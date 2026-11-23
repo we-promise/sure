@@ -2719,8 +2719,8 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 
 ## 19. Delivery
 
-Eight PRs after the spike, the first of them in five parts (2a to 2e) and the second in four
-(3a to 3d). Each PR, and each part,
+Eight PRs after the spike, the first of them in five parts (2a to 2e), the second in four
+(3a to 3d) and the seventh in four (7a to 7d). Each PR, and each part,
 is its own PR into `main`, merged in order: 2a #4773, 2b #4774, 2c #4775, 2d #4765 and 2e #4771,
 each stacked on the one before. 2a to 2d first shared #4765, because the maintainer wanted fewer
 PRs; at about 18,000 changed lines that was too big to review, so they were split back at the
@@ -2738,6 +2738,12 @@ code, so the two never disagree. That keeps most reviews to one question ("is th
 right?"). A PR is as big as its replacement needs, and a replacement too big to review in one
 piece is split into parts that each replace something whole, as PR 2 is. The principle, and
 that it isn't a ban, is a call by @josh-sanders during development of PR #4440.
+
+**The first place to stop** is the top of stack #5504: 2c to 2f, 3a, the generation windowing
+(#5521) and the review follow-ups (#5550, #5608), landing together on `main` through
+`refactor/ai-plumbing`, planned for the first alpha of December. From there only bug fixes are
+stacked on #5504; each later PR, or part, is a feature on its own stack, a release and a place
+to stop (calls by @josh-sanders, 2026-11-23).
 
 **RubyLLM versions.** PR 2 built on 2.1.1; PR #4892 ships 2.2.0 (`~> 2.2`) on the 2f stack,
 released ahead of PR 5 running. `Gemfile.lock` fixes the exact version each PR is tested with, so
@@ -2778,7 +2784,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    deleted with no shims: the upgrade note says to let the AI queues drain first (call by @josh-sanders during development of
    PR #4440). Each part replaces something whole, so `main`
    works between them, and each brings a transport call only with its first caller. The target
-   release is v0.7.7 (call by @josh-sanders during development of PR #4440).
+   release was v0.7.7 (call by @josh-sanders during development of PR #4440); with 3a and the
+   follow-ups, they now land in the first alpha of December (see "The first place to stop"
+   above).
    #3422 (vault statements indexed and readable by chat tools) lands before 2e: 2e's PR is
    stacked on 2d (#4765) and #3422, and moves #3422's pieces onto the plumbing (call by @josh-sanders
    during development of PR #4440; section 5.5).
@@ -2968,41 +2976,66 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
 
    The results rewrite section 8.4's driver and `History`. A case that needs an upstream change
    goes to crmne/ruby_llm as an issue before PR 6 builds around it.
-7. **Configuration in the database.** The tables (`ai_endpoints`, `ai_models`, `ai_routes`),
-   presets, `Ai::ConfigFile` and `AI_CONFIG`, `ai:export_config`, the data migration of
-   UI-stored settings, the version stamp, and the source rule. `Ai::Config` now reads the tables,
-   and `Ai::LegacyEnvConfig` loads its structure into them as a deprecated source. The instance
-   pages (endpoints with presets, models, routes with each entry's overrides: JSON mode, prompt,
-   reasoning effort) and the family AI features page replace the
-   hostings AI sections. The endpoint form requires a model once a base URL is set, and keeps the
-   local-server help today's OpenAI section has (#4408). The hosting guide (`docs/hosting/ai.md`)
-   covers a server on the Docker host, such as Ollama run natively on macOS (#4649), as an endpoint
-   instead of `OPENAI_URI_BASE` and `EMBEDDING_URI_BASE`: the `ollama` preset, URL
-   `http://host.docker.internal:11434/v1`, location `local` (plain http is allowed only for local
-   endpoints), used by the `embed` route as well as chat. Behind the proxy, `host.docker.internal`
-   goes in `NO_PROXY`. The AI features page has chat mode and each feature's switch and
-   manifest: `families.ai_consents`, the consent migration (an `mcp_only` family gets chat
-   switched off, and PR 6's `mcp_only` line goes), member emails, `:no_family_consent` and
-   `:consent_outdated`, and the shadow comparison switch with `Setting.ai_shadow_rates` replacing
-   `families.categorization_shadow_rate` (section 8.2). Turning Documents on indexes the stored
-   statements not yet indexed (section 5.5). Each embedding model carries its search score
-   threshold, for the OpenAI store and pgvector alike (default 0.3), and PR 7 resolves an
-   embedding model whose dimensions don't match the chunks table, where 2e fails with
-   `InvalidOutput` (calls by @josh-sanders during development of PR #4440). Changing a family's
-   `embed` route leaves the old store's copies in place until a family admin confirms
-   re-indexing or deleting them (section 5.5). Presets carry their
-   provider's JSON-schema dialect, so Sure drops what a provider's strict mode refuses (Cohere
-   refuses nullable objects and integer `minimum`; 2c's `auto` then falls to `none`), rather than
-   2c's fallback changing (call by @josh-sanders during development of PR #4440, after 2e's live
-   testing). That fixes drift bug 4. The `embed` endpoint has its own `extra_headers`, sent on
-   embedding requests and by its health probe alike, so an embedding server behind a gateway that
-   needs a header on every request (Cloudflare AI Gateway's authenticated mode, Helicone) works;
-   until then embedding requests send none, as on `main` (call by @josh-sanders during development
-   of PR #4440, after #4774's review). RubyLLM's `embed` takes no headers, on 2.1.1 or `main`,
-   unlike `complete`; the public way is a provider's `headers` override, merged into every request,
-   unless RubyLLM adds headers per context by then (requested in crmne/ruby_llm#1556). `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
-   The test helpers switch to the new fixtures. Adds the config and consent tests.
-   *Still on old code:* nothing; from here every process reads the same rows.
+7. **Configuration in the database**, in four parts, each its own PR into `main` and each a
+   release. PR 7 is the one PR built by layer and by feature at once: tables and a loader, the
+   instance pages, and the family's consent page. Split by feature, each part replaces something
+   whole and is a place to stop (call by @josh-sanders, 2026-11-23). 7a comes first; 7b and 7c
+   each need only 7a, and can be built in parallel; 7d needs 7b and 7c.
+   - **7a. Config tables and the config file.** The tables (`ai_endpoints`, `ai_models`,
+     `ai_routes`), presets, `Ai::ConfigFile` and `AI_CONFIG`, `ai:export_config`, the data
+     migration of UI-stored settings, the version stamp, and the source rule. `Ai::Config` now
+     reads the tables, and `Ai::LegacyEnvConfig` loads its structure into them as a deprecated
+     source, so the hostings page keeps working: what it saves is loaded into the tables. Presets
+     carry their provider's JSON-schema dialect, so Sure drops what a provider's strict mode
+     refuses (Cohere refuses nullable objects and integer `minimum`; 2c's `auto` then falls to
+     `none`), rather than 2c's fallback changing (call by @josh-sanders during development of PR
+     #4440, after 2e's live testing). That fixes drift bug 4. The `embed` endpoint has its own
+     `extra_headers`, sent on embedding requests and by its health probe alike, so an embedding
+     server behind a gateway that needs a header on every request (Cloudflare AI Gateway's
+     authenticated mode, Helicone) works; set through `AI_CONFIG` here and on 7b's pages; until
+     then embedding requests send none, as on `main` (call by @josh-sanders during development of
+     PR #4440, after #4774's review). RubyLLM's `embed` takes no headers, on 2.1.1 or `main`,
+     unlike `complete`; the public way is a provider's `headers` override, merged into every
+     request, unless RubyLLM adds headers per context by then (requested in crmne/ruby_llm#1556).
+     The test helpers switch to the new fixtures. Adds the config test.
+     *What a user gets:* the web and the workers read the same rows, so they can't disagree, and
+     a home lab or multi-tenant admin configures everything in one file.
+     *Still on old code:* the hostings AI sections edit the old `Setting` fields, loaded into the
+     tables; families have no AI features page, and background features run without family
+     consent, as before.
+   - **7b. Instance AI pages.** The instance pages (endpoints with presets, models, routes with
+     each entry's overrides: JSON mode, prompt, reasoning effort) replace the hostings AI
+     sections, and become read-only with "Set by the AI config file" under `AI_CONFIG`. The
+     endpoint form requires a model once a base URL is set, and keeps the local-server help
+     today's OpenAI section has (#4408). The hosting guide (`docs/hosting/ai.md`) covers a server
+     on the Docker host, such as Ollama run natively on macOS (#4649), as an endpoint instead of
+     `OPENAI_URI_BASE` and `EMBEDDING_URI_BASE`: the `ollama` preset, URL
+     `http://host.docker.internal:11434/v1`, location `local` (plain http is allowed only for
+     local endpoints), used by the `embed` route as well as chat. Behind the proxy,
+     `host.docker.internal` goes in `NO_PROXY`.
+     *What a user gets:* a self-hoster sets up AI on its own pages, with presets, instead of ENV
+     and the hostings form.
+     *Still on old code:* nothing at instance level; the family side is 7c's.
+   - **7c. The family AI features page and consent.** The family AI features page with chat mode
+     and each feature's switch and manifest: `families.ai_consents`, the consent migration (an
+     `mcp_only` family gets chat switched off, and PR 6's `mcp_only` line goes), member emails,
+     `:no_family_consent` and `:consent_outdated`.
+     `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
+     Turning Documents on indexes the stored statements not yet indexed (section 5.5). Adds the
+     consent test.
+     *What a user gets:* a family admin sees and controls which AI features run on the family's
+     data, and members are told when a background feature is turned on.
+     *Still on old code:* the shadow rate and the embedding settings, 7d's.
+   - **7d. Shadow runs and embedding settings.** The shadow comparison switch on the AI features
+     page, with `Setting.ai_shadow_rates` replacing `families.categorization_shadow_rate` (section
+     8.2). Each embedding model carries its search score threshold, for the OpenAI store and
+     pgvector alike (default 0.3), and 7d resolves an embedding model whose dimensions don't match
+     the chunks table, where 2e fails with `InvalidOutput` (calls by @josh-sanders during
+     development of PR #4440). Changing a family's `embed` route leaves the old store's copies in
+     place until a family admin confirms re-indexing or deleting them (section 5.5).
+     *What a user gets:* an admin sets each feature's shadow rate and each embedding model's
+     threshold, and a family keeps control of its documents when its embedding route changes.
+     *Still on old code:* nothing; from here every process reads the same rows.
 8. **Health and settings pages.** The health page (lanes, down marks, AI threads per worker,
    rates, the context window check, "Copy diagnostics"), each row's status on the AI features
    page with the "AI unavailable" banner, the categorization page, and the prompts (behind
@@ -3022,7 +3055,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      kept". The switch's help text lists these before it's turned off.
 
    Neither switch deletes anything already stored when it's flipped. Turning one off applies to
-   files processed from then on.
+   files processed from then on. Needs 7c, for the AI features page.
 9. **Allowed endpoints, own keys and the member switch.** `families.ai_blocked_endpoint_ids`,
    `ai_endpoint_credentials` and `users.ai_allowed`; the AI features page gains its endpoints
    section, with the allow checkbox, the "use our own key" field with a probe on save and the
@@ -3031,7 +3064,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    between the instance's key and the family's own follows section 5.5's rule: no document is
    copied into the other account, or deleted, without a family admin's confirmation. Adds
    `llm_usages.family_key` and the family key test, and extends the consent test with the member
-   cases. Needs PR 7.
+   cases. Needs 7a and 7c.
 
 **RubyLLM spike criteria.** RubyLLM is adopted under `Ai::Transport::*` only if every item holds
 or has a small fix. Whatever the result, Sure still owns the router, consent, the JSON-mode policy
