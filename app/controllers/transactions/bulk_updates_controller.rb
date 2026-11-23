@@ -53,7 +53,7 @@ class Transactions::BulkUpdatesController < ApplicationController
         bulk_update_entries(annotate_ids, scoped_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES), &collect_changed)
     end
 
-    Rule.apply_immediately_later(Current.family, changed_ids)
+    Rule.apply_immediately_later(Current.family, changed_ids, user: Current.user)
 
     redirect_back_or_to transactions_path, notice: "#{updated} transactions updated"
   rescue ActiveRecord::RecordInvalid => e

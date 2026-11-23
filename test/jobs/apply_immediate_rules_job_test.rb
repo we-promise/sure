@@ -103,7 +103,7 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
   test "AI actions take the changed transactions the person who changed them may categorize" do
     create_rule("AI", apply_immediately: true, action: Rule::Action.new(action_type: "auto_categorize"))
 
-    ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ], user: @account.owner)
+    ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ], user_id: @account.owner.id)
 
     assert_equal [ @changed.id ], ai_batch_ids
   end
@@ -125,7 +125,7 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
     # Its AI job offers the result once it has changed something (RuleRun#complete_job!).
     Family.any_instance.expects(:broadcast_replace_to).never
     assert_enqueued_jobs 1, only: AutoCategorizeJob do
-      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ], user: @account.owner)
+      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ], user_id: @account.owner.id)
     end
   end
 
@@ -142,7 +142,7 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
 
     RuleRun.expects(:offer_immediate_result).with(@family).once
     assert_enqueued_jobs 1, only: AutoCategorizeJob do
-      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ], user: @account.owner)
+      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ], user_id: @account.owner.id)
     end
     assert_equal [ tag ], @changed.reload.tags
   end
@@ -189,6 +189,17 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
     assert_enqueued_with(job: ApplyImmediateRulesJob) do
       ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
     end
+  end
+
+  test "still runs when the member who made the change is deleted while it waits" do
+    create_rule("Groceries", category: @groceries, apply_immediately: true)
+    member = @family.users.create!(email: "leaving-immediate@example.com", password: "password123", role: :member)
+    Rule.apply_immediately_later(@family, [ @changed.id ], user: member)
+    member.destroy!
+
+    perform_enqueued_jobs
+
+    assert_equal @groceries, @changed.reload.category
   end
 
   private

@@ -484,7 +484,7 @@ class Entry < ApplicationRecord
   # Rules set to "apply immediately" run for this transaction after a person
   # created or changed it. With changed_from (a rule_input_snapshot from before
   # the edit) they only run when the edit changed something.
-  def apply_immediate_rules_later(changed_from: nil, user: Current.user)
+  def apply_immediate_rules_later(user:, changed_from: nil)
     return unless transaction?
     return if changed_from && changed_from == rule_input_snapshot
 

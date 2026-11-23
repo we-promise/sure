@@ -26,7 +26,7 @@ class TransactionCategoriesController < ApplicationController
 
     transaction.lock_saved_attributes!
     @entry.lock_saved_attributes!
-    @entry.apply_immediate_rules_later(changed_from: rule_input)
+    @entry.apply_immediate_rules_later(user: Current.user, changed_from: rule_input)
 
     in_split_group = helpers.in_split_group?(@entry, params[:grouped])
     respond_to do |format|

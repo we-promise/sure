@@ -608,29 +608,28 @@ class RuleTest < ActiveSupport::TestCase
     create_category_rule("Paused", apply_immediately: true, active: false)
 
     assert_no_enqueued_jobs(only: ApplyImmediateRulesJob) do
-      Rule.apply_immediately_later(@family, transaction.id)
+      Rule.apply_immediately_later(@family, transaction.id, user: nil)
     end
 
     create_category_rule("Immediate", apply_immediately: true)
 
-    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ transaction.id ], user: nil } ]) do
-      Rule.apply_immediately_later(@family, [ transaction.id, transaction.id, nil ])
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ transaction.id ], user_id: nil } ]) do
+      Rule.apply_immediately_later(@family, [ transaction.id, transaction.id, nil ], user: nil)
     end
     assert_no_enqueued_jobs(only: ApplyImmediateRulesJob) do
-      Rule.apply_immediately_later(@family, [])
+      Rule.apply_immediately_later(@family, [], user: nil)
     end
   end
 
   # The AI actions of the run take what the person who made the change may
   # categorize (see Rule::AiEnrichment).
-  test "apply_immediately_later hands the run the person signed in" do
+  test "apply_immediately_later hands the run the person who made the change" do
     transaction = create_transaction(account: @account, name: "Whole Foods").transaction
     create_category_rule("Immediate", apply_immediately: true)
     user = @family.users.first
-    Current.stubs(:user).returns(user)
 
-    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ transaction.id ], user: user } ]) do
-      Rule.apply_immediately_later(@family, transaction.id)
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ transaction.id ], user_id: user.id } ]) do
+      Rule.apply_immediately_later(@family, transaction.id, user: user)
     end
   end
 
@@ -639,7 +638,7 @@ class RuleTest < ActiveSupport::TestCase
     create_category_rule("Immediate", apply_immediately: true)
     ApplyImmediateRulesJob.stubs(:perform_later).raises(RuntimeError, "queue down")
 
-    assert_nil Rule.apply_immediately_later(@family, transaction.id)
+    assert_nil Rule.apply_immediately_later(@family, transaction.id, user: nil)
   end
 
   test "apply_immediately_later logs a job the adapter refuses" do
@@ -648,7 +647,7 @@ class RuleTest < ActiveSupport::TestCase
     ApplyImmediateRulesJob.stubs(:perform_later).returns(false)
     Rails.logger.expects(:error).with(regexp_matches(/could not enqueue ApplyImmediateRulesJob/))
 
-    assert_nil Rule.apply_immediately_later(@family, transaction.id)
+    assert_nil Rule.apply_immediately_later(@family, transaction.id, user: nil)
   end
 
   private

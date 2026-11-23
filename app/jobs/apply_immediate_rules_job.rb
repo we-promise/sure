@@ -7,7 +7,7 @@ class ApplyImmediateRulesJob < ApplicationJob
 
   retry_on Rule::Runner::LockBusy, wait: 30.seconds, attempts: 20
 
-  def perform(family, transaction_ids:, user: nil)
+  def perform(family, transaction_ids:, user_id: nil)
     rules = family.rules.applied_immediately
     return if rules.none?
 
@@ -16,7 +16,7 @@ class ApplyImmediateRulesJob < ApplicationJob
       rules: rules,
       execution_type: "immediate",
       transaction_ids: transaction_ids,
-      user: user
+      user: family.users.find_by(id: user_id)
     )
     runner.run
 

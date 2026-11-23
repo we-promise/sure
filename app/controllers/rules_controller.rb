@@ -134,7 +134,7 @@ class RulesController < ApplicationController
   end
 
   def apply_all
-    ApplyAllRulesJob.perform_later(Current.family, user: Current.user)
+    ApplyAllRulesJob.perform_later(Current.family, user_id: Current.user.id)
     redirect_back_or_to rules_path, notice: t("rules.apply_all.success")
   end
 

@@ -31,7 +31,7 @@ class Transactions::CategorizesController < ApplicationController
     entries  = Current.annotatable_entries.excluding_split_parents.where(id: entry_ids)
     changed_ids = []
     count = entries.bulk_update!({ category_id: category.id }) { |entry| changed_ids << entry.entryable_id }
-    Rule.apply_immediately_later(Current.family, changed_ids)
+    Rule.apply_immediately_later(Current.family, changed_ids, user: Current.user)
 
     if params[:create_rule] == "1" && (count.positive? || entry_ids.empty?)
       rule = Rule.create_from_grouping(
@@ -102,7 +102,7 @@ class Transactions::CategorizesController < ApplicationController
 
     changed_ids = []
     Current.annotatable_entries.where(id: entry.id).bulk_update!({ category_id: category.id }) { |changed| changed_ids << changed.entryable_id }
-    Rule.apply_immediately_later(Current.family, changed_ids)
+    Rule.apply_immediately_later(Current.family, changed_ids, user: Current.user)
 
     remaining_entries = uncategorized_entries_for(remaining_ids)
     remaining_ids     = remaining_entries.map { |e| e.id.to_s }

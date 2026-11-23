@@ -100,7 +100,7 @@ class Assistant::Function::UpdateTransactionTest < ActiveSupport::TestCase
     result = @function.call("id" => @transaction.id, "notes" => "Updated by assistant")
 
     assert_equal true, result[:success]
-    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @transaction.id ], user: @user } ])
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @transaction.id ], user_id: @user.id } ])
   end
 
   test "an update that changes nothing runs no immediate rules" do

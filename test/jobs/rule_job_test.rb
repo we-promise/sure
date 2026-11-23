@@ -124,10 +124,26 @@ class RuleJobTest < ActiveJob::TestCase
     )
     Family.any_instance.stubs(:auto_categorize_transactions_later).returns(false)
 
-    assert_nothing_raised { RuleJob.perform_now(rule, user: users(:empty)) }
+    assert_nothing_raised { RuleJob.perform_now(rule, user_id: users(:empty).id) }
 
     rule_run = rule.rule_runs.sole
     assert_equal "failed", rule_run.status
     assert_match "ActiveJob::EnqueueError", rule_run.error_message
+  end
+
+  test "still runs when the member who applied the rule is deleted while it waits" do
+    transaction = create_transaction(account: @account, name: "Whole Foods").transaction
+    rule = @family.rules.create!(
+      name: "Applied", resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @food_and_dining.id) ]
+    )
+    member = @family.users.create!(email: "leaving-rule@example.com", password: "password123", role: :member)
+    rule.apply_later(user: member)
+    member.destroy!
+
+    perform_enqueued_jobs
+
+    assert_equal @food_and_dining, transaction.reload.category
   end
 end

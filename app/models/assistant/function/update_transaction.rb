@@ -88,7 +88,7 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
       entry.lock_saved_attributes!
     end
 
-    entry.apply_immediate_rules_later(changed_from: rule_input, user: user)
+    entry.apply_immediate_rules_later(user: user, changed_from: rule_input)
 
     {
       success: true,

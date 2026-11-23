@@ -331,15 +331,14 @@ class Rule < ApplicationRecord
   # run applies the rules anyway, so a failed enqueue must not fail the request.
   # Callers inside a database transaction call this after it, so the enqueue
   # is not deferred to an after-commit callback outside this rescue.
-  # user: the person who made the change (see Rule::AiEnrichment). The
-  # assistant runs outside a request, so it passes its user.
-  def self.apply_immediately_later(family, transaction_ids, user: Current.user)
+  # user: the person who made the change (see Rule::AiEnrichment).
+  def self.apply_immediately_later(family, transaction_ids, user:)
     transaction_ids = Array(transaction_ids).compact.uniq
     return if transaction_ids.empty? || !family.rules.applied_immediately.exists?
 
     # perform_later returns false instead of raising when the adapter
     # refuses the job (see RulesController#enqueue_clear_ai_cache).
-    return if ApplyImmediateRulesJob.perform_later(family, transaction_ids: transaction_ids, user: user)
+    return if ApplyImmediateRulesJob.perform_later(family, transaction_ids: transaction_ids, user_id: user&.id)
 
     Rails.logger.error("Rule.apply_immediately_later could not enqueue ApplyImmediateRulesJob for family #{family.id}")
     nil
@@ -350,7 +349,7 @@ class Rule < ApplicationRecord
 
   # user: the person applying the rule (see Rule::AiEnrichment).
   def apply_later(ignore_attribute_locks: false, user: nil)
-    RuleJob.perform_later(self, ignore_attribute_locks: ignore_attribute_locks, user: user)
+    RuleJob.perform_later(self, ignore_attribute_locks: ignore_attribute_locks, user_id: user&.id)
   end
 
   def primary_condition_title

@@ -74,6 +74,17 @@ class ApplyAllRulesJobTest < ActiveJob::TestCase
     end
   end
 
+  test "still runs when the member who started it is deleted while it waits" do
+    create_rule(active: true)
+    member = @family.users.create!(email: "leaving-all@example.com", password: "password123", role: :member)
+    ApplyAllRulesJob.perform_later(@family, user_id: member.id)
+    member.destroy!
+
+    perform_enqueued_jobs
+
+    assert_equal @groceries_category, @transaction.reload.category
+  end
+
   private
     def category_action
       Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id)

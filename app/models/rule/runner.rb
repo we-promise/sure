@@ -22,7 +22,8 @@
 #
 # user is the person who started the run ("Apply rule", "Apply all", the edit
 # behind "apply immediately"), nil after a sync. Only the AI actions look at
-# it (see Rule::AiEnrichment).
+# it (see Rule::AiEnrichment). The jobs take the user's id and look it up, so a
+# member deleted while the job waits leaves nil instead of discarding the run.
 #
 # One run per family at a time, guarded by a PostgreSQL advisory lock. A busy
 # lock raises LockBusy so the calling job can retry instead of dropping the run.
