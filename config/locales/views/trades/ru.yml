@@ -1,6 +1,9 @@
 ---
 ru:
   trades:
+    trade:
+      pending: В ожидании
+      quantity_change: "%{qty} %{ticker}"
     form:
       account: Счёт для перевода (необязательно)
       account_prompt: Поиск счёта

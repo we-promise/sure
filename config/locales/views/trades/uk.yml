@@ -1,5 +1,8 @@
 uk:
   trades:
+    trade:
+      pending: Очікується
+      quantity_change: "%{qty} %{ticker}"
     form:
       account: Рахунок для переказу (необов'язково)
       account_prompt: Пошук рахунку

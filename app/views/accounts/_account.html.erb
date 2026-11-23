@@ -73,15 +73,17 @@
       <% elsif !account.pending_deletion? %>
         <% permission = account.permission_for(Current.user) %>
         <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false, max_width: "280px") do |menu| %>
+          <%= render "bitcoin_wallets/menu_item", menu: menu, account: account, permission: permission %>
           <% if permission.in?([ :owner, :full_control ]) %>
             <% menu.with_item(variant: "link", text: t("accounts.account.edit"), href: edit_account_path(account, return_to: return_to), icon: "pencil-line", data: { turbo_frame: :modal }) %>
           <% end %>
           <% menu.with_item(variant: "link", text: t("accounts.account.sharing"), href: account_sharing_path(account), icon: "users", data: { turbo_frame: :modal }) %>
 
           <% if Current.user&.admin? %>
-            <% if !account.linked? && %w[Depository CreditCard Investment Crypto].include?(account.accountable_type) %>
+            <% bitcoin_wallet = account.bitcoin_wallet_account if account.crypto? %>
+            <% if !account.linked? && !bitcoin_wallet && %w[Depository CreditCard Investment Crypto].include?(account.accountable_type) %>
               <% menu.with_item(variant: "link", text: t("accounts.account.link_provider"), href: select_provider_account_path(account), icon: "link", data: { turbo_frame: :modal }) %>
-            <% elsif account.linked? %>
+            <% elsif account.linked? && !bitcoin_wallet %>
               <%# Same-provider relink (e.g., card-replacement fraud). Only surfaced for
                  SimpleFIN-linked accounts today; other providers can be added later. %>
               <% if account.linked_to?("SimplefinAccount") %>

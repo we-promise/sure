@@ -1,6 +1,9 @@
 ---
 tr:
   trades:
+    trade:
+      pending: Beklemede
+      quantity_change: "%{qty} %{ticker}"
     form:
       account: Transfer hesabı (isteğe bağlı)
       account_prompt: Hesap ara

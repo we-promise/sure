@@ -77,6 +77,8 @@ de:
       reset_confirm_body: "Das Wertpapier wird von %{current} zurück auf %{original} geändert; alle zugehörigen Trades werden verschoben."
       ticker_label: Ticker
       trade_history_entry: "%{qty} Anteile von %{security} zu %{price}"
+      trade_history_transfer: "%{name}: %{qty}"
+      managed_position_note: Diese Position wird automatisch von einem verbundenen Anbieter aktualisiert.
       total_return_label: Gesamtrendite
       shares_label: Anteile
       book_value_label: Buchwert
