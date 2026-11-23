@@ -186,6 +186,63 @@ class Assistant::Function::CreateBillTest < ActiveSupport::TestCase
     assert_nil @family.recurring_transactions.find_by(name: "Maybe")
   end
 
+  test "a custom cadence repeats every 3 weeks from its anchor" do
+    travel_to Date.new(2026, 11, 23) do
+      result = call_tool("name" => "Hairdresser", "amount" => 30, "anchor_date" => "2026-11-24",
+                         "frequency" => "custom", "interval_count" => 3, "interval_unit" => "week")
+
+      assert result[:created], result[:error]
+      assert_equal %w[2026-11-24 2026-12-15 2027-01-05], result[:upcoming_due_dates]
+      assert_equal({ frequency: "custom", interval_count: 3, interval_unit: "week" },
+                   result[:bill].slice(:frequency, :interval_count, :interval_unit))
+
+      series = @family.recurring_transactions.find_by!(name: "Hairdresser")
+      assert_equal Date.new(2026, 11, 24), series.anchor_date
+      assert_equal [ Date.new(2026, 11, 24), Date.new(2026, 12, 15), Date.new(2027, 1, 5) ],
+                   series.recurring_occurrences.order(:due_on).limit(3).pluck(:due_on)
+    end
+  end
+
+  test "a custom count of days is stored in whole weeks, and refused otherwise" do
+    travel_to Date.new(2026, 11, 23) do
+      result = call_tool("name" => "Hairdresser", "amount" => 30, "first_due_on" => "2026-11-24",
+                         "frequency" => "custom", "interval_count" => 21, "interval_unit" => "day")
+
+      assert result[:created], result[:error]
+      assert_equal [ 3, "week" ], result[:bill].values_at(:interval_count, :interval_unit)
+
+      refused = call_tool("name" => "Pills", "amount" => 8, "first_due_on" => "2026-11-24",
+                          "frequency" => "custom", "interval_count" => 10, "interval_unit" => "day")
+
+      assert_match(/Every 10 days/, refused[:error])
+      assert_nil @family.recurring_transactions.find_by(name: "Pills")
+    end
+  end
+
+  test "interval fields are refused unless frequency is custom" do
+    result = call_tool("name" => "Gym", "amount" => 40, "first_due_on" => (Date.current + 3).iso8601,
+                       "frequency" => "weekly", "interval_count" => 3, "interval_unit" => "week")
+
+    assert_match(/only apply to frequency custom/, result[:error])
+    assert_nil @family.recurring_transactions.find_by(name: "Gym")
+
+    missing = call_tool("name" => "Gym", "amount" => 40, "first_due_on" => (Date.current + 3).iso8601,
+                        "frequency" => "custom", "interval_unit" => "week")
+
+    assert_match(/needs interval_count/, missing[:error])
+  end
+
+  test "anchor_date and first_due_on name the same date and must agree" do
+    result = call_tool("name" => "Gym", "amount" => 40, "first_due_on" => "2026-12-01", "anchor_date" => "2026-12-02")
+
+    assert_match(/different dates/, result[:error])
+    assert_nil @family.recurring_transactions.find_by(name: "Gym")
+
+    invalid = call_tool("name" => "Gym", "amount" => 40, "anchor_date" => "next tuesday")
+
+    assert_equal "anchor_date is not a valid date", invalid[:error]
+  end
+
   test "a read-only shared account is not a creation destination" do
     member = users(:family_member)
 

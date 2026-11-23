@@ -29,6 +29,10 @@ class RecurringTransaction
       # cycle start, since their history predates the row.
       from = [ from, series.anchor_date ].compact.max if series.manual?
 
+      # The same holds for any re-anchored schedule: before its start, the
+      # cycle lookback would only fabricate debt the new schedule never had.
+      from = [ from, series.schedule_starts_on ].compact.max
+
       # A one-payment plan's only date can already be past. The clamp above
       # refuses to look behind today, which would drop that only occurrence.
       if single_payment? && series.anchor_date
@@ -58,6 +62,10 @@ class RecurringTransaction
     # happens to uncovered past occurrences; this only creates rows.
     def backfill!(from:, through: Date.current)
       return 0 unless series.active?
+
+      # History before a re-anchoring was the replaced schedule's; rebuilding
+      # it on the new grid would invent cycles that never existed.
+      from = [ from, series.schedule_starts_on ].compact.max
 
       upsert_window(from, through)
     end
@@ -133,6 +141,10 @@ class RecurringTransaction
       # Returns the original_due_ons of the occurrences stood in for. Searched
       # beyond the window, so a kept row's nearest occurrence just outside it
       # is not mistaken for a farther one inside.
+      #
+      # Rows before a re-anchored schedule's start stand in for nothing: the
+      # user moved the series on purpose, so last week's leftover is not the
+      # cycle the new start date opens.
       def stood_in_for(schedule, from, through)
         # A Once bill is a date the user chose. Rows kept from an earlier
         # schedule are other obligations, not stand-ins for it, and a yearly
@@ -145,16 +157,17 @@ class RecurringTransaction
         nearby = schedule.occurrence_pairs_between(from - reach, through + reach)
         current = nearby.map(&:original_due_on).to_set
 
-        series.recurring_occurrences
-              .where(due_on: (from - reach)..(through + reach))
-              .pluck(:original_due_on, :due_on)
-              .reject { |original_due_on, _due_on| current.include?(original_due_on) }
-              .filter_map do |_original_due_on, due_on|
-                nearby.select { |pair| (due_on - pair.due_on).abs <= reach }
-                      .min_by { |pair| [ (due_on - pair.due_on).abs, pair.due_on ] }
-                      &.original_due_on
-              end
-              .to_set
+        kept = series.recurring_occurrences.where(due_on: (from - reach)..(through + reach))
+        kept = kept.where(due_on: series.schedule_starts_on..) if series.schedule_starts_on
+
+        kept.pluck(:original_due_on, :due_on)
+            .reject { |original_due_on, _due_on| current.include?(original_due_on) }
+            .filter_map do |_original_due_on, due_on|
+              nearby.select { |pair| (due_on - pair.due_on).abs <= reach }
+                    .min_by { |pair| [ (due_on - pair.due_on).abs, pair.due_on ] }
+                    &.original_due_on
+            end
+            .to_set
       end
 
       # Just under half the cycle length, as RecurringTransaction::Matcher's

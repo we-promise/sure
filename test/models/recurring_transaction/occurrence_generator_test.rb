@@ -56,6 +56,43 @@ class RecurringTransaction::OccurrenceGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  # A detected series has no anchor floor of its own: without the restart
+  # date, the cycle lookback would put a Nov 20 row, already late, on a bill
+  # the user just said is next due Dec 20.
+  test "a re-anchored schedule generates and backfills nothing before its start" do
+    travel_to Date.new(2026, 11, 23) do
+      Generator.new(@series).generate!
+      start = Date.new(2026, 12, 20)
+
+      @series.restart_schedule_on(start)
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "monthly", day_of_month: 20)
+      @series.save!
+      Generator.new(@series).generate!
+      Generator.new(@series).backfill!(from: Date.new(2026, 5, 1))
+
+      on_new_day = @series.recurring_occurrences.reload.select { |occurrence| occurrence.due_on.day == 20 }
+      assert_equal start, on_new_day.map(&:due_on).min
+      assert_equal Date.new(2026, 11, 5), @series.recurring_occurrences.minimum(:due_on),
+        "the old schedule's open row is left to the user"
+    end
+  end
+
+  test "rows before a re-anchored start do not stand in for its first occurrence" do
+    travel_to Date.new(2026, 11, 23) do
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "interval", interval: 3, interval_unit: "weekly",
+                                                           weekday: 2)
+      @series.anchor_date = Date.new(2026, 10, 27)
+      @series.save!
+      assert @series.recurring_occurrences.exists?(due_on: Date.new(2026, 11, 17))
+
+      @series.restart_schedule_on(Date.new(2026, 11, 24))
+      @series.save!
+
+      assert @series.recurring_occurrences.exists?(due_on: Date.new(2026, 11, 24)),
+        "the Nov 17 leftover is a week away but belongs to the replaced schedule"
+    end
+  end
+
   test "converting a repeating bill to once keeps unpaid past occurrences and adds the one date" do
     travel_to Date.new(2026, 11, 13) do
       Generator.new(@series).generate!

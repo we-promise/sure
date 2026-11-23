@@ -25,6 +25,9 @@ class Assistant::Function::GetBillDetails < Assistant::Function
         #{PRICE_CHANGE_LOOKBACK_MONTHS} months. history_window and price_change_window report
         the real totals, so do not sum the rows and present the result as a lifetime figure.
 
+        A custom every-N cadence carries interval_count and interval_unit beside frequency
+        "custom", and anchor_date is the date it counts from.
+
         bill_id must be the exact id returned by get_bills.
       INSTRUCTIONS
     end

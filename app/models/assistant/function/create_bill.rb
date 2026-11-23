@@ -18,7 +18,14 @@ class Assistant::Function::CreateBill < Assistant::Function
         - category_name must exactly match a name returned by get_categories.
         - first_due_on seeds the schedule: its day of month (or weekday for weekly
           cadences) becomes the recurring due day. frequency "once" is a single
-          occurrence on first_due_on and does not repeat.
+          occurrence on first_due_on and does not repeat. anchor_date is the same
+          date under the name update_bill uses; pass either one (both must agree).
+        - frequency "custom" repeats every interval_count interval_units counted
+          from first_due_on: every 3 weeks from 2026-11-24 falls due 2026-11-24,
+          2026-12-15, 2027-01-05. interval_count and interval_unit are required with
+          custom and refused with any other frequency. Bills repeat by week, month or
+          year, so interval_unit "day" works in whole weeks only. A custom cadence
+          that matches a named one reads back as it (every 2 weeks is biweekly).
         - Transfers between accounts cannot be created here.
 
         Confirm the details with the user before calling this.
@@ -32,16 +39,19 @@ class Assistant::Function::CreateBill < Assistant::Function
 
   def params_schema
     build_schema(
-      required: %w[name amount first_due_on],
+      required: %w[name amount],
       properties: {
         name: { type: "string", description: "What the user calls this bill." },
         amount: { type: "number", minimum: 0.01, description: "Positive magnitude per occurrence." },
-        first_due_on: { type: "string", description: "Next due date, YYYY-MM-DD." },
+        first_due_on: { type: "string", description: "Next due date, YYYY-MM-DD. Required unless anchor_date is given." },
+        anchor_date: { type: "string", description: "Same as first_due_on, YYYY-MM-DD: the first due date the schedule counts from." },
         frequency: {
           type: "string",
-          enum: RecurringTransaction::FrequencyPreset::PRESETS,
-          description: "Cadence (default monthly)."
+          enum: FREQUENCIES,
+          description: "Cadence (default monthly). custom needs interval_count and interval_unit."
         },
+        interval_count: { type: "integer", minimum: 1, description: INTERVAL_COUNT_DESCRIPTION },
+        interval_unit: { type: "string", enum: CUSTOM_INTERVAL_UNITS, description: INTERVAL_UNIT_DESCRIPTION },
         is_income: { type: "boolean", description: "True for a paycheck/income schedule." },
         bill_type: {
           type: "string", enum: %w[bill subscription installment],
@@ -76,14 +86,22 @@ class Assistant::Function::CreateBill < Assistant::Function
     frequency, frequency_error = resolve_frequency(params["frequency"])
     return frequency_error if frequency_error
 
+    interval, interval_error = resolve_custom_interval(params, frequency)
+    return interval_error if interval_error
+
+    first_due_on, due_error = resolve_first_due_on(params)
+    return due_error if due_error
+
     series = RecurringTransaction::DeclaredBill.new(
       family: family,
       user: user,
       attrs: {
         name: params["name"],
         amount: params["amount"],
-        first_due_on: params["first_due_on"],
-        frequency_preset: frequency,
+        first_due_on: first_due_on,
+        frequency_preset: interval ? RecurringTransaction::FrequencyPreset::INTERVAL : frequency,
+        frequency_interval: interval&.first,
+        frequency_interval_unit: interval&.last,
         is_income: is_income,
         account_id: account&.id,
         payment_url: params["payment_url"],
@@ -124,14 +142,39 @@ class Assistant::Function::CreateBill < Assistant::Function
     def resolve_frequency(value)
       return [ "monthly", nil ] if value.blank?
 
-      preset = value.to_s.presence_in(RecurringTransaction::FrequencyPreset::PRESETS)
-      return [ preset, nil ] if preset
+      frequency = value.to_s.presence_in(FREQUENCIES)
+      return [ frequency, nil ] if frequency
 
       [ nil, {
         error: "#{value} is not a frequency this app recognizes",
-        hint: "Use one of: #{RecurringTransaction::FrequencyPreset::PRESETS.join(', ')}. " \
-              "Omit it entirely for monthly."
+        hint: "Use one of: #{FREQUENCIES.join(', ')}. Omit it entirely for monthly."
       } ]
+    end
+
+    # anchor_date is first_due_on under the name update_bill gives the date a
+    # schedule counts from, so either names it. Two different dates are two
+    # answers to one question, and are refused rather than picked between.
+    def resolve_first_due_on(params)
+      first_due_on = params["first_due_on"].presence
+      return [ first_due_on, nil ] if params["anchor_date"].blank?
+
+      anchor = strict_date(params["anchor_date"])
+      return [ nil, { error: "anchor_date is not a valid date", hint: "Use YYYY-MM-DD." } ] if anchor.nil?
+
+      if first_due_on && lenient_date(first_due_on) != anchor
+        return [ nil, {
+          error: "first_due_on and anchor_date name different dates",
+          hint: "They are the same date here; pass just one of them."
+        } ]
+      end
+
+      [ anchor, nil ]
+    end
+
+    def lenient_date(value)
+      Date.parse(value.to_s)
+    rescue Date::Error
+      nil
     end
 
     # Writable, not merely visible: attaching a bill to an account changes
@@ -168,28 +211,6 @@ class Assistant::Function::CreateBill < Assistant::Function
       [ nil, {
         error: "No category named #{name.inspect}",
         hint: "Call get_categories and retry once with the exact category name."
-      } ]
-    end
-
-    # The tool caller does not enforce params_schema, so a string "true" from
-    # a loose MCP client would otherwise compare unequal to true and silently
-    # flip a paycheck into a bill. An explicit allowlist, not
-    # ActiveModel::Type::Boolean, because that cast reads every unrecognized
-    # string as true, and a financial write is the wrong place to guess.
-    TRUTHY_INPUTS = [ true, "true", "t", "1", 1 ].freeze
-    FALSY_INPUTS = [ false, "false", "f", "0", 0 ].freeze
-
-    def resolve_boolean(params, key)
-      value = params[key]
-      return [ false, nil ] if value.nil?
-
-      normalized = value.is_a?(String) ? value.strip.downcase : value
-      return [ true, nil ] if TRUTHY_INPUTS.include?(normalized)
-      return [ false, nil ] if FALSY_INPUTS.include?(normalized)
-
-      [ nil, {
-        error: "#{key} must be true or false",
-        hint: "Pass a JSON boolean, not #{value.inspect}."
       } ]
     end
 end

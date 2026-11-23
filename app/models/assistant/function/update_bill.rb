@@ -21,8 +21,28 @@ class Assistant::Function::UpdateBill < Assistant::Function
           figure, so a rent raise never restates last month's unpaid rent.
         - account_name / category_name must exactly match names from get_accounts /
           get_categories. Pass category_name "Uncategorized" to clear the category.
-        - Changing the schedule (frequency / due day) pins it: automatic detection
-          will respect it as the user's intent from then on.
+        - frequency "custom" repeats every interval_count interval_units. Both are
+          required with custom and refused with any other frequency. Bills repeat by
+          week, month or year, so interval_unit "day" works in whole weeks only.
+        - anchor_date (YYYY-MM-DD) is the bill's next due date and, from then on, the
+          date its cadence counts from. Passed alone it moves the current cadence; with
+          frequency the new cadence starts there. due_day_of_month / weekday /
+          month_of_year default to the anchor's. Every 3 weeks anchored on 2026-11-24
+          falls due 2026-11-24, 2026-12-15, 2027-01-05. Pass anchor_date with a custom
+          cadence so it starts where the user expects.
+        - Re-anchoring rebuilds only the open, unpaid occurrences due from today on.
+          Paid and partially paid occurrences and their payments never change, and
+          past ones change only as skip_open_before_anchor below allows.
+          anchor_date cannot fall before the last occurrence with a payment, and
+          installment plans and semimonthly bills cannot be re-anchored here.
+        - Open occurrences already past and due before the new anchor stay owed and are
+          listed in occurrences.left_open_before_anchor. skip_open_before_anchor true
+          marks the ones without any payment skipped instead (never paid).
+        - dry_run true checks the whole change and returns the occurrences it would
+          create, remove and skip, without saving anything. Preview schedule changes
+          this way and confirm them with the user before calling again without it.
+        - Changing the schedule (frequency / due day / anchor_date) pins it: automatic
+          detection will respect it as the user's intent from then on.
         - status "paused" sets the bill aside (no new occurrences); "active" resumes it.
         - bill_type can move between bill, subscription and installment only.
 
@@ -48,8 +68,24 @@ class Assistant::Function::UpdateBill < Assistant::Function
         status: { type: "string", enum: %w[active paused] },
         frequency: {
           type: "string",
-          enum: RecurringTransaction::FrequencyPreset::PRESETS,
-          description: "New cadence. once is a single occurrence on the bill's current due date. Combine other cadences with due_day_of_month / weekday / month_of_year as needed."
+          enum: FREQUENCIES,
+          description: "New cadence. once is a single occurrence on the bill's current due date (or on anchor_date). " \
+                       "custom needs interval_count and interval_unit. Combine other cadences with " \
+                       "due_day_of_month / weekday / month_of_year as needed."
+        },
+        interval_count: { type: "integer", minimum: 1, description: INTERVAL_COUNT_DESCRIPTION },
+        interval_unit: { type: "string", enum: CUSTOM_INTERVAL_UNITS, description: INTERVAL_UNIT_DESCRIPTION },
+        anchor_date: {
+          type: "string",
+          description: "YYYY-MM-DD. The bill's next due date; its cadence counts from this date from now on."
+        },
+        skip_open_before_anchor: {
+          type: "boolean",
+          description: "With anchor_date: mark open, payment-free occurrences already due before it skipped. Default false."
+        },
+        dry_run: {
+          type: "boolean",
+          description: "Validate and return the occurrences that would be created, removed and skipped, without saving. Default false."
         },
         due_day_of_month: { type: "integer", minimum: 1, maximum: 31 },
         weekday: { type: "integer", minimum: 0, maximum: 6, description: "0 = Sunday." },
@@ -71,7 +107,14 @@ class Assistant::Function::UpdateBill < Assistant::Function
     series, error = find_writable_series(params["bill_id"])
     return error if error
 
+    dry_run, error = resolve_boolean(params, "dry_run")
+    return error if error
+
     changed = []
+    # Set by apply_schedule when the call re-anchors the series. Reset here
+    # because one instance can serve several calls in a chat.
+    @anchor = nil
+    @skip_open_before_anchor = false
 
     # Each step returns an error hash or nil; the first error aborts the call
     # before anything is saved.
@@ -86,11 +129,25 @@ class Assistant::Function::UpdateBill < Assistant::Function
       return { error: "No recognized fields to change", hint: "Pass at least one editable field." }
     end
 
-    unless series.save
+    edit = RecurringTransaction::ScheduleEdit.new(series, anchor: @anchor, skip_open_before_anchor: @skip_open_before_anchor)
+    unless (report = edit.save(dry_run: dry_run))
       return { error: series.errors.full_messages.to_sentence, hint: "Fix the named fields and retry once." }
     end
 
-    { updated: true, changed_fields: changed, bill: serialize_series(series.reload) }
+    result = if dry_run
+      { dry_run: true, changed_fields: changed }
+    else
+      { updated: true, changed_fields: changed, bill: serialize_series(series.reload) }
+    end
+    result[:occurrences] = report.to_h if dry_run || changed.include?("schedule")
+
+    if report.left_open_before_anchor.any?
+      result[:note] = "The open occurrences in left_open_before_anchor predate the new anchor and are still owed. " \
+                      "Ask the user whether they were paid (record_bill_payment) or should be skipped " \
+                      "(skip_bill_occurrence, or skip_open_before_anchor with the same anchor_date)."
+    end
+
+    result
   end
 
   private
@@ -237,49 +294,157 @@ class Assistant::Function::UpdateBill < Assistant::Function
     # cannot quietly move it back, exactly as the edit dialog does.
     def apply_schedule(series, params, changed)
       companions = %w[due_day_of_month weekday month_of_year].select { |key| params.key?(key) }
+      anchoring = params["anchor_date"].present?
 
-      unless params.key?("frequency")
-        # Day details without a cadence would be silently dropped; a financial
-        # write is the wrong place to guess which cadence they belong to.
-        if companions.any?
-          return {
-            error: "#{companions.to_sentence} need frequency alongside them",
-            hint: "Pass frequency too (get_bill_details shows the current one)."
-          }
-        end
-        return nil
+      skip_open, error = resolve_boolean(params, "skip_open_before_anchor")
+      return error if error
+
+      if skip_open && !anchoring
+        return {
+          error: "skip_open_before_anchor needs anchor_date",
+          hint: "Pass the new anchor_date the skipped occurrences fall before."
+        }
+      end
+
+      # Day details without a cadence would be silently dropped; a financial
+      # write is the wrong place to guess which cadence they belong to.
+      if companions.any? && !params.key?("frequency")
+        return {
+          error: "#{companions.to_sentence} need frequency alongside them",
+          hint: "Pass frequency too (get_bill_details shows the current one)."
+        }
       end
 
       # Same contract as create_bill: an unrecognized cadence is rejected, not
       # guessed around, and the other edits in this call are not saved with it.
-      unless params["frequency"].to_s.presence_in(RecurringTransaction::FrequencyPreset::PRESETS)
+      if params.key?("frequency") && !params["frequency"].to_s.presence_in(FREQUENCIES)
         return {
           error: "#{params["frequency"]} is not a frequency this app recognizes",
-          hint: "Use one of: #{RecurringTransaction::FrequencyPreset::PRESETS.join(', ')}."
+          hint: "Use one of: #{FREQUENCIES.join(', ')}."
         }
       end
 
-      applied = RecurringTransaction::FrequencyPreset.apply(
-        series,
-        preset: params["frequency"],
-        day_of_month: params["due_day_of_month"],
-        weekday: params["weekday"],
-        month_of_year: params["month_of_year"]
-      )
+      frequency = params["frequency"]
+      interval, error = resolve_custom_interval(params, frequency)
+      return error if error
 
-      # A refused cadence (a paid one-off's date, say) is reported, not saved
-      # around: the save below would clear the error and drop the change.
-      if series.errors.any?
-        return {
-          error: series.errors.full_messages.to_sentence,
-          hint: "Fix the named fields and retry once."
-        }
+      if anchoring
+        return reanchor(series, frequency, interval, params, changed, skip_open: skip_open)
       end
+      return nil unless params.key?("frequency")
+
+      applied, error = apply_cadence(series, frequency, interval, params)
+      return error if error
 
       if applied
         series.pin_schedule
         changed << "schedule"
       end
       nil
+    end
+
+    # The anchor becomes the bill's next due date and the day its cadence
+    # counts from. Without a frequency it moves the cadence the bill already
+    # has; with one, the new cadence starts there. Either way the day details
+    # follow the anchor unless given, so the anchor is a due date by
+    # construction, and given ones that disagree with it are refused.
+    def reanchor(series, frequency, interval, params, changed, skip_open:)
+      anchor = strict_date(params["anchor_date"])
+      return { error: "anchor_date is not a valid date", hint: "Use YYYY-MM-DD." } if anchor.nil?
+
+      if frequency.nil?
+        frequency, interval, error = current_cadence(series)
+        return error if error
+      end
+
+      if frequency == "semimonthly"
+        return {
+          error: "A twice-monthly bill has no single start date to move",
+          hint: "Change its days with frequency semimonthly and due_day_of_month instead, or pick another cadence."
+        }
+      end
+
+      last_paid = series.last_paid_due_on
+      if last_paid && anchor < last_paid
+        return {
+          error: "anchor_date #{anchor.iso8601} is before #{last_paid.iso8601}, the last occurrence of " \
+                 "#{series.display_name} with a payment on it",
+          hint: "Paid cycles are history the schedule continues from. Use an anchor_date on or after #{last_paid.iso8601}."
+        }
+      end
+
+      series.restart_schedule_on(anchor)
+      _, error = apply_cadence(series, frequency, interval, params, anchor: anchor)
+      return error if error
+
+      # Leaving Once releases its one-payment cap; an installment keeps its
+      # count, which runs from the anchor, so moving it would restart the plan.
+      if series.ends_after_count? && frequency != RecurringTransaction::FrequencyPreset::ONCE
+        return {
+          error: "#{series.display_name} is a plan of #{series.end_after_count} payments counted from its first one",
+          hint: "Moving its start would restart that count, so installment plans cannot be re-anchored here. " \
+                "Tell the user to adjust it on the Bills page."
+        }
+      end
+
+      unless frequency == RecurringTransaction::FrequencyPreset::ONCE || due_on_schedule?(series, anchor)
+        return {
+          error: "No occurrence of the resulting schedule falls on anchor_date #{anchor.iso8601}",
+          hint: "Leave out due_day_of_month / weekday / month_of_year so they follow anchor_date, and check " \
+                "the bill's end date and weekend handling in get_bill_details."
+        }
+      end
+
+      @anchor = anchor
+      @skip_open_before_anchor = skip_open
+      series.pin_schedule
+      changed << "schedule"
+      nil
+    end
+
+    # [applied, nil] or [nil, error]. A refused cadence (a paid one-off's
+    # date, say) is reported, not saved around: the save would clear the
+    # error and drop the change.
+    def apply_cadence(series, frequency, interval, params, anchor: nil)
+      applied = RecurringTransaction::FrequencyPreset.apply(
+        series,
+        preset: interval ? RecurringTransaction::FrequencyPreset::INTERVAL : frequency,
+        day_of_month: params["due_day_of_month"] || anchor&.day,
+        weekday: params["weekday"] || anchor&.wday,
+        month_of_year: params["month_of_year"] || anchor&.month,
+        interval: interval&.first,
+        interval_unit: interval&.last,
+        once_on: anchor
+      )
+
+      return [ applied, nil ] if series.errors.none?
+
+      [ nil, { error: series.errors.full_messages.to_sentence, hint: "Fix the named fields and retry once." } ]
+    end
+
+    # The bill's cadence as this tool's frequency and interval, for an anchor
+    # passed alone. A shape the tool cannot express (an nth weekday, or two
+    # rules) has nothing it could re-apply from the new date.
+    def current_cadence(series)
+      detection = RecurringTransaction::FrequencyPreset.detect(series)
+
+      case detection.key
+      when RecurringTransaction::FrequencyPreset::INTERVAL
+        [ RecurringTransaction::FrequencyPreset::CUSTOM, [ detection.interval, detection.interval_unit ], nil ]
+      when RecurringTransaction::FrequencyPreset::CUSTOM
+        [ nil, nil, {
+          error: "#{series.display_name} has a cadence this tool cannot re-anchor as it is",
+          hint: "Pass frequency (with interval_count and interval_unit for custom) alongside anchor_date to replace it."
+        } ]
+      else
+        [ detection.key, nil, nil ]
+      end
+    end
+
+    # On the raw schedule, before weekend handling moves it: the anchor is the
+    # occurrence's identity even when it is paid a day early.
+    def due_on_schedule?(series, date)
+      margin = RecurringTransaction::Schedule::WEEKEND_MARGIN
+      series.schedule.occurrence_pairs_between(date - margin, date + margin).any? { |pair| pair.original_due_on == date }
     end
 end

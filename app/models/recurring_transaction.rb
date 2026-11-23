@@ -1034,6 +1034,35 @@ class RecurringTransaction < ApplicationRecord
     self.matcher_hints = matcher_hints.to_h.merge("schedule_pinned_at" => Time.current.iso8601)
   end
 
+  # Re-anchors the schedule: `date` becomes the next due date and the one an
+  # every-N cadence counts from. Occurrence rows before it belong to the
+  # schedule it replaces, so generation never reaches behind it again (see
+  # #schedule_starts_on). Kept in matcher_hints beside the pin, which travels
+  # with exports. Assigns rather than saves, like pin_schedule.
+  def restart_schedule_on(date)
+    self.anchor_date = date
+    self.next_expected_date = date
+    self.matcher_hints = matcher_hints.to_h.merge("schedule_starts_on" => date.iso8601)
+  end
+
+  # The date a re-anchored schedule starts on, or nil when it never was.
+  # A declared bill's anchor already plays this part for generation; this
+  # carries it to detected series, and to the rows an earlier schedule left.
+  def schedule_starts_on
+    value = matcher_hints.to_h["schedule_starts_on"]
+    Date.iso8601(value) if value.present?
+  rescue Date::Error
+    nil
+  end
+
+  # Due date of the latest occurrence that is paid or carries a confirmed
+  # payment, in full or in part. The cycles up to it are paid history, so a
+  # schedule re-anchored before it would lay new obligations among them.
+  def last_paid_due_on
+    paid_ids = RecurringAllocation.confirmed.select(:recurring_occurrence_id)
+    recurring_occurrences.paid.or(recurring_occurrences.where(id: paid_ids)).maximum(:due_on)
+  end
+
   # Mark as inactive
   def mark_inactive!
     update!(status: "inactive")

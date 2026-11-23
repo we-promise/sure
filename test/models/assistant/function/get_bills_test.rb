@@ -36,6 +36,18 @@ class Assistant::Function::GetBillsTest < ActiveSupport::TestCase
 
     assert_equal "interval", RecurringTransaction::FrequencyPreset.detect(series).key
     assert_equal "custom", row[:frequency]
+    assert_equal 2, row[:interval_count], "custom alone does not say how often"
+    assert_equal "month", row[:interval_unit], "in the unit words the write tools take"
+  end
+
+  test "a named cadence carries no interval fields" do
+    create_series(name: "Rent", amount: 900)
+
+    row = call_tool[:bills].find { |bill| bill[:name] == "Rent" }
+
+    assert_equal "monthly", row[:frequency]
+    assert_not row.key?(:interval_count)
+    assert_not row.key?(:interval_unit)
   end
 
   test "the paused filter speaks the UI vocabulary over the stored value" do

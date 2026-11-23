@@ -27,10 +27,13 @@ class RecurringTransaction
     attr_reader :rules, :anchor_date, :weekend_adjust, :end_mode, :end_on, :end_after_count,
                 :expected_day_of_month
 
+    # Rules marked for destruction are leaving with the next save. Mid-edit,
+    # FrequencyPreset has already built their replacements beside them, so
+    # counting both would schedule the old cadence and the new one at once.
     def self.for(recurring_transaction)
       new(
         expected_day_of_month: recurring_transaction.expected_day_of_month,
-        rules: recurring_transaction.recurrence_rules.map { |rule|
+        rules: recurring_transaction.recurrence_rules.reject(&:marked_for_destruction?).map { |rule|
           Rule.new(
             frequency: rule.frequency,
             interval: rule.interval,

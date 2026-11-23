@@ -26,6 +26,30 @@ module Assistant::Function::BillsSupport
   REFERENCE_ONLY_DESCRIPTION = "With a bank_reference set: match payments by that reference alone and ignore " \
                                "the bill's name and merchant. Default false; has no effect without a reference."
 
+  # The write tools' cadence enum: the named presets, plus "custom" for an
+  # every-N cadence described by interval_count and interval_unit.
+  FREQUENCIES = (RecurringTransaction::FrequencyPreset::PRESETS + [ RecurringTransaction::FrequencyPreset::CUSTOM ]).freeze
+
+  # interval_unit words and the rule frequency each one stores. The schedule
+  # engine repeats by week, month or year only, so "day" is accepted for
+  # whole weeks and stored as weeks.
+  INTERVAL_UNITS = { "week" => "weekly", "month" => "monthly", "year" => "yearly" }.freeze
+  CUSTOM_INTERVAL_UNITS = ([ "day" ] + INTERVAL_UNITS.keys).freeze
+  DAYS_PER_WEEK = 7
+
+  INTERVAL_COUNT_DESCRIPTION = "With frequency custom only, and then required: repeat every this many units, " \
+                               "a whole number from 1 (3 with interval_unit week is every 3 weeks)."
+  INTERVAL_UNIT_DESCRIPTION = "With frequency custom only, and then required. day counts only in whole weeks " \
+                              "(21 days is stored as 3 weeks): bills repeat by week, month or year."
+
+  # The tool caller does not enforce params_schema, so a string "true" from
+  # a loose MCP client would otherwise compare unequal to true and silently
+  # flip a paycheck into a bill. An explicit allowlist, not
+  # ActiveModel::Type::Boolean, because that cast reads every unrecognized
+  # string as true, and a financial write is the wrong place to guess.
+  TRUTHY_INPUTS = [ true, "true", "t", "1", 1 ].freeze
+  FALSY_INPUTS = [ false, "false", "f", "0", 0 ].freeze
+
   private
     def recurring_disabled?
       family.recurring_transactions_disabled?
@@ -83,6 +107,7 @@ module Assistant::Function::BillsSupport
 
     def serialize_series(series)
       detection = RecurringTransaction::FrequencyPreset.detect(series)
+      every_n = detection.key == RecurringTransaction::FrequencyPreset::INTERVAL
 
       {
         id: series.id,
@@ -91,9 +116,13 @@ module Assistant::Function::BillsSupport
         status: display_status(series),
         amount: series.amount_money.abs.format,
         currency: series.currency,
-        # The tools' frequency enum is PRESETS; an every-N cadence outside it
-        # reads as custom there, as it did before the picker could set one.
+        # The tools' frequency enum is PRESETS plus custom; an every-N cadence
+        # outside the presets reads as custom, with its interval beside it so
+        # the cadence can be read back and passed to the write tools as is.
+        # Other custom shapes (an nth weekday, say) carry no single interval.
         frequency: detection.key.presence_in(RecurringTransaction::FrequencyPreset::PRESETS) || "custom",
+        interval_count: (detection.interval if every_n),
+        interval_unit: (INTERVAL_UNITS.key(detection.interval_unit) if every_n),
         next_due_date: series.next_due_date&.iso8601,
         autopay: series.autopay,
         detected_automatically: !series.manual,
@@ -139,6 +168,102 @@ module Assistant::Function::BillsSupport
       return nil if account.nil?
 
       { id: account.id, name: account.name }
+    end
+
+    def resolve_boolean(params, key)
+      value = params[key]
+      return [ false, nil ] if value.nil?
+
+      normalized = value.is_a?(String) ? value.strip.downcase : value
+      return [ true, nil ] if TRUTHY_INPUTS.include?(normalized)
+      return [ false, nil ] if FALSY_INPUTS.include?(normalized)
+
+      [ nil, {
+        error: "#{key} must be true or false",
+        hint: "Pass a JSON boolean, not #{value.inspect}."
+      } ]
+    end
+
+    # YYYY-MM-DD only. Date.parse reads "3" as the 3rd of this month and
+    # "next tuesday" as a date, and a schedule's anchor is the wrong place to
+    # guess. nil when the value is absent or does not parse.
+    def strict_date(value)
+      Date.iso8601(value.to_s) if value.present?
+    rescue Date::Error
+      nil
+    end
+
+    # [[interval, rule frequency], nil] for frequency "custom", [nil, nil] for
+    # any other cadence, or [nil, error]. interval_count and interval_unit
+    # belong to "custom" alone: beside a named cadence they would be ignored,
+    # and a financial write is the wrong place to guess which one was meant.
+    def resolve_custom_interval(params, frequency)
+      given = %w[interval_count interval_unit].select { |key| params[key].present? }
+
+      unless frequency == RecurringTransaction::FrequencyPreset::CUSTOM
+        return [ nil, nil ] if given.empty?
+
+        return [ nil, {
+          error: "#{given.to_sentence} only #{given.one? ? 'applies' : 'apply'} to frequency custom",
+          hint: "Pass frequency \"custom\" with interval_count and interval_unit, or drop them for a named cadence."
+        } ]
+      end
+
+      missing = %w[interval_count interval_unit] - given
+      if missing.any?
+        return [ nil, {
+          error: "frequency custom needs #{missing.to_sentence}",
+          hint: "Pass interval_count (a whole number from 1) and interval_unit (#{CUSTOM_INTERVAL_UNITS.join(', ')}), " \
+                "e.g. 3 and week for every 3 weeks."
+        } ]
+      end
+
+      count = strict_integer(params["interval_count"])
+      if count.nil? || count < 1
+        return [ nil, {
+          error: "interval_count must be a whole number of at least 1",
+          hint: "Pass an integer such as 3, not #{params["interval_count"].inspect}."
+        } ]
+      end
+
+      unit = params["interval_unit"].to_s
+      unless CUSTOM_INTERVAL_UNITS.include?(unit)
+        return [ nil, {
+          error: "#{unit.inspect} is not an interval unit this app recognizes",
+          hint: "Use one of: #{CUSTOM_INTERVAL_UNITS.join(', ')}."
+        } ]
+      end
+
+      if unit == "day"
+        unless (count % DAYS_PER_WEEK).zero?
+          return [ nil, {
+            error: "Every #{count} days is not a cadence this app can schedule",
+            hint: "Bills repeat by week, month or year, so a count of days must be whole weeks " \
+                  "(a multiple of #{DAYS_PER_WEEK}). Ask the user which weekly or monthly cadence is closest."
+          } ]
+        end
+
+        count /= DAYS_PER_WEEK
+        unit = "week"
+      end
+
+      max = RecurringTransaction::FrequencyPreset::MAX_INTERVAL
+      if count > max
+        return [ nil, {
+          error: "interval_count can be at most #{max} #{unit.pluralize}",
+          hint: "Use a larger interval_unit for a cadence that long."
+        } ]
+      end
+
+      [ [ count, INTERVAL_UNITS.fetch(unit) ], nil ]
+    end
+
+    # A typed count is parsed whole: to_i would read "2.5" as 2 and "3abc" as
+    # 3. Base 10 because Integer alone reads "010" as octal.
+    def strict_integer(value)
+      return value if value.is_a?(Integer)
+
+      Integer(value.to_s, 10, exception: false)
     end
 
     # One grouped SUM for the given occurrences, injected through the same

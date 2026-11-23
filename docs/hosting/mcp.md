@@ -188,9 +188,10 @@ permissions enforced in the web UI.
 | `get_bill_details` | One bill's full configuration, open occurrences, payment history, price-change history and cost analytics |
 | `get_paycheck_plan` | Income plan sliced into pay periods: what is due before the next payday, what stays reserved for later bills, what is safe to spend |
 | `get_bill_audit` | Deterministic bills review: possible duplicates, price changes, trials about to convert, upcoming renewals, long-overdue bills and undeclared recurring patterns |
-| `create_bill` | Create a bill, subscription, installment plan or income schedule |
-| `update_bill` | Update one bill's configuration; amount changes apply from today forward |
+| `create_bill` | Create a bill, subscription, installment plan or income schedule, including a custom every-N-weeks/months/years cadence |
+| `update_bill` | Update one bill's configuration; amount changes apply from today forward. Can set a custom cadence, re-anchor the series on a new next due date (rebuilding only open future occurrences), and preview the occurrence changes with `dry_run` |
 | `record_bill_payment` | Record a partial payment against a bill's open occurrence, or settle it in full |
+| `skip_bill_occurrence` | Mark one open occurrence skipped (a duplicate or phantom date), as Skip does on the Bills page |
 
 Because tool calls never pass through the Bills pages' controllers, the bills
 tools re-check the family's recurring-transactions feature gate (Settings →

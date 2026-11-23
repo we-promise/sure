@@ -8,7 +8,8 @@ class Assistant::Function::BillsToolsSchemaTest < ActiveSupport::TestCase
     Assistant::Function::GetBillAudit,
     Assistant::Function::CreateBill,
     Assistant::Function::UpdateBill,
-    Assistant::Function::RecordBillPayment
+    Assistant::Function::RecordBillPayment,
+    Assistant::Function::SkipBillOccurrence
   ].freeze
 
   # Strict function calling requires every declared property in `required`;
