@@ -112,7 +112,7 @@ class LoanTest < ActiveSupport::TestCase
       name: "Interest-free Loan",
       balance: 1,
       currency: "USD",
-      accountable: Loan.create!(subtype: "mortgage", interest_rate: 0, term_months: 1200, rate_type: "fixed", start_date: Date.new(2024, 1, 1))
+      accountable: Loan.create!(subtype: "mortgage", interest_rate: 0, term_months: 360, rate_type: "fixed", start_date: Date.new(2024, 1, 1))
 
     assert_not rateless.loan.amortizable?, "premise: a loan with no rate cannot be scheduled"
     assert rounds_to_zero.loan.amortizable?, "premise: a 0% loan with a term can be scheduled"
