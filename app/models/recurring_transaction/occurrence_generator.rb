@@ -79,12 +79,15 @@ class RecurringTransaction
         from = [ from, history_floor(through, history_cycles) ].max if history_cycles.present?
       end
 
-      upsert_window(
+      count = upsert_window(
         from,
         through,
         historical: historical,
         limit: historical ? history_cycles : nil
       )
+      trim_older_historical_rows!(history_cycles) if historical
+
+      count
     end
 
     private
@@ -180,6 +183,26 @@ class RecurringTransaction
           pair = by_original[occurrence.original_due_on]
           occurrence.update_column(:expected_amount, series.amount_on(pair.due_on).abs)
         end
+      end
+
+      # A later backfill (time has moved on, or the start date changed) would
+      # otherwise leave an ever-growing tail of empty historical cycles. Keep
+      # the newest `limit`; older scheduled rows with no confirmed payment are
+      # safe to remove. Recorded and settled history is never touched.
+      def trim_older_historical_rows!(limit)
+        return if limit.blank?
+
+        keep_ids = series.recurring_occurrences
+                         .where(historical: true)
+                         .order(due_on: :desc)
+                         .limit(limit)
+                         .pluck(:id)
+
+        series.recurring_occurrences
+              .where(historical: true, status: "scheduled")
+              .where.not(id: keep_ids)
+              .where.not(id: RecurringAllocation.confirmed.select(:recurring_occurrence_id))
+              .delete_all
       end
 
       # Rows a schedule edit kept from the previous rule are paid or past-due

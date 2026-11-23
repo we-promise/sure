@@ -41,9 +41,9 @@
             value: recurring_transaction.first_due_on,
             required: true %>
       <%= f.date_field :started_on,
-            label: t(".started_on_label"),
+            label: income ? t(".income_started_on_label") : t(".started_on_label"),
             value: recurring_transaction.started_on %>
-      <p class="text-xs text-secondary"><%= t(".started_on_hint") %></p>
+      <p class="text-xs text-secondary"><%= income ? t(".income_started_on_hint") : t(".started_on_hint") %></p>
     <% else %>
       <%# first_due_on seeds the schedule and does nothing once the series
           exists, so editing when a bill falls due happens in the frequency
@@ -159,8 +159,9 @@
 
     <% if recurring_transaction.persisted? %>
       <div class="space-y-2">
-        <%= f.date_field :started_on, label: t(".started_on_label") %>
-        <p class="text-xs text-secondary"><%= t(".started_on_edit_hint") %></p>
+        <%= f.date_field :started_on,
+              label: income ? t(".income_started_on_label") : t(".started_on_label") %>
+        <p class="text-xs text-secondary"><%= income ? t(".income_started_on_edit_hint") : t(".started_on_edit_hint") %></p>
       </div>
     <% end %>
 

@@ -3908,9 +3908,12 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     series = @family.recurring_transactions.find_by!(name: "Rent")
     generated = series.recurring_occurrences.open_status.order(:due_on).pluck(:due_on)
 
-    assert generated.any?, "generation must have materialized future cycles"
+    assert_operator generated.length, :>=, 2, "a single occurrence cannot prove the cadence"
     generated.each do |due_on|
       assert_equal 1, due_on.cwday, "#{due_on} is not the rule's Monday"
+    end
+    generated.each_cons(2) do |a, b|
+      assert_equal 14, (b - a).to_i, "#{a} to #{b} is not one biweekly step"
     end
   end
 

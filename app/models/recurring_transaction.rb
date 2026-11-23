@@ -601,7 +601,7 @@ class RecurringTransaction < ApplicationRecord
 
   def current_occurrence
     recurring_occurrences.current_open.order(:due_on).first ||
-      recurring_occurrences.order(due_on: :desc).first
+      recurring_occurrences.where(historical: false).order(due_on: :desc).first
   end
 
   # The occurrences are the schedule. They are what the app materializes,

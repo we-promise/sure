@@ -503,6 +503,22 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal current, series.next_open_occurrence
   end
 
+  test "current occurrence does not fall back to an old historical cycle" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Rent", amount: 100, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    series.recurring_occurrences.delete_all
+    series.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true
+    )
+
+    assert_nil series.current_occurrence
+  end
+
   test "moving started_on later removes only unallocated history" do
     series = @family.recurring_transactions.create!(
       account: @account, name: "Rent", amount: 100, currency: "USD",

@@ -119,6 +119,7 @@ class RecurringOccurrencesController < ApplicationController
 
       scope = base
         .where(entryable_type: "Transaction")
+        .not_excluded_or_split_parent
         .where(currency: @occurrence.currency)
         .where(sign)
         .where.not(id: @occurrence.allocations.where.not(entry_id: nil).select(:entry_id))

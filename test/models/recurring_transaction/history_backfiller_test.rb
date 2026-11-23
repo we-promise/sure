@@ -184,6 +184,27 @@ class RecurringTransaction::HistoryBackfillerTest < ActiveSupport::TestCase
     end
   end
 
+  test "a later backfill keeps only the newest 12 unpaid historical cycles" do
+    travel_to Date.new(2026, 8, 10) do
+      series = create_series(name: "CITY WATER", amount: 80, day_offset: -1)
+      series.update_column(:started_on, Date.new(2024, 1, 1))
+      scope = @family.recurring_transactions.where(id: series.id)
+
+      Backfiller.new(@family, from: series.started_on, series_scope: scope, keep_history: true).run!
+      assert_equal 12, series.recurring_occurrences.where(historical: true).count
+
+      travel 6.months
+      RecurringTransaction::OccurrenceGenerator.new(series).generate!
+      Backfiller.new(@family, from: series.started_on, series_scope: scope, keep_history: true).run!
+
+      historical = series.recurring_occurrences.where(historical: true).order(:due_on)
+      assert_equal 12, historical.count, "the empty history tail must not grow"
+      assert_operator historical.last.due_on, :>, Date.new(2026, 7, 9),
+        "the later backfill must have added newer cycles"
+      assert_equal historical.map(&:due_on), historical.map(&:due_on).sort
+    end
+  end
+
   test "declared history uses the price in force on each cycle" do
     travel_to Date.new(2026, 8, 10) do
       series = create_series(name: "CITY WATER", amount: 90, day_offset: -1)
