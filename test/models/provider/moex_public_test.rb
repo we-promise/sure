@@ -343,6 +343,10 @@ class Provider::MoexPublicTest < ActiveSupport::TestCase
     assert_in_delta 12.4, cny.data.rate.to_f
   end
 
+  test "usd_cross? is false, as only RUB pairs are quoted" do
+    assert_not @provider.usd_cross?
+  end
+
   test "fetch_exchange_rates returns empty for a non-RUB-crossed pair" do
     @provider.expects(:get_json).never
 

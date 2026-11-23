@@ -80,6 +80,13 @@ class Provider::Frankfurter < Provider
     end
   end
 
+  # The API converts every pair between two currencies it covers itself, so a
+  # pair it lacks has an unsupported currency or no data for the dates, and so
+  # does a USD leg.
+  def usd_cross?
+    false
+  end
+
   def max_history_days
     nil # Backed by central bank reference rates going back decades, no bounded window.
   end
