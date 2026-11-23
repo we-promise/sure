@@ -27,7 +27,7 @@ class Rule::Runner
 
   # changed_now_count: transactions the run changed itself, without the ones
   # handed to AI jobs, which report their own changes (RuleRun#complete_job!).
-  attr_reader :errors, :changed_now_count
+  attr_reader :changed_now_count
 
   def self.advisory_lock_key(family_id)
     Digest::MD5.hexdigest("rule_runner:#{family_id}").to_i(16) % (2**62)
@@ -41,9 +41,14 @@ class Rule::Runner
     @ignore_attribute_locks = ignore_attribute_locks
     @claimed_ids = Hash.new { |hash, attribute| hash[attribute] = Set.new }
     @stopped_ids = Set.new
-    @errors = []
+    @errors_by_rule_id = {}
     @changed_now_count = 0
   end
+
+  def errors = errors_by_rule_id.values
+
+  # The error that failed this rule's run, if it raised.
+  def error_for(rule) = errors_by_rule_id[rule.id]
 
   # Returns the RuleRun records created, one per executed rule.
   def run
@@ -57,7 +62,7 @@ class Rule::Runner
   end
 
   private
-    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :transaction_ids
+    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :transaction_ids, :errors_by_rule_id
 
     def run_rules
       rule_runs = []
@@ -177,7 +182,7 @@ class Rule::Runner
     end
 
     def record_failure(rule, rule_run, error, executed_at:, queued:)
-      errors << error
+      errors_by_rule_id[rule.id] = error
       error_message = "#{error.class}: #{error.message}"
       Rails.logger.error("Rule::Runner failed for rule #{rule.id}: #{error_message}")
       # A failed rule, such as a pattern that timed out, is the user's to fix, so
