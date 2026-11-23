@@ -136,11 +136,18 @@ class Rule::ActionExecutor
   private
     attr_reader :rule
 
+    # Never raises, so one batch can't keep the others from being queued.
     def queue_ai_job(batch, ids, rule_run:)
       raise ActiveJob::EnqueueError, "the AI job couldn't be queued" unless yield(batch)
     rescue StandardError => error
       Rails.logger.error("[#{self.class.name}] #{error.class}: #{error.message}")
+      fail_unqueued_job(rule_run, error, ids)
+    end
+
+    def fail_unqueued_job(rule_run, error, ids)
       rule_run&.fail_job!(job_id: SecureRandom.uuid, error:, source: self.class.name, transaction_ids: ids)
+    rescue StandardError => settle_error
+      Rails.error.report(settle_error, handled: true, context: { rule_run_id: rule_run.id, source: self.class.name })
     end
 
     def family

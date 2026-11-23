@@ -232,6 +232,20 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_match "ActiveJob::EnqueueError", run.error_message
   end
 
+  test "the other AI batches are still queued when one can't be queued or recorded" do
+    create_transaction(account: @account, name: "Whole Foods Downtown")
+    rule = create_ai_rule("auto_categorize")
+    Provider::LlmConcept.stubs(:max_items_per_call).returns(1)
+    Family.any_instance.expects(:auto_categorize_transactions_later).twice.returns(false).then.returns(true)
+    RuleRun.any_instance.stubs(:fail_job!).raises(ActiveRecord::ConnectionNotEstablished, "connection lost")
+
+    Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run
+
+    run = rule.rule_runs.sole
+    assert_equal "pending", run.status, "the queued batch still reports to the run"
+    assert_equal 2, run.pending_jobs_count
+  end
+
   test "a rule above that cannot be matched does not stop the applied rule" do
     broken = create_rule("Broken", "Whole Foods", category: @groceries)
     broken.conditions.first.update!(condition_type: "transaction_notes")
