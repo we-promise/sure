@@ -38,6 +38,33 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal 1, @account.transactions.reload.enrichable(:category_id).count
   end
 
+  test "leaves plain transfer legs uncategorized" do
+    transfer_leg = create_transaction(account: @account, name: "To brokerage").transaction
+    transfer_leg.update!(kind: "funds_movement")
+    @llm_provider.expects(:auto_categorize).never
+
+    assert_equal 0, Family::AutoCategorizer.new(@family, transaction_ids: [ transfer_leg.id ]).auto_categorize
+    assert_nil transfer_leg.reload.category
+  end
+
+  # A sync or confirmation makes the leg a plain transfer after the
+  # categorizer selected it: the AI's category must not land on it.
+  test "leaves a leg that became a plain transfer after it was selected uncategorized" do
+    leg = create_transaction(account: @account, name: "To brokerage").transaction
+    category = @family.categories.create!(name: "Investments")
+    selected = Transaction.where(id: leg.id).to_a
+    Transaction.where(id: leg.id).update_all(kind: "funds_movement")
+    Family::AutoCategorizer.any_instance.stubs(:scope).returns(selected)
+    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: leg.id, category_name: category.name)
+    ]))
+
+    assert_equal 0, Family::AutoCategorizer.new(@family, transaction_ids: [ leg.id ]).auto_categorize
+    leg.reload
+    assert_nil leg.category
+    assert_not leg.locked?(:category_id)
+  end
+
   test "raises when provider returns an unsuccessful response" do
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     @family.categories.create!(name: "Coffee")

@@ -261,6 +261,10 @@ fr:
         placeholder: Saisissez ici votre clé d'API RentCast
         title: RentCast
         usage: "%{used} sur %{limit} requêtes mensuelles utilisées"
+      reset_market_data:
+        market_data_reset: Réinitialisation des données de marché mise en file d'attente. Les taux et les cours seront réimportés, puis tous les comptes seront synchronisés.
+        market_data_reset_already_queued: Une réinitialisation des données de marché est déjà en file d'attente ou en cours.
+        market_data_reset_failed: La réinitialisation des données de marché n'a pas pu être mise en file d'attente. Rien n'a été supprimé ; veuillez réessayer.
       show:
         ai_assistant: Assistant IA
         clear_cache: Effacer le cache de données
@@ -270,6 +274,9 @@ fr:
           body: "Êtes-vous sûr(e) de vouloir effacer le cache de données ? Les soldes et les positions des comptes de votre famille seront recalculés, et les taux de change et les cours des titres qu'ils utilisent seront rechargés. Seuls les soldes et les positions de votre famille sont supprimés ; les taux de change et les cours des titres sont partagés avec les autres familles de cette instance et sont aussi mis à jour pour elles. Cette action ne peut pas être annulée."
           body_without_provider: "Êtes-vous sûr(e) de vouloir effacer le cache de données ? Les soldes et les positions des comptes de votre famille seront recalculés. Aucun fournisseur de taux de change ou de cours des titres n'est configuré, les taux de change et les cours enregistrés sont donc conservés. Cette action ne peut pas être annulée."
           title: Effacer le cache de données ?
+        confirm_reset_market_data:
+          title: Réinitialiser les données de marché de toutes les familles ?
+          body: Cette action supprime les taux de change et les cours des titres que vos fournisseurs peuvent recharger, pour toutes les familles de cette instance, puis les réimporte. Jusqu'à la fin de l'import, les montants en devises étrangères peuvent apparaître non convertis. Cette action est irréversible.
         danger_zone: Zone dangereuse
         demo_refresh: Actualisation des données de démo
         financial_data_providers: Fournisseurs de données financières
@@ -277,6 +284,8 @@ fr:
         instance_settings_restricted: 'Les identifiants des fournisseurs, la connexion IA partagée et les paramètres de synchronisation s''appliquent à toutes les familles de cette instance : seul un super administrateur peut donc les modifier. L''assistant utilisé par votre famille reste défini par famille. Une personne ayant accès au serveur peut promouvoir un utilisateur super administrateur ; le guide d''auto-hébergement Docker donne la commande dans ses notes de mise à niveau.'
         invites: Codes d'invitation
         property_valuation_providers: Fournisseurs de valorisation immobilière
+        reset_market_data: Réinitialiser les données de marché de toutes les familles
+        reset_market_data_warning: Supprime les taux de change et les cours des titres que vos fournisseurs peuvent recharger, les réimporte, puis synchronise tous les comptes. Les totaux en devises étrangères peuvent apparaître non convertis jusqu'à la fin de l'import.
         sync_settings: Paramètres de synchronisation
         title: Auto-hébergement
       sync_auto_sync_scheduler!:
@@ -293,6 +302,13 @@ fr:
         market_data_sync_label: Activer l'import quotidien des données de marché
         market_data_sync_time_description: Indiquez l'heure à laquelle l'import quotidien des cours doit s'exécuter, par exemple peu après la clôture de votre place boursière principale.
         market_data_sync_time_label: Heure d'import des données de marché (HH:MM)
+      terrascoutx_settings:
+        title: TerraScoutX
+        description: 'Saisissez votre clé API TerraScoutX pour rechercher les caractéristiques et la valeur des biens situés aux États-Unis lors de l''ajout d''un bien. La valeur est celle fixée par l''évaluateur du comté (county assessor) dans le dernier rôle d''imposition dont dispose TerraScoutX, et non une estimation automatisée du marché : elle est donc en retard sur le marché et peut lui être nettement inférieure dans les États qui plafonnent les évaluations, comme la Californie. La couverture varie selon les comtés. Les clés sont gratuites et limitées à 2 000 requêtes API par mois, partagées entre les recherches de biens et les actualisations quotidiennes des estimations. Si votre clé en autorise davantage, relevez le plafond avec la variable d''environnement TERRASCOUTX_MAX_REQUESTS_PER_MONTH.'
+        env_configured_message: Configuré avec succès via la variable d'environnement TERRASCOUTX_API_KEY.
+        label: Clé API
+        placeholder: Saisissez ici votre clé API TerraScoutX
+        usage: "%{used} sur %{limit} requêtes mensuelles utilisées"
       tiingo_settings:
         description: Saisissez le token API fourni par Tiingo. Le forfait gratuit supporte 50 symboles uniques par heure avec plus de 30 ans de données historiques.
         env_configured_message: Configuré avec succès via la variable d'environnement TIINGO_API_KEY.
