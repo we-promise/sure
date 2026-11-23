@@ -25,6 +25,22 @@ class TradeRepublicAccount < ApplicationRecord
   validates :currency, presence: true
   validates :trade_republic_account_id, uniqueness: { scope: :trade_republic_item_id, allow_nil: true }
 
+  # The Sure accounts that settle the trades of the accounts given: the Cash
+  # account of each connection whose Portfolio or Crypto account is among
+  # account_ids. ActivitiesProcessor#link_settlement_counterpart! books every
+  # trade's cash on that account and links it to the securities account as a
+  # confirmed transfer, so money reaches a split Portfolio or Crypto account
+  # only through it. Returns a relation of account ids, for use as a subquery.
+  def self.settlement_account_ids_for(account_ids)
+    connection_ids = joins(:account_provider)
+      .where(account_providers: { account_id: account_ids }, kind: %w[portfolio crypto])
+      .select(:trade_republic_item_id)
+
+    AccountProvider
+      .where(provider_type: name, provider_id: where(kind: "cash", trade_republic_item_id: connection_ids).select(:id))
+      .select(:account_id)
+  end
+
   def self.crypto_isin?(isin)
     isin.to_s.strip.upcase.start_with?(CRYPTO_ISIN_PREFIX)
   end

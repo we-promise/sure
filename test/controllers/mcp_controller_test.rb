@@ -921,6 +921,28 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools/call import_bank_statement offers and accepts only accounts the user can write to" do
+    use_ai_routes
+    @user = users(:family_member)
+    pdf_import = PdfImport.create!(family: @user.family, document_type: "bank_statement")
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "import_bank_statement", arguments: { pdf_import_id: pdf_import.id } }).to_json,
+           headers: mcp_headers(@token)
+      listed = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+      assert_equal "account_required", listed["error"]
+      assert_not_includes listed["available_accounts"].map { |a| a["id"] }, accounts(:connected).id
+
+      assert_no_difference "Import.count" do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "import_bank_statement", arguments: { pdf_import_id: pdf_import.id, account_id: accounts(:connected).id } }).to_json,
+             headers: mcp_headers(@token)
+      end
+      refused = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+      assert_equal "account_not_found", refused["error"]
+    end
+  end
+
   # -- JSON-RPC id preservation --
 
   test "preserves request id in successful response" do

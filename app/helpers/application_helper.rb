@@ -15,6 +15,12 @@ module ApplicationHelper
     Rails.configuration.x.brand_name
   end
 
+  # The instance's own privacy policy or terms URL, or nil when unset. The
+  # /privacy and /terms routes redirect to the same variables.
+  def legal_page_url(page)
+    ENV[{ privacy: "LEGAL_PRIVACY_URL", terms: "LEGAL_TERMS_URL" }.fetch(page)].presence
+  end
+
   def styled_form_with(**options, &block)
     options[:builder] = StyledFormBuilder
     form_with(**options, &block)
