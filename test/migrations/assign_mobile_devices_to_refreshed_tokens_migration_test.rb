@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require Rails.root.join("db/migrate/20261122120000_assign_mobile_devices_to_refreshed_tokens")
+require Rails.root.join("db/migrate/20261123210000_assign_mobile_devices_to_refreshed_tokens")
 
 class AssignMobileDevicesToRefreshedTokensMigrationTest < ActiveSupport::TestCase
   setup do
