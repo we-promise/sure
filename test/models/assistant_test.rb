@@ -759,6 +759,23 @@ class AssistantTest < ActiveSupport::TestCase
 
       assert_equal "Done.", last_reply.content
     end
+
+    test "a second retry after one that broke mid-answer still does not run the tool again (#{api})" do
+      model = use_scripted_model(api: api, plan: [ [ "create_tag" ] ], failures: { 2 => :error, 3 => :partial })
+      Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true })
+
+      perform_enqueued_jobs
+      @chat.reload.retry_last_message!
+      perform_enqueued_jobs
+      assert_equal "Half an ans", last_reply.content
+      assert_equal "failed", last_reply.status
+
+      @chat.reload.retry_last_message!
+      perform_enqueued_jobs
+
+      assert_equal "Done.", last_reply.content
+      assert_sees_tool_result model.requests.last, "call_1_0", after: @message.content, prompt: nil
+    end
   end
 
   test "a failed reply's partial text stays out of the history" do

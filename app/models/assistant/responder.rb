@@ -129,8 +129,13 @@ class Assistant::Responder
       }
     end
 
+    # The latest reply that finished or ran tools. A failed reply without tool
+    # calls (a retry that broke mid-answer) left nothing in the chain to
+    # continue from, so the search goes past it to the tools before it.
     def latest_reply
-      history_messages.reverse.find { |history_message| history_message.is_a?(AssistantMessage) }
+      history_messages.reverse.find do |history_message|
+        history_message.is_a?(AssistantMessage) && (history_message.complete? || history_message.tool_calls.any?)
+      end
     end
 
     def provider_preserves_response_context?
