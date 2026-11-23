@@ -1,0 +1,9 @@
+---
+nb:
+  settings:
+    ai_prompts:
+      show:
+        insight_dig_in:
+          title: "Utforsk innsikt"
+          subtitle: "Første chatmelding når du utforsker en innsikt nærmere med AI"
+          label: "Melding for å utforske"

@@ -1,0 +1,6 @@
+---
+zh-CN:
+  activerecord:
+    attributes:
+      enable_banking_item:
+        client_certificate: 私钥
