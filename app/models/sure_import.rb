@@ -174,6 +174,16 @@ class SureImport < Import
     raise
   end
 
+  def link_property_cost_tags!(import_session:)
+    # Every exported property carries the key, so a chunk without it has no
+    # link. JSON can only spell the key differently through a \u escape, so a
+    # chunk with one is parsed and the linker checks the decoded key.
+    blob = ndjson_blob_string
+    return unless blob.include?("cost_tag_id") || blob.include?("\\u")
+
+    Family::DataImporter.new(family, blob, import_session: import_session, import: self).link_property_cost_tags!
+  end
+
   def publish_later(user:)
     # The counts the claim's checks read (#writes_rules?) match the file now.
     sync_ndjson_rows_count!
