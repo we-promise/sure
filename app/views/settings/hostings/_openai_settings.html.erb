@@ -65,7 +65,7 @@
                       [t(".json_mode_none"), "none"],
                       [t(".json_mode_json_object"), "json_object"]
                     ],
-                    ENV["LLM_JSON_MODE"].presence_in(Provider::Openai::Concerns::JsonMode::VALID_JSON_MODES) || Setting.openai_json_mode
+                    ENV["LLM_JSON_MODE"].present? ? Provider::Openai::Concerns::JsonMode.configured_mode : Setting.openai_json_mode
                   ),
                   { label: t(".json_mode_label") },
                   { disabled: ENV["LLM_JSON_MODE"].present?,
@@ -88,7 +88,7 @@
     <%= form.number_field :llm_max_response_tokens,
                           label: t(".max_response_tokens_label"),
                           placeholder: "512",
-                          value: ENV["LLM_MAX_RESPONSE_TOKENS"].to_i.positive? ? ENV["LLM_MAX_RESPONSE_TOKENS"].to_i : Setting.llm_max_response_tokens,
+                          value: ENV["LLM_MAX_RESPONSE_TOKENS"].present? ? Provider::Openai.explicit_max_response_tokens : Setting.llm_max_response_tokens,
                           min: 64,
                           disabled: ENV["LLM_MAX_RESPONSE_TOKENS"].present?,
                           data: { "auto-submit-form-target": "auto" } %>

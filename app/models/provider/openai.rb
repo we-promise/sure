@@ -178,7 +178,7 @@ class Provider::Openai < Provider
   # The response cap is only sent to the provider when someone explicitly
   # configured it (ENV or a stored Setting). The 512 fallback above exists for
   # budget math and must not silently truncate replies on stock installs.
-  def explicit_max_response_tokens
+  def self.explicit_max_response_tokens
     explicit = ENV["LLM_MAX_RESPONSE_TOKENS"].to_s.strip.to_i
     return explicit if explicit.positive?
 
@@ -186,6 +186,10 @@ class Provider::Openai < Provider
     return from_setting if from_setting.positive?
 
     nil
+  end
+
+  def explicit_max_response_tokens
+    self.class.explicit_max_response_tokens
   end
 
   def system_prompt_reserve
