@@ -394,6 +394,71 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_equal(-2.75.to_d, replayed.amount)
   end
 
+  test "zero cash corrections update existing provider entries without creating new ones" do
+    stub_snapshot
+    stub_broker_history(
+      cash_event("corrected-deposit", "DEPOSIT", amount: "25"),
+      cash_event("locked-deposit", "DEPOSIT", amount: "30")
+    )
+    run_sync
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    deposit = cash.entries.find_by!(external_id: "corrected-deposit")
+    locked = cash.entries.find_by!(external_id: "locked-deposit")
+    locked.lock_attr!(:amount)
+    original_date = deposit.date
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_history(
+      cash_event("corrected-deposit", "DEPOSIT", amount: "0", at: 1.hour.ago),
+      cash_event("locked-deposit", "DEPOSIT", amount: "0", at: 1.hour.ago),
+      cash_event("new-zero", "DEPOSIT", amount: "0", at: 1.hour.ago)
+    )
+    run_sync
+
+    assert_equal 0.to_d, deposit.reload.amount
+    assert_equal original_date, deposit.date
+    assert_equal deposit.id, cash.entries.where(external_id: "corrected-deposit").sole.id
+    assert_equal(-30.to_d, locked.reload.amount)
+    refute cash.entries.exists?(external_id: "new-zero")
+  end
+
+  test "a zero-net replay clears both settlement legs and a later correction reuses them" do
+    stub_snapshot
+    run_sync
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    broker_leg = brokerage.entries.find_by!(external_id: "settlement:sell")
+    cash_leg = cash.entries.find_by!(external_id: "settlement:sell")
+    transfer = broker_leg.transaction.transfer
+    fee = cash.entries.create!(entryable: Transaction.new(transfer_id: transfer.id), date: cash_leg.date,
+                               amount: 1, currency: "EUR", name: "Separate transfer fee")
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "SELL", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "SELL", "1", "100", "0")))
+    run_sync
+
+    assert_equal 0.to_d, brokerage.entries.trades.find_by!(external_id: "sell").amount
+    assert_equal [ 0.to_d, 0.to_d ], [ broker_leg.reload.amount, cash_leg.reload.amount ]
+    refute Transfer.exists?(transfer.id)
+    assert_nil fee.reload.transaction.transfer_id
+    assert_equal 1.to_d, fee.amount
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "SELL", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "SELL", "1", "100", "95")))
+    run_sync
+
+    assert_equal [ 95.to_d, -95.to_d ], [ broker_leg.reload.amount, cash_leg.reload.amount ]
+    assert_equal broker_leg.transaction.transfer, cash_leg.transaction.transfer
+    assert_predicate broker_leg.transaction.transfer, :confirmed?
+    assert_equal broker_leg.id, brokerage.entries.where(external_id: "settlement:sell").sole.id
+    assert_equal cash_leg.id, cash.entries.where(external_id: "settlement:sell").sole.id
+  end
+
   test "an unreadable timestamp on a supported event preserves checkpoints for a retry" do
     stub_snapshot
     run_sync

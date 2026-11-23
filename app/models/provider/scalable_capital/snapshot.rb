@@ -153,7 +153,6 @@ class Provider::ScalableCapital::Snapshot
 
       amount = decimal(row["amount"])&.abs
       raise Provider::ScalableCapital::InvalidResponse, "Scalable returned an unreadable amount for a supported cash transaction" unless amount
-      return if amount.zero?
 
       label = { "INTEREST" => "Interest", "DIVIDEND" => "Dividend", "DISTRIBUTION" => "Dividend", "FEE" => "Fee" }[type]
       { external_id: id, date: time.to_date, name: text(row["description"]) || type.humanize,

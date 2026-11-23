@@ -140,8 +140,6 @@ class ScalableCapitalItem::Syncer
 
       security = securities.resolve(entry.fetch(:isin), entry[:security_name])
       trade = adapter.import_trade(**entry.except(:isin, :security_name), security: security, source: SOURCE, currency: CURRENCY)
-      return if trade.amount.zero?
-
       import_settlement(adapter, cash_adapter, trade)
     end
 
@@ -149,6 +147,11 @@ class ScalableCapitalItem::Syncer
       # The trade moves Sure investment cash. Its opposite leg keeps portfolio
       # cash at zero even if the user deliberately unlinked the cash account.
       id = "settlement:#{trade.external_id}"
+      if trade.amount.zero?
+        [ broker_adapter, cash_adapter ].compact.each { |adapter| apply_zero_amount(adapter, id) }
+        return
+      end
+
       name = I18n.t("scalable_capital_items.accounts.settlement", name: trade.name)
       leg = { external_id: id, date: trade.date, name: name, kind: "funds_movement" }
       broker_leg = import_transaction(broker_adapter, leg.merge(amount: -trade.amount))
@@ -166,7 +169,26 @@ class ScalableCapitalItem::Syncer
     end
 
     def import_transaction(adapter, entry)
+      return apply_zero_amount(adapter, entry.fetch(:external_id)) if entry.fetch(:amount).zero?
+
       adapter.import_transaction(**entry, source: SOURCE, currency: CURRENCY, allow_heuristic_matching: false)
+    end
+
+    def apply_zero_amount(adapter, external_id)
+      entry = adapter.account.entries.transactions.find_by(external_id: external_id, source: SOURCE)
+      return unless entry
+
+      entry.lock!
+      return if entry.protected_from_sync? || entry.locked?(:amount) || entry.locked?(:currency) || entry.amount.zero?
+
+      transaction = entry.transaction
+      if (transfer = transaction.transfer_as_inflow || transaction.transfer_as_outflow)
+        # A zero leg cannot belong to a transfer. Keep separately recorded fees.
+        transfer.fee_transactions.update_all(transfer_id: nil)
+        transfer.fee_transactions.reset
+        transfer.destroy!
+      end
+      entry.update!(amount: 0)
     end
 
     def import_holdings(adapter, provider, date, positions, securities)
