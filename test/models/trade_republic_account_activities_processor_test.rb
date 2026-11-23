@@ -1496,6 +1496,8 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
       date: Date.parse("2026-08-01"),
       name: "Cash in",
       source: "trade_republic",
+      kind: "investment_contribution",
+      category_id: category.id,
       investment_activity_label: "Contribution"
     )
     assert_equal "investment_contribution", legacy.transaction.kind
