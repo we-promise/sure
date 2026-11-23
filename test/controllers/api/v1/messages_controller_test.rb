@@ -92,6 +92,22 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "No assistant message to retry", JSON.parse(response.body)["error"]
   end
 
+  test "retries with a read_write API key and refuses a read-only one" do
+    @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :failed)
+    read_key = ApiKey.create!(user: @user, name: "Read key", scopes: [ "read" ], source: "web", display_key: "test_ro_#{SecureRandom.hex(8)}")
+    write_key = ApiKey.create!(user: @user, name: "Write key", scopes: [ "read_write" ], source: "mobile", display_key: "test_rw_#{SecureRandom.hex(8)}")
+
+    assert_no_enqueued_jobs(only: AssistantResponseJob) do
+      post "/api/v1/chats/#{@chat.id}/messages/retry", headers: api_headers(read_key)
+    end
+    assert_response :forbidden
+
+    assert_enqueued_with(job: AssistantResponseJob) do
+      post "/api/v1/chats/#{@chat.id}/messages/retry", headers: api_headers(write_key)
+    end
+    assert_response :accepted
+  end
+
   test "should not access messages in other user's chat" do
     other_user = users(:family_member)
     other_user.update!(family: families(:empty))
