@@ -158,7 +158,17 @@ class RecurringTransaction
     def allocate_matched!(entry:, state:, confidence:, signals:)
       occurrence.with_lock do
         with_entry_lock(entry) do
-          allocated, source_amount, source_currency = resolve_amounts(nil, entry)
+          # A payment the series' bank reference identified is the bill's own
+          # whatever it amounted to, so it is recorded at what was really paid
+          # instead of being capped at what the cycle still needed.
+          whole_payment = signals.to_h.with_indifferent_access[:reference].present? && entry.currency == occurrence.currency
+
+          # A suggestion pins nothing, so a confirmed reference payment replaces any
+          # it already has (a leftover from an earlier run) rather than being blocked
+          # by the capacity it holds or by the unique index.
+          RecurringAllocation.where(entry_id: entry.id, state: "suggested").destroy_all if whole_payment && state == "confirmed"
+
+          allocated, source_amount, source_currency = resolve_amounts(nil, entry, reference: whole_payment)
           return nil unless allocated.positive?
 
           guard_entry_capacity!(entry, source_amount)
@@ -274,6 +284,10 @@ class RecurringTransaction
         confirmed = occurrence.allocations.confirmed.to_a
         return false if confirmed.empty?
 
+        # Identified by the series' bank reference: that is the cycle's payment
+        # whatever it amounted to, under- or overpaid.
+        return true if confirmed.any? { |allocation| allocation.match_signals.to_h["reference"].present? }
+
         total = confirmed.sum(&:allocated_amount)
 
         if confirmed.size == 1
@@ -284,7 +298,7 @@ class RecurringTransaction
         total >= expected - RecurringOccurrence::CLOSE_EPSILON
       end
 
-      def resolve_amounts(amount, entry)
+      def resolve_amounts(amount, entry, reference: false)
         if entry.nil?
           raise ArgumentError, "an amount is required for a payment without a transaction" if amount.blank?
 
@@ -305,7 +319,7 @@ class RecurringTransaction
             capacity = entry_capacity(entry, entry_total)
             remaining = occurrence.remaining_amount
 
-            if settles_bill?(entry, entry_total)
+            if settles_bill?(entry, entry_total, reference: reference)
               capacity
             else
               remaining.positive? ? [ capacity, remaining ].min : capacity
@@ -346,8 +360,11 @@ class RecurringTransaction
       # its real amount instead of being capped at the estimate. It qualifies
       # only when nothing has been paid against this occurrence or this entry
       # yet, and its amount sits inside the same tolerance band the matcher uses.
-      # Partial payments and accumulations keep the capped behaviour.
-      def settles_bill?(entry, entry_total)
+      # Partial payments and accumulations keep the capped behaviour. A payment
+      # the bill's own bank reference identified is the bill itself whatever it
+      # amounted to and however many payments the cycle already holds.
+      def settles_bill?(entry, entry_total, reference: false)
+        return true if reference
         return false if occurrence.allocations.confirmed.exists?
         return false if active_allocations_for(entry).exists?
 
