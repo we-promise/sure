@@ -71,7 +71,39 @@ en:
       new_transaction: New transaction
     transaction_category:
       set_on_outflow: "The category belongs to the outgoing side of this transfer and can only be changed there"
+    receipt:
+      amount: Amount
+      category: Category
+      due_date: Payment due
+      item: Item
+      line_items: Receipt items
+      merchant: Merchant
+      nip: Tax ID (NIP)
+      open_match: Open
+      reasons:
+        ai_unavailable: The receipt could not be read because receipt scanning is not set up. Fill in the transaction yourself.
+        currency_mismatch: The receipt is in a different currency than the account, so it was not matched to a bank transaction.
+        duplicate_receipt: Another receipt on this account already records this payment.
+        future_date: The date read from the receipt is in the future.
+        invalid_nip: The tax ID read from the receipt is not valid.
+        items_total_mismatch: The receipt items don't add up to the total.
+        missing_date: The date could not be read.
+        missing_total: The total could not be read.
+        non_positive_total: The total is zero or negative, for example a refund.
+        old_date: The date read from the receipt is more than two years ago.
+        possible_duplicates: Several bank transactions could be this payment. Delete the one you don't need.
+        split_after_booking: The bank hasn't booked this payment yet. Split it by category once it's booked.
+        too_many_attachments: The matching bank transaction already has too many attachments.
+        unknown_currency: The currency could not be read.
+        vat_total_mismatch: The VAT summary doesn't add up to the total.
+      review_title: Check this receipt
+      status:
+        completed: Receipt read
+        needs_review: Needs review
+        processing: Processing receipt…
+      uncategorized: Uncategorized
     show:
+      receipt: Receipt
       category_set_on_hidden_outflow: "This is the incoming side of a transfer. Its category belongs to the outgoing side, on an account you cannot access, and can only be changed there."
       category_set_on_outflow: "This is the incoming side of a transfer. Its category belongs to the outgoing side and can only be changed there, so budgets count it once."
       keep_both: No, keep both
@@ -242,6 +274,7 @@ en:
       edit_tags: Edit tags
       import: Import
     index:
+      scan_receipt: Scan receipt
       title: "Transactions"
       transaction: transaction
       transactions: transactions

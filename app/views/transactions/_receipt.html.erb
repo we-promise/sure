@@ -1,0 +1,42 @@
+<%# locals: (receipt:) %>
+<% status = receipt["status"].presence || "processing" %>
+<% reasons = Array(receipt["review_reasons"]) %>
+<% line_items = Array(receipt["line_items"]) %>
+<div class="space-y-3">
+  <div class="flex items-center gap-2">
+    <%= render DS::Pill.new(
+          label: t("transactions.receipt.status.#{status}"),
+          tone: { "completed" => :success, "needs_review" => :warning }.fetch(status, :neutral),
+          marker: false
+        ) %>
+  </div>
+
+  <% if reasons.any? %>
+    <%= render DS::Alert.new(title: t("transactions.receipt.review_title"), variant: :warning) do %>
+      <ul class="list-disc pl-4 space-y-1">
+        <% reasons.each do |reason| %>
+          <li>
+            <%= t("transactions.receipt.reasons.#{reason["reason"]}", default: reason["reason"].to_s.humanize) %>
+            <% Array(reason["entry_ids"].presence || reason["entry_id"]).each do |entry_id| %>
+              <%= link_to t("transactions.receipt.open_match"), transaction_path(entry_id), class: "underline", data: { turbo_frame: "drawer" } %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  <% end %>
+
+  <dl>
+    <%= render DS::DetailRow.new(label: t("transactions.receipt.merchant"), value: receipt["merchant"]) if receipt["merchant"].present? %>
+    <%= render DS::DetailRow.new(label: t("transactions.receipt.nip"), value: receipt["nip"]) if receipt["nip"].present? %>
+    <%= render DS::DetailRow.new(label: t("transactions.receipt.due_date"), value: receipt["due_date"]) if receipt["due_date"].present? %>
+  </dl>
+
+  <% if line_items.any? %>
+    <%= render DS::Table.new(rows: line_items, inset: true, label: t("transactions.receipt.line_items")) do |table| %>
+      <% table.with_column(t("transactions.receipt.item")) { |item| item["name"].to_s } %>
+      <% table.with_column(t("transactions.receipt.category")) { |item| item["category_name"].presence || t("transactions.receipt.uncategorized") } %>
+      <% table.with_column(t("transactions.receipt.amount"), numeric: true, class: "privacy-sensitive") { |item| item["amount"].to_s } %>
+    <% end %>
+  <% end %>
+</div>

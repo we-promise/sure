@@ -1,0 +1,14 @@
+---
+en:
+  receipt_scans:
+    create:
+      account_required: Choose an account you can add transactions to.
+      success: Receipt uploaded. Its transaction will be filled in shortly.
+    new:
+      account: Paid from
+      description: Upload up to %{count} photos or a PDF of one receipt, bill or invoice. A transaction is created right away and filled in once the receipt has been read.
+      files: Receipt photos or PDF
+      preview: Preview
+      submit: Upload receipt
+      title: Scan receipt
+    unavailable: Receipt scanning needs an AI provider that can read images (Anthropic). Set one up in Settings → Self-Hosting.

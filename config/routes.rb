@@ -772,6 +772,8 @@ Rails.application.routes.draw do
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"
   end
 
+  resources :receipt_scans, only: %i[new create]
+
   resources :account_statements, only: %i[index show create update destroy] do
     member do
       patch :link
