@@ -39,6 +39,26 @@ class ApplyRulesJobTest < ActiveJob::TestCase
     end
   end
 
+  test "after a sync, warms Reports once the rules have run" do
+    create_rule(active: true)
+
+    assert_enqueued_with(job: WarmReportsCacheJob, args: [ @family ]) do
+      ApplyRulesJob.perform_now(@family, warm_reports: true)
+    end
+    assert_equal @groceries, @transaction.reload.category
+
+    assert_no_enqueued_jobs(only: WarmReportsCacheJob) { ApplyRulesJob.perform_now(@family) }
+  end
+
+  test "a rule run that must retry warms Reports only when it finishes" do
+    Rule::Runner.any_instance.stubs(:run).raises(Rule::Runner::LockBusy)
+
+    assert_no_enqueued_jobs(only: WarmReportsCacheJob) do
+      ApplyRulesJob.perform_now(@family, warm_reports: true)
+    end
+    assert_enqueued_with(job: ApplyRulesJob, args: [ @family, { warm_reports: true } ])
+  end
+
   private
     def create_rule(active:)
       @family.rules.create!(

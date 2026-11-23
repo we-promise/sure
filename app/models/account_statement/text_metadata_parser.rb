@@ -30,6 +30,8 @@ class AccountStatement::TextMetadataParser
 
   # Month tokens are matched in full, then on their first four and three
   # letters, which covers abbreviations ("Sept.", "févr.") and full names.
+  # The two-digit-year format matches them in full only, here or in
+  # FULL_MONTHS.
   MONTHS = {
     "jan" => 1, "gen" => 1, "ene" => 1, "janv" => 1,
     "feb" => 2, "fév" => 2, "fev" => 2, "févr" => 2, "fevr" => 2,
@@ -39,11 +41,26 @@ class AccountStatement::TextMetadataParser
     "jun" => 6, "giu" => 6, "juin" => 6,
     "jul" => 7, "lug" => 7, "juil" => 7,
     "aug" => 8, "ago" => 8, "aoû" => 8, "aou" => 8,
-    "sep" => 9, "set" => 9,
+    "sep" => 9, "sept" => 9, "set" => 9,
     "oct" => 10, "ott" => 10, "okt" => 10, "out" => 10,
     "nov" => 11,
     "dec" => 12, "dic" => 12, "dez" => 12, "déc" => 12
   }.freeze
+  # Full names in the same languages, for formats that match a month exactly.
+  FULL_MONTHS = [
+    %w[january gennaio januar janvier enero januari janeiro],
+    %w[february febbraio februar février fevrier febrero februari fevereiro],
+    %w[march marzo märz maerz mars maart março marco],
+    %w[april aprile avril abril],
+    %w[may maggio mai mayo mei maio],
+    %w[june giugno juni juin junio junho],
+    %w[july luglio juli juillet julio julho],
+    %w[august agosto août aout augustus],
+    %w[september settembre septembre septiembre setembro],
+    %w[october ottobre oktober octobre octubre outubro],
+    %w[november novembre noviembre novembro],
+    %w[december dicembre dezember décembre decembre diciembre dezembro]
+  ].each_with_index.flat_map { |names, index| names.map { |name| [ name, index + 1 ] } }.to_h.freeze
 
   ORDINAL = /(?:st|nd|rd|th)?/i
   MONTH_NAME = /[[:alpha:]]{3,10}/
@@ -55,8 +72,16 @@ class AccountStatement::TextMetadataParser
     month_name_day: /(?<month_name>#{MONTH_NAME})\.?\s+(?<day>\d{1,2})#{ORDINAL},?\s+(?<year>\d{4})/
   }.freeze
   DATE = Regexp.union(DATE_FORMATS.values.map { |format| Regexp.new(format.source.gsub(/\(\?<\w+>/, "(?:"), format.options) })
-  RANGE_SEPARATOR = /\s*(?:[-–—]|\b(?:to|through|until|bis|al|au|tot|a|até|hasta)\b)\s*/i
+  RANGE_WORD = /(?:[-–—]|\b(?:to|through|until|bis|al|au|tot|a|até|hasta)\b)/i
+  RANGE_SEPARATOR = /\s*#{RANGE_WORD}\s*/
   PERIOD_PATTERN = /(?<start>#{DATE})#{RANGE_SEPARATOR}(?<end>#{DATE})/
+  # "3 Sep 21 - 1 Oct 21". Read only when no four-digit-year period is found.
+  # The month must be a whole MONTHS or FULL_MONTHS token ("2 Marketing 21" is
+  # not a date), and any space counts, as PDF extractors may emit
+  # non-breaking ones.
+  TWO_DIGIT_YEAR_DATE = /(?<!\d)(?<day>\d{1,2})#{ORDINAL}[[:space:]]+(?<month_name>[[:alpha:]]+)\.?[[:space:]]+(?<year>\d{2})(?!\d)/
+  TWO_DIGIT_YEAR = TWO_DIGIT_YEAR_DATE.source.gsub(/\(\?<\w+>/, "(?:")
+  TWO_DIGIT_YEAR_PERIOD = /(?<start>#{TWO_DIGIT_YEAR})[[:space:]]*#{RANGE_WORD}[[:space:]]*(?<end>#{TWO_DIGIT_YEAR})/
   # Annual statements span a year; anything longer isn't one period.
   MAX_PERIOD_DAYS = 400
 
@@ -110,7 +135,6 @@ class AccountStatement::TextMetadataParser
   # value carries only a "-" sign; currency is the token as printed ("$",
   # "EUR"); side is the CR/DR marker, if any.
   Amount = Data.define(:value, :currency, :side)
-  BALANCE_FIELDS = %w[opening_balance closing_balance].freeze
 
   def self.parse(text)
     new(text).parse
@@ -134,11 +158,11 @@ class AccountStatement::TextMetadataParser
     symbol_currency = currency.presence || fallback_currency
 
     candidates.each do |source, pair|
-      currencies = BALANCE_FIELDS.map { |field| resolve_currency(pair.dig(field, "currency"), symbol_currency) }
+      currencies = AccountStatement::BALANCE_FIELDS.map { |field| resolve_currency(pair.dig(field, "currency"), symbol_currency) }
       next unless currencies.uniq.size == 1 && currencies.first.present?
       next if currency.present? && currencies.first != currency.to_s.upcase
 
-      opening, closing = BALANCE_FIELDS.map do |field|
+      opening, closing = AccountStatement::BALANCE_FIELDS.map do |field|
         signed_amount(BigDecimal(pair.dig(field, "amount")), pair.dig(field, "side")&.to_sym, classification)
       end
       return Balances.new(opening_balance: opening, closing_balance: closing, currency: currencies.first, source: source)
@@ -204,9 +228,14 @@ class AccountStatement::TextMetadataParser
     end
 
     def range_period
-      @text.to_enum(:scan, PERIOD_PATTERN).each do
+      first_period(PERIOD_PATTERN) { |raw| parse_date(raw) } ||
+        first_period(TWO_DIGIT_YEAR_PERIOD) { |raw| parse_two_digit_year_date(raw) }
+    end
+
+    def first_period(pattern)
+      @text.to_enum(:scan, pattern).each do
         match = Regexp.last_match
-        period = valid_period(parse_date(match[:start]), parse_date(match[:end]))
+        period = valid_period(yield(match[:start]), yield(match[:end]))
         return period if period
       end
       nil
@@ -246,6 +275,18 @@ class AccountStatement::TextMetadataParser
       nil
     end
 
+    def parse_two_digit_year_date(raw)
+      match = raw.match(/\A#{TWO_DIGIT_YEAR_DATE}\z/)
+      token = match[:month_name].downcase
+      month = MONTHS[token] || FULL_MONTHS[token]
+      return nil unless month
+
+      date = Date.new(2000 + match[:year].to_i, month, match[:day].to_i)
+      date if AccountStatement::MetadataDetector.reasonable_date?(date)
+    rescue Date::Error
+      nil
+    end
+
     def month_number(name)
       token = name.to_s.downcase
       MONTHS[token] || MONTHS[token[0, 4]] || MONTHS[token[0, 3]]
@@ -262,7 +303,7 @@ class AccountStatement::TextMetadataParser
     end
 
     def reading(pair)
-      BALANCE_FIELDS.zip(pair).to_h do |field, amount|
+      AccountStatement::BALANCE_FIELDS.zip(pair).to_h do |field, amount|
         [ field, { "amount" => amount.value.to_s("F"), "side" => amount.side&.to_s, "currency" => amount.currency } ]
       end
     end
