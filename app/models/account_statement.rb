@@ -266,7 +266,9 @@ class AccountStatement < ApplicationRecord
       suggested_account: nil,
       match_confidence: confidence,
       review_status: :linked,
-      currency: currency.presence || target_account.currency
+      # The linked account defines the currency; a detected document currency
+      # that differs is dropped with its balances by derive_detected_balances.
+      currency: target_account.currency
     )
   end
 
@@ -463,6 +465,9 @@ class AccountStatement < ApplicationRecord
         currency: currency.presence || account&.currency,
         fallback_currency: family.currency
       )
+      # An unmatched statement keeps the document's own currency, so its
+      # balances are not later labelled with the family's fallback.
+      self.currency = balances.currency if currency.blank? && account.blank? && balances&.currency.present?
       @derived_balances = (BALANCE_FIELDS - edited_balances).to_h do |field|
         self[field] = balances&.public_send(field)
         [ field, self[field] ]

@@ -563,7 +563,7 @@ class AccountStatementTest < ActiveSupport::TestCase
   test "keeps the PDF currency and balances for an accountless upload" do
     statement = upload_trade_republic_statement(account: nil)
 
-    assert_nil statement.currency
+    assert_equal "EUR", statement.currency
     assert_equal Date.new(2026, 4, 1), statement.period_start_on
     assert_equal Date.new(2026, 4, 30), statement.period_end_on
     assert_equal BigDecimal("1101.14"), statement.opening_balance
