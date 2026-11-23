@@ -41,7 +41,8 @@ id:
       available_description: "Obrolan AI dapat menjawab pertanyaan keuangan dan memberikan wawasan berdasarkan data Anda. Untuk menggunakan fitur ini, Anda harus mengaktifkannya secara eksplisit."
       unavailable_description_html: "Untuk menggunakan asisten AI, Anda perlu mengatur variabel lingkungan <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> atau mengonfigurasikannya di pengaturan Self-Hosting instans Anda."
       enable_button: "Aktifkan Obrolan AI"
-      disable_note: "Nonaktifkan kapan saja. Semua data yang dikirimkan ke penyedia LLM kami dianonimkan."
+      disable_note: "Nonaktifkan kapan saja. Ini mengaktifkan AI untuk obrolan, tagihan, dan pencarian dokumen, yang mengirim pesan, transaksi, dan dokumen Anda apa adanya ke penyedia AI instans ini."
+      family_note: "Sebagai admin keluarga, ini juga mengaktifkan kategorisasi AI dan deteksi merchant untuk keluarga Anda, yang mengirim nama transaksi, jumlah, dan nama merchant."
   assistant_messages:
     assistant_message:
       assistant_reasoning: "Penalaran asisten"

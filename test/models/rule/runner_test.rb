@@ -189,6 +189,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
   end
 
   test "an AI job that finishes before the runner is done still finishes the run" do
+    use_ai_routes
     rule = create_ai_rule("auto_categorize")
     Family.any_instance.stubs(:auto_categorize_transactions).returns(1)
 
@@ -203,6 +204,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
   end
 
   test "a rule's AI jobs start only once all its AI actions have counted theirs" do
+    use_ai_routes
     rule = create_ai_rule("auto_categorize", "auto_detect_merchants")
     Family.any_instance.stubs(:auto_categorize_transactions).returns(1)
     Family.any_instance.stubs(:auto_detect_transaction_merchants).returns(1)

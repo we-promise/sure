@@ -4,6 +4,7 @@ class AutoDetectMerchantsJobTest < ActiveJob::TestCase
   include ProviderTestHelper
 
   setup do
+    use_ai_routes
     @family = families(:dylan_family)
     @transaction = transactions(:one)
     @rule_run = rules(:one).rule_runs.create!(
@@ -57,6 +58,19 @@ class AutoDetectMerchantsJobTest < ActiveJob::TestCase
     @rule_run.reload
     assert_equal "failed", @rule_run.status
     assert_match "Ai::Error::Timeout", @rule_run.error_message
+    assert_equal 0, @rule_run.pending_jobs_count
+  end
+
+  test "sends nothing while no family admin has turned AI on" do
+    @family.users.update_all(ai_enabled: false)
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.expects(:auto_detect_merchants).never
+
+    AutoDetectMerchantsJob.perform_now(@family, transaction_ids: [ @transaction.id ], rule_run_id: @rule_run.id)
+
+    @rule_run.reload
+    assert_equal "success", @rule_run.status
     assert_equal 0, @rule_run.pending_jobs_count
   end
 end

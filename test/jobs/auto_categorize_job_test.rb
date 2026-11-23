@@ -4,6 +4,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
   include EntriesTestHelper, ProviderTestHelper
 
   setup do
+    use_ai_routes
     @family = families(:empty)
     @account = @family.accounts.create!(name: "Rule test", balance: 100, currency: "USD", accountable: Depository.new)
     @family.categories.create!(name: "Food")
@@ -193,6 +194,20 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
 
     assert_equal "Food", applied.reload.category.name
     assert_equal "Food", left.reload.category.name
+    @rule_run.reload
+    assert_equal "success", @rule_run.status
+    assert_equal 0, @rule_run.pending_jobs_count
+  end
+
+  test "sends nothing while no family admin has turned AI on" do
+    @family.users.update_all(ai_enabled: false)
+    transaction = create_transaction(account: @account, name: "Coffee shop").transaction
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.expects(:auto_categorize).never
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+
     @rule_run.reload
     assert_equal "success", @rule_run.status
     assert_equal 0, @rule_run.pending_jobs_count
