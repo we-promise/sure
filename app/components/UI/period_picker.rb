@@ -15,17 +15,22 @@ class UI::PeriodPicker < ApplicationComponent
   #
   # NOTE: `url` must be a path without a query string; pass query state via
   # `extra_params` so the picker can compose `?period=…` cleanly.
-  attr_reader :selected, :selected_key, :url, :frame, :extra_params, :placement, :options
+  attr_reader :selected, :selected_key, :url, :frame, :extra_params, :custom_extra_params, :placement, :options
 
   # `options` narrows the menu to [key, label] pairs, for a chart that offers
   # its own timescales under the shared period keys (the loan chart). Without
   # it every Period is offered under its own short label.
-  def initialize(selected:, url:, frame: nil, extra_params: {}, placement: "bottom-end", options: nil)
+  #
+  # `custom_extra_params` replaces `extra_params` on the custom row, for a page
+  # whose presets drop state tied to the range they replace (the account page's
+  # dragged activity dates) while re-applying that range keeps it.
+  def initialize(selected:, url:, frame: nil, extra_params: {}, custom_extra_params: nil, placement: "bottom-end", options: nil)
     @selected = selected
     @selected_key = selected.respond_to?(:key) ? selected.key : selected.to_s
     @url = url
     @frame = frame
     @extra_params = (extra_params || {}).symbolize_keys
+    @custom_extra_params = custom_extra_params&.symbolize_keys || @extra_params
     @placement = placement
     @options = options
   end
@@ -79,7 +84,7 @@ class UI::PeriodPicker < ApplicationComponent
   # what an anchor gives for free. A checked radio you can focus, announce and
   # re-activate for no effect is exactly how a radio group behaves anyway.
   def custom_href
-    "#{url}?#{extra_params.merge(start_date: selected.start_date, end_date: selected.end_date).to_query}"
+    "#{url}?#{custom_extra_params.merge(start_date: selected.start_date, end_date: selected.end_date).to_query}"
   end
 
   # Both pickers navigate a Turbo frame, and a frame navigation leaves the
