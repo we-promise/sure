@@ -1,0 +1,209 @@
+---
+id:
+  mercury_items:
+    api_error:
+      title: Kesalahan Koneksi Mercury
+      unable_to_connect: Tidak dapat terhubung ke Mercury
+      common_issues: "Masalah Umum:"
+      invalid_api_token_label: Token API Tidak Valid
+      invalid_api_token_desc: Periksa token API Anda di Pengaturan Penyedia
+      expired_credentials_label: Kredensial Kedaluwarsa
+      expired_credentials_desc: Buat token API baru dari Mercury
+      insufficient_permissions_label: Izin Tidak Mencukupi
+      insufficient_permissions_desc: Pastikan token Anda memiliki akses hanya-baca
+      network_issue_label: Masalah Jaringan
+      network_issue_desc: Periksa koneksi internet Anda
+      service_down_label: Layanan Terganggu
+      service_down_desc: API Mercury mungkin sedang tidak tersedia sementara
+      check_provider_settings: Periksa Pengaturan Penyedia
+    setup_required:
+      title: Pengaturan Mercury Diperlukan
+      api_token_not_configured: Token API Belum Dikonfigurasi
+      api_token_description: Sebelum dapat menautkan rekening Mercury, Anda perlu mengonfigurasi token API Mercury Anda.
+      setup_steps_title: "Langkah Pengaturan:"
+      setup_step_1_html: "Buka <strong>Pengaturan > Penyedia</strong>"
+      setup_step_2_html: "Temukan bagian <strong>Mercury</strong>"
+      setup_step_3: Masukkan token API Mercury Anda
+      setup_step_4: Kembali ke sini untuk menautkan rekening Anda
+      go_to_provider_settings: Buka Pengaturan Penyedia
+    create:
+      success: Koneksi Mercury berhasil dibuat
+    destroy:
+      success: Koneksi Mercury dihapus
+    index:
+      title: Koneksi Mercury
+    loading:
+      loading_message: Memuat rekening Mercury...
+      loading_title: Memuat
+    link_accounts:
+      all_already_linked:
+        one: "Rekening yang dipilih (%{names}) sudah tertaut"
+        other: "Semua %{count} rekening yang dipilih sudah tertaut: %{names}"
+      api_error: "Kesalahan API: %{message}"
+      invalid_account_names:
+        one: "Tidak dapat menautkan rekening dengan nama kosong"
+        other: "Tidak dapat menautkan %{count} rekening dengan nama kosong"
+      link_failed: Gagal menautkan rekening
+      no_accounts_selected: Silakan pilih setidaknya satu rekening
+      no_api_token: Token API Mercury tidak ditemukan. Silakan konfigurasikan di Pengaturan Penyedia.
+      partial_invalid: "Berhasil menautkan %{created_count} rekening, %{already_linked_count} sudah tertaut, %{invalid_count} rekening memiliki nama tidak valid"
+      partial_success: "Berhasil menautkan %{created_count} rekening. %{already_linked_count} rekening sudah tertaut: %{already_linked_names}"
+      select_connection: Pilih koneksi Mercury sebelum menautkan rekening.
+      success:
+        one: "Berhasil menautkan %{count} rekening"
+        other: "Berhasil menautkan %{count} rekening"
+    mercury_item:
+      accounts_need_setup: Rekening perlu pengaturan
+      delete: Hapus koneksi
+      deletion_in_progress: penghapusan sedang berlangsung...
+      error: Kesalahan
+      no_accounts_description: Koneksi ini belum memiliki rekening tertaut.
+      no_accounts_title: Tidak ada rekening
+      setup_action: Atur Rekening Baru
+      setup_description: "%{linked} dari %{total} rekening tertaut. Pilih jenis rekening untuk rekening Mercury yang baru diimpor."
+      setup_needed: Rekening baru siap diatur
+      status: "Disinkronkan %{timestamp} lalu"
+      status_never: Belum pernah disinkronkan
+      status_with_summary: "Terakhir disinkronkan %{timestamp} lalu - %{summary}"
+      syncing: Menyinkronkan...
+      total: Total
+      unlinked: Belum tertaut
+    provider_panel:
+      add_connection: Tambah koneksi Mercury
+      base_url_label: URL Dasar (opsional)
+      base_url_placeholder: https://api.mercury.com/api/v1 (default)
+      connection_name_label: Nama koneksi
+      connection_name_placeholder: Giro bisnis
+      default_connection_name: Koneksi Mercury
+      disconnect: Putuskan koneksi
+      disconnect_confirm: "Putuskan koneksi %{name}?"
+      instructions:
+        copy_token_html: "Salin <strong>token lengkap</strong> (termasuk awalan <code>secret-token:</code>) dan tambahkan sebagai koneksi bernama di bawah ini"
+        create_token: Buat token API baru dengan akses "Read Only"
+        open_tokens: Buka Settings > Developer > API Tokens
+        sign_in_html: "Kunjungi %{link} dan masuk ke akun yang ingin Anda hubungkan"
+        whitelist_ip_html: "<strong>Penting:</strong> Tambahkan alamat IP server Anda ke daftar putih token"
+      keep_token_placeholder: Kosongkan untuk mempertahankan token saat ini
+      sandbox_note_html: "Gunakan koneksi bernama terpisah untuk setiap login/token API Mercury yang ingin Anda sinkronkan. Untuk pengujian sandbox, gunakan <code>https://api-sandbox.mercury.com/api/v1</code> sebagai URL Dasar. Mercury memerlukan daftar putih IP - pastikan untuk menambahkan IP Anda di dasbor Mercury."
+      setup_accounts: Atur rekening
+      setup_title: "Petunjuk pengaturan:"
+      sync: Sinkronkan
+      token_label: Token
+      token_placeholder: Tempel token di sini
+      update_connection: Perbarui koneksi
+    provider_connection:
+      default_description: Hubungkan ke bank Anda melalui Mercury
+      default_name: Mercury
+      description: "Hubungkan menggunakan %{name}"
+      name: "Mercury - %{name}"
+    select_accounts:
+      accounts_selected: rekening dipilih
+      api_error: "Kesalahan API: %{message}"
+      cancel: Batal
+      configure_name_in_mercury: Tidak dapat mengimpor - silakan konfigurasikan nama rekening di Mercury
+      description: Pilih rekening yang ingin Anda tautkan ke akun %{product_name} Anda.
+      link_accounts: Tautkan rekening yang dipilih
+      no_accounts_found: Tidak ada rekening ditemukan. Silakan periksa konfigurasi token API Anda.
+      no_api_token: Token API Mercury belum dikonfigurasi. Silakan konfigurasikan di Pengaturan.
+      no_credentials_configured: Silakan konfigurasikan token API Mercury Anda terlebih dahulu di Pengaturan Penyedia.
+      no_name_placeholder: "(Tanpa nama)"
+      select_connection: Pilih koneksi Mercury di Pengaturan Penyedia.
+      title: Pilih Rekening Mercury
+    select_existing_account:
+      account_already_linked: Rekening ini sudah ditautkan ke penyedia lain
+      all_accounts_already_linked: Semua rekening Mercury sudah tertaut
+      api_error: "Kesalahan API: %{message}"
+      cancel: Batal
+      configure_name_in_mercury: Tidak dapat mengimpor - silakan konfigurasikan nama rekening di Mercury
+      description: Pilih rekening Mercury untuk ditautkan dengan rekening ini. Transaksi akan disinkronkan dan dideduplikasi secara otomatis.
+      link_account: Tautkan rekening
+      no_account_specified: Tidak ada rekening yang ditentukan
+      no_accounts_found: Tidak ada rekening Mercury ditemukan. Silakan periksa konfigurasi token API Anda.
+      no_api_token: Token API Mercury belum dikonfigurasi. Silakan konfigurasikan di Pengaturan.
+      no_credentials_configured: Silakan konfigurasikan token API Mercury Anda terlebih dahulu di Pengaturan Penyedia.
+      no_name_placeholder: "(Tanpa nama)"
+      select_connection: Pilih koneksi Mercury di Pengaturan Penyedia.
+      title: "Tautkan %{account_name} dengan Mercury"
+    link_existing_account:
+      account_already_linked: Rekening ini sudah ditautkan ke penyedia lain
+      api_error: "Kesalahan API: %{message}"
+      invalid_account_name: Tidak dapat menautkan rekening dengan nama kosong
+      mercury_account_already_linked: Rekening Mercury ini sudah ditautkan ke rekening lain
+      mercury_account_not_found: Rekening Mercury tidak ditemukan
+      missing_parameters: Parameter yang diperlukan tidak lengkap
+      no_api_token: Token API Mercury tidak ditemukan. Silakan konfigurasikan di Pengaturan Penyedia.
+      select_connection: Pilih koneksi Mercury sebelum menautkan rekening.
+      success: "Berhasil menautkan %{account_name} dengan Mercury"
+    setup_accounts:
+      account_type_label: "Jenis Rekening:"
+      all_accounts_linked: "Semua rekening Mercury Anda telah diatur."
+      api_error: "Kesalahan API: %{message}"
+      fetch_failed: "Gagal Mengambil Rekening"
+      no_accounts_to_setup: "Tidak Ada Rekening untuk Diatur"
+      no_api_token: "Token API Mercury belum dikonfigurasi. Silakan periksa pengaturan koneksi Anda."
+      account_types:
+        skip: Lewati rekening ini
+        depository: Rekening Giro atau Tabungan
+        credit_card: Kartu Kredit
+        investment: Rekening Investasi
+        loan: Pinjaman atau KPR
+        other_asset: Aset Lainnya
+      subtype_labels:
+        depository: "Subjenis Rekening:"
+        credit_card: ""
+        investment: "Jenis Investasi:"
+        loan: "Jenis Pinjaman:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kartu kredit akan diatur secara otomatis sebagai rekening kartu kredit."
+        other_asset: "Tidak ada opsi tambahan yang diperlukan untuk Aset Lainnya."
+      subtypes:
+        depository:
+          checking: Giro
+          savings: Tabungan
+          hsa: Rekening Tabungan Kesehatan (HSA)
+          cd: Sertifikat Deposito (CD)
+          money_market: Pasar Uang
+        investment:
+          brokerage: Pialang
+          pension: Pensiun
+          retirement: Dana Pensiun
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "Paket 529"
+          hsa: Rekening Tabungan Kesehatan (HSA)
+          mutual_fund: Reksa Dana
+          ira: IRA Tradisional
+          roth_ira: Roth IRA
+          angel: Angel
+        loan:
+          mortgage: KPR
+          student: Pinjaman Pelajar
+          auto: Pinjaman Kendaraan
+          other: Pinjaman Lainnya
+      balance: Saldo
+      cancel: Batal
+      choose_account_type: "Pilih jenis rekening yang tepat untuk setiap rekening Mercury:"
+      create_accounts: Buat Rekening
+      creating_accounts: Membuat Rekening...
+      historical_data_range: "Rentang Data Historis:"
+      subtitle: Pilih jenis rekening yang tepat untuk rekening yang Anda impor
+      sync_start_date_help: Pilih seberapa jauh ke belakang Anda ingin menyinkronkan riwayat transaksi. Tersedia riwayat maksimal 3 tahun.
+      sync_start_date_label: "Mulai menyinkronkan transaksi dari:"
+      title: Atur Rekening Mercury Anda
+    complete_account_setup:
+      all_skipped: "Semua rekening dilewati. Tidak ada rekening yang dibuat."
+      creation_failed: "Gagal membuat rekening: %{error}"
+      no_accounts: "Tidak ada rekening untuk diatur."
+      success: "Berhasil membuat %{count} rekening."
+    sync:
+      success: Sinkronisasi dimulai
+    update:
+      success: Koneksi Mercury diperbarui
+    mercury_item_selection_error_payload:
+      select_connection: Pilih koneksi Mercury sebelum memuat rekening.
+    render_mercury_item_selection_failure:
+      select_connection: Pilih koneksi Mercury di Pengaturan Penyedia.
+      no_credentials_configured: Silakan konfigurasikan token API Mercury Anda terlebih dahulu di Pengaturan Penyedia.

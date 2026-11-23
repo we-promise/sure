@@ -38,6 +38,9 @@ fr:
       corporate_bond:
         long: Obligation d'entreprise
         short: Obligation d'entreprise
+      epf:
+        short: EPF
+        long: Fonds de prévoyance des employés (EPF)
       fd:
         long: Dépôt fixe
         short: FD
