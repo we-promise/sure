@@ -163,7 +163,7 @@ class Provider::ScalableCapital::Snapshot
     def security_transfer(row, time, id)
       isin = text(row["isin"])
       shares = decimal(row["quantity"])&.abs
-      return unless isin&.match?(ISIN_PATTERN) && shares&.positive?
+      raise invalid unless isin&.match?(ISIN_PATTERN) && shares&.positive?
 
       outgoing = row["non_trade_security_transaction_type"] == "TRANSFER_OUT"
       { external_id: id, date: time.to_date, occurred_at: time, isin: isin, quantity: outgoing ? -shares : shares,
@@ -173,21 +173,22 @@ class Provider::ScalableCapital::Snapshot
     def trade(summary, event_time, id)
       detail = broker_result(@client.trade(@item.portfolio_id, id))
       raise invalid unless detail["id"] == id && detail["currency"] == CURRENCY
-      return unless detail["is_pending"] == false && detail["is_cancellation"] == false
+      return if detail["is_cancellation"] == true
+      raise invalid unless detail["is_pending"] == false && detail["is_cancellation"] == false
 
       trade = detail["security_trade"]
-      return unless trade.is_a?(Hash) && FINAL_STATUSES.include?(trade["status"])
+      raise invalid unless trade.is_a?(Hash) && FINAL_STATUSES.include?(trade["status"])
 
       isin = text(detail.dig("security", "isin")) || text(summary["isin"])
       quantity = decimal(trade.dig("number_of_shares", "filled"))
       price = decimal(trade["average_price"])
       net = decimal(trade["total_amount"])&.abs
       side = trade["side"]
-      return unless isin&.match?(ISIN_PATTERN) && quantity&.positive? && price&.positive? && net&.positive? && %w[BUY SELL].include?(side)
+      raise invalid unless isin&.match?(ISIN_PATTERN) && quantity&.positive? && price&.positive? && net && %w[BUY SELL].include?(side)
 
       buy = side == "BUY"
       fee = reconciled_fee(trade["trade_transaction_amounts"], gross: quantity * price, net: net, buy: buy)
-      return if fee.nil?
+      raise invalid if fee.nil?
 
       time = execution_time(detail["history"]) || event_time
       { external_id: id, date: time.to_date, occurred_at: time, isin: isin, security_name: text(detail.dig("security", "name")),

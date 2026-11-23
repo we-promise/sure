@@ -449,6 +449,73 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_equal Time.current, @item.savings_synced_through
   end
 
+  test "incomplete details for a settled trade preserve checkpoints for retry" do
+    stub_snapshot
+    run_sync
+    checkpoints = @item.reload.attributes.slice("broker_synced_through", "savings_synced_through")
+    account = @item.scalable_capital_accounts.brokerage.sole.account
+
+    travel 1.day
+    stub_snapshot
+    buy = cash_event("corrected-buy", "BUY", at: 1.hour.ago)
+    stub_broker_trades(buy)
+    pending_detail = trade("corrected-buy", "BUY", "1", "30", "30").merge("is_pending" => true)
+    missing_net = trade("corrected-buy", "BUY", "1", "30", nil)
+    inconsistent_net = trade("corrected-buy", "BUY", "1", "30", "25")
+    [ pending_detail, missing_net, inconsistent_net ].each do |detail|
+      @client.stubs(:trade).with("portfolio", "corrected-buy").returns(broker(detail))
+      assert_raises(Provider::ScalableCapital::InvalidResponse) { run_sync }
+      assert_equal checkpoints, @item.reload.attributes.slice(*checkpoints.keys)
+      refute account.entries.exists?(external_id: "corrected-buy")
+    end
+
+    travel 1.hour
+    stub_snapshot
+    cancelled = cash_event("cancelled-trade", "BUY", at: 30.minutes.ago)
+    zero_net_sale = cash_event("zero-net-sale", "SELL", at: 15.minutes.ago)
+    stub_broker_trades(buy, cancelled, zero_net_sale)
+    @client.stubs(:trade).with("portfolio", "corrected-buy").returns(broker(trade("corrected-buy", "BUY", "1", "30", "30")))
+    @client.stubs(:trade).with("portfolio", "cancelled-trade")
+      .returns(broker(trade("cancelled-trade", "BUY", "1", "10", nil).merge("is_cancellation" => true)))
+    @client.stubs(:trade).with("portfolio", "zero-net-sale")
+      .returns(broker(trade("zero-net-sale", "SELL", "1", "1", "0")))
+    run_sync
+
+    assert_equal 30.to_d, account.entries.trades.where(external_id: "corrected-buy").sole.amount
+    refute account.entries.exists?(external_id: "cancelled-trade")
+    assert_equal 0.to_d, account.entries.trades.where(external_id: "zero-net-sale").sole.amount
+    assert_equal Time.current, @item.reload.broker_synced_through
+    assert_equal Time.current, @item.savings_synced_through
+  end
+
+  test "an incomplete settled security transfer preserves checkpoints for retry" do
+    stub_snapshot
+    run_sync
+    checkpoints = @item.reload.attributes.slice("broker_synced_through", "savings_synced_through")
+    account = @item.scalable_capital_accounts.brokerage.sole.account
+
+    travel 1.day
+    stub_snapshot
+    transfer = cash_event("corrected-transfer", "TRANSFER_IN", at: 1.hour.ago).merge(
+      "summary_type" => "BrokerNonTradeSecurityTransactionSummary", "non_trade_security_transaction_type" => "TRANSFER_IN",
+      "isin" => position.fetch("isin"), "quantity" => "2")
+    stub_broker_history(transfer.merge("quantity" => nil))
+    assert_raises(Provider::ScalableCapital::InvalidResponse) { run_sync }
+    assert_equal checkpoints, @item.reload.attributes.slice(*checkpoints.keys)
+    refute account.entries.exists?(external_id: "corrected-transfer")
+
+    travel 1.hour
+    stub_snapshot
+    stub_broker_history(transfer)
+    run_sync
+
+    imported = account.entries.trades.where(external_id: "corrected-transfer").sole.entryable
+    assert_equal 2.to_d, imported.qty
+    assert_equal "Transfer", imported.investment_activity_label
+    assert_equal Time.current, @item.reload.broker_synced_through
+    assert_equal Time.current, @item.savings_synced_through
+  end
+
   test "a savings write failure rolls back broker writes and the retry imports each entry once" do
     stub_snapshot
     run_sync
