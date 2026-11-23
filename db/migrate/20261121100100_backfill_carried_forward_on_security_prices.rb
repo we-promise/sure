@@ -7,6 +7,8 @@
 #
 # Batched outside a transaction so a large table is not locked in one
 # statement. Rows already marked are skipped, so it can run more than once.
+# The outer update repeats the predicate so a row a refresh made real after
+# the subquery read it is skipped.
 class BackfillCarriedForwardOnSecurityPrices < ActiveRecord::Migration[8.1]
   disable_ddl_transaction!
 
@@ -20,6 +22,7 @@ class BackfillCarriedForwardOnSecurityPrices < ActiveRecord::Migration[8.1]
           WHERE provisional = true AND carried_forward = false
           LIMIT #{batch_size}
         )
+        AND provisional = true AND carried_forward = false
       SQL
       break if updated.zero?
     end
