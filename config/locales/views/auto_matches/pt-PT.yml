@@ -4,8 +4,10 @@ pt-PT:
     title: Correspondências automáticas
     settings:
       enable_label: Ativar correspondência automática
-      enable_description: Deteta e sugere automaticamente correspondências de transferências entre contas em cada sincronização. As sugestões só são aplicadas depois de as confirmares abaixo.
+      enable_description: Deteta e sugere automaticamente correspondências de transferências entre contas em cada sincronização.
       admin_only: Apenas administradores podem alterar esta definição.
+      confirm_label: "Confirmar correspondências antes de as contar como transferências"
+      confirm_description: "Quando ativado, uma correspondência sugerida continua a contar como receita e despesa até a confirmar. Quando desativado, as sugestões saem logo das receitas e despesas, e rejeitar uma devolve-a."
     update_settings:
       settings_updated: Definições de correspondência automática atualizadas
     bulk_update:

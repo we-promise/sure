@@ -790,7 +790,22 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_no_match transfer_path(transfer), response.body, "the redrawn rows still offer the rejected match"
   end
 
+  test "rejecting a pending match whose legs carry transfer kinds reloads the page" do
+    transfer = transfers(:one)
+    transfer.apply_kinds!
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => account_url(transfer.outflow_transaction.entry.account) }
+
+    assert_response :success
+    assert_select "turbo-stream[action=redirect]", count: 1
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+  end
+
   test "rejecting a pending match redraws only the rows the user can see" do
+    # The legs carry transfer kinds of their own, not ones the match gave
+    # them, so rejecting keeps them (Transfer#kinds_applied?).
     transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
 
     patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream
@@ -902,6 +917,8 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "rows redrawn on an account page keep the account view's signed amounts" do
+    # The legs carry transfer kinds of their own, not ones the match gave
+    # them, so rejecting keeps them (Transfer#kinds_applied?).
     transfer = transfers(:one)
     transfer.outflow_transaction.update_columns(kind: "funds_movement")
 

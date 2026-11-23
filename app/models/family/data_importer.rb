@@ -1127,14 +1127,38 @@ class Family::DataImporter
           transfer.status = transfer_status_for(data["status"])
           transfer.notes = data["notes"]
         end
-        # Transfer kinds only apply once a transfer is confirmed (see Transfer#confirm!)
+        # Read before the kinds are applied: updating the transfer resets it.
+        created = transfer.previously_new_record?
+
         if transfer.confirmed?
           apply_transfer_transaction_kinds!(transfer)
           # Restores a user's explicit choice over the destination's default kind.
           transfer.update_investment_contribution!(truthy?(data["investment_contribution"])) unless data["investment_contribution"].nil?
+        elsif imported_match_kinds?(transfer, data)
+          # A pending match takes its kinds as an auto-match would, unless the
+          # family confirms matches first.
+          transfer.apply_kinds!
+        elsif @family.require_transfer_match_confirmation? && truthy?(data["match_kinds_applied"])
+          # The legs arrived with the kinds the match gave them in the exporting
+          # family, but this family confirms matches first.
+          transfer.reset_kinds!
+        elsif data.key?("match_kinds_applied") && !truthy?(data["match_kinds_applied"]) && transfer.match_kinds_applied?
+          # The export says the match did not set these kinds, so unlinking the
+          # transfer later must leave them.
+          transfer.update!(match_kinds_applied: false)
         end
-        increment_summary("Transfer", transfer.previously_new_record? ? :created : :updated)
+        increment_summary("Transfer", created ? :created : :updated)
       end
+    end
+
+    # Whether an imported pending transfer is a match whose kinds the match
+    # gives: the export says the match set them, or (an export without that
+    # flag) both legs are still standard. A pending transfer imported with
+    # kinds of its own keeps them, so unlinking it later leaves them too.
+    def imported_match_kinds?(transfer, data)
+      return false if @family.require_transfer_match_confirmation? || !transfer.match_may_set_kinds?
+
+      data.key?("match_kinds_applied") ? truthy?(data["match_kinds_applied"]) : transfer.standard_legs?
     end
 
     def apply_transfer_transaction_kinds!(transfer)

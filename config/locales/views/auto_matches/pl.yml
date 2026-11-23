@@ -4,8 +4,10 @@ pl:
     title: Automatyczne dopasowywanie
     settings:
       enable_label: Włącz automatyczne dopasowywanie
-      enable_description: Automatycznie wykrywa i sugeruje dopasowania przelewów między kontami przy każdej synchronizacji. Sugestie nie są stosowane, dopóki ich nie potwierdzisz poniżej.
+      enable_description: Automatycznie wykrywa i sugeruje dopasowania przelewów między kontami przy każdej synchronizacji.
       admin_only: Tylko administratorzy mogą zmienić to ustawienie.
+      confirm_label: "Potwierdzaj dopasowania, zanim zostaną uznane za przelewy"
+      confirm_description: "Gdy włączone, sugerowane dopasowanie nadal liczy się jako przychód i wydatek, dopóki go nie potwierdzisz. Gdy wyłączone, sugestie od razu wypadają z przychodów i wydatków, a odrzucenie jednej przywraca ją."
     update_settings:
       settings_updated: Zaktualizowano ustawienia automatycznego dopasowywania
     bulk_update:

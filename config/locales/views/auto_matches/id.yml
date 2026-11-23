@@ -4,8 +4,10 @@ id:
     title: Pencocokan Otomatis
     settings:
       enable_label: Aktifkan Pencocokan Otomatis
-      enable_description: Deteksi dan sarankan pencocokan transfer antarrekening secara otomatis pada setiap sinkronisasi. Saran tidak akan diterapkan sampai Anda mengonfirmasinya di bawah.
+      enable_description: Deteksi dan sarankan pencocokan transfer antarrekening secara otomatis pada setiap sinkronisasi.
       admin_only: Hanya admin yang dapat mengubah pengaturan ini.
+      confirm_label: "Konfirmasi kecocokan sebelum dihitung sebagai transfer"
+      confirm_description: "Jika aktif, kecocokan yang disarankan tetap dihitung sebagai pemasukan dan pengeluaran sampai Anda mengonfirmasinya. Jika nonaktif, saran langsung dikeluarkan dari pemasukan dan pengeluaran, dan menolak salah satunya mengembalikannya."
     update_settings:
       settings_updated: Pengaturan pencocokan otomatis berhasil diperbarui
     bulk_update:

@@ -52,7 +52,19 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
     assert RejectedTransfer.exists?(inflow_transaction_id: @transfer.inflow_transaction_id)
   end
 
-  test "unmatches a pending auto-match" do
+  test "unmatches a pending auto-match and resets the kinds it applied" do
+    @transfer.update!(status: "pending", match_kinds_applied: true)
+
+    result = @function.call("transaction_id" => @transfer.outflow_transaction_id)
+
+    assert result[:success]
+    assert_nil Transfer.find_by(id: @transfer.id)
+    assert_equal "standard", @transfer.outflow_transaction.reload.kind
+    assert_equal "standard", result[:transfer][:outflow][:kind_after]
+  end
+
+  test "unmatches a pending auto-match in a family that confirms matches first" do
+    families(:dylan_family).update!(require_transfer_match_confirmation: true)
     @transfer.update!(status: "pending")
 
     result = @function.call("transaction_id" => @transfer.outflow_transaction_id)
@@ -61,7 +73,7 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
     assert_equal "pending", result[:transfer][:status]
     assert_nil Transfer.find_by(id: @transfer.id)
 
-    # A pending match never changed the kinds, so a kind set before it stays.
+    # Such a pending match never changed the kinds, so a kind set before it stays.
     assert_equal "cc_payment", @transfer.outflow_transaction.reload.kind
     assert_equal "cc_payment", result[:transfer][:outflow][:kind_after]
     assert_includes result[:message], "Outflow kind is now cc_payment"

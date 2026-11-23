@@ -21,20 +21,26 @@ class AutoMatchesController < ApplicationController
   end
 
   def update_settings
-    was_disabled = Current.family.auto_match_transfers_disabled?
-    now_disabled = nil
+    family = Current.family
+    was_disabled = family.auto_match_transfers_disabled?
 
     # One transaction, so a failed cleanup doesn't leave auto match off with
     # some suggestions still pending.
     Family.transaction do
-      Current.family.update!(auto_match_settings_params)
-      now_disabled = Current.family.auto_match_transfers_disabled?
-      cleanup_pending_auto_matches! if !was_disabled && now_disabled
+      if params.key?(:auto_match_transfers_disabled)
+        family.update!(auto_match_transfers_disabled: params[:auto_match_transfers_disabled] == "true")
+        cleanup_pending_auto_matches! if !was_disabled && family.auto_match_transfers_disabled?
+      end
+
+      if params.key?(:require_transfer_match_confirmation)
+        required = params[:require_transfer_match_confirmation] == "true"
+        family.update_transfer_match_confirmation!(required) unless required == family.require_transfer_match_confirmation?
+      end
     end
     # Re-enabling should have an immediate effect rather than waiting for the
     # next scheduled sync -- run the (potentially slow, family-wide) match
     # scan in the background instead of blocking this request.
-    AutoMatchTransfersJob.perform_later(Current.family) if was_disabled && !now_disabled
+    AutoMatchTransfersJob.perform_later(family) if was_disabled && !family.auto_match_transfers_disabled?
 
     respond_to do |format|
       format.html do
@@ -94,10 +100,6 @@ class AutoMatchesController < ApplicationController
         .select(:id)
     end
 
-    def auto_match_settings_params
-      { auto_match_transfers_disabled: params[:auto_match_transfers_disabled] == "true" }
-    end
-
     # Turning the toggle off stops future matching but previously suggested
     # pending matches would otherwise sit in the list (and on the
     # transaction rows) indefinitely. Destroy rather than reject!: reject!
@@ -106,17 +108,19 @@ class AutoMatchesController < ApplicationController
     # include_rejected: false), which would surprise a user who re-enables
     # the toggle later expecting the same pairs to resurface.
     def cleanup_pending_auto_matches!
-      family_transaction_ids = Current.family.transactions.select(:id)
-      # Only clean up genuine auto-match suggestions -- both legs still
-      # kind == "standard". A pending transfer imported with a kind already
-      # set (Family::DataImporter, Demo::Generator) isn't an auto-match
-      # suggestion, so the toggle leaves it in place.
-      Transfer.pending
-        .where(inflow_transaction_id: family_transaction_ids)
-        .where(outflow_transaction_id: family_transaction_ids)
-        .joins(:inflow_transaction, :outflow_transaction)
-        .where(inflow_transaction: { kind: "standard" }, outflow_transaction: { kind: "standard" })
-        .find_each(&:destroy!)
+      # Only clean up genuine auto-match suggestions (Transfer#match_suggestion?).
+      # A pending transfer imported with kinds of its own (Family::DataImporter)
+      # isn't one, even when those kinds equal the ones a match would give, so
+      # the toggle leaves it in place.
+      Current.family.pending_transfer_matches.find_each do |transfer|
+        # Locked and re-read, so a match confirmed since the batch was loaded
+        # keeps its transfer and kinds.
+        transfer.with_lock do
+          transfer.destroy! if transfer.match_suggestion?
+        end
+      rescue ActiveRecord::RecordNotFound
+        # Another request already removed it.
+      end
     end
 
     def bulk_update_params

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_22_100200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -862,6 +862,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.string "name"
     t.boolean "personal_budgets", default: false, null: false
     t.boolean "recurring_transactions_disabled", default: false, null: false
+    t.boolean "require_transfer_match_confirmation", default: false, null: false
     t.string "stripe_customer_id"
     t.string "timezone"
     t.datetime "updated_at", null: false
@@ -2920,6 +2921,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.decimal "amount", precision: 19, scale: 4, default: "0.0", null: false
     t.datetime "created_at", null: false
     t.uuid "inflow_transaction_id", null: false
+    t.boolean "match_kinds_applied", default: false, null: false
     t.text "notes"
     t.uuid "outflow_transaction_id", null: false
     t.string "status", default: "pending", null: false

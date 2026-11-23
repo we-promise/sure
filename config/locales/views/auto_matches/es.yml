@@ -4,8 +4,10 @@ es:
     title: Coincidencias automáticas
     settings:
       enable_label: Activar coincidencia automática
-      enable_description: Detecta y sugiere automáticamente coincidencias de transferencias entre cuentas en cada sincronización. Las sugerencias no se aplican hasta que las confirmes a continuación.
+      enable_description: Detecta y sugiere automáticamente coincidencias de transferencias entre cuentas en cada sincronización.
       admin_only: Solo los administradores pueden cambiar esta configuración.
+      confirm_label: "Confirmar coincidencias antes de contarlas como transferencias"
+      confirm_description: "Si está activado, una coincidencia sugerida sigue contando como ingreso y gasto hasta que la confirmes. Si está desactivado, las sugerencias se excluyen de inmediato de los ingresos y gastos, y al rechazar una vuelve a contarse."
     update_settings:
       settings_updated: Configuración de coincidencia automática actualizada
     bulk_update:

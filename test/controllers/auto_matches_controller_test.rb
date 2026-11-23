@@ -221,4 +221,97 @@ class AutoMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "investment_contribution", imported_outflow.transaction.reload.kind
     assert_equal "funds_movement", imported_inflow.transaction.reload.kind
   end
+
+  test "update_settings disabling preserves an imported pending transfer whose kinds equal the ones a match gives" do
+    outflow = create_transaction(date: Date.current, account: accounts(:depository), amount: 700, kind: "funds_movement")
+    inflow = create_transaction(date: Date.current, account: accounts(:connected), amount: -700, kind: "funds_movement")
+    imported_transfer = Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: outflow.transaction, notes: "Imported")
+    assert_not imported_transfer.match_suggestion?
+
+    patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
+
+    assert Transfer.exists?(imported_transfer.id)
+    assert_equal "funds_movement", outflow.transaction.reload.kind
+    assert_equal "funds_movement", inflow.transaction.reload.kind
+  end
+
+  test "update_settings disabling destroys pending auto-matches that carry transfer kinds and resets those kinds" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+    transfer = outflow_entry.transaction.reload.transfer
+    assert_equal "cc_payment", outflow_entry.transaction.kind
+
+    patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
+
+    assert_not Transfer.exists?(transfer.id)
+    assert_equal "standard", outflow_entry.transaction.reload.kind
+    assert_equal "standard", inflow_entry.transaction.reload.kind
+  end
+
+  test "update_settings disabling keeps a match confirmed after the cleanup batch was loaded" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+    stale_transfer = outflow_entry.transaction.reload.transfer
+
+    # A concurrent request confirms the match after the batch was loaded.
+    Transfer.find(stale_transfer.id).confirm!
+    batch = mock("pending_transfer_matches")
+    batch.stubs(:find_each).yields(stale_transfer)
+    Family.any_instance.stubs(:pending_transfer_matches).returns(batch)
+
+    patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
+
+    assert_redirected_to auto_matches_url
+    assert stale_transfer.reload.confirmed?
+    assert_equal "cc_payment", outflow_entry.transaction.reload.kind
+  end
+
+  test "update_settings disabling skips a match another request already removed" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+    stale_transfer = outflow_entry.transaction.reload.transfer
+
+    Transfer.find(stale_transfer.id).destroy!
+    batch = mock("pending_transfer_matches")
+    batch.stubs(:find_each).yields(stale_transfer)
+    Family.any_instance.stubs(:pending_transfer_matches).returns(batch)
+
+    patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
+
+    assert_redirected_to auto_matches_url
+    assert @family.reload.auto_match_transfers_disabled?
+  end
+
+  test "update_settings requires confirmation and returns pending matches to their own kinds" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+
+    patch update_settings_auto_matches_url, params: { require_transfer_match_confirmation: "true" }
+
+    assert_redirected_to auto_matches_url
+    assert @family.reload.require_transfer_match_confirmation?
+    assert_not @family.auto_match_transfers_disabled?, "the other setting is left alone"
+    assert outflow_entry.transaction.reload.transfer.pending?
+    assert_equal "standard", outflow_entry.transaction.kind
+  end
+
+  test "update_settings requiring confirmation is refused for a member" do
+    sign_in users(:family_member)
+
+    patch update_settings_auto_matches_url, params: { require_transfer_match_confirmation: "true" }
+
+    assert_redirected_to accounts_url
+    assert_not @family.reload.require_transfer_match_confirmation?
+  end
+
+  test "index renders the confirmation toggle" do
+    get auto_matches_url
+
+    assert_response :success
+    assert_select "#require_transfer_match_confirmation"
+  end
 end

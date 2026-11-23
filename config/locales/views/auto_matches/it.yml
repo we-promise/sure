@@ -4,8 +4,10 @@ it:
     title: Corrispondenze automatiche
     settings:
       enable_label: Attiva corrispondenza automatica
-      enable_description: Rileva e suggerisce automaticamente le corrispondenze dei trasferimenti tra conti a ogni sincronizzazione. I suggerimenti non vengono applicati finché non li confermi qui sotto.
+      enable_description: Rileva e suggerisce automaticamente le corrispondenze dei trasferimenti tra conti a ogni sincronizzazione.
       admin_only: Solo gli amministratori possono modificare questa impostazione.
+      confirm_label: "Conferma le corrispondenze prima di contarle come trasferimenti"
+      confirm_description: "Se attivo, una corrispondenza suggerita continua a contare come entrata e spesa finché non la confermi. Se disattivo, i suggerimenti vengono esclusi subito da entrate e spese, e rifiutarne uno li reinserisce."
     update_settings:
       settings_updated: Impostazioni di corrispondenza automatica aggiornate
     bulk_update:

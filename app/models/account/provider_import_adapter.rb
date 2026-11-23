@@ -287,11 +287,13 @@ class Account::ProviderImportAdapter
         # amount on a Loan turning the matched inflow back into loan_payment,
         # makes budgets and reports count the same payment as an expense on
         # both legs. Deriving it from the transfer also repairs legs an earlier
-        # sync already overwrote. An unconfirmed auto-match gets its kinds only
-        # in Transfer#confirm!, so until then the leg keeps its own kind.
+        # sync already overwrote. A pending match whose kinds the match did not
+        # set (the family confirms matches first, or it was imported with kinds
+        # of its own) gets them only in Transfer#confirm!, so until then the
+        # row's kind applies as it would to any leg (Transfer#kinds_applied?).
         if auto_kind.present?
           transfer = matched_transfer_for(entry)
-          transfer = nil if transfer&.pending?
+          transfer = nil if transfer && !transfer.kinds_applied?
           entry.transaction.assign_attributes(kind: transfer ? transfer.kind_for_leg(entry.transaction) : auto_kind)
         end
 

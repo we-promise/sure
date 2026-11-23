@@ -182,7 +182,30 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "funds_movement", checking_entry.transaction.reload.kind
   end
 
-  test "re-importing an unconfirmed auto-matched leg does not give it a transfer kind" do
+  test "re-importing a pending auto-matched leg keeps the kind its transfer gives it" do
+    Account::ProviderImportAdapter.new(accounts(:loan)).import_transaction(
+      external_id: "plaid_loan_inflow_pending", amount: -200.00, currency: "USD",
+      date: Date.current, name: "Loan Repayment Received", source: "plaid"
+    )
+    checking_entry = @adapter.import_transaction(
+      external_id: "plaid_checking_outflow_pending", amount: 200.00, currency: "USD",
+      date: Date.current, name: "Loan Repayment", source: "plaid"
+    )
+
+    @family.auto_match_transfers!
+    assert checking_entry.transaction.reload.transfer.pending?
+    assert_equal "loan_payment", checking_entry.transaction.kind
+
+    @adapter.import_transaction(
+      external_id: "plaid_checking_outflow_pending", amount: 200.00, currency: "USD",
+      date: Date.current, name: "Loan Repayment", source: "plaid", kind: "funds_movement"
+    )
+
+    assert_equal "loan_payment", checking_entry.transaction.reload.kind
+  end
+
+  test "re-importing an unconfirmed auto-matched leg does not give it a transfer kind when the family confirms matches first" do
+    @family.update!(require_transfer_match_confirmation: true)
     loan_entry = Account::ProviderImportAdapter.new(accounts(:loan)).import_transaction(
       external_id: "plaid_loan_inflow_pending", amount: -200.00, currency: "USD",
       date: Date.current, name: "Loan Repayment Received", source: "plaid"

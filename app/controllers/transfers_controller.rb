@@ -291,9 +291,10 @@ class TransfersController < ApplicationController
     end
 
     # Whether rejecting changes nothing on the page but the two legs' rows, so
-    # those rows can be redrawn in place. Not when the transfer was confirmed
-    # (its legs go back to income and spending, moving the page's totals), has
-    # fees (rejecting deletes them), or has a leg drawn inside a split group
+    # those rows can be redrawn in place. Not when the transfer was confirmed,
+    # or rejecting it takes a transfer kind off a leg (either returns the legs
+    # to income and spending, moving the page's totals), has fees (rejecting
+    # deletes them), or has a leg drawn inside a split group
     # (its row needs the group's context). Nor when both legs are on a list
     # outside an account page: such a list draws a transfer once, by its
     # outflow (EntriesHelper#entries_by_date), so the inflow has no row to
@@ -302,6 +303,7 @@ class TransfersController < ApplicationController
       legs = Entry.where(entryable_type: "Transaction", entryable_id: [ @transfer.inflow_transaction_id, @transfer.outflow_transaction_id ])
 
       @transfer.pending? &&
+        !@transfer.releasing_resets_kinds? &&
         @transfer.fee_transactions.none? &&
         !legs.where.not(parent_entry_id: nil).exists? &&
         (@view_ctx == "account" || legs.merge(Current.accessible_entries).count < 2)

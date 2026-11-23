@@ -465,6 +465,7 @@ class Family::DataExporter
             status: transfer.status,
             notes: transfer.notes,
             investment_contribution: transfer.investment_contribution_choice,
+            match_kinds_applied: transfer.match_kinds_applied,
             created_at: transfer.created_at,
             updated_at: transfer.updated_at
           }
