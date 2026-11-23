@@ -1,0 +1,7 @@
+<% if purchase.items.any? %>
+  <ul>
+    <% purchase.items.includes(:category).each do |item| %>
+      <li><%= item.name %><% if item.category %> (<%= item.category.name %>)<% end %></li>
+    <% end %>
+  </ul>
+<% end %>

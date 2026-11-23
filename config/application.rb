@@ -56,6 +56,11 @@ module Sure
 
     config.app_mode = (ENV["SELF_HOSTED"] == "true" || ENV["SELF_HOSTING_ENABLED"] == "true" ? "self_hosted" : "managed").inquiry
 
+    # The order mailbox is polled over IMAP (PurchaseInbox::PollJob); no HTTP ingress is used.
+    # config/sidekiq.yml lists its queues explicitly, so Action Mailbox must use existing ones.
+    config.action_mailbox.ingress = nil
+    config.action_mailbox.queues = { routing: :medium_priority, incineration: :low_priority }
+
     # Self hosters can optionally set their own encryption keys if they want to use ActiveRecord encryption.
     if Rails.application.credentials.active_record_encryption.present?
       config.active_record.encryption = Rails.application.credentials.active_record_encryption

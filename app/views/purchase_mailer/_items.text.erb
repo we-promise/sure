@@ -1,0 +1,3 @@
+<% purchase.items.includes(:category).each do |item| %>
+- <%= item.name %><% if item.category %> (<%= item.category.name %>)<% end %>
+<% end %>

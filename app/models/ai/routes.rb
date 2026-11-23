@@ -18,6 +18,8 @@ module Ai::Routes
                          sends: %i[uploaded_document] },
     extract_receipt:   { lane: :prompt,      needs: %i[structured_output],      consent: :user,
                          sends: %i[receipt_images category_names] },
+    extract_purchase:  { lane: :background,  needs: %i[structured_output],      consent: :user,
+                         sends: %i[order_email_text category_names] },
     embed:             { lane: :prompt,      needs: %i[embedding],              consent: :user,
                          sends: %i[depends_on_vector_store] },
     search_documents:  { lane: :interactive, route_of: :embed, consent_as: :embed, consent: :user,
