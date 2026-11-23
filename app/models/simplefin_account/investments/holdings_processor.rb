@@ -85,7 +85,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
 
         # SimpleFIN sometimes reports a ticker (e.g. "ETH" for the Grayscale
         # Ethereum Mini Trust ETF) in the holding currency field. Keep a real
-        # ISO currency; fall back to the account's valuation currency (#2856).
+        # ISO currency; fall back to the account's valuation currency.
         currency = holding_currency(simplefin_holding["currency"]) ||
                    simplefin_account.currency.presence ||
                    account&.currency.presence ||
@@ -274,11 +274,11 @@ class SimplefinAccount::Investments::HoldingsProcessor
       # with equities. The linked account type is the main discriminator; an
       # Investment account can still hold crypto (a Coinbase/Kraken account
       # inferred as Investment), so a known crypto symbol stays namespaced
-      # unless the description names a fund or trust (#2856).
+      # unless the description names a fund or trust.
       sym = symbol.to_s.upcase
       is_crypto_account = account&.accountable_type == "Crypto" || crypto_named_account?(description)
       is_crypto_symbol = CRYPTO_SYMBOLS.include?(sym) && !description.to_s.match?(FUND_DESCRIPTION)
-      mentions_crypto = description.to_s.downcase.include?("crypto")
+      mentions_crypto = description.to_s.downcase.include?("crypto") && !description.to_s.match?(FUND_DESCRIPTION)
 
       if !sym.include?(":") && (is_crypto_account || is_crypto_symbol || mentions_crypto)
         sym = "CRYPTO:#{sym}"
@@ -293,16 +293,32 @@ class SimplefinAccount::Investments::HoldingsProcessor
           # Skip resolver for custom tickers - create offline security directly
           raise "Custom ticker - skipping resolver"
         end
-        Security::Resolver.new(sym).resolve
+
+        security = Security::Resolver.new(sym).resolve
+        # A plain ticker on an Investment account must not attach to a crypto
+        # security the provider search happened to return (e.g. ETH -> ETHUSD).
+        if !sym.start_with?("CRYPTO:") && security&.crypto?
+          Rails.logger.warn "SimpleFin: resolver returned crypto security #{security.ticker} for non-crypto symbol=#{sym}; falling back to offline security"
+          return offline_security(sym, description)
+        end
+
+        security
       rescue => e
         # If provider search fails or any unexpected error occurs, fall back to an offline security
         Rails.logger.warn "SimpleFin: resolver failed for symbol=#{sym}: #{e.class} - #{e.message}; falling back to offline security" unless is_custom
-        Security.find_or_initialize_by(ticker: sym).tap do |sec|
-          sec.offline = true if sec.respond_to?(:offline) && sec.offline != true
-          sec.name = description.presence if sec.name.blank? && description.present?
-          sec.save! if sec.changed?
-        end
+        offline_security(sym, description)
       end
+    end
+
+    # Only blank-MIC rows are considered, so a crypto row that shares the
+    # ticker is never marked offline.
+    def offline_security(sym, description)
+      security = Security.where("UPPER(ticker) = ?", sym).where(exchange_operating_mic: [ nil, "" ]).first ||
+                 Security.new(ticker: sym)
+      security.offline = true if security.respond_to?(:offline) && security.offline != true
+      security.name = description.presence if security.name.blank? && description.present?
+      security.save! if security.changed?
+      security
     end
 
     def parse_holding_date(created_timestamp)

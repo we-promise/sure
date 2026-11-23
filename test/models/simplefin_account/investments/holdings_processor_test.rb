@@ -443,6 +443,26 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
                     simplefin_name: "Crypto Portfolio", expected: "ETH")
   end
 
+  test "a fund description that mentions crypto stays an equity" do
+    assert_resolves(account: accounts(:investment), symbol: "ETH",
+                    description: "Grayscale Ethereum Mini Trust ETF (Crypto)", expected: "ETH")
+  end
+
+  test "an investment ETF ticker never attaches to a crypto security" do
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:simplefin_account).returns(stub(name: "Wealthfront"))
+
+    crypto_security = Security.new(ticker: "ETHUSD", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+    Security::Resolver.stubs(:new).returns(stub(resolve: crypto_security))
+
+    resolved = processor.send(:resolve_security, "ETH", "Grayscale Ethereum Mini Trust ETF")
+
+    assert_equal "ETH", resolved.ticker
+    assert resolved.offline?
+    refute resolved.crypto?
+  end
+
   private
     def assert_resolves(account:, symbol:, description:, expected:, simplefin_name: "Wealthfront")
       processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
