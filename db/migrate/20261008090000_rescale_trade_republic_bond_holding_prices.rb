@@ -24,7 +24,8 @@
 # prices are rescaled under the same check.
 #
 # Balances and the account's current value were computed from the inflated
-# prices too; the item sync scheduled at the end refreshes them.
+# prices too; RefreshTradeRepublicBalancesAfterBondRescale schedules their
+# refresh after the later item schema migrations have committed.
 class RescaleTradeRepublicBondHoldingPrices < ActiveRecord::Migration[8.1]
   PERCENT_QUOTE_RATIO = 10
   SHARED_BOND_TICKER = "BOND"
@@ -36,7 +37,6 @@ class RescaleTradeRepublicBondHoldingPrices < ActiveRecord::Migration[8.1]
 
   def up
     bond_security_ids = Security.where(ticker: SHARED_BOND_TICKER, exchange_operating_mic: SHARED_BOND_MIC).pluck(:id)
-    item_ids = []
 
     TradeRepublicAccount.where(kind: "portfolio").includes(:account_provider).find_each do |trade_republic_account|
       # Account can require columns added by later migrations. Read its ID
@@ -60,10 +60,7 @@ class RescaleTradeRepublicBondHoldingPrices < ActiveRecord::Migration[8.1]
       next if rescaled.zero? && !payload_rescaled
 
       say "Rescaled #{rescaled} Trade Republic bond holdings on account #{provider.account_id}"
-      item_ids << trade_republic_account.trade_republic_item_id
     end
-
-    schedule_syncs(item_ids.uniq)
   end
 
   # The old prices were wrong; restoring them would bring back the 100x error.
@@ -99,23 +96,6 @@ class RescaleTradeRepublicBondHoldingPrices < ActiveRecord::Migration[8.1]
       end
       trade_republic_account.update_column(:raw_positions_payload, payload) if changed
       changed
-    end
-
-    # TradeRepublicItem.syncable reads session_expires_at, which a later
-    # migration adds, so an upgrade that runs this first stops here. Pick the
-    # items with the columns this migration can rely on; an item whose session
-    # has already expired just fails that one sync and asks for a login.
-    def schedule_syncs(item_ids)
-      return if item_ids.empty?
-
-      TradeRepublicItem.reset_column_information
-      TradeRepublicItem.where(id: item_ids, scheduled_for_deletion: false, status: "good", pending_login_state: nil)
-        .where.not(session_blob: [ nil, "" ])
-        .find_each do |item|
-        item.sync_later
-      rescue => e
-        say "Could not schedule a sync for Trade Republic item #{item.id} (#{e.message}); it refreshes on its next sync"
-      end
     end
 
     def parse_decimal(value)

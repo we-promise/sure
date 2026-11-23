@@ -3,7 +3,11 @@
 require "test_helper"
 require Rails.root.join("db/migrate/20261008090000_rescale_trade_republic_bond_holding_prices")
 
+require Rails.root.join("db/migrate/20261123210000_refresh_trade_republic_balances_after_bond_rescale")
+
 class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   BOND_ISIN = "IT0005377152"
   STOCK_ISIN = "US0378331005"
   INTEREST_ISIN = "LU0000000001"
@@ -43,7 +47,7 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     Account.connection.remove_column(:accounts, :logo_selection)
     Account.reset_column_information
 
-    assert_difference -> { @item.syncs.count }, 1 do
+    assert_no_difference -> { @item.syncs.count } do
       run_migration
     end
 
@@ -52,7 +56,7 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     assert_equal "0.8404", @tr_account.reload.raw_positions_payload.first["price"]
   end
 
-  test "schedules the sync before later Trade Republic item columns exist" do
+  test "does not schedule a sync before later Trade Republic item columns exist" do
     holding = create_snapshot(BOND_ISIN, Date.current, qty: "2677.95", price: "84.04", cost_basis: "0.93")
 
     # Upgrades from before these migrations run this one first. PostgreSQL
@@ -63,7 +67,7 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     end
     TradeRepublicItem.reset_column_information
 
-    assert_difference -> { Sync.where(syncable: @item).count }, 1 do
+    assert_no_difference -> { Sync.where(syncable: @item).count } do
       run_migration
     end
 
@@ -138,14 +142,59 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     assert_equal "84.04", @tr_account.reload.raw_positions_payload.first["price"]
   end
 
-  test "schedules a sync only for items with rescaled holdings" do
+  test "leaves sync scheduling to the later migration even when rerun" do
     create_snapshot(BOND_ISIN, Date.current, qty: "2677.95", price: "84.04", cost_basis: "0.93")
 
-    assert_difference -> { @item.syncs.count }, 1 do
+    assert_no_difference -> { @item.syncs.count } do
       run_migration
     end
     assert_no_difference -> { @item.syncs.count } do
       run_migration
+    end
+  end
+
+  test "refreshes corrected portfolios only after the item schema migrations" do
+    connection = TradeRepublicItem.connection
+    %i[device_id session_expires_at].each do |column|
+      connection.remove_column(:trade_republic_items, column)
+    end
+    TradeRepublicItem.reset_column_information
+
+    assert_no_enqueued_jobs only: SyncJob do
+      run_migration
+    end
+    assert_equal "0.8404", @tr_account.reload.raw_positions_payload.first["price"]
+
+    connection.add_column(:trade_republic_items, :device_id, :uuid, default: -> { "gen_random_uuid()" }, null: false)
+    connection.add_column(:trade_republic_items, :session_expires_at, :datetime)
+    # Deliberately keep the migration process's stale model cache.
+    assert_enqueued_jobs 1, only: SyncJob do
+      run_refresh
+    end
+    assert @item.reload.ready_for_sync?
+    assert @item.device_id.present?
+    assert_no_difference -> { @item.syncs.count } do
+      run_refresh
+    end
+  end
+
+  test "refresh skips expired and disconnected items and unlinked portfolios" do
+    @item.update_columns(session_expires_at: 1.hour.ago)
+    assert_no_enqueued_jobs only: SyncJob do
+      run_refresh
+    end
+    @item.update_columns(session_expires_at: nil, status: "requires_update")
+    assert_no_enqueued_jobs only: SyncJob do
+      run_refresh
+    end
+    @item.update_columns(status: "good", scheduled_for_deletion: true)
+    assert_no_enqueued_jobs only: SyncJob do
+      run_refresh
+    end
+    @item.update_columns(scheduled_for_deletion: false)
+    @tr_account.account_provider.destroy!
+    assert_no_enqueued_jobs only: SyncJob do
+      run_refresh
     end
   end
 
@@ -164,6 +213,12 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
         external_id: "trade_republic_position_DEBOND1_#{isin}_#{date}",
         account_provider_id: @tr_account.account_provider.id
       }.merge(attributes))
+    end
+
+    def run_refresh
+      ActiveRecord::Migration.suppress_messages do
+        RefreshTradeRepublicBalancesAfterBondRescale.new.up
+      end
     end
 
     def run_migration
