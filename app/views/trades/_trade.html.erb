@@ -77,9 +77,11 @@
           <% end %>
         <% end %>
 
-        <%= content_tag :p,
-                    format_money(-entry.amount_money),
-                    class: ["privacy-sensitive", "text-green-600": entry.amount.negative?] %>
+        <% if trade.non_cash_reward? %>
+          <p class="text-right"><%= render "trades/reward_value", value: trade.reward_value, compact: true %></p>
+        <% else %>
+          <%= tag.p format_money(-entry.amount_money), class: ["privacy-sensitive", "text-success": entry.amount.negative?] %>
+        <% end %>
       </div>
     </div>
   <% end %>

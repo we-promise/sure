@@ -72,6 +72,25 @@ class Trade < ApplicationRecord
     qty.negative?
   end
 
+  def non_cash_reward?
+    kraken = extra["kraken"]
+    return false unless kraken && entry&.source == "kraken" && entry.amount.zero? && qty&.positive?
+
+    # Earn also records movements between Kraken wallets, including migrations.
+    %w[staking earn].include?(kraken["type"].to_s.downcase) &&
+      (kraken["subtype"].blank? || %w[reward rewardallocation].include?(kraken["subtype"].downcase))
+  end
+
+  def reward_unit_price
+    # The importer can store a positive spot price while waiting for history.
+    price_money if non_cash_reward? && price&.positive? && !extra.dig("kraken", "price_missing")
+  end
+
+  def reward_value
+    unit_price = reward_unit_price
+    unit_price * qty if unit_price
+  end
+
   # A sale that can name the lot it sold from.
   def disposal?
     sell? && !internal_movement?

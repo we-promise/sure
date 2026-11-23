@@ -3,6 +3,36 @@ require "test_helper"
 class TradeTest < ActiveSupport::TestCase
   include EntriesTestHelper
   include SqlQueryCapture
+
+  test "a Kraken reward without a positive historical unit price has no value estimate" do
+    trade = entries(:trade).trade
+    trade.entry.assign_attributes(source: "kraken", amount: 0)
+    trade.extra = { "kraken" => { "type" => "staking" } }
+
+    [ nil, 0, -1 ].each do |price|
+      trade.price = price
+      assert_predicate trade, :non_cash_reward?
+      assert_nil trade.reward_value
+    end
+  end
+
+  test "only received Kraken rewards with no cash leg qualify for a reward estimate" do
+    trade = entries(:trade).trade
+    [
+      [ nil, "staking", "", 2, 0 ],
+      [ "kraken", "deposit", "", 2, 0 ],
+      [ "kraken", "earn", "migration", 2, 0 ],
+      [ "kraken", "earn", "reward", -2, 0 ],
+      [ "kraken", "staking", "", 2, -5 ]
+    ].each do |source, type, subtype, qty, amount|
+      trade.entry.assign_attributes(source: source, amount: amount)
+      trade.assign_attributes(qty: qty, investment_activity_label: "Dividend",
+                              extra: { "kraken" => { "type" => type, "subtype" => subtype } })
+      assert_not trade.non_cash_reward?
+      assert_nil trade.reward_value
+    end
+  end
+
   # `Trend#value` is `current - previous`, and `Money#-` keeps the left
   # operand's currency while taking the right one's bare amount without
   # converting or raising. So a disposal priced in the security's currency had

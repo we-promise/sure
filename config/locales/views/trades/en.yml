@@ -29,7 +29,15 @@ en:
     trade:
       scheduled: Scheduled
       scheduled_tooltip: Dated in the future — won't affect your balance until then
+    reward_value:
+      label: Estimated value received (non-cash)
+      short_label: Non-cash estimate
+      less_than: "< %{amount}"
+      unavailable: Unavailable
     header:
+      quantity_received: Quantity received
+      price_at_receipt: Unit price at receipt
+      cash_movement: Cash movement
       buy: Buy
       sell: Sell
       dividend: Dividend

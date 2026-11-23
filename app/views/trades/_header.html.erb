@@ -1,8 +1,11 @@
 <%# locals: (entry:) %>
 
+<% trade = entry.trade %>
+<% reward = trade.non_cash_reward? %>
+
 <div id="<%= dom_id(entry, :header) %>">
   <%= tag.header class: "mb-4 space-y-1" do %>
-    <% label = entry.trade.investment_activity_label %>
+    <% label = trade.investment_activity_label %>
     <% income_trade = %w[Dividend Interest].include?(label) %>
     <%# The label is what the importer actually recorded, so it wins over the
         amount's sign: a transfer between two accounts you own is neither a
@@ -21,13 +24,14 @@
 
     <div class="flex items-center gap-4">
       <h3 class="font-medium">
-        <span class="text-2xl text-primary privacy-sensitive">
-          <%= format_money(income_trade ? entry.amount_money.abs : entry.amount_money) %>
-        </span>
-
-        <span class="text-lg text-secondary">
-          <%= entry.currency %>
-        </span>
+        <% if reward %>
+          <span class="text-2xl text-primary"><%= render "trades/reward_value", value: trade.reward_value %></span>
+        <% else %>
+          <span class="text-2xl text-primary privacy-sensitive">
+            <%= format_money(income_trade ? entry.amount_money.abs : entry.amount_money) %>
+          </span>
+          <span class="text-lg text-secondary"><%= entry.currency %></span>
+        <% end %>
       </h3>
 
       <% if entry.linked? %>
@@ -42,8 +46,6 @@
     </span>
   <% end %>
 
-  <% trade = entry.trade %>
-
   <% unless trade.security.cash? %>
   <div class="mb-2">
     <%= render DS::Disclosure.new(title: t(".overview"), open: true) do %>
@@ -54,7 +56,11 @@
               <dd class="text-primary"><%= trade.security.ticker %></dd>
             </div>
 
-          <% if trade.qty.positive? %>
+          <% if reward %>
+            <%= render DS::DetailRow.new(label: t(".quantity_received"), value: format_quantity(trade.qty, exact: true), value_class: "privacy-sensitive") %>
+            <%= render DS::DetailRow.new(label: t(".price_at_receipt"), value: format_reward_value(trade.reward_unit_price), value_class: "privacy-sensitive") %>
+            <%= render DS::DetailRow.new(label: t(".cash_movement"), value: format_money(entry.amount_money), value_class: "privacy-sensitive") %>
+          <% elsif trade.qty.positive? %>
             <div class="flex items-center justify-between text-sm">
               <dt class="text-secondary"><%= t(".purchase_qty_label") %></dt>
               <dd class="text-primary"><%= trade.qty.abs %></dd>
@@ -66,18 +72,19 @@
             </div>
           <% end %>
 
-          <% if trade.qty.positive? && trade.security.current_price.present? %>
+          <% current_price = trade.security.current_price if trade.qty.positive? %>
+          <% if current_price %>
             <div class="flex items-center justify-between text-sm">
               <dt class="text-secondary"><%= t(".current_market_price_label") %></dt>
-              <dd class="text-primary privacy-sensitive"><%= format_money trade.security.current_price %></dd>
+              <dd class="text-primary privacy-sensitive"><%= format_money current_price %></dd>
             </div>
           <% end %>
 
-          <% if trade.qty.positive? && trade.unrealized_gain_loss.present? %>
+          <% if (gain_loss = trade_header_gain_loss(trade, current_price)) %>
             <div class="flex items-center justify-between text-sm">
               <dt class="text-secondary"><%= t(".total_return_label") %></dt>
-              <dd style="color: <%= trade.unrealized_gain_loss.color %>;">
-                <%= render "shared/trend_change", trend: trade.unrealized_gain_loss %>
+              <dd style="color: <%= gain_loss.color %>;">
+                <%= render "shared/trend_change", trend: gain_loss %>
               </dd>
             </div>
           <% end %>
