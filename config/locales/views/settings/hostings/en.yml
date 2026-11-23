@@ -35,10 +35,12 @@ en:
         danger_zone: Danger Zone
         instance_settings_restricted: Provider credentials, the shared AI connection and sync settings apply to every family on this instance, so only a super admin can change them. Which assistant your family uses is still set per family. Someone with access to the server can promote a user to super admin; the Docker self-hosting guide shows the command in its upgrade notes.
         clear_cache: Clear data cache
-        clear_cache_warning: Clearing the data cache will remove all exchange rates, security prices, account balances, and other data. This will not delete accounts, transactions, categories, or other user-owned data.
+        clear_cache_warning: "Clearing the data cache recalculates your family's account balances and holdings and reloads the exchange rates and security prices they use. Only your family's balances and holdings are deleted; exchange rates and security prices are shared with the other families on this instance and are updated for them too. This will not delete accounts, transactions, categories, or other user-owned data."
+        clear_cache_warning_without_provider: "Clearing the data cache recalculates your family's account balances and holdings. No exchange rate or security price provider is configured, so the stored exchange rates and security prices are kept. This will not delete accounts, transactions, categories, or other user-owned data."
         confirm_clear_cache:
           title: Clear data cache?
-          body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
+          body: "Are you sure you want to clear the data cache? Your family's account balances and holdings will be recalculated, and the exchange rates and security prices they use will be reloaded. Only your family's balances and holdings are deleted; exchange rates and security prices are shared with the other families on this instance and are updated for them too. This action cannot be undone."
+          body_without_provider: "Are you sure you want to clear the data cache? Your family's account balances and holdings will be recalculated. No exchange rate or security price provider is configured, so the stored exchange rates and security prices are kept. This action cannot be undone."
         reset_market_data: Reset market data for all families
         reset_market_data_warning: Deletes the exchange rates and security prices your providers can load again, re-imports them, and then syncs every account. Foreign-currency totals may show unconverted until the import finishes.
         confirm_reset_market_data:
@@ -336,6 +338,9 @@ en:
         invalid_onboarding_state: Invalid onboarding state
         invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g., 02:30).
         invalid_llm_budget: "%{field} must be a whole number ≥ %{minimum}."
+        invalid_page_cache_days: "Days to keep cached pages must be a whole number from %{minimum} to %{maximum}."
+        invalid_page_cache_max_mb: "Max cache size must be a whole number of megabytes from %{minimum} to %{maximum}."
+        invalid_page_cache_cooldown_minutes: "Minutes between rebuilds must be a whole number from %{minimum} to %{maximum}."
         invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
         anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
         invalid_jev_endpoint: Jev Endpoint must be an https URL. Plain http is accepted only for localhost.
@@ -365,6 +370,12 @@ en:
         market_data_sync_description: When enabled, security prices are imported automatically once a day (Monday-Friday) at the specified time.
         market_data_sync_time_label: Market data import time (HH:MM)
         market_data_sync_time_description: Specify the time of day when the daily security price import should run — e.g. shortly after your primary exchange closes.
+        page_cache_days_label: Keep cached pages for (days)
+        page_cache_days_description: "Reports are built ahead of time after each sync and kept for this many days if nobody opens them. Default: %{default_days}. PAGE_CACHE_DAYS overrides this field."
+        page_cache_cooldown_minutes_label: Rebuild cached pages at most every (minutes)
+        page_cache_cooldown_minutes_description: "When the data behind a cached page changes, the page you had is still shown while a new one is built in the background, at most once in this many minutes. Refresh on the page rebuilds it straight away. 0 rebuilds after every change. Default: %{default_minutes}. PAGE_CACHE_COOLDOWN_MINUTES overrides this field."
+        page_cache_max_mb_label: Max cache size (MB)
+        page_cache_max_mb_description: "The most cached pages may take together. When a new page would go over it, the pages opened longest ago are dropped first; a page bigger than the whole limit is shown but not kept. Using %{used} of %{limit}. Default: %{default_mb}. PAGE_CACHE_MAX_MB overrides this field."
         include_pending_label: Include pending transactions
         include_pending_description: When enabled, pending (uncleared) transactions will be imported and automatically reconciled when they post. Disable if your bank provides unreliable pending data.
         env_configured_message: This setting is disabled because a provider environment variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING) is set. Remove it to enable this setting.

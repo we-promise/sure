@@ -10,7 +10,8 @@ class AccountsLogoViewTest < ActionView::TestCase
 
     assert_select "span.relative" do
       assert_select "div", text: @account.name.first
-      assert_select "img[src='https://example.com/logo.png'][data-controller='image-fallback'][data-action='error->image-fallback#remove']"
+      assert_select "img[src='https://example.com/logo.png'][data-controller='image-fallback'][data-action='error->image-fallback#remove']" \
+        "[data-image-fallback-retry-value='true'][data-image-fallback-release-permanent-value='true']"
       assert_select "img[onerror]", count: 0
     end
   end

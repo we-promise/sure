@@ -15,6 +15,10 @@
   rounded: true
 } %>
 
+<%# A sidebar logo sits in a wrapper Turbo carries across visits. A failed
+    same-origin image is fetched once more at a fresh URL, then drops that
+    permanence before it removes itself (see image_fallback_controller.js). %>
+<% fallback = ProviderLogo::REMOVE_ON_ERROR.merge(image_fallback_retry_value: true, image_fallback_release_permanent_value: true) %>
 <div class="relative shrink-0">
   <% if url.present? %>
     <%# The ProviderLogo recipe: the initials sit under the image, and a logo the
@@ -26,7 +30,7 @@
             class: "absolute inset-0 w-full h-full rounded-full object-contain bg-container",
             alt: "",
             loading: "lazy",
-            data: ProviderLogo::REMOVE_ON_ERROR %>
+            data: fallback %>
     <% end %>
   <% else %>
     <%= render DS::FilledIcon.new(**initials) %>
