@@ -57,6 +57,7 @@ module ProviderItemModelLifecycleTests
       error = StandardError.new("raw provider failure")
       provider_item.class.any_instance.stubs(:"import_latest_#{key}_data").raises(error)
       # Only the failure's own reports are counted, not the post-sync broadcast's.
+      # The stub also hides a provider with no SyncCompleteEvent, whose broadcast reports a NameError.
       provider_item.class.any_instance.stubs(:broadcast_sync_complete)
       sync = Sync.create!(syncable: provider_item)
       captured = []
