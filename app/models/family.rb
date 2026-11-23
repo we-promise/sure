@@ -756,6 +756,15 @@ class Family < ApplicationRecord
     "#{tag_count}-#{tag_max_at&.to_f}-#{tagging_count}-#{tagging_max_at&.to_f}"
   end
 
+  # Editing a holding (its manual cost basis, or unlocking it) changes
+  # neither its account nor any entry, so caches whose results depend on
+  # holdings, such as the Reports body's gains, key on this too. The count
+  # catches a removed holding.
+  def holdings_version
+    count, max_at = holdings.pick(Arel.sql("count(*)"), Arel.sql('max("holdings"."updated_at")'))
+    "#{count}-#{max_at&.to_f}"
+  end
+
   # Used for invalidating caches keyed on recurring transactions (e.g. the
   # transactions index's projected recurring list). See #entries_version for
   # why .count is included alongside the timestamp.
@@ -924,7 +933,7 @@ class Family < ApplicationRecord
         Transaction.where(id: batch).update_all([ "locked_attributes = locked_attributes - ?, updated_at = ?", attribute, Time.current ])
         # Without the flag, a lock the user sets later counts as confirming it.
         DataEnrichment.where(enrichable_type: "Transaction", enrichable_id: batch, attribute_name: attribute, source: source)
-                      .update_all([ "metadata = metadata - ?", flag ])
+                      .drop_metadata_flag!(flag)
         Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
       end
       ids.size

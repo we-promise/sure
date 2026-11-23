@@ -89,6 +89,27 @@ class UI::PeriodPickerTest < ViewComponent::TestCase
     assert_match(/end_date=#{custom_period.end_date}/, checked.first[:href])
   end
 
+  test "custom_extra_params replace extra_params on the custom row only" do
+    custom_period = Period.custom(start_date: 15.days.ago.to_date, end_date: Date.current)
+
+    render_inline(UI::PeriodPicker.new(
+      selected: custom_period, url: "/accounts/abc",
+      extra_params: { chart_view: "balance" }, custom_extra_params: { chart_view: "gains" }
+    ))
+
+    links = page.all("a[role='menuitemradio']")
+    assert links[0...-1].all? { |link| link[:href].include?("chart_view=balance") }
+    assert_includes links.last[:href], "chart_view=gains"
+  end
+
+  test "the custom row takes extra_params without custom_extra_params" do
+    custom_period = Period.custom(start_date: 15.days.ago.to_date, end_date: Date.current)
+
+    render_inline(UI::PeriodPicker.new(selected: custom_period, url: "/", extra_params: { chart_view: "balance" }))
+
+    assert_includes page.all("a[role='menuitemradio']").last[:href], "chart_view=balance"
+  end
+
   test "a preset selection renders no custom row" do
     render_inline(UI::PeriodPicker.new(selected: Period.last_30_days, url: "/"))
 

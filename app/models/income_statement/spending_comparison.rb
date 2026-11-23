@@ -53,8 +53,9 @@ class IncomeStatement::SpendingComparison
          .minimum(:date)
   end
 
-  def initialize(income_statement, period:, history_start:, as_of: Date.current)
+  def initialize(income_statement, period:, history_start:, as_of: Date.current, tag_ids: nil)
     @income_statement = income_statement
+    @tag_ids = tag_ids
     @in_progress = period.start_date <= as_of && as_of < period.end_date
     # An unfinished period counts spending so far.
     @period = @in_progress ? Period.custom(start_date: period.start_date, end_date: as_of) : period
@@ -139,7 +140,7 @@ class IncomeStatement::SpendingComparison
   end
 
   private
-    attr_reader :income_statement
+    attr_reader :income_statement, :tag_ids
 
     def build_baseline_period(history_start)
       end_date = period.start_date - 1.day
@@ -184,16 +185,7 @@ class IncomeStatement::SpendingComparison
     # { key => { category:, net: } } for every category with activity, where
     # net = expense - income booked to that category in the period.
     def net_by_category(p)
-      result = {}
-      { income_statement.expense_totals(period: p) => 1, income_statement.income_totals(period: p) => -1 }.each do |totals, sign|
-        totals.category_totals.each do |ct|
-          next if ct.total.zero?
-
-          entry = result[key_for(ct.category)] ||= { category: ct.category, net: 0 }
-          entry[:net] += sign * ct.total
-        end
-      end
-      result
+      IncomeStatement::NetByCategory.new(income_statement, period: p, tag_ids: tag_ids).call
     end
 
     def scaled_normal(baseline_net)
@@ -245,9 +237,6 @@ class IncomeStatement::SpendingComparison
     end
 
     def key_for(category)
-      return :uncategorized if category.uncategorized?
-      return :other_investments if category.other_investments?
-
-      category.id
+      IncomeStatement::NetByCategory.key(category)
     end
 end
