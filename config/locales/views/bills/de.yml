@@ -125,7 +125,7 @@ de:
     feed:
       calendar_name: "Sure-Rechnungen"
     ai_prompts:
-      due_before_paycheck: "Was ist vor meinem nächsten Gehalt fällig?"
+      due_before_paycheck: "Was ist vor meinem nächsten Zahltag fällig?"
       subscriptions_up: "Welche Abos sind dieses Jahr teurer geworden?"
       monthly_subscriptions: "Wie viel zahle ich monatlich für Abos?"
       safe_to_spend: "Wie viel kann ich in diesem Zeitraum sicher ausgeben?"
@@ -244,8 +244,8 @@ de:
     amount_range: "zwischen %{min} und %{max}"
     possible_duplicate: "Mögliches Duplikat"
     pay_period:
-      paycheck_on: "Gehalt am %{date}"
-      before_next_paycheck: "Vor deinem nächsten Gehalt"
+      paycheck_on: "Zahltag am %{date}"
+      before_next_paycheck: "Vor deinem nächsten Zahltag"
       due_before_date: "%{amount} fällig vor dem %{date}"
     paycheck:
       unconvertible:
@@ -290,14 +290,14 @@ de:
         one: "Rechnungen vor deinem nächsten Zahltag · 1"
         other: "Rechnungen vor deinem nächsten Zahltag · %{count}"
       of_total: "von %{amount}"
-      bridge_label: "Vor deinem nächsten Gehalt"
+      bridge_label: "Vor deinem nächsten Zahltag"
       bridge_amount: "· %{amount} fällig"
       bridge_split: "Fällig vor dem %{date}, gedeckt durch die %{cash} auf deinen Konten."
       bridge_left: "%{amount} übrig nach Rechnungen"
       bridge_show_more:
         one: "1 weitere anzeigen"
         other: "%{count} weitere anzeigen"
-      bridge_allocation_aria: "Von %{cash} auf deinen Konten sind %{due} vor deinem nächsten Gehalt fällig und %{left} bleiben übrig."
+      bridge_allocation_aria: "Von %{cash} auf deinen Konten sind %{due} vor deinem nächsten Zahltag fällig und %{left} bleiben übrig."
       item_overdue: "Überfällig"
       shortfall_label: "Fehlbetrag vor deinem nächsten Zahltag"
       shortfall_amount: "· %{amount}"
