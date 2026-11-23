@@ -1,0 +1,9 @@
+---
+nb:
+  tag:
+    dropdowns:
+      show:
+        empty: "Ingen tagger ennå"
+        manage: "Administrer tagger"
+        no_tags: "Fant ingen tagger"
+        search_placeholder: "Søk"
