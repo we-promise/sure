@@ -268,7 +268,10 @@ class Account::ProviderImportAdapter
       auto_category = nil
       if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
         auto_kind = "funds_movement"
-      elsif detected_label == "Contribution"
+      elsif detected_label == "Contribution" && (account.investment? || account.crypto?)
+        # Some providers (SnapTrade for Wealthsimple cash accounts) label every
+        # deposit on a bank account CONTRIBUTION. There it is salary or another
+        # inflow, not money moving into an investment, so it keeps its own kind.
         auto_kind = "investment_contribution"
         auto_category = account.family.investment_contributions_category
       elsif account.accountable_type == "Loan" && entry.amount.negative?
