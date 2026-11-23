@@ -53,6 +53,29 @@ class MintImportTest < ActiveSupport::TestCase
     assert_equal [ 1234.56, -1234.56 ], signed_amounts(import)
   end
 
+  test "amounts without a leading zero keep their value" do
+    import = mint_import(<<~CSV)
+      Date,Amount,Account Name,Description,Category,Labels,Currency,Notes,Transaction Type
+      01/01/2024,.50,Checking,Fee,Fees,,USD,,debit
+      01/02/2024,-.50,Checking,Fee,Fees,,USD,,debit
+      01/03/2024,.50,Checking,Refund,Fees,,USD,,credit
+      01/04/2024,-.50,Checking,Refund,Fees,,USD,,credit
+    CSV
+
+    assert_equal [ 0.5, 0.5, -0.5, -0.5 ], signed_amounts(import)
+  end
+
+  test "amounts without a leading zero use the import's decimal separator" do
+    csv = <<~CSV
+      Date;Amount;Account Name;Description;Category;Labels;Currency;Notes;Transaction Type
+      01/01/2024;,50;Checking;Fee;Fees;;EUR;;debit
+    CSV
+    import = @family.imports.create!(type: "MintImport", raw_file_str: csv, col_sep: ";", number_format: "1.234,56")
+    import.generate_rows_from_csv
+
+    assert_equal [ 0.5 ], signed_amounts(import)
+  end
+
   private
     def mint_import(csv)
       @family.imports.create!(type: "MintImport", raw_file_str: csv, col_sep: ",").tap(&:generate_rows_from_csv)
