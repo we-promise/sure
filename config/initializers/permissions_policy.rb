@@ -14,11 +14,15 @@
 # it unlisted keeps the browser default (allowed), which is what passkey
 # login/registration needs. Do not add those directive names here; Rails
 # raises NoMethodError for any symbol outside its fixed DIRECTIVES map.
+#
+# Rails only sends this policy as the legacy Feature-Policy header, which
+# Firefox and Safari ignore, so the same list also goes out as
+# Permissions-Policy (each feature disabled with an empty allowlist).
+disabled_features = %i[camera microphone geolocation usb payment fullscreen]
+
 Rails.application.config.permissions_policy do |policy|
-  policy.camera      :none
-  policy.microphone  :none
-  policy.geolocation :none
-  policy.usb         :none
-  policy.payment     :none
-  policy.fullscreen  :none
+  disabled_features.each { |feature| policy.public_send(feature, :none) }
 end
+
+Rails.application.config.action_dispatch.default_headers["Permissions-Policy"] =
+  disabled_features.map { |feature| "#{feature}=()" }.join(", ")

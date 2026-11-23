@@ -13,6 +13,18 @@
 #   every third-party OAuth client and the mobile app's SSO flow.
 # - report-uri: no violation-collection endpoint exists yet; add one before
 #   relying on this for detection rather than just enforcement.
+# A CSP source with a path matches only that path, so external URLs are
+# reduced to their origin (scheme, host and a non-default port).
+csp_origin = lambda do |url|
+  uri = URI.parse(url.to_s.strip)
+  next unless %w[http https].include?(uri.scheme) && uri.host.present?
+
+  port = uri.port == uri.default_port ? "" : ":#{uri.port}"
+  "#{uri.scheme}://#{uri.host}#{port}"
+rescue URI::InvalidURIError
+  nil
+end
+
 Rails.application.configure do
   config.content_security_policy do |policy|
     policy.default_src :self
@@ -20,7 +32,21 @@ Rails.application.configure do
     # blob: is required for the profile-picture upload preview
     # (app/javascript/controllers/profile_image_preview_controller.js uses
     # URL.createObjectURL(file) to show the selected file before it's saved).
-    policy.img_src     :self, :https, :data, :blob
+    #
+    # A generic_s3 endpoint can be plain http (e.g. a local MinIO), which
+    # :https does not cover, so its origin is allowed explicitly. Without
+    # path-style URLs the bucket is a subdomain of the endpoint host.
+    s3_image_origins = lambda do
+      s3_origin = csp_origin.call(ENV["GENERIC_S3_ENDPOINT"])
+      next [] unless s3_origin
+
+      bucket = ENV["GENERIC_S3_BUCKET"].to_s.strip
+      path_style = ActiveModel::Type::Boolean.new.cast(ENV.fetch("GENERIC_S3_FORCE_PATH_STYLE", "false"))
+      origins = [ s3_origin ]
+      origins << s3_origin.sub("://", "://#{bucket}.") if bucket.match?(/\A[a-z0-9.-]+\z/i) && !path_style
+      origins
+    end
+    policy.img_src :self, :https, :data, :blob, s3_image_origins
 
     # Plaid Link (app/javascript/controllers/plaid_controller.js) loads its
     # widget script from cdn.plaid.com at runtime via a dynamically inserted
@@ -71,7 +97,9 @@ Rails.application.configure do
       if config.feedback_enabled && Rails.application.config.app_mode.self_hosted?
         hosts << config.self_hosted_feedback_project[:host]
       end
-      hosts.uniq.flat_map { |host| [ host, host.sub(".i.posthog.com", "-assets.i.posthog.com") ] }.uniq
+      # POSTHOG_HOST may carry a reverse-proxy path (e.g. https://example.com/ingest).
+      hosts.filter_map { |host| csp_origin.call(host) }.uniq
+           .flat_map { |host| [ host, host.sub(".i.posthog.com", "-assets.i.posthog.com") ] }.uniq
     end
     policy.script_src  :self, plaid_cdn_host, posthog_hosts
     policy.connect_src :self, *plaid_api_hosts, posthog_hosts
@@ -106,4 +134,10 @@ Rails.application.configure do
   # styles need per-element upkeep they don't.
   config.content_security_policy_nonce_generator = ->(request) { request.session.id.to_s }
   config.content_security_policy_nonce_directives = %w[script-src]
+
+  # CSP_REPORT_ONLY=true sends the same policy as
+  # Content-Security-Policy-Report-Only: the browser reports violations in
+  # its console but blocks nothing. An escape hatch for self-hosted setups
+  # that inject their own scripts (see docs/hosting/content-security-policy.md).
+  config.content_security_policy_report_only = ActiveModel::Type::Boolean.new.cast(ENV.fetch("CSP_REPORT_ONLY", "false"))
 end

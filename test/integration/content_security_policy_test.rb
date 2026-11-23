@@ -29,6 +29,29 @@ class ContentSecurityPolicyTest < ActionDispatch::IntegrationTest
     assert_select "script:not([src])[nonce=?]", nonce, count: inline_scripts.size
   end
 
+  test "the cached account sidebar still runs its script in a new session" do
+    store = ActiveSupport::Cache::MemoryStore.new
+    original = [ ActionController::Base.perform_caching, ActionController::Base.cache_store ]
+    ActionController::Base.perform_caching = true
+    ActionController::Base.cache_store = store
+
+    nonces = 2.times.map do
+      reset!
+      sign_in users(:family_admin)
+      get root_path
+
+      nonce = response.headers["Content-Security-Policy"][/'nonce-([0-9a-f]+)'/, 1]
+      sidebar_script = css_select("script").find { |script| script.text.include?("__sidebarExpandAllBound") }
+      assert sidebar_script, "the account sidebar script is rendered"
+      assert_equal nonce, sidebar_script["nonce"]
+      nonce
+    end
+
+    assert_not_equal nonces.first, nonces.last, "each session gets its own nonce"
+  ensure
+    ActionController::Base.perform_caching, ActionController::Base.cache_store = original
+  end
+
   test "allows every Plaid API host whatever environment PLAID_ENV names" do
     # The effective Plaid environment can come from Settings > Providers or
     # PLAID_EU_ENV, so the policy must not depend on PLAID_ENV alone.
@@ -97,13 +120,51 @@ class ContentSecurityPolicyTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "sends a restrictive Permissions-Policy header" do
+  test "sends the permissions policy as Permissions-Policy as well as Feature-Policy" do
     get new_session_url
 
-    policy = response.headers["Feature-Policy"] || response.headers["Permissions-Policy"]
-    assert policy.present?, "Permissions-Policy header must be set"
-    assert_includes policy, "camera 'none'"
-    assert_includes policy, "microphone 'none'"
+    assert_includes response.headers["Feature-Policy"], "camera 'none'"
+    permissions = response.headers["Permissions-Policy"].split(", ")
+    %w[camera microphone geolocation usb payment fullscreen].each do |feature|
+      assert_includes permissions, "#{feature}=()"
+    end
+  end
+
+  test "allows a plain-http generic S3 endpoint for images" do
+    with_env_overrides(GENERIC_S3_ENDPOINT: "http://minio.local:9000", GENERIC_S3_BUCKET: "sure", GENERIC_S3_FORCE_PATH_STYLE: "true") do
+      get new_session_url
+      assert_includes csp_directive("img-src"), "http://minio.local:9000"
+      assert_not_includes csp_directive("img-src"), "http://sure.minio.local:9000"
+    end
+
+    with_env_overrides(GENERIC_S3_ENDPOINT: "http://minio.local:9000/", GENERIC_S3_BUCKET: "sure", GENERIC_S3_FORCE_PATH_STYLE: "false") do
+      get new_session_url
+      assert_includes csp_directive("img-src"), "http://minio.local:9000"
+      assert_includes csp_directive("img-src"), "http://sure.minio.local:9000"
+    end
+  end
+
+  test "adds no S3 image origin without a usable endpoint" do
+    [ nil, "", "minio.local" ].each do |endpoint|
+      with_env_overrides(GENERIC_S3_ENDPOINT: endpoint) do
+        get new_session_url
+        assert_equal %w['self' https: data: blob:], csp_directive("img-src")
+      end
+    end
+  end
+
+  test "reduces a PostHog host behind a reverse-proxy path to its origin" do
+    config = Rails.configuration.x.posthog
+    config.stubs(:feedback_enabled).returns(false)
+    config.stubs(:api_key).returns("operator-owned-project")
+    config.stubs(:host).returns("https://analytics.example.com/ingest")
+    Rails.env.stubs(:production?).returns(true)
+
+    get new_session_url
+    [ "script-src", "connect-src" ].each do |directive|
+      assert_includes csp_directive(directive), "https://analytics.example.com"
+      assert_not_includes response.headers["Content-Security-Policy"], "/ingest"
+    end
   end
 
   private
