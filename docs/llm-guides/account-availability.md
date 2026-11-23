@@ -61,6 +61,23 @@ account.effective_liquidity(today)  # a released locked account reads "immediate
 account.next_release_date(today)
 ```
 
+## Release reminders
+
+`Account::ReleaseReminder` decides which locked accounts need a reminder on a
+day: `upcoming` (released within the lead time), `released` (on the release
+date and for a week after) and `renewal` (a renewing deposit; from the lead
+time before the renewal date until that day).
+
+Reminders appear in the feed only:
+`Insight::Generators::AccountReleaseGenerator`, run by `GenerateInsightsJob`
+for preview families, with the fixed lead time
+`Account::ReleaseReminder::DEFAULT_LEAD_DAYS`. The feed is per family, so it
+takes only accounts that count in the finances of an active preview member
+and leaves out accounts that not every active member can see (their name and
+balance would leak). There is no per-person channel or e-mail on purpose: a
+delivery setting belongs in one notification preference shared by all
+features, not in a setting per feature.
+
 ## Overview figures
 
 `BalanceSheet#liquidity(date:)` returns a `BalanceSheet::LiquidityOverview`
