@@ -97,14 +97,22 @@ class Family::BayesCategorizer
       category_id, confidence = classify(transaction)
       next if category_id.nil?
 
-      categorized_ids << transaction.id
       # Kept on the enrichment so the threshold can be audited against what
       # users later changed. A ranking score, not a probability.
       metadata = { confidence: confidence.round(3), model: MODEL_VERSION, settings: settings.digest }
       metadata[:locked_by_bayes] = true if settings.lock_results
-      was_modified = transaction.enrich_attribute(:category_id, category_id, source: "bayes", metadata: metadata)
-      transaction.lock_attr!(:category_id) if settings.lock_results
-      modified_count += 1 if was_modified
+      # Rechecked under the row's lock (which reloads it), as the AI's results
+      # are: a sync or a transfer confirmation may have made it a plain
+      # transfer, or someone categorized it, since it was selected.
+      applied = transaction.with_lock do
+        next false if transaction.category_id.present? || Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(transaction.kind)
+
+        was_modified = transaction.enrich_attribute(:category_id, category_id, source: "bayes", metadata: metadata)
+        transaction.lock_attr!(:category_id) if settings.lock_results
+        modified_count += 1 if was_modified
+        true
+      end
+      categorized_ids << transaction.id if applied
     end
 
     Result.new(categorized_ids: categorized_ids, modified_count: modified_count)
