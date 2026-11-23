@@ -342,6 +342,7 @@ class RecurringTransaction < ApplicationRecord
   # asks for. Detection confirmation already has its own callback, so this
   # covers only the resume path.
   def should_reconstruct_history?
+    return false if skip_started_on_backfill
     return true if activated_from_suggestion?
 
     saved_change_to_status? && active? && (started_on.present? || saved_change_to_started_on?)
