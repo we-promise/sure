@@ -48,6 +48,10 @@ class RuleRun < ApplicationRecord
     nil
   end
 
+  # Before a rule's AI jobs are queued: `count` more jobs are pending. Atomic and
+  # ahead of the queue, so a job that finishes at once finds itself counted.
+  def await_jobs!(count) = self.class.update_counters(id, pending_jobs_count: count)
+
   # A job reports once, when it has finished for good: retries report through
   # the same job_id, and so does a job Sidekiq runs again after a restart, so
   # each job is counted once however often it reports.

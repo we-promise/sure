@@ -17,10 +17,14 @@ class Rule::ActionExecutor::AutoDetectMerchantsTest < ActiveSupport::TestCase
 
   test "queues one job per LLM call, sized by LLM_MAX_ITEMS_PER_CALL" do
     5.times { |i| create_transaction(account: @account, name: "Coffee #{i}") }
-    Family.any_instance.expects(:auto_detect_transaction_merchants_later).times(3)
+    Family.any_instance.expects(:auto_detect_transaction_merchants_later).times(3).returns(true)
+
+    rule_run = @rule.rule_runs.create!(rule_name: @rule.name, execution_type: "manual", status: "pending", executed_at: Time.current)
 
     with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "2") do
-      assert_equal 3, @executor.execute(@account.transactions)[:jobs_count]
+      @executor.execute(@account.transactions, rule_run: rule_run)
     end
+
+    assert_equal 3, rule_run.reload.pending_jobs_count
   end
 end
