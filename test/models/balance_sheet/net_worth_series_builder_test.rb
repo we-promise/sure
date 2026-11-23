@@ -69,7 +69,7 @@ class BalanceSheet::NetWorthSeriesBuilderTest < ActiveSupport::TestCase
     create_balance(account: account, date: 5.days.ago.to_date, balance: 0)
     create_balance(account: account, date: 1.day.ago.to_date, balance: 500)
 
-    assert_not_includes builder.send(:account_active_until_dates), account.id
+    assert_not builder.send(:account_active_until_dates).key?(account.id)
   end
 
   test "a disabled account keeps the earlier cutoff" do
