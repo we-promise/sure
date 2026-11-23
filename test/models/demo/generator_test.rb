@@ -181,6 +181,25 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     assert @family.accounts.find_by!(name: "Bookstore Gift Card").gift_card.expiring_soon?
   end
 
+  # The demo's transfers are recorded ones, not auto-match suggestions. The
+  # investment card counts only a confirmed transfer's leg as a flow, so
+  # left pending, the quarterly HSA contributions showed as none.
+  test "demo transfers are confirmed and count as the HSA's contributions" do
+    @family.update!(currency: "USD")
+    generator = Demo::Generator.new(seed: 42)
+    generator.send(:create_realistic_categories!, @family)
+    generator.send(:create_realistic_accounts!, @family)
+    generator.send(:generate_additional_savings_transfers!)
+
+    hsa = @family.accounts.find_by!(name: "Fidelity HSA Investment")
+    deposits = hsa.entries.where(name: "HSA Contribution")
+    assert deposits.any?, "the demo must record HSA contributions, or this asserts nothing"
+    assert_equal [ "confirmed" ], Transfer.joins(inflow_transaction: :entry).where(entries: { account_id: hsa.id }).distinct.pluck(:status)
+
+    totals = InvestmentStatement::Totals.new(@family, account_ids: [ hsa.id ], date_range: deposits.minimum(:date)..Date.current).call
+    assert_equal(-deposits.sum(:amount), totals[:contributions])
+  end
+
   # The demo family's loans were bare Loan.new records -- no rate, no term, and
   # the mortgage's principal a transaction rather than an opening valuation --
   # so none of them had a schedule to show. The mortgage is adjustable with

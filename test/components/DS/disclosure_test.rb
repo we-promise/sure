@@ -25,6 +25,13 @@ class DS::DisclosureTest < ViewComponent::TestCase
     assert_selector "details > div", text: "body text"
   end
 
+  test "summary_data puts data attributes on the summary, not the details" do
+    render_inline(DS::Disclosure.new(title: "More", summary_data: { controller: "probe", action: "pointerup->probe#tap" })) { "body text" }
+
+    assert_selector "details > summary[data-controller='probe'][data-action='pointerup->probe#tap']"
+    assert_no_selector "details[data-controller]"
+  end
+
   test "forwards data attributes and a summary_class override" do
     render_inline(DS::Disclosure.new(
       summary_class: "custom-summary",
