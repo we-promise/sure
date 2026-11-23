@@ -276,6 +276,19 @@ class ChatTest < ActiveSupport::TestCase
     end
   end
 
+  test "a failed last reply still needs a response, so a reload shows the error and Retry" do
+    chat = chats(:two)
+    chat.messages.destroy_all
+    chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "gpt-4.1")
+    reply = chat.messages.where(type: "AssistantMessage").sole
+
+    reply.update!(status: :failed)
+    assert chat.needs_assistant_response?
+
+    reply.update!(content: "Done.", status: :complete)
+    assert_not chat.needs_assistant_response?
+  end
+
   test "handle_undelivered_response! ignores a pending bubble younger than the server timeout" do
     chat = chats(:two)
     fresh = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.seconds.ago)

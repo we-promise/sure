@@ -72,8 +72,10 @@ class Chat < ApplicationRecord
     end
   end
 
+  # A failed reply still needs one: the chat shows the error and Retry.
   def needs_assistant_response?
-    conversation_messages.ordered.last.role != "assistant"
+    last_message = conversation_messages.ordered.last
+    last_message.role != "assistant" || last_message.failed?
   end
 
   # Asks again for an answer to the last prompt when its reply failed or
