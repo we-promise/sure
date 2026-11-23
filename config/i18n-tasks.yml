@@ -43,4 +43,6 @@ ignore_unused:
   - 'errors.*'
   - 'helpers.*'
   - 'support.*'
+  - 'transactions.receipt.reasons.*' # looked up by the reason a ReceiptScan was flagged with
+  - 'transactions.receipt.status.*' # looked up by receipt status
   - '{credit_cards,cryptos,depositories,other_assets,other_liabilities,loans,vehicles,properties,investments}.{create,update,destroy}.success'
