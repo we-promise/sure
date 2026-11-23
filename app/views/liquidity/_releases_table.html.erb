@@ -1,0 +1,33 @@
+<%# locals: (overview:) %>
+
+<% if overview.releases.any? %>
+  <%= render DS::Table.new(
+        rows: liquidity_release_table_rows(overview),
+        inset: true,
+        label: t(".caption"),
+        id: "liquidity-releases",
+        row_class: ->(row) { "bg-container-inset" if row.total? }
+      ) do |table| %>
+    <% table.with_column(t(".account"), row_header: true) do |row| %>
+      <% if row.total? %>
+        <span class="text-xs font-medium text-secondary"><%= t(".year_total", year: row.year) %></span>
+      <% else %>
+        <%= link_to row.release.account.name, account_path(row.release.account) %>
+        <% if row.release.auto_renew %>
+          <span class="block text-xs text-secondary font-normal"><%= t(".renews") %></span>
+        <% end %>
+      <% end %>
+    <% end %>
+    <% table.with_column(t(".released_on"), class: "text-secondary") do |row| %>
+      <%= l(row.release.date, format: :long) unless row.total? %>
+    <% end %>
+    <% table.with_column(t(".remaining"), align: :right, class: "text-secondary") do |row| %>
+      <%= liquidity_release_remaining(row.release) unless row.total? %>
+    <% end %>
+    <% table.with_column(t(".amount"), numeric: true, class: "font-medium privacy-sensitive") do |row| %>
+      <%= format_money(row.amount) %>
+    <% end %>
+  <% end %>
+<% else %>
+  <p class="text-sm text-subdued" id="liquidity-releases"><%= t(".empty") %></p>
+<% end %>

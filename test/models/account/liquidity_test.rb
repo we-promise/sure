@@ -194,6 +194,20 @@ class Account::LiquidityTest < ActiveSupport::TestCase
     assert_nil account.renewal_term_months
   end
 
+  test "immediate assets include locked accounts from their release date" do
+    checking = create_account(Depository, "checking")
+    brokerage = create_account(Investment, "brokerage")
+    cd = create_account(Depository, "cd")
+    cd.update!(available_on: @today + 10)
+    renewing = create_account(Depository, "cd")
+    renewing.update!(available_on: @today, auto_renew: true, renewal_term_months: 12)
+    card = create_account(CreditCard, nil)
+    accounts = Account.where(id: [ checking, brokerage, cd, renewing, card ].map(&:id))
+
+    assert_equal [ checking ].map(&:id), accounts.immediate_assets_on(@today).pluck(:id)
+    assert_equal [ checking, cd ].map(&:id).sort, accounts.immediate_assets_on(@today + 10).pluck(:id).sort
+  end
+
   test "today is evaluated in the family's time zone" do
     @family.update!(timezone: "Pacific/Auckland")
 

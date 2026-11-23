@@ -43,6 +43,19 @@ module Account::Liquidity
     validate :liquidity_choice_must_be_known
 
     before_validation :apply_liquidity
+
+    # Money for this month's budget: immediate accounts plus locked accounts
+    # whose release date has come. A brokerage account is available wealth,
+    # but not budget money.
+    scope :immediate_assets_on, ->(date) {
+      assets.where(liquidity: "immediate").or(assets.released_on(date))
+    }
+
+    # Locked accounts whose release date is on or before `date`. An account
+    # that renews automatically never releases by itself.
+    scope :released_on, ->(date) {
+      where(liquidity: "locked", auto_renew: false).where(available_on: ..date)
+    }
   end
 
   class_methods do

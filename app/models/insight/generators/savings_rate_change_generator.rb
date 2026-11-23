@@ -77,7 +77,9 @@ class Insight::Generators::SavingsRateChangeGenerator < Insight::Generator
       expense > incomes.sum
     end
 
-    # [each month's income, the window's summed spending].
+    # [each month's income, the window's summed spending]. Transfers into
+    # savings accounts are budget expenses, but they are money saved, not
+    # spent, so they don't count as spending here.
     def window_totals(start_date)
       months = Array.new(WINDOW_MONTHS) do |i|
         month_start = start_date + i.months
@@ -86,7 +88,10 @@ class Insight::Generators::SavingsRateChangeGenerator < Insight::Generator
 
       [
         months.map { |month| income_statement.income_totals(period: month).total.to_d },
-        months.sum { |month| income_statement.expense_totals(period: month).total.to_d }
+        months.sum do |month|
+          income_statement.expense_totals(period: month).total.to_d -
+            income_statement.savings_contributions_total(period: month).to_d
+        end
       ]
     end
 
