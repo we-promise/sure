@@ -605,6 +605,79 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
            "the declared bill's occurrence must materialize immediately"
   end
 
+  test "create keeps started_on and enqueues the history backfill" do
+    due = Date.current + 5
+    started = 3.months.ago.to_date
+
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Backdated water", amount: "80", account_id: accounts(:depository).id,
+        first_due_on: due.iso8601, started_on: started.iso8601, frequency_preset: "monthly"
+      }
+    }
+
+    bill = @family.recurring_transactions.order(:created_at).last
+    assert bill, "the bill must be created"
+    assert_equal started, bill.started_on
+    assert bill.active?
+    assert bill.started_on_past?
+    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ bill.id ])
+  end
+
+  test "the created bill's history backfill materializes 12 past cycles" do
+    due = Date.current + 5
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Backdated water", amount: "80", account_id: accounts(:depository).id,
+        first_due_on: due.iso8601, started_on: 2.years.ago.to_date.iso8601,
+        frequency_preset: "monthly"
+      }
+    }
+    bill = @family.recurring_transactions.order(:created_at).last
+
+    perform_enqueued_jobs(only: BackfillRecurringHistoryJob)
+
+    historical = bill.recurring_occurrences.where(historical: true)
+    assert_equal 12, historical.count
+    assert historical.all? { |occurrence| occurrence.due_on < due }
+    assert historical.all? { |occurrence| occurrence.expected_amount == 80 }
+  end
+
+  test "create rejects an unreadable started_on" do
+    assert_no_difference "@family.recurring_transactions.count" do
+      post recurring_transactions_url, params: {
+        recurring_transaction: {
+          name: "Bad date", amount: "80", account_id: accounts(:depository).id,
+          first_due_on: (Date.current + 5).iso8601, started_on: "not-a-date",
+          frequency_preset: "monthly"
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "editing started_on enqueues the history backfill" do
+    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ @recurring_transaction.id ]) do
+      patch recurring_transaction_url(@recurring_transaction), params: {
+        recurring_transaction: { started_on: 3.months.ago.to_date.iso8601 }
+      }
+    end
+
+    assert_equal 3.months.ago.to_date, @recurring_transaction.reload.started_on
+  end
+
+  test "an unreadable started_on is refused instead of silently clearing the field" do
+    @recurring_transaction.update_column(:started_on, 3.months.ago.to_date)
+
+    patch recurring_transaction_url(@recurring_transaction), params: {
+      recurring_transaction: { started_on: "not-a-date" }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal 3.months.ago.to_date, @recurring_transaction.reload.started_on
+  end
+
   test "create keeps the category chosen on the add form" do
     post recurring_transactions_url, params: {
       recurring_transaction: {

@@ -698,6 +698,7 @@ class Family::DataExporter
         renews_on: recurring_transaction.renews_on,
         trial_ends_on: recurring_transaction.trial_ends_on,
         cancelled_on: recurring_transaction.cancelled_on,
+        started_on: recurring_transaction.started_on,
         anchor_date: recurring_transaction.anchor_date,
         end_mode: recurring_transaction.end_mode,
         end_on: recurring_transaction.end_on,
@@ -738,6 +739,7 @@ class Family::DataExporter
         snoozed_until: occurrence.snoozed_until,
         closed_at: occurrence.closed_at,
         closed_source: occurrence.closed_source,
+        historical: occurrence.historical,
         notes: occurrence.notes
       }
     end

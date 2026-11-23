@@ -54,7 +54,7 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
     # and noise for an annual one.)
     def overdue_occurrences
       candidates = family.recurring_occurrences
-        .open_status
+        .current_open
         .joins(:recurring_transaction)
         .where(recurring_transactions: { status: :active, destination_account_id: nil })
         .merge(shared_recurring_transactions)

@@ -155,10 +155,11 @@
     <% end %>
   <% end %>
 
-  <%# Settled cycles with what paid them: "did I pay it that month" and "which
-      transaction paid it" in one list, rather than a cycle list and a payment
-      list that mostly repeat each other. Every row opens its cycle's payment
-      drawer, which is the only place a payment can be unlinked. %>
+  <%# The last 12 cycles with what paid them: "did I pay it that month" and
+      "which transaction paid it" in one list, rather than a cycle list and a
+      payment list that mostly repeat each other. Backdated open months are
+      listed here too, because this is where a past payment gets linked. Every
+      row opens its cycle's payment drawer. %>
   <% if history.any? %>
     <%= render DS::Disclosure.new(title: t("bills.detail.history")) do %>
       <div class="bg-container-inset rounded-lg divide-y divide-subdued">
@@ -170,17 +171,21 @@
             <div class="min-w-0">
               <p class="text-sm text-primary"><%= l(occurrence.due_on, format: :long) %></p>
               <p class="text-xs text-secondary truncate">
-                <%= t("recurring_occurrences.history_status.#{occurrence.status}") %>
-                <% if payments.size > 1 %>
-                  &middot; <%= t("bills.detail.payment_count", count: payments.size) %>
-                <% elsif (payment = payments.first) %>
-                  &middot; <%= payment.entry&.name.presence || t("bills.detail.manual_payment") %>
+                <% if occurrence.historical? && occurrence.scheduled? && payments.empty? %>
+                  <%= t("bills.detail.no_payment") %>
+                <% else %>
+                  <%= t("recurring_occurrences.history_status.#{occurrence.status}") %>
+                  <% if payments.size > 1 %>
+                    &middot; <%= t("bills.detail.payment_count", count: payments.size) %>
+                  <% elsif (payment = payments.first) %>
+                    &middot; <%= payment.entry&.name.presence || t("bills.detail.manual_payment") %>
+                  <% end %>
                 <% end %>
               </p>
             </div>
             <span class="flex items-center gap-1.5 shrink-0">
-              <span class="text-sm text-primary privacy-sensitive">
-                <%= format_money(occurrence.confirmed_allocated_money) %>
+              <span class="text-sm privacy-sensitive <%= payments.any? ? "text-primary" : "text-secondary" %>">
+                <%= format_money(payments.any? ? occurrence.confirmed_allocated_money : occurrence.resolved_expected_amount_money) %>
               </span>
               <%= icon("chevron-right", size: "sm", class: "text-subdued") %>
             </span>

@@ -674,6 +674,7 @@ class Family::DataImporter
           renews_on: parse_import_date(data["renews_on"]),
           trial_ends_on: parse_import_date(data["trial_ends_on"]),
           cancelled_on: parse_import_date(data["cancelled_on"]),
+          started_on: parse_import_date(data["started_on"]),
           anchor_date: parse_import_date(data["anchor_date"]),
           end_mode: imported_enum_value(data["end_mode"], RecurringTransaction.end_modes, "never"),
           end_on: parse_import_date(data["end_on"]),
@@ -791,6 +792,7 @@ class Family::DataImporter
           # A check constraint limits closed_source; an unknown export value
           # degrades to nil rather than aborting the import.
           closed_source: data["closed_source"].to_s.presence_in(%w[auto user]),
+          historical: boolean_import_value(data, "historical", default: false),
           notes: data["notes"]
         )
         # A check constraint ties status and closed_at together, so a closed row

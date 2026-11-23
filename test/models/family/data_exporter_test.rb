@@ -956,6 +956,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       expected_day_of_month: 14,
       last_occurrence_date: Date.parse("2024-01-14"),
       next_expected_date: Date.parse("2024-02-14"),
+      started_on: Date.parse("2024-01-14"),
       status: "active",
       occurrence_count: 6,
       manual: true,
@@ -963,6 +964,14 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       expected_amount_min: -95,
       expected_amount_max: -85,
       expected_amount_avg: -89.99
+    )
+    occurrence = recurring_transaction.recurring_occurrences.create!(
+      family: @family,
+      original_due_on: Date.parse("2024-01-14"),
+      due_on: Date.parse("2024-01-14"),
+      currency: "USD",
+      status: "scheduled",
+      historical: true
     )
 
     zip_data = @exporter.generate_export
@@ -981,8 +990,17 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal "-89.99", BigDecimal(recurring_data["data"]["amount"].to_s).to_s("F")
       assert_equal "active", recurring_data["data"]["status"]
       assert_equal true, recurring_data["data"]["manual"]
+      assert_equal "2024-01-14", recurring_data["data"]["started_on"]
       assert_equal "https://pay.example.com/internet", recurring_data["data"]["payment_url"]
       assert_not recurring_data["data"].key?("family_id")
+
+      occurrence_data = ndjson_content
+        .split("\n")
+        .map { |line| JSON.parse(line) }
+        .find { |line| line["type"] == "RecurringOccurrence" && line.dig("data", "id") == occurrence.id }
+
+      assert occurrence_data
+      assert_equal true, occurrence_data["data"]["historical"]
     end
   end
 

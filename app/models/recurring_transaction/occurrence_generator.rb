@@ -45,6 +45,7 @@ class RecurringTransaction
     def regenerate_future!(through: nil)
       removable = series.recurring_occurrences
                         .open_status
+                        .where(historical: false)
                         .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
       doomed = removable.where("due_on >= ?", Date.current)
       doomed = doomed.or(removable.where(original_due_on: single_payment_moved_from)) if single_payment_moved_from
@@ -56,10 +57,34 @@ class RecurringTransaction
 
     # Materializes a past window (catch-up/backfill). The caller decides what
     # happens to uncovered past occurrences; this only creates rows.
-    def backfill!(from:, through: Date.current)
+    #
+    # `historical: true` is the declared-bill path: only cycles before the
+    # current one are generated, they are capped at history_cycles, and each
+    # row carries the price that was in force on its own due date.
+    def backfill!(from:, through: Date.current, historical: false, history_cycles: nil)
       return 0 unless series.active?
 
-      upsert_window(from, through)
+      if historical
+        series.recurring_price_changes.load
+        current_cycle_start = series.current_cycle_start
+        if current_cycle_start.present?
+          # Keep a cycle that falls before a future anchor: the next due can be
+          # set ahead while the obligation has existed for months. A current
+          # row that generation already materialized is excluded so it does
+          # not consume one of the 12 history slots.
+          current = series.recurring_occurrences.find_by(due_on: current_cycle_start)
+          boundary = current.present? && !current.historical? ? current_cycle_start - 1 : current_cycle_start
+          through = [ through, boundary ].min
+        end
+        from = [ from, history_floor(through, history_cycles) ].max if history_cycles.present?
+      end
+
+      upsert_window(
+        from,
+        through,
+        historical: historical,
+        limit: historical ? history_cycles : nil
+      )
     end
 
     private
@@ -96,16 +121,29 @@ class RecurringTransaction
         [ horizon, next_due ].compact.max
       end
 
-      def upsert_window(from, through)
+      # The lower bound that leaves at most `history_cycles` occurrences before
+      # `through`. Cycle length is cadence-specific, so weekly history reaches
+      # back weeks while annual history reaches back years.
+      def history_floor(through, history_cycles)
+        return through if history_cycles.blank?
+
+        cycle_days = (365.25 / series.schedule.occurrences_per_year).ceil
+        through - (cycle_days * (history_cycles + 2))
+      end
+
+      def upsert_window(from, through, historical: false, limit: nil)
+        return 0 if from > through
+
         schedule = series.schedule
         pairs = schedule.occurrence_pairs_between(from, through)
         stood_in = stood_in_for(schedule, from, through)
         pairs = pairs.reject { |pair| stood_in.include?(pair.original_due_on) }
+        pairs = pairs.last(limit) if limit.present?
         return 0 if pairs.empty?
 
         now = Time.current
         rows = pairs.map do |pair|
-          {
+          row = {
             recurring_transaction_id: series.id,
             family_id: series.family_id,
             original_due_on: pair.original_due_on,
@@ -115,10 +153,33 @@ class RecurringTransaction
             created_at: now,
             updated_at: now
           }
+
+          if historical
+            row[:historical] = true
+            row[:expected_amount] = series.amount_on(pair.due_on).abs
+          end
+
+          row
         end
 
         result = RecurringOccurrence.insert_all(rows, unique_by: "idx_recurring_occurrences_identity")
+        update_historical_amounts(pairs) if historical
         result.rows.size
+      end
+
+      # Rows that already existed when a history was first generated can carry
+      # a nil expected_amount. Pin them to the price of their own cycle without
+      # touching a payment or a closed row.
+      def update_historical_amounts(pairs)
+        by_original = pairs.index_by(&:original_due_on)
+
+        series.recurring_occurrences
+              .where(historical: true, expected_amount: nil)
+              .where(original_due_on: by_original.keys)
+              .find_each do |occurrence|
+          pair = by_original[occurrence.original_due_on]
+          occurrence.update_column(:expected_amount, series.amount_on(pair.due_on).abs)
+        end
       end
 
       # Rows a schedule edit kept from the previous rule are paid or past-due

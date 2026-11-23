@@ -101,7 +101,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
     # occurrences contribute only what actually remains.
     def upcoming_recurring_entries
       occurrences = family.recurring_occurrences
-        .open_status
+        .current_open
         .joins(:recurring_transaction)
         .where(recurring_transactions: { status: :active, destination_account_id: nil })
         .merge(shared_recurring_transactions)

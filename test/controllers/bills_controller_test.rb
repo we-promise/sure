@@ -370,6 +370,32 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.text-xs.text-secondary", text: I18n.t("bills.detail.rule_detected", name: "NETFLIX.COM"), count: 0
   end
 
+  test "backdated open cycles show in history and stay out of the bills page" do
+    travel_to Date.new(2026, 8, 10) do
+      bill = create_bill(
+        name: "Backdated water", amount: 80, manual: true,
+        anchor_date: Date.new(2026, 8, 9), expected_day_of_month: 9,
+        next_expected_date: Date.new(2026, 8, 9)
+      )
+      historical = bill.recurring_occurrences.create!(
+        family: @family, original_due_on: Date.new(2026, 7, 9), due_on: Date.new(2026, 7, 9),
+        currency: "USD", status: "scheduled", historical: true, expected_amount: 80
+      )
+
+      get bills_url
+      assert_no_match I18n.t("bills.detail.no_payment"), response.body
+
+      get_bill_history(bill)
+      assert_response :success
+      assert_select "p", text: I18n.t("bills.detail.no_payment"), count: 1
+      assert_select "a[href='#{recurring_occurrence_path(historical)}']"
+
+      get recurring_occurrence_url(historical)
+      assert_response :success
+      assert_select "p", text: I18n.t("bills.due_label.historical", date: ApplicationController.helpers.bills_upcoming_date(historical.due_on))
+    end
+  end
+
   # The row drops Autopay once a bill is paused, and the drawer's schedule
   # line still claimed it.
   test "a paused bill's drawer schedule leaves out autopay" do

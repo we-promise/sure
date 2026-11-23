@@ -14,6 +14,22 @@ class RecurringTransaction::DeclaredBillTest < ActiveSupport::TestCase
       I18n.t("recurring_transactions.create.amount_invalid")
   end
 
+  test "a readable started_on is kept" do
+    started = 2.months.ago.to_date
+    series = build_bill(amount: "40", started_on: started.iso8601)
+
+    assert series.errors.none?
+    assert_equal started, series.started_on
+  end
+
+  test "an unreadable started_on becomes a validation error" do
+    series = build_bill(amount: "40", started_on: "not-a-date")
+
+    assert_not series.errors.none?
+    assert_includes series.errors.full_messages.to_sentence,
+      I18n.t("recurring_transactions.create.started_on_invalid")
+  end
+
   test "a plain numeric amount still builds" do
     series = build_bill(amount: "40.00")
 

@@ -31,6 +31,11 @@ class RecurringOccurrence < ApplicationRecord
   validates :expected_amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
   scope :open_status, -> { where(status: :scheduled) }
+  # Historical rows are past cycles generated from a bill's started_on. They
+  # stay linkable from the bill's history, but they are never the bill's
+  # current cycle and never count as debt.
+  scope :current_open, -> { open_status.where(historical: false) }
+  scope :history, -> { where(historical: true).or(closed) }
   scope :closed, -> { where.not(status: :scheduled) }
   scope :due_between, ->(from, to) { where(due_on: from..to) }
 
@@ -39,7 +44,7 @@ class RecurringOccurrence < ApplicationRecord
   # queries so remaining_spending_money on each row issues none. `series`
   # narrows the bills read, e.g. to those the whole family may see.
   def self.open_bills_due(family, dates, series: RecurringTransaction.all)
-    occurrences = open_status
+    occurrences = current_open
                     .joins(:recurring_transaction)
                     .merge(RecurringTransaction.bills)
                     .merge(series)
@@ -175,6 +180,7 @@ class RecurringOccurrence < ApplicationRecord
   # window, due through the grace period, overdue after it.
   def derived_state
     return status.to_sym unless scheduled?
+    return :historical if historical?
 
     today = Date.current
 

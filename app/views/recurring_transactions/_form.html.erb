@@ -40,6 +40,10 @@
             label: income ? t(".income_due_on_label") : t(".first_due_on_label"),
             value: recurring_transaction.first_due_on,
             required: true %>
+      <%= f.date_field :started_on,
+            label: t(".started_on_label"),
+            value: recurring_transaction.started_on %>
+      <p class="text-xs text-secondary"><%= t(".started_on_hint") %></p>
     <% else %>
       <%# first_due_on seeds the schedule and does nothing once the series
           exists, so editing when a bill falls due happens in the frequency
@@ -152,6 +156,13 @@
         </div>
       <% end %>
     </div>
+
+    <% if recurring_transaction.persisted? %>
+      <div class="space-y-2">
+        <%= f.date_field :started_on, label: t(".started_on_label") %>
+        <p class="text-xs text-secondary"><%= t(".started_on_edit_hint") %></p>
+      </div>
+    <% end %>
 
     <% if recurring_transaction.persisted? && %w[bill subscription installment other].include?(recurring_transaction.bill_type) %>
       <%# One field per row: the category picker opens a menu that holds a

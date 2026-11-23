@@ -143,6 +143,35 @@ class BillDrawerTest < ApplicationSystemTestCase
     assert settled.scheduled?, "unlinking the last payment reopens the cycle"
   end
 
+  test "a backdated open cycle links a recorded transaction from history" do
+    due = 2.months.ago.to_date
+    historical = @bill.recurring_occurrences.create!(
+      family: @user.family, original_due_on: due, due_on: due, currency: "USD",
+      status: "scheduled", historical: true, expected_amount: 80
+    )
+    entry = accounts(:depository).entries.create!(
+      date: due, amount: 80, currency: "USD", name: "CITY WATER", entryable: Transaction.new
+    )
+
+    visit bills_url
+    find(@row_link).click
+
+    within("dialog[open]") do
+      scroll_to find("turbo-frame[src*='display=history']")
+      assert_text(/#{I18n.t("bills.detail.history_title")}/i)
+      find("summary", text: /#{Regexp.escape(I18n.t("bills.detail.history"))}/i).click
+      find("a[href='#{recurring_occurrence_path(historical)}']",
+           text: I18n.l(historical.due_on, format: :long)).click
+
+      assert_text(/#{Regexp.escape(I18n.t("recurring_occurrences.show.find_heading"))}/i)
+      click_on I18n.t("recurring_occurrences.show.link_payment")
+    end
+
+    assert_text I18n.t("recurring_allocations.create.success")
+    assert_equal entry.id, historical.reload.allocations.sole.entry_id
+    assert historical.paid?, "the backdated cycle settles as paid"
+  end
+
   # The drawer's verb is chosen for the cycle it is showing. With the next
   # cycle open that is Find payment, so the bill's settled payments used to be
   # unreachable from the drawer even though the Manage payments surface is one

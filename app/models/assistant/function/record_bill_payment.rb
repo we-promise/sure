@@ -170,7 +170,7 @@ class Assistant::Function::RecordBillPayment < Assistant::Function
     end
 
     def open_due_dates(series)
-      dates = series.recurring_occurrences.open_status.order(:due_on).limit(6).pluck(:due_on)
+      dates = series.recurring_occurrences.current_open.order(:due_on).limit(6).pluck(:due_on)
       dates.any? ? dates.map(&:iso8601).join(", ") : "none"
     end
 

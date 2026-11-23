@@ -58,6 +58,20 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
                "a recurring one-cent transfer is income by sign and a paycheck by nothing"
   end
 
+  test "backdated historical cycles are not planned" do
+    create_series(name: "Paycheck", amount: -2000, due: Date.current + 3, income: true)
+    rent = create_series(name: "Rent", amount: 500, due: Date.current + 5)
+    historical = rent.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true
+    )
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 2)
+    occurrence_ids = plan.flat_map(&:items).map { |item| item.occurrence.id }
+
+    assert_not_includes occurrence_ids, historical.id
+  end
+
   test "recurring transfers between own depository accounts are not bills; debt transfers are" do
     create_series(name: "Paycheck", amount: -2000, due: Date.current + 3, income: true)
     expense = create_series(name: "Rent", amount: 500, due: Date.current + 5)

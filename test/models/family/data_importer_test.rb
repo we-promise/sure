@@ -3756,6 +3756,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 9.5, series.amount_tolerance_pct.to_f
     assert_equal "before", series.weekend_adjust
     assert_equal "2000", series.dedup_scope
+    assert_equal Date.new(2026, 5, 9), series.started_on
     assert_equal [ "WATSON PROPERTY" ], series.matcher_hints["name_aliases"]
 
     rule = series.recurrence_rules.sole
@@ -3764,6 +3765,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     occurrence = series.recurring_occurrences.find_by(original_due_on: Date.new(2026, 6, 9))
     assert occurrence.paid?
+    assert occurrence.historical?
     assert_equal 2000, occurrence.expected_amount.to_f
 
     allocation = occurrence.allocations.sole
@@ -3895,6 +3897,23 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "a started_on import does not cache rules before the rules land" do
+    records = bills_ndjson_records
+    records.each do |record|
+      record[:data][:next_expected_date] = "2027-07-09" if record[:type] == "RecurringTransaction"
+    end
+
+    Family::DataImporter.new(@family, build_ndjson(records)).import!
+
+    series = @family.recurring_transactions.find_by!(name: "Rent")
+    generated = series.recurring_occurrences.open_status.order(:due_on).pluck(:due_on)
+
+    assert generated.any?, "generation must have materialized future cycles"
+    generated.each do |due_on|
+      assert_equal 1, due_on.cwday, "#{due_on} is not the rule's Monday"
+    end
+  end
+
   # Session imports arrive in chunks, each processed by a fresh importer. The
   # occurrence map used to live in memory, so an allocation whose occurrence
   # landed in an earlier chunk was silently skipped.
@@ -4003,7 +4022,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
             expected_day_of_month: 9, last_occurrence_date: "2026-06-09",
             next_expected_date: "2026-07-09", status: "active", name: "Rent",
             manual: true, bill_type: "bill", amount_tolerance_pct: "9.5",
-            anchor_date: "2026-06-09", weekend_adjust: "before", dedup_scope: "2000",
+            anchor_date: "2026-06-09", started_on: "2026-05-09",
+            weekend_adjust: "before", dedup_scope: "2000",
             matcher_hints: { "name_aliases" => [ "WATSON PROPERTY" ] } } },
         { type: "RecurrenceRule", data: {
             id: "old-rule", recurring_transaction_id: "old-series",
@@ -4014,7 +4034,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
         { type: "RecurringOccurrence", data: {
             id: "old-occ", recurring_transaction_id: "old-series",
             original_due_on: "2026-06-09", due_on: "2026-06-09", currency: "USD",
-            expected_amount: "2000.0", status: "paid",
+            expected_amount: "2000.0", status: "paid", historical: true,
             closed_at: "2026-06-09T12:00:00Z", closed_source: "auto" } },
         { type: "RecurringAllocation", data: {
             id: "old-alloc", recurring_occurrence_id: "old-occ", transaction_id: "old-txn",

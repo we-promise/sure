@@ -45,7 +45,7 @@ class Assistant::Function::GetBillDetails < Assistant::Function
     series, error = find_series(params["bill_id"])
     return error if error
 
-    open_occurrences = series.recurring_occurrences.open_status.order(:due_on).to_a
+    open_occurrences = series.recurring_occurrences.current_open.order(:due_on).to_a
     closed = series.recurring_occurrences.closed
     history = closed.order(due_on: :desc).limit(HISTORY_LIMIT).includes(allocations: :entry).to_a
     preload_allocation_sums(open_occurrences + history)

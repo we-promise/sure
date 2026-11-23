@@ -97,6 +97,7 @@ en:
       success: Bill added
       success_income: Income added
       due_date_required: "Enter the bill's next due date"
+      started_on_invalid: "Enter the date this bill started, or leave it blank"
       amount_invalid: "Enter the amount as a plain number"
       amount_too_precise: Use at most 4 decimal places
       account_invalid: "Pick an account you can add bills to, or leave it blank"
@@ -140,6 +141,9 @@ en:
       name_placeholder: Rent, PG&E, Netflix
       amount_label: Amount
       first_due_on_label: Next due
+      started_on_label: Started on
+      started_on_hint: Optional. Backdates up to 12 past cycles so you can link payments that already happened.
+      started_on_edit_hint: The bill's due day stays on the frequency above. This only reaches back through the last 12 cycles.
       account_label: Paid from
       account_blank: Any account
       bill_type_label: Kind

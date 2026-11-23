@@ -60,6 +60,7 @@ en:
       last_account: Last account used
       upcoming: Coming up
       manual_payment: Manual payment
+      no_payment: No payment linked
       history: History
       payment_count:
         one: "1 payment"
@@ -138,6 +139,7 @@ en:
         other: "Overdue by %{count} days, was due %{date}"
       today: "Due today"
       settled: "Was due %{date}"
+      historical: "Was due %{date}"
       due_since: "Due %{date}"
       snoozed: "Snoozed until %{date}"
       upcoming:

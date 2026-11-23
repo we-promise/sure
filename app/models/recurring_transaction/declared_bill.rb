@@ -22,6 +22,12 @@ class RecurringTransaction
         nil
       end
 
+      started_on = begin
+        Date.iso8601(attrs[:started_on].to_s)
+      rescue Date::Error
+        nil
+      end
+
       is_income = ActiveModel::Type::Boolean.new.cast(attrs[:is_income]) || false
       # BigDecimal parses "Infinity" and "NaN" as non-finite numbers; both are
       # invalid here, same as unparseable input.
@@ -51,6 +57,7 @@ class RecurringTransaction
         notes: attrs[:notes],
         bank_reference: (attrs[:bank_reference] unless is_income),
         reference_only: (attrs[:reference_only] unless is_income),
+        started_on: started_on,
         status: "active",
         manual: true,
         occurrence_count: 0
@@ -90,6 +97,11 @@ class RecurringTransaction
 
       if due.nil?
         recurring.errors.add(:base, I18n.t("recurring_transactions.create.due_date_required"))
+        return recurring
+      end
+
+      if attrs[:started_on].present? && started_on.nil?
+        recurring.errors.add(:base, I18n.t("recurring_transactions.create.started_on_invalid"))
         return recurring
       end
 

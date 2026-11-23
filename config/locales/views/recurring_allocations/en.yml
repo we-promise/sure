@@ -6,6 +6,7 @@ en:
     already_allocated: That transaction is already applied to this bill
     split_counterpart_allocated: That transaction is split, and the original charge or one of its parts is already applied to a bill
     entry_exhausted: That transaction's full amount is already applied to other payments due
+    entry_not_eligible: That transaction can't be applied to this bill
     invalid: The payment could not be recorded
     create:
       success: Payment applied

@@ -44,6 +44,7 @@ class RecurringTransaction
         return {} if series_ids.empty?
 
         ranked = RecurringOccurrence
+                   .where(historical: false)
                    .paid
                    .where(recurring_transaction_id: series_ids)
                    .select(

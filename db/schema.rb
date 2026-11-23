@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_22_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2159,7 +2159,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.date "snoozed_until"
     t.string "status", default: "scheduled", null: false
     t.datetime "updated_at", null: false
+    t.boolean "historical", default: false, null: false
     t.index ["family_id", "due_on"], name: "index_recurring_occurrences_on_family_id_and_due_on"
+    t.index ["family_id", "historical", "status", "due_on"], name: "idx_recurring_occurrences_history_scope"
     t.index ["family_id", "status", "due_on"], name: "index_recurring_occurrences_on_family_id_and_status_and_due_on"
     t.index ["id", "currency"], name: "idx_recurring_occurrences_id_currency", unique: true
     t.index ["recurring_transaction_id", "original_due_on"], name: "idx_recurring_occurrences_identity", unique: true
@@ -2225,6 +2227,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.integer "upcoming_window_days"
     t.datetime "updated_at", null: false
     t.string "weekend_adjust", default: "none", null: false
+    t.date "started_on"
     t.index ["account_id"], name: "index_recurring_transactions_on_account_id"
     t.index ["category_id"], name: "index_recurring_transactions_on_category_id"
     t.index ["destination_account_id"], name: "index_recurring_transactions_on_destination_account_id"

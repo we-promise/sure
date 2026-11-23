@@ -446,6 +446,28 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal @occurrence.expected_amount, @occurrence.allocations.sum(:allocated_amount)
   end
 
+  test "mark_paid dates a past cycle on its own due date" do
+    past = @series.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
+      currency: "USD", historical: true
+    )
+
+    post mark_paid_recurring_occurrence_url(past)
+
+    assert_equal past.due_on, past.reload.allocations.sole.paid_on
+  end
+
+  test "the manual payment form defaults a past cycle to its own date" do
+    past = @series.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
+      currency: "USD", historical: true
+    )
+
+    get recurring_occurrence_url(past), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_select "input[name=paid_on][value=?]", past.due_on.iso8601
+  end
+
   test "skip and reopen round trip" do
     post skip_recurring_occurrence_url(@occurrence)
     assert @occurrence.reload.skipped?

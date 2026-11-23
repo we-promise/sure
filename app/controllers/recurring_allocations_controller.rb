@@ -1,22 +1,32 @@
 class RecurringAllocationsController < ApplicationController
   include RecurringFeatureGuardable
 
+  # A direct POST can name any entry this user can see. Reject the shapes the
+  # picker never offers instead of quietly attaching a transfer, an inflow or
+  # another account's charge to a bill.
+  class IneligibleEntryError < StandardError; end
+
   before_action :ensure_recurring_enabled
 
   def create
     occurrence = find_occurrence(params[:recurring_occurrence_id])
     ensure_series_writable(occurrence)
     entry = find_entry(occurrence, params[:entry_id])
+    paid_on = parse_paid_on(params[:paid_on])
+    # A manual payment for a past cycle belongs to that cycle, not to the day
+    # the form happened to be submitted. Today is still right for a cycle that
+    # has not come due.
+    paid_on ||= occurrence.due_on if entry.nil? && occurrence.due_on < Date.current
 
     RecurringTransaction::Allocator.new(occurrence).allocate!(
       entry: entry,
       amount: params[:amount].presence,
-      # Defaults to today via RecurringAllocation's callback; accepting a date
-      # lets someone record last Tuesday's payment as last Tuesday.
-      paid_on: parse_paid_on(params[:paid_on])
+      paid_on: paid_on
     )
 
     redirect_with notice: t(".success")
+  rescue IneligibleEntryError
+    redirect_with alert: t("recurring_allocations.entry_not_eligible")
   rescue RecurringTransaction::Allocator::OverAllocationError,
          RecurringTransaction::Allocator::MissingRateError,
          ActiveRecord::RecordInvalid,
@@ -105,10 +115,29 @@ class RecurringAllocationsController < ApplicationController
 
     # Scoped to what this user can see: sharing is per account, so a family
     # scope alone would let a member pay with another account's transaction.
+    # Then held to the same filters the picker applies, because a crafted POST
+    # must not be able to bypass them.
     def find_entry(occurrence, entry_id)
       return nil if entry_id.blank?
 
-      Current.accessible_entries.find(entry_id)
+      entry = Current.accessible_entries.find(entry_id)
+      ensure_entry_linkable!(occurrence, entry)
+      entry
+    end
+
+    def ensure_entry_linkable!(occurrence, entry)
+      series = occurrence.recurring_transaction
+      transaction = entry.entryable
+
+      eligible =
+        transaction.is_a?(Transaction) &&
+        (!entry.excluded || entry.split_parent?) &&
+        entry.currency == occurrence.currency &&
+        (series.transfer? || !transaction.kind.in?(Transaction::TRANSFER_KINDS)) &&
+        (series.account_id.blank? || entry.account_id == series.account_id) &&
+        (series.amount.negative? ? entry.amount.negative? : entry.amount.positive?)
+
+      raise IneligibleEntryError unless eligible
     end
 
     def allocation_error_message(error)

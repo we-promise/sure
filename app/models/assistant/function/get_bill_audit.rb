@@ -146,7 +146,7 @@ class Assistant::Function::GetBillAudit < Assistant::Function
     def dormant
       accessible_series.where(status: STATUS_VOCABULARY.fetch("paused"))
                        .joins(:recurring_occurrences)
-                       .merge(RecurringOccurrence.open_status)
+                       .merge(RecurringOccurrence.current_open)
                        .distinct
                        .map do |series|
         { bill_id: series.id, name: series.display_name, status: display_status(series) }

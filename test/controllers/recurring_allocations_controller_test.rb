@@ -108,6 +108,72 @@ class RecurringAllocationsControllerTest < ActionDispatch::IntegrationTest
     assert_empty other.reload.allocations
   end
 
+  test "a paid cycle can still receive a linked transaction" do
+    entry = accounts(:credit_card).entries.create!(
+      date: Date.current, amount: 95, currency: "USD", name: "ANNUAL FEE",
+      entryable: Transaction.new
+    )
+    @occurrence.close!("paid", source: "user")
+
+    post recurring_occurrence_allocations_url(@occurrence), params: { entry_id: entry.id }
+
+    assert_redirected_to bills_url
+    assert_equal entry.id, @occurrence.reload.allocations.sole.entry_id
+  end
+
+  test "a backdated open cycle can be settled by linking its transaction" do
+    historical = @series.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true, expected_amount: 95
+    )
+    entry = accounts(:credit_card).entries.create!(
+      date: historical.due_on, amount: 95, currency: "USD", name: "ANNUAL FEE",
+      entryable: Transaction.new
+    )
+
+    post recurring_occurrence_allocations_url(historical), params: { entry_id: entry.id }
+
+    historical.reload
+    assert_equal entry.id, historical.allocations.sole.entry_id
+    assert historical.paid?, "a settled historical cycle closes as paid"
+    assert historical.historical?, "and stays out of current bill KPIs"
+  end
+
+  test "a wrong-sign entry is refused even on a direct post" do
+    entry = accounts(:credit_card).entries.create!(
+      date: Date.current, amount: -95, currency: "USD", name: "REFUND",
+      entryable: Transaction.new
+    )
+
+    post recurring_occurrence_allocations_url(@occurrence), params: { entry_id: entry.id }
+
+    assert_equal I18n.t("recurring_allocations.entry_not_eligible"), flash[:alert]
+    assert_empty @occurrence.reload.allocations
+  end
+
+  test "an entry on another account is refused" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 95, currency: "USD", name: "ANNUAL FEE",
+      entryable: Transaction.new
+    )
+
+    post recurring_occurrence_allocations_url(@occurrence), params: { entry_id: entry.id }
+
+    assert_equal I18n.t("recurring_allocations.entry_not_eligible"), flash[:alert]
+    assert_empty @occurrence.reload.allocations
+  end
+
+  test "a manual payment with no date belongs to its cycle" do
+    historical = @series.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true
+    )
+
+    post recurring_occurrence_allocations_url(historical), params: { amount: "5.00" }
+
+    assert_equal historical.due_on, historical.reload.allocations.sole.paid_on
+  end
+
   test "allocation feedback is available in German" do
     expected_translations = {
       "recurring_allocations.over_allocation" => "Damit würdest du mehr als den Transaktionsbetrag zuordnen.",
