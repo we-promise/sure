@@ -174,7 +174,7 @@ de:
       submit_income: "Einkommen speichern"
       income_name_label: "Quelle"
       income_name_placeholder: "Arbeitgeber, Kunde, Nebenjob"
-      income_amount_label: "Betrag pro Gehaltszahlung"
+      income_amount_label: "Betrag pro Zahltag"
       income_due_on_label: "Nächster Zahltag"
       income_account_label: "Eingang auf"
       income_frequency_hint: "Wie oft du bezahlt wirst. Wähl die Tagesangaben passend zu deinem Zahltag."
