@@ -6,7 +6,7 @@
 #
 # Computed for the account the viewer opened, so it is only ever shown to
 # someone who can see that account. The viewer decides what an issue offers to
-# do about it: only admins can reconnect a provider connection.
+# do about it, such as whether they may reconnect a provider connection.
 class Account::HealthStatus
   Issue = Data.define(:severity, :message, :details, :hint, :link) do
     def initialize(severity:, message:, details: [], hint: nil, link: nil)
@@ -27,33 +27,56 @@ class Account::HealthStatus
 
   private
     # An expired sign-in fails the connection's sync, not the account's, so
-    # sync_issue never sees it. Admins reconnect on the connection's card on
-    # the accounts page; everyone else is told to ask one.
+    # sync_issue never sees it. Whoever may reconnect gets a link to where that
+    # happens; everyone else is told to ask an admin.
     def provider_reconnect_issues
-      can_reconnect = viewer&.admin?
-
       reconnect_items.map do |item, provider_name|
+        link = reconnect_link(item)
         Issue.new(
           severity: :warning,
           message: I18n.t("accounts.health_status.provider_reconnect.message", provider: item.try(:institution_display_name).presence || item.try(:name).presence || provider_name.humanize),
-          hint: I18n.t(can_reconnect ? "accounts.health_status.provider_reconnect.hint" : "accounts.health_status.provider_reconnect.hint_ask_admin"),
-          link: (reconnect_link(item) if can_reconnect)
+          hint: I18n.t(link ? "accounts.health_status.provider_reconnect.hint" : "accounts.health_status.provider_reconnect.hint_ask_admin"),
+          link: link
         )
       end
     end
 
+    # Where a signed-out connection is repaired. Plaid (through Plaid Link) and
+    # SimpleFIN (with a new setup token) reconnect from their card on the
+    # accounts page; the bank sync settings page can't do that for them. Every
+    # other connection is repaired in its panel on that settings page, which
+    # lists it among the connections needing attention and is admin-only.
     def reconnect_link(item)
-      {
-        text: I18n.t("accounts.health_status.provider_reconnect.link"),
-        href: Rails.application.routes.url_helpers.accounts_path(anchor: ActionView::RecordIdentifier.dom_id(item))
-      }
+      return unless reconnectable_by_viewer?(item)
+
+      routes = Rails.application.routes.url_helpers
+      if item.is_a?(PlaidItem) || item.is_a?(SimplefinItem)
+        { text: I18n.t("accounts.health_status.provider_reconnect.link_accounts"), href: routes.accounts_path(anchor: ActionView::RecordIdentifier.dom_id(item)) }
+      elsif viewer.admin?
+        { text: I18n.t("accounts.health_status.provider_reconnect.link_bank_sync"), href: routes.settings_providers_path }
+      end
     end
 
+    # A connection with its own owner (Plaid) may be reconnected by a member who
+    # owns it; every other one by admins only, as its controller requires.
+    def reconnectable_by_viewer?(item)
+      return item.manageable_by?(viewer) if item.respond_to?(:manageable_by?)
+
+      viewer&.admin? == true
+    end
+
+    # Includes connections still linked through the legacy plaid_account /
+    # simplefin_account columns: such an account may have no AccountProvider,
+    # and a signed-out connection's sync never gets far enough to add one.
     def reconnect_items
-      account.account_providers.filter_map do |account_provider|
+      linked = account.account_providers.filter_map do |account_provider|
         item = account_provider.adapter.try(:item)
-        [ item, account_provider.provider_name ] if item && ProviderConnectionStatus.requires_update?(item)
-      end.uniq(&:first)
+        [ item, account_provider.provider_name ] if item
+      end
+      linked << [ account.plaid_account.plaid_item, "plaid" ] if account.plaid_account&.plaid_item
+      linked << [ account.simplefin_account.simplefin_item, "simplefin" ] if account.simplefin_account&.simplefin_item
+
+      linked.uniq(&:first).select { |item, _| ProviderConnectionStatus.requires_update?(item) }
     end
 
     # The account's own latest sync: a later one that went through clears it.

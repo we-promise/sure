@@ -82,7 +82,8 @@ de:
       provider_reconnect:
         hint: Neue Umsätze und Kontostände werden erst wieder abgerufen, wenn du die Verbindung erneuerst. Synchronisieren allein erneuert sie nicht.
         hint_ask_admin: Neue Umsätze und Kontostände werden erst wieder abgerufen, wenn die Verbindung erneuert ist. Bitte einen Admin deiner Familie, sie zu erneuern.
-        link: "Auf der Seite „Konten“ erneuern"
+        link_accounts: "Auf der Seite „Konten“ erneuern"
+        link_bank_sync: "Unter „Banksynchronisierung“ erneuern"
         message: "Die Verbindung zu %{provider} muss erneuert werden"
       sync_failed:
         message: "Die letzte Synchronisierung ist fehlgeschlagen"

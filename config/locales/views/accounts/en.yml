@@ -144,7 +144,8 @@ en:
       provider_reconnect:
         hint: New transactions and balances won't be imported until you reconnect. Syncing this account doesn't reconnect it.
         hint_ask_admin: New transactions and balances won't be imported until the connection is renewed. Ask an admin of your family to reconnect it.
-        link: Reconnect on the Accounts page
+        link_accounts: Reconnect on the Accounts page
+        link_bank_sync: Reconnect under Bank sync
         message: "Your connection to %{provider} needs to be renewed"
       sync_failed:
         message: The last sync failed
