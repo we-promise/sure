@@ -33,6 +33,25 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     assert_equal 150_000, @wallet.reload.balance_sats
   end
 
+  test "a pending deposit after an unused address probe is included with the same tip" do
+    @wallet.bitcoin_wallet_sources.destroy_all
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    @provider.fund(source.public_key.address(0, 2), 100_000)
+    address = source.public_key.address(0, 1)
+    pending = bitcoin_transaction(confirmed: false, outputs: [ [ address, 50_000 ] ])
+    @provider.define_singleton_method(:get_address) do |current|
+      super(current).tap do
+        transactions[address] = [ pending ] if current == address && reads.count(address) == 1
+      end
+    end
+
+    BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
+
+    assert @wallet.reload.status_preview?
+    assert_equal 150_000, @wallet.balance_sats
+    assert @wallet.bitcoin_wallet_addresses.find_by!(address: address).used?
+  end
+
   test "a verified extension finds a new deposit beyond the routine lookahead" do
     @wallet.bitcoin_wallet_sources.destroy_all
     source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE, gap_limit: 40)
@@ -80,7 +99,7 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
   test "a preview retains newly observed change when its pending transaction confirms" do
     @wallet.bitcoin_wallet_sources.destroy_all
     source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB,
-      receive_address: RECEIVE, discovery: { "0" => { "complete" => true }, "1" => { "complete" => true } })
+      receive_address: RECEIVE)
     @wallet.bitcoin_wallet_addresses.create!(address: RECEIVE, bitcoin_wallet_source: source, used: true)
     @wallet.bitcoin_wallet_addresses.create!(address: CHANGE, bitcoin_wallet_source: source)
     @provider.fund(RECEIVE, 100_000)
@@ -170,6 +189,29 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
     assert_equal 123, @wallet.reload.balance_sats
     assert_nil @wallet.last_synced_at
+  end
+
+  test "a gap change during discovery queues a fresh read" do
+    @wallet.bitcoin_wallet_sources.destroy_all
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    @wallet.update!(balance_sats: 123)
+    @provider.define_singleton_method(:get_address) do |address|
+      source.update!(gap_limit: 40) if reads.empty?
+      super(address)
+    end
+    Provider::MempoolSpace.stubs(:new).returns(@provider)
+
+    freeze_time do
+      sync = @wallet.sync_later
+      perform_enqueued_jobs(only: SyncJob, at: Time.current)
+      assert_equal 123, @wallet.reload.balance_sats
+      assert sync.children.sole.pending?
+
+      travel 1.second
+      perform_enqueued_jobs(only: SyncJob, at: Time.current)
+      assert @wallet.reload.status_preview?
+      assert sync.reload.completed?
+    end
   end
 
   test "a held advisory lock coalesces concurrent readers" do

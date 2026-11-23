@@ -36,7 +36,7 @@ class BitcoinWalletAccount < ApplicationRecord
       skipped = full_scan ? 0 : [ source.gap_limit - ROUTINE_LOOKAHEAD, 0 ].max
       state = [ 0, 1 ].to_h do |branch|
         highest = bitcoin_wallet_addresses.where(bitcoin_wallet_source: source, branch: branch, used: true).maximum(:address_index)
-        [ branch.to_s, { "index" => full_scan || highest.nil? ? 0 : highest + 1, "gap" => skipped } ]
+        [ branch.to_s, { "index" => full_scan || highest.nil? ? 0 : highest + 1, "gap" => skipped, "gap_limit" => source.gap_limit } ]
       end
       state["full_scan_at"] = full_scan ? Time.current.iso8601 : source.discovery["full_scan_at"]
       source.update!(discovery: state)
@@ -74,6 +74,8 @@ class BitcoinWalletAccount < ApplicationRecord
     def eligible_account
       return if account.nil? || onchain_wallet_item.nil?
       errors.add(:account, :invalid) unless account.family_id == onchain_wallet_item.family_id && account.accountable_type == "Crypto"
+      # Serialize new wallet links with AccountProvider's exclusive-writer check.
+      Account.where(id: account_id).lock.pick(:id) if new_record? || will_save_change_to_account_id?
       other_links = account.account_providers.where.not(provider_type: self.class.name)
       errors.add(:account, :linked) if other_links.exists? || account.plaid_account_id || account.simplefin_account_id
       return if security.nil?

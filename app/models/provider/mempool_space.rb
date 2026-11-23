@@ -90,7 +90,7 @@ class Provider::MempoolSpace
   # confirmed pagination at the baseline or configured page budget. The mixed
   # /txs response cannot safely supply a confirmed-history cursor. Set truncated
   # when a history budget or the provider's pending response cap is reached.
-  def get_wallet_transactions(address, since: nil, include_history: true, include_mempool: true)
+  def get_wallet_transactions(address, baseline_block_height: nil, include_history: true, include_mempool: true)
     encoded = ERB::Util.url_encode(address)
     pending = include_mempool ? Array(get_json("/address/#{encoded}/txs/mempool")) : []
     @truncated = pending.size >= 50
@@ -99,7 +99,10 @@ class Provider::MempoolSpace
     page = Array(get_json("/address/#{encoded}/txs/chain"))
     transactions = pending + page
     pages_read = 1
-    reached_start = -> { since && page.any? { |tx| tx.dig("status", "block_time").to_i < since.to_i } }
+    reached_start = -> do
+      height = page.last&.dig("status", "block_height")
+      baseline_block_height && height.is_a?(Integer) && height <= baseline_block_height
+    end
 
     while page.size >= PAGE_SIZE && pages_read < @max_pages && !reached_start.call
       last_txid = page.last["txid"]

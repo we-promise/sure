@@ -71,17 +71,17 @@ class BitcoinWalletAccount::Syncer
       discovery = BitcoinWalletAccount::Discovery.new(wallet, provider: provider, tip: tip)
       unless discovery.perform
         wallet.with_lock do
-          return unless source_signature == @source_signature
-
-          wallet.update!(status: :discovering)
-          queue_continuation(read_attempt: @sync ? read_attempt : 0)
+          unchanged = source_signature == @source_signature
+          wallet.update!(status: :discovering) if unchanged
+          queue_continuation(read_attempt: @sync && unchanged ? read_attempt : 0)
         end
         return
       end
 
       begin
         anchors = wallet.bitcoin_wallet_sources.where(kind: "bip84").filter_map { |source| source.discovery["tip_hash"] }
-        snapshot = BitcoinWalletAccount::Snapshot.new(wallet, provider: provider).fetch(before: tip, discovery_tips: anchors) do |observed, height|
+        snapshot = BitcoinWalletAccount::Snapshot.new(wallet, provider: provider).fetch(before: tip, discovery_tips: anchors,
+          lookahead_addresses: discovery.probed_addresses) do |observed, height|
           missing_statuses(observed, height)
         end
       rescue BitcoinWalletAccount::Snapshot::ChangedTip

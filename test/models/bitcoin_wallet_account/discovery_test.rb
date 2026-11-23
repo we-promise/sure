@@ -29,6 +29,8 @@ class BitcoinWalletAccount::DiscoveryTest < ActiveSupport::TestCase
   test "an unrelated manual address does not validate the wrong xpub" do
     manual = "1BoatSLRHtKNngkdXEeobR76b53LETtpyT"
     manual_bitcoin_source(@wallet, manual)
+    manual_bitcoin_source(@wallet, RECEIVE)
+    @provider.fund(RECEIVE, 1)
     # Two branches of 120 exceed one run's budget, so the first run's batch is already saved.
     source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB,
       receive_address: manual, gap_limit: 120)
@@ -37,7 +39,10 @@ class BitcoinWalletAccount::DiscoveryTest < ActiveSupport::TestCase
     assert_raises(BitcoinWalletAccount::Discovery::AddressMismatch) do
       BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
     end
-    assert_equal [ manual ], @wallet.bitcoin_wallet_addresses.pluck(:address)
+    assert_equal [ manual, RECEIVE ].sort, @wallet.bitcoin_wallet_addresses.pluck(:address).sort
+    overlap = @wallet.bitcoin_wallet_addresses.find_by!(address: RECEIVE)
+    assert_nil overlap.bitcoin_wallet_source_id
+    assert overlap.used?
   end
 
   test "bounds work and resumes at the saved cursor" do
@@ -111,6 +116,31 @@ class BitcoinWalletAccount::DiscoveryTest < ActiveSupport::TestCase
     end
     refute BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
     assert_equal reset, source.reload.discovery
+  end
+
+  test "a scan discards results when the gap limit changes during its reads" do
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    @provider.define_singleton_method(:get_address) do |address|
+      source.update!(gap_limit: 40) if reads.empty?
+      super(address)
+    end
+
+    refute BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+    assert_empty source.reload.discovery
+    assert_empty @wallet.bitcoin_wallet_addresses.reload
+  end
+
+  test "a larger gap rescans completed branches from their start" do
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    late_address = source.public_key.address(0, 30)
+    assert BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+    refute @provider.reads.include?(late_address)
+
+    source.update!(gap_limit: 40)
+    refute source.discovery_complete?
+    @provider.fund(late_address, 1)
+    assert BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+    assert @wallet.bitcoin_wallet_addresses.find_by!(address: late_address).used?
   end
 
   test "a scan does not save addresses for a key replaced during its reads" do
