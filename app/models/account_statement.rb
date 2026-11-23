@@ -47,6 +47,7 @@ class AccountStatement < ApplicationRecord
   before_validation :normalize_currency
   before_validation :sync_review_status
   before_validation :note_edited_balances
+  before_validation :adopt_account_currency, if: -> { account.present? && will_save_change_to_account_id? }
   before_validation :derive_detected_balances, if: -> { new_record? || will_save_change_to_account_id? || will_save_change_to_currency? }
 
   validates :filename, :content_type, :checksum, presence: true
@@ -448,6 +449,16 @@ class AccountStatement < ApplicationRecord
         will_save_change_to_attribute?(field) && !(@derived_balances&.key?(field) && @derived_balances[field] == self[field])
       end
       merge_pdf_output("edited_balances" => (edited_balances | edited)) if edited.any?
+    end
+
+    # A linked account defines the currency. Balances entered in another
+    # currency do not carry over, so they are cleared rather than relabelled.
+    def adopt_account_currency
+      return if account.currency.blank? || account.currency == currency
+
+      self.currency = account.currency
+      BALANCE_FIELDS.each { |field| self[field] = nil }
+      merge_pdf_output("edited_balances" => [])
     end
 
     # The detected balances follow the account and the currency: their CR/DR

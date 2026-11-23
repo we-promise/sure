@@ -584,6 +584,17 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal BigDecimal("11948.59"), statement.closing_balance
   end
 
+  test "adopting a different-currency account clears edited balances" do
+    statement = upload_trade_republic_statement(account: nil)
+    statement.update!(closing_balance: 400)
+
+    statement.update!(account: @account)
+
+    assert_equal "USD", statement.reload.currency
+    assert_nil statement.opening_balance
+    assert_nil statement.closing_balance
+  end
+
   test "drops the PDF balances when an accountless statement is linked to an account in another currency" do
     statement = upload_trade_republic_statement(account: nil)
 
