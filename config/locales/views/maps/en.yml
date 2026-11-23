@@ -8,6 +8,5 @@ en:
       filters:
         all_accounts: "All accounts"
       located_count:
-        zero: "No transactions have a location yet."
         one: "1 transaction has a location."
         other: "%{count} transactions have a location."
