@@ -240,6 +240,17 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-date-input-target=display]", text: Date.current.strftime("%d.%m.%Y")
   end
 
+  test "date overlay hides on focus even when Rails wraps the input after a validation error" do
+    get new_transaction_path
+
+    assert_response :success
+    # Rails wraps an invalid input in `field_with_errors`, so the overlay
+    # cannot rely on being its sibling (`peer-focus`).
+    assert_select "div.group.relative[data-controller=date-input]"
+    assert_select "[data-date-input-target=display][class*='group-focus-within:opacity-0']"
+    assert_select "input.peer", count: 0
+  end
+
   test "creates with transaction details" do
     assert_difference [ "Entry.count", "Transaction.count" ], 1 do
       post transactions_url, params: {

@@ -38,21 +38,24 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
     format = Current.family&.date_format.presence || "%m/%d/%Y"
 
     html_options[:value] = date&.iso8601
-    html_options[:class] = @template.class_names("form-field__input", "peer", html_options[:class])
+    html_options[:class] = @template.class_names("form-field__input", html_options[:class])
     html_options[:data] = (html_options[:data] || {}).merge(
       date_input_target: "input",
       action: [ html_options.dig(:data, :action), "input->date-input#render change->date-input#render" ].compact.join(" ")
     )
 
     build_field(method, form_options, html_options) do |merged_options|
+      # `group`/`group-focus-within` rather than `peer`: on a validation error
+      # Rails wraps the input in `field_with_errors`, so it stops being the
+      # overlay's sibling and `peer-focus` no longer matches.
       @template.tag.div(
-        class: "relative",
+        class: "group relative",
         data: { controller: "date-input", date_input_format_value: format }
       ) do
         ActionView::Helpers::FormBuilder.instance_method(:date_field).bind_call(self, method, merged_options) +
           @template.tag.span(
             date ? date.strftime(format) : "",
-            class: "absolute inset-y-0 left-0 right-8 flex items-center bg-container text-sm text-primary pointer-events-none peer-focus:opacity-0",
+            class: "absolute inset-y-0 left-0 right-8 flex items-center bg-container text-sm text-primary pointer-events-none group-focus-within:opacity-0",
             data: { date_input_target: "display" },
             aria: { hidden: true }
           )
