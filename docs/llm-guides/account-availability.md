@@ -59,7 +59,7 @@ family.accounts.visible.immediate_assets_on(today)  # money for this month's bud
 family.accounts.visible.bound_assets_on(today)      # the rest of the assets
 family.accounts.visible.short_term_liabilities      # credit cards, overdraft lines
 
-account.available_on?(today)
+account.available_now?(today)
 account.effective_liquidity(today)  # a released locked account reads "immediate"
 account.next_release_date(today)
 ```
