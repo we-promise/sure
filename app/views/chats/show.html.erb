@@ -11,9 +11,7 @@
         <%= render "chats/worker_health_warning" %>
 
         <% if show_demo_warning? %>
-          <%= render "shared/demo_warning",
-            title: t("chats.demo_banner_title"),
-            message: t("chats.demo_banner_message") %>
+          <%= render "chats/demo_warning" %>
         <% end %>
       </div>
 

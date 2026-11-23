@@ -3,6 +3,8 @@ vi:
   chats:
     demo_banner_title: "Chế độ Demo đang hoạt động"
     demo_banner_message: "Token LLM miễn phí do Vercel AI Gateway cung cấp. Kết quả có thể thay đổi vì chúng tôi thường xuyên thay đổi trọng số mô hình để thử nghiệm. Hãy tham khảo tài liệu của Vercel để biết các cuộc trò chuyện của bạn được gửi đến đâu! 🤖"
+    demo_banner_message_addendum_html: "(xem %{link})"
+    demo_banner_link: "tại đây"
     thinking: "Đang xử lý ..."
     ai_greeting:
       greeting: "Xin chào %{name}! Tôi là một AI/mô hình ngôn ngữ lớn có thể hỗ trợ bạn về tài chính. Tôi có quyền truy cập internet và dữ liệu tài khoản của bạn."
