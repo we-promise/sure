@@ -15,41 +15,58 @@ class Purchase::FromReceiptScan
     @ai_metadata = ai_metadata
   end
 
-  # @return [Purchase, nil] nil when the member who uploaded the scan was removed: a purchase is
-  #   always someone's.
+  # @return [Purchase, nil] nil when the member who uploaded the scan was removed or is no longer
+  #   in the scan's family: a purchase is always someone's in its own family.
   def sync!
-    return if scan.user.nil?
+    return if scan.user.nil? || scan.user.family_id != scan.family_id
 
     purchase = Purchase.find_or_initialize_by(receipt_scan_id: scan.id)
-    # An order email may already have claimed the transaction; it keeps it and this receipt's
-    # purchase stays unlinked for the user to sort out.
-    owner = Purchase.where(transaction_id: scan.transaction_id).where.not(id: purchase.id).first if scan.transaction_id
-    transaction = owner ? nil : scan.linked_transaction
-    reasons = scan.review_reasons
-    reasons += [ { "reason" => "already_linked", "purchase_id" => owner.id } ] if owner
+    claimed_meanwhile = false
+    begin
+      record(purchase, transaction_owner(purchase))
+    rescue ActiveRecord::RecordNotUnique
+      # An order email linked the transaction between the lookup and the write; read the owner
+      # again, once.
+      raise if claimed_meanwhile
 
-    Purchase.transaction do
-      purchase.update!(
-        family: scan.family,
-        user: scan.user,
-        source: :receipt,
-        linked_transaction: transaction,
-        status: transaction ? :matched : :unmatched,
-        matched_at: transaction ? (purchase.matched_at || Time.current) : nil,
-        merchant: extraction["merchant"],
-        ordered_on: extraction["date"].presence || scan.linked_transaction&.entry&.date,
-        total: extraction["total"],
-        currency: extraction["currency"].presence || scan.account.currency,
-        payment_method: PAYMENT_METHODS.fetch(extraction["payment_method"].to_s, "unknown"),
-        review_reasons: reasons,
-        ai_metadata:
-      )
-      replace_items(purchase)
+      claimed_meanwhile = true
+      retry
     end
     purchase
   end
 
   private
+    # An order email may already have claimed the transaction; it keeps it and this receipt's
+    # purchase stays unlinked for the user to sort out.
+    def transaction_owner(purchase)
+      Purchase.where(transaction_id: scan.transaction_id).where.not(id: purchase.id).first if scan.transaction_id
+    end
+
+    def record(purchase, owner)
+      transaction = owner ? nil : scan.linked_transaction
+      reasons = scan.review_reasons
+      reasons += [ { "reason" => "already_linked", "purchase_id" => owner.id } ] if owner
+
+      Purchase.transaction(requires_new: true) do
+        purchase.update!(
+          family: scan.family,
+          user: scan.user,
+          source: :receipt,
+          linked_transaction: transaction,
+          status: transaction ? :matched : :unmatched,
+          matched_at: transaction ? (purchase.matched_at || Time.current) : nil,
+          merchant: extraction["merchant"],
+          ordered_on: extraction["date"].presence || scan.linked_transaction&.entry&.date,
+          total: extraction["total"],
+          currency: extraction["currency"].presence || scan.account.currency,
+          payment_method: PAYMENT_METHODS.fetch(extraction["payment_method"].to_s, "unknown"),
+          review_reasons: reasons,
+          ai_metadata:
+        )
+        replace_items(purchase)
+      end
+    end
+
     attr_reader :scan, :extraction, :ai_metadata
 
     def replace_items(purchase)

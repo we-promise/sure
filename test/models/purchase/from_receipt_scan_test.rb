@@ -48,6 +48,26 @@ class Purchase::FromReceiptScanTest < ActiveSupport::TestCase
     assert_equal "unmatched", purchase.status
   end
 
+  test "an email purchase that claims the transaction meanwhile keeps it" do
+    email_purchase = purchases(:allegro_awaiting)
+    email_purchase.update!(linked_transaction: @entry.entryable, status: :matched)
+    Purchase::FromReceiptScan.any_instance.stubs(:transaction_owner).returns(nil).then.returns(email_purchase)
+
+    purchase = Purchase::FromReceiptScan.sync!(@scan, extraction_hash: @extraction, ai_metadata: {})
+
+    assert_equal "unmatched", purchase.status
+    assert_nil purchase.transaction_id
+    assert_equal @entry.entryable, email_purchase.reload.linked_transaction
+  end
+
+  test "a scan whose uploader is in another family gets no purchase" do
+    @scan.user.update_columns(family_id: families(:empty).id)
+
+    assert_no_difference -> { Purchase.count } do
+      assert_nil Purchase::FromReceiptScan.sync!(@scan.reload, extraction_hash: @extraction, ai_metadata: {})
+    end
+  end
+
   test "a transaction that already has an email purchase keeps it; the receipt purchase stays unlinked" do
     email_purchase = purchases(:allegro_awaiting)
     email_purchase.update!(linked_transaction: @entry.entryable, status: :matched)
