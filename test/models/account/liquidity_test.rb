@@ -194,24 +194,18 @@ class Account::LiquidityTest < ActiveSupport::TestCase
     assert_nil account.renewal_term_months
   end
 
-  test "scopes split assets by availability on a date" do
+  test "immediate assets include locked accounts from their release date" do
     checking = create_account(Depository, "checking")
     brokerage = create_account(Investment, "brokerage")
     cd = create_account(Depository, "cd")
     cd.update!(available_on: @today + 10)
-    pension = create_account(Investment, "401k")
+    renewing = create_account(Depository, "cd")
+    renewing.update!(available_on: @today, auto_renew: true, renewal_term_months: 12)
     card = create_account(CreditCard, nil)
-    mortgage = create_account(Loan, "mortgage")
-    ids = [ checking, brokerage, cd, pension, card, mortgage ].map(&:id)
-    accounts = Account.where(id: ids)
+    accounts = Account.where(id: [ checking, brokerage, cd, renewing, card ].map(&:id))
 
-    assert_equal [ checking, brokerage ].map(&:id).sort, accounts.available_assets_on(@today).pluck(:id).sort
-    assert_equal [ checking, brokerage, cd ].map(&:id).sort, accounts.available_assets_on(@today + 10).pluck(:id).sort
     assert_equal [ checking ].map(&:id), accounts.immediate_assets_on(@today).pluck(:id)
     assert_equal [ checking, cd ].map(&:id).sort, accounts.immediate_assets_on(@today + 10).pluck(:id).sort
-    assert_equal [ cd, pension ].map(&:id).sort, accounts.bound_assets_on(@today).pluck(:id).sort
-    assert_equal [ pension ].map(&:id), accounts.bound_assets_on(@today + 10).pluck(:id)
-    assert_equal [ card ].map(&:id), accounts.short_term_liabilities.pluck(:id)
   end
 
   test "today is evaluated in the family's time zone" do

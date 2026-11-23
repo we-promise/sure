@@ -66,8 +66,7 @@ class Account::RuleDetails
     end
 
     # Whether the balance counts as money for this month's budget ("really
-    # free"): only immediately available assets do, as in the preview's
-    # Account.immediate_assets_on.
+    # free"): only immediately available assets do.
     def budget_cash_row
       return nil unless account.asset?
       return excluded_row(:counts_as_budget_cash) if account.exclude_from_reports?
