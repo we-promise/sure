@@ -1126,44 +1126,40 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
   end
 
-  test "maps the pre-determined tax base to a cash outflow and the older securities transfer to an order execution" do
+  test "maps the pre-determined tax base to a cash outflow and leaves the older securities transfer unmapped" do
     categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
     assert_equal "POC_CREATED", categories["PRE_DETERMINED_TAX_BASE"]
-    assert_equal "orderExecution", categories["ACCOUNT_TRANSFER_INCOMING"]
-
-    %w[PRE_DETERMINED_TAX_BASE ACCOUNT_TRANSFER_INCOMING].each do |event_type|
-      assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
-    end
-    assert Provider::TradeRepublicClient.requires_trade_detail?("eventType" => "ACCOUNT_TRANSFER_INCOMING")
+    assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => "PRE_DETERMINED_TAX_BASE")
     assert_not Provider::TradeRepublicClient.requires_trade_detail?("eventType" => "PRE_DETERMINED_TAX_BASE")
 
-    # A stored transfer whose detail was never fetched (category nil) is
-    # fetched again by the backlog.
-    stored = { "id" => "evt_old", "eventType" => "ACCOUNT_TRANSFER_INCOMING", "category" => nil, "detail" => nil, "status" => "EXECUTED" }
-    assert Provider::TradeRepublicClient.incomplete_trade_detail_event?(stored)
+    assert_not categories.key?("ACCOUNT_TRANSFER_INCOMING")
+    assert_equal :unknown, Provider::TradeRepublicTimelineEvent.classify("eventType" => "ACCOUNT_TRANSFER_INCOMING")
+    assert_not Provider::TradeRepublicClient.requires_trade_detail?("eventType" => "ACCOUNT_TRANSFER_INCOMING")
   end
 
-  test "normalize_event_detail signs an older securities transfer by its shares row" do
-    item = { "id" => "evt_old", "eventType" => "ACCOUNT_TRANSFER_INCOMING", "title" => "Core S&P 500", "subtitle" => "Securities transfer" }
-    raw = lambda do |shares_title|
-      {
-        "sections" => [
-          { "title" => "Overview", "data" => [
-            { "title" => shares_title, "detail" => { "text" => "2" } },
-            { "title" => "Share price", "detail" => { "text" => "€511.96" } }
-          ] },
-          { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B5BMR087" } } } } ] }
-        ]
-      }
-    end
+  test "a pre-determined tax base keeps the debit from the timeline item and its detail reads the total" do
+    item = {
+      "id" => "evt_tax_base", "eventType" => "PRE_DETERMINED_TAX_BASE", "title" => "Fund",
+      "subtitle" => "Pre-Determined Tax Base", "status" => "EXECUTED", "amount" => { "value" => -12.34, "currency" => "EUR" }
+    }
+    event = @client.send(:build_skeleton_event, item)
+    assert_equal "POC_CREATED", event["category"]
+    assert_equal(-12.34, event.dig("detail", "amount"))
 
-    added = @client.send(:normalize_event_detail, raw.call("Shares added"), item: item)
-    removed = @client.send(:normalize_event_detail, raw.call("Shares removed"), item: item)
+    row = ->(title, text) { { "title" => title, "detail" => { "text" => text } } }
+    raw = {
+      "sections" => [
+        { "title" => "Overview", "data" => [ row.call("Event", "Pre-Determined Tax Base"), row.call("Asset", "Fund") ] },
+        { "title" => "Transaction", "data" => [ row.call("Shares", "20"), row.call("Tax", "€12.34"), row.call("Total", "€12.34") ] },
+        { "type" => "table", "data" => [ row.call("Capital gains tax", "€9.00"), row.call("Solidarity surcharge", "€0.49"), row.call("Church tax", "€0.85"), row.call("Tax", "€10.34") ] },
+        { "type" => "table", "data" => [ row.call("Fee", "Free") ] }
+      ]
+    }
+    detail = @client.send(:normalize_event_detail, raw, item: item)
 
-    assert_equal "2.0", added["quantity"]
-    assert_equal "-2.0", removed["quantity"]
-    assert_equal "511.96", removed["price"]
-    assert_equal "IE00B5BMR087", removed["isin"]
+    assert_equal "12.34", detail["amount"]
+    assert_equal "12.34", detail["taxes"]
+    assert_nil detail["price"]
   end
 
   test "maps credit card top-ups and stock bonuses" do

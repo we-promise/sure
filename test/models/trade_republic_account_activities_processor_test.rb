@@ -936,52 +936,47 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_tr_out")
   end
 
-  test "an older securities transfer in imports as a zero-amount transfer trade" do
-    cash_account, cash_sure = create_linked_cash_account!
+  test "an older securities transfer is logged once with its reason and not imported" do
+    cash_account, = create_linked_cash_account!
+    event = {
+      id: "evt_old_in", timestamp: "2023-11-23T09:00:00.000+0000", eventType: "ACCOUNT_TRANSFER_INCOMING",
+      title: "STOXX Global Dividend 100 EUR (Dist)", subtitle: "Securities transfer", status: "EXECUTED", detail: nil
+    }
+    @tr_account.update!(raw_timeline_payload: [ event ])
+    cash_account.update!(raw_timeline_payload: [ event ])
 
-    transfer = securities_transfer_event(id: "evt_old_in", event_type: "ACCOUNT_TRANSFER_INCOMING", quantity: "10")
-    @tr_account.update!(raw_timeline_payload: [ transfer ])
-    cash_account.update!(raw_timeline_payload: [ transfer ])
+    assert_no_difference "Entry.where(source: 'trade_republic').count" do
+      3.times do
+        TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+        TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+      end
+    end
 
-    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
-    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
-
-    trade = find_trade("trade_republic_event_evt_old_in")
-    assert_not_nil trade
-    assert_equal BigDecimal("10"), trade.entryable.qty
-    assert_equal "Transfer", trade.entryable.investment_activity_label
-    assert_equal 0, trade.amount
-    assert_in_delta BigDecimal("451.20"), trade.entryable.qty * trade.entryable.price, BigDecimal("0.01")
-    assert_equal "ACCOUNT_TRANSFER_INCOMING", trade.entryable.extra.dig("trade_republic", "event_type")
-
-    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_old_in")
+    logs = DebugLogEntry.where("message LIKE ?", "%ACCOUNT_TRANSFER_INCOMING%")
+    assert_equal 1, logs.count
+    log = logs.first
+    assert_equal "warn", log.level
+    assert_match(/direction and price are not in the detail; add it manually/, log.message)
+    assert_equal "evt_old_in", log.metadata["event_id"]
+    assert_equal "2023-11-23", log.metadata["date"]
+    assert_equal "STOXX Global Dividend 100 EUR (Dist)", log.metadata["name"]
+    assert_equal 0, incomplete_execution_logs.count
   end
 
-  test "an older securities transfer that removes shares imports as a negative transfer trade" do
-    # Both a booking and its later removal arrive as ACCOUNT_TRANSFER_INCOMING;
-    # the client signs the removal's quantity negative from the detail.
+  test "each older securities transfer gets its own log entry with the ISIN when the detail has one" do
+    base = { timestamp: "2023-11-23T09:00:00.000+0000", eventType: "ACCOUNT_TRANSFER_INCOMING", title: "Fund", status: "EXECUTED" }
     @tr_account.update!(raw_timeline_payload: [
-      securities_transfer_event(id: "evt_old_booked", event_type: "ACCOUNT_TRANSFER_INCOMING", quantity: "10"),
-      securities_transfer_event(id: "evt_old_removed", event_type: "ACCOUNT_TRANSFER_INCOMING", quantity: "-10")
-        .merge(timestamp: "2024-06-20T09:00:00.000+0000")
+      base.merge(id: "evt_old_a", detail: { isin: "DE000A0F5UH1", quantity: "10" }),
+      base.merge(id: "evt_old_b", timestamp: "2024-05-07T09:00:00.000+0000", detail: { isin: "DE000A0F5UH1", quantity: "10" })
     ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
     TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
 
-    removed = find_trade("trade_republic_event_evt_old_removed")
-    assert_equal BigDecimal("-10"), removed.entryable.qty
-    assert_equal "Transfer", removed.entryable.investment_activity_label
-    assert_equal 0, removed.amount
-    assert_equal BigDecimal("10"), find_trade("trade_republic_event_evt_old_booked").entryable.qty
-  end
-
-  test "an older securities transfer without its detail yet is not imported" do
-    import_event({
-      id: "evt_old_nodetail", timestamp: "2023-11-10T09:00:00.000+0000", eventType: "ACCOUNT_TRANSFER_INCOMING",
-      title: "STOXX Global Dividend 100 EUR (Dist)", subtitle: "Securities transfer", detail: nil
-    })
-
-    assert_nil find_trade("trade_republic_event_evt_old_nodetail")
-    assert_equal 1, incomplete_execution_logs.count
+    logs = DebugLogEntry.where("message LIKE ?", "%ACCOUNT_TRANSFER_INCOMING%")
+    assert_equal %w[evt_old_a evt_old_b], logs.map { |log| log.metadata["event_id"] }.sort
+    assert_equal [ "DE000A0F5UH1" ], logs.map { |log| log.metadata["isin"] }.uniq
+    assert_equal 0, Entry.where(source: "trade_republic", entryable_type: "Trade").count
   end
 
   test "Private Markets bonus units import as a portfolio trade without a cash leg" do

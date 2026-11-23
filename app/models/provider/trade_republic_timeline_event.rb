@@ -31,10 +31,6 @@ module Provider::TradeRepublicTimelineEvent
     # zero-amount trades so quantities and cost basis line up with holdings.
     "SSP_SECURITIES_TRANSFER_INCOMING" => "orderExecution",
     "SSP_SECURITIES_TRANSFER_OUTGOING" => "orderExecution",
-    # The older form of the same transfers (late 2023 and 2024). A booking and
-    # its later removal share this event type, so the direction comes from the
-    # detail, not from the type.
-    "ACCOUNT_TRANSFER_INCOMING" => "orderExecution",
     "BANK_TRANSACTION_INCOMING" => "PAYMENT_RECEIVED",
     "INCOMING_TRANSFER" => "PAYMENT_RECEIVED",
     "INCOMING_TRANSFER_DELEGATION" => "PAYMENT_RECEIVED",
