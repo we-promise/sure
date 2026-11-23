@@ -132,6 +132,8 @@ en:
       no_matching_icons: No matching icons
       search_placeholder: Search icons...
     location_picker:
+      clear_label: "Remove location"
+      search_label: "Location"
       search_placeholder: "Search a place..."
       search_unavailable: "Search unavailable, try again"
       no_matches: "No matches, try a different search"

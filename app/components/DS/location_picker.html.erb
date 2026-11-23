@@ -1,18 +1,24 @@
 <div data-controller="location-picker"
      data-location-picker-search-unavailable-value="<%= helpers.t("ds.location_picker.search_unavailable") %>"
-     data-location-picker-no-matches-value="<%= helpers.t("ds.location_picker.no_matches") %>">
+     data-location-picker-no-matches-value="<%= helpers.t("ds.location_picker.no_matches") %>"
+     data-location-picker-tile-url-value="<%= helpers.map_tile_url %>"
+     data-location-picker-tile-attribution-value="<%= helpers.map_tile_attribution %>">
   <%= form.hidden_field :location_lat, value: entry.location_lat, data: { "location-picker-target": "lat" } %>
   <%= form.hidden_field :location_lng, value: entry.location_lng, data: { "location-picker-target": "lng" } %>
   <%= form.hidden_field :location_name, value: entry.location_name, data: { "location-picker-target": "name" } %>
 
   <div data-location-picker-target="display" class="<%= "hidden" unless located? %>">
     <span data-location-picker-target="displayText"><%= display_value %></span>
-    <%= helpers.icon("x", as_button: true, disabled: !can_annotate, data: { action: "location-picker#clear" }) %>
+    <%= helpers.icon("x", as_button: true, disabled: !can_annotate, aria_label: t("ds.location_picker.clear_label"), data: { action: "location-picker#clear" }) %>
   </div>
 
   <div data-location-picker-target="search" class="<%= "hidden" if located? %>">
-    <%= tag.input type: "text", data: { location_picker_target: "searchInput", action: "input->location-picker#search" }, placeholder: t("ds.location_picker.search_placeholder"), disabled: !can_annotate %>
-    <ul data-location-picker-target="suggestions"></ul>
+    <%= tag.label t("ds.location_picker.search_label"), for: search_input_id, id: search_label_id, class: "form-field__label" %>
+    <%= tag.input type: "text", id: search_input_id, data: { location_picker_target: "searchInput", action: "input->location-picker#search" }, placeholder: t("ds.location_picker.search_placeholder"), disabled: !can_annotate %>
+    <%# Suggestions are focusable options rather than bare <li>s, so the list is
+        operable with Enter/Space and not just a mouse. #fetchSuggestions sets
+        the per-item roles and actions. %>
+    <%= tag.ul role: "listbox", "aria-labelledby": search_label_id, data: { location_picker_target: "suggestions" } %>
   </div>
 
   <div data-location-picker-target="confirmMap" class="hidden" style="height: 200px;"></div>

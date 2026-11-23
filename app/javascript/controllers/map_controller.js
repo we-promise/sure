@@ -4,13 +4,13 @@ import "leaflet.markercluster";
 
 // Connects to data-controller="map"
 export default class extends Controller {
-  static values = { points: Array };
+  static values = { points: Array, tileUrl: String, tileAttribution: String };
 
   connect() {
     this.map = L.map(this.element).setView([20, 0], 2);
 
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap contributors",
+    L.tileLayer(this.tileUrlValue, {
+      attribution: this.tileAttributionValue,
       maxZoom: 19,
     }).addTo(this.map);
 

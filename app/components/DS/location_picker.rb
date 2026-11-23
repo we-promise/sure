@@ -16,4 +16,14 @@ class DS::LocationPicker < DesignSystemComponent
   def display_value
     entry.location_name
   end
+
+  # Scoped to the entry so a page showing more than one picker still pairs each
+  # label with its own input.
+  def search_input_id
+    "location_picker_search_#{entry.id}"
+  end
+
+  def search_label_id
+    "#{search_input_id}_label"
+  end
 end

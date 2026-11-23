@@ -36,6 +36,35 @@ class TransactionLocationTest < ApplicationSystemTestCase
     assert_equal 2.1734, entry.location_lng.to_f
   end
 
+  test "selecting a suggestion with the keyboard sets the location" do
+    entry = create_transaction(account: accounts(:depository), name: "Travelodge Malaga", amount: 100)
+
+    Geocoding::NominatimClient.any_instance.stubs(:search).returns(
+      [ Geocoding::NominatimClient::Result.new(lat: 41.3851, lng: 2.1734, display_name: "Barcelona, Spain") ]
+    )
+
+    visit transaction_path(entry)
+    find("summary", text: /#{I18n.t("transactions.show.details")}/i).click
+
+    # Looking the field up by its label is itself the check that the label is
+    # associated with the input.
+    search = find_field I18n.t("ds.location_picker.search_label")
+    search.set("Barcelona")
+
+    # Never touches the mouse: Tab out of the search field has to land on the
+    # suggestion, and Enter there has to commit it.
+    assert_text "Barcelona, Spain"
+    option = find("[role='option']", text: "Barcelona, Spain")
+    search.send_keys(:tab)
+    assert_equal option.text, page.evaluate_script("document.activeElement.textContent")
+
+    option.send_keys(:enter)
+
+    wait_until { entry.reload.location_name == "Barcelona, Spain" }
+
+    assert_equal "Barcelona, Spain", entry.location_name
+  end
+
   test "dragging the confirm-map marker reverse-geocodes the new position" do
     entry = create_transaction(account: accounts(:depository), name: "Travelodge Malaga", amount: 100)
 

@@ -18,6 +18,8 @@ export default class extends Controller {
   static values = {
     searchUnavailable: String,
     noMatches: String,
+    tileUrl: String,
+    tileAttribution: String,
   };
 
   connect() {
@@ -27,6 +29,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    clearTimeout(this.debounceTimeout);
     this.confirmMapInstance?.remove();
   }
 
@@ -35,7 +38,7 @@ export default class extends Controller {
 
     clearTimeout(this.debounceTimeout);
     if (query.length < 3) {
-      this.suggestionsTarget.innerHTML = "";
+      this.suggestionsTarget.replaceChildren();
       return;
     }
 
@@ -68,27 +71,41 @@ export default class extends Controller {
     );
 
     if (!response.ok) {
-      this.suggestionsTarget.innerHTML = `<li>${this.searchUnavailableValue}</li>`;
+      this.#renderMessage(this.searchUnavailableValue);
       return;
     }
 
     const results = await response.json();
 
     if (results.length === 0) {
-      this.suggestionsTarget.innerHTML = `<li>${this.noMatchesValue}</li>`;
+      this.#renderMessage(this.noMatchesValue);
       return;
     }
 
-    this.suggestionsTarget.innerHTML = "";
+    this.suggestionsTarget.replaceChildren();
     results.forEach((result) => {
       const item = document.createElement("li");
       item.textContent = result.display_name;
-      item.dataset.action = "click->location-picker#select";
+      // Focusable so a keyboard-only user can reach a suggestion, and Enter or
+      // Space picks it — clicking is not the only way in.
+      item.setAttribute("role", "option");
+      item.setAttribute("aria-selected", "false");
+      item.tabIndex = 0;
+      item.dataset.action =
+        "click->location-picker#select keydown.enter->location-picker#select:prevent keydown.space->location-picker#select:prevent";
       item.dataset.locationPickerLatParam = result.lat;
       item.dataset.locationPickerLngParam = result.lng;
       item.dataset.locationPickerNameParam = result.display_name;
       this.suggestionsTarget.appendChild(item);
     });
+  }
+
+  // A status line, not a choice, so it stays out of the listbox's options.
+  #renderMessage(text) {
+    const item = document.createElement("li");
+    item.setAttribute("role", "presentation");
+    item.textContent = text;
+    this.suggestionsTarget.replaceChildren(item);
   }
 
   #showConfirmMap(lat, lng, name) {
@@ -106,8 +123,8 @@ export default class extends Controller {
       [lat, lng],
       15,
     );
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap contributors",
+    L.tileLayer(this.tileUrlValue, {
+      attribution: this.tileAttributionValue,
     }).addTo(this.confirmMapInstance);
 
     this.marker = L.marker([lat, lng], { draggable: true }).addTo(

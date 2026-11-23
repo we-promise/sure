@@ -20,6 +20,24 @@ class DS::LocationPickerTest < ViewComponent::TestCase
     assert_text "Barcelona, Spain"
   end
 
+  test "names the search input and the clear button for assistive tech" do
+    entry = entries(:transaction)
+    entry.assign_attributes(location_lat: 41.3851, location_lng: 2.1734, location_name: "Barcelona, Spain")
+
+    render_inline(DS::LocationPicker.new(form: form_builder_for(entry, "entry"), entry: entry))
+
+    input_id = page.find("[data-location-picker-target='searchInput']")[:id]
+    assert_selector "label[for='#{input_id}']", text: I18n.t("ds.location_picker.search_label")
+
+    # Without this the icon button announces as "X" — DS::Button's fallback
+    # humanizes the icon key.
+    assert_selector "[data-location-picker-target='display'] button[aria-label='#{I18n.t("ds.location_picker.clear_label")}']"
+
+    # The list is labelled by the same label, so a screen reader announces what
+    # the suggestions are for.
+    assert_selector "[data-location-picker-target='suggestions'][role='listbox'][aria-labelledby='#{input_id}_label']"
+  end
+
   test "disables the search input and clear button when can_annotate is false" do
     entry = entries(:transaction)
 

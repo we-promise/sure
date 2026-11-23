@@ -15,6 +15,16 @@ module ApplicationHelper
     Rails.configuration.x.brand_name
   end
 
+  # Both the Map page and DS::LocationPicker build a Leaflet tile layer, so the
+  # tile server is configured in one place rather than hardcoded in each.
+  def map_tile_url
+    Rails.configuration.x.map_tile_url
+  end
+
+  def map_tile_attribution
+    Rails.configuration.x.map_tile_attribution
+  end
+
   def styled_form_with(**options, &block)
     options[:builder] = StyledFormBuilder
     form_with(**options, &block)
