@@ -68,7 +68,7 @@ class Assistant::Function::DeleteCategory < Assistant::Function
       return error("invalid_replacement", "A category cannot replace itself.") if replacement == category
     end
 
-    preview_before_delete(params, category, preview(category, replacement)) do
+    confirm_with_preview(params, category, preview(category, replacement)) do
       name = category.name_with_parent
       category.replace_and_destroy!(replacement)
 

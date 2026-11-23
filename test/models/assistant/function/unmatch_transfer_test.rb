@@ -18,7 +18,7 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
     outflow = @transfer.outflow_transaction
     inflow = @transfer.inflow_transaction
 
-    result = @function.call("transaction_id" => inflow.id)
+    result = unmatch("transaction_id" => inflow.id)
 
     assert result[:success]
     assert result[:unmatched]
@@ -36,7 +36,7 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
   end
 
   test "reject false only unlinks" do
-    result = @function.call("transfer_id" => @transfer.id, "reject" => false)
+    result = unmatch("transfer_id" => @transfer.id, "reject" => false)
 
     assert result[:success]
     assert_equal false, result[:rejected]
@@ -45,7 +45,7 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
   end
 
   test "a null reject rejects the pairing, like an omitted one" do
-    result = @function.call("transfer_id" => @transfer.id, "reject" => nil)
+    result = unmatch("transfer_id" => @transfer.id, "reject" => nil)
 
     assert result[:success]
     assert_equal true, result[:rejected]
@@ -55,7 +55,7 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
   test "unmatches a pending auto-match" do
     @transfer.update!(status: "pending")
 
-    result = @function.call("transaction_id" => @transfer.outflow_transaction_id)
+    result = unmatch("transaction_id" => @transfer.outflow_transaction_id)
 
     assert result[:success]
     assert_equal "pending", result[:transfer][:status]
@@ -67,16 +67,65 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
     assert_includes result[:message], "Outflow kind is now cc_payment"
   end
 
-  test "dry run changes nothing" do
+  test "without a preview_token it previews the unlink, fee deletions included, and changes nothing" do
+    transfer = create_transfer(from_account: accounts(:depository), to_account: accounts(:investment), amount: 100)
+    fee = create_transaction(account: accounts(:depository), name: "Transfer fee", amount: 2).entryable
+    transfer.fee_transactions << fee
+
+    assert_no_difference [ "Transfer.count", "RejectedTransfer.count", "Transaction.count" ] do
+      result = @function.call("transfer_id" => transfer.id)
+
+      assert result[:success]
+      assert_equal false, result[:unmatched]
+      assert_equal transfer.id, result[:preview][:transfer][:id]
+      assert_equal true, result[:preview][:reject]
+      assert_equal [ fee.id ], result[:preview][:transfer][:deleted_fee_transactions].map { |t| t[:id] }
+      assert result[:preview_token].present?
+    end
+  end
+
+  test "a dry_run call only previews" do
     assert_no_difference [ "Transfer.count", "RejectedTransfer.count" ] do
       result = @function.call("transfer_id" => @transfer.id, "dry_run" => true)
 
-      assert result[:success]
-      assert result[:dry_run]
-      assert_equal @transfer.id, result[:transfer][:id]
+      assert_equal false, result[:unmatched]
+      assert result[:preview_token].present?
+    end
+    assert_equal "cc_payment", @transfer.outflow_transaction.reload.kind
+  end
+
+  test "refuses a forged token, another transfer's token, another user's token, another tool's token and an expired one" do
+    other = create_transfer(from_account: accounts(:depository), to_account: accounts(:investment), amount: 75)
+    other_token = @function.call("transfer_id" => other.id)[:preview_token]
+    foreign_token = Assistant::Function::UnmatchTransfer.new(users(:family_member)).tap { |f| f.stubs(:find_transfer).returns(@transfer) }
+      .call("transfer_id" => @transfer.id)[:preview_token]
+    delete_token = Assistant::Function::DeleteTransaction.new(@user).call("id" => @transfer.inflow_transaction_id)[:preview_token]
+    assert [ other_token, foreign_token, delete_token ].all?(&:present?)
+
+    [ "forged", other_token, foreign_token, delete_token ].each do |token|
+      assert_equal "preview_required", @function.call("transfer_id" => @transfer.id, "preview_token" => token)[:error]
     end
 
-    assert_equal "cc_payment", @transfer.outflow_transaction.reload.kind
+    token = @function.call("transfer_id" => @transfer.id)[:preview_token]
+    travel Assistant::Function::PreviewToken::PREVIEW_TOKEN_TTL + 1.minute do
+      assert_equal "preview_required", @function.call("transfer_id" => @transfer.id, "preview_token" => token)[:error]
+    end
+    assert Transfer.exists?(@transfer.id)
+  end
+
+  test "refuses a token previewed with another reject choice or before a fee was attached" do
+    token = @function.call("transfer_id" => @transfer.id, "reject" => false)[:preview_token]
+    result = @function.call("transfer_id" => @transfer.id, "preview_token" => token)
+    assert_equal "preview_stale", result[:error]
+    assert_equal true, result[:preview][:reject]
+
+    token = @function.call("transfer_id" => @transfer.id)[:preview_token]
+    @transfer.fee_transactions << create_transaction(account: accounts(:depository), name: "Late fee", amount: 3).entryable
+    result = @function.call("transfer_id" => @transfer.id, "preview_token" => token)
+    assert_equal "preview_stale", result[:error]
+    assert_equal 1, result[:preview][:transfer][:deleted_fee_transactions].size
+
+    assert Transfer.exists?(@transfer.id)
   end
 
   test "lists and deletes fee transactions, like the UI" do
@@ -85,7 +134,7 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
     fee_entry_id = fee.entry.id
     transfer.fee_transactions << fee
 
-    result = @function.call("transfer_id" => transfer.id, "reject" => false)
+    result = unmatch("transfer_id" => transfer.id, "reject" => false)
 
     assert result[:success]
     assert_equal [ fee.id ], result[:transfer][:deleted_fee_transactions].map { |t| t[:id] }
@@ -98,7 +147,7 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
     transfer.fee_transactions << create_transaction(account: accounts(:depository), name: "Transfer fee", amount: 2).entryable
     Account.any_instance.stubs(:sync_later).raises(StandardError, "queue down")
 
-    result = @function.call("transfer_id" => transfer.id)
+    result = unmatch("transfer_id" => transfer.id)
 
     assert result[:success]
     assert_match "could not be enqueued", result[:warning]
@@ -129,7 +178,7 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
     function = Assistant::Function::UnmatchTransfer.new(users(:family_member))
     function.stubs(:find_transfer).returns(@transfer)
 
-    result = function.call("transfer_id" => @transfer.id)
+    result = unmatch({ "transfer_id" => @transfer.id }, function)
 
     assert_equal "not_found", result[:error]
     assert Transfer.exists?(@transfer.id)
@@ -141,4 +190,11 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
     assert_equal "not_found", result[:error]
     assert Transfer.exists?(@transfer.id)
   end
+
+  private
+    def unmatch(params, function = @function)
+      token = function.call(params)[:preview_token]
+      assert token.present?, "the preview issued no token"
+      function.call(params.merge("preview_token" => token))
+    end
 end

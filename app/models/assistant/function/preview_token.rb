@@ -7,8 +7,9 @@
 # be replayed on another record, by another user, after the target changed, or
 # after PREVIEW_TOKEN_TTL.
 #
-# Used by apply_rule (see RuleSupport) and by the delete tools, which preview
-# when called without a token (preview_before_delete).
+# Used by apply_rule (see RuleSupport) and by the tools that delete or undo
+# data (delete_transaction, delete_category, unmatch_transfer), which preview
+# when called without a token (confirm_with_preview).
 module Assistant::Function::PreviewToken
   PREVIEW_TOKEN_TTL = 30.minutes
 
@@ -30,19 +31,20 @@ module Assistant::Function::PreviewToken
       payload
     end
 
-    # Without a preview_token, returns the preview and a token and deletes
-    # nothing. With a token issued for this target and this exact preview, it
-    # yields, and the block performs the delete.
-    def preview_before_delete(params, target, preview)
+    # Without a preview_token, returns the preview and a token and changes
+    # nothing (done_key, the result's success flag, is false). With a token
+    # issued for this target and this exact preview, it yields, and the block
+    # makes the change.
+    def confirm_with_preview(params, target, preview, done_key: :deleted)
       state = Digest::SHA256.hexdigest(preview.to_json)
 
       if params["preview_token"].blank?
         return {
           success: true,
-          deleted: false,
+          done_key => false,
           preview: preview,
           preview_token: issue_preview_token(target, state),
-          message: "Nothing was deleted. Show the user what would be removed; only if they confirm, call #{name} again with this preview_token (it expires after #{PREVIEW_TOKEN_TTL.inspect})."
+          message: "Nothing was changed. Show the user this preview; only if they confirm, call #{name} again with this preview_token (it expires after #{PREVIEW_TOKEN_TTL.inspect})."
         }
       end
 
@@ -51,7 +53,7 @@ module Assistant::Function::PreviewToken
         return {
           success: false,
           error: "preview_required",
-          message: "That preview_token is not valid here: it expired or was issued for another record. Nothing was deleted; call #{name} without preview_token to preview again."
+          message: "That preview_token is not valid here: it expired or was issued for something else. Nothing was changed; call #{name} without preview_token to preview again."
         }
       end
 
@@ -61,7 +63,7 @@ module Assistant::Function::PreviewToken
           error: "preview_stale",
           preview: preview,
           preview_token: issue_preview_token(target, state),
-          message: "What would be deleted changed since that preview. Nothing was deleted; show the user this preview and, if they confirm, retry with its preview_token."
+          message: "What the call would change is different since that preview. Nothing was changed; show the user this preview and, if they confirm, retry with its preview_token."
         }
       end
 

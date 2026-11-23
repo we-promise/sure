@@ -102,7 +102,7 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     # associations or triggers lazy loads on a deleted record.
     snapshot = serialize(transaction, entry)
 
-    preview_before_delete(params, transaction, snapshot) { destroy_entry(entry, snapshot) }
+    confirm_with_preview(params, transaction, snapshot) { destroy_entry(entry, snapshot) }
   end
 
   private

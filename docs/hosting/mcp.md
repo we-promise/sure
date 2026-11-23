@@ -152,7 +152,7 @@ At the time of writing, `tools/list` includes:
 | `get_categories` | Categories with hierarchy and pagination |
 | `create_goal` | Create a savings goal linked to depository accounts |
 | `set_opening_balance` | Set a manual account's opening balance and the date it applies from, reporting whether the current balance changes. Supports `dry_run` |
-| `unmatch_transfer` | Unlink a confirmed or pending transfer (by either transaction's id) so a wrong match can be redone; rejects the pairing for auto-match by default. Supports `dry_run` |
+| `unmatch_transfer` | Unlink a confirmed or pending transfer (by either transaction's id) so a wrong match can be redone; rejects the pairing for auto-match by default and deletes the transfer's fee transactions. [Previews first](#deletes-preview-first) |
 | `update_transfer` | Switch a confirmed transfer into an investment or crypto account between an investment contribution (counted as spending) and a plain transfer, e.g. when a brokerage or crypto account only converts currency. Supports `dry_run` |
 | `create_tag` / `update_tag` | Manage tags |
 | `create_category` / `update_category` | Manage categories: create, rename, recolor, move between parents |
@@ -185,14 +185,14 @@ Every tool in `tools/list` carries MCP [tool annotations](https://modelcontextpr
 
 ### Deletes preview first
 
-`delete_transaction` and `delete_category` take two calls, like `apply_rule`:
+`delete_transaction`, `delete_category` and `unmatch_transfer` take two calls, like `apply_rule`:
 
-1. Call without `preview_token`. Nothing is deleted. The result has `deleted: false`, a `preview` of what would be removed (the transaction, or the category with its transaction count, replacement, subcategories and budget allocations) and a `preview_token`.
-2. Call again with the same arguments and that `preview_token` to delete.
+1. Call without `preview_token`. Nothing changes. The result has `deleted: false` (`unmatched: false` for `unmatch_transfer`), a `preview` of what would go and a `preview_token`. The preview is the transaction; the category with its transaction count, replacement, subcategories and budget allocations; or the transfer with the fee transactions it would delete and whether the pairing would be rejected.
+2. Call again with the same arguments and that `preview_token` to make the change.
 
-The token is bound to the user, the record and what the preview showed, and expires after 30 minutes. A token for another record, user or tool, or an expired one, returns `preview_required`. If the record changed since the preview (for a category, also a different `replacement_id` or new transactions in it), the call returns `preview_stale` with a fresh preview and token. In every one of these cases nothing is deleted.
+The token is bound to the user, the record and what the preview showed, and expires after 30 minutes. A token for another record, user or tool, or an expired one, returns `preview_required`. If the record changed since the preview (for a category, also a different `replacement_id` or new transactions in it; for a transfer, a different `reject` or a new fee), the call returns `preview_stale` with a fresh preview and token. In every one of these cases nothing changes.
 
-Clients written against the earlier one-call contract get a preview instead of a deletion until they pass the token.
+Clients written against the earlier one-call contract get a preview instead of the change until they pass the token. `unmatch_transfer` no longer takes `dry_run`: a call without a token is the preview.
 
 ### Preview Tools
 

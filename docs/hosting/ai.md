@@ -1603,9 +1603,9 @@ enforce the shape server-side.
 
 The assistant reads and changes user data through function calling (tool use),
 with the same tools as the [MCP server](mcp.md#available-tools), defined in
-`app/models/assistant/function/`. `delete_transaction` and
-`delete_category` [preview before deleting](mcp.md#deletes-preview-first) in
-the chat too.
+`app/models/assistant/function/`. `delete_transaction`,
+`delete_category` and `unmatch_transfer` [preview before they
+change anything](mcp.md#deletes-preview-first) in the chat too.
 
 ### Vector Store (Document Search)
 
