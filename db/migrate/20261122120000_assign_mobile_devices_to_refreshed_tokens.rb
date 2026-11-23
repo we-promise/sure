@@ -1,9 +1,26 @@
 # Tokens the mobile app's refresh token bought at /oauth/token were saved
 # without a device, so signing in again on that device left them working.
-# Each one names the token it replaced in previous_refresh_token: follow those
-# links from every device token and give its descendants the same device.
+#
+# A sign-in before this migration may already have missed them, and a token
+# refreshed from one through /api/v1/auth/refresh kept no link to its parent,
+# so neither the device nor a missed revocation can be worked out reliably.
+# Every mobile client token without a device is revoked, which costs those
+# sessions one sign-in. Each refreshed token names the one it replaced in
+# previous_refresh_token: those links are followed from every device token to
+# record the device on its descendants.
 class AssignMobileDevicesToRefreshedTokens < ActiveRecord::Migration[8.1]
   def up
+    execute <<~SQL
+      UPDATE oauth_access_tokens
+      SET revoked_at = CURRENT_TIMESTAMP
+      WHERE mobile_device_id IS NULL
+        AND revoked_at IS NULL
+        AND application_id IN (
+          SELECT id FROM oauth_applications
+          WHERE name = 'Sure Mobile' AND redirect_uri = 'sureapp://oauth/callback'
+        )
+    SQL
+
     execute <<~SQL
       WITH RECURSIVE lineage AS (
         SELECT refresh_token, mobile_device_id
@@ -24,6 +41,6 @@ class AssignMobileDevicesToRefreshedTokens < ActiveRecord::Migration[8.1]
   end
 
   def down
-    # The device ids it assigns are correct, so there is nothing to undo.
+    # Revoked tokens stay revoked and the device ids it assigns are correct.
   end
 end

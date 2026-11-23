@@ -11,7 +11,7 @@ class AssignMobileDevicesToRefreshedTokensMigrationTest < ActiveSupport::TestCas
     @mobile_client = MobileDevice.shared_oauth_application
   end
 
-  test "gives every token refreshed from a device token that device" do
+  test "gives every token refreshed from a device token that device and revokes it" do
     root = token(mobile_device_id: @device.id)
     child = token(previous: root)
     grandchild = token(previous: child)
@@ -19,7 +19,30 @@ class AssignMobileDevicesToRefreshedTokensMigrationTest < ActiveSupport::TestCas
     run_migration
 
     assert_equal [ @device.id ] * 2, [ child, grandchild ].map { |t| t.reload.mobile_device_id }
-    assert_includes @device.active_tokens, grandchild
+    assert [ child, grandchild ].all?(&:revoked?)
+    assert_not root.reload.revoked?
+  end
+
+  test "revokes a refreshed descendant that a sign-in before the migration missed" do
+    root = token(mobile_device_id: @device.id)
+    orphan = token(previous: root)
+    @device.issue_token!
+
+    run_migration
+
+    assert root.reload.revoked?
+    assert orphan.reload.revoked?
+    assert_not_includes @device.active_tokens, orphan
+  end
+
+  test "revokes a mobile client token whose device cannot be recovered" do
+    root = token(mobile_device_id: @device.id)
+    lost = token(previous: token(previous: root)).tap { |t| t.update_column(:previous_refresh_token, "") }
+
+    run_migration
+
+    assert_nil lost.reload.mobile_device_id
+    assert lost.revoked?
   end
 
   test "leaves tokens outside a device's lineage alone" do
@@ -34,6 +57,7 @@ class AssignMobileDevicesToRefreshedTokensMigrationTest < ActiveSupport::TestCas
     assert_nil unrelated.reload.mobile_device_id
     assert_nil refreshed_unrelated.reload.mobile_device_id
     assert_equal other_device.id, stamped.reload.mobile_device_id
+    assert_not [ unrelated, refreshed_unrelated, stamped ].any?(&:revoked?)
   end
 
   private
