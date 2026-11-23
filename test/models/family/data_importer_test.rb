@@ -2,6 +2,7 @@ require "test_helper"
 
 class Family::DataImporterTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include ActiveJob::TestHelper
 
   setup do
     @family = families(:empty)
@@ -3903,7 +3904,9 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       record[:data][:next_expected_date] = "2026-01-09" if record[:type] == "RecurringTransaction"
     end
 
-    Family::DataImporter.new(@family, build_ndjson(records)).import!
+    assert_no_enqueued_jobs(only: BackfillRecurringHistoryJob) do
+      Family::DataImporter.new(@family, build_ndjson(records)).import!
+    end
 
     series = @family.recurring_transactions.find_by!(name: "Rent")
     assert_equal Date.new(2026, 5, 9), series.started_on

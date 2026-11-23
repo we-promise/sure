@@ -93,7 +93,8 @@ class RecurringTransaction < ApplicationRecord
   # FrequencyPreset and the controller translate these on save. Not persisted.
   attr_accessor :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
                 :frequency_weekday, :frequency_month_of_year, :frequency_interval, :frequency_interval_unit,
-                :frequency_once_on, :first_due_on, :is_income, :skip_started_on_bound_validation
+                :frequency_once_on, :first_due_on, :is_income, :skip_started_on_bound_validation,
+                :skip_started_on_backfill
 
   # A scheme, followed by either "//" or by something that is not a port number.
   # "example.com:8080" is a host and port, not a scheme, so it does not match.
@@ -351,6 +352,8 @@ class RecurringTransaction < ApplicationRecord
   # generated open history outside the new bound can be reconciled. An
   # activation has its own path, which must not enqueue a second job.
   def should_backfill_history?
+    return false if skip_started_on_backfill
+
     if saved_change_to_id?
       return started_on.present? && active?
     end
@@ -501,6 +504,9 @@ class RecurringTransaction < ApplicationRecord
   def started_on_within_schedule
     return if started_on.blank?
     return if expected_day_of_month.blank?
+    # A start date accepted by an earlier edit stays valid on a later save that
+    # leaves both the start date and the schedule alone.
+    return if persisted? && !will_save_change_to_started_on? && !schedule_shape_changing?
 
     # A new record (including a data import) validates before its recurrence
     # rules have landed, so it reads the stored next expected date. A persisted

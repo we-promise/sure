@@ -701,6 +701,10 @@ class Family::DataImporter
         # rules have not been restored yet at this point, so the live schedule
         # cannot be validated here.
         recurring_transaction.skip_started_on_bound_validation = true
+        # The export carries its occurrences. Reconstructing here can run before
+        # a later chunk restores the recurrence rules, and the implicit monthly
+        # fallback would leave the wrong history behind.
+        recurring_transaction.skip_started_on_backfill = true
         recurring_transaction.save!
         map_source!(:recurring_transactions, old_id, recurring_transaction)
         # A replacement points at another series that may not exist yet, so it

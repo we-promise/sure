@@ -494,6 +494,12 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       series.started_on = Date.new(2026, 11, 20)
 
       assert series.valid?, series.errors.full_messages.to_sentence
+      series.save!
+
+      # The old overdue November 5 row is kept by regeneration. A later rename
+      # must not revalidate the unchanged start date against it.
+      series.name = "Renamed"
+      assert series.valid?, series.errors.full_messages.to_sentence
     end
   end
 
