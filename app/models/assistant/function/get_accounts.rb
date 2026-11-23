@@ -83,7 +83,7 @@ class Assistant::Function::GetAccounts < Assistant::Function
           # immediate, short_term, locked (until available_on) or long_term.
           liquidity: account.liquidity,
           available_on: account.available_on,
-          available_now: account.available_on?,
+          available_now: account.available_now?,
           start_date: account.start_date,
           is_linked: account.linked?,
           provider: account.provider_name,

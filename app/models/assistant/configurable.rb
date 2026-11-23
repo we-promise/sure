@@ -162,7 +162,7 @@ module Assistant::Configurable
 
       # Only bound assets get a note: "available" is what everyone assumes.
       def liquidity_context(account)
-        return "" unless account.asset? && !account.available_on?
+        return "" unless account.asset? && !account.available_now?
 
         release = account.next_release_date
         if release.nil?

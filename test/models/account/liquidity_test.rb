@@ -138,17 +138,16 @@ class Account::LiquidityTest < ActiveSupport::TestCase
     account = create_account(Depository, "cd")
     account.update!(available_on: @today + 10)
 
-    assert_not account.available_on?(@today + 9)
-    assert account.available_on?(@today + 10)
+    assert_not account.available_now?(@today + 9)
+    assert account.available_now?(@today + 10)
     assert_equal "locked", account.effective_liquidity(@today + 9)
     assert_equal "immediate", account.effective_liquidity(@today + 10)
-    assert_equal 10, account.days_until_available(@today)
   end
 
   test "a locked account without a date stays locked" do
     account = create_account(Depository, "cd")
 
-    assert_not account.available_on?(@today + 1000)
+    assert_not account.available_now?(@today + 1000)
     assert_nil account.next_release_date(@today)
   end
 
@@ -158,7 +157,7 @@ class Account::LiquidityTest < ActiveSupport::TestCase
 
     assert_equal Date.new(2026, 9, 30), account.next_release_date(Date.new(2026, 9, 30))
     assert_equal Date.new(2027, 3, 31), account.next_release_date(@today), "month-end dates do not slip"
-    assert_not account.available_on?(@today)
+    assert_not account.available_now?(@today)
   end
 
   test "next release date matches stepping term by term" do
@@ -229,15 +228,13 @@ class Account::LiquidityTest < ActiveSupport::TestCase
     assert_equal Date.current, Account.liquidity_today_for(@family)
   end
 
-  test "rules show where tax treatment and budget inclusion come from" do
+  test "rules carry the subtype's default liquidity and tax treatment" do
     rules = Investment.rules_for("401k")
 
     assert_equal "long_term", rules.liquidity
     assert_equal :tax_deferred, rules.tax_treatment
-    assert_not rules.counts_in_budget?
-    assert Depository.rules_for("cd").release_date?
-    assert Depository.rules_for("checking").counts_in_budget?
-    assert_not Depository.rules_for("hsa").counts_in_budget?
+    assert_equal "locked", Depository.rules_for("cd").liquidity
+    assert_nil Depository.rules_for("checking").tax_treatment
   end
 
   private

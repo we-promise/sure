@@ -32,6 +32,17 @@ nb:
         manual_entry: Angi kontobalanse
         title: Hvordan vil du legge den til?
       title: Hva vil du legge til?
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): under null fra %{date}, lavest %{qty}"
+        hint: "Sannsynligvis mangler et kjøp eller en overføring. Legg det til, eller rett transaksjonene som tok beholdningen under null."
+        link: "Se gjennom beholdningene"
+        message: "Noen beholdninger gikk under null"
+      sync_failed:
+        message: "Den siste synkroniseringen mislyktes"
+      sync_hint: "Tallene her kan være utdaterte. Synkroniser på nytt for å oppdatere dem."
+      sync_stale:
+        message: "Den siste synkroniseringen ble ikke fullført"
     show:
       activity:
         amount: Beløp

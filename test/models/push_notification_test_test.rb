@@ -161,6 +161,14 @@ class PushNotificationTestTest < ActiveJob::TestCase
     assert_nil PushNotificationTest.new(users(:family_admin)).latest
   end
 
+  test "an unregistered device is removed and reported" do
+    @test.request!
+    Apns::Client.any_instance.stubs(:deliver_test).returns(stub(ok?: false, status: "410", body: { "reason" => "Unregistered" }))
+    deliver
+    assert_equal "unregistered", result_status
+    assert_not PushSubscription.exists?(@subscription.id)
+  end
+
   test "transient errors retry without reporting success" do
     @test.request!
     Apns::Client.any_instance.stubs(:deliver_test).returns(stub(ok?: false, status: "503"))

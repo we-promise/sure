@@ -266,6 +266,28 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  # Under fifo each sale's basis is read from what it took from each lot. The
+  # card reads those for every sale in one query, not one per sale.
+  test "the card preloads the lot disposals its fifo sales read" do
+    date = Date.current.beginning_of_month
+    account = @family.accounts.create!(name: "Brokerage FIFO", balance: 10_000, currency: "USD",
+                                       cost_basis_method: "fifo", accountable: Investment.new)
+    security = Security.create!(ticker: "FIF#{SecureRandom.hex(3)}", name: "Fifo Listed")
+    create_trade(security, account: account, qty: 60, date: date - 20, price: 12)
+    create_trade(security, account: account, qty: 40, date: date - 10, price: 20)
+    create_trade(security, account: account, qty: -10, date: date, price: 25)
+    create_trade(security, account: account, qty: -60, date: date, price: 25)
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    queries = capture_sql_queries { get reports_path }
+
+    assert_response :ok
+    lines = css_select("[data-testid='realized-gain-line']").map(&:text).select { |text| text.include?(security.ticker) }
+    assert_equal 2, lines.size, "both sales must be listed, or this proves nothing"
+    assert lines.any? { |text| text.include?("$130.00") }, "10 x (25 - 12), the oldest lot"
+    assert_equal 1, queries.count { |sql| sql.include?(%("holding_lot_disposals")) }, "one preload, not one per sale"
+  end
+
   test "index renders successfully" do
     get reports_path
     assert_response :ok
@@ -355,6 +377,55 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       end_date: Date.current.to_s
     )
     assert_response :ok
+  end
+
+  test "all time runs from the member's first transaction or trade to today" do
+    first = @family.earliest_activity_date
+    assert first, "fixtures need a transaction or trade"
+
+    get reports_path(period_type: :all_time)
+
+    assert_response :ok
+    assert_select "a[aria-current]", text: I18n.t("reports.index.periods.all_time")
+    assert_includes @response.body, I18n.t("reports.index.period_label.all_time",
+      start: I18n.l(first, format: :short_month_year), end: I18n.l(Date.current, format: :short_month_year))
+    assert_includes @response.body, first.strftime("%b %Y")
+    assert_not_includes @response.body, (first - 1.month).strftime("%b %Y")
+  end
+
+  test "all time doesn't start at activity in an account the member can't see" do
+    member = users(:family_member)
+    hidden = @family.accounts.create!(name: "Admin's old account", balance: 0, currency: "USD",
+      accountable: Depository.new, owner: @user)
+    hidden.entries.create!(date: Date.new(2001, 2, 3), name: "Old", amount: 10, currency: "USD", entryable: Transaction.new)
+    assert_not member.finance_accounts.include?(hidden), "the member must not see the account"
+
+    sign_in member
+    get reports_path(period_type: :all_time)
+
+    assert_response :ok
+    assert_not_includes @response.body, "2001-02-03"
+    assert_not_includes @response.body, I18n.l(Date.new(2001, 2, 3), format: :short_month_year)
+  end
+
+  test "all time ignores scheduled entries after today" do
+    @family.entries.where(entryable_type: %w[Transaction Trade]).delete_all
+    account = @family.accounts.first
+    account.entries.create!(date: 1.month.from_now.to_date, name: "Scheduled", amount: 10, currency: "USD", entryable: Transaction.new)
+
+    get reports_path(period_type: :all_time)
+
+    assert_response :ok
+    assert_nil flash[:alert]
+    assert_includes @response.body, I18n.t("reports.index.period_label.all_time",
+      start: I18n.l(Date.current.beginning_of_month, format: :short_month_year), end: I18n.l(Date.current, format: :short_month_year))
+  end
+
+  test "all time has no previous period to compare with" do
+    get reports_path(period_type: :all_time)
+
+    assert_response :ok
+    assert_not_includes @response.body, I18n.t("reports.summary.vs_previous")
   end
 
   test "index with last 6 months period" do
@@ -747,6 +818,16 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[role=region][tabindex='0'][aria-label=?] table", "Expenses"
   end
 
+  test "index lets keyboard users scroll the trends and net worth tables" do
+    create_transaction(account: @family.accounts.first, name: "Lunch", amount: 15, category: categories(:food_and_drink))
+
+    get reports_path(period_type: :monthly)
+
+    %w[Monthly\ Breakdown Assets Liabilities].each do |label|
+      assert_select "[role=region][tabindex='0'][aria-label=?] table", label
+    end
+  end
+
   test "index links income and expense categories to filtered transactions" do
     start_date = Date.current.beginning_of_month
     end_date = Date.current.end_of_month
@@ -821,8 +902,8 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     create_transaction(account: taxable_account, name: "Taxable dividend", amount: -100, category: taxable_category)
     create_transaction(account: retirement_account, name: "401k dividend", amount: -200, category: retirement_category)
-    create_trade(securities(:aapl), account: taxable_account, qty: 1, date: Date.current, price: 100)
-    create_trade(securities(:aapl), account: retirement_account, qty: 1, date: Date.current, price: 200)
+    create_income_trade(account: taxable_account, label: "Dividend", amount: -100)
+    create_income_trade(account: retirement_account, label: "Dividend", amount: -200)
 
     get reports_path(period_type: :monthly)
     assert_response :ok
@@ -838,6 +919,106 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
     assert_match(/#{Regexp.escape(I18n.t("reports.transactions_breakdown.table.entries", count: 1))}/, other_investments_rows.first.text)
     assert_match(/\$100\.00/, other_investments_rows.first.text)
+  end
+
+  # Selling a holding turns securities into cash; it is not income, and the
+  # Total Income card (IncomeStatement::Totals) already leaves trades out.
+  test "activity breakdown leaves trades out of income and expenses" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+
+    salary = @family.categories.create!(name: "Reports Salary", color: "#111111")
+    brokerage = @family.accounts.create!(
+      owner: @user,
+      name: "Reports Brokerage",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new(subtype: "brokerage")
+    )
+
+    create_transaction(account: accounts(:depository), name: "Paycheck", amount: -100, category: salary)
+    create_trade(securities(:aapl), account: brokerage, qty: -10, date: Date.current, price: 100)
+    create_trade(securities(:aapl), account: brokerage, qty: 5, date: Date.current, price: 100)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "tr[data-category='category-other_investments']", count: 0
+    assert_select "tr[data-category='category-#{salary.id}']", text: /\$100\.00/
+    income_total = css_select("span.text-success.privacy-sensitive").map { |node| node.text.strip }
+    assert_includes income_total, "$100.00"
+    assert_not_includes income_total, "$1,100.00"
+  end
+
+  # Manually entered dividends, interest and fees are qty-0 trades
+  # (Trade::CreateForm#create_income_trade) and stay under Other Investments.
+  test "activity breakdown keeps manually entered dividends, interest and fees" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+    brokerage = @family.accounts.create!(owner: @user, name: "Reports Brokerage", balance: 0, currency: "USD",
+                                         accountable: Investment.new(subtype: "brokerage"))
+    create_transaction(account: accounts(:depository), name: "Coffee", amount: 3) # the page needs a transaction
+    create_income_trade(account: brokerage, label: "Dividend", amount: -42.17)
+    create_income_trade(account: brokerage, label: "Interest", amount: -13.37)
+    create_income_trade(account: brokerage, label: "Fee", amount: 7.77)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    rows = css_select("tr[data-category='category-other_investments']").map(&:text).join
+    [ "$55.54", "$7.77" ].each { |amount| assert_includes rows, amount }
+  end
+
+  # The activity-label editor relabels a trade without changing its quantity.
+  test "activity breakdown keeps a trade relabelled as a dividend" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+    brokerage = @family.accounts.create!(owner: @user, name: "Reports Brokerage", balance: 0, currency: "USD",
+                                         accountable: Investment.new(subtype: "brokerage"))
+    create_transaction(account: accounts(:depository), name: "Coffee", amount: 3)
+    create_trade(securities(:aapl), account: brokerage, qty: -1, date: Date.current, price: 42.17)
+      .trade.update!(investment_activity_label: "Dividend")
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_includes css_select("tr[data-category='category-other_investments']").map(&:text).join, "$42.17"
+  end
+
+  # The rule is by label, not only Buy and Sell: a trade that moves units
+  # stays out unless it is labelled as income or a fee.
+  test "activity breakdown leaves out trades with other labels or none" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+    brokerage = @family.accounts.create!(owner: @user, name: "Reports Brokerage", balance: 0, currency: "USD",
+                                         accountable: Investment.new(subtype: "brokerage"))
+    create_transaction(account: accounts(:depository), name: "Coffee", amount: 3)
+    [ "Contribution", "Withdrawal", "Reinvestment", "Transfer", "Exchange", "Other", nil ].each_with_index do |label, i|
+      create_trade(securities(:aapl), account: brokerage, qty: i.even? ? 2 : -2, date: Date.current, price: 50)
+        .trade.update!(investment_activity_label: label)
+    end
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "tr[data-category='category-other_investments']", count: 0
+  end
+
+  # A cash-only trade relabelled as a movement (e.g. through the API) is not
+  # income either; an unlabelled or "Other" one stays as before.
+  test "activity breakdown leaves out qty-0 trades labelled as movements" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+    brokerage = @family.accounts.create!(owner: @user, name: "Reports Brokerage", balance: 0, currency: "USD",
+                                         accountable: Investment.new(subtype: "brokerage"))
+    create_transaction(account: accounts(:depository), name: "Coffee", amount: 3)
+    [ "Transfer", "Sweep In", "Contribution", "Withdrawal", "Buy" ].each do |label|
+      create_income_trade(account: brokerage, label: "Dividend", amount: -100).trade.update!(investment_activity_label: label)
+    end
+    create_income_trade(account: brokerage, label: "Dividend", amount: -12.34).trade.update!(investment_activity_label: "Other")
+    create_income_trade(account: brokerage, label: "Dividend", amount: -10).trade.update!(investment_activity_label: nil)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    rows = css_select("tr[data-category='category-other_investments']").map(&:text).join
+    assert_includes rows, "$22.34"
+    assert_not_includes rows, "$522.34"
   end
 
   # The summary leaves out an amount in a currency with no rate; the
@@ -1076,6 +1257,39 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     get reports_path
     assert_response :ok
     assert_select "#liquidity-releases th", text: /Term deposit/
+  end
+
+  # The category column of the reports export is a user-supplied name, and this
+  # is the export the app points at Google Sheets.
+  test "transactions export escapes formula-triggering category names" do
+    malicious = "=SUM(A1)"
+    malicious_income = "@income"
+    account = @family.accounts.first
+
+    # One expense and one income, so both sections of the export are covered.
+    { malicious => 42.00, malicious_income => -500.00 }.each do |name, amount|
+      account.entries.create!(
+        name: "Payee",
+        date: Date.current.beginning_of_month + 3.days,
+        amount: amount,
+        currency: "USD",
+        entryable: Transaction.new(category: @family.categories.create!(name: name, color: "#123456"), kind: "standard")
+      )
+    end
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :monthly,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month
+    )
+
+    assert_response :ok
+    rows = CSV.parse(@response.body)
+    [ malicious, malicious_income ].each do |name|
+      assert rows.any? { |r| r.first == "'#{name}" }, "the #{name} category cell must be escaped"
+      assert_not rows.any? { |r| r.first == name }, "a raw #{name} must not lead a row"
+    end
   end
 
   # The card was gated on `investment_accounts`, which is visible accounts
@@ -1566,5 +1780,13 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
                                  amount: BigDecimal(750), currency: "USD", cost_basis: 100)
         create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR")
       end
+    end
+
+    # A cash-only trade, as Trade::CreateForm#create_income_trade records a
+    # manually entered dividend, interest payment or fee.
+    def create_income_trade(account:, label:, amount:)
+      account.entries.create!(name: label, date: Date.current, amount: amount, currency: "USD",
+                              entryable: Trade.new(qty: 0, price: 0, currency: "USD", security: securities(:aapl),
+                                                   investment_activity_label: label))
     end
 end
