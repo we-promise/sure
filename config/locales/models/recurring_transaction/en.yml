@@ -6,18 +6,22 @@ en:
       unmeasurable: "this transaction carries an allocation that cannot be converted to %{currency}, so what is left of it cannot be measured. Add an exchange rate for %{date} or remove the existing payment first"
       over_allocated: "allocating %{amount} exceeds the transaction's remaining %{capacity} %{currency}"
       entry_exhausted: "this transaction's full amount is already applied to other payments due"
+      split_counterpart_allocated: "this transaction is split, and the original charge or one of its parts is already applied to a bill"
       already_allocated: "this transaction is already applied to this bill"
       exceeds_remaining: "%{amount} exceeds the %{remaining} remaining on this cycle"
   activerecord:
     attributes:
       recurring_transaction:
         payment_url: "Payment link"
+        bank_reference: "Bank reference"
         frequency_interval: "Repeat interval"
     errors:
       models:
         recurring_transaction:
           merchant_or_name_required: "Either merchant or name must be present"
           attributes:
+            bank_reference:
+              needs_account_and_expense: "only works on an expense bill with an account, because it is matched against that account's payments"
             payment_url:
               invalid_scheme: "must be a valid http:// or https:// address"
             anchor_date:

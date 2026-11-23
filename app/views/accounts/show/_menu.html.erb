@@ -1,6 +1,10 @@
 <%# locals: (account:) %>
 
 <% permission = account.permission_for(Current.user) %>
+<% bulk_reconciliation = Current.family&.manual_reconciliation? &&
+     account.manual? &&
+     permission.in?([ :owner, :full_control ]) &&
+     account.transactions.exists? %>
 <%= render DS::Menu.new(testid: "account-menu") do |menu| %>
   <% if permission.in?([ :owner, :full_control ]) %>
     <% menu.with_item(variant: "link", text: t(".edit"), href: edit_account_path(account), icon: "pencil-line", data: { turbo_frame: :modal }) %>
@@ -8,6 +12,28 @@
   <% menu.with_item(variant: "link", text: t(".sharing"), href: account_sharing_path(account), icon: "users", data: { turbo_frame: :modal }) %>
   <% unless account.physical_cash? %>
     <% menu.with_item(variant: "link", text: t(".statements"), href: account_path(account, tab: "statements"), icon: "archive") %>
+  <% end %>
+
+  <% if bulk_reconciliation %>
+    <% menu.with_item(variant: "divider") %>
+
+    <% Entry.reconciled_statuses.each_key do |status| %>
+      <% status_label = t("transactions.reconcile.statuses.#{status}") %>
+      <% menu.with_item(
+        variant: "button",
+        text: t(".reconcile_all.#{status}"),
+        icon: reconcile_status_icon(status),
+        href: reconcile_all_account_path(account, reconciled_status: status),
+        method: :patch,
+        confirm: CustomConfirm.new(
+          title: t(".reconcile_all.confirm_title", status: status_label),
+          body: t(".reconcile_all.confirm_body"),
+          btn_text: t(".reconcile_all.confirm_accept", status: status_label),
+          destructive: status == "unreconciled"
+        ),
+        data: { turbo_frame: :_top }
+      ) %>
+    <% end %>
   <% end %>
 
   <% if permission.in?([ :owner, :full_control ]) %>

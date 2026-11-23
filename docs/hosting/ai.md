@@ -589,7 +589,7 @@ curl -X POST https://your-sure-instance/mcp \
 
 ### OpenClaw Gateway Example
 
-[OpenClaw](https://github.com/luckyPipewrench/openclaw) is an AI agent gateway that exposes agents as OpenAI-compatible endpoints. If your agent runs behind OpenClaw, configure it like this:
+[OpenClaw](https://github.com/openclaw/openclaw) is an AI agent gateway that exposes agents as OpenAI-compatible endpoints. If your agent runs behind OpenClaw, configure it like this:
 
 ```bash
 ASSISTANT_TYPE=external
@@ -1676,12 +1676,16 @@ VECTOR_STORE_PROVIDER=pgvector
 EMBEDDING_MODEL=mxbai-embed-large         # Default: mxbai-embed-large
 EMBEDDING_DIMENSIONS=1024                 # Default: 1024 (must match your model)
 EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to the OpenAI API Base URL (ENV or Settings) if not set
-EMBEDDING_ACCESS_TOKEN=                   # Falls back to the OpenAI Access Token (ENV or Settings) if not set
+EMBEDDING_ACCESS_TOKEN=                   # Falls back to OPENAI_ACCESS_TOKEN, or to the token saved in Settings for the OpenAI URL
 ```
 
 The fallbacks include values saved in **Settings** → **Self-Hosting**. Before this release they
 read only `OPENAI_URI_BASE` and `OPENAI_ACCESS_TOKEN` from the environment, so an install that set
-its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key.
+its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key. The
+access token saved in Settings is sent only to the OpenAI URL it was saved with: a separate
+`EMBEDDING_URI_BASE` that needs a key needs `EMBEDDING_ACCESS_TOKEN`. `OPENAI_ACCESS_TOKEN` set in
+the environment still goes to a separate `EMBEDDING_URI_BASE` when `EMBEDDING_ACCESS_TOKEN` is
+empty, as it did before this release.
 
 Sure enables the `vector` extension when it first provisions the chunks table,
 provided the database user has permission. If the AI status page reports that

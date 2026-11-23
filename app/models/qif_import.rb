@@ -1,4 +1,10 @@
 class QifImport < Import
+  # Month-first dates with dots (e.g. "7.10.13" for July 10) occur in QIF
+  # exports that declare "!Option:MDY" but have no Family::DATE_FORMATS entry.
+  QIF_ONLY_DATE_FORMATS = [
+    [ "MM.DD.YYYY", "%m.%d.%Y" ]
+  ].freeze
+
   after_create :set_default_config
 
   # The date format used to parse the raw QIF file's D-fields (e.g. "%m/%d/%Y").
@@ -10,6 +16,7 @@ class QifImport < Import
 
   def qif_date_format=(fmt)
     self.column_mappings = (column_mappings || {}).merge("qif_date_format" => fmt)
+    reset_parsed_transactions
   end
 
   # Parses the stored QIF content and creates Import::Row records.
@@ -94,6 +101,12 @@ class QifImport < Import
     @qif_account_type = raw_file_str.present? ? QifParser.account_type(raw_file_str) : nil
   end
 
+  # Account types in the file that are not standard QIF account types and are
+  # imported like a bank account (e.g. "Oth T").
+  def unknown_qif_account_types
+    raw_file_str.present? ? QifParser.unknown_account_types(raw_file_str) : []
+  end
+
   def qif_accounts
     @qif_accounts ||= raw_file_str.present? ? QifParser.parse_accounts(raw_file_str) : []
   end
@@ -155,10 +168,22 @@ class QifImport < Import
     QifParser.try_parse_date(sample, date_format: format)
   end
 
+  def date_format_options
+    Family::DATE_FORMATS + QIF_ONLY_DATE_FORMATS
+  end
+
   private
 
     def parsed_transactions_with_splits
       @parsed_transactions_with_splits ||= QifParser.parse(raw_file_str, date_format: qif_date_format)
+    end
+
+    # The parsed transactions depend on the date format; forget them when it changes.
+    def reset_parsed_transactions
+      remove_instance_variable(:@parsed_transactions_with_splits) if defined?(@parsed_transactions_with_splits)
+      remove_instance_variable(:@parsed_transaction_by_source_row_number) if defined?(@parsed_transaction_by_source_row_number)
+      remove_instance_variable(:@has_split_transactions) if defined?(@has_split_transactions)
+      remove_instance_variable(:@split_categories) if defined?(@split_categories)
     end
 
     def parsed_transaction_by_source_row_number
@@ -364,7 +389,7 @@ class QifImport < Import
       children = entry.split!(split_rows)
       children.zip(split_rows).each do |child, row|
         child.update!(notes: row[:notes]) if row[:notes].present?
-        row[:tags].each { |tag| child.entryable.taggings.create!(tag: tag) }
+        row[:tags].uniq.each { |tag| child.entryable.taggings.create!(tag: tag) }
       end
     end
 
@@ -553,12 +578,45 @@ class QifImport < Import
     end
 
     # Auto-detects the QIF file's date format from D-field samples and persists it.
+    # A declared "!Option:MDY"/"!Option:DMY" limits detection to formats with that
+    # day/month order (year-first formats are unambiguous and always kept), as
+    # long as the chosen format reads every date. Otherwise all formats compete.
     # Falls back to "%m/%d/%Y" (US convention) if detection is inconclusive.
     def detect_and_set_qif_date_format!
       samples = QifParser.extract_raw_dates(raw_file_str)
-      detected = Import.detect_date_format(samples, fallback: "%m/%d/%Y")
+      formats = date_format_options.map(&:last)
+      declared_order = QifParser.date_order(raw_file_str)
+
+      if declared_order
+        ordered_formats = formats.select { |fmt| [ declared_order, nil ].include?(day_month_order(fmt)) }
+        detected = Import.detect_date_format(samples, candidates: ordered_formats, fallback: nil)
+        detected = nil unless detected && reads_all_dates?(samples, detected)
+      end
+
+      detected ||= Import.detect_date_format(samples, candidates: formats, fallback: "%m/%d/%Y")
       self.qif_date_format = detected
       update_column(:column_mappings, column_mappings)
+    end
+
+    def reads_all_dates?(samples, fmt)
+      samples.all? do |sample|
+        Import.reasonable_date_range.cover?(Date.strptime(sample, fmt))
+      rescue Date::Error, ArgumentError
+        false
+      end
+    end
+
+    # "MDY" or "DMY" for formats that start with the month or the day, nil for
+    # formats that start with the year.
+    def day_month_order(fmt)
+      fields = fmt.scan(/%[a-zA-Z]/)
+      return nil if fields.first.in?(%w[%Y %y])
+
+      day_index   = fields.index { |field| field.in?(%w[%d %e]) }
+      month_index = fields.index { |field| field.in?(%w[%m %b]) }
+      return nil unless day_index && month_index
+
+      month_index < day_index ? "MDY" : "DMY"
     end
 
     # Returns the signed qty for a trade row:

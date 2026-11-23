@@ -44,7 +44,7 @@ class Api::V1::BudgetsController < Api::V1::BaseController
     def budgets_scope
       current_resource_owner.family.budgets
         .where(user_id: visible_owner_ids)
-        .includes(budget_categories: :category)
+        .includes(:user, budget_categories: :category)
     end
 
     # nil (the shared household budget) + the caller's own personal budget +
