@@ -92,7 +92,7 @@ class Ai::PdfReading
       result = Ai::Generations::ExtractBankStatement.new(units:, content:, filename:, family:, user:).call(plan:, cancelled:)
       result.value!
 
-      balances = printed_balances(source)
+      balances = printed_balances(source, currency: result.value[:currency])
       # The checks reconcile against the balances printed in the text layer. Keep those values in
       # the retained extraction too: PdfImport#extract_transactions stores them as the statement's
       # balances, and the model's own figures can be wrong even when the rows reconcile.
@@ -337,14 +337,22 @@ class Ai::PdfReading
     end
 
     # A source with both balances wins over one with only one of them.
-    def printed_balances(source)
-      parsed = [ text_pages.join("\n"), source ].compact.uniq.map { parsed_balances(_1) }
+    def printed_balances(source, currency:)
+      parsed = [ text_pages.join("\n"), source ].compact.uniq.map { parsed_balances(_1, currency:) }
       parsed.find { _1.size == 2 } || parsed.find(&:present?) || {}
     end
 
-    def parsed_balances(text)
+    def parsed_balances(text, currency:)
       parsed = AccountStatement::TextMetadataParser.parse(text)
-      { opening_balance: parsed&.opening_balance, closing_balance: parsed&.closing_balance }.compact
+      readings = parsed&.balance_readings.to_h.deep_dup
+      readings.each_value do |pair|
+        AccountStatement::BALANCE_FIELDS.each do |field|
+          reading = pair[field]
+          reading["currency"] ||= currency if reading
+        end
+      end
+      balances = AccountStatement::TextMetadataParser.balances_for(readings, classification: nil, currency:)
+      { opening_balance: balances&.opening_balance, closing_balance: balances&.closing_balance }.compact
     rescue StandardError
       {}
     end
