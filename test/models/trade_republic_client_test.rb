@@ -1137,7 +1137,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_not Provider::TradeRepublicClient.requires_trade_detail?("eventType" => "ACCOUNT_TRANSFER_INCOMING")
   end
 
-  test "a pre-determined tax base keeps the debit from the timeline item and its detail reads the total" do
+  test "a pre-determined tax base keeps the debit from the timeline item, and a detail with tax breakdown tables still reads the total" do
     item = {
       "id" => "evt_tax_base", "eventType" => "PRE_DETERMINED_TAX_BASE", "title" => "Fund",
       "subtitle" => "Pre-Determined Tax Base", "status" => "EXECUTED", "amount" => { "value" => -12.34, "currency" => "EUR" }

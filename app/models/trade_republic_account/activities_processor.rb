@@ -60,6 +60,9 @@ class TradeRepublicAccount::ActivitiesProcessor
       event = event.with_indifferent_access
       classification = classify_timeline_event(event)
       next if classification == :ignored
+
+      # Whatever category a stored copy carries, these are never imported.
+      classification = :unknown if UNSUPPORTED_EVENT_REASONS.key?(event[:eventType].to_s)
       next if lifecycle_blocks_import?(event)
       # After routing, so split portfolio/cash connections log an unknown
       # event once (from the cash side) instead of twice.

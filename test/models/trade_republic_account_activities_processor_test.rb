@@ -963,6 +963,19 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 0, incomplete_execution_logs.count
   end
 
+  test "an older securities transfer is not imported even if a copy carries an order execution category" do
+    import_event({
+      id: "evt_old_cat", timestamp: "not a date", eventType: "ACCOUNT_TRANSFER_INCOMING", category: "orderExecution",
+      title: "Fund", subtitle: "Securities transfer", status: "EXECUTED", amount: 450.0,
+      detail: { isin: "DE000A0F5UH1", quantity: "10", amount: "450.0", currency: "EUR" }
+    })
+
+    assert_equal 0, Entry.where(source: "trade_republic").count
+    log = DebugLogEntry.find_by!("message LIKE ?", "%ACCOUNT_TRANSFER_INCOMING%")
+    assert_equal "DE000A0F5UH1", log.metadata["isin"]
+    assert_nil log.metadata["date"]
+  end
+
   test "each older securities transfer gets its own log entry with the ISIN when the detail has one" do
     base = { timestamp: "2023-11-23T09:00:00.000+0000", eventType: "ACCOUNT_TRANSFER_INCOMING", title: "Fund", status: "EXECUTED" }
     @tr_account.update!(raw_timeline_payload: [
