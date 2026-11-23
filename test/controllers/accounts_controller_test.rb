@@ -51,6 +51,24 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#sidebar-scroll[class*='[scrollbar-gutter:stable]']"
   end
 
+  test "sidebar subgroups keep each account's logo and sparkline across visits" do
+    @account.update!(custom_group: "Household")
+    @user.update!(preferences: @user.preferences.merge(
+      "preview_features_enabled" => true,
+      "account_grouping" => { "sidebar" => "custom_group" }
+    ))
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-subgroup-key] [id^='logo_keep_'][id*='#{@account.id}'][data-turbo-permanent]"
+    assert_select "[data-subgroup-key] [id^='sparkline_keep_'][id*='#{@account.id}'][data-turbo-permanent] turbo-frame##{dom_id(@account, :sparkline)}"
+
+    ids = css_select("[data-turbo-permanent]").map { |el| el["id"] }
+    assert ids.any?
+    assert_equal ids.uniq, ids, "each sidebar copy needs its own wrapper ids"
+  end
+
   test "show points an unmatched transaction with a counterpart to the transfer matcher" do
     outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
     create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
