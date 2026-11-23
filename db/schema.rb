@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_22_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -628,6 +628,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.string "account_id"
     t.string "account_status"
     t.string "account_type"
+    t.decimal "anchor_pending_total", precision: 19, scale: 4
     t.boolean "balance_evidence_verified", default: false, null: false
     t.boolean "balance_verified", default: false, null: false
     t.datetime "created_at", null: false
@@ -641,6 +642,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
     t.string "name"
+    t.decimal "pending_total", precision: 19, scale: 4
     t.string "product"
     t.string "provider"
     t.jsonb "raw_payload"
@@ -875,6 +877,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
   end
 
   create_table "family_documents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_statement_id"
     t.string "content_type"
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
@@ -884,6 +887,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.string "provider_file_id"
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_statement_id"], name: "index_family_documents_on_account_statement_id"
     t.index ["family_id"], name: "index_family_documents_on_family_id"
     t.index ["provider_file_id"], name: "index_family_documents_on_provider_file_id"
     t.index ["status"], name: "index_family_documents_on_status"
@@ -3210,6 +3214,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"
   add_foreign_key "eval_samples", "eval_datasets"
+  add_foreign_key "family_documents", "account_statements", on_delete: :cascade
   add_foreign_key "family_documents", "families"
   add_foreign_key "family_exports", "families"
   add_foreign_key "family_merchant_associations", "families"

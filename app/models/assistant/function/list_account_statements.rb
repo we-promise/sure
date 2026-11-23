@@ -87,11 +87,9 @@ class Assistant::Function::ListAccountStatements < Assistant::Function
     # Visibility is filtered in SQL, not after the fact. Post-filtering a page
     # would both underfill it and — because there is no cursor — make a statement
     # permanently unreachable whenever enough newer rows the caller cannot see sit
-    # in front of it. Mirrors AccountStatement#viewable_by? for a statement
-    # manager: unlinked statements are visible, linked ones follow the account.
+    # in front of it.
     scope = family.account_statements
-      .where(account_id: nil)
-      .or(family.account_statements.where(account_id: user.accessible_accounts.select(:id)))
+      .viewable_by(user)
       .includes(:account, :suggested_account)
       .ordered
 

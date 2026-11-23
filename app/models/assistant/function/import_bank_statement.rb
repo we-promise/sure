@@ -57,7 +57,7 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   def call(params = {})
-    pdf_import = family.imports.find_by(id: params["pdf_import_id"], type: "PdfImport")
+    pdf_import = find_pdf_import(params["pdf_import_id"])
 
     unless pdf_import
       return {
@@ -82,17 +82,17 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         success: false,
         error: "account_required",
         message: "Please specify which account to import transactions into",
-        available_accounts: family.accounts.visible.depository.map { |a| { id: a.id, name: a.name } }
+        available_accounts: account_choices
       }
     end
 
-    account = family.accounts.find_by(id: params["account_id"])
+    account = writable_accounts.find_by(id: params["account_id"]) if valid_uuid?(params["account_id"])
     unless account
       return {
         success: false,
         error: "account_not_found",
-        message: "Account not found",
-        available_accounts: family.accounts.visible.depository.map { |a| { id: a.id, name: a.name } }
+        message: "No writable account matched that account_id",
+        available_accounts: account_choices
       }
     end
 
@@ -169,6 +169,22 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   private
+    # Same visibility as the web's import page: another member's private
+    # statement is not found, so it is neither sent to the model nor echoed back.
+    def find_pdf_import(id)
+      pdf_import = family.imports.find_by(id: id, type: "PdfImport")
+      pdf_import if pdf_import&.viewable_by?(user)
+    end
+
+    # The import writes transactions into the account, so the user needs write
+    # access to it, as the web requires to publish and the API to create.
+    def writable_accounts
+      family.accounts.writable_by(user)
+    end
+
+    def account_choices
+      writable_accounts.visible.depositories.map { |a| { id: a.id, name: a.name } }
+    end
 
     # The refusal every AI gate on this path returns: the router's reason and its message.
     def ai_unavailable(availability)

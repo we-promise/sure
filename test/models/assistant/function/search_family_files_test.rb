@@ -61,8 +61,8 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
       VectorStore::Response.new(
         success?: true,
         data: [
-          { content: "Total income: $85,000", filename: "2024_tax_return.pdf", score: 0.95, file_id: "file-abc" },
-          { content: "W-2 wages: $80,000", filename: "2024_tax_return.pdf", score: 0.87, file_id: "file-abc" }
+          { content: "Total income: $85,000", filename: "2024_tax_return.pdf", score: 0.95, file_id: "file-abc123" },
+          { content: "W-2 wages: $80,000", filename: "2024_tax_return.pdf", score: 0.87, file_id: "file-abc123" }
         ],
         error: nil
       )
@@ -114,19 +114,72 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_equal "search_failed", result[:error]
   end
 
-  test "caps max_results at 20" do
-    @user.family.update!(vector_store_id: "vs_test123")
+  test "returns at most 20 results" do
+    chunks = Array.new(30) { |i| chunk("file-abc123", "Excerpt #{i}") }
+    stub_search(chunks)
 
-    mock_adapter = mock("vector_store_adapter")
-    mock_adapter.expects(:search).with(
-      store_id: "vs_test123",
-      query: "test",
-      max_results: 20
-    ).returns(VectorStore::Response.new(success?: true, data: [], error: nil))
+    result = @function.call("query" => "test", "max_results" => 50)
 
-    VectorStore::Registry.stubs(:adapter).returns(mock_adapter)
+    assert_equal 20, result[:result_count]
+  end
 
-    @function.call("query" => "test", "max_results" => 50)
+  # Statement PDFs are searchable by whoever may see the statement
+  # (AccountStatement#viewable_by?); files uploaded straight to the store are
+  # the family's.
+  test "a member finds no excerpts of a statement of an account not shared with them" do
+    hidden = statement_document(account: accounts(:connected))
+    shared = statement_document(account: accounts(:depository))
+    stub_search([ chunk(hidden, "Admin private"), chunk(shared, "Shared"), chunk("file-abc123", "Family upload") ])
+
+    result = Assistant::Function::SearchFamilyFiles.new(users(:family_member)).call("query" => "statement")
+
+    assert_equal [ "Shared", "Family upload" ], result[:results].map { |r| r[:content] }
+  end
+
+  test "the owner of the account finds the excerpts of its statement" do
+    hidden = statement_document(account: accounts(:connected))
+    stub_search([ chunk(hidden, "Admin private") ])
+
+    result = @function.call("query" => "statement")
+
+    assert_equal [ "Admin private" ], result[:results].map { |r| r[:content] }
+  end
+
+  test "a statement linked to an account later follows that account" do
+    statement_file = statement_document(account: nil)
+    stub_search([ chunk(statement_file, "Inbox statement") ])
+    member_search = Assistant::Function::SearchFamilyFiles.new(users(:family_member))
+
+    assert_equal 1, member_search.call("query" => "statement")[:result_count]
+
+    FamilyDocument.find_by!(provider_file_id: statement_file).account_statement.link_to_account!(accounts(:connected))
+
+    assert_empty member_search.call("query" => "statement")[:results]
+  end
+
+  test "a guest finds no excerpts of an unlinked statement" do
+    statement_file = statement_document(account: nil)
+    stub_search([ chunk(statement_file, "Inbox statement"), chunk("file-abc123", "Family upload") ])
+
+    result = Assistant::Function::SearchFamilyFiles.new(family_guest).call("query" => "statement")
+
+    assert_equal [ "Family upload" ], result[:results].map { |r| r[:content] }
+  end
+
+  # PDFs processed before documents recorded their statement could come from
+  # any account, so nobody finds them until they are linked.
+  test "nobody finds a processed PDF whose statement is unknown" do
+    @user.family.family_documents.create!(filename: "old.pdf", provider_file_id: "file-legacy", status: "ready",
+                                          metadata: { "type" => "bank_statement" })
+    stub_search([ chunk("file-legacy", "Legacy statement") ])
+
+    assert_empty @function.call("query" => "statement")[:results]
+  end
+
+  test "excerpts of a file the family has no record of are left out" do
+    stub_search([ chunk("file-unknown", "Orphan") ])
+
+    assert_empty @function.call("query" => "statement")[:results]
   end
 
   test "returns the search failure when tracing finalization also fails" do
@@ -145,4 +198,28 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_equal "search_failed", result[:error]
     assert_equal "An error occurred while searching documents: Search unavailable", result[:message]
   end
+
+  private
+    def stub_search(chunks)
+      @user.family.update!(vector_store_id: "vs_test123")
+      adapter = mock("vector_store_adapter")
+      adapter.stubs(:search).returns(VectorStore::Response.new(success?: true, data: chunks, error: nil))
+      VectorStore::Registry.stubs(:adapter).returns(adapter)
+    end
+
+    def chunk(file_id, content)
+      { content: content, filename: "statement.pdf", score: 0.9, file_id: file_id }
+    end
+
+    # The provider file id of a document uploaded for a new statement PDF.
+    def statement_document(account:)
+      family = @user.family
+      statement = AccountStatement.create_from_upload!(
+        family: family,
+        account: account,
+        file: uploaded_file(filename: "statement.pdf", content_type: "application/pdf", content: "%PDF-1.4 #{SecureRandom.hex}")
+      )
+      family.family_documents.create!(filename: statement.filename, provider_file_id: "file-#{SecureRandom.hex(4)}", status: "ready",
+                                      account_statement: statement, metadata: { "type" => "bank_statement" }).provider_file_id
+    end
 end

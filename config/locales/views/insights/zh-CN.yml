@@ -46,6 +46,10 @@ zh-CN:
       budget_at_risk: 预算
       budget_on_track: 预算
       maintained_goal_depleted: 储备金
+      bill_not_covered: 账单
+      loan_payment_change: 贷款还款
+      bank_fees: 费用
+      fixed_commitments_ratio: 固定支出
     meta:
       next_n_days:
         one: 未来一天
@@ -66,6 +70,11 @@ zh-CN:
       idle_days:
         one: "闲置 %{count} 天"
         other: "闲置 %{count} 天"
+      of_income: 占收入
+      short_on: "%{date} 短缺"
+      fee_charges:
+        one: "%{count} 笔费用"
+        other: "%{count} 笔费用"
     actions:
       spending_anomaly: "查看 %{category} 交易"
       cash_flow_warning: 查看循环交易
@@ -75,6 +84,10 @@ zh-CN:
       idle_cash: 前往账户
       budget: 查看预算
       maintained_goal_depleted: 查看储备金
+      bill_not_covered: 前往账户
+      loan_payment_change: 查看贷款
+      bank_fees: 查看费用
+      fixed_commitments_ratio: 检查循环交易
     titles:
       spending_anomaly:
         above: "%{category} 支出呈上升趋势"
@@ -93,6 +106,14 @@ zh-CN:
         one: 预算中有一个分类需要注意
         other: "预算中有 %{count} 个分类需要注意"
       budget_on_track: 您的预算进度正常
+      bill_not_covered: "%{account} 可能不足以支付 %{name}"
+      loan_payment_change:
+        up: "%{account} 的还款额即将上涨"
+        down: "%{account} 的还款额即将下降"
+      bank_fees: "%{account} 产生了费用"
+      fixed_commitments_ratio:
+        up: 固定支出占您收入的比例正在上升
+        over_half: 固定支出目前已占您收入的一半及以上
     templates:
       spending_anomaly:
         above: "按目前进度，您本月在 %{category} 上的支出预计为 %{projected_spend}，比近期月均支出 %{baseline_spend} 高出约 %{deviation_pct}%。"
@@ -112,3 +133,17 @@ zh-CN:
         over: "%{categories} 本月已超出预算。您目前已使用总预算的 %{budget_spent_pct}%。"
         near: "%{categories} 本月已接近预算上限。您目前已使用总预算的 %{budget_spent_pct}%。"
       budget_on_track: "您已花费 %{budgeted} 预算中的 %{spent}（%{budget_spent_pct}%），所有开销均在限额之内。"
+      bill_not_covered: "将于 %{due_on} 从 %{account} 支付的 %{name} 金额为 %{amount}。综合计入该账户届时之前的其他账单与收入，预计将短缺约 %{shortfall}。"
+      loan_payment_change:
+        up: "根据贷款还款计划及已记录的利率，您 %{account} 的还款额将于 %{effective_on} 从 %{previous_payment} 调整为 %{new_payment}，增加 %{change_pct}%。"
+        down: "根据贷款还款计划及已记录的利率，您 %{account} 的还款额将于 %{effective_on} 从 %{previous_payment} 调整为 %{new_payment}，减少 %{change_pct}%。"
+      bank_fees:
+        recurring: "%{account} 在过去 %{days} 天内产生了 %{amount} 的费用。"
+        new: "%{account} 在过去 %{days} 天内产生了 %{amount} 的费用，而此前 %{days} 天内没有此类费用。"
+      fixed_commitments_ratio: "每月 %{commitments} 的固定循环支出占您平常月收入 %{income} 的 %{current_ratio}%，高于六个月前的 %{previous_ratio}%。%{explanation}"
+    fixed_commitments_ratio:
+      contributors: "主要变化：%{list}。"
+      contributor:
+        new: "%{name}（新增，每月 %{amount}）"
+        raised: "%{name}（每月增加 %{amount}）"
+      income_fell: "您平常的月收入从 %{previous_income} 降至 %{current_income}。"
