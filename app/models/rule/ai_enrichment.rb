@@ -1,7 +1,8 @@
 # The actions that hand transactions to an AI provider. A rule acts on the
-# whole family, but the provider only gets what the person behind the run
-# could categorize by hand (Account.annotatable_by), plus the accounts every
-# active member can see. A run nobody started (after a sync) gets only the
+# whole family, but the provider only gets the accounts the person behind the
+# run can categorize (Account.annotatable_by), plus the accounts every active
+# member can see, even where this person's share is read-only: the run after a
+# sync sends those too. A run nobody started (after a sync) gets only the
 # latter. Admins are not exempt, as on /accounts.
 #
 # Checked twice: when the rule queues the AI jobs, and again by each job right
