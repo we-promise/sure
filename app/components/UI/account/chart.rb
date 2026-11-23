@@ -10,13 +10,21 @@ class UI::Account::Chart < ApplicationComponent
   # The page's reference date travels inside the payload (`today`), so the
   # component takes no date of its own. `extra_repayment` is the Extra
   # repayments tab's Loan::ExtraRepayment, which the period picker keeps.
-  def initialize(account:, period: nil, view: nil, loan_chart: nil, extra_repayment: nil)
+  # `activity_filters` are the activity feed's `q` params: the feed follows a
+  # range dragged on this chart, and a period picked here keeps its filters.
+  def initialize(account:, period: nil, view: nil, loan_chart: nil, extra_repayment: nil, activity_filters: nil)
     @account = account
     @period = period
     @view = view
     @loan_chart = loan_chart
     @extra_repayment = extra_repayment
+    @activity_filters = activity_filters.to_h.stringify_keys
   end
+
+  # The activity feed's own date params, which a range dragged on the chart
+  # sets alongside the chart's, and the page param a new range drops.
+  ACTIVITY_RANGE_PARAMS = [ %w[q[start_date] q[end_date]] ].freeze
+  ACTIVITY_RESET_PARAMS = %w[page].freeze
 
   def loan_chart?
     loan_chart.present?
@@ -210,11 +218,34 @@ class UI::Account::Chart < ApplicationComponent
   # What each period link carries besides the period. Picking one reloads
   # the page, which rebuilds an applied extra only from its params, so the
   # links keep it, and the tab it was applied from.
+  #
+  # They also keep the activity feed's filters, except a date filter a drag
+  # set: a preset replaces the dragged range, so activity dates equal to that
+  # range's bounds go with it. Activity dates set to anything else were set
+  # by hand and stay.
   def period_picker_extra_params
-    return { chart_view: view } if account.supports_trades?
-    return {} unless @extra_repayment&.applied?
+    with_activity_filters(chart_params, activity_filters_outliving_range)
+  end
 
-    { tab: "extra_repayments", extra_payment: @extra_repayment.to_params }
+  # The custom row re-applies the range already shown, so it keeps every
+  # activity filter.
+  def period_picker_custom_extra_params
+    with_activity_filters(chart_params, @activity_filters)
+  end
+
+  # Hidden fields the chart-view select submits with the view, as
+  # [name, value] pairs: a range dragged on the chart (a custom period, which
+  # unlike a preset is not remembered for the user) and the activity feed's
+  # filters, so switching between balance, holdings, cash and gains keeps the
+  # selection and the activity it filters.
+  def chart_view_hidden_fields
+    fields = {}
+    if @period && @period.key.blank?
+      fields[:start_date] = @period.start_date.iso8601
+      fields[:end_date] = @period.end_date.iso8601
+    end
+    fields[:q] = @activity_filters if @activity_filters.present?
+    flatten_params(fields)
   end
 
   # A saved period the loan chart does not offer shows the whole life, so its
@@ -248,6 +279,37 @@ class UI::Account::Chart < ApplicationComponent
   end
 
   private
+    def chart_params
+      return { chart_view: view } if account.supports_trades?
+      return {} unless @extra_repayment&.applied?
+
+      { tab: "extra_repayments", extra_payment: @extra_repayment.to_params }
+    end
+
+    def with_activity_filters(params, filters)
+      filters.present? ? params.merge(q: filters) : params
+    end
+
+    def activity_filters_outliving_range
+      return @activity_filters if period.key.present?
+
+      @activity_filters.reject do |key, value|
+        (key == "start_date" && value == period.start_date.iso8601) ||
+          (key == "end_date" && value == period.end_date.iso8601)
+      end
+    end
+
+    def flatten_params(value, prefix = nil)
+      case value
+      when Hash
+        value.flat_map { |key, nested| flatten_params(nested, prefix ? "#{prefix}[#{key}]" : key.to_s) }
+      when Array
+        value.flat_map { |nested| flatten_params(nested, "#{prefix}[]") }
+      else
+        [ [ prefix, value.to_s ] ]
+      end
+    end
+
     # Prefixes positive gains with "+"; other views keep plain Money formatting.
     def signed_format(money)
       return money.format unless view == "gains" && money.amount.positive?
