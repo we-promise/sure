@@ -147,7 +147,11 @@ class Assistant::Function::MatchTransfer < Assistant::Function
         transaction: serialize_transaction(transaction),
         counterpart: account ? nil : serialize_transaction(counterpart),
         creates_counterpart_in: account && { account_id: account.id, account: account.name, name: counterpart.entry.name },
-        outflow_kind: Transfer.kind_for_account(transfer.inflow_transaction.entry.account)
+        outflow_kind: Transfer.kind_for_account(
+          transfer.inflow_transaction.entry.account,
+          from_account: transfer.outflow_transaction.entry.account,
+          date: transfer.outflow_transaction.entry.date
+        )
       }.compact
     end
 

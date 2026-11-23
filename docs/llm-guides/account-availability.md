@@ -55,10 +55,48 @@ today = Account.liquidity_today_for(family)
 account.available_now?(today)
 ```
 
+## Transfers that count as saving
+
+A transfer from available money into a depository account that is not
+available on the booking date (`locked` before its release date, or
+`long_term`) is a saving, like a contribution to a brokerage account. Its
+outflow leg gets the existing kind `investment_contribution` and the family's
+`investment_contributions_category` ("Investment Contributions"), so
+budgets show it as money set aside. Rules:
+
+- The decision lives in `Transfer.kind_for_account(destination, from_account:, date:)`
+  and `Transfer.saving_into?`. Every path that creates or matches a transfer
+  passes the source account and the booking date: `Transfer::Creator`, the
+  automatic matcher, the manual match dialog, the "set as transfer" rule
+  action and the Sure data import.
+- Money moved between two savings accounts (brokerage, crypto, locked or
+  long-term bank accounts) is not new saving and stays `funds_movement`, in
+  both directions: a locked deposit moved into a brokerage account is not a
+  new contribution either.
+- Borrowed money (a loan or credit card as the source) is not saving.
+- Property, vehicles and other assets stay out even though they are
+  long-term: a down payment or money lent to a friend is not saving.
+- Money coming back (a matured term deposit paid out to the current account)
+  stays `funds_movement`; it is not income.
+- Instant-access savings (`immediate`) stay neutral. A user who wants them to
+  count as saving classifies the account as locked.
+- The kind is stored per transaction, so this applies to everyone, without the
+  preview switch, to transfers created or matched from now on. Older transfers
+  keep their kind until `rake data_migration:reconcile_savings_transfer_kinds`
+  (`Transfer::SavingsKindReconciler`) and
+  `rake data_migration:reconcile_investment_transfer_kinds` run; both take
+  `DRY_RUN=1` and `FAMILY_ID=`. The same holds when a user later changes an
+  account's availability or release date: stored kinds stay until the tasks
+  run again.
+- `InvestmentFlowStatement` follows the same rule: a matched brokerage
+  contribution or withdrawal whose counterpart is a bank account locked or
+  long-term on the booking date is not counted.
+
 ## Preview gating
 
 The columns, the migration backfill and the defaults apply to everyone; they
 change no figure on their own. Code that answers "is this money available?"
 must read the viewer's `preview_features_enabled?` until
-the feature is released. The API account fields (`liquidity`, `available_on`,
+the feature is released. The one exception is the saving rule for
+transfers above, which is stored per transaction. The API account fields (`liquidity`, `available_on`,
 `available_now`) are always returned (additive).

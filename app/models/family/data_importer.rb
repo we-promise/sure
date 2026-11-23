@@ -1191,9 +1191,11 @@ class Family::DataImporter
     end
 
     def imported_transfer_outflow_kind(transfer)
-      source_account = transfer.outflow_transaction.entry.account
-      destination_account = transfer.inflow_transaction.entry.account
-      Transfer.kind_for_account(destination_account, from_account: source_account)
+      Transfer.kind_for_account(
+        transfer.inflow_transaction.entry.account,
+        from_account: transfer.outflow_transaction.entry.account,
+        date: transfer.outflow_transaction.entry.date
+      )
     end
 
     def import_rejected_transfers(records)

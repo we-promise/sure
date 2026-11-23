@@ -99,6 +99,50 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), totals.contributions
   end
 
+  test "money moved from a locked deposit into a brokerage account is not a contribution" do
+    family = families(:dylan_family)
+    period = Period.custom(start_date: Date.current, end_date: Date.current)
+    term_deposit = family.accounts.create!(
+      name: "Term deposit", balance: 0, currency: "USD",
+      accountable: Depository.new(subtype: "cd"), available_on: 1.year.from_now.to_date
+    )
+
+    inflow = accounts(:investment).entries.create!(
+      name: "Contribution", amount: -400, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "funds_movement", investment_activity_label: "Contribution")
+    )
+    outflow = term_deposit.entries.create!(
+      name: "To brokerage", amount: 400, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: outflow.transaction, status: "confirmed")
+
+    totals = InvestmentFlowStatement.new(family).period_totals(period: period)
+    assert_equal Money.new(0, "USD"), totals.contributions
+  end
+
+  test "money moved from a matured deposit into a brokerage account is not a contribution" do
+    family = families(:dylan_family)
+    period = Period.custom(start_date: Date.current, end_date: Date.current)
+    matured = family.accounts.create!(
+      name: "Matured deposit", balance: 0, currency: "USD",
+      accountable: Depository.new(subtype: "cd"), available_on: 1.month.ago.to_date
+    )
+
+    inflow = accounts(:investment).entries.create!(
+      name: "Contribution", amount: -400, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "funds_movement", investment_activity_label: "Contribution")
+    )
+    outflow = matured.entries.create!(
+      name: "To brokerage", amount: 400, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: outflow.transaction, status: "confirmed")
+
+    totals = InvestmentFlowStatement.new(family).period_totals(period: period)
+    assert_equal Money.new(0, "USD"), totals.contributions
+  end
+
   test "movements between investment and crypto accounts are not contributions" do
     family = families(:dylan_family)
     period = Period.custom(start_date: Date.current, end_date: Date.current)

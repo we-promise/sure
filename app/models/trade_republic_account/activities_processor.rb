@@ -267,7 +267,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       if @trade_republic_account.holds_securities?
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       else
-        import_labeled_cash_movement(event, detail, external_id, date, "round_up", sign: 1, kind: "investment_contribution", settles_trade: true)
+        import_labeled_cash_movement(event, detail, external_id, date, "round_up", sign: 1, kind: settlement_buy_kind, settles_trade: true)
       end
     end
 
@@ -418,8 +418,11 @@ class TradeRepublicAccount::ActivitiesProcessor
     # topics, negative for buys and positive for sales. Payloads that only
     # carry a magnitude fall back to the traded quantity; without either
     # signal the direction is unknown and nothing is booked.
-    # Buys count as investment contributions in budgets; sale proceeds are a
-    # funds movement rather than income. Neither gets a category.
+    # Buys count as investment contributions in budgets, unless the cash
+    # account is itself savings (Transfer.savings_account?, the rule
+    # Transfer.kind_for_account applies to the settlement transfer); sale
+    # proceeds are a funds movement rather than income. Neither gets a
+    # category.
     def import_order_settlement(event, detail, external_id, date)
       signed_amount = parse_decimal(detail[:signed_amount])
       amount = parse_decimal(detail[:amount])&.nonzero? || signed_amount
@@ -439,9 +442,16 @@ class TradeRepublicAccount::ActivitiesProcessor
         label: outflow ? "Buy" : "Sell",
         activity_label: outflow ? "Buy" : "Sell",
         sign: outflow ? 1 : -1,
-        kind: outflow ? "investment_contribution" : "funds_movement",
+        kind: outflow ? settlement_buy_kind : "funds_movement",
         settles_trade: true
       )
+    end
+
+    # The kind of cash leaving this account for a trade: what
+    # Transfer.kind_for_account gives the settlement transfer into the
+    # portfolio, which depends only on whether the cash account is savings.
+    def settlement_buy_kind
+      Transfer.savings_account?(account) ? "funds_movement" : "investment_contribution"
     end
 
     # Records an order whose list amount and detail total differ, when the

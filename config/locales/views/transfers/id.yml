@@ -32,7 +32,7 @@ id:
       delete_subtitle: Tindakan ini akan menghapus transfer. Transaksi yang mendasarinya tidak akan dihapus.
       delete_title: Hapus transfer?
       details: Detail
-      investment_contribution_subtitle: Hitung transfer ini sebagai pengeluaran dalam anggaran dan laporan. Nonaktifkan jika rekening sekuritas atau kripto hanya mengonversi uang ke mata uang lain.
+      investment_contribution_subtitle: "Hitung transfer ini sebagai dana yang disisihkan dalam anggaran dan laporan, seperti untuk rekening sekuritas, kripto, deposito berjangka, atau tabungan jangka panjang. Nonaktifkan jika uang tersebut tidak benar-benar ditabung, misalnya jika rekening hanya mengonversinya ke mata uang lain."
       investment_contribution_title: Setoran investasi
       mark_recurring: Tandai sebagai berulang
       mark_recurring_subtitle: Lacak transfer ini sebagai pola berulang di umpan mendatang dan halaman berulang.

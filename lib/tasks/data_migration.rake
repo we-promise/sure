@@ -276,4 +276,36 @@ namespace :data_migration do
       result.changed.each { |change, count| puts "  #{change}: #{count}" }
     end
   end
+
+  desc "Reclassify older transfers into locked or long-term bank accounts as saving"
+  # A transfer from available money into a bank account that is locked or
+  # long-term on the booking date counts as saving (investment_contribution,
+  # see Transfer.kind_for_account). Kinds are stored per transaction, so
+  # transfers booked before that rule keep funds_movement until this runs.
+  # Run reconcile_investment_transfer_kinds too: it covers money moved from a
+  # locked deposit into a brokerage account, which is no longer a new
+  # contribution. Idempotent; budgets and cash flow for affected periods
+  # change, and reverting the code later does not restore the previous kinds.
+  #
+  #   DRY_RUN=1    print what would change without writing
+  #   FAMILY_ID=id limit the run to one family
+  task reconcile_savings_transfer_kinds: :environment do
+    dry_run = ActiveModel::Type::Boolean.new.cast(ENV["DRY_RUN"]) || false
+    scope = Transfer.all
+
+    if ENV["FAMILY_ID"].present?
+      family = Family.find_by(id: ENV["FAMILY_ID"])
+      abort "No family with id #{ENV["FAMILY_ID"]}" unless family
+      scope = scope.where(inflow_transaction_id: family.transactions.select(:id))
+    end
+
+    result = Transfer::SavingsKindReconciler.new(scope: scope, dry_run: dry_run).run
+
+    puts "#{dry_run ? "Dry run: " : ""}checked #{result.checked} transfers into locked or long-term bank accounts"
+    if result.changed.empty?
+      puts "No legs needed a new kind."
+    else
+      result.changed.each { |change, count| puts "  #{change}: #{count}" }
+    end
+  end
 end

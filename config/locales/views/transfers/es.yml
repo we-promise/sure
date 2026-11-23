@@ -32,7 +32,7 @@ es:
       delete_subtitle: Esto eliminará la transferencia. No se eliminarán las transacciones subyacentes.
       delete_title: ¿Eliminar transferencia?
       details: Detalles
-      investment_contribution_subtitle: Cuenta esta transferencia como gasto en presupuestos e informes. Desactívalo si la cuenta de bolsa o de cripto solo convierte el dinero a otra divisa.
+      investment_contribution_subtitle: "Cuenta esta transferencia como dinero apartado en presupuestos e informes, como en una cuenta de corretaje, cripto o de ahorro a plazo o a largo plazo. Desactívalo cuando el dinero no se ahorra de verdad, por ejemplo cuando la cuenta solo lo convierte a otra moneda."
       investment_contribution_title: Aportación a inversión
       mark_recurring: Marcar como recurrente
       mark_recurring_subtitle: Haz seguimiento de esta transferencia como un patrón recurrente en el feed de próximos movimientos y en la página de recurrentes.

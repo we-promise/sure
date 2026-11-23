@@ -46,6 +46,43 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_equal "Transfer from #{@source_account.name}", inflow.entry.name
   end
 
+  test "creates a savings contribution when transferring into a locked account" do
+    term_deposit = @family.accounts.create!(
+      name: "Term deposit", balance: 0, currency: "USD",
+      accountable: Depository.new(subtype: "cd"), available_on: 1.year.from_now.to_date
+    )
+
+    transfer = Transfer::Creator.new(
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: term_deposit.id,
+      date: @date,
+      amount: @amount
+    ).create
+
+    assert_equal "investment_contribution", transfer.outflow_transaction.kind
+    assert_equal @investment_category, transfer.outflow_transaction.category
+    assert_equal "funds_movement", transfer.inflow_transaction.kind
+  end
+
+  test "money paid out of a term deposit stays a funds movement" do
+    term_deposit = @family.accounts.create!(
+      name: "Term deposit", balance: 1000, currency: "USD",
+      accountable: Depository.new(subtype: "cd"), available_on: 1.year.from_now.to_date
+    )
+
+    transfer = Transfer::Creator.new(
+      family: @family,
+      source_account_id: term_deposit.id,
+      destination_account_id: @source_account.id,
+      date: @date,
+      amount: @amount
+    ).create
+
+    assert_equal "funds_movement", transfer.outflow_transaction.kind
+    assert_nil transfer.outflow_transaction.category
+  end
+
   test "creates basic transfer between depository accounts" do
     other_depository = @family.accounts.create!(name: "Savings", balance: 1000, currency: "USD", accountable: Depository.new)
 
@@ -100,6 +137,24 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_equal "funds_movement", inflow.kind
     assert_equal "Transfer from #{@source_account.name}", inflow.entry.name
     assert_equal crypto_account.currency, inflow.entry.currency
+  end
+
+  test "money moved from a term deposit into an investment account stays a funds movement" do
+    term_deposit = @family.accounts.create!(
+      name: "Term deposit", balance: 1000, currency: "USD",
+      accountable: Depository.new(subtype: "cd"), available_on: 1.year.from_now.to_date
+    )
+
+    transfer = Transfer::Creator.new(
+      family: @family,
+      source_account_id: term_deposit.id,
+      destination_account_id: @destination_account.id,
+      date: @date,
+      amount: @amount
+    ).create
+
+    assert_equal "funds_movement", transfer.outflow_transaction.kind
+    assert_nil transfer.outflow_transaction.category
   end
 
   test "creates funds_movement for investment to investment transfer (rollover)" do
@@ -372,6 +427,20 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
 
     assert_equal [ tag.id ], transfer.outflow_transaction.tag_ids
     assert_equal [ tag.id ], transfer.inflow_transaction.tag_ids
+  end
+
+  test "accepts the booking date as a string for a transfer into a locked deposit" do
+    term_deposit = @family.accounts.create!(
+      name: "Term deposit", balance: 0, currency: "USD",
+      accountable: Depository.new(subtype: "cd"), available_on: 1.year.from_now.to_date
+    )
+
+    transfer = Transfer::Creator.new(
+      family: @family, source_account_id: @source_account.id, destination_account_id: term_deposit.id,
+      date: Date.current.iso8601, amount: 100
+    ).create
+
+    assert_equal "investment_contribution", transfer.outflow_transaction.kind
   end
 
   # we-promise/sure#4226: a transfer pledge resolved only from provider

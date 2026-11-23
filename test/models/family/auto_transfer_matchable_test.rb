@@ -22,6 +22,25 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "auto-matched transfer into a locked account counts as saving" do
+    ensure_investment_contributions_category(@family)
+    term_deposit = @family.accounts.create!(
+      name: "Term deposit", balance: 0, currency: "USD",
+      accountable: Depository.new(subtype: "cd"), available_on: 1.year.from_now.to_date
+    )
+    outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: term_deposit, amount: -500)
+
+    @family.auto_match_transfers!
+    # Confirm the suggestion so the check holds whether the kind is applied
+    # on match or only once the user confirms it.
+    outflow_entry.transaction.reload.transfer.confirm!
+
+    outflow = outflow_entry.transaction.reload
+    assert_equal "investment_contribution", outflow.kind
+    assert_equal @family.investment_contributions_category, outflow.category
+  end
+
   # Candidates for a page of transactions are searched within the page's date
   # span widened by the match window, so a counterpart at the far edge of the
   # window, outside the page's own dates, must still be found -- on either side.
