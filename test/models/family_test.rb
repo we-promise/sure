@@ -273,6 +273,16 @@ class FamilyTest < ActiveSupport::TestCase
     assert_tags_version_changes(family) { tag.destroy! }
   end
 
+  test "holdings_version changes when a holding is edited or removed, and only then" do
+    family = families(:dylan_family)
+    holding = holdings(:one)
+
+    assert_equal family.holdings_version, family.holdings_version, "stable while nothing changes"
+    assert_holdings_version_changes(family) { holding.set_manual_cost_basis!(80) }
+    assert_holdings_version_changes(family) { holding.unlock_cost_basis! }
+    assert_holdings_version_changes(family) { holdings(:two).destroy! }
+  end
+
   test "entries_cache_version changes when an older entry is destroyed" do
     family = families(:dylan_family)
     newer_entry = entries(:transaction)
@@ -914,6 +924,12 @@ class FamilyTest < ActiveSupport::TestCase
       before = family.tags_version
       yield
       assert_not_equal before, family.reload.tags_version
+    end
+
+    def assert_holdings_version_changes(family)
+      before = family.holdings_version
+      yield
+      assert_not_equal before, family.holdings_version
     end
 
     def set_preview_features(user, enabled)

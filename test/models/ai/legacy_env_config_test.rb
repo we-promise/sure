@@ -91,6 +91,40 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "http://llama.local:8081/v1", first_model(named, :embed).endpoint.base_url
   end
 
+  test "the OpenAI key saved in Settings goes only to the OpenAI URL, not to a separate embedding server" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.openai_access_token = "sk-saved"
+
+    separate = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "http://embeddings.example.test:11434/v1")
+    inherited = build("VECTOR_STORE_PROVIDER" => "pgvector")
+    same = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "https://api.openai.com/v1/")
+
+    assert_nil first_model(separate, :embed).endpoint.api_key
+    assert_equal "sk-saved", first_model(inherited, :embed).endpoint.api_key
+    assert_equal "sk-saved", first_model(same, :embed).endpoint.api_key, "OpenAI's own URL written out is the same server"
+  end
+
+  test "the saved key goes to EMBEDDING_URI_BASE when it is the OpenAI URL saved with it, and nowhere else on that host" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.openai_access_token = "sk-saved"
+    Setting.openai_uri_base = "https://gateway.example.test/TenantA/v1"
+
+    same = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "https://GATEWAY.example.test:443/TenantA/v1/")
+    other_tenant = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "https://gateway.example.test/tenanta/v1")
+
+    assert_equal "sk-saved", first_model(same, :embed).endpoint.api_key
+    assert_nil first_model(other_tenant, :embed).endpoint.api_key
+  end
+
+  test "EMBEDDING_ACCESS_TOKEN and OPENAI_ACCESS_TOKEN still reach a separate embedding server, as before the router" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.openai_access_token = "sk-saved"
+    separate = { "VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "http://embeddings.example.test:11434/v1" }
+
+    assert_equal "emb-env", first_model(build(separate.merge("EMBEDDING_ACCESS_TOKEN" => "emb-env")), :embed).endpoint.api_key
+    assert_equal "sk-env", first_model(build(separate.merge("OPENAI_ACCESS_TOKEN" => "sk-env")), :embed).endpoint.api_key
+  end
+
   test "a self-hosted Jev on https has no calibrated confidence either: only TypeSafe's API does" do
     jev = build("JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://jev.internal/v1/systemone", "CATEGORIZATION_PROVIDER" => "jev")
             .routes_for(:categorize).first
@@ -180,28 +214,6 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_empty config.routes_for(:embed), "a differently spelled api.openai.com is still OpenAI"
   end
 
-  test "the OpenAI key saved in Settings goes only to the OpenAI URL, not to a separate embedding server" do
-    VectorStore::Pgvector.stubs(:available?).returns(true)
-    Setting.stubs(:openai_access_token).returns("sk-saved")
-
-    separate = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "http://ollama:11434/v1")
-    inherited = build("VECTOR_STORE_PROVIDER" => "pgvector")
-    same = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "https://api.openai.com/v1/")
-
-    assert_nil first_model(separate, :embed).endpoint.api_key
-    assert_equal "sk-saved", first_model(inherited, :embed).endpoint.api_key
-    assert_equal "sk-saved", first_model(same, :embed).endpoint.api_key, "OpenAI's own URL written out is the same server"
-  end
-
-  test "OPENAI_ACCESS_TOKEN still reaches a separate embedding server, as it always has" do
-    VectorStore::Pgvector.stubs(:available?).returns(true)
-    Setting.stubs(:openai_access_token).returns(nil)
-
-    config = build("VECTOR_STORE_PROVIDER" => "pgvector", "OPENAI_ACCESS_TOKEN" => "sk-env", "EMBEDDING_URI_BASE" => "http://ollama:11434/v1")
-
-    assert_equal "sk-env", first_model(config, :embed).endpoint.api_key
-  end
-
   test "an inherited OpenAI URL without a version gets /v1 for embeddings, as for chat; EMBEDDING_URI_BASE stays as written" do
     VectorStore::Pgvector.stubs(:available?).returns(true)
     Setting.stubs(:openai_access_token).returns("sk-saved")
@@ -213,17 +225,5 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "https://gateway.example/v1", first_model(inherited, :embed).endpoint.base_url
     assert_equal "sk-saved", first_model(inherited, :embed).endpoint.api_key
     assert_equal "http://ollama:11434", first_model(written, :embed).endpoint.base_url
-  end
-
-  test "the saved key follows the server, not the spelling: a default port is the same server, a path's case isn't" do
-    VectorStore::Pgvector.stubs(:available?).returns(true)
-    Setting.stubs(:openai_access_token).returns("sk-saved")
-    Setting.stubs(:openai_uri_base).returns("https://gateway.example/TenantA/v1")
-
-    port = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "https://GATEWAY.example:443/TenantA/v1/")
-    other_tenant = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "https://gateway.example/tenanta/v1")
-
-    assert_equal "sk-saved", first_model(port, :embed).endpoint.api_key
-    assert_nil first_model(other_tenant, :embed).endpoint.api_key
   end
 end
