@@ -1,7 +1,9 @@
 class Provider::ScalableCapital::Snapshot
   CURRENCY = "EUR"
   ZONE = "Europe/Berlin"
-  FINAL_STATUSES = %w[FILLED SETTLED EXECUTED COMPLETED].freeze
+  FINAL_STATUSES = %w[FILLED FINAL_FILL SETTLED EXECUTED COMPLETED].freeze
+  FILL_STATES = %w[FILLED FINAL_FILL PARTIAL_FILL EXECUTED].freeze
+  ROUNDING_TOLERANCE = 0.01.to_d
   INFLOWS = %w[INTEREST DISTRIBUTION DIVIDEND TAX_RETURN DEPOSIT TRANSFER_IN CASH_TRANSFER_IN].freeze
   OUTFLOWS = %w[FEE TAX WITHDRAWAL TRANSFER_OUT CASH_TRANSFER_OUT].freeze
   ISIN_PATTERN = /\A[A-Z]{2}[A-Z0-9]{10}\z/
@@ -105,7 +107,7 @@ class Provider::ScalableCapital::Snapshot
           raise invalid unless id.is_a?(String) && id.present? && id.bytesize <= 220
           next if entries.key?(id)
 
-          entries[id] = event(row, time.to_date, id) if row["currency"] == CURRENCY
+          entries[id] = event(row, time, id) if row["currency"] == CURRENCY
           entries[id] ||= nil
           @skipped += 1 unless entries[id]
         end
@@ -121,13 +123,13 @@ class Provider::ScalableCapital::Snapshot
       end
     end
 
-    def event(row, date, id)
+    def event(row, time, id)
       case row["summary_type"]
       when "BrokerSecurityTransactionSummary"
-        return trade(row, date, id) if %w[BUY SELL SAVINGS_PLAN].include?(row["security_transaction_type"] || row["type"])
+        return trade(row, time, id) if %w[BUY SELL SAVINGS_PLAN].include?(row["security_transaction_type"] || row["type"])
         return
       when "BrokerNonTradeSecurityTransactionSummary"
-        return security_transfer(row, date, id) if %w[TRANSFER_IN TRANSFER_OUT].include?(row["non_trade_security_transaction_type"])
+        return security_transfer(row, time, id) if %w[TRANSFER_IN TRANSFER_OUT].include?(row["non_trade_security_transaction_type"])
       end
 
       type = row["cash_transaction_type"] || row["non_trade_security_transaction_type"] || row["type"]
@@ -138,21 +140,21 @@ class Provider::ScalableCapital::Snapshot
       return if %w[FEE TAX].include?(type) && row["related_isin"].present?
 
       label = { "INTEREST" => "Interest", "DIVIDEND" => "Dividend", "DISTRIBUTION" => "Dividend", "FEE" => "Fee" }[type]
-      { external_id: id, date: date, name: text(row["description"]) || type.humanize,
+      { external_id: id, date: time.to_date, name: text(row["description"]) || type.humanize,
         amount: inflow ? -amount : amount, investment_activity_label: label }
     end
 
-    def security_transfer(row, date, id)
+    def security_transfer(row, time, id)
       isin = text(row["isin"])
       shares = decimal(row["quantity"])&.abs
       return unless isin&.match?(ISIN_PATTERN) && shares&.positive?
 
       outgoing = row["non_trade_security_transaction_type"] == "TRANSFER_OUT"
-      { external_id: id, date: date, isin: isin, quantity: outgoing ? -shares : shares,
+      { external_id: id, date: time.to_date, occurred_at: time, isin: isin, quantity: outgoing ? -shares : shares,
         price: 0, amount: 0, fee: 0, activity_label: "Transfer" }
     end
 
-    def trade(summary, date, id)
+    def trade(summary, event_time, id)
       detail = broker_result(@client.trade(@item.portfolio_id, id))
       raise invalid unless detail["id"] == id && detail["currency"] == CURRENCY
       return unless detail["is_pending"] == false && detail["is_cancellation"] == false
@@ -168,11 +170,43 @@ class Provider::ScalableCapital::Snapshot
       return unless isin&.match?(ISIN_PATTERN) && quantity&.positive? && price&.positive? && net&.positive? && %w[BUY SELL].include?(side)
 
       buy = side == "BUY"
-      fee = buy ? net - quantity * price : quantity * price - net
-      return if fee < -0.01.to_d
+      fee = reconciled_fee(trade["trade_transaction_amounts"], gross: quantity * price, net: net, buy: buy)
+      return if fee.nil?
 
-      { external_id: id, date: date, isin: isin, security_name: text(detail.dig("security", "name")),
-        quantity: buy ? quantity : -quantity, price: price, amount: buy ? net : -net, fee: [ fee, 0 ].max }
+      time = execution_time(detail["history"]) || event_time
+      { external_id: id, date: time.to_date, occurred_at: time, isin: isin, security_name: text(detail.dig("security", "name")),
+        quantity: buy ? quantity : -quantity, price: price, amount: buy ? net : -net, fee: fee }
+    end
+
+    def execution_time(history)
+      Array(history).filter_map do |event|
+        timestamp(event["timestamp"]) if event.is_a?(Hash) && FILL_STATES.include?(event["state"])
+      end.max
+    end
+
+    def reconciled_fee(amounts, gross:, net:, buy:)
+      if amounts.is_a?(Hash)
+        fee = reported_fee(amounts, gross: gross, net: net, buy: buy)
+        return fee unless fee.nil?
+      end
+
+      adjustment = buy ? net - gross : gross - net
+      [ adjustment, 0 ].max if adjustment >= -ROUNDING_TOLERANCE
+    end
+
+    def reported_fee(amounts, gross:, net:, buy:)
+      fee_values = amounts.values_at("transaction_fee", "venue_fee", "crypto_spread_fee").compact
+      return if fee_values.empty? && amounts["tax_amount"].nil?
+
+      fees = fee_values.map { |value| decimal(value) }
+      tax = decimal(amounts["tax_amount"] || 0)
+      market_value = decimal(amounts["market_valuation"] || gross)
+      return unless tax && market_value && (market_value - gross).abs <= ROUNDING_TOLERANCE
+      return unless fees.all? { |fee| fee && !fee.negative? }
+
+      fee = fees.sum(0.to_d)
+      expected_net = buy ? market_value + fee + tax : market_value - fee - tax
+      fee if (expected_net - net).abs <= ROUNDING_TOLERANCE
     end
 
     def position(row)

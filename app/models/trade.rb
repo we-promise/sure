@@ -85,9 +85,9 @@ class Trade < ApplicationRecord
 
   # The acquisitions this sale can name as the lot it sold from: buys and
   # transfers-in of its security, in its account, that the replay applies
-  # before it (an earlier date, or the same date and entered no later: a
-  # purchase stamped with the sale's own created_at replays first, see
-  # Holding::PortfolioCache#trades), leaving out a lot sales dated before it had already
+  # before it (an earlier date, or the same date with an equal or earlier
+  # timestamp; see Holding::PortfolioCache#trades), leaving out a lot sales
+  # dated before it had already
   # emptied. Only a sale in an account that sells by fifo has any, since under
   # average a sale relieves every lot pro rata. The choice the sale already
   # holds is always among them, so an edit keeps it, and is replayed only
@@ -98,8 +98,8 @@ class Trade < ApplicationRecord
     acquisitions = entry.account.entries
       .where(entryable_type: "Trade", entryable_id: Trade.where(security_id: security_id).where("qty > 0").select(:id))
     before_sale = acquisitions
-      .where("(entries.date, entries.created_at) <= (:date, :created_at)",
-             date: entry.date, created_at: entry.created_at || Time.current)
+      .where("(entries.date, #{Entry::OCCURRENCE_TIME_SQL}) <= (:date, :occurrence_time)",
+             date: entry.date, occurrence_time: entry.occurrence_time || Time.current)
       .where.not(id: lots_emptied_before_sale)
     before_sale.or(acquisitions.where(id: attribute_in_database(:lot_source_entry_id))).chronological
   end
@@ -300,16 +300,15 @@ class Trade < ApplicationRecord
         .select(:source_entry_id)
     end
 
-    # Entries replay by date, then in the order they were entered (see
-    # Holding::PortfolioCache#trades), so a same-day entry made earlier has
-    # already run by the time this sale does. `scope` must expose `entries`.
+    # Use the same date and timestamp as the holding replay.
+    # `scope` must expose `entries`.
     def on_or_after_sale(scope)
       if entry.persisted?
-        scope.where("(entries.date, entries.created_at, entries.id) >= (:date, :created_at, :id)",
-                    date: entry.date, created_at: entry.created_at, id: entry.id)
+        scope.where("(entries.date, #{Entry::OCCURRENCE_TIME_SQL}, entries.id) >= (:date, :occurrence_time, :id)",
+                    date: entry.date, occurrence_time: entry.occurrence_time, id: entry.id)
       else
-        scope.where("(entries.date, entries.created_at) >= (:date, :created_at)",
-                    date: entry.date, created_at: Time.current)
+        scope.where("(entries.date, #{Entry::OCCURRENCE_TIME_SQL}) >= (:date, :occurrence_time)",
+                    date: entry.date, occurrence_time: entry.occurrence_time || Time.current)
       end
     end
 

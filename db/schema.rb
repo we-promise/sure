@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_23_080000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -708,6 +708,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.jsonb "locked_attributes", default: {}
     t.string "name", null: false
     t.text "notes"
+    t.datetime "occurred_at"
     t.uuid "parent_entry_id"
     t.string "reconciled_status", default: "unreconciled", null: false
     t.string "plaid_id"

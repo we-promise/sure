@@ -720,8 +720,9 @@ class Account::ProviderImportAdapter
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
   # @param exchange_rate [BigDecimal, Numeric, nil] Optional provider-supplied FX rate into the account currency
   # @param fee [BigDecimal, Numeric, nil] Optional provider-reported transaction fee, already included in `amount`
+  # @param occurred_at [Time, nil] Optional provider timestamp for replaying same-day trades in order
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil, fee: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil, fee: nil, occurred_at: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -772,6 +773,7 @@ class Account::ProviderImportAdapter
         currency: currency,
         name: trade_name
       )
+      entry.occurred_at = occurred_at if occurred_at
 
       entry.save!
 

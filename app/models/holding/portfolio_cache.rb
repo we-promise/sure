@@ -122,13 +122,12 @@ class Holding::PortfolioCache
       @split_ratios ||= splits.to_h { |split| [ [ split.security_id, split.ex_date ], split.ratio ] }
     end
 
-    # Entry.chronological, except that trades sharing a date and created_at, as
-    # a batch import stamps them, replay acquisitions before disposals: their
-    # ids say nothing about which came first, and a sale cannot precede the
-    # purchase it sells from. Rows with different created_at keep their order.
+    # When trades share a date and timestamp, replay acquisitions first.
+    # Batch imports can give several rows the same creation time, and their
+    # IDs say nothing about which came first.
     def trades
       @trades ||= chronological_trades
-        .sort_by.with_index { |entry, index| [ entry.date, entry.created_at, entry.entryable.qty.negative? ? 1 : 0, index ] }
+        .sort_by.with_index { |entry, index| [ entry.date, entry.occurrence_time, entry.entryable.qty.negative? ? 1 : 0, index ] }
     end
 
     def chronological_trades

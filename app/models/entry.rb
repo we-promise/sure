@@ -11,6 +11,8 @@ class Entry < ApplicationRecord
   DESCRIPTIVE_ATTRIBUTES = %w[name notes updated_at].freeze
   DESCRIPTIVE_TRANSACTION_ATTRIBUTES = %w[category_id merchant_id updated_at].freeze
 
+  OCCURRENCE_TIME_SQL = "COALESCE(entries.occurred_at, entries.created_at)".freeze
+
   # Key in transactions.extra marking a stale pending the sync excluded on its own.
   AUTO_EXCLUDED_PENDING_KEY = "auto_excluded_stale_pending".freeze
 
@@ -108,7 +110,7 @@ class Entry < ApplicationRecord
     order(
       date: :asc,
       Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :asc,
-      created_at: :asc,
+      Arel.sql(OCCURRENCE_TIME_SQL) => :asc,
       id: :asc
     )
   }
@@ -117,10 +119,14 @@ class Entry < ApplicationRecord
     order(
       date: :desc,
       Arel.sql("CASE WHEN entries.entryable_type = 'Valuation' THEN 1 ELSE 0 END") => :desc,
-      created_at: :desc,
+      Arel.sql(OCCURRENCE_TIME_SQL) => :desc,
       id: :desc
     )
   }
+
+  def occurrence_time
+    occurred_at || created_at
+  end
 
   # Manual reconciliation scopes (see reconciled_status enum above)
   scope :needs_reconciliation, -> { where(reconciled_status: [ :unreconciled, :cleared ]) }

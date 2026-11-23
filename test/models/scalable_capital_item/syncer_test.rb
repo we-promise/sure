@@ -83,6 +83,91 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_nil cash.entries.find_by(external_id: "cancelled")
   end
 
+  test "imports a completed trade with final fill status" do
+    stub_snapshot
+    detail = trade("buy", "BUY", "2.5", "120", "301")
+    detail.fetch("security_trade")["status"] = "FINAL_FILL"
+    @client.stubs(:trade).with("portfolio", "buy").returns(broker(detail))
+    run_sync
+
+    account = @item.scalable_capital_accounts.brokerage.sole.account
+    buy = account.entries.trades.find_by!(external_id: "buy")
+    assert_equal 301.to_d, buy.amount
+    assert_equal 1.to_d, buy.entryable.fee
+    assert_equal Time.current, @item.reload.broker_synced_through
+  end
+
+  test "preserves net sale proceeds and fees when a tax credit raises the settlement above gross" do
+    stub_snapshot
+    detail = trade("sell", "SELL", "3", "34", "105")
+    detail.fetch("security_trade")["trade_transaction_amounts"] = {
+      "market_valuation" => "102", "transaction_fee" => "0.75", "venue_fee" => "0.25", "tax_amount" => "-4"
+    }
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(detail))
+    run_sync
+
+    accounts = @item.scalable_capital_accounts
+    sale = accounts.brokerage.sole.account.entries.trades.find_by!(external_id: "sell")
+    assert_equal(-105.to_d, sale.amount)
+    assert_equal 34.to_d, sale.entryable.price
+    assert_equal 1.to_d, sale.entryable.fee
+    assert_equal(-105.to_d, accounts.cash.sole.account.entries.find_by!(external_id: "settlement:sell").amount)
+  end
+
+  test "books a trade on its execution date even if its final status changes later" do
+    stub_snapshot
+    detail = trade("buy", "BUY", "2.5", "120", "301")
+    detail["history"] = [
+      { "state" => "SETTLED", "timestamp" => "2026-11-19T23:30:00Z" },
+      { "state" => "FILLED", "timestamp" => "2026-11-19T18:00:00Z" },
+      { "state" => "PARTIAL_FILL", "timestamp" => "2026-11-19T17:00:00Z" }
+    ]
+    @client.stubs(:trade).with("portfolio", "buy").returns(broker(detail))
+    run_sync
+
+    account = @item.scalable_capital_accounts.brokerage.sole.account
+    buy = account.entries.trades.find_by!(external_id: "buy")
+    assert_equal Date.new(2026, 11, 19), buy.date
+    assert_equal Time.utc(2026, 11, 19, 18), buy.occurred_at
+    assert_equal Time.current, buy.created_at
+  end
+
+  test "uses execution order for same-day FIFO even when an earlier buy settles in a later sync" do
+    holding = position.merge("quantity" => "1")
+    earlier_buy = Time.current - 3.hours
+    sale_time = Time.current - 2.hours
+    later_buy = Time.current - 1.hour
+
+    stub_snapshot(positions: [ holding ])
+    stub_broker_trades(
+      cash_event("buy-later", "BUY", at: later_buy),
+      cash_event("sell", "SELL", at: sale_time)
+    )
+    @client.stubs(:trade).with("portfolio", "buy-later").returns(broker(trade("buy-later", "BUY", "1", "80", "80")))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "SELL", "1", "100", "100")))
+    run_sync
+
+    travel 30.minutes
+    stub_snapshot(positions: [ holding ])
+    stub_broker_trades(cash_event("buy", "BUY", at: Time.current - 1.minute))
+    detail = trade("buy", "BUY", "1", "50", "50")
+    detail["history"] = [ { "state" => "FINAL_FILL", "timestamp" => earlier_buy.iso8601 } ]
+    @client.stubs(:trade).with("portfolio", "buy").returns(broker(detail))
+    run_sync
+
+    account = @item.scalable_capital_accounts.brokerage.sole.account
+    account.update!(cost_basis_method: "fifo")
+    Holding::Materializer.new(account, strategy: :reverse).materialize_holdings
+    sale = account.entries.trades.find_by!(external_id: "sell")
+    buy = account.entries.trades.find_by!(external_id: "buy")
+
+    assert_equal [ "buy", "sell", "buy-later" ], account.entries.trades.chronological.pluck(:external_id)
+    disposal = HoldingLotDisposal.find_by!(sale_entry: sale)
+    assert_equal 50.to_d, disposal.unit_cost
+    assert_equal buy.id, disposal.lot_source_entry_id
+    assert_equal [ buy.id ], sale.entryable.lot_choices.pluck(:id)
+  end
+
   test "applies default household sharing to every new Scalable account" do
     admin = users(:family_admin)
     member = users(:family_member)
@@ -335,6 +420,11 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
           cash_event("interest", "INTEREST", amount: "1.25"),
           cash_event("cash-transfer-out", "CASH_TRANSFER_OUT", amount: "20")
         ])
+    end
+
+    def stub_broker_trades(*events)
+      rows = events.map { |event| event.merge("summary_type" => "BrokerSecurityTransactionSummary") }
+      @client.stubs(:broker_transactions).with("portfolio", all_of(has_key(:since), has_key(:before))).yields(broker({}), rows)
     end
 
     def broker_events
