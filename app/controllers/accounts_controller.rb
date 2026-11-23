@@ -236,10 +236,7 @@ class AccountsController < ApplicationController
     # We defer the expensive series computation until we know the content is stale.
     # A URL carrying the current version can't go stale, so the browser may reuse it.
     expires_in 1.day if params[:v] == @account.sparkline_version
-    # The body echoes the requesting frame id, so a reused copy must come from the same frame.
-    response.headers["Vary"] = [ response.headers["Vary"], "Turbo-Frame" ].compact.join(", ")
-    # The frame id is part of the response body, so it is part of the ETag.
-    if stale?(etag: [ @account.sparkline_cache_key, turbo_frame_request_id ])
+    if stale?(etag: @account.sparkline_cache_key)
       @sparkline_series = @account.sparkline_series
       render layout: false
     end
@@ -607,7 +604,7 @@ class AccountsController < ApplicationController
       return unless statement_tab_active?
 
       @statement_coverage = AccountStatement::Coverage.for_year(@account, params[:statement_year])
-      @account_statements = @account.account_statements.with_attached_original_file.ordered.to_a
+      @account_statements = @account.account_statements.with_attached_original_file.by_period.to_a
       @statement_reconciliation_statuses = AccountStatement.reconciliation_statuses_for(@account_statements, account: @account)
       permission = @account.permission_for(Current.user)
       @can_manage_statements = AccountStatement.statement_manager?(Current.user) &&

@@ -26,6 +26,42 @@ class Assistant::Function::CreateBillTest < ActiveSupport::TestCase
     assert_operator series.recurring_occurrences.count, :>, 0
   end
 
+  test "frequency once creates a single occurrence on the due date" do
+    due = Date.current + 40
+
+    result = call_tool(
+      "name" => "Domain renewal", "amount" => 18, "first_due_on" => due.iso8601,
+      "frequency" => "once"
+    )
+
+    assert result[:created]
+    assert_equal [ due.iso8601 ], result[:upcoming_due_dates]
+
+    series = @family.recurring_transactions.find_by!(name: "Domain renewal")
+    assert series.one_off?
+    assert_equal [ due ], series.recurring_occurrences.pluck(:due_on)
+  end
+
+  test "a bank reference is stored on the new bill" do
+    result = call_tool(
+      "name" => "City Water", "amount" => 80, "first_due_on" => (Date.current + 3).iso8601,
+      "account_name" => accounts(:depository).name, "bank_reference" => "VN 4711"
+    )
+
+    assert result[:created]
+    assert_equal "VN 4711", @family.recurring_transactions.find_by!(name: "City Water").bank_reference
+  end
+
+  test "reference_only is stored with the reference" do
+    result = call_tool(
+      "name" => "City Water", "amount" => 80, "first_due_on" => (Date.current + 3).iso8601,
+      "account_name" => accounts(:depository).name, "bank_reference" => "VN 4711", "reference_only" => true
+    )
+
+    assert result[:created]
+    assert @family.recurring_transactions.find_by!(name: "City Water").reference_only?
+  end
+
   test "income flips the stored sign, never the caller's" do
     result = call_tool(
       "name" => "Paycheck", "amount" => 1200,

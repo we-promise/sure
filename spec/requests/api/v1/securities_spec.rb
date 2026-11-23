@@ -50,6 +50,7 @@ RSpec.describe 'API V1 Securities', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Investment Account',
       balance: 50_000,
       currency: 'USD',

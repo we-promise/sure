@@ -1,0 +1,171 @@
+---
+id:
+  wise_items:
+    profile_types:
+      personal: Pribadi
+      business: Bisnis
+    entries:
+      default_name: Transaksi Wise
+      fee_name: Biaya Wise
+      refund_name: Pengembalian dana Wise
+    activities:
+      jar_deposit: Transfer ke Jar
+      jar_withdrawal: Transfer dari Jar
+      transfer_to_jar: "Transfer ke %{jar}"
+      transfer_from_jar: "Transfer dari %{jar}"
+      interest: Bunga Wise
+      asset_fee: Biaya Wise Assets
+      default_name: Aktivitas Wise
+    sync_status:
+      no_accounts: Tidak ada rekening ditemukan
+      all_synced:
+        one: "%{count} rekening disinkronkan"
+        other: "%{count} rekening disinkronkan"
+      partial_setup: "%{synced} disinkronkan, %{pending} perlu pengaturan"
+    create:
+      no_profiles_found: Tidak ada profil Wise ditemukan. Silakan periksa token API Anda.
+      invalid_token: Token API tidak valid. Silakan periksa dan coba lagi.
+      connection_failed: Tidak dapat terhubung ke Wise. Silakan coba lagi nanti.
+    destroy:
+      success: Koneksi Wise dihapus
+    update:
+      success: Koneksi Wise diperbarui
+    sync:
+      success: Sinkronisasi dimulai
+    syncer:
+      importing_accounts: Mengimpor rekening dari Wise...
+      checking_account_configuration: Memeriksa konfigurasi rekening...
+      accounts_need_setup:
+        one: "%{count} rekening perlu pengaturan..."
+        other: "%{count} rekening perlu pengaturan..."
+      processing_transactions: Memproses transaksi...
+      calculating_balances: Menghitung saldo...
+      credentials_invalid: Token API Wise tidak valid atau izin tidak mencukupi
+      failed: Sinkronisasi gagal. Silakan coba lagi atau hubungi dukungan.
+      import_failed: Impor Wise gagal.
+      accounts_failed:
+        one: "%{count} saldo gagal diimpor."
+        other: "%{count} saldo gagal diimpor."
+      transactions_failed:
+        one: "%{count} saldo mengalami kegagalan impor transaksi."
+        other: "%{count} saldo mengalami kegagalan impor transaksi."
+      account_processing_failed:
+        one: "%{count} rekening Wise gagal saat diproses."
+        other: "%{count} rekening Wise gagal saat diproses."
+      account_sync_failed:
+        one: "%{count} sinkronisasi rekening Wise tidak dapat dijadwalkan."
+        other: "%{count} sinkronisasi rekening Wise tidak dapat dijadwalkan."
+      fetch_failed:
+        one: "%{count} permintaan Wise gagal. Sinkronisasi berikutnya akan mencobanya lagi."
+        other: "%{count} permintaan Wise gagal. Sinkronisasi berikutnya akan mencobanya lagi."
+    provider_panel:
+      add_connection: Tambah koneksi Wise
+      token_label: Token API
+      token_placeholder: Tempel token API pribadi Wise Anda
+      keep_token_placeholder: Kosongkan untuk mempertahankan token saat ini
+      connection_name_label: Nama koneksi
+      connection_name_placeholder: Wise Pribadi
+      sync_start_date_label: Impor transaksi mulai dari
+      sync_start_date_help: Laporan Wise diimpor mulai tanggal ini dan seterusnya. Biarkan default untuk riwayat hingga satu tahun.
+      import_all_history_label: Impor seluruh riwayat transaksi
+      import_all_history_help: Impor seluruh riwayat Wise (transfer, aktivitas, dan laporan) alih-alih hanya setahun terakhir. Setiap saldo kemudian dimulai dari 0 pada hari Wise membukanya.
+      connect: Hubungkan Wise
+      update_connection: Perbarui koneksi
+      setup_accounts: Atur rekening
+      sync: Sinkronkan
+      disconnect: Putuskan koneksi
+      disconnect_label: "Putuskan koneksi %{name}"
+      disconnect_confirm: "Apakah Anda yakin ingin memutuskan koneksi %{name}? Ini akan menghapus semua data rekening yang disinkronkan."
+      sandbox_note_html: "Gunakan URL dasar <strong>sandbox</strong> (<code>https://api.wise-sandbox.com</code>) untuk pengujian. Atur <code>WISE_BASE_URL</code> di lingkungan Anda."
+      encryption_warning:
+        title: Enkripsi database belum dikonfigurasi
+        message: Konfigurasikan kunci enkripsi Active Record sebelum menambahkan token Wise di produksi. Tanpa enkripsi, token disimpan sebagai teks biasa.
+      instructions:
+        sign_in_html: "Kunjungi %{link} dan masuk ke akun Anda"
+        open_tokens: "Buka Settings → Connect and manage apps → Developer tools → API tokens"
+        create_token: "Buat token API pribadi baru dengan akses hanya-baca"
+        copy_token_html: "Salin token dan tempelkan di bawah ini. Sure hanya menggunakannya untuk menyinkronkan saldo dan transaksi Anda."
+      sca:
+        title: Strong Customer Authentication (SCA)
+        description: Wise memerlukan tantangan token sekali pakai yang ditandatangani untuk membaca laporan transaksi lengkap, termasuk pembayaran masuk. Buat pasangan kunci di sini dan daftarkan kunci publik ke Wise untuk mengaktifkan ini.
+        public_key_label: Kunci publik (PEM)
+        registered_help_html: "Daftarkan kunci ini ke Wise: Settings → Connect and manage apps → Developer tools → Public keys → Add public key."
+        copy: Salin
+        copied: Disalin!
+        generate: Buat pasangan kunci
+        regenerate: Buat ulang pasangan kunci
+        regenerate_confirm: "Ini akan membuat pasangan kunci baru. Wise akan tetap menerima kunci publik sebelumnya sampai Anda menghapusnya sendiri di akun Wise Anda — Sure tidak dapat mencabutnya dari jarak jauh. Anda harus mendaftarkan kunci publik baru ke Wise sebelum laporan dapat disinkronkan kembali. Lanjutkan?"
+    provider_connection:
+      default_name: Wise
+      default_description: Hubungkan akun multi-mata uang Wise Anda
+      name: "Wise — %{name}"
+      description: "Hubungkan menggunakan %{name}"
+    link_profiles:
+      session_expired: Sesi berakhir. Silakan coba hubungkan kembali.
+      no_profiles_selected: Silakan pilih setidaknya satu profil.
+      already_connected: Semua profil yang dipilih sudah terhubung.
+      success:
+        one: "Berhasil menghubungkan %{count} profil Wise"
+        other: "Berhasil menghubungkan %{count} profil Wise"
+    select_profiles:
+      session_expired: Sesi berakhir. Silakan coba hubungkan kembali.
+      title: Pilih Profil Wise
+      subtitle: Pilih profil yang ingin dihubungkan
+      description: Akun Wise Anda memiliki beberapa profil. Pilih profil yang ingin Anda sinkronkan dengan Sure.
+      unnamed_profile: "(Profil tanpa nama)"
+      already_connected_label: Sudah terhubung
+      connect: Hubungkan profil yang dipilih
+      cancel: Batal
+    wise_item:
+      deletion_in_progress: penghapusan sedang berlangsung...
+      syncing: Menyinkronkan...
+      error: Kesalahan sinkronisasi
+      status: "Disinkronkan %{timestamp} lalu"
+      status_never: Belum pernah disinkronkan
+      status_with_summary: "Terakhir disinkronkan %{timestamp} lalu — %{summary}"
+      delete: Putuskan koneksi
+      setup_needed: Rekening baru siap diatur
+      setup_description: "%{linked} dari %{total} rekening tertaut. Buat rekening Sure untuk saldo mata uang Wise Anda."
+      setup_action: Atur Rekening
+      no_accounts_title: Belum ada rekening yang tertaut
+      no_accounts_description: Jalankan sinkronisasi untuk menemukan saldo Wise Anda, lalu tautkan ke rekening Sure.
+    setup_accounts:
+      title: Atur Rekening Wise
+      subtitle: Tautkan saldo mata uang Wise Anda
+      description: Buat rekening Sure untuk setiap saldo mata uang Wise yang ingin Anda lacak. Setiap mata uang menjadi rekeningnya sendiri.
+      no_accounts_to_setup: Semua rekening sudah diatur
+      all_accounts_linked: Semua saldo mata uang Wise Anda telah ditautkan ke rekening Sure.
+      create_account: Buat Rekening
+      done: Selesai
+    select_accounts:
+      title: Pilih Saldo Wise
+      description: Pilih saldo mata uang Wise yang ingin Anda tautkan ke akun %{product_name} Anda.
+      no_accounts_found: Semua saldo Wise sudah ditautkan ke rekening Sure.
+      no_connection: Tidak ada koneksi Wise ditemukan. Silakan hubungkan Wise di Pengaturan Penyedia terlebih dahulu.
+      link_account: Tautkan saldo
+      cancel: Batal
+    select_existing_account:
+      not_found: Rekening atau saldo Wise tidak ditemukan.
+      title: "Tautkan %{account_name} dengan Wise"
+      description: Pilih saldo mata uang Wise untuk ditautkan dengan rekening ini. Transaksi akan disinkronkan secara otomatis.
+      no_accounts_found: Tidak ada saldo Wise yang belum tertaut ditemukan.
+      link_account: Tautkan saldo
+      cancel: Batal
+    link_accounts:
+      not_found: Saldo Wise tidak ditemukan.
+      success: Saldo Wise berhasil ditautkan ke rekening.
+      failed: Gagal menautkan saldo Wise. Silakan coba lagi.
+    link_existing_account:
+      not_found: Rekening atau saldo Wise tidak ditemukan.
+      account_already_linked: Rekening ini sudah ditautkan ke penyedia lain.
+      unsupported_account_type: Saldo Wise hanya dapat ditautkan ke rekening kas.
+      currency_mismatch: "Saldo Wise ini dalam mata uang %{balance_currency}, tetapi rekening dalam mata uang %{account_currency}. Pilih saldo dengan mata uang rekening."
+      success: "Berhasil menautkan %{account_name} dengan Wise"
+      failed: Gagal menautkan rekening. Silakan coba lagi.
+    complete_account_setup:
+      not_found: Saldo Wise tidak ditemukan.
+      success: Rekening berhasil dibuat dan ditautkan.
+      failed: Gagal membuat rekening. Silakan coba lagi.
+    generate_sca_keypair:
+      success: Pasangan kunci SCA baru dibuat. Daftarkan kunci publik ke Wise untuk menyelesaikan pengaktifannya.
+      failed: Gagal membuat pasangan kunci SCA baru. Silakan coba lagi.

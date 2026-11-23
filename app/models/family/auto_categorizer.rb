@@ -306,8 +306,11 @@ class Family::AutoCategorizer
       )
     end
 
+    # Excluded transactions are out of every report on purpose; a guessed
+    # category on them is noise, so the LLM is never asked about them.
     def scope
-      family.transactions.where(id: transaction_ids, category_id: nil)
+      family.transactions.with_entry
+                         .where(id: transaction_ids, category_id: nil, entries: { excluded: false })
                          .enrichable(:category_id)
                          .includes(:category, :merchant, :entry)
     end

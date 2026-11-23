@@ -5,24 +5,16 @@ require "application_system_test_case"
 # countdown therefore has to time the request rather than the element
 # connecting — otherwise every unexpanded row claims it timed out, ten seconds
 # into any page load, without a single request having been made.
-#
-# The frames are also data-turbo-permanent and carry a data version in their
-# id. A loaded sparkline must survive navigations and morph refreshes while
-# its data is unchanged, and must be replaced by a fresh frame once the data
-# changes. Idiomorph never removes permanent elements on its own;
-# permanent_frame_controller.js releases the stale frame on a morph.
 class SidebarSparklinesTest < ApplicationSystemTestCase
-  FRAME_SELECTOR = "turbo-frame[id^='tab_'][id*='_sparkline_'][complete]".freeze
-  SPARKLINE_FRAME = "#sidebar-scroll turbo-frame[data-controller~='turbo-frame-timeout']"
+  SPARKLINE_FRAME = "#sidebar-scroll turbo-frame[data-controller='turbo-frame-timeout']"
   BADGE_TEXT = "Timeout"
 
   # The group total in the <summary> renders the same chart as the rows inside
   # the disclosure and is on screen from the start, so "a sparkline loaded" has
-  # to say which one. Both ids carry the placement and the data version (see
-  # AccountsHelper#sidebar_sparkline_frame_id); the rows are built from
-  # `dom_id(account, :sparkline)`, the total from "#{account_group.key}_sparkline".
-  ACCOUNT_SPARKLINE_FRAME = "#{SPARKLINE_FRAME}[id*='_sparkline_account_']"
-  GROUP_SPARKLINE_FRAME = "#{SPARKLINE_FRAME}:not([id*='_sparkline_account_'])"
+  # to say which one: the rows are `dom_id(account, :sparkline)`, the total is
+  # "#{account_group.key}_sparkline".
+  ACCOUNT_SPARKLINE_FRAME = "#{SPARKLINE_FRAME}[id^='sparkline_account_']"
+  GROUP_SPARKLINE_FRAME = "#{SPARKLINE_FRAME}[id$='_sparkline']"
 
   # The shipped window is ten seconds. Outliving it for real would add most of
   # a minute to the system suite for a cosmetic badge, so the frames render
@@ -178,7 +170,7 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
       page.execute_script(<<~JS)
         const requestAnimationFrame = window.requestAnimationFrame
         document.addEventListener("turbo:before-frame-render", (event) => {
-          if (!event.target.id.includes("_sparkline_account_")) return
+          if (!event.target.id.startsWith("sparkline_account_")) return
           const render = event.detail.render
           event.detail.render = (currentElement, newElement) => {
             render(currentElement, newElement)
@@ -217,38 +209,224 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
     end
   end
 
-  test "a loaded sparkline frame is kept while its data is unchanged" do
-    with_short_sparkline_timeout do
-      visit root_path
-      frame_id = mark_loaded_sparkline
+  # A request that fails outright never answers, so there is nothing to wait
+  # for. The shipped window applies here: the badge must not need it.
+  test "a request that fails outright raises the badge at once and is not carried" do
+    visit root_path
 
-      find("a[href='#{transactions_path}']", match: :first).click
-      assert_current_path transactions_path
-      assert_marked_frame frame_id
+    with_stalled_sparkline_responses do
+      expand_first_group
+      assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[busy]", minimum: 1, visible: :all
 
-      # The kept frame reconnects its timeout controller on the visit, but it
-      # is no longer fetching, so no countdown may start again.
-      wait_out_timeout_window
-      assert_no_selector "##{frame_id} p", text: BADGE_TEXT, visible: :all
+      # What Turbo dispatches on a network error or a dropped connection.
+      page.execute_script(<<~JS)
+        document.querySelectorAll("#{ACCOUNT_SPARKLINE_FRAME}[busy]").forEach((frame) => {
+          frame.dispatchEvent(new CustomEvent("turbo:fetch-request-error", { bubbles: true, detail: { error: new TypeError("Failed to fetch") } }))
+        })
+      JS
 
-      refresh_with_morph
-      assert_marked_frame frame_id
+      assert_selector "#{ACCOUNT_SPARKLINE_FRAME} p", text: BADGE_TEXT, minimum: 1, wait: 2
+      failed = page.evaluate_script(<<~JS)
+        Array.from(document.querySelectorAll("#{ACCOUNT_SPARKLINE_FRAME}"))
+          .filter((frame) => frame.textContent.includes("#{BADGE_TEXT}"))
+          .filter((frame) => frame.closest("[data-turbo-permanent]")).length
+      JS
+      assert_equal 0, failed, "a wrapper around a failed sparkline is still permanent"
     end
   end
 
-  test "a morph refresh replaces a sparkline frame whose data changed" do
+  # A Turbo visit replaces the page body, sidebar included. The sparklines sit
+  # in permanent wrappers so the next page takes over the charts already drawn
+  # rather than starting every frame from its placeholder and fetching it again.
+  test "a visit keeps the sparklines already drawn instead of fetching them again" do
     visit root_path
-    frame_id = mark_loaded_sparkline
+    expand_first_group
+    assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[complete] svg path", minimum: 1
+    kept = mark_drawn_sparklines
+    record_sparkline_requests
 
-    # Any account update moves the sparkline data version, as a completed
-    # sync does.
-    @user.family.accounts.first.touch
+    visit_first_open_account
 
-    refresh_with_morph
+    assert_equal kept, page.evaluate_script("document.querySelectorAll(#{"#{SPARKLINE_FRAME}[data-kept]".to_json}).length"), "the drawn sparklines were replaced"
+    assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[data-kept][complete] svg path", minimum: 1
+    assert_empty page.evaluate_script("window.sparklineRequests").select { |id| id.start_with?("sparkline_account_") }
+  end
 
-    assert_no_selector "##{frame_id}", visible: :all
-    assert_selector FRAME_SELECTOR, visible: :all
-    assert_no_selector "#{FRAME_SELECTOR}[data-test-marker]", visible: :all
+  test "a visit keeps the account logos instead of drawing them again" do
+    visit root_path
+    expand_first_group
+    kept = page.evaluate_script(<<~JS)
+      (() => {
+        const logos = document.querySelectorAll("#sidebar-scroll details[open] [id^='logo_keep_']")
+        logos.forEach((logo) => { logo.dataset.kept = "1" })
+        return logos.length
+      })()
+    JS
+    assert_operator kept, :>, 0
+
+    visit_first_open_account
+
+    assert_equal kept, page.evaluate_script("document.querySelectorAll(\"[id^='logo_keep_'][data-kept]\").length"), "the logos were drawn again"
+  end
+
+  test "a logo that failed to load is not carried to the next page" do
+    account = accounts(:depository)
+    account.logo.attach(io: StringIO.new("not an image"), filename: "broken.png", content_type: "image/png")
+
+    visit root_path
+    expand_first_group
+
+    wrapper = "[id^='logo_keep_'][id*='#{account.id}']"
+    assert_selector wrapper, minimum: 1
+    assert_no_selector "#{wrapper} img", wait: 10
+    assert page.evaluate_script(%(Array.from(document.querySelectorAll(#{wrapper.to_json})).filter((el) => el.offsetParent).every((el) => !el.hasAttribute("data-turbo-permanent")))),
+      "a wrapper whose logo failed is still permanent"
+  end
+
+  # iOS Safari can fail a stored logo it only revalidated (a 304 for an image
+  # whose data it already dropped). One failure must not cost the logo: the
+  # image is fetched again once, at a fresh URL, before the initials show.
+  test "a logo that fails once is fetched again at a fresh URL and shown" do
+    account = accounts(:depository)
+    account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png", content_type: "image/png")
+
+    visit root_path
+    expand_first_group
+
+    image = "[id^='logo_keep_'][id*='#{account.id}'] img"
+    assert_selector image, minimum: 1
+    page.execute_script(<<~JS)
+      const img = Array.from(document.querySelectorAll(#{image.to_json})).find((el) => el.offsetParent);
+      img.dataset.probe = "1";
+      img.dispatchEvent(new Event("error"));
+    JS
+
+    assert_selector "img[data-probe][src*='retry=']", visible: :all, wait: 5
+    page.document.synchronize(5) do
+      loaded = page.evaluate_script(%((() => { const img = document.querySelector("img[data-probe]"); return !!img && img.complete && img.naturalWidth > 0 })()))
+      raise Capybara::ExpectationNotMet, "the retried logo did not load" unless loaded
+    end
+    assert page.evaluate_script(%(document.querySelector("img[data-probe]").closest("[id^='logo_keep_']").hasAttribute("data-turbo-permanent"))),
+      "a logo that recovered stopped being kept"
+  end
+
+  test "a visit fetches a sparkline again once its series has changed" do
+    visit root_path
+    expand_first_group
+    assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[complete] svg path", minimum: 1
+    mark_drawn_sparklines
+
+    FreshSparklineVersions.salt = SecureRandom.hex(4)
+    visit_first_open_account
+
+    assert_no_selector "#{SPARKLINE_FRAME}[data-kept]", visible: :all
+    assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[complete] svg path", minimum: 1
+  end
+
+  # A finished sync refreshes the page with a morph rather than a visit. Turbo
+  # never removes a permanent element during a morph, so a wrapper whose id
+  # the refreshed page no longer has would stay beside the new one.
+  test "a refresh after the series changed replaces each sparkline instead of adding one" do
+    visit root_path
+    expand_first_group
+    assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[complete] svg path", minimum: 1
+    wrappers = sparkline_wrapper_count
+
+    2.times do
+      FreshSparklineVersions.salt = SecureRandom.hex(4)
+      morph_refresh
+      # The group totals sit in the summaries, on screen whatever the morph
+      # does to the groups' open state.
+      assert_selector "#{GROUP_SPARKLINE_FRAME}[complete] svg path", minimum: 1
+      assert_equal wrappers, sparkline_wrapper_count, "a refresh left the old sparklines beside the new ones"
+    end
+  end
+
+  test "a refresh with unchanged series keeps the sparklines drawn" do
+    visit root_path
+    expand_first_group
+    assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[complete] svg path", minimum: 1
+    kept = mark_drawn_sparklines
+
+    morph_refresh
+
+    assert_equal kept, page.evaluate_script("document.querySelectorAll(#{"#{SPARKLINE_FRAME}[data-kept]".to_json}).length")
+  end
+
+  test "a sparkline that timed out is not carried to the next page" do
+    with_short_sparkline_timeout do
+      visit root_path
+
+      with_stalled_sparkline_responses do
+        expand_first_group
+        assert_selector "#{ACCOUNT_SPARKLINE_FRAME} p", text: BADGE_TEXT, minimum: 1
+
+        # While the responses are still held: once released they render over
+        # the badges, and no badge left would make this pass on nothing.
+        timed_out = page.evaluate_script(<<~JS)
+          (() => {
+            const frames = Array.from(document.querySelectorAll("#{ACCOUNT_SPARKLINE_FRAME}"))
+              .filter((frame) => frame.textContent.includes("#{BADGE_TEXT}"))
+            return { count: frames.length, permanent: frames.filter((frame) => frame.closest("[data-turbo-permanent]")).length }
+          })()
+        JS
+        assert_operator timed_out["count"], :>, 0
+        assert_equal 0, timed_out["permanent"], "a wrapper around a timed-out sparkline is still permanent"
+      end
+    end
+  end
+
+  # A request that failed outright never answers, so nothing renders over the
+  # badge. The refresh a finished sync triggers would otherwise make its
+  # wrapper permanent again and put the frame back on its placeholder for good.
+  test "a refresh with unchanged series fetches a sparkline that timed out again" do
+    with_short_sparkline_timeout do
+      visit root_path
+
+      with_broken_sparkline_responses(:server_error) do
+        expand_first_group
+        assert_selector "#{ACCOUNT_SPARKLINE_FRAME} p", text: BADGE_TEXT, minimum: 1, wait: SETTLE_WAIT_SECONDS
+        wait_for_fetched_frames
+      end
+      timed_out = page.evaluate_script(<<~JS)
+        Array.from(document.querySelectorAll("#{ACCOUNT_SPARKLINE_FRAME}"))
+          .filter((frame) => frame.offsetParent && frame.textContent.includes("#{BADGE_TEXT}")).map((frame) => frame.id)
+      JS
+      assert_not_empty timed_out
+
+      morph_refresh
+      expand_first_group unless page.evaluate_script(%(document.querySelector("#sidebar-scroll details").open))
+
+      page.document.synchronize(SETTLE_WAIT_SECONDS) do
+        stuck = page.evaluate_script(<<~JS)
+          #{timed_out.to_json}.filter((id) => !Array.from(document.querySelectorAll(`[id="${id}"]`)).some((frame) => frame.offsetParent && frame.querySelector("svg path") && !frame.textContent.includes("#{BADGE_TEXT}")))
+        JS
+        raise Capybara::ExpectationNotMet, "sparklines that timed out stayed undrawn after the refresh: #{stuck.inspect}" if stuck.any?
+      end
+    end
+  end
+
+  # In this sidebar the morph above replaces the timed-out frames, so that case
+  # passes either way; a frame the morph kept instead would stay on its
+  # placeholder, so the wrapper doesn't rely on being replaced.
+  test "a wrapper that dropped its permanence removes itself before a morph, even when the refreshed page has its id" do
+    visit root_path
+    expand_first_group
+    assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[complete] svg path", minimum: 1
+
+    result = page.evaluate_script(<<~JS)
+      (() => {
+        const wrappers = Array.from(document.querySelectorAll("[id^='sparkline_keep_']")).filter((el) => el.offsetParent)
+        const [failed, kept] = wrappers
+        failed.removeAttribute("data-turbo-permanent")
+        const newBody = document.body.cloneNode(true)
+        document.dispatchEvent(new CustomEvent("turbo:before-render", { detail: { renderMethod: "morph", newBody } }))
+        return { failed: failed.isConnected, kept: kept.isConnected }
+      })()
+    JS
+
+    assert_not result["failed"], "a wrapper that lost its permanence stayed for the morph"
+    assert result["kept"], "a wrapper still permanent and still on the refreshed page was removed"
   end
 
   # Only a response that renders the frame ends the wait; one without it is as
@@ -302,7 +480,7 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
         const requestedAt = {}
         window.sparklineResponseTimes = []
         document.addEventListener("turbo:before-fetch-request", (event) => {
-          if (event.target.id.includes("_sparkline_account_")) requestedAt[event.target.id] = performance.now()
+          if (event.target.id.startsWith("sparkline_account_")) requestedAt[event.target.id] = performance.now()
         })
         document.addEventListener("turbo:before-fetch-response", (event) => {
           if (event.target.id in requestedAt) window.sparklineResponseTimes.push(performance.now() - requestedAt[event.target.id])
@@ -314,6 +492,44 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
       response_times = page.evaluate_script("window.sparklineResponseTimes")
       assert_not_empty response_times
       assert response_times.all? { |time| time < ms }, "Sparkline responses took #{response_times.map(&:round)} ms"
+    end
+
+    # Tags every drawn sparkline frame, so a frame on the next page can be told
+    # apart as the same element (carried over) or a new one.
+    def mark_drawn_sparklines
+      page.evaluate_script(<<~JS)
+        (() => {
+          const frames = document.querySelectorAll("#{SPARKLINE_FRAME}[complete]")
+          frames.forEach((frame) => { frame.dataset.kept = "1" })
+          return frames.length
+        })()
+      JS
+    end
+
+    def record_sparkline_requests
+      page.execute_script(<<~JS)
+        window.sparklineRequests = []
+        document.addEventListener("turbo:before-fetch-request", (event) => {
+          if (event.target.id.includes("sparkline")) window.sparklineRequests.push(event.target.id)
+        })
+      JS
+    end
+
+    def sparkline_wrapper_count
+      page.evaluate_script("document.querySelectorAll('[id^=sparkline_keep_]').length")
+    end
+
+    # What the sync toast does once a sync has finished: refresh the page in
+    # place, which the layout's turbo_refreshes_with turns into a morph.
+    def morph_refresh
+      page.execute_script(%(window.__morphed = false; document.addEventListener("turbo:morph", () => { window.__morphed = true }, { once: true }); Turbo.visit(location.href, { action: "replace" })))
+      Timeout.timeout(15) { sleep 0.05 until page.evaluate_script("window.__morphed") }
+    end
+
+    # A Turbo visit, unlike `visit`, which loads the page afresh.
+    def visit_first_open_account
+      find("#sidebar-scroll details[open] a[href^='/accounts/']", match: :first).click
+      assert_selector "#sidebar-scroll a[data-active-account]"
     end
 
     def expand_first_group
@@ -330,30 +546,5 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
     # only means anything once the window it would have fired in has passed.
     def wait_out_timeout_window
       sleep (SHORT_TIMEOUT_MS * 3) / 1000.0
-    end
-
-    # Waits for a sidebar sparkline to finish loading and tags that element, so
-    # a later check can tell the same DOM node apart from a re-rendered one.
-    def mark_loaded_sparkline
-      frame = find(FRAME_SELECTOR, match: :first, visible: :all)
-      page.execute_script("arguments[0].setAttribute('data-test-marker', 'loaded')", frame)
-      frame[:id]
-    end
-
-    def assert_marked_frame(frame_id)
-      assert_selector "##{frame_id}[complete][data-test-marker='loaded']", visible: :all
-    end
-
-    # What a broadcast refresh (turbo_stream_from Current.family) does after a
-    # sync completes: reload the current URL, rendered as a morph.
-    def refresh_with_morph
-      page.execute_script(<<~JS)
-        document.documentElement.removeAttribute("data-test-refreshed")
-        document.addEventListener("turbo:render", () => {
-          document.documentElement.setAttribute("data-test-refreshed", "true")
-        }, { once: true })
-        Turbo.session.refresh(window.location.href)
-      JS
-      assert_selector "html[data-test-refreshed='true']", visible: :all
     end
 end

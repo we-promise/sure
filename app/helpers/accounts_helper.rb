@@ -20,14 +20,9 @@ module AccountsHelper
   # into view, which can be long after they render, or never, so the countdown
   # has to time the request rather than the element. The frames declare when it
   # starts and when it stops.
-  #
-  # They are also data-turbo-permanent with a versioned id (see
-  # `sidebar_sparkline_frame_id`); `permanent_frame_controller` releases a
-  # stale one on a morph refresh.
   def sparkline_frame_data
     {
-      turbo_permanent: true,
-      controller: "turbo-frame-timeout permanent-frame",
+      controller: "turbo-frame-timeout",
       action: "turbo:before-fetch-request->turbo-frame-timeout#startTimeout " \
               "turbo:before-frame-render->turbo-frame-timeout#clearTimeout " \
               "turbo:fetch-request-error->turbo-frame-timeout#handleError",
@@ -43,6 +38,33 @@ module AccountsHelper
     match && match[1]
   end
 
+  # The id of the permanent wrapper around a sidebar sparkline frame. On a
+  # Turbo visit, an element marked data-turbo-permanent is carried over to the
+  # new page when that page has one with the same id, so the chart already
+  # drawn stays instead of being fetched and drawn again. The id names the copy
+  # of the sidebar it sits in (each tab panel, and the mobile one), since ids
+  # must be unique, and the series version, so a chart whose data changed is
+  # replaced by a fresh frame.
+  def sidebar_sparkline_wrapper_id(copy, subject, version)
+    "sparkline_keep_#{copy}_#{subject}_#{Digest::MD5.hexdigest(version.to_s)[0, 12]}"
+  end
+
+  # The id of the permanent wrapper around a sidebar account logo, for the
+  # same reason as the sparklines': a new <img> shows the initials beneath it
+  # until the image loads, so every visit flashed them. It changes with what
+  # the logo shows (the image, and the name and colour of the initials), not
+  # with its URL, which changes at the daily rollover where stored URLs
+  # expire (Account#logo_identity).
+  def sidebar_logo_wrapper_id(copy, account, color)
+    "logo_keep_#{copy}_#{account.id}_#{Digest::MD5.hexdigest([ account.logo_identity, account.name, color ].join("|"))[0, 12]}"
+  end
+
+  # See kept_element_controller.js: a morph refresh never removes a permanent
+  # element, so one the refreshed page no longer has removes itself.
+  def kept_element_data
+    { turbo_permanent: true, controller: "kept-element", action: "turbo:before-render@document->kept-element#dropIfGone" }
+  end
+
   # Versions for the sidebar's sparkline URLs, keyed by account id and by group
   # accountable, computed together rather than per account.
   def sidebar_sparkline_versions(family)
@@ -56,16 +78,15 @@ module AccountsHelper
   # Cache key for `accounts/_account_sidebar_tabs.html.erb`.
   # Kept here (not in the ERB) so the partial stays render-only.
   #
-  # The account share version comes from `Current.account_share_version`, the
-  # same source the sidebar sparkline frame ids use, so a change in the user's
-  # account access moves both together.
+  # The user's account access comes from `Current.account_share_version`, the
+  # same source the other share-scoped caches use.
   def account_sidebar_tabs_cache_key(family:, active_tab:, mobile:)
     # Linking or unlinking a provider doesn't touch the account, but changes its sparkline versions.
     providers_version = AccountProvider.where(account_id: family.accounts.select(:id))
       .pick(Arel.sql("count(*)"), Arel.sql("max(account_providers.updated_at)"))
 
     [
-      family.build_cache_key("account_sidebar_tabs_v10", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v11", invalidate_on_data_updates: true),
       Current.user&.id,
       Current.account_share_version,
       providers_version,
@@ -90,38 +111,6 @@ module AccountsHelper
       Current.user&.default_account_order,
       Current.user&.account_order&.manual? ? Digest::SHA256.hexdigest(Current.user.manual_account_order.to_json) : nil
     ]
-  end
-
-  # Data version for the sidebar's sparkline frames. It is built from the same
-  # inputs as the sparkline ETags (latest sync + account updates), so it moves
-  # exactly when a sparkline could change. Computed once per sidebar render.
-  def sidebar_sparkline_version(family)
-    # Per user and share version too: which accounts a group sparkline covers
-    # depends on the viewer's account shares.
-    key = [
-      family.build_cache_key("sidebar_sparklines_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true),
-      Current.user&.id,
-      Current.account_share_version
-    ].join("_")
-    Digest::SHA256.hexdigest(key).first(12)
-  end
-
-  # DOM id for a sparkline frame in the sidebar. The sidebar renders each group
-  # and account up to four times (All tab + type tab, desktop + mobile), so the
-  # id carries the placement to stay unique. The frames are
-  # data-turbo-permanent: a loaded sparkline survives Turbo navigations while
-  # its id is unchanged, and the data version in the id makes a sync render new
-  # frames that load fresh.
-  def sidebar_sparkline_frame_id(base_id, all_tab:, mobile:, version:)
-    [ ("mobile" if mobile), (all_tab ? "all" : "tab"), base_id, version ].compact.join("_")
-  end
-
-  # Frame id for a sparkline response: echoes the requesting frame's id so
-  # Turbo can match it, falling back to the base id for direct requests.
-  def sparkline_response_frame_id(base_id)
-    requested = turbo_frame_request_id.to_s
-    pattern = /\A(?:mobile_)?(?:all|tab)_#{Regexp.escape(base_id)}_[0-9a-f]{12}\z/
-    requested.match?(pattern) ? requested : base_id
   end
 
   # Where the icon shown for the account comes from, for the account form.

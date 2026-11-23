@@ -15,16 +15,16 @@ import { Controller } from "@hotwired/stimulus"
 // frame-load fires, and a countdown expiring in that gap would overwrite the
 // rendered frame with the badge. Responses that bring no matching frame (an
 // error, or a sign-in page after a redirect) never render, so they keep
-// counting and still end in the badge.
+// counting and still end in the badge. A request that fails outright (a
+// network error or a dropped connection) will never answer at all, so it shows
+// the badge at once instead of waiting out the countdown.
 export default class extends Controller {
   static values = { timeout: { type: Number, default: 10000 } }
 
   connect() {
     // Turbo keeps a frame busy for the length of its request. An eager frame
     // can start fetching before Stimulus connects, and the attribute is what
-    // tells us the event has already been and gone. A data-turbo-permanent
-    // frame reconnects on every Turbo visit; once loaded it is not busy, so
-    // nothing restarts.
+    // tells us the event has already been and gone.
     if (this.element.hasAttribute("busy")) {
       this.startTimeout()
     }
@@ -54,14 +54,16 @@ export default class extends Controller {
     this.showBadge()
   }
 
-  // A failed request (network error, dropped connection) will never render,
-  // so there is nothing to wait for: show the badge right away.
   handleError() {
     this.clearTimeout()
     this.showBadge()
   }
 
   showBadge() {
+    // A sidebar sparkline sits in a wrapper Turbo carries across visits; the
+    // badge must not be carried with it, so the next page fetches it again.
+    this.element.closest("[data-turbo-permanent]")?.removeAttribute("data-turbo-permanent")
+
     // Replace loading content with error state
     this.element.innerHTML = `
       <div class="flex items-center justify-end gap-1">

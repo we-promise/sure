@@ -80,7 +80,8 @@
             </span>
           </div>
         <% end %>
-        <%= render partial: section[:partial], locals: section[:locals] %>
+        <%# A cached page (Reports) hands over its section content already rendered. %>
+        <%= section[:html] ? section[:html].html_safe : render(partial: section[:partial], locals: section[:locals]) %>
       <% end %>
     </section>
   <% end %>

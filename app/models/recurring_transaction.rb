@@ -55,6 +55,7 @@ class RecurringTransaction < ApplicationRecord
   validate :amount_variance_consistency
   validate :transfer_endpoints_consistent
   validate :payment_url_is_http
+  validate :bank_reference_is_distinctive
   validate :anchor_required_for_intervals
   validate :end_mode_fields_consistent
   validate :bill_type_matches_shape
@@ -62,6 +63,8 @@ class RecurringTransaction < ApplicationRecord
   normalizes :payment_url, with: ->(url) { normalize_payment_url(url) }
 
   before_validation :derive_transfer_bill_type
+  validate :transfer_day_not_taken, on: :update, if: :transfer_day_changing?
+  before_save :sync_transfer_dedup_scope, if: :transfer_day_changing?
 
   # Columns whose change reshapes the occurrence stream. Amount is absent on
   # purpose: open occurrences inherit it at read time.
@@ -82,12 +85,13 @@ class RecurringTransaction < ApplicationRecord
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
   before_save :preserve_detected_name, if: -> { name_changed? && name_was.present? && matcher_hints.to_h["detected_name"].blank? }
   after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
+  after_update :record_price_change, if: :saved_change_to_amount?
 
   # Form state for the frequency picker and the create-bill dialog;
   # FrequencyPreset and the controller translate these on save. Not persisted.
   attr_accessor :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
                 :frequency_weekday, :frequency_month_of_year, :frequency_interval, :frequency_interval_unit,
-                :first_due_on, :is_income
+                :frequency_once_on, :first_due_on, :is_income
 
   # A scheme, followed by either "//" or by something that is not a port number.
   # "example.com:8080" is a host and port, not a scheme, so it does not match.
@@ -160,6 +164,55 @@ class RecurringTransaction < ApplicationRecord
     matcher_hints.to_h["detected_name"].presence || name
   end
 
+  # The stable token a bank puts in this series' payment notes (a contract or
+  # customer number, a transfer's Verwendungszweck), kept in matcher_hints so
+  # the matcher can recognise variable-amount payments by it. User-entered;
+  # see Matcher::REFERENCE_BONUS for what it can and cannot do.
+  def bank_reference
+    matcher_hints.to_h["bank_reference"].presence
+  end
+
+  def bank_reference=(value)
+    cleaned = value.to_s.squish
+    hints = matcher_hints.to_h.except("bank_reference")
+    hints["bank_reference"] = cleaned if cleaned.present?
+    self.matcher_hints = hints
+  end
+
+
+  # "Match by reference only": the bank reference is then the bill's whole
+  # identity for the matcher (see Matcher#reference_only?). Meaningless
+  # without a reference, so it reads false then.
+  def reference_only?
+    bank_reference.present? && reference_effective? && matcher_hints.to_h["reference_only"] == true
+  end
+
+  # Whether the text carries this bill's bank reference, ignoring case and
+  # whitespace the way the matcher does.
+  def note_carries_reference?(text)
+    return false if bank_reference.blank? || text.blank?
+
+    needle = Matcher.normalize_name(bank_reference)
+    needle.length >= Matcher::MIN_REFERENCE_LENGTH && Matcher.normalize_name(text).include?(needle)
+  end
+
+  # A reference only ever matches payments on this bill's account, and never
+  # income (see Matcher#matched_reference).
+  def reference_effective?
+    account_id.present? && !typed_income?
+  end
+
+  # The stored switch as the form shows it, effective or not.
+  def reference_only
+    matcher_hints.to_h["reference_only"] == true
+  end
+
+  def reference_only=(value)
+    hints = matcher_hints.to_h.except("reference_only")
+    hints["reference_only"] = true if ActiveModel::Type::Boolean.new.cast(value)
+    self.matcher_hints = hints
+  end
+
   # A bill first renamed without a stored detected name keeps its original name, so the detector can still claim it.
   def preserve_detected_name
     self.matcher_hints = matcher_hints.to_h.merge("detected_name" => name_was)
@@ -192,6 +245,15 @@ class RecurringTransaction < ApplicationRecord
 
       errors.add(attribute, :wrong_family)
     end
+  end
+
+  def bank_reference_is_distinctive
+    return if bank_reference.blank?
+
+    errors.add(:bank_reference, :needs_account_and_expense) unless reference_effective?
+    min = RecurringTransaction::Matcher::MIN_REFERENCE_LENGTH
+    errors.add(:bank_reference, :too_short, count: min) if bank_reference.length < min
+    errors.add(:bank_reference, :too_long, count: 100) if bank_reference.length > 100
   end
 
   def payment_url_is_http
@@ -281,10 +343,59 @@ class RecurringTransaction < ApplicationRecord
       end
   end
 
+  # An edited amount is a price change from today, kept in the price history
+  # so anything reading an earlier date (see #amount_on) still sees the old
+  # price. Skipped when the history already reached the new amount: the
+  # PriceChangeDetector records its change before updating the series, and a
+  # manual series edited to a detected price is that same change. A second
+  # edit the same day moves that day's change rather than adding one; over a
+  # detected change it becomes the user's, as the charge no longer backs it.
+  # A suggestion was never a commitment, and a new currency or a change of
+  # sign (bill to income) is not a new price.
+  def record_price_change
+    was, now = saved_change_to_amount
+    return if suggested? || status_before_last_save == "suggested" || saved_change_to_currency?
+    return unless was.positive? && now.positive?
+    return if recurring_price_changes.order(:effective_on).last&.new_amount == now
+
+    today = recurring_price_changes.find_by(effective_on: Date.current)
+    if today.nil?
+      recurring_price_changes.create!(effective_on: Date.current, previous_amount: was, new_amount: now,
+                                      currency: currency, source: "user")
+    elsif today.previous_amount == now
+      today.destroy!
+    else
+      today.update!(new_amount: now, source: "user", entry: nil)
+    end
+  end
+
   # A destination account is the definition of a transfer, so the type derives
   # from the shape rather than every creation path remembering to set it.
   def derive_transfer_bill_type
     self.bill_type = "transfer" if transfer?
+  end
+
+  # create_from_transfer keys a transfer series by its day in dedup_scope (a
+  # legacy series has none). Moving the series to another day moves the key
+  # with it, or the unique index would keep guarding the old day.
+  def transfer_day_changing?
+    transfer? && persisted? && will_save_change_to_expected_day_of_month? &&
+      (dedup_scope.blank? || dedup_scope.start_with?("day-"))
+  end
+
+  def sync_transfer_dedup_scope
+    self.dedup_scope = "day-#{expected_day_of_month}"
+  end
+
+  # A series cannot move onto the day another series between the same accounts
+  # and amount already holds, whatever its dedup_scope.
+  def transfer_day_not_taken
+    taken = self.class.where(
+      family_id: family_id, account_id: account_id, destination_account_id: destination_account_id,
+      amount: amount, currency: currency, expected_day_of_month: expected_day_of_month
+    ).where.not(id: id).exists?
+
+    errors.add(:expected_day_of_month, :taken) if taken
   end
 
   def bill_type_matches_shape
@@ -366,16 +477,20 @@ class RecurringTransaction < ApplicationRecord
   # credit-card or loan payment is a real obligation with a real due date,
   # even though it is a transfer and not spending. (It stays excluded from
   # any budget/category math for exactly that reason.)
-  scope :payable, -> {
+  scope :payable, -> { active.obligations(%w[CreditCard Loan]) }
+
+  # Outflows owed to someone, whatever the series' status: expense series and
+  # recurring transfers into accounts of the given `debt_types`.
+  scope :obligations, ->(debt_types) {
     # Correlated to the row rather than a free-standing id list: the bare
     # subquery scanned every account in the installation on every call, and
     # the destination must belong to the series' own family.
-    debt_destination = Account.where(accountable_type: %w[CreditCard Loan])
+    debt_destination = Account.where(accountable_type: debt_types)
                               .where("accounts.id = recurring_transactions.destination_account_id")
                               .where("accounts.family_id = recurring_transactions.family_id")
 
-    active.where("amount > 0")
-          .merge(where(destination_account_id: nil).or(where(debt_destination.arel.exists)))
+    where("recurring_transactions.amount > 0")
+      .merge(where(destination_account_id: nil).or(where(debt_destination.arel.exists)))
   }
 
   # The bills that want an action from you. Autopay bills still belong on the
@@ -441,8 +556,28 @@ class RecurringTransaction < ApplicationRecord
   # a $120 annual bill contributes $10, a $10 weekly bill about $43.45. This
   # is the honest number for "recurring commitment" style totals; summing raw
   # amounts across mixed cadences answers no meaningful question.
-  def monthly_equivalent_amount
-    amount_money * (schedule.occurrences_per_year / 12.0)
+  #
+  # A one-off is a single payment, not a rate, so it adds nothing to
+  # "per month" commitment totals. The occurrence still shows on its date.
+  #
+  # `on:` prices it as it stood on that date instead of today; see #amount_on.
+  def one_off?
+    RecurringTransaction::FrequencyPreset.detect(self).key == RecurringTransaction::FrequencyPreset::ONCE
+  end
+
+  def monthly_equivalent_amount(on: nil)
+    price = on ? Money.new(amount_on(on), currency) : amount_money
+    return price * 0 if one_off?
+
+    price * (schedule.occurrences_per_year / 12.0)
+  end
+
+  # What this series charged on `date`, read back through its price history:
+  # the previous amount of the first change after that date, or today's amount
+  # when nothing has changed since. Preload-aware like #recent_price_changes.
+  def amount_on(date)
+    later = recurring_price_changes.select { |change| change.effective_on > date }.min_by(&:effective_on)
+    later ? later.previous_amount : amount
   end
 
   # The newest price changes, most recent first. Sorts in Ruby when a caller
@@ -473,25 +608,28 @@ class RecurringTransaction < ApplicationRecord
     cycle_days = 365.25 / schedule.occurrences_per_year
     ((Date.current - next_due_date).to_i / cycle_days).floor
   end
-  scope :accessible_by, ->(user) {
-    accessible_account_ids = Account.accessible_by(user).select(:id)
-    # A recurring row is accessible when:
-    #   * its account_id is in the user's accessible set or null (legacy rows
-    #     with no account scoping survive), AND
-    #   * its destination_account_id is also accessible OR null (so a recurring
-    #     transfer never leaks into the list of a user without access to BOTH
-    #     endpoints).
+  scope :accessible_by, ->(user) { within_accounts(Account.accessible_by(user)) }
+
+  # Series whose endpoints all fall inside `accounts`, an Account relation: the
+  # accounts one user can access, or the ones every member of a family can.
+  scope :within_accounts, ->(accounts) {
+    # A recurring row is kept when:
+    #   * its account_id is in `accounts` or null (legacy rows with no account
+    #     scoping survive), AND
+    #   * its destination_account_id is also in `accounts` OR null (so a
+    #     recurring transfer never leaks into the list of a user without
+    #     access to BOTH endpoints).
     #
     # Written as one raw SQL predicate on purpose. ActiveRecord's
     # `merge` replaces an existing hash predicate on the same column instead of
     # AND-ing it, so a hash-style `where(destination_account_id: ...)` here would
     # silently wipe out a caller's own destination filter when composed through
     # `.merge(RecurringTransaction.accessible_by(user))`.
-    # Both endpoints (ignoring NULLs) must be inside the accessible set, so the
+    # Both endpoints (ignoring NULLs) must be inside the set, so the
     # set is evaluated once instead of once per column.
     where(
       "array_remove(ARRAY[recurring_transactions.account_id, recurring_transactions.destination_account_id], NULL) <@ ARRAY(?)",
-      accessible_account_ids
+      accounts.select(:id)
     )
   }
 
@@ -509,6 +647,47 @@ class RecurringTransaction < ApplicationRecord
 
   def self.cleanup_stale_for(family)
     Cleaner.new(family).cleanup_stale_transactions
+  end
+
+  # The recurring transfer a Transfer already belongs to: same accounts,
+  # amount and currency, and the transfer's date falls on the series' schedule,
+  # including its posting tolerance (a standing order due on a Saturday posts
+  # the following Monday). Where several series cover the date, the closest
+  # day wins, an exact day before a clamped one. Payments between the same
+  # accounts for the same amount more than the tolerance apart are separate
+  # series.
+  def self.transfer_series_for(transfer)
+    outflow_entry = transfer.outflow_transaction&.entry
+    inflow_entry  = transfer.inflow_transaction&.entry
+    return nil unless outflow_entry && inflow_entry
+
+    date = outflow_entry.date
+    candidates = where(
+      family_id: outflow_entry.account.family_id,
+      account_id: outflow_entry.account_id,
+      destination_account_id: inflow_entry.account_id,
+      amount: outflow_entry.amount,
+      currency: outflow_entry.currency
+    ).select { |series| series.schedule.matches_day?(date) }
+
+    candidates.min_by { |series| transfer_day_rank(series, date) }
+  end
+
+  # Days between a date and the series' nearest monthly occurrence, looking at
+  # the neighbouring months too: a day-31 series' April 30 occurrence is one
+  # day from May 1.
+  def self.transfer_day_distance(series, date)
+    [ -1, 0, 1 ].map do |offset|
+      month_start = date.beginning_of_month.advance(months: offset)
+      scheduled_day = [ series.expected_day_of_month, month_start.end_of_month.day ].min
+      (date - month_start.change(day: scheduled_day)).abs.to_i
+    end.min
+  end
+
+  # Orders series for a date: nearest occurrence first, then an exact day over
+  # a clamped one (day 28 over day 31 on Feb 28), then id for a stable result.
+  def self.transfer_day_rank(series, date)
+    [ transfer_day_distance(series, date), series.expected_day_of_month == date.day ? 0 : 1, series.id ]
   end
 
   # Create a manual recurring transfer from an existing Transfer pair.
@@ -538,6 +717,9 @@ class RecurringTransaction < ApplicationRecord
       # name_prefix logic so the recurring row reads consistently with
       # the originating Transfer.
       name: transfer.name,
+      # Same accounts and amount on another day of the month is another series;
+      # the day in dedup_scope keeps their unique-index keys apart.
+      dedup_scope: "day-#{expected_day}",
       amount: outflow_entry.amount, # positive (outflow), per Sure sign convention
       currency: outflow_entry.currency,
       expected_day_of_month: expected_day,
@@ -602,6 +784,17 @@ class RecurringTransaction < ApplicationRecord
          .where.not(id: RecurringMatchRejection.where(entry_id: entry.id).select(:recurring_transaction_id))
          .order(:created_at)
          .find do |series|
+           # A reference-only bill is identified by the note alone, whatever the
+           # amount, but never across signs: a refund is not its payment.
+           same_sign = series.amount.positive? == entry.amount.positive?
+           next same_sign && series.note_carries_reference?(entry.notes) if series.reference_only?
+
+           # Any bill's reference in the note identifies its payment too, unless
+           # the bill is bound to a different merchant than the payment's.
+           if same_sign && series.reference_effective? && series.note_carries_reference?(entry.notes) &&
+              !(series.merchant_id.present? && merchant&.id.present? && merchant.id != series.merchant_id)
+             next true
+           end
            next false unless amount_within_variance_band?(entry.amount, series.amount)
 
            if series.merchant_id.present?
@@ -814,6 +1007,18 @@ class RecurringTransaction < ApplicationRecord
     return false if last_occurrence_date.nil?
 
     last_occurrence_date < staleness_threshold_date
+  end
+
+  # True when this series matches transactions and every one of them is now a
+  # transfer leg. Detection skips transfer kinds (see Identifier), so a
+  # suggestion built from charges later confirmed as a transfer has nothing
+  # left that would detect it today. One ordinary match keeps it: detection
+  # still sees that charge and may refresh the series from it.
+  def matches_only_transfer_legs?
+    entryable_ids = matching_transactions.map(&:entryable_id)
+
+    entryable_ids.any? &&
+      Transaction.where(id: entryable_ids).where.not(kind: Transaction::TRANSFER_KINDS).none?
   end
 
   # A cadence the user typed is intent; the dates charges land on are

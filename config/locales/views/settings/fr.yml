@@ -43,6 +43,11 @@ fr:
     settings_nav_link_large:
       next: Suivant
       previous: Précédent
+    settings_search:
+      aria_label: Rechercher dans les paramètres
+      no_results: Aucun paramètre ne correspond à votre recherche.
+      placeholder: Rechercher dans les paramètres
+      results_label: Paramètres correspondants
     user_avatar_field:
       accepted_formats: JPG ou PNG. 5MB max.
       change: Changer de photo

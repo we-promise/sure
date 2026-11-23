@@ -556,6 +556,49 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show lists positions that went below zero in the account status" do
+    account = accounts(:investment)
+    # An import that records a sale without its purchase, as a provider or CSV can.
+    account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "[data-testid='account-health-status']", text: /Microsoft \(MSFT\): below zero from/
+  end
+
+  test "show has no account status for a healthy account" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-testid='account-health-status']", count: 0
+  end
+
+  test "a member who cannot open the account does not see its status" do
+    account = accounts(:investment)
+    account.syncs.create!(status: :failed, failed_at: 1.hour.ago)
+    sign_in users(:family_member)
+
+    get account_url(account)
+
+    assert_response :not_found
+    assert_not_includes response.body, I18n.t("accounts.health_status.sync_failed.message")
+  end
+
+  test "a member sees the status of an account shared with them" do
+    @account.syncs.create!(status: :failed, failed_at: 1.hour.ago)
+    sign_in users(:family_member)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-testid='account-health-status']", text: /#{I18n.t("accounts.health_status.sync_failed.message")}/
+  end
+
   test "show renders the scheduled balance tooltip when a scheduled transaction exists" do
     create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date)
 
@@ -1166,6 +1209,24 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(@account, :container)}", count: 0
   end
 
+  test "statements tab lists statements by period" do
+    statements = [ Date.new(2024, 2, 1), Date.new(2024, 4, 1), Date.new(2024, 3, 1) ].map do |month|
+      statement = AccountStatement.create_from_upload!(
+        family: @account.family,
+        account: @account,
+        file: uploaded_file(filename: "statement_#{month}.csv", content_type: "text/csv", content: "date,amount\n#{month},1\n")
+      )
+      statement.update!(period_start_on: month, period_end_on: month.end_of_month)
+      statement
+    end
+
+    get account_url(@account, tab: "statements")
+
+    assert_response :success
+    assert_equal statements.sort_by(&:period_end_on).reverse.map { |statement| dom_id(statement) },
+                 css_select("tr[id^='account_statement_']").map { |row| row["id"] }
+  end
+
   test "statements tab filters historical coverage by year" do
     account = Account.create!(
       family: @user.family,
@@ -1730,7 +1791,6 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       get src
       assert_response :success
       assert_includes response.headers["Cache-Control"], "max-age=86400"
-      assert_includes response.headers["Vary"], "Turbo-Frame", "each sidebar frame needs its own copy"
     end
   end
 
@@ -1791,55 +1851,6 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get sparkline_account_url(@account)
 
     assert_response :success
-  end
-
-  test "sparkline echoes the requesting sidebar frame id" do
-    frame_id = "mobile_all_#{dom_id(@account, :sparkline)}_0123456789ab"
-
-    get sparkline_account_url(@account), headers: { "Turbo-Frame" => frame_id }
-
-    assert_response :success
-    assert_select "turbo-frame##{frame_id}", count: 1
-    assert_select "##{frame_id}_chart", count: 1
-  end
-
-  test "sparkline ignores a frame id that is not a sparkline frame" do
-    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "x\"><script>" }
-
-    assert_response :success
-    assert_select "turbo-frame##{dom_id(@account, :sparkline)}", count: 1
-  end
-
-  test "sparkline etag depends on the requesting frame" do
-    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "tab_#{dom_id(@account, :sparkline)}_0123456789ab" }
-    etag = response.headers["ETag"]
-
-    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "tab_#{dom_id(@account, :sparkline)}_0123456789ab", "If-None-Match" => etag }
-    assert_response :not_modified
-
-    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "all_#{dom_id(@account, :sparkline)}_0123456789ab", "If-None-Match" => etag }
-    assert_response :success
-  end
-
-  test "sparkline ignores a frame id that only contains the sparkline id" do
-    get sparkline_account_url(@account), headers: { "Turbo-Frame" => "other_#{dom_id(@account, :sparkline)}_0123456789ab" }
-
-    assert_response :success
-    assert_select "turbo-frame##{dom_id(@account, :sparkline)}", count: 1
-  end
-
-  test "sidebar sparkline frames have unique ids and survive navigation" do
-    get account_url(@account)
-    assert_response :success
-
-    frames = css_select("turbo-frame[id*='_sparkline']")
-    ids = frames.map { |frame| frame["id"] }
-
-    assert_operator ids.size, :>, 1
-    assert_equal ids.uniq, ids
-    assert frames.all? { |frame| frame["data-turbo-permanent"] == "true" }
-    assert_includes ids.join(" "), "all_#{dom_id(@account, :sparkline)}_"
-    assert_includes ids.join(" "), "mobile_tab_#{dom_id(@account, :sparkline)}_"
   end
 
   test "destroys account" do
@@ -2343,7 +2354,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     end
 
     def sidebar_sparkline_src(frame_id)
-      css_select("turbo-frame[id^='all_#{frame_id}_']").first["src"]
+      css_select("turbo-frame##{frame_id}").first["src"]
     end
 
     def logo_icon(key, source, size, name: nil, body: "\x89PNG".b)
