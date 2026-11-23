@@ -259,8 +259,7 @@
                         disable_currency: true,
                         step: step,
                         min: step %>
-                  <%= form.date_field :paid_on, label: t(".manual_date_label"),
-                        value: (@occurrence.due_on < Date.current ? @occurrence.due_on : Date.current) %>
+                  <%= form.date_field :paid_on, label: t(".manual_date_label"), value: Date.current %>
                 </div>
                 <%# DS::Button defaults to type="button"; this one has to submit the form. %>
                 <%= render DS::Button.new(text: t(".record_payment"), variant: "secondary", full_width: true, type: "submit") %>

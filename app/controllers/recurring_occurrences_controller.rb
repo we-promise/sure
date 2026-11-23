@@ -28,10 +28,7 @@ class RecurringOccurrencesController < ApplicationController
   end
 
   def mark_paid
-    # A past cycle was paid on its own date, not on the day someone got round
-    # to recording it. An upcoming cycle is prepaid today.
-    paid_on = @occurrence.due_on if @occurrence.due_on < Date.current
-    allocator.mark_paid!(paid_on: paid_on)
+    allocator.mark_paid!
     redirect_after_action t(".success")
   end
 

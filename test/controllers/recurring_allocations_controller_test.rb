@@ -163,7 +163,7 @@ class RecurringAllocationsControllerTest < ActionDispatch::IntegrationTest
     assert_empty @occurrence.reload.allocations
   end
 
-  test "a manual payment with no date belongs to its cycle" do
+  test "a manual payment with no date records today, not the cycle due date" do
     historical = @series.recurring_occurrences.create!(
       family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
       currency: "USD", status: "scheduled", historical: true
@@ -171,7 +171,7 @@ class RecurringAllocationsControllerTest < ActionDispatch::IntegrationTest
 
     post recurring_occurrence_allocations_url(historical), params: { amount: "5.00" }
 
-    assert_equal historical.due_on, historical.reload.allocations.sole.paid_on
+    assert_equal Date.current, historical.reload.allocations.sole.paid_on
   end
 
   test "allocation feedback is available in German" do

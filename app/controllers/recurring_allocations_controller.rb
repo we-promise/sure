@@ -13,10 +13,8 @@ class RecurringAllocationsController < ApplicationController
     ensure_series_writable(occurrence)
     entry = find_entry(occurrence, params[:entry_id])
     paid_on = parse_paid_on(params[:paid_on])
-    # A manual payment for a past cycle belongs to that cycle, not to the day
-    # the form happened to be submitted. Today is still right for a cycle that
-    # has not come due.
-    paid_on ||= occurrence.due_on if entry.nil? && occurrence.due_on < Date.current
+    # A manual payment without a date is recorded when it was entered, not on
+    # the cycle's due date. The form offers the real date when it is known.
 
     RecurringTransaction::Allocator.new(occurrence).allocate!(
       entry: entry,
