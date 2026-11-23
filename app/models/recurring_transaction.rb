@@ -346,9 +346,10 @@ class RecurringTransaction < ApplicationRecord
   # generated open history outside the new bound can be reconciled. An
   # activation has its own path, which must not enqueue a second job.
   def should_backfill_history?
+    return true if saved_change_to_id? && started_on.present? && active?
     return false if saved_change_to_status?
 
-    saved_change_to_started_on? || (saved_change_to_id? && started_on.present?)
+    saved_change_to_started_on?
   end
 
   def backfill_history_from_started_on
