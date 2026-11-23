@@ -52,6 +52,28 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     )
   end
 
+  test "a receipt on the pending transaction moves to the posted one with its scan" do
+    pending_tx = @pending_entry.transaction
+    scan = ReceiptScan.create!(family: @family, user: users(:family_admin), account: @account, status: :completed, linked_transaction: pending_tx)
+    pending_tx.update!(extra: pending_tx.extra.merge("receipt" => { "scan_id" => scan.id, "merchant" => "Starbucks" }))
+
+    pending_tx.merge_with_duplicate!
+
+    posted_tx = @posted_entry.transaction.reload
+    assert_equal "Starbucks", posted_tx.extra.dig("receipt", "merchant")
+    assert_equal posted_tx, scan.reload.linked_transaction
+  end
+
+  test "a receipt already on the posted transaction is kept" do
+    pending_tx = @pending_entry.transaction
+    pending_tx.update!(extra: pending_tx.extra.merge("receipt" => { "merchant" => "Pending receipt" }))
+    @posted_entry.transaction.update!(extra: { "receipt" => { "merchant" => "Posted receipt" } })
+
+    pending_tx.merge_with_duplicate!
+
+    assert_equal "Posted receipt", @posted_entry.transaction.reload.extra.dig("receipt", "merchant")
+  end
+
   test "destroys the pending entry on successful merge" do
     pending_id = @pending_entry.id
     assert_difference "Entry.count", -1 do

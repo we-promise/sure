@@ -3,6 +3,33 @@ require "test_helper"
 class TransactionTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
+  test "a category the user sets back after a rule's stays the user's" do
+    food = categories(:food_and_drink)
+    other = families(:dylan_family).categories.create!(name: "Household", color: "#000000")
+    transaction = create_transaction(name: "Shop").transaction
+    transaction.enrich_attribute(:category_id, food.id, source: "rule")
+    assert_not transaction.reload.category_set_by_user?
+
+    [ other, food ].each do |category|
+      transaction.update!(category: category)
+      transaction.lock_attr!(:category_id)
+    end
+
+    assert transaction.reload.category_set_by_user?
+  end
+
+  test "a rule that sets the category again claims it again" do
+    food = categories(:food_and_drink)
+    other = families(:dylan_family).categories.create!(name: "Household", color: "#000000")
+    transaction = create_transaction(name: "Shop").transaction
+    transaction.enrich_attribute(:category_id, food.id, source: "rule")
+    transaction.update!(category: other)
+    transaction.enrich_attribute(:category_id, food.id, source: "rule")
+    transaction.lock_attr!(:category_id)
+
+    assert_not transaction.reload.category_set_by_user?
+  end
+
   test "with_any_tag returns transactions carrying any of the tags, each once" do
     travel = families(:dylan_family).tags.create!(name: "Travel")
     work = families(:dylan_family).tags.create!(name: "Work")

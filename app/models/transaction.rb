@@ -15,6 +15,8 @@ class Transaction < ApplicationRecord
     attachable.variant :thumbnail, resize_to_limit: [ 150, 150 ]
   end
 
+  has_one :receipt_scan, foreign_key: :transaction_id, dependent: :nullify, inverse_of: :linked_transaction
+
   # Attachment validation constants
   MAX_ATTACHMENTS_PER_TRANSACTION = 10
   MAX_ATTACHMENT_SIZE = 10.megabytes
@@ -362,6 +364,17 @@ class Transaction < ApplicationRecord
     sanitize_sql_array([ "#{sql})", { attribute: attribute, sources: sources.flatten.map(&:to_s), since: since, metadata: metadata&.to_json } ])
   end
 
+  # The category is one the user chose: locked, and not still the value an automatic source
+  # (AI, Bayes, a rule, a receipt or purchase) recorded for it. AI and some categorizers lock
+  # what they set, so the lock alone doesn't mean the user chose it.
+  def category_set_by_user?
+    return false unless locked?(:category_id)
+
+    data_enrichments.where(attribute_name: "category_id").none? do |enrichment|
+      enrichment.value.to_s == category_id.to_s && enrichment.metadata&.dig("superseded") != true
+    end
+  end
+
   # Marks the AI's and Bayes' category enrichments of the given transactions
   # superseded: their category changed, so it is no longer the value they
   # recorded as theirs, even where it later equals it again. Callers hold the
@@ -577,6 +590,10 @@ class Transaction < ApplicationRecord
   # pick. See Category.recently_used_for.
   def record_category_usage!
     category.touch(:last_used_at) if saved_change_to_category_id? && category.present?
+  end
+
+  def from_receipt?
+    extra.is_a?(Hash) && extra.key?("receipt")
   end
 
   def pending?
@@ -835,6 +852,17 @@ class Transaction < ApplicationRecord
 
       new_tags = from.tags.where.not(id: to.tags.select(:id))
       to.tags << new_tags if new_tags.any?
+
+      carry_over_receipt(from:, to:)
+    end
+
+    # A receipt read onto the pending transaction moves with its scan, unless the posted one
+    # already has a receipt of its own, which is kept.
+    def carry_over_receipt(from:, to:)
+      return if from.extra["receipt"].blank? || to.extra["receipt"].present?
+
+      to.update!(extra: to.extra.merge("receipt" => from.extra["receipt"]))
+      ReceiptScan.where(transaction_id: from.id).update_all(transaction_id: to.id, updated_at: Time.current)
     end
 
     def attachment_count_after_merge(from:, to:)
@@ -895,7 +923,15 @@ class Transaction < ApplicationRecord
     # as history (the "AI history" filter). A change the source makes itself
     # rewrites its record's metadata right after the save
     # (Enrichable#log_enrichment), so only someone else's change ends a claim.
+    #
+    # Other sources (rules, receipts, purchases) lose their claim once the
+    # category moves away from the value they recorded, so a category the user
+    # later sets back to that value is the user's (see #category_set_by_user?).
     def supersede_automatic_category_claims
       self.class.supersede_automatic_category_claims!([ id ])
+      DataEnrichment.where(enrichable: self, attribute_name: "category_id")
+                    .where.not(source: AUTO_CATEGORY_SOURCES)
+                    .where.not(value: category_id&.to_s)
+                    .update_all(Arel.sql(%(metadata = COALESCE(metadata, '{}'::jsonb) || '{"superseded": true}'::jsonb)))
     end
 end
