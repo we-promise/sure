@@ -288,6 +288,16 @@ class Purchase::EmailProcessorTest < ActiveSupport::TestCase
     process
   end
 
+  test "reprocess! keeps a purchase failed when the queue rejects the job" do
+    @purchase.update!(status: :failed, error: "boom")
+    Purchase::EmailProcessJob.stubs(:perform_later).returns(false)
+
+    @purchase.reprocess!
+
+    assert @purchase.reload.failed?
+    assert_equal "boom", @purchase.error
+  end
+
   test "reprocess! restarts a failed purchase" do
     @purchase.update!(status: :failed, error: "boom")
 

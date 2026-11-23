@@ -145,13 +145,16 @@ class Purchase < ApplicationRecord
 
     previous_error = error
     update!(status: :processing, error: nil)
-    begin
+    enqueued = begin
       Purchase::EmailProcessJob.perform_later(self)
     rescue StandardError
       # Left processing with no job, it could never be retried.
       update!(status: :failed, error: previous_error)
       raise
     end
+    # Match false exactly, as DestroyableLater does: a rejected enqueue returns false.
+    update!(status: :failed, error: previous_error) if enqueued == false
+    enqueued
   end
 
   # Re-checks the stored AI read against the current total rules, without calling the AI again.
