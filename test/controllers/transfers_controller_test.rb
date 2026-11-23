@@ -688,6 +688,18 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_nil transfer.outflow_transaction.reload.category_id
   end
 
+  test "update clears the category when the editor submits none" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.update!(category: categories(:food_and_drink))
+
+    patch transfer_url(transfer), params: { transfer: { category_id: "" } }
+
+    assert_redirected_to transactions_url
+    outflow = transfer.outflow_transaction.reload
+    assert_nil outflow.category_id
+    assert outflow.locked?(:category_id), "a sync would refill a cleared category it can treat as its own"
+  end
+
   test "can add notes to transfer" do
     transfer = transfers(:one)
     assert_nil transfer.notes
