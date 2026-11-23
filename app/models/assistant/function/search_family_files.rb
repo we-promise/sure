@@ -1,6 +1,10 @@
 class Assistant::Function::SearchFamilyFiles < Assistant::Function
   include LangfuseTraceable
 
+  # Excerpts asked of the store before those of documents the user may not
+  # see are dropped (OpenAI's store returns at most 50).
+  SEARCH_POOL = 50
+
   class << self
     def name
       "search_family_files"
@@ -95,7 +99,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
     response = adapter.search(
       store_id: store_id,
       query: query,
-      max_results: max_results
+      max_results: SEARCH_POOL
     )
 
     unless response.success?
@@ -113,7 +117,8 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       }
     end
 
-    results = response.data
+    searchable_file_ids = family.family_documents.searchable_by(user).where.not(provider_file_id: nil).pluck(:provider_file_id).to_set
+    results = response.data.select { |result| searchable_file_ids.include?(result[:file_id]) }.first(max_results)
 
     Rails.logger.debug("[SearchFamilyFiles] #{results.size} chunk(s) returned")
 
