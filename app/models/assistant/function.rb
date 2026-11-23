@@ -7,7 +7,29 @@ class Assistant::Function
     def description
       raise NotImplementedError, "Subclasses must implement the description class method"
     end
+
+    # Declares the tool's effect as MCP tool annotations (ToolAnnotations,
+    # 2025-03-26 and 2025-06-18 schemas), which clients use to decide which
+    # calls need the user's confirmation:
+    #   :read_only   changes nothing
+    #   :additive    only adds records
+    #   :destructive may overwrite or remove existing data
+    # idempotent: repeating the call with the same arguments changes nothing
+    # more. Every tool works on the family's own data, so none is open-world.
+    def annotate(effect, idempotent: false)
+      hints =
+        case effect
+        when :read_only then { readOnlyHint: true }
+        when :additive then { readOnlyHint: false, destructiveHint: false, idempotentHint: idempotent }
+        when :destructive then { readOnlyHint: false, destructiveHint: true, idempotentHint: idempotent }
+        else raise ArgumentError, "unknown tool effect: #{effect.inspect}"
+        end
+
+      self.annotations = hints.merge(openWorldHint: false).freeze
+    end
   end
+
+  class_attribute :annotations, instance_writer: false
 
   # The AI feature (a key in Ai::Routes::MATRIX) a tool calls a model for, if any. A tool that
   # sets one is listed only while that feature is available, so chat and MCP clients never see a

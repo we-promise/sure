@@ -1,4 +1,6 @@
 class Assistant::Function::UpdateCategory < Assistant::Function
+  annotate :destructive, idempotent: true
+
   class << self
     def name
       "update_category"

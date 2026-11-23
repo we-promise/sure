@@ -1,4 +1,6 @@
 class Assistant::Function::GetRecurringTransactions < Assistant::Function
+  annotate :read_only
+
   MAX_RESULTS = 200
 
   class << self

@@ -1,6 +1,8 @@
 class Assistant::Function::GetBills < Assistant::Function
   include Assistant::Function::BillsSupport
 
+  annotate :read_only
+
   MAX_RESULTS = 100
 
   class << self

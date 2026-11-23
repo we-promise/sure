@@ -1,6 +1,8 @@
 class Assistant::Function::GetIncomeStatement < Assistant::Function
   include ActiveSupport::NumberHelper
 
+  annotate :read_only
+
   class << self
     def name
       "get_income_statement"

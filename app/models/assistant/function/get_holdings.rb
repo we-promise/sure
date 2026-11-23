@@ -1,4 +1,6 @@
 class Assistant::Function::GetHoldings < Assistant::Function
+  annotate :read_only
+
   SUPPORTED_ACCOUNT_TYPES = %w[Investment Crypto].freeze
 
   class << self

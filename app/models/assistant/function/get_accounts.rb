@@ -1,4 +1,6 @@
 class Assistant::Function::GetAccounts < Assistant::Function
+  annotate :read_only
+
   class << self
     def name
       "get_accounts"

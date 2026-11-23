@@ -1601,34 +1601,11 @@ enforce the shape server-side.
 
 ### Function Calling
 
-The assistant uses OpenAI's function calling (tool use) to access user data:
-
-**Available functions:**
-
-Read and analysis:
-- `get_transactions` - Search transactions with filters, sorting and pagination
-- `get_recurring_transactions` - Detected and manual recurring transactions (subscriptions, bills) with totals
-- `get_accounts` - Accounts with ids and current balances; opt-in balance history series
-- `get_holdings` - Investment holdings
-- `get_balance_sheet` - Net worth, assets and liabilities with a configurable history period and interval
-- `get_income_statement` - Income and expenses for a period, with monthly series, prior-period comparison and account filtering
-- `get_budget` - Budget summary for a month
-- `get_merchants` - Merchants with the ids update_transaction accepts and the exact names get_transactions filters on
-- `get_tags` / `get_categories` - Tag and category listings with pagination
-
-Write:
-- `update_transaction`, `update_budget`, `create_goal`
-- `unmatch_transfer` - Unlink a wrongly matched transfer
-- `update_transfer` - Count a transfer into an investment account as spending or as a plain transfer
-- `create_tag` / `update_tag`, `create_category` / `update_category` / `delete_category`
-
-Documents:
-- `import_bank_statement` - Import bank statement data
-- `search_family_files` - Search uploaded documents (vector store)
-
-These are defined in `app/models/assistant/function/`. Preview tools
-(Statement Vault, `get_valuations`, `get_insights`) are listed in
-[mcp.md](mcp.md#preview-tools).
+The assistant reads and changes user data through function calling (tool use),
+with the same tools as the [MCP server](mcp.md#available-tools), defined in
+`app/models/assistant/function/`. `delete_transaction` and
+`delete_category` [preview before deleting](mcp.md#deletes-preview-first) in
+the chat too.
 
 ### Vector Store (Document Search)
 

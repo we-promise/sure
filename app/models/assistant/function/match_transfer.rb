@@ -11,6 +11,8 @@
 class Assistant::Function::MatchTransfer < Assistant::Function
   include Assistant::Function::TransferMatchSupport
 
+  annotate :destructive
+
   class << self
     def name
       "match_transfer"

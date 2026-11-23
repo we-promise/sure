@@ -442,6 +442,23 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools/list carries each tool's annotations" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      tools = JSON.parse(response.body)["result"]["tools"].index_by { |t| t["name"] }
+
+      Assistant.function_classes(@user).each do |fn_class|
+        assert_equal fn_class.new(@user).annotations.deep_stringify_keys, tools.dig(fn_class.name, "annotations"), fn_class.name
+      end
+      assert_equal true, tools.dig("get_accounts", "annotations", "readOnlyHint")
+      assert_equal true, tools.dig("delete_transaction", "annotations", "destructiveHint")
+      assert_equal false, tools.dig("create_transaction", "annotations", "destructiveHint")
+    end
+  end
+
   test "tools stay available to external agents when the in-app assistant is off" do
     @user.family.update!(assistant_type: "mcp_only")
 
@@ -638,6 +655,39 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_equal categories(:food_and_drink).id, hidden_entry.transaction.reload.category_id, "apply_rule recategorised a transaction the guest cannot reach"
       assert_not rule.reload.active, "apply_rule activated the rule for a guest"
       assert_equal(-32602, JSON.parse(response.body).dig("error", "code"))
+    end
+  end
+
+  test "tools/call delete_transaction previews first and deletes only with the preview token" do
+    transaction = transactions(:one)
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "delete_transaction", arguments: { id: transaction.id } }, id: 9).to_json,
+           headers: mcp_headers(@token)
+
+      preview = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+      assert_equal false, preview["deleted"]
+      assert_equal transaction.id, preview.dig("preview", "id")
+      assert Transaction.exists?(transaction.id), "a call without preview_token deleted the transaction"
+
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "delete_transaction", arguments: { id: transaction.id, preview_token: preview["preview_token"] } }, id: 10).to_json,
+           headers: mcp_headers(@token)
+
+      assert_equal true, JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))["deleted"]
+      assert_not Transaction.exists?(transaction.id)
+    end
+  end
+
+  test "tools/call rejects delete_category for a guest" do
+    category = categories(:food_and_drink)
+
+    with_guest_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "delete_category", arguments: { id: category.id } }, id: 11).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      assert_equal(-32602, JSON.parse(response.body).dig("error", "code"))
+      assert Category.exists?(category.id)
     end
   end
 

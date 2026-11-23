@@ -15,6 +15,8 @@
 # the registry's own option lists: those read Current.user, which is nil on the
 # assistant and MCP paths.
 module Assistant::Function::RuleSupport
+  include Assistant::Function::PreviewToken
+
   # AI-backed actions cost money per transaction; the web UI shows a cost
   # estimate before applying them, which this surface cannot do yet.
   BLOCKED_ACTION_TYPES = %w[auto_categorize auto_detect_merchants].freeze
@@ -29,8 +31,6 @@ module Assistant::Function::RuleSupport
 
   DEFAULT_SAMPLE_SIZE = 10
   MAX_SAMPLE_SIZE = 25
-
-  PREVIEW_TOKEN_TTL = 30.minutes
 
   # JSON schema fragments shared by preview_rule, create_rule and update_rule.
   def condition_schema
@@ -405,26 +405,22 @@ module Assistant::Function::RuleSupport
     # Issued for a saved rule when the preview listed matches: none for a zero
     # sample_size, or when every match is in an account the user can't see.
     # A rule matching nothing gets one, so a rule meant for future
-    # transactions can be activated. Signed, and bound to the user, the rule's
-    # definition and the match count.
+    # transactions can be activated. Bound to the rule's definition and match
+    # count (see PreviewToken).
     def preview_token(rule, match_count, shown:)
       return nil unless rule.persisted? && rule.changes.empty?
       return nil if match_count.positive? && shown.zero?
 
-      preview_verifier.generate(
-        { "rule_id" => rule.id, "user_id" => user.id, "definition" => definition_digest(rule), "match_count" => match_count },
-        purpose: :apply_rule, expires_in: PREVIEW_TOKEN_TTL
-      )
+      issue_preview_token(rule, preview_state(rule, match_count))
     end
 
-    # The token's payload, or nil when it is missing, forged, expired, or
-    # issued to another user or rule.
-    def read_preview_token(token, rule)
-      payload = preview_verifier.verified(token.to_s, purpose: :apply_rule) if token.present?
-      return nil unless payload.is_a?(Hash)
-      return nil unless payload["rule_id"] == rule.id && payload["user_id"] == user.id
+    def preview_state(rule, match_count)
+      [ definition_digest(rule), match_count ]
+    end
 
-      payload
+    # Every rule tool issues tokens for apply_rule, the one that accepts them.
+    def preview_token_purpose
+      "apply_rule"
     end
 
     # What the rule would do, independent of timestamps and display names.
@@ -442,10 +438,6 @@ module Assistant::Function::RuleSupport
       return [ condition.operator, condition.sub_conditions.map { |sub| digest_condition(sub) }.sort_by(&:to_json) ] if condition.compound?
 
       [ condition.condition_type, condition.operator, condition.value.to_s ]
-    end
-
-    def preview_verifier
-      Rails.application.message_verifier("assistant/rule_preview")
     end
 
     def serialize_sample(txn)

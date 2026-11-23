@@ -1,6 +1,8 @@
 require "csv"
 
 class Assistant::Function::ImportBankStatement < Assistant::Function
+  annotate :additive
+
   self.ai_feature = :extract_pdf
 
   class << self

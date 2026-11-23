@@ -9,6 +9,8 @@
 # from both the /mcp endpoint and the in-app assistant — the same surface that
 # already carries the equally-mutating UpdateTransaction.
 class Assistant::Function::CreateTransaction < Assistant::Function
+  annotate :additive
+
   class << self
     # The tool's stable name; this is the MCP function identifier callers use.
     def name

@@ -16,6 +16,8 @@
 class Assistant::Function::UnmatchTransfer < Assistant::Function
   include Assistant::Function::TransferSupport
 
+  annotate :destructive, idempotent: true
+
   class << self
     def name
       "unmatch_transfer"

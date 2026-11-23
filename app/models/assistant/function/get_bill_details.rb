@@ -1,6 +1,8 @@
 class Assistant::Function::GetBillDetails < Assistant::Function
   include Assistant::Function::BillsSupport
 
+  annotate :read_only
+
   HISTORY_LIMIT = 12
   PRICE_CHANGE_LOOKBACK_MONTHS = 24
 

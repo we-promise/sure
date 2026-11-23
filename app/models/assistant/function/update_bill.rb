@@ -1,6 +1,8 @@
 class Assistant::Function::UpdateBill < Assistant::Function
   include Assistant::Function::BillsSupport
 
+  annotate :destructive, idempotent: true
+
   # UI-parity only: exactly the fields the edit dialog exposes. No income or
   # transfer flips (they change sign and shape semantics), no end-condition
   # juggling, no currency.

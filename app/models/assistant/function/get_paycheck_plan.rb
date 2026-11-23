@@ -1,6 +1,8 @@
 class Assistant::Function::GetPaycheckPlan < Assistant::Function
   include Assistant::Function::BillsSupport
 
+  annotate :read_only
+
   class << self
     def name
       "get_paycheck_plan"

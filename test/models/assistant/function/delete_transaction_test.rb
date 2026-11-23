@@ -1,16 +1,34 @@
 require "test_helper"
 
 class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @user = users(:family_admin)
     @transaction = transactions(:one)
     @function = Assistant::Function::DeleteTransaction.new(@user)
   end
 
-  test "deletes a transaction and its ledger entry" do
-    entry_id = @transaction.entry.id
+  test "without a preview_token it previews the deletion and deletes nothing" do
+    entry = @transaction.entry
 
     result = @function.call("id" => @transaction.id)
+
+    assert_equal true, result[:success]
+    assert_equal false, result[:deleted]
+    assert_equal @transaction.id, result[:preview][:id]
+    assert_equal entry.id, result[:preview][:entry_id]
+    assert_equal entry.account.name, result[:preview][:account]
+    assert_equal entry.amount.to_s, result[:preview][:amount]
+    assert result[:preview_token].present?
+    assert Transaction.exists?(@transaction.id)
+    assert Entry.exists?(entry.id)
+  end
+
+  test "deletes a transaction and its ledger entry with the token from its preview" do
+    entry_id = @transaction.entry.id
+
+    result = delete_with_preview(@function, "id" => @transaction.id)
 
     assert_equal true, result[:success]
     assert_equal true, result[:deleted]
@@ -20,6 +38,67 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
     # The transaction and its root entry are both gone.
     assert_nil Transaction.find_by(id: @transaction.id)
     assert_nil Entry.find_by(id: entry_id)
+  end
+
+  test "refuses a forged token, another transaction's token and another tool's token" do
+    other = transactions(:transfer_out)
+    other_token = @function.call("id" => other.id)[:preview_token]
+    assert other_token.present?
+
+    category_token = Assistant::Function::DeleteCategory.new(@user).call("id" => categories(:food_and_drink).id)[:preview_token]
+    assert category_token.present?
+
+    [ "forged", other_token, category_token ].each do |token|
+      result = @function.call("id" => @transaction.id, "preview_token" => token)
+
+      assert_equal false, result[:success]
+      assert_equal "preview_required", result[:error]
+    end
+    assert Transaction.exists?(@transaction.id)
+  end
+
+  test "refuses a token issued to another user, including one from another family" do
+    member_token = Assistant::Function::DeleteTransaction.new(users(:family_member)).call("id" => @transaction.id)[:preview_token]
+    assert member_token.present?, "family_member has full control of the account, so its preview issues a token"
+
+    josh = users(:josh)
+    foreign_account = josh.family.accounts.create!(
+      name: "Foreign checking", balance: 0, currency: "USD", accountable: Depository.new, owner: josh
+    )
+    foreign = create_transaction(account: foreign_account, name: "Foreign").entryable
+    foreign_token = Assistant::Function::DeleteTransaction.new(josh).call("id" => foreign.id)[:preview_token]
+    assert foreign_token.present?
+
+    [ member_token, foreign_token ].each do |token|
+      assert_equal "preview_required", @function.call("id" => @transaction.id, "preview_token" => token)[:error]
+    end
+    assert_equal "not_found", @function.call("id" => foreign.id, "preview_token" => foreign_token)[:error]
+    assert Transaction.exists?(@transaction.id)
+    assert Transaction.exists?(foreign.id)
+  end
+
+  test "refuses an expired token" do
+    token = @function.call("id" => @transaction.id)[:preview_token]
+
+    travel Assistant::Function::PreviewToken::PREVIEW_TOKEN_TTL + 1.minute do
+      assert_equal "preview_required", @function.call("id" => @transaction.id, "preview_token" => token)[:error]
+    end
+    assert Transaction.exists?(@transaction.id)
+  end
+
+  test "refuses a token once the transaction changed, and returns a fresh preview" do
+    token = @function.call("id" => @transaction.id)[:preview_token]
+    @transaction.entry.update!(amount: @transaction.entry.amount + 100)
+
+    result = @function.call("id" => @transaction.id, "preview_token" => token)
+
+    assert_equal false, result[:success]
+    assert_equal "preview_stale", result[:error]
+    assert_equal @transaction.entry.reload.amount.to_s, result[:preview][:amount]
+    assert result[:preview_token].present?
+    assert Transaction.exists?(@transaction.id)
+
+    assert_equal true, @function.call("id" => @transaction.id, "preview_token" => result[:preview_token])[:deleted]
   end
 
   test "returns not_found for an unknown id" do
@@ -41,7 +120,7 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
     assert Transaction.exists?(@transaction.id)
   end
 
-  test "does not let read-only collaborators delete transactions" do
+  test "does not let read-only collaborators preview or delete transactions" do
     transaction = transactions(:transfer_in)
     function = Assistant::Function::DeleteTransaction.new(users(:family_member))
 
@@ -49,7 +128,20 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
 
     assert_equal false, result[:success]
     assert_equal "not_found", result[:error]
+    assert_nil result[:preview_token]
     assert Transaction.exists?(transaction.id)
+  end
+
+  test "does not let a guest preview or delete a transaction in an account shared read-only" do
+    account = @transaction.entry.account
+    account.account_shares.create!(user: family_guest, permission: "read_only")
+    function = Assistant::Function::DeleteTransaction.new(family_guest)
+
+    result = function.call("id" => @transaction.id)
+
+    assert_equal "not_found", result[:error]
+    assert_nil result[:preview_token]
+    assert Transaction.exists?(@transaction.id)
   end
 
   test "does not let a user from a different family delete a transaction" do
@@ -65,7 +157,7 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
     assert Transaction.exists?(@transaction.id)
   end
 
-  test "rejects deleting a split child transaction" do
+  test "rejects previewing or deleting a split child transaction" do
     Entry.any_instance.stubs(:split_child?).returns(true)
 
     result = @function.call("id" => @transaction.id)
@@ -76,9 +168,10 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
   end
 
   test "returns delete_aborted when a before_destroy guard aborts the destroy" do
+    token = @function.call("id" => @transaction.id)[:preview_token]
     Entry.any_instance.stubs(:destroy!).raises(ActiveRecord::RecordNotDestroyed)
 
-    result = @function.call("id" => @transaction.id)
+    result = @function.call("id" => @transaction.id, "preview_token" => token)
 
     assert_equal false, result[:success]
     assert_equal "delete_aborted", result[:error]
@@ -88,13 +181,21 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
   test "reports deleted with a warning when the post-delete sync fails to enqueue" do
     # The transaction is already destroyed by the time sync_account_later runs,
     # so an enqueue failure must not be reported as a failed deletion.
+    token = @function.call("id" => @transaction.id)[:preview_token]
     Entry.any_instance.stubs(:destroy!)
     Entry.any_instance.stubs(:sync_account_later).raises(StandardError, "job backend unavailable")
 
-    result = @function.call("id" => @transaction.id)
+    result = @function.call("id" => @transaction.id, "preview_token" => token)
 
     assert_equal true, result[:success]
     assert_equal true, result[:deleted]
     assert_match(/could not be enqueued/, result[:warning])
   end
+
+  private
+    def delete_with_preview(function, params)
+      token = function.call(params)[:preview_token]
+      assert token.present?, "the preview issued no token"
+      function.call(params.merge("preview_token" => token))
+    end
 end

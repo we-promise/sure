@@ -1,6 +1,8 @@
 class Assistant::Function::CreateBill < Assistant::Function
   include Assistant::Function::BillsSupport
 
+  annotate :additive
+
   class << self
     def name
       "create_bill"

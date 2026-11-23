@@ -7,6 +7,8 @@
 class Assistant::Function::GetRuleOptions < Assistant::Function
   include Assistant::Function::RuleSupport
 
+  annotate :read_only
+
   class << self
     def name
       "get_rule_options"

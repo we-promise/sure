@@ -6,6 +6,8 @@
 class Assistant::Function::PreviewRule < Assistant::Function
   include Assistant::Function::RuleSupport
 
+  annotate :read_only
+
   class << self
     def name
       "preview_rule"

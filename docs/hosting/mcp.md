@@ -55,7 +55,7 @@ openssl rand -base64 32
 The `MCP_USER_EMAIL` must match an existing Sure user's email address. The AI assistant will have access to all financial data for that user's family.
 
 > [!CAUTION]
-> The AI assistant can call the MCP tools available to the specified user. This includes reading financial data and write-capable tools such as statement import, goal/category/tag changes, transaction updates, and budget updates. Only set this for users you trust with your AI provider.
+> The AI assistant can call the MCP tools available to the specified user. This includes reading financial data and write-capable tools such as statement import, goal/category/tag changes, creating, updating and deleting transactions, deleting categories, and budget updates. Only set this for users you trust with your AI provider.
 
 ## Configuration
 
@@ -140,6 +140,7 @@ At the time of writing, `tools/list` includes:
 | Tool | Description |
 |------|-------------|
 | `get_transactions` | Search transactions with filters (exact names or ids), sorting by date or absolute amount, and pagination |
+| `get_uncategorized_transactions` | Spending with no category yet, grouped by payee |
 | `get_recurring_transactions` | Detected and manual recurring transactions (subscriptions, bills, salaries) with expected dates and per-currency totals |
 | `get_accounts` | Accounts with ids and current balances; pass `include_balance_series: true` for a period-bounded history series |
 | `get_holdings` | Query investment holdings |
@@ -154,8 +155,11 @@ At the time of writing, `tools/list` includes:
 | `unmatch_transfer` | Unlink a confirmed or pending transfer (by either transaction's id) so a wrong match can be redone; rejects the pairing for auto-match by default. Supports `dry_run` |
 | `update_transfer` | Switch a confirmed transfer into an investment or crypto account between an investment contribution (counted as spending) and a plain transfer, e.g. when a brokerage or crypto account only converts currency. Supports `dry_run` |
 | `create_tag` / `update_tag` | Manage tags |
-| `create_category` / `update_category` / `delete_category` | Manage categories: create, rename, recolor, move between parents, and delete (optionally moving transactions to a replacement) |
+| `create_category` / `update_category` | Manage categories: create, rename, recolor, move between parents |
+| `delete_category` | Delete a category, optionally moving its transactions to a replacement. [Previews first](#deletes-preview-first) |
+| `create_transaction` | Create a transaction on an account the user can write to; retries with the same `external_id` return the existing one |
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
+| `delete_transaction` | Permanently delete a transaction and its ledger entry. [Previews first](#deletes-preview-first) |
 | `get_transfer_match_candidates` | A transaction's current transfer (including a pending auto-match) or the transactions it could be matched with, as in the "Match transfer" dialog |
 | `match_transfer` | Match a transaction as a transfer with an existing counterpart, or create the counterpart in a target account (e.g. a manual loan). Supports `dry_run` |
 | `review_transfer` | Confirm or reject a pending auto-matched transfer |
@@ -166,6 +170,29 @@ At the time of writing, `tools/list` includes:
 | `apply_rule` | Activate a rule and apply it. Requires the `preview_token` from `preview_rule`, `create_rule` or `update_rule` (never `get_rules`; it expires after 30 minutes) and refuses if the rule or its matches have changed; keeps hand-set values unless `override_locked: true` |
 | `import_bank_statement` | Import bank statement data |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
+
+### Tool annotations
+
+Every tool in `tools/list` carries MCP [tool annotations](https://modelcontextprotocol.io/specification/2025-06-18/schema#toolannotations), so a client can ask for confirmation on writes and let reads through:
+
+| Tools | `readOnlyHint` | `destructiveHint` | `idempotentHint` |
+|-------|----------------|-------------------|------------------|
+| Reads (`get_*`, `list_account_statements`, `search_family_files`, `preview_rule`) | `true` | | |
+| Additions (`create_*`, `import_bank_statement`, `upload_account_statement`, `record_bill_payment`) | `false` | `false` | `true` only for `upload_account_statement` |
+| Changes and deletions (`update_*`, `delete_*`, `apply_rule`, `match_transfer`, `review_transfer`, `unmatch_transfer`, `set_opening_balance`, `record_valuation`) | `false` | `true` | `true` except `apply_rule` and `match_transfer` |
+
+`openWorldHint` is `false` on every tool: they only read and change the family's own data. Annotations are hints for the client; Sure still enforces each user's permissions on every call.
+
+### Deletes preview first
+
+`delete_transaction` and `delete_category` take two calls, like `apply_rule`:
+
+1. Call without `preview_token`. Nothing is deleted. The result has `deleted: false`, a `preview` of what would be removed (the transaction, or the category with its transaction count, replacement, subcategories and budget allocations) and a `preview_token`.
+2. Call again with the same arguments and that `preview_token` to delete.
+
+The token is bound to the user, the record and what the preview showed, and expires after 30 minutes. A token for another record, user or tool, or an expired one, returns `preview_required`. If the record changed since the preview (for a category, also a different `replacement_id` or new transactions in it), the call returns `preview_stale` with a fresh preview and token. In every one of these cases nothing is deleted.
+
+Clients written against the earlier one-call contract get a preview instead of a deletion until they pass the token.
 
 ### Preview Tools
 
@@ -254,7 +281,7 @@ curl -X POST https://your-sure-instance/mcp \
   }'
 ```
 
-Response includes tool names, descriptions, and JSON schemas for parameters.
+Response includes tool names, descriptions, JSON schemas for parameters, and each tool's [annotations](#tool-annotations).
 
 ### OAuth discovery
 

@@ -1,4 +1,6 @@
 class Assistant::Function::UpdateTransaction < Assistant::Function
+  annotate :destructive, idempotent: true
+
   class << self
     def name
       "update_transaction"

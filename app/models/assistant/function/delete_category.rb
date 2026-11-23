@@ -1,4 +1,12 @@
+# DeleteCategory — deletes a category, moving its transactions to a
+# replacement or leaving them uncategorized. A call without preview_token
+# deletes nothing and returns what would change plus a token; only a call with
+# that token deletes (see PreviewToken).
 class Assistant::Function::DeleteCategory < Assistant::Function
+  include Assistant::Function::PreviewToken
+
+  annotate :destructive, idempotent: true
+
   class << self
     def name
       "delete_category"
@@ -13,7 +21,12 @@ class Assistant::Function::DeleteCategory < Assistant::Function
         of a deleted top-level category are kept and become top-level categories. Budget
         allocations for the deleted category are removed.
 
-        Confirm with the user before calling this tool.
+        Always two calls. First call it without preview_token: nothing is
+        deleted, and it returns the category, how many transactions it holds,
+        where they would go, and a preview_token. Show that to the user, and
+        only once they confirm call it again with the same id, the same
+        replacement_id and that preview_token. The token expires after
+        #{Assistant::Function::PreviewToken::PREVIEW_TOKEN_TTL.inspect} and is refused if any of that changed since the preview.
       INSTRUCTIONS
     end
   end
@@ -33,6 +46,10 @@ class Assistant::Function::DeleteCategory < Assistant::Function
         replacement_id: {
           type: "string",
           description: "ID of a category to move the deleted category's transactions to (optional). Transactions become uncategorized if omitted."
+        },
+        preview_token: {
+          type: "string",
+          description: "preview_token from the preview call with the same id and replacement_id. Omit it to preview; nothing is deleted without it."
         }
       }
     )
@@ -51,15 +68,28 @@ class Assistant::Function::DeleteCategory < Assistant::Function
       return error("invalid_replacement", "A category cannot replace itself.") if replacement == category
     end
 
-    name = category.name_with_parent
-    category.replace_and_destroy!(replacement)
+    preview_before_delete(params, category, preview(category, replacement)) do
+      name = category.name_with_parent
+      category.replace_and_destroy!(replacement)
 
-    message = "Category '#{name}' deleted."
-    message += " Its transactions were moved to '#{replacement.reload.name_with_parent}'." if replacement
-    { success: true, id: category.id, replacement_id: replacement&.id, message: message }
+      message = "Category '#{name}' deleted."
+      message += " Its transactions were moved to '#{replacement.reload.name_with_parent}'." if replacement
+      { success: true, deleted: true, id: category.id, replacement_id: replacement&.id, message: message }
+    end
   end
 
   private
+    # What deleting the category would change; the token is bound to it.
+    def preview(category, replacement)
+      {
+        category: { id: category.id, name: category.name_with_parent },
+        transaction_count: category.transactions.count,
+        replacement: replacement && { id: replacement.id, name: replacement.name_with_parent },
+        subcategories: category.subcategories.order(:name).pluck(:name),
+        budget_allocations: category.budget_categories.count
+      }
+    end
+
     def find_category(id)
       family.categories.find_by(id: id) if valid_uuid?(id)
     end

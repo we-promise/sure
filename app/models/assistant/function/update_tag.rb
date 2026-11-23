@@ -1,4 +1,6 @@
 class Assistant::Function::UpdateTag < Assistant::Function
+  annotate :destructive, idempotent: true
+
   class << self
     def name
       "update_tag"

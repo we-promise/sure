@@ -1,6 +1,8 @@
 class Assistant::Function::GetBillAudit < Assistant::Function
   include Assistant::Function::BillsSupport
 
+  annotate :read_only
+
   SECTION_LIMIT = 20
   NOTICE_WINDOW_DAYS = 30
 

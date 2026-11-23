@@ -7,6 +7,8 @@
 class Assistant::Function::CreateRule < Assistant::Function
   include Assistant::Function::RuleSupport
 
+  annotate :additive
+
   class << self
     def name
       "create_rule"

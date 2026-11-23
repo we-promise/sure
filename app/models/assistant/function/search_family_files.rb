@@ -1,6 +1,8 @@
 class Assistant::Function::SearchFamilyFiles < Assistant::Function
   include LangfuseTraceable
 
+  annotate :read_only
+
   class << self
     def name
       "search_family_files"

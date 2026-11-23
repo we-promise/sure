@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Assistant::Function::RecordValuation < Assistant::Function
+  annotate :destructive, idempotent: true
+
   class << self
     def name
       "record_valuation"

@@ -1,6 +1,8 @@
 class Assistant::Function::UpdateBudget < Assistant::Function
   include Assistant::Function::MonthResolvable
 
+  annotate :destructive, idempotent: true
+
   class << self
     def name
       "update_budget"

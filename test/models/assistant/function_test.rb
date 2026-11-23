@@ -90,6 +90,46 @@ class Assistant::FunctionTest < ActiveSupport::TestCase
     end
   end
 
+  test "every registered function declares its MCP annotations" do
+    user = users(:family_admin)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+    function_classes = Assistant.function_classes(user)
+    assert_empty Assistant::PREVIEW_FUNCTION_CLASSES - function_classes
+
+    additive = %w[import_bank_statement upload_account_statement record_bill_payment]
+    destructive = %w[record_valuation match_transfer review_transfer unmatch_transfer apply_rule set_opening_balance]
+
+    function_classes.each do |function_class|
+      name = function_class.name
+      annotations = function_class.new(user).annotations
+      assert annotations, "#{name} declares no annotations"
+      assert_equal false, annotations[:openWorldHint], "#{name} only touches the family's own data"
+
+      case name
+      when /\A(get|list|search|preview)_/
+        assert_equal({ readOnlyHint: true, openWorldHint: false }, annotations, name)
+      when /\Acreate_/, *additive
+        assert_equal false, annotations[:readOnlyHint], name
+        assert_equal false, annotations[:destructiveHint], name
+      when /\A(update|delete)_/, *destructive
+        assert_equal false, annotations[:readOnlyHint], name
+        assert_equal true, annotations[:destructiveHint], name
+      else
+        flunk "#{name} is not classified here; add it to the read-only, additive or destructive group"
+      end
+    end
+  end
+
+  test "deletes are destructive and idempotent, and a function without a declaration has no annotations" do
+    user = users(:family_admin)
+
+    [ Assistant::Function::DeleteTransaction, Assistant::Function::DeleteCategory ].each do |function_class|
+      assert_equal({ readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+        function_class.new(user).annotations)
+    end
+    assert_nil @function.annotations
+  end
+
   test "to_ai_time_series rounds to the currency's own precision" do
     value = Struct.new(:trend).new(Struct.new(:current).new(Money.new(0.00000001, "BTC")))
     series = Struct.new(:start_date, :end_date, :interval, :values)

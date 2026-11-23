@@ -15,8 +15,16 @@
 # consistent with CreateTransaction. A read-only shared account, a cross-family
 # id, or an unknown id all resolve to a safe `not_found` without leaking
 # whether the record exists.
+#
+# Preview first: a call without preview_token deletes nothing and returns what
+# would be removed plus a token; only a call with that token deletes (see
+# PreviewToken).
 
 class Assistant::Function::DeleteTransaction < Assistant::Function
+  include Assistant::Function::PreviewToken
+
+  annotate :destructive, idempotent: true
+
   class << self
     # The tool's stable name; this is the MCP function identifier callers use.
     def name
@@ -29,6 +37,13 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
         Permanently deletes a transaction from the ledger. This is destructive
         and irreversible: the transaction and its ledger entry are removed and
         the account balance is recalculated.
+
+        Always two calls. First call it without preview_token: nothing is
+        deleted, and it returns the transaction it would delete and a
+        preview_token. Show that to the user, and only once they confirm call
+        it again with the same id and that preview_token. The token expires
+        after #{Assistant::Function::PreviewToken::PREVIEW_TOKEN_TTL.inspect} and is refused if the transaction
+        changed since the preview.
 
         Use get_transactions first to find the transaction id (the same id
         create_transaction returns). Optionally pass account_id as a guard so a
@@ -59,17 +74,22 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
         account_id: {
           type: "string",
           description: "Optional guard. If provided, the transaction must also belong to this writable account; a mismatch returns not_found."
+        },
+        preview_token: {
+          type: "string",
+          description: "preview_token from the preview call for this transaction. Omit it to preview; nothing is deleted without it."
         }
       }
     )
   end
 
-  # Tool entry point. Resolves a writable transaction, snapshots it, destroys
+  # Tool entry point. Resolves a writable transaction and, without a valid
+  # preview_token, returns the preview instead of deleting. With one, destroys
   # its root ledger entry (cascading to the transaction), enqueues the
-  # post-delete account sync (best-effort), and returns a result hash. Returns
-  # { success: true, deleted: true, transaction: } on success (with an optional
-  # :warning if the sync could not be enqueued), or an error hash for
-  # not_found / split_child / delete_aborted.
+  # post-delete account sync (best-effort), and returns
+  # { success: true, deleted: true, transaction: } (with an optional :warning
+  # if the sync could not be enqueued). Errors: not_found, split_child,
+  # preview_required, preview_stale, delete_aborted.
   def call(params = {})
     transaction = find_transaction(params["id"], params["account_id"])
     return error("not_found", "No transaction with id '#{params["id"]}' in an account you can write to.") unless transaction
@@ -77,46 +97,51 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     entry = transaction.entry
     return error("split_child", "Split child transactions cannot be deleted individually. Delete the split parent instead.") if entry.split_child?
 
-    # Snapshot before destruction so the response never reads destroyed
+    # The snapshot is both the preview and the deleted record in the response,
+    # taken before destruction so the response never reads destroyed
     # associations or triggers lazy loads on a deleted record.
     snapshot = serialize(transaction, entry)
 
-    # 1) Destroy. Entry is the delegated_type root record; destroy! cascades
-    #    to the Transaction child (delegated_type ... dependent: :destroy) and
-    #    wraps itself in a transaction (atomic: fully destroyed or it raises).
-    #    This is the exact record the native destroy action destroys.
-    begin
-      entry.destroy!
-    rescue ActiveRecord::RecordNotDestroyed
-      # A before_destroy guard aborted the destroy (e.g. a split child that
-      # slipped past the pre-check, or another constraint). `throw :abort` in
-      # a before_destroy makes destroy! raise RecordNotDestroyed — the record
-      # was NOT deleted.
-      return error("delete_aborted", "Deletion was aborted by a record constraint; the transaction was not deleted.")
-    end
-
-    # 2) Recalculate the account balance/sync window. This is best-effort: the
-    #    transaction is ALREADY deleted at this point, so a failure here must
-    #    NOT be reported as a failed deletion. sync_account_later is
-    #    destroyed?-safe (reads the still-loaded in-memory account).
-    sync_warning = nil
-    begin
-      entry.sync_account_later
-    rescue StandardError => e
-      sync_warning = "Transaction deleted, but the post-delete account sync could not be enqueued (#{e.class}). The balance will recalculate on the next sync."
-    end
-
-    response = {
-      success: true,
-      deleted: true,
-      transaction: snapshot,
-      message: "Deleted #{snapshot[:name]} (#{snapshot[:amount_formatted]} on #{snapshot[:date]})."
-    }
-    response[:warning] = sync_warning if sync_warning
-    response
+    preview_before_delete(params, transaction, snapshot) { destroy_entry(entry, snapshot) }
   end
 
   private
+    def destroy_entry(entry, snapshot)
+      # 1) Destroy. Entry is the delegated_type root record; destroy! cascades
+      #    to the Transaction child (delegated_type ... dependent: :destroy) and
+      #    wraps itself in a transaction (atomic: fully destroyed or it raises).
+      #    This is the exact record the native destroy action destroys.
+      begin
+        entry.destroy!
+      rescue ActiveRecord::RecordNotDestroyed
+        # A before_destroy guard aborted the destroy (e.g. a split child that
+        # slipped past the pre-check, or another constraint). `throw :abort` in
+        # a before_destroy makes destroy! raise RecordNotDestroyed — the record
+        # was NOT deleted.
+        return error("delete_aborted", "Deletion was aborted by a record constraint; the transaction was not deleted.")
+      end
+
+      # 2) Recalculate the account balance/sync window. This is best-effort: the
+      #    transaction is ALREADY deleted at this point, so a failure here must
+      #    NOT be reported as a failed deletion. sync_account_later is
+      #    destroyed?-safe (reads the still-loaded in-memory account).
+      sync_warning = nil
+      begin
+        entry.sync_account_later
+      rescue StandardError => e
+        sync_warning = "Transaction deleted, but the post-delete account sync could not be enqueued (#{e.class}). The balance will recalculate on the next sync."
+      end
+
+      response = {
+        success: true,
+        deleted: true,
+        transaction: snapshot,
+        message: "Deleted #{snapshot[:name]} (#{snapshot[:amount_formatted]} on #{snapshot[:date]})."
+      }
+      response[:warning] = sync_warning if sync_warning
+      response
+    end
+
     # Resolve a Transaction by id, scoped to accounts the user can WRITE to
     # (owner or full_control share) — the same write gate CreateTransaction
     # uses. `merge(Account.writable_by(user))` is the native set_transaction
@@ -153,6 +178,7 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
         amount: entry.amount.to_s,
         amount_formatted: format_money(entry),
         currency: entry.currency,
+        account: entry.account.name,
         type: entry.classification
       }
     end

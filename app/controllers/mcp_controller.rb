@@ -101,8 +101,9 @@ class McpController < ApplicationController
         {
           name: fn_instance.name,
           description: fn_instance.description,
-          inputSchema: fn_instance.params_schema
-        }
+          inputSchema: fn_instance.params_schema,
+          annotations: fn_instance.annotations
+        }.compact
       end
 
       { tools: tools }
