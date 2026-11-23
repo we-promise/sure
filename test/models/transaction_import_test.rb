@@ -378,6 +378,38 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_not account.entries.exists?(name: "Bakery")
   end
 
+  test "revert removes an imported transaction that was split afterwards" do
+    account = accounts(:depository)
+
+    @import.update!(
+      account: account,
+      raw_file_str: "date,name,amount\n01/01/2024,Supermarket,100\n01/02/2024,Bakery,20\n",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+    @import.reload
+    @import.publish
+    assert @import.reload.complete?
+
+    supermarket = account.entries.find_by!(name: "Supermarket")
+    supermarket.split!([
+      { name: "Groceries", amount: supermarket.amount - 30 },
+      { name: "Household", amount: 30 }
+    ])
+
+    assert_difference -> { Entry.count } => -4 do
+      @import.revert
+    end
+
+    assert @import.reload.pending?, @import.error
+    assert_not account.entries.exists?(name: %w[Supermarket Groceries Household Bakery])
+  end
+
   test "creates new transaction when name differs even if date and amount match" do
     account = accounts(:depository)
 

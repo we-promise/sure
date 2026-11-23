@@ -42,6 +42,34 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal 1, @account.transactions.reload.enrichable(:category_id).count
   end
 
+  test "leaves plain transfer legs uncategorized" do
+    transfer_leg = create_transaction(account: @account, name: "To brokerage").transaction
+    transfer_leg.update!(kind: "funds_movement")
+    @family.categories.create!(name: "Investments")
+    stub_ai(:categorize) { flunk "the model shouldn't be asked" }
+
+    categorize([ transfer_leg.id ])
+
+    assert_nil transfer_leg.reload.category
+  end
+
+  # A sync or confirmation makes the leg a plain transfer after the
+  # categorizer selected it: the AI's category must not land on it.
+  test "leaves a leg that became a plain transfer after it was selected uncategorized" do
+    leg = create_transaction(account: @account, name: "To brokerage").transaction
+    category = @family.categories.create!(name: "Investments")
+    categorizer = Family::AutoCategorizer.new(@family, transaction_ids: [ leg.id ])
+    categorizer.ai_generation
+    Transaction.where(id: leg.id).update_all(kind: "funds_movement")
+
+    assert_equal 0, categorizer.apply_ai(Ai::Result.new(value: { categorizations: [
+      { transaction_id: leg.id, category_name: category.name }
+    ] }))
+    leg.reload
+    assert_nil leg.category
+    assert_not leg.locked?(:category_id)
+  end
+
   test "a category deleted while the AI answers is skipped, and the rest of the batch still applies" do
     gone = @family.categories.create!(name: "Coffee")
     kept = @family.categories.create!(name: "Groceries")

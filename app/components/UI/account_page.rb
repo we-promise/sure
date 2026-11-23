@@ -103,6 +103,12 @@ class UI::AccountPage < ApplicationComponent
     @extra_repayment ||= Loan::ExtraRepayment.new(amount: nil, currency: account.currency)
   end
 
+  # The activity feed's filters. The feed follows a range dragged on the
+  # chart, so the chart needs them to carry through a period pick.
+  def activity_filters
+    activity_feed? ? activity_feed.q : {}
+  end
+
   def tab_content_for(tab)
     case tab
     when :activity
