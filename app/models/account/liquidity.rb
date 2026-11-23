@@ -12,7 +12,7 @@
 # kept in `locked_attributes` so subtype changes and syncs never overwrite it.
 #
 # A locked account becomes available on its release date by calculation only:
-# no job flips the column. Every scope and predicate therefore takes the date
+# no job flips the column. Predicates therefore take the date
 # it is asked about, so historical figures evaluate the release date per day
 # with today's classification.
 #
@@ -24,7 +24,6 @@ module Account::Liquidity
 
   LEVELS = %w[immediate short_term locked long_term].freeze
   AVAILABLE_LEVELS = %w[immediate short_term].freeze
-  BOUND_LEVELS = %w[locked long_term].freeze
 
   # Form value for "follow the subtype again".
   AUTOMATIC = "automatic".freeze
@@ -40,38 +39,6 @@ module Account::Liquidity
     validate :liquidity_choice_must_be_known
 
     before_validation :apply_liquidity
-
-    # Assets that can be reached at short notice on `date`: immediate and
-    # short-term accounts, plus locked accounts whose release date has come.
-    # Liabilities are deliberately separate (see .short_term_liabilities): a
-    # combined scope would count credit cards as available wealth.
-    scope :available_assets_on, ->(date) {
-      assets.where(liquidity: AVAILABLE_LEVELS).or(assets.released_on(date))
-    }
-
-    # Money for this month's budget (a brokerage account counts as
-    # available wealth, but not as budget money).
-    scope :immediate_assets_on, ->(date) {
-      assets.where(liquidity: "immediate").or(assets.released_on(date))
-    }
-
-    # Assets that are not available on `date`.
-    scope :bound_assets_on, ->(date) {
-      assets.where(liquidity: "long_term").or(
-        assets.where(liquidity: "locked")
-              .where("accounts.auto_renew OR accounts.available_on IS NULL OR accounts.available_on > ?", date)
-      )
-    }
-
-    # Debts that eat into available wealth: credit cards and
-    # overdraft lines. Loans and mortgages are long-term and stay out.
-    scope :short_term_liabilities, -> { liabilities.where(liquidity: AVAILABLE_LEVELS) }
-
-    # Locked accounts whose release date is on or before `date`. An account
-    # that renews automatically never releases by itself.
-    scope :released_on, ->(date) {
-      where(liquidity: "locked", auto_renew: false).where(available_on: ..date)
-    }
   end
 
   class_methods do
@@ -108,30 +75,6 @@ module Account::Liquidity
     return true if liquidity.in?(AVAILABLE_LEVELS)
 
     liquidity == "locked" && !auto_renew? && available_on.present? && available_on <= date
-  end
-
-  # The level that applies on `date`: a locked account past its release date
-  # reads as immediate.
-  def effective_liquidity(date = liquidity_today)
-    return "immediate" if liquidity == "locked" && available_now?(date)
-
-    liquidity
-  end
-
-  # The next date the money is released, rolled forward by the renewal term
-  # when the deposit renews automatically.
-  def next_release_date(date = liquidity_today)
-    return nil unless liquidity == "locked" && available_on.present?
-    return available_on unless auto_renew? && renewal_term_months.to_i.positive?
-
-    # Whole terms that fit between the original date and `date` by calendar
-    # month, plus one when that renewal still falls before `date`. Counted
-    # from the original date: stepping from the previous result would let a
-    # month-end date slip (Jan 31 -> Feb 28 -> Mar 28).
-    months = (date.year * 12 + date.month) - (available_on.year * 12 + available_on.month)
-    terms = [ months / renewal_term_months, 0 ].max
-    terms += 1 if (available_on >> (terms * renewal_term_months)) < date
-    available_on >> (terms * renewal_term_months)
   end
 
   def liquidity_today
