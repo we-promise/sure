@@ -1,6 +1,8 @@
 require "test_helper"
 
 class ChatTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @user = users(:family_admin)
     @assistant = mock
@@ -226,6 +228,53 @@ class ChatTest < ActiveSupport::TestCase
     end
 
     assert_equal "failed", pending.reload.status
+  end
+
+  test "handle_undelivered_response! keeps a blank pending bubble whose tools already ran" do
+    BackgroundJobHealth.stubs(:snapshot).returns({})
+    BackgroundJobHealth.stubs(:summary).returns("")
+
+    chat = chats(:two)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+    ToolCall::Function.create!(message: pending, provider_id: "fc_1", provider_call_id: "call_1", function_name: "create_tag",
+                               function_arguments: { name: "Groceries" }, function_result: { success: true })
+
+    assert_no_difference -> { ToolCall.count } do
+      assert chat.handle_undelivered_response!(pending)
+    end
+
+    assert_equal "failed", pending.reload.status
+  end
+
+  test "retry_last_message! hands the tool calls of a failed reply to the new one" do
+    chat = chats(:two)
+    chat.messages.destroy_all
+    prompt = chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "gpt-4.1")
+    failed = chat.messages.where(type: "AssistantMessage").sole
+    failed.update!(status: :failed)
+    tool_call = ToolCall::Function.create!(message: failed, provider_id: "fc_1", provider_call_id: "call_1", function_name: "create_tag",
+                                           function_arguments: { name: "Groceries" }, function_result: { success: true })
+
+    reply = nil
+    assert_enqueued_with(job: AssistantResponseJob) do
+      reply = chat.retry_last_message!
+    end
+
+    assert_not Message.exists?(failed.id)
+    assert reply.pending?
+    assert_equal [ tool_call.id ], reply.tool_calls.pluck(:id)
+    assert_equal [ prompt, reply ], chat.conversation_messages.ordered.to_a
+  end
+
+  test "retry_last_message! leaves a finished reply alone" do
+    chat = chats(:two)
+    chat.messages.destroy_all
+    chat.messages.create!(type: "UserMessage", content: "Hi", ai_model: "gpt-4.1")
+    chat.messages.where(type: "AssistantMessage").sole.update!(content: "Hello", status: :complete)
+
+    assert_no_enqueued_jobs(only: AssistantResponseJob) do
+      assert_nil chat.retry_last_message!
+    end
   end
 
   test "handle_undelivered_response! ignores a pending bubble younger than the server timeout" do

@@ -33,7 +33,7 @@ All chat endpoints require an OAuth2 access token or API key that grants the app
 | `PATCH /api/v1/chats/{id}` | `write` | Update a chat title. |
 | `DELETE /api/v1/chats/{id}` | `write` | Permanently delete a chat. |
 | `POST /api/v1/chats/{chat_id}/messages` | `write` | Append a user message to a chat. |
-| `POST /api/v1/chats/{chat_id}/messages/retry` | `write` | Retry the last assistant response in a chat. |
+| `POST /api/v1/chats/{chat_id}/messages/retry` | `write` | Retry the last reply if it failed or never arrived. Tool calls the failed reply already ran are kept and not run again. |
 
 Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schemas, reusable components (pagination, errors, messages, tool calls), and security definitions.
 

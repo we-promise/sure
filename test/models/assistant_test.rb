@@ -1,7 +1,7 @@
 require "test_helper"
 
 class AssistantTest < ActiveSupport::TestCase
-  include ProviderTestHelper
+  include ActiveJob::TestHelper, ProviderTestHelper
 
   test "default registry includes the analytical read tools and gates preview reads" do
     default_classes = Assistant.function_classes
@@ -293,7 +293,7 @@ class AssistantTest < ActiveSupport::TestCase
     assert_equal 1, response.tool_calls.size
   end
 
-  test "cleans up the pending message when the tool-call limit is exceeded" do
+  test "keeps the tool calls that ran when the tool-call limit is exceeded" do
     @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
     Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("accounts").once
 
@@ -321,7 +321,8 @@ class AssistantTest < ActiveSupport::TestCase
       @assistant.respond_to(@message, assistant_message: pending)
     end
 
-    assert_not AssistantMessage.exists?(pending.id)
+    assert_equal "failed", pending.reload.status
+    assert_equal [ "get_accounts" ], pending.tool_calls.map(&:function_name)
     assert_includes @chat.reload.technical_error_message, "tool-call limit"
   end
 
@@ -689,6 +690,104 @@ class AssistantTest < ActiveSupport::TestCase
     assert_not tool_result_entry.key?(:name), "tool messages must not carry the deprecated `name` field"
   end
 
+  # Retry after a failed turn. ScriptedModel plays a model that calls the
+  # planned tools until it sees their results, so a Retry that starts the turn
+  # over makes it call them again.
+  [ false, true ].each do |responses_endpoint|
+    endpoint = responses_endpoint ? "responses endpoint" : "stateless chat"
+
+    test "retry after a failed follow-up resumes after the tool that ran (#{endpoint})" do
+      model = use_scripted_model(plan: [ [ "create_tag" ] ], failures: { 2 => :error }, responses_endpoint: responses_endpoint)
+      Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true })
+
+      perform_enqueued_jobs
+      failed = last_reply
+      assert_equal "failed", failed.status
+      assert_equal [ "create_tag" ], failed.tool_calls.map(&:function_name)
+      assert @chat.reload.error.present?
+
+      @chat.retry_last_message!
+      perform_enqueued_jobs
+
+      reply = last_reply
+      assert_not AssistantMessage.exists?(failed.id)
+      assert_equal "complete", reply.status
+      assert_equal "Done.", reply.content
+      assert_equal [ "create_tag" ], reply.tool_calls.map(&:function_name)
+      assert_nil @chat.reload.error
+      assert_equal 3, model.requests.size
+    end
+
+    test "retry resumes after every tool round that ran (#{endpoint})" do
+      model = use_scripted_model(plan: [ [ "create_tag" ], [ "get_tags", "get_accounts" ] ], failures: { 3 => :error },
+                                 responses_endpoint: responses_endpoint)
+      Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true })
+      Assistant::Function::GetTags.any_instance.expects(:call).once.returns({ tags: [] })
+      Assistant::Function::GetAccounts.any_instance.expects(:call).once.returns({ accounts: [] })
+
+      perform_enqueued_jobs
+      @chat.retry_last_message!
+      perform_enqueued_jobs
+
+      reply = last_reply
+      assert_equal "Done.", reply.content
+      assert_equal %w[create_tag get_tags get_accounts], reply.tool_calls.order(:created_at).map(&:function_name)
+
+      resumed = model.requests.last
+      if responses_endpoint
+        assert_equal "resp_2", resumed[:previous_response_id]
+        assert_equal %w[call_2_0 call_2_1], resumed[:function_results].map { |result| result[:call_id] }
+      else
+        assert_equal %w[call_1_0 call_2_0 call_2_1], resumed[:function_results].map { |result| result[:call_id] }
+        assert_equal [ 1, 2, 2 ], resumed[:function_results].map { |result| result[:round] }
+      end
+    end
+
+    test "retry after a stream that broke mid-answer keeps the tool and drops the partial text (#{endpoint})" do
+      use_scripted_model(plan: [ [ "create_tag" ] ], failures: { 2 => :partial }, responses_endpoint: responses_endpoint)
+      Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true })
+
+      perform_enqueued_jobs
+      assert_equal "Half an ans", last_reply.content
+      assert_equal "failed", last_reply.status
+
+      @chat.retry_last_message!
+      perform_enqueued_jobs
+
+      assert_equal "Done.", last_reply.content
+      assert_equal 1, last_reply.tool_calls.count
+    end
+  end
+
+  test "retry starts the turn over when it failed before any tool ran" do
+    model = use_scripted_model(plan: [ [ "create_tag" ] ], failures: { 1 => :error })
+    Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true })
+
+    perform_enqueued_jobs
+    assert_nil pending_assistant_message
+    assert_equal 0, @chat.messages.where(type: "AssistantMessage").where("created_at > ?", @message.created_at).count
+
+    @chat.retry_last_message!
+    perform_enqueued_jobs
+
+    assert_equal "Done.", last_reply.content
+    assert_empty model.requests.second[:function_results]
+  end
+
+  test "retry after a stream that broke without tools asks again" do
+    use_scripted_model(plan: [], failures: { 1 => :partial })
+
+    perform_enqueued_jobs
+    failed = last_reply
+    assert_equal "failed", failed.status
+
+    @chat.retry_last_message!
+    perform_enqueued_jobs
+
+    assert_not AssistantMessage.exists?(failed.id)
+    assert_equal "Done.", last_reply.content
+  end
+
   private
 
     def mock_external_sse_response(sse_body)
@@ -768,5 +867,91 @@ class AssistantTest < ActiveSupport::TestCase
         chunks.each { |chunk| options[:streamer].call(chunk) }
         true
       end.returns(*responses)
+    end
+
+    def last_reply
+      @chat.messages.where(type: "AssistantMessage").where("created_at > ?", @message.created_at).order(:created_at).last
+    end
+
+    def use_scripted_model(**options)
+      ScriptedModel.new(**options).tap do |model|
+        Assistant::Builtin.any_instance.stubs(:get_model_provider).returns(model)
+      end
+    end
+
+    # A model that calls the next planned tool round until the request carries
+    # the results of every earlier round, then answers "Done.". With
+    # responses_endpoint it keeps the turn server-side like the Responses API:
+    # a follow-up must name the response that asked for the tools and send
+    # exactly those tools' outputs. `failures` maps a request number to :error
+    # (no output) or :partial (some text, then the error).
+    class ScriptedModel
+      include ProviderTestHelper
+
+      attr_reader :requests
+
+      def initialize(plan:, failures: {}, responses_endpoint: false)
+        @plan = plan
+        @failures = failures
+        @responses_endpoint = responses_endpoint
+        @requests = []
+        @responses = {}
+      end
+
+      def supports_responses_endpoint?
+        @responses_endpoint
+      end
+
+      def chat_response(_prompt, function_results:, previous_response_id:, streamer:, **)
+        @requests << { function_results: function_results, previous_response_id: previous_response_id }
+        number = @requests.size
+
+        rounds_done = rounds_seen(function_results, previous_response_id)
+        return provider_error_response(StandardError.new("No tool output found for function call")) if rounds_done.nil?
+
+        case @failures[number]
+        when :error
+          return provider_error_response(StandardError.new("503 Service Unavailable"))
+        when :partial
+          streamer.call(text_chunk("Half an ans"))
+          return provider_error_response(StandardError.new("stream closed"))
+        end
+
+        id = "resp_#{number}"
+        if rounds_done < @plan.size
+          requests = @plan[rounds_done].each_with_index.map do |name, index|
+            Provider::LlmConcept::ChatFunctionRequest.new(id: "fc_#{number}_#{index}", call_id: "call_#{number}_#{index}",
+                                                          function_name: name, function_args: "{}")
+          end
+          @responses[id] = { rounds: rounds_done + 1, call_ids: requests.map(&:call_id) }
+          respond(id, messages: [], function_requests: requests)
+        else
+          streamer.call(text_chunk("Done."))
+          respond(id, messages: [ Provider::LlmConcept::ChatMessage.new(id: id, output_text: "Done.") ], function_requests: [])
+        end
+      end
+
+      private
+        # Tool rounds the request shows as done, or nil for a request the real
+        # API would reject.
+        def rounds_seen(function_results, previous_response_id)
+          return function_results.map { |result| result[:round] }.uniq.size unless @responses_endpoint
+
+          asked = @responses[previous_response_id]
+          return 0 if asked.nil? && function_results.empty?
+          return nil if asked.nil? || function_results.map { |result| result[:call_id] } != asked[:call_ids]
+
+          asked[:rounds]
+        end
+
+        def text_chunk(text)
+          Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: text, usage: nil)
+        end
+
+        def respond(id, messages:, function_requests:)
+          provider_success_response(
+            Provider::LlmConcept::ChatResponse.new(id: id, model: "gpt-4.1", messages: messages, function_requests: function_requests)
+          )
+        end
     end
 end

@@ -54,16 +54,11 @@ class Assistant::Builtin < Assistant::Base
       end
     end
 
-    responder.respond(previous_response_id: latest_response_id)
+    # A retried turn carries the tool calls its failed attempt already ran.
+    executed_tool_calls = assistant_message.persisted? ? assistant_message.tool_calls.order(:created_at, :id).to_a : []
+    responder.respond(previous_response_id: latest_response_id, executed_tool_calls: executed_tool_calls)
   rescue => e
-    if assistant_message&.persisted?
-      if assistant_message.content.blank?
-        assistant_message.destroy
-      else
-        # Demote partially-streamed turns to `failed` so the responder's history builders (`#openai_messages_payload`, `#chat_message_records`) exclude them.
-        assistant_message.update_columns(status: "failed")
-      end
-    end
+    assistant_message.abandon! if assistant_message&.persisted?
     chat.add_error(e)
   end
 

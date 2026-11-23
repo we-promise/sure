@@ -21,6 +21,18 @@ class AssistantMessage < Message
     save!
   end
 
+  # Ends a reply that stopped before finishing. One with nothing in it goes
+  # away. One that streamed text or ran tools stays as `failed`, which keeps
+  # it out of the history builders; Chat#retry_last_message! hands its tool
+  # calls to the next attempt so they do not run again.
+  def abandon!
+    if content.blank? && tool_calls.none?
+      destroy!
+    else
+      update!(status: "failed")
+    end
+  end
+
   private
 
     # Flips pending -> complete with a conditional UPDATE, so the check and the

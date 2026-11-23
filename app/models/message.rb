@@ -8,7 +8,8 @@ class Message < ApplicationRecord
     failed: "failed"
   }
 
-  validates :content, presence: true, unless: :pending?
+  # A failed reply may be empty when it only carries tool calls that ran.
+  validates :content, presence: true, if: :complete?
 
   after_create_commit -> { broadcast_append_to chat, target: chat.messages_target }, if: :broadcast?
   after_update_commit -> { broadcast_update_to chat }, if: :broadcast?

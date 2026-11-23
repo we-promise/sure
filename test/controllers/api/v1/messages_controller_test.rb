@@ -58,36 +58,39 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "should retry last assistant message" do
-    skip "Retry functionality needs debugging"
-
-    # Create an assistant message to retry
-    assistant_message = @chat.messages.create!(
-      type: "AssistantMessage",
-      content: "Previous response",
-      ai_model: "gpt-4"
-    )
+  test "retries a failed reply without running its tools again" do
+    failed = @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :failed)
+    tool_call = ToolCall::Function.create!(message: failed, provider_id: "fc_1", provider_call_id: "call_1", function_name: "create_tag",
+                                           function_arguments: { name: "Groceries" }, function_result: { success: true })
 
     assert_enqueued_with(job: AssistantResponseJob) do
-      post "/api/v1/chats/#{@chat.id}/messages/retry",
-        headers: bearer_auth_header(@write_token)
+      post "/api/v1/chats/#{@chat.id}/messages/retry", headers: bearer_auth_header(@write_token)
     end
 
     assert_response :accepted
-    response_body = JSON.parse(response.body)
-    assert response_body["message_id"].present?
+    reply = AssistantMessage.find(JSON.parse(response.body)["message_id"])
+    assert reply.pending?
+    assert_equal [ tool_call.id ], reply.tool_calls.pluck(:id)
+    assert_not Message.exists?(failed.id)
   end
 
-  test "should not retry if no assistant message exists" do
-    # Remove all assistant messages
+  test "retries when the last reply never arrived" do
     @chat.messages.where(type: "AssistantMessage").destroy_all
 
-    post "/api/v1/chats/#{@chat.id}/messages/retry.json",
-      headers: bearer_auth_header(@write_token)
+    assert_enqueued_with(job: AssistantResponseJob) do
+      post "/api/v1/chats/#{@chat.id}/messages/retry", headers: bearer_auth_header(@write_token)
+    end
+
+    assert_response :accepted
+  end
+
+  test "does not retry a reply that finished" do
+    assert_no_enqueued_jobs(only: AssistantResponseJob) do
+      post "/api/v1/chats/#{@chat.id}/messages/retry.json", headers: bearer_auth_header(@write_token)
+    end
 
     assert_response :unprocessable_entity
-    response_body = JSON.parse(response.body)
-    assert_equal "No assistant message to retry", response_body["error"]
+    assert_equal "No assistant message to retry", JSON.parse(response.body)["error"]
   end
 
   test "should not access messages in other user's chat" do

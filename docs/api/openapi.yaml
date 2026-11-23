@@ -6635,7 +6635,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: no assistant message available
+          description: nothing to retry
           content:
             application/json:
               schema:

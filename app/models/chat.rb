@@ -76,14 +76,19 @@ class Chat < ApplicationRecord
     conversation_messages.ordered.last.role != "assistant"
   end
 
+  # Asks again for the reply that failed. A failed reply is replaced, and the
+  # tool calls it already ran move to the new one, which resumes after them
+  # instead of running them again. Returns the new pending reply, or nil when
+  # there is nothing to retry.
   def retry_last_message!
     update!(error: nil)
 
     last_message = conversation_messages.ordered.last
 
-    if last_message.present? && last_message.role == "user"
-
+    if last_message&.role == "user"
       ask_assistant_later(last_message)
+    elsif last_message.is_a?(AssistantMessage) && last_message.failed?
+      retry_failed_reply(last_message)
     end
   end
 
@@ -125,8 +130,10 @@ class Chat < ApplicationRecord
   def ask_assistant_later(message)
     clear_error
     pending = messages.create!(type: "AssistantMessage", content: "", ai_model: message.ai_model, status: :pending)
+    yield pending if block_given?
     broadcast_pending_status(pending, busy: true) if BackgroundJobHealth.ai_busy?
     AssistantResponseJob.perform_later(message, pending)
+    pending
   end
 
   def ask_assistant(message, assistant_message: nil)
@@ -215,12 +222,7 @@ class Chat < ApplicationRecord
       next false unless assistant_message.pending?
       next false if assistant_message.created_at > self.class.undelivered_response_timeout.ago
 
-      if assistant_message.content.blank?
-        assistant_message.destroy!
-      else
-        # Demote partially-streamed turns to `failed` so history builders exclude them.
-        assistant_message.update_columns(status: "failed")
-      end
+      assistant_message.abandon!
       true
     end
 
@@ -233,6 +235,17 @@ class Chat < ApplicationRecord
   end
 
   private
+
+    def retry_failed_reply(failed_reply)
+      prompt = messages.where(type: "UserMessage").ordered.last
+      return unless prompt
+
+      ask_assistant_later(prompt) do |pending|
+        failed_reply.tool_calls.update_all(message_id: pending.id)
+        failed_reply.tool_calls.reset
+        failed_reply.destroy!
+      end
+    end
 
     def undelivered_error_payload(assistant_message)
       {
