@@ -103,14 +103,14 @@ class ProcessPdfJobTest < ActiveJob::TestCase
 
   test "skips the vector store when embed is unavailable" do
     use_ai_routes(embed: [])
-    attach_pdf!(@import)
-    @import.expects(:process_with_ai).once.returns(Struct.new(:document_type).new("financial_document"))
-    @import.stubs(:send_next_steps_email)
-    @family.expects(:upload_document).never
+    import = statement_backed_import
+    import.expects(:process_with_ai).once.returns(Struct.new(:document_type).new("financial_document"))
+    import.stubs(:send_next_steps_email)
+    import.family.expects(:upload_document).never
 
-    ProcessPdfJob.perform_now(@import)
+    ProcessPdfJob.perform_now(import)
 
-    assert_equal "complete", @import.reload.status
+    assert_equal "complete", import.reload.status
   end
 
   test "uploads bank statement PDF to vector store with classified type metadata" do
