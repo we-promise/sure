@@ -11,9 +11,18 @@
             <%= render "properties/form_alert", notice: @success_message, error: @error_message %>
 
             <%= form.money_field :balance,
-                label: t(".market_value_label"),
-                label_tooltip: t(".market_value_tooltip"),
+                label: @account.draft? ? t("vehicles.form.purchase_price") : t(".market_value_label"),
+                label_tooltip: (t(".market_value_tooltip") unless @account.draft?),
+                value: (purchase_value.price if @account.draft? && !@submitted_balance),
                 placeholder: "0" %>
+
+            <% if @account.draft? %>
+              <%= form.date_field :purchase_date,
+                  label: t(".purchase_date_label"),
+                  value: purchase_value.field_date,
+                  min: Entry.min_supported_date + 1,
+                  max: Date.current %>
+            <% end %>
           </div>
 
           <!-- Next button -->
