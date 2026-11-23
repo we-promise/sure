@@ -170,6 +170,21 @@ class Family::BayesCategorizerTest < ActiveSupport::TestCase
     assert_not leg.locked?(:category_id)
   end
 
+  test "a leg that was suggested as a transfer after it was selected stays uncategorized" do
+    train_two_categories
+    categorizer = Family::BayesCategorizer.new(@family)
+    leg = create_transaction(account: @account, name: "Starbucks Coffee", amount: 42).transaction
+    other_account = @family.accounts.create!(name: "Savings", balance: 100, currency: "USD", accountable: Depository.new)
+    counterpart = create_transaction(account: other_account, name: "Starbucks Coffee", amount: -42).transaction
+    categorizer.stubs(:classify).with { |transaction| Transfer.create!(outflow_transaction_id: leg.id, inflow_transaction_id: counterpart.id, amount: 42) }.returns([ @coffee.id, 0.99 ])
+
+    result = categorizer.classify_and_apply([ leg.id ])
+
+    assert_equal [ [], 0 ], [ result.categorized_ids, result.modified_count ]
+    assert_nil leg.reload.category
+    assert_not leg.locked?(:category_id)
+  end
+
   test "novel merchant below threshold is left alone" do
     train_two_categories
     categorizer = Family::BayesCategorizer.new(@family)

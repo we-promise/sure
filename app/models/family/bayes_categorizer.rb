@@ -103,9 +103,10 @@ class Family::BayesCategorizer
       metadata[:locked_by_bayes] = true if settings.lock_results
       # Rechecked under the row's lock (which reloads it), as the AI's results
       # are: a sync or a transfer confirmation may have made it a plain
-      # transfer, or someone categorized it, since it was selected.
+      # transfer, Auto Match may have suggested one, or someone categorized
+      # it, since it was selected.
       applied = transaction.with_lock do
-        next false if transaction.category_id.present? || Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(transaction.kind)
+        next false if transaction.category_id.present? || Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(transaction.kind) || transaction.pending_transfer_leg?
 
         was_modified = transaction.enrich_attribute(:category_id, category_id, source: "bayes", metadata: metadata)
         transaction.lock_attr!(:category_id) if settings.lock_results

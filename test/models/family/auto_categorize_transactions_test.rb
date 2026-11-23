@@ -20,6 +20,19 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
     10.times { create_transaction(account: @account, name: "Safeway Groceries", category: @groceries) }
   end
 
+  # Two uncategorized legs that Auto Match suggests as one transfer. Returns
+  # [outflow, inflow] transactions.
+  def suggest_transfer(name)
+    # Auto Match only pairs accounts that someone in the family can write to.
+    @family.users.create!(email: "member@example.com", password: "password123!A", first_name: "Test", last_name: "Member", role: "member") unless @family.users.exists?
+    to_account = @family.accounts.create!(name: "Savings", balance: 100, currency: "USD", accountable: Depository.new)
+    outflow = create_transaction(account: @account, name: name, amount: 42).transaction
+    inflow = create_transaction(account: to_account, name: name, amount: -42).transaction
+    @family.auto_match_transfers!
+    assert_predicate outflow.reload.transfer, :pending?
+    [ outflow, inflow ]
+  end
+
   test "the rule's auto-categorize is the LLM only, even when Bayes would know" do
     train_two_categories
     Provider::Registry.stubs(:preferred_llm_provider).returns(@llm_provider)
@@ -67,6 +80,55 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
 
     assert_equal 0, @family.bayes_categorize_uncategorized
     assert_nil transfer.reload.category
+  end
+
+  # Auto Match runs before the rules after every sync, so its suggestions
+  # exist by the time the classifier does. Until the user confirms one, both
+  # legs keep the kind "standard", but they are one movement between the
+  # user's own accounts, not spending and income to put a guess on.
+  test "Bayes leaves both legs of a suggested transfer uncategorized" do
+    train_two_categories
+    outflow, inflow = suggest_transfer("Starbucks Coffee")
+    ordinary = create_transaction(account: @account, name: "Starbucks Coffee").transaction
+
+    assert_equal 1, @family.bayes_categorize_uncategorized
+    assert_nil outflow.reload.category
+    assert_nil inflow.reload.category
+    assert_equal @coffee, ordinary.reload.category
+  end
+
+  test "Bayes leaves a suggested transfer's legs alone in a rule's scope too" do
+    train_two_categories
+    outflow, inflow = suggest_transfer("Starbucks Coffee")
+
+    assert_equal 0, @family.bayes_categorize_uncategorized(@family.transactions)
+    assert_nil outflow.reload.category
+    assert_nil inflow.reload.category
+  end
+
+  test "Bayes categorizes the legs again once the suggestion is rejected" do
+    train_two_categories
+    outflow, inflow = suggest_transfer("Starbucks Coffee")
+    assert_equal 0, @family.bayes_categorize_uncategorized
+
+    outflow.transfer.reject!
+
+    assert_equal 2, @family.bayes_categorize_uncategorized
+    assert_equal @coffee, outflow.reload.category
+    assert_equal @coffee, inflow.reload.category
+  end
+
+  test "Bayes categorizes a confirmed loan payment but not the transfer's other leg" do
+    train_two_categories
+    loan = @family.accounts.create!(name: "Car loan", balance: 1000, currency: "USD", accountable: Loan.new)
+    outflow = create_transaction(account: @account, name: "Starbucks Coffee", amount: 42).transaction
+    inflow = create_transaction(account: loan, name: "Starbucks Coffee", amount: -42).transaction
+    Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow, amount: 42).confirm!
+
+    assert_equal 1, @family.bayes_categorize_uncategorized
+    assert_equal "loan_payment", outflow.reload.kind
+    assert_equal @coffee, outflow.category
+    assert_nil inflow.reload.category
   end
 
   # Excluding a transaction takes it out of every report on purpose (a house
