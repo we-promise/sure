@@ -128,8 +128,10 @@ class Account::ProviderImportAdapter
         # not to a receipt or manual entry of the same amount.
         linked_pending = pending_transaction_id.present? && account.entries.exists?(external_id: pending_transaction_id, source: source)
         scheduled = find_scheduled_transaction(date: date, amount: amount, currency: currency)
-        receipt = unclaimed(find_receipt_transaction(date: date, amount: amount, currency: currency), amount:, currency:) unless scheduled || linked_pending
-        duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency) unless scheduled || receipt || linked_pending
+        receipt = unclaimed(find_receipt_transaction(date: date, amount: amount, currency: currency), date:, amount:, currency:) unless scheduled || linked_pending
+        # A receipt the claim above passed over (excluded, paid in cash, still being read) stays
+        # unclaimed rather than taken as a same-day duplicate.
+        duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency, exclude_receipts: true) unless scheduled || receipt || linked_pending
 
         if scheduled
           # A bill or paycheck the user entered ahead of time has now been
@@ -140,10 +142,14 @@ class Account::ProviderImportAdapter
           # be recognized when the booked version arrives under a new id.
           entry = scheduled
           entry.assign_attributes(external_id: external_id, source: source, date: date)
+        elsif receipt&.import_locked?
+          # An import owns this entry: link the provider's id and change nothing else.
+          receipt.update!(external_id: external_id, source: source)
+          record_skip(receipt, "import_locked")
+          return receipt
         elsif receipt
           # A receipt is claimed the same way, but it already carries the day of
-          # the purchase: its locked date is kept by the financial-attribute
-          # guard below.
+          # the purchase, which the financial-attribute guard below keeps.
           entry = receipt
           entry.assign_attributes(external_id: external_id, source: source)
         elsif duplicate
@@ -239,7 +245,8 @@ class Account::ProviderImportAdapter
       # Amount and currency only make sense together, so a lock on either keeps both.
       financial_attributes = { amount: amount, currency: currency, date: effective_date }
       if entry.persisted?
-        financial_attributes.delete(:date) if entry.locked?(:date)
+        # A receipt's date is the day of the purchase; the bank books it days later.
+        financial_attributes.delete(:date) if entry.locked?(:date) || entry.transaction&.from_receipt?
         financial_attributes.except!(:amount, :currency) if entry.locked?(:amount) || entry.locked?(:currency)
       end
       entry.assign_attributes(financial_attributes)
@@ -841,7 +848,9 @@ class Account::ProviderImportAdapter
   #   provider sync: a provider must not claim another provider's entry. A
   #   statement import passes true, because the whole question it is asking is
   #   whether this transaction already arrived via sync.
-  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil, date_window: 0, include_provider_entries: false)
+  # @param exclude_receipts [Boolean] leaves out entries made from receipts, which
+  #   provider sync claims only through find_receipt_transaction's rules.
+  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil, date_window: 0, include_provider_entries: false, exclude_receipts: false)
     # Convert date to Date object if it's a string
     date = Date.parse(date.to_s) unless date.is_a?(Date)
 
@@ -865,7 +874,7 @@ class Account::ProviderImportAdapter
 
     # A zero-amount receipt is a placeholder whose receipt was never read, not a payment, and a
     # receipt paid in cash is another expense than a bank charge of the same amount.
-    query = query.where.not(entryable_id: Transaction.where("transactions.extra ? 'receipt'").select(:id)) if amount.to_d.zero?
+    query = query.where.not(entryable_id: Transaction.where("transactions.extra ? 'receipt'").select(:id)) if exclude_receipts || amount.to_d.zero?
     query = query.where.not(entryable_id: Transaction.where("transactions.extra -> 'receipt' ->> 'payment_method' = 'cash'").select(:id))
 
     query = if date_window.to_i.zero?
@@ -1197,11 +1206,13 @@ class Account::ProviderImportAdapter
   private
     # Locks a candidate for the rest of the import's transaction and drops it if another import
     # claimed it, or it no longer matches, since it was found.
-    def unclaimed(entry, amount:, currency:)
+    def unclaimed(entry, date:, amount:, currency:)
       return unless entry
 
+      date = Date.parse(date.to_s) unless date.is_a?(Date)
       entry.lock!
       return unless entry.external_id.nil? && entry.amount == amount.to_d && entry.currency == currency
+      return unless (entry.date - date).abs <= ReceiptScan::MATCH_DATE_WINDOW
       return if entry.excluded? && !entry.split_parent?
 
       entry

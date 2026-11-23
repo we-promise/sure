@@ -1967,6 +1967,73 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_not_equal receipt.id, entry.id
   end
 
+  test "a same-day booking does not take an excluded receipt as a duplicate" do
+    receipt = create_receipt_entry(date: Date.current, amount: 61.37)
+    receipt.update!(excluded: true)
+
+    entry = @adapter.import_transaction(
+      external_id: "simplefin_receipt_excluded_same_day", amount: 61.37, currency: "USD",
+      date: Date.current, name: "CARD CORNER GROCER", source: "simplefin"
+    )
+
+    assert_not_equal receipt.id, entry.id
+    assert_nil receipt.reload.external_id
+  end
+
+  test "a receipt moved out of the date window after it was picked is not claimed" do
+    receipt = create_receipt_entry(date: Date.current - 1.day, amount: 61.37)
+    stale = Entry.find(receipt.id)
+    receipt.update_columns(date: Date.current - 30.days)
+    @adapter.stubs(:find_receipt_transaction).returns(stale)
+
+    entry = @adapter.import_transaction(
+      external_id: "simplefin_receipt_moved", amount: 61.37, currency: "USD",
+      date: Date.current, name: "CARD CORNER GROCER", source: "simplefin"
+    )
+
+    assert_not_equal receipt.id, entry.id
+    assert_nil receipt.reload.external_id
+  end
+
+  test "a claimed receipt keeps its date when nothing locked it, on later syncs too" do
+    receipt = @account.entries.create!(
+      date: Date.current - 2.days, amount: 61.37, currency: "USD", name: "Corner Grocer",
+      entryable: Transaction.new(extra: { "receipt" => { "status" => "completed" } })
+    )
+    assert_not receipt.locked?(:date)
+
+    2.times do
+      entry = @adapter.import_transaction(
+        external_id: "simplefin_receipt_unlocked", amount: 61.37, currency: "USD",
+        date: Date.current, name: "CARD CORNER GROCER", source: "simplefin"
+      )
+
+      assert_equal receipt.id, entry.id
+      assert_equal Date.current - 2.days, entry.reload.date
+    end
+  end
+
+  test "a booking claiming an import-locked receipt only links it" do
+    receipt = @account.entries.create!(
+      date: Date.current - 1.day, amount: 61.37, currency: "USD", name: "Corner Grocer", import_locked: true,
+      entryable: Transaction.new(extra: { "receipt" => { "status" => "completed" } })
+    )
+
+    entry = @adapter.import_transaction(
+      external_id: "simplefin_receipt_import_locked", amount: 61.37, currency: "USD",
+      date: Date.current, name: "CARD CORNER GROCER", source: "simplefin", notes: "card 1234",
+      extra: { "simplefin" => { "memo" => "card" } }
+    )
+
+    assert_equal receipt.id, entry.id
+    receipt.reload
+    assert_equal "simplefin_receipt_import_locked", receipt.external_id
+    assert_equal "Corner Grocer", receipt.name
+    assert_equal Date.current - 1.day, receipt.date
+    assert_nil receipt.notes
+    assert_equal({ "receipt" => { "status" => "completed" } }, receipt.transaction.extra)
+  end
+
   test "a statement import row finds a receipt entry within its window" do
     receipt = create_receipt_entry(date: Date.current - 3.days, amount: 61.37)
 
