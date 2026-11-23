@@ -8,6 +8,7 @@ class DataEnrichment < ApplicationRecord
     bayes: "bayes",
     brex: "brex",
     coinstats: "coinstats",
+    email_alert: "email_alert",
     enable_banking: "enable_banking",
     fio: "fio",
     ibkr: "ibkr",

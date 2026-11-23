@@ -1,0 +1,39 @@
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=gtbank.com;
+ i=@gtbank.com; q=dns/txt; s=sure-test; t=1795391445; h=from : to :
+ subject : date : message-id : content-type;
+ bh=966H+foUXQ2mqLdqP0edvsryRy0ru0rzI36iYXaB4UM=;
+ b=Ul9Voawu3LpPrBkO0IeGHg3PAE9wsY19T//xTCicIGWwXxz7escVJgU5b/2jJKBKI2Cq+
+ GOiOwi5a2kxx28eU++9g+BXUSzgKeROy5UYhp5r4STLR+fhjelt4gvuKL3Zs0mE5d+DFWhm
+ QsGDMkQ9i/xwIrPpGBr8Z0fYGaWsKpGVlITxBWB9FHKlPv8Ze19KT8CRFrn5DhUJWUuKUSK
+ aRMsMSP8MqDbkfb39qL15d6G9vpXeJHJj7XUL+EiywOJQfWfoDNmFvBfV691h/Qagt9KjQC
+ exT1j4axffx6D9v7BTaaRpnfiULlza26E47MUHxVTbVmr3r7TBy5RpvwXYfg==
+From: GeNS@gtbank.com
+To: ada.okafor@example.com
+Subject: Transaction Notification
+Date: Tue, 17 Nov 2026 09:05:11 +0000
+Message-ID: <179539144593.502354.11487552608523513745@gtbank.com>
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><div>10:05:11 AM</div><p>Dear<br>ADA NKECHI OKAFOR</p>
+<p>Guaranty Trust Bank electronic Notification Service<br>(GeNS)</p>
+<p>We wish to inform you that a <b>DEBIT</b> transaction occurred on your acc=
+ount with us.</p>
+<p>The details of this transaction are shown below:</p>
+<table><tr><td><strong>Transaction Notification</strong></td></tr><tr><td wid=
+th=3D"130">Account Number</td><td> : </td><td colspan=3D"8">******4821</td></=
+tr><tr><td width=3D"130">Transaction Location</td><td> : </td><td colspan=3D"=
+8">205</td></tr><tr><td width=3D"130">Description</td><td> : </td><td colspan=
+=3D"8">Commission on NIP Transfer</td></tr><tr><td width=3D"130">Amount</td><=
+td> : </td><td colspan=3D"8">NGN&nbsp;25</td></tr><tr><td width=3D"130">Value=
+ Date</td><td> : </td><td colspan=3D"8">2026-11-17</td></tr><tr><td width=3D"=
+130">Remarks</td><td> : </td><td colspan=3D"8">CHARGES</td></tr><tr><td width=
+=3D"130">Time of Transaction</td><td> : </td><td colspan=3D"8">10:05:11 AM</t=
+d></tr><tr><td width=3D"130">Document Number</td><td> : </td><td colspan=3D"8=
+"></td></tr></table>
+<p>The balances on this account as at 10:05:11 AM are as follows;</p>
+<table><tr><td width=3D"130">Current Balance</td><td> : </td><td colspan=3D"8=
+">NGN&nbsp;41210.50</td></tr><tr><td width=3D"130">Available Balance</td><td>=
+ : </td><td colspan=3D"8">NGN&nbsp;41000.50</td></tr></table>
+<p>Thank you for choosing Guaranty Trust Bank Limited</p></body></html>

@@ -1,0 +1,30 @@
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=opay-nigeria.com;
+ i=@opay-nigeria.com; q=dns/txt; s=sure-test; t=1795391445; h=from : to
+ : subject : date : message-id : content-type;
+ bh=thIVsSklVlcDayomjY1pJmrBwUMVwIC9gRa5jr/Zm9Q=;
+ b=rKup1ORrdoqTg24KDZ7MbRy1MLwbc7mdFxFBRxm7yM1LLgJ6J4cZYG62LR+5jmLAwBgQJ
+ 7HcsBu7prQ7ljmXs7OokYZUu2l1+H7DJ3cYhTFXH9H+IpEahXfnRgWKrc/Ne4jdZ9QlkjPi
+ Y7jlgDIxhRNc+p0DcQkuAAUWzp/ZQKwi/AsrJ3AlRMtiF6B5fg5maBFtL2/AuzKfAT1Xvw9
+ 6t5XaROaB6RlU4/YY8lieynZjOo2rfReDf3o05EJIXLAi9g6/e0ZK3uzizbkfX0f8ARJo9Y
+ xCcjt3AIRKAGWjbHOqvSagV40boDZx3vEJOVxa+CxkVD6XF+/l53HSWamYhQ==
+From: "OPay" <no-reply@opay-nigeria.com>
+To: ada.okafor@example.com
+Subject: Payment Successful
+Date: Tue, 01 Dec 2026 09:05:44 +0530
+Message-ID: <179539144596.502354.8060961194380358930@opay-nigeria.com>
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><table><tr><td><p>Dear</p><p>ADA NKECHI OKAFOR</p><p>,</p>
+<p>Your payment of</p><p><span>=E2=82=A612,500.00</span></p><p>is successful.=
+</p>
+<p>Your available balance is</p><p><span>=E2=82=A644,120.10</span></p><p>.</p>
+<p>Payment Details:</p><p><span>Transaction No.:</span><em style=3D"font-weig=
+ht:700">251222140300000000000002</em></p><p><span>Merchant Name:</span><em st=
+yle=3D"font-weight:700">Paystack Payment Limited</em></p><p><span>Merchant Or=
+der Number:</span><em style=3D"font-weight:700">paystack_000000_abcde</em></p=
+><p><span>Transaction Date:</span><em style=3D"font-weight:700">Dec 1st, 2026=
+ 09:05:43</em></p>
+<p>Phone=EF=BC=9A</p><p>07000000000</p><p>Thank you for choosing OPay.</p></t=
+d></tr></table></body></html>

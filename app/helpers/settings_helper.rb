@@ -137,6 +137,9 @@ module SettingsHelper
     when "sharesight"
       return { status: :off } unless @sharesight_items&.any?
       sync_based_summary(key)
+    when "email_alert"
+      return { status: :off } unless @email_alert_items&.any?
+      sync_based_summary(key)
     else
       { status: :off }
     end

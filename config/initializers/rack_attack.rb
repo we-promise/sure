@@ -5,6 +5,12 @@ class Rack::Attack
   enabled = Rails.env.production? || Rails.env.staging?
   self.enabled = enabled
 
+  # Inbound bank alert emails, relayed by a mail worker. A person's alerts are a
+  # handful per hour, so a burst means a leaked token or a misbehaving relay.
+  throttle("webhooks/email_alerts", limit: 60, period: 1.minute) do |request|
+    request.ip if request.post? && request.path.start_with?("/webhooks/email_alerts/")
+  end
+
   # Throttle requests to the OAuth token endpoint
   throttle("oauth/token", limit: 10, period: 1.minute) do |request|
     request.ip if request.path == "/oauth/token"

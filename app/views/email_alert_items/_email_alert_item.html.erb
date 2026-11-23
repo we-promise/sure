@@ -1,0 +1,131 @@
+<%# locals: (email_alert_item:, visible_accounts:) %>
+
+<%= tag.div id: dom_id(email_alert_item) do %>
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
+      <div class="flex items-center gap-2">
+        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+
+        <%= render ProviderLogo.new(provider_key: :email_alert) %>
+
+        <div class="pl-1 text-sm">
+          <div class="flex items-center gap-2">
+            <%= tag.p email_alert_item.name, class: "font-medium text-primary" %>
+            <% if email_alert_item.scheduled_for_deletion? %>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+            <% end %>
+          </div>
+          <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
+          <% if email_alert_item.syncing? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "loader", size: "sm", class: "animate-spin" %>
+              <%= tag.span t(".syncing") %>
+            </div>
+          <% elsif email_alert_item.requires_update? %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "warning" %>
+              <%= tag.span t(".requires_update") %>
+            </div>
+          <% else %>
+            <p class="text-secondary">
+              <% if email_alert_item.last_synced_at %>
+                <% if email_alert_item.sync_status_summary %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(email_alert_item.last_synced_at), summary: email_alert_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status", timestamp: time_ago_in_words(email_alert_item.last_synced_at)) %>
+                <% end %>
+              <% else %>
+                <%= t(".status_never") %>
+              <% end %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <% if email_alert_item.requires_update? %>
+          <%= render DS::Link.new(
+            text: t(".update_credentials"),
+            icon: "refresh-cw",
+            variant: "secondary",
+            href: settings_providers_path,
+            frame: "_top"
+          ) %>
+        <% else %>
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_email_alert_item_path(email_alert_item),
+            disabled: email_alert_item.syncing?
+          ) %>
+        <% end %>
+
+        <%= render DS::Menu.new do |menu| %>
+          <% sync_schedule_menu_item(menu, email_alert_item) %>
+          <% menu.with_item(
+            variant: "button",
+            text: t(".delete"),
+            icon: "trash-2",
+            href: email_alert_item_path(email_alert_item),
+            method: :delete,
+            confirm: CustomConfirm.for_resource_deletion(email_alert_item.name, high_severity: true)
+          ) %>
+        <% end %>
+      </div>
+    </summary>
+
+    <% unless email_alert_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+        <% end %>
+
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = if defined?(@email_alert_sync_stats_map) && @email_alert_sync_stats_map
+             @email_alert_sync_stats_map[email_alert_item.id] || {}
+           else
+             email_alert_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: email_alert_item,
+          show_account_details: visible_accounts.size == email_alert_item.accounts.size
+        ) %>
+
+        <%# Compute unlinked accounts (no AccountProvider link) %>
+        <% unlinked_count = email_alert_item.unlinked_email_alert_accounts&.count || 0 %>
+
+        <% if unlinked_count.to_i > 0 && email_alert_item.accounts.empty? %>
+          <%# No accounts imported yet - show prominent setup prompt %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: email_alert_item.accounts.count, total: email_alert_item.email_alert_accounts.count) %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "plus",
+              variant: "primary",
+              href: setup_accounts_email_alert_item_path(email_alert_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif unlinked_count.to_i > 0 %>
+          <%# Some accounts imported, more available - show subtle link %>
+          <div class="pt-2 border-t border-primary">
+            <%= link_to setup_accounts_email_alert_item_path(email_alert_item),
+                        data: { turbo_frame: :modal },
+                        class: "flex items-center gap-2 text-sm text-secondary hover:text-primary transition-colors" do %>
+              <%= icon "plus", size: "sm" %>
+              <span><%= t(".more_accounts_available", count: unlinked_count) %></span>
+            <% end %>
+          </div>
+        <% elsif email_alert_item.accounts.empty? && email_alert_item.email_alert_accounts.none? %>
+          <%# No provider accounts at all - waiting for sync %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </details>
+<% end %>

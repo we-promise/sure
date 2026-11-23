@@ -1,0 +1,5 @@
+one:
+  family: dylan_family
+  name: "Bank email alerts"
+  inbound_token: "test_inbound_token_0123456789abcdef"
+  status: good

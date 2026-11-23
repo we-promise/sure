@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_22_234244) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -624,6 +624,68 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "email_alert_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "email_alert_item_id", null: false
+    t.string "name"
+    t.string "email_alert_account_id", null: false
+    t.string "account_number"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.datetime "balance_as_of"
+    t.string "account_status"
+    t.string "account_type"
+    t.string "provider"
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.date "sync_start_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email_alert_item_id", "email_alert_account_id"], name: "index_email_alert_accounts_on_item_and_account_id", unique: true
+    t.index ["email_alert_item_id"], name: "index_email_alert_accounts_on_email_alert_item_id"
+  end
+
+  create_table "email_alert_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.string "inbound_token", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_email_alert_items_on_family_id"
+    t.index ["inbound_token"], name: "index_email_alert_items_on_inbound_token", unique: true
+    t.index ["status"], name: "index_email_alert_items_on_status"
+  end
+
+  create_table "email_alert_messages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "email_alert_item_id", null: false
+    t.uuid "email_alert_account_id"
+    t.string "fingerprint", null: false
+    t.text "raw_base64", null: false
+    t.string "from_address"
+    t.string "subject"
+    t.string "status", default: "pending", null: false
+    t.text "parsed_payload"
+    t.text "processing_error"
+    t.datetime "received_at", null: false
+    t.datetime "processed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email_alert_account_id"], name: "index_email_alert_messages_on_email_alert_account_id"
+    t.index ["email_alert_item_id", "fingerprint"], name: "idx_on_email_alert_item_id_fingerprint_96a52635e4", unique: true
+    t.index ["email_alert_item_id", "status"], name: "index_email_alert_messages_on_email_alert_item_id_and_status"
+    t.index ["email_alert_item_id"], name: "index_email_alert_messages_on_email_alert_item_id"
+  end
+
   create_table "enable_banking_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "account_id"
     t.string "account_status"
@@ -725,8 +787,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "(((entryable_type)::text = 'Transaction'::text) AND (excluded = false))"
     t.index ["date"], name: "index_entries_on_date"
-    t.index ["entryable_type"], name: "index_entries_on_entryable_type"
     t.index ["entryable_type", "entryable_id"], name: "index_entries_on_entryable_type_and_entryable_id"
+    t.index ["entryable_type"], name: "index_entries_on_entryable_type"
     t.index ["import_id"], name: "index_entries_on_import_id"
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
@@ -2013,7 +2075,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.index ["subscription_type", "subscription_id"], name: "index_push_deliveries_on_subscription"
     t.check_constraint "insight_id IS NULL AND insight_version IS NULL OR insight_id IS NOT NULL AND insight_version IS NOT NULL AND insight_version > 0", name: "chk_push_deliveries_insight_version"
     t.check_constraint "provider_attempts >= 0", name: "chk_push_deliveries_provider_attempts"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'skipped'::character varying, 'rejected'::character varying, 'failed'::character varying, 'enqueue_failed'::character varying]::text[])", name: "chk_push_deliveries_status"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'accepted'::character varying::text, 'skipped'::character varying::text, 'rejected'::character varying::text, 'failed'::character varying::text, 'enqueue_failed'::character varying::text])", name: "chk_push_deliveries_status"
   end
 
   create_table "push_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3186,6 +3248,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
   add_foreign_key "debug_log_entries", "accounts", on_delete: :nullify
   add_foreign_key "debug_log_entries", "families", on_delete: :nullify
   add_foreign_key "debug_log_entries", "users", on_delete: :nullify
+  add_foreign_key "email_alert_accounts", "email_alert_items"
+  add_foreign_key "email_alert_items", "families"
+  add_foreign_key "email_alert_messages", "email_alert_accounts"
+  add_foreign_key "email_alert_messages", "email_alert_items"
   add_foreign_key "enable_banking_accounts", "enable_banking_items"
   add_foreign_key "enable_banking_items", "families"
   add_foreign_key "entries", "account_statements", column: "reconciled_by_statement_id", on_delete: :nullify

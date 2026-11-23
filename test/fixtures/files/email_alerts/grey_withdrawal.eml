@@ -1,0 +1,63 @@
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=grey.co;
+ i=@grey.co; q=dns/txt; s=sure-test; t=1795391446; h=from : to :
+ subject : date : message-id : content-type;
+ bh=3ygJJRY230piCIF5e8HQ14CO7JKy1RB8piazKt4npUg=;
+ b=hMDp4oUOyq6E9AA8TaqbCmEGGovmlN+E4907X0gmucljIsiQ97jYgxMmDhkCt/G+SzD2j
+ +wsUjYmBO+ROHD5q0dAncOacmvD8t3y8fZNpFVzVdpdonZQa5ZCysDn613gy8FmKBOqovNJ
+ dyuuooEs2No9cbovTHZ2wF8jKReLeoI0HNzeyywv4EKFN6sMQREkT+9qZxjs6B+Tb9PZhJ+
+ Z0l5B6KRZW1v9THpd5Ipq20HLHpznQ3iQNtiASCGiBzVV5ohxiyx3mkdaAiGdMSstr/dtMn
+ NhZ1JqwaWUIq1QzNXxQTOlTS3pknFEs0tkayyUFZmJaRODQG5KCu0WLfAjlw==
+From: Grey <hello@grey.co>
+To: ada.okafor@example.com
+Subject: Withdrawal Successful
+Date: Tue, 03 Nov 2026 23:37:00 +0000
+Message-ID: <179539144600.502354.17426649760876739127@grey.co>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============7540335340851195930=="
+
+--===============7540335340851195930==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Hello ada,
+Your withdrawal was successful
+The details are shown below:
+Transaction Type:
+USD to NGN
+Amount tendered:
+$4.10
+Amount received:
+=E2=82=A65,600.00
+Bank name:
+Moniepoint Microfinance Bank
+Account name:
+MAMA PUT KITCHEN
+Account number:
+5000000001
+Reference:
+TESTREF0001
+Date & Time:
+11/03/2026 - 11:37 PM UTC
+
+--===============7540335340851195930==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><p>Hello ada,</p><p>Your withdrawal was successful</p><table><tr>=
+<td class=3D"transaction-label">Transaction Type</td><td class=3D"transaction=
+-detail">USD to NGN</td></tr><tr><td class=3D"transaction-label">Amount tende=
+red</td><td class=3D"transaction-detail">$4.10</td></tr><tr><td class=3D"tran=
+saction-label">Amount received</td><td class=3D"transaction-detail">=E2=82=A6=
+5,600.00</td></tr><tr><td class=3D"transaction-label">Bank name</td><td class=
+=3D"transaction-detail">Moniepoint Microfinance Bank</td></tr><tr><td class=
+=3D"transaction-label">Account name</td><td class=3D"transaction-detail">MAMA=
+ PUT KITCHEN</td></tr><tr><td class=3D"transaction-label">Account number</td>=
+<td class=3D"transaction-detail">5000000001</td></tr><tr><td class=3D"transac=
+tion-label">Reference</td><td class=3D"transaction-detail">TESTREF0001</td></=
+tr><tr><td class=3D"transaction-label">Date & Time</td><td class=3D"transacti=
+on-detail">11/03/2026 - 11:37 PM UTC</td></tr></table><p>=C2=A92026. Grey.</p=
+></body></html>
+
+--===============7540335340851195930==--

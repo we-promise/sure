@@ -1,0 +1,55 @@
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=grey.co;
+ i=@grey.co; q=dns/txt; s=sure-test; t=1795391446; h=from : to :
+ subject : date : message-id : content-type;
+ bh=Cqz3OyfAIPQqfzMMDF/KQczLzWsHm5Bg+60sT8Dimr4=;
+ b=pbq5up2o/+rXuuw+6TOEamsyOo3CGpnEgPW/o17LHHdMeh3Yxh1G8XwS7ieNw9PurY+kI
+ /nIWKuBAZENRaVlRKmMJMuT9/5DeFZ/2tuXJCvyUycDsDB+DCsrNgnj0cTWJxFwoNrZfHBA
+ lKCR8hn5c8qFjBabXTlWizksX1GglLz4GAsCioCjfEg7qFSLgLQ4P0/u4q1eWfFP8gZhVEo
+ d9QEJcdMu1P4v2GiyQNyNSRV3nz5Df621YUlE4r+plaOS1liI59G7+mbrzaq/wg9teQGYFv
+ 2NiB02OVaWggztogqnVRJ2wuyl44V5JSKuitnoWTfibhMLWfP5S3UY46iP2Q==
+From: Grey <hello@grey.co>
+To: ada.okafor@example.com
+Subject: Wallet Funding Successful
+Date: Tue, 03 Nov 2026 14:26:00 +0000
+Message-ID: <179539144604.502354.6509480299382221658@grey.co>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============1915118917137351741=="
+
+--===============1915118917137351741==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Hello ada,
+Your wallet has been funded successfully!
+The details are shown below:
+Transaction Type:
+USD to USD
+Amount tendered:
+$800.00
+Amount received:
+$795.00
+Memo:
+
+Reference:
+TESTREF0003
+Date & Time:
+11/03/2026 - 2:26 PM UTC
+
+--===============1915118917137351741==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><p>Hello ada,</p><p>Your wallet has been funded successfully!</p>=
+<table><tr><td class=3D"transaction-label">Transaction Type</td><td class=3D"=
+transaction-detail">USD to USD</td></tr><tr><td class=3D"transaction-label">A=
+mount tendered</td><td class=3D"transaction-detail">$800.00</td></tr><tr><td =
+class=3D"transaction-label">Amount received</td><td class=3D"transaction-deta=
+il">$795.00</td></tr><tr><td class=3D"transaction-label">Memo</td><td class=
+=3D"transaction-detail"></td></tr><tr><td class=3D"transaction-label">Referen=
+ce</td><td class=3D"transaction-detail">TESTREF0003</td></tr><tr><td class=3D=
+"transaction-label">Date & Time</td><td class=3D"transaction-detail">11/03/20=
+26 - 2:26 PM UTC</td></tr></table><p>=C2=A92026. Grey.</p></body></html>
+
+--===============1915118917137351741==--

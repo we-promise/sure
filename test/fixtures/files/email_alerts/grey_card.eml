@@ -1,0 +1,56 @@
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=grey.co;
+ i=@grey.co; q=dns/txt; s=sure-test; t=1795391446; h=from : to :
+ subject : date : message-id : content-type;
+ bh=KstHUduXnJEKYJtUAMjyqDFui4OkTOUqNGFgGZjEnhA=;
+ b=n8fJtjDMyUy1rpXdI4F7EXjoze5pN2zwQ3t8jY4yvYPGN0W6Q/VGqJlxZcusg/g/d6uqO
+ fYEdlfmU/Ti7+pXVoRBFjzZiPV5AyuAv78avYTWvIbIVuqGRb92UELRorTd73Ff4GgP1wCw
+ Ni9qkgIVAB+XXx3hH6eRbk/RLCFzGyIgqmCP8WA83Si5zSFAHxoAW5vV3xOyO6JZfCLCcWk
+ Rpf+hRjMzx4Ev5AUAqGx8/DDarr02zSFn6mPomG4yFScvssLUoHGUQYAMUhamo2irrXOojO
+ 6J5axdniU974q+bnPOnmT+2r1IWBUDKDiVRaxAO540kzJcfZD+LDNTaCXR/A==
+From: Grey <hello@grey.co>
+To: ada.okafor@example.com
+Subject: Card transaction successful
+Date: Tue, 27 Oct 2026 06:12:00 +0000
+Message-ID: <179539144602.502354.6693838751562337236@grey.co>
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============8411688422644398135=="
+
+--===============8411688422644398135==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Hello ada,
+Your card transaction was successful
+The details are shown below:
+Transaction type:
+Virtual card
+Merchant:
+Hetzner
+Amount debited:
+$9.45
+Description:
+Card spend at Hetzner
+Reference:
+TESTREF0002
+Date & time:
+10/27/2026 - 6:12 AM UTC
+
+--===============8411688422644398135==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><p>Hello ada,</p><p>Your card transaction was successful</p><tabl=
+e><tr><td class=3D"transaction-label">Transaction type</td><td class=3D"trans=
+action-detail">Virtual card</td></tr><tr><td class=3D"transaction-label">Merc=
+hant</td><td class=3D"transaction-detail">Hetzner</td></tr><tr><td class=3D"t=
+ransaction-label">Amount debited</td><td class=3D"transaction-detail">$9.45</=
+td></tr><tr><td class=3D"transaction-label">Description</td><td class=3D"tran=
+saction-detail">Card spend at Hetzner</td></tr><tr><td class=3D"transaction-l=
+abel">Reference</td><td class=3D"transaction-detail">TESTREF0002</td></tr><tr=
+><td class=3D"transaction-label">Date & time</td><td class=3D"transaction-det=
+ail">10/27/2026 - 6:12 AM UTC</td></tr></table><p>=C2=A92026. Grey.</p></body=
+></html>
+
+--===============8411688422644398135==--

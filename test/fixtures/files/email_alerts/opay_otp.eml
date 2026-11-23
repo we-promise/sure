@@ -1,0 +1,19 @@
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=opay-nigeria.com;
+ i=@opay-nigeria.com; q=dns/txt; s=sure-test; t=1795391445; h=from : to
+ : subject : date : message-id : content-type;
+ bh=MhI3Bji53L8KOYUTfhQX0yP91XWHiXnSZ8rK9DC0QMk=;
+ b=b0F2xYc48M6OA4We9jOKWggvC1TACsRLwHrPOzC0NhYvxMI4YKUZp6GoUnK9eVSZRE/3A
+ S083t6D/anvS1ysjJIXxAt8PhqpJGP329fcBg9tf+1GMpykMJvlmN5l6sbTb33mXr6C/Nvf
+ YuGVDcU3LItsOtM1+B9M8Y/0f7UXKgqfFnZ2BHIhvrEnHZ55h1H4omtVpNvW3ZtxOkBDSqS
+ bi5xwioQ6AdjEENbGtj3DWsOTOSPkfylyCdzodmSSGMsay734q/a65KQC4mSURdxHXtoOwW
+ cEO28XrmAo0+laJlpYYI247pLBm8pNH/RqPAJaR9nnvFE+Q4ac9RyX5k05qA==
+From: "OPay" <no-reply@opay-nigeria.com>
+To: ada.okafor@example.com
+Subject: 123456 is your verification code
+Date: Sat, 21 Nov 2026 18:24:19 +0000
+Message-ID: <179539144598.502354.14564603921666898055@opay-nigeria.com>
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><p>123456 is your verification code.</p></body></html>

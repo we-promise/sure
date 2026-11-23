@@ -1,0 +1,39 @@
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=gtbank.com;
+ i=@gtbank.com; q=dns/txt; s=sure-test; t=1795391445; h=from : to :
+ subject : date : message-id : content-type;
+ bh=dnJI6cKXoM+FgOmGqxDEoeRiF6L17w+GbGEwA81vL5s=;
+ b=lDUF1Au02zG8PtWieZ+7MqEcgpZ+Fz6184wDBjMNtGXvSgXKBpRcC2kEWNbZpTeXZolGv
+ t7LqXhDA2241Zb8cpaqv63DtsNHq1ZUuyJJ8yqRZpd4HvvK0WbG1Hq+s49/sC6pwlo8LPcX
+ bN2a1g5dpWBRhUr3OzBdw/+wU6ySke+jRukQHEiTJatIG2NvGs66iPjrrPqfDodY5QIjzIX
+ Bn+c6RFatUxy19sLBWBqfx3pjwgDFmQlP/NPpivedeSKFhcRgDI2yhZbPhlx+KHH5HJx9Pf
+ fYA+GuqwsvlGbSkRuTuwE7Hh81sFmheOKge0pFXht7ys7TuKYphViqOX1UsA==
+From: GeNS@gtbank.com
+To: ada.okafor@example.com
+Subject: Transaction Notification
+Date: Sat, 21 Nov 2026 18:24:19 +0000
+Message-ID: <179539144591.502354.10675145145664082491@gtbank.com>
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><div>3:15:42 PM</div><p>Dear<br>ADA NKECHI OKAFOR</p>
+<p>Guaranty Trust Bank electronic Notification Service<br>(GeNS)</p>
+<p>We wish to inform you that a <b>CREDIT</b> transaction occurred on your ac=
+count with us.</p>
+<p>The details of this transaction are shown below:</p>
+<table><tr><td><strong>Transaction Notification</strong></td></tr><tr><td wid=
+th=3D"130">Account Number</td><td> : </td><td colspan=3D"8">******4821</td></=
+tr><tr><td width=3D"130">Transaction Location</td><td> : </td><td colspan=3D"=
+8">205</td></tr><tr><td width=3D"130">Description</td><td> : </td><td colspan=
+=3D"8">000012261119151542000000000001-INVOICE 42-ZENITH-ACME SUPPLIES LTD</td=
+></tr><tr><td width=3D"130">Amount</td><td> : </td><td colspan=3D"8">NGN&nbsp=
+;250000</td></tr><tr><td width=3D"130">Value Date</td><td> : </td><td colspan=
+=3D"8">2026-11-19</td></tr><tr><td width=3D"130">Remarks</td><td> : </td><td =
+colspan=3D"8"></td></tr><tr><td width=3D"130">Time of Transaction</td><td> : =
+</td><td colspan=3D"8">3:15:42 PM</td></tr><tr><td width=3D"130">Document Num=
+ber</td><td> : </td><td colspan=3D"8">00001226111915154200</td></tr></table>
+<p>The balances on this account as at 3:15:42 PM are as follows;</p>
+<table><tr><td width=3D"130">Current Balance</td><td> : </td><td colspan=3D"8=
+">NGN&nbsp;312450.75</td></tr><tr><td width=3D"130">Available Balance</td><td=
+> : </td><td colspan=3D"8">NGN&nbsp;311809.75</td></tr></table>
+<p>Thank you for choosing Guaranty Trust Bank Limited</p></body></html>

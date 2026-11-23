@@ -1,0 +1,53 @@
+<div id="email_alert-providers-panel" class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p><%= t("email_alert_items.panel.intro", institutions: EmailAlert::Parsers.supported_institutions.to_sentence) %></p>
+    <ol>
+      <li><%= t("email_alert_items.panel.step_1") %></li>
+      <li><%= t("email_alert_items.panel.step_2") %></li>
+      <li><%= t("email_alert_items.panel.step_3") %></li>
+      <li><%= t("email_alert_items.panel.step_4") %></li>
+    </ol>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <% email_alert_item = Current.family.email_alert_items.active.ordered.first %>
+  <% if email_alert_item %>
+    <div class="bg-surface-inset rounded-xl p-4" data-controller="clipboard" data-clipboard-copied-text-value="<%= t("email_alert_items.panel.inbound_url.copied") %>">
+      <h4 class="font-medium text-primary mb-1"><%= t("email_alert_items.panel.inbound_url.heading") %></h4>
+      <p class="text-secondary text-sm mb-3"><%= t("email_alert_items.panel.inbound_url.description") %></p>
+      <div class="flex flex-col gap-3 bg-container rounded-lg p-3 border border-primary">
+        <code class="font-mono text-sm text-primary break-all" data-clipboard-target="source"><%= "#{request.base_url}#{email_alert_item.inbound_path}" %></code>
+        <div class="flex flex-wrap gap-2">
+          <%= render DS::Button.new(text: t("email_alert_items.panel.inbound_url.copy"), variant: "ghost", icon: "copy",
+                                    data: { action: "clipboard#copy" }) %>
+          <%= render DS::Button.new(text: t("email_alert_items.panel.inbound_url.regenerate"), variant: "ghost", icon: "refresh-cw",
+                                    href: regenerate_token_email_alert_item_path(email_alert_item),
+                                    confirm: t("email_alert_items.panel.inbound_url.regenerate_confirm"),
+                                    data: { turbo: true }) %>
+        </div>
+      </div>
+    </div>
+
+    <% counts = email_alert_item.email_alert_messages.group(:status).count %>
+    <p class="text-sm text-secondary">
+      <%= t("email_alert_items.panel.message_counts",
+            processed: counts.fetch("processed", 0),
+            awaiting: counts.fetch("awaiting_link", 0),
+            rejected: counts.fetch("rejected", 0) + counts.fetch("failed", 0)) %>
+    </p>
+  <% else %>
+    <%= styled_form_with model: Current.family.email_alert_items.build, url: email_alert_items_path, scope: :email_alert_item,
+                         method: :post, data: { turbo: true }, class: "space-y-3" do |form| %>
+      <%= form.text_field :name, label: t("email_alert_items.panel.name_label"),
+                          placeholder: t("email_alert_items.default_name") %>
+      <div class="flex justify-end">
+        <%= form.submit t("email_alert_items.panel.create_button"),
+                        class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium btn btn--primary" %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

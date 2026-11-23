@@ -6,6 +6,23 @@ Rails.application.routes.draw do
     post :test_notification, on: :member
   end
 
+  resources :email_alert_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+      post :regenerate_token
+    end
+  end
+
   resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -1073,6 +1090,7 @@ Rails.application.routes.draw do
     post "plaid"
     post "plaid_eu"
     post "stripe"
+    post "email_alerts/:token", to: "email_alerts#create", as: :email_alerts
   end
 
   get "redis-configuration-error", to: "pages#redis_configuration_error"

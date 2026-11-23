@@ -8,6 +8,7 @@ class Provider
       up:             { region: "AU",      kinds: %w[Bank],            maturity: :beta,   logo_text: "UP", logo_color: "#ea580c", domain: "up.com.au" },
       monobank:       { region: "UA",      kinds: %w[Bank],            maturity: :alpha,  logo_text: "MB", logo_color: "#111827", domain: "monobank.ua" },
       fio:            { region: "CZ",      kinds: %w[Bank],            maturity: :alpha,  logo_text: "FI", logo_color: "#1d4ed8", domain: "fio.cz", name: "Fio banka" },
+      email_alert:    { region: "Global",  kinds: %w[Bank],            maturity: :alpha,  logo_text: "EA", logo_color: "#0d9488", domain: nil, logo_icon: "mail", name: "Bank email alerts" },
       enable_banking: { region: "EU",      kinds: %w[Bank],            maturity: :beta,   logo_text: "EB", logo_color: "#9333ea", domain: "enablebanking.com" },
       truelayer:      { region: "UK",      kinds: %w[Bank],            maturity: :alpha,  logo_text: "TL", logo_color: "#0f172a", domain: "truelayer.com", name: "TrueLayer" },
       coinstats:      { region: "Global",  kinds: %w[Crypto],          maturity: :beta,   logo_text: "CS", logo_color: "#db2777", domain: "coinstats.app" },

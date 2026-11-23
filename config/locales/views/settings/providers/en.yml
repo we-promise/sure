@@ -75,6 +75,7 @@ en:
         up: Sync Australian Up bank accounts with a personal access token.
         monobank: Sync Ukrainian Monobank cards and jars with a personal API token.
         fio: Sync a Fio banka account with a read-only API token.
+        email_alert: Import transactions from the alert emails your bank sends (GTBank, OPay, Grey).
         enable_banking: Sync European bank accounts via PSD2 open banking.
         truelayer: Sync UK bank accounts and credit cards via TrueLayer open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
