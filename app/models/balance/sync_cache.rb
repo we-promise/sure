@@ -88,7 +88,9 @@ class Balance::SyncCache
       @holdings_value_by_date ||= begin
         missing_rate_pairs = []
 
-        totals = account.holdings.each_with_object(Hash.new(0)) do |h, acc|
+        holdings = account.holdings
+        holdings = holdings.preferred_on_date if account.accounting_start_date
+        totals = holdings.each_with_object(Hash.new(0)) do |h, acc|
           begin
             converted = Money.new(h.amount, h.currency).exchange_to(account.currency, date: h.date).amount
           rescue Money::ConversionError => error

@@ -849,8 +849,7 @@ class Account < ApplicationRecord
     # A cash-anchored account carries untraded holdings in their own currency,
     # so take each security's latest row up to today in any currency.
     if accounting_start_date
-      latest = holdings.through_today.select("DISTINCT ON (security_id) id").order(:security_id, date: :desc)
-      return holdings.where(id: latest).where.not(qty: 0).order(amount: :desc)
+      return Holding::CurrentForInvestmentAccounts.new([ id ]).relation.order(amount: :desc)
     end
 
     if holdings.where.not(account_provider_id: nil).exists?

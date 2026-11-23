@@ -30,6 +30,23 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     assert_equal 1100, @account.balance
   end
 
+  test "the cash value and ledger baseline use the same entries" do
+    debit = cash_entry(amount: 10, date: Date.yesterday)
+    calculator = Balance::ForwardCalculator.new(@account)
+    calculate = calculator.method(:calculate)
+    calculator.define_singleton_method(:calculate) do
+      balances = calculate.call
+      debit.update!(amount: 20)
+      balances
+    end
+    Balance::ForwardCalculator.expects(:new).with(@account).returns(calculator)
+
+    anchor = @account.create_cash_anchor!
+
+    assert_equal 90, anchor.amount
+    assert_equal 1010, anchor.entryable.cash_entry_total
+  end
+
   test "foreign cash movements use the standard dated exchange rate" do
     @account.create_cash_anchor!
     ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "USD", date: Date.current).update!(rate: "1.2")
@@ -437,6 +454,24 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     materialize(window_start_date: edit_date)
     assert_equal earlier, @account.balances.where(date: ...edit_date).order(:date).pluck(:id, :updated_at)
     assert_equal 94, @account.reload.cash_balance
+  end
+
+  test "an empty incremental window purges the stale tail and keeps imported history" do
+    @account.entries.trades.destroy_all
+    @account.holdings.delete_all
+    travel_to(2.days.ago) { @account.create_cash_anchor! }
+    cash_entry(amount: 1, date: Date.yesterday)
+    latest = cash_entry(amount: 1)
+    imported = @account.balances.create!(date: 10.days.ago.to_date, currency: "USD", balance: 10, cash_balance: 10)
+    materialize
+    assert @account.balances.exists?(id: imported.id)
+    assert @account.balances.exists?(date: latest.date)
+
+    latest.destroy!
+    materialize(window_start_date: latest.date)
+
+    assert @account.balances.exists?(id: imported.id)
+    assert_not @account.balances.exists?(date: latest.date)
   end
 
   test "a pending account sync cannot be borrowed by a different parent" do

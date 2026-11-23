@@ -23,6 +23,17 @@ class Holding < ApplicationRecord
   validates :external_id, uniqueness: { scope: :account_id }, allow_blank: true
   validates :cost_basis_source, inclusion: { in: COST_BASIS_SOURCES }, allow_nil: true
 
+  # An observed position outranks its calculated copies. Among observations prefer
+  # the provider, then the account currency. The unique key includes currency.
+  POSITION_ORDER = <<~SQL.squish.freeze
+    (holdings.account_provider_id IS NOT NULL) DESC, holdings.materialized ASC,
+    (holdings.currency = accounts.currency) DESC, holdings.currency ASC
+  SQL
+
+  scope :preferred_on_date, -> {
+    keys = "holdings.account_id, holdings.security_id, holdings.date"
+    joins(:account).select("DISTINCT ON (#{keys}) holdings.*").reorder(Arel.sql("#{keys}, #{POSITION_ORDER}"))
+  }
   scope :chronological, -> { order(:date) }
   scope :through_today, -> { where(date: ..Date.current) }
   scope :for, ->(security) { where(security_id: security).order(:date) }

@@ -98,11 +98,9 @@ class Balance::Materializer
         # (e.g. window_start_date is beyond the last entry), purge stale tail records that
         # now fall beyond the prior-balance boundary so orphaned future rows are cleaned up.
         if strategy == :forward && calculator.incremental? && calculator.calculation_start_date <= @window_start_date - 1
-          deleted_count = account.balances.delete_by(
-            "date < ? OR date > ?",
-            calculator.calculation_start_date,
-            @window_start_date - 1
-          )
+          stale = account.balances.where(date: @window_start_date..)
+          stale = stale.or(account.balances.where(date: ...calculator.calculation_start_date)) unless account.accounting_start_date
+          deleted_count = stale.delete_all
           Rails.logger.info("Purged #{deleted_count} stale balances") if deleted_count > 0
         end
         return

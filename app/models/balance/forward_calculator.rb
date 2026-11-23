@@ -66,6 +66,11 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     end
   end
 
+  # Use the same ledger snapshot as the calculated cash balance.
+  def cash_entry_total(date)
+    sync_cache.cash_entry_total(date)
+  end
+
   private
     # Returns [start_cash_balance, start_non_cash_balance] for the first iteration.
     #
