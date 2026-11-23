@@ -696,6 +696,11 @@ class Family::DataImporter
           }.compact
         )
 
+        # An export can carry a started_on after the cached next_expected_date
+        # when a manual payment left that hint on the settled cycle. Recurrence
+        # rules have not been restored yet at this point, so the live schedule
+        # cannot be validated here.
+        recurring_transaction.skip_started_on_bound_validation = true
         recurring_transaction.save!
         map_source!(:recurring_transactions, old_id, recurring_transaction)
         # A replacement points at another series that may not exist yet, so it

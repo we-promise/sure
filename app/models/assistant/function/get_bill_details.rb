@@ -73,6 +73,7 @@ class Assistant::Function::GetBillDetails < Assistant::Function
         end_on: series.end_on&.iso8601,
         end_after_count: series.end_after_count,
         anchor_date: series.anchor_date&.iso8601,
+        started_on: series.started_on&.iso8601,
         notes: series.notes,
         notify_days_before: series.notify_days_before,
         overdue_grace_days: series.overdue_grace_days,

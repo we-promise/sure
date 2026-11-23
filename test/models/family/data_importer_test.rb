@@ -3897,6 +3897,18 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "an import tolerates a start date after the exported cached next expected date" do
+    records = bills_ndjson_records
+    records.each do |record|
+      record[:data][:next_expected_date] = "2026-01-09" if record[:type] == "RecurringTransaction"
+    end
+
+    Family::DataImporter.new(@family, build_ndjson(records)).import!
+
+    series = @family.recurring_transactions.find_by!(name: "Rent")
+    assert_equal Date.new(2026, 5, 9), series.started_on
+  end
+
   test "a started_on import does not cache rules before the rules land" do
     records = bills_ndjson_records
     records.each do |record|

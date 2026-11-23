@@ -53,6 +53,14 @@ class Assistant::Function::GetBillDetailsTest < ActiveSupport::TestCase
     assert_equal "user_confirmed", payment[:source]
   end
 
+  test "configuration reports the bill's start date" do
+    series = create_series(name: "CITY WATER", amount: 80, started_on: Date.new(2025, 1, 15))
+
+    result = call_tool(series.id)
+
+    assert_equal "2025-01-15", result[:bill][:started_on]
+  end
+
   test "history includes backdated open cycles so they can be linked" do
     series = create_series(name: "CITY WATER", amount: 80)
     due = 2.months.ago.to_date

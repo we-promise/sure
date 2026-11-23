@@ -189,6 +189,8 @@ class RecurringTransaction
           next unless series.active? && entry
 
           current = allocation.recurring_occurrence
+          next if !include_historical && current.historical?
+
           if contradicted_allocation?(series, entry)
             Allocator.new(current).unallocate!(allocation) if releasable_cycle?(current, series)
           elsif allocation.match_signals.to_h["reference"].present? && matched_reference(series, entry)

@@ -93,7 +93,7 @@ class RecurringTransaction < ApplicationRecord
   # FrequencyPreset and the controller translate these on save. Not persisted.
   attr_accessor :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
                 :frequency_weekday, :frequency_month_of_year, :frequency_interval, :frequency_interval_unit,
-                :frequency_once_on, :first_due_on, :is_income
+                :frequency_once_on, :first_due_on, :is_income, :skip_started_on_bound_validation
 
   # A scheme, followed by either "//" or by something that is not a port number.
   # "example.com:8080" is a host and port, not a scheme, so it does not match.
@@ -363,6 +363,8 @@ class RecurringTransaction < ApplicationRecord
 
   def backfill_history_from_started_on
     BackfillRecurringHistoryJob.perform_later(id)
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
   end
 
   # Skipping under a held lock used to leave the bill without history for
@@ -504,17 +506,17 @@ class RecurringTransaction < ApplicationRecord
     # rules have landed, so it reads the stored next expected date. A persisted
     # record reads the live schedule instead: next_expected_date is only a
     # cached hint and can freeze in the past after a settlement.
-    boundary =
-      if new_record?
-        next_expected_date
-      elsif schedule_shape_changing?
-        schedule.first_occurrence_after(Date.current)
-      else
-        next_open_occurrence&.effective_due_on || schedule.first_occurrence_after(Date.current)
-      end
+    unless skip_started_on_bound_validation
+      boundary =
+        if new_record?
+          next_expected_date
+        elsif schedule_shape_changing?
+          schedule.first_occurrence_after(Date.current)
+        else
+          next_open_occurrence&.effective_due_on || schedule.first_occurrence_after(Date.current)
+        end
 
-    if boundary.present? && started_on > boundary
-      errors.add(:started_on, :after_next_due)
+      errors.add(:started_on, :after_next_due) if boundary.present? && started_on > boundary
     end
 
     return if anchor_date.blank?
