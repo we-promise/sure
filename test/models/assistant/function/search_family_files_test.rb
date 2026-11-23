@@ -53,6 +53,18 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_equal "not_configured", result[:reason]
   end
 
+  test "sends the search text nowhere when the user has AI off" do
+    @user.family.update!(vector_store_id: "vs_test123")
+    @user.update!(ai_enabled: false)
+    adapter = mock("vector_store_adapter")
+    adapter.expects(:search).never
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    result = @function.call("query" => "tax return")
+
+    assert_equal "user_disabled", result[:reason]
+  end
+
   test "returns search results on success" do
     @user.family.update!(vector_store_id: "vs_test123")
 
