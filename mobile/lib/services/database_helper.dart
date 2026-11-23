@@ -72,7 +72,7 @@ class DatabaseHelper {
 
       return await openDatabase(
         path,
-        version: 3,
+        version: 4,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       );
@@ -118,6 +118,7 @@ class DatabaseHelper {
           merchant_name TEXT,
           tag_ids TEXT DEFAULT '[]',
           tag_names TEXT DEFAULT '[]',
+          receipt_json TEXT,
           sync_status TEXT NOT NULL,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
@@ -211,6 +212,13 @@ class DatabaseHelper {
       if (!columnNames.contains('tag_names')) {
         await db.execute(
             "ALTER TABLE transactions ADD COLUMN tag_names TEXT DEFAULT '[]'");
+      }
+    }
+    if (oldVersion < 4) {
+      final columns = await db.rawQuery('PRAGMA table_info(transactions)');
+      final columnNames = columns.map((c) => c['name'] as String).toSet();
+      if (!columnNames.contains('receipt_json')) {
+        await db.execute('ALTER TABLE transactions ADD COLUMN receipt_json TEXT');
       }
     }
   }

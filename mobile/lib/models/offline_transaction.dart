@@ -34,6 +34,7 @@ class OfflineTransaction extends Transaction {
     super.tagIds,
     super.tagNames,
     super.tagsProvided = true,
+    super.receipt,
     this.syncStatus = SyncStatus.pending,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -64,6 +65,7 @@ class OfflineTransaction extends Transaction {
       tagIds: transaction.tagIds,
       tagNames: transaction.tagNames,
       tagsProvided: transaction.tagsProvided,
+      receipt: transaction.receipt,
       syncStatus: syncStatus,
     );
   }
@@ -91,6 +93,7 @@ class OfflineTransaction extends Transaction {
       tagIds: tagIds,
       tagNames: tagNames,
       tagsProvided: tagsProvided,
+      receipt: _decodeReceipt(map['receipt_json'] as String?),
       syncStatus: _parseSyncStatus(map['sync_status'] as String),
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -114,6 +117,7 @@ class OfflineTransaction extends Transaction {
       'merchant_name': merchantName,
       'tag_ids': jsonEncode(tagIds),
       'tag_names': jsonEncode(tagNames),
+      'receipt_json': receipt == null ? null : jsonEncode(receipt!.toJson()),
       'sync_status': _syncStatusToString(syncStatus),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -139,6 +143,7 @@ class OfflineTransaction extends Transaction {
       tagIds: tagIds,
       tagNames: tagNames,
       tagsProvided: tagsProvided,
+      receipt: receipt,
     );
   }
 
@@ -176,6 +181,7 @@ class OfflineTransaction extends Transaction {
       tagIds: nextTagIds,
       tagNames: nextTagIds.map((tagId) => tagNamesById[tagId] ?? '').toList(),
       tagsProvided: true,
+      receipt: receipt,
     );
   }
 
@@ -205,6 +211,7 @@ class OfflineTransaction extends Transaction {
           : merchantName,
       tagIds: transaction.tagsProvided ? transaction.tagIds : tagIds,
       tagNames: transaction.tagsProvided ? transaction.tagNames : tagNames,
+      receipt: transaction.receipt,
       syncStatus: SyncStatus.synced,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
@@ -253,6 +260,7 @@ class OfflineTransaction extends Transaction {
       tagIds: tagIds ?? this.tagIds,
       tagNames: tagNames ?? this.tagNames,
       tagsProvided: tagsProvided ?? this.tagsProvided,
+      receipt: receipt,
       syncStatus: syncStatus ?? this.syncStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -308,6 +316,16 @@ class OfflineTransaction extends Transaction {
         return 'failed';
       case SyncStatus.pendingDelete:
         return 'pending_delete';
+    }
+  }
+
+  static TransactionReceipt? _decodeReceipt(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map ? TransactionReceipt.fromJson(Map<String, dynamic>.from(decoded)) : null;
+    } catch (_) {
+      return null;
     }
   }
 }

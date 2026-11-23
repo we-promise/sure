@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../providers/accounts_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/privacy_provider.dart';
 import '../widgets/sure_logo.dart';
@@ -8,6 +9,7 @@ import 'chat_list_screen.dart';
 import 'dashboard_screen.dart';
 import 'intro_screen.dart';
 import 'more_screen.dart';
+import 'receipt_capture_screen.dart';
 import 'settings_screen.dart';
 import '../l10n/app_localizations.dart';
 
@@ -69,12 +71,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  Future<void> _handleSelectSettings(AuthProvider authProvider, bool introLayout) async {
+  Future<void> _handleSelectSettings(
+      AuthProvider authProvider, bool introLayout) async {
     final settingsIndex = introLayout ? 2 : 3;
     await _handleDestinationSelected(settingsIndex, authProvider, introLayout);
   }
 
-  List<NavigationDestination> _buildDestinations(bool introLayout, AppLocalizations l) {
+  List<NavigationDestination> _buildDestinations(
+      bool introLayout, AppLocalizations l) {
     final destinations = <NavigationDestination>[];
 
     if (!introLayout) {
@@ -118,7 +122,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return destinations;
   }
 
-  PreferredSizeWidget _buildTopBar(AuthProvider authProvider, bool introLayout) {
+  PreferredSizeWidget _buildTopBar(
+      AuthProvider authProvider, bool introLayout) {
     return AppBar(
       automaticallyImplyLeading: false,
       toolbarHeight: 60,
@@ -136,6 +141,27 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
       ),
       actions: [
+        if (!introLayout)
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(
+              child: Tooltip(
+                message: AppLocalizations.of(context).receiptScanTitle,
+                child: InkWell(
+                  onTap: _openReceiptCapture,
+                  child: SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: Icon(
+                      Icons.receipt_long_outlined,
+                      semanticLabel:
+                          AppLocalizations.of(context).receiptScanTitle,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.only(right: 12),
           child: Center(
@@ -173,6 +199,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _openReceiptCapture() {
+    final accounts = context.read<AccountsProvider>().accounts;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReceiptCaptureScreen(accounts: accounts),
+      ),
     );
   }
 
@@ -244,7 +279,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         const chatIndex = 1;
         final screens = _buildScreens(
           introLayout,
-          () => _handleDestinationSelected(chatIndex, authProvider, introLayout),
+          () =>
+              _handleDestinationSelected(chatIndex, authProvider, introLayout),
         );
         final destinations = _buildDestinations(introLayout, l);
         final bottomNavIndex = _resolveBottomSelectedIndex(destinations);

@@ -35,6 +35,18 @@ class Transaction {
   /// field.
   final bool? splitParent;
 
+  /// The scanned receipt this transaction came from or was matched to, with
+  /// the transaction's attachments; null when there is neither.
+  final TransactionReceipt? receipt;
+
+  /// "processing", "completed" or "needs_review", or null without a receipt.
+  String? get receiptStatus => receipt?.status;
+  bool get receiptProcessing => receiptStatus == 'processing';
+  bool get receiptNeedsReview => receiptStatus == 'needs_review';
+  List<String> get receiptReviewReasons => receipt?.reviewReasons ?? const [];
+  List<ReceiptLineItem> get receiptLineItems => receipt?.lineItems ?? const [];
+  List<TransactionAttachment> get attachments => receipt?.attachments ?? const [];
+
   Transaction({
     this.id,
     required this.accountId,
@@ -57,6 +69,7 @@ class Transaction {
     this.kind,
     this.excluded,
     this.splitParent,
+    this.receipt,
   })  : tagIds = List.unmodifiable(tagIds),
         tagNames = List.unmodifiable(tagNames),
         categoryProvided =
@@ -169,6 +182,7 @@ class Transaction {
       excluded: json['excluded'] is bool ? json['excluded'] as bool : null,
       splitParent:
           json['split_parent'] is bool ? json['split_parent'] as bool : null,
+      receipt: TransactionReceipt.fromApi(json),
     );
   }
 
@@ -199,4 +213,103 @@ class Transaction {
 
   bool get isExpense => nature == 'expense';
   bool get isIncome => nature == 'income';
+}
+
+class TransactionReceipt {
+  final String? status;
+  final List<String> reviewReasons;
+  final List<ReceiptLineItem> lineItems;
+  final List<TransactionAttachment> attachments;
+
+  TransactionReceipt({
+    this.status,
+    List<String> reviewReasons = const [],
+    List<ReceiptLineItem> lineItems = const [],
+    List<TransactionAttachment> attachments = const [],
+  })  : reviewReasons = List.unmodifiable(reviewReasons),
+        lineItems = List.unmodifiable(lineItems),
+        attachments = List.unmodifiable(attachments);
+
+  /// Reads the API's `receipt` and `attachments` fields of a transaction.
+  static TransactionReceipt? fromApi(Map<String, dynamic> json) {
+    final receipt = json['receipt'] is Map ? Map<String, dynamic>.from(json['receipt'] as Map) : null;
+    final attachments = json['attachments'] is List ? json['attachments'] as List : const [];
+    if (receipt == null && attachments.isEmpty) return null;
+
+    return fromJson({...?receipt, 'attachments': attachments});
+  }
+
+  static TransactionReceipt fromJson(Map<String, dynamic> json) {
+    final status = json['status']?.toString().trim();
+    return TransactionReceipt(
+      status: status == null || status.isEmpty ? null : status,
+      reviewReasons: [
+        for (final reason in (json['review_reasons'] as List? ?? const []))
+          if (reason is Map && reason['reason'] != null) reason['reason'].toString()
+          else if (reason is String) reason,
+      ],
+      lineItems: [
+        for (final item in (json['line_items'] as List? ?? const []))
+          if (item is Map) ReceiptLineItem.fromJson(Map<String, dynamic>.from(item)),
+      ],
+      attachments: [
+        for (final attachment in (json['attachments'] as List? ?? const []))
+          if (attachment is Map) TransactionAttachment.fromJson(Map<String, dynamic>.from(attachment)),
+      ],
+    );
+  }
+
+  /// The form stored in the offline database (see TransactionReceipt.fromJson).
+  Map<String, dynamic> toJson() => {
+        'status': status,
+        'review_reasons': [for (final reason in reviewReasons) {'reason': reason}],
+        'line_items': [for (final item in lineItems) item.toJson()],
+        'attachments': [for (final attachment in attachments) attachment.toJson()],
+      };
+}
+
+class ReceiptLineItem {
+  final String name;
+  final String? amount;
+  final String? categoryName;
+
+  const ReceiptLineItem({required this.name, this.amount, this.categoryName});
+
+  Map<String, dynamic> toJson() => {'name': name, 'amount': amount, 'category_name': categoryName};
+
+  factory ReceiptLineItem.fromJson(Map<String, dynamic> json) => ReceiptLineItem(
+        name: json['name']?.toString() ?? '',
+        amount: json['amount']?.toString(),
+        categoryName: json['category_name']?.toString(),
+      );
+}
+
+class TransactionAttachment {
+  final String url;
+  final String? thumbnailUrl;
+  final String contentType;
+  final String filename;
+
+  const TransactionAttachment({
+    required this.url,
+    required this.contentType,
+    required this.filename,
+    this.thumbnailUrl,
+  });
+
+  bool get isImage => contentType.startsWith('image/');
+
+  Map<String, dynamic> toJson() => {
+        'url': url,
+        'thumbnail_url': thumbnailUrl,
+        'content_type': contentType,
+        'filename': filename,
+      };
+
+  factory TransactionAttachment.fromJson(Map<String, dynamic> json) => TransactionAttachment(
+        url: json['url']?.toString() ?? '',
+        thumbnailUrl: json['thumbnail_url']?.toString(),
+        contentType: json['content_type']?.toString() ?? '',
+        filename: json['filename']?.toString() ?? '',
+      );
 }

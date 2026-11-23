@@ -299,6 +299,7 @@ class OfflineStorageService {
         merchantName: transaction.merchantName,
         tagIds: transaction.tagIds,
         tagNames: transaction.tagNames,
+        receipt: transaction.receipt,
         syncStatus: SyncStatus.synced,
       );
       await _dbHelper.insertTransaction(offlineTransaction.toDatabaseMap());

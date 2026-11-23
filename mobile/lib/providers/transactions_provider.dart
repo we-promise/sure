@@ -110,6 +110,9 @@ class TransactionsProvider with ChangeNotifier {
         'Loaded ${localTransactions.length} transactions from local storage${accountId != null ? " with account filter" : ""}',
       );
 
+      // The list is shared: a fetch for an account the user has since left
+      // mustn't replace the current account's transactions.
+      if (accountId != _currentAccountId) return;
       _transactions = localTransactions;
       notifyListeners();
 
@@ -137,6 +140,7 @@ class TransactionsProvider with ChangeNotifier {
           );
           _log.debug('TransactionsProvider',
               'After sync, loaded ${updatedTransactions.length} transactions from local storage');
+          if (accountId != _currentAccountId) return;
           _transactions = updatedTransactions;
           _error = null;
         } else {
@@ -151,7 +155,7 @@ class TransactionsProvider with ChangeNotifier {
       );
       _error = 'Something went wrong. Please try again.';
     } finally {
-      _isLoading = false;
+      if (accountId == _currentAccountId) _isLoading = false;
       notifyListeners();
     }
   }

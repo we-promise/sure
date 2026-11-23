@@ -1192,5 +1192,60 @@
   "@cashFlowTransactionsEmpty": { "description": "Empty state of the category transactions screen." },
 
 "cashFlowTransactionsLoadFailed": "Couldn't load transactions",
-  "@cashFlowTransactionsLoadFailed": { "description": "Error state of the category transactions screen." }
+  "@cashFlowTransactionsLoadFailed": { "description": "Error state of the category transactions screen." },
+
+  "receiptScanTitle": "Scan receipt",
+  "@receiptScanTitle": { "description": "Title of the receipt capture screen and the add-receipt option." },
+
+  "receiptTakePhoto": "Take photo",
+  "@receiptTakePhoto": { "description": "Button that opens the camera to photograph a receipt." },
+
+  "receiptChooseFromGallery": "Choose from gallery",
+  "@receiptChooseFromGallery": { "description": "Button that picks receipt photos from the photo library." },
+
+  "receiptMaxPhotos": "Up to {count} photos of one receipt",
+  "@receiptMaxPhotos": {
+    "description": "Hint under the receipt photos explaining the photo limit.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "receiptAccountLabel": "Paid from",
+  "@receiptAccountLabel": { "description": "Label of the account picker on the receipt capture screen." },
+
+  "receiptUpload": "Upload receipt",
+  "@receiptUpload": { "description": "Button that uploads the receipt photos." },
+
+  "receiptUploaded": "Receipt uploaded. Its transaction will be filled in shortly.",
+  "@receiptUploaded": { "description": "Confirmation after a receipt upload." },
+
+  "receiptScannerFailed": "Couldn't open the scanner: {message}",
+  "@receiptScannerFailed": {
+    "description": "Shown when the document scanner cannot be opened.",
+    "placeholders": { "message": { "type": "String" } }
+  },
+  "receiptGalleryFailed": "Couldn't open your photos: {message}",
+  "@receiptGalleryFailed": {
+    "description": "Shown when the photo gallery cannot be opened.",
+    "placeholders": { "message": { "type": "String" } }
+  },
+  "receiptUploadFailed": "Couldn't upload the receipt: {message}",
+  "@receiptUploadFailed": {
+    "description": "Error shown when a receipt upload fails.",
+    "placeholders": { "message": { "type": "String" } }
+  },
+
+  "receiptRemovePhoto": "Remove photo",
+  "@receiptRemovePhoto": { "description": "Tooltip of the button that removes a selected receipt photo." },
+
+  "addTransactionOption": "Transaction",
+  "@addTransactionOption": { "description": "Option in the add menu that opens the new transaction form." },
+
+  "receiptProcessing": "Processing receipt…",
+  "@receiptProcessing": { "description": "Badge on a transaction whose receipt is still being read." },
+
+  "receiptNeedsReview": "Needs review",
+  "@receiptNeedsReview": { "description": "Badge on a transaction whose receipt needs the user to check it." },
+
+  "receiptSectionTitle": "Receipt",
+  "@receiptSectionTitle": { "description": "Heading of the receipt section on the transaction screen." }
 }

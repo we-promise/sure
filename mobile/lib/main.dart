@@ -14,6 +14,7 @@ import 'providers/privacy_provider.dart';
 import 'screens/backend_config_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/biometric_lock_screen.dart';
+import 'services/app_lock_guard.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/sso_onboarding_screen.dart';
 import 'services/api_config.dart';
@@ -158,10 +159,11 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // The lock screen shows via build() and starts the biometric prompt itself.
     if (state == AppLifecycleState.paused) {
-      _markLockedIfEnabled();
-    } else if (state == AppLifecycleState.resumed && _isLocked) {
-      // Lock screen is already showing via build(); biometric auto-triggers there.
+      if (AppLockGuard.instance.shouldLockOnPause()) _markLockedIfEnabled();
+    } else if (state == AppLifecycleState.resumed) {
+      if (AppLockGuard.instance.shouldLockOnResume()) _markLockedIfEnabled();
     }
   }
 
