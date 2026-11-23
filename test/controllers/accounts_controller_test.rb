@@ -17,6 +17,40 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "account reconciliation indicator renders only on the account page" do
+    create_transaction(account: @account, name: "Unreconciled", amount: 10)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+
+    @user.family.update!(manual_reconciliation: true)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_equal 1, response.body.scan(I18n.t("accounts.reconciliation_indicator.needs_attention")).size
+
+    get accounts_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+
+    get root_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+  end
+
+  # Opening the account groups makes the list scroll; reserving the scrollbar's
+  # space keeps the sidebar from shifting sideways when it appears.
+  test "the sidebar keeps room for its scrollbar" do
+    get root_url
+
+    assert_select "#sidebar-scroll[class*='[scrollbar-gutter:stable]']"
+  end
+
   test "show points an unmatched transaction with a counterpart to the transfer matcher" do
     outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
     create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
@@ -50,6 +84,36 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal account_path(@account), account_link["href"]
   end
 
+  test "index shows the excluded-from-reports indicator with its explanation" do
+    @account.update!(exclude_from_reports: true)
+
+    get accounts_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    frame = doc.at_css("turbo-frame##{dom_id(@account)}")
+    text = I18n.t("accounts.account.excluded_from_reports_indicator")
+    panel = frame.css("[role='tooltip']").find { |node| node.text.strip == text }
+    assert panel, "expected a tooltip panel with the indicator text"
+    assert_nil panel.at_css("svg"), "the tooltip panel should show text, not the icon"
+
+    trigger = frame.at_css("[aria-describedby='#{panel["id"]}']")
+    assert_equal "button", trigger.name
+    assert_equal eye_off_icon_paths, trigger.css("svg path").map { |path| path["d"] }, "the trigger should be the eye-off icon"
+  end
+
+  test "index omits the excluded-from-reports indicator for included accounts" do
+    @account.update!(exclude_from_reports: false)
+
+    get accounts_url
+
+    assert_response :success
+    frame = Nokogiri::HTML::Document.parse(response.body).at_css("turbo-frame##{dom_id(@account)}")
+    text = I18n.t("accounts.account.excluded_from_reports_indicator")
+    assert_empty frame.css("[role='tooltip']").select { |node| node.text.strip == text }
+    assert_not_includes frame.text, text
+  end
+
   test "index localizes the Plaid add accounts action" do
     ensure_tailwind_build
     @user.update!(locale: "de")
@@ -68,6 +132,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
     assert_response :success
     assert_select "##{dom_id(kraken_item)}"
+  end
+
+  test "index titles each ibkr connection with its own name" do
+    first = ibkr_items(:configured_item)
+    first.update!(name: "IBKR Ireland")
+    second = @user.family.ibkr_items.create!(name: "IBKR US", query_id: "Q2", token: "T2")
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(first)}", text: /IBKR Ireland/
+    assert_select "##{dom_id(second)}", text: /IBKR US/
   end
 
   test "index renders on-chain wallet items" do
@@ -480,6 +556,75 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show lists positions that went below zero in the account status" do
+    account = accounts(:investment)
+    # An import that records a sale without its purchase, as a provider or CSV can.
+    account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "[data-testid='account-health-status']", text: /Microsoft \(MSFT\): below zero from/
+  end
+
+  test "show has no account status for a healthy account" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-testid='account-health-status']", count: 0
+  end
+
+  test "a member who cannot open the account does not see its status" do
+    account = accounts(:investment)
+    account.syncs.create!(status: :failed, failed_at: 1.hour.ago)
+    sign_in users(:family_member)
+
+    get account_url(account)
+
+    assert_response :not_found
+    assert_not_includes response.body, I18n.t("accounts.health_status.sync_failed.message")
+  end
+
+  test "a member sees the status of an account shared with them" do
+    @account.syncs.create!(status: :failed, failed_at: 1.hour.ago)
+    sign_in users(:family_member)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-testid='account-health-status']", text: /#{I18n.t("accounts.health_status.sync_failed.message")}/
+  end
+
+  test "show renders the scheduled balance tooltip when a scheduled transaction exists" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-controller='DS--tooltip']"
+  end
+
+  test "show adds the scheduled projection to the investment value tooltip" do
+    investment_account = accounts(:investment)
+    create_transaction(account: investment_account, amount: 200, date: 3.days.from_now.to_date)
+
+    get account_url(investment_account)
+
+    assert_response :success
+    assert_select "[role='tooltip']", text: /#{I18n.t("investments.value_tooltip.projected")}/
+  end
+
+  test "show omits the scheduled projection from the investment value tooltip without scheduled entries" do
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    assert_select "[role='tooltip']", text: /#{I18n.t("investments.value_tooltip.projected")}/, count: 0
+  end
+
   test "show renders the balance chart as drag-selectable for a custom date range" do
     get account_url(@account)
 
@@ -526,6 +671,311 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(valuation)}", count: 0
   end
 
+  test "show filters activity by reconciliation status on a manual account" do
+    @user.family.update!(manual_reconciliation: true)
+    cleared = create_transaction(name: "Cleared", amount: 50, account: @account)
+    cleared.update!(reconciled_status: "cleared")
+    unreconciled = create_transaction(name: "Unreconciled", amount: 60, account: @account)
+
+    get account_url(@account), params: { q: { reconcile_status: [ "cleared" ] } }
+
+    assert_response :success
+    assert_select "##{dom_id(cleared)}"
+    assert_select "##{dom_id(unreconciled)}", count: 0
+    assert_select "#transaction-filters-menu button[data-id=?]", "reconcile_status_filter"
+  end
+
+  test "show hides the reconciliation filter on a synced account and drops the param" do
+    @user.family.update!(manual_reconciliation: true)
+    synced_account = accounts(:connected)
+    entry = create_transaction(name: "Synced entry", amount: 50, account: synced_account)
+
+    get account_url(synced_account), params: { q: { reconcile_status: [ "unreconciled" ] } }
+
+    assert_response :success
+    assert_select "#transaction-filters-menu button[data-id=?]", "reconcile_status_filter", count: 0
+    assert_select "##{dom_id(entry)}"
+  end
+
+  test "reconcile_all marks every transaction on a manual account and keeps statement data" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    first = create_transaction(account: account, name: "First", amount: 10)
+    second = create_transaction(account: account, name: "Second", amount: 20)
+    valuation = create_valuation(account: account, date: 2.days.ago.to_date)
+    other_account_entry = create_transaction(account: accounts(:credit_card), name: "Other account")
+    reconciled_at = 2.days.ago.change(usec: 0)
+    first.update_columns(reconciled_at: reconciled_at)
+
+    patch reconcile_all_account_url(account), params: { reconciled_status: "reconciled" }
+
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.reconcile_all.success", count: 2, status: I18n.t("transactions.reconcile.statuses.reconciled")), flash[:notice]
+    assert_equal %w[reconciled reconciled], [ first, second ].map { |entry| entry.reload.reconciled_status }
+    assert_equal reconciled_at, first.reload.reconciled_at
+    assert_equal "unreconciled", valuation.reload.reconciled_status
+    assert_equal "unreconciled", other_account_entry.reload.reconciled_status
+  end
+
+  test "reconcile_all rejects a synced account" do
+    @user.family.update!(manual_reconciliation: true)
+    account = accounts(:connected)
+    entry = create_transaction(account: account, name: "Synced")
+
+    patch reconcile_all_account_url(account), params: { reconciled_status: "reconciled" }
+
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.reconcile_all.not_manual_account"), flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile_all rejects an unknown status" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    entry = create_transaction(account: account, name: "Untouched")
+
+    patch reconcile_all_account_url(account), params: { reconciled_status: "bogus" }
+
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.reconcile_all.invalid_status"), flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile_all returns not found when manual reconciliation is disabled" do
+    account = create_manual_account
+    entry = create_transaction(account: account, name: "Untouched")
+
+    patch reconcile_all_account_url(account), params: { reconciled_status: "reconciled" }
+
+    assert_response :not_found
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile_all requires write permission" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    entry = create_transaction(account: account, name: "Untouched")
+    member = users(:family_member)
+    account.account_shares.create!(user: member, permission: "read_only")
+
+    sign_in member
+    patch reconcile_all_account_url(account), params: { reconciled_status: "reconciled" }
+
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "show offers bulk reconciliation only on an eligible manual account" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    create_transaction(account: account, name: "Transaction")
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "[data-testid='account-menu']" do
+      assert_select "button", text: /#{I18n.t("accounts.show.menu.reconcile_all.unreconciled")}/
+      assert_select "button", text: /#{I18n.t("accounts.show.menu.reconcile_all.cleared")}/
+      assert_select "button", text: /#{I18n.t("accounts.show.menu.reconcile_all.reconciled")}/
+    end
+    assert_select "form[action=?]", reconcile_all_account_path(account, reconciled_status: "reconciled")
+  end
+
+  test "show hides bulk reconciliation without the family setting" do
+    account = create_manual_account
+    create_transaction(account: account, name: "Transaction")
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "form[action=?]", reconcile_all_account_path(account, reconciled_status: "reconciled"), count: 0
+  end
+
+  test "show hides bulk reconciliation on a synced account" do
+    @user.family.update!(manual_reconciliation: true)
+    account = accounts(:connected)
+    create_transaction(account: account, name: "Synced")
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "form[action=?]", reconcile_all_account_path(account, reconciled_status: "reconciled"), count: 0
+  end
+
+  test "show hides bulk reconciliation on an account without transactions" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "form[action=?]", reconcile_all_account_path(account, reconciled_status: "reconciled"), count: 0
+  end
+
+  test "show hides bulk reconciliation from a read-only share" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    create_transaction(account: account, name: "Transaction")
+    member = users(:family_member)
+    account.account_shares.create!(user: member, permission: "read_only")
+
+    sign_in member
+    get account_url(account)
+
+    assert_response :success
+    assert_select "form[action=?]", reconcile_all_account_path(account, reconciled_status: "reconciled"), count: 0
+  end
+
+  test "reconcile_all allows a member with full_control" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    entry = create_transaction(account: account, name: "Shared")
+    member = users(:family_member)
+    account.account_shares.create!(user: member, permission: "full_control")
+
+    sign_in member
+    patch reconcile_all_account_url(account), params: { reconciled_status: "cleared" }
+
+    assert_redirected_to account_url(account)
+    assert_equal "cleared", entry.reload.reconciled_status
+  end
+
+  test "reconcile_all treats a missing status as invalid" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    entry = create_transaction(account: account, name: "Untouched")
+
+    patch reconcile_all_account_url(account)
+
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.reconcile_all.invalid_status"), flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile_all reports zero updates for an account without transactions" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+
+    patch reconcile_all_account_url(account), params: { reconciled_status: "cleared" }
+
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.reconcile_all.success", count: 0, status: I18n.t("transactions.reconcile.statuses.cleared")), flash[:notice]
+  end
+
+  test "reconcile_all does not reach an account in another family" do
+    @user.family.update!(manual_reconciliation: true)
+    other_account = Account.create!(
+      family: families(:inactive_trial),
+      name: "Someone else's account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    patch reconcile_all_account_url(other_account), params: { reconciled_status: "reconciled" }
+
+    assert_response :not_found
+  end
+
+  test "show hides bulk reconciliation on an account with only valuations" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    create_valuation(account: account, date: 2.days.ago.to_date)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "form[action=?]", reconcile_all_account_path(account, reconciled_status: "reconciled"), count: 0
+  end
+
+  test "the bulk reconciliation items carry a confirmation" do
+    @user.family.update!(manual_reconciliation: true)
+    account = create_manual_account
+    create_transaction(account: account, name: "Transaction")
+
+    get account_url(account)
+
+    assert_response :success
+    Entry.reconciled_statuses.each_key do |status|
+      assert_select "form[action=?] button[data-turbo-confirm]",
+                    reconcile_all_account_path(account, reconciled_status: status)
+    end
+  end
+
+  test "show hides balance updates on a linked account by default" do
+    account = accounts(:connected)
+    transaction = create_transaction(account: account, name: "Linked Transaction")
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "##{dom_id(transaction)}"
+    assert_select "##{dom_id(balance_update)}", count: 0
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 1
+    assert_select "input[type=checkbox][name=?]:not([checked])", "q[balance_updates]"
+  end
+
+  test "show lists balance updates on a linked account when the preference is on" do
+    account = accounts(:connected)
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date, name: "Manual balance update")
+    @user.update_show_balance_updates(true)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}", text: /Synced balance/
+    # Nothing left to switch in the filter: it shows as on, and points to Preferences.
+    assert_select "input[type=checkbox][name=?][checked][disabled]", "q[balance_updates]"
+    assert_select "#account-activity-filters li", count: 0
+  end
+
+  test "the activity filter shows balance updates for one view without saving the preference" do
+    account = accounts(:connected)
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date)
+
+    get account_url(account), params: { q: { balance_updates: "show", search: "Valuation" } }
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}"
+    assert_select "#account-activity-filters li", count: 2
+    assert_select "#account-activity-filters li", text: /Synced balances/
+    assert_not @user.reload.show_balance_updates?
+  end
+
+  test "clearing the balance updates badge hides them again and keeps the other filters" do
+    account = accounts(:connected)
+
+    delete clear_filter_account_url(account), params: {
+      q: { balance_updates: "show", search: "Valuation" },
+      param_key: "balance_updates",
+      param_value: "show"
+    }
+
+    assert_redirected_to account_url(account, q: { search: "Valuation" }, tab: "activity", page: nil, per_page: nil)
+  end
+
+  test "show lists balance updates on a manual account without offering the filter" do
+    balance_update = create_valuation(account: @account, date: 2.days.ago.to_date)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}"
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 0
+  end
+
+  test "show omits the balance updates filter on a linked account without any" do
+    account = accounts(:connected)
+    account.entries.balance_updates.destroy_all
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 0
+  end
+
   test "show renders a badge for each active filter" do
     get account_url(@account), params: { q: { categories: [ "Food & Drink" ], search: "grocery" } }
 
@@ -560,6 +1010,69 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to account_url(@account, q: { search: "grocery" }, tab: "activity", page: nil, per_page: nil)
+  end
+
+  test "clear_filter keeps the chart's range and view" do
+    delete clear_filter_account_url(@account), params: {
+      q: { start_date: "2026-01-05", end_date: "2026-02-10" },
+      start_date: "2026-01-05", end_date: "2026-02-10", chart_view: "balance",
+      param_key: "start_date",
+      param_value: "2026-01-05"
+    }
+
+    assert_redirected_to account_url(@account, q: { end_date: "2026-02-10" }, tab: "activity",
+                                               start_date: "2026-01-05", end_date: "2026-02-10", chart_view: "balance")
+  end
+
+  test "show's period links keep the activity filters but not the dates of the range they replace" do
+    get account_url(@account), params: {
+      start_date: "2026-01-05", end_date: "2026-02-10",
+      q: { start_date: "2026-01-05", end_date: "2026-02-10", search: "grocery" }
+    }
+
+    assert_response :success
+    preset = css_select("a[role='menuitemradio']").find { |link| link["href"].include?("period=last_90_days") }
+    query = Rack::Utils.parse_nested_query(URI.parse(preset["href"]).query)
+    assert_equal({ "search" => "grocery" }, query["q"])
+  end
+
+  test "show's chart-view select keeps a dragged range and the activity filters" do
+    get account_url(accounts(:investment)), params: {
+      start_date: "2026-01-05", end_date: "2026-02-10",
+      q: { start_date: "2026-01-05", end_date: "2026-02-10", search: "grocery" }
+    }
+
+    assert_response :success
+    form = css_select("form").find { |f| f.at_css("select[name='chart_view']") }
+    hidden = form.css("input[type='hidden']").to_h { |input| [ input["name"], input["value"] ] }
+    assert_equal "2026-01-05", hidden["start_date"]
+    assert_equal "2026-02-10", hidden["end_date"]
+    assert_equal "2026-01-05", hidden["q[start_date]"]
+    assert_equal "2026-02-10", hidden["q[end_date]"]
+    assert_equal "grocery", hidden["q[search]"]
+  end
+
+  test "show's chart-view select carries no range for a preset period" do
+    get account_url(accounts(:investment)), params: { period: "last_90_days" }
+
+    assert_response :success
+    form = css_select("form").find { |f| f.at_css("select[name='chart_view']") }
+    names = form.css("input[type='hidden']").map { |input| input["name"] }
+    assert_not_includes names, "start_date"
+    assert_not_includes names, "end_date"
+  end
+
+  test "show's activity search keeps the chart's range and view for its badges' clear links" do
+    get account_url(accounts(:investment)), params: {
+      start_date: "2026-01-05", end_date: "2026-02-10", chart_view: "holdings_balance", tab: "activity"
+    }
+
+    assert_response :success
+    form = css_select("form").find { |f| f.at_css("input[name='q[search]']") }
+    hidden = form.css("input[type='hidden']").to_h { |input| [ input["name"], input["value"] ] }
+    assert_equal "2026-01-05", hidden["start_date"]
+    assert_equal "2026-02-10", hidden["end_date"]
+    assert_equal "holdings_balance", hidden["chart_view"]
   end
 
   test "clear_filter drops the amount_operator once amount is cleared" do
@@ -759,6 +1272,24 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(@account, :container)}", count: 0
   end
 
+  test "statements tab lists statements by period" do
+    statements = [ Date.new(2024, 2, 1), Date.new(2024, 4, 1), Date.new(2024, 3, 1) ].map do |month|
+      statement = AccountStatement.create_from_upload!(
+        family: @account.family,
+        account: @account,
+        file: uploaded_file(filename: "statement_#{month}.csv", content_type: "text/csv", content: "date,amount\n#{month},1\n")
+      )
+      statement.update!(period_start_on: month, period_end_on: month.end_of_month)
+      statement
+    end
+
+    get account_url(@account, tab: "statements")
+
+    assert_response :success
+    assert_equal statements.sort_by(&:period_end_on).reverse.map { |statement| dom_id(statement) },
+                 css_select("tr[id^='account_statement_']").map { |row| row["id"] }
+  end
+
   test "statements tab filters historical coverage by year" do
     account = Account.create!(
       family: @user.family,
@@ -826,6 +1357,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       entryable: Transaction.new
     )
 
+    materialize_balances(accounts(:credit_card))
     get account_url(accounts(:credit_card), tab: "overview")
 
     assert_response :success
@@ -836,6 +1368,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
     accounts(:credit_card).credit_card.update!(statement_close_day: 25, due_day: 5, apr: nil, minimum_payment: nil)
 
+    materialize_balances(accounts(:credit_card))
     get account_url(accounts(:credit_card), tab: "overview")
 
     assert_response :success
@@ -848,6 +1381,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
     accounts(:credit_card).credit_card.update!(statement_close_day: 25, due_day: 5, apr: 18.99, minimum_payment: nil)
 
+    materialize_balances(accounts(:credit_card))
     get account_url(accounts(:credit_card), tab: "overview")
 
     assert_response :success
@@ -867,6 +1401,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -889,6 +1424,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -911,10 +1447,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
-      assert_match I18n.t("credit_cards.tabs.overview.remaining_due", amount: Money.new(60, "USD").format), response.body
+      # The bill card shows what is still owed on the statement: 100 less the 40 paid.
+      # Scoped to that card, since the APR card also renders a balance.
+      bill_card = Nokogiri::HTML(response.body)
+        .css("[data-testid=credit-card-summary-grid] > div:first-child")
+        .first
+      assert_includes bill_card.text, Money.new(60, "USD").format
       assert_match I18n.t("credit_cards.tabs.overview.status_partial"), response.body
     end
   end
@@ -934,14 +1476,15 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
       assert_match I18n.t("credit_cards.tabs.overview.charges"), response.body
-      assert_match I18n.t("credit_cards.tabs.overview.payments_credits"), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.payments_applied"), response.body
       assert_match Money.new(100, "USD").format, response.body
       assert_match Money.new(40, "USD").format, response.body
-      assert_match I18n.t("credit_cards.tabs.overview.closes_on", date: I18n.l(Date.new(2026, 11, 10), format: :long)), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.closes_on_days", date: I18n.l(Date.new(2026, 11, 10), format: :long), count: 25), response.body
     end
   end
 
@@ -964,6 +1507,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       )
       open_due = series.recurring_occurrences.open_status.minimum(:due_on)
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -992,6 +1536,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       manual: true
     )
 
+    materialize_balances(account)
     get account_url(account, tab: "overview")
 
     assert_response :success
@@ -1009,10 +1554,11 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
-      assert_select "span.text-destructive", text: I18n.t("credit_cards.due.overdue", count: 9)
+      assert_select "span.text-destructive", text: I18n.t("credit_cards.tabs.overview.due_overdue_days", date: I18n.l(Date.new(2026, 10, 21), format: :long), count: 9)
     end
   end
 
@@ -1025,11 +1571,12 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # of THIS month -- not the 26th of next, which is the statement still
     # building and not yet owed.
     travel_to Date.new(2026, 10, 16) do
+      materialize_balances(accounts(:credit_card))
       get account_url(accounts(:credit_card), tab: "overview")
 
       assert_response :success
       assert_match I18n.l(Date.new(2026, 10, 26), format: :long), response.body
-      assert_match I18n.t("credit_cards.due.in_days", count: 10), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.due_on_days", date: I18n.l(Date.new(2026, 10, 26), format: :long), count: 10), response.body
     end
   end
 
@@ -1048,6 +1595,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -1074,6 +1622,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -1085,6 +1634,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   test "credit card overview asks for a cycle when none is set" do
     sign_in users(:family_admin)
 
+    materialize_balances(accounts(:credit_card))
     get account_url(accounts(:credit_card), tab: "overview")
 
     assert_response :success
@@ -1225,6 +1775,121 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   test "should get sparkline" do
     get sparkline_account_url(@account)
     assert_response :success
+  end
+
+  test "sparkline stays fresh when another account syncs" do
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    @account.family.touch(:latest_sync_completed_at)
+    get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+
+    assert_response :not_modified
+  end
+
+  test "sparkline is re-rendered when the account's balances change" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+    before = response.body
+
+    travel 1.minute do
+      @account.balances.create!(date: 3.days.ago.to_date, balance: 1234, start_cash_balance: 1234, currency: @account.currency)
+      get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+    assert_not_equal before, response.body
+  end
+
+  test "sparkline is re-rendered after the account's own sync completes" do
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      @account.syncs.create!(status: "completed", completed_at: Time.current)
+      get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+  end
+
+  # AccountProvider rows don't touch the account, and swapping one keeps it linked.
+  test "sparkline is re-rendered when the account's provider link changes" do
+    AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      @account.account_providers.destroy_all
+      other = PlaidAccount.create!(
+        plaid_item: plaid_items(:one), plaid_id: "acc_mock_swap", name: "Swapped", plaid_type: "depository",
+        currency: "USD", current_balance: 1
+      )
+      AccountProvider.create!(account: @account, provider: other)
+      get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+  end
+
+  test "an investment sparkline is re-rendered after any family sync" do
+    investment = accounts(:investment)
+    get sparkline_account_url(investment)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      investment.family.touch(:latest_sync_completed_at)
+      get sparkline_account_url(investment), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+  end
+
+  test "sidebar sparkline URLs carry a version the browser may reuse" do
+    get account_url(@account)
+
+    [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ].each do |src|
+      assert_match(/[?&]v=\h{16}\z/, src)
+      get src
+      assert_response :success
+      assert_includes response.headers["Cache-Control"], "max-age=86400"
+    end
+  end
+
+  test "a sparkline URL with an outdated version must be revalidated" do
+    get sparkline_account_url(@account, v: "outdated")
+    assert_response :success
+    assert_includes response.headers["Cache-Control"], "max-age=0"
+
+    get accountable_sparkline_url("depository", v: "outdated")
+    assert_response :success
+    assert_includes response.headers["Cache-Control"], "max-age=0"
+  end
+
+  test "a sidebar sparkline URL changes when the account's balances do" do
+    get account_url(@account)
+    before = sidebar_sparkline_src(dom_id(@account, :sparkline))
+
+    travel 1.minute do
+      @account.balances.create!(date: 40.days.ago.to_date, balance: 1, currency: @account.currency)
+      get account_url(@account)
+    end
+
+    assert_not_equal before, sidebar_sparkline_src(dom_id(@account, :sparkline))
+  end
+
+  test "sidebar sparkline URLs change the next day" do
+    get account_url(@account)
+    before = [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ]
+
+    travel 1.day do
+      get account_url(@account)
+      after = [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ]
+
+      assert_not_equal before[0], after[0]
+      assert_not_equal before[1], after[1]
+    end
   end
 
   test "sparkline renders an empty series without a trend" do
@@ -1732,8 +2397,33 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    # A manual (unsynced) account with no entries, so counts stay exact.
+    def create_manual_account
+      @user.family.accounts.create!(
+        name: "Manual test account",
+        balance: 100,
+        currency: "USD",
+        accountable: Depository.new
+      )
+    end
+
+    def sidebar_sparkline_src(frame_id)
+      css_select("turbo-frame##{frame_id}").first["src"]
+    end
+
     def logo_icon(key, source, size, name: nil, body: "\x89PNG".b)
       Account::LogoFetcher::Icon.new(key:, source:, name:, body:, size:, content_type: "image/png", extension: "png")
+    end
+
+    # The Overview reads the account's balance records, which sync builds from
+    # the entries. Tests build them after creating entries directly.
+    def materialize_balances(account)
+      Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    end
+
+    # Lucide SVGs carry no icon-name class, so an icon is identified by its path data.
+    def eye_off_icon_paths
+      Nokogiri::HTML::DocumentFragment.parse(ApplicationController.helpers.icon("eye-off")).css("path").map { |path| path["d"] }
     end
 
     # #3630. Links a shared and an unshared account to +item+ through two fresh

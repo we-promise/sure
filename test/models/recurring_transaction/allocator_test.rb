@@ -141,6 +141,154 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert @occurrence.reload.partially_paid?
   end
 
+  test "a single payment inside the tolerance band is recorded at its real amount" do
+    # The bill is 2000 and the charge is 2080 (4%, inside the 7.5% band).
+    allocation = @allocator.allocate!(entry: entry_for(2080))
+
+    assert_equal 2080, allocation.allocated_amount
+    assert_equal 2080, @occurrence.reload.confirmed_allocated
+    assert @occurrence.paid?
+    assert_not @occurrence.overpaid?, "a payment inside the band is the bill, not an overpayment"
+  end
+
+  test "a single payment outside the band is still capped at the estimate" do
+    # 2600 is 30% over, beyond the 25% limit a manual link can teach.
+    allocation = @allocator.allocate!(entry: entry_for(2600))
+
+    assert_equal 2000, allocation.allocated_amount
+  end
+
+  test "a learned tolerance widens the band the allocator uses" do
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => 10 })
+
+    allocation = @allocator.allocate!(entry: entry_for(2180))
+
+    assert_equal 2180, allocation.allocated_amount, "9% over is inside the learned 10% band"
+  end
+
+  test "a null learned tolerance hint reads as no widening" do
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => nil })
+
+    allocation = @allocator.allocate!(entry: entry_for(2080))
+
+    assert_equal 2080, allocation.allocated_amount
+    assert @occurrence.reload.paid?
+  end
+
+  test "a single below-estimate payment inside the band is recorded at its real amount" do
+    # 1900 is 5% under the 2000 bill, inside the 7.5% band.
+    allocation = @allocator.allocate!(entry: entry_for(1900))
+
+    assert_equal 1900, allocation.allocated_amount
+    assert @occurrence.reload.paid?
+  end
+
+  test "a payment just past the band is recorded in full on the first manual link" do
+    # 2151 is 7.55% over 2000, just outside the 7.5% default. The manual link
+    # teaches a band (7.6%) that covers it, and the whole payment is recorded.
+    allocation = @allocator.allocate!(entry: entry_for(2151))
+
+    assert_equal 2151, allocation.allocated_amount
+    assert_equal 2151, @occurrence.reload.confirmed_allocated
+    assert_equal 7.6, @rent.reload.matcher_hints["learned_tolerance_pct"].to_f
+    assert @occurrence.paid?
+    assert_not @occurrence.overpaid?
+  end
+
+  test "a payment 7.51% over the bill stores the ceiling of the deviation" do
+    # 7.51% rounds to 7.5 at one decimal but must store 7.6 (the ceiling).
+    allocation = @allocator.allocate!(entry: entry_for(BigDecimal("2150.20")))
+
+    assert_equal BigDecimal("2150.20"), allocation.allocated_amount
+    assert_equal 7.6, @rent.reload.matcher_hints["learned_tolerance_pct"].to_f
+  end
+
+  test "a non-numeric learned hint reads as no widening" do
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => "" })
+
+    allocation = @allocator.allocate!(entry: entry_for(2080))
+
+    assert_equal 2080, allocation.allocated_amount
+  end
+
+  test "a non-finite learned hint reads as no widening" do
+    # "Infinity" would otherwise widen the band to everything. 30% over is
+    # beyond the 25% learnable limit, so the default must still cap it.
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => "Infinity" })
+
+    allocation = @allocator.allocate!(entry: entry_for(2600))
+
+    assert_equal 2000, allocation.allocated_amount
+  end
+
+  test "a non-finite learned hint does not widen the matched-payment band" do
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => "Infinity" })
+
+    allocation = @allocator.allocate_matched!(
+      entry: entry_for(2300), state: "confirmed", confidence: 1.0, signals: {}
+    )
+
+    assert_equal 2000, allocation.allocated_amount
+  end
+
+  test "an imported learned hint is capped at the learnable maximum" do
+    # Learning never exceeds 25%, but imported hints are not validated. A 100%
+    # hint must not turn the band into everything: 30% over stays capped.
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => 100 })
+
+    allocation = @allocator.allocate!(entry: entry_for(2600))
+
+    assert_equal 2000, allocation.allocated_amount
+  end
+
+  test "the displayed learned tolerance is capped the same way as the matcher's" do
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => 100 })
+
+    assert_equal 25, @rent.reload.learned_amount_tolerance_pct.to_f
+    assert_equal 25, @rent.effective_amount_tolerance_pct.to_f
+  end
+
+  test "the first manual link of a payment outside the default band records the actual amount" do
+    # The Codex case: a 40.00 bill, a 46.80 payment (17% over). The first link
+    # teaches a 17% band and records 46.80, not the 40.00 estimate.
+    occurrence = usd_occurrence(expected: 40)
+    allocation = Allocator.new(occurrence).allocate!(entry: entry_for(46.80))
+
+    assert_equal 46.80, allocation.allocated_amount
+    assert_equal 46.80, occurrence.reload.confirmed_allocated
+    assert occurrence.paid?
+    assert_not occurrence.overpaid?
+  end
+
+  test "a manual partial payment outside the band teaches nothing and stays partial" do
+    allocation = @allocator.allocate!(entry: entry_for(1500))
+
+    assert_equal 1500, allocation.allocated_amount
+    assert @occurrence.reload.partially_paid?
+    assert_nil @rent.reload.matcher_hints["learned_tolerance_pct"]
+  end
+
+  test "an explicit amount on a manual link is never promoted to the entry amount" do
+    occurrence = usd_occurrence(expected: 40)
+    allocation = Allocator.new(occurrence).allocate!(entry: entry_for(46.80), amount: 40)
+
+    assert_equal 40, allocation.allocated_amount
+  end
+
+  test "a partial payment is never recorded as the whole bill" do
+    allocation = @allocator.allocate!(entry: entry_for(1500))
+
+    assert_equal 1500, allocation.allocated_amount
+    assert @occurrence.reload.partially_paid?
+  end
+
+  test "a second payment on an occurrence is capped at what remains, not the band" do
+    @allocator.allocate!(entry: entry_for(1900))
+    allocation = @allocator.allocate!(entry: entry_for(500))
+
+    assert_equal 100, allocation.allocated_amount
+  end
+
   test "overpayment closes and flags" do
     # The default allocation takes only what the occurrence needs, so an
     # overpay has to be explicit.
@@ -181,13 +329,7 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
 
   test "one entry can pay several occurrences but never more than itself" do
     lump = entry_for(1612.50)
-    # A mid-month date the day-29 series never generates, so this manual
-    # row can never collide with the generator's rows regardless of what
-    # Date.current is when the suite runs.
-    free_date = (Date.current + 2.months).beginning_of_month + 9
-    september = @rent.recurring_occurrences.create!(
-      family: @family, original_due_on: free_date, due_on: free_date, currency: "USD"
-    )
+    september = free_occurrence
 
     @allocator.allocate!(entry: lump, amount: 1000)
     Allocator.new(september).allocate!(entry: lump, amount: 612.50)
@@ -200,10 +342,7 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
   test "an entry another occurrence already uses up is refused as exhausted" do
     lump = entry_for(500)
     @allocator.allocate!(entry: lump)
-    free_date = (Date.current + 2.months).beginning_of_month + 9
-    september = @rent.recurring_occurrences.create!(
-      family: @family, original_due_on: free_date, due_on: free_date, currency: "USD"
-    )
+    september = free_occurrence
 
     # With no amount the default is what the entry has left, which is zero.
     # That used to reach the allocation's "greater than 0" validation instead.
@@ -221,6 +360,88 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
       @allocator.allocate!(entry: lump)
     end
     assert_equal 1, @occurrence.allocations.where(entry: lump).count
+  end
+
+  test "remaining_by_entry reports what each used entry has left in one query" do
+    partly = entry_for(500)
+    fully = entry_for(300)
+    unused = entry_for(100)
+    @allocator.allocate!(entry: partly, amount: 200)
+    @allocator.allocate!(entry: fully, amount: 300)
+
+    remaining = assert_queries_count(1) { Allocator.remaining_by_entry([ partly, fully, unused ]) }
+
+    assert_equal({ partly.id => 300, fully.id => 0 }, remaining)
+  end
+
+  # A split parent and its children are the same money: whichever side pays a
+  # bill first, the other side is spent, suggestions included.
+  test "a split parent and its children never both pay" do
+    parent = entry_for(1612.50)
+    child, = parent.split!([ { name: "Rent", amount: 1000 }, { name: "Parking", amount: 612.50 } ])
+    september = free_occurrence
+
+    @allocator.allocate!(entry: parent, amount: 1000)
+    assert_raises(Allocator::SplitCounterpartAllocatedError) { Allocator.new(september).allocate!(entry: child) }
+
+    @occurrence.allocations.destroy_all
+    Allocator.new(september).allocate_matched!(entry: child, state: "suggested", confidence: 0.7, signals: {})
+    assert_raises(Allocator::SplitCounterpartAllocatedError) { @allocator.allocate!(entry: parent) }
+    assert_empty @occurrence.allocations
+  end
+
+  test "the parts of a split can each pay a bill" do
+    rent, parking = entry_for(1612.50).split!([ { name: "Rent", amount: 1000 }, { name: "Parking", amount: 612.50 } ])
+
+    @allocator.allocate!(entry: rent)
+    Allocator.new(free_occurrence).allocate!(entry: parking)
+
+    assert_equal 2, RecurringAllocation.where(entry: [ rent, parking ]).count
+  end
+
+  test "remaining_by_entry reports the other side of a paying split as used up, in one query" do
+    parent = entry_for(1612.50)
+    rent, parking = parent.split!([ { name: "Rent", amount: 1000 }, { name: "Parking", amount: 612.50 } ])
+    @allocator.allocate!(entry: rent, amount: 400)
+
+    remaining = assert_queries_count(1) { Allocator.remaining_by_entry([ parent, rent, parking ]) }
+
+    assert_equal({ parent.id => 0, rent.id => 600 }, remaining)
+
+    other_parent = entry_for(500)
+    other_child, = other_parent.split!([ { name: "A", amount: 200 }, { name: "B", amount: 300 } ])
+    @allocator.allocate!(entry: other_parent, amount: 100)
+
+    assert_equal({ other_child.id => 0 }, Allocator.remaining_by_entry([ other_child ]))
+  end
+
+  # The guard ignores ended series, so the drawer must too: a deleted bill
+  # that a child paid leaves the parent free.
+  test "remaining_by_entry ignores what an ended bill took, on the entry or its counterpart" do
+    parent = entry_for(1612.50)
+    rent, = parent.split!([ { name: "Rent", amount: 1000 }, { name: "Parking", amount: 612.50 } ])
+    @allocator.allocate!(entry: rent, amount: 400)
+    @rent.update!(status: "ended")
+
+    assert_empty Allocator.remaining_by_entry([ parent, rent ])
+  end
+
+  # Different locks would let a parent and a child pass their counterpart
+  # checks at once, each blind to the other's uncommitted allocation.
+  test "a split parent and its children share one entry lock" do
+    parent = entry_for(1612.50)
+    children = parent.split!([ { name: "Rent", amount: 1000 }, { name: "Parking", amount: 612.50 } ])
+
+    assert_equal [ Allocator.entry_lock_id(parent) ], children.map { |child| Allocator.entry_lock_id(child) }.uniq
+    assert_not_equal Allocator.entry_lock_id(parent), Allocator.entry_lock_id(entry_for(10))
+  end
+
+  test "remaining_by_entry treats an unmeasurable entry as used up" do
+    ExchangeRate.delete_all
+    entry = foreign_entry(amount: 100, currency: "EUR")
+    Allocator.new(usd_occurrence(expected: 150)).allocate!(amount: 150, entry: entry)
+
+    assert_equal({ entry.id => 0 }, Allocator.remaining_by_entry([ entry ]))
   end
 
   test "the same entry cannot be allocated twice to one occurrence" do
@@ -267,10 +488,7 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     )
     @allocator.allocate!(entry: foreign, amount: 55)
 
-    free_date = (Date.current + 2.months).beginning_of_month + 9
-    other = @rent.recurring_occurrences.create!(
-      family: @family, original_due_on: free_date, due_on: free_date, currency: "USD"
-    )
+    other = free_occurrence
     # 50 EUR of the entry is spoken for, so the default is the 50 EUR
     # leftover converted, not the full 100 the old default reached for.
     allocation = Allocator.new(other).allocate!(entry: foreign)
@@ -366,6 +584,320 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_equal 95, occurrence.reload.allocations.sum(:allocated_amount)
   end
 
+  test "a payment can be linked to a new bill after the original bill is ended" do
+    # Reproduces: we-promise/sure#3592
+    # entry_capacity was summing allocations from ended series, making the
+    # entry appear fully spent and blocking re-use on a new bill.
+    payment = entry_for(2000)
+
+    # Link the payment to the original bill's occurrence and close it.
+    @allocator.allocate!(entry: payment)
+    assert @occurrence.reload.paid?
+
+    # End the original series (what the app does when a user "deletes" a bill).
+    @rent.update!(status: "ended")
+
+    # Create a replacement bill for the same obligation.
+    replacement = @family.recurring_transactions.create!(
+      account: @account,
+      name: "Watson Property",
+      amount: 2000,
+      currency: "USD",
+      expected_day_of_month: 29,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      manual: true,
+      dedup_scope: "replacement"
+    )
+    new_occurrence = replacement.recurring_occurrences.create!(
+      family: @family,
+      original_due_on: (Date.current + 1.month).beginning_of_month + 9,
+      due_on: (Date.current + 1.month).beginning_of_month + 9,
+      currency: "USD"
+    )
+
+    # Linking the same payment to the new bill must succeed.
+    assert_nothing_raised do
+      Allocator.new(new_occurrence).allocate!(entry: payment)
+    end
+
+    assert new_occurrence.reload.paid?
+  end
+
+  test "a payment fully linked to an active bill cannot be re-linked to another active bill" do
+    # The ended-series exclusion must NOT weaken the double-allocation guard for
+    # allocations that belong to a still-active series: a payment already spent
+    # on an active bill stays spent.
+    payment = entry_for(2000)
+
+    @allocator.allocate!(entry: payment)
+    assert @occurrence.reload.paid?
+
+    # A second, still-active bill (the original @rent is left active).
+    other = @family.recurring_transactions.create!(
+      account: @account,
+      name: "Unrelated Active Bill",
+      amount: 2000,
+      currency: "USD",
+      expected_day_of_month: 29,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      manual: true,
+      dedup_scope: "unrelated"
+    )
+    other_occurrence = other.recurring_occurrences.create!(
+      family: @family,
+      original_due_on: (Date.current + 1.month).beginning_of_month + 9,
+      due_on: (Date.current + 1.month).beginning_of_month + 9,
+      currency: "USD"
+    )
+
+    # The entry is fully consumed by the active allocation, so there is no
+    # capacity left for another active bill.
+    assert_raises(Allocator::EntryExhaustedError) do
+      Allocator.new(other_occurrence).allocate!(entry: payment)
+    end
+    assert_not other_occurrence.reload.paid?
+  end
+
+  test "two equal in-band settlements on a non-manual bill record a price change" do
+    series = @family.recurring_transactions.create!(
+      name: "Price Watch", account: @account, amount: 2000, currency: "USD",
+      status: "active", bill_type: "bill", manual: false,
+      dedup_scope: "price-watch-#{SecureRandom.hex(4)}", expected_day_of_month: 29,
+      last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current + 1.month
+    )
+    first_due = (Date.current + 1.month).beginning_of_month + 9
+    second_due = (Date.current + 2.months).beginning_of_month + 9
+    first = series.recurring_occurrences.create!(
+      family: @family, original_due_on: first_due, due_on: first_due,
+      currency: "USD", expected_amount: 2000, status: "scheduled"
+    )
+    second = series.recurring_occurrences.create!(
+      family: @family, original_due_on: second_due, due_on: second_due,
+      currency: "USD", expected_amount: 2000, status: "scheduled"
+    )
+
+    Allocator.new(first).allocate!(entry: entry_for(2080))
+    Allocator.new(second).allocate!(entry: entry_for(2080))
+
+    RecurringTransaction::PriceChangeDetector.new(@family).detect!
+
+    assert_equal 2080, series.reload.amount
+    assert_equal 2080, series.recurring_price_changes.order(:effective_on).last.new_amount
+  end
+
+  # A bill's category is the user's statement of what its payments are, so a
+  # confirmed payment inherits it instead of being categorized a second time.
+  # Only a blank, unlocked category is filled: a locked one is a user, rule or
+  # provider decision, and the bill must not undo it.
+  test "a confirmed manual attach gives an uncategorized transaction the bill's category" do
+    category = bill_category!
+    entry = entry_for(2000)
+
+    @allocator.allocate!(entry: entry, categorize: true)
+
+    transaction = entry.transaction.reload
+    assert_equal category, transaction.category
+    assert_not transaction.locked?(:category_id), "a bill-set category stays overridable by the user"
+    assert_equal "recurring_bill", transaction.data_enrichments.find_by(attribute_name: "category_id").source
+  end
+
+  # The caller knows whether its user may annotate the transaction, so
+  # categorizing is something it asks for, never something it gets by default.
+  test "allocate! does not categorize unless asked to" do
+    bill_category!
+    entry = entry_for(2000)
+
+    @allocator.allocate!(entry: entry)
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "confirm_suggestion! does not categorize unless asked to" do
+    bill_category!
+    entry = entry_for(2000)
+    allocation = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.8, signals: {})
+
+    @allocator.confirm_suggestion!(allocation)
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "a confirmed auto match gives an uncategorized transaction the bill's category" do
+    category = bill_category!
+    entry = entry_for(2000)
+
+    @allocator.allocate_matched!(entry: entry, state: "confirmed", confidence: 1, signals: {})
+
+    assert_equal category, entry.transaction.reload.category
+  end
+
+  test "a suggested match leaves the category alone until the suggestion is confirmed" do
+    category = bill_category!
+    entry = entry_for(2000)
+
+    allocation = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.8, signals: {})
+    assert_nil entry.transaction.reload.category
+
+    @allocator.confirm_suggestion!(allocation, categorize: true)
+    assert_equal category, entry.transaction.reload.category
+  end
+
+  test "a transaction that already has a category keeps it" do
+    bill_category!
+    other = @family.categories.create!(name: "Other pick", color: "#e99537", lucide_icon: "shapes")
+    entry = entry_for(2000)
+    entry.transaction.update!(category: other)
+
+    @allocator.allocate!(entry: entry, categorize: true)
+
+    assert_equal other, entry.transaction.reload.category
+  end
+
+  test "an uncategorized transaction whose category the user locked stays uncategorized" do
+    bill_category!
+    entry = entry_for(2000)
+    entry.transaction.lock_attr!(:category_id)
+
+    @allocator.allocate!(entry: entry, categorize: true)
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "a bill without a category changes nothing" do
+    entry = entry_for(2000)
+
+    @allocator.allocate!(entry: entry, categorize: true)
+
+    assert_nil entry.transaction.reload.category
+    assert_empty entry.transaction.data_enrichments
+  end
+
+  test "releasing the payment leaves the category the transaction picked up" do
+    category = bill_category!
+    entry = entry_for(2000)
+    allocation = @allocator.allocate!(entry: entry, categorize: true)
+
+    @allocator.unallocate!(allocation)
+
+    assert_equal category, entry.transaction.reload.category,
+      "the user may have relied on it; un-matching is not a request to uncategorize"
+  end
+
+  test "a payment without a transaction has nothing to categorize" do
+    bill_category!
+
+    assert_nothing_raised { @allocator.allocate!(amount: 500, categorize: true) }
+  end
+
+  # Auto-matching has no signed-in user, and a bill that is not tied to an
+  # account matches anything in the family, so only a person's own confirmation
+  # (with their own access) categorizes for it.
+  test "an account-less bill does not categorize an auto match" do
+    bill_category!
+    @rent.update!(account: nil)
+    entry = card_entry_for(2000)
+
+    @allocator.allocate_matched!(entry: entry, state: "confirmed", confidence: 1, signals: {})
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "an account-less bill categorizes when a person confirms the suggestion" do
+    category = bill_category!
+    @rent.update!(account: nil)
+    entry = card_entry_for(2000)
+    suggestion = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.7, signals: {})
+    assert_nil entry.transaction.reload.category
+
+    @allocator.confirm_suggestion!(suggestion, categorize: true)
+
+    assert_equal category, entry.transaction.reload.category
+  end
+
+  test "an account-less bill does not categorize a repaired orphan on its own" do
+    bill_category!
+    @rent.update!(account: nil)
+    entry = card_entry_for(2000)
+    allocation = @allocator.allocate!(entry: entry)
+
+    @allocator.categorize_reattached!(allocation)
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "a category committed after the matcher loaded the transaction is not overwritten" do
+    bill_category!
+    other = @family.categories.create!(name: "Picked meanwhile", color: "#e99537", lucide_icon: "shapes")
+    entry = entry_for(2000)
+    stale = Entry.includes(:entryable).find(entry.id)
+    stale.entryable # loaded while still blank
+
+    Transaction.where(id: entry.entryable_id).update_all(category_id: other.id)
+    @allocator.allocate_matched!(entry: stale, state: "confirmed", confidence: 1, signals: {})
+
+    assert_equal other, entry.transaction.reload.category
+  end
+
+  test "confirming an allocation that is already confirmed does not categorize it later" do
+    entry = entry_for(2000)
+    allocation = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.8, signals: {})
+    @allocator.confirm_suggestion!(allocation, categorize: true)
+    assert_nil entry.transaction.reload.category
+
+    bill_category!
+    @allocator.confirm_suggestion!(allocation.reload, categorize: true)
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "a transaction whose category is not editable is not categorized" do
+    bill_category!
+    entry = entry_for(2000)
+    Transaction.any_instance.stubs(:category_editable?).returns(false)
+
+    @allocator.allocate!(entry: entry, categorize: true)
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "a category that cannot be written does not stop the payment from being confirmed" do
+    bill_category!
+    entry = entry_for(2000)
+    Transaction.any_instance.stubs(:enrich_attribute).raises(ActiveRecord::InvalidForeignKey)
+
+    allocation = @allocator.allocate!(entry: entry, categorize: true)
+
+    assert allocation.persisted?
+    assert allocation.allocation_confirmed?
+  end
+
+  test "re-attaching a payment confirmed since it was loaded still categorizes the replacement" do
+    category = bill_category!
+    entry = entry_for(2000)
+    allocation = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.8, signals: {})
+    stale = RecurringAllocation.find(allocation.id)
+    assert stale.allocation_suggested?
+
+    allocation.update!(state: "confirmed", source: "user_confirmed")
+    @allocator.categorize_reattached!(stale)
+
+    assert_equal category, entry.transaction.reload.category
+  end
+
+  test "re-attaching a payment that is still only a suggestion does not categorize" do
+    bill_category!
+    entry = entry_for(2000)
+    allocation = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.8, signals: {})
+
+    @allocator.categorize_reattached!(allocation)
+
+    assert_nil entry.transaction.reload.category
+  end
+
   private
 
     def foreign_entry(amount:, currency:)
@@ -390,6 +922,18 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
         currency: "USD", expected_amount: expected, status: "scheduled"
       )
     end
+    def bill_category!
+      category = @family.categories.create!(name: "Housing bills", color: "#e99537", lucide_icon: "house")
+      @rent.update!(category: category)
+      category
+    end
+
+    def card_entry_for(amount)
+      accounts(:credit_card).entries.create!(
+        date: Date.current, amount: amount, currency: "USD", name: "Watson Property", entryable: Transaction.new
+      )
+    end
+
     def entry_for(amount)
       @account.entries.create!(
         date: Date.current,
@@ -397,6 +941,16 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
         currency: "USD",
         name: "Watson Property",
         entryable: Transaction.new
+      )
+    end
+
+    # A mid-month date the day-29 series never generates, so this manual
+    # row can never collide with the generator's rows regardless of what
+    # Date.current is when the suite runs.
+    def free_occurrence
+      free_date = (Date.current + 2.months).beginning_of_month + 9
+      @rent.recurring_occurrences.create!(
+        family: @family, original_due_on: free_date, due_on: free_date, currency: "USD"
       )
     end
 end

@@ -300,6 +300,51 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_equal [ account_provider.id ], yesterday_holdings.pluck(:account_provider_id)
   end
 
+  test "cleans up calculated holdings for each provider security only on its own snapshot dates" do
+    [ Date.yesterday, Date.current ].each do |date|
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date, rate: 1.2)
+    end
+
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(
+      name: "Brokerage",
+      currency: "USD"
+    )
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    provider_rows = { @aapl => [ Date.yesterday, Date.current ], @msft => [ Date.current ] }
+    provider_rows.each do |security, dates|
+      dates.each do |date|
+        Holding.create!(
+          account: @account,
+          security: security,
+          qty: 10,
+          price: 200,
+          amount: 2000,
+          currency: "EUR",
+          date: date,
+          account_provider: account_provider
+        )
+      end
+    end
+
+    # Calculated rows from an earlier sync: AAPL and MSFT on both days.
+    [ @aapl, @msft ].product([ Date.yesterday, Date.current ]).each do |security, date|
+      Holding.create!(account: @account, security: security, qty: 10, price: 240, amount: 2400, currency: "USD", date: date)
+    end
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    provider_rows.each do |security, dates|
+      dates.each do |date|
+        assert_equal [ account_provider.id ], @account.holdings.where(security: security, date: date).pluck(:account_provider_id)
+      end
+    end
+
+    msft_yesterday = @account.holdings.where(security: @msft, date: Date.yesterday)
+    assert_equal [ [ "USD", nil ] ], msft_yesterday.pluck(:currency, :account_provider_id)
+  end
+
   test "carries forward provider cost_basis to calculated rows past the provider snapshot date" do
     coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
     coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")

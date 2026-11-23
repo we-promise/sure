@@ -2,7 +2,7 @@
 nb:
   accounts:
     account:
-      troubleshoot: Feilsøking
+      troubleshoot: Feilsøk
     chart:
       data_not_available: Data ikke tilgjengelig for den valgte perioden
     create:
@@ -12,10 +12,10 @@ nb:
     empty:
       empty_message: Legg til en konto enten via tilkobling, importering eller manuell inntasting.
       new_account: Ny konto
-      no_accounts: Ingen kontoer enda
+      no_accounts: Ingen kontoer ennå
 
     form:
-      balance: Nåværende balanse
+      balance: "Saldo per dato:"
       name_label: Kontonavn
       name_placeholder: Eksempel på kontonavn
     index:
@@ -29,27 +29,27 @@ nb:
       method_selector:
         connected_entry: Koble til konto
         connected_entry_eu: Koble til EU-konto
-        manual_entry: Angi kontobalanse
+        manual_entry: Angi kontosaldo
         title: Hvordan vil du legge den til?
       title: Hva vil du legge til?
     show:
       activity:
         amount: Beløp
-        balance: Balanse
+        balance: Saldo
         date: Dato
-        entries: transaksjoner
-        entry: transaksjon
+        entries: oppføringer
+        entry: oppføring
         new: Ny
-        new_balance: Ny balanse
+        new_balance: Ny saldo
         new_transaction: Ny transaksjon
-        no_entries: Ingen transaksjoner funnet
+        no_entries: Ingen oppføringer funnet
         title: Aktivitet
       chart:
-        balance: Balanse
-        owed: Beløp skyldig
+        balance: Saldo
+        owed: Skyldig beløp
       menu:
         confirm_accept: Slett "%{name}"
-        confirm_body_html: "<p>Ved å slette denne kontoen, vil du slette dens verdihistorikk, som påvirker ulike aspekter av din samlede kontooversikt. Denne handlingen vil ha en direkte innvirkning på dine nettoverdi-beregninger og kontoens grafer.</p><br /> <p>Etter sletting er det ingen måte å gjenopprette kontoinformasjonen på, fordi du må legge den til som en ny konto.</p>"
+        confirm_body_html: "<p>Ved å slette denne kontoen, vil du slette dens verdihistorikk, som påvirker ulike aspekter av din samlede kontooversikt. Denne handlingen vil ha en direkte innvirkning på dine nettoformueberegninger og kontoens grafer.</p><br /> <p>Etter sletting er det ingen måte å gjenopprette kontoinformasjonen på, fordi du må legge den til som en ny konto.</p>"
         confirm_title: Slette konto?
         edit: Rediger
         import: Importer transaksjoner

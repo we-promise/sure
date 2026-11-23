@@ -1,0 +1,24 @@
+---
+es:
+  settings:
+    payments:
+      show:
+        page_title: Pagos
+        subscription_subtitle: Actualiza los detalles de tu tarjeta de crédito
+        subscription_title: Gestionar contribuciones
+        currently_on_plan: Actualmente en el plan
+        trialing: Actualmente usando la demo abierta de %{product_name}
+        trial_days_left:
+          one: Los datos se eliminarán en %{count} día
+          other: Los datos se eliminarán en %{count} días
+        not_contributing_prefix: Actualmente
+        not_contributing_emphasis: no estás contribuyendo
+        contributions_note: Las contribuciones a %{product_name} aparecerán aquí.
+        manage: Gestionar
+        choose_level: Elegir nivel
+        payment_via_stripe: Pago mediante Stripe
+  views:
+    settings:
+      payments:
+        renewal: Tu contribución continúa el %{date}.
+        cancellation: Tu contribución finaliza el %{date}.

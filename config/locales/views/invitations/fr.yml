@@ -3,14 +3,37 @@ fr:
   invitations:
     accept_choice:
       create_account: Créer un nouveau compte
+      existing_account_hint: "Vous avez déjà un compte ? Les comptes existants ne peuvent pas rejoindre un autre foyer via une invitation."
       joined_household: Vous avez rejoint le foyer.
       message: "%{inviter} vous a invité(e) à rejoindre en tant que %{role}."
-      sign_in_existing: J'ai déjà un compte
       title: Rejoindre %{family}
+    bulk_create:
+      download: Télécharger le rapport
+      errors:
+        email_not_queued: Invitation enregistrée, mais l'e-mail n'a pas pu être mis en file d'attente. Supprimez-la et réessayez.
+        processing_failed: L'invitation n'a pas pu être traitée. Vérifiez qu'aucune invitation n'est déjà en attente avant de réessayer.
+      invalid_role: Les invitations groupées ne peuvent être envoyées qu'à des membres et à des invités.
+      invite_more: Inviter d'autres personnes
+      no_emails: Saisissez au moins une adresse e-mail.
+      status:
+        invalid: Invitation impossible
+        link_only: Prête à partager
+        sent: Invitation envoyée
+      summary: "%{sent} envoyée(s), %{link_only} prête(s) à partager, %{invalid} en échec."
+      title: Résultats des invitations
+      too_many: Vous pouvez inviter jusqu'à %{max} personnes à la fois. Veuillez en envoyer moins.
+    bulk_new:
+      emails_label: Adresses e-mail
+      emails_placeholder: Saisissez les adresses e-mail, séparées par des virgules ou des retours à la ligne
+      role_guest: Invité
+      role_label: Rôle
+      role_member: Membre
+      submit: Envoyer les invitations
+      subtitle: Invitez plusieurs personnes à rejoindre votre compte %{moniker} sur %{product_name}
+      title: Inviter plusieurs personnes
     create:
-      existing_user_added: L'utilisateur a été ajouté à votre foyer.
-      existing_user_has_family_data: Cet utilisateur possède déjà un foyer avec des comptes. Il doit supprimer ou transférer ces comptes avant de rejoindre le vôtre.
       failure: Impossible d'envoyer l'invitation
+      own_email: Vous ne pouvez pas vous inviter vous-même.
       success: Invitation envoyée avec succès
     destroy:
       failure: Il y a eu un problème pour supprimer l'invitation.

@@ -75,6 +75,23 @@ zh-CN:
       creating_accounts: 正在创建账户...
       cancel: 取消
       psd2_savings_notice: 根据 PSD2 规则，部分储蓄账户可能需要额外授权。
+      skip_notice: 系统会记住已跳过的账户：在您将它们关联到账户之前，Sure 将停止导入这些账户。
+      account_types:
+        skip: 跳过此账户
+        depository: 支票或储蓄账户
+        credit_card: 信用卡
+        investment: 投资账户
+        loan: 贷款或抵押贷款
+        other_asset: 其他资产
+      subtype_labels:
+        depository: 账户子类型：
+        investment: 投资类型：
+        loan: 贷款类型：
+      subtype_messages:
+        credit_card: 信用卡将自动设置为信用卡账户。
+        other_asset: 其他资产将设置为常规资产。
+      select_subtype: 选择子类型
+      select_type: 选择类型
     new:
       link_enable_banking_title: 连接 Enable Banking
       session_expired: 会话已过期 - 需要重新授权

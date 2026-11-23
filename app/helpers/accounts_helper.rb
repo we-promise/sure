@@ -1,7 +1,7 @@
 module AccountsHelper
-  def summary_card(title:, &block)
+  def summary_card(title:, footer: nil, &block)
     content = capture(&block)
-    render "accounts/summary_card", title: title, content: content
+    render "accounts/summary_card", title: title, content: content, footer: footer
   end
 
   def sync_path_for(account)
@@ -37,6 +37,33 @@ module AccountsHelper
     match && match[1]
   end
 
+  # The id of the permanent wrapper around a sidebar sparkline frame. On a
+  # Turbo visit, an element marked data-turbo-permanent is carried over to the
+  # new page when that page has one with the same id, so the chart already
+  # drawn stays instead of being fetched and drawn again. The id names the copy
+  # of the sidebar it sits in (each tab panel, and the mobile one), since ids
+  # must be unique, and the series version, so a chart whose data changed is
+  # replaced by a fresh frame.
+  def sidebar_sparkline_wrapper_id(copy, subject, version)
+    "sparkline_keep_#{copy}_#{subject}_#{Digest::MD5.hexdigest(version.to_s)[0, 12]}"
+  end
+
+  # The id of the permanent wrapper around a sidebar account logo, for the
+  # same reason as the sparklines': a new <img> shows the initials beneath it
+  # until the image loads, so every visit flashed them. It changes with what
+  # the logo shows (the image, and the name and colour of the initials), not
+  # with its URL, which changes at the daily rollover where stored URLs
+  # expire (Account#logo_identity).
+  def sidebar_logo_wrapper_id(copy, account, color)
+    "logo_keep_#{copy}_#{account.id}_#{Digest::MD5.hexdigest([ account.logo_identity, account.name, color ].join("|"))[0, 12]}"
+  end
+
+  # See kept_element_controller.js: a morph refresh never removes a permanent
+  # element, so one the refreshed page no longer has removes itself.
+  def kept_element_data
+    { turbo_permanent: true, controller: "kept-element", action: "turbo:before-render@document->kept-element#dropIfGone" }
+  end
+
   # Cache key for `accounts/_account_sidebar_tabs.html.erb`.
   # Kept here (not in the ERB) so the partial stays render-only.
   #
@@ -46,6 +73,16 @@ module AccountsHelper
   # Both are pulled in a single SQL round-trip via `pick`. Note: Rails
   # returns the values as Strings for raw SQL fragments — that's fine
   # since they only feed into a cache key (concat-stable, never coerced).
+  # Versions for the sidebar's sparkline URLs, keyed by account id and by group
+  # accountable, computed together rather than per account.
+  def sidebar_sparkline_versions(family)
+    @sidebar_sparkline_versions ||= begin
+      groups = family.balance_sheet.account_groups
+      Account.sparkline_versions(groups.flat_map(&:accounts).map(&:account))
+        .merge(AccountableSparkline.versions(groups.map(&:accountable_type).uniq))
+    end
+  end
+
   def account_sidebar_tabs_cache_key(family:, active_tab:, mobile:)
     shares_version =
       if Current.user
@@ -55,13 +92,20 @@ module AccountsHelper
         "#{count}-#{max_at}"
       end
 
+    # Linking or unlinking a provider doesn't touch the account, but changes its sparkline versions.
+    providers_version = AccountProvider.where(account_id: family.accounts.select(:id))
+      .pick(Arel.sql("count(*)"), Arel.sql("max(account_providers.updated_at)"))
+
     [
-      family.build_cache_key("account_sidebar_tabs_v6", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v10", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
+      providers_version,
       active_tab,
       mobile,
       I18n.locale,
+      # Sparkline URLs carry a version that rolls over with the 30-day window.
+      Date.current,
       sidebar_active_account_id,
       # Fold the per-user "start expanded by default" preference into the key
       # so toggling it in Settings busts the 12h fragment cache immediately

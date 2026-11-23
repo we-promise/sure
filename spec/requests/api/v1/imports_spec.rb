@@ -37,6 +37,7 @@ RSpec.describe 'API V1 Imports', type: :request do
       user: user,
       name: 'No Read Docs Key',
       key: key,
+      display_key: key,
       scopes: %w[write],
       source: 'web'
     ).tap { |api_key| api_key.save!(validate: false) }
@@ -47,6 +48,7 @@ RSpec.describe 'API V1 Imports', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Test Checking',
       balance: 1000,
       currency: 'USD',
@@ -138,13 +140,13 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           type: {
             type: :string,
-            enum: Import::TYPES,
-            description: 'Import type (defaults to TransactionImport)'
+            enum: Import::TYPES - %w[MonarchImport],
+            description: 'Import type (defaults to TransactionImport). MonarchImport imports are created in the web app; requesting one here returns 422 unsupported_type.'
           },
           account_id: {
             type: :string,
             format: :uuid,
-            description: 'Account ID to import into'
+            description: 'Account ID to import into. Must be an account the API user can write to'
           },
           publish: {
             type: :string,
@@ -250,7 +252,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '403', 'guest users cannot import family configuration' do
+      response '403', 'guest users cannot import family configuration, or the account is shared without write access' do
         schema oneOf: [
           { '$ref' => '#/components/schemas/ErrorResponse' },
           { '$ref' => '#/components/schemas/ErrorResponseWithImportId' }
@@ -420,13 +422,13 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           type: {
             type: :string,
-            enum: Import::TYPES,
+            enum: Import::Preflight::IMPORT_TYPES,
             description: 'Import type to validate (defaults to TransactionImport)'
           },
           account_id: {
             type: :string,
             format: :uuid,
-            description: 'Account ID used for account-scoped CSV import validation'
+            description: 'Account ID used for account-scoped CSV import validation. Must be an account the API user can write to'
           },
           date_col_label: { type: :string, description: 'CSV imports only. Header name for the date column' },
           amount_col_label: { type: :string, description: 'CSV imports only. Header name for the amount column' },
@@ -502,6 +504,33 @@ RSpec.describe 'API V1 Imports', type: :request do
       response '422', 'missing or invalid content' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:body) { { type: 'SureImport' } }
+
+        run_test!
+      end
+
+      response '403', 'account is shared with the user without write access' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:read_only_account) do
+          owner = family.users.create!(
+            email: 'api-account-owner@example.com',
+            password: 'password123',
+            password_confirmation: 'password123'
+          )
+          Account.create!(
+            family: family,
+            owner: owner,
+            name: 'Shared Checking',
+            balance: 1000,
+            currency: 'USD',
+            accountable: Depository.new
+          ).tap { |shared| shared.account_shares.create!(user: user, permission: 'read_only') }
+        end
+        let(:body) do
+          {
+            raw_file_content: "date,amount,name\n01/15/2024,50.00,New Transaction",
+            account_id: read_only_account.id
+          }
+        end
 
         run_test!
       end

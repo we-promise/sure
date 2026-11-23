@@ -195,7 +195,10 @@ class Provider::YahooFinance < Provider
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
-      cache_key = "search_#{symbol}_#{country_code}_#{exchange_operating_mic}"
+      # The cached values are Security Data objects. Rails treats an entry that no
+      # longer fits the class (TypeError: struct size differs) as an error, not a
+      # miss, so bump the version here whenever Security's members change.
+      cache_key = "search_v2_#{symbol}_#{country_code}_#{exchange_operating_mic}"
       if cached_result = get_cached_result(cache_key)
         cached_result
       else
@@ -331,14 +334,11 @@ class Provider::YahooFinance < Provider
     with_provider_response do
       symbol = normalize_symbol(symbol, exchange_operating_mic)
       validate_date_params!(start_date, end_date)
-      # Convert dates to Unix timestamps using UTC to ensure consistent epoch boundaries across timezones
-      period1 = start_date.to_time.utc.to_i
-      period2 = end_date.end_of_day.to_time.utc.to_i
+      dates = start_date.to_date..end_date.to_date
 
       throttle_request
       data = fetch_authenticated_chart(symbol, {
-        "period1" => period1,
-        "period2" => period2,
+        **chart_period(dates),
         "interval" => "1d",
         "includeAdjustedClose" => true
       })
@@ -356,17 +356,21 @@ class Provider::YahooFinance < Provider
       raw_currency = chart_data.dig("meta", "currency")
       raw_currency ||= default_currency_for_exchange(meta_exchange) || "USD"
 
+      zone = exchange_zone(chart_data)
       prices = []
       timestamps.each_with_index do |timestamp, index|
         close_price = closes[index]
         next if close_price.nil? # Skip days with no data (weekends, holidays)
+
+        date = zone.at(timestamp).to_date
+        next unless dates.cover?(date)
 
         # Normalize currency and price to handle minor units
         normalized_currency, normalized_price = normalize_currency_and_price(raw_currency, close_price.to_f)
 
         prices << Price.new(
           symbol: symbol,
-          date: Time.at(timestamp).utc.to_date,
+          date: date,
           price: normalized_price,
           currency: normalized_currency,
           exchange_operating_mic: exchange_operating_mic
@@ -599,7 +603,13 @@ class Provider::YahooFinance < Provider
       "XCSE" => { yahoo_suffix: ".CO", default_currency: "DKK" },
       "XHEL" => { yahoo_suffix: ".HE", default_currency: "EUR" },
       "XOSL" => { yahoo_suffix: ".OL", default_currency: "NOK" },
-      "XWBO" => { yahoo_suffix: ".VI", default_currency: "EUR" }  # Vienna
+      "XWBO" => { yahoo_suffix: ".VI", default_currency: "EUR" }, # Vienna
+      # Canada. Yahoo writes share classes and units with a dash, not a dot:
+      # CSH.UN is CSH-UN.TO and CCL.B is CCL-B.TO.
+      "XTSE" => { yahoo_suffix: ".TO", default_currency: "CAD", share_class_separator: "-" }, # Toronto
+      "XTSX" => { yahoo_suffix: ".V",  default_currency: "CAD", share_class_separator: "-" }, # TSX Venture
+      "XCNQ" => { yahoo_suffix: ".CN", default_currency: "CAD", share_class_separator: "-" }, # CSE
+      "NEOE" => { yahoo_suffix: ".NE", default_currency: "CAD", share_class_separator: "-" }  # Cboe Canada (NEO)
     }.freeze
 
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
@@ -622,11 +632,17 @@ class Provider::YahooFinance < Provider
     end
 
     # Appends the Yahoo Finance symbol suffix for exchanges that require one
-    # (e.g. XNSE → ".NS", XBOM → ".BO").  Already-suffixed symbols pass through.
+    # (e.g. XNSE → ".NS", XBOM → ".BO").  Already-suffixed symbols keep a
+    # single suffix.  Where the exchange sets a share_class_separator, a dot
+    # in the ticker becomes that separator (XTSE: CSH.UN → CSH-UN.TO).
     def normalize_symbol(symbol, exchange_operating_mic)
-      suffix = EXCHANGE_CONFIG.dig(exchange_operating_mic, :yahoo_suffix)
-      return symbol if suffix.nil? || symbol.end_with?(suffix)
-      "#{symbol}#{suffix}"
+      config = EXCHANGE_CONFIG[exchange_operating_mic]
+      suffix = config&.dig(:yahoo_suffix)
+      return symbol if suffix.nil?
+
+      base = symbol.delete_suffix(suffix)
+      base = base.tr(".", config[:share_class_separator]) if config[:share_class_separator]
+      "#{base}#{suffix}"
     end
 
     # Returns the default currency for a Yahoo exchange name (e.g. "NSE" → "INR")
@@ -805,9 +821,9 @@ class Provider::YahooFinance < Provider
 
     def fetch_currency_pair_data(from, to, start_date, end_date)
       symbol = "#{from}#{to}=X"
-      fetch_chart_data(symbol, start_date, end_date, currency: to) do |timestamp, close_rate|
+      fetch_chart_data(symbol, start_date, end_date, currency: to) do |date, close_rate|
         Rate.new(
-          date: Time.at(timestamp).utc.to_date,
+          date: date,
           from: from,
           to: to,
           rate: close_rate.to_f
@@ -817,9 +833,9 @@ class Provider::YahooFinance < Provider
 
     def fetch_inverse_currency_pair_data(from, to, start_date, end_date)
       symbol = "#{to}#{from}=X"
-      rates = fetch_chart_data(symbol, start_date, end_date, currency: from) do |timestamp, close_rate|
+      rates = fetch_chart_data(symbol, start_date, end_date, currency: from) do |date, close_rate|
         Rate.new(
-          date: Time.at(timestamp).utc.to_date,
+          date: date,
           from: from,
           to: to,
           rate: (BigDecimal("1") / BigDecimal(close_rate.to_s)).round(12)
@@ -874,17 +890,29 @@ class Provider::YahooFinance < Provider
       data
     end
 
+    # Yahoo reads the bounds as instants and picks sessions by their date, so
+    # they are UTC midnights whatever the host's or the family's zone.
+    def chart_period(dates)
+      { "period1" => dates.begin.to_time(:utc).to_i, "period2" => dates.end.to_time(:utc).end_of_day.to_i }
+    end
+
+    # Yahoo stamps a daily bar with the time its session opens, which can fall
+    # on the previous day in UTC: the ASX opens at 10:00 in Sydney, and London
+    # FX sessions open at midnight local time, 23:00 UTC during summer time. A
+    # bar's date is its date on the exchange's clock.
+    def exchange_zone(chart_data)
+      ActiveSupport::TimeZone[chart_data.dig("meta", "exchangeTimezoneName").to_s] || ActiveSupport::TimeZone["UTC"]
+    end
+
     # `currency` is what the quote must be in. Yahoo leaves it blank on some
     # scaled crosses: RUBGEL=X is GEL per 100 RUB, a 100x error once inverted.
     def fetch_chart_data(symbol, start_date, end_date, currency:, &block)
-      period1 = start_date.to_time.utc.to_i
-      period2 = end_date.end_of_day.to_time.utc.to_i
+      dates = start_date.to_date..end_date.to_date
 
       begin
         throttle_request
         data = fetch_authenticated_chart(symbol, {
-          "period1" => period1,
-          "period2" => period2,
+          **chart_period(dates),
           "interval" => "1d",
           "includeAdjustedClose" => true
         })
@@ -914,12 +942,16 @@ class Provider::YahooFinance < Provider
         quotes = chart_data.dig("indicators", "quote", 0) || {}
         closes = quotes["close"] || []
 
+        zone = exchange_zone(chart_data)
         results = []
         timestamps.each_with_index do |timestamp, index|
           close_value = closes[index]
           next if close_value.nil? || close_value <= 0
 
-          results << block.call(timestamp, close_value)
+          date = zone.at(timestamp).to_date
+          next unless dates.cover?(date)
+
+          results << block.call(date, close_value)
         end
 
         results.sort_by(&:date)
@@ -1218,10 +1250,16 @@ class Provider::YahooFinance < Provider
         "XNAS" # Yahoo default, assume NASDAQ
       when "TSE", "TOR"
         "XTSE" # Toronto Stock Exchange
-      when "CVE"
+      when "CVE", "VAN"
         "XTSX" # TSX Venture Exchange
+      when "CNQ"
+        "XCNQ" # Canadian Securities Exchange
+      when "NEO"
+        "NEOE" # Cboe Canada (NEO)
       when "LSE", "LON"
         "XLON" # London Stock Exchange
+      when "GER"
+        "XETR" # Xetra
       when "FRA"
         "XFRA" # Frankfurt Stock Exchange
       when "PAR"

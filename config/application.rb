@@ -31,8 +31,28 @@ module Sure
     # Explicit source of truth for the session cookie name (also used by Codespaces).
     config.session_store :cookie_store, key: SESSION_COOKIE_KEY
 
+    # Pages are server-rendered HTML that compresses ~15x, and the Docker image
+    # serves Puma directly, so without this every page crossed the network
+    # uncompressed unless a reverse proxy happened to compress it. A proxy that
+    # does compress leaves an already-encoded response alone. Not in
+    # development, where rack-mini-profiler has to inject into the HTML.
+    #
+    # After Rack::Sendfile, which every stack has: ActionDispatch::Static is
+    # absent when public_file_server is disabled. Text only (PDFs and images are
+    # already compressed), and never a 206, whose Content-Range counts bytes of
+    # the uncompressed file.
+    unless Rails.env.development?
+      config.middleware.insert_after Rack::Sendfile, Rack::Deflater,
+        include: %w[text/html text/vnd.turbo-stream.html text/css text/plain text/csv text/javascript
+                    application/javascript application/json application/xml image/svg+xml],
+        if: ->(_env, status, _headers, _body) { status != 206 }
+    end
+
     # TODO: This is here for incremental adoption of localization.  This can be removed when all translations are implemented.
     config.i18n.fallbacks = true
+
+    # Exact opt-in: version metadata is authenticated by default.
+    config.public_version_endpoint = ENV["PUBLIC_VERSION_ENDPOINT"] == "true"
 
     config.app_mode = (ENV["SELF_HOSTED"] == "true" || ENV["SELF_HOSTING_ENABLED"] == "true" ? "self_hosted" : "managed").inquiry
 
@@ -76,5 +96,11 @@ module Sure
     # Handle OmniAuth/OIDC errors gracefully (must be before OmniAuth middleware)
     require_relative "../app/middleware/omniauth_error_handler"
     config.middleware.use OmniauthErrorHandler
+
+    # Bound a FinanceKit batch upload before Rails reads and parses it; see
+    # the class comment for why the controller's own size check is too late.
+    # Ahead of Rack::MethodOverride, the first middleware that reads a body.
+    require_relative "../app/middleware/financekit_body_limit"
+    config.middleware.insert_before Rack::MethodOverride, FinancekitBodyLimit
   end
 end

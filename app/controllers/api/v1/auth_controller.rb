@@ -35,7 +35,9 @@ module Api
         end
 
         # Validate password
-        password_errors = validate_password(params[:user][:password])
+        # user_signup_params requires the `user` key; a missing payload raises
+        # ParameterMissing, which BaseController renders as a 400.
+        password_errors = validate_password(user_signup_params[:password])
         if password_errors.any?
           render json: { errors: password_errors }, status: :unprocessable_entity
           return
@@ -82,14 +84,17 @@ module Api
       end
 
       def login
-        user = User.find_by(email: params[:email])
+        user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
         unless local_login_permitted_for?(user)
           render json: { error: "Local login is disabled. Please use SSO." }, status: :forbidden
           return
         end
 
-        if user&.authenticate(params[:password])
+        if user
+          # Taken before the reload below, so a password change after this check is noticed.
+          password_fingerprint = user.password_fingerprint
+
           unless user.active?
             render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
             return
@@ -131,9 +136,12 @@ module Api
           end
 
           begin
-            token_response = device.issue_token!
+            token_response = device.issue_token!(password_fingerprint: password_fingerprint)
           rescue User::InactiveError
             render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+            return
+          rescue User::StaleCredentialsError
+            render json: { error: "Invalid email or password" }, status: :unauthorized
             return
           end
 
@@ -211,7 +219,7 @@ module Api
         cached = validate_linking_code(linking_code)
         return unless cached
 
-        user = User.authenticate_by(email: params[:email], password: params[:password])
+        user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
         unless user
           render json: { error: "Invalid email or password" }, status: :unauthorized
@@ -251,11 +259,15 @@ module Api
             )
 
             device = MobileDevice.upsert_device!(user, device_info)
-            token_response = device.issue_token!
+            token_response = device.issue_token!(password_fingerprint: user.password_fingerprint)
           end
         rescue User::InactiveError
           restore_linking_code!(linking_code, cached)
           render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+          return
+        rescue User::StaleCredentialsError
+          restore_linking_code!(linking_code, cached)
+          render json: { error: "Invalid email or password" }, status: :unauthorized
           return
         rescue ActiveRecord::RecordInvalid => e
           restore_linking_code!(linking_code, cached)
@@ -324,7 +336,7 @@ module Api
             invitation&.update!(accepted_at: Time.current)
 
             # Joining an existing family via invitation must honor the family's
-            # default sharing policy, matching Invitation#accept_for, so a mobile
+            # default sharing policy, matching token registration, so a mobile
             # SSO invitee sees the accounts the family shares by default.
             user.family.auto_share_existing_accounts_with(user) if invitation.present?
 

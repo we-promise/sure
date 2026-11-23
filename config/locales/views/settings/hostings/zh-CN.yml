@@ -100,13 +100,24 @@ zh-CN:
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
           mansa: Mansa
+      reset_market_data:
+        market_data_reset: 市场数据重置已加入队列。汇率和价格将重新导入，随后所有账户将同步。
+        market_data_reset_already_queued: 市场数据重置已在队列中或正在运行。
+        market_data_reset_failed: 无法将市场数据重置加入队列。未删除任何数据，请重试。
       show:
         demo_refresh: 演示数据刷新
         clear_cache: 清除数据缓存
-        clear_cache_warning: 清除数据缓存将移除所有汇率、证券价格、账户余额及其他数据。这不会删除账户、交易记录、分类或其他用户自有数据。
+        clear_cache_warning: "清除数据缓存会重新计算您家庭账户的余额和持仓，并重新加载它们使用的汇率和证券价格。只会删除您家庭的余额和持仓；汇率和证券价格由此实例上的所有家庭共享，也会为他们更新。这不会删除账户、交易记录、分类或其他用户自有数据。"
+        clear_cache_warning_without_provider: "清除数据缓存会重新计算您家庭账户的余额和持仓。由于未配置汇率或证券价格提供商，已保存的汇率和证券价格将保持不变。这不会删除账户、交易记录、分类或其他用户自有数据。"
         confirm_clear_cache:
-          body: 确定要清除数据缓存吗？这将移除所有汇率、证券价格、账户余额及其他数据，且不可撤销。
+          body: "确定要清除数据缓存吗？您家庭账户的余额和持仓将被重新计算，它们使用的汇率和证券价格将被重新加载。只会删除您家庭的余额和持仓；汇率和证券价格由此实例上的所有家庭共享，也会为他们更新。此操作不可撤销。"
+          body_without_provider: "确定要清除数据缓存吗？您家庭账户的余额和持仓将被重新计算。由于未配置汇率或证券价格提供商，已保存的汇率和证券价格将保持不变。此操作不可撤销。"
           title: 确认清除数据缓存？
+        reset_market_data: 重置所有家庭的市场数据
+        reset_market_data_warning: 删除您的提供商可重新加载的汇率和证券价格，重新导入它们，然后同步每个账户。在导入完成前，外币总额可能会显示为未换算状态。
+        confirm_reset_market_data:
+          title: 重置所有家庭的市场数据？
+          body: 这将删除此实例上每个家庭中提供商可重新加载的汇率和证券价格，并重新导入。在导入完成前，外币金额可能会显示为未换算状态。此操作无法撤销。
         danger_zone: 高风险操作
         financial_data_providers: 金融数据提供商
         general: 通用设置
@@ -144,6 +155,9 @@ zh-CN:
         anthropic_model_required_for_base_url: 设置 Anthropic Base URL 时必须填写模型。
         invalid_jev_endpoint: Jev 端点必须是 https URL。仅 localhost 接受普通 http。
         invalid_categorization_rate: "%{field} 必须是 0 到 1 之间的数字。"
+        invalid_page_cache_days: 缓存页面保留天数必须是 %{minimum} 到 %{maximum} 之间的整数。
+        invalid_page_cache_max_mb: 最大缓存大小必须是 %{minimum} 到 %{maximum} 之间的整兆字节数。
+        invalid_page_cache_cooldown_minutes: 重建间隔分钟数必须是 %{minimum} 到 %{maximum} 之间的整数。
         scheduler_sync_failed: 设置已保存，但同步计划更新失败。请重试或检查服务器日志。
       yahoo_finance_settings:
         title: Yahoo Finance 设置
@@ -183,7 +197,7 @@ zh-CN:
           title: 断开外部助手？
           body: 断开后将无法继续使用此远程助手。
         type_mcp_only: 应用内不启用（通过 MCP 连接您自己的代理）
-        mcp_only_help: 此家庭中的所有成员均关闭应用内助手。账单 AI 快捷方式和 AI 编写的洞察文本也将停止。MCP 和后台分类仍然可用；可在“设置 > MCP”中连接外部代理。
+        mcp_only_help: 此家庭中的所有成员均关闭应用内助手。账单 AI 快捷方式和洞察上的“借助 AI 深入分析”也将停止。MCP 和后台分类仍然可用；可在“设置 > MCP”中连接外部代理。
         agent_discovery_configure_first: 保存有效的端点 URL 和 API 令牌以加载可用代理。
         external_agent_required: 保存前请选择一个外部代理。
         external_agent_invalid: 请选择配置的端点所返回的代理。
@@ -289,6 +303,13 @@ zh-CN:
         label: API 密钥
         placeholder: 在此输入您的 Chimnie API 密钥
         usage: "本月已使用 %{used} / %{limit} 次请求"
+      terrascoutx_settings:
+        title: TerraScoutX
+        description: 输入您的 TerraScoutX API 密钥，以便在添加房产时查询美国房产详情和估值。该估值为 TerraScoutX 所持最新税册中的县评估官评估价，而非自动市场估价，因此会滞后于市场行情，且在加州等对评估价设限的州可能明显低于市价。覆盖范围因县而异。密钥免费且每月限 2,000 次 API 请求，由房产查询和每日估值刷新共享。如果您的密钥额度更高，可通过 TERRASCOUTX_MAX_REQUESTS_PER_MONTH 环境变量提高上限。
+        env_configured_message: 已通过 TERRASCOUTX_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 TerraScoutX API 密钥
+        usage: "本月已使用 %{used} / %{limit} 次请求"
       tinkoff_invest_settings:
         title: T-Invest (T-Bank)
         description: 输入只读 T-Invest API 令牌。用于获取证券的品牌 Logo（包括基金和债券，即使它们由 MOEX 定价），并在上方启用时获取俄罗斯金融产品的价格。
@@ -352,3 +373,9 @@ zh-CN:
         market_data_sync_description: 启用后，将在指定时间每天（周一至周五）自动导入证券价格一次。
         market_data_sync_time_label: 市场数据导入时间（HH:MM）
         market_data_sync_time_description: 指定每日运行证券价格导入的时间 — 例如在您的主要交易所收盘后不久。
+        page_cache_days_label: 缓存页面保留时长（天）
+        page_cache_days_description: "每次同步后都会提前生成报表，若无人打开则保留此天数。默认值：%{default_days}。PAGE_CACHE_DAYS 会覆盖此字段。"
+        page_cache_cooldown_minutes_label: 缓存页面最短重建间隔（分钟）
+        page_cache_cooldown_minutes_description: "当缓存页面背后的数据发生变化时，后台最多每隔此分钟数重建一次新页面，期间仍会显示原有页面。点击页面上的“刷新”可立即重建。设为 0 则每次变化后都立即重建。默认值：%{default_minutes}。PAGE_CACHE_COOLDOWN_MINUTES 会覆盖此字段。"
+        page_cache_max_mb_label: 最大缓存大小（MB）
+        page_cache_max_mb_description: "缓存页面合计可占用的最大空间。当新页面会超出限制时，将优先移除最久未打开的页面；大于总上限的单个页面仍会显示，但不会保留缓存。已使用 %{used} / %{limit}。默认值：%{default_mb}。PAGE_CACHE_MAX_MB 会覆盖此字段。"

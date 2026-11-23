@@ -13,7 +13,8 @@ class RecurringAllocationsController < ApplicationController
       amount: params[:amount].presence,
       # Defaults to today via RecurringAllocation's callback; accepting a date
       # lets someone record last Tuesday's payment as last Tuesday.
-      paid_on: parse_paid_on(params[:paid_on])
+      paid_on: parse_paid_on(params[:paid_on]),
+      categorize: annotatable?(entry)
     )
 
     redirect_with notice: t(".success")
@@ -40,7 +41,7 @@ class RecurringAllocationsController < ApplicationController
     occurrence = allocation.recurring_occurrence
     ensure_series_writable(occurrence)
 
-    RecurringTransaction::Allocator.new(occurrence).confirm_suggestion!(allocation)
+    RecurringTransaction::Allocator.new(occurrence).confirm_suggestion!(allocation, categorize: annotatable?(allocation.entry))
 
     redirect_with_return notice: t(".success")
   end
@@ -74,6 +75,12 @@ class RecurringAllocationsController < ApplicationController
       return if Account.writable_by(Current.user).where(id: series.account_id).exists?
 
       raise ActiveRecord::RecordNotFound
+    end
+
+    # Linking only needs read access to the transaction; setting its category
+    # needs the right to annotate it.
+    def annotatable?(entry)
+      entry.nil? || Current.annotatable_entries.exists?(id: entry.id)
     end
 
     def find_allocation
@@ -113,11 +120,12 @@ class RecurringAllocationsController < ApplicationController
 
     def allocation_error_message(error)
       case error
-      # The two subclasses before OverAllocationError, which would otherwise
-      # claim them.
+      # The subclasses before OverAllocationError, which would otherwise claim
+      # them.
       when RecurringTransaction::Allocator::AlreadyAllocatedError,
            ActiveRecord::RecordNotUnique then t("recurring_allocations.already_allocated")
       when RecurringTransaction::Allocator::EntryExhaustedError then t("recurring_allocations.entry_exhausted")
+      when RecurringTransaction::Allocator::SplitCounterpartAllocatedError then t("recurring_allocations.split_counterpart_allocated")
       when RecurringTransaction::Allocator::OverAllocationError then t("recurring_allocations.over_allocation")
       when RecurringTransaction::Allocator::MissingRateError then t("recurring_allocations.missing_rate")
       else t("recurring_allocations.invalid")

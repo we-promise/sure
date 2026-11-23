@@ -33,9 +33,30 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
   let(:'X-Api-Key') { api_key.plain_key }
 
+  let(:read_only_transaction) do
+    owner = family.users.create!(
+      email: 'api-owner@example.com',
+      password: 'password123',
+      password_confirmation: 'password123'
+    )
+    shared_account = Account.create!(
+      family: family,
+      owner: owner,
+      name: 'Shared Checking',
+      balance: 1000,
+      currency: 'USD',
+      accountable: Depository.new
+    )
+    shared_account.account_shares.create!(user: user, permission: 'read_only', include_in_finances: true)
+    shared_account.entries.create!(
+      name: 'Shared transaction', amount: 10, currency: 'USD', date: Date.current, entryable: Transaction.new
+    ).transaction
+  end
+
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Checking Account',
       balance: 1000,
       currency: 'USD',
@@ -71,6 +92,30 @@ RSpec.describe 'API V1 Transactions', type: :request do
       )
     )
     entry.transaction.tags << tag
+    entry.transaction
+  end
+
+  # An imported EUR dividend in the USD account, so the documented
+  # investment_activity_label, provider_type, security_id, exchange_rate and
+  # amount_currency fields are populated.
+  let!(:dividend_transaction) do
+    security = Security.create!(ticker: 'VTI', name: 'Vanguard Total Stock Market ETF', country_code: 'US')
+    entry = account.entries.create!(
+      name: 'Dividend VTI',
+      date: Date.current - 2.days,
+      amount: -12.40,
+      currency: 'EUR',
+      source: 'ibkr',
+      external_id: 'ibkr_cash_docs_1',
+      entryable: Transaction.new(
+        investment_activity_label: 'Dividend',
+        extra: {
+          'exchange_rate' => 1.08,
+          'security_id' => security.id,
+          'ibkr' => { 'type' => 'Dividends' }
+        }
+      )
+    )
     entry.transaction
   end
 
@@ -253,7 +298,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - missing required fields' do
+      response '422', 'validation error - missing required fields, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -282,7 +327,15 @@ RSpec.describe 'API V1 Transactions', type: :request do
       response '200', 'transaction retrieved' do
         schema '$ref' => '#/components/schemas/Transaction'
 
-        run_test!
+        # The dividend, so the populated exchange_rate and amount_currency are
+        # checked against the schema too.
+        let(:id) { dividend_transaction.id }
+
+        run_test! do |response|
+          data = JSON.parse(response.body)
+          expect(data['exchange_rate']).to eq(1.08)
+          expect(data['amount_currency']).to eq('EUR')
+        end
       end
 
       response '404', 'transaction not found' do
@@ -316,7 +369,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               currency: { type: :string, description: 'Currency code' },
               category_id: { type: :string, format: :uuid },
               merchant_id: { type: :string, format: :uuid },
-              nature: { type: :string, enum: %w[income expense inflow outflow] },
+              nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Sign of the amount. Without amount, applies to the stored amount.' },
               tag_ids: {
                 type: :array,
                 items: { type: :string, format: :uuid },
@@ -343,10 +396,26 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
+      response '403', 'account is shared with you without permission to change this transaction' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_transaction.id }
+
+        run_test!
+      end
+
       response '404', 'transaction not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+
+      response '422', 'validation error - unknown nature, an amount or nature change on a transfer, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { transaction: { tag_ids: [ SecureRandom.uuid ] } } }
 
         run_test!
       end
@@ -361,6 +430,14 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
       response '200', 'transaction deleted' do
         schema '$ref' => '#/components/schemas/DeleteResponse'
+
+        run_test!
+      end
+
+      response '403', 'account is shared with you without full control' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_transaction.id }
 
         run_test!
       end

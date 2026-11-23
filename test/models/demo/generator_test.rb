@@ -12,7 +12,7 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
       User.any_instance.stubs(:ai_available?).returns(false)
       generator = Demo::Generator.new(seed: 42)
       %i[create_realistic_categories! create_realistic_accounts! create_realistic_transactions!
-         generate_budget_auto_fill! generate_goals! create_monitoring_api_key!].each do |step|
+         generate_budget_auto_fill! create_sample_rules! generate_goals! create_monitoring_api_key!].each do |step|
         generator.stubs(step)
       end
 
@@ -33,7 +33,7 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     User.find_by!(email: "user@example.com").update!(email: "existing-user@example.com")
     generator = Demo::Generator.new(seed: 42)
     %i[create_realistic_categories! create_realistic_accounts! create_realistic_transactions!
-       generate_budget_auto_fill! generate_goals! create_monitoring_api_key!].each do |step|
+       generate_budget_auto_fill! create_sample_rules! generate_goals! create_monitoring_api_key!].each do |step|
       generator.stubs(step)
     end
 
@@ -125,6 +125,26 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     assert_equal 1, ApiKey.where(display_key: ApiKey::DEMO_MONITORING_KEY).count
   end
 
+  test "sample rules come in groups and are all switched off" do
+    generator = Demo::Generator.new(seed: 42)
+    generator.send(:create_realistic_categories!, @family)
+    existing_rule_ids = @family.rules.ids
+    generator.send(:create_sample_rules!, @family)
+
+    rules = @family.rules.where.not(id: existing_rule_ids).ordered.includes(:rule_group, :conditions, :actions).to_a
+    assert_equal 5, rules.size
+    assert rules.none?(&:active?), "sample rules must stay off until someone switches them on"
+    assert_equal [ "Groceries", "Subscriptions" ], @family.rule_groups.order(:name).pluck(:name)
+    assert rules.any? { |rule| rule.rule_group.nil? }, "the demo should also show a rule without a group"
+
+    netflix = rules.find { |rule| rule.conditions.first.value == "Netflix" }
+    assert_equal "Subscriptions", netflix.rule_group.name
+    assert_equal @family.categories.find_by!(name: "Entertainment").id, netflix.actions.first.value
+
+    # Each group's rules sit directly below it, in the order the page shows.
+    assert_equal @family.rules.ordered.to_a, Rule::Layout.new(@family).items.flat_map { |item| item.group? ? item.rules : [ item.rule ] }
+  end
+
   # Regression for a `rake demo_data:default` crash: the goal-seeding matrix
   # linked several active goals to the same account as a 100%-whole-account
   # claim each, which violates GoalAccount#whole_account_link_must_be_exclusive
@@ -139,6 +159,25 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     assert_difference "@family.goals.count", 9 do
       Demo::Generator.new.send(:generate_goals!, @family)
     end
+  end
+
+  # The demo's transfers are recorded ones, not auto-match suggestions. The
+  # investment card counts only a confirmed transfer's leg as a flow, so
+  # left pending, the quarterly HSA contributions showed as none.
+  test "demo transfers are confirmed and count as the HSA's contributions" do
+    @family.update!(currency: "USD")
+    generator = Demo::Generator.new(seed: 42)
+    generator.send(:create_realistic_categories!, @family)
+    generator.send(:create_realistic_accounts!, @family)
+    generator.send(:generate_additional_savings_transfers!)
+
+    hsa = @family.accounts.find_by!(name: "Fidelity HSA Investment")
+    deposits = hsa.entries.where(name: "HSA Contribution")
+    assert deposits.any?, "the demo must record HSA contributions, or this asserts nothing"
+    assert_equal [ "confirmed" ], Transfer.joins(inflow_transaction: :entry).where(entries: { account_id: hsa.id }).distinct.pluck(:status)
+
+    totals = InvestmentStatement::Totals.new(@family, account_ids: [ hsa.id ], date_range: deposits.minimum(:date)..Date.current).call
+    assert_equal(-deposits.sum(:amount), totals[:contributions])
   end
 
   # The demo family's loans were bare Loan.new records -- no rate, no term, and

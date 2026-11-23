@@ -33,7 +33,7 @@ nl:
       syncing: "Accountgegevens synchroniseren..."
     require_admin: "Alleen beheerders kunnen deze actie uitvoeren"
     require_non_guest: "Gasten kunnen deze actie niet uitvoeren"
-    require_connector_owner: "U kunt alleen verbindingen beheren die u zelf heeft toegevoegd"
+    require_connector_owner: "U kunt alleen koppelingen beheren die u zelf heeft toegevoegd"
     custom_confirm:
       default_title: "Weet u het zeker?"
       default_body: "Dit kan niet ongedaan worden gemaakt."

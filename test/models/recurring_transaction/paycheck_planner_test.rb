@@ -10,6 +10,39 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     @family.recurring_transactions.destroy_all
   end
 
+  test "a lone one-off income is credited in a window of its own" do
+    payday = Date.current + 6
+    create_series(name: "Bonus", amount: -3000, due: payday, preset: "once", income: true)
+    create_series(name: "Insurance", amount: 400, due: payday + 3, preset: "once")
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal [ Date.current, payday ], plan.map(&:starts_on)
+    assert_equal 3000, plan.last.income
+    assert_equal [ "Bonus" ], plan.last.income_sources
+    assert_equal 400, plan.last.due_total, "a bill after the one-off is funded from it"
+  end
+
+  test "a one-off income far ahead keeps its payday in a window that ends at its own date" do
+    payday = Date.current + 200
+    create_series(name: "Bonus", amount: -3000, due: payday, preset: "once", income: true)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal payday, plan.last.starts_on
+    assert_equal payday, plan.last.ends_on, "nothing past the payday is materialized for this window"
+    assert_equal 3000, plan.last.income
+  end
+
+  test "a one-off income arriving today still makes a plan" do
+    create_series(name: "Bonus", amount: -3000, due: Date.current, preset: "once", income: true)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal 1, plan.size
+    assert_equal 3000, plan.first.income
+  end
+
   test "no declared income means no plan" do
     create_series(name: "Rent", amount: 2150, due: Date.current + 10)
 
@@ -23,6 +56,22 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
 
     assert_nil Planner.new(@family, user: @user).plan,
                "a recurring one-cent transfer is income by sign and a paycheck by nothing"
+  end
+
+  test "recurring transfers between own depository accounts are not bills; debt transfers are" do
+    create_series(name: "Paycheck", amount: -2000, due: Date.current + 3, income: true)
+    expense = create_series(name: "Rent", amount: 500, due: Date.current + 5)
+    to_loan = create_series(name: "Mortgage payment", amount: 300, due: Date.current + 6)
+    to_loan.update!(destination_account: accounts(:loan))
+    to_savings = create_series(name: "To savings", amount: 700, due: Date.current + 7)
+    to_savings.update!(destination_account: accounts(:connected))
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 2)
+    series_ids = plan.flat_map(&:items).map { |item| item.occurrence.recurring_transaction_id }.uniq
+
+    assert_includes series_ids, expense.id
+    assert_includes series_ids, to_loan.id
+    assert_not_includes series_ids, to_savings.id
   end
 
   test "periods slice by paycheck and apportion bills to their due dates" do
@@ -348,7 +397,7 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_not plan.first.short?, "so $100 in the bank is not short"
     assert_equal %w[Internet Power Water], plan[1].items_due.map { |item| item.occurrence.recurring_transaction.name },
       "payday's window carries both, in the order of the dates they were snoozed to"
-    markers = ApplicationController.helpers.bills_pay_period_markers([ power ], plan)
+    markers = ApplicationController.helpers.bills_pay_period_markers([ power ], plan, currency: @family.currency)
     assert_equal plan[1], markers.dig(power.id, :period), "the overview marks it under the same paycheck"
   end
 
@@ -485,7 +534,8 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
       )
 
       if preset != "monthly"
-        RecurringTransaction::FrequencyPreset.apply(series, preset: preset, weekday: due.wday)
+        RecurringTransaction::FrequencyPreset.apply(series, preset: preset, weekday: due.wday,
+                                                  once_on: (due if preset == "once"))
         series.save!
       end
 

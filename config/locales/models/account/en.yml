@@ -26,6 +26,12 @@ en:
         logo: Logo
         name: Name
         subtype: Subtype
+      depository:
+        subtype: Account type
+      investment:
+        subtype: Investment type
+      loan:
+        subtype: Loan type
     errors:
       models:
         account:
@@ -33,6 +39,8 @@ en:
             logo:
               invalid_content_type: must be a PNG, JPEG, GIF, WebP or ICO image
               too_large: must be smaller than %{max_size} MB
+            base:
+              cost_tag_other_family: The cost tag must be one of your own tags
     models:
       account: Account
       account/credit: Credit Card

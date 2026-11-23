@@ -26,6 +26,7 @@ en:
       rentcast: RentCast
       realie: Realie
       chimnie: Chimnie
+      terrascoutx: TerraScoutX
     new:
       title: Enter property manually
       next: "Next"
@@ -43,6 +44,10 @@ en:
       avm_submit: "Look up property"
       avm_preview_title: "Confirm property details"
       avm_preview_description: "Here's what %{provider} found. Review the details before adding the property — nothing has been created yet."
+      avm_descriptions:
+        terrascoutx: "Enter a name for the property and its address. %{provider} will look up the property details and the county's assessed value from its latest tax roll. That is not a current market estimate."
+      avm_roll_value_notes:
+        terrascoutx: "%{provider} reports the county's assessed value from its latest tax roll. It is not a current market estimate, so it can differ from what the property would sell for."
       avm_preview_no_record: "%{provider} couldn't find a property record at this address, so the value shown is an estimate based on the surrounding area. Double-check the address before continuing."
       avm_preview_back: "Back"
       avm_preview_uprn: "UPRN"
@@ -71,9 +76,12 @@ en:
       title: "Enter property manually"
       market_value_label: "Estimated market value"
       market_value_tooltip: "The estimated market value of your property. This number can often be found on sites like Zillow or Redfin, and is never an exact number."
+      purchase_date_label: "Purchase date"
       save: "Save"
       next: "Next"
     overview_fields:
+      notes_label: "Notes"
+      notes_placeholder: "Registry or cadastral number, deed reference, notary, etc."
       name_label: "Name"
       name_placeholder: "Vacation home"
       subtype_prompt: "Select type"
@@ -85,6 +93,9 @@ en:
       square_feet: "Square Feet"
       square_meters: "Square Meters"
       area_unit_label: "Area Unit"
+      cost_tag_label: "Cost tag (optional)"
+      cost_tag_prompt: "None"
+      cost_tag_hint: "Transactions with this tag, such as notary fees and taxes, count towards the property's cost basis."
     overview:
       living_area: Living Area
       market_value: Market Value
@@ -98,6 +109,17 @@ en:
         market_value: Market Value
         purchase_price: Purchase Price
         trend: Trend
+        trend_in_currency: "Trend in %{currency}"
+        rate_unavailable: "Exchange rate unavailable"
+        purchase_costs: Purchase costs
+        purchase_costs_in_currency: "Purchase costs in %{currency}"
+        cost_transactions:
+          one: "1 transaction tagged %{tag}"
+          other: "%{count} transactions tagged %{tag}"
+        cost_basis: Cost basis
+        cost_basis_in_currency: "Cost basis in %{currency}"
+        gain_after_costs: Gain after costs
+        gain_after_costs_in_currency: "Gain after costs in %{currency}"
         unknown: Unknown
         year_built: Year Built
         edit_account_details: "Edit account details"
@@ -105,6 +127,9 @@ en:
         valuation_source: "Valued by %{provider}, last updated %{date}"
         link_valuation: "Update value automatically with %{provider}"
         link_valuation_description: "This property's value is only updated manually."
+    update_balances:
+      invalid_currency: "Choose a currency from the list."
+      invalid_purchase_date: "Enter a purchase date that isn't in the future or more than 30 years ago."
     refresh_valuation:
       queued: "The valuation refresh has started. The new value will appear shortly."
       not_linked: "This property isn't linked to a valuation provider."
@@ -131,5 +156,6 @@ en:
         long: Agricultural Land
     form_tabs:
       address: Address
+      aria_label: Property details
       overview: Overview
       value: Value

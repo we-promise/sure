@@ -200,7 +200,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       # Check rules.csv
       rules_csv = zip.read("rules.csv")
-      assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions")
+      assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions,group")
     end
   end
 
@@ -442,8 +442,35 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert rule_data["data"].key?("active")
       assert_equal @rule.position, rule_data["data"]["position"]
       assert_equal false, rule_data["data"]["stop_processing"]
+      assert_equal false, rule_data["data"]["apply_immediately"]
       assert rule_data["data"].key?("conditions")
       assert rule_data["data"].key?("actions")
+    end
+  end
+
+  test "exports apply_immediately independently of stop_processing" do
+    @rule.update!(apply_immediately: true)
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rule_data = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }.find do |record|
+        record["type"] == "Rule" && record["data"]["name"] == "Test Rule"
+      end
+
+      assert_equal false, rule_data["data"]["stop_processing"]
+      assert_equal true, rule_data["data"]["apply_immediately"]
+    end
+  end
+
+  test "exports the rule group name in CSV and NDJSON" do
+    @rule.update!(rule_group: @family.rule_groups.create!(name: "Food"))
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rules_csv = CSV.parse(zip.read("rules.csv"), headers: true)
+      assert_equal "Food", rules_csv.find { |row| row["name"] == "Test Rule" }["group"]
+
+      rule_line = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        .find { |line| line["type"] == "Rule" && line["data"]["name"] == "Test Rule" }
+      assert_equal "Food", rule_line["data"]["group"]
     end
   end
 
@@ -592,6 +619,33 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       condition = rule_data["data"]["conditions"].first
       assert_equal "Test Category", condition["value"]
       assert_equal({ "type" => "Category", "id" => @category.id, "name" => "Test Category" }, condition["value_ref"])
+    end
+  end
+
+  test "exports provider merchant rule operands by name" do
+    provider_merchant = ProviderMerchant.create!(name: "Synced Grocer", source: "plaid")
+    @account.entries.create!(
+      date: Date.current, amount: 10, name: "Groceries", currency: "USD",
+      entryable: Transaction.new(merchant: provider_merchant)
+    )
+    rule = @family.rules.build(name: "Provider Merchant Rule", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_merchant", operator: "=", value: provider_merchant.id)
+    rule.actions.build(action_type: "set_transaction_merchant", value: provider_merchant.id)
+    rule.save!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rule_data = zip.read("all.ndjson").split("\n").filter_map do |line|
+        parsed = JSON.parse(line)
+        parsed if parsed["type"] == "Rule" && parsed["data"]["name"] == "Provider Merchant Rule"
+      end.first
+
+      expected_ref = { "type" => "Merchant", "id" => provider_merchant.id, "name" => "Synced Grocer" }
+      assert_equal "Synced Grocer", rule_data["data"]["conditions"].first["value"]
+      assert_equal expected_ref, rule_data["data"]["conditions"].first["value_ref"]
+      assert_equal "Synced Grocer", rule_data["data"]["actions"].first["value"]
+      assert_equal expected_ref, rule_data["data"]["actions"].first["value_ref"]
     end
   end
 
@@ -1248,6 +1302,364 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       ndjson_content = zip.read("all.ndjson")
       assert ndjson_content.include?(@rule.name)
       refute ndjson_content.include?(other_rule.name)
+    end
+  end
+
+  test "exports trade fee, activity label and stored exchange rate in NDJSON" do
+    investment_account = @family.accounts.create!(
+      name: "Tax Investment Account",
+      accountable: Investment.new,
+      balance: 10_000,
+      currency: "EUR"
+    )
+    security = Security.create!(ticker: "TAX#{SecureRandom.hex(3).upcase}", name: "Tax Export Security")
+    entry = investment_account.entries.create!(
+      date: Date.parse("2024-05-20"),
+      amount: 1002.5,
+      name: "Buy",
+      currency: "USD",
+      entryable: Trade.new(
+        security: security,
+        qty: 10,
+        price: 100,
+        fee: 2.5,
+        currency: "USD",
+        investment_activity_label: "Buy",
+        extra: { "exchange_rate" => 0.92, "ibkr" => { "account_id" => "U1234567" } }
+      )
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      trade_data = records.find { |record| record["type"] == "Trade" && record.dig("data", "id") == entry.entryable.id }["data"]
+
+      assert_equal "2.5", BigDecimal(trade_data["fee"].to_s).to_s("F")
+      assert_equal "Buy", trade_data["investment_activity_label"]
+      assert_equal 0.92, trade_data["exchange_rate"]
+      assert_not trade_data.key?("extra")
+      assert_not_includes zip.read("all.ndjson"), "U1234567"
+    end
+  end
+
+  # The cost basis applies a trade's stored rate from currency (the trade's)
+  # and the cash balance from the entry's currency, which an edit can make
+  # differ. The rate is exported when either path applies it, with both
+  # currencies named.
+  test "exports the amount's currency next to the rate on trades and transactions" do
+    investment_account = @family.accounts.create!(
+      name: "Amount Currency Account",
+      accountable: Investment.new,
+      balance: 10_000,
+      currency: "USD"
+    )
+    security = Security.create!(ticker: "AMC#{SecureRandom.hex(3).upcase}", name: "Amount Currency Security")
+    # Only the cost basis applies the rate: the entry is in the account's currency.
+    cost_basis_entry = investment_account.entries.create!(
+      date: Date.parse("2024-05-20"),
+      amount: 100,
+      name: "Buy",
+      currency: "USD",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "EUR", investment_activity_label: "Buy",
+        extra: { "exchange_rate" => 1.1 })
+    )
+    # Only the cash balance applies it: the trade is in the account's currency.
+    cash_entry = investment_account.entries.create!(
+      date: Date.parse("2024-05-20"),
+      amount: -5,
+      name: "Dividend",
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 0, price: 0, currency: "USD", investment_activity_label: "Dividend",
+        extra: { "exchange_rate" => 1.2 })
+    )
+    transaction_entry = investment_account.entries.create!(
+      date: Date.parse("2024-05-21"),
+      amount: -5,
+      name: "Dividend",
+      currency: "EUR",
+      entryable: Transaction.new(investment_activity_label: "Dividend", extra: { "exchange_rate" => 1.1 })
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      data_for = ->(type, entry) { records.find { |record| record["type"] == type && record.dig("data", "id") == entry.entryable.id }["data"] }
+
+      cost_basis_data = data_for.call("Trade", cost_basis_entry)
+      assert_equal 1.1, cost_basis_data["exchange_rate"]
+      assert_equal "EUR", cost_basis_data["currency"]
+      assert_equal "USD", cost_basis_data["amount_currency"]
+
+      cash_data = data_for.call("Trade", cash_entry)
+      assert_equal 1.2, cash_data["exchange_rate"]
+      assert_equal "USD", cash_data["currency"]
+      assert_equal "EUR", cash_data["amount_currency"]
+
+      transaction_data = data_for.call("Transaction", transaction_entry)
+      assert_equal "EUR", transaction_data["amount_currency"]
+      assert_equal 1.1, transaction_data["exchange_rate"]
+    end
+  end
+
+  # numeric_exchange_rate reads each split line's account, which the export
+  # preloads, so more split parents do not mean more account queries.
+  test "split lines do not query accounts once per line" do
+    make_split = lambda do
+      parent = @account.entries.create!(date: Date.parse("2024-05-23"), amount: -10, name: "Split", currency: "EUR",
+        entryable: Transaction.new)
+      parent.split!([ { name: "A", amount: -6 }, { name: "B", amount: -4 } ]).each do |child|
+        child.entryable.update_columns(extra: { "exchange_rate" => 1.08 })
+      end
+    end
+    count_account_queries = lambda do
+      count = 0
+      callback = ->(*, payload) { count += 1 if payload[:sql].match?(/FROM "accounts"/) }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { @exporter.generate_export }
+      count
+    end
+
+    make_split.call
+    baseline = count_account_queries.call
+    3.times { make_split.call }
+
+    assert_equal baseline, count_account_queries.call
+  end
+
+  test "exports the activity label and safe provider fields on split lines" do
+    security = Security.create!(ticker: "SPL#{SecureRandom.hex(3).upcase}", name: "Split Line Security")
+    parent = @account.entries.create!(
+      date: Date.parse("2024-05-22"),
+      amount: -10,
+      name: "Dividend to split",
+      currency: "EUR",
+      entryable: Transaction.new(investment_activity_label: "Dividend")
+    )
+    child = parent.split!([
+      { name: "Dividend part", amount: -6 },
+      { name: "Other part", amount: -4 }
+    ]).first
+    # Split children start without these; a provider or a later edit can
+    # store them, as on any other row.
+    child.update_columns(source: "ibkr")
+    child.entryable.update_columns(
+      investment_activity_label: "Dividend",
+      extra: {
+        "exchange_rate" => 1.08,
+        "security_id" => security.id,
+        "ibkr" => { "type" => "Dividends", "account_id" => "U5550001" }
+      }
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      ndjson = zip.read("all.ndjson")
+      records = ndjson.split("\n").map { |line| JSON.parse(line) }
+      parent_data = records.find { |record| record["type"] == "Transaction" && record.dig("data", "id") == parent.entryable.id }["data"]
+      lines = parent_data["split_lines"]
+      child_line = lines.find { |line| line["id"] == child.entryable.id }
+      other_line = lines.find { |line| line["id"] != child.entryable.id }
+
+      assert_equal "Dividend", child_line["investment_activity_label"]
+      assert_equal "Dividends", child_line["provider_type"]
+      assert_equal security.id, child_line["security_id"]
+      assert_equal 1.08, child_line["exchange_rate"]
+      assert_equal "EUR", child_line["amount_currency"]
+      %w[investment_activity_label provider_type security_id exchange_rate].each do |field|
+        assert other_line.key?(field), "expected #{field} on the split line"
+        assert_nil other_line[field]
+      end
+      assert_not_includes ndjson, "U5550001"
+    end
+  end
+
+  test "export reads a non-hash extra on a trade or transaction as null tax fields" do
+    investment_account = @family.accounts.create!(
+      name: "Malformed Extra Investment Account",
+      accountable: Investment.new,
+      balance: 10_000,
+      currency: "EUR"
+    )
+    security = Security.create!(ticker: "TMX#{SecureRandom.hex(3).upcase}", name: "Malformed Extra Security")
+    trade_entry = investment_account.entries.create!(
+      date: Date.parse("2024-05-20"),
+      amount: 500,
+      name: "Buy",
+      currency: "USD",
+      entryable: Trade.new(security: security, qty: 5, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+    transaction_entry = @account.entries.create!(
+      date: Date.parse("2024-05-21"),
+      amount: 1.5,
+      name: "Malformed",
+      currency: "EUR",
+      source: "ibkr",
+      entryable: Transaction.new
+    )
+
+    [ [ 1, 2 ], "raw-string-extra" ].each do |malformed|
+      # Written past the model, as a provider or a migration writing SQL might.
+      trade_entry.entryable.update_column(:extra, malformed)
+      transaction_entry.entryable.update_column(:extra, malformed)
+
+      Zip::File.open_buffer(@exporter.generate_export) do |zip|
+        records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        trade_data = records.find { |record| record["type"] == "Trade" && record.dig("data", "id") == trade_entry.entryable.id }["data"]
+        transaction_data = records.find { |record| record["type"] == "Transaction" && record.dig("data", "id") == transaction_entry.entryable.id }["data"]
+
+        assert_nil trade_data["exchange_rate"]
+        %w[provider_type security_id exchange_rate].each do |field|
+          assert transaction_data.key?(field)
+          assert_nil transaction_data[field], "expected #{field} to be null for extra = #{malformed.inspect}"
+        end
+      end
+    end
+  end
+
+  test "exports transaction activity label and safe provider fields in NDJSON" do
+    security = Security.create!(ticker: "WHX#{SecureRandom.hex(3).upcase}", name: "Withholding Export Security")
+    entry = @account.entries.create!(
+      date: Date.parse("2024-05-21"),
+      amount: 1.5,
+      name: "Withholding Tax",
+      currency: "EUR",
+      source: "ibkr",
+      entryable: Transaction.new(
+        investment_activity_label: "Dividend",
+        extra: {
+          "exchange_rate" => 0.93,
+          "security_id" => security.id,
+          "ibkr" => { "type" => "Withholding Tax", "conid" => "CONID-SECRET-2" }
+        }
+      )
+    )
+    plain_entry = @account.entries.create!(
+      date: Date.parse("2024-05-22"),
+      amount: 10,
+      name: "Plain",
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      transaction_data = records.find { |record| record["type"] == "Transaction" && record.dig("data", "id") == entry.entryable.id }["data"]
+      plain_data = records.find { |record| record["type"] == "Transaction" && record.dig("data", "id") == plain_entry.entryable.id }["data"]
+
+      assert_equal "Dividend", transaction_data["investment_activity_label"]
+      assert_equal "Withholding Tax", transaction_data["provider_type"]
+      assert_equal security.id, transaction_data["security_id"]
+      assert_equal 0.93, transaction_data["exchange_rate"]
+      assert_not transaction_data.key?("extra")
+      assert_not_includes zip.read("all.ndjson"), "CONID-SECRET-2"
+
+      %w[investment_activity_label provider_type security_id exchange_rate].each do |field|
+        assert plain_data.key?(field)
+        assert_nil plain_data[field]
+      end
+    end
+  end
+
+  # CSV formula injection (CWE-1236) -------------------------------------------
+  #
+  # These assert on the emitted CSV rather than on the helper. Sanitizing field
+  # by field is how fields get missed, so each generator is checked for the
+  # columns a user controls.
+
+  test "every CSV in the export escapes formula-triggering user content" do
+    security = Security.create!(ticker: "=SUM(A1)", name: "Formula Security", exchange_operating_mic: "XNAS")
+    account = @family.accounts.create!(
+      name: "@evil account",
+      accountable: Depository.new(subtype: "=cmd"),
+      balance: 500,
+      currency: "USD"
+    )
+    account.entries.create!(
+      date: Date.parse("2024-05-18"), amount: 1500, name: "Formula Trade", currency: "USD",
+      entryable: Trade.new(security: security, qty: 10, price: 150, currency: "USD")
+    )
+    category = @family.categories.create!(name: "+cmd|calc", color: "#123456", lucide_icon: "@icon")
+    account.entries.create!(
+      date: Date.parse("2024-05-19"), amount: 10, currency: "USD",
+      name: "=SUM(B1)", notes: "-1.5x leverage",
+      entryable: Transaction.new(category: category)
+    )
+    @family.merchants.create!(name: "-2+3", color: "#123456")
+    @family.rules.create!(
+      name: "@rule",
+      resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: category.id) ]
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      accounts = CSV.parse(zip.read("accounts.csv"), headers: true)
+      row = accounts.find { |r| r["name"] == "'@evil account" }
+      assert row, "account name must be escaped"
+      assert_equal "'=cmd", row["subtype"], "account subtype must be escaped"
+
+      trades = CSV.parse(zip.read("trades.csv"), headers: true)
+      assert trades.any? { |r| r["ticker"] == "'=SUM(A1)" }, "trade ticker must be escaped"
+      assert_not trades.any? { |r| r["ticker"] == "=SUM(A1)" }, "raw formula ticker must not appear"
+
+      categories = CSV.parse(zip.read("categories.csv"), headers: true)
+      row = categories.find { |r| r["name"] == "'+cmd|calc" }
+      assert row, "category name must be escaped"
+      assert_equal "'@icon", row["lucide_icon"], "category lucide_icon must be escaped"
+
+      transactions = CSV.parse(zip.read("transactions.csv"), headers: true)
+      row = transactions.find { |r| r["name"] == "'=SUM(B1)" }
+      assert row, "transaction name must be escaped"
+      assert_equal "'-1.5x leverage", row["notes"], "transaction notes must be escaped"
+
+      merchants = CSV.parse(zip.read("merchants.csv"), headers: true)
+      assert merchants.any? { |r| r["name"] == "'-2+3" }, "merchant name must be escaped"
+
+      rules = CSV.parse(zip.read("rules.csv"), headers: true)
+      assert rules.any? { |r| r["name"] == "'@rule" }, "rule name must be escaped"
+    end
+  end
+
+  # A bare number cannot run anything, and escaping it would turn every income
+  # amount, negative balance and sale quantity into text in the spreadsheet.
+  test "CSV export leaves negative numbers as numbers" do
+    account = @family.accounts.create!(name: "Overdrawn", accountable: Depository.new, balance: -250.5, currency: "USD")
+    account.entries.create!(
+      date: Date.parse("2024-05-19"), amount: -1200, currency: "USD", name: "Salary",
+      entryable: Transaction.new
+    )
+    security = Security.create!(ticker: "SELLME", name: "Sold Security", exchange_operating_mic: "XNAS")
+    account.entries.create!(
+      date: Date.parse("2024-05-20"), amount: -300, name: "Sell", currency: "USD",
+      entryable: Trade.new(security: security, qty: -2, price: 150, currency: "USD")
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      accounts = CSV.parse(zip.read("accounts.csv"), headers: true)
+      assert_equal "-250.5", accounts.find { |r| r["name"] == "Overdrawn" }["balance"]
+
+      transactions = CSV.parse(zip.read("transactions.csv"), headers: true)
+      assert_equal "-1200.0", transactions.find { |r| r["name"] == "Salary" }["amount"]
+
+      trade = CSV.parse(zip.read("trades.csv"), headers: true).find { |r| r["ticker"] == "SELLME" }
+      assert_equal "-2.0", trade["quantity"]
+      assert_equal "-300.0", trade["amount"]
+    end
+  end
+
+  test "NDJSON keeps formula-prefixed values verbatim so export and import round-trip" do
+    name  = "=SUM(A1)"
+    notes = "-1.5x leverage"
+    entry = @account.entries.create!(
+      date: Date.current, name: name, amount: 10, currency: "USD", notes: notes,
+      entryable: Transaction.new
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      line = zip.read("all.ndjson").each_line.find do |l|
+        parsed = JSON.parse(l)
+        parsed["type"] == "Transaction" && parsed.dig("data", "entry_id") == entry.id
+      end
+
+      assert line, "the transaction must be in all.ndjson"
+      data = JSON.parse(line)["data"]
+      assert_equal name, data["name"]
+      assert_equal notes, data["notes"]
     end
   end
 

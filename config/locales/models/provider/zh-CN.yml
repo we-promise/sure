@@ -1,6 +1,8 @@
 ---
 zh-CN:
   providers:
+    truelayer:
+      description: 通过 TrueLayer 连接到您的英国银行
     property_valuation:
       not_configured: 此房产数据提供商未配置。
       missing_fields: 请提供名称和完整的美国地址（街道、城市、州和邮政编码）。
@@ -25,3 +27,9 @@ zh-CN:
         unsupported_property: Chimnie 仅评估住宅房产；此 UPRN 属于商业或商住混合房产。
         unauthorized: Chimnie 拒绝了该 API 密钥。请在“设置 → 自托管”中检查密钥。
         insufficient_balance: 您的 Chimnie 账户余额不足以处理此请求。
+    terrascoutx:
+      errors:
+        no_property: TerraScoutX 找不到与此地址匹配的房产。
+        no_valuation: TerraScoutX 未返回此房产的估值。
+        location_mismatch: TerraScoutX 匹配到了门牌号或邮编不同的房产。请仔细核对地址。
+        insecure_url: TERRASCOUTX_URL 必须使用 https://。

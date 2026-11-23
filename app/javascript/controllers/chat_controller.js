@@ -34,13 +34,19 @@ export default class extends Controller {
 
   autoResize() {
     const input = this.inputTarget;
-    const lineHeight = 20; // text-sm line-height (14px * 1.429 ≈ 20px)
-    const maxLines = 3; // 3 lines = 60px total
+    const style = getComputedStyle(input);
+    const lineHeight = Number.parseFloat(style.lineHeight) || 20; // text-sm: 20px
+    const maxLines = 3;
+    // scrollHeight includes the vertical padding, so the cap must too, or the
+    // box stops growing short of three lines and scrolls early.
+    const maxHeight =
+      lineHeight * maxLines +
+      Number.parseFloat(style.paddingTop) +
+      Number.parseFloat(style.paddingBottom);
 
     input.style.height = "auto";
-    input.style.height = `${Math.min(input.scrollHeight, lineHeight * maxLines)}px`;
-    input.style.overflowY =
-      input.scrollHeight > lineHeight * maxLines ? "auto" : "hidden";
+    input.style.height = `${Math.min(input.scrollHeight, maxHeight)}px`;
+    input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
 
     this.#updateSubmitState();
   }

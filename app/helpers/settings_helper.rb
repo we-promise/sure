@@ -116,7 +116,7 @@ module SettingsHelper
       return { status: :off } unless @trading212_items&.any?
       sync_based_summary(key)
     when "snaptrade"
-      configured_item = @snaptrade_items&.find(&:oauth_configured?)
+      configured_item = @snaptrade_items&.find(&:credentials_configured?)
       return { status: :off } unless configured_item
       sync_based_summary(key)
     when "ibkr"
@@ -133,6 +133,9 @@ module SettingsHelper
       sync_based_summary(key)
     when "questrade"
       return { status: :off } unless @questrade_items&.any?
+      sync_based_summary(key)
+    when "sharesight"
+      return { status: :off } unless @sharesight_items&.any?
       sync_based_summary(key)
     else
       { status: :off }

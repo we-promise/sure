@@ -39,9 +39,10 @@ class WiseItem::Syncer
     if linked_count.positive?
       update_status(sync, :processing_transactions)
       mark_import_started(sync)
-      process_results = wise_item.process_accounts
+      process_results = wise_item.process_accounts(import_complete: import_complete?(import_result))
       sync_errors.concat(result_failure_errors(process_results, category: :account_processing_error, message_key: :account_processing_failed))
       capture_transaction_processing_summary(process_results)
+      collect_wise_prune_stats(sync, process_results)
 
       wise_item.link_jar_transfers!
 
@@ -69,7 +70,8 @@ class WiseItem::Syncer
     Rails.logger.error Array(e.backtrace).first(10).join("\n")
     Sentry.capture_exception(e) { |s| s.set_tags(wise_item_id: wise_item.id) }
     collect_health_stats(sync, errors: [ { message: safe_message, category: "sync_error" } ])
-    raise SafeSyncError, safe_message
+    # cause: nil keeps the raw error, already reported above, off Sync's own report.
+    raise SafeSyncError.new(safe_message), cause: nil
   end
 
   def perform_post_sync
@@ -102,8 +104,15 @@ class WiseItem::Syncer
       errors = []
       errors << sync_error(:account_import_error, :accounts_failed, count: result[:accounts_failed]) if result[:accounts_failed].to_i.positive?
       errors << sync_error(:transaction_import_error, :transactions_failed, count: result[:transactions_failed]) if result[:transactions_failed].to_i.positive?
+      errors << sync_error(:fetch_error, :fetch_failed, count: result[:fetch_failures]) if result[:fetch_failures].to_i.positive?
       errors << sync_error(:import_error, :import_failed) if errors.empty?
       errors
+    end
+
+    # Only an import that fetched every source may drive steps that delete
+    # or rewrite entries.
+    def import_complete?(result)
+      result.is_a?(Hash) && result[:complete] == true
     end
 
     def result_failure_errors(results, category:, message_key:)
@@ -111,6 +120,18 @@ class WiseItem::Syncer
       return [] unless failed.positive?
 
       [ sync_error(category, message_key, count: failed) ]
+    end
+
+    # Stale Wise entries the processing deleted (see
+    # WiseAccount::Transactions::Processor), summed over the accounts.
+    def collect_wise_prune_stats(sync, results)
+      return unless sync.respond_to?(:sync_stats)
+
+      merge_sync_stats(sync, { "wise_pruned_entries" => pruned_entry_count(results) })
+    end
+
+    def pruned_entry_count(results)
+      Array(results).sum { |result| result.is_a?(Hash) && result[:result].is_a?(Hash) ? result[:result][:pruned].to_i : 0 }
     end
 
     def capture_transaction_processing_summary(results)
@@ -136,7 +157,8 @@ class WiseItem::Syncer
           processed_account_count: account_results.size,
           imported_transaction_count: imported,
           skipped_transaction_count: skipped,
-          failed_transaction_count: failed
+          failed_transaction_count: failed,
+          pruned_entry_count: pruned_entry_count(account_results)
         }
       )
     rescue => e

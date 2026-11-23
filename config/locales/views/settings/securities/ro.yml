@@ -8,3 +8,4 @@ ro:
         enable_mfa: Activează 2FA
         mfa_description: Adaugă un strat suplimentar de securitate contului tău solicitând un cod din aplicația ta de autentificare la conectare
         mfa_title: Autentificare cu Doi Factori
+        page_title: Securitate

@@ -23,6 +23,7 @@ class Session < ApplicationRecord
   SESSION_TOUCH_INTERVAL = 1.hour
 
   belongs_to :user, counter_cache: :sessions_count
+  has_many :web_push_subscriptions, dependent: :destroy
   belongs_to :active_impersonator_session,
     -> { where(status: :in_progress) },
     class_name: "ImpersonationSession",
