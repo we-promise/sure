@@ -1,7 +1,7 @@
 module AccountsHelper
-  def summary_card(title:, &block)
+  def summary_card(title:, footer: nil, &block)
     content = capture(&block)
-    render "accounts/summary_card", title: title, content: content
+    render "accounts/summary_card", title: title, content: content, footer: footer
   end
 
   def sync_path_for(account)

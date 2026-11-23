@@ -1,0 +1,19 @@
+---
+nb:
+  sync_schedules:
+    menu_item: "Synkroniseringsfrekvens"
+    intervals:
+      minutes: "Hvert %{count}. minutt"
+      hours:
+        one: "Hver time"
+        other: "Hver %{count}. time"
+    edit:
+      title: "Synkroniseringsfrekvens"
+      description: "Alle tilkoblinger synkroniseres med husholdningens synkronisering, én gang om dagen for de fleste leverandører. Velg et intervall for også å synkronisere %{name} for seg selv gjennom dagen."
+      interval_label: "Synkroniser"
+      no_schedule: "Bare vanlig synkronisering"
+      hint: "Hyppige synkroniseringer teller mot leverandørens forespørselsgrenser, og noen leverandører tar betalt per forespørsel."
+      save: "Lagre"
+    update:
+      updated: "Synkroniseringsfrekvensen er lagret."
+      cleared: "Synkroniseringsfrekvensen er fjernet. Tilkoblingen bruker igjen vanlig synkronisering."

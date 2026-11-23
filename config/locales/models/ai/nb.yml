@@ -1,0 +1,33 @@
+---
+nb:
+  ai:
+    availability:
+      capability_missing:
+        admin: "%{feature} er ikke tilgjengelig: ingen av de konfigurerte AI-modellene støtter det. Sjekk modellene under Innstillinger → Selvhosting."
+        member: "%{feature} er ikke tilgjengelig: ingen av de konfigurerte AI-modellene støtter det."
+      not_configured:
+        admin: "%{feature} er ikke tilgjengelig: ingen AI-modell er satt opp for dette. Legg til en under Innstillinger → Selvhosting."
+        member: "%{feature} er ikke tilgjengelig: AI er ikke satt opp for dette på denne instansen."
+      user_disabled:
+        member: "%{feature} krever at AI er slått på. Du kan slå det på fra AI-assistenten."
+    consent_rows:
+      bill_setup: "Regninger"
+      categorize: "Kategorier"
+      chat: "Chat"
+      detect_merchants: "Forhandlere"
+      embed: "Dokumenter"
+      extract_pdf: "PDF-import"
+    sends:
+      bill_configuration: "Regningens nåværende innstillinger"
+      category_names: "Kategorinavnene dine"
+      chat_messages: "Chatmeldingene dine"
+      depends_on_vector_store: "Dokumentene du har lastet opp, som hele filer til et vektorlager eller som tekstbiter til en embedding-modell"
+      looked_up_financial_data: "De økonomiske dataene assistenten slår opp for å svare"
+      merchant_names: "Forhandlernavn"
+      provider_category_hints: "Kategorier banken din foreslår"
+      search_query: "Søketeksten din"
+      stored_document_text: "Teksten i kontoutskrifter som er lagret i arkivet ditt"
+      transaction_amounts: "Transaksjonsbeløp"
+      transaction_dates: "Transaksjonsdatoer"
+      transaction_names: "Transaksjonsnavn"
+      uploaded_document: "Dokumentet du laster opp"
