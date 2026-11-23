@@ -17,7 +17,6 @@ zh-CN:
       delete_all: 删除全部
     menu:
       label: 编辑标签
-      loading: 正在加载标签...
     new:
       new: 新建标签
     summary:
