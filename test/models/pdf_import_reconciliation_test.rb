@@ -239,7 +239,9 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     @statement.update_columns(currency: nil)
     stub_extracted_balances(opening: 1066.47, closing: 435.88, currency: "EUR")
     period = { "statement_period_start" => @statement.period_start_on.to_s, "statement_period_end" => @statement.period_end_on.to_s }
-    PdfImport::AiProcessor.any_instance.stubs(:process).returns(OpenStruct.new(extracted_data: period))
+    outcome = Ai::PdfReading::Outcome.new(value: { document_type: "bank_statement", extracted_data: period },
+      way: :text, model: nil, checks: nil, usage: nil, attempts: [])
+    Ai::PdfReading.any_instance.stubs(:read).returns(outcome)
 
     # As ProcessPdfJob does: both calls save the import's one statement object,
     # the first in the family's dollars, the second switching it to euros.
@@ -711,14 +713,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
     def stub_extracted_balances(opening:, closing:, currency: nil)
       use_ai_routes
-      provider = mock("llm_provider")
-      Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-      provider.stubs(:extract_bank_statement).returns(
-        OpenStruct.new(
-          success?: true,
-          data: { opening_balance: opening, closing_balance: closing, currency: currency, transactions: [] }
-        )
-      )
+      stub_ai(:extract_pdf, returns: { opening_balance: opening, closing_balance: closing, currency:, transactions: [] })
       @import.stubs(:pdf_file_content).returns("fake-pdf")
     end
 
