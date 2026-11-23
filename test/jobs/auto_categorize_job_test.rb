@@ -8,6 +8,9 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     @family = families(:empty)
     @account = @family.accounts.create!(name: "Rule test", balance: 100, currency: "USD", accountable: Depository.new)
     @family.categories.create!(name: "Food")
+    # The rule run that queues these jobs was started by the account's owner.
+    @user_id = @account.owner.id
+    @queued_id = create_transaction(account: @account, name: "Queued").entryable_id
     @rule = @family.rules.create!(
       name: "AI category rule",
       resource_type: "transaction",
@@ -33,13 +36,13 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
 
   test "an unexpected error ends the run once instead of going through Sidekiq's retries" do
     error = RuntimeError.new("Fixed prompt tokens exceed context budget")
-    transaction_ids = [ SecureRandom.uuid ]
+    transaction_ids = [ @queued_id ]
 
     Family.any_instance.stubs(:auto_categorize_transactions).with(transaction_ids).raises(error)
 
     assert_difference "DebugLogEntry.count", 1 do
       perform_enqueued_jobs do
-        AutoCategorizeJob.perform_later(@family, transaction_ids: transaction_ids, rule_run_id: @rule_run.id)
+        AutoCategorizeJob.perform_later(@family, transaction_ids: transaction_ids, rule_run_id: @rule_run.id, user_id: @user_id)
       end
     end
 
@@ -68,7 +71,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
 
     assert_difference "DebugLogEntry.count", 1 do
       perform_enqueued_jobs do
-        AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+        AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id, user_id: @user_id)
       end
     end
 
@@ -93,7 +96,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
 
     assert_difference "DebugLogEntry.count", 2 do
       perform_enqueued_jobs do
-        AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+        AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id, user_id: @user_id)
       end
     end
 
@@ -116,7 +119,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     openai_fails_with Faraday::UnauthorizedError.new("the server responded with status 401", { status: 401, body: "invalid_api_key" }), times: 1
 
     perform_enqueued_jobs do
-      AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id, user_id: @user_id)
     end
 
     assert_no_enqueued_jobs
@@ -132,7 +135,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     openai_fails_with Faraday::ServerError.new("the server responded with status 503", { status: 503, body: "overloaded" }), times: RuleAiJob::ATTEMPTS
 
     perform_enqueued_jobs do
-      AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id, user_id: @user_id)
     end
 
     assert_no_enqueued_jobs
@@ -155,7 +158,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
       .then.returns(provider_success_response([ categorization(transaction, "Food") ]))
 
     perform_enqueued_jobs do
-      AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id, user_id: @user_id)
     end
 
     @rule_run.reload
@@ -168,7 +171,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
   test "a job that runs again after its batch was counted doesn't count it twice" do
     @rule_run.update!(pending_jobs_count: 2)
     @family.stubs(:auto_categorize_transactions).raises(RuntimeError, "boom")
-    job = AutoCategorizeJob.new(@family, transaction_ids: [ SecureRandom.uuid ], rule_run_id: @rule_run.id)
+    job = AutoCategorizeJob.new(@family, transaction_ids: [ @queued_id ], rule_run_id: @rule_run.id, user_id: @user_id)
 
     2.times { job.perform_now }
 
@@ -189,7 +192,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     DebugLogEntry.stubs(:capture).raises(ActiveRecord::Deadlocked).then.returns(nil)
 
     perform_enqueued_jobs do
-      AutoCategorizeJob.perform_later(@family, transaction_ids: [ applied.id, left.id ], rule_run_id: @rule_run.id)
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ applied.id, left.id ], rule_run_id: @rule_run.id, user_id: @user_id)
     end
 
     assert_equal "Food", applied.reload.category.name
@@ -206,7 +209,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
     provider.expects(:auto_categorize).never
 
-    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id, user_id: @user_id)
 
     @rule_run.reload
     assert_equal "success", @rule_run.status
@@ -218,7 +221,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     RuleRun.stubs(:find_by).raises(ActiveRecord::ConnectionTimeoutError, "could not obtain a connection").then.returns(@rule_run)
 
     perform_enqueued_jobs do
-      AutoCategorizeJob.perform_later(@family, transaction_ids: [ SecureRandom.uuid ], rule_run_id: @rule_run.id)
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ @queued_id ], rule_run_id: @rule_run.id, user_id: @user_id)
     end
 
     @rule_run.reload
@@ -230,7 +233,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
   test "a run that can't be told the job gave up is left to Sidekiq to retry" do
     @family.stubs(:auto_categorize_transactions).raises(Ai::Error::Unauthorized, "invalid key")
     RuleRun.any_instance.stubs(:fail_job!).raises(ActiveRecord::ConnectionNotEstablished, "connection lost")
-    job = AutoCategorizeJob.new(@family, transaction_ids: [ SecureRandom.uuid ], rule_run_id: @rule_run.id)
+    job = AutoCategorizeJob.new(@family, transaction_ids: [ @queued_id ], rule_run_id: @rule_run.id, user_id: @user_id)
 
     assert_raises(ActiveRecord::ConnectionNotEstablished) { job.perform_now }
     assert_operator AutoCategorizeJob.get_sidekiq_options["retry"], :>, 0

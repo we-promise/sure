@@ -19,7 +19,7 @@ class Rule::ActionExecutor::AutoDetectMerchants < Rule::ActionExecutor
     false
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil, user: nil)
     enrichable_transactions = transaction_scope.enrichable(:merchant_id)
 
     if enrichable_transactions.empty?
@@ -29,7 +29,7 @@ class Rule::ActionExecutor::AutoDetectMerchants < Rule::ActionExecutor
 
     Rails.logger.info("Scheduling auto-merchant-enrichment for #{enrichable_transactions.count} transactions")
     queue_ai_jobs(enrichable_transactions, rule_run:) do |transactions|
-      rule.family.auto_detect_transaction_merchants_later(transactions, rule_run_id: rule_run&.id)
+      rule.family.auto_detect_transaction_merchants_later(transactions, rule_run_id: rule_run&.id, user_id: user&.id)
     end
 
     # modified_count is the queued count: the jobs report what they actually

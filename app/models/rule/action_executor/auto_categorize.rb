@@ -39,7 +39,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
     false
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil, user: nil)
     protected_scope = protected_transactions(transaction_scope)
     cached_transaction_ids = cached_transaction_ids(protected_scope)
     blocked_transaction_ids = protected_scope.pluck(:id) - cached_transaction_ids
@@ -56,7 +56,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
 
     Rails.logger.info("Scheduling auto-categorization for #{enrichable_transactions.count} transactions")
     queue_ai_jobs(enrichable_transactions, rule_run:) do |transactions|
-      rule.family.auto_categorize_transactions_later(transactions, rule_run_id: rule_run&.id)
+      rule.family.auto_categorize_transactions_later(transactions, rule_run_id: rule_run&.id, user_id: user&.id)
     end
 
     # modified_count is the queued count: the jobs report what they actually

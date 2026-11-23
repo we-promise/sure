@@ -441,6 +441,25 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal [ probes[:member_private] ], ai_batch_ids
   end
 
+  test "an AI job leaves out an account whose share was revoked after it was queued" do
+    use_ai_routes
+    probes = ai_scope_probes
+    run_ai_rule("auto_categorize", user: users(:family_member))
+    account_shares(:depository_shared_with_member).destroy!
+
+    Family.any_instance.expects(:auto_categorize_transactions).with([ probes[:member_private] ]).returns(1)
+    perform_enqueued_jobs(only: AutoCategorizeJob)
+  end
+
+  test "an AI job run by nobody sends only accounts every active member can see" do
+    use_ai_routes
+    probes = ai_scope_probes
+    AutoDetectMerchantsJob.perform_later(families(:dylan_family), transaction_ids: probes.values)
+
+    Family.any_instance.expects(:auto_detect_transaction_merchants).with([ probes[:shared] ]).returns(1)
+    perform_enqueued_jobs(only: AutoDetectMerchantsJob)
+  end
+
   test "AI actions leave out an account shared read-only with the member running the rule" do
     families(:dylan_family).users.create!(email: "third-member@example.com", password: "password123", role: :member)
     probes = ai_scope_probes

@@ -97,7 +97,7 @@ class Rule::Action < ApplicationRecord
   end
 
   def apply(resource_scope, ignore_attribute_locks: false, rule_run: nil, user: nil)
-    executor.execute(executor.actionable_scope(resource_scope, user: user), value: execution_value, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run) || 0
+    executor.run(resource_scope, user: user, value: execution_value, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run) || 0
   end
 
   def options

@@ -25,11 +25,13 @@ class RuleAiJob < ApplicationJob
   retry_on(*TRANSIENT_DB, attempts: ATTEMPTS) { |job, error| job.give_up(error) }
   discard_on(*DISCARDED) { |job, error| job.give_up(error) }
 
-  def perform(family, transaction_ids: [], rule_run_id: nil)
+  def perform(family, transaction_ids: [], rule_run_id: nil, user_id: nil)
     @transaction_ids = transaction_ids
     @rule_run = RuleRun.find_by(id: rule_run_id) if rule_run_id.present?
 
-    modified_count = enrich(family, transaction_ids)
+    # Access may have changed since the rule queued the batch (Rule::AiEnrichment).
+    user = family.users.find_by(id: user_id)
+    modified_count = enrich(family, Rule::AiEnrichment.permitted_ids(family, transaction_ids, user:))
     @rule_run&.complete_job!(job_id:, modified_count:)
   rescue *TRANSIENT_DB
     raise
