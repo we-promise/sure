@@ -22,7 +22,7 @@ class RuleRunTest < ActiveSupport::TestCase
     transaction_id = SecureRandom.uuid
 
     assert_difference "DebugLogEntry.count", 1 do
-      rule_run.fail_job!(error: error, source: "AutoCategorizeJob", transaction_ids: [ transaction_id ])
+      rule_run.fail_job!(job_id: "job-a", error: error, source: "AutoCategorizeJob", transaction_ids: [ transaction_id ])
     end
 
     rule_run.reload
@@ -44,36 +44,48 @@ class RuleRunTest < ActiveSupport::TestCase
     assert_equal [ transaction_id ], entry.metadata["transaction_ids"]
   end
 
-  test "fail_job is retry-safe for pending count and debug logging" do
-    rule_run = create_rule_run(pending_jobs_count: 1)
+  test "a job that reports its failure again is counted once" do
+    rule_run = create_rule_run(pending_jobs_count: 2)
     error = RuntimeError.new("retrying same failed batch")
 
     assert_difference "DebugLogEntry.count", 1 do
-      rule_run.fail_job!(error: error, source: "AutoCategorizeJob")
-      rule_run.fail_job!(error: error, source: "AutoCategorizeJob")
+      rule_run.fail_job!(job_id: "job-a", error: error, source: "AutoCategorizeJob")
+      rule_run.fail_job!(job_id: "job-a", error: error, source: "AutoCategorizeJob")
     end
 
     rule_run.reload
     assert_equal "failed", rule_run.status
-    assert_equal 0, rule_run.pending_jobs_count
+    assert_equal 1, rule_run.pending_jobs_count, "the other batch is still running"
   end
 
   test "fail_job deduplicates repeated error messages individually" do
     rule_run = create_rule_run(pending_jobs_count: 3)
 
-    rule_run.fail_job!(error: RuntimeError.new("first failed batch"), source: "AutoCategorizeJob")
-    rule_run.fail_job!(error: RuntimeError.new("second failed batch"), source: "AutoCategorizeJob")
-    rule_run.fail_job!(error: RuntimeError.new("second failed batch"), source: "AutoCategorizeJob")
+    rule_run.fail_job!(job_id: "job-a", error: RuntimeError.new("first failed batch"), source: "AutoCategorizeJob")
+    rule_run.fail_job!(job_id: "job-b", error: RuntimeError.new("second failed batch"), source: "AutoCategorizeJob")
+    rule_run.fail_job!(job_id: "job-c", error: RuntimeError.new("second failed batch"), source: "AutoCategorizeJob")
 
     rule_run.reload
     assert_equal "RuntimeError: first failed batch\nRuntimeError: second failed batch", rule_run.error_message
     assert_equal 0, rule_run.pending_jobs_count
   end
 
+  test "a job that reports its success again is counted once" do
+    rule_run = create_rule_run(pending_jobs_count: 2)
+
+    rule_run.complete_job!(job_id: "job-a", modified_count: 3)
+    rule_run.complete_job!(job_id: "job-a", modified_count: 3)
+
+    rule_run.reload
+    assert_equal "pending", rule_run.status
+    assert_equal 1, rule_run.pending_jobs_count
+    assert_equal 3, rule_run.transactions_modified
+  end
+
   test "complete_job does not overwrite failed status" do
     rule_run = create_rule_run(status: "failed", pending_jobs_count: 0)
 
-    rule_run.complete_job!(modified_count: 3)
+    rule_run.complete_job!(job_id: "job-a", modified_count: 3)
 
     rule_run.reload
     assert_equal "failed", rule_run.status
@@ -85,8 +97,8 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run = create_rule_run(pending_jobs_count: 2)
     error = RuntimeError.new("LLM provider returned HTTP 503")
 
-    rule_run.fail_job!(error: error, source: "AutoCategorizeJob")
-    rule_run.complete_job!(modified_count: 1)
+    rule_run.fail_job!(job_id: "job-a", error: error, source: "AutoCategorizeJob")
+    rule_run.complete_job!(job_id: "job-b", modified_count: 1)
 
     rule_run.reload
     assert_equal "failed", rule_run.status
@@ -100,8 +112,8 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run.update!(execution_type: "immediate")
 
     RuleRun.expects(:offer_immediate_result).with(@rule.family).once
-    rule_run.complete_job!(modified_count: 1)
-    rule_run.complete_job!(modified_count: 0)
+    rule_run.complete_job!(job_id: "job-a", modified_count: 1)
+    rule_run.complete_job!(job_id: "job-b", modified_count: 0)
   end
 
   test "an immediate run whose jobs changed nothing offers no result" do
@@ -109,8 +121,8 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run.update!(execution_type: "immediate")
 
     RuleRun.expects(:offer_immediate_result).never
-    rule_run.complete_job!(modified_count: 0)
-    rule_run.complete_job!(modified_count: 0)
+    rule_run.complete_job!(job_id: "job-a", modified_count: 0)
+    rule_run.complete_job!(job_id: "job-b", modified_count: 0)
   end
 
   test "an immediate run whose last job fails still offers what earlier jobs changed" do
@@ -118,8 +130,8 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run.update!(execution_type: "immediate")
 
     RuleRun.expects(:offer_immediate_result).with(@rule.family).once
-    rule_run.complete_job!(modified_count: 3)
-    rule_run.fail_job!(error: StandardError.new("provider down"), source: "test")
+    rule_run.complete_job!(job_id: "job-a", modified_count: 3)
+    rule_run.fail_job!(job_id: "job-b", error: StandardError.new("provider down"), source: "test")
 
     assert_equal "failed", rule_run.reload.status
   end
@@ -129,17 +141,8 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run.update!(execution_type: "immediate")
 
     RuleRun.expects(:offer_immediate_result).with(@rule.family).once
-    rule_run.complete_job!(modified_count: 1)
-    3.times { rule_run.fail_job!(error: StandardError.new("provider down"), source: "test") }
-  end
-
-  test "a retry that succeeds after the run's only job failed offers what it changed" do
-    rule_run = create_rule_run
-    rule_run.update!(execution_type: "immediate")
-
-    RuleRun.expects(:offer_immediate_result).with(@rule.family).once
-    rule_run.fail_job!(error: StandardError.new("provider down"), source: "test")
-    rule_run.complete_job!(modified_count: 2)
+    rule_run.complete_job!(job_id: "job-a", modified_count: 1)
+    3.times { rule_run.fail_job!(job_id: "job-b", error: StandardError.new("provider down"), source: "test") }
   end
 
   test "an immediate run that fails without changes offers no result" do
@@ -147,7 +150,7 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run.update!(execution_type: "immediate")
 
     RuleRun.expects(:offer_immediate_result).never
-    rule_run.fail_job!(error: StandardError.new("provider down"), source: "test")
+    rule_run.fail_job!(job_id: "job-a", error: StandardError.new("provider down"), source: "test")
   end
 
   test "a failed result broadcast does not fail the job that finished the run" do
@@ -155,7 +158,7 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run.update!(execution_type: "immediate")
     Family.any_instance.stubs(:broadcast_replace_to).raises(RuntimeError, "cable down")
 
-    assert_nothing_raised { rule_run.complete_job!(modified_count: 1) }
+    assert_nothing_raised { rule_run.complete_job!(job_id: "job-a", modified_count: 1) }
     assert_equal "success", rule_run.reload.status
   end
 
@@ -163,7 +166,7 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run = create_rule_run
 
     RuleRun.expects(:offer_immediate_result).never
-    rule_run.complete_job!(modified_count: 1)
+    rule_run.complete_job!(job_id: "job-a", modified_count: 1)
   end
 
   private

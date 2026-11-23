@@ -48,49 +48,56 @@ class RuleRun < ApplicationRecord
     nil
   end
 
-  # Thread-safe method to complete a job and update the run
-  def complete_job!(modified_count: 0)
-    drained = false
-
-    with_lock do
-      drained = pending_jobs_count == 1
+  # A job reports once, when it has finished for good: retries report through
+  # the same job_id, and so does a job Sidekiq runs again after a restart, so
+  # each job is counted once however often it reports.
+  def complete_job!(job_id:, modified_count: 0)
+    drained = settle_job(job_id) do
       self.transactions_modified += modified_count
-      self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
 
       # Preserve a previously recorded failure while still draining pending jobs.
       self.status = "success" if pending_jobs_count <= 0 && !failed?
-
-      save!
     end
 
-    # A Sidekiq retry of a job that failed before finds nothing left to
-    # drain, so its changes are offered on their own.
-    offer_job_results if pending_jobs_count.zero? && (drained || modified_count.positive?)
+    offer_job_results if drained
   end
 
-  def fail_job!(error:, source:, transaction_ids: [])
+  def fail_job!(job_id:, error:, source:, transaction_ids: [])
     should_log = false
-    drained = false
     current_error_message = "#{error.class}: #{error.message}"
 
-    with_lock do
+    drained = settle_job(job_id) do
       should_log = !failed?
-      drained = pending_jobs_count == 1
-      self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
       self.status = "failed"
       existing_error_messages = error_message.to_s.split("\n").reject(&:blank?)
       self.error_message = (existing_error_messages + [ current_error_message ]).uniq.join("\n")
-
-      save!
     end
 
     capture_failure_debug_log(error:, source:, transaction_ids:) if should_log
-    # Earlier jobs of the run may already have changed transactions. A retry
-    # of a job that already failed drains nothing, so it offers nothing again.
+    # Earlier jobs of the run may already have changed transactions.
     offer_job_results if drained
   end
 
   private
+    # Counts a job against pending_jobs_count, then yields for its outcome, both
+    # under the row lock. Does nothing for a job already counted. Returns
+    # whether this job was the run's last.
+    def settle_job(job_id)
+      drained = false
+
+      with_lock do
+        next if settled_job_ids.include?(job_id)
+
+        drained = pending_jobs_count == 1
+        self.settled_job_ids += [ job_id ]
+        self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
+        yield
+        save!
+      end
+
+      drained
+    end
+
     # The jobs of an immediate run with AI actions offer what they changed once
     # the last one is done; ApplyImmediateRulesJob offers the run's other changes.
     def offer_job_results

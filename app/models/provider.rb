@@ -7,11 +7,20 @@ class Provider
     # Builds a provider error. `details` holds opaque response metadata
     # (e.g. the upstream body); `failure_code` is an optional symbol the
     # admin AI status page and health probe key on so they can show a
-    # specific, actionable reason instead of a generic message.
-    def initialize(message, details: nil, failure_code: nil)
+    # specific, actionable reason instead of a generic message. `cause` is
+    # the client error this one wraps.
+    def initialize(message, details: nil, failure_code: nil, cause: nil)
       super(message)
       @details = details
       @failure_code = failure_code
+      @cause = cause
+    end
+
+    # with_provider_response returns its error instead of raising it, so Ruby
+    # never records what it wraps. Callers deciding whether to retry need the
+    # client error underneath (its HTTP status, or a timeout).
+    def cause
+      @cause || super
     end
 
     # Serialized form for API consumers. Includes `failure_code` so
@@ -57,11 +66,8 @@ class Provider
     # present and truthy) and, for Faraday errors, the response body as
     # `details`. Subclasses may override this to customise.
     def default_error_transformer(error)
-      kwargs = if error.respond_to?(:failure_code) && error.failure_code
-        { failure_code: error.failure_code }
-      else
-        {}
-      end
+      kwargs = { cause: error }
+      kwargs[:failure_code] = error.failure_code if error.respond_to?(:failure_code) && error.failure_code
 
       if error.is_a?(Faraday::Error)
         self.class::Error.new(

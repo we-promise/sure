@@ -55,6 +55,15 @@ class ProviderTest < ActiveSupport::TestCase
     assert_instance_of TestProvider::TestError, response.error
   end
 
+  test "a failed response keeps the error it wraps as its cause" do
+    source = Faraday::UnauthorizedError.new("the server responded with status 401", { status: 401 })
+    @client.expects(:get).with("/test").raises(source)
+
+    response = @provider.fetch_data
+
+    assert_same source, response.error.cause
+  end
+
   test "default_error_transformer preserves the failure_code when present" do
     source = Provider::Error.new("render failed", failure_code: :render_missing_binary)
 
