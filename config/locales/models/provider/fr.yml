@@ -25,3 +25,11 @@ fr:
       errors:
         no_valuation: RentCast n'a renvoyé aucune estimation de valeur pour cette adresse.
         not_found: RentCast n'a trouvé aucun bien correspondant à cette adresse.
+    terrascoutx:
+      errors:
+        no_property: TerraScoutX n'a trouvé aucun bien correspondant à cette adresse.
+        no_valuation: TerraScoutX n'a renvoyé aucune valeur pour ce bien.
+        location_mismatch: TerraScoutX a trouvé un bien avec un autre numéro de rue ou un autre code postal. Vérifiez l'adresse.
+        insecure_url: TERRASCOUTX_URL doit utiliser https://.
+    truelayer:
+      description: Connectez-vous à votre banque britannique via TrueLayer
