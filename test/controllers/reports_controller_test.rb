@@ -546,6 +546,66 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "each trend selection is its own cached report" do
+    groceries, dining = create_trend_categories
+    enable_preview!
+
+    with_memory_cache do
+      get reports_path(period_type: :ytd, trend_category_ids: [ groceries.id ])
+      assert_equal [ "Trend groceries" ], trend_series_names
+
+      get reports_path(period_type: :ytd, trend_category_ids: [ dining.id ])
+      assert_equal [ "Trend dining" ], trend_series_names
+    end
+  end
+
+  test "the same trend categories in another order share one cached report" do
+    groceries, dining = create_trend_categories
+    enable_preview!
+
+    with_memory_cache do
+      get reports_path(period_type: :ytd, trend_category_ids: [ groceries.id, dining.id ])
+
+      ReportsController.any_instance.expects(:setup_report_data).never
+      get reports_path(period_type: :ytd, trend_category_ids: [ dining.id, groceries.id ])
+
+      assert_response :ok
+      assert_equal [ "Trend dining", "Trend groceries" ], trend_series_names.sort
+    end
+  end
+
+  test "each trend granularity is its own cached report" do
+    groceries, = create_trend_categories
+    start_date = 1.year.ago.beginning_of_year.to_date
+    months = (Date.current.year - start_date.year) * 12 + Date.current.month
+    query = { period_type: :custom, start_date: start_date, end_date: Date.current.end_of_month, trend_category_ids: [ groceries.id ] }
+    enable_preview!
+
+    with_memory_cache do
+      get reports_path(**query, trend_granularity: "month")
+      assert_equal months, trend_chart_data["series"].sole["values"].size
+
+      get reports_path(**query, trend_granularity: "year")
+      assert_equal 2, trend_chart_data["series"].sole["values"].size
+    end
+  end
+
+  test "a body warmed for a trend selection is the one the page serves" do
+    groceries, dining = create_trend_categories
+    enable_preview!
+
+    with_memory_cache do
+      assert ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd, trend_category_ids: [ groceries.id ] })
+      assert ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd, trend_category_ids: [ dining.id ] })
+
+      ReportsController.any_instance.expects(:setup_report_data).never
+      get reports_path(period_type: :ytd, trend_category_ids: [ dining.id ])
+
+      assert_response :ok
+      assert_equal [ "Trend dining" ], trend_series_names
+    end
+  end
+
   test "a background rebuild repeats the page's sort and filters" do
     with_memory_cache do
       get reports_path(period_type: :ytd, sort_by: "count", filter_account_id: accounts(:depository).id)
@@ -2405,6 +2465,19 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
       assert chart, "the trend chart must render"
       JSON.parse(chart["data-multi-series-chart-data-value"])
+    end
+
+    def trend_series_names
+      trend_chart_data["series"].map { |series| series["name"] }
+    end
+
+    # Two expense categories with spending this month, for the trend chart.
+    def create_trend_categories
+      %w[groceries dining].map do |name|
+        category = @family.categories.create!(name: "Trend #{name}", color: "#ABCDEF")
+        create_transaction(account: accounts(:depository), name: name, amount: 20, category: category, date: Date.current)
+        category
+      end
     end
 
     # Travel, Work and Other tags on a month of their own, away from the
