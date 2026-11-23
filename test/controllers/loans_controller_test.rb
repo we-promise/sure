@@ -1291,6 +1291,19 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # A loan has no availability field on its form, so a request cannot set
+  # one either, even with preview features.
+  test "update ignores an availability choice for a loan" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    level = @account.liquidity
+
+    patch loan_path(@account), params: { account: { liquidity_choice: "immediate" } }
+
+    @account.reload
+    assert_equal level, @account.liquidity
+    assert_not @account.liquidity_manual?
+  end
+
   private
     # The query of every period link in the chart card's picker.
     def period_link_queries

@@ -28,6 +28,10 @@ module Account::Liquidity
   # Form value for "follow the subtype again".
   AUTOMATIC = "automatic".freeze
 
+  # Form fields for the availability choice; web forms permit them only
+  # where they show them (AccountableResource#liquidity_form_attributes).
+  FORM_ATTRIBUTES = %i[liquidity_choice available_on auto_renew renewal_term_months].freeze
+
   MAX_RENEWAL_TERM_MONTHS = 600
 
   included do
@@ -57,6 +61,17 @@ module Account::Liquidity
     @liquidity_choice = value.to_s.presence
   end
 
+  # The value the form's select shows.
+  def liquidity_choice_for_form
+    liquidity_choice || (liquidity_manual? ? liquidity : AUTOMATIC)
+  end
+
+  # Whether the form offers the availability choice.
+  def liquidity_selectable?
+    type = Accountable.from_type(accountable_type)
+    type.present? && type.classification == "asset" && type.liquidity_selectable?
+  end
+
   def liquidity_manual?
     locked?(:liquidity)
   end
@@ -75,6 +90,30 @@ module Account::Liquidity
     return true if liquidity.in?(AVAILABLE_LEVELS)
 
     liquidity == "locked" && !auto_renew? && available_on.present? && available_on <= date
+  end
+
+  # The level that applies on `date`: a locked account past its release date
+  # reads as immediate.
+  def effective_liquidity(date = liquidity_today)
+    return "immediate" if liquidity == "locked" && available_now?(date)
+
+    liquidity
+  end
+
+  # The next date the money is released, rolled forward by the renewal term
+  # when the deposit renews automatically.
+  def next_release_date(date = liquidity_today)
+    return nil unless liquidity == "locked" && available_on.present?
+    return available_on unless auto_renew? && renewal_term_months.to_i.positive?
+
+    # Whole terms that fit between the original date and `date` by calendar
+    # month, plus one when that renewal still falls before `date`. Counted
+    # from the original date: stepping from the previous result would let a
+    # month-end date slip (Jan 31 -> Feb 28 -> Mar 28).
+    months = (date.year * 12 + date.month) - (available_on.year * 12 + available_on.month)
+    terms = [ months / renewal_term_months, 0 ].max
+    terms += 1 if (available_on >> (terms * renewal_term_months)) < date
+    available_on >> (terms * renewal_term_months)
   end
 
   def liquidity_today

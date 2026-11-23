@@ -66,6 +66,7 @@ class Account::LiquidityTest < ActiveSupport::TestCase
     account.reload
     assert_equal "locked", account.liquidity
     assert account.liquidity_manual?
+    assert_equal "locked", account.liquidity_choice_for_form
   end
 
   test "a manual choice equal to the old value still wins over a subtype change in the same save" do
@@ -86,6 +87,7 @@ class Account::LiquidityTest < ActiveSupport::TestCase
     account.reload
     assert_equal "locked", account.liquidity
     assert_not account.liquidity_manual?
+    assert_equal Account::Liquidity::AUTOMATIC, account.liquidity_choice_for_form
   end
 
   test "release fields are cleared when the account is not locked" do
@@ -138,19 +140,45 @@ class Account::LiquidityTest < ActiveSupport::TestCase
 
     assert_not account.available_now?(@today + 9)
     assert account.available_now?(@today + 10)
+    assert_equal "locked", account.effective_liquidity(@today + 9)
+    assert_equal "immediate", account.effective_liquidity(@today + 10)
   end
 
   test "a locked account without a date stays locked" do
     account = create_account(Depository, "cd")
 
     assert_not account.available_now?(@today + 1000)
+    assert_nil account.next_release_date(@today)
   end
 
-  test "an auto renewing deposit never releases" do
+  test "an auto renewing deposit rolls its release date forward and never releases" do
     account = create_account(Depository, "cd")
     account.update!(available_on: Date.new(2025, 3, 31), auto_renew: true, renewal_term_months: 6)
 
+    assert_equal Date.new(2026, 9, 30), account.next_release_date(Date.new(2026, 9, 30))
+    assert_equal Date.new(2027, 3, 31), account.next_release_date(@today), "month-end dates do not slip"
     assert_not account.available_now?(@today)
+  end
+
+  test "next release date matches stepping term by term" do
+    account = create_account(Depository, "cd")
+
+    [ [ Date.new(2025, 1, 31), 1 ], [ Date.new(2024, 2, 29), 12 ], [ Date.new(2026, 8, 15), 3 ] ].each do |start, term|
+      account.update!(available_on: start, auto_renew: true, renewal_term_months: term)
+
+      (start - 40).step(start + 800, 3).each do |date|
+        terms = 0
+        terms += 1 while (start >> (terms * term)) < date
+        assert_equal start >> (terms * term), account.next_release_date(date), "#{start} every #{term} months on #{date}"
+      end
+    end
+  end
+
+  test "a long running auto renewing deposit is rolled forward far into the future" do
+    account = create_account(Depository, "cd")
+    account.update!(available_on: Date.new(1990, 1, 31), auto_renew: true, renewal_term_months: 1)
+
+    assert_equal Date.new(2126, 10, 31), account.next_release_date(Date.new(2126, 10, 5))
   end
 
   test "a provider changing the subtype away from locked clears the release fields" do
