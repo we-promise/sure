@@ -58,7 +58,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "retries a failed reply without running its tools again" do
+  test "retries a failed reply and keeps the tool calls it ran" do
     failed = @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :failed)
     tool_call = ToolCall::Function.create!(message: failed, provider_id: "fc_1", provider_call_id: "call_1", function_name: "create_tag",
                                            function_arguments: { name: "Groceries" }, function_result: { success: true })
@@ -70,8 +70,7 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :accepted
     reply = AssistantMessage.find(JSON.parse(response.body)["message_id"])
     assert reply.pending?
-    assert_equal [ tool_call.id ], reply.tool_calls.pluck(:id)
-    assert_not Message.exists?(failed.id)
+    assert_equal [ tool_call.id ], failed.tool_calls.pluck(:id)
   end
 
   test "retries when the last reply never arrived" do

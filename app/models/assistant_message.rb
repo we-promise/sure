@@ -22,15 +22,28 @@ class AssistantMessage < Message
   end
 
   # Ends a reply that stopped before finishing. One with nothing in it goes
-  # away. One that streamed text or ran tools stays as `failed`, which keeps
-  # it out of the history builders; Chat#retry_last_message! hands its tool
-  # calls to the next attempt so they do not run again.
+  # away. One that streamed text or ran tools stays as `failed`: the history
+  # replays its tool calls, so neither Retry nor the next message runs them
+  # again.
   def abandon!
     if content.blank? && tool_calls.none?
       destroy!
     else
       update!(status: "failed")
     end
+  end
+
+  # Tool calls of a failed reply whose results never reached the provider:
+  # its last round, the calls the response in provider_response_id asked for.
+  # Calls stored before that id existed cannot be matched to a response.
+  def unanswered_tool_calls
+    return [] unless failed?
+
+    ordered = tool_calls.sort_by { |tool_call| [ tool_call.created_at, tool_call.id ] }
+    last_round = ordered.last&.provider_response_id
+    return [] if last_round.blank?
+
+    ordered.select { |tool_call| tool_call.provider_response_id == last_round }
   end
 
   private

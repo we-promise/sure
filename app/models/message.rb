@@ -18,6 +18,12 @@ class Message < ApplicationRecord
 
   scope :ordered, -> { order(created_at: :asc) }
 
+  # The text a provider sees when the conversation is replayed. A failed
+  # reply's partial text is left out; the tool calls it ran still count.
+  def replayed_content
+    failed? ? "" : content.to_s
+  end
+
   private
     def broadcast?
       true

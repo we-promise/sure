@@ -246,24 +246,23 @@ class ChatTest < ActiveSupport::TestCase
     assert_equal "failed", pending.reload.status
   end
 
-  test "retry_last_message! hands the tool calls of a failed reply to the new one" do
+  test "retry_last_message! asks again after a failed reply and keeps it" do
     chat = chats(:two)
     chat.messages.destroy_all
     prompt = chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "gpt-4.1")
     failed = chat.messages.where(type: "AssistantMessage").sole
     failed.update!(status: :failed)
-    tool_call = ToolCall::Function.create!(message: failed, provider_id: "fc_1", provider_call_id: "call_1", function_name: "create_tag",
-                                           function_arguments: { name: "Groceries" }, function_result: { success: true })
+    ToolCall::Function.create!(message: failed, provider_id: "fc_1", provider_call_id: "call_1", function_name: "create_tag",
+                               function_arguments: { name: "Groceries" }, function_result: { success: true })
 
     reply = nil
-    assert_enqueued_with(job: AssistantResponseJob) do
+    assert_enqueued_with(job: AssistantResponseJob, args: ->(args) { args.first == prompt }) do
       reply = chat.retry_last_message!
     end
 
-    assert_not Message.exists?(failed.id)
     assert reply.pending?
-    assert_equal [ tool_call.id ], reply.tool_calls.pluck(:id)
-    assert_equal [ prompt, reply ], chat.conversation_messages.ordered.to_a
+    assert_equal [ prompt, failed, reply ], chat.conversation_messages.ordered.to_a
+    assert_equal 1, failed.tool_calls.count
   end
 
   test "retry_last_message! leaves a finished reply alone" do

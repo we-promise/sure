@@ -54,9 +54,7 @@ class Assistant::Builtin < Assistant::Base
       end
     end
 
-    # A retried turn carries the tool calls its failed attempt already ran.
-    executed_tool_calls = assistant_message.persisted? ? assistant_message.tool_calls.order(:created_at, :id).to_a : []
-    responder.respond(previous_response_id: latest_response_id, executed_tool_calls: executed_tool_calls)
+    responder.respond(previous_response_id: latest_response_id)
   rescue => e
     assistant_message.abandon! if assistant_message&.persisted?
     chat.add_error(e)

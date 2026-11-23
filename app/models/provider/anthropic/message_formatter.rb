@@ -2,9 +2,11 @@ class Provider::Anthropic::MessageFormatter
   # Builds the `messages` array Anthropic expects.
   #
   # Inputs:
-  # - prompt: text of the current user turn
-  # - conversation_history: chronologically-ordered Message records preceding
-  #   the current user message (UserMessage / AssistantMessage)
+  # - prompt: text of the current user turn, sent on its own only when there
+  #   is no stored conversation
+  # - conversation_history: the stored conversation, chronologically ordered
+  #   Message records (UserMessage / AssistantMessage) up to and including the
+  #   current prompt, as Assistant::Responder#history_messages selects them
   # - function_results: tool-result entries for the in-flight follow-up call
   #   (the responder feeds these back after executing the tool_use blocks
   #   returned by the previous requests, tagging each with its :round)
@@ -26,7 +28,7 @@ class Provider::Anthropic::MessageFormatter
       end
     end
 
-    messages << { role: "user", content: @prompt.to_s }
+    messages << { role: "user", content: @prompt.to_s } if @conversation_history.empty?
 
     # One assistant tool_use turn plus its user tool_result turn per round, in
     # order, so each follow-up request extends the previous one and prompt
@@ -53,7 +55,7 @@ class Provider::Anthropic::MessageFormatter
 
       blocks = []
       blocks.concat(tool_calls.map { |tc| tool_use_block_from_record(tc) }) if tool_calls.any?
-      blocks << { type: "text", text: assistant_message.content.to_s } if assistant_message.content.present?
+      blocks << { type: "text", text: assistant_message.replayed_content } if assistant_message.replayed_content.present?
 
       return [] if blocks.empty?
 

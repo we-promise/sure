@@ -76,20 +76,18 @@ class Chat < ApplicationRecord
     conversation_messages.ordered.last.role != "assistant"
   end
 
-  # Asks again for the reply that failed. A failed reply is replaced, and the
-  # tool calls it already ran move to the new one, which resumes after them
-  # instead of running them again. Returns the new pending reply, or nil when
-  # there is nothing to retry.
+  # Asks again for an answer to the last prompt when its reply failed or
+  # never arrived. A failed reply stays: the history replays the tools it ran,
+  # so they do not run again. Returns the new pending reply, or nil when there
+  # is nothing to retry.
   def retry_last_message!
     update!(error: nil)
 
     last_message = conversation_messages.ordered.last
+    return unless last_message&.role == "user" || last_message&.failed?
 
-    if last_message&.role == "user"
-      ask_assistant_later(last_message)
-    elsif last_message.is_a?(AssistantMessage) && last_message.failed?
-      retry_failed_reply(last_message)
-    end
+    prompt = messages.where(type: "UserMessage").ordered.last
+    ask_assistant_later(prompt) if prompt
   end
 
   def update_latest_response!(provider_response_id)
@@ -130,7 +128,6 @@ class Chat < ApplicationRecord
   def ask_assistant_later(message)
     clear_error
     pending = messages.create!(type: "AssistantMessage", content: "", ai_model: message.ai_model, status: :pending)
-    yield pending if block_given?
     broadcast_pending_status(pending, busy: true) if BackgroundJobHealth.ai_busy?
     AssistantResponseJob.perform_later(message, pending)
     pending
@@ -235,17 +232,6 @@ class Chat < ApplicationRecord
   end
 
   private
-
-    def retry_failed_reply(failed_reply)
-      prompt = messages.where(type: "UserMessage").ordered.last
-      return unless prompt
-
-      ask_assistant_later(prompt) do |pending|
-        failed_reply.tool_calls.update_all(message_id: pending.id)
-        failed_reply.tool_calls.reset
-        failed_reply.destroy!
-      end
-    end
 
     def undelivered_error_payload(assistant_message)
       {
