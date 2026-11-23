@@ -118,7 +118,7 @@ pl:
         one: Zaległe od 1 dnia, termin upłynął %{date}
         other: Zaległe od %{count} dni, termin upłynął %{date}
       settled: Termin upłynął %{date}
-      historical: "Było wymagalne %{date}"
+      historical: "Termin upłynął %{date}"
       snoozed: Odłożone do %{date}
       today: Termin dziś
       upcoming:

@@ -133,7 +133,7 @@ id:
         other: "Lewat jatuh tempo %{count} hari, seharusnya %{date}"
       today: "Jatuh tempo hari ini"
       settled: "Jatuh tempo pada %{date}"
-      historical: "Jatuh tempo %{date}"
+      historical: "Seharusnya jatuh tempo pada %{date}"
       due_since: "Jatuh tempo pada %{date}"
       snoozed: "Ditunda hingga %{date}"
       upcoming:

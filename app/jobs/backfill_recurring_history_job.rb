@@ -18,7 +18,7 @@ class BackfillRecurringHistoryJob < ApplicationJob
     # generated open history, so that part runs without touching payments.
     unless series.active?
       acquired = RecurringTransaction::Pipeline.with_family_lock(series.family_id) do
-        series.trim_unallocated_history_before_started_on!
+        RecurringTransaction.find_by(id: series.id)&.trim_unallocated_history_before_started_on!
       end
       raise FamilyLockHeld unless acquired
 
