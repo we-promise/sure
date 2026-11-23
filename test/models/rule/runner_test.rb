@@ -190,6 +190,64 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal @dining, @whole_foods.reload.category
   end
 
+  test "an AI job that finishes before the runner is done still finishes the run" do
+    use_ai_routes
+    rule = create_ai_rule("auto_categorize")
+    Family.any_instance.stubs(:auto_categorize_transactions).returns(1)
+
+    perform_enqueued_jobs do
+      Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual", user: users(:empty)).run
+    end
+
+    run = rule.rule_runs.sole
+    assert_equal "success", run.status
+    assert_equal 0, run.pending_jobs_count
+    assert_equal 1, run.transactions_modified
+  end
+
+  test "a rule's AI jobs start only once all its AI actions have counted theirs" do
+    use_ai_routes
+    rule = create_ai_rule("auto_categorize", "auto_detect_merchants")
+    Family.any_instance.stubs(:auto_categorize_transactions).returns(1)
+    Family.any_instance.stubs(:auto_detect_transaction_merchants).returns(1)
+    RuleRun.expects(:offer_immediate_result).once
+
+    perform_enqueued_jobs do
+      Rule::Runner.new(@family, rules: [ rule ], execution_type: "immediate", transaction_ids: [ @whole_foods.id ], user: users(:empty)).run
+    end
+
+    run = rule.rule_runs.sole
+    assert_equal "success", run.status
+    assert_equal 0, run.pending_jobs_count
+    assert_equal 2, run.transactions_modified
+  end
+
+  test "an AI job that can't be queued fails the run instead of leaving it pending" do
+    rule = create_ai_rule("auto_categorize")
+    Family.any_instance.stubs(:auto_categorize_transactions_later).returns(false)
+
+    Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual", user: users(:empty)).run
+
+    run = rule.rule_runs.sole
+    assert_equal "failed", run.status
+    assert_equal 0, run.pending_jobs_count
+    assert_match "ActiveJob::EnqueueError", run.error_message
+  end
+
+  test "the other AI batches are still queued when one can't be queued or recorded" do
+    create_transaction(account: @account, name: "Whole Foods Downtown")
+    rule = create_ai_rule("auto_categorize")
+    Provider::LlmConcept.stubs(:max_items_per_call).returns(1)
+    Family.any_instance.expects(:auto_categorize_transactions_later).twice.returns(false).then.returns(true)
+    RuleRun.any_instance.stubs(:fail_job!).raises(ActiveRecord::ConnectionNotEstablished, "connection lost")
+
+    Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual", user: users(:empty)).run
+
+    run = rule.rule_runs.sole
+    assert_equal "pending", run.status, "the queued batch still reports to the run"
+    assert_equal 2, run.pending_jobs_count
+  end
+
   test "a rule above that cannot be matched does not stop the applied rule" do
     broken = create_rule("Broken", "Whole Foods", category: @groceries)
     broken.conditions.first.update!(condition_type: "transaction_notes")
@@ -409,6 +467,16 @@ class Rule::RunnerTest < ActiveSupport::TestCase
   private
     def run_ai_rule(action_type, user:, execution_type: "manual")
       Rule::Runner.new(families(:dylan_family), rules: [ ai_scope_rule(action_type) ], execution_type: execution_type, user: user).run
+    end
+
+    def create_ai_rule(*action_types)
+      @family.rules.create!(
+        name: "AI",
+        resource_type: "transaction",
+        active: true,
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
+        actions: action_types.map { |type| Rule::Action.new(action_type: type) }
+      )
     end
 
     def run_active_rules

@@ -23,9 +23,9 @@ class Provider::Sophtron < Provider
   Error = Class.new(Provider::Error) do
     attr_reader :error_type
 
-    def initialize(message, error_type = :unknown, details: nil)
+    def initialize(message, error_type = :unknown, **)
       @error_type = error_type
-      super(message, details: details)
+      super(message, **)
     end
   end
 

@@ -10,7 +10,8 @@ de:
       busy: "Ich erledige nur noch schnell eine Hintergrundaufgabe, dann bin ich ganz für dich da. Tipp ruhig weiter!"
     ai_consent:
       available_description: Der KI-Chat beantwortet Finanzfragen und wertet deine Daten aus. Du musst die Funktion ausdrücklich einschalten, bevor du sie nutzen kannst.
-      disable_note: Jederzeit abschaltbar. Alle Daten, die an unsere LLM-Anbieter gehen, sind anonymisiert.
+      disable_note: "Jederzeit abschaltbar. Damit wird KI für Chat, Rechnungen und Dokumentensuche aktiviert; dabei werden deine Nachrichten, Transaktionen und Dokumente unverändert an den KI-Anbieter dieser Instanz gesendet."
+      family_note: "Als Familien-Admin aktivierst du damit auch die KI-Kategorisierung und Händlererkennung für deine Familie; dabei werden Transaktionsnamen, Beträge und Händlernamen gesendet."
       enable_button: KI-Chats aktivieren
       title: KI-Chats aktivieren
       unavailable_description_html: Für den KI-Assistenten musst du die Umgebungsvariable <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> setzen oder ihn in den Self-Hosting-Einstellungen deiner Instanz einrichten.

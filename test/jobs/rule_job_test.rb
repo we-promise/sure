@@ -114,4 +114,20 @@ class RuleJobTest < ActiveJob::TestCase
 
     assert_raises(Rule::Registry::UnsupportedActionError) { RuleJob.perform_now(rule) }
   end
+
+  test "an AI job that can't be queued fails the run, not the job" do
+    create_transaction(account: @account, name: "Whole Foods")
+    rule = @family.rules.create!(
+      name: "AI", resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
+      actions: [ Rule::Action.new(action_type: "auto_categorize") ]
+    )
+    Family.any_instance.stubs(:auto_categorize_transactions_later).returns(false)
+
+    assert_nothing_raised { RuleJob.perform_now(rule, user: users(:empty)) }
+
+    rule_run = rule.rule_runs.sole
+    assert_equal "failed", rule_run.status
+    assert_match "ActiveJob::EnqueueError", rule_run.error_message
+  end
 end

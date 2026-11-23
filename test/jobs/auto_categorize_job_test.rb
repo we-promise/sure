@@ -4,6 +4,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
   include EntriesTestHelper, ProviderTestHelper
 
   setup do
+    use_ai_routes
     @family = families(:empty)
     @account = @family.accounts.create!(name: "Rule test", balance: 100, currency: "USD", accountable: Depository.new)
     @family.categories.create!(name: "Food")
@@ -30,18 +31,19 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     )
   end
 
-  test "records rule run failure debug log before reraising categorization errors" do
+  test "an unexpected error ends the run once instead of going through Sidekiq's retries" do
     error = RuntimeError.new("Fixed prompt tokens exceed context budget")
     transaction_ids = [ SecureRandom.uuid ]
 
-    @family.stubs(:auto_categorize_transactions).with(transaction_ids).raises(error)
+    Family.any_instance.stubs(:auto_categorize_transactions).with(transaction_ids).raises(error)
 
     assert_difference "DebugLogEntry.count", 1 do
-      assert_raises(RuntimeError) do
-        AutoCategorizeJob.perform_now(@family, transaction_ids: transaction_ids, rule_run_id: @rule_run.id)
+      perform_enqueued_jobs do
+        AutoCategorizeJob.perform_later(@family, transaction_ids: transaction_ids, rule_run_id: @rule_run.id)
       end
     end
 
+    assert_no_enqueued_jobs
     @rule_run.reload
     assert_equal "failed", @rule_run.status
     assert_equal "RuntimeError: Fixed prompt tokens exceed context budget", @rule_run.error_message
@@ -62,11 +64,11 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     provider_error = Provider::Error.new("Fixed prompt tokens exceed context budget")
 
     Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider.expects(:auto_categorize).returns(provider_error_response(provider_error))
+    provider.expects(:auto_categorize).once.returns(provider_error_response(provider_error))
 
     assert_difference "DebugLogEntry.count", 1 do
-      assert_raises(Family::AutoCategorizer::Error) do
-        AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+      perform_enqueued_jobs do
+        AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
       end
     end
 
@@ -90,8 +92,8 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     provider.expects(:auto_categorize).never
 
     assert_difference "DebugLogEntry.count", 2 do
-      assert_raises(Family::AutoCategorizer::Error) do
-        AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+      perform_enqueued_jobs do
+        AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
       end
     end
 
@@ -108,4 +110,144 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     assert_equal [ transaction.id ], categorization_entry.metadata["requested_transaction_ids"]
     assert_equal "No categories available for auto-categorization", rule_run_entry.metadata["error_message"]
   end
+
+  test "a key the provider rejects is discarded after one call, not retried" do
+    transaction = create_transaction(account: @account, name: "Coffee shop").transaction
+    openai_fails_with Faraday::UnauthorizedError.new("the server responded with status 401", { status: 401, body: "invalid_api_key" }), times: 1
+
+    perform_enqueued_jobs do
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+    end
+
+    assert_no_enqueued_jobs
+    @rule_run.reload
+    assert_equal "failed", @rule_run.status
+    assert_match "Ai::Error::Unauthorized", @rule_run.error_message
+    assert_equal 0, @rule_run.pending_jobs_count
+  end
+
+  test "a provider that stays down is retried a few times, then its batch is counted once" do
+    @rule_run.update!(pending_jobs_count: 2)
+    transaction = create_transaction(account: @account, name: "Coffee shop").transaction
+    openai_fails_with Faraday::ServerError.new("the server responded with status 503", { status: 503, body: "overloaded" }), times: RuleAiJob::ATTEMPTS
+
+    perform_enqueued_jobs do
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+    end
+
+    assert_no_enqueued_jobs
+    @rule_run.reload
+    assert_equal "failed", @rule_run.status
+    assert_match "Ai::Error::Upstream", @rule_run.error_message
+    assert_equal 1, @rule_run.pending_jobs_count, "the run's other batch is still running"
+  end
+
+  test "a provider that recovers on a retry completes the run without a failure" do
+    transaction = create_transaction(account: @account, name: "Coffee shop").transaction
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    rate_limited = Provider::Openai.new("test-token").send(
+      :default_error_transformer,
+      Faraday::TooManyRequestsError.new("the server responded with status 429", { status: 429, body: "slow down" })
+    )
+    provider.expects(:auto_categorize).twice
+      .returns(provider_error_response(rate_limited))
+      .then.returns(provider_success_response([ categorization(transaction, "Food") ]))
+
+    perform_enqueued_jobs do
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+    end
+
+    @rule_run.reload
+    assert_equal "success", @rule_run.status
+    assert_nil @rule_run.error_message
+    assert_equal 1, @rule_run.transactions_modified
+    assert_equal "Food", transaction.reload.category.name
+  end
+
+  test "a job that runs again after its batch was counted doesn't count it twice" do
+    @rule_run.update!(pending_jobs_count: 2)
+    @family.stubs(:auto_categorize_transactions).raises(RuntimeError, "boom")
+    job = AutoCategorizeJob.new(@family, transaction_ids: [ SecureRandom.uuid ], rule_run_id: @rule_run.id)
+
+    2.times { job.perform_now }
+
+    assert_equal 1, @rule_run.reload.pending_jobs_count
+  end
+
+  test "a retry after part of the batch was applied sends only what is left" do
+    applied = create_transaction(account: @account, name: "Coffee shop").transaction
+    left = create_transaction(account: @account, name: "Coffee beans").transaction
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+
+    provider.expects(:auto_categorize).with { |args| sent_ids(args) == [ left.id ] }
+      .once.returns(provider_success_response([ categorization(left, "Food") ]))
+    provider.expects(:auto_categorize).with { |args| sent_ids(args) == [ applied.id, left.id ].sort }
+      .once.returns(provider_success_response([ categorization(applied, "Food"), categorization(left, "Not a category") ]))
+    # The batch is applied, then something transient fails before the job reports.
+    DebugLogEntry.stubs(:capture).raises(ActiveRecord::Deadlocked).then.returns(nil)
+
+    perform_enqueued_jobs do
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ applied.id, left.id ], rule_run_id: @rule_run.id)
+    end
+
+    assert_equal "Food", applied.reload.category.name
+    assert_equal "Food", left.reload.category.name
+    @rule_run.reload
+    assert_equal "success", @rule_run.status
+    assert_equal 0, @rule_run.pending_jobs_count
+  end
+
+  test "sends nothing while no family admin has turned AI on" do
+    @family.users.update_all(ai_enabled: false)
+    transaction = create_transaction(account: @account, name: "Coffee shop").transaction
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.expects(:auto_categorize).never
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+
+    @rule_run.reload
+    assert_equal "success", @rule_run.status
+    assert_equal 0, @rule_run.pending_jobs_count
+  end
+
+  test "a database that can't be reached is retried instead of leaving the batch uncounted" do
+    Family.any_instance.stubs(:auto_categorize_transactions).returns(1)
+    RuleRun.stubs(:find_by).raises(ActiveRecord::ConnectionTimeoutError, "could not obtain a connection").then.returns(@rule_run)
+
+    perform_enqueued_jobs do
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ SecureRandom.uuid ], rule_run_id: @rule_run.id)
+    end
+
+    @rule_run.reload
+    assert_equal "success", @rule_run.status
+    assert_equal 0, @rule_run.pending_jobs_count
+    assert_equal 1, @rule_run.transactions_modified
+  end
+
+  test "a run that can't be told the job gave up is left to Sidekiq to retry" do
+    @family.stubs(:auto_categorize_transactions).raises(Ai::Error::Unauthorized, "invalid key")
+    RuleRun.any_instance.stubs(:fail_job!).raises(ActiveRecord::ConnectionNotEstablished, "connection lost")
+    job = AutoCategorizeJob.new(@family, transaction_ids: [ SecureRandom.uuid ], rule_run_id: @rule_run.id)
+
+    assert_raises(ActiveRecord::ConnectionNotEstablished) { job.perform_now }
+    assert_operator AutoCategorizeJob.get_sidekiq_options["retry"], :>, 0
+  end
+
+  private
+    # Runs the real OpenAI provider, whose request fails with `error` each of `times`.
+    def openai_fails_with(error, times:)
+      Provider::Registry.stubs(:preferred_llm_provider).returns(Provider::Openai.new("test-token"))
+      Provider::Openai::AutoCategorizer.any_instance.expects(:auto_categorize).times(times).raises(error)
+    end
+
+    def sent_ids(args)
+      args[:transactions].map { |t| t[:id] }.sort
+    end
+
+    def categorization(transaction, category_name)
+      Provider::LlmConcept::AutoCategorization.new(transaction_id: transaction.id, category_name: category_name)
+    end
 end

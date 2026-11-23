@@ -31,7 +31,7 @@ class Rule::Runner
 
   # changed_now_count: transactions the run changed itself, without the ones
   # handed to AI jobs, which report their own changes (RuleRun#complete_job!).
-  attr_reader :errors, :changed_now_count
+  attr_reader :changed_now_count
 
   def self.advisory_lock_key(family_id)
     Digest::MD5.hexdigest("rule_runner:#{family_id}").to_i(16) % (2**62)
@@ -46,9 +46,14 @@ class Rule::Runner
     @ignore_attribute_locks = ignore_attribute_locks
     @claimed_ids = Hash.new { |hash, attribute| hash[attribute] = Set.new }
     @stopped_ids = Set.new
-    @errors = []
+    @errors_by_rule_id = {}
     @changed_now_count = 0
   end
+
+  def errors = errors_by_rule_id.values
+
+  # The error that failed this rule's run, if it raised.
+  def error_for(rule) = errors_by_rule_id[rule.id]
 
   # Returns the RuleRun records created, one per executed rule.
   def run
@@ -62,7 +67,7 @@ class Rule::Runner
   end
 
   private
-    attr_reader :family, :user, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :transaction_ids
+    attr_reader :family, :user, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :transaction_ids, :errors_by_rule_id
 
     def run_rules
       rule_runs = []
@@ -160,8 +165,10 @@ class Rule::Runner
 
     def run_counts(result, queued:, rule:)
       if result.is_a?(Hash) && result[:async]
-        # The async jobs report the modified count back via RuleRun#complete_job!
-        { status: "pending", transactions_processed: result[:modified_count] || 0, pending_jobs_count: result[:jobs_count] || 0 }
+        # The run stays as created, pending, unless its jobs have finished it
+        # already: Rule#apply counted them (RuleRun#await_jobs!) before queuing
+        # any, and they report back via RuleRun#complete_job!.
+        { transactions_processed: result[:modified_count] || 0 }
       elsif result.is_a?(Integer)
         { status: "success", transactions_processed: queued, transactions_modified: result }
       else
@@ -181,7 +188,7 @@ class Rule::Runner
     end
 
     def record_failure(rule, rule_run, error, executed_at:, queued:)
-      errors << error
+      errors_by_rule_id[rule.id] = error
       error_message = "#{error.class}: #{error.message}"
       Rails.logger.error("Rule::Runner failed for rule #{rule.id}: #{error_message}")
       # A failed rule, such as a pattern that timed out, is the user's to fix, so

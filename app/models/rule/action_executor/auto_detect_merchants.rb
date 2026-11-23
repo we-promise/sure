@@ -27,23 +27,13 @@ class Rule::ActionExecutor::AutoDetectMerchants < Rule::ActionExecutor
       return 0
     end
 
-    batch_size = Provider::LlmConcept.max_items_per_call
-    jobs_count = 0
-
-    enrichable_transactions.in_batches(of: batch_size).each_with_index do |transactions, idx|
-      Rails.logger.info("Scheduling auto-merchant-enrichment for batch #{idx + 1} of #{enrichable_transactions.count}")
+    Rails.logger.info("Scheduling auto-merchant-enrichment for #{enrichable_transactions.count} transactions")
+    queue_ai_jobs(enrichable_transactions, rule_run:) do |transactions|
       rule.family.auto_detect_transaction_merchants_later(transactions, rule_run_id: rule_run&.id)
-      jobs_count += 1
     end
 
-    # Return metadata about async jobs
-    # Note: modified_count is set to queued_count here because we don't know
-    # the actual modified count until the async jobs complete
-    # The actual modified count will be reported back via rule_run.complete_job!
-    {
-      async: true,
-      modified_count: enrichable_transactions.count,
-      jobs_count: jobs_count
-    }
+    # modified_count is the queued count: the jobs report what they actually
+    # changed through rule_run.complete_job!
+    { async: true, modified_count: enrichable_transactions.count }
   end
 end

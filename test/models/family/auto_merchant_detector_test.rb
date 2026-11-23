@@ -40,6 +40,18 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal 1, @account.transactions.reload.enrichable(:merchant_id).count
   end
 
+  test "raises when the provider fails, as the categorizer does" do
+    txn = create_transaction(account: @account, name: "McDonalds").transaction
+    @llm_provider.expects(:auto_detect_merchants).returns(provider_error_response(Provider::Error.new("upstream refused")))
+
+    error = assert_raises(Family::AutoMerchantDetector::Error) do
+      Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+    end
+
+    assert_equal "Failed to auto-detect merchants: upstream refused", error.message
+    assert_nil txn.reload.merchant
+  end
+
   test "an invalid AI merchant name leaves that transaction unassigned without failing the batch" do
     invalid_txn = create_transaction(account: @account, name: "Weird").transaction
     valid_txn = create_transaction(account: @account, name: "Chipotle").transaction
