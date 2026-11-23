@@ -138,12 +138,20 @@ check_upgraded() {
   check_eq "$1: uploaded files are still there" "uploaded" "$(vol "${project}_app-storage" 'cat /v/upload.txt')"
 }
 
+# example_default NAME: the default compose.example.yml gives ${NAME:-default},
+# so the seed has the credentials the example's services will use.
+example_default() {
+  sed -n "s/.*\${$1:-\([^}]*\)}.*/\1/p" "${REPO}/compose.example.yml" | head -n 1
+}
+
 # --- seed: a PostgreSQL 16 cluster as an older Sure would have left it ---------
 
 section "Seed PostgreSQL 16 data"
 docker volume create "$SEED" >/dev/null
 docker run -d --rm --name "${RUN}-seed" -v "${SEED}:/var/lib/postgresql/data" \
-  -e POSTGRES_USER=sure_user -e POSTGRES_PASSWORD=sure_password -e POSTGRES_DB=sure_production \
+  -e "POSTGRES_USER=$(example_default POSTGRES_USER)" \
+  -e "POSTGRES_PASSWORD=$(example_default POSTGRES_PASSWORD)" \
+  -e "POSTGRES_DB=$(example_default POSTGRES_DB)" \
   postgres:16 >/dev/null
 if wait_tcp "${RUN}-seed" && docker exec "${RUN}-seed" psql -X -q -U sure_user -d sure_production -c "
     CREATE TABLE schema_migrations (version varchar PRIMARY KEY);
