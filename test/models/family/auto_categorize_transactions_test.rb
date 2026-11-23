@@ -65,6 +65,37 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
     assert_nil transfer.reload.category
   end
 
+  # Excluding a transaction takes it out of every report on purpose (a house
+  # deposit, a loan drawdown). A guessed category on it is noise at best, and a
+  # large one-off reads like the nearest frequent label (rent).
+  test "Bayes leaves excluded transactions uncategorized" do
+    train_two_categories
+    excluded = create_transaction(account: @account, name: "Starbucks Coffee", excluded: true).transaction
+    included = create_transaction(account: @account, name: "Starbucks Coffee").transaction
+
+    assert_equal 1, @family.bayes_categorize_uncategorized
+    assert_nil excluded.reload.category
+    assert_equal @coffee, included.reload.category
+  end
+
+  test "Bayes skips excluded transactions in a rule's scope too" do
+    train_two_categories
+    excluded = create_transaction(account: @account, name: "Starbucks Coffee", excluded: true).transaction
+
+    assert_equal 0, @family.bayes_categorize_uncategorized(@family.transactions)
+    assert_nil excluded.reload.category
+  end
+
+  test "the LLM is not asked about excluded transactions" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(@llm_provider)
+    excluded = create_transaction(account: @account, name: "House deposit", excluded: true).transaction
+
+    @llm_provider.expects(:auto_categorize).never
+
+    assert_equal 0, @family.auto_categorize_transactions([ excluded.id ])
+    assert_nil excluded.reload.category
+  end
+
   test "clearing Bayes locks unlocks only what Bayes locked and still has its pick" do
     train_two_categories
     @family.update_bayes_settings!(lock_results: true)

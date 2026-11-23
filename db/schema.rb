@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -637,6 +637,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.decimal "credit_limit", precision: 19, scale: 4
     t.string "currency"
     t.decimal "current_balance", precision: 19, scale: 4
+    t.datetime "early_fetched_at"
     t.uuid "enable_banking_item_id", null: false
     t.string "iban"
     t.jsonb "identification_hashes", default: []
@@ -668,6 +669,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.string "country_code"
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
+    t.datetime "full_history_fetch_requested_at"
     t.string "institution_color"
     t.string "institution_domain"
     t.string "institution_id"
@@ -1939,6 +1941,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "page_cache_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "bytes", null: false
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.datetime "last_used_at", null: false
+    t.string "page_key", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_page_cache_entries_on_family_id"
+    t.index ["last_used_at"], name: "index_page_cache_entries_on_last_used_at"
+    t.index ["page_key"], name: "index_page_cache_entries_on_page_key", unique: true
+  end
+
   create_table "plaid_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.decimal "available_balance", precision: 19, scale: 4
     t.datetime "created_at", null: false
@@ -2531,6 +2545,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
     t.jsonb "raw_transactions_payload"
     t.uuid "simplefin_item_id", null: false
     t.datetime "updated_at", null: false
+    t.datetime "holdings_requested_at"
+    t.datetime "account_requested_at"
     t.index ["account_id"], name: "index_simplefin_accounts_on_account_id"
     t.index ["simplefin_item_id", "account_id"], name: "idx_unique_sfa_per_item_and_upstream", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["simplefin_item_id"], name: "index_simplefin_accounts_on_simplefin_item_id"
@@ -3299,6 +3315,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_050000) do
   add_foreign_key "oidc_identities", "users"
   add_foreign_key "onchain_wallet_accounts", "onchain_wallet_items"
   add_foreign_key "onchain_wallet_items", "families"
+  add_foreign_key "page_cache_entries", "families", on_delete: :cascade
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "plaid_items", "users", column: "owner_id", on_delete: :nullify

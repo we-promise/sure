@@ -5,6 +5,17 @@ require 'rails_helper'
 RSpec.configure do |config|
   config.openapi_root = Rails.root.join('docs', 'api').to_s
   reset_count_keys = Family::FinancialDataReset::STATUS_COUNT_KEYS.map(&:to_s)
+  budget_owner_schema = {
+    type: :object,
+    nullable: true,
+    description: 'Null for the household budget. For a personal budget, the family member it belongs to: ' \
+                 'the caller, or a member who shared their budget with the caller.',
+    required: %w[id name],
+    properties: {
+      id: { type: :string, format: :uuid },
+      name: { type: :string }
+    }
+  }
 
   config.openapi_specs = {
     'openapi.yaml' => {
@@ -521,12 +532,13 @@ RSpec.configure do |config|
           },
           BudgetSummary: {
             type: :object,
-            required: %w[id start_date end_date name currency initialized current created_at updated_at],
+            required: %w[id start_date end_date name owner currency initialized current created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               start_date: { type: :string, format: :date },
               end_date: { type: :string, format: :date },
               name: { type: :string },
+              owner: budget_owner_schema,
               currency: { type: :string },
               initialized: { type: :boolean },
               current: { type: :boolean },
@@ -542,12 +554,13 @@ RSpec.configure do |config|
           },
           Budget: {
             type: :object,
-            required: %w[id start_date end_date name currency initialized current created_at updated_at],
+            required: %w[id start_date end_date name owner currency initialized current created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               start_date: { type: :string, format: :date },
               end_date: { type: :string, format: :date },
               name: { type: :string },
+              owner: budget_owner_schema,
               currency: { type: :string },
               initialized: { type: :boolean },
               current: { type: :boolean },
