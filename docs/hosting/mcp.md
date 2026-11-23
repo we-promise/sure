@@ -177,8 +177,8 @@ Every tool in `tools/list` carries MCP [tool annotations](https://modelcontextpr
 
 | Tools | `readOnlyHint` | `destructiveHint` | `idempotentHint` |
 |-------|----------------|-------------------|------------------|
-| Reads (`get_*`, `list_account_statements`, `search_family_files`, `preview_rule`) | `true` | | |
-| Additions (`create_*`, `import_bank_statement`, `upload_account_statement`, `record_bill_payment`) | `false` | `false` | `true` only for `upload_account_statement` |
+| Reads (`get_*` except `get_budget`, `list_account_statements`, `search_family_files`, `preview_rule`) | `true` | | |
+| Additions (`create_*`, `import_bank_statement`, `upload_account_statement`, `record_bill_payment`, `get_budget`, which creates a month's budget the first time it is read) | `false` | `false` | `true` only for `upload_account_statement` and `get_budget` |
 | Changes and deletions (`update_*`, `delete_*`, `apply_rule`, `match_transfer`, `review_transfer`, `unmatch_transfer`, `set_opening_balance`, `record_valuation`) | `false` | `true` | `true` except `apply_rule` and `match_transfer` |
 
 `openWorldHint` is `false` on every tool: they only read and change the family's own data. Annotations are hints for the client; Sure still enforces each user's permissions on every call.

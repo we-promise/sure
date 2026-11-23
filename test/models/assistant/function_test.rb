@@ -96,7 +96,8 @@ class Assistant::FunctionTest < ActiveSupport::TestCase
     function_classes = Assistant.function_classes(user)
     assert_empty Assistant::PREVIEW_FUNCTION_CLASSES - function_classes
 
-    additive = %w[import_bank_statement upload_account_statement record_bill_payment]
+    # get_budget bootstraps a month that has no budget yet.
+    additive = %w[import_bank_statement upload_account_statement record_bill_payment get_budget]
     destructive = %w[record_valuation match_transfer review_transfer unmatch_transfer apply_rule set_opening_balance]
 
     function_classes.each do |function_class|
@@ -106,11 +107,11 @@ class Assistant::FunctionTest < ActiveSupport::TestCase
       assert_equal false, annotations[:openWorldHint], "#{name} only touches the family's own data"
 
       case name
-      when /\A(get|list|search|preview)_/
-        assert_equal({ readOnlyHint: true, openWorldHint: false }, annotations, name)
       when /\Acreate_/, *additive
         assert_equal false, annotations[:readOnlyHint], name
         assert_equal false, annotations[:destructiveHint], name
+      when /\A(get|list|search|preview)_/
+        assert_equal({ readOnlyHint: true, openWorldHint: false }, annotations, name)
       when /\A(update|delete)_/, *destructive
         assert_equal false, annotations[:readOnlyHint], name
         assert_equal true, annotations[:destructiveHint], name

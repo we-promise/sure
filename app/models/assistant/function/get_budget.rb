@@ -2,7 +2,7 @@ class Assistant::Function::GetBudget < Assistant::Function
   include ActiveSupport::NumberHelper
   include Assistant::Function::MonthResolvable
 
-  annotate :read_only
+  annotate :additive, idempotent: true
 
   MAX_PRIOR_MONTHS = 11
 
