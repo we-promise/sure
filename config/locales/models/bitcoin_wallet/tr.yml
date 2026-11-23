@@ -1,0 +1,24 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: bir Bitcoin cüzdanını takip ediyor. Başka bir sağlayıcı bağlamadan önce cüzdanı kaldırın.
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: başka bir sağlayıcıya bağlı. Bitcoin cüzdanları yalnızca manuel kripto hesaplarında takip edilebilir.
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: yapılandırılmış Active Record şifrelemesi gerektirir
+  bitcoin_wallet:
+    quantity_reconciliation: Pozisyon miktarı mutabakatı
+    reconciliation: "Cüzdan düzeltmesi"
+    managed_position: Bu pozisyon bir sağlayıcı tarafından yönetiliyor. Miktarını değiştirmeden önce sağlayıcının bağlantısını kesin.
+    movements:
+      received: "%{quantity} BTC alındı"
+      sent: "%{quantity} BTC gönderildi"

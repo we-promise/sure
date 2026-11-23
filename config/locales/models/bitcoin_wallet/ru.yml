@@ -1,0 +1,24 @@
+---
+ru:
+  activerecord:
+    errors:
+      models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: отслеживает кошелёк Bitcoin. Удалите кошелёк, прежде чем привязывать другого поставщика.
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: привязан к другому поставщику. Кошельки Bitcoin можно отслеживать только на ручных криптосчетах.
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: требует настроенного шифрования Active Record
+  bitcoin_wallet:
+    quantity_reconciliation: Сверка количества в позиции
+    reconciliation: "Корректировка кошелька"
+    managed_position: Эта позиция управляется поставщиком. Отключите его, прежде чем изменять её количество.
+    movements:
+      received: "Получено %{quantity} BTC"
+      sent: "Отправлено %{quantity} BTC"

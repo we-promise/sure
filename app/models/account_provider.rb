@@ -8,6 +8,7 @@ class AccountProvider < ApplicationRecord
   validates :provider_id, uniqueness: { scope: :provider_type }
 
   validate :financekit_has_exclusive_writer, if: -> { new_record? || will_save_change_to_account_id? || will_save_change_to_provider_id? || will_save_change_to_provider_type? }
+  validate :account_has_no_bitcoin_wallet, if: -> { new_record? || will_save_change_to_account_id? || will_save_change_to_provider_id? || will_save_change_to_provider_type? }
 
   # When unlinking a CoinStats account, also destroy the CoinstatsAccount record
   # so it doesn't remain orphaned and count as "needs setup".
@@ -21,6 +22,7 @@ class AccountProvider < ApplicationRecord
   # — so linking that same asset again would collide with a row nothing shows.
   # The Sure account and its holdings are untouched and carry on as manual.
   after_destroy :destroy_onchain_provider_account, if: :onchain_provider?
+  after_destroy :destroy_bitcoin_provider_account, if: -> { provider_type == "BitcoinWalletAccount" }
 
   # Linking an account the user ignored during setup is how they take it back.
   after_create :stop_ignoring_provider_account, if: -> { provider.respond_to?(:ignored?) }
@@ -37,6 +39,26 @@ class AccountProvider < ApplicationRecord
   end
 
   private
+
+    def destroy_bitcoin_provider_account
+      return if destroyed_by_association&.active_record == BitcoinWalletAccount
+
+      provider&.destroy!
+    end
+
+    # A Bitcoin wallet must be its account's only provider; see BitcoinWalletAccount#eligible_account.
+    def account_has_no_bitcoin_wallet
+      return if account.nil?
+
+      if provider_type == "BitcoinWalletAccount"
+        unless provider&.account_id == account_id && account.crypto? && account.plaid_account_id.nil? &&
+            account.simplefin_account_id.nil? && !self.class.where(account_id: account_id).where.not(id: id).exists?
+          errors.add(:account, :bitcoin_wallet)
+        end
+      elsif BitcoinWalletAccount.exists?(account_id: account_id) || account.accounting_start_date
+        errors.add(:account, :bitcoin_wallet)
+      end
+    end
 
     # Under the provider's row lock, which reloads it: an ignore! that committed
     # after the provider was loaded is seen, and one still running waits.

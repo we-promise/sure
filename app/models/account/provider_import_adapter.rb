@@ -582,7 +582,8 @@ class Account::ProviderImportAdapter
         price: price,
         amount: amount,
         account_provider_id: account_provider_id,
-        external_id: external_id
+        external_id: external_id,
+        materialized: false
       }
 
       # Only update security if not locked by user
@@ -637,7 +638,8 @@ class Account::ProviderImportAdapter
             updates = {
               qty: quantity,
               price: price,
-              amount: amount
+              amount: amount,
+              materialized: false
             }
 
             # Reconcile cost_basis to respect priority hierarchy
@@ -773,7 +775,12 @@ class Account::ProviderImportAdapter
         name: trade_name
       )
 
-      entry.save!
+      begin
+        entry.entryable.provider_importing = true
+        entry.save!
+      ensure
+        entry.entryable.provider_importing = false
+      end
 
       # Coins arriving in a wallet are its deposits (GoalPledge.deposit_trade?).
       # After commit, because a wallet writes the trade inside its own

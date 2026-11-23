@@ -43,7 +43,12 @@ module Account::Linkable
 
   # Returns all provider adapters for this account
   def providers
-    @providers ||= account_providers.map(&:adapter).compact
+    @providers ||= account_providers.filter_map(&:adapter)
+  end
+
+  def reset_provider_adapters
+    account_providers.reset
+    @provider = @providers = nil
   end
 
   # Returns the provider adapter for a specific provider type
@@ -60,7 +65,8 @@ module Account::Linkable
   # Convenience method to get the provider name
   def provider_name
     # Try new system first
-    return provider&.provider_name if provider.present?
+    adapter = provider
+    return adapter.provider_name if adapter
 
     # Fall back to legacy system
     return "plaid" if plaid_account.present?
@@ -93,5 +99,38 @@ module Account::Linkable
     return true if unlinked?
 
     providers.all?(&:can_delete_holdings?)
+  end
+
+  # Deleting any dated row removes its journal, so protect the whole managed
+  # security while retaining deletion rights for unrelated manual positions.
+  def can_delete_holding?(holding)
+    return false if provider_managed_security?(holding.security_id)
+
+    providers.reject(&:position_only?).all?(&:can_delete_holdings?)
+  end
+
+  # A position publisher owns selected securities rather than the account total.
+  def position_tracking?
+    crypto? && account_providers.exists?(provider_type: "BitcoinWalletAccount")
+  end
+
+  # Cash and other securities remain editable when every link publishes positions.
+  def manual_accounting?
+    unlinked? || (position_tracking? && plaid_account_id.nil? && simplefin_account_id.nil? && providers.all?(&:position_only?))
+  end
+
+  # Scope quantity ownership to a security and, for dated edits, its connection.
+  def provider_managed_security?(security_id, date: nil)
+    return false unless crypto?
+
+    adapter = provider_for("BitcoinWalletAccount")
+    return false unless adapter&.managed_security_ids&.include?(security_id)
+
+    date.nil? || adapter.position_start_date.nil? || date >= adapter.position_start_date
+  end
+
+  # Cash anchors require forward accounting even after the publisher disconnects.
+  def balance_calculation_strategy
+    unlinked? || position_tracking? ? :forward : :reverse
   end
 end

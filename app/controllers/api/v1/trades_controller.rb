@@ -129,7 +129,9 @@ class Api::V1::TradesController < Api::V1::BaseController
 
   def destroy
     @entry = @trade.entry
-    @entry.destroy!
+    unless @entry.destroy
+      return render_validation_error("Trade could not be deleted", @entry.errors.full_messages)
+    end
     @entry.sync_account_later
 
     render json: { message: "Trade deleted successfully" }, status: :ok

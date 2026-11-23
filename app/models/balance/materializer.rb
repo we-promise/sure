@@ -6,13 +6,15 @@ class Balance::Materializer
 
   attr_reader :account, :strategy, :security_ids
 
+  # Choose an incremental window that preserves earlier imported account history.
   def initialize(account, strategy:, security_ids: nil, window_start_date: nil)
     @account = account
     @strategy = strategy
     @security_ids = security_ids
-    @window_start_date = window_start_date
+    @window_start_date = account.materialization_window(window_start_date)
   end
 
+  # Persist holdings and balances atomically.
   def materialize_balances
     Balance.transaction do
       # Every materialization of an account -- a sync, or a lot edit's
@@ -20,6 +22,9 @@ class Balance::Materializer
       # them serialise in one lock order rather than deadlocking on each other's
       # holding rows.
       account.lock!
+      # A linked wallet's first priced publication establishes the new cash baseline.
+      return if account.position_tracking? && account.bitcoin_wallet_account&.initial_valuation_pending?
+
       materialize_holdings
       calculate_balances
 
@@ -35,8 +40,12 @@ class Balance::Materializer
   end
 
   private
+    # Pass the security filter to the holding materializer. Only cash-anchored
+    # accounts keep history before the window; every other account rebuilds
+    # all holdings, so late rates and backfilled prices still reach old days.
     def materialize_holdings
-      @holdings = Holding::Materializer.new(account, strategy: strategy, security_ids: security_ids).materialize_holdings
+      @holdings = Holding::Materializer.new(account, strategy: strategy, security_ids: security_ids,
+        window_start_date: (@window_start_date if account.accounting_start_date)).materialize_holdings
     end
 
     def update_account_info
@@ -69,8 +78,10 @@ class Balance::Materializer
       )
     end
 
+    # A cash-anchored account keeps only rows inside its write window.
     def calculate_balances
       @balances = calculator.calculate
+      @balances.select! { |balance| balance.date >= @window_start_date } if account.accounting_start_date && @window_start_date
     end
 
     def persist_balances
@@ -83,6 +94,7 @@ class Balance::Materializer
       end
     end
 
+    # Remove stale tails while preserving valid history before an incremental window.
     def purge_stale_balances
       if @balances.empty?
         # In incremental forward-sync, even when no balances were calculated for the window
@@ -109,7 +121,9 @@ class Balance::Materializer
       # (from entries dated before the opening anchor) are not deleted.
       # We ask the calculator whether it actually ran incrementally — it may have
       # fallen back to a full recalculation, in which case we use the normal bound.
-      oldest_valid_date = if strategy == :forward && calculator.incremental?
+      oldest_valid_date = if account.accounting_start_date
+        account.balances.minimum(:date) || oldest_balance.date
+      elsif strategy == :forward && calculator.incremental?
         calculator.calculation_start_date
       else
         oldest_balance.date
