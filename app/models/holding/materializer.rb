@@ -12,6 +12,13 @@ class Holding::Materializer
     @strategy = strategy
     @security_ids = security_ids
     @window_start_date = window_start_date
+    @position_start_dates = {}
+    if account.position_tracking?
+      account.account_providers.each do |link|
+        adapter = link.adapter
+        @position_start_dates[link.id] = adapter.position_start_date if adapter&.position_only?
+      end
+    end
   end
 
   def materialize_holdings
@@ -147,7 +154,13 @@ class Holding::Materializer
 
         # Skip provider-sourced holdings - they have authoritative data from the provider
         # (e.g., Coinbase, SimpleFIN) and should not be overwritten by calculated holdings
-        if existing&.account_provider_id.present?
+        starts_on = @position_start_dates[existing&.account_provider_id]
+        derived_position = starts_on && holding.date >= starts_on
+        if derived_position && holding.date == Date.current
+          holding.qty = existing.qty
+          holding.amount = existing.qty * holding.price
+        end
+        if existing&.account_provider_id.present? && !derived_position
           Rails.logger.debug(
             "Holding::Materializer - Skipping provider-sourced holding id=#{existing.id} " \
             "security_id=#{existing.security_id} date=#{existing.date}"

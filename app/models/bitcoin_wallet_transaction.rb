@@ -4,4 +4,8 @@ class BitcoinWalletTransaction < ApplicationRecord
   belongs_to :bitcoin_wallet_account
   validates :txid, format: { with: /\A[0-9a-f]{64}\z/ }, uniqueness: { scope: :bitcoin_wallet_account_id }
   validates :amount_sats, numericality: { only_integer: true }
+
+  def quantity
+    amount_sats.to_d / 100_000_000
+  end
 end

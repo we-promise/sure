@@ -12,6 +12,7 @@ class BitcoinWalletAccount < ApplicationRecord
   belongs_to :account
   belongs_to :security
   delegate :family, to: :onchain_wallet_item
+  has_one :account_provider, as: :provider, dependent: :destroy
   has_many :bitcoin_wallet_sources, dependent: :destroy
   has_many :bitcoin_wallet_addresses, dependent: :destroy
   has_many :bitcoin_wallet_transactions, dependent: :destroy
@@ -19,10 +20,88 @@ class BitcoinWalletAccount < ApplicationRecord
   enum :status, { discovering: "discovering", preview: "preview", active: "active", failed: "failed" }, prefix: true
   validates :account_id, uniqueness: true
   validate :eligible_account
+  scope :linked, -> { joins(:account_provider) }
 
   # The last complete explorer read can precede completion of its account sync.
   def last_synced_at
     self[:last_synced_at]
+  end
+
+  def quantity
+    balance_sats.to_d / 100_000_000
+  end
+
+  def current_account
+    account if account_provider.present?
+  end
+
+  def connect!
+    Time.use_zone(Time.find_zone(family.timezone) || Time.zone) { connect_in_family_zone! }
+  end
+
+  def connect_in_family_zone!
+    return if account_provider.present?
+    raise ArgumentError, "Complete wallet discovery before connecting" unless status_preview? && !stale?
+
+    processor = BitcoinWalletAccount::Processor.new(self)
+    processor.prepare_prices
+    with_lock do
+      return if account_provider.present?
+      raise ArgumentError, "Complete wallet discovery before connecting" unless status_preview? && !stale?
+
+      account.lock!
+      raise ArgumentError, "Connect Bitcoin only to a manual Crypto account" unless valid?
+      create_account_provider!(account: account)
+      account.reset_provider_adapters
+      bitcoin_wallet_transactions.update_all(baseline: true)
+      update!(baseline_at: Time.current, status: :active)
+      processor.process(prepare_prices: false)
+    end
+  end
+
+  def disconnect!
+    with_lock do
+      # The latest quantities remain available as manual holdings, and entries
+      # retain their provenance. Nothing owned by the user is deleted.
+      destroy!
+      account.reset_provider_adapters
+    end
+  end
+
+  def stale?
+    status_failed? || read_outdated?
+  end
+
+  def read_outdated?
+    last_synced_at.nil? || last_synced_at < 2.hours.ago
+  end
+
+  def record_reconciliation!
+    recorded = account.trades.where(security: security).joins(:entry).where("entries.date <= ?", Date.current).sum(:qty)
+    difference = quantity - recorded
+    return if difference.zero?
+
+    price = BitcoinWalletAccount::Processor.new(self).price_on(Date.current)
+    return unless price
+
+    entry = Account::ProviderImportAdapter.new(account).import_trade(
+      security: security, quantity: difference, price: price, amount: 0, currency: account.currency,
+      date: Date.current, source: "bitcoin_wallet_reconciliation",
+      external_id: "bitcoin_wallet_#{id}_reconciliation_#{SecureRandom.uuid}",
+      name: I18n.t("bitcoin_wallet.reconciliation", locale: account.family.locale),
+      activity_label: Trade::TRANSFER_LABEL
+    )
+    entry.entryable.update!(extra: entry.entryable.extra.to_h.merge("balance_adjustment" => true))
+    entry
+  end
+
+  # Keep the previous valuation until the first BTC price is available.
+  def initial_valuation_pending?
+    account_provider && !account_provider.holdings.exists?
+  end
+
+  def pending_quantity
+    bitcoin_wallet_transactions.where(present: true, confirmed: false).sum(:amount_sats).to_d / 100_000_000
   end
 
   # Reopen each HD branch after its highest used address, preserving cached
@@ -45,7 +124,7 @@ class BitcoinWalletAccount < ApplicationRecord
 
   # Queue discovery of a new source set from the start of each branch.
   def sources_changed!
-    update!(status: :discovering)
+    update!(status: :discovering, needs_reconciliation: account_provider.present?)
     restart_discovery!(full: true)
     sync_later
   end
@@ -60,6 +139,8 @@ class BitcoinWalletAccount < ApplicationRecord
   def broadcast_sync_complete
     account.broadcast_refresh
   end
+
+  private :connect_in_family_zone!
 
   private
     # Running reads cannot absorb source edits, and cancelling a parent stales

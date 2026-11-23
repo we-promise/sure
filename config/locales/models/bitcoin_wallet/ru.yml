@@ -15,3 +15,10 @@ ru:
           attributes:
             extended_public_key:
               encryption_unavailable: требует настроенного шифрования Active Record
+  bitcoin_wallet:
+    quantity_reconciliation: Сверка количества в позиции
+    reconciliation: "Корректировка кошелька"
+    managed_position: Эта позиция управляется поставщиком. Отключите его, прежде чем изменять её количество.
+    movements:
+      received: "Получено %{quantity} BTC"
+      sent: "Отправлено %{quantity} BTC"

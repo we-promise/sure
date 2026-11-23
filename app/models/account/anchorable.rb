@@ -55,7 +55,7 @@ module Account::Anchorable
   end
 
   def history_start_date
-    if linked? && balance_type == :investment
+    if linked? && balance_type == :investment && !position_tracking?
       Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(self)
     else
       [
@@ -117,9 +117,13 @@ module Account::Anchorable
   # The account lock keeps a concurrent caller from adding a second anchor for
   # the day, which nothing in the schema forbids: kind and date live in
   # different tables.
-  def create_cash_anchor!
+  def typed_balance_only?
+    !holdings.exists? && !entries.where.not(entryable_type: "Valuation").exists?
+  end
+
+  def create_cash_anchor!(cash: nil)
     with_lock do
-      cash = Balance::ForwardCalculator.new(self).calculate.select { |balance| balance.date <= Date.current }.last&.cash_balance || 0
+      cash ||= Balance::ForwardCalculator.new(self).calculate.select { |balance| balance.date <= Date.current }.last&.cash_balance || 0
       entry = entries.valuations.find_by(date: Date.current, entryable_id: Valuation.cash_anchor.select(:id)) ||
         entries.new(date: Date.current, entryable: Valuation.new(kind: :cash_anchor))
       entry.assign_attributes(amount: cash, currency: currency, name: I18n.t("valuations.cash_anchor", locale: family.locale))

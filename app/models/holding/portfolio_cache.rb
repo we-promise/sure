@@ -18,11 +18,12 @@ class Holding::PortfolioCache
   end
 
   # carry_forward_prices lets a cash-anchored account value a day without a quote at the last known one.
-  def initialize(account, use_holdings: false, security_ids: nil, carry_forward_prices: false)
+  def initialize(account, use_holdings: false, security_ids: nil, carry_forward_prices: false, stored_rates_only: false)
     @account = account
     @use_holdings = use_holdings
     @security_ids = security_ids
     @carry_forward_prices = carry_forward_prices
+    @stored_rates_only = stored_rates_only
     load_prices
   end
 
@@ -62,7 +63,14 @@ class Holding::PortfolioCache
     price_money = Money.new(carried_split ? Security::Split.unscale(price.price, carried_split) : price.price, price.currency)
 
     begin
-      converted_amount = price_money.exchange_to(currency, date: date).amount
+      if @stored_rates_only && price.currency != currency
+        rate = ExchangeRate.find_stored_rate(from: price.currency, to: currency, date: date)
+        return nil unless rate
+
+        converted_amount = price_money.amount * rate.rate
+      else
+        converted_amount = price_money.exchange_to(currency, date: date).amount
+      end
     rescue Money::ConversionError
       # Anchored accounts keep the last valued holding (gapfill) instead of
       # booking an unconverted quote or failing the whole sync.
@@ -176,7 +184,7 @@ class Holding::PortfolioCache
     def collect_unique_securities
       ids = trades_by_security_id.keys
       ids |= holdings_by_security_id.keys if use_holdings
-      ids &= @security_ids if @security_ids
+      ids = @stored_rates_only ? @security_ids : (ids & @security_ids) if @security_ids
 
       Security.where(id: ids).to_a
     end

@@ -734,6 +734,25 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
+      response '422', 'trade belongs to a managed Bitcoin position' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) do
+          crypto_account = Account.create!(family: family, owner: user, name: 'Bitcoin', balance: 0, currency: 'USD', accountable: Crypto.create!)
+          bitcoin = Security.create!(ticker: 'CRYPTO:BTC', name: 'Bitcoin', country_code: 'US')
+          record = Account::ProviderImportAdapter.new(crypto_account).import_trade(
+            security: bitcoin, quantity: 1, price: 20, amount: 20, currency: 'USD',
+            date: Date.current, source: 'demo')
+          item = family.onchain_wallet_items.create!(name: 'Wallets')
+          wallet = BitcoinWalletAccount.create!(account: crypto_account, security: bitcoin, onchain_wallet_item: item,
+            baseline_at: Time.current, status: :active)
+          wallet.create_account_provider!(account: crypto_account)
+          record.trade.id
+        end
+
+        run_test!
+      end
+
       response '404', 'trade not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 

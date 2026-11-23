@@ -15,3 +15,10 @@ tr:
           attributes:
             extended_public_key:
               encryption_unavailable: yapılandırılmış Active Record şifrelemesi gerektirir
+  bitcoin_wallet:
+    quantity_reconciliation: Pozisyon miktarı mutabakatı
+    reconciliation: "Cüzdan düzeltmesi"
+    managed_position: Bu pozisyon bir sağlayıcı tarafından yönetiliyor. Miktarını değiştirmeden önce sağlayıcının bağlantısını kesin.
+    movements:
+      received: "%{quantity} BTC alındı"
+      sent: "%{quantity} BTC gönderildi"

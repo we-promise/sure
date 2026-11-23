@@ -22,6 +22,9 @@ class Balance::Materializer
       # them serialise in one lock order rather than deadlocking on each other's
       # holding rows.
       account.lock!
+      # A linked wallet's first priced publication establishes the new cash baseline.
+      return if account.position_tracking? && account.bitcoin_wallet_account&.initial_valuation_pending?
+
       materialize_holdings
       calculate_balances
 

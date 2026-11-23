@@ -1,4 +1,5 @@
 class Holding < ApplicationRecord
+  class ManagedPositionError < ArgumentError; end
   include Monetizable, Gapfillable
 
   monetize :amount
@@ -302,12 +303,33 @@ class Holding < ApplicationRecord
     @day_change = prev&.amount_money ? Trend.new(current: amount_money, previous: prev.amount_money) : nil
   end
 
+  def reconcile_trade_quantity!
+    recorded = account.trades.where(security: security).joins(:entry).where(entries: { date: ..date }).sum(:qty)
+    difference = qty - recorded
+    return if difference.zero?
+
+    entry = Account::ProviderImportAdapter.new(account).import_trade(security: security,
+      quantity: difference, price: price, amount: 0, currency: currency, date: date,
+      source: "manual_position_reconciliation", external_id: "position_#{id}_#{SecureRandom.uuid}",
+      name: I18n.t("bitcoin_wallet.quantity_reconciliation", locale: account.family.locale), activity_label: Trade::TRANSFER_LABEL)
+    entry.entryable.update!(extra: { "balance_adjustment" => true })
+  end
+
   def trades
     account.entries.where(entryable: account.trades.where(security: security)).reverse_chronological
   end
 
   # A cash-anchored account keeps holdings history, so remove this position's whole manual series.
+  def assert_editable_security!(target_security_id)
+    if account.provider_managed_security?(security_id) || account.provider_managed_security?(target_security_id)
+      raise ManagedPositionError, "A provider manages this position"
+    end
+  end
+  private :assert_editable_security!
+
   def destroy_holding_and_entries!
+    raise ManagedPositionError, "A provider manages this position" if account.provider_managed_security?(security_id)
+
     trade_entries = account.entries.where(entryable: account.trades.where(security: security))
     # A cash-anchored account only rebuilds from a given date: start where this position began.
     if account.accounting_start_date
@@ -399,6 +421,8 @@ class Holding < ApplicationRecord
   # Also moves all trades for the old security to the new security
   # If the target security already has holdings on some dates, merge by combining qty/amount
   def remap_security!(new_security)
+    assert_editable_security!(new_security.id)
+
     return if new_security.id == security_id
 
     old_security = security
@@ -472,6 +496,8 @@ class Holding < ApplicationRecord
   # typically be for real tickers not CUSTOM: ones. A more robust solution would track which
   # trades were moved during remap, but that adds significant complexity for an edge case.
   def reset_security_to_provider!
+    assert_editable_security!(provider_security_id)
+
     return unless provider_security_id.present?
 
     current_security = security
