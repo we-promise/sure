@@ -87,10 +87,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
         # Ethereum Mini Trust ETF) in the holding currency field. A currency
         # equal to the symbol is that ticker; fall back to the account's
         # valuation currency.
-        currency = holding_currency(simplefin_holding["currency"], symbol) ||
-                   simplefin_account.currency.presence ||
-                   account&.currency.presence ||
-                   "USD"
+        currency = holding_currency(simplefin_holding["currency"], symbol) || simplefin_account.currency
         position = positions[[ security.id, currency, holding_date ]] ||= {
           security: security,
           currency: currency,
@@ -261,14 +258,6 @@ class SimplefinAccount::Investments::HoldingsProcessor
     FUND_DESCRIPTION = /\b(etf|etn|trust|fund|index|shares?)\b/i
     CRYPTO_SYMBOLS = %w[BTC ETH SOL DOGE LTC BCH].freeze
 
-    # An exchange connection inferred as Investment still holds crypto, so a
-    # crypto-named account namespaces its tickers. A fund/trust description
-    # wins, so an ETF in such an account stays an equity.
-    def crypto_named_account?(description)
-      simplefin_account.name.to_s.downcase.include?("crypto") &&
-        !description.to_s.match?(FUND_DESCRIPTION)
-    end
-
     def resolve_security(symbol, description)
       # Normalize crypto tickers to a distinct namespace so they don't collide
       # with equities. The linked account type is the main discriminator; an
@@ -276,29 +265,26 @@ class SimplefinAccount::Investments::HoldingsProcessor
       # inferred as Investment), so a known crypto symbol stays namespaced
       # unless the description names a fund or trust.
       sym = symbol.to_s.upcase
-      is_crypto_account = account&.accountable_type == "Crypto" || crypto_named_account?(description)
-      is_crypto_symbol = CRYPTO_SYMBOLS.include?(sym) && !description.to_s.match?(FUND_DESCRIPTION)
-      mentions_crypto = description.to_s.downcase.include?("crypto") && !description.to_s.match?(FUND_DESCRIPTION)
+      fund = description.to_s.match?(FUND_DESCRIPTION)
+      crypto_named = simplefin_account.name.to_s.downcase.include?("crypto") && !fund
+      is_crypto_account = account&.accountable_type == "Crypto" || crypto_named
+      is_crypto_symbol = CRYPTO_SYMBOLS.include?(sym) && !fund
+      mentions_crypto = description.to_s.downcase.include?("crypto") && !fund
 
       if !sym.include?(":") && (is_crypto_account || is_crypto_symbol || mentions_crypto)
         sym = "CRYPTO:#{sym}"
       end
 
-      # Custom tickers (from holdings without symbols) should always be offline
-      is_custom = sym.start_with?("CUSTOM:")
+      # Custom tickers (from holdings without symbols) are always offline.
+      return offline_security(sym, description) if sym.start_with?("CUSTOM:")
 
       # Use Security::Resolver to find or create the security, but be resilient
       begin
-        if is_custom
-          # Skip resolver for custom tickers - create offline security directly
-          raise "Custom ticker - skipping resolver"
-        end
-
         security = Security::Resolver.new(sym).resolve
         # A fund whose ticker collides with a crypto symbol must not attach to
         # a crypto security the provider search happened to return (ETH ->
         # ETHUSD). Genuine crypto assets keep the provider's crypto security.
-        if !sym.start_with?("CRYPTO:") && security&.crypto? && description.to_s.match?(FUND_DESCRIPTION)
+        if !sym.start_with?("CRYPTO:") && security&.crypto? && fund
           Rails.logger.warn "SimpleFin: resolver returned crypto security #{security.ticker} for fund symbol=#{sym}; falling back to offline security"
           return offline_security(sym, description)
         end
@@ -306,7 +292,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
         security
       rescue => e
         # If provider search fails or any unexpected error occurs, fall back to an offline security
-        Rails.logger.warn "SimpleFin: resolver failed for symbol=#{sym}: #{e.class} - #{e.message}; falling back to offline security" unless is_custom
+        Rails.logger.warn "SimpleFin: resolver failed for symbol=#{sym}: #{e.class} - #{e.message}; falling back to offline security"
         offline_security(sym, description)
       end
     end
@@ -314,8 +300,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
     # Only blank-MIC rows are considered, so a crypto row that shares the
     # ticker is never marked offline.
     def offline_security(sym, description)
-      security = Security.where("UPPER(ticker) = ?", sym).where(exchange_operating_mic: [ nil, "" ]).first ||
-                 Security.new(ticker: sym)
+      security = Security.find_or_initialize_by_ticker_and_exchange(ticker: sym, exchange_operating_mic: nil)
       security.offline = true if security.respond_to?(:offline) && security.offline != true
       security.name = description.presence if security.name.blank? && description.present?
       security.save! if security.changed?

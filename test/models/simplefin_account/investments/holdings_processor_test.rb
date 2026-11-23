@@ -218,18 +218,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
 
     # A plain recorder rather than a mocha argument matcher, so the assertions
     # read against the real keyword arguments.
-    recorder = Class.new do
-      attr_reader :calls
-
-      def initialize = @calls = []
-
-      def import_holding(**kwargs)
-        @calls << kwargs
-        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
-              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
-                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
-      end
-    end.new
+    recorder = recording_import_adapter
 
     processor.stubs(:import_adapter).returns(recorder)
 
@@ -302,18 +291,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
       stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, currency: "USD")
     )
 
-    recorder = Class.new do
-      attr_reader :calls
-
-      def initialize = @calls = []
-
-      def import_holding(**kwargs)
-        @calls << kwargs
-        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
-              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
-                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
-      end
-    end.new
+    recorder = recording_import_adapter
 
     processor.stubs(:import_adapter).returns(recorder)
 
@@ -354,18 +332,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
       stub(id: "sfa-test", name: "Wealthfront", account_provider: nil, currency: "USD")
     )
 
-    recorder = Class.new do
-      attr_reader :calls
-
-      def initialize = @calls = []
-
-      def import_holding(**kwargs)
-        @calls << kwargs
-        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
-              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
-                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
-      end
-    end.new
+    recorder = recording_import_adapter
 
     processor.stubs(:import_adapter).returns(recorder)
 
@@ -396,18 +363,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
       stub(id: "sfa-test", name: "Wealthfront", account_provider: nil, currency: "USD")
     )
 
-    recorder = Class.new do
-      attr_reader :calls
-
-      def initialize = @calls = []
-
-      def import_holding(**kwargs)
-        @calls << kwargs
-        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
-              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
-                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
-      end
-    end.new
+    recorder = recording_import_adapter
 
     processor.stubs(:import_adapter).returns(recorder)
 
@@ -438,18 +394,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
       stub(id: "sfa-test", name: "Wealthfront", account_provider: nil, currency: "USD")
     )
 
-    recorder = Class.new do
-      attr_reader :calls
-
-      def initialize = @calls = []
-
-      def import_holding(**kwargs)
-        @calls << kwargs
-        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
-              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
-                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
-      end
-    end.new
+    recorder = recording_import_adapter
 
     processor.stubs(:import_adapter).returns(recorder)
 
@@ -520,6 +465,22 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
   end
 
   private
+
+    def recording_import_adapter
+      Class.new do
+        attr_reader :calls
+
+        def initialize = @calls = []
+
+        def import_holding(**kwargs)
+          @calls << kwargs
+          Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
+                .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
+                     kwargs[:currency], kwargs[:date], kwargs[:external_id])
+        end
+      end.new
+    end
+
     def assert_resolves(account:, symbol:, description:, expected:, simplefin_name: "Wealthfront")
       processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
       processor.stubs(:account).returns(account)
