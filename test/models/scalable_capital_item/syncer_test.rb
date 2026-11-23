@@ -419,6 +419,36 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_equal Time.current, @item.reload.broker_synced_through
   end
 
+  test "a malformed cash amount preserves checkpoints and the corrected event imports on retry" do
+    stub_snapshot
+    run_sync
+    checkpoints = @item.reload.attributes.slice("broker_synced_through", "savings_synced_through")
+    account = @item.scalable_capital_accounts.cash.sole.account
+
+    travel 1.day
+    stub_snapshot
+    deposit = cash_event("corrected-amount", "DEPOSIT", amount: "25", at: 1.hour.ago)
+    [ nil, "invalid", "NaN" ].each do |malformed_amount|
+      stub_broker_history(deposit.merge("amount" => malformed_amount))
+      error = assert_raises(Provider::ScalableCapital::InvalidResponse) { run_sync }
+      assert_match(/unreadable amount/, error.message)
+      assert_equal checkpoints, @item.reload.attributes.slice(*checkpoints.keys)
+      refute account.entries.exists?(external_id: "corrected-amount")
+    end
+
+    travel 1.hour
+    stub_snapshot
+    zero = cash_event("zero-amount", "DEPOSIT", amount: "0", at: 1.minute.ago)
+    unsupported = cash_event("unsupported-amount", "UNSUPPORTED", amount: nil, at: 1.minute.ago)
+    stub_broker_history(deposit, zero, unsupported)
+    run_sync
+
+    assert_equal(-25.to_d, account.entries.where(external_id: "corrected-amount").sole.amount)
+    refute account.entries.exists?(external_id: [ "zero-amount", "unsupported-amount" ])
+    assert_equal Time.current, @item.reload.broker_synced_through
+    assert_equal Time.current, @item.savings_synced_through
+  end
+
   test "a savings write failure rolls back broker writes and the retry imports each entry once" do
     stub_snapshot
     run_sync
