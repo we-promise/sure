@@ -96,7 +96,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_22_090000) do
     t.uuid "accountable_id"
     t.string "accountable_type"
     t.decimal "balance", precision: 34, scale: 18
-    t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
+    t.decimal "cash_balance", precision: 34, scale: 18, default: "0.0"
     t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
     t.string "cost_basis_method", default: "average", null: false
     t.datetime "created_at", null: false
@@ -250,26 +250,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_22_090000) do
 
   create_table "balances", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
-    t.decimal "balance", precision: 19, scale: 4, null: false
-    t.decimal "cash_adjustments", precision: 19, scale: 4, default: "0.0", null: false
-    t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
-    t.decimal "cash_inflows", precision: 19, scale: 4, default: "0.0", null: false
-    t.decimal "cash_outflows", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "balance", precision: 34, scale: 18, null: false
+    t.decimal "cash_adjustments", precision: 34, scale: 18, default: "0.0", null: false
+    t.decimal "cash_balance", precision: 34, scale: 18, default: "0.0"
+    t.decimal "cash_inflows", precision: 34, scale: 18, default: "0.0", null: false
+    t.decimal "cash_outflows", precision: 34, scale: 18, default: "0.0", null: false
     t.datetime "created_at", null: false
     t.string "currency", default: "USD", null: false
     t.date "date", null: false
-    t.virtual "end_balance", type: :decimal, precision: 19, scale: 4, as: "(((start_cash_balance + ((cash_inflows - cash_outflows) * (flows_factor)::numeric)) + cash_adjustments) + (((start_non_cash_balance + ((non_cash_inflows - non_cash_outflows) * (flows_factor)::numeric)) + net_market_flows) + non_cash_adjustments))", stored: true
-    t.virtual "end_cash_balance", type: :decimal, precision: 19, scale: 4, as: "((start_cash_balance + ((cash_inflows - cash_outflows) * (flows_factor)::numeric)) + cash_adjustments)", stored: true
-    t.virtual "end_non_cash_balance", type: :decimal, precision: 19, scale: 4, as: "(((start_non_cash_balance + ((non_cash_inflows - non_cash_outflows) * (flows_factor)::numeric)) + net_market_flows) + non_cash_adjustments)", stored: true
     t.integer "flows_factor", default: 1, null: false
-    t.decimal "net_market_flows", precision: 19, scale: 4, default: "0.0", null: false
-    t.decimal "non_cash_adjustments", precision: 19, scale: 4, default: "0.0", null: false
-    t.decimal "non_cash_inflows", precision: 19, scale: 4, default: "0.0", null: false
-    t.decimal "non_cash_outflows", precision: 19, scale: 4, default: "0.0", null: false
-    t.virtual "start_balance", type: :decimal, precision: 19, scale: 4, as: "(start_cash_balance + start_non_cash_balance)", stored: true
-    t.decimal "start_cash_balance", precision: 19, scale: 4, default: "0.0", null: false
-    t.decimal "start_non_cash_balance", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "net_market_flows", precision: 34, scale: 18, default: "0.0", null: false
+    t.decimal "non_cash_adjustments", precision: 34, scale: 18, default: "0.0", null: false
+    t.decimal "non_cash_inflows", precision: 34, scale: 18, default: "0.0", null: false
+    t.decimal "non_cash_outflows", precision: 34, scale: 18, default: "0.0", null: false
+    t.decimal "start_cash_balance", precision: 34, scale: 18, default: "0.0", null: false
+    t.decimal "start_non_cash_balance", precision: 34, scale: 18, default: "0.0", null: false
     t.datetime "updated_at", null: false
+    t.virtual "start_balance", type: :decimal, precision: 34, scale: 18, as: "(start_cash_balance + start_non_cash_balance)", stored: true
+    t.virtual "end_cash_balance", type: :decimal, precision: 34, scale: 18, as: "((start_cash_balance + ((cash_inflows - cash_outflows) * (flows_factor)::numeric)) + cash_adjustments)", stored: true
+    t.virtual "end_non_cash_balance", type: :decimal, precision: 34, scale: 18, as: "(((start_non_cash_balance + ((non_cash_inflows - non_cash_outflows) * (flows_factor)::numeric)) + net_market_flows) + non_cash_adjustments)", stored: true
+    t.virtual "end_balance", type: :decimal, precision: 34, scale: 18, as: "(((start_cash_balance + ((cash_inflows - cash_outflows) * (flows_factor)::numeric)) + cash_adjustments) + (((start_non_cash_balance + ((non_cash_inflows - non_cash_outflows) * (flows_factor)::numeric)) + net_market_flows) + non_cash_adjustments))", stored: true
     t.index ["account_id", "date", "currency"], name: "index_account_balances_on_account_id_date_currency_unique", unique: true
     t.index ["account_id", "date"], name: "index_balances_on_account_id_and_date", order: { date: :desc }
   end
@@ -725,8 +725,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_22_090000) do
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "(((entryable_type)::text = 'Transaction'::text) AND (excluded = false))"
     t.index ["date"], name: "index_entries_on_date"
-    t.index ["entryable_type"], name: "index_entries_on_entryable_type"
     t.index ["entryable_type", "entryable_id"], name: "index_entries_on_entryable_type_and_entryable_id"
+    t.index ["entryable_type"], name: "index_entries_on_entryable_type"
     t.index ["import_id"], name: "index_entries_on_import_id"
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
@@ -2013,7 +2013,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_22_090000) do
     t.index ["subscription_type", "subscription_id"], name: "index_push_deliveries_on_subscription"
     t.check_constraint "insight_id IS NULL AND insight_version IS NULL OR insight_id IS NOT NULL AND insight_version IS NOT NULL AND insight_version > 0", name: "chk_push_deliveries_insight_version"
     t.check_constraint "provider_attempts >= 0", name: "chk_push_deliveries_provider_attempts"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'skipped'::character varying, 'rejected'::character varying, 'failed'::character varying, 'enqueue_failed'::character varying]::text[])", name: "chk_push_deliveries_status"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'accepted'::character varying::text, 'skipped'::character varying::text, 'rejected'::character varying::text, 'failed'::character varying::text, 'enqueue_failed'::character varying::text])", name: "chk_push_deliveries_status"
   end
 
   create_table "push_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

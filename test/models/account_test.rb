@@ -1569,6 +1569,20 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal BigDecimal("2.34567891"), account.reload.balance
   end
 
+  test "materialized balances keep more than four decimal places" do
+    account = @family.accounts.create!(
+      name: "BTC wallet",
+      balance: 0,
+      currency: "BTC",
+      accountable: Crypto.new
+    )
+    create_transaction(account: account, currency: "BTC", amount: BigDecimal("-0.12345678"))
+
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+
+    assert_equal BigDecimal("0.12345678"), account.reload.balance
+  end
+
   private
     def create_loan_with_start_date(start_date, opening_balance_date)
       Account.create_and_sync(
