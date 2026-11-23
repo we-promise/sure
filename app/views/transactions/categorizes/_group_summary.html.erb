@@ -2,6 +2,10 @@
   <p class="text-sm text-secondary">
     <%= t("transactions.categorizes.show.transaction_count", count: entries.size) %>
     &middot;
-    <span class="privacy-sensitive"><%= format_money(entries.sum { |e| e.amount_money.abs }) %></span>
+    <% if (total = Transaction::Grouper.total_in(entries, currency: Current.family.currency)) %>
+      <span class="privacy-sensitive"><%= format_money(total) %></span>
+    <% else %>
+      <%= t(".missing_rate") %>
+    <% end %>
   </p>
 <% end %>

@@ -25,13 +25,7 @@
       <%= render partial: "transactions/categorizes/group_title",
                  locals: { display_name: @group.display_name, color: @group.merchant&.color || "#737373", transaction_type: @group.transaction_type } %>
     </div>
-    <%= turbo_frame_tag "categorize_group_summary" do %>
-      <p class="text-sm text-secondary">
-        <%= t(".transaction_count", count: @group.entries.size) %>
-        &middot;
-        <span class="privacy-sensitive"><%= format_money(@group.entries.sum { |e| e.amount_money.abs }) %></span>
-      </p>
-    <% end %>
+    <%= render "transactions/categorizes/group_summary", entries: @group.entries %>
   </div>
 
   <%# Main form %>

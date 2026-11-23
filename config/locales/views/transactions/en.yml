@@ -257,6 +257,8 @@ en:
         one: "Categorize (1)"
         other: "Categorize (%{count})"
     categorizes:
+      group_summary:
+        missing_rate: "Total unavailable (missing exchange rate)"
       show:
         exit: "Exit"
         skip: "Skip"
