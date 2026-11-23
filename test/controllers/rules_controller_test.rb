@@ -611,6 +611,7 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "th", text: /Queued\s+Processed\s+Modified\s+Blocked/
     assert_select "td", text: "10 / 7 / 4 / 3"
+    assert_select "p", text: I18n.t("rules.recent_runs.counts_note")
   end
 
   test "index renders recent run execution types with design-system tones" do
