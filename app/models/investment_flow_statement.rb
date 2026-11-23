@@ -21,10 +21,14 @@ class InvestmentFlowStatement
 
   # Get contribution/withdrawal totals for a period
   def period_totals(period: Period.current_month)
-    base = family.transactions
+    # From Transaction rather than family.transactions: `visible` joins the
+    # entry and its account itself, and the association's own copies of those
+    # joins left the date filter on one copy only, so Postgres matched every
+    # candidate transaction against every transaction entry of the family.
+    base = Transaction
       .visible
       .excluding_pending
-      .where(entries: { date: period.date_range })
+      .where(entries: { account_id: family.accounts.select(:id), date: period.date_range })
       .where(investment_activity_label: %w[Contribution Withdrawal])
 
     scope = base.where(kind: %w[standard investment_contribution])

@@ -10,6 +10,8 @@ json.id budget.id
 json.start_date budget.start_date
 json.end_date budget.end_date
 json.name budget.name
+# null for the household budget; otherwise the member whose personal budget it is.
+json.owner budget.user && { id: budget.user.id, name: budget.user.display_name }
 json.currency budget.currency
 json.initialized budget.initialized?
 json.current budget.current?

@@ -26,7 +26,15 @@
   </div>
 <% end %>
 
-<%= styled_form_with url: verify_mfa_path, method: :post, class: "space-y-4 mt-4 md:mt-0", data: { turbo: false } do |form| %>
+<%= styled_form_with url: verify_mfa_path,
+      method: :post,
+      class: "space-y-4 mt-4 md:mt-0",
+      data: {
+        turbo: false,
+        controller: "loading-button",
+        action: "submit->loading-button#showLoading pageshow@window->loading-button#restoreIfPersisted",
+        loading_button_loading_text_value: t(".verifying")
+      } do |form| %>
   <%= form.text_field :code,
     required: true,
     autofocus: true,
@@ -34,5 +42,5 @@
     type: "text",
     label: t(".page_title") %>
 
-  <%= form.submit t(".verify_button") %>
+  <%= form.submit t(".verify_button"), data: { loading_button_target: "button" } %>
 <% end %>

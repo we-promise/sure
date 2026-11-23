@@ -26,20 +26,37 @@ export default class extends Controller {
     this.savePreference(collapsed);
   }
 
-  async savePreference(collapsed) {
-    const preferences = {
+  savePreference(collapsed) {
+    return this.patchPreferences({
       [`${this.preferenceKeyValue}_collapsed_sections`]: {
         [this.sectionKeyValue]: collapsed,
       },
-    };
+    });
+  }
 
+  // A control inside a section that saves one preference value (given as
+  // Stimulus action params) and reloads the page to show its effect.
+  // Saves run one after another, so quick clicks reach the server in click
+  // order and the last choice is the one stored; only the last save reloads.
+  async savePreferenceValue({ params: { key, value } }) {
+    const save = (this.pendingSave ?? Promise.resolve()).then(() =>
+      this.patchPreferences({ [key]: value }),
+    );
+    this.pendingSave = save;
+
+    if ((await save) && this.pendingSave === save) {
+      window.Turbo.visit(window.location.href, { action: "replace" });
+    }
+  }
+
+  async patchPreferences(preferences) {
     // Safely obtain CSRF token
     const csrfToken = document.querySelector('meta[name="csrf-token"]');
     if (!csrfToken) {
       console.error(
         "[Reports Section] CSRF token not found. Cannot save preferences.",
       );
-      return;
+      return false;
     }
 
     try {
@@ -60,11 +77,13 @@ export default class extends Controller {
           errorData,
         );
       }
+      return response.ok;
     } catch (error) {
       console.error(
         "[Reports Section] Network error saving preferences:",
         error,
       );
+      return false;
     }
   }
 }

@@ -1,0 +1,23 @@
+---
+fr:
+  rule_groups:
+    new:
+      title: Nouveau groupe de règles
+    edit:
+      title: Renommer le groupe « %{name} »
+    form:
+      name_label: Nom
+      name_placeholder: ex. Courses
+      hint: Les groupes servent uniquement à organiser la liste des règles. Les règles s'exécutent toujours de haut en bas.
+    create:
+      success: Groupe créé
+    update:
+      success: Groupe renommé
+    destroy:
+      success: Groupe supprimé. Ses règles restent en place, sans groupe.
+    activation:
+      activated: Toutes les règles de « %{name} » sont activées
+      deactivated: Toutes les règles de « %{name} » sont désactivées
+      partially_switched:
+        one: "%{count} règle n'a pas pu être basculée. Ouvrez-la pour en voir la raison."
+        other: "%{count} règles n'ont pas pu être basculées. Ouvrez-les pour en voir la raison."

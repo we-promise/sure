@@ -436,11 +436,14 @@ class Family < ApplicationRecord
   end
 
   # Runs Bayes over the uncategorized transactions in scope the user hasn't
-  # locked, transfer legs aside (they never belong in Uncategorized); those
-  # it isn't sure about are tried again with a better model next time.
-  # Returns the modified count.
+  # locked, transfer legs aside (they never belong in Uncategorized), and
+  # excluded transactions aside too, as the uncategorized badge and Quick
+  # Categorize already do (Entry.uncategorized_transactions); those it isn't
+  # sure about are tried again with a better model next time. Returns the
+  # modified count.
   def bayes_categorize_uncategorized(scope = categorizable_transactions)
-    scope = scope.where(category_id: nil).where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS).enrichable(:category_id)
+    scope = scope.with_entry.where(entries: { excluded: false }, category_id: nil)
+                 .where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS).enrichable(:category_id)
     requested = scope.count
     return 0 if requested.zero?
 
@@ -741,6 +744,26 @@ class Family < ApplicationRecord
     "#{categories.count}-#{categories.maximum(:updated_at)&.to_f || 0}"
   end
 
+  # Tag changes write taggings without touching their entries, so caches
+  # whose results depend on tag membership key on this too. The tag count
+  # catches a merge or a deletion, which moves or drops taggings without
+  # adding one.
+  def tags_version
+    tag_count, tag_max_at = tags.pick(Arel.sql("count(*)"), Arel.sql('max("tags"."updated_at")'))
+    tagging_count, tagging_max_at = Tagging.joins(:tag).where(tags: { family_id: id })
+      .pick(Arel.sql("count(*)"), Arel.sql('max("taggings"."updated_at")'))
+    "#{tag_count}-#{tag_max_at&.to_f}-#{tagging_count}-#{tagging_max_at&.to_f}"
+  end
+
+  # Editing a holding (its manual cost basis, or unlocking it) changes
+  # neither its account nor any entry, so caches whose results depend on
+  # holdings, such as the Reports body's gains, key on this too. The count
+  # catches a removed holding.
+  def holdings_version
+    count, max_at = holdings.pick(Arel.sql("count(*)"), Arel.sql('max("holdings"."updated_at")'))
+    "#{count}-#{max_at&.to_f}"
+  end
+
   # Used for invalidating caches keyed on recurring transactions (e.g. the
   # transactions index's projected recurring list). See #entries_version for
   # why .count is included alongside the timestamp.
@@ -909,7 +932,7 @@ class Family < ApplicationRecord
         Transaction.where(id: batch).update_all([ "locked_attributes = locked_attributes - ?, updated_at = ?", attribute, Time.current ])
         # Without the flag, a lock the user sets later counts as confirming it.
         DataEnrichment.where(enrichable_type: "Transaction", enrichable_id: batch, attribute_name: attribute, source: source)
-                      .update_all([ "metadata = metadata - ?", flag ])
+                      .drop_metadata_flag!(flag)
         Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
       end
       ids.size

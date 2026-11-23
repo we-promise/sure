@@ -1,24 +1,88 @@
 class ReportsController < ApplicationController
   include Periodable
 
+  SIGN_AGNOSTIC_EXPENSE_KINDS = %w[loan_payment investment_contribution].freeze
+
+  # Bump when the body's markup changes, so a deploy never serves the old one.
+  REPORT_BODY_CACHE_VERSION = 6
+  # Every parameter the body is built from, as a background rebuild repeats
+  # it and as part of the cache key: the period, the tag and entry filters,
+  # the breakdown's sort and the trend chart's selection.
+  REPORT_BODY_PARAMS = %i[
+    period_type start_date end_date sort_by sort_direction filter_category_id filter_account_id
+    filter_amount_min filter_amount_max filter_date_start filter_date_end trend_granularity
+  ].freeze
+  # The views warmed after each sync, as their URLs carry them.
+  WARMED_PERIOD_TYPES = %i[monthly quarterly ytd last_6_months all_time].freeze
+
   # Allow API key authentication for exports (for Google Sheets integration)
   # Note: We run authentication_for_export which handles both session and API key auth
   skip_authentication only: :export_transactions
   before_action :authenticate_for_export, only: :export_transactions
 
-  def index
-    setup_report_data(show_flash: true)
+  helper_method :filter_tags
 
-    # Build reports sections for collapsible/reorderable UI
-    @reports_sections = build_reports_sections
+  # The report body is served from PageCache: at once when a build exists, even
+  # one from before the latest data (it is rebuilt in the background then), and
+  # built while the member waits only the first time or on `refresh`.
+  def index
+    setup_report_period(show_flash: true)
+    refresh = params[:refresh].present?
+    served = PageCache.serve(
+      report_body_cache_key,
+      version: report_body_version,
+      family: Current.family,
+      user: Current.user,
+      refresh: refresh,
+      rebuild_later: -> { RebuildReportJob.perform_later(Current.user, report_query, I18n.locale.to_s) }
+    ) { render_report_body }
+    # A refresh is rebuilt above; drop it from the URL so reloading doesn't
+    # rebuild again. A page too big to keep is shown as built instead, since
+    # the redirect would only build it a second time.
+    return redirect_to(reports_path(request.query_parameters.except("refresh"))) if refresh && served.kept
+
+    @report = served.body
+    @report_built_at = served.built_at
+    @report_stale = served.stale
+    @reports_sections = order_reports_sections(@report[:sections])
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.reports"), nil ] ]
   end
 
   def print
-    setup_report_data(show_flash: false)
+    # The print view does not render the chart, so skip its bucket queries.
+    setup_report_data(show_flash: false, include_trend: false)
 
     render layout: "print"
+  end
+
+  # Builds and caches the report body for `user` outside a request, so a
+  # background job can have it ready before anyone opens Reports. `query` is
+  # what the page's URL would carry (period_type, start_date, end_date,
+  # filter_tag_ids). Returns whether it had to build the body: one already
+  # built from the current data is left alone.
+  # `locale` is the one the cached build was made in, when a request chose it
+  # (a ?locale= or the browser's language); without it the member's own applies.
+  def self.warm_body_cache(user:, query: {}, locale: nil)
+    controller = new
+    url_query = locale.present? ? query.merge(locale: locale) : query
+    request = ActionDispatch::Request.new(Rack::MockRequest.env_for("/reports?#{url_query.to_query}"))
+    request.routes = _routes
+    controller.set_request!(request)
+    controller.set_response!(make_response!(request))
+
+    # Current memoizes the member's accounts, and Current.set doesn't clear
+    # that, so it is reset around each member: a job warming several members
+    # must never build one member's report from another's accounts. Only call
+    # this outside a request.
+    Current.reset
+    Current.session = Session.new(user: user)
+    # The member's locale and time zone, chosen as a request would choose them.
+    controller.send(:switch_locale) do
+      controller.send(:switch_timezone) { controller.send(:warm_report_body) }
+    end
+  ensure
+    Current.reset
   end
 
   def update_preferences
@@ -81,7 +145,8 @@ class ReportsController < ApplicationController
       start_date: params[:start_date],
       end_date: params[:end_date],
       sort_by: params[:sort_by],
-      sort_direction: params[:sort_direction]
+      sort_direction: params[:sort_direction],
+      filter_tag_ids: filter_tags.map(&:id).presence
     }.compact
 
     # The CSV URL the instructions tell people to add their API key to
@@ -94,6 +159,8 @@ class ReportsController < ApplicationController
   def picker
     @period_type = params[:period_type]&.to_sym || :monthly
     @start_date = parse_date_param(:start_date) || Date.current.beginning_of_month
+    @category_selection = category_selection
+    @trend_granularity = trend_granularity
     render partial: "reports/period_picker", locals: {
       period_type: @period_type,
       start_date: @start_date
@@ -101,7 +168,7 @@ class ReportsController < ApplicationController
   end
 
   private
-    def setup_report_data(show_flash: false)
+    def setup_report_period(show_flash: false)
       @period_type = params[:period_type]&.to_sym || :monthly
       @start_date = parse_date_param(:start_date) || default_start_date
       @end_date = parse_date_param(:end_date) || default_end_date
@@ -112,6 +179,21 @@ class ReportsController < ApplicationController
       # Build the period
       @period = Period.custom(start_date: @start_date, end_date: @end_date)
       @previous_period = build_previous_period
+
+      @tags = Current.family.tags.alphabetically
+      @filter_tags = filter_tags
+
+      # Trend chart selection. It scopes the chart only, not the report totals.
+      # The page header draws it too, so it is read before the body is served.
+      @category_selection = category_selection
+      @trend_granularity = trend_granularity
+
+      # Build navigation links for period switching
+      @nav = build_period_navigation
+    end
+
+    def setup_report_data(show_flash: false, include_trend: true)
+      setup_report_period(show_flash: show_flash)
 
       # Get aggregated data
       @income_statement = Current.family.income_statement(user: Current.user)
@@ -132,6 +214,10 @@ class ReportsController < ApplicationController
 
       # Transactions breakdown
       @transactions = build_transactions_breakdown
+      @category_trend = include_trend ? build_category_trend : nil
+
+      @biggest_expenses_limit = Current.user.reports_biggest_expenses_limit
+      @biggest_expenses = build_biggest_expenses(@biggest_expenses_limit)
 
       # Investment metrics
       @investment_metrics = build_investment_metrics
@@ -144,18 +230,130 @@ class ReportsController < ApplicationController
 
       # Flags for view rendering
       @has_accounts = accessible_accounts.any?
+    end
 
-      # Build navigation links for period switching
-      @nav = build_period_navigation
+    # The report's figures, rendered: the exchange rate notes, the summary and
+    # each section's content. Section order, which are collapsed and the
+    # section frames are drawn when the page is served, so arranging the page
+    # never invalidates it.
+    def render_report_body
+      setup_report_data(show_flash: false)
+      html = ->(partial, locals) { render_to_string(partial: partial, locals: locals, formats: [ :html ]) }
+
+      {
+        notes: html.call("shared/exchange_rate_notes", { family: Current.family }),
+        has_transactions: Current.family.transactions.any?,
+        summary: html.call("reports/summary_dashboard", { metrics: @summary_metrics, period_type: @period_type }),
+        sections: build_reports_sections.map do |section|
+          section.except(:partial, :locals).merge(html: (html.call(section[:partial], section[:locals]) if section[:visible]))
+        end
+      }
+    end
+
+    def warm_report_body
+      setup_report_period(show_flash: false)
+      key = report_body_cache_key
+      version = report_body_version
+      return false if PageCache.current?(key, version: version, family: Current.family, user: Current.user)
+
+      started_at = Time.current
+      PageCache.write(key, render_report_body, version: version, family: Current.family, user: Current.user, started_at: started_at)
+      true
+    end
+
+    def report_query
+      query = params.permit(*REPORT_BODY_PARAMS, filter_tag_ids: [], trend_category_ids: []).to_h.symbolize_keys
+      query[:filter_tag_ids] = filter_tags.map(&:id).sort if filter_tags.any?
+      query.except!(:filter_tag_ids) if filter_tags.none?
+      query[:trend_category_ids] = Array(query[:trend_category_ids]).sort if query[:trend_category_ids].present?
+      query.except!(:trend_category_ids) if query[:trend_category_ids].blank?
+      # The page opens on this month when no period is given; naming it keeps one
+      # key for /reports and its warmed ?period_type=monthly build.
+      query[:period_type] = "monthly" if query[:period_type].blank?
+      query.compact_blank.sort.to_h
+    end
+
+    # Names the report whatever data it is built from: whose it is (family and
+    # member: PageCache also enforces both on every read), the
+    # member's settings that change its figures, and the period and filters as
+    # the URL gave them. A default period ("this year") keeps its key from one
+    # day to the next, so yesterday's build is served while today's is made.
+    #
+    # The accounts the member may see are part of the name, not the version: a
+    # build from before a change of access is never served, even stale, so a
+    # report can't show an account the member has just lost.
+    def report_body_cache_key
+      [
+        "reports_body", REPORT_BODY_CACHE_VERSION, Current.family.id, Current.user.id, report_member_version,
+        report_family_settings_version, I18n.locale,
+        report_access_digest, Digest::SHA256.hexdigest(report_query.to_query),
+        report_period_start_key
+      ].join("/")
+    end
+
+    # A default period starts afresh each month, quarter or year, and the new
+    # one is a different report, not a stale copy of the last, so its start is
+    # part of the name. The end date isn't, so "this year" keeps its build from
+    # one day to the next. All time's start moves whenever older history
+    # arrives; that build is replaced in the background, not while the member
+    # waits, so it's left out.
+    def report_period_start_key
+      @start_date unless @period_type == :all_time
+    end
+
+    def report_access_digest
+      Digest::SHA256.hexdigest([
+        accessible_accounts.map(&:id).sort.join(","),
+        Current.user.finance_accounts.pluck(:id).sort.join(",")
+      ].join("|"))
+    end
+
+    # The family's settings that change a report's figures or how it reads
+    # (currency is already in family.build_cache_key). Part of the key, not the
+    # version: a build made under other settings is never served.
+    def report_family_settings_version
+      family = Current.family
+      Digest::SHA256.hexdigest([
+        family.investment_contributions_as_spending, family.month_start_day, family.date_format,
+        family.household_budget_enabled, family.personal_budgets, family.moniker
+      ].join("|"))
+    end
+
+    # The member's settings that change a report's figures. Section order and
+    # collapse state are left out: they are applied when the page is served.
+    def report_member_version
+      user = Current.user
+      [ user.reports_biggest_expenses_limit, user.preview_features_enabled?, user.role ].join(",")
+    end
+
+    # Everything the body is drawn from: the family's data (a completed sync,
+    # any entry, category, tag or tagging, account or budget change), exchange
+    # rates, the dates the period resolves to and today's date. A build from a
+    # different version is served stale and rebuilt.
+    def report_body_version
+      family = Current.family
+      Digest::SHA256.hexdigest([
+        family.build_cache_key("reports_body", invalidate_on_data_updates: true),
+        family.entries_version,
+        family.tags_version,
+        family.holdings_version,
+        ExchangeRate.updated_at_version,
+        family.budgets.maximum(:updated_at)&.to_f,
+        BudgetCategory.joins(:budget).where(budgets: { family_id: family.id }).maximum(:updated_at)&.to_f,
+        accessible_accounts.map(&:updated_at).max&.to_f,
+        @start_date, @end_date, Date.current
+      ].join("|"))
     end
 
     def preferences_params
-      # Only the two reports keys are passed on; User#update_section_preferences
-      # drops any value that is not an array of keys or a hash of flags.
+      # Only the reports keys are passed on; User#update_reports_preferences
+      # drops any value that is not an array of keys, a hash of flags or an
+      # offered limit.
       prefs = params.require(:preferences)
       {
         "reports_collapsed_sections" => prefs[:reports_collapsed_sections],
-        "reports_section_order" => prefs[:reports_section_order]
+        "reports_section_order" => prefs[:reports_section_order],
+        "reports_biggest_expenses_limit" => prefs[:reports_biggest_expenses_limit]
       }
     end
 
@@ -173,7 +371,7 @@ class ReportsController < ApplicationController
           key: "trends_insights",
           title: "reports.trends.title",
           partial: "reports/trends_insights",
-          locals: { trends_data: @trends_data },
+          locals: trend_section_locals,
           visible: @has_accounts,
           collapsible: true
         },
@@ -210,14 +408,30 @@ class ReportsController < ApplicationController
             transactions: @transactions,
             period_type: @period_type,
             start_date: @start_date,
-            end_date: @end_date
+            end_date: @end_date,
+            filter_tags: filter_tags
           },
           visible: @has_accounts,
+          collapsible: true
+        },
+        {
+          key: "biggest_expenses",
+          title: "reports.biggest_expenses.title",
+          partial: "reports/biggest_expenses",
+          locals: { expenses: @biggest_expenses },
+          header_partial: "reports/biggest_expenses_limit",
+          header_locals: { limit: @biggest_expenses_limit },
+          visible: @has_accounts && @biggest_expenses.any?,
           collapsible: true
         }
       ]
 
-      # Order sections according to user preference
+      order_reports_sections(all_sections)
+    end
+
+    # Puts sections in the member's saved order. Kept apart from building them,
+    # so a cached report is reordered when served rather than rebuilt.
+    def order_reports_sections(all_sections)
       section_order = Current.user.reports_section_order
       ordered_sections = section_order.map do |key|
         all_sections.find { |s| s[:key] == key }
@@ -264,6 +478,10 @@ class ReportsController < ApplicationController
         Date.current.beginning_of_year.to_date
       when :last_6_months
         (Date.current.end_of_month + 1.day - 6.months).beginning_of_month.to_date
+      when :last_12_months
+        (Date.current.end_of_month + 1.day - 12.months).beginning_of_month.to_date
+      when :all_time
+        earliest_report_activity_date || Date.current.beginning_of_month.to_date
       when :custom
         1.month.ago.to_date
       else
@@ -271,15 +489,23 @@ class ReportsController < ApplicationController
       end
     end
 
+    # The first transaction or trade in the accounts this member's reports read
+    # (their finance accounts, as IncomeStatement uses), never a scheduled one.
+    # An older entry in an account they can't see must not start All time: its
+    # date would show in the label and the URLs built from it.
+    def earliest_report_activity_date
+      Entry.where(account_id: Current.user.finance_accounts.select(:id), entryable_type: %w[Transaction Trade])
+        .excluding_scheduled
+        .minimum(:date)
+    end
+
     def default_end_date
       case @period_type
-      when :monthly, :last_6_months
+      when :monthly, :last_6_months, :last_12_months
         Date.current.end_of_month.to_date
       when :quarterly
         Date.current.end_of_quarter.to_date
-      when :ytd
-        Date.current
-      when :custom
+      when :ytd, :all_time, :custom
         Date.current
       else
         Date.current.end_of_month.to_date
@@ -296,16 +522,24 @@ class ReportsController < ApplicationController
 
     def build_summary_metrics
       # Ensure we always have Money objects
-      current_income = ensure_money(@current_income_totals.total)
-      current_expenses = ensure_money(@current_expense_totals.total)
+      if filter_tags.any?
+        current = @income_statement.totals_for(@period, tag_ids: filter_tags.map(&:id))
+        previous = @income_statement.totals_for(@previous_period, tag_ids: filter_tags.map(&:id))
+        current_income, current_expenses = current.income_money, current.expense_money
+        previous_income, previous_expenses = previous.income_money, previous.expense_money
+      else
+        current_income = ensure_money(@current_income_totals.total)
+        current_expenses = ensure_money(@current_expense_totals.total)
+        previous_income = ensure_money(@previous_income_totals.total)
+        previous_expenses = ensure_money(@previous_expense_totals.total)
+      end
       net_savings = current_income - current_expenses
 
-      previous_income = ensure_money(@previous_income_totals.total)
-      previous_expenses = ensure_money(@previous_expense_totals.total)
-
-      # Calculate percentage changes
-      income_change = calculate_percentage_change(previous_income, current_income)
-      expense_change = calculate_percentage_change(previous_expenses, current_expenses)
+      # Calculate percentage changes. All time has no period before it to compare with.
+      unless @period_type == :all_time
+        income_change = calculate_percentage_change(previous_income, current_income)
+        expense_change = calculate_percentage_change(previous_expenses, current_expenses)
+      end
 
       # Get budget performance for current period
       budget_percent = calculate_budget_performance
@@ -349,28 +583,36 @@ class ReportsController < ApplicationController
     end
 
     def build_trends_data(income_statement:)
-      # Generate month-by-month data based on the current period filter
+      # Month-by-month data based on the current period filter, fetched with a
+      # single month-grouped totals query instead of two queries per month.
       trends = []
 
-      # Generate list of months within the period
       current_month = @start_date.beginning_of_month
       end_of_period = @end_date.end_of_month
 
+      monthly_totals = if filter_tags.empty?
+        income_statement.monthly_income_expense_totals(
+          period: Period.custom(start_date: current_month, end_date: @end_date)
+        )
+      end
+
       while current_month <= end_of_period
-        month_start = current_month
-        month_end = current_month.end_of_month
-
-        # Ensure we don't go beyond the end date
-        month_end = @end_date if month_end > @end_date
-
-        period = Period.custom(start_date: month_start, end_date: month_end)
-
-        income = income_statement.income_totals(period: period).total
-        expenses = income_statement.expense_totals(period: period).total
+        if filter_tags.any?
+          month_end = [ current_month.end_of_month, @end_date ].min
+          period = Period.custom(start_date: current_month, end_date: month_end)
+          totals = income_statement.totals_for(period, tag_ids: filter_tags.map(&:id))
+          income = totals.income_money.amount
+          expenses = totals.expense_money.amount
+        else
+          totals = monthly_totals[current_month] || { income: 0.to_d, expense: 0.to_d }
+          income = totals[:income]
+          expenses = totals[:expense]
+        end
 
         trends << {
-          month: month_start.strftime("%b %Y"),
-          is_current_month: (month_start.month == Date.current.month && month_start.year == Date.current.year),
+          month: current_month.strftime("%b %Y"),
+          calendar_month: current_month,
+          is_current_month: (current_month.month == Date.current.month && current_month.year == Date.current.year),
           income: income,
           expenses: expenses,
           net: income - expenses
@@ -404,21 +646,51 @@ class ReportsController < ApplicationController
       end
     end
 
-    def build_transactions_breakdown
-      # Base query: all transactions in the period
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+    # The period's reportable transactions with every Reports filter applied
+    # (finance account scoping, tax-advantaged exclusion, tags, ...).
+    def report_transactions_scope(excluded_kinds:)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Current.family.analytics_excluded_kinds)
+        .where.not(kind: excluded_kinds)
         .includes(entry: :account, category: :parent)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
-      # Apply filters (includes finance account scoping)
-      transactions = apply_transaction_filters(transactions)
+      apply_transaction_filters(transactions)
+    end
+
+    # The period's largest expenses in the family currency, largest first.
+    # Unlike the breakdown it keeps one-time expenses (the view marks them):
+    # a one-off is exactly what this list is for. Trades are left out, as in
+    # the income statement.
+    def build_biggest_expenses(limit)
+      family_currency = Current.family.currency
+      # Loan payments and investment contributions are expenses whatever their
+      # sign (some importers store them negative), as in the income statement.
+      expenses = report_transactions_scope(excluded_kinds: Current.family.analytics_excluded_kinds - [ "one_time" ])
+        .where("entries.amount > 0 OR (entries.amount < 0 AND transactions.kind IN (?))", SIGN_AGNOSTIC_EXPENSE_KINDS)
+      expense_amount_sql = Arel.sql(ActiveRecord::Base.sanitize_sql_array([
+        "CASE WHEN transactions.kind IN (?) THEN ABS(entries.amount) ELSE entries.amount END DESC", SIGN_AGNOSTIC_EXPENSE_KINDS
+      ]))
+
+      # The overall top `limit` is always among the top `limit` in the family
+      # currency plus the foreign-currency rows, so only those get loaded.
+      candidates = expenses.where(entries: { currency: family_currency }).order(expense_amount_sql).limit(limit).to_a +
+        expenses.where.not(entries: { currency: family_currency }).to_a
+
+      convert = report_amount_converter(family_currency)
+      candidates.filter_map do |transaction|
+        amount = convert.call(transaction.entry)
+        { transaction: transaction, entry: transaction.entry, amount: Money.new(amount, family_currency) } if amount
+      end.sort_by { |expense| -expense[:amount].amount }.first(limit)
+    end
+
+    def build_transactions_breakdown
+      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      transactions = report_transactions_scope(excluded_kinds: Current.family.analytics_excluded_kinds)
 
       # Get trades in the period (matching income_statement logic)
       trades = Trade
@@ -426,6 +698,13 @@ class ReportsController < ApplicationController
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
+        # Buys/sells move value between cash and holdings; keep cash income and fees, decided by label as Portfolio::FlowClassifier does.
+        # A qty-0 trade also stays unless its label marks it as a movement (internal, external or transfer).
+        .where(
+          "trades.investment_activity_label IN (?) OR (trades.qty = 0 AND (trades.investment_activity_label IS NULL OR trades.investment_activity_label NOT IN (?)))",
+          Portfolio::FlowClassifier::INCOME_LABELS + Portfolio::FlowClassifier::FEE_LABELS,
+          Portfolio::FlowClassifier::INTERNAL_LABELS + Portfolio::FlowClassifier::EXTERNAL_LABELS + [ Portfolio::FlowClassifier::TRANSFER_LABEL ]
+        )
         .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
         .includes(entry: :account, category: :parent)
       trades = exclude_tax_advantaged_accounts(trades)
@@ -478,6 +757,9 @@ class ReportsController < ApplicationController
       # Helper to process an entry (transaction or trade)
       convert = report_amount_converter(family_currency)
       process_entry = ->(category, entry, is_trade) do
+        # No money moved (e.g. a 0.00 card authorisation): neither income nor expense
+        next if entry.amount.zero?
+
         type = entry.amount > 0 ? "expense" : "income"
         converted_amount = convert.call(entry)
         next if converted_amount.nil?
@@ -533,6 +815,61 @@ class ReportsController < ApplicationController
       result.sort_by(&sort_logic)
     end
 
+    def category_selection
+      @category_selection ||= Reports::CategorySelection.new(Current.family, params[:trend_category_ids])
+    end
+
+    def trend_granularity
+      @trend_granularity ||= begin
+        requested = params[:trend_granularity]
+        if %w[month year].include?(requested)
+          requested
+        else
+          long_period? ? "year" : "month"
+        end
+      end
+    end
+
+    # Two years of monthly points is still readable. Longer ranges default to
+    # years, and the user can override the choice.
+    def long_period?
+      @start_date.present? && @end_date.present? && @start_date.advance(months: 24) < @end_date
+    end
+
+    # Category trends are a preview. The model scopes only the chart; the
+    # report totals and tables stay unfiltered.
+    def build_category_trend
+      return nil unless preview_features_enabled?
+
+      Reports::CategoryTrend.new(
+        @income_statement,
+        period: @period,
+        selection: category_selection,
+        granularity: trend_granularity,
+        tag_ids: filter_tags.map(&:id)
+      )
+    end
+
+    # Preview users get the trend locals. Building the category options for
+    # everyone costs a query and objects that the view never renders.
+    def trend_section_locals
+      locals = {
+        trends_data: @trends_data,
+        period_type: @period_type,
+        start_date: @start_date,
+        end_date: @end_date,
+        trend_granularity: trend_granularity
+      }
+      return locals unless @category_trend
+
+      locals.merge(
+        category_trend: @category_trend,
+        category_options: category_selection.options,
+        selected_category_values: category_selection.selected_values,
+        selected_category_count: category_selection.selected_count
+      )
+    end
+
     def build_investment_metrics
       investment_statement = Current.family.investment_statement
       investment_accounts = investment_statement.investment_accounts
@@ -560,10 +897,11 @@ class ReportsController < ApplicationController
 
     def build_gains_by_tax_treatment(investment_statement)
       currency = Current.family.currency
-      # Eager-load account and accountable to avoid N+1 when accessing tax_treatment
-      current_holdings = investment_statement.current_holdings
-        .includes(account: :accountable)
-        .to_a
+      # The card's holdings, average costs already read in one query (the trends
+      # below would otherwise run them per holding), plus each account's
+      # accountable for its tax treatment.
+      current_holdings = investment_statement.holdings_with_avg_costs
+      ActiveRecord::Associations::Preloader.new(records: current_holdings, associations: { account: :accountable }).call
 
       # Group holdings by tax treatment (from account)
       holdings_by_treatment = current_holdings.group_by { |h| h.account.tax_treatment || :taxable }
@@ -574,18 +912,13 @@ class ReportsController < ApplicationController
         .includes(:security, entry: { account: :accountable })
         .to_a
 
-      # Preload holdings for all accounts that have sell trades to avoid N+1 in realized_gain_loss
-      account_ids = sell_trades.map { |t| t.entry.account_id }.uniq
-      holdings_by_account = Holding
-        .where(account_id: account_ids)
-        .where("date <= ?", @period.date_range.end)
-        .order(date: :desc)
-        .group_by(&:account_id)
+      # Each sale's basis position in one query, before the rates: the rate
+      # preload keys on the currency that position is carried in.
+      Trade.preload_basis_holdings(sell_trades)
 
-      # Inject preloaded holdings into trades for realized_gain_loss calculation
-      sell_trades.each do |trade|
-        trade.instance_variable_set(:@preloaded_holdings, holdings_by_account[trade.entry.account_id] || [])
-      end
+      # What each fifo sale took from which lot, read once for the whole set.
+      lot_disposals = HoldingLotDisposal.readable_by_sale(sell_trades)
+      sell_trades.each { |trade| trade.preloaded_lot_disposals = lot_disposals[trade.entry.id] }
 
       # The rates the proceeds conversion needs, in one query rather than one
       # per foreign disposal.
@@ -626,7 +959,7 @@ class ReportsController < ApplicationController
       foreign_trade_currencies = (
         sell_trades.map(&:currency) +
         sell_trades.map { |t| t.entry.account.currency } +
-        holdings_by_account.values.flatten.map(&:currency)
+        sell_trades.map(&:preloaded_basis_currency)
       ).compact.uniq.reject { |c| c == currency }
       rates_by_trade_date = sell_trades.map { |t| t.entry.date }.uniq.each_with_object({}) do |date, memo|
         memo[date] = ExchangeRate.rates_for(foreign_trade_currencies, to: currency, date: date)
@@ -767,12 +1100,19 @@ class ReportsController < ApplicationController
     def apply_transaction_filters(scope)
       scope = apply_entry_filters(scope)
 
-      # Filter by tag (Transaction-specific — trades don't have taggings)
-      if params[:filter_tag_id].present?
-        scope = scope.joins(:taggings).where(taggings: { tag_id: params[:filter_tag_id] })
-      end
+      scope = scope.with_any_tag(filter_tags.map(&:id)) if filter_tags.any?
 
       scope
+    end
+
+    def filter_tag_ids
+      @filter_tag_ids ||= params[:filter_tag_ids].is_a?(Array) ? params[:filter_tag_ids].grep(String).compact_blank : []
+    end
+
+    # The family's tags among filter_tag_ids. Ids that match none of them
+    # (another family's tag, a deleted one) are ignored.
+    def filter_tags
+      @filter_tags ||= filter_tag_ids.any? ? Current.family.tags.where(id: filter_tag_ids).alphabetically.to_a : []
     end
 
     def exclude_tax_advantaged_accounts(scope)
@@ -797,6 +1137,9 @@ class ReportsController < ApplicationController
         # Trades have no category, so a category filter leaves them out.
         scope = scope.model == Trade ? scope.none : scope.where(category_id: all_category_ids)
       end
+
+      # Trades carry no tags, so a tag filter leaves them out.
+      scope = scope.none if scope.model == Trade && filter_tags.any?
 
       # Filter by account
       if params[:filter_account_id].present?
@@ -826,35 +1169,6 @@ class ReportsController < ApplicationController
       scope
     rescue Date::Error
       scope
-    end
-
-    def build_transactions_breakdown_for_export
-      # Get flat transactions list (not grouped) for export
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
-      transactions = Transaction
-        .joins(:entry)
-        .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
-        .merge(Account.included_in_reports)
-        .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Current.family.analytics_excluded_kinds)
-        .includes(entry: :account, category: [])
-      transactions = exclude_tax_advantaged_accounts(transactions)
-
-      transactions = apply_transaction_filters(transactions)
-
-      sort_by = params[:sort_by] || "date"
-      # Whitelist sort_direction to prevent SQL injection
-      sort_direction = %w[asc desc].include?(params[:sort_direction]&.downcase) ? params[:sort_direction].upcase : "DESC"
-
-      case sort_by
-      when "date"
-        transactions.order("entries.date #{sort_direction}")
-      when "amount"
-        transactions.order("entries.amount #{sort_direction}")
-      else
-        transactions.order("entries.date DESC")
-      end
     end
 
     def build_monthly_breakdown_for_export
@@ -890,6 +1204,7 @@ class ReportsController < ApplicationController
       # Process transactions
       transactions.each do |transaction|
         entry = transaction.entry
+        next if entry.amount.zero? # neither income nor expense
         is_expense = entry.amount > 0
         type = is_expense ? "expense" : "income"
         category_name = transaction.category&.name || "Uncategorized"
@@ -930,6 +1245,10 @@ class ReportsController < ApplicationController
     def generate_transactions_csv
       require "csv"
 
+      # Category names are user-supplied and this is the export the app points
+      # at Google Sheets, so the cells that carry them are escaped against
+      # formula injection (CWE-1236). Only that column: the amount cells are
+      # formatted money such as "-$42.00", which the escape would turn to text.
       CSV.generate do |csv|
         # Build header row: Category + Month columns + Total
         month_headers = @export_data[:months].map { |m| m.strftime("%b %Y") }
@@ -941,7 +1260,7 @@ class ReportsController < ApplicationController
           csv << [ "INCOME" ] + Array.new(month_headers.length + 1, "")
 
           @export_data[:income].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ CsvSanitizer.sanitize(category_data[:category]) ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
@@ -973,7 +1292,7 @@ class ReportsController < ApplicationController
           csv << [ "EXPENSES" ] + Array.new(month_headers.length + 1, "")
 
           @export_data[:expenses].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ CsvSanitizer.sanitize(category_data[:category]) ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
@@ -1294,6 +1613,18 @@ class ReportsController < ApplicationController
           next_end   = next_start + 6.months - 1.day
         end
         at_latest  = @end_date >= Date.current.end_of_month
+      when :last_12_months
+        prev_start = @start_date.beginning_of_month - 12.months
+        prev_end   = prev_start + 12.months - 1.day
+        candidate_start = @start_date.beginning_of_month + 12.months
+        if candidate_start + 12.months >= Date.current.beginning_of_month
+          next_end   = Date.current.end_of_month
+          next_start = (next_end + 1.day - 12.months).beginning_of_month
+        else
+          next_start = candidate_start
+          next_end   = next_start + 12.months - 1.day
+        end
+        at_latest  = @end_date >= Date.current.end_of_month
       else
         return nil
       end
@@ -1315,6 +1646,10 @@ class ReportsController < ApplicationController
         end
       when :last_6_months
         t("reports.index.period_label.last_6_months",
+          start: I18n.l(@start_date, format: :short_month_year),
+          end: I18n.l(@end_date, format: :short_month_year))
+      when :last_12_months
+        t("reports.index.period_label.last_12_months",
           start: I18n.l(@start_date, format: :short_month_year),
           end: I18n.l(@end_date, format: :short_month_year))
       end

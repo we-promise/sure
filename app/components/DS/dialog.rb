@@ -139,7 +139,7 @@ class DS::Dialog < DesignSystemComponent
     data[:DS__dialog_auto_open_value] = auto_open
     data[:DS__dialog_reload_on_close_value] = reload_on_close
     data[:DS__dialog_disable_click_outside_value] = disable_click_outside
-    data[:action] = [ "click->DS--dialog#clickOutside", data[:action] ].compact.join(" ")
+    data[:action] = [ "pointerdown->DS--dialog#trackPress pointercancel->DS--dialog#clearPress click->DS--dialog#clickOutside", data[:action] ].compact.join(" ")
     data[:hotkey] = "esc:DS--dialog#close"
     # Fetched into a frame over the page, the dialog is left out of Turbo's
     # cached copy of that page, or Back brings it back: stray if it was still
