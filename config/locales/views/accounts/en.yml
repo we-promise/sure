@@ -246,12 +246,6 @@ en:
       credit_card: Credit Cards
       loan: Loans
       other_liability: Other Liabilities
-    liquidity:
-      levels:
-        immediate: Available immediately
-        short_term: Available at short notice
-        locked: Locked until a date
-        long_term: Locked long-term
     tax_treatments:
       taxable: Taxable
       tax_deferred: Tax-Deferred

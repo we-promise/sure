@@ -90,17 +90,6 @@ module Account::Liquidity
     @liquidity_choice = value.to_s.presence
   end
 
-  # The value the form's select shows.
-  def liquidity_choice_for_form
-    liquidity_choice || (liquidity_manual? ? liquidity : AUTOMATIC)
-  end
-
-  # Whether the form offers the availability choice.
-  def liquidity_selectable?
-    type = Accountable.from_type(accountable_type)
-    type.present? && type.classification == "asset" && type.liquidity_selectable?
-  end
-
   def liquidity_manual?
     locked?(:liquidity)
   end
@@ -111,11 +100,10 @@ module Account::Liquidity
     accountable_class.rules_for(subtype).liquidity
   end
 
-  def subtype_rules
-    accountable_class&.rules_for(subtype)
-  end
-
-  def available_on?(date = liquidity_today)
+  # Whether the money can be reached on `date` (today by default). Named
+  # apart from `available_on?`, the attribute query Rails generates for the
+  # `available_on` column; the API returns it as `available_now`.
+  def available_now?(date = liquidity_today)
     return false if liability?
     return true if liquidity.in?(AVAILABLE_LEVELS)
 
@@ -125,7 +113,7 @@ module Account::Liquidity
   # The level that applies on `date`: a locked account past its release date
   # reads as immediate.
   def effective_liquidity(date = liquidity_today)
-    return "immediate" if liquidity == "locked" && available_on?(date)
+    return "immediate" if liquidity == "locked" && available_now?(date)
 
     liquidity
   end
@@ -144,17 +132,6 @@ module Account::Liquidity
     terms = [ months / renewal_term_months, 0 ].max
     terms += 1 if (available_on >> (terms * renewal_term_months)) < date
     available_on >> (terms * renewal_term_months)
-  end
-
-  def days_until_available(date = liquidity_today)
-    release = next_release_date(date)
-    return nil if release.nil? || release < date
-
-    (release - date).to_i
-  end
-
-  def liquidity_label
-    I18n.t("accounts.liquidity.levels.#{liquidity}")
   end
 
   def liquidity_today
