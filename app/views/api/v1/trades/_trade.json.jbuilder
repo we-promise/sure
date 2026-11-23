@@ -9,6 +9,21 @@ json.notes trade.entry.notes
 json.qty trade.qty
 json.price trade.price_money.format
 json.investment_activity_label trade.investment_activity_label
+# The fee charged on the trade, formatted like price, and as an unrounded,
+# locale-independent decimal string (the stored value).
+json.fee trade.fee_money.format
+json.fee_decimal trade.fee.to_s("F")
+# The rate to the account's currency stored on the trade, for example by a
+# provider that reports its own rate. The cost basis applies it to price and
+# fee, from `currency` (the trade's); the cash balance applies it to `amount`,
+# from amount_currency (the entry's). The two are the same unless the web form
+# or PATCH changed the entry's currency, which leaves the trade's as it was.
+# The rate was recorded for `currency`; the cash balance then reuses it
+# unchanged for amount_currency.
+# Null when the trade carries none, in which case market rates are used, and
+# when both currencies are the account's.
+json.exchange_rate trade.numeric_exchange_rate
+json.amount_currency trade.entry.currency
 json.lot_source_trade_id trade.lot_source_entry&.entryable_id
 
 json.account do

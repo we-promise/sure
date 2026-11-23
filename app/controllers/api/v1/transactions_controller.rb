@@ -111,6 +111,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     return render_validation_error("Unknown category id") if unknown_category_id?
     return render_validation_error("Unknown merchant id") if unknown_merchant_id?
     return render_validation_error("amount must be a valid number") if malformed_amount?
+    return render_unknown_currency if unknown_currency?
 
     @entry = account.entries.new(entry_params_for_create)
 
@@ -153,17 +154,17 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
-    if @entry.split_parent? && split_financial_fields_changed?
-      render json: { error: "validation_failed", message: "Split parent amount, date, and type cannot be changed directly. Use the split editor." }, status: :unprocessable_entity
-      return
-    end
+    return render_unknown_currency if unknown_currency?
+
+    return render_split_parent_change if split_financial_fields_changed? && @entry.split_parent?
 
     return render_validation_error(INVALID_NATURE_MESSAGE) if invalid_nature?
     return render_validation_error("amount must be a valid number") if malformed_amount?
-    # The web UI hides amount and nature on a transfer: one leg alone cannot
-    # change them without breaking Transfer#transfer_has_opposite_amounts.
-    if @entry.transaction.transfer && transfer_amount_changed?
-      return render_validation_error("A transfer's amount and nature cannot be changed through one of its transactions")
+    # The web UI hides amount, nature and currency on a transfer: one leg alone
+    # cannot change them without breaking Transfer#transfer_has_opposite_amounts.
+    if @entry.transaction.transfer
+      return render_validation_error("A transfer's amount and nature cannot be changed through one of its transactions") if transfer_amount_changed?
+      return render_validation_error("A transfer's currency cannot be changed through one of its transactions") if currency_changed?
     end
     return render_validation_error("tag_ids must be an array of tag ids") if malformed_tag_ids?
     return render_validation_error("Unknown tag id") if tags_provided? && unknown_tag_ids?
@@ -174,6 +175,17 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     updated = false
 
     Entry.transaction do
+      # A split committed since the check above would leave the parent's amount,
+      # date, nature or currency apart from its children's: re-check under the
+      # lock split_once! takes.
+      if split_financial_fields_changed?
+        @entry.lock_for_split!
+        if @entry.split_parent?
+          render_split_parent_change
+          raise ActiveRecord::Rollback
+        end
+      end
+
       if @entry.update(entry_params_for_update)
         sync_needed = @entry.saved_changes_affect_balances?
 
@@ -382,7 +394,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         name: transaction_params[:name] || transaction_params[:description],
         date: transaction_params[:date],
         amount: calculate_signed_amount,
-        currency: transaction_params[:currency] || current_resource_owner.family.currency,
+        currency: requested_currency || current_resource_owner.family.currency,
         notes: transaction_params[:notes],
         entryable_type: "Transaction",
         entryable_attributes: {
@@ -403,6 +415,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       entry_params = {
         name: transaction_params[:name] || transaction_params[:description],
         date: transaction_params[:date],
+        currency: requested_currency,
         notes: transaction_params[:notes],
         entryable_attributes: {
           id: @entry.entryable_id,
@@ -483,6 +496,39 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       Category.type_for_attribute(:id).cast(value)
     end
 
+    def requested_currency
+      canonical_currency(transaction_params[:currency])
+    end
+
+    # Entries created before codes were normalized can hold "usd".
+    def canonical_currency(code)
+      code.to_s.strip.upcase.presence
+    end
+
+    # Entry does not check the code, and one Money does not know would be
+    # stored and then fail every read of the transaction's amount.
+    def unknown_currency?
+      return false unless requested_currency
+
+      Money::Currency.new(requested_currency)
+      false
+    rescue Money::Currency::UnknownCurrencyError
+      true
+    end
+
+    # Re-sending the stored code, in any case, is not a change.
+    def currency_changed?
+      requested_currency.present? && requested_currency != canonical_currency(@entry.currency)
+    end
+
+    def render_split_parent_change
+      render_validation_error("Split parent amount, currency, date, and type cannot be changed directly. Use the split editor.")
+    end
+
+    def render_unknown_currency
+      render_validation_error("Unknown currency: #{requested_currency}")
+    end
+
     # The request's tag ids in canonical UUID form, each once. Postgres matches
     # a UUID in any case, so one tag spelled two ways is one tag, and writing
     # the raw list would store it twice.
@@ -494,6 +540,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     def split_financial_fields_changed?
       params.dig(:transaction, :amount).present? ||
+        currency_changed? ||
         params.dig(:transaction, :date).present? ||
         params.dig(:transaction, :nature).present?
     end
