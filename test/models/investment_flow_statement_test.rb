@@ -14,7 +14,9 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
   end
 
   test "period totals aggregate contributions and withdrawals in one query" do
-    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    # A completed month, so none of the flows below is future-dated.
+    month = Date.current.prev_month
+    period = Period.custom(start_date: month.beginning_of_month, end_date: month.end_of_month)
 
     @account.share_with!(users(:new_email), permission: "read_only", include_in_finances: true)
     @account.share_with!(users(:intro_user), permission: "read_only", include_in_finances: true)
