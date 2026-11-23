@@ -827,22 +827,71 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h3", text: I18n.t("reports.empty_state.title")
   end
 
-  test "index with budget performance for current month" do
-    # Create a budget for current month
+  test "index shows the share of this month's allocation already spent" do
     budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
     category = @family.categories.expenses.first
+    budget.budget_categories.find_by!(category: category).update!(budgeted_spending: 500)
+    budget.current_user = @user
+    expected = (budget.actual_spending / budget.allocated_spending * 100).round(1)
 
-    # Fail fast if test setup is incomplete
-    assert_not_nil category, "Test setup failed: no expense category found for family"
-    assert_not_nil budget, "Test setup failed: budget could not be created or found"
-
-    # Find or create budget category to avoid duplicate errors
-    budget_category = budget.budget_categories.find_or_initialize_by(category: category)
-    budget_category.budgeted_spending = Money.new(50000, @family.currency)
-    budget_category.save!
+    # A category created after the budget has no line in it yet: it counts as
+    # nothing allocated.
+    @family.categories.create!(name: "Added after the budget", color: "#123456")
 
     get reports_path(period_type: :monthly)
+
     assert_response :ok
+    assert_select "p", text: "#{expected}%"
+  end
+
+  test "the share of the household budget spent counts only the accounts the member can see" do
+    member = users(:family_member)
+    category = @family.categories.expenses.first
+    create_transaction(account: accounts(:connected), category: category, amount: 300)
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
+    budget.budget_categories.find_by!(category: category).update!(budgeted_spending: 500)
+    percent_used = ->(viewer) do
+      seen = Budget.find(budget.id).tap { |b| b.current_user = viewer }
+      (seen.actual_spending / seen.allocated_spending * 100).round(1)
+    end
+    expected = percent_used.call(member)
+    assert_not_equal expected, percent_used.call(nil), "setup: the member must see less spending than the family"
+
+    sign_in member
+    get reports_path(period_type: :monthly)
+
+    assert_response :ok
+    assert_select "p", text: "#{expected}%"
+  end
+
+  test "index shows nothing used when this month has no budget" do
+    @family.budgets.destroy_all
+
+    get reports_path(period_type: :monthly)
+
+    assert_response :ok
+    assert_select "p", text: "0%"
+    assert_select "p", text: I18n.t("reports.summary.of_budget_used")
+  end
+
+  # Opening Reports must not change the data its cache version is drawn from:
+  # a body that bootstraps this month's budget is stale as soon as it is built.
+  test "building this month's report creates no budget or budget line" do
+    @family.categories.create!(name: "Not budgeted yet", color: "#123456")
+
+    assert_no_difference [ "Budget.count", "BudgetCategory.count" ] do
+      get reports_path(period_type: :monthly)
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :monthly })
+    end
+  end
+
+  test "this month's body warmed twice is built once" do
+    @family.categories.create!(name: "Not budgeted yet", color: "#123456")
+
+    with_memory_cache do
+      assert ReportsController.warm_body_cache(user: @user, query: { period_type: :monthly })
+      assert_not ReportsController.warm_body_cache(user: @user, query: { period_type: :monthly }), "already warm"
+    end
   end
 
   test "index calculates summary metrics correctly" do

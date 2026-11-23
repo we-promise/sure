@@ -68,8 +68,7 @@ class Budget < ApplicationRecord
 
       Budget.transaction do
         budget_start, budget_end = period_for(start_date, family: family)
-
-        owner = (household || !family.personal_budgets?) ? nil : user
+        owner = owner_for(family, user: user, household: household)
 
         budget = Budget.find_or_create_by!(
           family: family,
@@ -89,7 +88,19 @@ class Budget < ApplicationRecord
       end
     end
 
+    # The budget find_or_bootstrap would return, if it already exists, read
+    # without writing a budget, budget line or rollover: for pages that only
+    # read one, like Reports.
+    def find_existing(family, start_date:, user: nil)
+      budget_start, budget_end = period_for(start_date, family: family)
+      family.budgets.find_by(start_date: budget_start, end_date: budget_end, user: owner_for(family, user: user, household: false))
+    end
+
     private
+      def owner_for(family, user:, household:)
+        (household || !family.personal_budgets?) ? nil : user
+      end
+
       def oldest_valid_budget_date(family)
         two_years_ago = 2.years.ago.beginning_of_month
         oldest_entry_date = family.oldest_entry_date.beginning_of_month

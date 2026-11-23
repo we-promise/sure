@@ -101,6 +101,28 @@ class PersonalBudgetTest < ActiveSupport::TestCase
     assert_nil BudgetCategory.find_by(id: budget_category.id)
   end
 
+  test "find_existing returns the budget find_or_bootstrap resolves, without writing" do
+    @family.update!(personal_budgets: false)
+    shared = Budget.find_or_bootstrap(@family, start_date: @date, user: @user1)
+    @family.categories.create!(name: "Not budgeted yet", color: "#123456")
+
+    assert_no_difference [ "Budget.count", "BudgetCategory.count" ] do
+      assert_equal shared, Budget.find_existing(@family, start_date: @date + 3.days, user: @user2)
+    end
+
+    @family.update!(personal_budgets: true)
+    personal = Budget.find_or_bootstrap(@family, start_date: @date, user: @user1)
+
+    assert_equal personal, Budget.find_existing(@family, start_date: @date, user: @user1)
+    assert_nil Budget.find_existing(@family, start_date: @date, user: @user2)
+  end
+
+  test "find_existing returns nil and creates nothing for a month without a budget" do
+    assert_no_difference [ "Budget.count", "BudgetCategory.count" ] do
+      assert_nil Budget.find_existing(@family, start_date: @date, user: @user1)
+    end
+  end
+
   test "household and personal budgets coexist when household: true is explicitly requested" do
     @family.update!(personal_budgets: true)
 
