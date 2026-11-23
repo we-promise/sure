@@ -501,6 +501,7 @@ class Import < ApplicationRecord
     FAMILY_CONFIG_TYPES.include?(type)
   end
 
+  # The viewable_by scope's rule for a single import.
   def viewable_by?(user)
     user.present? && self.class.viewable_by(user).exists?(id)
   end
