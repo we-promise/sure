@@ -6,6 +6,8 @@ class Provider::ScalableCapital::Snapshot
   ROUNDING_TOLERANCE = 0.01.to_d
   INFLOWS = %w[INTEREST DISTRIBUTION DIVIDEND TAX_RETURN DEPOSIT TRANSFER_IN CASH_TRANSFER_IN].freeze
   OUTFLOWS = %w[FEE TAX WITHDRAWAL TRANSFER_OUT CASH_TRANSFER_OUT].freeze
+  TRADE_TYPES = %w[BUY SELL SAVINGS_PLAN].freeze
+  SECURITY_TRANSFER_TYPES = %w[TRANSFER_IN TRANSFER_OUT].freeze
   ISIN_PATTERN = /\A[A-Z]{2}[A-Z0-9]{10}\z/
 
   attr_reader :broker_account_id, :savings_id, :skipped, :through
@@ -31,22 +33,22 @@ class Provider::ScalableCapital::Snapshot
   private
 
     def brokerage(overview)
-      valuation = broker_result(overview)
-      timestamp = timestamp(valuation.dig("timestamps", "valuation_timestamp_utc"))
-      raise invalid unless timestamp && timestamp.between?(7.days.ago, 5.minutes.from_now)
+      overview_data = broker_result(overview)
+      reject_crypto! if decimal(overview_data.dig("valuation", "crypto"))&.nonzero?
 
-      holdings_value = decimal(valuation.dig("valuation", "securities"))
       cash = decimal(broker_result(@client.cash(@item.portfolio_id))["cash_balance"])
-      raise invalid unless holdings_value && cash
-      reject_crypto! if decimal(valuation.dig("valuation", "crypto"))&.nonzero?
+      raise invalid unless cash
 
       inventory = broker_result(@client.holdings(@item.portfolio_id))
+      inventory_date = Time.current.in_time_zone(ZONE).to_date
       positions = positions(inventory)
-      raise invalid if positions.empty? && holdings_value.nonzero?
+      # The overview's valuation can refer to an older inventory. Use the
+      # holdings observation for both the balance and the position snapshots.
+      holdings_value = positions.sum { |position| position.fetch(:amount) }
 
       trades, cash_events = history(:brokerage, @item.broker_synced_through).partition { |row| row.key?(:isin) }
       [
-        { kind: :brokerage, date: timestamp.to_date, balance: holdings_value, cash: 0, positions: positions, entries: trades },
+        { kind: :brokerage, date: inventory_date, balance: holdings_value, cash: 0, positions: positions, entries: trades },
         { kind: :cash, date: local_today, balance: cash, cash: cash, positions: [], entries: cash_events }
       ]
     end
@@ -98,6 +100,9 @@ class Provider::ScalableCapital::Snapshot
 
           time = timestamp(row["last_event_datetime"])
           unless time
+            if event_type(row)
+              raise Provider::ScalableCapital::InvalidResponse, "Scalable returned an unreadable timestamp for a supported transaction"
+            end
             @skipped += 1
             next
           end
@@ -107,7 +112,8 @@ class Provider::ScalableCapital::Snapshot
           raise invalid unless id.is_a?(String) && id.present? && id.bytesize <= 220
           next if entries.key?(id)
 
-          entries[id] = event(row, time, id) if row["currency"] == CURRENCY
+          type = event_type(row)
+          entries[id] = event(row, time, id, type) if type
           entries[id] ||= nil
           @skipped += 1 unless entries[id]
         end
@@ -123,25 +129,34 @@ class Provider::ScalableCapital::Snapshot
       end
     end
 
-    def event(row, time, id)
+    def event_type(row)
+      return unless row["currency"] == CURRENCY
+
       case row["summary_type"]
       when "BrokerSecurityTransactionSummary"
-        return trade(row, time, id) if %w[BUY SELL SAVINGS_PLAN].include?(row["security_transaction_type"] || row["type"])
+        return :trade if TRADE_TYPES.include?(row["security_transaction_type"] || row["type"])
         return
       when "BrokerNonTradeSecurityTransactionSummary"
-        return security_transfer(row, time, id) if %w[TRANSFER_IN TRANSFER_OUT].include?(row["non_trade_security_transaction_type"])
+        return :security_transfer if SECURITY_TRANSFER_TYPES.include?(row["non_trade_security_transaction_type"])
       end
 
       type = row["cash_transaction_type"] || row["non_trade_security_transaction_type"] || row["type"]
-      amount = decimal(row["amount"])&.abs
-      inflow = INFLOWS.include?(type)
-      return unless amount&.positive? && (inflow || OUTFLOWS.include?(type))
       # Trade amounts already include their security-related fees and taxes.
       return if %w[FEE TAX].include?(type) && row["related_isin"].present?
 
+      type if INFLOWS.include?(type) || OUTFLOWS.include?(type)
+    end
+
+    def event(row, time, id, type)
+      return trade(row, time, id) if type == :trade
+      return security_transfer(row, time, id) if type == :security_transfer
+
+      amount = decimal(row["amount"])&.abs
+      return unless amount&.positive?
+
       label = { "INTEREST" => "Interest", "DIVIDEND" => "Dividend", "DISTRIBUTION" => "Dividend", "FEE" => "Fee" }[type]
       { external_id: id, date: time.to_date, name: text(row["description"]) || type.humanize,
-        amount: inflow ? -amount : amount, investment_activity_label: label }
+        amount: INFLOWS.include?(type) ? -amount : amount, investment_activity_label: label }
     end
 
     def security_transfer(row, time, id)

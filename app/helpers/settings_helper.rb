@@ -123,8 +123,11 @@ module SettingsHelper
       return { status: :off } unless @ibkr_items&.any?
       sync_based_summary(key)
     when "scalable_capital"
-      return { status: :off } unless @scalable_capital_items&.any?
-      sync_based_summary(key)
+      item = @scalable_capital_items&.first
+      return { status: :off } unless item
+      return sync_based_summary(key) if item.configured?
+
+      { status: :warn, meta: t("scalable_capital_items.disabled"), last_synced_at: @provider_sync_health&.dig(key, :last_synced_at) }
     when "trade_republic"
       return { status: :off } unless @trade_republic_items&.any?
       trade_republic_summary

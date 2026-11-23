@@ -21,7 +21,7 @@ class AccountsController < ApplicationController
       .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
       .joins(:account_providers).where(account_providers: { provider_type: "FinancekitAccountLineage" })
       .distinct.with_attached_logo.includes(:accountable, account_providers: :provider).order(:name)
-    @scalable_capital_accounts = family.accounts.accessible_by(Current.user).visible
+    @scalable_capital_accounts = family.accounts.accessible_by(Current.user).historical
       .joins(:account_providers).where(account_providers: { provider_type: "ScalableCapitalAccount" })
       .with_attached_logo.includes(:accountable, account_providers: :provider).order(:name)
     @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:plaid_accounts))
@@ -590,7 +590,7 @@ class AccountsController < ApplicationController
         @onchain_wallet_items
       ].flatten.compact
 
-      accounts = @manual_accounts.to_a + @financekit_accounts.to_a
+      accounts = @manual_accounts.to_a + @financekit_accounts.to_a + @scalable_capital_accounts.to_a
       items.each do |item|
         next unless item.respond_to?(:accounts)
         accounts.concat(item.accounts)

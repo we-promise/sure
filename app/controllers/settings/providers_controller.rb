@@ -486,6 +486,7 @@ class Settings::ProvidersController < ApplicationController
           partial: panel[:partial],
           auto_open_param: panel[:auto_open],
           maturity: Provider::Metadata.for(panel[:key])[:maturity],
+          sync_supported: panel[:key] != "scalable_capital" || ScalableCapitalItem.configured_family_id == Current.family.id,
           summary: view_context.provider_summary(panel[:key])
         }
       end

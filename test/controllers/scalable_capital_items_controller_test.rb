@@ -47,6 +47,42 @@ class ScalableCapitalItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/valid Scalable account IDs/, flash[:alert])
   end
 
+  test "accounts renders a linked Scalable account and lets its owner enable it again" do
+    item = @admin.family.scalable_capital_items.create!(portfolio_id: "portfolio", owner: @admin)
+    account = item.scalable_capital_accounts.create!(kind: :brokerage)
+      .create_linked_account!(balance: 125, cash_balance: 0)
+    row = "#scalable-capital-accounts turbo-frame#account_#{account.id}"
+
+    get accounts_path
+    assert_response :success
+    assert_select row, text: /#{Regexp.escape(account.name)}/
+
+    patch toggle_active_account_path(account)
+    follow_redirect!
+    assert_predicate account.reload, :disabled?
+    assert_select "#{row} button", text: I18n.t("accounts.account.enable")
+
+    patch toggle_active_account_path(account)
+    follow_redirect!
+    assert_predicate account.reload, :active?
+    assert_select row, count: 1
+  end
+
+  test "bank sync warns and hides refresh when an existing connection loses CLI configuration" do
+    item = @admin.family.scalable_capital_items.create!(portfolio_id: "portfolio", owner: @admin)
+    item.syncs.create!(status: :completed, completed_at: 10.minutes.ago)
+    ScalableCapitalItem.stubs(:configured_family_id).returns(nil)
+    refresh = sync_provider_settings_providers_path(provider_key: "scalable_capital")
+
+    get settings_providers_path
+    assert_response :success
+    assert_select "#scalable-capital-connection" do
+      assert_select "summary", text: /#{Regexp.escape(I18n.t("settings.providers.status.warn"))}/
+      assert_select "form[action=?]", refresh, count: 0
+      assert_select "form[action=?]", scalable_capital_item_path(item), count: 1
+    end
+  end
+
   test "disconnect removes the link and preserves the account" do
     item = @admin.family.scalable_capital_items.create!(portfolio_id: "portfolio")
     source = item.scalable_capital_accounts.create!(kind: :brokerage)

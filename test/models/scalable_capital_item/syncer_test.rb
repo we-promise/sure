@@ -193,17 +193,28 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_empty @item.accounts.accessible_by(users(:family_member))
   end
 
-  test "first sync saves dated holdings and anchor and protects a later anchor" do
-    date = Date.current.yesterday
-    stub_snapshot(valuation_at: 1.day.ago)
+  test "brokerage holdings and balance use the inventory observation" do
+    date = Time.current.in_time_zone("Europe/Berlin").to_date
+    stub_snapshot(valuation_at: 1.day.ago, positions: [ position.merge("valuation" => "400") ])
     run_sync
 
     broker = @item.scalable_capital_accounts.brokerage.sole.account
+    holding = broker.holdings.where.not(account_provider_id: nil).sole
     assert_predicate broker, :has_current_anchor?
     assert_equal date, broker.current_anchor_date
-    assert_equal date, broker.holdings.where.not(account_provider_id: nil).sole.date
+    assert_equal date, holding.date
+    assert_equal 400.to_d, broker.balance
+    assert_equal broker.balance, holding.amount
+  end
 
-    stub_snapshot(valuation_at: 2.days.ago, securities_value: "0", positions: [])
+  test "an earlier inventory observation cannot overwrite a newer balance anchor" do
+    stub_snapshot
+    run_sync
+    broker = @item.scalable_capital_accounts.brokerage.sole.account
+    date = broker.current_anchor_date
+
+    travel(-1.day)
+    stub_snapshot(positions: [])
     run_sync
 
     assert_equal date, broker.reload.current_anchor_date
@@ -367,6 +378,80 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_equal 255.25.to_d, @item.scalable_capital_accounts.cash.sole.account.balance
   end
 
+  test "an in-window replay updates the original row with the same provider ID" do
+    stub_snapshot
+    run_sync
+    account = @item.scalable_capital_accounts.cash.sole.account
+    original = account.entries.find_by!(external_id: "dividend")
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_history(cash_event("dividend", "DISTRIBUTION", amount: "2.75", at: 1.hour.ago))
+    run_sync
+
+    replayed = account.entries.where(external_id: "dividend").sole
+    assert_equal original.id, replayed.id
+    assert_equal(-2.75.to_d, replayed.amount)
+  end
+
+  test "an unreadable timestamp on a supported event preserves checkpoints for a retry" do
+    stub_snapshot
+    run_sync
+    checkpoints = @item.reload.attributes.slice("broker_synced_through", "savings_synced_through")
+    account = @item.scalable_capital_accounts.cash.sole.account
+
+    travel 1.day
+    stub_snapshot
+    corrected = cash_event("corrected-deposit", "DEPOSIT", amount: "25", at: 1.hour.ago)
+    unsupported = cash_event("unsupported", "UNSUPPORTED").merge("last_event_datetime" => "invalid")
+    stub_broker_history(corrected.merge("last_event_datetime" => "invalid"), unsupported)
+    assert_raises(Provider::ScalableCapital::InvalidResponse) { run_sync }
+    assert_equal checkpoints, @item.reload.attributes.slice(*checkpoints.keys)
+    refute account.entries.exists?(external_id: "corrected-deposit")
+
+    travel 1.hour
+    stub_snapshot
+    stub_broker_history(corrected, unsupported)
+    run_sync
+
+    assert_equal(-25.to_d, account.entries.where(external_id: "corrected-deposit").sole.amount)
+    refute account.entries.exists?(external_id: "unsupported")
+    assert_equal Time.current, @item.reload.broker_synced_through
+  end
+
+  test "a savings write failure rolls back broker writes and the retry imports each entry once" do
+    stub_snapshot
+    run_sync
+    checkpoints = @item.reload.attributes.slice("broker_synced_through", "savings_synced_through")
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    savings = @item.scalable_capital_accounts.savings.sole.account
+    travel 1.day
+    deposit = cash_event("retry-deposit", "DEPOSIT", amount: "25", at: 1.hour.ago)
+
+    # This value parses as a balance, but PostgreSQL rejects its precision
+    # when the savings account is updated after the broker cash account.
+    stub_snapshot(savings_balance: "100000000000000000000")
+    @client.stubs(:cash).with("portfolio").returns(broker({ "cash_balance" => "280.25" }))
+    stub_broker_history(deposit)
+    error = assert_raises(Provider::ScalableCapital::Error) { run_sync }
+    assert_equal "Could not persist Scalable Capital data", error.message
+    assert_equal checkpoints, @item.reload.attributes.slice(*checkpoints.keys)
+    assert_equal 255.25.to_d, cash.reload.balance
+    assert_equal 50.to_d, savings.reload.balance
+    refute cash.entries.exists?(external_id: "retry-deposit")
+
+    stub_snapshot(savings_balance: "55")
+    @client.stubs(:cash).with("portfolio").returns(broker({ "cash_balance" => "280.25" }))
+    stub_broker_history(deposit)
+    run_sync
+
+    assert_equal 280.25.to_d, cash.reload.balance
+    assert_equal 55.to_d, savings.reload.balance
+    assert_equal(-25.to_d, cash.entries.where(external_id: "retry-deposit").sole.amount)
+    assert_equal Time.current, @item.reload.broker_synced_through
+    assert_equal Time.current, @item.savings_synced_through
+  end
+
   test "closing a holding writes a zero snapshot and preserves historical quantity" do
     stub_snapshot
     run_sync
@@ -423,8 +508,11 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     end
 
     def stub_broker_trades(*events)
-      rows = events.map { |event| event.merge("summary_type" => "BrokerSecurityTransactionSummary") }
-      @client.stubs(:broker_transactions).with("portfolio", all_of(has_key(:since), has_key(:before))).yields(broker({}), rows)
+      stub_broker_history(*events.map { |event| event.merge("summary_type" => "BrokerSecurityTransactionSummary") })
+    end
+
+    def stub_broker_history(*events)
+      @client.stubs(:broker_transactions).with("portfolio", all_of(has_key(:since), has_key(:before))).yields(broker({}), events)
     end
 
     def broker_events
