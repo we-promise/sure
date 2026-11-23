@@ -101,4 +101,18 @@ class Assistant::HistoryTrimmerTest < ActiveSupport::TestCase
 
     assert_equal [ messages.last ], result
   end
+
+  test "keeps the question a retried tool turn answers, however large its results" do
+    messages = [
+      { role: "user", content: "old message" },
+      { role: "assistant", content: "old answer" },
+      { role: "user", content: "Tag my groceries" },
+      { role: "assistant", content: "", tool_calls: [ { id: "call_1", type: "function", function: { name: "get_tags", arguments: "{}" } } ] },
+      { role: "tool", tool_call_id: "call_1", content: "tag " * 400 }
+    ]
+
+    result = Assistant::HistoryTrimmer.new(messages, max_tokens: 50).call
+
+    assert_equal messages.last(3), result
+  end
 end

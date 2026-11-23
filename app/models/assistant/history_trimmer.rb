@@ -7,14 +7,17 @@ class Assistant::HistoryTrimmer
   def call
     return [] if @messages.empty? || @max_tokens <= 0
 
-    kept = []
-    tokens = 0
+    groups = group_tool_pairs(@messages)
+    # The question being answered and everything after it always survive:
+    # dropping them would discard the very message the model is asked to
+    # answer, or leave a retried turn's tool results without it.
+    current = groups.rindex { |group| group.first[:role].to_s == "user" } || groups.size - 1
+    kept = groups[current..].flatten(1)
+    tokens = Assistant::TokenEstimator.estimate(kept)
 
-    group_tool_pairs(@messages).reverse_each.with_index do |group, index|
+    groups[0...current].reverse_each do |group|
       group_tokens = Assistant::TokenEstimator.estimate(group)
-      # The newest group always survives: dropping it would discard the very
-      # message the model is being asked to answer.
-      break if index.positive? && tokens + group_tokens > @max_tokens
+      break if tokens + group_tokens > @max_tokens
 
       kept.unshift(*group)
       tokens += group_tokens
