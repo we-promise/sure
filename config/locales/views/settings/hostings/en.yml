@@ -339,6 +339,9 @@ en:
         invalid_onboarding_state: Invalid onboarding state
         invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g., 02:30).
         invalid_llm_budget: "%{field} must be a whole number ≥ %{minimum}."
+        invalid_page_cache_days: "Days to keep cached pages must be a whole number from %{minimum} to %{maximum}."
+        invalid_page_cache_max_mb: "Max cache size must be a whole number of megabytes from %{minimum} to %{maximum}."
+        invalid_page_cache_cooldown_minutes: "Minutes between rebuilds must be a whole number from %{minimum} to %{maximum}."
         invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
         anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
         invalid_jev_endpoint: Jev Endpoint must be an http or https URL. Use http only for a server on your own network.
@@ -369,6 +372,12 @@ en:
         market_data_sync_description: When enabled, security prices are imported automatically once a day (Monday-Friday) at the specified time.
         market_data_sync_time_label: Market data import time (HH:MM)
         market_data_sync_time_description: Specify the time of day when the daily security price import should run — e.g. shortly after your primary exchange closes.
+        page_cache_days_label: Keep cached pages for (days)
+        page_cache_days_description: "Reports are built ahead of time after each sync and kept for this many days if nobody opens them. Default: %{default_days}. PAGE_CACHE_DAYS overrides this field."
+        page_cache_cooldown_minutes_label: Rebuild cached pages at most every (minutes)
+        page_cache_cooldown_minutes_description: "When the data behind a cached page changes, the page you had is still shown while a new one is built in the background, at most once in this many minutes. Refresh on the page rebuilds it straight away. 0 rebuilds after every change. Default: %{default_minutes}. PAGE_CACHE_COOLDOWN_MINUTES overrides this field."
+        page_cache_max_mb_label: Max cache size (MB)
+        page_cache_max_mb_description: "The most cached pages may take together. When a new page would go over it, the pages opened longest ago are dropped first; a page bigger than the whole limit is shown but not kept. Using %{used} of %{limit}. Default: %{default_mb}. PAGE_CACHE_MAX_MB overrides this field."
         include_pending_label: Include pending transactions
         include_pending_description: When enabled, pending (uncleared) transactions will be imported and automatically reconciled when they post. Disable if your bank provides unreliable pending data.
         env_configured_message: This setting is disabled because a provider environment variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING) is set. Remove it to enable this setting.
