@@ -76,7 +76,6 @@ class RecurringTransaction
           boundary = current.present? && !current.historical? ? current_cycle_start - 1 : current_cycle_start
           through = [ through, boundary ].min
         end
-        from = [ from, history_floor(through, history_cycles) ].max if history_cycles.present?
       end
 
       count = upsert_window(
@@ -124,16 +123,6 @@ class RecurringTransaction
         [ horizon, next_due ].compact.max
       end
 
-      # The lower bound that leaves at most `history_cycles` occurrences before
-      # `through`. Cycle length is cadence-specific, so weekly history reaches
-      # back weeks while annual history reaches back years.
-      def history_floor(through, history_cycles)
-        return through if history_cycles.blank?
-
-        cycle_days = (365.25 / series.schedule.occurrences_per_year).ceil
-        through - (cycle_days * (history_cycles + 2))
-      end
-
       def upsert_window(from, through, historical: false, limit: nil)
         return 0 if from > through
 
@@ -178,7 +167,9 @@ class RecurringTransaction
 
         series.recurring_occurrences
               .where(historical: true, expected_amount: nil)
+              .open_status
               .where(original_due_on: by_original.keys)
+              .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
               .find_each do |occurrence|
           pair = by_original[occurrence.original_due_on]
           occurrence.update_column(:expected_amount, series.amount_on(pair.due_on).abs)

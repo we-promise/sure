@@ -89,7 +89,7 @@ class RecurringTransaction
     # Historical rows are eligible here so a backdated bill can pick up the
     # payments it already had.
     def run_backfill!
-      reconcile_reference_allocations!
+      reconcile_reference_allocations!(include_historical: true)
       written = apply(
         collect_candidates(include_closed_window: true, include_historical: true),
         suggest: false
@@ -179,7 +179,7 @@ class RecurringTransaction
       # kinds of allocation can need either step, and only those are loaded: on a
       # reference-only bill, carrying a reference signal, or whose note names a
       # bill's reference. A family without a bank reference skips the scan.
-      def reconcile_reference_allocations!
+      def reconcile_reference_allocations!(include_historical: false)
         return unless reference_bills?
 
         rehomes = []
@@ -199,7 +199,7 @@ class RecurringTransaction
         # Oldest payment first, each against the cycles as the moves before it
         # left them, so a backlog fills in order instead of piling onto one cycle.
         rehomes.sort_by { |_, _, entry| [ entry.date, entry.id ] }.each do |allocation, series, entry|
-          rehome_reference_allocation!(allocation, series, entry)
+          rehome_reference_allocation!(allocation, series, entry, include_historical: include_historical)
         rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
           # The target cycle already holds this entry; leave the allocation where it is.
           next
@@ -244,9 +244,9 @@ class RecurringTransaction
         needles.map { |needle| "%#{Entry.sanitize_sql_like(needle).gsub(/\s+/, '%')}%" }
       end
 
-      def rehome_reference_allocation!(allocation, series, entry)
+      def rehome_reference_allocation!(allocation, series, entry, include_historical: false)
         current = allocation.recurring_occurrence
-        target = target_cycle(series, entry)
+        target = target_cycle(series, entry, include_historical: include_historical)
         return if target.nil? || target.id == current.id
         return unless rehome_target?(target, current, entry)
 
@@ -296,8 +296,13 @@ class RecurringTransaction
       # The reference decides which bill, not which month: of a bill's cycles the
       # payment goes to the oldest open one whose window covers it, and only when
       # none does, to the nearest by due date.
-      def target_cycle(series, entry)
-        pick_cycle(series.recurring_occurrences.reload.select { |occurrence| occurrence.scheduled? || occurrence.paid? }, entry)
+      def target_cycle(series, entry, include_historical: false)
+        cycles = series.recurring_occurrences.reload.select do |occurrence|
+          (occurrence.scheduled? || occurrence.paid?) &&
+            (include_historical || !occurrence.historical?)
+        end
+
+        pick_cycle(cycles, entry)
       end
 
       # An open cycle a late payment can still be for: the entry is inside its

@@ -383,7 +383,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       )
 
       get bills_url
-      assert_no_match I18n.t("bills.detail.no_payment"), response.body
+      current = bill.current_occurrence
+      assert current, "premise: the August 9 cycle is the bill's current cycle"
+      assert_includes response.body, recurring_occurrence_path(current)
+      assert_not_includes response.body, recurring_occurrence_path(historical)
 
       get_bill_history(bill)
       assert_response :success
