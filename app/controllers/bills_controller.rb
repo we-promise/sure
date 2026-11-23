@@ -475,15 +475,9 @@ class BillsController < ApplicationController
     # payments alike). Inactive series ride along so their leftover open
     # occurrences can render as Dormant instead of haunting Past Due.
     def payable_series_ids
-      debt_accounts = Account.where(accountable_type: %w[CreditCard Loan]).select(:id)
-
       Current.family.recurring_transactions
              .where(status: %w[active inactive])
-             .where("amount > 0")
-             .merge(
-               RecurringTransaction.where(destination_account_id: nil)
-                                   .or(RecurringTransaction.where(destination_account_id: debt_accounts))
-             )
+             .obligations(%w[CreditCard Loan])
              .accessible_by(Current.user)
              .select(:id)
     end
@@ -646,9 +640,9 @@ class BillsController < ApplicationController
     end
 
     # Only occurrences the overview lists: open rows and this month's paid ones.
-    # Ending a bill leaves its scheduled occurrences behind and the matcher
-    # still scores them, and skipping closes an occurrence but keeps its
-    # suggestion, so neither may ask about a row the page doesn't show.
+    # Ending a bill leaves its scheduled occurrences and any earlier suggestion on
+    # them, and skipping closes an occurrence but keeps its suggestion, so neither
+    # may ask about a row the page doesn't show.
     def suggested_allocations(listed)
       RecurringAllocation
         .suggested
