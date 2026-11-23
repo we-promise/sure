@@ -22,7 +22,7 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
 
   test "show totals same-currency income by magnitude" do
     @family.update!(currency: "GBP")
-    create_transaction(amount: -10, currency: "GBP")
+    create_transaction(amount: -10, currency: "gbp")
     create_transaction(amount: -15, currency: "GBP")
 
     get transactions_categorize_url
@@ -39,7 +39,7 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     usd = create_transaction(amount: 10, currency: "USD", date: second_date)
     create_transaction(amount: 10, currency: "EUR", date: first_date)
     create_transaction(amount: 10, currency: "EUR", date: second_date)
-    create_transaction(amount: 1000, currency: "HUF", date: first_date)
+    create_transaction(amount: 1000, currency: "huf", date: first_date)
 
     get transactions_categorize_url
     assert_response :success

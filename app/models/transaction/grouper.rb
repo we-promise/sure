@@ -9,13 +9,15 @@ class Transaction::Grouper
 
   # A missing transaction-date rate makes the whole group total unavailable.
   def self.total_in(entries, currency:)
-    native, foreign = entries.partition { |entry| entry.currency == currency }
+    currency = Money::Currency.new(currency).iso_code
+    native, foreign = entries.partition { |entry| entry.currency.upcase == currency }
     total = Money.new(native.sum { |entry| entry.amount.abs }, currency)
-    rates = ExchangeRate.where(to_currency: currency, from_currency: foreign.pluck(:currency).uniq, date: foreign.pluck(:date).uniq)
+    foreign_currencies = foreign.map { |entry| entry.currency.upcase }.uniq
+    rates = ExchangeRate.where(to_currency: currency, from_currency: foreign_currencies, date: foreign.pluck(:date).uniq)
                         .index_by { |rate| [ rate.from_currency, rate.date ] }
 
     foreign.sum(total) do |entry|
-      rate = rates.fetch([ entry.currency, entry.date ]) { return nil }
+      rate = rates.fetch([ entry.currency.upcase, entry.date ]) { return nil }
       entry.amount_money.exchange_to(currency, custom_rate: rate.rate).abs
     end
   end
