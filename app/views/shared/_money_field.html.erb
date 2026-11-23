@@ -15,6 +15,7 @@
 <div class="form-field group/money-field <%= options[:container_class] %>"
      data-controller="money-field"
      data-money-field-separator-value="<%= currency.separator %>"
+     data-money-field-delimiter-value="<%= currency.delimiter %>"
      data-money-field-separator-currency-value="<%= currency.iso_code %>"
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
      <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>
