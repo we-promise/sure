@@ -125,6 +125,7 @@ fr:
         unknown: Inconnu
       repayment_progress:
         estimated_interest: Les intérêts sont estimés à partir de l'échéancier.
+        incomplete_data: 'Certains paiements n''ont pas pu être convertis dans la devise du prêt ; ces totaux peuvent donc être incomplets.'
         instalment: Échéance %{number} · %{date}
         insurance: Assurance
         interest: Intérêts

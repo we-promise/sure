@@ -175,6 +175,35 @@ class Loan::PaidBreakdownTest < ActiveSupport::TestCase
     assert_nil account.loan.paid_breakdown(as_of: PAYMENT_DATE)
   end
 
+  test "marks the breakdown incomplete when a payment cannot be converted" do
+    account = create_loan_account(initial_balance: 12_000, term_months: 12, entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 },
+      { type: "transaction", date: PAYMENT_DATE, amount: -1_066.19 }
+    ])
+    enable_preview_features_for_family!(account.family)
+    account.entries.create!(name: "EUR payment", date: PAYMENT_DATE, amount: -100,
+                            currency: "EUR", entryable: Transaction.new)
+    account.reload
+
+    paid = account.loan.paid_breakdown(as_of: PAYMENT_DATE)
+
+    assert paid.incomplete?
+    assert_not paid.estimated_interest?
+    assert_equal Money.new(946.19, "USD"), paid.principal
+  end
+
+  test "is complete when every entry converts" do
+    account = create_loan_account(initial_balance: 12_000, term_months: 12, entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 },
+      { type: "transaction", date: PAYMENT_DATE, amount: -1_066.19 }
+    ])
+    enable_preview_features_for_family!(account.family)
+
+    paid = account.loan.paid_breakdown(as_of: PAYMENT_DATE)
+
+    assert_not paid.incomplete?
+  end
+
   test "the paid breakdown does not write missing-rate diagnostics" do
     account = create_loan_account(initial_balance: 12_000, term_months: 12, entries: [
       { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }

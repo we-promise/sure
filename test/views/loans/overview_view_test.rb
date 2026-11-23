@@ -80,6 +80,28 @@ class LoanOverviewViewTest < ActionView::TestCase
     end
   end
 
+  test "the overview marks the paid card incomplete when a payment cannot be converted" do
+    @account.entries.create!(
+      date: Date.new(2026, 1, 15), name: "Opening balance", amount: 12_000, currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+    @account.entries.create!(
+      date: Date.new(2026, 2, 15), name: "Loan payment", amount: -1_000, currency: "USD",
+      entryable: Transaction.new
+    )
+    @account.entries.create!(
+      date: Date.new(2026, 2, 15), name: "EUR payment", amount: -100, currency: "EUR",
+      entryable: Transaction.new
+    )
+    @account.update_column(:balance, 11_000)
+
+    render partial: "loans/tabs/overview", locals: { account: @account, as_of: Date.new(2026, 4, 20) }
+
+    assert_select "section", text: /Paid so far/ do |cards|
+      assert_includes cards.first.text, "could not be converted"
+    end
+  end
+
   test "the overview hides the paid card when nothing has been paid" do
     @account.entries.create!(
       date: Date.new(2026, 1, 15), name: "Opening balance", amount: 12_000, currency: "USD",

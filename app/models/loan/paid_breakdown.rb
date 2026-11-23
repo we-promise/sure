@@ -45,6 +45,14 @@ class Loan
       principal_payments.nil?
     end
 
+    # True when the replay dropped entries it could not convert into the
+    # account's currency, so the totals understate what was paid. The balance
+    # calculation drops the same entries, keeping the two figures consistent.
+    def incomplete?
+      principal_payments
+      @incomplete == true
+    end
+
     private
       attr_reader :loan, :as_of
 
@@ -70,10 +78,15 @@ class Loan
 
         # This replay runs while the page renders. Suppress missing-rate
         # diagnostics here; the next sync will inspect the same data.
-        @principal_payments = Loan::PrincipalPayments.for(
-          loan,
-          entries: Balance::SyncCache.new(loan.account, report_missing_rates: false).entries
-        )
+        sync_cache = Balance::SyncCache.new(loan.account, report_missing_rates: false)
+        entries = sync_cache.entries
+        payments = Loan::PrincipalPayments.for(loan, entries: entries)
+
+        # Entries without a rate are dropped from the replay, exactly as the
+        # balance calculation drops them. Record that so the card can say the
+        # totals are incomplete rather than present them as final.
+        @incomplete = payments.present? && sync_cache.unconvertible_entry_count.positive?
+        @principal_payments = payments
       end
 
       # The latest recorded balance on or before `as_of`. Today may not be

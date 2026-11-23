@@ -94,6 +94,10 @@
           <% end %>
         </dl>
 
+        <% if paid.incomplete? %>
+          <p class="text-xs text-secondary mt-2"><%= t(".incomplete_data") %></p>
+        <% end %>
+
         <% if paid.estimated_interest? %>
           <p class="text-xs text-secondary mt-2"><%= t(".estimated_interest") %></p>
         <% end %>

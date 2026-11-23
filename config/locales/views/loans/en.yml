@@ -108,6 +108,7 @@ en:
         variable_rate_notice: This loan's rate changes over time. These figures apply the rate changes already recorded; a change that has not been recorded yet will shift them.
       repayment_progress:
         estimated_interest: Interest is estimated from the schedule.
+        incomplete_data: Some payments could not be converted to the loan's currency, so these totals may be incomplete.
         instalment: Payment %{number} · %{date}
         insurance: Insurance
         interest: Interest
