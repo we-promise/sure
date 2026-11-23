@@ -22,11 +22,12 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index keeps active filters in the search form until the filter menu loads" do
-    get transactions_url(q: { categories: [ "Food & Drink" ], start_date: "2026-10-01" })
+    get transactions_url(q: { categories: [ "Food & Drink", "Income" ], start_date: "2026-10-01" })
 
     assert_response :success
     assert_select "#transactions-search turbo-frame#transaction-filters" do
       assert_select "input[type=hidden][name='q[categories][]'][value=?]", "Food & Drink", count: 1
+      assert_select "input[type=hidden][name='q[categories][]'][value=?]", "Income", count: 1
       assert_select "input[type=hidden][name='q[start_date]'][value=?]", "2026-10-01", count: 1
     end
   end
