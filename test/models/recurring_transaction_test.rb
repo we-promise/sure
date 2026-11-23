@@ -482,6 +482,21 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_includes series.errors[:started_on], "cannot be later than the next due date"
   end
 
+  test "started_on validates against the new schedule during a frequency edit" do
+    travel_to Date.new(2026, 11, 10) do
+      series = @family.recurring_transactions.create!(
+        account: @account, name: "Dated", amount: 80, currency: "USD",
+        expected_day_of_month: 5, anchor_date: Date.new(2026, 11, 5),
+        last_occurrence_date: Date.new(2026, 10, 5), next_expected_date: Date.new(2026, 11, 5),
+        status: "active", manual: true
+      )
+      series.expected_day_of_month = 25
+      series.started_on = Date.new(2026, 11, 20)
+
+      assert series.valid?, series.errors.full_messages.to_sentence
+    end
+  end
+
   test "a stale next expected date does not reject a persisted start date" do
     series = @family.recurring_transactions.create!(
       account: @account, name: "Dated", amount: 80, currency: "USD",

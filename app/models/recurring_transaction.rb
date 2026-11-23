@@ -492,6 +492,10 @@ class RecurringTransaction < ApplicationRecord
   # the current schedule, and a finite plan counts its occurrences from the
   # anchor, so a date before that anchor would either create nothing or change
   # what the plan means.
+  def schedule_shape_changing?
+    rules_rewritten || SCHEDULE_SHAPING_ATTRIBUTES.any? { |attribute| will_save_change_to_attribute?(attribute) }
+  end
+
   def started_on_within_schedule
     return if started_on.blank?
     return if expected_day_of_month.blank?
@@ -503,6 +507,8 @@ class RecurringTransaction < ApplicationRecord
     boundary =
       if new_record?
         next_expected_date
+      elsif schedule_shape_changing?
+        schedule.first_occurrence_after(Date.current)
       else
         next_open_occurrence&.effective_due_on || schedule.first_occurrence_after(Date.current)
       end
