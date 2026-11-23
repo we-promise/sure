@@ -141,11 +141,10 @@ class Rule::Runner
 
         counts = run_counts(result, queued: matched_ids.size, rule: rule)
         if async?(result)
-          # An AI job may already have added its changes via RuleRun#ai_handled!,
-          # so add to the stored count (with_lock reloads it) rather than overwrite it.
-          rule_run.with_lock do
-            rule_run.update!(**counts, transactions_modified: [ rule_run.transactions_modified + counts[:transactions_modified], matched_ids.size ].min)
-          end
+          # An AI job may already have reported via RuleRun#ai_handled!, so the run's own
+          # changes are added to the stored count in one statement rather than written over it.
+          rule_run.update!(**counts.except(:transactions_modified))
+          RuleRun.where(id: rule_run.id).update_all([ "transactions_modified = LEAST(transactions_modified + ?, transactions_queued)", counts[:transactions_modified] ])
         else
           rule_run.update!(**counts)
         end

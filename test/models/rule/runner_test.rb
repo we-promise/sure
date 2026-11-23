@@ -296,7 +296,8 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     rule.actions.create!(action_type: "auto_categorize")
 
     runner = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual")
-    run = runner.run.first
+    # The AI action counted its job in the database (RuleRun#await_ai!).
+    run = runner.run.first.reload
 
     # Whole Foods already carries the tag, so only the other match changes now.
     assert_equal 1, runner.changed_now_count
@@ -402,7 +403,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     rule = create_rule("Two actions and AI", "o", name: "Renamed", tags: [ @tag_a ])
     rule.actions.create!(action_type: "auto_categorize")
 
-    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first
+    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first.reload
 
     assert_equal "pending", run.status
     assert_equal 2, run.transactions_modified
