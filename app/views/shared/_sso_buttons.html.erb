@@ -3,21 +3,18 @@
 <% if providers.any? %>
   <div class="space-y-3">
     <% providers.each do |provider| %>
-      <% provider_id = provider[:id].to_s %>
-      <% provider_name = provider[:name].to_s %>
-      <% is_google = provider_id == "google" || provider[:strategy].to_s == "google_oauth2" %>
-      <% default_label = is_google ? t("sessions.new.google_auth_connect") : t("sessions.new.#{provider_id}", default: provider_name.titleize) %>
+      <% display = AuthConfig.sso_provider_display(provider) %>
 
       <%# Google keeps its official multi-color mark and wording via the custom icon. %>
       <%= render DS::Button.new(
-            href: "/auth/#{provider_name}",
+            href: "/auth/#{display[:name]}",
             method: :post,
             variant: :outline,
             size: :md,
             full_width: true,
-            icon: is_google ? "google-icon" : provider[:icon].presence,
-            icon_custom: is_google,
-            text: provider[:label].presence || default_label,
+            icon: display[:is_google] ? "google-icon" : provider[:icon].presence,
+            icon_custom: display[:is_google],
+            text: display[:label],
             class: "gap-2",
             form: { data: { turbo: false } }
           ) %>

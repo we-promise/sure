@@ -100,5 +100,21 @@ class AuthConfig
         Rails.configuration.x.auth.sso_providers || []
       end
     end
+
+    # Display fields shared by the web buttons and the mobile provider list.
+    def sso_provider_display(provider)
+      id = provider[:id].to_s
+      name = provider[:name].to_s
+      is_google = id == "google" || provider[:strategy].to_s == "google_oauth2"
+      default_label = if is_google
+        I18n.t("sessions.new.google_auth_connect")
+      elsif id.present?
+        I18n.t("sessions.new.#{id}", default: name.titleize)
+      else
+        name.titleize
+      end
+
+      { name: name, is_google: is_google, label: provider[:label].presence || default_label }
+    end
   end
 end
