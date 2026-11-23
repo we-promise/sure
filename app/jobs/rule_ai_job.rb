@@ -1,24 +1,28 @@
 # Base for the AI jobs a rule run queues, one per batch of transactions.
 #
 # A failure a later attempt can get past (a timeout, a 429, a 5xx, an
-# unreachable server, a deadlock) is retried a few times. Anything else (a
-# rejected key, any other 4xx, no provider or categories, a response that
-# doesn't parse) fails the same way on every attempt, so the batch ends there.
-# Either way the run hears once, when the job is done for good. A retry sends
-# only what the earlier attempt left: applied transactions are locked, and the
-# enrichers skip locked ones.
+# unreachable server, a deadlock, a lost database connection) is retried a few
+# times. Anything else (a rejected key, any other 4xx, no provider or
+# categories, a response that doesn't parse) fails the same way on every
+# attempt, so the batch ends there. Either way the run hears once, when the job
+# is done for good. A retry sends only what the earlier attempt left: applied
+# transactions are locked, and the enrichers skip locked ones.
 class RuleAiJob < ApplicationJob
   queue_as :ai_low_priority
-  # The budget below is the only one; Sidekiq must not start its own chain.
-  sidekiq_options retry: false
+  # The budget below handles every failure perform raises. Sidekiq's few
+  # retries only catch what escapes it: the run's row failing to settle when
+  # the job gives up, or a retry that can't be queued. They reuse the job_id,
+  # so the run still counts the job once.
+  sidekiq_options retry: 3
 
   ATTEMPTS = 5
   RETRIED = [ Ai::Error::RateLimited, Ai::Error::Timeout, Ai::Error::Upstream, Ai::Error::Unreachable ].freeze
+  TRANSIENT_DB = [ ActiveRecord::Deadlocked, ActiveRecord::ConnectionNotEstablished, ActiveRecord::ConnectionFailed ].freeze
   DISCARDED = [ Ai::Error::Unauthorized, Ai::Error::NoCredit, Ai::Error::ModelMissing, Ai::Error::ContextTooLong,
                 Ai::Error::InvalidOutput, Ai::Error::Refused, Ai::Error::Cancelled ].freeze
 
   retry_on(*RETRIED, wait: :polynomially_longer, attempts: ATTEMPTS) { |job, error| job.give_up(error) }
-  retry_on(ActiveRecord::Deadlocked, attempts: ATTEMPTS) { |job, error| job.give_up(error) }
+  retry_on(*TRANSIENT_DB, attempts: ATTEMPTS) { |job, error| job.give_up(error) }
   discard_on(*DISCARDED) { |job, error| job.give_up(error) }
 
   def perform(family, transaction_ids: [], rule_run_id: nil)
@@ -27,7 +31,7 @@ class RuleAiJob < ApplicationJob
 
     modified_count = enrich(family, transaction_ids)
     @rule_run&.complete_job!(job_id:, modified_count:)
-  rescue ActiveRecord::Deadlocked
+  rescue *TRANSIENT_DB
     raise
   rescue StandardError => error
     ai_error = ai_error_for(error)
