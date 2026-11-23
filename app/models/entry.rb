@@ -63,7 +63,9 @@ class Entry < ApplicationRecord
   RECONCILED_STATUS_CYCLE = reconciled_statuses.keys.freeze
 
   validates :date, :name, :amount, :currency, presence: true
-  validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
+  validates :date, uniqueness: { scope: [ :account_id, :entryable_type ],
+    conditions: -> { excluding_cash_anchors } },
+    if: -> { valuation? && !entryable.cash_anchor? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
   validates :external_id, uniqueness: { scope: [ :account_id, :source ] }, if: -> { external_id.present? && source.present? }
 
@@ -86,8 +88,13 @@ class Entry < ApplicationRecord
       entryable_type == "Transaction" && account&.family&.auto_generate_transaction_names?
   }
 
+  validate :position_provider_owns_trade_entry
+
+  before_destroy :prevent_managed_trade_deletion
   before_destroy :prevent_individual_child_deletion, if: :split_child?
+  before_validation :reactivate_changed_valuation
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
+  after_destroy :remove_holdings_of_last_trade, if: -> { trade? && entryable.qty.nonzero? }
 
   # Any other write of `excluded` (a user toggling it, a reconciliation) ends the
   # "excluded automatically" state, so a later booking cannot override it. This
@@ -184,6 +191,9 @@ class Entry < ApplicationRecord
       )
     SQL
   }
+
+  # Cash anchors are internal accounting baselines, not user valuations.
+  scope :excluding_cash_anchors, -> { where.not(entryable_id: Valuation.cash_anchor.select(:id)) }
 
   # The entries in `ids` and the children of any of them that was split, which
   # stand in for their excluded parent wherever money is counted.
@@ -500,9 +510,12 @@ class Entry < ApplicationRecord
   # Starting the window after the old date would seed the incremental balance
   # calculation from a balance that still includes this entry.
   #
+  # A delete normally rebuilds everything. A cash-anchored account only
+  # rebuilds from a given date, so its deleted entry still names its own.
+  #
   # @return [void]
   def sync_account_later
-    sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed?
+    sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed? && !account.accounting_start_date
     @earliest_saved_date = nil
     account.sync_later(window_start_date: sync_start_date)
 
@@ -1031,7 +1044,29 @@ class Entry < ApplicationRecord
     end
   end
 
+  def provider_managed_trade?
+    trade? && account && date && account.provider_managed_security?(entryable.security_id, date: date)
+  end
+
   private
+
+    def position_provider_owns_trade_entry
+      return unless trade? && account && date && !entryable.provider_importing
+      wallet_metadata_changed = source.in?(%w[bitcoin_wallet bitcoin_wallet_reconciliation]) && (name_changed? || notes_changed?)
+      return unless new_record? || date_changed? || amount_changed? || currency_changed? || excluded_changed? || wallet_metadata_changed
+      return unless provider_managed_trade? ||
+        (date_in_database && account.provider_managed_security?(entryable.security_id, date: date_in_database))
+
+      errors.add(:base, I18n.t("bitcoin_wallet.managed_position"))
+    end
+
+    def prevent_managed_trade_deletion
+      return if destroyed_by_association&.active_record == Account || !trade? || entryable.provider_importing
+      return unless provider_managed_trade?
+
+      errors.add(:base, I18n.t("bitcoin_wallet.managed_position"))
+      throw(:abort)
+    end
     # Works on the stored row: the loaded transaction may predate the sync
     # that wrote the mark.
     def clear_auto_excluded_pending_mark
@@ -1058,6 +1093,24 @@ class Entry < ApplicationRecord
         lock!
         yield txn
       end
+    end
+
+    # A monetary or dated edit explicitly restores a superseded total valuation.
+    def reactivate_changed_valuation
+      return unless valuation? && !entryable.cash_anchor? && (amount_changed? || date_changed?)
+
+      entryable.superseded_at = nil
+    end
+
+    # A cash-anchored account carries holdings of securities it has no
+    # quantity-changing trades for. Once a security's last such trade is gone,
+    # the rows calculated from it would be carried too, so they go from the
+    # trade's date on.
+    def remove_holdings_of_last_trade
+      return unless account.accounting_start_date
+      return if account.trades.where.not(qty: 0).exists?(security_id: entryable.security_id)
+
+      account.holdings.where(security_id: entryable.security_id, account_provider_id: nil, materialized: true, date: date..).delete_all
     end
 
     # Remembers the earliest date this entry had before any save that changed

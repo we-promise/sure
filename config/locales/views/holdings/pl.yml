@@ -98,6 +98,8 @@ pl:
       ticker_label: Symbol ticker
       total_return_label: Łączny zwrot
       trade_history_entry: "%{qty} akcji %{security} po %{price}"
+      trade_history_transfer: "%{name}: %{qty}"
+      managed_position_note: Ta pozycja jest aktualizowana automatycznie przez połączonego dostawcę.
       truncated_history_warning: Historia cen jest dostępna dopiero od %{date}. Dla
         wcześniejszych dat brak danych od wybranego dostawcy. Może się tak zdarzyć,
         gdy aktywo zostało wprowadzone do obrotu po dacie Twojej transakcji, albo

@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "support/bitcoin_wallet_test_helper"
 
 class Api::V1::ProviderConnectionsControllerTest < ActionDispatch::IntegrationTest
+  include BitcoinWalletTestHelper
   setup do
     @user = users(:family_admin)
     @family = @user.family
@@ -59,6 +61,34 @@ class Api::V1::ProviderConnectionsControllerTest < ActionDispatch::IntegrationTe
     assert_equal failed_sync.id, mercury_connection["sync"]["latest"]["id"]
     assert_equal true, mercury_connection["sync"]["latest"]["error"]["present"]
     assert_equal "Sync failed", mercury_connection["sync"]["latest"]["error"]["message"]
+  end
+
+  test "on-chain status includes safe aggregated Bitcoin metadata" do
+    wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current)
+    wallet.bitcoin_wallet_sources.create!(kind: "bip84", receive_address: RECEIVE, extended_public_key: ZPUB)
+    wallet.bitcoin_wallet_addresses.create!(address: RECEIVE)
+    get api_v1_provider_connections_url, headers: api_headers(@api_key)
+    assert_response :success
+    connection = JSON.parse(response.body)["data"].find { |row| row["id"] == wallet.onchain_wallet_item_id }
+    assert_equal 1, connection["bitcoin_wallets"].first["address_count"]
+    assert_equal "preview", connection["bitcoin_wallets"].first["status"]
+    refute_includes response.body, ZPUB
+    refute_includes response.body, RECEIVE
+  end
+
+  test "on-chain status omits a wallet on a private account" do
+    wallet = build_bitcoin_wallet
+    member = users(:family_member)
+    refute member.accessible_accounts.exists?(wallet.account_id)
+    member_key = ApiKey.create!(user: member, name: "Member wallet status", scopes: [ "read" ],
+      display_key: "test_read_#{SecureRandom.hex(8)}", source: "web")
+
+    get api_v1_provider_connections_url, headers: api_headers(member_key)
+
+    assert_response :success
+    connection = JSON.parse(response.body)["data"].find { |row| row["id"] == wallet.onchain_wallet_item_id }
+    assert_empty connection.fetch("bitcoin_wallets")
+    refute_includes response.body, wallet.account_id
   end
 
   test "reports failed sync errors as present without exposing raw messages" do

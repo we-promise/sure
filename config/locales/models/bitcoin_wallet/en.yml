@@ -1,0 +1,24 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: tracks a Bitcoin wallet. Remove the wallet before linking another provider.
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: is linked to another provider. Bitcoin wallets can be tracked only on manual crypto accounts.
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: requires configured Active Record encryption
+  bitcoin_wallet:
+    quantity_reconciliation: Position quantity reconciliation
+    reconciliation: "Wallet adjustment"
+    managed_position: This position is managed by a provider. Disconnect it before changing its quantity.
+    movements:
+      received: "Received %{quantity} BTC"
+      sent: "Sent %{quantity} BTC"

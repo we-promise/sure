@@ -1,0 +1,24 @@
+---
+pl:
+  activerecord:
+    errors:
+      models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: śledzi portfel Bitcoin. Usuń portfel przed połączeniem innego dostawcy.
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: jest połączone z innym dostawcą. Portfele Bitcoin można śledzić tylko na ręcznych kontach kryptowalut.
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: wymaga skonfigurowanego szyfrowania Active Record
+  bitcoin_wallet:
+    quantity_reconciliation: Uzgodnienie ilości w pozycji
+    reconciliation: "Korekta portfela"
+    managed_position: Ta pozycja jest zarządzana przez dostawcę. Odłącz go przed zmianą jej ilości.
+    movements:
+      received: "Otrzymano %{quantity} BTC"
+      sent: "Wysłano %{quantity} BTC"

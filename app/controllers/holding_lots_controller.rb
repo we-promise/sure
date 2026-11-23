@@ -75,7 +75,7 @@ class HoldingLotsController < ApplicationController
         set_lot
         changed = yield
         if changed
-          strategy = account.linked? ? :reverse : :forward
+          strategy = account.balance_calculation_strategy
           Balance::Materializer.new(account, strategy: strategy, security_ids: [ @holding.security_id ]).materialize_balances
         end
         changed

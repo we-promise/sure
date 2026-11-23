@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "support/bitcoin_wallet_test_helper"
 
 class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
+  include BitcoinWalletTestHelper
 
   setup do
     @user = users(:family_admin)
@@ -11,6 +13,23 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     @investment_account = accounts(:investment)
     @read_write_api_key = nil
     @read_only_api_key = nil
+  end
+
+  test "a trade in a managed Bitcoin position cannot be deleted or have its quantity changed" do
+    wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current)
+    entry = Account::ProviderImportAdapter.new(wallet.account).import_trade(
+      security: wallet.security, quantity: 1, price: 20, amount: 20, currency: "USD",
+      date: Date.current, source: "test")
+    wallet.update!(balance_sats: 100_000_000)
+    wallet.connect!
+
+    patch api_v1_trade_url(entry.trade), params: { trade: { qty: 2 } }, headers: api_headers(read_write_api_key)
+    assert_response :unprocessable_entity
+    assert_equal 1, entry.trade.reload.qty
+
+    delete api_v1_trade_url(entry.trade), headers: api_headers(read_write_api_key)
+    assert_response :unprocessable_entity
+    assert Entry.exists?(entry.id)
   end
 
   test "create dividend with security returns 201" do

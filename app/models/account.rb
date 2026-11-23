@@ -26,6 +26,7 @@ class Account < ApplicationRecord
   has_many :holding_lots
   has_many :holding_lot_disposals
   has_many :balances, dependent: :destroy
+  has_one :bitcoin_wallet_account, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
   has_many :goal_accounts, dependent: :destroy
   has_many :goals, through: :goal_accounts
@@ -72,6 +73,7 @@ class Account < ApplicationRecord
   def reload(*)
     @scheduled_entry_flows = nil
     @current_holdings_total = nil
+    @provider = @providers = nil
     super
   end
 
@@ -846,6 +848,15 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
+    return Holding::CurrentPositions.new(self).scope if position_tracking?
+
+    # A cash-anchored account carries untraded holdings in their own currency,
+    # so take each security's latest row up to today in any currency.
+    if accounting_start_date
+      latest = holdings.through_today.select("DISTINCT ON (security_id) id").order(:security_id, date: :desc)
+      return holdings.where(id: latest).where.not(qty: 0).order(amount: :desc)
+    end
+
     if holdings.where.not(account_provider_id: nil).exists?
       closed_provider_ids = account_providers.where(provider_type: "SimplefinAccount").includes(:provider).filter_map do |link|
         link.id if link.provider.raw_holdings_payload == []
@@ -861,13 +872,23 @@ class Account < ApplicationRecord
         .where(currency: currency)
         .where.not(qty: 0)
         .where(
-          id: holdings.select("DISTINCT ON (security_id) id")
+          id: holdings.through_today.select("DISTINCT ON (security_id) id")
                       .where(currency: currency)
                       .order(:security_id, date: :desc)
         )
         .order(amount: :desc)
     end
   end
+
+  # New data needs a follow-up after a running materializer has built its cache;
+  # pending jobs may be reused only within the same completion tree.
+  def coalescible_syncs(parent_sync: nil)
+    return super unless accounting_start_date
+
+    scope = syncs.visible.pending
+    parent_sync ? scope.where(parent_id: [ nil, parent_sync.id ]) : scope
+  end
+  private :coalescible_syncs
 
   def latest_provider_holdings_snapshot_date
     holdings.where.not(account_provider_id: nil).maximum(:date)
@@ -912,6 +933,8 @@ class Account < ApplicationRecord
   # Determines if this account supports manual trade entry
   # Investment accounts always support trades; Crypto only if subtype is "exchange"
   def supports_trades?
+    return true if position_tracking?
+
     return true if investment?
     return accountable.supports_trades? if crypto? && accountable.respond_to?(:supports_trades?)
     false

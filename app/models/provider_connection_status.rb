@@ -33,14 +33,14 @@ class ProviderConnectionStatus
   ].freeze
 
   class << self
-    def for_family(family)
+    def for_family(family, viewer: nil)
       PROVIDERS.flat_map do |provider|
         relation = family.public_send(provider[:association])
         items = relation.includes(association_includes_for(relation, provider)).ordered.to_a
         sync_contexts = sync_contexts_for(provider[:type], items)
 
         items.map do |item|
-          new(provider, item, sync_contexts.fetch(item.id, {})).to_h
+          new(provider, item, sync_contexts.fetch(item.id, {}), viewer).to_h
         end
       end
     end
@@ -85,14 +85,16 @@ class ProviderConnectionStatus
       end
   end
 
-  def initialize(provider, item, sync_context = {})
+  def initialize(provider, item, sync_context = {}, viewer = nil)
     @provider = provider
     @item = item
     @sync_context = sync_context
+    @viewer = viewer
   end
 
+  # Expose safe connection counts and sync metadata without wallet keys or address lists.
   def to_h
-    {
+    payload = {
       id: item.id,
       provider: provider[:key],
       provider_type: provider[:type],
@@ -108,11 +110,13 @@ class ProviderConnectionStatus
       created_at: item.created_at,
       updated_at: item.updated_at
     }
+    payload[:bitcoin_wallets] = bitcoin_wallet_payload if provider[:key] == "onchain_wallet"
+    payload
   end
 
   private
 
-    attr_reader :provider, :item, :sync_context
+    attr_reader :provider, :item, :sync_context, :viewer
 
     def credentials_configured?
       item_boolean(:credentials_configured?)
@@ -180,10 +184,38 @@ class ProviderConnectionStatus
       0
     end
 
+    # Preload provider records without loading unbounded grouped-wallet address collections.
     def provider_account_records
       return unless item.respond_to?(provider[:accounts])
 
-      @provider_account_records ||= item.public_send(provider[:accounts]).to_a
+      @provider_account_records ||= begin
+        records = item.public_send(provider[:accounts]).to_a
+        records += visible_bitcoin_wallets if item.is_a?(OnchainWalletItem)
+        records
+      end
+    end
+
+    # Return freshness and counts for accessible wallet accounts only. Neither
+    # extended public keys nor the underlying address lists enter the status API.
+    def bitcoin_wallet_payload
+      wallets = visible_bitcoin_wallets
+      address_counts = BitcoinWalletAddress.where(bitcoin_wallet_account_id: wallets.map(&:id)).group(:bitcoin_wallet_account_id).count
+      source_counts = BitcoinWalletSource.where(bitcoin_wallet_account_id: wallets.map(&:id)).group(:bitcoin_wallet_account_id).count
+      wallets.map do |wallet|
+        {
+          account_id: wallet.account_id, provider_type: "BitcoinWalletAccount", status: wallet.status,
+          address_count: address_counts.fetch(wallet.id, 0), source_count: source_counts.fetch(wallet.id, 0),
+          last_synced_at: wallet.last_synced_at, stale: wallet.stale?, history_truncated: wallet.history_truncated?
+        }
+      end
+    end
+
+    def visible_bitcoin_wallets
+      @visible_bitcoin_wallets ||= begin
+        wallets = item.bitcoin_wallet_accounts.includes(:account_provider)
+        wallets = wallets.where(account_id: viewer.accessible_accounts.select(:id)) if viewer
+        wallets.to_a
+      end
     end
 
     def linked_provider_account?(provider_account)

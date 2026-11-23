@@ -27,6 +27,8 @@ en:
       dividend_requires_security: Security is required for dividends
       trade_requires_security: A security (ticker) is required for buy and sell trades
     trade:
+      pending: Pending
+      quantity_change: "%{qty} %{ticker}"
       scheduled: Scheduled
       scheduled_tooltip: Dated in the future — won't affect your balance until then
     header:

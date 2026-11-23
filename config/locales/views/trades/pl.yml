@@ -1,6 +1,9 @@
 ---
 pl:
   trades:
+    trade:
+      pending: Oczekująca
+      quantity_change: "%{qty} %{ticker}"
     form:
       account: Konto transferowe (opcjonalnie)
       account_prompt: Wyszukaj konto

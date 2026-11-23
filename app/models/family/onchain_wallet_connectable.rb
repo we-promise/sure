@@ -35,12 +35,24 @@ module Family::OnchainWalletConnectable
   # family, which is what makes re-linking it a duplicate. Tracked means linked,
   # not merely present: a row whose account is gone syncs nothing and displays
   # nowhere, so counting it here would refuse the address with nothing to show
-  # for it.
+  # for it. A Bitcoin wallet's addresses count from discovery on, before the
+  # wallet is connected, so connecting it later cannot track an address twice.
   def onchain_address_linked?(chain, address)
-    OnchainWalletAccount
+    legacy = OnchainWalletAccount
       .where(onchain_wallet_item: onchain_wallet_items.active)
       .for_wallet(chain, address)
       .linked
       .exists?
+    legacy || BitcoinWalletAddress.tracks?(family: self, chain: chain, address: address)
+  end
+
+  # Both address representations claim ownership under the same short lock.
+  def with_onchain_address_lock(chain, address)
+    canonical = Onchain::Chains.canonical_address(chain, address)
+    key = Digest::SHA256.digest("onchain-address:#{id}:#{chain}:#{canonical}").unpack1("q>")
+    self.class.transaction do
+      self.class.connection.execute("SELECT pg_advisory_xact_lock(#{key})")
+      yield
+    end
   end
 end

@@ -27,6 +27,8 @@ fr:
       type_sell: Vendre
       type_withdrawal: Retrait
     trade:
+      pending: En attente
+      quantity_change: "%{qty} %{ticker}"
       scheduled: Planifiée
       scheduled_tooltip: Datée dans le futur — n'affectera votre solde qu'à cette date
     header:

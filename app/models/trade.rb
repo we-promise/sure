@@ -1,5 +1,6 @@
 class Trade < ApplicationRecord
   include Entryable, Monetizable
+  attr_accessor :provider_importing
 
   monetize :price
   monetize :fee
@@ -62,6 +63,7 @@ class Trade < ApplicationRecord
   validate :exchange_rate_must_be_valid
   validate :lot_source_entry_must_be_a_lot_choice, if: -> { lot_source_entry_id_changed? && lot_source_entry_id }
   before_validation :drop_lot_source_entry, if: -> { lot_source_entry_id && !lot_source_entry_id_changed? && qty && !disposal? }
+  validate :position_provider_owns_quantity
 
   # Trade types for categorization
   def buy?
@@ -102,6 +104,16 @@ class Trade < ApplicationRecord
              date: entry.date, created_at: entry.created_at || Time.current)
       .where.not(id: lots_emptied_before_sale)
     before_sale.or(acquisitions.where(id: attribute_in_database(:lot_source_entry_id))).chronological
+  end
+
+  # Coverage corrections are adjustments rather than external asset flows.
+  def balance_adjustment?
+    extra&.dig("balance_adjustment") == true
+  end
+
+  # Keep explorer confirmation metadata separate from the cash entry's status.
+  def pending?
+    extra&.dig("bitcoin_wallet", "pending") == true
   end
 
   class << self
@@ -311,6 +323,17 @@ class Trade < ApplicationRecord
         scope.where("(entries.date, entries.created_at) >= (:date, :created_at)",
                     date: entry.date, created_at: Time.current)
       end
+    end
+
+    # Editing the Trade directly must enforce the same ownership guard as Entry.
+    def position_provider_owns_quantity
+      return if provider_importing || new_record?
+      return unless entry && entry.account
+      return unless qty_changed? || security_id_changed? || price_changed? || fee_changed? || investment_activity_label_changed? || lot_source_entry_id_changed?
+      ids = [ security_id, security_id_in_database ].compact.uniq
+      return unless entry.date && ids.any? { |id| entry.account.provider_managed_security?(id, date: entry.date) }
+
+      errors.add(:base, I18n.t("bitcoin_wallet.managed_position"))
     end
 
     def exchange_rate_must_be_valid

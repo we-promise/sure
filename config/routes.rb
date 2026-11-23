@@ -769,6 +769,12 @@ Rails.application.routes.draw do
     end
 
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"
+    resource :bitcoin_wallet, only: %i[new create show destroy] do
+      post :connect
+      post :sync
+      post :add_source
+      delete :remove_source
+    end
   end
 
   resources :account_statements, only: %i[index show create update destroy] do

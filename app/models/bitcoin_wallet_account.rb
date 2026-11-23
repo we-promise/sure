@@ -1,0 +1,163 @@
+# frozen_string_literal: true
+
+class BitcoinWalletAccount < ApplicationRecord
+  include Syncable
+
+  ROUTINE_LOOKAHEAD = 20
+  FULL_RESCAN_INTERVAL = 1.day
+  # Tickers a wallet may track.
+  BTC_TICKER = /\A(?:CRYPTO:)?(?:BTC|XBT)(?:-?USD)?\z/
+
+  belongs_to :onchain_wallet_item
+  belongs_to :account
+  belongs_to :security
+  delegate :family, to: :onchain_wallet_item
+  has_one :account_provider, as: :provider, dependent: :destroy
+  has_many :bitcoin_wallet_sources, dependent: :destroy
+  has_many :bitcoin_wallet_addresses, dependent: :destroy
+  has_many :bitcoin_wallet_transactions, dependent: :destroy
+
+  enum :status, { discovering: "discovering", preview: "preview", active: "active", failed: "failed" }, prefix: true
+  validates :account_id, uniqueness: true
+  validate :eligible_account
+  scope :linked, -> { joins(:account_provider) }
+
+  # The last complete explorer read can precede completion of its account sync.
+  def last_synced_at
+    self[:last_synced_at]
+  end
+
+  def quantity
+    balance_sats.to_d / 100_000_000
+  end
+
+  def current_account
+    account if account_provider.present?
+  end
+
+  def connect!
+    Time.use_zone(Time.find_zone(family.timezone) || Time.zone) { connect_in_family_zone! }
+  end
+
+  def connect_in_family_zone!
+    return if account_provider.present?
+    raise ArgumentError, "Complete wallet discovery before connecting" unless status_preview? && !stale?
+
+    processor = BitcoinWalletAccount::Processor.new(self)
+    processor.prepare_prices
+    with_lock do
+      return if account_provider.present?
+      raise ArgumentError, "Complete wallet discovery before connecting" unless status_preview? && !stale?
+
+      account.lock!
+      raise ArgumentError, "Connect Bitcoin only to a manual Crypto account" unless valid?
+      create_account_provider!(account: account)
+      account.reset_provider_adapters
+      bitcoin_wallet_transactions.update_all(baseline: true)
+      update!(baseline_at: Time.current, status: :active)
+      processor.process(prepare_prices: false)
+    end
+  end
+
+  def disconnect!
+    with_lock do
+      # The latest quantities remain available as manual holdings, and entries
+      # retain their provenance. Nothing owned by the user is deleted.
+      destroy!
+      account.reset_provider_adapters
+    end
+  end
+
+  def stale?
+    status_failed? || read_outdated?
+  end
+
+  def read_outdated?
+    last_synced_at.nil? || last_synced_at < 2.hours.ago
+  end
+
+  def record_reconciliation!
+    recorded = account.trades.where(security: security).joins(:entry).where("entries.date <= ?", Date.current).sum(:qty)
+    difference = quantity - recorded
+    return if difference.zero?
+
+    price = BitcoinWalletAccount::Processor.new(self).price_on(Date.current)
+    return unless price
+
+    entry = Account::ProviderImportAdapter.new(account).import_trade(
+      security: security, quantity: difference, price: price, amount: 0, currency: account.currency,
+      date: Date.current, source: "bitcoin_wallet_reconciliation",
+      external_id: "bitcoin_wallet_#{id}_reconciliation_#{SecureRandom.uuid}",
+      name: I18n.t("bitcoin_wallet.reconciliation", locale: account.family.locale),
+      activity_label: Trade::TRANSFER_LABEL
+    )
+    entry.entryable.update!(extra: entry.entryable.extra.to_h.merge("balance_adjustment" => true))
+    entry
+  end
+
+  # Keep the previous valuation until the first BTC price is available.
+  def initial_valuation_pending?
+    account_provider && !account_provider.holdings.exists?
+  end
+
+  def pending_quantity
+    bitcoin_wallet_transactions.where(present: true, confirmed: false).sum(:amount_sats).to_d / 100_000_000
+  end
+
+  # Reopen each HD branch after its highest used address, preserving cached
+  # addresses so later receives and change are found. Routine syncs probe a
+  # standard-size window. Once a day the branch is rescanned from its start,
+  # so a deposit to a skipped address below the highest used one is found.
+  def restart_discovery!(full: false)
+    bitcoin_wallet_sources.where(kind: "bip84").each do |source|
+      last_full = source.discovery["full_scan_at"]&.then { |value| Time.zone.parse(value) }
+      full_scan = full || last_full.nil? || last_full < FULL_RESCAN_INTERVAL.ago
+      skipped = full_scan ? 0 : [ source.gap_limit - ROUTINE_LOOKAHEAD, 0 ].max
+      state = [ 0, 1 ].to_h do |branch|
+        highest = bitcoin_wallet_addresses.where(bitcoin_wallet_source: source, branch: branch, used: true).maximum(:address_index)
+        [ branch.to_s, { "index" => full_scan || highest.nil? ? 0 : highest + 1, "gap" => skipped } ]
+      end
+      state["full_scan_at"] = full_scan ? Time.current.iso8601 : source.discovery["full_scan_at"]
+      source.update!(discovery: state)
+    end
+  end
+
+  # Queue discovery of a new source set from the start of each branch.
+  def sources_changed!
+    update!(status: :discovering, needs_reconciliation: account_provider.present?)
+    restart_discovery!(full: true)
+    sync_later
+  end
+
+  # Publish completion after all account materialization children have finished.
+  def perform_post_sync
+    account.broadcast_refresh
+    onchain_wallet_item.broadcast_sync_complete
+  end
+
+  # Refresh the account's existing sync status presentation.
+  def broadcast_sync_complete
+    account.broadcast_refresh
+  end
+
+  private :connect_in_family_zone!
+
+  private
+    # Running reads cannot absorb source edits, and cancelling a parent stales
+    # its pending reads, so a request reuses only a pending read with the same
+    # parent (or none).
+    def coalescible_syncs(parent_sync: nil)
+      syncs.visible.pending.where(parent_id: parent_sync&.id)
+    end
+
+    # Restrict tracking to a manual same-family Crypto account and a BTC
+    # security: the wallet must be the account's only provider.
+    def eligible_account
+      return if account.nil? || onchain_wallet_item.nil?
+      errors.add(:account, :invalid) unless account.family_id == onchain_wallet_item.family_id && account.accountable_type == "Crypto"
+      other_links = account.account_providers.where.not(provider_type: self.class.name)
+      errors.add(:account, :linked) if other_links.exists? || account.plaid_account_id || account.simplefin_account_id
+      return if security.nil?
+      errors.add(:security, :invalid) unless security.ticker.to_s.upcase.match?(BTC_TICKER)
+    end
+end
