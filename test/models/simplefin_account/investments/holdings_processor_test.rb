@@ -417,6 +417,48 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_equal "EUR", recorder.calls.first[:currency]
   end
 
+  test "a holding in a supported non-ISO currency keeps that currency" do
+    security = securities(:aapl)
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+
+    processor.stubs(:holdings_data).returns([
+      {
+        "id" => "cnh-fund",
+        "symbol" => "VWCE",
+        "description" => "Vanguard FTSE All-World",
+        "shares" => "10",
+        "market_value" => "1200.00",
+        "currency" => "CNH"
+      }
+    ])
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:resolve_security).returns(security)
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Wealthfront", account_provider: nil, currency: "USD")
+    )
+
+    recorder = Class.new do
+      attr_reader :calls
+
+      def initialize = @calls = []
+
+      def import_holding(**kwargs)
+        @calls << kwargs
+        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
+              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
+                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
+      end
+    end.new
+
+    processor.stubs(:import_adapter).returns(recorder)
+
+    processor.process
+
+    assert_equal 1, recorder.calls.size
+    assert_equal "CNH", recorder.calls.first[:currency]
+  end
+
   test "an investment account keeps an ETF ticker out of the crypto namespace (#2856)" do
     assert_resolves(account: accounts(:investment), symbol: "ETH",
                     description: "Grayscale Ethereum Mini Trust ETF", expected: "ETH")
@@ -461,6 +503,20 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_equal "ETH", resolved.ticker
     assert resolved.offline?
     refute resolved.crypto?
+  end
+
+  test "a genuine crypto asset keeps the provider's crypto security" do
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:simplefin_account).returns(stub(name: "Wealthfront"))
+
+    crypto_security = Security.new(ticker: "ADAUSD", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+    Security::Resolver.stubs(:new).returns(stub(resolve: crypto_security))
+
+    resolved = processor.send(:resolve_security, "ADA", "Cardano")
+
+    assert_equal crypto_security, resolved
+    assert resolved.crypto?
   end
 
   private

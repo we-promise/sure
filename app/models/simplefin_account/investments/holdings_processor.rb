@@ -84,9 +84,10 @@ class SimplefinAccount::Investments::HoldingsProcessor
         next if qty.to_d.zero? && computed_amount.to_d.zero?
 
         # SimpleFIN sometimes reports a ticker (e.g. "ETH" for the Grayscale
-        # Ethereum Mini Trust ETF) in the holding currency field. Keep a real
-        # ISO currency; fall back to the account's valuation currency.
-        currency = holding_currency(simplefin_holding["currency"]) ||
+        # Ethereum Mini Trust ETF) in the holding currency field. A currency
+        # equal to the symbol is that ticker; fall back to the account's
+        # valuation currency.
+        currency = holding_currency(simplefin_holding["currency"], symbol) ||
                    simplefin_account.currency.presence ||
                    account&.currency.presence ||
                    "USD"
@@ -184,16 +185,15 @@ class SimplefinAccount::Investments::HoldingsProcessor
       simplefin_account.raw_holdings_payload || []
     end
 
-    # Returns the holding's currency only when it is an ISO 4217 code (one
-    # with an ISO numeric code). Crypto codes in config/currencies.yml (ETH,
-    # BTC, …) have none, so a ticker in the currency field falls back to the
-    # account currency.
-    def holding_currency(value)
+    # Returns the holding's currency unless the field repeats the ticker.
+    # Any currency the app supports is kept, including non-ISO codes such as
+    # CNH or JEP.
+    def holding_currency(value, symbol)
       code = value.to_s.strip.upcase
-      return nil unless code.match?(/\A[A-Z]{3}\z/)
+      return nil if code.blank?
+      return nil if code == symbol.to_s.strip.upcase
 
-      currency = Money::Currency.new(code)
-      currency.iso_code if currency.iso_numeric.present?
+      Money::Currency.new(code).iso_code
     rescue Money::Currency::UnknownCurrencyError
       nil
     end
@@ -295,10 +295,11 @@ class SimplefinAccount::Investments::HoldingsProcessor
         end
 
         security = Security::Resolver.new(sym).resolve
-        # A plain ticker on an Investment account must not attach to a crypto
-        # security the provider search happened to return (e.g. ETH -> ETHUSD).
-        if !sym.start_with?("CRYPTO:") && security&.crypto?
-          Rails.logger.warn "SimpleFin: resolver returned crypto security #{security.ticker} for non-crypto symbol=#{sym}; falling back to offline security"
+        # A fund whose ticker collides with a crypto symbol must not attach to
+        # a crypto security the provider search happened to return (ETH ->
+        # ETHUSD). Genuine crypto assets keep the provider's crypto security.
+        if !sym.start_with?("CRYPTO:") && security&.crypto? && description.to_s.match?(FUND_DESCRIPTION)
+          Rails.logger.warn "SimpleFin: resolver returned crypto security #{security.ticker} for fund symbol=#{sym}; falling back to offline security"
           return offline_security(sym, description)
         end
 
