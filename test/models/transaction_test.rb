@@ -18,6 +18,19 @@ class TransactionTest < ActiveSupport::TestCase
     assert transaction.reload.category_set_by_user?
   end
 
+  test "a category the user sets back after a bulk reassignment stays the user's" do
+    food = categories(:food_and_drink)
+    other = families(:dylan_family).categories.create!(name: "Household", color: "#000000")
+    transaction = create_transaction(name: "Shop").transaction
+    transaction.enrich_attribute(:category_id, food.id, source: "rule")
+
+    Transaction.reassign_category!(Transaction.where(id: transaction.id), other.id)
+    transaction.reload.update!(category: food)
+    transaction.lock_attr!(:category_id)
+
+    assert transaction.reload.category_set_by_user?
+  end
+
   test "a rule that sets the category again claims it again" do
     food = categories(:food_and_drink)
     other = families(:dylan_family).categories.create!(name: "Household", color: "#000000")

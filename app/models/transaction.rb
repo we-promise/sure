@@ -385,6 +385,15 @@ class Transaction < ApplicationRecord
                   .update_all(Arel.sql(%(metadata = COALESCE(metadata, '{}'::jsonb) || '{"superseded": true}'::jsonb)))
   end
 
+  # Ends the claims of other sources (rules, receipts, purchases) whose recorded category is no
+  # longer the transactions' category, so the user setting it back later makes it theirs.
+  def self.supersede_other_category_claims!(transaction_ids, category_id)
+    DataEnrichment.where(enrichable_type: name, enrichable_id: transaction_ids, attribute_name: "category_id")
+                  .where.not(source: AUTO_CATEGORY_SOURCES)
+                  .where.not(value: category_id&.to_s)
+                  .update_all(Arel.sql(%(metadata = COALESCE(metadata, '{}'::jsonb) || '{"superseded": true}'::jsonb)))
+  end
+
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)
     joins(entry: :account).where(accounts: { family_id: family.id })
@@ -425,6 +434,7 @@ class Transaction < ApplicationRecord
         # The UPDATE skips the after_save that ends the automatic
         # categorizers' claims, so end them here for the rows reassigned.
         supersede_automatic_category_claims!(batch)
+        supersede_other_category_claims!(batch, category_id)
         Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
       end
 
@@ -929,9 +939,6 @@ class Transaction < ApplicationRecord
     # later sets back to that value is the user's (see #category_set_by_user?).
     def supersede_automatic_category_claims
       self.class.supersede_automatic_category_claims!([ id ])
-      DataEnrichment.where(enrichable: self, attribute_name: "category_id")
-                    .where.not(source: AUTO_CATEGORY_SOURCES)
-                    .where.not(value: category_id&.to_s)
-                    .update_all(Arel.sql(%(metadata = COALESCE(metadata, '{}'::jsonb) || '{"superseded": true}'::jsonb)))
+      self.class.supersede_other_category_claims!([ id ], category_id)
     end
 end
