@@ -4,6 +4,7 @@ class Settings::McpControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
     sign_in @user
+    MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
   end
 
   test "shows MCP settings page" do
@@ -74,7 +75,6 @@ class Settings::McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "does not show a mobile app token refreshed without its device" do
-    MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
     Doorkeeper::AccessToken.create!(
       application: MobileDevice.shared_oauth_application,
       resource_owner_id: @user.id,
