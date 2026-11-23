@@ -194,6 +194,7 @@ fr:
       no_api_key: Les identifiants Indexa Capital ne sont pas configurés. Veuillez
         vérifier les paramètres de connexion.
       select_all: Tout sélectionner
+      skip_notice: 'Les comptes décochés sont ignorés : Sure arrête de les récupérer jusqu''à ce que vous les liiez à un compte.'
       subtitle: Choisissez les types de compte corrects pour vos comptes importés
       subtype_labels:
         credit_card: ''

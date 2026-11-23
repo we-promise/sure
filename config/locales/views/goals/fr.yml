@@ -117,6 +117,8 @@ fr:
       no_accounts: Aucun compte lié
       no_target_date: Ouvert
       pace_no_target: Moy. %{avg}/mois
+      pace_unknown_with_target: Rythme inconnu · objectif %{target}/mois
+      pace_unknown: Rythme inconnu
       pace_with_target: "%{avg}/mois · cible %{target}/mois"
       past_due: Échu
       pending_count:
@@ -156,6 +158,9 @@ fr:
           no_date:
             one: 1 sans date limite
             other: "%{count} sans date limite"
+          pace_unknown:
+            one: "%{count} au rythme inconnu"
+            other: "%{count} au rythme inconnu"
           paused:
             one: 1 en pause
             other: "%{count} en pause"
@@ -309,6 +314,7 @@ fr:
         legend_required: Requis
         legend_saved: Épargné
         no_pace: Aucun dépôt pour le moment. Ajoutez de l'argent sur un compte lié pour démarrer la projection.
+        pace_unknown: 'Pas encore assez d''historique sur ces comptes pour mesurer un rythme : il n''y a donc pas de projection.'
         no_target_date: Aucune date cible définie. Définissez-en une pour projeter la fin.
         on_track_html: Au rythme actuel, vous atteindrez cet objectif vers le <strong class="text-primary whitespace-nowrap">%{date}</strong>.
         reserve: "Une réserve maintient un solde cible : il n'y a pas d'échéance à projeter."
@@ -343,6 +349,7 @@ fr:
         behind: épargnez %{amount}/mois de plus pour rattraper le retard
         behind_covered: les promesses en attente comblent le retard
         no_target_date: définissez une date cible pour projeter une date de fin
+        pace_unknown: impossible de mesurer un rythme à partir de ces comptes pour l'instant ; il faut une mise à jour du solde au cours de la dernière année et un an d'historique de solde
         on_track: atteindra l'objectif vers %{date}
       unarchive: Restaurer
     states:
@@ -357,6 +364,7 @@ fr:
       behind: En retard
       completed: Terminé
       no_target_date: Ouvert
+      pace_unknown: Rythme inconnu
       on_track: En bonne voie
       paused: En pause
       reached: Atteint
