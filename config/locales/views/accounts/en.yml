@@ -141,6 +141,11 @@ en:
         hint: A purchase or transfer is probably missing. Add it, or correct the trades that took the position below zero.
         link: Review holdings
         message: Some positions went below zero
+      provider_reconnect:
+        hint: New transactions and balances won't be imported until you reconnect. Syncing this account doesn't reconnect it.
+        hint_ask_admin: New transactions and balances won't be imported until the connection is renewed. Ask an admin of your family to reconnect it.
+        link: Reconnect on the Accounts page
+        message: "Your connection to %{provider} needs to be renewed"
       sync_failed:
         message: The last sync failed
       sync_hint: The figures here may be out of date. Sync again to bring them up to date.

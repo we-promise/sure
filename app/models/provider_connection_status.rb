@@ -33,6 +33,14 @@ class ProviderConnectionStatus
   ].freeze
 
   class << self
+    # Whether the connection can't import until the user signs in or
+    # reconnects. A session can end while the stored status is still good.
+    def requires_update?(item, latest_sync: nil)
+      return item.setup_token_update_required?(latest_sync: latest_sync) if item.respond_to?(:setup_token_update_required?)
+
+      item.try(:requires_update?) == true || item.try(:needs_login?) == true
+    end
+
     def for_family(family)
       PROVIDERS.flat_map do |provider|
         relation = family.public_send(provider[:association])
@@ -128,9 +136,7 @@ class ProviderConnectionStatus
     end
 
     def item_requires_update?
-      return item.setup_token_update_required?(latest_sync: latest_sync) if item.respond_to?(:setup_token_update_required?)
-
-      item_boolean(:requires_update?) || item_boolean(:needs_login?)
+      self.class.requires_update?(item, latest_sync: latest_sync)
     end
 
     def pending_account_setup?

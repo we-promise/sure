@@ -6,7 +6,7 @@ class UI::Account::HealthStatus < ApplicationComponent
   end
 
   def issues
-    @issues ||= Account::HealthStatus.new(@account).issues
+    @issues ||= Account::HealthStatus.new(@account, viewer: Current.user).issues
   end
 
   def render?
