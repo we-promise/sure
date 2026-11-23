@@ -157,7 +157,7 @@ class Budget < ApplicationRecord
   def uncategorized_budget_category
     budget_categories.uncategorized.tap do |bc|
       bc.budgeted_spending = [ available_to_allocate, 0 ].max
-      bc.currency = family.currency
+      bc.currency = currency
     end
   end
 

@@ -67,6 +67,15 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "uncategorized line retains the budget currency after the family changes currency" do
+    @family.update!(currency: "EUR")
+    get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
+    assert_response :success
+    data = JSON.parse(response.body)
+    assert_equal "USD", data.dig("uncategorized", "currency")
+    assert_equal data["available_to_allocate_cents"], data.dig("uncategorized", "budgeted_spending_cents")
+  end
+
   test "shows a budget" do
     get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
 
