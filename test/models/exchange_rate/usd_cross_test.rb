@@ -171,13 +171,13 @@ class ExchangeRate::UsdCrossTest < ActiveSupport::TestCase
     2.times { assert_empty ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day2) }
   end
 
-  test "does not remember days before the first USD rate as a miss" do
-    @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "USD", start_date: @day1, end_date: @day1).twice
+  test "remembers a miss when both USD legs have quotes but no shared dates" do
+    @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "USD", start_date: @day1, end_date: @day2).once
              .returns(provider_success_response([ rate(@day1, "KZT", "USD", 0.002) ]))
-    @provider.expects(:fetch_exchange_rates).with(from: "USD", to: "RUB", start_date: @day1, end_date: @day1).twice
-             .returns(provider_success_response([ rate(@day1 + 1, "USD", "RUB", 80) ]))
+    @provider.expects(:fetch_exchange_rates).with(from: "USD", to: "RUB", start_date: @day1, end_date: @day2).once
+             .returns(provider_success_response([ rate(@day2, "USD", "RUB", 80) ]))
 
-    2.times { assert_empty ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day1) }
+    2.times { assert_empty ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day2) }
   end
 
   private

@@ -8,11 +8,8 @@ class ExchangeRate::UsdCross
   # error, an unknown pair) look alike, as Yahoo Finance reports both as Error.
   PROVIDER_FAILURES = %w[RateLimitError AuthenticationError].freeze
 
-  # How long a request whose USD legs failed, for that pair and those dates, is
-  # not repeated. A sync looks up every entry and holding row in turn, many of
-  # them for the same pair and date, so this keeps the legs to one attempt (up
-  # to 4 Yahoo chart requests, before retries, and a debug log row), while an outage or a pair
-  # the provider adds is picked up within the hour.
+  # Avoid repeating unsuccessful USD-leg requests for the same pair and dates
+  # during a sync of many entries or holdings.
   MISS_TTL = 1.hour
 
   def initialize(provider)
@@ -24,9 +21,8 @@ class ExchangeRate::UsdCross
   # [] when either side is USD, the provider itself is failing or cannot derive
   # a pair (see Provider::ExchangeRateConcept#usd_cross?), it has quoted
   # this pair before (so the failure is an outage, and a derived rate would
-  # be cached in place of its own), or a leg has no rates. Unless the provider
-  # itself failed, that is then not asked again for the same pair and dates
-  # for MISS_TTL.
+  # be cached in place of its own), or the legs yield no usable cross. The
+  # latter is cached for MISS_TTL unless the provider itself failed.
   def rates(from:, to:, start_date:, end_date:, error: nil)
     return [] if from == to || [ from, to ].include?("USD")
     return [] if provider_failure?(error)
@@ -53,12 +49,12 @@ class ExchangeRate::UsdCross
       Provider::ExchangeRateConcept::Rate.new(date: first.date, from: from, to: to, rate: rate)
     end
 
-    if crossed.any?
-      Rails.cache.delete(miss_key(from, to, start_date, end_date))
-      direct_error = error&.message
-      report("info", "Derived #{crossed.size} #{from}/#{to} rates from #{@provider.class.name} USD rates between #{start_date} and #{end_date}; direct pair: #{direct_error || "no rates"}",
-             from:, to:, start_date:, end_date:, direct_error:)
-    end
+    return miss(from, to, start_date, end_date) if crossed.empty?
+
+    Rails.cache.delete(miss_key(from, to, start_date, end_date))
+    direct_error = error&.message
+    report("info", "Derived #{crossed.size} #{from}/#{to} rates from #{@provider.class.name} USD rates between #{start_date} and #{end_date}; direct pair: #{direct_error || "no rates"}",
+           from:, to:, start_date:, end_date:, direct_error:)
     crossed
   end
 
@@ -82,8 +78,7 @@ class ExchangeRate::UsdCross
       "usd_cross_miss:#{@provider.class.name}:#{from}:#{to}:#{start_date}:#{end_date}"
     end
 
-    # A leg with no rates, unless the provider itself failed, which says
-    # nothing about the pair.
+    # A failed derivation says nothing about the pair if the provider is down.
     def miss(from, to, start_date, end_date)
       Rails.cache.write(miss_key(from, to, start_date, end_date), true, expires_in: MISS_TTL) unless @provider_failing
       []
