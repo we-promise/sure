@@ -41,12 +41,13 @@ class Holding::ForwardCalculator
       holdings = []
 
       first_date = @window_start_date || account.start_date
-      # Replay the days before the window the same way, splits included, without emitting holdings.
-      account.start_date.upto(first_date - 1) do |date|
+      today = Date.current
+      # Seed lots through the day before the window without applying scheduled trades early.
+      account.start_date.upto([ first_date - 1, today ].min) do |date|
         current_portfolio = apply_trades(apply_splits(current_portfolio, date), portfolio_cache.get_trades(date: date))
       end
 
-      first_date.upto(Date.current).each do |date|
+      first_date.upto(today).each do |date|
         trades = portfolio_cache.get_trades(date: date)
         next_portfolio = apply_trades(apply_splits(current_portfolio, date), trades)
         holdings.concat(build_holdings(next_portfolio, date))

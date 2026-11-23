@@ -342,6 +342,20 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     end
   end
 
+  test "a future materialization window keeps only effective trades in the lot book" do
+    @account.create_cash_anchor!
+    today = Date.current
+    buy = @account.entries.create!(date: today, amount: 200, currency: "USD", name: "Buy MSFT",
+      entryable: Trade.new(security: @other, qty: 2, price: 100, currency: "USD", investment_activity_label: "Buy"))
+    @account.entries.create!(date: today.next_day, amount: 300, currency: "USD", name: "Scheduled MSFT buy",
+      entryable: Trade.new(security: @other, qty: 3, price: 100, currency: "USD", investment_activity_label: "Buy"))
+
+    materialize(window_start_date: today + 2.days)
+
+    lots = HoldingLot.where(account: @account, security: @other)
+    assert_equal [ [ buy.id, 2 ] ], lots.pluck(:source_entry_id, :qty)
+  end
+
   test "a split before the window still scales the position" do
     @account.create_cash_anchor!
     Security::Split.create!(security: @aapl, ex_date: Date.current.prev_day, numerator: 2, denominator: 1, source: "manual")

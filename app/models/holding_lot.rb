@@ -83,8 +83,18 @@ class HoldingLot < ApplicationRecord
 
       holdings = Holding.through_today.where(account_id: account_ids, security_id: security_ids, superseded: false)
       latest = holdings.group(:account_id, :security_id).select(:account_id, :security_id, "MAX(date)")
-      held = holdings.where("(holdings.account_id, holdings.security_id, holdings.date) IN (#{latest.to_sql})")
-        .group(:account_id, :security_id).sum(:qty)
+      anchored = Valuation.cash_anchor.with_entry.where(entries: { account_id: account_ids }).select("entries.account_id")
+      quantity = Arel.sql(<<~SQL.squish)
+        CASE WHEN holdings.account_id IN (#{anchored.to_sql})
+          THEN (ARRAY_AGG(holdings.qty ORDER BY #{Holding::POSITION_ORDER}))[1]
+          ELSE SUM(holdings.qty)
+        END
+      SQL
+      held = holdings.joins(:account)
+        .where("(holdings.account_id, holdings.security_id, holdings.date) IN (#{latest.to_sql})")
+        .group("holdings.account_id", "holdings.security_id")
+        .pluck("holdings.account_id", "holdings.security_id", quantity)
+        .to_h { |account_id, security_id, qty| [ [ account_id, security_id ], qty ] }
 
       lots.filter_map { |key, qty| key if held[key] == qty }.to_set
     end
