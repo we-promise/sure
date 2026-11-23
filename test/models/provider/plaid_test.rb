@@ -149,6 +149,109 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     end
   end
 
+  test "collects all transaction pages with the maximum page size" do
+    pages = sequence("transaction pages")
+    expect_transaction_page("saved-cursor", pages).returns(transaction_page("page-2", has_more: true, prefix: "first"))
+    expect_transaction_page("page-2", pages).returns(transaction_page("complete", prefix: "second"))
+    DebugLogEntry.expects(:capture).never
+
+    result = @plaid.get_transactions("access-token", next_cursor: "saved-cursor")
+
+    assert_equal [ "first-added", "second-added" ], result.added
+    assert_equal [ "first-modified", "second-modified" ], result.modified
+    assert_equal [ "first-removed", "second-removed" ], result.removed
+    assert_equal "complete", result.cursor
+  end
+
+  test "restarts the entire transaction update and discards partial results" do
+    pages = sequence("transaction pages")
+    expect_transaction_page("saved-cursor", pages).returns(transaction_page("page-2", has_more: true, prefix: "discarded"))
+    expect_transaction_page("page-2", pages).raises(transaction_mutation_error)
+    expect_transaction_page("saved-cursor", pages).returns(transaction_page("retry-page-2", has_more: true, prefix: "retry-first"))
+    expect_transaction_page("retry-page-2", pages).returns(transaction_page("complete", prefix: "retry-second"))
+    expect_transaction_restart(1)
+
+    result = @plaid.get_transactions("access-token", next_cursor: "saved-cursor")
+
+    assert_equal [ "retry-first-added", "retry-second-added" ], result.added
+    assert_equal [ "retry-first-modified", "retry-second-modified" ], result.modified
+    assert_equal [ "retry-first-removed", "retry-second-removed" ], result.removed
+    assert_equal "complete", result.cursor
+  end
+
+  test "restarts an initial transaction sync without a cursor" do
+    pages = sequence("transaction pages")
+    expect_transaction_page(nil, pages).returns(transaction_page("page-2", has_more: true, prefix: "discarded"))
+    expect_transaction_page("page-2", pages).raises(transaction_mutation_error)
+    expect_transaction_page(nil, pages).returns(transaction_page("complete"))
+    expect_transaction_restart(1)
+
+    result = @plaid.get_transactions("access-token")
+
+    assert_equal [ "kept-added" ], result.added
+    assert_equal [ "kept-modified" ], result.modified
+    assert_equal [ "kept-removed" ], result.removed
+    assert_equal "complete", result.cursor
+  end
+
+  test "allows three transaction pagination restarts" do
+    pages = sequence("transaction pages")
+    3.times do |index|
+      expect_transaction_page("saved-cursor", pages).returns(transaction_page("page-2", has_more: true, prefix: "discarded"))
+      expect_transaction_page("page-2", pages).raises(transaction_mutation_error)
+      expect_transaction_restart(index + 1)
+    end
+    expect_transaction_page("saved-cursor", pages).returns(transaction_page("complete"))
+
+    result = @plaid.get_transactions("access-token", next_cursor: "saved-cursor")
+
+    assert_equal [ "kept-added" ], result.added
+    assert_equal [ "kept-modified" ], result.modified
+    assert_equal [ "kept-removed" ], result.removed
+    assert_equal "complete", result.cursor
+  end
+
+  test "raises the Plaid error after exhausting transaction pagination restarts" do
+    pages = sequence("transaction pages")
+    error = transaction_mutation_error
+    4.times do |index|
+      expect_transaction_page("saved-cursor", pages).returns(transaction_page("page-2", has_more: true))
+      expect_transaction_page("page-2", pages).raises(error)
+      expect_transaction_restart(index + 1) if index < 3
+    end
+
+    raised = assert_raises(Plaid::ApiError) do
+      @plaid.get_transactions("access-token", next_cursor: "saved-cursor")
+    end
+
+    assert_same error, raised
+  end
+
+  {
+    "unrelated Plaid error" => '{"error_code":"ITEM_LOGIN_REQUIRED"}',
+    "item limit error" => '{"error_code":"TRANSACTIONS_SYNC_ITEM_LIMIT_EXCEEDED"}',
+    "malformed error body" => "not json",
+    "missing error body" => nil,
+    "missing error code" => "{}",
+    "array error body" => "[]",
+    "null error body" => "null",
+    "string error body" => '"unexpected"'
+  }.each do |description, body|
+    test "does not restart transaction pagination for #{description}" do
+      pages = sequence("transaction pages")
+      error = Plaid::ApiError.new(code: 400, response_body: body)
+      expect_transaction_page("saved-cursor", pages).returns(transaction_page("page-2", has_more: true))
+      expect_transaction_page("page-2", pages).raises(error)
+      DebugLogEntry.expects(:capture).never
+
+      raised = assert_raises(Plaid::ApiError) do
+        @plaid.get_transactions("access-token", next_cursor: "saved-cursor")
+      end
+
+      assert_same error, raised
+    end
+  end
+
   test "requests a transaction refresh" do
     @plaid.client.expects(:transactions_refresh).with do |request|
       request.access_token == "access-token"
@@ -250,6 +353,41 @@ class Provider::PlaidTest < ActiveSupport::TestCase
   end
 
   private
+    def expect_transaction_page(cursor, pages)
+      @plaid.client.expects(:transactions_sync).with do |request|
+        request.access_token == "access-token" && request.cursor == cursor &&
+          request.count == 500 && request.options == { include_original_description: true }
+      end.in_sequence(pages)
+    end
+
+    def transaction_page(cursor, has_more: false, prefix: "kept")
+      OpenStruct.new(
+        added: [ "#{prefix}-added" ],
+        modified: [ "#{prefix}-modified" ],
+        removed: [ "#{prefix}-removed" ],
+        has_more: has_more,
+        next_cursor: cursor
+      )
+    end
+
+    def transaction_mutation_error
+      Plaid::ApiError.new(
+        code: 400,
+        response_body: { error_code: "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION" }.to_json
+      )
+    end
+
+    def expect_transaction_restart(retry_count)
+      DebugLogEntry.expects(:capture).with(
+        category: "provider_sync",
+        level: "info",
+        message: "Restarting Plaid transaction pagination after data changed",
+        source: "Provider::PlaidSandbox",
+        provider_key: "plaid",
+        metadata: { error_code: "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION", retry_count: retry_count }
+      )
+    end
+
     # Pins the webhook verification contract that the jwt gem bump (2.10.3 ->
     # 3.3.0) rides on: JWKS built from the key Plaid publishes for the token's
     # kid, ES256 decode with expiration skipped in favor of the iat age check,
