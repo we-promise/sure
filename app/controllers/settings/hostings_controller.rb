@@ -295,6 +295,17 @@ class Settings::HostingsController < ApplicationController
       Setting.jev_model = hosting_params[:jev_model].presence
     end
 
+    Setting::PAGE_CACHE_SETTINGS.each do |key, (range, _default)|
+      next unless hosting_params.key?(key) && Setting.page_cache_env_value(key).nil?
+
+      raw = hosting_params[key].to_s.strip
+      value = raw.presence && (Integer(raw, 10) rescue nil)
+      if raw.present? && !range.cover?(value)
+        raise Setting::ValidationError, t(".invalid_#{key}", minimum: range.min, maximum: range.max)
+      end
+      Setting.public_send("#{key}=", value)
+    end
+
     LLM_NUMERIC_MINIMUMS.each do |key, minimum|
       next unless hosting_params.key?(key)
       raw = hosting_params[key].to_s.strip
@@ -369,7 +380,7 @@ class Settings::HostingsController < ApplicationController
     # Strong parameters for the self-hosting settings form.
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :demo_family_refresh_enabled, :demo_family_refresh_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :chimnie_api_key, :terrascoutx_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :ai_health_probe_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :market_data_sync_enabled, :market_data_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :demo_family_refresh_enabled, :demo_family_refresh_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :chimnie_api_key, :terrascoutx_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :ai_health_probe_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :market_data_sync_enabled, :market_data_sync_time, :page_cache_days, :page_cache_max_mb, :page_cache_cooldown_minutes, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
     end
 
     def load_external_assistant_models

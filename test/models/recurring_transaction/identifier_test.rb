@@ -1006,6 +1006,17 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal categories(:one), oldest_minority.reload.category
   end
 
+  test "a detected series restricted to its reference is not refreshed from name groups" do
+    account = @family.accounts.first
+    detected = create_detected_series(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+    detected.update!(bank_reference: "PET 123", reference_only: true)
+    create_name_pattern_entries(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+
+    @identifier.identify_recurring_patterns
+
+    assert_not_equal 3, detected.reload.occurrence_count, "the reference-only series must not be refreshed by name"
+  end
+
   # No categorised entry means no category to take: the series stays blank and
   # the run still completes (an empty tally gives max_by nothing, not an error).
   test "uncategorised entries leave a blank series blank" do
