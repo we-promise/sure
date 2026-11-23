@@ -314,7 +314,7 @@ nb:
           past_due: "Forfalt"
           canceled: "Kansellert"
           unpaid: "Ubetalt"
-          paused: "Satt på pause"
+          paused: "På pause"
           no_subscription: "Ingen abonnement"
         not_recorded: "Ikke registrert"
         eligible: "Kvalifiserer"

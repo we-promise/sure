@@ -51,10 +51,10 @@ nb:
       institution_domain_settings_link: "Legg til en under innstillingene for selvhosting"
       logo_label: "Ikon"
       logo_hint: "Eller last opp ditt eget PNG-, JPEG-, GIF-, WebP- eller ICO-bilde på opptil 1 MB. Det erstatter Brandfetch-logoen."
-      cost_basis_method_label: "Metode for anskaffelseskost"
-      cost_basis_method_hint: "Hvordan et salg knyttes til aksjene det kom fra. Hvis du endrer dette, beregnes tidligere realiserte gevinster og gjennomsnittlig kostnad for det du eier, på nytt. Ved salg av aksjer med ukjent kostnad vises gevinsten som ukjent."
+      cost_basis_method_label: "Metode for kostpris"
+      cost_basis_method_hint: "Hvordan et salg knyttes til aksjene det kom fra. Hvis du endrer dette, beregnes tidligere realiserte gevinster og gjennomsnittlig kostpris for det du eier, på nytt. Ved salg av aksjer med ukjent kostnad vises gevinsten som ukjent."
       cost_basis_methods:
-        average: "Gjennomsnittlig kostnad"
+        average: "Gjennomsnittlig kostpris"
         fifo: "Først inn, først ut (FIFO)"
     index:
       accounts: Kontoer

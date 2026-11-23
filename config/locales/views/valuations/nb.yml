@@ -30,7 +30,7 @@ nb:
       note_placeholder: Legg til eventuelle tilleggsdetaljer om denne oppføringen
       overview: Oversikt
       settings: Innstillinger
-      opening_balance: Startsaldo
+      opening_balance: "Inngående saldo"
       amount_label: Kontoverdi på datoen
       update_value: Oppdater verdi
     confirmation_contents:

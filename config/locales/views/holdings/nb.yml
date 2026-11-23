@@ -10,12 +10,12 @@ nb:
       per_share: per aksje
       shares: "%{qty} aksjer"
       unknown: --
-      no_cost_basis: Ingen anskaffelseskost
+      no_cost_basis: Ingen kostpris
     index:
       positions:
         one: "%{count} posisjon"
         other: "%{count} posisjoner"
-      average_cost: Gjennomsnittlig kostnad
+      average_cost: Gjennomsnittlig kostpris
       holdings: Beholdninger
       name: Navn
       new_holding: Ny aktivitet
@@ -27,7 +27,7 @@ nb:
         dens avkastning eller verdi.
       missing_data: Manglende data
     show:
-      avg_cost_label: Gjennomsnittlig kostnad
+      avg_cost_label: Gjennomsnittlig kostpris
       current_market_price_label: Gjeldende markedspris
       delete: Slett
       delete_subtitle: Dette vil slette beholdningen og alle dine tilknyttede handler
@@ -60,11 +60,11 @@ nb:
       reset_to_provider: Tilbakestill til leverandør
       reset_confirm_title: Vil du tilbakestille verdipapiret til leverandørens?
       reset_confirm_body: Dette endrer verdipapiret fra %{current} tilbake til %{original} og flytter alle tilknyttede handler.
-      cost_basis_locked_label: Anskaffelseskosten er låst
-      cost_basis_locked_description: Anskaffelseskosten du har angitt manuelt, blir ikke endret av synkroniseringer.
+      cost_basis_locked_label: Kostprisen er låst
+      cost_basis_locked_description: Kostprisen du har angitt manuelt, blir ikke endret av synkroniseringer.
       unlock_cost_basis: Lås opp
-      unlock_confirm_title: Vil du låse opp anskaffelseskosten?
-      unlock_confirm_body: Dette lar anskaffelseskosten bli oppdatert av synkroniseringer fra leverandøren eller beregninger fra handler.
+      unlock_confirm_title: Vil du låse opp kostprisen?
+      unlock_confirm_body: Dette lar kostprisen bli oppdatert av synkroniseringer fra leverandøren eller beregninger fra handler.
       shares_label: Aksjer
       book_value_label: Bokført verdi
       market_value_label: Markedsverdi
@@ -74,10 +74,10 @@ nb:
       syncing: Synkroniserer...
       never: Aldri
     update:
-      success: Anskaffelseskost lagret.
-      error: Ugyldig verdi for anskaffelseskost.
+      success: Kostpris lagret.
+      error: Ugyldig verdi for kostpris.
     unlock_cost_basis:
-      success: Anskaffelseskosten er låst opp. Den kan bli oppdatert ved neste synkronisering.
+      success: Kostprisen er låst opp. Den kan bli oppdatert ved neste synkronisering.
     remap_security:
       success: Verdipapiret er oppdatert.
       security_not_found: Fant ikke det valgte verdipapiret.
@@ -96,12 +96,12 @@ nb:
     cost_basis_cell:
       unknown: --
       set: Angi
-      set_cost_basis_header: "Angi anskaffelseskost for %{ticker}"
-      total_cost_basis_label: Total anskaffelseskost
+      set_cost_basis_header: "Angi kostpris for %{ticker}"
+      total_cost_basis_label: Total kostpris
       cancel: Avbryt
       save: Lagre
-      overwrite_confirm_title: Vil du overskrive anskaffelseskosten?
-      overwrite_confirm_body: Dette erstatter den nåværende anskaffelseskosten på %{current}.
+      overwrite_confirm_title: Vil du overskrive kostprisen?
+      overwrite_confirm_body: Dette erstatter den nåværende kostprisen på %{current}.
       per_share_label: "Per aksje"
     lots:
       title: "Partier"

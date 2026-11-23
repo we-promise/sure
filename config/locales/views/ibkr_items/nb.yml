@@ -32,7 +32,7 @@ nb:
         title: IBKR Flex Query-import
         items:
           item_1: Beholdninger med gjeldende kurser og antall
-          item_2: Anskaffelseskost per posisjon
+          item_2: Kostpris per posisjon
           item_3: Handler, utbytte, kurtasje og kontantinnskudd eller -uttak
         warning: "Aktivitet som er eldre enn perioden i Flex Query, importeres over de neste synkroniseringene, opptil fire år tilbake"
       status:

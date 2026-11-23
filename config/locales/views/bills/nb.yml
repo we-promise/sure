@@ -118,7 +118,7 @@ nb:
       overdue:
         one: '%{count} dag over forfall'
         other: '%{count} dager over forfall'
-      paused: "Satt på pause"
+      paused: "På pause"
     paid_label: Betalt
     paid_over_short: Betalt, for mye
     installment_progress: Avdrag %{done_plus_one} av %{total}
@@ -229,7 +229,7 @@ nb:
         due: Forfaller snart
         partial: Delvis betalt
         paid: Betalt
-        paused: Satt på pause
+        paused: "På pause"
         ended: Avsluttet
       subscription_monthly: Per måned
       subscription_annual: Per år
@@ -303,7 +303,7 @@ nb:
       this_month: Denne måneden
       later: Etter denne måneden
       paid_this_month: Betalt denne måneden
-      dormant: "Satt på pause"
+      dormant: "På pause"
       kpi_remaining: Gjenstår denne måneden
       kpi_paid: Betalt denne måneden
       kpi_next_seven: Forfaller neste 7 dager

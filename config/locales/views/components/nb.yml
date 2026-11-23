@@ -90,7 +90,7 @@ nb:
           extra: "Med ekstra innbetaling"
           aria_actual_history_starts: "Historikken for registrert saldo starter %{date}."
           aria_interest_share: "I terminbeløpene det første året er omtrent %{first} % av det som betales, renter. I det siste året er det omtrent %{last} %."
-          aria_interest_share_overall: "Av alle terminbeløpene er omtrent %{share} % av det som betales, renter."
+          aria_interest_share_overall: "Samlet sett er omtrent %{share} % av det som betales, renter."
           aria_composition: "Verktøytipset på hver planlagte betaling deler den opp i %{principal} og %{interest}."
           interest_share: "Renteandel"
           principal_share: "Avdragsandel"

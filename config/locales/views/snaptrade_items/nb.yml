@@ -82,7 +82,7 @@ nb:
       refresh: Oppdater
       info_title: Investeringsdata fra SnapTrade
       info_holdings: Beholdninger med gjeldende kurser og antall
-      info_cost_basis: Anskaffelseskost per posisjon (når tilgjengelig)
+      info_cost_basis: Kostpris per posisjon (når tilgjengelig)
       info_activities: Handelshistorikk med aktivitetstyper (kjøp, salg, utbytte osv.)
       info_history: Opptil 3 års transaksjonshistorikk
       free_tier_note: Gratisnivået til SnapTrade tillater 20 meglertilkoblinger.
@@ -143,7 +143,7 @@ nb:
     snaptrade:
       name: SnapTrade
       connection_description: Koble til megleren din via SnapTrade (over 25 meglere støttes)
-      description: SnapTrade kobler til over 25 store meglere (Fidelity, Vanguard, Schwab, Robinhood osv.) og gir full handelshistorikk med aktivitetstyper og anskaffelseskost.
+      description: SnapTrade kobler til over 25 store meglere (Fidelity, Vanguard, Schwab, Robinhood osv.) og gir full handelshistorikk med aktivitetstyper og kostpris.
       oauth_setup_step_1_html: Registrer en OAuth-app på <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
       oauth_setup_step_2_html: 'Bare for nettleserflyten: legg til denne appens callback-URL (<code>%{callback_url}</code>) som en registrert redirect URI'
       oauth_setup_step_3: Sett SNAPTRADE_OAUTH_CLIENT_ID i miljøet ditt og start på nytt. Det alene aktiverer enhetskodeflyten; legg også til SNAPTRADE_OAUTH_CLIENT_SECRET for nettleserflyten
