@@ -11,6 +11,11 @@ class ProxyConfigurableTest < ActiveSupport::TestCase
     assert_nil ProxyConfigurable.url_for("https://api.openai.com", env: {})
   end
 
+  test "lowercase https_proxy and http_proxy are read too" do
+    assert_equal PROXY, ProxyConfigurable.url_for("https://api.openai.com", env: { "https_proxy" => PROXY })
+    assert_equal PROXY, ProxyConfigurable.url_for("https://api.openai.com", env: { "http_proxy" => PROXY })
+  end
+
   test "loopback is never proxied, as Ruby's own lookup doesn't" do
     env = { "HTTPS_PROXY" => PROXY }
 
