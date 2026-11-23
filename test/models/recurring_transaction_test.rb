@@ -482,6 +482,34 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_includes series.errors[:started_on], "cannot be later than the next due date"
   end
 
+  test "a stale next expected date does not reject a persisted start date" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Dated", amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.new(2020, 1, 1),
+      status: "active", manual: true
+    )
+    series.recurring_occurrences.delete_all
+    series.started_on = 3.months.ago.to_date
+
+    assert series.valid?, series.errors.full_messages.to_sentence
+  end
+
+  test "reconstruct history reloads started_on after another edit" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Reloaded", amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    stale = RecurringTransaction.find(series.id)
+    series.update_column(:started_on, 2.years.ago.to_date)
+
+    assert stale.reconstruct_history!
+    assert series.recurring_occurrences.where(historical: true).exists?,
+      "the job must use the latest start date, not the one loaded before the lock"
+  end
+
   test "started_on cannot precede an installment plan's anchor" do
     recurring = build_recurring(
       bill_type: "installment",

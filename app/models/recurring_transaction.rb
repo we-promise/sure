@@ -282,12 +282,17 @@ class RecurringTransaction < ApplicationRecord
   def reconstruct_history!(from: nil)
     return true if family.recurring_transactions_disabled?
 
-    from ||= started_on
-
     Pipeline.with_family_lock(family_id) do
+      # Read the latest start date under the lock without reloading self:
+      # after_commit callbacks later in the chain still need this record's
+      # saved changes (regeneration checks them).
+      latest = self.class.find_by(id: id)
+      return true unless latest
+
+      from ||= latest.started_on
       series_scope = family.recurring_transactions.where(id: id)
 
-      trim_unallocated_history_before_started_on!
+      latest.trim_unallocated_history_before_started_on!
 
       # The current cycle and the upcoming occurrences first, as Pipeline#run!
       # does, so the history pass can match an early payment to the occurrence
@@ -300,7 +305,7 @@ class RecurringTransaction < ApplicationRecord
         family,
         from: from,
         series_scope: series_scope,
-        keep_history: started_on.present?
+        keep_history: latest.started_on.present?
       ).run!
     end
   end
@@ -489,12 +494,20 @@ class RecurringTransaction < ApplicationRecord
   # what the plan means.
   def started_on_within_schedule
     return if started_on.blank?
+    return if expected_day_of_month.blank?
 
-    # Read the stored next expected date, not next_due_date: the latter builds
-    # the schedule, and a data import validates before its recurrence rules
-    # have landed. Caching an empty rule set there turns the restored bill
-    # monthly.
-    if next_expected_date.present? && started_on > next_expected_date
+    # A new record (including a data import) validates before its recurrence
+    # rules have landed, so it reads the stored next expected date. A persisted
+    # record reads the live schedule instead: next_expected_date is only a
+    # cached hint and can freeze in the past after a settlement.
+    boundary =
+      if new_record?
+        next_expected_date
+      else
+        next_open_occurrence&.effective_due_on || schedule.first_occurrence_after(Date.current)
+      end
+
+    if boundary.present? && started_on > boundary
       errors.add(:started_on, :after_next_due)
     end
 
