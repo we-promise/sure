@@ -2288,6 +2288,22 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-section-key=biggest_expenses] tbody tr:nth-child(2)", text: /One-time/, count: 0
   end
 
+  test "biggest expenses does not name an account the viewer cannot open in a contribution's name" do
+    brokerage = @family.accounts.create!(name: "Hidden Brokerage", owner: users(:family_admin), balance: 0,
+                                         currency: "USD", accountable: Investment.new)
+    Transfer::Creator.new(
+      family: @family, source_account_id: accounts(:depository).id, destination_account_id: brokerage.id,
+      date: BIGGEST_MONTH + 1, amount: 700
+    ).create
+    sign_in users(:family_member)
+
+    get biggest_expenses_reports_path
+
+    assert_response :ok
+    assert_includes biggest_expense_names, "Transfer to another account"
+    assert_no_match "Hidden Brokerage", response.body
+  end
+
   test "biggest expenses leaves out trades" do
     security = securities(:aapl)
     create_trade(security, account: accounts(:investment), qty: 100, date: BIGGEST_MONTH + 1, price: 500)

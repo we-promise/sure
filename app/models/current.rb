@@ -6,7 +6,7 @@ class Current < ActiveSupport::CurrentAttributes
 
   delegate :family, to: :user, allow_nil: true
 
-  resets { @accessible_accounts = @finance_accounts = nil }
+  resets { @accessible_accounts = @accessible_account_ids = @finance_accounts = nil }
 
   def user
     impersonated_user || session&.user
@@ -24,6 +24,10 @@ class Current < ActiveSupport::CurrentAttributes
     @accessible_accounts ||= (user ? user.accessible_accounts : family&.accounts)&.load
   end
 
+  def accessible_account_ids
+    @accessible_account_ids ||= Array(accessible_accounts).map(&:id).to_set
+  end
+
   def finance_accounts
     @finance_accounts ||= (user ? user.finance_accounts : family&.accounts)&.load
   end
@@ -38,6 +42,16 @@ class Current < ActiveSupport::CurrentAttributes
   def annotatable_entries
     return family&.entries unless user
     family.entries.joins(:account).merge(Account.annotatable_by(user))
+  end
+
+  # Entries the Quick Categorize wizard offers: the annotatable ones, less the
+  # transfer legs and fees named after an account the user cannot open, as the
+  # wizard groups, titles and builds rules by name.
+  def categorizable_entries
+    entries = annotatable_entries
+    return entries unless user
+
+    entries.where.not(entryable_id: Transaction.with_counterpart_hidden_from(user).select(:id))
   end
 
   # Used for invalidating caches whose results depend on the current user's

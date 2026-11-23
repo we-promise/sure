@@ -19,7 +19,7 @@
     <% outflows.each do |entry| %>
       <li class="flex items-center justify-between gap-3 rounded-lg bg-surface-inset px-3 py-2">
         <div class="min-w-0">
-          <p class="text-sm text-primary truncate"><%= entry.name %></p>
+          <p class="text-sm text-primary truncate"><%= entry_display_name(entry) %></p>
           <p class="text-xs text-secondary tabular-nums privacy-sensitive">
             <%= l(entry.date, format: :long) %>
             <span aria-hidden="true"><%= t("shared.dot_separator") %></span>

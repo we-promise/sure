@@ -115,7 +115,7 @@
                       <p class="text-secondary text-xs uppercase">
                         <%= l(transaction.entry.date, format: :short) %>
                       </p>
-                      <%= link_to transaction.entry.name,
+                      <%= link_to entry_display_name(transaction.entry),
                                   transactions_path,
                                   class: "text-primary hover:underline",
                                   data: { turbo_frame: :_top } %>

@@ -1,11 +1,12 @@
 <%= turbo_frame_tag "categorize_entry_#{entry.id}" do %>
+  <% display_name = entry_display_name(entry) %>
   <input type="hidden" name="all_entry_ids[]" value="<%= entry.id %>">
   <div class="grid grid-cols-[1rem_1fr_5rem_6rem_6.5rem] gap-3 items-center px-5 py-3 bg-container hover:bg-container-hover">
     <input type="checkbox" name="entry_ids[]" value="<%= entry.id %>"
            checked class="checkbox checkbox--light shrink-0"
-           aria-label="<%= t("transactions.categorizes.entry_row.include_checkbox", name: entry.name) %>"
+           aria-label="<%= t("transactions.categorizes.entry_row.include_checkbox", name: display_name) %>"
            data-action="change->categorize#uncheckRule">
-    <span class="min-w-0 font-medium text-primary truncate"><%= entry.name %></span>
+    <span class="min-w-0 font-medium text-primary truncate"><%= display_name %></span>
     <span class="text-secondary whitespace-nowrap"><%= format_date(entry.date) %></span>
     <span class="privacy-sensitive font-medium text-right whitespace-nowrap <%= entry.amount.negative? ? "text-green-600" : "text-primary" %>">
       <%= format_money(entry.amount_money.abs) %>
@@ -13,7 +14,7 @@
     <%= select_tag "category_id",
           options_for_select(Category::Group.select_options(categories)),
           prompt: t("transactions.categorizes.show.assign_category_prompt"),
-          aria: { label: t("transactions.categorizes.entry_row.assign_category_select", name: entry.name) },
+          aria: { label: t("transactions.categorizes.entry_row.assign_category_select", name: display_name) },
           class: "w-full text-xs border border-primary rounded-lg px-1.5 py-0.5 bg-container text-secondary",
           data: { entry_id: entry.id, action: "change->categorize#assignEntry" } %>
   </div>

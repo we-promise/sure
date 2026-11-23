@@ -953,7 +953,115 @@ class TransactionTest < ActiveSupport::TestCase
     assert_not_includes found, contribution
   end
 
+  test "a transfer leg keeps its name for a user who can open both accounts" do
+    transfer = transfer_to_hidden_account
+
+    assert_equal "Transfer to Hidden Savings", transfer.outflow_transaction.name_for(account_ids_of(users(:family_admin)))
+    assert_equal "Transfer from Shared Checking", transfer.inflow_transaction.name_for(account_ids_of(users(:family_admin)))
+  end
+
+  test "a transfer leg does not name an account the user cannot open" do
+    transfer = transfer_to_hidden_account
+
+    assert_equal "Transfer to another account", transfer.outflow_transaction.name_for(account_ids_of(users(:family_member)))
+  end
+
+  test "an inflow leg does not name the account it came from when the user cannot open it" do
+    transfer = transfer_to_hidden_account(from: hidden_account, to: shared_account)
+
+    assert_equal "Transfer from another account", transfer.inflow_transaction.name_for(account_ids_of(users(:family_member)))
+  end
+
+  test "a payment does not name a liability the user cannot open" do
+    card = families(:dylan_family).accounts.create!(name: "Hidden Card", owner: users(:family_admin), balance: 0,
+                                                     currency: "USD", accountable: CreditCard.new)
+    transfer = transfer_to_hidden_account(to: card)
+
+    assert_equal "Payment to another account", transfer.outflow_transaction.name_for(account_ids_of(users(:family_member)))
+  end
+
+  test "a transfer leg does not name a hidden account that was renamed after the transfer" do
+    transfer = transfer_to_hidden_account
+    hidden_account.update!(name: "Rainy Day Fund")
+
+    assert_equal "Transfer to another account", transfer.outflow_transaction.reload.name_for(account_ids_of(users(:family_member)))
+  end
+
+  test "a name the user wrote is kept when it does not name the hidden account" do
+    transfer = transfer_to_hidden_account
+    transfer.outflow_transaction.entry.update!(name: "Monthly savings")
+
+    assert_equal "Monthly savings", transfer.outflow_transaction.reload.name_for(account_ids_of(users(:family_member)))
+  end
+
+  test "a name the user wrote does not name the hidden account either" do
+    transfer = transfer_to_hidden_account
+    transfer.outflow_transaction.entry.update!(name: "Top up Hidden Savings for the trip")
+
+    assert_equal "Top up another account for the trip", transfer.outflow_transaction.reload.name_for(account_ids_of(users(:family_member)))
+  end
+
+  test "a transfer fee does not name the account on the transfer's other side" do
+    transfer = transfer_to_hidden_account(source_fee_amount: 2)
+    fee = transfer.fee_transactions.sole
+
+    assert_equal "Transfer fee — Transfer to Hidden Savings", fee.name_for(account_ids_of(users(:family_admin)))
+    assert_equal "Transfer fee — Transfer to another account", fee.name_for(account_ids_of(users(:family_member)))
+  end
+
+  test "a transaction outside a transfer keeps its name" do
+    entry = create_transaction(account: shared_account, name: "Hidden Savings interest")
+
+    assert_equal "Hidden Savings interest", entry.transaction.name_for(account_ids_of(users(:family_member)))
+  end
+
+  test "with_counterpart_hidden_from finds the visible legs and fees of transfers with an account the user cannot open" do
+    hidden_transfer = transfer_to_hidden_account(source_fee_amount: 2)
+    open_transfer = transfer_to_hidden_account(to: families(:dylan_family).accounts.create!(
+      name: "Shared Savings", owner: users(:family_admin), balance: 0, currency: "USD", accountable: Depository.new
+    ).tap { |account| account.account_shares.create!(user: users(:family_member), permission: "read_only") })
+    plain = create_transaction(account: shared_account, name: "Groceries").transaction
+
+    ids = Transaction.with_counterpart_hidden_from(users(:family_member)).ids
+
+    assert_includes ids, hidden_transfer.outflow_transaction_id
+    assert_includes ids, hidden_transfer.fee_transactions.sole.id
+    assert_not_includes ids, open_transfer.outflow_transaction_id
+    assert_not_includes ids, open_transfer.inflow_transaction_id
+    assert_not_includes ids, plain.id
+    assert_empty Transaction.with_counterpart_hidden_from(users(:family_admin)).where(id: ids)
+  end
+
   private
+    # A transfer between an account the family member can open and one only
+    # the admin can, named the way Sure names it.
+    def transfer_to_hidden_account(from: shared_account, to: hidden_account, source_fee_amount: nil)
+      Transfer::Creator.new(
+        family: families(:dylan_family),
+        source_account_id: from.id,
+        destination_account_id: to.id,
+        date: Date.current,
+        amount: 100,
+        source_fee_amount: source_fee_amount
+      ).create
+    end
+
+    def shared_account
+      @shared_account ||= families(:dylan_family).accounts.create!(
+        name: "Shared Checking", owner: users(:family_admin), balance: 1_000, currency: "USD", accountable: Depository.new
+      ).tap { |account| account.account_shares.create!(user: users(:family_member), permission: "full_control") }
+    end
+
+    def hidden_account
+      @hidden_account ||= families(:dylan_family).accounts.create!(
+        name: "Hidden Savings", owner: users(:family_admin), balance: 0, currency: "USD", accountable: Depository.new
+      )
+    end
+
+    def account_ids_of(user)
+      Account.accessible_by(user).pluck(:id).to_set
+    end
+
     # Whether each SQL form of "is this transaction pending?" says it is.
     def sql_pending_answers(transaction)
       entry_id = transaction.entry.id

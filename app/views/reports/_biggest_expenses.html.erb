@@ -5,7 +5,7 @@
       <%# Name and details wrap rather than truncate, so the amount stays in view on a narrow screen. %>
       <div class="space-y-0.5">
         <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <%= link_to expense[:entry].name, entry_path(expense[:entry]),
+          <%= link_to entry_display_name(expense[:entry]), entry_path(expense[:entry]),
                       class: "font-medium text-primary hover:underline",
                       data: { turbo_frame: "drawer", turbo_prefetch: false } %>
           <% if expense[:transaction].one_time? %>

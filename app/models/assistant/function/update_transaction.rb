@@ -93,7 +93,7 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
     {
       success: true,
       transaction: serialize(transaction.reload),
-      message: "Transaction '#{transaction.entry.name}' updated."
+      message: "Transaction '#{entry_name(transaction.entry)}' updated."
     }
   rescue ActiveRecord::RecordInvalid => e
     error("validation_failed", e.record.errors.full_messages.join("; "))
@@ -165,7 +165,7 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
       entry = transaction.entry
       {
         id: transaction.id,
-        name: entry.name,
+        name: entry_name(entry),
         date: entry.date,
         notes: entry.notes,
         category: transaction.category && {

@@ -47,7 +47,9 @@ class TransactionsController < ApplicationController
                              inflow_transaction: { entry: :account },
                              outflow_transaction: [ :category, { entry: :account } ]
                            }
-                         }
+                         },
+                         # A fee row's name hides the account on its transfer's other side.
+                         { transfer: { inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account } } }
                        )
 
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]))
@@ -78,7 +80,7 @@ class TransactionsController < ApplicationController
     # Counts what the categorize wizard can act on, so read-only shares don't
     # keep the "Categorize" menu item visible.
     @uncategorized_count = Rails.cache.fetch(uncategorized_count_cache_key) do
-      Current.annotatable_entries.uncategorized_transactions.count
+      Current.categorizable_entries.uncategorized_transactions.count
     end
 
     # Load projected recurring transactions for next 10 days. Only the IDs are
@@ -577,6 +579,7 @@ class TransactionsController < ApplicationController
   def name_suggestions
     unknown_names = LanguagesHelper::SUPPORTED_LOCALES.map { |locale| I18n.t("transactions.unknown_name", locale: locale) }
     transactions = Current.family.transactions.merge(Account.accessible_by(Current.user)).where.not(entries: { name: unknown_names })
+                          .where.not(id: hidden_counterpart_transaction_ids)
     query = params[:q].to_s.strip
 
     @suggestions = if query.length < Transaction::MIN_LENGTH_FOR_NAME_SUGGESTION
@@ -589,7 +592,7 @@ class TransactionsController < ApplicationController
 
   private
     def uncategorized_count_cache_key
-      "transactions_uncategorized_count/v5/#{Current.family.id}/#{Current.user.id}/" \
+      "transactions_uncategorized_count/v6/#{Current.family.id}/#{Current.user.id}/" \
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
     end
 
@@ -800,12 +803,19 @@ class TransactionsController < ApplicationController
       Current.accessible_entries
         .where(entryable_type: "Transaction")
         .where.not(name: unknown_names)
+        .where.not(entryable_id: hidden_counterpart_transaction_ids)
         .order(created_at: :desc)
         .limit(200)
         .pluck(:name, :created_at)
         .map(&:first)
         .uniq
         .first(20)
+    end
+
+    # Transfer legs and fees named after an account the user cannot open; their
+    # names are not offered as suggestions.
+    def hidden_counterpart_transaction_ids
+      Transaction.with_counterpart_hidden_from(Current.user).select(:id)
     end
 
     # Filters entry_params based on the user's permission on the account.

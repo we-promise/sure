@@ -150,7 +150,7 @@ module TransactionsHelper
     transaction = entry.entryable
     transfer = transaction.transfer
     outflow_leg = transaction.transfer_as_outflow.present?
-    counterpart = transfer && (outflow_leg ? transfer.to_account : transfer.from_account)
+    counterpart = transaction.counterpart_account
     other_leg = transfer && (outflow_leg ? transfer.inflow_transaction : transfer.outflow_transaction)
     split_parent = @split_parent_entry_ids ? @split_parent_entry_ids.include?(entry.id) : entry.split_parent?
     account_key = ->(account) { account && [ account.id, account.name, account.accountable_type, account.supports_trades? ] }
@@ -174,6 +174,9 @@ module TransactionsHelper
       can_reconcile_account?(entry.account),
       (manual_account?(entry.account) if transfer.present?),
       counterpart.present? && @accessible_account_ids&.include?(counterpart.id),
+      # Whether the name hides an account the viewer cannot open (a fee's
+      # counterpart is not covered by the line above).
+      entry_display_name(entry) != entry.name,
       Setting.brand_fetch_logo_size,
       Setting.brand_fetch_client_id.presence&.then { |id| Digest::SHA256.hexdigest(id) },
       entry.cache_key_with_version,

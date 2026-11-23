@@ -123,6 +123,16 @@ class Assistant::Function
       user.family
     end
 
+    # The accounts this user can open (owned or shared).
+    def accessible_account_ids
+      @accessible_account_ids ||= family.accounts.accessible_by(user).pluck(:id).to_set
+    end
+
+    # The entry's name as this user may read it (Entry#name_for).
+    def entry_name(entry)
+      entry.name_for(accessible_account_ids)
+    end
+
     def valid_uuid?(str)
       UuidFormat.valid?(str)
     end

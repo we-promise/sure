@@ -1692,6 +1692,36 @@ end
     assert_not_includes response.body, hidden_account_id(transfer)
   end
 
+  test "a transfer's name does not name the other leg's account when the caller cannot open it" do
+    key, transfer = member_transfer_to_hidden_account
+
+    get api_v1_transaction_url(transfer.outflow_transaction), headers: api_headers(key)
+    assert_response :success
+
+    assert_equal "Transfer to another account", JSON.parse(response.body)["name"]
+    assert_not_includes response.body, "Hidden Savings"
+  end
+
+  test "index does not name the other leg's account in a transfer's name when the caller cannot open it" do
+    key, transfer = member_transfer_to_hidden_account
+
+    get api_v1_transactions_url, params: { per_page: 100 }, headers: api_headers(key)
+    assert_response :success
+
+    row = JSON.parse(response.body)["transactions"].find { |t| t["id"] == transfer.outflow_transaction_id }
+    assert_equal "Transfer to another account", row["name"]
+    assert_not_includes response.body, "Hidden Savings"
+  end
+
+  test "a transfer keeps its name for a caller who can open both accounts" do
+    _key, transfer = member_transfer_to_hidden_account
+
+    get api_v1_transaction_url(transfer.outflow_transaction), headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal "Transfer to Hidden Savings", JSON.parse(response.body)["name"]
+  end
+
   test "index renders transfer rows without per-transfer transaction lookups" do
     transfer = create_transfer_between_accounts
 

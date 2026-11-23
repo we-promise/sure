@@ -26,6 +26,30 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show leaves out a payment named after an account the user cannot open" do
+    loan = @family.accounts.create!(name: "Hidden Mortgage", owner: @user, balance: 1_000, currency: "USD", accountable: Loan.new)
+    Transfer::Creator.new(family: @family, source_account_id: @account.id, destination_account_id: loan.id,
+                          date: Date.current, amount: 300).create
+    create_transaction(account: @account, name: "Starbucks")
+    sign_in users(:family_member)
+
+    get transactions_categorize_url
+
+    assert_response :success
+    assert_no_match "Hidden Mortgage", response.body
+  end
+
+  test "show offers a payment to an account the user can open" do
+    loan = @family.accounts.create!(name: "Shared Mortgage", owner: @user, balance: 1_000, currency: "USD", accountable: Loan.new)
+    Transfer::Creator.new(family: @family, source_account_id: @account.id, destination_account_id: loan.id,
+                          date: Date.current, amount: 300).create
+
+    get transactions_categorize_url
+
+    assert_response :success
+    assert_match "Payment to Shared Mortgage", response.body
+  end
+
   test "show groups subcategories immediately after their parent in the category select" do
     create_transaction(account: @account, name: "Starbucks")
     get transactions_categorize_url

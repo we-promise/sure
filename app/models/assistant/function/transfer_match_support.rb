@@ -23,10 +23,6 @@ module Assistant::Function::TransferMatchSupport
       family.accounts.visible.writable_by(user).find_by(id: id)
     end
 
-    def accessible_account_ids
-      @accessible_account_ids ||= family.accounts.accessible_by(user).pluck(:id).to_set
-    end
-
     def serialize_transaction(transaction)
       entry = transaction.entry
 
@@ -34,7 +30,7 @@ module Assistant::Function::TransferMatchSupport
         transaction_id: transaction.id,
         account_id: entry.account_id,
         account: entry.account.name,
-        name: entry.name,
+        name: entry_name(entry),
         date: entry.date,
         amount: entry.amount.abs.to_s,
         amount_formatted: format_money(entry.amount_money.abs),

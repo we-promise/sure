@@ -206,7 +206,8 @@ class Assistant::Function::GetTransactions < Assistant::Function
       { entry: :account },
       :category, :merchant, :tags,
       transfer_as_outflow: { inflow_transaction: { entry: :account } },
-      transfer_as_inflow: { outflow_transaction: { entry: :account } }
+      transfer_as_inflow: { outflow_transaction: { entry: :account } },
+      transfer: { inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account } }
     ).offset(pagy.offset).limit(pagy.limit)
 
     totals = search.totals
@@ -216,7 +217,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
       row = {
         id: txn.id,
         entry_id: entry.id,
-        name: entry.name,
+        name: entry_name(entry),
         date: entry.date,
         amount: entry.amount.abs,
         currency: entry.currency,
@@ -241,7 +242,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
       # visible leg is legitimately in this result, but naming the account on
       # the other end would disclose an account this user cannot reach. The key
       # is then left out rather than blanked, matching the sparse convention.
-      counterparty = transfer_counterparty_account(txn)
+      counterparty = txn.counterpart_account
       row[:transfer_account] = counterparty.name if counterparty && accessible_account_ids.include?(counterparty.id)
 
       apply_label_hints(row, entry)
@@ -271,25 +272,13 @@ class Assistant::Function::GetTransactions < Assistant::Function
     # card was used earlier, which is the gap that makes fee timing impossible
     # to explain from `date` alone.
     def apply_label_hints(row, entry)
-      label = Transaction::LabelNormalizer.normalize(entry.name, on: entry.date, region: family.country)
+      label = Transaction::LabelNormalizer.normalize(row[:name], on: entry.date, region: family.country)
 
-      row[:clean_name] = label.name if label.normalized?(entry.name)
+      row[:clean_name] = label.name if label.normalized?(row[:name])
       row[:rail] = label.rail if label.rail
       row[:operation_date] = label.operation_date if label.operation_date && label.operation_date != entry.date
 
       row
-    end
-
-    # The transfer pair is already preloaded for both directions (see the
-    # `includes` above), so naming the other side costs no extra query. Without
-    # it an assistant sees `is_transfer: true` and cannot tell a card payment
-    # from a move into savings.
-    def transfer_counterparty_account(txn)
-      transfer = txn.transfer
-      return nil unless transfer
-
-      other = transfer.inflow_transaction_id == txn.id ? transfer.outflow_transaction : transfer.inflow_transaction
-      other&.entry&.account
     end
 
     def ordered(query, params)

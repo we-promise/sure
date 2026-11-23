@@ -140,7 +140,7 @@ class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
     # investment contribution or a one-time row with no category is part of the gap.
     def uncategorized_entries(period, account_ids)
       Entry.uncategorized_transactions
-           .where(account_id: accessible_account_ids(account_ids))
+           .where(account_id: requested_accessible_account_ids(account_ids))
            .where(entries: { date: period })
            # preload, not includes: the scope already carries a raw
            # INNER JOIN on transactions, and `includes` would try to
@@ -150,7 +150,7 @@ class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
            .to_a
     end
 
-    def accessible_account_ids(requested)
+    def requested_accessible_account_ids(requested)
       accessible = user.accessible_accounts.visible.pluck(:id)
       return accessible if requested.blank?
 
@@ -183,7 +183,7 @@ class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
       merchant = entry.entryable.merchant
       return [ merchant.name, nil, entry.currency, classification_of(entry) ] if merchant
 
-      label = Transaction::LabelNormalizer.normalize(entry.name, on: entry.date, region: family.country)
+      label = Transaction::LabelNormalizer.normalize(entry_name(entry), on: entry.date, region: family.country)
       [ label.name.upcase, label.rail, entry.currency, classification_of(entry) ]
     end
 

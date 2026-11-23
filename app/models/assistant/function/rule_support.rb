@@ -454,7 +454,7 @@ module Assistant::Function::RuleSupport
         id: txn.id,
         date: entry.date.iso8601,
         account: entry.account.name,
-        name: entry.name,
+        name: entry_name(entry),
         amount: entry.amount.to_s,
         currency: entry.currency,
         category: txn.category&.name_with_parent,

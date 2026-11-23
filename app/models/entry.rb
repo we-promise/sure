@@ -518,6 +518,12 @@ class Entry < ApplicationRecord
     (entryable.saved_changes.keys - descriptive).any?
   end
 
+  # The name as read by someone who can open only the accounts in
+  # +accessible_account_ids+ (see Transaction#name_for).
+  def name_for(accessible_account_ids)
+    transaction? ? entryable.name_for(accessible_account_ids) : name
+  end
+
   def entryable_name_short
     entryable_type.demodulize.underscore
   end

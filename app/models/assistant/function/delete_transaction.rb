@@ -148,7 +148,7 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
         id: transaction.id,
         entry_id: entry.id,
         account_id: entry.account_id,
-        name: entry.name,
+        name: entry_name(entry),
         date: entry.date,
         amount: entry.amount.to_s,
         amount_formatted: format_money(entry),

@@ -8,6 +8,7 @@
     embed the session's CSRF token, and the session may not be loaded yet. %>
 <% cache_unless transaction.transfer&.pending?, transaction_row_cache_key(entry, view_ctx: view_ctx, in_split_group: in_split_group), expires_in: 12.hours, skip_digest: true do %>
 <% transaction_security_logo_url = transaction.activity_security&.display_logo_url %>
+<% display_name = entry_display_name(entry) %>
 <% open_path = if transaction.transfer?
      transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry)
    else
@@ -68,7 +69,7 @@
                 <div class="hidden lg:flex">
                   <%= render DS::FilledIcon.new(
                     variant: :text,
-                    text: entry.name,
+                    text: display_name,
                     size: "lg",
                     rounded: true
                   ) %>
@@ -81,7 +82,7 @@
                 <div class="flex items-center gap-1 min-w-0" data-tag-fit-bounds="0.5">
                   <div class="truncate flex-shrink">
                     <%= link_to(
-                          entry.name,
+                          display_name,
                           open_path,
                           data: {
                             turbo_frame: "drawer",
@@ -161,7 +162,7 @@
                     <span class="text-secondary">
                       <%= transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %> •
                       <% if transaction.transfer.present? %>
-                        <% counterpart = transaction.transfer_as_outflow.present? ? transaction.transfer.to_account : transaction.transfer.from_account %>
+                        <% counterpart = transaction.counterpart_account %>
                         <% if counterpart.present? && @accessible_account_ids&.include?(counterpart.id) %>
                           <% if transaction.transfer_as_outflow.present? %>
                             <%= entry.account.name %> → <%= counterpart.name %>

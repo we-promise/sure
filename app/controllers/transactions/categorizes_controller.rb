@@ -7,7 +7,7 @@ class Transactions::CategorizesController < ApplicationController
     ]
     @position = [ params[:position].to_i, 0 ].max
     groups = Transaction::Grouper.strategy.call(
-      Current.annotatable_entries,
+      Current.categorizable_entries,
       limit: 1,
       offset: @position
     )
@@ -77,7 +77,7 @@ class Transactions::CategorizesController < ApplicationController
   def preview_rule
     filter           = params[:filter].to_s.strip
     transaction_type = params[:transaction_type].presence
-    entries          = filter.present? ? Entry.uncategorized_matching(Current.annotatable_entries, filter, transaction_type) : []
+    entries          = filter.present? ? Entry.uncategorized_matching(Current.categorizable_entries, filter, transaction_type) : []
     @categories      = Current.family.categories.includes(:parent).alphabetically
 
     render turbo_stream: [
@@ -124,12 +124,12 @@ class Transactions::CategorizesController < ApplicationController
   private
 
     def uncategorized_count
-      Current.annotatable_entries.uncategorized_transactions.count
+      Current.categorizable_entries.uncategorized_transactions.count
     end
 
     def uncategorized_entries_for(ids)
       return [] if ids.blank?
-      Current.annotatable_entries
+      Current.categorizable_entries
         .excluding_split_parents
         .where(id: ids)
         .uncategorized_transactions

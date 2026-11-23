@@ -50,6 +50,23 @@ class Assistant::Function::UpdateTransactionTest < ActiveSupport::TestCase
     assert @transaction.locked?(:tag_ids)
   end
 
+  test "does not name an inaccessible account in the updated transfer leg's name" do
+    hidden = families(:dylan_family).accounts.create!(name: "Hidden Savings", owner: users(:family_admin), balance: 0,
+                                                      currency: "USD", accountable: Depository.new)
+    transfer = Transfer::Creator.new(
+      family: families(:dylan_family), source_account_id: accounts(:depository).id, destination_account_id: hidden.id,
+      date: Date.current, amount: 100
+    ).create
+
+    result = Assistant::Function::UpdateTransaction.new(users(:family_member)).call(
+      "id" => transfer.outflow_transaction_id, "notes" => "Monthly"
+    )
+
+    assert_equal true, result[:success]
+    assert_equal "Transfer to another account", result[:transaction][:name]
+    assert_not_includes result.to_json, "Hidden Savings"
+  end
+
   test "rejects categories outside the family" do
     other_category = Category.create!(
       family: families(:empty),
