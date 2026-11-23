@@ -19,8 +19,8 @@ class ExchangeRate::UsdCross
     @provider = provider
   end
 
-  # Rate[] dated like the X→USD leg, each multiplied by the latest USD→Y rate
-  # on or before that date. `error` is why the direct pair failed, when it did.
+  # Rate[] for dates with both USD legs. Callers can reuse a completed cross
+  # when a date has no matching quotes. `error` is why the direct pair failed.
   # [] when either side is USD, the provider itself is failing or cannot derive
   # a pair (see Provider::ExchangeRateConcept#usd_cross?), it has quoted
   # this pair before (so the failure is an outage, and a derived rate would
@@ -41,16 +41,13 @@ class ExchangeRate::UsdCross
     from_usd = leg("USD", to, start_date, end_date)
     return miss(from, to, start_date, end_date) if from_usd.empty?
 
-    # The latest USD→Y rate in the fetched window is carried however old, as the
-    # importer carries a direct rate over a gap; X→USD still moves the result
-    # each day.
-    i = -1
+    from_usd_by_date = from_usd.index_by(&:date)
     crossed = to_usd.filter_map do |first|
-      i += 1 while i + 1 < from_usd.size && from_usd[i + 1].date <= first.date
-      next if i.negative?
+      second = from_usd_by_date[first.date]
+      next unless second
 
       # Two tiny legs can multiply to under 5e-13, which rounds to a zero rate.
-      rate = (BigDecimal(first.rate.to_s) * BigDecimal(from_usd[i].rate.to_s)).round(12)
+      rate = (BigDecimal(first.rate.to_s) * BigDecimal(second.rate.to_s)).round(12)
       next unless ExchangeRate.valid_rate?(rate)
 
       Provider::ExchangeRateConcept::Rate.new(date: first.date, from: from, to: to, rate: rate)

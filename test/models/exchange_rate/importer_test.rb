@@ -358,7 +358,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_not ExchangeRate.exists?(from_currency: "XYZ", to_currency: "BTC")
   end
 
-  test "imports a pair the provider lacks from its USD legs" do
+  test "imports a cross from same-day USD legs and carries the cross over a gap" do
     ExchangeRate.delete_all
     window = { start_date: get_provider_fetch_start_date(1.day.ago.to_date), end_date: Date.current }
 
@@ -381,7 +381,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     ).import_provider_rates
 
     rates = ExchangeRate.where(from_currency: "KZT", to_currency: "RUB").order(:date).pluck(:rate).map(&:to_f)
-    assert_equal [ 0.16, 0.176 ], rates
+    assert_equal [ 0.16, 0.16 ], rates
     assert_equal 2, ExchangeRate.where(from_currency: "RUB", to_currency: "KZT").count
   end
 

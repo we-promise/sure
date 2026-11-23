@@ -169,19 +169,23 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_nil ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true)
   end
 
-  test "derives a pair the provider lacks from its USD legs and caches it" do
+  test "caches the latest cross on its shared observation date" do
     ExchangeRate.delete_all
     date = Date.current
+    common_date = date - 1
     window = { start_date: date - ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS, end_date: date }
 
     @provider.expects(:fetch_exchange_rate).returns(provider_error_response(StandardError.new("no KZT/RUB")))
     @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "USD", **window)
-             .returns(provider_success_response([ OpenStruct.new(from: "KZT", to: "USD", date: date, rate: 0.002) ]))
+             .returns(provider_success_response([
+               OpenStruct.new(from: "KZT", to: "USD", date: common_date, rate: 0.002),
+               OpenStruct.new(from: "KZT", to: "USD", date: date, rate: 0.0022)
+             ]))
     @provider.expects(:fetch_exchange_rates).with(from: "USD", to: "RUB", **window)
-             .returns(provider_success_response([ OpenStruct.new(from: "USD", to: "RUB", date: date, rate: 80) ]))
+             .returns(provider_success_response([ OpenStruct.new(from: "USD", to: "RUB", date: common_date, rate: 80) ]))
 
     assert_equal 0.16, ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: date).rate.to_f
-    assert_equal 0.16, ExchangeRate.find_by!(from_currency: "KZT", to_currency: "RUB", date: date).rate.to_f
+    assert_equal [ [ common_date, BigDecimal("0.16") ] ], ExchangeRate.where(from_currency: "KZT", to_currency: "RUB").pluck(:date, :rate)
   end
 
   test "does not ask Yahoo for the USD legs when its single lookup failed on authentication" do
