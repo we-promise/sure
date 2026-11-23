@@ -15,3 +15,10 @@ en:
           attributes:
             extended_public_key:
               encryption_unavailable: requires configured Active Record encryption
+  bitcoin_wallet:
+    quantity_reconciliation: Position quantity reconciliation
+    reconciliation: "Wallet adjustment"
+    managed_position: This position is managed by a provider. Disconnect it before changing its quantity.
+    movements:
+      received: "Received %{quantity} BTC"
+      sent: "Sent %{quantity} BTC"

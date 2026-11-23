@@ -73,6 +73,7 @@ class Account < ApplicationRecord
   def reload(*)
     @scheduled_entry_flows = nil
     @current_holdings_total = nil
+    @provider = @providers = nil
     super
   end
 
@@ -847,6 +848,8 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
+    return Holding::CurrentPositions.new(self).scope if position_tracking?
+
     # A cash-anchored account carries untraded holdings in their own currency,
     # so take each security's latest row up to today in any currency.
     if accounting_start_date
@@ -930,6 +933,8 @@ class Account < ApplicationRecord
   # Determines if this account supports manual trade entry
   # Investment accounts always support trades; Crypto only if subtype is "exchange"
   def supports_trades?
+    return true if position_tracking?
+
     return true if investment?
     return accountable.supports_trades? if crypto? && accountable.respond_to?(:supports_trades?)
     false

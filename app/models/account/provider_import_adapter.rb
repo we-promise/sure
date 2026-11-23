@@ -759,7 +759,12 @@ class Account::ProviderImportAdapter
         name: trade_name
       )
 
-      entry.save!
+      begin
+        entry.entryable.provider_importing = true
+        entry.save!
+      ensure
+        entry.entryable.provider_importing = false
+      end
 
       # Coins arriving in a wallet are its deposits (GoalPledge.deposit_trade?).
       # After commit, because a wallet writes the trade inside its own

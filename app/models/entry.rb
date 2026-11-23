@@ -88,6 +88,9 @@ class Entry < ApplicationRecord
       entryable_type == "Transaction" && account&.family&.auto_generate_transaction_names?
   }
 
+  validate :position_provider_owns_trade_entry
+
+  before_destroy :prevent_managed_trade_deletion
   before_destroy :prevent_individual_child_deletion, if: :split_child?
   before_validation :reactivate_changed_valuation
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
@@ -1041,7 +1044,29 @@ class Entry < ApplicationRecord
     end
   end
 
+  def provider_managed_trade?
+    trade? && account && date && account.provider_managed_security?(entryable.security_id, date: date)
+  end
+
   private
+
+    def position_provider_owns_trade_entry
+      return unless trade? && account && date && !entryable.provider_importing
+      wallet_metadata_changed = source.in?(%w[bitcoin_wallet bitcoin_wallet_reconciliation]) && (name_changed? || notes_changed?)
+      return unless new_record? || date_changed? || amount_changed? || currency_changed? || excluded_changed? || wallet_metadata_changed
+      return unless provider_managed_trade? ||
+        (date_in_database && account.provider_managed_security?(entryable.security_id, date: date_in_database))
+
+      errors.add(:base, I18n.t("bitcoin_wallet.managed_position"))
+    end
+
+    def prevent_managed_trade_deletion
+      return if destroyed_by_association&.active_record == Account || !trade? || entryable.provider_importing
+      return unless provider_managed_trade?
+
+      errors.add(:base, I18n.t("bitcoin_wallet.managed_position"))
+      throw(:abort)
+    end
     # Works on the stored row: the loaded transaction may predate the sync
     # that wrote the mark.
     def clear_auto_excluded_pending_mark

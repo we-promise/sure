@@ -15,3 +15,10 @@ uk:
           attributes:
             extended_public_key:
               encryption_unavailable: потребує налаштованого шифрування Active Record
+  bitcoin_wallet:
+    quantity_reconciliation: Звірка кількості в позиції
+    reconciliation: "Коригування гаманця"
+    managed_position: Цією позицією керує постачальник. Від'єднайте його, перш ніж змінювати її кількість.
+    movements:
+      received: "Отримано %{quantity} BTC"
+      sent: "Надіслано %{quantity} BTC"

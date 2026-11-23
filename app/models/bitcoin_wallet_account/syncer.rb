@@ -91,8 +91,10 @@ class BitcoinWalletAccount::Syncer
         raise
       end
 
+      processor = BitcoinWalletAccount::Processor.new(wallet)
+      processor.prepare_prices if wallet.account_provider
       invalid_claim = false
-      wallet.with_lock do
+      window = wallet.with_lock do
         if source_signature != @source_signature
           queue_continuation
           return
@@ -115,16 +117,31 @@ class BitcoinWalletAccount::Syncer
         remember_transactions(snapshot, snapshot.missing_statuses)
         attributes = { balance_sats: snapshot.balance_sats,
           history_truncated: snapshot.history_truncated, last_synced_at: Time.current, last_error: nil,
-          status: :preview }
-        attributes[:baseline_block_height] = snapshot.block_height if wallet.baseline_at.nil?
+          status: wallet.account_provider ? :active : :preview }
+        attributes[:baseline_block_height] = snapshot.block_height if wallet.baseline_at.nil? || wallet.needs_reconciliation?
         wallet.update!(attributes)
         # Reopen the lookahead after every read, so a deposit to a fresh
         # address is in the next quantity.
         wallet.restart_discovery!
+        next unless wallet.account_provider
+
+        if wallet.needs_reconciliation?
+          wallet.bitcoin_wallet_transactions.update_all(baseline: true)
+          wallet.update!(baseline_at: Time.current, needs_reconciliation: false)
+        end
+        processor.process(prepare_prices: false, materialize: @sync.nil?)
       end
       if invalid_claim
         raise BitcoinWalletAccount::Discovery::AddressMismatch, "The receive address does not match this BIP84 account within the selected gap limit"
       end
+      queue_account_sync(window)
+    end
+
+    def queue_account_sync(window)
+      return unless @sync && window && !@sync.cancel_requested?
+
+      wallet.account.sync_later(parent_sync: @sync,
+        window_start_date: [ window, @sync.window_start_date ].compact.min, window_end_date: @sync.window_end_date)
     end
 
     # A reader that held the lock while this sync waited may already have
@@ -134,7 +151,7 @@ class BitcoinWalletAccount::Syncer
       return false unless @sync && @sync.sync_stats.to_h.fetch("lock_waits", 0).to_i.positive?
 
       wallet.reload
-      !wallet.status_discovering? && wallet.last_synced_at.present? && wallet.last_synced_at >= @sync.created_at
+      !wallet.account_provider && !wallet.status_discovering? && wallet.last_synced_at.present? && wallet.last_synced_at >= @sync.created_at
     end
 
     # Transient reads are retried only inside a sync tree.
