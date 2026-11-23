@@ -23,7 +23,7 @@ Stored on `accounts.liquidity`:
 ## Where the logic lives
 
 - `Account::Liquidity` (concern on `Account`): validations, the callback that
-  writes the default, predicates and scopes.
+  writes the default and the predicates.
 - `Accountable.rules_for(subtype)` returns `Accountable::Rules`, the rule set a
   subtype brings: default liquidity and tax treatment. Each accountable class
   overrides `default_liquidity_for(subtype)` (and `default_tax_treatment_for`
@@ -54,18 +54,12 @@ family's time zone rather than the server's.
 ```ruby
 today = Account.liquidity_today_for(family)
 
-family.accounts.visible.available_assets_on(today)  # wealth you can reach at short notice
 family.accounts.visible.immediate_assets_on(today)  # money for this month's budget
-family.accounts.visible.bound_assets_on(today)      # the rest of the assets
-family.accounts.visible.short_term_liabilities      # credit cards, overdraft lines
 
 account.available_now?(today)
 account.effective_liquidity(today)  # a released locked account reads "immediate"
 account.next_release_date(today)
 ```
-
-Assets and liabilities are separate scopes on purpose: a combined scope would
-count credit cards as available wealth.
 
 ## Release reminders
 
@@ -109,7 +103,7 @@ so saving does not lower the savings rate.
 
 The columns, the migration backfill and the defaults apply to everyone; they
 change no figure on their own. Code that answers "is this money available?"
-with the scopes above must read the viewer's `preview_features_enabled?` until
+must read the viewer's `preview_features_enabled?` until
 the feature is released. The form section, the header badge, the Details tab,
 the budget's and paycheck planner's switch from "depository" to
 `immediate_assets_on`, the dashboard widget and the reports section already

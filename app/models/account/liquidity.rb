@@ -12,7 +12,7 @@
 # kept in `locked_attributes` so subtype changes and syncs never overwrite it.
 #
 # A locked account becomes available on its release date by calculation only:
-# no job flips the column. Every scope and predicate therefore takes the date
+# no job flips the column. Predicates therefore take the date
 # it is asked about, so historical figures evaluate the release date per day
 # with today's classification.
 #
@@ -24,7 +24,6 @@ module Account::Liquidity
 
   LEVELS = %w[immediate short_term locked long_term].freeze
   AVAILABLE_LEVELS = %w[immediate short_term].freeze
-  BOUND_LEVELS = %w[locked long_term].freeze
 
   # Form value for "follow the subtype again".
   AUTOMATIC = "automatic".freeze
@@ -45,31 +44,12 @@ module Account::Liquidity
 
     before_validation :apply_liquidity
 
-    # Assets that can be reached at short notice on `date`: immediate and
-    # short-term accounts, plus locked accounts whose release date has come.
-    # Liabilities are deliberately separate (see .short_term_liabilities): a
-    # combined scope would count credit cards as available wealth.
-    scope :available_assets_on, ->(date) {
-      assets.where(liquidity: AVAILABLE_LEVELS).or(assets.released_on(date))
-    }
-
-    # Money for this month's budget (a brokerage account counts as
-    # available wealth, but not as budget money).
+    # Money for this month's budget: immediate accounts plus locked accounts
+    # whose release date has come. A brokerage account is available wealth,
+    # but not budget money.
     scope :immediate_assets_on, ->(date) {
       assets.where(liquidity: "immediate").or(assets.released_on(date))
     }
-
-    # Assets that are not available on `date`.
-    scope :bound_assets_on, ->(date) {
-      assets.where(liquidity: "long_term").or(
-        assets.where(liquidity: "locked")
-              .where("accounts.auto_renew OR accounts.available_on IS NULL OR accounts.available_on > ?", date)
-      )
-    }
-
-    # Debts that eat into available wealth: credit cards and
-    # overdraft lines. Loans and mortgages are long-term and stay out.
-    scope :short_term_liabilities, -> { liabilities.where(liquidity: AVAILABLE_LEVELS) }
 
     # Locked accounts whose release date is on or before `date`. An account
     # that renews automatically never releases by itself.
