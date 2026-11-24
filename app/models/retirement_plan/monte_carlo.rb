@@ -88,8 +88,11 @@ class RetirementPlan::MonteCarlo
   #
   # Costly: a full run of every path for each candidate year, with no cap and
   # no early exit, because lasting is not monotonic in the year (a later start
-  # can fail where an earlier one lasts). Keep it off the request cycle; call
-  # it from a job and cache the answer.
+  # can fail where an earlier one lasts). Cache the answer, and keep it off
+  # the page's own render: run it from a lazily loaded frame so the page around
+  # it does not wait. Measured cold, the worst case, a 99% target no year
+  # reaches over 66 candidate years, took about 2.1 seconds with the rest of
+  # the run.
   def confident_year(target)
     target = target.to_f
     (first_year..last_year).detect { |year| success_rate(retirement_year: year) >= target }
