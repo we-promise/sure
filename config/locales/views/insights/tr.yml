@@ -3,13 +3,13 @@ tr:
   insights:
     notification:
       title: Yeni finansal içgörü
-      body: En son yapay zekâ içgörünüzü incelemek için Sure'ı açın.
+      body: En son içgörünüzü incelemek için Sure'ı açın.
     actions:
       budget: Bütçeyi görüntüle
       cash_flow_warning: Yinelenen işlemleri incele
       idle_cash: Hesaba git
       net_worth_milestone: Net değer raporunu görüntüle
-      savings_rate_change: O ayın işlemlerini görüntüle
+      savings_rate_change: Bu ayların işlemlerini görüntüle
       spending_anomaly: "%{category} işlemlerini görüntüle"
       subscription_audit: Yinelenen işlemleri incele
       maintained_goal_depleted: Rezervi görüntüle
@@ -35,7 +35,7 @@ tr:
       of_budget: bütçenin
       on_pace: bu tempoda
       today: bugün
-      vs_previous: önceki aya göre
+      vs_previous_three_months: önceki üç aya göre
       need_attention: dikkat gerektiriyor
     index:
       empty:
@@ -75,12 +75,9 @@ tr:
       net_worth_milestone: Net değeriniz %{milestone} sınırını geçti ve şu anda %{net_worth}
         seviyesinde.
       savings_rate_change:
-        down: "%{month} ayında gelirinizin %{current_rate}%'ini biriktirdiniz, bu
-          önceki aydaki %{previous_rate}%'den %{change_pp} puan düşüş anlamına geliyor."
-        down_negative: "%{month} ayında kazandığınızdan daha fazla harcadınız: tasarruf
-          oranınız önceki aydaki %{previous_rate}%'den %{current_rate}%'e düştü."
-        up: "%{month} ayında gelirinizin %{current_rate}%'ini biriktirdiniz, bu önceki
-          aydaki %{previous_rate}%'den %{change_pp} puan artış anlamına geliyor."
+        down: "%{from_month}–%{to_month} döneminde olağan aylık gelirinize göre tasarruf oranınız %{current_rate}% oldu; bu, önceki üç aydaki %{previous_rate}%'e göre %{change_pp} puan daha az."
+        down_negative: "%{from_month}–%{to_month} döneminde kazandığınızdan fazla harcadınız: tasarruf oranınız önceki üç aydaki %{previous_rate}%'den %{current_rate}%'e düştü."
+        up: "%{from_month}–%{to_month} döneminde olağan aylık gelirinize göre tasarruf oranınız %{current_rate}% oldu; bu, önceki üç aydaki %{previous_rate}%'e göre %{change_pp} puan daha fazla."
       spending_anomaly:
         above: Bu ay %{category} kategorisinde %{projected_spend} harcama temposundasınız;
           bu, son aylık ortalamanız olan %{baseline_spend}'den yaklaşık %{deviation_pct}%
@@ -102,8 +99,8 @@ tr:
       idle_cash: "%{account} hesabında hareketsiz nakit"
       net_worth_milestone: 'Net değer kilometre taşı: %{milestone}'
       savings_rate_change:
-        down: Tasarruf oranınız %{month} ayında düştü
-        up: Tasarruf oranınız %{month} ayında iyileşti
+        down: Tasarruf oranınız son üç ayda düştü
+        up: Tasarruf oranınız son üç ayda iyileşti
       spending_anomaly:
         above: "%{category} harcamaları artış eğiliminde"
         below: "%{category} harcamaları azalış eğiliminde"
