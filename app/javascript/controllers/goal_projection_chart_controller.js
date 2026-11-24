@@ -121,6 +121,9 @@ export default class extends Controller {
     const targetAmount = data.target_amount || 0;
     const currentAmount = data.current_amount || 0;
     const avgMonthly = data.avg_monthly || 0;
+    // null when the goal's accounts give no measurable pace: draw no
+    // projection rather than a flat line that claims the goal will fall short.
+    const paceKnown = data.avg_monthly != null;
 
     // Past-due goals: pin endDate at today so the "today" marker stays inside
     // the x-domain instead of clipping right at the edge.
@@ -153,7 +156,7 @@ export default class extends Controller {
     const projectionEnd = target
       ? Math.max(currentAmount, currentAmount + avgMonthly * Math.max(0, this._monthsBetween(today, target)))
       : currentAmount;
-    const projectionSeries = target
+    const projectionSeries = target && paceKnown
       ? [
           { date: today, value: currentAmount },
           { date: target, value: projectionEnd },
