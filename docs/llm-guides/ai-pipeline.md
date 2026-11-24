@@ -106,8 +106,8 @@ flowchart LR
   (`users.ai_enabled`); a `family` feature needs `Family#ai_consented?`, which until families
   record consent means a family admin turned that switch on. Uploading a PDF for import is itself
   the request, so `extract_pdf`, and `embed` asked with no user (the upload's search copy), need
-  no switch. A requester checks `Ai.available?` in `ai_generation` and returns nil without
-  consent, so a rule run ends with nothing changed rather than failing.
+  no switch. A background run without the family's consent fails with `no_family_consent` (the
+  generation raises `Ai::Error::Unavailable`), so a rule run says why it changed nothing.
 - **An AI tool declares its feature** (`ai_feature :extract_pdf` on an `Assistant::Function`), so
   chat and MCP list it only while the feature is available.
 - **`Ai::Config` is built in each process from its own ENV**, so give the web and the worker

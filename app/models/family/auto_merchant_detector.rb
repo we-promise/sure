@@ -17,9 +17,6 @@ class Family::AutoMerchantDetector
   end
 
   def ai_generation
-    # Without the family's consent nothing is sent, and the run ends having changed nothing.
-    return unless Ai.available?(:detect_merchants, family:)
-
     if scope.none?
       Rails.logger.info("No transactions to auto-detect merchants for family #{family.id}")
       return
