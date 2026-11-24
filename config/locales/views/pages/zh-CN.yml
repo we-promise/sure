@@ -190,3 +190,7 @@ zh-CN:
         period_scope_hint: 显示您在此处选择的月份 — 独立于顶部仪表盘的时间范围。
         no_data: 本月暂无支出数据
         previous_comparison_days: "(1-%{end_day}日)"
+        compare_picker_aria_label: 选择要对比的月份
+        compare_months:
+          one: 对比上个月
+          other: 对比最近 %{count} 个月

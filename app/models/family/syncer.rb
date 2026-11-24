@@ -24,7 +24,7 @@ class Family::Syncer
     family.backfill_provider_merchant_logos
 
     Rails.logger.info("Applying rules for family #{family.id}")
-    ApplyRulesJob.perform_later(family)
+    ApplyRulesJob.perform_later(family, warm_reports: true)
   end
 
   # Every `*_items` association whose model is Syncable, found by reflection
