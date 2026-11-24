@@ -141,6 +141,12 @@ class Assistant::Function
       page.positive? ? page : 1
     end
 
+    # Ids of the accounts the user can open (owned or shared, hidden ones
+    # included), e.g. to tell whether a transfer's other side may be named.
+    def accessible_account_ids
+      @accessible_account_ids ||= family.accounts.accessible_by(user).pluck(:id).to_set
+    end
+
     def family
       user.family
     end

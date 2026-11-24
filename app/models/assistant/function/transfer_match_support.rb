@@ -23,10 +23,6 @@ module Assistant::Function::TransferMatchSupport
       family.accounts.visible.writable_by(user).find_by(id: id)
     end
 
-    def accessible_account_ids
-      @accessible_account_ids ||= family.accounts.accessible_by(user).pluck(:id).to_set
-    end
-
     def serialize_transaction(transaction)
       entry = transaction.entry
 

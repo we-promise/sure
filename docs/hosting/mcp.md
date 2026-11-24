@@ -187,10 +187,12 @@ Every tool in `tools/list` carries MCP [tool annotations](https://modelcontextpr
 
 `delete_transaction`, `delete_category` and `unmatch_transfer` take two calls, like `apply_rule`:
 
-1. Call without `preview_token`. Nothing changes. The result has `deleted: false` (`unmatched: false` for `unmatch_transfer`), a `preview` of what would go and a `preview_token`. The preview is the transaction, with a split's children or, for a transfer leg, the transfer and the fee transactions deleted with it; the category with its transaction count, replacement, subcategories, budget allocations and the recurring bills left uncategorized; or the transfer with the fee transactions it would delete and whether the pairing would be rejected.
+1. Call without `preview_token`. Nothing changes. The result has `deleted: false` (`unmatched: false` for `unmatch_transfer`), a `preview` of what would go and a `preview_token`. The preview is the transaction, with a split's children or, for a transfer leg, the transfer, its other leg and the fee transactions deleted with it; the category with its transaction count, replacement, subcategories, budget allocations and the recurring bills left uncategorized; or the transfer with the fee transactions it would delete and whether the pairing would be rejected. An entry in an account the caller cannot open shows only `account: "another account"`, and a category's bills are listed only where the caller can open their accounts (`uncategorized_bill_count` counts them all).
 2. Call again with the same arguments and that `preview_token` to make the change.
 
 The token is bound to the user, the record and what the preview showed, and expires after 30 minutes. A token for another record, user or tool, or an expired one, returns `preview_required`. The confirming call locks the record and rebuilds the preview before it writes; if that differs from what the token was issued for (a changed transaction, split or fee; for a category, also a different `replacement_id`, new transactions or bills in it; for a transfer, a different `reject` or a new fee), the call returns `preview_stale` with a fresh preview and token. In every one of these cases nothing changes.
+
+`delete_transaction` refuses a transfer leg with `transfer_spans_unwritable_account` when one of the transfer's fee transactions is in an account the caller cannot write, since deleting the leg deletes the fees. The web's transfer unlink refuses the same case.
 
 Clients written against the earlier one-call contract get a preview instead of the change until they pass the token. `unmatch_transfer` no longer takes `dry_run`: a call without a token is the preview.
 

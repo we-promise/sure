@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
-# Shared lookups for the transfer tools (unmatch_transfer, update_transfer):
-# a transfer is reachable only when the user can write to both of its accounts.
+# Shared lookups for the tools that write transfers. A transfer is reachable
+# (unmatch_transfer, update_transfer) only when the user can write to both of
+# its accounts; delete_transaction uses writable_transactions alone.
 module Assistant::Function::TransferSupport
   private
     def writable_transactions

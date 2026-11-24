@@ -187,6 +187,18 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
     assert Transfer.exists?(@transfer.id)
   end
 
+  test "never previews or deletes fees on an account the user cannot write" do
+    # family_member writes the checking account and only reads the credit card.
+    fee = create_transaction(account: accounts(:credit_card), name: "Card fee", amount: 2).entryable
+    @transfer.fee_transactions << fee
+
+    result = Assistant::Function::UnmatchTransfer.new(users(:family_member)).call("transaction_id" => @transfer.outflow_transaction_id)
+
+    assert_equal "not_found", result[:error]
+    assert_nil result[:preview]
+    assert Transaction.exists?(fee.id)
+  end
+
   test "rechecks write access under the lock" do
     # As if the lookup had passed before the read-only share took effect.
     function = Assistant::Function::UnmatchTransfer.new(users(:family_member))

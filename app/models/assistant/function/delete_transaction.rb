@@ -19,9 +19,17 @@
 # Preview first: a call without preview_token deletes nothing and returns what
 # would be removed plus a token; only a call with that token deletes (see
 # PreviewToken).
+#
+# Deleting a transfer leg also deletes the transfer's fee transactions, so it
+# is refused when a fee sits on an account the user cannot write, as the web's
+# unlink is. The other leg stays (as a standard transaction); the preview names
+# it only when the user can open its account.
 
 class Assistant::Function::DeleteTransaction < Assistant::Function
+  include Assistant::Function::TransferSupport
   include Assistant::Function::PreviewToken
+
+  HIDDEN_ACCOUNT = "another account"
 
   annotate :destructive, idempotent: true
 
@@ -51,7 +59,9 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
 
         It deletes the transaction's root ledger entry, which cascades to the
         transaction. It will not delete a split child transaction individually —
-        delete the split parent instead.
+        delete the split parent instead. Deleting a transfer leg also deletes
+        the transfer's fee transactions, so it is refused when a fee is in an
+        account the user cannot write.
       INSTRUCTIONS
     end
   end
@@ -89,19 +99,25 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
   # a transfer with its fees), enqueues the post-delete account sync
   # (best-effort), and returns { success: true, deleted: true, transaction: }
   # (with an optional :warning if the sync could not be enqueued). Errors:
-  # not_found, split_child, preview_required, preview_stale, delete_aborted.
+  # not_found, split_child, transfer_spans_unwritable_account,
+  # preview_required, preview_stale, delete_aborted.
   def call(params = {})
     transaction = find_transaction(params["id"], params["account_id"])
     return error("not_found", "No transaction with id '#{params["id"]}' in an account you can write to.") unless transaction
 
     entry = transaction.entry
     return error("split_child", "Split child transactions cannot be deleted individually. Delete the split parent instead.") if entry.split_child?
+    return unwritable_fee_error if unwritable_fees?(transaction)
 
     # The preview is both what the user confirms and the deleted record in the
     # response, taken before destruction so the response never reads destroyed
     # associations. The locks follow Entry#with_split_lock, so a resplit can't
     # change the children between the check and the destroy.
+    # Write access to the fee accounts is checked again under the lock: a
+    # share downgraded since the preview leaves the preview unchanged.
     result = confirm_with_preview(params, transaction, -> { preview(transaction, entry) }, lock: [ transaction, entry ]) do |snapshot|
+      next unwritable_fee_error if unwritable_fees?(transaction)
+
       destroy_entry(entry, snapshot)
     end
     result[:deleted] ? sync_after_delete(entry, result) : result
@@ -141,17 +157,14 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
 
     # Resolve a Transaction by id, scoped to accounts the user can WRITE to
     # (owner or full_control share) — the same write gate CreateTransaction
-    # uses. `merge(Account.writable_by(user))` is the native set_transaction
-    # pattern (which uses accessible_by) tightened to the write set, so a
-    # read-only shared account simply yields nil -> not_found. An optional
-    # account_id narrows the query so a mismatched id cannot delete the wrong
-    # record. Returns nil if the id is not a valid UUID or is not found.
+    # uses (writable_transactions), so a read-only shared account simply
+    # yields nil -> not_found. An optional account_id narrows the query so a
+    # mismatched id cannot delete the wrong record. Returns nil if the id is
+    # not a valid UUID or is not found.
     def find_transaction(id, account_id)
       return nil unless valid_uuid?(id)
 
-      query = family.transactions
-        .joins(entry: :account)
-        .merge(Account.writable_by(user))
+      query = writable_transactions
 
       if account_id.present?
         return nil unless valid_uuid?(account_id)
@@ -162,9 +175,22 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
       query.find_by(id: id)
     end
 
+    # Whether deleting the transaction would delete a transfer fee on an
+    # account the user cannot write. Fees go with the transfer whichever leg
+    # is deleted.
+    def unwritable_fees?(transaction)
+      transfer = transaction.transfer
+      transfer.present? && transfer.fee_transactions.where.not(id: writable_transactions.select(:id)).exists?
+    end
+
+    def unwritable_fee_error
+      error("transfer_spans_unwritable_account", "This transaction is part of a transfer with fee transactions in an account you cannot write to, and deleting it would delete them. Nothing was deleted. Someone who can write to both accounts has to delete it.")
+    end
+
     # What deleting the transaction removes: the transaction itself, a split's
     # children and, for a transfer leg, the transfer and its fee transactions
-    # (the other leg stays and becomes a standard transaction).
+    # (the other leg stays and becomes a standard transaction). Entries in an
+    # account the user cannot open show only that (see serialize_brief).
     def preview(transaction, entry)
       snapshot = serialize(transaction, entry)
 
@@ -202,6 +228,8 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     end
 
     def serialize_brief(entry)
+      return { account: HIDDEN_ACCOUNT } unless accessible_account_ids.include?(entry.account_id)
+
       {
         id: entry.entryable_id,
         entry_id: entry.id,
@@ -219,10 +247,5 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
       entry.amount_money.format
     rescue StandardError
       "#{entry.amount} #{entry.currency}"
-    end
-
-    # Build a standard error result hash: { success: false, error:, message: }.
-    def error(key, message)
-      { success: false, error: key, message: message }
     end
 end

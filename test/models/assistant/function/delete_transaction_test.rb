@@ -149,6 +149,86 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
     assert Transfer.exists?(transfer.id)
   end
 
+  test "a member's preview of a transfer leg names neither the account nor the other leg it cannot open" do
+    hidden = hidden_account
+    transfer = create_transfer(from_account: accounts(:depository), to_account: hidden, amount: 100)
+    transfer.outflow_transaction.entry.update!(name: "Savings top-up")
+    member = Assistant::Function::DeleteTransaction.new(users(:family_member))
+    params = { "id" => transfer.outflow_transaction.id }
+
+    preview = member.call(params)
+
+    assert_equal({ account: "another account" }, preview[:preview][:transfer][:counterpart])
+    assert_not_includes preview.to_json, hidden.name
+    assert_not_includes preview.to_json, transfer.inflow_transaction.id
+
+    result = member.call(params.merge("preview_token" => preview[:preview_token]))
+
+    assert_equal true, result[:deleted]
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+  end
+
+  test "refuses to delete a transfer leg whose fees sit on an account the user cannot write" do
+    member = Assistant::Function::DeleteTransaction.new(users(:family_member))
+    # family_member cannot open the hidden account and only reads the credit card.
+    [ hidden_account, accounts(:credit_card) ].each do |other|
+      transfer = create_transfer(from_account: accounts(:depository), to_account: other, amount: 100)
+      transfer.outflow_transaction.entry.update!(name: "Card payment")
+      fee = create_transaction(account: other, name: "Incoming fee", amount: 2).entryable
+      transfer.fee_transactions << fee
+
+      result = member.call("id" => transfer.outflow_transaction.id)
+
+      assert_equal false, result[:success]
+      assert_equal "transfer_spans_unwritable_account", result[:error]
+      assert_nil result[:preview_token]
+      assert_not_includes result.to_json, other.name
+      assert Transfer.exists?(transfer.id)
+      assert Transaction.exists?(fee.id)
+    end
+  end
+
+  test "refuses a token once a fee on an account the user cannot write was attached, without disclosing it" do
+    hidden = hidden_account
+    transfer = create_transfer(from_account: accounts(:depository), to_account: hidden, amount: 100)
+    transfer.outflow_transaction.entry.update!(name: "Savings top-up")
+    member = Assistant::Function::DeleteTransaction.new(users(:family_member))
+    params = { "id" => transfer.outflow_transaction.id }
+    token = member.call(params)[:preview_token]
+
+    change_after_token_check(member) do
+      transfer.fee_transactions << create_transaction(account: hidden, name: "Hidden fee", amount: 2).entryable
+    end
+    stale = member.call(params.merge("preview_token" => token))
+
+    assert_equal "preview_stale", stale[:error]
+    assert_equal [ { account: "another account" } ], stale[:preview][:transfer][:deleted_fee_transactions]
+    assert_not_includes stale.to_json, "Hidden fee"
+
+    result = Assistant::Function::DeleteTransaction.new(users(:family_member)).call(params.merge("preview_token" => stale[:preview_token]))
+
+    assert_equal "transfer_spans_unwritable_account", result[:error]
+    assert Transfer.exists?(transfer.id)
+  end
+
+  test "rechecks write access to a transfer's fee accounts under the lock" do
+    transfer = create_transfer(from_account: accounts(:depository), to_account: accounts(:investment), amount: 100)
+    fee = create_transaction(account: accounts(:investment), name: "Incoming fee", amount: 2).entryable
+    transfer.fee_transactions << fee
+    accounts(:investment).account_shares.create!(user: users(:family_member), permission: "full_control")
+    member = Assistant::Function::DeleteTransaction.new(users(:family_member))
+    params = { "id" => transfer.outflow_transaction.id }
+    token = member.call(params)[:preview_token]
+    assert token.present?
+
+    # A downgrade to read-only leaves the preview unchanged.
+    change_after_token_check(member) { accounts(:investment).account_shares.find_by!(user: users(:family_member)).update!(permission: "read_only") }
+    result = member.call(params.merge("preview_token" => token))
+
+    assert_equal "transfer_spans_unwritable_account", result[:error]
+    assert Transaction.exists?(fee.id)
+  end
+
   test "a transaction outside splits and transfers previews neither" do
     preview = @function.call("id" => @transaction.id)[:preview]
 
@@ -248,6 +328,12 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
   end
 
   private
+    def hidden_account
+      users(:family_admin).family.accounts.create!(
+        name: "Hidden Savings", balance: 0, currency: "USD", accountable: Depository.new, owner: users(:family_admin)
+      )
+    end
+
     def delete_with_preview(function, params)
       token = function.call(params)[:preview_token]
       assert token.present?, "the preview issued no token"
