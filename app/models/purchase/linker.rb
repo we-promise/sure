@@ -11,10 +11,11 @@ class Purchase::Linker
   def link!(entry, manual: false)
     transaction = entry.entryable
     raise Purchase::LinkError, "Only transactions can be linked" unless transaction.is_a?(Transaction)
-    raise Purchase::LinkError, "The account can't be changed by this user" unless annotatable?(entry)
 
     Purchase.transaction do
+      # Checked on the locked purchase: a family transfer may have moved it since it was loaded.
       purchase.lock!
+      raise Purchase::LinkError, "The account can't be changed by this user" unless annotatable?(entry)
       existing = Purchase.where(transaction_id: transaction.id).where.not(id: purchase.id)
       raise Purchase::LinkError, "The transaction already belongs to another purchase" if existing.exists?
       # Linking elsewhere would leave the first transaction carrying this purchase: unlink first.

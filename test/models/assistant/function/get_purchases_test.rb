@@ -26,6 +26,16 @@ class Assistant::Function::GetPurchasesTest < ActiveSupport::TestCase
     assert_equal @matched.transaction_id, purchase[:transaction_id]
   end
 
+  test "a share removed between two calls hides the account from the second" do
+    assert_equal "Checking Account", @fn.call({ "query" => "coffee" })[:purchases].first[:account_name]
+
+    Account.stubs(:accessible_by).with(@user).returns(Account.none)
+
+    purchase = @fn.call({ "query" => "coffee" })[:purchases].first
+    assert_nil purchase[:account_name]
+    assert_nil purchase[:transaction_id]
+  end
+
   test "filters by date range and status" do
     result = @fn.call({ "start_date" => @awaiting.ordered_on.iso8601, "end_date" => @awaiting.ordered_on.iso8601 })
     assert_equal [ @awaiting.id ], result[:purchases].map { _1[:id] }

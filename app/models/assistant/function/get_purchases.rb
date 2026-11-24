@@ -40,6 +40,8 @@ class Assistant::Function::GetPurchases < Assistant::Function
   end
 
   def call(params = {})
+    # Read once per call: the function serves several calls, and access can change in between.
+    @accessible_account_ids = nil
     scope = filtered(Purchase.visible_to(user).where(family:), params)
     purchases = scope
       .includes(items: :category, linked_transaction: { entry: :account })

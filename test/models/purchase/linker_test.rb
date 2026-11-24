@@ -230,6 +230,14 @@ class Purchase::LinkerTest < ActiveSupport::TestCase
     assert_nil @purchase.reload.transaction_id
   end
 
+  test "a purchase moved to another family since it was loaded isn't linked to the old family's transaction" do
+    Purchase.where(id: @purchase.id).update_all(family_id: families(:empty).id)
+
+    assert_raises(Purchase::LinkError) { @purchase.link!(@entry) }
+    assert_nil @purchase.reload.transaction_id
+    assert_nil @entry.entryable.reload.extra["purchase"]
+  end
+
   test "linking an entry another purchase already has raises" do
     purchases(:allegro_matched).update!(linked_transaction: @entry.entryable)
 
