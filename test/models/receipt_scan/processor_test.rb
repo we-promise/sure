@@ -118,6 +118,18 @@ class ReceiptScan::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Corner Grocer", entry.entryable.extra.dig("receipt", "merchant")
   end
 
+  test "a total read with more decimals than the currency has is rounded to it" do
+    scan = upload("rotated.jpg", "image/jpeg")
+    stub_extraction(total: BigDecimal("10.005"), currency: "USD",
+                    line_items: [ item("Cheese", "5.0025", "Food & Drink"), item("Soap", "5.0025", "Household") ])
+
+    process(scan)
+
+    entry = scan.reload.linked_transaction.entry
+    assert_equal BigDecimal("10.01"), entry.amount
+    assert_equal entry.amount, entry.child_entries.sum(:amount)
+  end
+
   test "single category sets category without split" do
     scan = upload("rotated.jpg", "image/jpeg")
     stub_extraction(line_items: [ item("Cheese", "50.00", "Food & Drink") ])

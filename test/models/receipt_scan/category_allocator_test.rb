@@ -29,6 +29,16 @@ class ReceiptScan::CategoryAllocatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.03"), groups.sum { _1[:amount] }
   end
 
+  test "a currency with three decimals splits to the tenth of a cent" do
+    groups = allocate(total: "1.001", precision: 3, items: [
+      item("Cheese", "0.5005", "Food & Drink"),
+      item("Soap", "0.5005", "Household")
+    ])
+
+    assert_equal BigDecimal("1.001"), groups.sum { _1[:amount] }
+    assert_equal [ BigDecimal("0.501"), BigDecimal("0.500") ], groups.map { _1[:amount] }
+  end
+
   test "folds small groups into the largest" do
     groups = allocate(total: "100.00", items: [
       item("Groceries", "99.01", "Food & Drink"),
@@ -94,9 +104,9 @@ class ReceiptScan::CategoryAllocatorTest < ActiveSupport::TestCase
       { "name" => name, "quantity" => "1", "amount" => amount, "discount" => discount, "category_name" => category_name }
     end
 
-    def allocate(total:, items:)
+    def allocate(total:, items:, precision: 2)
       extraction = build_receipt_extraction(total: BigDecimal(total), line_items: items)
-      ReceiptScan::CategoryAllocator.new(extraction, categories: @family.categories).groups
+      ReceiptScan::CategoryAllocator.new(extraction, categories: @family.categories, precision:).groups
     end
 
     def summary(groups)

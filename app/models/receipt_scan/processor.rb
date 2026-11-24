@@ -31,6 +31,9 @@ class ReceiptScan::Processor
     @extraction = extract
     return unless extraction
 
+    # Amounts are kept to the currency's decimals, so the split parts can add up to the total.
+    @extraction = extraction.with(total: extraction.total.round(precision)) if extraction.total
+
     outcome = with_completion_locks do
       next unless scan.processing? && placeholder_still_there?
       next :no_access unless uploader_can_write?
@@ -186,6 +189,10 @@ class ReceiptScan::Processor
       entry.sync_account_later
     end
 
+    def precision
+      Money::Currency.new(known_currency?(extraction.currency) ? extraction.currency : scan.account.currency).default_precision
+    end
+
     def known_currency?(code)
       code.present? && Money::Currency.new(code).present?
     rescue Money::Currency::UnknownCurrencyError
@@ -196,7 +203,7 @@ class ReceiptScan::Processor
       return if extraction.total.nil? || entry.amount != extraction.total
       return if entry.entryable.category_set_by_user?
 
-      groups = ReceiptScan::CategoryAllocator.new(extraction, categories: family.categories).groups
+      groups = ReceiptScan::CategoryAllocator.new(extraction, categories: family.categories, precision:).groups
       if groups.one?
         entry.entryable.update!(category: groups.first[:category]) if groups.first[:category]
       elsif groups.many? && entry.entryable.pending?

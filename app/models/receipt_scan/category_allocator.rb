@@ -5,8 +5,10 @@ class ReceiptScan::CategoryAllocator
   # become its own split.
   FOLD_SHARE = BigDecimal("0.05")
 
-  def initialize(extraction, categories:)
+  # precision: the currency's decimal places, which the parts are rounded to.
+  def initialize(extraction, categories:, precision: 2)
     @extraction = extraction
+    @precision = precision
     @categories_by_name = categories.index_by { |category| category.name.downcase }
   end
 
@@ -20,7 +22,7 @@ class ReceiptScan::CategoryAllocator
     return [ group(nil, total, []) ] unless items_total.positive?
 
     grouped = nets.group_by { |item, _| category_for(item["category_name"]) }.map do |category, rows|
-      group(category, rows.sum { |_, net| net * total / items_total }.round(2), rows.map { |item, _| item["name"] })
+      group(category, rows.sum { |_, net| net * total / items_total }.round(precision), rows.map { |item, _| item["name"] })
     end
 
     grouped = fold_small(grouped.sort_by { -_1[:amount].abs })
@@ -28,7 +30,7 @@ class ReceiptScan::CategoryAllocator
   end
 
   private
-    attr_reader :extraction, :categories_by_name
+    attr_reader :extraction, :categories_by_name, :precision
 
     def total
       extraction.total
@@ -50,11 +52,11 @@ class ReceiptScan::CategoryAllocator
       [ largest, *kept ]
     end
 
-    # Rounding each group to cents can leave the sum a few cents off the total. A shortfall goes
-    # to the largest group; an excess comes off the largest groups a cent at a time, so no group
-    # crosses zero. A group left at zero joins the largest.
+    # Rounding each group to the currency's smallest unit can leave the sum a few units off the
+    # total. A shortfall goes to the largest group; an excess comes off the largest groups a unit
+    # at a time, so no group crosses zero. A group left at zero joins the largest.
     def settle_rounding(groups)
-      cent = total.negative? ? BigDecimal("-0.01") : BigDecimal("0.01")
+      cent = BigDecimal("1e-#{precision}") * (total.negative? ? -1 : 1)
       missing = ((total - groups.sum { _1[:amount] }) / cent).round
       if missing >= 0
         groups.first[:amount] += cent * missing
