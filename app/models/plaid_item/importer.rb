@@ -51,6 +51,9 @@ class PlaidItem::Importer
     def fetch_and_import_accounts_data
       snapshot = PlaidItem::AccountsSnapshot.new(plaid_item, plaid_provider: plaid_provider)
       returned_ids = snapshot.accounts.map(&:account_id)
+      # Fetch before opening the import transaction so retry diagnostics survive
+      # exhausted retries or a later account import failure.
+      transactions_cursor = snapshot.transactions_cursor
 
       PlaidItem.transaction do
         snapshot.accounts.each do |raw_account|
@@ -65,7 +68,7 @@ class PlaidItem::Importer
         clear_liabilities_of_omitted_accounts(snapshot)
 
         # Once we know all data has been imported, save the cursor to avoid re-fetching the same data next time
-        plaid_item.update!(next_cursor: snapshot.transactions_cursor)
+        plaid_item.update!(next_cursor: transactions_cursor)
       end
     end
 

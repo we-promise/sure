@@ -1,0 +1,14 @@
+---
+nb:
+  activerecord:
+    attributes:
+      brex_item:
+        base_url: Basis-URL
+        name: Navn på tilkobling
+        token: Token
+    errors:
+      models:
+        brex_item:
+          attributes:
+            base_url:
+              official_hosts_only: må være tom, https://api.brex.com eller https://api-staging.brex.com

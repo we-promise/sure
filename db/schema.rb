@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_23_220100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -629,6 +629,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.string "account_id"
     t.string "account_status"
     t.string "account_type"
+    t.decimal "anchor_pending_total", precision: 19, scale: 4
     t.boolean "balance_evidence_verified", default: false, null: false
     t.boolean "balance_verified", default: false, null: false
     t.datetime "created_at", null: false
@@ -642,6 +643,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
     t.string "name"
+    t.decimal "pending_total", precision: 19, scale: 4
     t.string "product"
     t.string "provider"
     t.jsonb "raw_payload"
@@ -876,6 +878,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
   end
 
   create_table "family_documents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_statement_id"
     t.string "content_type"
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
@@ -885,6 +888,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.string "provider_file_id"
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_statement_id"], name: "index_family_documents_on_account_statement_id"
     t.index ["family_id"], name: "index_family_documents_on_family_id"
     t.index ["provider_file_id"], name: "index_family_documents_on_provider_file_id"
     t.index ["status"], name: "index_family_documents_on_status"
@@ -1930,6 +1934,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "page_cache_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "bytes", null: false
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.datetime "last_used_at", null: false
+    t.string "page_key", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_page_cache_entries_on_family_id"
+    t.index ["last_used_at"], name: "index_page_cache_entries_on_last_used_at"
+    t.index ["page_key"], name: "index_page_cache_entries_on_page_key", unique: true
+  end
+
   create_table "plaid_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.decimal "available_balance", precision: 19, scale: 4
     t.datetime "created_at", null: false
@@ -1979,12 +1995,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.string "avm_external_id"
     t.date "avm_last_synced_on"
     t.string "avm_provider"
+    t.uuid "cost_tag_id"
     t.datetime "created_at", null: false
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
+    t.index ["cost_tag_id"], name: "index_properties_on_cost_tag_id"
     t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text, 'chimnie'::character varying::text, 'terrascoutx'::character varying::text]))", name: "properties_avm_provider_check"
   end
 
@@ -2507,6 +2525,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.jsonb "raw_transactions_payload"
     t.uuid "simplefin_item_id", null: false
     t.datetime "updated_at", null: false
+    t.datetime "holdings_requested_at"
+    t.datetime "account_requested_at"
     t.index ["account_id"], name: "index_simplefin_accounts_on_account_id"
     t.index ["simplefin_item_id", "account_id"], name: "idx_unique_sfa_per_item_and_upstream", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["simplefin_item_id"], name: "index_simplefin_accounts_on_simplefin_item_id"
@@ -3197,6 +3217,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"
   add_foreign_key "eval_samples", "eval_datasets"
+  add_foreign_key "family_documents", "account_statements", on_delete: :cascade
   add_foreign_key "family_documents", "families"
   add_foreign_key "family_exports", "families"
   add_foreign_key "family_merchant_associations", "families"
@@ -3275,9 +3296,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
   add_foreign_key "oidc_identities", "users"
   add_foreign_key "onchain_wallet_accounts", "onchain_wallet_items"
   add_foreign_key "onchain_wallet_items", "families"
+  add_foreign_key "page_cache_entries", "families", on_delete: :cascade
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "plaid_items", "users", column: "owner_id", on_delete: :nullify
+  add_foreign_key "properties", "tags", column: "cost_tag_id", on_delete: :nullify
   add_foreign_key "push_deliveries", "insights"
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "questrade_accounts", "questrade_items"

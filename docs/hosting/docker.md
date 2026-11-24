@@ -230,6 +230,26 @@ WEBAUTHN_ALLOWED_ORIGINS="https://sure.example.com"
 
 `WEBAUTHN_RP_ID` should usually be your registrable domain, not a full URL. See [WebAuthn MFA Configuration](webauthn.md) before changing hostnames or reverse proxy settings for an instance with registered passkeys.
 
+#### Privacy policy and terms links (optional)
+
+To link your own privacy policy and terms of service from the login, signup and onboarding pages, set their full URLs in your `.env` file:
+
+```txt
+LEGAL_PRIVACY_URL="https://example.com/privacy"
+LEGAL_TERMS_URL="https://example.com/terms"
+```
+
+`compose.example.yml` passes both to the app through its `x-rails-env` anchor. If your `compose.yml` was copied before they were added, add them there yourself:
+
+```yaml
+x-rails-env: &rails_env
+  # ...existing keys...
+  LEGAL_PRIVACY_URL: ${LEGAL_PRIVACY_URL:-}
+  LEGAL_TERMS_URL: ${LEGAL_TERMS_URL:-}
+```
+
+`/privacy` and `/terms` then redirect to these URLs. Each footer link appears only when its URL is set, so an instance without them shows neither link. Restart the app after changing them; the redirects are read at boot.
+
 #### Binding to IPv6 (optional)
 
 By default Sure listens on `0.0.0.0:3000` (IPv4 wildcard) inside the container and Docker publishes the port on the host's IPv4 interface only. If you want the app reachable over IPv6 as well, two things need to change:

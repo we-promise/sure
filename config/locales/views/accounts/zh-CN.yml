@@ -92,6 +92,17 @@ zh-CN:
       iban_placeholder: "例如：DE89370400440532013000" # pipelock:ignore IBAN
       iban_set_placeholder: "%{masked} — 已保存 IBAN，输入新值以替换"
       iban_remove_label: "移除 IBAN"
+      cost_basis_method_label: 成本基础计算方式
+      cost_basis_method_hint: 决定卖出交易如何匹配其对应的买入份额。更改该设置会重新计算历史已实现收益以及当前持仓的平均成本。若卖出份额的成本未知，其收益将显示为未知。
+      cost_basis_methods:
+        average: 平均成本法
+        fifo: 先进先出法（FIFO）
+    reconcile_all:
+      success:
+        one: 已将 %{count} 笔交易标记为%{status}。
+        other: 已将 %{count} 笔交易标记为%{status}。
+      invalid_status: 请选择有效的核对状态。
+      not_manual_account: 批量核对仅适用于手动录入的账户。
     index:
       accounts: 账户
       financekit_accounts:
@@ -143,7 +154,6 @@ zh-CN:
       activity:
         amount: 金额
         balance: 余额
-        confirmed: 已确认
         date: 日期
         entries: 条记录
         entry: 条记录
@@ -155,11 +165,9 @@ zh-CN:
         new_transaction: 新交易记录
         new_transfer: 新转账
         no_entries: 未找到记录
-        pending: 待处理
         search:
           placeholder: 按名称搜索记录
         search_placeholder: 按名称搜索记录
-        status: 状态
         title: 活动
       chart:
         balance: 余额
@@ -176,6 +184,13 @@ zh-CN:
         import_trades: 导入交易
         import_transactions: 导入交易记录
         manage: 管理账户
+        reconcile_all:
+          cleared: 全部标记为已核实
+          confirm_accept: 全部标记为%{status}
+          confirm_body: 此操作会更改该账户中每一笔交易的核对状态。已上传的对账单不受影响。
+          confirm_title: 将所有交易标记为%{status}？
+          reconciled: 全部标记为已核对
+          unreconciled: 全部标记为未核对
         sharing: 共享
         statements: 对账单
         exclude_from_reports: 从所有报表中排除

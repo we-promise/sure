@@ -1,0 +1,12 @@
+---
+en:
+  activerecord:
+    attributes:
+      property:
+        cost_tag: Cost tag
+    errors:
+      models:
+        property:
+          attributes:
+            cost_tag:
+              other_family: must be one of your own tags

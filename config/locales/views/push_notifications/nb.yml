@@ -1,0 +1,7 @@
+---
+nb:
+  push_notifications:
+    budget_description: "Varsle meg også når en budsjettkategori nærmer seg grensen. Varsler om overskredet budsjett sendes alltid. Av som standard."
+    budget_title: "Budsjettvarsler"
+    description: "Gjelder alle enheter du har aktivert, både nettleser og iOS."
+    title: "Push-varsler"
