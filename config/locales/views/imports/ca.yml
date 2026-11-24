@@ -427,7 +427,6 @@ ca:
       unknown_state_title: Estat desconegut
       source_statement: Extracte d'origen
       errors:
-        provider_not_configured: No hi ha cap proveïdor d'IA configurat
         provider_no_pdf_support: El proveïdor d'IA no admet el processament de PDF
       view_summary: Veure el resum de la importació
       already_recorded_note:

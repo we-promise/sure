@@ -440,4 +440,19 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_equal "BALANCES_UNAVAILABLE", error.response_data[:error]
     assert_equal "redacted", error.response_data.dig(:detail, :account_id)
   end
+
+  test "get_account_transactions sends strategy only when given" do
+    requested_queries = []
+    Provider::EnableBanking.expects(:get).twice.with do |_url, options|
+      requested_queries << options[:query].dup
+      true
+    end.returns(OpenStruct.new(code: 200, body: { transactions: [] }.to_json))
+
+    @provider.get_account_transactions(account_id: "acct_123", transaction_status: "BOOK", strategy: "longest")
+    @provider.get_account_transactions(account_id: "acct_123", transaction_status: "BOOK", date_from: Date.new(2026, 1, 1))
+
+    assert_equal "longest", requested_queries.first[:strategy]
+    assert_not requested_queries.first.key?(:date_from)
+    assert_not requested_queries.second.key?(:strategy)
+  end
 end

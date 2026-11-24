@@ -16,19 +16,23 @@ module VectorStore
     Registry.configured?
   end
 
+  # The embedding model and server come from the `embed` route (Ai::Config), which reads
+  # EMBEDDING_* and falls back to the OpenAI URL and key, from ENV or Settings.
   def self.embedding_model
-    ENV.fetch("EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
+    embedding_config&.name || DEFAULT_EMBEDDING_MODEL
   end
 
   def self.embedding_dimensions
-    ENV.fetch("EMBEDDING_DIMENSIONS", DEFAULT_EMBEDDING_DIMENSIONS).to_i
+    embedding_config&.embedding_dimensions || DEFAULT_EMBEDDING_DIMENSIONS
   end
 
   def self.embedding_uri_base
-    ENV["EMBEDDING_URI_BASE"].presence || ENV["OPENAI_URI_BASE"].presence || DEFAULT_EMBEDDING_URI_BASE
+    embedding_config&.endpoint&.base_url || DEFAULT_EMBEDDING_URI_BASE
   end
 
   def self.embedding_access_token
-    ENV["EMBEDDING_ACCESS_TOKEN"].presence || ENV["OPENAI_ACCESS_TOKEN"].presence
+    embedding_config&.endpoint&.api_key
   end
+
+  def self.embedding_config = Ai::Config.current.embedding_model
 end
