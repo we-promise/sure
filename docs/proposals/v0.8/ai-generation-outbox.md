@@ -1,6 +1,6 @@
 # AI generation outbox: record the job with its count, queue after commit, deliver again
 
-Status: planned 2026-11-23, not built · A PR on top of #5608 (stack #5504) · Companion to
+Status: planned 2026-11-23, not built · Its own PR, delivered with PR 4 (Sequencer), after #5608 (stack #5504) · Companion to
 [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md), [`ai-generation-windowing.md`](ai-generation-windowing.md)
 and [`rubyllm-workbench-comparison.md`](rubyllm-workbench-comparison.md). The problem comes from
 #5077 ("Release a rule run's awaited count when releasing it fails too"), and CodeRabbit's last

@@ -2922,6 +2922,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    own requests can't be interrupted, and never need to be. Replaces #4444's fetch class. Adds the lane and
    gate tests and the sequencer cases of the escalation test.
    Merges after 3a and before 3b. Implementation plan: [`pr-4-sequencer.md`](pr-4-sequencer.md).
+   The AI generation outbox comes with it as its own PR
+   ([`ai-generation-outbox.md`](ai-generation-outbox.md)): a rule run's AI job is recorded with
+   its count and delivered again, never given back.
 5. **RubyLLM 2.2 — delivered.** 2.2.0 (`~> 2.2`) ships on the 2f stack (PR #4892, `28cd75e61`).
    The recorded tests replayed and the live ones recorded again; Jev on OpenRouter works again
    (#1264: `…/alpha/decisions`, verified live 2026-11-12 — STARBUCKS → Coffee Shops 0.67,
