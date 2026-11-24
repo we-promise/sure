@@ -83,6 +83,10 @@ class Holding::PortfolioCache
     @security_cache.map { |_, v| v[:security] }
   end
 
+  def get_holdings(security_id)
+    holdings_by_security_id[security_id]
+  end
+
   # The ratio of the split a security goes ex on this date, or nil when it
   # has none. Nil, not 1, so a caller can leave an unsplit position untouched.
   def get_split_ratio(security_id, date)
@@ -162,10 +166,14 @@ class Holding::PortfolioCache
 
     def holdings
       @holdings ||= begin
-        scope = account.holdings.chronological
+        scope = account.holdings
         # Rebuild anchored prices from observations so a corrected split can change them.
-        scope = scope.where(materialized: false) if @carry_forward_prices
-        scope.to_a
+        if @carry_forward_prices
+          scope = scope.where(security_id: @security_ids) if @security_ids
+          scope.where(materialized: false).preferred_on_date.to_a
+        else
+          scope.where(superseded: false).chronological.to_a
+        end
       end
     end
 
@@ -327,7 +335,6 @@ class Holding::PortfolioCache
         @security_cache[security.id] = {
           security: security,
           prices_by_date: prices_by_date,
-          price_dates: prices_by_date.keys.sort,
           prices_by_date_and_source: prices_by_date_and_source,
           barrier_dates: barrier_dates,
           priced_trade_on_barrier: priced_trade_on_barrier,
@@ -342,7 +349,10 @@ class Holding::PortfolioCache
       unpriced_trades_by_security_id.each do |security_id, trades|
         price_unpriced_trade_days(security_id, trades, earlier: earlier[security_id])
       end
-      @security_cache.each_key { |security_id| reprice_holding_source(security_id) }
+      @security_cache.each do |security_id, cached|
+        cached[:price_dates] = cached[:prices_by_date].keys.sort if @carry_forward_prices
+        reprice_holding_source(security_id)
+      end
     end
 
     # A lookup for holding prices alone (the reverse calculator reads today's

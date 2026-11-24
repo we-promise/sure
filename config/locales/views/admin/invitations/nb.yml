@@ -1,0 +1,8 @@
+---
+nb:
+  admin:
+    invitations:
+      destroy:
+        success: Invitasjonen er slettet.
+      destroy_all:
+        success: Alle invitasjoner for denne husholdningen er slettet.

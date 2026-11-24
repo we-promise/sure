@@ -7,7 +7,7 @@ class Api::V1::HoldingsController < Api::V1::BaseController
   before_action :set_holding, only: [ :show ]
 
   def index
-    holdings_query = accessible_holdings
+    holdings_query = accessible_holdings.where(superseded: false)
 
     holdings_query = apply_filters(holdings_query)
     holdings_query = holdings_query.includes(:account, :security).chronological

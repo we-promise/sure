@@ -78,8 +78,15 @@ class SnaptradeAccount::ActivitiesProcessor
     "REBATE" => { category: :cash, label: "Other", cash_flow: :inflow },
     "RETURN_OF_CAPITAL" => { category: :cash, label: "Dividend", cash_flow: :inflow },
     "DISTRIBUTION" => { category: :cash, label: "Dividend", cash_flow: :inflow },
-    "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow }
+    "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+
+    # Card activities (Wealthsimple). Direction comes from the description, see normalize_card_activity.
+    "CREDIT_CARD" => { category: :cash, label: "Other", cash_flow: :card },
+    "PREPAID_CARD" => { category: :cash, label: "Other", cash_flow: :card }
   }.freeze
+
+  # "CREDIT_CARD PURCHASE: <merchant>", "CREDIT_CARD REFUND: <merchant>", "CREDIT_CARD PAYMENT"
+  CARD_DESCRIPTION = /\A(?:CREDIT_CARD|PREPAID_CARD)\s+(PURCHASE|PAYMENT|REFUND)\b:?\s*(.*)\z/m
 
   SNAPTRADE_TYPE_TO_LABEL = ACTIVITY_RULES.transform_values { |r| r[:label] }.freeze
 
@@ -541,7 +548,11 @@ class SnaptradeAccount::ActivitiesProcessor
       description = data[:description] || data["description"] || build_description(activity_type, symbol)
 
       # Normalize amount sign for certain activity types
-      amount = normalize_cash_amount(amount, activity_type)
+      if ACTIVITY_RULES.dig(activity_type, :cash_flow) == :card
+        amount, description = normalize_card_activity(amount, description, activity_type)
+      else
+        amount = normalize_cash_amount(amount, activity_type)
+      end
 
       # Extract currency - handle both nested object and string
       currency_data = data[:currency] || data["currency"]
@@ -615,6 +626,27 @@ class SnaptradeAccount::ActivitiesProcessor
         -amount
       else
         amount
+      end
+    end
+
+    # Returns [ amount in Sure's convention (positive = money out), name ].
+    #
+    # Wealthsimple card rows name their direction in the description and are
+    # signed from the account's side (a purchase is negative), so the sign is
+    # taken from the description, and the name is the merchant without the
+    # "CREDIT_CARD PURCHASE:" prefix. Older rows were a bare "CREDIT_CARD" with
+    # a positive amount for every charge; those keep their sign. A bare
+    # PREPAID_CARD (debit card on a cash account) is signed like the newer rows.
+    def normalize_card_activity(amount, description, activity_type)
+      match = CARD_DESCRIPTION.match(description.to_s.strip)
+
+      if match
+        signed = match[1] == "PURCHASE" ? amount.abs : -amount.abs
+        [ signed, match[2].to_s.strip.presence || description ]
+      elsif activity_type == "PREPAID_CARD"
+        [ -amount, description ]
+      else
+        [ amount, description ]
       end
     end
 

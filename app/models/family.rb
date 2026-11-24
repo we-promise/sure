@@ -873,11 +873,11 @@ class Family < ApplicationRecord
     # account's holdings on its latest holding date.
     def currencies_held_now(scope)
       account_ids = self.accounts.visible.where(id: scope.select(:id)).select(:id)
-      latest = Holding.through_today.where(account_id: account_ids).group(:account_id).select("account_id, MAX(date) AS date")
+      latest = Holding.through_today.where(account_id: account_ids, superseded: false).group(:account_id).select("account_id, MAX(date) AS date")
       (
         Account.where(id: account_ids).distinct.pluck(:currency) +
           Holding.joins("JOIN (#{latest.to_sql}) latest ON latest.account_id = holdings.account_id AND latest.date = holdings.date")
-            .distinct.pluck(:currency)
+            .where(superseded: false).distinct.pluck(:currency)
       ).compact.uniq
     end
 
@@ -932,7 +932,7 @@ class Family < ApplicationRecord
         Transaction.where(id: batch).update_all([ "locked_attributes = locked_attributes - ?, updated_at = ?", attribute, Time.current ])
         # Without the flag, a lock the user sets later counts as confirming it.
         DataEnrichment.where(enrichable_type: "Transaction", enrichable_id: batch, attribute_name: attribute, source: source)
-                      .update_all([ "metadata = metadata - ?", flag ])
+                      .drop_metadata_flag!(flag)
         Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
       end
       ids.size

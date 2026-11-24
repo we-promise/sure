@@ -198,11 +198,14 @@ class SimplefinAccount::Investments::HoldingsProcessor
           next unless holding.account_provider_id == provider.id
 
           collision = account.holdings.find_by(security_id: holding.security_id, currency: holding.currency, date: snapshot_date)
-          next if collision && collision.account_provider_id != provider.id
+          if collision && collision.account_provider_id != provider.id
+            next unless account.accounting_start_date && collision.account_provider_id.nil? && collision.materialized?
+          end
 
-          closed = holding.date == snapshot_date ? holding : holding.dup
+          closed = collision || holding.dup
           closed.assign_attributes(
             date: snapshot_date, qty: 0, amount: 0, price: 0,
+            account_provider: provider, materialized: false, superseded: false,
             external_id: "simplefin_closed_#{provider.id}_#{holding.provider_security_id || holding.security_id}_#{holding.currency}_#{snapshot_date}"
           )
           Holding.transaction(requires_new: true) { closed.save! }

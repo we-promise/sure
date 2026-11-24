@@ -1077,15 +1077,19 @@ class Entry < ApplicationRecord
       entryable.superseded_at = nil
     end
 
-    # A cash-anchored account carries holdings of securities it has no
-    # quantity-changing trades for. Once a security's last such trade is gone,
-    # the rows calculated from it would be carried too, so they go from the
-    # trade's date on.
+    # Earlier trades may have been removed before the next sync. Clear the
+    # calculated series and rebuild from its first day to carry any observations.
     def remove_holdings_of_last_trade
       return unless account.accounting_start_date
+      # Serialize the last-trade check when two entries are deleted together.
+      Account.where(id: account_id).lock.pick(:id)
       return if account.trades.where.not(qty: 0).exists?(security_id: entryable.security_id)
 
-      account.holdings.where(security_id: entryable.security_id, account_provider_id: nil, materialized: true, date: date..).delete_all
+      calculated = account.holdings.where(security_id: entryable.security_id, account_provider_id: nil,
+        materialized: true, superseded: false)
+      @earliest_saved_date = [ @earliest_saved_date, calculated.minimum(:date) ].compact.min
+      # Keep stored basis overrides; the rebuild reactivates any genuine snapshot carry.
+      calculated.update_all(superseded: true)
     end
 
     # Remembers the earliest date this entry had before any save that changed

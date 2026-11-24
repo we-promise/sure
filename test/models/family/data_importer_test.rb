@@ -778,6 +778,88 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal Tag::COLORS.first, tag.color
   end
 
+  test "round trips a property's cost tag through full export" do
+    source_family = Family.create!(name: "Source Cost Tag Family", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+    tag = source_family.tags.create!(name: "Round Trip Land Costs")
+    source_family.accounts.create!(name: "Round Trip Plot", balance: 30_000, currency: "USD", accountable: Property.new(cost_tag: tag))
+
+    ndjson = nil
+    Zip::File.open_buffer(Family::DataExporter.new(source_family).generate_export) do |zip|
+      ndjson = zip.read("all.ndjson")
+    end
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    imported_tag = @family.tags.find_by!(name: "Round Trip Land Costs")
+    assert_not_equal tag.id, imported_tag.id
+    assert_equal imported_tag.id, @family.accounts.find_by!(name: "Round Trip Plot").property.cost_tag_id
+  end
+
+  test "a property whose cost tag is not in the import is left unlinked" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "old-plot", name: "Orphan Plot", balance: "100", currency: "USD",
+                                 accountable_type: "Property", accountable: { cost_tag_id: "missing-tag" } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_nil @family.accounts.find_by!(name: "Orphan Plot").property.cost_tag_id
+  end
+
+  test "a session mapping to a since-deleted cost tag leaves the property unlinked" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    tag = @family.tags.create!(name: "Gone Land Costs")
+    session.source_mappings.create!(family: @family, source_type: "Tag", source_id: "tag-gone", target: tag)
+    tag.delete
+
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "old-plot", name: "Replayed Plot", balance: "100", currency: "USD",
+                                 accountable_type: "Property", accountable: { cost_tag_id: "tag-gone" } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    assert_nil @family.accounts.find_by!(name: "Replayed Plot").property.cost_tag_id
+  end
+
+  test "a replayed import clears a cost tag link the file no longer has" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    tag = @family.tags.create!(name: "Replayed Land Costs")
+    session.source_mappings.create!(family: @family, source_type: "Tag", source_id: "tag-1", target: tag)
+    plot = { type: "Account", data: { id: "old-plot", name: "Relinked Plot", balance: "100", currency: "USD",
+                                      accountable_type: "Property", accountable: { cost_tag_id: "tag-1" } } }
+
+    Family::DataImporter.new(@family, build_ndjson([ plot ]), import_session: session).import!
+    property = @family.accounts.find_by!(name: "Relinked Plot").property
+    assert_equal tag.id, property.cost_tag_id
+
+    plot[:data][:accountable] = { cost_tag_id: "tag-unknown" }
+    Family::DataImporter.new(@family, build_ndjson([ plot ]), import_session: session).import!
+    assert_nil property.reload.cost_tag_id
+
+    plot[:data][:accountable] = { cost_tag_id: "tag-1" }
+    Family::DataImporter.new(@family, build_ndjson([ plot ]), import_session: session).import!
+    assert_equal tag.id, property.reload.cost_tag_id
+
+    plot[:data][:accountable] = { cost_tag_id: nil }
+    Family::DataImporter.new(@family, build_ndjson([ plot ]), import_session: session).import!
+    assert_nil property.reload.cost_tag_id
+  end
+
+  test "an import without the cost tag key keeps the property's link" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    tag = @family.tags.create!(name: "Kept Land Costs")
+    session.source_mappings.create!(family: @family, source_type: "Tag", source_id: "tag-1", target: tag)
+    plot = { type: "Account", data: { id: "old-plot", name: "Kept Plot", balance: "100", currency: "USD",
+                                      accountable_type: "Property", accountable: { cost_tag_id: "tag-1" } } }
+    Family::DataImporter.new(@family, build_ndjson([ plot ]), import_session: session).import!
+
+    plot[:data][:accountable] = {}
+    Family::DataImporter.new(@family, build_ndjson([ plot ]), import_session: session).import!
+
+    assert_equal tag.id, @family.accounts.find_by!(name: "Kept Plot").property.cost_tag_id
+  end
+
   test "imports merchants" do
     ndjson = build_ndjson([
       {
@@ -1590,6 +1672,47 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     account = @family.accounts.find_by!(name: "Investment Account")
     assert_equal 2, account.holdings.count
     assert_equal %w[CAD USD], account.holdings.order(:currency).pluck(:currency)
+  end
+
+  test "restoring cash-anchored accounts preserves the ledger baseline and holding provenance" do
+    account = @family.accounts.create!(name: "Anchored", accountable: Investment.new, currency: "USD", balance: 1000)
+    security = securities(:msft)
+    account.entries.create!(date: 2.days.ago.to_date, amount: 1000, currency: "USD", name: "Opening",
+      entryable: Valuation.new(kind: :opening_anchor))
+    create_trade(security, account: account, qty: 2, price: 100, date: Date.yesterday)
+    account.entries.create!(date: Date.current, amount: 1100, currency: "USD", name: "Old total", entryable: Valuation.new)
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    anchor = account.create_cash_anchor!
+    original_cash = anchor.amount
+    account.holdings.create!(security: security, date: Date.current, currency: "EUR", price: 50, qty: 2, amount: 100,
+      materialized: true, superseded: true, cost_basis: 35, cost_basis_inherited: true)
+
+    restored_family = Family.create!(name: "Restored", currency: "USD", locale: "en")
+    Family::DataImporter.new(restored_family, full_export_ndjson(@family)).import!
+    restored = restored_family.accounts.find_by!(name: account.name)
+    assert_equal 200, restored.valuations.cash_anchor.sole.cash_entry_total
+    assert_predicate restored.entries.valuations.find_by!(name: "Old total").entryable, :superseded_at?
+    assert restored.holdings.all?(&:materialized?)
+    retained = restored.holdings.find_by!(currency: "EUR")
+    assert_predicate retained, :superseded?
+    assert_predicate retained, :cost_basis_inherited?
+    Balance::Materializer.new(restored, strategy: :forward).materialize_balances
+    assert_equal original_cash, restored.reload.cash_balance
+    restored.entries.trades.sole.destroy!
+    assert_empty restored.current_holdings
+  end
+
+  test "a calculated holding in a backup does not replace an observation in a target account" do
+    account = @family.accounts.create!(name: "Target", accountable: Investment.new, currency: "USD", balance: 0)
+    security = Security.create!(ticker: "OBS", name: "Observed holding", exchange_operating_mic: "XNAS")
+    source = account.holdings.create!(security: security, date: Date.current, currency: "USD", qty: 3, price: 10, amount: 30)
+    record = { type: "Holding", data: {
+      account_id: "source", ticker: security.ticker, exchange_operating_mic: "XNAS", date: Date.current,
+      currency: "USD", qty: 6, price: 10, amount: 60, materialized: true
+    } }
+    Family::DataImporter.new(@family, record.to_json, account_targets: { "source" => account }).import!
+    assert_equal 3, source.reload.qty
+    refute_predicate source, :materialized?
   end
 
   test "round trips holding snapshots through full export" do

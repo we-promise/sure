@@ -8,6 +8,9 @@ class Account < ApplicationRecord
 
   after_destroy_commit :move_account_statements_to_inbox
 
+  # Property checks its cost tag once it belongs to a saved account; a new
+  # one cannot reach the family yet, so the new account checks it.
+  validate :cost_tag_in_family, if: -> { new_record? && property? && accountable&.cost_tag_id.present? }
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
@@ -850,8 +853,7 @@ class Account < ApplicationRecord
     # A cash-anchored account carries untraded holdings in their own currency,
     # so take each security's latest row up to today in any currency.
     if accounting_start_date
-      latest = holdings.through_today.select("DISTINCT ON (security_id) id").order(:security_id, date: :desc)
-      return holdings.where(id: latest).where.not(qty: 0).order(amount: :desc)
+      return Holding::CurrentForInvestmentAccounts.new([ id ]).relation.order(amount: :desc)
     end
 
     if holdings.where.not(account_provider_id: nil).exists?
@@ -865,12 +867,11 @@ class Account < ApplicationRecord
         .where.not(qty: 0)
         .order(amount: :desc)
     else
-      holdings
-        .where(currency: currency)
+      visible_holdings = holdings.where(superseded: false, currency: currency)
+      visible_holdings
         .where.not(qty: 0)
         .where(
-          id: holdings.through_today.select("DISTINCT ON (security_id) id")
-                      .where(currency: currency)
+          id: visible_holdings.through_today.select("DISTINCT ON (security_id) id")
                       .order(:security_id, date: :desc)
         )
         .order(amount: :desc)
@@ -1128,6 +1129,12 @@ class Account < ApplicationRecord
       return if owner_user&.family_id == family_id
 
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
+    end
+
+    def cost_tag_in_family
+      return if family && accountable.cost_tag_in?(family)
+
+      errors.add(:base, :cost_tag_other_family)
     end
 
     # AASM transition callbacks run after the timestamp is set and before the

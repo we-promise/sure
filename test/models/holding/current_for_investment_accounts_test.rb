@@ -33,6 +33,24 @@ class Holding::CurrentForInvestmentAccountsTest < ActiveSupport::TestCase
     assert_equal [ latest.id ], described_query.pluck(:id)
   end
 
+  test "cash-anchored accounts value one observed position across currencies, including a zero" do
+    @account.create_cash_anchor!
+    security = securities(:aapl)
+    derived = create_holding_for_security(security, date: Date.current, qty: 10)
+    derived.update!(materialized: true)
+    observed = create_holding_for_security(security, date: Date.current, qty: 2, currency: "EUR")
+    ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "USD", date: Date.current).update!(rate: 2)
+
+    assert_equal [ observed.id ], @account.current_holdings.pluck(:id)
+    assert_equal [ observed.id ], described_query.pluck(:id)
+    assert_equal 400, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+
+    observed.update!(qty: 0, amount: 0)
+    assert_empty @account.current_holdings
+    assert_empty described_query
+    assert_equal 0, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+  end
+
   test "resolves the latest provider import day per account" do
     other_account = @family.accounts.create!(
       name: "Second investment",
