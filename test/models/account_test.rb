@@ -39,6 +39,13 @@ class AccountTest < ActiveSupport::TestCase
     assert_empty account.negative_positions
   end
 
+  test "negative_positions skips the holdings query for an account without holdings" do
+    account = accounts(:depository)
+    account.expects(:holdings).never
+
+    assert_empty account.negative_positions
+  end
+
   test "linked cash and investment accounts hide balance updates by default" do
     assert accounts(:connected).hides_balance_updates_by_default?
 
@@ -973,6 +980,26 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_equal [ provider_holding.id, second_provider_holding.id ].sort, account.current_holdings.pluck(:id).sort
     assert_equal %w[CHF EUR], account.current_holdings.pluck(:currency).sort
+  end
+
+  test "a closed provider cannot hide an earlier active provider snapshot" do
+    account = accounts(:investment)
+    account.holdings.delete_all
+    item = @family.simplefin_items.create!(name: "Snapshot providers", access_url: "https://example.com/access")
+    closed = item.simplefin_accounts.create!(name: "Closed", account_id: "closed", currency: "USD", account_type: "investment", current_balance: 0, raw_holdings_payload: [])
+    active_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    active = active_item.coinstats_accounts.create!(name: "Active", currency: "USD")
+    closed_link = account.account_providers.create!(provider: closed)
+    active_link = account.account_providers.create!(provider: active)
+    account.holdings.create!(account_provider: closed_link, security: securities(:aapl), date: Date.current,
+      qty: 0, amount: 0, price: 100, currency: "USD")
+    holding = account.holdings.create!(account_provider: active_link, security: securities(:aapl), date: Date.yesterday,
+      qty: 2, amount: 200, price: 100, currency: "USD")
+
+    assert_equal [ holding.id ], account.current_holdings.pluck(:id)
+
+    holding.update!(account_provider: nil)
+    assert_empty account.current_holdings
   end
 
   test "on account destroyed cascade transfer destroyed" do
