@@ -25,7 +25,7 @@ Milestone 1 lands as one change: 2c to 2f on this branch plus the #5504 stack, a
 4. **Each feature through its real entry point.** Bill setup, rule categorization and merchant detection, merchant enhancement, PDF import, document search, Jev, the health probes.
 5. **The tests.** `test/architecture` (the invariants, redesign §17) and the recorded evals.
 
-Fixes found in review land as commits on one PR at the top of the stack.
+Fixes found in review land as commits on https://github.com/we-promise/sure/pull/5769.
 
 ---
 
@@ -47,6 +47,7 @@ Fixes found in review land as commits on one PR at the top of the stack.
   - https://github.com/we-promise/sure/pull/5550 2c follow-up: recorded evals that run, set-aside prompt overrides on the family
   - https://github.com/we-promise/sure/pull/5608 Fix #5077 follow-ups: credentials, rule-run accounting, JSON mode, eval errors
   - https://github.com/we-promise/sure/pull/5663 Send nullable enums to Anthropic as anyOf (on #5608).
+  - https://github.com/we-promise/sure/pull/5769 Fixes before the landing: down-mark lockouts, jobs queued on main (on #5608).
 
 Issue https://github.com/we-promise/sure/issues/5077 tracks follow-up work deferred from these PRs.
 
