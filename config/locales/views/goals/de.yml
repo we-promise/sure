@@ -50,7 +50,7 @@ de:
         whole_balance: "Leer: ganzer Saldo"
         progress_basis: Was für dieses Ziel zählt
         target_mode: "Wie der Zielsaldo festgelegt wird"
-        target_months: "Monatsausgaben"
+        target_months: "Anzahl Monate"
         target_months_hint: "Wird am 1. jedes Monats aus dem Median deiner monatlichen Ausgaben neu berechnet."
         target_balance: "Zielsaldo"
         target_balance_pending: "Wird beim Speichern berechnet"
@@ -76,7 +76,7 @@ de:
           hint: Nettoeinlagen. Marktgewinne und -verluste bleiben außen vor.
       target_modes:
         fixed: "Ein fester Betrag"
-        months_of_expenses: "Eine Anzahl Monatsausgaben"
+        months_of_expenses: "Ausgaben für eine Anzahl Monate"
       kinds:
         one_off:
           hint: "Spar auf etwas hin und schließ das Ziel ab, wenn du das Geld ausgibst."
