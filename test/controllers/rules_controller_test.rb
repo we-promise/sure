@@ -806,14 +806,15 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal probes.values_at(:shared, :member_private).sort, ai_batch_ids
   end
 
-  test "applying all rules as a member leaves out accounts not shared with them" do
-    sign_in users(:family_member)
+  # Admins are not exempt (Rule::AiEnrichment).
+  test "applying all rules leaves out accounts not shared with the admin who started it" do
+    sign_in users(:family_admin)
     probes = ai_scope_probes
     ai_scope_rule(active: false)
 
     perform_enqueued_jobs(only: ApplyAllRulesJob) { post apply_all_rules_url }
 
-    assert_equal probes.values_at(:shared, :member_private).sort, ai_batch_ids
+    assert_equal probes.values_at(:shared, :admin_private).sort, ai_batch_ids
   end
 
   test "member can create rule" do
