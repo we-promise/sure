@@ -414,6 +414,23 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_in_delta 1 / 1.12, usd_eur.data.first.rate.to_f, 1e-9
   end
 
+  # Yahoo stamps a daily bar with the time its session opens. London's FX
+  # sessions open at midnight local time, which during summer time is 23:00 UTC
+  # the day before.
+  test "fetch_exchange_rates dates each bar on the exchange's calendar" do
+    @provider.stubs(:throttle_request)
+    chart = { "chart" => { "result" => [ {
+      "meta" => { "currency" => "USD", "exchangeTimezoneName" => "Europe/London" },
+      "timestamp" => [ Time.utc(2026, 6, 23, 23), Time.utc(2026, 6, 24, 23), Time.utc(2026, 6, 25, 23) ].map(&:to_i),
+      "indicators" => { "quote" => [ { "close" => [ 1.11, 1.12, 1.13 ] } ] }
+    } ] } }
+    @provider.stubs(:fetch_authenticated_chart).with("EURUSD=X", anything).returns(chart)
+
+    response = @provider.fetch_exchange_rates(from: "EUR", to: "USD", start_date: Date.new(2026, 6, 24), end_date: Date.new(2026, 6, 25))
+
+    assert_equal [ [ Date.new(2026, 6, 24), 1.11 ], [ Date.new(2026, 6, 25), 1.12 ] ], response.data.map { |rate| [ rate.date, rate.rate.to_f ] }
+  end
+
   test "fetch_exchange_rates matches the quote currency regardless of case" do
     @provider.stubs(:throttle_request)
     date = Date.new(2026, 10, 22)
@@ -751,6 +768,21 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     response = @provider.fetch_security_price(symbol: "", exchange_operating_mic: "XNAS", date: date)
     assert_not response.success?
     assert_instance_of Provider::YahooFinance::Error, response.error
+  end
+
+  # The ASX opens at 10:00 in Sydney, 23:00 UTC the day before, and Yahoo
+  # stamps each daily bar with that opening time.
+  test "fetch_security_prices dates each bar on the exchange's calendar" do
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:fetch_authenticated_chart).with("CBA.AX", anything).returns("chart" => { "result" => [ {
+      "meta" => { "currency" => "AUD", "exchangeName" => "ASX", "exchangeTimezoneName" => "Australia/Sydney" },
+      "timestamp" => [ Time.utc(2026, 11, 11, 23).to_i ],
+      "indicators" => { "quote" => [ { "close" => [ 172.5 ] } ] }
+    } ] })
+
+    response = @provider.fetch_security_prices(symbol: "CBA.AX", start_date: Date.new(2026, 11, 12), end_date: Date.new(2026, 11, 12))
+
+    assert_equal [ Date.new(2026, 11, 12) ], response.data.map(&:date)
   end
 
   test "fetch_security_prices uses the Colombian Yahoo suffix once and COP fallback" do
@@ -1315,7 +1347,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     def fx_chart(date, currency, close)
       { "chart" => { "result" => [ {
         "meta" => { "currency" => currency },
-        "timestamp" => [ date.to_time.utc.to_i ],
+        "timestamp" => [ date.to_time(:utc).to_i ],
         "indicators" => { "quote" => [ { "close" => [ close ] } ] }
       } ] } }
     end
