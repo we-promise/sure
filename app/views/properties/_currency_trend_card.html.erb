@@ -1,0 +1,13 @@
+<%# locals: (title:, trend:) %>
+<%# A trend in the family currency, or a note when a stored rate is missing. %>
+
+<%= summary_card title: title do %>
+  <% if trend %>
+    <span class="flex items-center gap-1" style="color: <%= trend.color %>">
+      <span><%= trend.value %></span>
+      <span class="text-base font-normal">(<%= trend.percent_formatted %>)</span>
+    </span>
+  <% else %>
+    <span class="text-sm font-normal text-secondary"><%= t("properties.tabs.overview.rate_unavailable") %></span>
+  <% end %>
+<% end %>

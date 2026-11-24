@@ -11,3 +11,5 @@ nb:
     update:
       invalid_token: Ugyldig token.
       success: Passordet ditt er tilbakestilt.
+    disabled: Tilbakestilling av passord via Sure er deaktivert. Tilbakestill passordet hos identitetsleverandøren din.
+    sso_only_user: Kontoen din bruker SSO for autentisering. Kontakt administratoren din for å administrere påloggingsinformasjonen.

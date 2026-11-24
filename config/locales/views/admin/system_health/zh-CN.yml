@@ -399,6 +399,9 @@ zh-CN:
             render_missing_binary: 此容器中缺少 pdftoppm 渲染器（poppler-utils）
             timeout: 服务未在探测超时时间内响应
             request_failed: 服务请求失败
+            no_credit: 由于该密钥余额已耗尽，服务拒绝了请求
+            unauthorized: 服务拒绝了该 API 密钥
+            unreachable: 无法连接到该服务
             unsupported_provider: 该提供商不支持此项检查
           worker:
             run_coverage_notice: "每次检查仅验证领取该任务的单个 Worker 进程。如果有多个 Worker 副本，单次通过并不代表所有 Worker 都健康；可再次运行检查以抽样其他副本。"

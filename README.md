@@ -35,6 +35,7 @@ Issue https://github.com/we-promise/sure/issues/5077 tracks follow-up work defer
 ---
 
 - https://github.com/we-promise/sure/pull/4425 Propose a transaction split from an attached receipt.
+- https://github.com/we-promise/sure/pull/4844 Run Anthropic AI features on a Claude subscription
 
 ---
 

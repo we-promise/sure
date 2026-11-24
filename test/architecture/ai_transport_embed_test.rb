@@ -53,7 +53,7 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     requests = stub_ai
 
     vectors = Ai::Embeddings.index(Array.new(51) { "chunk #{_1}" }, family: @family)
-    query = Ai::Embeddings.query("rent", family: @family)
+    query = Ai::Embeddings.query("rent", family: @family, user: users(:family_admin))   # a search is someone's
 
     assert_equal 51, vectors.size
     assert_equal 768, query.size
