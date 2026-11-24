@@ -7,6 +7,7 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user = users(:family_admin)
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @family = @user.family
+    use_ai_routes
     @family.recurring_transactions.destroy_all
     @series = @family.recurring_transactions.create!(
       name: "Gym", account: accounts(:depository), amount: 40, currency: "USD",
@@ -55,12 +56,13 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 45.0, @series.reload.amount.to_f
   end
 
-  test "forbidden without an LLM provider" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+  test "sent back with the reason when no model is set up for bills" do
+    use_no_ai
 
     get smart_configuration_bill_url(@series)
 
-    assert_response :forbidden
+    assert_redirected_to root_path
+    assert_equal Ai::Availability.unavailable(:bill_setup, :not_configured).message_for(@user), flash[:alert]
   end
 
   test "another family's bill is not found" do
