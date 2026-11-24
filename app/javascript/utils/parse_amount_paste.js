@@ -1,3 +1,4 @@
+import { parseGroupedWholeNumber } from "utils/evaluate_amount_expression"
 import parseLocaleFloat from "utils/parse_locale_float"
 
 // The currency symbols carried by config/currencies.yml, restricted to the
@@ -68,7 +69,16 @@ export default function parseAmountPaste(text, options = {}) {
   if (!match) return null
   if (match[1] === "-") negative = true
 
-  const { separator } = options
+  // A whole-number field (precision 0) reads a dot or comma as grouping, the
+  // same rule as typing there: "150.000.000" is 150000000, and any other shape
+  // is left to the browser instead of being rounded.
+  const { separator, precision } = options
+  if (precision === 0 && /[.,]/.test(match[2])) {
+    const whole = parseGroupedWholeNumber(match[2])
+    if (whole === null) return null
+    return negative ? -whole : whole
+  }
+
   const parsed = parseLocaleFloat(
     match[2],
     AMBIGUOUS_SEPARATOR.test(match[2]) ? { separator } : {},
