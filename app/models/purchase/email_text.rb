@@ -25,6 +25,8 @@ class Purchase::EmailText
     /-{3,}\s*Original Message\s*-{3,}/i,
     /Begin forwarded message:/i
   ].freeze
+  # How far past a forward marker its header lines are looked for.
+  FORWARD_BLOCK_CHARS = 2_000
   FORWARDED_HEADERS = {
     "Original-From" => /^\s*(?:From|Od):\s*(.+)$/i,
     "Original-Date" => /^\s*(?:Date|Data|Sent|Wysłano):\s*(.+)$/i,
@@ -159,13 +161,17 @@ class Purchase::EmailText
       }
     end
 
-    # The header lines right after a "Forwarded message" marker in an inline forward.
+    # The header lines right after a "Forwarded message" marker in an inline forward. An order
+    # forwarded on again carries one block per forward; the innermost one with a sender is the
+    # shop's.
     def inline_forward_headers(body)
-      marker = FORWARD_MARKERS.lazy.filter_map { |pattern| body.match(pattern) }.first
-      return {} unless marker
-
-      block = body[marker.end(0)..].lines.first(8).join
-      FORWARDED_HEADERS.transform_values { |pattern| block[pattern, 1]&.strip }.compact_blank
+      ends = FORWARD_MARKERS.flat_map { |pattern| body.to_enum(:scan, pattern).map { Regexp.last_match.end(0) } }
+      ends.sort.reverse_each do |offset|
+        block = body[offset, FORWARD_BLOCK_CHARS].lines.first(8).join
+        headers = FORWARDED_HEADERS.transform_values { |pattern| block[pattern, 1]&.strip }.compact_blank
+        return headers if headers["Original-From"]
+      end
+      {}
     end
 
     def header_block(headers)

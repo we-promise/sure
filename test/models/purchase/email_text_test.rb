@@ -159,6 +159,36 @@ class Purchase::EmailTextTest < ActiveSupport::TestCase
     assert_match(/\AOriginal-From: Sklep <shop@example.com>\nOriginal-Date: 12.11.2026\nOriginal-Subject: Zamówienie/, text)
   end
 
+  test "an order forwarded twice inline takes the shop's headers from the innermost forward" do
+    body = <<~TEXT
+      FYI
+
+      ---------- Forwarded message ---------
+      From: Alice <alice@family.example>
+      Date: Fri, 13 Nov 2026
+      Subject: Fwd: Your order
+
+      ---------- Forwarded message ---------
+      From: Shop <orders@shop.example>
+      Date: Thu, 12 Nov 2026
+      Subject: Your order
+
+      Total: $10.00
+    TEXT
+
+    result = Purchase::EmailText.new(Mail.new(body:)).call
+
+    assert_match(/\AOriginal-From: Shop <orders@shop.example>\nOriginal-Date: Thu, 12 Nov 2026\nOriginal-Subject: Your order/, result.text)
+    assert_equal "shop.example", result.original_from_domain
+  end
+
+  test "a forward marker quoted without headers after it doesn't hide the real forward" do
+    body = "---------- Forwarded message ---------\nFrom: Shop <orders@shop.example>\nSubject: Your order\n\n" \
+           "Reply above this line\n---------- Forwarded message ---------\nnothing here\n"
+
+    assert_equal "shop.example", Purchase::EmailText.new(Mail.new(body:)).call.original_from_domain
+  end
+
   test "truncates long emails and says so" do
     mail = Mail.new(body: "x" * 50_000)
 
