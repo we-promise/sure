@@ -62,18 +62,6 @@ class I18nTest < ActiveSupport::TestCase
     end
   end
 
-  # The admin reset names every broken rule, so a locale that translates the
-  # other rules must translate the byte limit too.
-  def test_admin_password_too_long_exists_wherever_the_other_rules_are_translated
-    Dir.glob(Rails.root.join("config/locales/views/admin/users/*.yml")).each do |path|
-      locale, data = YAML.load_file(path, aliases: true).first
-      messages = data.dig("admin", "users", "update") || {}
-      next if messages["password_missing_special"].blank?
-
-      assert_includes messages["password_too_long"].to_s, "%{count}", "#{locale}: admin.users.update.password_too_long is missing"
-    end
-  end
-
   # The insights page, the card's "Dig in with AI" button and the push
   # notification all read this tree, so a gap shows Spanish users English
   # copy, and for the dig-in prompt, an English message in their chat box.

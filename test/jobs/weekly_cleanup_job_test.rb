@@ -88,7 +88,7 @@ class WeeklyCleanupJobTest < ActiveJob::TestCase
     # calls) out of the way; family destroy still runs its real callbacks.
     family = Family.create!(name: "Cleanup Destroy Family", currency: "USD", locale: "en")
     admin = family.users.create!(
-      email: "cleanup-destroy@example.com", password: "password-1234-abcd", role: "admin",
+      email: "cleanup-destroy@example.com", password: "Password-1234-abcd!", role: "admin",
       first_name: "Clean", last_name: "Up", onboarded_at: 1.day.ago, ai_enabled: true,
       preferences: { "preview_features_enabled" => true }
     )

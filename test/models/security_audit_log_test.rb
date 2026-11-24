@@ -86,7 +86,7 @@ class SecurityAuditLogTest < ActiveSupport::TestCase
   test "survives its user being deleted, preserving the user's email" do
     disposable_user = User.create!(
       email: "disposable-audit-test@example.com",
-      password: "somesecurepassword12345",
+      password: "SomeSecurePassword12345!",
       first_name: "Disposable",
       last_name: "User",
       family: families(:dylan_family)

@@ -1,8 +1,8 @@
-# The password rules shared by sign-up, the admin reset, the API signup and the
-# password change/reset. password_validator_controller.js mirrors them for the
-# live checklist on the sign-up form, so change both together. The byte limit
-# has no checklist row: the sign-up field's maxlength caps characters, and
-# accented letters or emoji that push past 72 bytes get the server's message.
+# The password rules User checks whenever a new password is assigned.
+# password_validator_controller.js mirrors them for the live checklist on the
+# sign-up form, so change both together. The byte limit has no checklist row:
+# the sign-up field's maxlength caps characters, and accented letters or emoji
+# that push past 72 bytes get the server's message.
 class PasswordPolicy
   MIN_LENGTH = 8
   # bcrypt ignores everything after byte 72, so a longer password would be

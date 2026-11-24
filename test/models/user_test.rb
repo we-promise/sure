@@ -20,11 +20,8 @@ class UserTest < ActiveSupport::TestCase
     assert @user.valid?, @user.errors.full_messages.to_sentence
   end
 
-  test "password complexity applies only when requested" do
+  test "every new password must meet the complexity rules" do
     @user.password = "password"
-    assert @user.valid?, @user.errors.full_messages.to_sentence
-
-    @user.require_password_complexity = true
     assert_not @user.valid?
     assert_equal %i[missing_case missing_number missing_special], @user.errors.details[:password].map { |detail| detail[:error] }
 
@@ -32,24 +29,19 @@ class UserTest < ActiveSupport::TestCase
     assert @user.valid?, @user.errors.full_messages.to_sentence
   end
 
-  test "password complexity requires a new password" do
-    @user.require_password_complexity = true
-    @user.password = ""
+  test "a stored password is not re-checked when other attributes change" do
+    user = User.find(@user.id)
+    user.first_name = "Renamed"
 
-    assert_not @user.valid?
-    assert_equal [ :blank ], @user.errors.details[:password].map { |detail| detail[:error] }
+    assert user.valid?, user.errors.full_messages.to_sentence
   end
 
-  test "a new password longer than 72 bytes is rejected on every write" do
+  test "a new password longer than 72 bytes is rejected" do
     @user.password = "Aa1!" + "a" * 69
 
     assert_not @user.valid?
     assert_equal [ :too_long ], @user.errors.details[:password].map { |detail| detail[:error] }
     assert_match(/maximum is 72 bytes/, @user.errors.full_messages.to_sentence)
-
-    @user.require_password_complexity = true
-    assert_not @user.valid?
-    assert_equal [ :too_long ], @user.errors.details[:password].map { |detail| detail[:error] }
 
     @user.password = "Aa1!" + "a" * 68
     assert @user.valid?, @user.errors.full_messages.to_sentence
@@ -1575,7 +1567,7 @@ class UserTest < ActiveSupport::TestCase
 
   test "purging the last user cascades to remove family and its export attachments" do
     family = Family.create!(name: "Solo Family", locale: "en", date_format: "%m-%d-%Y", currency: "USD")
-    user = User.create!(family: family, email: "solo@example.com", password: "password123")
+    user = User.create!(family: family, email: "solo@example.com", password: "Password123!")
     export = family.family_exports.create!
     export.export_file.attach(
       io: StringIO.new("export-data"),
@@ -1654,28 +1646,28 @@ class UserTest < ActiveSupport::TestCase
     assert grant.reload.revoked_at.present?
   end
   test "password_challenge must match the current password when given" do
-    @user.assign_attributes(password_challenge: "wrongpassword123", password: "newpassword123")
+    @user.assign_attributes(password_challenge: "wrongpassword123", password: "NewPassword123!")
     assert_not @user.valid?
     assert @user.errors.of_kind?(:password_challenge, :invalid)
 
-    @user.assign_attributes(password_challenge: "", password: "newpassword123")
+    @user.assign_attributes(password_challenge: "", password: "NewPassword123!")
     assert_not @user.valid?
 
-    @user.assign_attributes(password_challenge: user_password_test, password: "newpassword123")
+    @user.assign_attributes(password_challenge: user_password_test, password: "NewPassword123!")
     assert @user.valid?
   end
 
   test "password_challenge is not checked when not given" do
-    @user.password = "newpassword123"
+    @user.password = "NewPassword123!"
     assert @user.valid?
   end
 
   test "password_confirmation must match when given" do
-    @user.assign_attributes(password: "newpassword123", password_confirmation: "otherpassword123")
+    @user.assign_attributes(password: "NewPassword123!", password_confirmation: "OtherPassword123!")
     assert_not @user.valid?
     assert @user.errors.of_kind?(:password_confirmation, :confirmation)
 
-    @user.password_confirmation = "newpassword123"
+    @user.password_confirmation = "NewPassword123!"
     assert @user.valid?
   end
 

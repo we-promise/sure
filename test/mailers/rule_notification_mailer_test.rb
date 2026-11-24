@@ -35,7 +35,7 @@ class RuleNotificationMailerTest < ActionMailer::TestCase
     # A self-hosted family is commonly a single super_admin (the owner) with no
     # :admin user. The owner must still receive the digest.
     family = Family.create!(name: "Solo owner family", currency: "USD")
-    owner = User.create!(family: family, email: "solo-owner@example.com", password: "password123", role: :super_admin)
+    owner = User.create!(family: family, email: "solo-owner@example.com", password: "Password123!", role: :super_admin)
     account = family.accounts.create!(name: "Mailer test", balance: 100, currency: "USD", accountable: Depository.new)
     txn = create_transaction(date: Date.current, account: account, amount: 100, name: "Coffee").transaction
     rule = Rule.new(family: family, resource_type: "transaction", name: "Coffee rule")
@@ -50,9 +50,9 @@ class RuleNotificationMailerTest < ActionMailer::TestCase
     # is returned is not deterministic and precedence is intentionally undefined.
     # The contract is only that the recipient is admin-level, never a member.
     family = Family.create!(name: "Mixed roles family", currency: "USD")
-    User.create!(family: family, email: "the-admin@example.com", password: "password123", role: :admin)
-    User.create!(family: family, email: "the-super-admin@example.com", password: "password123", role: :super_admin)
-    User.create!(family: family, email: "the-member@example.com", password: "password123", role: :member)
+    User.create!(family: family, email: "the-admin@example.com", password: "Password123!", role: :admin)
+    User.create!(family: family, email: "the-super-admin@example.com", password: "Password123!", role: :super_admin)
+    User.create!(family: family, email: "the-member@example.com", password: "Password123!", role: :member)
     account = family.accounts.create!(name: "Mailer test", balance: 100, currency: "USD", accountable: Depository.new)
     txn = create_transaction(date: Date.current, account: account, amount: 100, name: "Coffee").transaction
     rule = Rule.new(family: family, resource_type: "transaction", name: "Coffee rule")
@@ -66,7 +66,7 @@ class RuleNotificationMailerTest < ActionMailer::TestCase
   test "digest is skipped when the family has no admin or super_admin" do
     # Transaction details must never go to a regular member/guest.
     family = Family.create!(name: "No-admin family", currency: "USD")
-    User.create!(family: family, email: "member-only@example.com", password: "password123", role: :member)
+    User.create!(family: family, email: "member-only@example.com", password: "Password123!", role: :member)
     account = family.accounts.create!(name: "Mailer test", balance: 100, currency: "USD", accountable: Depository.new)
     txn = create_transaction(date: Date.current, account: account, amount: 100, name: "Coffee").transaction
     rule = Rule.new(family: family, resource_type: "transaction", name: "Coffee rule")

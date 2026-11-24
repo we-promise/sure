@@ -56,7 +56,7 @@ class PasswordResetsController < ApplicationController
       end
 
       ActiveRecord::Base.transaction do
-        next false unless @user.update(password_params.merge(require_password_complexity: true))
+        next false unless @user.update(password_params)
 
         SecurityAuditLog.log_password_changed!(user: @user, request: request)
         # The user is signed out on this path, so every session goes

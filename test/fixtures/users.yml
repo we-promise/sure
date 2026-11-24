@@ -7,7 +7,7 @@ empty:
   first_name: User
   last_name: One
   email: user1@example.com
-  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
+  password_digest: $2a$04$YSnEVJ2Qcx1scJFvJWGz3e7oNnG7GGIPfh9AcuLrCDjH.yh4f25lu
   onboarded_at: <%= 3.days.ago %>
   # Explicit created_at so this admin sorts before the other admin fixture
   # (sso_only) in family "empty" — without it, both rows get the same
@@ -25,7 +25,7 @@ sure_support_staff:
   first_name: Support
   last_name: Admin
   email: support@sure.am
-  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
+  password_digest: $2a$04$YSnEVJ2Qcx1scJFvJWGz3e7oNnG7GGIPfh9AcuLrCDjH.yh4f25lu
   role: super_admin
   onboarded_at: <%= 3.days.ago %>
   ai_enabled: true
@@ -38,7 +38,7 @@ family_admin:
   first_name: Bob
   last_name: Dylan
   email: bob@bobdylan.com
-  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
+  password_digest: $2a$04$YSnEVJ2Qcx1scJFvJWGz3e7oNnG7GGIPfh9AcuLrCDjH.yh4f25lu
   role: admin
   onboarded_at: <%= 3.days.ago %>
   ai_enabled: true
@@ -51,7 +51,7 @@ family_member:
   first_name: Jakob
   last_name: Dylan
   email: jakobdylan@yahoo.com
-  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
+  password_digest: $2a$04$YSnEVJ2Qcx1scJFvJWGz3e7oNnG7GGIPfh9AcuLrCDjH.yh4f25lu
   onboarded_at: <%= 3.days.ago %>
   role: member
   ai_enabled: true
@@ -65,7 +65,7 @@ new_email:
   last_name: User
   email: user@example.com
   unconfirmed_email: new@example.com
-  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
+  password_digest: $2a$04$YSnEVJ2Qcx1scJFvJWGz3e7oNnG7GGIPfh9AcuLrCDjH.yh4f25lu
   onboarded_at: <%= Time.current %>
   role: member
   ai_enabled: true
@@ -78,7 +78,7 @@ intro_user:
   first_name: Intro
   last_name: User
   email: intro@example.com
-  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
+  password_digest: $2a$04$YSnEVJ2Qcx1scJFvJWGz3e7oNnG7GGIPfh9AcuLrCDjH.yh4f25lu
   onboarded_at: <%= 1.day.ago %>
   role: guest
   ai_enabled: true
@@ -91,7 +91,7 @@ inactive_trial_user:
   first_name: Inactive
   last_name: User
   email: inactive@example.com
-  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
+  password_digest: $2a$04$YSnEVJ2Qcx1scJFvJWGz3e7oNnG7GGIPfh9AcuLrCDjH.yh4f25lu
   role: admin
   onboarded_at: <%= 90.days.ago %>
   ai_enabled: true

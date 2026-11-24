@@ -557,7 +557,7 @@ class TransactionTest < ActiveSupport::TestCase
 
     2.times do |i|
       extra_member = User.create!(
-        family: family, email: "extra_member_#{i}@example.com", password: "password123456",
+        family: family, email: "extra_member_#{i}@example.com", password: "Password123456!",
         first_name: "Extra", last_name: "Member #{i}", role: "member"
       )
       AccountShare.create!(account: shared_account, user: extra_member, permission: "read_only", include_in_finances: true)

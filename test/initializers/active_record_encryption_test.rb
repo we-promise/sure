@@ -101,12 +101,12 @@ class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
     skip "Encryption not configured" unless User.encryption_ready?
 
     user = users(:family_admin)
-    user.update!(password: "correct-horse-battery-staple")
+    user.update!(password: "Correct-horse-battery-staple1!")
     ActiveRecord::Base.connection.execute(
       ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", "legacy-plaintext@example.com", user.id ])
     )
 
-    assert_equal user, User.authenticate_by_email(email: "legacy-plaintext@example.com", password: "correct-horse-battery-staple")
+    assert_equal user, User.authenticate_by_email(email: "legacy-plaintext@example.com", password: "Correct-horse-battery-staple1!")
     assert_nil User.authenticate_by_email(email: "legacy-plaintext@example.com", password: "wrong-password")
   end
 
@@ -114,12 +114,12 @@ class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
     skip "Encryption not configured" unless User.encryption_ready?
 
     user = users(:family_admin)
-    user.update!(password: "correct-horse-battery-staple")
+    user.update!(password: "Correct-horse-battery-staple1!")
 
     BCrypt::Password.expects(:create).never
     BCrypt::Password.any_instance.expects(:is_password?).twice.returns(true, false)
 
-    assert_equal user, User.authenticate_by_email(email: user.email, password: "correct-horse-battery-staple")
+    assert_equal user, User.authenticate_by_email(email: user.email, password: "Correct-horse-battery-staple1!")
     assert_nil User.authenticate_by_email(email: user.email, password: "wrong-password")
   end
 

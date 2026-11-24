@@ -290,7 +290,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
 
       demo_family = Family.create!(name: "Disposable Demo")
-      demo_family.users.create!(first_name: "Demo", last_name: "Owner", email: demo_email, password: "password123", role: :admin)
+      demo_family.users.create!(first_name: "Demo", last_name: "Owner", email: demo_email, password: "Password123!", role: :admin)
       patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: demo_family.id } }
       assert_redirected_to settings_hosting_path
       patch settings_hosting_url, params: { setting: { demo_family_refresh_enabled: "1" } }
@@ -302,7 +302,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     demo_email = "demo-selection@example.com"
     Rails.application.stubs(:config_for).with(:demo).returns({ email: demo_email })
     demo_family = Family.create!(name: "Demo Selection")
-    demo_user = demo_family.users.create!(first_name: "Demo", last_name: "Member", email: demo_email, password: "password123", role: :member)
+    demo_user = demo_family.users.create!(first_name: "Demo", last_name: "Member", email: demo_email, password: "Password123!", role: :member)
     sign_in users(:sure_support_staff)
 
     with_self_hosting do
@@ -318,7 +318,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       get settings_hosting_url
       assert_select "option[value='#{demo_family.id}']", count: 0
       demo_user.update!(role: :admin)
-      other_admin = demo_family.users.create!(first_name: "Instance", last_name: "Admin", email: "instance-admin@example.com", password: "password123", role: :super_admin)
+      other_admin = demo_family.users.create!(first_name: "Instance", last_name: "Admin", email: "instance-admin@example.com", password: "Password123!", role: :super_admin)
       get settings_hosting_url
       assert_select "option[value='#{demo_family.id}']", count: 0
       other_admin.update!(role: :member)

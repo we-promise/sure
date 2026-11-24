@@ -60,7 +60,7 @@ class User < ApplicationRecord
   validates :password, confirmation: true, allow_blank: true
   validate :password_challenge_matches, unless: -> { password_challenge.nil? }
   validate :password_within_byte_limit
-  validate :password_meets_complexity_requirements, if: :require_password_complexity
+  validate :password_meets_complexity_requirements
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
   normalizes :locale, with: ->(locale) { locale.presence }
@@ -307,11 +307,6 @@ class User < ApplicationRecord
 
   # Attribute to skip password validation during SSO JIT provisioning
   attr_accessor :skip_password_validation
-
-  # Set by the self-service password change and the password reset so they
-  # require a new password and apply the same rules (PasswordPolicy) as
-  # sign-up, the admin reset and the API signup.
-  attr_accessor :require_password_complexity
 
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
@@ -1060,13 +1055,11 @@ class User < ApplicationRecord
       errors.add(:password, :too_long, count: PasswordPolicy::MAX_BYTES)
     end
 
-    # has_secure_password ignores a blank assignment, so an empty new password
-    # would otherwise leave the old one in place and still report success.
+    # Runs on every password assignment, so each path that sets one (sign-up,
+    # admin reset, API signup, password change and reset) gets the same rules.
+    # Stored passwords are not re-checked: password is only set on assignment.
     def password_meets_complexity_requirements
-      if password.to_s.empty?
-        errors.add(:password, :blank)
-        return
-      end
+      return if password.nil?
 
       # Length is covered by the length and byte-limit validations above.
       (PasswordPolicy.unmet_requirements(password) - %i[too_short too_long]).each do |requirement|

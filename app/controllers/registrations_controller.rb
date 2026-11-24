@@ -6,7 +6,6 @@ class RegistrationsController < ApplicationController
   before_action :ensure_signup_open, if: :self_hosted?
   before_action :set_user, only: :create
   before_action :set_invitation
-  before_action :validate_password_requirements, only: :create
 
   def new
     @user = User.new(email: @invitation&.email)
@@ -88,26 +87,6 @@ class RegistrationsController < ApplicationController
       end
 
       success
-    end
-
-    def validate_password_requirements
-      password = user_params[:password]
-      return if password.blank? # Let Rails built-in validations handle blank passwords
-
-      PasswordPolicy.unmet_requirements(password).each do |requirement|
-        case requirement
-        when :too_short
-          @user.errors.add(:password, :too_short, count: PasswordPolicy::MIN_LENGTH)
-        when :too_long
-          @user.errors.add(:password, :too_long, count: PasswordPolicy::MAX_BYTES)
-        else
-          @user.errors.add(:password, requirement)
-        end
-      end
-
-      if @user.errors.present?
-        render :new, status: :unprocessable_entity
-      end
     end
 
     def ensure_signup_open

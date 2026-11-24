@@ -16,7 +16,7 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
   test "user email is encrypted and can be looked up" do
     user = User.create!(
       email: "encryption-test@example.com",
-      password: "password123",
+      password: "Password123!",
       family: families(:dylan_family)
     )
 
@@ -35,14 +35,14 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
   test "user email uniqueness validation works with encryption" do
     user1 = User.create!(
       email: "unique-test@example.com",
-      password: "password123",
+      password: "Password123!",
       family: families(:dylan_family)
     )
 
     # Should fail uniqueness
     user2 = User.new(
       email: "unique-test@example.com",
-      password: "password123",
+      password: "Password123!",
       family: families(:dylan_family)
     )
     assert_not user2.valid?
@@ -464,7 +464,7 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
   test "encrypted fields are not stored as plaintext in database" do
     user = User.create!(
       email: "plaintext-check@example.com",
-      password: "password123",
+      password: "Password123!",
       first_name: "PlaintextFirst",
       last_name: "PlaintextLast",
       family: families(:dylan_family)

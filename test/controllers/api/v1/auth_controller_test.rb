@@ -156,7 +156,8 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     response_data = JSON.parse(response.body)
-    assert response_data["errors"].include?("Password must be at least 8 characters")
+    assert_includes response_data["errors"], "Password is too short (minimum is 8 characters)"
+    assert_includes response_data["errors"], "Password must include both uppercase and lowercase letters"
   end
 
   test "should not signup with a password longer than 72 bytes" do
@@ -173,7 +174,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
-    assert_includes JSON.parse(response.body)["errors"], "Password must be at most 72 bytes"
+    assert_match(/maximum is 72 bytes/, JSON.parse(response.body)["errors"].to_sentence)
   end
 
   test "should not signup with duplicate email" do

@@ -1,14 +1,6 @@
 module Api
   module V1
     class AuthController < BaseController
-      PASSWORD_REQUIREMENT_MESSAGES = {
-        too_short: "Password must be at least #{PasswordPolicy::MIN_LENGTH} characters",
-        too_long: "Password must be at most #{PasswordPolicy::MAX_BYTES} bytes",
-        missing_case: "Password must include both uppercase and lowercase letters",
-        missing_number: "Password must include at least one number",
-        missing_special: "Password must include at least one special character"
-      }.freeze
-
       include Invitable
 
       skip_before_action :authenticate_request!
@@ -39,15 +31,6 @@ module Api
         # Validate invite code if provided
         if params[:invite_code].present? && !InviteCode.exists?(token: params[:invite_code]&.downcase)
           render json: { error: "Invalid invite code" }, status: :forbidden
-          return
-        end
-
-        # Validate password
-        # user_signup_params requires the `user` key; a missing payload raises
-        # ParameterMissing, which BaseController renders as a 400.
-        password_errors = validate_password(user_signup_params[:password])
-        if password_errors.any?
-          render json: { errors: password_errors }, status: :unprocessable_entity
           return
         end
 
@@ -459,21 +442,6 @@ module Api
 
         def user_signup_params
           params.require(:user).permit(:email, :password, :first_name, :last_name)
-        end
-
-        def validate_password(password)
-          errors = []
-
-          if password.blank?
-            errors << "Password can't be blank"
-            return errors
-          end
-
-          PasswordPolicy.unmet_requirements(password).each do |requirement|
-            errors << PASSWORD_REQUIREMENT_MESSAGES.fetch(requirement)
-          end
-
-          errors
         end
 
         def valid_device_info?

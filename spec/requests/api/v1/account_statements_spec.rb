@@ -9,8 +9,8 @@ RSpec.describe 'API V1 Account Statements', type: :request do
   let(:user) do
     family.users.create!(
       email: 'api-user@example.com',
-      password: 'password123',
-      password_confirmation: 'password123',
+      password: 'Password123!',
+      password_confirmation: 'Password123!',
       role: 'admin'
     )
   end
@@ -28,8 +28,8 @@ RSpec.describe 'API V1 Account Statements', type: :request do
   let(:guest) do
     family.users.create!(
       email: 'api-guest@example.com',
-      password: 'password123',
-      password_confirmation: 'password123',
+      password: 'Password123!',
+      password_confirmation: 'Password123!',
       role: 'guest'
     )
   end
@@ -168,8 +168,8 @@ RSpec.describe 'API V1 Account Statements', type: :request do
         let(:member) do
           family.users.create!(
             email: 'api-member@example.com',
-            password: 'password123',
-            password_confirmation: 'password123',
+            password: 'Password123!',
+            password_confirmation: 'Password123!',
             role: 'member'
           )
         end
