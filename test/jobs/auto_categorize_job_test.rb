@@ -236,6 +236,20 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     assert_operator AutoCategorizeJob.get_sidekiq_options["retry"], :>, 0
   end
 
+  test "a run that can't be loaded on any attempt is left to Sidekiq to retry" do
+    Family.any_instance.expects(:auto_categorize_transactions).never
+    RuleRun.stubs(:find_by).raises(ActiveRecord::ConnectionTimeoutError, "could not obtain a connection")
+
+    AutoCategorizeJob.perform_later(@family, transaction_ids: [ SecureRandom.uuid ], rule_run_id: @rule_run.id)
+
+    assert_raises(ActiveRecord::ConnectionTimeoutError) do
+      RuleAiJob::ATTEMPTS.times { perform_enqueued_jobs(at: 1.hour.from_now) }
+    end
+
+    assert_equal RuleAiJob::ATTEMPTS, performed_jobs.size
+    assert_equal 1, @rule_run.reload.pending_jobs_count
+  end
+
   private
     # Runs the real OpenAI provider, whose request fails with `error` each of `times`.
     def openai_fails_with(error, times:)
