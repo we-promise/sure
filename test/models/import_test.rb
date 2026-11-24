@@ -281,6 +281,19 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal [ other_family.id ], visible.(users(:empty))
   end
 
+  test "a statement cannot be deleted while an import carries it, so the import stays private" do
+    member = users(:family_member)
+    statement = statement_on(accounts(:investment))
+    pdf_import = PdfImport.create_from_statement!(statement: statement)
+    transaction_import = TransactionImport.create!(family: statement.family, account: accounts(:investment), account_statement: statement)
+    pdf_import.destroy!
+
+    assert_not statement.reload.destroy
+    assert AccountStatement.exists?(statement.id)
+    assert_equal statement.id, transaction_import.reload.account_statement_id
+    assert_not Import.viewable_by(member).exists?(transaction_import.id)
+  end
+
   private
     def statement_on(account)
       AccountStatement.create_from_upload!(
