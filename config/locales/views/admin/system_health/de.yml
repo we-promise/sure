@@ -405,7 +405,7 @@ de:
             extension_not_enabled: Die PostgreSQL-Erweiterung vector ist nicht aktiviert
             table_not_found: Die Tabelle vector_store_chunks wurde nicht gefunden
             missing_binary: Der Renderer pdftoppm (poppler-utils) ist in diesem Container nicht verfügbar
-            render_failed: pdftoppm (poppler-utils) konnte die Testseite in diesem Container nicht rendern. Prüfen Sie das Speicherlimit und die Protokolle des Workers.
+            render_failed: pdftoppm (poppler-utils) konnte die Testseite in diesem Container nicht rendern. Prüf das Speicherlimit und die Protokolle des Workers.
             timeout: Der Dienst hat nicht innerhalb des Zeitlimits für die Prüfung geantwortet
             request_failed: Die Anfrage an den Dienst ist fehlgeschlagen
             unsupported_provider: Der Anbieter unterstützt diese Prüfung nicht
