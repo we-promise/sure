@@ -62,6 +62,7 @@ nb:
       entry_updated: Oppføring oppdatert
     errors:
       amount_required: Beløp er påkrevd
+      duplicate_date: Denne datoen har allerede en saldooppdatering. Last inn siden på nytt og prøv igjen.
     confirm_create:
       confirm: Bekreft
       title: Bekreft ny saldo
