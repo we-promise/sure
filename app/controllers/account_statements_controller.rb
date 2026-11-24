@@ -121,7 +121,7 @@ class AccountStatementsController < ApplicationController
     return if @statement.account && !require_account_permission!(@statement.account)
 
     redirect_path = @statement.account ? account_path(@statement.account, tab: "statements") : account_statements_path
-    if @statement.destroy
+    if destroy_statement
       redirect_to redirect_path, notice: t("account_statements.destroy.success")
     else
       redirect_back_or_to redirect_path, alert: t("account_statements.destroy.failure")
@@ -129,6 +129,13 @@ class AccountStatementsController < ApplicationController
   end
 
   private
+    # The foreign key refuses the DELETE when an import arrived after the
+    # model's check for imports.
+    def destroy_statement
+      @statement.destroy
+    rescue ActiveRecord::InvalidForeignKey
+      false
+    end
 
     def set_statement
       @statement = Current.family.account_statements
