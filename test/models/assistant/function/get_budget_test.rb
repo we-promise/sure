@@ -152,6 +152,15 @@ class Assistant::Function::GetBudgetTest < ActiveSupport::TestCase
     assert_equal "over_budget", food[:status]
   end
 
+  test "category status is near_limit when spending outside bills fills the line" do
+    assert_equal "near_limit", food_status(spent: 95, bills_paid: 0)
+  end
+
+  # Bills paid early fill the line without using anything up.
+  test "category status is on_track when bills fill the line" do
+    assert_equal "on_track", food_status(spent: 95, bills_paid: 95)
+  end
+
   test "suggested_daily_spending omitted on non-current months" do
     target = Date.current.beginning_of_month << 1
     result = @function.call("month" => target.strftime("%Y-%m"))
@@ -182,4 +191,14 @@ class Assistant::Function::GetBudgetTest < ActiveSupport::TestCase
       assert totals.key?(key), "totals should include #{key}"
     end
   end
+
+  private
+    def food_status(spent:, bills_paid:)
+      budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month, user: @user)
+      budget.budget_categories.find { |bc| bc.category == categories(:food_and_drink) }.update!(budgeted_spending: 100)
+      BudgetCategory.any_instance.stubs(:actual_spending).returns(spent)
+      BudgetCategory.any_instance.stubs(:bills_paid).returns(bills_paid)
+
+      @function.call({})[:months].first[:categories].find { |c| c[:name] == "Food & Drink" }[:status]
+    end
 end

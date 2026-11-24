@@ -175,10 +175,13 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
     @provider.expects(:get_account_transactions).with("acc_no_offset", anything).twice
              .returns({ transactions: [ tx_payload("tx_1"), tx_payload("tx_2") ] })
 
-    assert_no_difference -> { DebugLogEntry.where(category: "provider_sync_warning").count } do
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync_warning", source: MercuryItem::Importer.name).count }, 1 do
       run_import
     end
 
+    warning = DebugLogEntry.where(category: "provider_sync_warning", source: MercuryItem::Importer.name).sole
+    assert_equal "Stopped paging transactions: a full page repeated earlier ids; later transactions may not be fetched", warning.message
+    assert_equal 2, warning.metadata["offset"]
     assert_equal %w[tx_1 tx_2], mercury_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
   end
 

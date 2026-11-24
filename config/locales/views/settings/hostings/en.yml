@@ -80,7 +80,7 @@ en:
         type_builtin: Builtin (direct LLM)
         type_external: External (remote agent)
         type_mcp_only: None in app (connect your own agent via MCP)
-        mcp_only_help: The in-app assistant is off for everyone in this household. Bills AI shortcuts and AI-written insight text also stop. MCP and background categorization stay available; connect external agents in Settings > MCP.
+        mcp_only_help: The in-app assistant is off for everyone in this household. Bills AI shortcuts and Dig in with AI on insights also stop. MCP and background categorization stay available; connect external agents in Settings > MCP.
         external_status: External assistant endpoint
         external_configured: Configured
         external_not_configured: Not configured. Enter the URL and token below, or set EXTERNAL_ASSISTANT_URL and EXTERNAL_ASSISTANT_TOKEN environment variables.

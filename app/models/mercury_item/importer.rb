@@ -288,7 +288,8 @@ class MercuryItem::Importer
 
     # Every page from start_date, each transaction id once. A short page is the
     # last: Mercury does not document what the response's total counts. A full
-    # page with no new ids ends it too, for an API that ignores the offset.
+    # page with no new ids ends it too, with a warning, for an API that ignores
+    # the offset.
     def fetch_transaction_pages(mercury_account, start_date:)
       transactions = []
       seen_ids = Set.new
@@ -307,7 +308,20 @@ class MercuryItem::Importer
         return { transactions: unique_transactions(transactions) } if batch.size < transactions_page_size
 
         new_ids = batch.filter_map { |tx| tx.with_indifferent_access[:id] if tx.is_a?(Hash) }.to_set - seen_ids
-        return { transactions: unique_transactions(transactions) } if new_ids.empty?
+        if new_ids.empty?
+          Rails.logger.warn "MercuryItem::Importer - Stopped paging transactions for account #{mercury_account.account_id}: a full page repeated earlier ids"
+          DebugLogEntry.capture(
+            category: "provider_sync_warning",
+            level: "warn",
+            message: "Stopped paging transactions: a full page repeated earlier ids; later transactions may not be fetched",
+            source: self.class.name,
+            provider_key: "mercury",
+            family: mercury_item.family,
+            account_provider: mercury_account.account_provider,
+            metadata: { mercury_item_id: mercury_item.id, account_id: mercury_account.account_id, offset: page * transactions_page_size, page_size: transactions_page_size }
+          )
+          return { transactions: unique_transactions(transactions) }
+        end
 
         seen_ids.merge(new_ids)
       end

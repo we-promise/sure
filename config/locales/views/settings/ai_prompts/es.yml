@@ -16,3 +16,7 @@ es:
         merchant_detector:
           title: Detector de Comerciantes
           subtitle: La IA identifica y enriquece los datos de transacciones con información de comerciantes
+        insight_dig_in:
+          title: Profundizar en un insight
+          subtitle: Primer mensaje del chat cuando profundizas en un insight con IA
+          label: Mensaje para profundizar

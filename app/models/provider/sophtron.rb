@@ -5,12 +5,19 @@
 # - V1 RPC-style endpoints for institution connection, jobs, MFA, accounts, and transactions.
 class Provider::Sophtron < Provider
   include HTTParty
+  extend BaseUrlAllowlistable
 
   DEFAULT_BASE_URL = "https://api.sophtron.com/api"
+  ALLOWED_BASE_URLS = [ DEFAULT_BASE_URL ].freeze
   USER_AGENT = "Sure Finance Sophtron Client"
   FAILURE_JOB_STATUSES = %w[Completed Timeout Failed Failure Error].freeze
 
   headers "User-Agent" => USER_AGENT
+  # The credential travels in a custom header, and HTTParty resends custom
+  # headers on a redirect; its host-change protection covers basic_auth only.
+  # A redirect off the allow-listed host would carry the token with it, so
+  # redirects are not followed at all.
+  no_follow true
   default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)
 
   Error = Class.new(Provider::Error) do
@@ -22,12 +29,27 @@ class Provider::Sophtron < Provider
     end
   end
 
+  # Accepts the shapes operators have historically pasted (a bare host, a
+  # trailing slash, the /v2 suffix) and reduces them to the API root before
+  # the allow-list decides. The allow-list is what makes the value safe; this
+  # only stops a well-meaning operator from being refused over a slash.
+  def self.normalize_base_url(value)
+    url = value.to_s.strip.chomp("/")
+    return super if url.blank?
+
+    url = url.delete_suffix("/v2")
+    url = "#{url}/api" unless URI.parse(url).path.to_s.chomp("/").end_with?("/api")
+    super(url)
+  rescue URI::InvalidURIError
+    nil
+  end
+
   attr_reader :user_id, :access_key, :base_url
 
   def initialize(user_id, access_key, base_url: DEFAULT_BASE_URL)
     @user_id = user_id
     @access_key = access_key
-    @base_url = normalize_base_url(base_url)
+    @base_url = self.class.normalize_base_url(base_url) || DEFAULT_BASE_URL
     super()
   end
 
@@ -378,17 +400,6 @@ class Provider::Sophtron < Provider
       JSON.parse(body, symbolize_names: true)
     rescue JSON::ParserError
       body
-    end
-
-    def normalize_base_url(value)
-      url = value.presence || DEFAULT_BASE_URL
-      url = url.to_s.chomp("/")
-      url = url.delete_suffix("/v2") if url.end_with?("/v2")
-
-      parsed = URI.parse(url)
-      parsed.path.to_s.end_with?("/api") ? url : "#{url}/api"
-    rescue URI::InvalidURIError
-      DEFAULT_BASE_URL
     end
 
     def normalize_account(account, user_institution_id:)
