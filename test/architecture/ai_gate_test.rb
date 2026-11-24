@@ -217,6 +217,45 @@ class AiGateTest < ActiveSupport::TestCase
     assert_operator remaining, :>, 0.1
   end
 
+  test "an interrupted request's wait and run are each added to the deadline once, and it's sent again" do
+    local = ai_endpoint(base_url: "http://gpu.local:8080/v1", location: :local)
+    running = occupy(Ai::Sequencer.gate_for(local), :interactive)
+    transport = Ai::Transport::Compatible.new(local)
+    instrumenter = Ai::Transport::Instrumenter.new(nil, endpoint: local)
+    result = Queue.new
+
+    thread = Thread.new do
+      with_ai_call_context(model: ai_model(endpoint: local), budget: 30) do
+        before = Ai::CallContext.current.deadline
+        sent = 0
+        Ai::Sequencer.with_lane(:prompt) do
+          transport.send(:attempt) do
+            transport.send(:mapping_errors) do
+              instrumenter.instrument("request.ruby_llm", {}) do
+                sent += 1
+                next if sent > 1
+
+                sleep 0.2
+                raise Ai::Gate::Interrupted, "an interactive request needed the model host"
+              end
+            end
+          end
+        end
+        result << [ sent, Ai::CallContext.current.deadline - before ]
+      end
+    rescue StandardError => error
+      result << error
+    end
+    wait_until { Ai::Sequencer.gate_for(local).waiters.any? }
+    sleep 0.3
+    running.release
+    thread.join(5)
+
+    sent, moved = result.pop(timeout: 1)
+    assert_equal 2, sent
+    assert_in_delta 0.5, moved, 0.15, "0.3 s waiting plus 0.2 s running, each once"
+  end
+
   test "the call's cancel check runs once the request has a place" do
     local = ai_endpoint(base_url: "http://gpu.local:8080/v1", location: :local)
 

@@ -1,7 +1,8 @@
 # RubyLLM's `config.instrumenter` on every context Sure builds. RubyLLM wraps each HTTP request
 # in `instrument("request.ruby_llm")`, so every request passes here:
-# - a request to a local endpoint holds a place at its host's gate (Ai::Gate) while it runs, and
-#   the time it waited for one is added to the call's deadline;
+# - a request to a local endpoint holds a place at its host's gate (Ai::Gate) while it runs. The
+#   time it waited for one, and the time it ran when an interactive request interrupted it, are
+#   added to the call's deadline;
 # - a request that would start after the call's deadline isn't sent;
 # - a failed request's mapped, scrubbed error goes on the payload as `:ai_error`, which
 #   UsageSubscriber adds to that request's usage row.
@@ -43,7 +44,15 @@ class Ai::Transport::Instrumenter
 
       gate.hold(Ai::Sequencer.lane, feature: Ai::CallContext.current&.feature, cancelled: Ai::Sequencer.cancelled) do |waited|
         Ai::CallContext.extend_deadline(waited)
-        yield
+        admitted = Ai::CallContext.now
+        begin
+          yield
+        rescue Ai::Gate::Interrupted
+          # The run an interactive request cut short isn't the call's either: the transport sends
+          # it again (Ai::Transport::Base#attempt). Each interval is credited here, once.
+          Ai::CallContext.extend_deadline(Ai::CallContext.now - admitted)
+          raise
+        end
       end
     end
 
