@@ -136,6 +136,7 @@ sequenceDiagram
 | Delivery job cadence | every 15 minutes | Matches `PushDelivery`'s claim timeout; cheap, one indexed query |
 | Deliveries per step | 3 | A queue that refuses three times needs an operator, not a fourth try |
 | Recovering a job lost after it started | out of this PR | Needs a started marker and a policy for the requester; §3 |
+| A batch that can't be queued | the outbox, not #5710's or #5608's behaviour | Call by @josh-sanders, 2026-11-24. #5710 (on `main`) fails the run and still queues the batches after it; #5608 gives the counts back and queues nothing after it. Both are replaced here. |
 
 ## 6. Tests
 
