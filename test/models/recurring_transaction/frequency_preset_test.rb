@@ -229,6 +229,7 @@ class RecurringTransaction::FrequencyPresetTest < ActiveSupport::TestCase
     assert_equal due, @recurring.next_expected_date
     assert @recurring.one_off?
     assert_equal 0, @recurring.monthly_equivalent_amount.amount
+    assert_equal 0, @recurring.monthly_equivalent_amount(on: 1.year.ago.to_date).amount
 
     found = Preset.detect(@recurring)
     assert_equal [ "once", due ], [ found.key, found.once_on ]

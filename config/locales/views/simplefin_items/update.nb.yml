@@ -1,0 +1,8 @@
+---
+nb:
+  simplefin_items:
+    update:
+      success: SimpleFIN-tilkoblingen er oppdatert.
+      errors:
+        blank_token: SimpleFIN-tilgangstoken mangler. Oppgi et token, eller bruk «Koble til eksisterende kontoer» for å fortsette.
+        update_failed: 'Kunne ikke oppdatere SimpleFIN-tilkoblingen: %{message}'
