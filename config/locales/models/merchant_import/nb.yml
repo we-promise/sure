@@ -1,0 +1,8 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        merchant_import:
+          missing_columns: 'Påkrevde kolonner mangler: %{columns}'
+          duplicate_columns: 'Dupliserte kolonnenavn etter normalisering: %{columns}'

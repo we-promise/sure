@@ -1,0 +1,22 @@
+---
+zh-CN:
+  weekly_cleanup:
+    chat_title: "每周整理 — %{date} 当周"
+    intro: "这是您的每周整理报告。我发现了 %{count} 个值得关注的方面 —— 以下内容均为只读，尚未更改任何数据。"
+    clean: "本周无需整理 —— 账目看起来非常整洁。"
+    outro: "如果您想深入处理其中任何一项，请直接在这里回复 —— 我可以帮您分类、合并商户或检查重复记录。"
+    detectors:
+      uncategorized_transactions:
+        heading: "未分类交易（过去 7 天）"
+      stale_imports:
+        heading: "停滞或失败的导入"
+      provider_data_gaps:
+        heading: "提供商同步问题（过去 7 天）"
+      missing_merchant_info:
+        heading: "缺少商户信息的交易（过去 7 天）"
+      duplicate_imported_entries:
+        heading: "可能重复的导入记录（过去 30 天）"
+      missing_context:
+        heading: "缺少备注或收据的大额支出（过去 7 天）"
+      merchant_duplicates:
+        heading: "商户去重 — %{total} 个商户，%{clusters} 组重复项（已聚类 %{coverage}%）"

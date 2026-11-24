@@ -39,6 +39,7 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Checking Account',
       balance: 1000,
       currency: 'USD',
