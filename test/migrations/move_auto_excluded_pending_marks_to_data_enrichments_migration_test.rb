@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require Rails.root.join("db/migrate/20261123090000_move_auto_excluded_pending_marks_to_data_enrichments")
+require Rails.root.join("db/migrate/20261124050000_move_auto_excluded_pending_marks_to_data_enrichments")
 
 class MoveAutoExcludedPendingMarksToDataEnrichmentsMigrationTest < ActiveSupport::TestCase
   include EntriesTestHelper

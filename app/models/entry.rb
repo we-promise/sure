@@ -285,9 +285,12 @@ class Entry < ApplicationRecord
     super
   end
 
-  # True for a pending entry that auto_exclude_stale_pending excluded.
+  # True for a pending entry that auto_exclude_stale_pending excluded. The
+  # checks on loaded data come first, so imports only query the record for
+  # excluded entries that are still pending.
   def auto_excluded_pending?
-    auto_exclusion&.metadata&.dig("reason") == "stale_pending"
+    excluded? && entryable.is_a?(Transaction) && entryable.pending? &&
+      auto_exclusion&.metadata&.dig("reason") == "stale_pending"
   end
 
   # Retroactively reconcile pending transactions that have a matching posted version

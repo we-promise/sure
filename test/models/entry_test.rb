@@ -167,6 +167,14 @@ class EntryTest < ActiveSupport::TestCase
     assert_empty entry.data_enrichments, "the record rolls back with the failed exclusion"
   end
 
+  test "auto_excluded_pending? reads no record for an excluded entry that is no longer pending" do
+    entry = create_transaction(account: accounts(:depository))
+    entry.update!(excluded: true)
+    entry = Entry.includes(:entryable).find(entry.id)
+
+    assert_no_queries_match(/data_enrichments/) { assert_not entry.auto_excluded_pending? }
+  end
+
   test "excluding by hand records no automatic exclusion" do
     entry = create_transaction(account: accounts(:depository))
 
