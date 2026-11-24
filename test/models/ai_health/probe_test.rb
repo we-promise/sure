@@ -590,6 +590,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
     assert result.failing?
     assert_equal :missing_binary, result.failure_code
+    assert I18n.exists?("admin.system_health.show.ai.failure_codes.#{result.failure_code}", :en), "System health has no text for the reason"
   end
 
   test "the PDF vision probe reports a model that takes no images as such, not as a failed request" do

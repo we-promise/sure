@@ -118,7 +118,7 @@ pl:
             invalid_response: Usługa zwróciła nieoczekiwaną odpowiedź
             model_not_available: Dostawca nie zwrócił skonfigurowanego modelu
             no_tool_call: Model odpowiedział bez wywołania narzędzia testu kondycji
-            render_missing_binary: Renderer pdftoppm (poppler-utils) jest niedostępny
+            missing_binary: Renderer pdftoppm (poppler-utils) jest niedostępny
               w tym kontenerze
             request_failed: Żądanie do usługi nie powiodło się
             table_not_found: Nie znaleziono tabeli vector_store_chunks

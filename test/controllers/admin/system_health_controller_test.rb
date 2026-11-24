@@ -704,7 +704,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
       dimensions_mismatch: "Die Dimensionen des Embedding-Vektors stimmen nicht mit den konfigurierten Dimensionen überein",
       extension_not_enabled: "Die PostgreSQL-Erweiterung vector ist nicht aktiviert",
       table_not_found: "Die Tabelle vector_store_chunks wurde nicht gefunden",
-      render_missing_binary: "Der Renderer pdftoppm (poppler-utils) ist in diesem Container nicht verfügbar",
+      missing_binary: "Der Renderer pdftoppm (poppler-utils) ist in diesem Container nicht verfügbar",
       timeout: "Der Dienst hat nicht innerhalb des Zeitlimits für die Prüfung geantwortet",
       request_failed: "Die Anfrage an den Dienst ist fehlgeschlagen",
       unsupported_provider: "Der Anbieter unterstützt diese Prüfung nicht"
