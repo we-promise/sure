@@ -20,8 +20,7 @@ class DS::Stat < DesignSystemComponent
   attr_reader :label, :plain_value, :hint, :opts
 
   # @param label [String] what the figure is
-  # @param value [String, nil] the figure; omit when using the value slot.
-  #   Blank, with no slot, renders no figure row
+  # @param value [String, nil] the figure; omit when using the value slot
   # @param hint [String, nil] a line of context beneath the figure
   # @param size [Symbol] :lg (default) or :xl, for a page's lead figure
   # @param tone [Symbol] :primary (default), :success or :warning
