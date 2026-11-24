@@ -130,17 +130,159 @@ class RedbarkAccount::LoanDetailsProcessorTest < ActiveSupport::TestCase
     assert_empty schedule
   end
 
-  # Amendment correction 6: a tiered rate is several rates wearing one entry,
-  # and the payload does not say which band the account sits in.
-  test "a tiered variable entry records nothing" do
-    detail lendingRates: [ {
-      "rateType" => "VARIABLE", "rate" => "0.0699",
-      "tiers" => [ { "name" => "Balance tier", "minimumValue" => 0, "maximumValue" => 250_000 } ]
-    } ]
+  # The payload does not say which balance band the account sits in, so a band
+  # matters only when the bands disagree.
+  test "a single tiered variable entry whose band holds the balance is used" do
+    detail lendingRates: [ tiered("0.0699", 0, 500_000) ]
 
     process
 
+    assert_equal({ "2026-09-21" => BigDecimal("6.99") }, rates)
+  end
+
+  # The balance is 400,000: the band that applies to it is missing, so the
+  # rate reported for another band is not the loan's.
+  test "tiered entries whose bands miss the balance record nothing and are logged" do
+    detail lendingRates: [ tiered("0.0699", 0, 250_000), tiered("0.0699", 250_000, 300_000) ]
+
+    process
+
+    assert_empty schedule, "a rate that applies to another balance band was recorded as the loan's rate"
+    assert_equal "Redbark reported a tiered rate whose bands miss the loan's balance; recording none",
+                 DebugLogEntry.order(:created_at).last.message
+  end
+
+  test "a variable entry with an unusable rate makes the rate unknown" do
+    detail lendingRates: [
+      { "rateType" => "VARIABLE", "rate" => "0.0699" },
+      { "rateType" => "VARIABLE", "rate" => "abc" }
+    ]
+
+    process
+
+    assert_empty schedule, "the remaining entry was taken as agreed while another could not be read"
+    assert_equal "Redbark reported an unparseable rate", DebugLogEntry.order(:created_at).last.message,
+                 "an unreadable rate was reported as a disagreement between rates"
+  end
+
+  # The shape Bankwest reports: one product rate split across two bands.
+  test "tiered variable entries that agree are used" do
+    detail lendingRate: nil, lendingRates: [
+      tiered("0.0693", 0, 420_151.97),
+      tiered("0.0693", 420_151.97, 10_000_000_000_000)
+    ]
+
+    process
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.93") }, rates)
+  end
+
+  test "untiered variable entries that agree are used" do
+    detail lendingRates: [
+      { "rateType" => "VARIABLE", "rate" => "0.0699" },
+      { "rateType" => "VARIABLE", "rate" => "0.0699" }
+    ]
+
+    process
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.99") }, rates)
+  end
+
+  test "tiered variable entries that disagree record nothing and are logged" do
+    detail lendingRates: [
+      tiered("0.0699", 0, 250_000),
+      tiered("0.0725", 250_000, 10_000_000)
+    ]
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      process
+    end
+
     assert_empty schedule, "a rate that applies to one balance band was recorded as the loan's rate"
+    assert_equal "Redbark reported several variable rates; recording none",
+                 DebugLogEntry.order(:created_at).last.message
+  end
+
+  # An untiered entry applies at any balance, so a tiered entry beside it does
+  # not make the rate ambiguous. This is the behaviour before tiers were read.
+  test "an untiered entry wins over a tiered entry at another rate" do
+    detail lendingRates: [
+      { "rateType" => "VARIABLE", "rate" => "0.0699" },
+      tiered("0.0725", 0, 10_000_000)
+    ]
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      process
+    end
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.99") }, rates)
+  end
+
+  test "tiered rates that differ only past the stored precision agree" do
+    detail lendingRates: [
+      tiered("0.069301", 0, 420_151.97),
+      tiered("0.069299", 420_151.97, 10_000_000_000_000)
+    ]
+
+    process
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.93") }, rates)
+  end
+
+  test "a tiered entry with an unusable rate makes the rate unknown" do
+    detail lendingRates: [
+      tiered("0.0693", 0, 420_151.97),
+      tiered("not-a-rate", 420_151.97, 10_000_000_000_000)
+    ]
+
+    process
+
+    assert_empty schedule, "a rate one band could not report was recorded as agreed"
+  end
+
+  test "agreeing tiered entries on a fixed loan write nothing and are logged" do
+    @loan.update!(rate_type: "fixed")
+    detail lendingRates: [
+      tiered("0.0693", 0, 420_151.97),
+      tiered("0.0693", 420_151.97, 10_000_000_000_000)
+    ]
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      process
+    end
+
+    @loan.reload
+    assert_empty schedule
+    assert_equal 6.25, @loan.interest_rate.to_f, "a fixed loan's base rate was overwritten"
+    assert_equal "Redbark reported a rate for a fixed loan; recording nothing",
+                 DebugLogEntry.order(:created_at).last.message
+  end
+
+  # Guard, passes before the change: the headline rate is read before any entry.
+  test "a headline rate wins over agreeing tiered entries" do
+    detail lendingRate: "0.0675", lendingRates: [
+      tiered("0.0693", 0, 420_151.97),
+      tiered("0.0693", 420_151.97, 10_000_000_000_000)
+    ]
+
+    process
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.75") }, rates)
+  end
+
+  test "a blank loan takes an agreeing tiered rate as its base rate" do
+    @loan.update!(rate_type: nil, interest_rate: nil)
+    detail lendingRates: [
+      tiered("0.0693", 0, 420_151.97),
+      tiered("0.0693", 420_151.97, 10_000_000_000_000)
+    ]
+
+    process
+
+    @loan.reload
+    assert_equal "variable", @loan.rate_type
+    assert_equal 6.93, @loan.interest_rate.to_f
+    assert_empty schedule, "a first sighting invented a change that never happened"
   end
 
   # Rows 12a-c: a loan whose rate was never recorded is not a loan whose rate
@@ -535,6 +677,13 @@ class RedbarkAccount::LoanDetailsProcessorTest < ActiveSupport::TestCase
 
     def process
       RedbarkAccount::LoanDetailsProcessor.new(@redbark_account, as_of: @as_of).process
+    end
+
+    def tiered(rate, minimum, maximum)
+      {
+        "rateType" => "VARIABLE", "rate" => rate,
+        "tiers" => [ { "name" => "DEBIT", "minimumValue" => minimum, "maximumValue" => maximum } ]
+      }
     end
 
     def schedule
