@@ -131,37 +131,24 @@ class Rule::Runner
         # that re-checks the conditions: otherwise an action that changes a
         # matched field (e.g. the name) would hide the transactions from the
         # actions after it, while the claims below still reserve them.
+        async_jobs = []
         result = rule.apply(
           ignore_attribute_locks: ignore_attribute_locks,
           rule_run: rule_run,
           scope: rule.scope_for_transaction_ids(matched_ids),
           claimed_ids: claimed_ids,
-          skip_action_types: skip_action_types
+          skip_action_types: skip_action_types,
+          async_jobs: async_jobs
         )
 
         counts = run_counts(result, queued: matched_ids.size, rule: rule)
         @changed_now_count += counts[:transactions_modified].to_i
 
-        if counts[:status] == "pending"
-          # An AI job may already have reported its changes via
-          # RuleRun#complete_job!, so add the run's own count instead of
-          # overwriting what is stored.
-          rule_run.with_lock do
-            counts[:transactions_modified] += rule_run.transactions_modified
-            if rule_run.success?
-              # Every job finished before the run recorded its counts.
-              counts[:status] = "success"
-              counts[:pending_jobs_count] = 0
-            elsif rule_run.failed?
-              # One job failed; the others may still be running.
-              counts[:status] = "failed"
-              counts[:pending_jobs_count] = rule_run.pending_jobs_count
-            end
-            rule_run.update!(**counts)
-          end
-        else
-          rule_run.update!(**counts)
-        end
+        # Record the pending count before enqueueing anything, so a job that
+        # finishes first cannot mark the run successful while others still run.
+        rule_run.update!(**counts)
+
+        enqueue_async_jobs(rule_run, async_jobs)
       rescue => e
         rule_run = record_failure(rule, rule_run, e, executed_at: executed_at, queued: matched_ids.size)
       ensure
@@ -171,6 +158,24 @@ class Rule::Runner
       end
 
       rule_run
+    end
+
+    # The run already stores the queued job count, so enqueue only after that.
+    # When an enqueue fails, the jobs after it never start: drop them from the
+    # pending count before the failure is recorded, or the run would wait for
+    # jobs that do not exist.
+    def enqueue_async_jobs(rule_run, async_jobs)
+      async_jobs.each_with_index do |enqueue, index|
+        begin
+          enqueue.call
+        rescue => e
+          never_enqueued = async_jobs.size - index
+          rule_run.with_lock do
+            rule_run.update!(pending_jobs_count: [ rule_run.pending_jobs_count - never_enqueued, 0 ].max)
+          end
+          raise e
+        end
+      end
     end
 
     def run_counts(result, queued:, rule:)

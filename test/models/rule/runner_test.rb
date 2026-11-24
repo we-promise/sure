@@ -327,6 +327,52 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal 0, rule_run.transactions_blocked
   end
 
+  test "records the pending job count before it enqueues an AI job" do
+    rule = @family.rules.create!(
+      name: "Categorize with AI",
+      resource_type: "transaction",
+      active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "o") ],
+      actions: [ Rule::Action.new(action_type: "auto_categorize") ]
+    )
+    pending_when_enqueued = nil
+
+    Family.any_instance.stubs(:auto_categorize_transactions_later).with do |_transactions, **_options|
+      pending_when_enqueued = rule.rule_runs.sole.pending_jobs_count
+      true
+    end
+
+    Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run
+
+    assert_equal 1, pending_when_enqueued
+    assert_equal 1, rule.rule_runs.sole.reload.pending_jobs_count
+  end
+
+  test "does not wait for jobs that never enqueued when an AI enqueue fails" do
+    rule = @family.rules.create!(
+      name: "Categorize with AI",
+      resource_type: "transaction",
+      active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "o") ],
+      actions: [ Rule::Action.new(action_type: "auto_categorize") ]
+    )
+
+    Provider::LlmConcept.stubs(:max_items_per_call).returns(1)
+    calls = 0
+    Family.any_instance.stubs(:auto_categorize_transactions_later).with do |_transactions, **_options|
+      calls += 1
+      raise "queue unavailable" if calls == 2
+      true
+    end
+
+    rule_run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.sole.reload
+
+    assert_equal 2, calls
+    assert_equal "failed", rule_run.status
+    # The first batch was enqueued; the second and the jobs after it were not.
+    assert_equal 1, rule_run.pending_jobs_count
+  end
+
   test "applying a single rule sees the changes the rules above make" do
     create_rule("Rename", "Whole Foods", name: "Supermarket")
     middle = create_rule("Middle", "Supermarket", category: @groceries)

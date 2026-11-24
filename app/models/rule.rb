@@ -298,12 +298,16 @@ class Rule < ApplicationRecord
   # the other actions already changed when they report their own changes
   # (RuleRun#complete_job!). modified_count is therefore only what the run
   # changed itself; the jobs' changes are added once they finish.
-  def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {}, skip_action_types: [])
+  def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {}, skip_action_types: [], async_jobs: nil)
     modified_transaction_ids = Set.new
     untracked_modified_count = 0
     async_actions = []
     total_async_jobs = 0
     has_async = false
+    # The runner passes its own array so it can record the pending job count
+    # before any job runs. Callers without one enqueue when apply returns.
+    enqueue_async_jobs = async_jobs.nil?
+    async_jobs ||= []
 
     actions.each do |action|
       next if skip_action_types.include?(action.action_type)
@@ -347,7 +351,8 @@ class Rule < ApplicationRecord
         ignore_attribute_locks: ignore_attribute_locks,
         rule_run: rule_run,
         modified_transaction_ids: modified_transaction_ids,
-        already_modified_count: sync_modified_count
+        already_modified_count: sync_modified_count,
+        async_jobs: async_jobs
       )
 
       if result.is_a?(Hash) && result[:async]
@@ -366,6 +371,7 @@ class Rule < ApplicationRecord
     total_modified = modified_transaction_ids.size + untracked_modified_count
 
     if has_async
+      async_jobs.each(&:call) if enqueue_async_jobs
       { modified_count: total_modified, async: true, jobs_count: total_async_jobs }
     else
       total_modified
@@ -477,7 +483,7 @@ class Rule < ApplicationRecord
   end
 
   private
-    def apply_action(action, scope, claimed_ids, ignore_attribute_locks:, rule_run:, modified_transaction_ids:, already_modified_count:)
+    def apply_action(action, scope, claimed_ids, ignore_attribute_locks:, rule_run:, modified_transaction_ids:, already_modified_count:, async_jobs: nil)
       excluded_ids = action.claimed_attributes.flat_map { |attribute| claimed_ids.fetch(attribute, []).to_a }.uniq
       action_scope = Rule.excluding_transaction_ids(scope, excluded_ids)
       action.apply(
@@ -485,7 +491,8 @@ class Rule < ApplicationRecord
         ignore_attribute_locks: ignore_attribute_locks,
         rule_run: rule_run,
         modified_transaction_ids: modified_transaction_ids,
-        already_modified_count: already_modified_count
+        already_modified_count: already_modified_count,
+        async_jobs: async_jobs
       )
     end
 

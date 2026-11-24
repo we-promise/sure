@@ -96,15 +96,16 @@ class Rule::Action < ApplicationRecord
     CSV.parse_line(str.to_s) || []
   end
 
-  def apply(resource_scope, ignore_attribute_locks: false, rule_run: nil, modified_transaction_ids: nil, already_modified_count: 0)
-    executor.execute(
-      resource_scope,
+  def apply(resource_scope, ignore_attribute_locks: false, rule_run: nil, modified_transaction_ids: nil, already_modified_count: 0, async_jobs: nil)
+    options = {
       value: execution_value,
       ignore_attribute_locks: ignore_attribute_locks,
       rule_run: rule_run,
       modified_transaction_ids: modified_transaction_ids,
       already_modified_count: already_modified_count
-    ) || 0
+    }
+    options[:async_jobs] = async_jobs if async_jobs
+    executor.execute(resource_scope, **options) || 0
   end
 
   def async?

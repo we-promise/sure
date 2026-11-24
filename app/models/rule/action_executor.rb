@@ -23,7 +23,9 @@ class Rule::ActionExecutor
 
   # Whether the action hands its work to background jobs (the AI actions).
   # Rule#apply runs those last, so the jobs can leave out the transactions the
-  # other actions changed when they report their own changes.
+  # other actions changed when they report their own changes. Such an executor
+  # appends its enqueue calls to async_jobs when given one, so the runner can
+  # record the pending count before any job runs.
   def async?
     false
   end
@@ -62,7 +64,7 @@ class Rule::ActionExecutor
     true
   end
 
-  def execute(scope, value: nil, ignore_attribute_locks: false, rule_run: nil, modified_transaction_ids: nil, already_modified_count: 0)
+  def execute(scope, value: nil, ignore_attribute_locks: false, rule_run: nil, modified_transaction_ids: nil, already_modified_count: 0, async_jobs: nil)
     raise NotImplementedError, "Action executor #{self.class.name} must implement #execute"
   end
 
