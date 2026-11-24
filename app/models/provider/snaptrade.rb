@@ -1,4 +1,5 @@
-# SnapTrade API client using SnapTrade OAuth apps (pre-release feature).
+# SnapTrade API client: SnapTrade OAuth apps (pre-release feature) or a
+# SnapTrade Personal API key.
 #
 # Auth model:
 #   - Instance admin registers an OAuth app on dashboard.snaptrade.com and sets
@@ -13,6 +14,13 @@
 #     SnaptradeItem by #apply_oauth_tokens!.
 #   - Data calls send Authorization: Bearer <access_token>. The SnapTrade user
 #     is implicit in the token; there is no userId/userSecret.
+#
+# Personal API key mode (an item with client_id + consumer_key and no OAuth
+# token): a SnapTrade Personal key is its own user, so data calls are signed
+# with the consumer key instead (clientId + timestamp query params and a
+# Signature header) and still carry no userId/userSecret. See
+# https://docs.snaptrade.com/docs/authentication-methods and
+# https://docs.snaptrade.com/docs/request-signatures.
 class Provider::Snaptrade
   class Error < StandardError; end
   # `oauth_error` carries the machine-readable `error` code from an OAuth error
@@ -38,6 +46,7 @@ class Provider::Snaptrade
       @response_body = response_body
     end
   end
+  class RateLimitError < ApiError; end
 
   MAX_RETRIES = 3
   INITIAL_RETRY_DELAY = 2 # seconds
@@ -362,6 +371,13 @@ class Provider::Snaptrade
   def initialize(snaptrade_item)
     raise ConfigurationError, "snaptrade_item is required" if snaptrade_item.nil?
     @snaptrade_item = snaptrade_item
+    @rate_limit_errors = {}
+  end
+
+  # Set once a Personal key request hits the rate limit (10 requests a minute
+  # per account); later calls for that account raise it without a request.
+  def rate_limit_error
+    @rate_limit_errors.values.first
   end
 
   # --- Data methods. The SnapTrade user is implicit in the Bearer token. ---
@@ -498,6 +514,8 @@ class Provider::Snaptrade
     end
 
     def request_json(method, path, params: {}, body: nil, retry_on_auth_failure: true)
+      return signed_request_json(method, path, params: params, body: body) if personal_key?
+
       ensure_fresh_token!
       operation = "#{method.to_s.upcase} #{path}"
       used_access_token = snaptrade_item.oauth_access_token
@@ -524,6 +542,54 @@ class Provider::Snaptrade
       end
 
       handle_response(response, operation)
+    end
+
+    # OAuth wins when both are present, so an authorized item never changes mode.
+    def personal_key?
+      snaptrade_item.oauth_access_token.blank? && snaptrade_item.personal_key_configured?
+    end
+
+    # Personal key request. The signature covers the path, the query string and
+    # the body exactly as sent, so both are built here rather than by Faraday:
+    # the query with Faraday's own (sorting) params encoder, so re-encoding the
+    # URL leaves it byte-for-byte unchanged, and the body as the same canonical
+    # JSON that is signed. Each attempt is signed afresh, since the timestamp is
+    # part of the signature. No refresh-and-retry: a 401/403 means the key itself
+    # was rejected, which handle_response turns into requires_update.
+    def signed_request_json(method, path, params:, body:)
+      bucket = path[%r{/accounts/([^/]+)}, 1]
+      raise @rate_limit_errors[bucket] if @rate_limit_errors[bucket]
+
+      operation = "#{method.to_s.upcase} #{path}"
+      content = body.presence && body.transform_keys(&:to_s).sort.to_h
+
+      retrier = method == :get ? method(:with_retries) : method(:without_retry)
+      response = retrier.call(operation) do
+        query = Faraday::Utils.default_params_encoder.encode(
+          params.to_h.merge(clientId: snaptrade_item.client_id, timestamp: Time.current.to_i)
+        )
+        signature = request_signature(path: path, query: query, content: content)
+        api_connection.public_send(method, "#{API_BASE_URL}#{path}?#{query}") do |request|
+          request.headers["Signature"] = signature
+          request.headers["Accept"] = "application/json"
+          if content
+            request.headers["Content-Type"] = "application/json"
+            request.body = JSON.generate(content)
+          end
+        end
+      end
+
+      handle_response(response, operation)
+    rescue RateLimitError => e
+      raise @rate_limit_errors[bucket] = e
+    end
+
+    # HMAC-SHA256 (keyed with the consumer key, Base64) of the JSON object
+    # {content, path, query} with keys sorted and no whitespace (the bodies we
+    # send are flat). content is null for a request without a body.
+    def request_signature(path:, query:, content:)
+      message = JSON.generate({ content: content, path: path, query: query })
+      Base64.strict_encode64(OpenSSL::HMAC.digest("SHA256", snaptrade_item.consumer_key.to_s, message))
     end
 
     def ensure_fresh_token!
@@ -621,8 +687,8 @@ class Provider::Snaptrade
           mark_requires_update!
           raise AuthenticationError, "Authentication failed (#{operation}): HTTP #{response.status}"
         when 429
-          raise ApiError.new("Rate limit exceeded. Please try again later.",
-                             status_code: response.status, response_body: response.body)
+          raise RateLimitError.new("Rate limit exceeded. Please try again later.",
+                                   status_code: response.status, response_body: response.body)
         when 500..599
           raise ApiError.new("SnapTrade server error (#{response.status}). Please try again later.",
                              status_code: response.status, response_body: response.body)

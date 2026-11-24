@@ -77,6 +77,23 @@ class ImportEncodingTest < ActiveSupport::TestCase
     assert import.raw_file_str.valid_encoding?, "Converted string should be valid UTF-8"
   end
 
+  test "keeps an uploaded file that is valid UTF-8 as UTF-8" do
+    # An upload arrives as binary. With one "®" among plain rows, as in a typical
+    # export, the charset guess is a confident but wrong EUC-JP.
+    rows = (1..20).map do |i|
+      account = i == 5 ? "Platinum Card® (...1005)" : "Checking (...4169)"
+      "2024-01-#{format('%02d', i)},Merchant #{i},Shopping,#{account},STATEMENT #{i},,-#{i}.50,"
+    end
+    csv_content = ([ "Date,Merchant,Category,Account,Original Statement,Notes,Amount,Tags" ] + rows).join("\n").b
+    assert_equal Encoding::ASCII_8BIT, csv_content.encoding
+
+    import = @family.imports.create!(type: "TransactionImport", account: @account, date_format: "%Y-%m-%d")
+    import.update!(raw_file_str: csv_content)
+
+    assert_equal Encoding::UTF_8, import.raw_file_str.encoding
+    assert_includes import.raw_file_str, "Platinum Card® (...1005)"
+  end
+
   test "handles UTF-8 files without modification" do
     # Test that valid UTF-8 files are not modified
     file_path = Rails.root.join("test/fixtures/files/imports/transactions.csv")

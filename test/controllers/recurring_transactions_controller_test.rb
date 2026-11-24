@@ -116,6 +116,18 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 15.99, @recurring_transaction.reload.amount
   end
 
+  # Editing the amount is how a rent rise is declared, so the old price has to
+  # stay in history for anything comparing against an earlier date.
+  test "update keeps the previous amount in the bill's price history" do
+    patch recurring_transaction_url(@recurring_transaction),
+      params: { recurring_transaction: { name: @recurring_transaction.display_name, amount: "17.99" } }
+
+    @recurring_transaction.reload
+    assert_equal 17.99, @recurring_transaction.amount
+    assert_equal 15.99, @recurring_transaction.amount_on(6.months.ago.to_date)
+    assert @recurring_transaction.recurring_price_changes.sole.recorded_by_user?
+  end
+
   test "the amount steps by the currency, never finer than the column" do
     assert_in_delta 0.01, RecurringTransaction.amount_step("USD")
     assert_in_delta 1.0, RecurringTransaction.amount_step("JPY")
@@ -221,6 +233,33 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to recurring_transactions_url
     assert_equal "https://pay.example.com/bill", @recurring_transaction.reload.payment_url
+  end
+
+  test "update saves and clears a bank reference" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { bank_reference: "VN 4711" } }
+    assert_equal "VN 4711", @recurring_transaction.reload.bank_reference
+
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { bank_reference: "" } }
+    assert_nil @recurring_transaction.reload.bank_reference
+  end
+
+  test "update toggles match by reference only" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { bank_reference: "VN 4711", reference_only: "1" } }
+    assert @recurring_transaction.reload.reference_only?
+
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { bank_reference: "VN 4711", reference_only: "0" } }
+    assert_not @recurring_transaction.reload.reference_only?
+  end
+
+  test "edit offers the bank reference field" do
+    get edit_recurring_transaction_url(@recurring_transaction), headers: { "Turbo-Frame" => "modal" }
+
+    assert_match "recurring_transaction[bank_reference]", response.body
+    assert_match "recurring_transaction[reference_only]", response.body
   end
 
   test "new renders the create dialog in a single modal frame" do
