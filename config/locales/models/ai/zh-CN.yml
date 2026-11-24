@@ -26,10 +26,10 @@ zh-CN:
       depends_on_vector_store: 您上传的文档（作为完整文件发送至向量存储，或作为文本分块发送至嵌入模型）
       looked_up_financial_data: 助手为回答问题而查询的财务数据
       merchant_names: 商户名称
-      provider_category_hints: 银行建议的分类
       search_query: 您的搜索文本
       stored_document_text: 您对账单库中存储的对账单文本
       transaction_amounts: 交易金额
       transaction_dates: 交易日期
       transaction_names: 交易名称
+      transaction_notes: 交易备注
       uploaded_document: 您上传的文档
