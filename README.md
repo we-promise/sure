@@ -8,6 +8,27 @@ Multi-part series branch https://github.com/we-promise/sure/tree/refactor/ai-plu
 
 ---
 
+### Review order for Milestone 1
+
+Milestone 1 lands as one change: 2c to 2f on this branch plus the #5504 stack, about 500 files. Review it by risk, not by PR.
+
+1. **The plan's decisions.** Every call made by @josh-sanders is a proposal, open to evidence. Scrutinise them first; the code follows from them.
+   - [ai-plumbing-redesign.md](https://github.com/josh-sanders/sure/blob/proposal/v0.8-ai-workflow-reviews/docs/proposals/v0.8/ai-plumbing-redesign.md): search for "@josh-sanders". Start with §5.4 (failover and down marks), §18 (breaking changes), §19 (delivery) and §20 (not in scope).
+   - The [decisions register](https://github.com/josh-sanders/sure/blob/proposal/v0.8-ai-workflow-reviews/docs/proposals/v0.8/rubyllm-spike-report.md#decisions-register) in the RubyLLM spike report: the evidence for and against each product decision.
+   - The per-PR plans in the [same folder](https://github.com/josh-sanders/sure/tree/proposal/v0.8-ai-workflow-reviews/docs/proposals/v0.8) (`pr-2a` to `pr-2f`, `ai-generation-windowing.md`), each with its own decisions.
+2. **The upgrade path.** What an existing install meets on deploy:
+   - migrations, including dropping `family_documents.account_statement_id`;
+   - jobs queued on `main` whose classes are deleted;
+   - the old AI ENV and settings read by `Ai::LegacyEnvConfig` (redesign §4.5), including which vector store is chosen;
+   - an AI run without family consent fails rather than skipping.
+3. **The core.** `Ai::Generation` (§8.1), the transports (§7), the router and down marks (§5), `Ai::Result` and `Ai::Error` (§9), usage and instrumentation (§10).
+4. **Each feature through its real entry point.** Bill setup, rule categorization and merchant detection, merchant enhancement, PDF import, document search, Jev, the health probes.
+5. **The tests.** `test/architecture` (the invariants, redesign §17) and the recorded evals.
+
+Fixes found in review land as commits on one PR at the top of the stack.
+
+---
+
 ### Milestone 1 - December 2026
 
 - https://github.com/we-promise/sure/pull/4773 2a. Transports and instrumentation.
@@ -25,6 +46,7 @@ Multi-part series branch https://github.com/we-promise/sure/tree/refactor/ai-plu
   - https://github.com/we-promise/sure/pull/5521 Windowing: fixing 2c's O(N²) runs, a #5077 performance bug
   - https://github.com/we-promise/sure/pull/5550 2c follow-up: recorded evals that run, set-aside prompt overrides on the family
   - https://github.com/we-promise/sure/pull/5608 Fix #5077 follow-ups: credentials, rule-run accounting, JSON mode, eval errors
+  - https://github.com/we-promise/sure/pull/5663 Send nullable enums to Anthropic as anyOf (on #5608).
 
 Issue https://github.com/we-promise/sure/issues/5077 tracks follow-up work deferred from these PRs.
 
@@ -39,13 +61,20 @@ Issue https://github.com/we-promise/sure/issues/5077 tracks follow-up work defer
 
 ---
 
-- 3b Bill suggestions and stopping AI work.
-- 3c Documents and MCP tools.
-- 3d Enforcement.
+[Plan](https://github.com/josh-sanders/sure/blob/proposal/v0.8-ai-workflow-reviews/docs/proposals/v0.8/stack-sequencer-off-the-web-thread.md): one stack, then one PR per feature, each under 2,000 lines.
 
----
-
-- 4 Sequencer.
+- https://github.com/we-promise/sure/stack/5748 stack, on #5608
+  - https://github.com/we-promise/sure/pull/5744 Count a mixed rule's ordinary changes as modified.
+  - https://github.com/we-promise/sure/pull/5745 Outbox: record each AI job and deliver it again when lost.
+  - https://github.com/we-promise/sure/pull/5756 4a. Lanes: a queue per AI lane, and chat a thread of its own.
+  - https://github.com/we-promise/sure/pull/5758 4b. Gate: one per local model host, with lanes and interrupts.
+  - 4c. Typing hold and visible waiting.
+- One PR each, on 4c, landing in any order:
+  - Bill suggestions and Stop.
+  - Stopping a PDF import.
+  - Documents in a job.
+  - MCP tools in a job.
+- Capsule-only check (enforcement), once the four have landed.
 
 ---
 
