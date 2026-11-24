@@ -92,4 +92,19 @@ class RetirementPlan::MonteCarloCacheTest < ActiveSupport::TestCase
 
     assert_not_equal before, key
   end
+
+  # Only the rates the plan's streams convert at are inputs: a rate stored for
+  # a pair the plan never reads must not throw away every plan's cached run.
+  test "the key is unchanged by a rate the plan's streams do not convert at" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @as_of, rate: 1.1)
+    @plan.streams.create!(kind: "expense", name: "Rent abroad", annual_amount: 10_000, currency: "EUR", source: "manual")
+    before = key
+
+    travel 1.minute do
+      ExchangeRate.create!(from_currency: "GBP", to_currency: "JPY", date: @as_of, rate: 190)
+    end
+
+    assert_equal before, key
+  end
 end

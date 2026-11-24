@@ -226,6 +226,12 @@ class RetirementPlan < ApplicationRecord
     streams_as_of(as_of).unconverted_count
   end
 
+  # The streams the simulation reads: each converted into the family's
+  # currency at `as_of`'s rate, those with no rate left out.
+  def converted_streams(as_of:)
+    streams_as_of(as_of).streams
+  end
+
   private
     def non_numeric_percents
       @non_numeric_percents ||= Set.new
