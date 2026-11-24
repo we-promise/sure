@@ -78,13 +78,20 @@ class BackfillMaterializedHoldingsMigrationTest < ActiveSupport::TestCase
     assert_equal 3, holding.qty
   end
 
-  test "keeps the original classification for an ambiguous singleton" do
+  test "preserves an ambiguous legacy singleton after the last trade is deleted" do
     holding = @account.holdings.find_by!(security: @security, date: Date.current)
     @account.holdings.where(security: @security).where.not(id: holding.id).delete_all
 
     run_migration
 
     refute_predicate holding.reload, :materialized?
+
+    @account.create_cash_anchor!
+    @trade.destroy!
+    Balance::Materializer.new(@account, strategy: :forward, window_start_date: @trade.date).materialize_balances
+
+    assert_equal holding.id, @account.current_holdings.find_by!(security: @security).id
+    assert_equal 2, holding.reload.qty
   end
 
   private

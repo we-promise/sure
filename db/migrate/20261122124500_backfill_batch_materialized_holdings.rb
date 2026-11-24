@@ -3,7 +3,7 @@ class BackfillBatchMaterializedHoldings < ActiveRecord::Migration[8.1]
     # A bulk holding write shares both timestamps across multiple dates, even
     # when the balances for those dates were already present.
     # Imports saved each row separately and can replace a holding after sync.
-    # A balance rewrite cannot confirm who last wrote a singleton holding.
+    # Preserve ambiguous singletons because last-trade cleanup could delete a genuine import.
     execute <<~SQL
       WITH holding_batches AS (
         SELECT account_id, security_id, currency, created_at, updated_at
