@@ -1,0 +1,54 @@
+<%# locals: (match:, link_counterpart: false) %>
+<%# The other side of a suggested transfer, to check before confirming it.
+    The buttons submit without Turbo so the page reloads: the drawer or dialog
+    would otherwise keep showing the match as it was. %>
+<% actions = pending_transfer_match_actions(match) %>
+<div class="space-y-3">
+  <p class="text-sm text-secondary"><%= t("transfer_matches.pending_match.description") %></p>
+
+  <% if match.counterpart_visible? %>
+    <% counterpart = match.counterpart_entry %>
+    <dl class="space-y-2 rounded-lg bg-container shadow-border-xs p-3">
+      <%= render DS::DetailRow.new(label: t("transfer_matches.pending_match.account")) do |row| %>
+        <% row.with_value do %>
+          <%= link_to match.counterpart_account.name, account_path(match.counterpart_account), class: "font-medium hover:underline", data: { turbo_frame: "_top" } %>
+        <% end %>
+      <% end %>
+      <%= render DS::DetailRow.new(label: t("transfer_matches.pending_match.date"), value: l(counterpart.date, format: :long), value_class: "font-medium") %>
+      <%= render DS::DetailRow.new(label: t("transfer_matches.pending_match.transaction")) do |row| %>
+        <% row.with_value do %>
+          <% if link_counterpart %>
+            <%= link_to counterpart.name, entry_path(counterpart), class: "font-medium hover:underline", data: { turbo_frame: "drawer", turbo_prefetch: false } %>
+          <% else %>
+            <span class="font-medium"><%= counterpart.name %></span>
+          <% end %>
+        <% end %>
+      <% end %>
+      <%= render DS::DetailRow.new(label: t("transfer_matches.pending_match.amount"), value: format_money(-counterpart.amount_money), value_class: "font-medium privacy-sensitive") %>
+    </dl>
+  <% else %>
+    <p class="text-sm text-secondary"><%= t("transactions.transfer_match.auto_matched_tooltip_hidden") %></p>
+  <% end %>
+
+  <% if actions[:confirm] || actions[:reject] %>
+    <div class="flex justify-end gap-2">
+      <% if actions[:reject] %>
+        <%= render DS::Button.new(
+              text: t("transactions.transfer_match.reject_match"),
+              variant: :secondary,
+              href: transfer_path(match.transfer, transfer: { status: "rejected" }),
+              method: :patch,
+              data: { turbo: false }
+            ) %>
+      <% end %>
+      <% if actions[:confirm] %>
+        <%= render DS::Button.new(
+              text: t("transactions.transfer_match.confirm_match"),
+              href: transfer_path(match.transfer, transfer: { status: "confirmed" }),
+              method: :patch,
+              data: { turbo: false }
+            ) %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

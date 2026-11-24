@@ -48,6 +48,13 @@
         </div>
       <% end %>
     <% end %>
+    <% if @entry.transaction.transfer&.pending? %>
+      <div class="mx-4 my-3">
+        <%= render DS::Alert.new(title: t(".pending_transfer_match"), variant: :info) do %>
+          <%= render "transfer_matches/pending_match", match: pending_transfer_match(@entry.transaction), link_counterpart: true %>
+        <% end %>
+      </div>
+    <% end %>
     <%= render "entries/protection_indicator", entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) %>
     <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div class="space-y-2">

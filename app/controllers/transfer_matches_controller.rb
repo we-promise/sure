@@ -2,6 +2,10 @@ class TransferMatchesController < ApplicationController
   before_action :set_entry
 
   def new
+    # The candidates leave out transactions already in a transfer, so a leg of
+    # a suggested match would find nothing; it gets that suggestion instead.
+    return render(:pending) if @entry.transaction.transfer&.pending?
+
     # Preloaded for the logo selects, which call Account#logo_url per option.
     @accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
       .includes(:account_providers, logo_attachment: :blob)

@@ -14,6 +14,8 @@ en:
       outflow_transaction: Outflow transaction
       inflow_transaction: Inflow transaction
       create_transfer_match: Create transfer match
+    pending:
+      title: Suggested transfer match
     matching_fields:
       select_method: Select a method for matching your transactions.
       match_existing_recommended: Match existing transaction (recommended)
@@ -22,3 +24,9 @@ en:
       matching_transaction: Matching transaction
       target_account: Target account
       no_matching_transactions: We couldn't find any transactions to match from your other accounts. Please select an account and we will create a new inflow transaction for you.
+    pending_match:
+      description: This transaction was automatically matched with the counterpart below in another account. Confirm the match if they belong together, or reject it to choose another one.
+      account: Account
+      date: Date
+      transaction: Transaction
+      amount: Amount

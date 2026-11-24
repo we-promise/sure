@@ -447,4 +447,17 @@ module TransactionsHelper
     @transfer_match_visible_account_ids ||= (@accessible_account_ids || accessible_accounts.pluck(:id)).to_set
     Transfer::PendingMatch.new(transaction, visible_account_ids: @transfer_match_visible_account_ids)
   end
+
+  # What the viewer may do with a pending transfer match, mirroring
+  # TransfersController#update: confirming rewrites both legs, so it needs
+  # write access to both accounts; rejecting unlinks them, which one is
+  # enough for.
+  #
+  # @return [Hash] { confirm: Boolean, reject: Boolean }
+  def pending_transfer_match_actions(match)
+    account_ids = [ match.transfer.from_account&.id, match.transfer.to_account&.id ].compact
+    writable_count = Current.family.accounts.writable_by(Current.user).where(id: account_ids).count
+
+    { confirm: account_ids.size == 2 && writable_count == 2, reject: writable_count.positive? }
+  end
 end

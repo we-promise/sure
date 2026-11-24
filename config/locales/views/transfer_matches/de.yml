@@ -14,6 +14,8 @@ de:
       outflow_transaction: Abgangstransaktion
       inflow_transaction: Zugangstransaktion
       create_transfer_match: Übertragungszuordnung erstellen
+    pending:
+      title: Automatisch zugeordnet
     matching_fields:
       select_method: Wähl eine Methode, um deine Transaktionen zuzuordnen.
       match_existing_recommended: Vorhandene Transaktion zuordnen (empfohlen)
@@ -22,3 +24,9 @@ de:
       matching_transaction: Zuzuordnende Transaktion
       target_account: Zielkonto
       no_matching_transactions: Wir haben in deinen anderen Konten keine passende Transaktion gefunden. Wähl ein Konto aus, dann legen wir eine neue Zugangstransaktion an.
+    pending_match:
+      description: Diese Transaktion wurde automatisch dem folgenden Gegenstück in einem anderen Konto zugeordnet. Bestätige die Zuordnung, wenn beide zusammengehören, oder lehne sie ab, um ein anderes zu wählen.
+      account: Konto
+      date: Datum
+      transaction: Transaktion
+      amount: Betrag

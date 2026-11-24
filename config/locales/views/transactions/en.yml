@@ -150,6 +150,7 @@ en:
         website: "Website"
       transfer_or_debt_payment: "Transfer or Debt Payment?"
       open_matcher: "Open matcher"
+      pending_transfer_match: "Suggested transfer match"
       convert: "Convert"
     activity_labels:
       buy: Buy

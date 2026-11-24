@@ -92,6 +92,7 @@ de:
       merge_duplicate: Ja, zusammenführen
       open_matcher: Zuordnung öffnen
       payee: Empfänger
+      pending_transfer_match: Automatisch zugeordnet
       pending_duplicate_merger_button: Zusammenführen öffnen
       pending_duplicate_merger_description: Führ diese offene Transaktion von Hand mit ihrer gebuchten Fassung zusammen.
       pending_duplicate_merger_title: Duplikat einer gebuchten Transaktion?
