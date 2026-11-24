@@ -255,13 +255,13 @@ class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
     def enrichment_diagnostic
       categorize = rule_state("auto_categorize")
       detect_merchants = rule_state("auto_detect_merchants")
-      llm_configured = Provider::Registry.preferred_llm_provider.present?
+      llm_routes = { categorize: Ai.available?(:categorize, family:), detect_merchants: Ai.available?(:detect_merchants, family:) }
 
       {
         auto_categorize_rule: categorize,
         auto_detect_merchants_rule: detect_merchants,
-        llm_provider_configured: llm_configured,
-        note: enrichment_note(categorize, detect_merchants, llm_configured)
+        llm_routes:,
+        note: enrichment_note(categorize, detect_merchants, llm_routes)
       }
     end
 
@@ -272,7 +272,10 @@ class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
       rules.where(active: true).any? ? "active" : "inactive"
     end
 
-    def enrichment_note(categorize, detect_merchants, llm_configured)
+    # Each action's route, not a count of configured providers: a broken preferred provider
+    # leaves no route though a fallback holds a key, and a family on Jev can categorize while
+    # merchant detection has no route. The note names the actions without one.
+    def enrichment_note(categorize, detect_merchants, llm_routes)
       notes = []
 
       if categorize != "active"
@@ -285,7 +288,15 @@ class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
                  "`merchant` is null on most transactions."
       end
 
-      notes << "No LLM provider is configured, so both actions would be no-ops even if a rule existed." unless llm_configured
+      without_route = llm_routes.reject { |_action, available| available }
+      unless without_route.empty?
+        actions = without_route.keys.map { _1 == :categorize ? "auto-categorization" : "merchant detection" }
+        no_ops = actions.one? ? "it would be a no-op" : "both would be no-ops"
+        notes << "No LLM route is available for #{actions.join(" or ")}, so #{no_ops} even if a rule existed. " \
+                 "The instance's AI configuration is missing or broken; its admin can fix it under " \
+                 "Settings -> Self-Hosting."
+      end
+
       notes << "Automatic enrichment is configured and running." if notes.empty?
 
       notes.join(" ")
