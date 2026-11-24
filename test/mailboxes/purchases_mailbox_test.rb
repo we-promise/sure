@@ -77,8 +77,23 @@ class PurchasesMailboxTest < ActionMailbox::TestCase
       inbound.route
     end
     assert purchase.reload.processing?
-    assert purchase.original_email.attached?
+    assert_equal inbound.source, purchase.original_email.download
     assert_equal 1, Purchase.where(inbound_email_message_id: inbound.message_id).count
+  end
+
+  test "a retry that finds its purchase read meanwhile leaves it alone" do
+    inbound = receive_inbound_email_from_source(fixture("amazon_manual_forward.eml"))
+    purchase = Purchase.find_by!(inbound_email_message_id: inbound.message_id)
+    purchase.update!(status: :failed)
+    stale = Purchase.find(purchase.id)
+    purchase.update!(status: :awaiting_payment)
+    PurchasesMailbox.any_instance.stubs(:previous_purchase).returns(stale)
+
+    assert_no_enqueued_jobs(only: Purchase::EmailProcessJob) do
+      inbound.reload.pending!
+      inbound.route
+    end
+    assert purchase.reload.awaiting_payment?
   end
 
   test "a purchase whose reading can't be queued is failed, so it can be read again" do
@@ -133,6 +148,20 @@ class PurchasesMailboxTest < ActionMailbox::TestCase
         receive_inbound_email_from_source(fixture("amazon_manual_forward.eml").sub(/Message-ID: <[^>]+>/, "Message-ID: <second@fixture.example>"))
       end
     end
+  end
+
+  test "the daily notice keeps preferences changed since the sender was looked up" do
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => false))
+    stale = User.find(@user.id)
+    PurchaseInbox::SenderResolver.any_instance.stubs(:result)
+      .returns(PurchaseInbox::SenderResolver::Result.new(user: stale, route_kind: :sender, reason: nil))
+    User.where(id: @user.id).update_all(preferences: stale.preferences.merge("show_sidebar" => false))
+
+    receive_inbound_email_from_source(fixture("amazon_manual_forward.eml"))
+
+    preferences = @user.reload.preferences
+    assert_equal false, preferences["show_sidebar"]
+    assert_equal Date.current.iso8601, preferences["purchase_inbox_preview_notice_on"]
   end
 
   private

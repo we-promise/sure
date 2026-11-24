@@ -17,10 +17,9 @@ class PurchasesMailbox < ApplicationMailbox
     # that was read already is left alone.
     purchase = previous_purchase(user)
     if purchase
-      return unless purchase.processing? || purchase.failed?
+      return unless reopen(purchase)
 
       store_original(purchase) unless purchase.original_email.attached?
-      purchase.update!(status: :processing, error: nil)
     else
       purchase = create_purchase(user)
     end
@@ -28,6 +27,16 @@ class PurchasesMailbox < ApplicationMailbox
   end
 
   private
+    # Under the purchase's lock, so a purchase another retry read meanwhile isn't read again.
+    def reopen(purchase)
+      purchase.with_lock do
+        next false unless purchase.processing? || purchase.failed?
+
+        purchase.update!(status: :processing, error: nil)
+        true
+      end
+    end
+
     def previous_purchase(user)
       return if mail.message_id.blank?
 
@@ -61,16 +70,24 @@ class PurchasesMailbox < ApplicationMailbox
     end
 
     # Active Storage uploads the original after the commit. When that fails the purchase exists
-    # without it: it's marked failed and the error re-raised, so Action Mailbox keeps the email
-    # failed and routing it again stores the original and reads it.
+    # with an attachment whose file is missing: the attachment is dropped, the purchase marked
+    # failed and the error re-raised, so Action Mailbox keeps the email failed and routing it
+    # again stores the original and reads it.
     def store_original_failing(purchase)
       yield
     rescue StandardError => e
       saved = purchase.call
-      if saved&.persisted? && Purchase.exists?(saved.id)
-        saved.update!(status: :failed, error: "The original email couldn't be stored: #{e.message}")
+      if saved&.persisted? && (failed = Purchase.find_by(id: saved.id))
+        drop_original(failed)
+        failed.update!(status: :failed, error: "The original email couldn't be stored: #{e.message}")
       end
       raise
+    end
+
+    def drop_original(purchase)
+      blob = purchase.original_email.blob
+      purchase.original_email.detach
+      blob&.purge_later
     end
 
     # A purchase whose job can't be queued is failed rather than left processing, so the user
@@ -102,11 +119,16 @@ class PurchasesMailbox < ApplicationMailbox
     end
 
     # At most one reminder a day, so a mail filter forwarding many orders doesn't flood the user.
+    # Checked and recorded under the user's lock, on the current preferences.
     def notify_preview_required(user)
       today = Date.current.iso8601
-      return if user.preferences["purchase_inbox_preview_notice_on"] == today
+      due = false
+      user.with_locked_preferences do |preferences|
+        next if preferences["purchase_inbox_preview_notice_on"] == today
 
-      user.update!(preferences: user.preferences.merge("purchase_inbox_preview_notice_on" => today))
-      PurchaseMailer.with(user:).preview_required.deliver_later
+        preferences["purchase_inbox_preview_notice_on"] = today
+        due = true
+      end
+      PurchaseMailer.with(user:).preview_required.deliver_later if due
     end
 end
