@@ -154,29 +154,42 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     end
   end
 
-  # With no rate on the reference date, the loan's repayment cannot be
-  # converted. Marking the plan seeded would leave the loan out for good, so
-  # the seed stays open, and the next one adds that loan without seeding the
-  # living costs or the loan in dollars a second time.
-  test "a foreign loan without a rate leaves seeding open and seeds it once a rate exists" do
-    checking = own_account(amount: 1_000)
-    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 1_000)
-    dollars = own_loan(balance: 45_000, term_months: 60)
+  # A foreign loan's repayment is kept in the loan's currency, as any stream
+  # can be, so a loan with no rate yet is seeded all the same and the plan
+  # marked seeded. The simulation leaves it out, and counts it, until the
+  # rate arrives.
+  test "a foreign loan seeds its repayment in its own currency, and joins the plan once a rate exists" do
     euros = own_loan(balance: 45_000, term_months: 60, currency: "EUR")
+    payment = euros.loan.amortization_schedule.payment_in_force(AS_OF)
     ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
 
     @plan.seed_streams!(as_of: AS_OF)
 
-    assert_nil @plan.reload.streams_seeded_on
-    assert_equal [ dollars ], @plan.streams.where(source: "seeded_loan").map(&:account)
+    stream = @plan.streams.find_by!(source: "seeded_loan")
+    assert_equal AS_OF, @plan.reload.streams_seeded_on
+    assert_equal [ "EUR", payment.amount * 12, euros ], [ stream.currency, stream.annual_amount, stream.account ]
+    assert_equal 1, RetirementPlan.find(@plan.id).unconverted_stream_count(as_of: AS_OF)
 
     ExchangeRate.unstub(:find_or_fetch_rate)
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: AS_OF, rate: BigDecimal("1.1"))
-    @plan.seed_streams!(as_of: AS_OF)
 
-    assert_equal AS_OF, @plan.reload.streams_seeded_on
-    assert_equal 1, @plan.streams.where(source: "seeded_living_costs").count
-    assert_equal [ dollars, euros ].map(&:id).sort, @plan.streams.where(source: "seeded_loan").pluck(:account_id).sort
+    assert_equal 0, RetirementPlan.find(@plan.id).unconverted_stream_count(as_of: AS_OF)
+  end
+
+  # A loan without a rate used to leave seeding open, so the next save
+  # seeded again and brought back a seeded stream the user had deleted.
+  test "a seeded stream deleted while a foreign loan has no rate does not come back" do
+    checking = own_account(amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 1_000)
+    own_loan(balance: 45_000, term_months: 60, currency: "EUR")
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    @plan.seed_streams!(as_of: AS_OF)
+    @plan.streams.find_by!(source: "seeded_living_costs").destroy!
+
+    assert_no_difference -> { @plan.streams.where(source: "seeded_living_costs").count } do
+      @plan.seed_streams!(as_of: AS_OF)
+    end
   end
 
   # Two requests that each loaded the plan before either seeded: the second
