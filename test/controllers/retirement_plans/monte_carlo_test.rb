@@ -28,7 +28,7 @@ class RetirementPlans::MonteCarloTest < ActionDispatch::IntegrationTest
   # The same plan is the same key, so each result is shown from a cleared cache.
   def frame_with(**options)
     Rails.cache.clear
-    RetirementPlan.any_instance.stubs(:monte_carlo_result).returns(result(**options))
+    RetirementPlan::MonteCarloCache.stubs(:result).returns(result(**options))
     get monte_carlo_retirement_plan_url
   end
 
@@ -37,12 +37,12 @@ class RetirementPlans::MonteCarloTest < ActionDispatch::IntegrationTest
   end
 
   test "the page holds a lazy frame for the run and runs nothing itself" do
-    RetirementPlan.any_instance.expects(:monte_carlo_result).never
+    RetirementPlan::MonteCarloCache.expects(:result).never
     RetirementPlan::MonteCarlo.expects(:new).never
 
     get retirement_plan_url
 
-    assert_select "turbo-frame#retirement-plan-monte-carlo-frame[loading='lazy'][src='#{monte_carlo_retirement_plan_path}']"
+    assert_select "turbo-frame#retirement-plan-monte-carlo-frame[loading='lazy'][src='#{monte_carlo_retirement_plan_path(as_of: Date.current.iso8601)}']"
     assert_select "[data-success-rate]", count: 0
   end
 
@@ -55,11 +55,23 @@ class RetirementPlans::MonteCarloTest < ActionDispatch::IntegrationTest
   end
 
   test "a cached result is shown again without running" do
-    RetirementPlan.any_instance.expects(:monte_carlo_result).once.returns(result)
+    RetirementPlan::MonteCarloCache.expects(:result).once.returns(result)
 
     2.times { get monte_carlo_retirement_plan_url }
 
     assert_select "[data-success-rate='0.93']"
+  end
+
+  # The frame runs on the page's date, so a page opened before midnight
+  # shows a run that matches the figures beside it. Only today or
+  # yesterday is taken; anything else is today.
+  test "the frame runs on the page's date, and only a recent one" do
+    { Date.yesterday => Date.yesterday, Date.current => Date.current,
+      Date.current - 10 => Date.current, Date.tomorrow => Date.current, "not-a-date" => Date.current }.each do |given, used|
+      RetirementPlan::MonteCarloCache.expects(:fetch).with(anything, as_of: used).returns(nil)
+      get monte_carlo_retirement_plan_url(as_of: given.to_s)
+      assert_response :success
+    end
   end
 
   test "without a saved plan of their own the frame is not found, whoever else has one" do
@@ -121,7 +133,7 @@ class RetirementPlans::MonteCarloTest < ActionDispatch::IntegrationTest
 
   test "a user without preview access is turned away from the frame before anything runs" do
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => false))
-    RetirementPlan.any_instance.expects(:monte_carlo_result).never
+    RetirementPlan::MonteCarloCache.expects(:result).never
 
     get monte_carlo_retirement_plan_url
 

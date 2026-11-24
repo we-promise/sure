@@ -33,7 +33,7 @@ class RetirementPlansController < ApplicationController
   def monte_carlo
     raise ActiveRecord::RecordNotFound unless @retirement_plan.persisted?
 
-    @monte_carlo = RetirementPlan::MonteCarloCache.fetch(@retirement_plan, as_of: Date.current)
+    @monte_carlo = RetirementPlan::MonteCarloCache.fetch(@retirement_plan, as_of: frame_as_of)
   end
 
   def edit
@@ -77,6 +77,16 @@ class RetirementPlansController < ApplicationController
 
       @retirement_plan = RetirementPlan.find_by!(user: Current.user)
       retry
+    end
+
+    # The page's own date, passed in the frame's URL, so the run matches the
+    # figures beside it when the frame loads after midnight. Only today or
+    # yesterday: anything else, or nothing, is today.
+    def frame_as_of
+      date = Date.iso8601(params[:as_of].to_s)
+      date.between?(Date.yesterday, Date.current) ? date : Date.current
+    rescue Date::Error
+      Date.current
     end
 
     def retirement_plan_params

@@ -19,20 +19,32 @@ class RetirementPlan::MonteCarloCacheTest < ActiveSupport::TestCase
   end
 
   test "the first fetch runs the plan and the next one reads it back" do
-    expected = plan.monte_carlo_result(as_of: @as_of)
-    RetirementPlan.any_instance.expects(:monte_carlo_result).with(as_of: @as_of).once.returns(expected)
+    RetirementPlan::MonteCarlo.any_instance.expects(:success_rate).once.returns(0.9)
 
     first = RetirementPlan::MonteCarloCache.fetch(plan, as_of: @as_of)
     second = RetirementPlan::MonteCarloCache.fetch(plan, as_of: @as_of)
 
-    assert_equal expected, first
-    assert_equal expected, second
+    assert_equal 0.9, first[:success_rate]
+    assert_equal first, second
+  end
+
+  # The page draws no percentile paths, and they cost a further full run.
+  test "the result is the plan's run without the percentile paths" do
+    expected = plan.monte_carlo_result(as_of: @as_of).except(:percentiles)
+    RetirementPlan::MonteCarlo.any_instance.expects(:percentiles).never
+
+    assert_equal expected, RetirementPlan::MonteCarloCache.fetch(plan, as_of: @as_of)
   end
 
   test "a plan with nothing to run caches nothing, so a later fetch tries again" do
-    RetirementPlan.any_instance.expects(:monte_carlo_result).twice.returns(nil)
+    RetirementPlan.any_instance.expects(:monte_carlo).twice.returns(nil)
 
     2.times { assert_nil RetirementPlan::MonteCarloCache.fetch(plan, as_of: @as_of) }
+  end
+
+  # A result cached by older code is not read back under a changed shape.
+  test "the key carries the cache's version" do
+    assert_includes key, "/v#{RetirementPlan::MonteCarloCache::VERSION}/"
   end
 
   test "the key is the same for the same inputs, and changes with each input the run reads" do
