@@ -6,12 +6,18 @@
 # the correction (or whose earlier refresh failed). The old migration did not
 # persist the affected item IDs, and corrected prices cannot identify them now.
 class RefreshTradeRepublicBalancesAfterBondRescale < ActiveRecord::Migration[8.1]
+  # This migration only schedules refreshes. Commit each item inside the rescue
+  # so an after-commit enqueue failure cannot abort the entire migration.
+  disable_ddl_transaction!
+
   def up
     TradeRepublicItem.reset_column_information
     item_ids = TradeRepublicAccount.where(kind: "portfolio").joins(:account_provider).select(:trade_republic_item_id)
 
     TradeRepublicItem.syncable.where(id: item_ids).find_each do |item|
       item.sync_later
+    rescue => e
+      say "Could not schedule a sync for Trade Republic item #{item.id} (#{e.message}); it refreshes on its next sync"
     end
   end
 

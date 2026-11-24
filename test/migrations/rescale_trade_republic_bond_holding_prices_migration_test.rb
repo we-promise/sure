@@ -178,6 +178,22 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     end
   end
 
+  test "refresh continues after an item cannot enqueue its sync" do
+    failed_item = mock("item whose queue is unavailable")
+    failed_item.stubs(:id).returns(@item.id)
+    failed_item.expects(:sync_later).raises(RuntimeError, "queue down")
+    next_item = mock("next eligible item")
+    next_item.expects(:sync_later).once
+    items = mock("eligible linked items")
+    items.expects(:find_each).multiple_yields([ failed_item ], [ next_item ])
+    TradeRepublicItem.stubs(:syncable).returns(items)
+    items.stubs(:where).returns(items)
+
+    migration = RefreshTradeRepublicBalancesAfterBondRescale.new
+    migration.expects(:say).with(regexp_matches(/Could not schedule a sync.*queue down/))
+    migration.up
+  end
+
   test "refresh skips expired and disconnected items and unlinked portfolios" do
     @item.update_columns(session_expires_at: 1.hour.ago)
     assert_no_enqueued_jobs only: SyncJob do
@@ -226,4 +242,33 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
         RescaleTradeRepublicBondHoldingPrices.new.up
       end
     end
+end
+
+# Exercise the real after-commit enqueue boundary without a fixture transaction.
+class TradeRepublicBalanceRefreshEnqueueTest < ActiveSupport::TestCase
+  self.use_transactional_tests = false
+  self.fixture_table_names = []
+
+  Item = Struct.new(:id) do
+    def sync_later
+      ActiveRecord::Base.transaction { SyncJob.perform_later(id) }
+    end
+  end
+
+  test "an after-commit queue failure does not abort the migration or skip later items" do
+    items = mock("eligible linked items")
+    TradeRepublicItem.stubs(:syncable).returns(items)
+    items.stubs(:where).returns(items)
+    items.expects(:find_each).multiple_yields([ Item.new("failed") ], [ Item.new("next") ])
+    SyncJob.queue_adapter.expects(:enqueue).with { |job| job.arguments == [ "failed" ] }.raises(RuntimeError, "queue down")
+    SyncJob.queue_adapter.expects(:enqueue).with { |job| job.arguments == [ "next" ] }.once
+
+    migration = RefreshTradeRepublicBalancesAfterBondRescale.new
+    migration.expects(:say).with(regexp_matches(/Could not schedule a sync.*queue down/))
+    # Use Rails' transaction wrapper, not just migration.up: the error otherwise
+    # happens after up has returned, outside its per-item rescue.
+    migrator = ActiveRecord::Migrator.allocate
+    migrator.stubs(:connection).returns(ActiveRecord::Base.connection)
+    migrator.send(:ddl_transaction, migration) { migration.up }
+  end
 end
