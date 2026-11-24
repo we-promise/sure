@@ -9,6 +9,9 @@ export default class extends Controller {
 
   connect() {
     this.map = L.map(this.containerTarget).setView([20, 0], 2);
+    this.pointsById = new Map(
+      this.pointsValue.map((point) => [String(point.id), point]),
+    );
 
     L.tileLayer(this.tileUrlValue, {
       attribution: this.tileAttributionValue,
@@ -35,6 +38,30 @@ export default class extends Controller {
 
   disconnect() {
     this.map?.remove();
+  }
+
+  // A standalone circle rather than reaching into the cluster group: the
+  // actual marker may be collapsed into a cluster at the current zoom, but
+  // this draws at the exact coordinates regardless of clustering state.
+  highlight(event) {
+    const point = this.pointsById.get(String(event.params.id));
+    if (!point) return;
+
+    this.unhighlight();
+    const color = getComputedStyle(this.element)
+      .getPropertyValue("--color-link")
+      .trim();
+    this.highlightCircle = L.circleMarker([point.lat, point.lng], {
+      radius: 12,
+      color,
+      weight: 3,
+      fillOpacity: 0.2,
+    }).addTo(this.map);
+  }
+
+  unhighlight() {
+    this.highlightCircle?.remove();
+    this.highlightCircle = null;
   }
 
   // Keeps the list in sync with whatever the user is actually looking at,

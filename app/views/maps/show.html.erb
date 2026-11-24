@@ -36,7 +36,12 @@
 
     <ul class="flex flex-col gap-1 overflow-y-auto" style="height: 70vh;">
       <% @map_data.each do |point| %>
-        <li data-map-target="item" data-lat="<%= point[:lat] %>" data-lng="<%= point[:lng] %>">
+        <li
+          data-map-target="item"
+          data-lat="<%= point[:lat] %>"
+          data-lng="<%= point[:lng] %>"
+          data-action="mouseenter->map#highlight mouseleave->map#unhighlight"
+          data-map-id-param="<%= point[:id] %>">
           <%= link_to point[:transaction_path], class: "flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-container-hover" do %>
             <div class="min-w-0">
               <p class="text-sm text-primary truncate"><%= point[:transaction_name] %></p>

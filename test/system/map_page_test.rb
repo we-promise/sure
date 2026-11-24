@@ -31,4 +31,24 @@ class MapPageTest < ApplicationSystemTestCase
       assert_link "Travelodge Malaga", href: transaction_path(Entry.find_by(location_name: "Malaga, Spain")), count: 2
     end
   end
+
+  test "hovering a list row highlights its location on the map" do
+    create_transaction(
+      account: accounts(:depository),
+      name: "Travelodge Malaga",
+      amount: 100
+    ).update!(location_lat: 36.72, location_lng: -4.42, location_name: "Malaga, Spain")
+
+    visit map_path
+
+    # The highlight is an SVG circle in the overlay pane, distinct from the
+    # marker icons (img elements in the marker pane) already on the page.
+    assert_no_selector ".leaflet-overlay-pane path"
+
+    find("li", text: "Travelodge Malaga").hover
+    assert_selector ".leaflet-overlay-pane path"
+
+    page.find("body").hover
+    assert_no_selector ".leaflet-overlay-pane path"
+  end
 end
