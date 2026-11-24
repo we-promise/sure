@@ -14,24 +14,33 @@ class KrakenRewardDisplayTest < ActionDispatch::IntegrationTest
     @security.prices.create!(date: Date.current, currency: "USD", price: 4_000)
   end
 
-  test "staking and Earn show the historical value of the net units and keep cash at zero" do
+  test "the account list values staking and Earn rewards at receipt with zero cash movement" do
     @security.prices.create!(date: @date, currency: "USD", price: 2_000)
-    { "staking" => "", "earn" => "rewardallocation" }.each do |type, subtype|
-      entry = import_reward(type, subtype)
-
+    rewards = [ import_reward("staking"), import_reward("earn", "rewardallocation") ]
+    get account_url(@account, tab: "activity")
+    assert_response :success
+    rewards.each do |entry|
       assert_equal 0, entry.amount
       assert_equal 0.0125.to_d, entry.trade.qty
-      assert_reward_display entry, "$25.00", currency: "USD"
-      assert_select "dt", text: "Cash movement" do |labels|
-        assert_equal "$0.00", labels.first.next_element.text.strip
-      end
+      assert_reward_row entry, "$25.00"
+    end
+  end
+
+  test "the drawer shows the historical reward value separately from cash" do
+    @security.prices.create!(date: @date, currency: "USD", price: 2_000)
+    assert_reward_header import_reward("staking"), "$25.00 USD"
+    assert_select "dd", text: /\$25\.00.*100\.0%/m
+    assert_select "dt", text: "Cash movement" do |labels|
+      assert_equal "$0.00", labels.first.next_element.text.strip
     end
   end
 
   test "a flagged spot price stays unavailable until a sync finds the historical price" do
     entry = import_reward("earn", "reward")
     assert_equal 4_000, entry.trade.price
-    assert_reward_display entry, "Unavailable"
+    get account_url(@account, tab: "activity")
+    assert_reward_row entry, "Unavailable"
+    assert_reward_header entry, "Unavailable"
     assert_select "dt", text: "Unit price at receipt" do |labels|
       assert_equal "Unavailable", labels.first.next_element.text.strip
     end
@@ -41,15 +50,18 @@ class KrakenRewardDisplayTest < ActionDispatch::IntegrationTest
     assert_no_difference -> { @account.entries.count } do
       KrakenAccount::LedgerProcessor.new(@kraken).process
     end
-    assert_reward_display entry.reload, "$12.50", currency: "USD"
-    assert_equal 0, entry.amount
+    assert_reward_header entry, "$12.50 USD"
+    assert_equal 0, entry.reload.amount
   end
 
   test "a small priced reward shows a fraction of the minor unit in the trade currency" do
-    entry = import_reward("staking", "")
-    entry.trade.update!(price: 0.1, currency: "EUR", extra: { kraken: { type: "staking" } })
-
-    assert_reward_display entry, "< €0.01", currency: "EUR"
+    @security.prices.create!(date: @date, currency: "USD", price: 0.1)
+    entry = import_reward("staking")
+    entry.trade.update!(currency: "EUR")
+    get account_url(@account, tab: "activity")
+    assert_reward_row entry, "< €0.01"
+    assert_reward_header entry, "< €0.01 EUR"
+    assert_select "dt", text: "Unrealized gain/loss", count: 0
   end
 
   test "ordinary trades and cash dividends keep their cash amounts in the list and drawer" do
@@ -75,7 +87,7 @@ class KrakenRewardDisplayTest < ActionDispatch::IntegrationTest
   end
 
   private
-    def import_reward(type, subtype)
+    def import_reward(type, subtype = "")
       @kraken.update!(
         raw_payload: { assets: [ { symbol: "ETH", price_usd: "4000" } ] },
         raw_transactions_payload: { ledgers: {
@@ -86,19 +98,19 @@ class KrakenRewardDisplayTest < ActionDispatch::IntegrationTest
       @account.entries.find_by!(external_id: "kraken_ledger_#{type}")
     end
 
-    def assert_reward_display(entry, value, currency: nil)
-      get account_url(@account, tab: "activity")
-      assert_response :success
+    def assert_reward_row(entry, value)
       assert_select "##{dom_id(entry.trade)}" do
-        assert_select "span", text: "Non-cash estimate"
         assert_select ".privacy-sensitive", text: value
+        assert_select "span", text: "Non-cash estimate"
       end
+    end
 
+    def assert_reward_header(entry, value)
       get trade_url(entry)
       assert_response :success
       assert_select "header h3" do
+        assert_select ".privacy-sensitive", text: value
         assert_select "span", text: "Estimated value received (non-cash)"
-        assert_select ".privacy-sensitive", text: [ value, currency ].compact.join(" ")
       end
     end
 end

@@ -47,50 +47,30 @@
   <% end %>
 
   <% unless trade.security.cash? %>
-  <div class="mb-2">
-    <%= render DS::Disclosure.new(title: t(".overview"), open: true) do %>
-      <div class="pb-4">
-        <dl class="space-y-3 px-3 py-2">
-            <div class="flex items-center justify-between text-sm">
-              <dt class="text-secondary"><%= t(".symbol_label") %></dt>
-              <dd class="text-primary"><%= trade.security.ticker %></dd>
-            </div>
+    <div class="mb-2">
+      <%= render DS::Disclosure.new(title: t(".overview"), open: true) do %>
+        <dl class="space-y-3 px-3 pt-2 pb-6">
+          <%= render DS::DetailRow.new(label: t(".symbol_label"), value: trade.security.ticker) %>
 
           <% if reward %>
             <%= render DS::DetailRow.new(label: t(".quantity_received"), value: format_quantity(trade.qty, exact: true), value_class: "privacy-sensitive") %>
             <%= render DS::DetailRow.new(label: t(".price_at_receipt"), value: format_reward_value(trade.reward_unit_price), value_class: "privacy-sensitive") %>
             <%= render DS::DetailRow.new(label: t(".cash_movement"), value: format_money(entry.amount_money), value_class: "privacy-sensitive") %>
-          <% elsif trade.qty.positive? %>
-            <div class="flex items-center justify-between text-sm">
-              <dt class="text-secondary"><%= t(".purchase_qty_label") %></dt>
-              <dd class="text-primary"><%= trade.qty.abs %></dd>
-            </div>
-
-            <div class="flex items-center justify-between text-sm">
-              <dt class="text-secondary"><%= t(".purchase_price_label") %></dt>
-              <dd class="text-primary privacy-sensitive"><%= format_money trade.price_money %></dd>
-            </div>
+          <% elsif trade.buy? %>
+            <%= render DS::DetailRow.new(label: t(".purchase_qty_label"), value: trade.qty) %>
+            <%= render DS::DetailRow.new(label: t(".purchase_price_label"), value: format_money(trade.price_money), value_class: "privacy-sensitive") %>
           <% end %>
 
-          <% current_price = trade.security.current_price if trade.qty.positive? %>
-          <% if current_price %>
-            <div class="flex items-center justify-between text-sm">
-              <dt class="text-secondary"><%= t(".current_market_price_label") %></dt>
-              <dd class="text-primary privacy-sensitive"><%= format_money current_price %></dd>
-            </div>
-          <% end %>
-
-          <% if (gain_loss = trade_header_gain_loss(trade, current_price)) %>
-            <div class="flex items-center justify-between text-sm">
-              <dt class="text-secondary"><%= t(".total_return_label") %></dt>
-              <dd style="color: <%= gain_loss.color %>;">
-                <%= render "shared/trend_change", trend: gain_loss %>
-              </dd>
-            </div>
+          <% if trade.buy? && (current_price = trade.security.current_price) %>
+            <%= render DS::DetailRow.new(label: t(".current_market_price_label"), value: format_money(current_price), value_class: "privacy-sensitive") %>
+            <% if (gain_loss = trade.unrealized_gain_loss) %>
+              <%= render DS::DetailRow.new(label: t(".total_return_label")) do |row| %>
+                <% row.with_value { render "shared/trend_change", trend: gain_loss } %>
+              <% end %>
+            <% end %>
           <% end %>
         </dl>
-      </div>
-    <% end %>
-  </div>
+      <% end %>
+    </div>
   <% end %>
 </div>

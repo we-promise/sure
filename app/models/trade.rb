@@ -76,9 +76,9 @@ class Trade < ApplicationRecord
     kraken = extra["kraken"]
     return false unless kraken && entry&.source == "kraken" && entry.amount.zero? && qty&.positive?
 
-    # Earn also records movements between Kraken wallets, including migrations.
+    # Older rewards have no subtype. Allocations and migrations move existing units.
     %w[staking earn].include?(kraken["type"].to_s.downcase) &&
-      (kraken["subtype"].blank? || %w[reward rewardallocation].include?(kraken["subtype"].downcase))
+      [ "", "reward", "rewardallocation" ].include?(kraken["subtype"].to_s.strip.downcase)
   end
 
   def reward_unit_price
@@ -134,6 +134,7 @@ class Trade < ApplicationRecord
     return nil unless qty.positive?
     current_price = security.current_price
     return nil if current_price.nil?
+    return nil if non_cash_reward? && reward_unit_price&.currency != current_price.currency
 
     current_value = current_price * qty.abs
     cost_basis = price_money * qty.abs + fee_money
