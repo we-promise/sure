@@ -6,6 +6,13 @@ en:
       subtitle: Comprehensive insights into your financial health
       export: Export CSV
       print_report: Print Report
+      tag_filter:
+        all: All tags
+        selected:
+          one: "%{count} tag"
+          other: "%{count} tags"
+        search: Search tags
+        apply: Apply
       section_aria: "%{title} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
       sections_aria: Reports sections
       periods:
@@ -86,6 +93,14 @@ en:
       description: Start tracking your finances by adding transactions or connecting your accounts to see comprehensive reports
       add_transaction: Add Transaction
       add_account: Add Account
+    biggest_expenses:
+      title: Biggest Expenses
+      one_time: One-time
+      limit_aria: Number of expenses to show
+      table:
+        name: Name
+        category: Category
+        amount: Amount
     transactions_breakdown:
       title: Activity Breakdown
       no_transactions: No activity found for the selected period and filters
@@ -274,3 +289,11 @@ en:
         amount: Amount
         percent: "%"
         more_categories: "+ %{count} more categories"
+      biggest_expenses:
+        title: Biggest Expenses
+        date: Date
+        name: Name
+        category: Category
+        account: Account
+        amount: Amount
+        one_time: One-time
