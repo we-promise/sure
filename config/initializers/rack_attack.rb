@@ -221,8 +221,10 @@ class Rack::Attack
   # (Geocoding::NominatimClient::USER_AGENT) is shared by every self-hosted
   # instance of this app, so one authenticated user hammering either action
   # risks Nominatim rate-limiting or banning the string for everyone, not
-  # just the abuser. Burst-tolerant budget roughly matching Nominatim's own
-  # policy, rather than a strict 1/sec that would reject normal typing.
+  # just the abuser. Each search fires once per explicit Enter press (not
+  # per keystroke, which Nominatim's usage policy prohibits), so this budget
+  # is a defense-in-depth backstop rather than something normal use would
+  # bump into.
   throttle("location_searches/ip", limit: 20, period: 20.seconds) do |request|
     request.ip if request.get? && request.path.start_with?("/location_searches")
   end

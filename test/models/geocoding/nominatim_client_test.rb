@@ -59,6 +59,13 @@ class Geocoding::NominatimClientTest < ActiveSupport::TestCase
     assert_not_empty results
   end
 
+  test "reverse returns nil for coordinates with no match, instead of (0.0, 0.0)" do
+    stub_request(:get, /nominatim.openstreetmap.org\/reverse/)
+      .to_return(status: 200, body: '{"error":"Unable to geocode"}')
+
+    assert_nil @client.reverse(0.0, 0.0)
+  end
+
   test "search raises RequestFailed on a non-2xx response" do
     stub_request(:get, /nominatim.openstreetmap.org\/search/).to_return(status: 500, body: "")
 

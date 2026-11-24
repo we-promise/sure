@@ -688,9 +688,14 @@ class TransactionsController < ApplicationController
 
       entry_params.delete(:amount) if entry_params[:amount].blank?
       entry_params.delete(:date) if entry_params[:date].blank?
-      entry_params[:location_lat] = nil if entry_params[:location_lat].blank?
-      entry_params[:location_lng] = nil if entry_params[:location_lng].blank?
-      entry_params[:location_name] = nil if entry_params[:location_name].blank?
+      # Every other per-field form on the page (notes, category, tags, ...)
+      # submits only its own field, so location_lat/lng/name are absent, not
+      # blank, on those requests. Only the location form itself submits these
+      # keys, and a blank value there means "clear it" -- key?  distinguishes
+      # that from "this request doesn't touch location at all".
+      entry_params[:location_lat] = nil if entry_params.key?(:location_lat) && entry_params[:location_lat].blank?
+      entry_params[:location_lng] = nil if entry_params.key?(:location_lng) && entry_params[:location_lng].blank?
+      entry_params[:location_name] = nil if entry_params.key?(:location_name) && entry_params[:location_name].blank?
 
       if nature.present? && entry_params[:amount].present?
         signed_amount = nature == "inflow" ? -entry_params[:amount].to_d : entry_params[:amount].to_d

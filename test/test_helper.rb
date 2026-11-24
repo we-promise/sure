@@ -178,4 +178,18 @@ module ActiveSupport
   end
 end
 
+# ApplicationController's PreviewGateable concern exposes this as a
+# controller helper_method, which a bare view test has no controller
+# instance to provide. `helper_method` on ActionView::TestCase itself doesn't
+# reach subclasses: ActionView::TestCase::Behavior::ClassMethods#new
+# re-includes ActionView::TestCase::HelperMethods directly into each
+# concrete subclass, which then outranks anything defined on this shared
+# base class. Defining the method directly on that module (instead of going
+# through the `helper_method` macro) sidesteps that ordering entirely.
+module ActionView::TestCase::HelperMethods
+  def preview_features_enabled?
+    Current.user&.preview_features_enabled? == true
+  end
+end
+
 Dir[Rails.root.join("test", "interfaces", "**", "*.rb")].each { |f| require f }

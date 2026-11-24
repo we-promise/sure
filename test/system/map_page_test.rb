@@ -22,6 +22,7 @@ class MapPageTest < ApplicationSystemTestCase
     # One point gets a plain marker, not a cluster, and the icon image has to
     # resolve from the locally vendored asset rather than Leaflet's CDN default.
     marker = find(".leaflet-marker-icon:not(.marker-cluster)")
+    wait_until { page.evaluate_script("arguments[0].complete && arguments[0].naturalWidth > 0", marker) }
     assert_equal true, page.evaluate_script("arguments[0].complete && arguments[0].naturalWidth > 0", marker)
 
     marker.click

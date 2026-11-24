@@ -7,6 +7,13 @@
 
 <div class="flex items-center gap-2 mb-4">
   <%= form_with url: map_path, method: :get, data: { controller: "auto-submit-form" } do |f| %>
+    <%# Carries a custom date range forward so switching accounts doesn't fall
+        back to the user's saved default period (Periodable only persists
+        named period keys, not explicit dates). %>
+    <% if @period.key.blank? %>
+      <%= hidden_field_tag :start_date, @period.start_date %>
+      <%= hidden_field_tag :end_date, @period.end_date %>
+    <% end %>
     <%= render DS::Select.new(
           form: f,
           method: :account_id,
@@ -47,7 +54,7 @@
               <p class="text-sm text-primary truncate"><%= point[:transaction_name] %></p>
               <p class="text-xs text-secondary truncate"><%= point[:name] %> &middot; <%= point[:date] %></p>
             </div>
-            <p class="text-sm text-primary whitespace-nowrap"><%= point[:amount] %></p>
+            <p class="text-sm text-primary whitespace-nowrap privacy-sensitive"><%= point[:amount] %></p>
           <% end %>
         </li>
       <% end %>

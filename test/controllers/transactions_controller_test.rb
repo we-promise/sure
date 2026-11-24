@@ -711,6 +711,27 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil entry.location_name
   end
 
+  test "update does not wipe an existing location when the submitted form omits it" do
+    entry = entries(:transaction)
+    entry.update!(location_lat: 41.3851, location_lng: 2.1734, location_name: "Barcelona, Spain")
+
+    # The notes form (and every other per-field form on the show page) only
+    # submits its own field, so location_lat/lng/name are absent here -- not
+    # blank, absent entirely.
+    patch transaction_url(entry), params: {
+      entry: {
+        entryable_type: "Transaction",
+        notes: "Some notes"
+      }
+    }
+
+    entry.reload
+    assert_equal "Some notes", entry.notes
+    assert_equal 41.3851, entry.location_lat.to_f
+    assert_equal 2.1734, entry.location_lng.to_f
+    assert_equal "Barcelona, Spain", entry.location_name
+  end
+
   test "re-renders show with mark-recurring state when update fails validation" do
     family = families(:empty)
     sign_in users(:empty)

@@ -26,31 +26,39 @@ export default class extends Controller {
     this.marker = null;
     this.confirmMapInstance = null;
     this.dragGeneration = 0;
+    this.searchGeneration = 0;
   }
 
   disconnect() {
-    clearTimeout(this.debounceTimeout);
     this.confirmMapInstance?.remove();
   }
 
+  // Fires once per explicit Enter press, not per keystroke: Nominatim's usage
+  // policy prohibits autocomplete/type-ahead style querying, so this is a
+  // single discrete search a user asks for, not a live suggestion stream.
   search(event) {
+    const generation = ++this.searchGeneration;
     const query = event.target.value.trim();
-
-    clearTimeout(this.debounceTimeout);
     if (query.length < 3) {
       this.suggestionsTarget.replaceChildren();
       return;
     }
 
-    this.debounceTimeout = setTimeout(() => this.#fetchSuggestions(query), 300);
+    this.#fetchSuggestions(query, generation);
   }
 
   select(event) {
+    // A stale reverse-lookup from a drag on the location this is replacing
+    // must not land after the new one is confirmed.
+    this.dragGeneration++;
     const { lat, lng, name } = event.params;
     this.#showConfirmMap(lat, lng, name);
   }
 
   clear() {
+    // Same reasoning as #select: invalidates a reverse-lookup in flight for
+    // the location being cleared.
+    this.dragGeneration++;
     this.latTarget.value = "";
     this.lngTarget.value = "";
     this.nameTarget.value = "";
@@ -62,7 +70,7 @@ export default class extends Controller {
     this.#submitForm();
   }
 
-  async #fetchSuggestions(query) {
+  async #fetchSuggestions(query, generation) {
     const response = await fetch(
       `/location_searches?q=${encodeURIComponent(query)}`,
       {
@@ -70,12 +78,16 @@ export default class extends Controller {
       },
     );
 
+    if (generation !== this.searchGeneration) return;
+
     if (!response.ok) {
       this.#renderMessage(this.searchUnavailableValue);
       return;
     }
 
     const results = await response.json();
+
+    if (generation !== this.searchGeneration) return;
 
     if (results.length === 0) {
       this.#renderMessage(this.noMatchesValue);
@@ -141,20 +153,26 @@ export default class extends Controller {
     this.latTarget.value = lat;
     this.lngTarget.value = lng;
 
-    const response = await fetch(
-      `/location_searches/reverse?lat=${lat}&lng=${lng}`,
-      {
-        headers: { Accept: "application/json" },
-      },
-    );
+    try {
+      const response = await fetch(
+        `/location_searches/reverse?lat=${lat}&lng=${lng}`,
+        {
+          headers: { Accept: "application/json" },
+        },
+      );
 
-    if (generation !== this.dragGeneration) return;
-
-    if (response.ok) {
-      const result = await response.json();
       if (generation !== this.dragGeneration) return;
-      this.nameTarget.value = result.display_name;
-      this.displayTextTarget.textContent = result.display_name;
+
+      if (response.ok) {
+        const result = await response.json();
+        if (generation !== this.dragGeneration) return;
+        this.nameTarget.value = result.display_name;
+        this.displayTextTarget.textContent = result.display_name;
+      }
+    } catch {
+      // A dropped connection still means the dragged position is real and
+      // has to save -- just without a resolved place name for it.
+      if (generation !== this.dragGeneration) return;
     }
 
     this.#submitForm();

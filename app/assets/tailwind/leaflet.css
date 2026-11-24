@@ -669,3 +669,33 @@ svg.leaflet-image-layer.leaflet-interactive path {
 		print-color-adjust: exact;
 		}
 	}
+
+/* ---- Below this line: Sure's own additions, not part of the vendored file ---- */
+
+/* Leaflet's stock palette is hard-coded light (white chrome, #333 text),
+   so dark mode needs an explicit override rather than inheriting it. Uses
+   this app's theme-aware custom properties instead of new hex literals. */
+[data-theme="dark"] .leaflet-container {
+	background: var(--color-surface);
+}
+[data-theme="dark"] .leaflet-popup-content-wrapper,
+[data-theme="dark"] .leaflet-popup-tip {
+	background: var(--color-container);
+	color: var(--utility-text-primary);
+}
+[data-theme="dark"] .leaflet-container a {
+	color: var(--color-link);
+}
+[data-theme="dark"] .leaflet-bar a {
+	background-color: var(--color-container);
+	border-bottom-color: var(--utility-border-primary);
+	color: var(--utility-text-primary);
+}
+[data-theme="dark"] .leaflet-bar a:hover,
+[data-theme="dark"] .leaflet-bar a:focus {
+	background-color: var(--color-container-hover);
+}
+[data-theme="dark"] .leaflet-control-attribution {
+	background: var(--color-container);
+	color: var(--utility-text-secondary);
+}

@@ -14,12 +14,19 @@
 
   <div data-location-picker-target="search" class="<%= "hidden" if located? %>">
     <%= tag.label t("ds.location_picker.search_label"), for: search_input_id, id: search_label_id, class: "form-field__label" %>
-    <%= tag.input type: "text", id: search_input_id, data: { location_picker_target: "searchInput", action: "input->location-picker#search" }, placeholder: t("ds.location_picker.search_placeholder"), disabled: !can_annotate %>
+    <%= render DS::SearchInput.new(
+          name: nil,
+          id: search_input_id,
+          placeholder: t("ds.location_picker.search_placeholder"),
+          aria_label: t("ds.location_picker.search_label"),
+          disabled: !can_annotate,
+          data: { location_picker_target: "searchInput", action: "keydown.enter->location-picker#search:prevent" }
+        ) %>
     <%# Suggestions are focusable options rather than bare <li>s, so the list is
         operable with Enter/Space and not just a mouse. #fetchSuggestions sets
         the per-item roles and actions. %>
     <%= tag.ul role: "listbox", "aria-labelledby": search_label_id, data: { location_picker_target: "suggestions" } %>
   </div>
 
-  <div data-location-picker-target="confirmMap" class="hidden" style="height: 200px;"></div>
+  <div data-location-picker-target="confirmMap" class="hidden h-50"></div>
 </div>

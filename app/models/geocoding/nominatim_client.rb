@@ -27,7 +27,10 @@ class Geocoding::NominatimClient
   def reverse(lat, lng)
     Rails.cache.fetch(cache_key("reverse", "#{lat},#{lng}"), expires_in: CACHE_EXPIRY) do
       response = get("/reverse", lat: lat, lon: lng, format: "json")
-      response.present? ? to_result(response) : nil
+      # A 200 with no match at these coordinates looks like
+      # {"error" => "Unable to geocode"}, not an empty body -- without this
+      # check it maps straight to a bogus Result at (0.0, 0.0).
+      response.present? && response["error"].blank? ? to_result(response) : nil
     end
   end
 

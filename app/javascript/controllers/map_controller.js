@@ -87,7 +87,11 @@ export default class extends Controller {
     wrapper.appendChild(link);
 
     const meta = document.createElement("div");
-    meta.textContent = `${point.amount} · ${point.date}`;
+    const amount = document.createElement("span");
+    amount.className = "privacy-sensitive";
+    amount.textContent = point.amount;
+    meta.appendChild(amount);
+    meta.append(` · ${point.date}`);
     wrapper.appendChild(meta);
 
     return wrapper;

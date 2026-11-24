@@ -20,7 +20,8 @@ class TransactionLocationTest < ApplicationSystemTestCase
     visit transaction_path(entry)
     find("summary", text: /#{I18n.t("transactions.show.details")}/i).click
 
-    fill_in "Search a place...", with: "Barcelona"
+    fill_in I18n.t("ds.location_picker.search_label"), with: "Barcelona"
+    find_field(I18n.t("ds.location_picker.search_label")).send_keys(:enter)
     assert_text "Barcelona, Spain"
     find("li", text: "Barcelona, Spain").click
 
@@ -50,6 +51,7 @@ class TransactionLocationTest < ApplicationSystemTestCase
     # associated with the input.
     search = find_field I18n.t("ds.location_picker.search_label")
     search.set("Barcelona")
+    search.send_keys(:enter)
 
     # Never touches the mouse: Tab out of the search field has to land on the
     # suggestion, and Enter there has to commit it.
@@ -80,7 +82,9 @@ class TransactionLocationTest < ApplicationSystemTestCase
     visit transaction_path(entry)
     find("summary", text: /#{I18n.t("transactions.show.details")}/i).click
 
-    fill_in "Search a place...", with: "Barcelona"
+    fill_in I18n.t("ds.location_picker.search_label"), with: "Barcelona"
+    find_field(I18n.t("ds.location_picker.search_label")).send_keys(:enter)
+    assert_text "Barcelona, Spain"
     mark_header_stale(entry)
     find("li", text: "Barcelona, Spain").click
 

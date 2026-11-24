@@ -3,17 +3,6 @@ require "test_helper"
 class Transactions::TransactionRowCacheTest < ActionView::TestCase
   include TransactionsHelper
 
-  # The real app gets this from ApplicationController's PreviewGateable
-  # concern (a helper_method, not a view helper module), which this bare
-  # ActionView::TestCase has no controller instance to provide. Defining the
-  # method alone isn't enough here -- ActionView::TestCase only exposes it to
-  # the rendered view via its own `helper_method` declaration.
-  helper_method :preview_features_enabled?
-
-  def preview_features_enabled?
-    Current.user&.preview_features_enabled? == true
-  end
-
   setup do
     Current.session = Session.create!(user: users(:family_admin))
 
@@ -151,6 +140,18 @@ class Transactions::TransactionRowCacheTest < ActionView::TestCase
 
     @transfer_hint_transaction_ids = Set.new
     assert_not_includes render_row, dom_id(@transaction, :transfer_hint)
+  end
+
+  test "a row cached without preview access shows a location once the viewer gains it, and hides it again once lost" do
+    Current.user.update!(preferences: (Current.user.preferences || {}).merge("preview_features_enabled" => false))
+    @entry.update!(location_lat: 41.3851, location_lng: 2.1734, location_name: "Barcelona, Spain")
+    assert_not_includes render_row, "Barcelona, Spain"
+
+    Current.user.update!(preferences: (Current.user.preferences || {}).merge("preview_features_enabled" => true))
+    assert_includes render_row, "Barcelona, Spain"
+
+    Current.user.update!(preferences: (Current.user.preferences || {}).merge("preview_features_enabled" => false))
+    assert_not_includes render_row, "Barcelona, Spain"
   end
 
   test "the key changes with the BUILD_COMMIT_SHA of the deployed image" do
