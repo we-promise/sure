@@ -24,6 +24,15 @@
     ) %>
   <% end %>
 
+  <% if @monte_carlo_available %>
+    <%= render DS::Card.new do %>
+      <h2 class="text-sm font-medium text-primary mb-3"><%= t(".monte_carlo") %></h2>
+      <%= turbo_frame_tag "retirement-plan-monte-carlo-frame", src: monte_carlo_retirement_plan_path, loading: :lazy do %>
+        <p class="text-sm text-secondary"><%= t(".monte_carlo_loading", paths: number_with_delimiter(RetirementPlan::MONTE_CARLO_PATHS)) %></p>
+      <% end %>
+    <% end %>
+  <% end %>
+
   <%= render DS::Card.new do %>
     <div class="flex items-center justify-between gap-2 mb-3">
       <h2 class="text-sm font-medium text-primary"><%= t(".streams") %></h2>

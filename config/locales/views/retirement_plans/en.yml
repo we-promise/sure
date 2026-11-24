@@ -21,6 +21,9 @@ en:
       end_age: Plan to age
       inflation_rate: Inflation (%)
       returns_hint: The expected return is your yearly compound return before inflation. Figures are before tax.
+      return_volatility: Return volatility (%)
+      return_volatility_hint: How far a year's return typically strays from the expected one. 12% is roughly a balanced portfolio; shares alone vary more.
+      success_target: Confidence target (%)
     update:
       success: Financial independence settings saved
     summary:
@@ -51,6 +54,8 @@ en:
       unconverted_accounts:
         one: 1 account is left out of the plan because it has no exchange rate for today.
         other: "%{count} accounts are left out of the plan because they have no exchange rate for today."
+      monte_carlo: Chance of success
+      monte_carlo_loading: Running %{paths} simulations of your plan.
       streams: Spending and income
       add_stream: Add
       no_streams: Nothing added yet. Your living costs and loan repayments are added the first time you save your settings.
@@ -134,3 +139,15 @@ en:
         success: Saved
       destroy:
         success: Deleted
+    monte_carlo:
+      unavailable: This plan can't be simulated. Check your year of birth, the age you plan to and your retirement date.
+      success_rate: Chance the money lasts
+      success_rate_hint: "Share of %{paths} simulated markets in which the money lasts to the end of the plan, retiring in %{year}."
+      stress: If the worst years come first
+      stress_hint: The same returns, with each simulation's worst years at the start of retirement.
+      confident_year: "Earliest retirement at %{target} confidence"
+      at_age: "at %{age}"
+      no_confident_year: "No retirement year reaches the target before %{end_age}."
+      heatmap: Chance of success by expected return (rows) and savings rate (columns)
+      heatmap_axes: Return / savings
+      assumptions: "Yearly returns vary around the expected return with %{volatility} volatility, independently each year. Before tax."

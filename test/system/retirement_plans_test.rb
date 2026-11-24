@@ -63,6 +63,9 @@ class RetirementPlansTest < ApplicationSystemTestCase
   test "a user adds a pension from its own modal" do
     RetirementPlan.create!(user: @user, birth_year: 1985, retirement_date: Date.new(2045, 1, 1), streams_seeded_on: Date.current)
     visit retirement_plan_path
+    # The Monte Carlo section is a lazy frame: it loads once scrolled into view.
+    scroll_to find("#retirement-plan-monte-carlo-frame")
+    assert_selector "#retirement-plan-monte-carlo [data-success-rate]"
 
     click_link I18n.t("retirement_plans.show.add_stream")
     within("dialog") do

@@ -22,6 +22,18 @@ class RetirementPlansController < ApplicationController
       streams: @retirement_plan.unconverted_stream_count(as_of: @as_of),
       accounts: @retirement_plan.unconverted_account_count(as_of: @as_of)
     }.select { |_, count| count.positive? }
+    # The run is its own lazy frame (#monte_carlo), so only whether there is
+    # one to show is decided here: a saved plan (the seed is its id) with a
+    # retirement year to run to.
+    @monte_carlo_available = @retirement_plan.persisted? && (@simulation.present? || @solution.present?)
+  end
+
+  # The Monte Carlo section's frame, run inline and cached. Only the
+  # signed-in user's own saved plan: without one there is nothing to run.
+  def monte_carlo
+    raise ActiveRecord::RecordNotFound unless @retirement_plan.persisted?
+
+    @monte_carlo = RetirementPlan::MonteCarloCache.fetch(@retirement_plan, as_of: Date.current)
   end
 
   def edit
@@ -70,7 +82,8 @@ class RetirementPlansController < ApplicationController
     def retirement_plan_params
       params.require(:retirement_plan).permit(
         :safe_withdrawal_rate_percent, :expected_annual_return_percent, :savings_rate_percent, :retirement_date,
-        :birth_year, :end_age, :inflation_rate_percent, :mode
+        :birth_year, :end_age, :inflation_rate_percent, :mode,
+        :return_volatility_percent, :success_target_percent
       )
     end
 end

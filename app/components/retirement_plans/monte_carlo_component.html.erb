@@ -1,0 +1,41 @@
+<div id="retirement-plan-monte-carlo" class="space-y-4">
+  <% if result.nil? %>
+    <p class="text-sm text-secondary" data-monte-carlo-unavailable><%= t("retirement_plans.monte_carlo.unavailable") %></p>
+  <% else %>
+    <div class="grid grid-cols-1 @xl:grid-cols-3 gap-3">
+      <%= render DS::Stat.new(
+        label: t("retirement_plans.monte_carlo.success_rate"), value: percent(result[:success_rate]),
+        tone: target_met? ? :success : :warning, value_opts: { data: { success_rate: result[:success_rate] } },
+        hint: t("retirement_plans.monte_carlo.success_rate_hint", paths: helpers.number_with_delimiter(RetirementPlan::MONTE_CARLO_PATHS), year: result[:retirement_year])
+      ) %>
+      <%= render DS::Stat.new(
+        label: t("retirement_plans.monte_carlo.stress"), value: percent(result[:stress_success_rate]),
+        value_opts: { data: { stress_rate: true } }, hint: t("retirement_plans.monte_carlo.stress_hint")
+      ) %>
+      <% if fire? && result[:confident_year] %>
+        <%= render DS::Stat.new(
+          label: t("retirement_plans.monte_carlo.confident_year", target: percent(plan.success_target)), value: result[:confident_year].to_s,
+          value_opts: { data: { confident_year: result[:confident_year] } }, hint: t("retirement_plans.monte_carlo.at_age", age: confident_age)
+        ) %>
+      <% elsif fire? %>
+        <%= render DS::Stat.new(label: t("retirement_plans.monte_carlo.confident_year", target: percent(plan.success_target))) do |stat| %>
+          <% stat.with_value do %>
+            <p class="text-sm text-warning" data-confident-year="none"><%= t("retirement_plans.monte_carlo.no_confident_year", end_age: plan.end_age) %></p>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div>
+      <p class="text-xs text-secondary mb-2"><%= t("retirement_plans.monte_carlo.heatmap") %></p>
+      <%= render DS::Table.new(rows: result[:heatmap], id: "retirement-plan-heatmap", label: t("retirement_plans.monte_carlo.heatmap")) do |table| %>
+        <% table.with_column(t("retirement_plans.monte_carlo.heatmap_axes"), row_header: true) { |row| return_label(row) } %>
+        <% heatmap_columns.each do |column| %>
+          <% table.with_column(savings_label(column), numeric: true) { |row| cell(row, column) } %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <p class="text-xs text-subdued"><%= t("retirement_plans.monte_carlo.assumptions", volatility: percent(plan.return_volatility)) %></p>
+  <% end %>
+</div>

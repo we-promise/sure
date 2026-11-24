@@ -35,6 +35,7 @@ class RetirementPlans::PlannerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "[data-planner-needs='years']"
+    assert_select "#retirement-plan-monte-carlo", count: 0
   end
 
   test "a traditional plan shows a row for every year to the end age, and whether the money lasts" do
