@@ -19,13 +19,14 @@ class PurchaseInbox::PollJobTest < ActiveJob::TestCase
   test "records and logs a connection error without the password" do
     Setting.purchase_inbox_password = "secret"
     PurchaseInbox.stubs(:configured?).returns(true)
-    PurchaseInbox::Poller.any_instance.stubs(:poll!).raises(SocketError, "getaddrinfo: nodename nor servname provided")
+    PurchaseInbox::Poller.any_instance.stubs(:poll!).raises(SocketError, "getaddrinfo: nodename nor servname provided for secret")
 
     assert_difference -> { DebugLogEntry.where(source: "PurchaseInbox::PollJob").count }, 1 do
       PurchaseInbox::PollJob.perform_now
     end
 
     assert_match "getaddrinfo", Setting.purchase_inbox_last_error
+    refute_includes Setting.purchase_inbox_last_error, "secret"
     entry = DebugLogEntry.where(source: "PurchaseInbox::PollJob").last
     refute_includes entry.metadata.to_json, "secret"
     refute_includes entry.message, "secret"

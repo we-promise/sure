@@ -26,6 +26,10 @@ class ActionMailboxIngressTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "no HTTP ingress is configured" do
+    assert_nil Rails.application.config.action_mailbox.ingress
+  end
+
   test "Action Mailbox jobs run on queues Sidekiq works" do
     assert_equal :medium_priority, Rails.application.config.action_mailbox.queues[:routing]
     assert_equal :low_priority, Rails.application.config.action_mailbox.queues[:incineration]

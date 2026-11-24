@@ -29,8 +29,13 @@ class PurchaseInbox::PollerTest < ActiveSupport::TestCase
 
     def uid_fetch(uid, attrs)
       raw = @messages.fetch(uid)
+      @calls << [ :uid_fetch, uid, attrs ]
       if attrs == [ "RFC822.SIZE" ]
         [ FetchData.new({ "RFC822.SIZE" => raw.bytesize }) ]
+      elsif attrs == "BODY.PEEK[HEADER.FIELDS (AUTHENTICATION-RESULTS)]"
+        headers = raw.split(/\r?\n\r?\n/, 2).first.lines.chunk_while { |_, line| line.start_with?(" ", "\t") }
+                     .select { _1.first.match?(/\AAuthentication-Results:/i) }.join
+        [ FetchData.new({ "BODY[HEADER.FIELDS (AUTHENTICATION-RESULTS)]" => "#{headers}\r\n" }) ]
       else
         [ FetchData.new({ "BODY[]" => raw }) ]
       end
@@ -145,11 +150,13 @@ class PurchaseInbox::PollerTest < ActiveSupport::TestCase
     assert result[:ok]
     assert_equal 3, result[:message_count]
     assert_equal [ "mx.google.com" ], result[:authserv_ids]
+    fetched = imap.calls.select { _1.first == :uid_fetch }.map(&:last)
+    assert_equal [ "BODY.PEEK[HEADER.FIELDS (AUTHENTICATION-RESULTS)]" ], fetched
   end
 
   test "test_connection reports a login error without the password" do
     imap = FakeImap.new(messages: {})
-    def imap.login(*) = raise(Net::IMAP::NoResponseError.new(Struct.new(:data).new(Struct.new(:text).new("Invalid credentials"))))
+    def imap.login(*) = raise(Net::IMAP::NoResponseError.new(Struct.new(:data).new(Struct.new(:text).new("Invalid credentials: secret"))))
 
     result = PurchaseInbox::Poller.test_connection(config: @config, imap_factory: ->(_c) { imap })
 

@@ -121,7 +121,10 @@ class PurchaseInbox::Poller
       uid = imap.uid_search([ "ALL" ]).last
       return [] unless uid
 
-      raw = imap.uid_fetch(uid, "BODY.PEEK[]")&.first&.attr&.fetch("BODY[]", nil)
+      # Only that header, not the whole message with its attachments. Servers echo the section
+      # name in their own letter case.
+      attr = imap.uid_fetch(uid, "BODY.PEEK[HEADER.FIELDS (AUTHENTICATION-RESULTS)]")&.first&.attr
+      raw = attr&.find { |name, _| name.to_s.upcase.start_with?("BODY[HEADER.FIELDS") }&.last
       return [] if raw.blank?
 
       Array(Mail.new(raw).header["Authentication-Results"]).filter_map do |field|
