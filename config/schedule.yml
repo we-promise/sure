@@ -22,7 +22,7 @@ requeue_vector_store_index_polls:
   cron: "*/5 * * * *"
   class: "VectorStore::RequeueIndexPollsJob"
   active_job: true
-  queue: "ai_low_priority"
+  queue: "ai_prompt"
   description: "Restarts vector store indexing polls lost to rejected enqueues"
 
 run_security_health_checks:

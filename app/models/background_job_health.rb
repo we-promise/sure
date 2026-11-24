@@ -8,13 +8,14 @@ require "sidekiq/api"
 # Fails open: if Sidekiq/Redis is unreachable we assume healthy rather than block
 # or alarm the UI on an unrelated infrastructure blip.
 class BackgroundJobHealth
-  # Syncs and imports run here; chat runs on ai_high_priority.
+  # Syncs and imports run here; chat runs on the interactive lane's queue.
   CRITICAL_QUEUE = "high_priority".freeze
-  CHAT_QUEUE = "ai_high_priority".freeze
-  AI_QUEUES = [ CHAT_QUEUE, "ai_low_priority" ].freeze
-  # A worker whose AI lane has one thread for both AI queues adds this label to
-  # its Sidekiq process at startup (config/initializers/sidekiq.rb), so web
-  # processes read the worker's lane instead of their own RAILS_AI_MAX_THREADS.
+  CHAT_QUEUE = Ai::Routes.queue_for(:chat)
+  AI_QUEUES = Ai::Routes.ai_queues
+  # A worker whose ai capsule has one thread for the prompt and background
+  # queues adds this label to its Sidekiq process at startup
+  # (config/initializers/sidekiq.rb), so web processes read the worker's
+  # capsule instead of their own RAILS_AI_MAX_THREADS.
   ONE_AI_THREAD_LABEL = "one-ai-thread".freeze
   LATENCY_WARN_SECONDS = 60
 
@@ -38,7 +39,7 @@ class BackgroundJobHealth
     end
 
     # Only when a single worker process polls the AI queues: with several, a
-    # chat can run on one while another runs background AI jobs.
+    # chat can reach a model while another runs background AI jobs.
     def one_ai_thread?
       ai_processes = Sidekiq::ProcessSet.new(false).select { |process| process.queues.intersect?(AI_QUEUES) }
       ai_processes.one? && ai_processes.first.labels.include?(ONE_AI_THREAD_LABEL)
@@ -47,9 +48,12 @@ class BackgroundJobHealth
       false
     end
 
+    # One thread runs every prompt and background job, so a chat's model call
+    # can wait behind it on a local model (ChatReservation holds them back).
     def one_ai_thread_worker?(config)
-      ai_capsules = config.capsules.values.select { |capsule| capsule.queues.intersect?(AI_QUEUES) }
-      ai_capsules.one? && ai_capsules.first.concurrency == 1 && (AI_QUEUES - ai_capsules.first.queues).empty?
+      capsules = config.capsules.values.select { |capsule| capsule.queues.intersect?(ChatReservation::HELD_QUEUES) }
+      lanes = Ai::Routes::QUEUES.values_at(:prompt, :background)
+      capsules.one? && capsules.first.concurrency == 1 && (lanes - capsules.first.queues).empty?
     end
 
     # With one AI thread, a chat sent now waits for any running AI job.

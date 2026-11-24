@@ -3,7 +3,7 @@ require "test_helper"
 class ChatReservationsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in users(:family_admin)
-    BackgroundJobHealth.stubs(:ai_job_running?).with(queues: [ "ai_low_priority" ]).returns(false)
+    BackgroundJobHealth.stubs(:ai_job_running?).with(queues: ChatReservation::HELD_QUEUES).returns(false)
     ChatReservation.stubs(:chat_active?).returns(false)
     stub_waiting_jobs(1)
   end
@@ -28,7 +28,7 @@ class ChatReservationsControllerTest < ActionDispatch::IntegrationTest
 
   test "the bubble says busy while a background AI job runs" do
     ChatReservation.expects(:hold!).returns(60)
-    BackgroundJobHealth.stubs(:ai_job_running?).with(queues: [ "ai_low_priority" ]).returns(true)
+    BackgroundJobHealth.stubs(:ai_job_running?).with(queues: ChatReservation::HELD_QUEUES).returns(true)
     stub_waiting_jobs(0)
 
     post chat_reservation_url, as: :turbo_stream
@@ -47,6 +47,7 @@ class ChatReservationsControllerTest < ActionDispatch::IntegrationTest
 
   private
     def stub_waiting_jobs(count)
-      Sidekiq::Queue.stubs(:new).with("ai_low_priority").returns(stub(size: count))
+      Sidekiq::Queue.stubs(:new).returns(stub(size: 0))
+      Sidekiq::Queue.stubs(:new).with("ai_background").returns(stub(size: count))
     end
 end

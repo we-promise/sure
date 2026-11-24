@@ -40,10 +40,6 @@ class SidekiqHealth
   # (seconds) if needed.
   CACHE_TTL = (ENV["SIDEKIQ_HEALTH_CACHE_TTL"].presence&.to_i&.then { |s| s.seconds } || 60.seconds)
 
-  # The ai capsule's queues (config/sidekiq.yml). A backlog there is expected,
-  # so it isn't "backed up", but a worker must poll them.
-  AI_QUEUES = %w[ai_high_priority ai_low_priority].freeze
-
   CACHE_KEY = "sidekiq_health/v1"
 
   REASONS = %i[redis_unreachable no_worker_processes stale_heartbeat ai_queues_not_polled queue_backed_up].freeze
@@ -104,7 +100,8 @@ class SidekiqHealth
     # suspect as one whose last heartbeat is stale — either way Sidekiq
     # isn't telling us a worker is alive.
     return :stale_heartbeat if last_heartbeat_at.nil? || last_heartbeat_at < PROCESS_HEARTBEAT_TIMEOUT.ago
-    return :ai_queues_not_polled unless (AI_QUEUES - @polled_queues.to_a).empty?
+    # A worker must poll every lane's queue: one started with an old sidekiq.yml leaves chats unanswered.
+    return :ai_queues_not_polled unless (Ai::Routes::QUEUES.values - @polled_queues.to_a).empty?
     return :queue_backed_up if @backed_up_latency.to_f > LATENCY_THRESHOLD
     nil
   end
@@ -132,7 +129,8 @@ class SidekiqHealth
       queues = Sidekiq::Queue.all
       latencies = queues.map { |q| q.latency.to_f }
       @max_queue_latency = latencies.max.to_f
-      @backed_up_latency = queues.reject { |q| AI_QUEUES.include?(q.name) }.map { |q| q.latency.to_f }.max.to_f
+      # A backlog on the AI queues is expected, so it isn't "backed up".
+      @backed_up_latency = queues.reject { |q| Ai::Routes.ai_queues.include?(q.name) }.map { |q| q.latency.to_f }.max.to_f
       @polled_queues = process_set.flat_map { |p| Array(p["queues"]) }
       @queue_breakdown = queues.sort_by(&:name).map { |q| [ q.name, q.size, q.latency.to_f ] }
 

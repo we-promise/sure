@@ -1,8 +1,11 @@
-# With one AI thread, a chat message sent while a background AI job runs waits
-# for that job's LLM call. Focusing or typing in the chat box, and each finished
-# reply, hold new ai_low_priority jobs back for TTL. Back-to-back holds stop
-# CAP after the first one and resume TTL later, so those jobs get a turn.
+# Chat has its own thread, but with one thread for the other AI work a chat's
+# model call can wait for a background job's on a local model. Focusing or
+# typing in the chat box, and each finished reply, hold new prompt and
+# background jobs back for TTL. Back-to-back holds stop CAP after the first one
+# and resume TTL later, so those jobs get a turn.
 module ChatReservation
+  # Every AI queue but the interactive ones, which chat runs on.
+  HELD_QUEUES = (Ai::Routes.ai_queues - Ai::Routes.queues_for_lane(:interactive)).freeze
   KEY = "chat_reservation".freeze
   STARTED_KEY = "chat_reservation:started".freeze
   CHAT_KEY = "chat_reservation:chat_running".freeze
@@ -53,7 +56,7 @@ module ChatReservation
   end
 
   def self.chat_active?
-    Sidekiq.redis { |conn| conn.call("EXISTS", CHAT_KEY) } == 1 || Sidekiq::Queue.new("ai_high_priority").size.positive?
+    Sidekiq.redis { |conn| conn.call("EXISTS", CHAT_KEY) } == 1 || waiting?(Ai::Routes.queues_for_lane(:interactive))
   end
 
   # Nothing while a chat is queued or running: its own bubble covers that.
@@ -62,7 +65,10 @@ module ChatReservation
   def self.bubble(seconds)
     return if seconds.nil? || chat_active?
 
-    busy = BackgroundJobHealth.ai_job_running?(queues: [ "ai_low_priority" ])
-    { seconds: seconds, busy: busy } if busy || Sidekiq::Queue.new("ai_low_priority").size.positive?
+    busy = BackgroundJobHealth.ai_job_running?(queues: HELD_QUEUES)
+    { seconds: seconds, busy: busy } if busy || waiting?(HELD_QUEUES)
   end
+
+  def self.waiting?(queues) = queues.any? { Sidekiq::Queue.new(_1).size.positive? }
+  private_class_method :waiting?
 end

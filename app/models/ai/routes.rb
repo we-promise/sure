@@ -29,8 +29,13 @@ module Ai::Routes
                          sends: %i[merchant_names] }
   }.freeze
 
-  # Each lane's queue, on the two AI queues: interactive work on the high-priority one, with chat.
-  QUEUES = { interactive: "ai_high_priority", prompt: "ai_low_priority", background: "ai_low_priority" }.freeze
+  # Each lane's queue. Interactive work runs in the worker's one-thread `ai_chat` capsule, the
+  # other two in order in the `ai` capsule (config/sidekiq.yml).
+  QUEUES = { interactive: "ai_interactive", prompt: "ai_prompt", background: "ai_background" }.freeze
+
+  # The queues before lanes, which the `ai` capsule drains for one release, and the lane their jobs
+  # now run in. Remove a release after the lanes ship.
+  LEGACY_QUEUES = { "ai_high_priority" => :interactive, "ai_low_priority" => :background }.freeze
 
   module_function
 
@@ -40,8 +45,14 @@ module Ai::Routes
 
   def queue_for(feature) = QUEUES.fetch(fetch(feature)[:lane])
 
-  # The queues the worker's `ai` capsule polls, and only it (Ai::Capsule).
-  def ai_queues = QUEUES.values.uniq
+  # The queues only the worker's AI capsules poll (Ai::Capsule), the legacy ones included.
+  def ai_queues = QUEUES.values + LEGACY_QUEUES.keys
+
+  # The lane a job on `queue` runs in, or nil off the AI queues.
+  def lane_for_queue(queue) = QUEUES.key(queue.to_s) || LEGACY_QUEUES[queue.to_s]
+
+  # Every queue that holds `lane`'s jobs, the legacy one included.
+  def queues_for_lane(lane) = ai_queues.select { lane_for_queue(_1) == lane }
 
   # The feature whose route and needs this one uses: a shadow's primary, or search's `embed`.
   def source_of(feature) = fetch(feature).values_at(:shadow_of, :route_of).compact.first || feature.to_sym
