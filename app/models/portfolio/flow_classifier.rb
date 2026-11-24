@@ -8,7 +8,8 @@
 #   :fee               a fee or commission
 #   :internal          cash turning into a security or back, or moving between
 #                      places inside the scope (buy, sell, sweep, exchange, a
-#                      transfer whose other leg is also in scope)
+#                      transfer whose other leg is also in scope -- and, under
+#                      strict_leg_pairing, posted the same day)
 #
 # Returns, allocation, income and contribution-room figures all need this
 # split, and they need the same answer. Deriving it in each reader is how the
@@ -28,9 +29,10 @@
 # pending; a transfer-fee leg; the activity label on the Trade or Transaction
 # (a split child without one reads its parent's); for an unlabelled
 # Transaction its `kind`; and for a transfer, whether the counterpart leg's
-# account is inside the scope on the entry's date. Direction for an external
-# flow comes from the Trade's quantity sign or the Transaction's amount sign
-# (negative amount = money in).
+# account is inside the scope on the entry's date and, under
+# strict_leg_pairing, whether that leg posted the same day and pairs one to
+# one. Direction for an external flow comes from the Trade's quantity sign or
+# the Transaction's amount sign (negative amount = money in).
 #
 # What a caller must do with the answer:
 #
@@ -52,11 +54,12 @@ class Portfolio::FlowClassifier
   # Activity label -> class. Two pseudo-classes resolve at classification
   # time, and both consult the link before the label: :external and :transfer
   # each become :internal when the entry is a linked Transfer whose other leg
-  # is inside the scope, and an inflow or an outflow by direction otherwise.
-  # A label describes what the borrower meant; a Transfer row records where
-  # the money went, and between two accounts in scope it went nowhere. A nil
-  # rule means the label decides nothing and
-  # the fallthrough applies (a Trade is internal; a Transaction goes by kind).
+  # is inside the scope (and, under strict_leg_pairing, posted the same day),
+  # and an inflow or an outflow by direction otherwise. A label describes what
+  # the borrower meant; a Transfer row records where the money went, and
+  # between two accounts in scope it went nowhere. A nil rule means the label
+  # decides nothing and the fallthrough applies (a Trade is internal; a
+  # Transaction goes by kind).
   #
   # "Exchange" is internal on both a Trade and a Transaction here, following
   # Transaction::INTERNAL_MOVEMENT_LABELS. Trade::INTERNAL_MOVEMENT_LABELS
@@ -326,8 +329,9 @@ class Portfolio::FlowClassifier
       # money went; a linked Transfer says where it actually went. When both
       # legs are inside the scope the movement is internal whatever either leg
       # is labelled, so the label cannot outrank the link. #transfer_resolution
-      # falls back to the direction whenever there is no link, or the
-      # counterpart sits outside the scope.
+      # falls back to the direction whenever there is no confirmed link, the
+      # counterpart sits outside the scope, or, under strict_leg_pairing, it
+      # posted another day.
       when :external then transfer_resolution(entry, transaction)
       when :transfer then transfer_resolution(entry, transaction)
       else rule
@@ -335,10 +339,11 @@ class Portfolio::FlowClassifier
     end
 
     # A Contribution or Withdrawal trade (and, under strict_leg_pairing, a
-    # Transfer trade) whose amount is signed like its quantity (qty x price, as the trades form and API write it). The
-    # balance calculators apply it as a buy or a sale, cash for units at the
-    # same value, so nothing crosses the scope. In kind (amount 0, a security
-    # journal) or cash only (qty 0), it is an external flow by direction.
+    # Transfer trade) whose amount is signed like its quantity (qty x price,
+    # as the trades form and API write it). The balance calculators apply it
+    # as a buy or a sale, cash for units at the same value, so nothing crosses
+    # the scope. In kind (amount 0, a security journal) or cash only (qty 0),
+    # it is an external flow by direction.
     def cash_settled?(entry, trade)
       (trade.qty * entry.amount).positive?
     end
@@ -448,10 +453,12 @@ class Portfolio::FlowClassifier
     end
 
     # A Trade's direction is its quantity's sign, and a summing caller takes
-    # the magnitude from -entries.amount. For a Contribution or Withdrawal
-    # trade the two would disagree when the amount is signed like the
-    # quantity, which the trades form and API write; that shape is internal
-    # (#cash_settled?) and never reaches here.
+    # the magnitude from -entries.amount. The two disagree when the amount is
+    # signed like the quantity, which the trades form and API write. For a
+    # Contribution or Withdrawal trade (and, under strict_leg_pairing, a
+    # Transfer trade) that shape is internal (#cash_settled?) and never reaches
+    # here. By default a Transfer trade of that shape with no counterpart does
+    # reach here, and takes its direction from the quantity.
     def direction_sql
       <<~SQL.squish
         CASE
