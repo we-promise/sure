@@ -36,6 +36,22 @@ class Assistant::Function::GetHoldingsTest < ActiveSupport::TestCase
     assert_equal [ "AAPL", "MSFT" ], tickers({})
   end
 
+  # A provider sync lists what the account holds now. A position sold
+  # between two days' syncs keeps its last row from the earlier day; the
+  # assistant must not list it, just as the holdings page does not.
+  test "get_holdings leaves out a position sold since the latest provider snapshot" do
+    account = @user.family.accounts.create!(name: "Linked brokerage", balance: 3000, cash_balance: 1500, currency: "USD", accountable: Investment.new, owner: @user)
+    snaptrade_account = snaptrade_accounts(:fidelity_401k)
+    snaptrade_account.ensure_account_provider!(account)
+
+    sync_snaptrade_positions!(snaptrade_account, %w[AAPL MSFT], on: Date.new(2026, 12, 17))
+    sync_snaptrade_positions!(snaptrade_account, %w[AAPL], on: Date.new(2026, 12, 18))
+
+    assert_equal %w[AAPL], account.reload.current_holdings.map { |h| h.security.ticker }
+    rows = Assistant::Function::GetHoldings.new(@user).call("page" => 1, "accounts" => [ account.name ])[:holdings]
+    assert_equal %w[AAPL], rows.map { |row| row[:ticker] }
+  end
+
   # With no stored cost the figure is the fallback, which on a FIFO account
   # reads the open lots; the assistant must answer what the drawer shows.
   test "get_holdings average_cost equals the drawer figure" do
@@ -71,6 +87,16 @@ class Assistant::Function::GetHoldingsTest < ActiveSupport::TestCase
   end
 
   private
+    def sync_snaptrade_positions!(snaptrade_account, tickers, on:)
+      travel_to(on) do
+        positions = tickers.map do |ticker|
+          { "instrument" => { "kind" => "stock", "symbol" => ticker }, "units" => "10", "price" => "150.00", "currency" => "USD" }
+        end
+        snaptrade_account.update!(currency: "USD", cash_balance: 1500, current_balance: 1500 + 1500 * tickers.size,
+          last_holdings_sync: Time.current, raw_holdings_payload: positions, raw_activities_payload: [])
+        SnaptradeAccount::Processor.new(snaptrade_account.reload).process
+      end
+    end
 
     def tickers(params)
       @fn.call({ "page" => 1 }.merge(params))[:holdings].map { |row| row[:ticker] }.uniq.sort

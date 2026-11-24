@@ -11,18 +11,31 @@ class Holding::CurrentForInvestmentAccountsTest < ActiveSupport::TestCase
     )
   end
 
-  test "returns the latest provider import day while preserving per-security price dates" do
+  test "returns the provider rows on the latest snapshot date, as Account#current_holdings does" do
     coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
     coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
     account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
 
     current_holding = create_holding("AAPL", date: Date.current, account_provider: account_provider)
-    stale_holding = create_holding("STALE", date: 1.day.ago.to_date, account_provider: account_provider)
-    older_price_current_holding = create_holding("MSFT", date: 1.day.ago.to_date, account_provider: account_provider)
-    stale_holding.update_columns(created_at: 2.days.ago, updated_at: 2.days.ago)
+    # Not in the latest snapshot, though the row was touched today.
+    create_holding("SOLD", date: 1.day.ago.to_date, account_provider: account_provider)
 
-    assert_equal [ current_holding.id, older_price_current_holding.id ].sort,
-                 described_query.pluck(:id).sort
+    assert_equal [ current_holding.id ], described_query.pluck(:id)
+    assert_equal @account.current_holdings.pluck(:id).sort, described_query.pluck(:id).sort
+  end
+
+  test "keys the snapshot on the holding date, not on the UTC day it was written" do
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    # A New York evening sync: the local date is a day behind the UTC write time.
+    yesterday_row = create_holding("SOLD", date: Date.new(2026, 12, 17), account_provider: account_provider)
+    yesterday_row.update_columns(updated_at: Time.utc(2026, 12, 18, 2))
+    current_holding = create_holding("AAPL", date: Date.new(2026, 12, 18), account_provider: account_provider)
+    current_holding.update_columns(updated_at: Time.utc(2026, 12, 18, 14))
+
+    assert_equal [ current_holding.id ], described_query.pluck(:id)
   end
 
   test "returns the latest holding per security for a manual account" do
