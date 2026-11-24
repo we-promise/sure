@@ -1,0 +1,313 @@
+---
+id:
+  sophtron_items:
+    defaults:
+      name: Koneksi Sophtron
+    new:
+      title: Hubungkan Sophtron
+      user_id: ID Pengguna
+      user_id_placeholder: tempel ID Pengguna Sophtron Anda
+      access_key: Kunci Akses
+      access_key_placeholder: tempel Kunci Akses Sophtron Anda
+      connect: Hubungkan
+      cancel: Batal
+    create:
+      success: Koneksi Sophtron berhasil dibuat
+    destroy:
+      success: Koneksi Sophtron dihapus
+    update:
+      success: Koneksi Sophtron berhasil diperbarui! Rekening Anda sedang dihubungkan ulang.
+      errors:
+        blank_user_id: Silakan masukkan ID Pengguna Sophtron.
+        invalid_user_id: ID Pengguna tidak valid. Pastikan Anda menyalin ID Pengguna lengkap dari Sophtron.
+        user_id_compromised: ID Pengguna mungkin telah bocor, kedaluwarsa, atau sudah digunakan. Silakan buat yang baru.
+        blank_access_key: Silakan masukkan Kunci Akses Sophtron.
+        invalid_access_key: Kunci Akses tidak valid. Pastikan Anda menyalin Kunci Akses lengkap dari Sophtron.
+        access_key_compromised: Kunci Akses mungkin telah bocor, kedaluwarsa, atau sudah digunakan. Silakan buat yang baru.
+        update_failed: "Gagal memperbarui koneksi: %{message}"
+        unexpected: Terjadi kesalahan yang tidak terduga. Silakan coba lagi atau hubungi dukungan.
+    edit:
+      user_id:
+        label: "ID Pengguna Sophtron:"
+        placeholder: "Tempel ID Pengguna Sophtron Anda di sini..."
+        help_text: "ID Pengguna harus berupa string panjang yang dimulai dengan huruf dan angka"
+      access_key:
+        label: "Kunci Akses Sophtron:"
+        placeholder: "Tempel Kunci Akses Sophtron Anda di sini..."
+        help_text: "Kunci Akses harus berupa string panjang yang dimulai dengan huruf dan angka"
+    index:
+      title: Koneksi Sophtron
+    loading:
+      loading_message: Memuat rekening Sophtron...
+      loading_title: Memuat
+    link_accounts:
+      all_already_linked:
+        one: "Rekening yang dipilih (%{names}) sudah tertaut"
+        other: "Semua %{count} rekening yang dipilih sudah tertaut: %{names}"
+      api_error: "Kesalahan koneksi API"
+      invalid_account_names:
+        one: "Tidak dapat menautkan rekening dengan nama kosong"
+        other: "Tidak dapat menautkan %{count} rekening dengan nama kosong"
+      link_failed: Gagal menautkan rekening
+      no_accounts_selected: Silakan pilih setidaknya satu rekening
+      partial_invalid: "Berhasil menautkan %{created_count} rekening, %{already_linked_count} sudah tertaut, %{invalid_count} rekening memiliki nama tidak valid"
+      partial_success: "Berhasil menautkan %{created_count} rekening. %{already_linked_count} rekening sudah tertaut: %{already_linked_names}"
+      success:
+        one: "Berhasil menautkan %{count} rekening"
+        other: "Berhasil menautkan %{count} rekening"
+      no_credentials_configured: "Silakan konfigurasikan ID Pengguna API dan Kunci Akses Sophtron Anda terlebih dahulu di Pengaturan Penyedia."
+      no_accounts_found: Tidak ada rekening ditemukan. Silakan periksa konfigurasi kunci API Anda.
+      no_access_key: Kunci Akses Sophtron belum dikonfigurasi. Silakan konfigurasikan di Pengaturan.
+      no_user_id: ID Pengguna Sophtron belum dikonfigurasi. Silakan konfigurasikan di Pengaturan.
+      no_institution_connected: Silakan hubungkan institusi bank dengan Sophtron terlebih dahulu.
+    connect:
+      cancel: Batal
+      captcha: Captcha
+      connect: Hubungkan
+      institution_search_label: Institusi
+      institution_search_placeholder: Cari berdasarkan nama bank
+      no_institutions: Tidak ada institusi yang cocok ditemukan.
+      password: Kata sandi
+      search: Cari
+      search_too_short: Masukkan setidaknya dua karakter untuk mencari.
+      title: Hubungkan Institusi Sophtron
+      username: Nama pengguna
+    connect_institution:
+      api_error: "Koneksi Sophtron gagal: %{message}"
+      missing_parameters: Pilih institusi dan masukkan kredensial login bank Anda.
+    connection_status:
+      api_error: "Kesalahan koneksi API: %{message}"
+      attempt: "Percobaan %{attempt} dari %{max}"
+      check_again: Periksa lagi
+      failed: Sophtron tidak dapat menyelesaikan koneksi institusi ini.
+      failed_timeout: Waktu Sophtron habis saat institusi menyelesaikan login.
+      timeout: Sophtron tidak selesai terhubung dalam waktu yang diharapkan. Anda dapat memeriksa lagi, atau mencoba menghubungkan ulang nanti.
+      title: Menghubungkan Sophtron
+      waiting: Sophtron masih menghubungkan ke institusi Anda.
+    mfa:
+      captcha: Teks captcha
+      captcha_alt: Captcha Sophtron
+      phone_confirmed: Saya sudah mengonfirmasi melalui telepon
+      submit: Kirim
+      title: Verifikasi Sophtron
+      token: Kode verifikasi
+    submit_mfa:
+      api_error: "Verifikasi gagal: %{message}"
+      invalid_security_answers: Jawaban keamanan tidak ada atau terlalu panjang.
+      unknown_challenge: Langkah verifikasi Sophtron tidak dikenal.
+    sophtron_item:
+      accounts_need_setup: Rekening perlu pengaturan
+      automatic_sync: Gunakan sinkronisasi otomatis
+      delete: Hapus koneksi
+      deletion_in_progress: penghapusan sedang berlangsung...
+      error: Kesalahan
+      no_accounts_description: Koneksi ini belum memiliki rekening tertaut.
+      no_accounts_title: Tidak ada rekening
+      manual_sync: Sinkronisasi manual
+      manual_sync_action: Wajibkan sinkronisasi manual
+      manual_sync_action_for: "Wajibkan sinkronisasi manual untuk %{institution}"
+      automatic_sync_for: "Gunakan sinkronisasi otomatis untuk %{institution}"
+      setup_action: Atur Rekening Baru
+      setup_description: "%{linked} dari %{total} rekening tertaut. Pilih jenis rekening untuk rekening Sophtron yang baru diimpor."
+      setup_needed: Rekening baru siap diatur
+      status: "Disinkronkan %{timestamp} lalu"
+      status_never: Belum pernah disinkronkan
+      status_with_summary: "Terakhir disinkronkan %{timestamp} lalu • %{summary}"
+      sync_now: Sinkronkan sekarang
+      syncing: Menyinkronkan...
+      total: Total
+      unlinked: Belum tertaut
+    preload_accounts:
+      preload_accounts: pramuatan rekening
+      api_error: "Kesalahan koneksi API"
+      unexpected_error: "Terjadi kesalahan yang tidak terduga"
+      no_credentials_configured: "Silakan konfigurasikan ID Pengguna API dan Kunci Akses Sophtron Anda terlebih dahulu di Pengaturan Penyedia."
+      no_accounts_found: Tidak ada rekening ditemukan. Silakan periksa konfigurasi kunci API Anda.
+      no_access_key: Kunci Akses Sophtron belum dikonfigurasi. Silakan konfigurasikan di Pengaturan.
+      no_user_id: ID Pengguna Sophtron belum dikonfigurasi. Silakan konfigurasikan di Pengaturan.
+    select_accounts:
+      accounts_selected: rekening dipilih
+      api_error: "Kesalahan koneksi API"
+      unexpected_error: "Terjadi kesalahan yang tidak terduga"
+      cancel: Batal
+      configure_name_in_sophtron: Tidak dapat mengimpor - silakan konfigurasikan nama rekening di Sophtron
+      description: Pilih rekening yang ingin Anda tautkan ke akun %{product_name} Anda.
+      link_accounts: Tautkan rekening yang dipilih
+      no_accounts_found: Tidak ada rekening ditemukan. Silakan periksa konfigurasi kunci API Anda.
+      no_access_key: Kunci Akses Sophtron belum dikonfigurasi. Silakan konfigurasikan di Pengaturan.
+      no_user_id: ID Pengguna Sophtron belum dikonfigurasi. Silakan konfigurasikan di Pengaturan.
+      no_credentials_configured: "Silakan konfigurasikan ID Pengguna API dan Kunci Akses Sophtron Anda terlebih dahulu di Pengaturan Penyedia."
+      no_institution_connected: Silakan hubungkan institusi bank dengan Sophtron terlebih dahulu.
+      no_name_placeholder: "(Tanpa nama)"
+      title: Pilih Rekening Sophtron
+    select_existing_account:
+      account_already_linked: Rekening ini sudah ditautkan ke penyedia lain
+      all_accounts_already_linked: Semua rekening Sophtron sudah tertaut
+      api_error: "Kesalahan koneksi API"
+      cancel: Batal
+      configure_name_in_sophtron: Tidak dapat mengimpor - silakan konfigurasikan nama rekening di Sophtron
+      description: Pilih rekening Sophtron untuk ditautkan dengan rekening ini. Transaksi akan disinkronkan dan dideduplikasi secara otomatis.
+      link_account: Tautkan rekening
+      no_account_specified: Tidak ada rekening yang ditentukan
+      no_accounts_found: Tidak ada rekening Sophtron ditemukan. Silakan periksa konfigurasi kunci API Anda.
+      no_access_key: Kunci Akses Sophtron belum dikonfigurasi. Silakan konfigurasikan di Pengaturan.
+      no_user_id: ID Pengguna Sophtron belum dikonfigurasi. Silakan konfigurasikan di Pengaturan.
+      no_institution_connected: Silakan hubungkan institusi bank dengan Sophtron terlebih dahulu.
+      no_name_placeholder: "(Tanpa nama)"
+      title: "Tautkan %{account_name} dengan Sophtron"
+      unexpected_error: "Terjadi kesalahan yang tidak terduga"
+    link_existing_account:
+      account_already_linked: Rekening ini sudah ditautkan ke penyedia lain
+      api_error: "Kesalahan koneksi API"
+      unexpected_error: "Terjadi kesalahan yang tidak terduga"
+      invalid_account_name: Tidak dapat menautkan rekening dengan nama kosong
+      sophtron_account_already_linked: Rekening Sophtron ini sudah ditautkan ke rekening lain
+      sophtron_account_not_found: Rekening Sophtron tidak ditemukan
+      missing_parameters: Parameter yang diperlukan tidak lengkap
+      no_institution_connected: Silakan hubungkan institusi bank dengan Sophtron terlebih dahulu.
+      success: "Berhasil menautkan %{account_name} dengan Sophtron"
+    setup_accounts:
+      account_type_label: "Jenis Rekening:"
+      all_accounts_linked: "Semua rekening Sophtron Anda telah diatur."
+      api_error: "Kesalahan koneksi API"
+      unexpected_error: "Terjadi kesalahan yang tidak terduga"
+      fetch_failed: "Gagal Mengambil Rekening"
+      no_accounts_to_setup: "Tidak Ada Rekening untuk Diatur"
+      no_access_key: "Kunci Akses Sophtron belum dikonfigurasi. Silakan periksa pengaturan koneksi Anda."
+      no_user_id: "ID Pengguna Sophtron belum dikonfigurasi. Silakan periksa pengaturan koneksi Anda."
+      no_institution_connected: "Institusi Sophtron belum terhubung."
+      account_types:
+        skip: Lewati rekening ini
+        depository: Rekening Giro atau Tabungan
+        credit_card: Kartu Kredit
+        investment: Rekening Investasi
+        loan: Pinjaman atau KPR
+        other_asset: Aset Lainnya
+      subtype_labels:
+        depository: "Subjenis Rekening:"
+        credit_card: ""
+        investment: "Jenis Investasi:"
+        loan: "Jenis Pinjaman:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kartu kredit akan diatur secara otomatis sebagai rekening kartu kredit."
+        other_asset: "Tidak ada opsi tambahan yang diperlukan untuk Aset Lainnya."
+      balance: Saldo
+      cancel: Batal
+      choose_account_type: "Pilih jenis rekening yang tepat untuk setiap rekening Sophtron:"
+      create_accounts: Buat Rekening
+      creating_accounts: Membuat Rekening...
+      historical_data_range: "Rentang Data Historis:"
+      subtitle: Pilih jenis rekening yang tepat untuk rekening yang Anda impor
+      sync_start_date_help: Pilih seberapa jauh ke belakang Anda ingin menyinkronkan riwayat transaksi. Tersedia riwayat maksimal 3 tahun.
+      sync_start_date_label: "Mulai menyinkronkan transaksi dari:"
+      title: Atur Rekening Sophtron Anda
+    complete_account_setup:
+      all_skipped: "Semua rekening dilewati. Tidak ada rekening yang dibuat."
+      creation_failed: "Gagal membuat rekening"
+      api_error: "Kesalahan koneksi API"
+      unexpected_error: "Terjadi kesalahan yang tidak terduga"
+      no_accounts: "Tidak ada rekening untuk diatur."
+      success: "Berhasil membuat %{count} rekening."
+    sync:
+      already_running: Sinkronisasi manual Sophtron sudah sedang berlangsung.
+      api_error: "Sinkronisasi manual Sophtron gagal: %{message}"
+      failed: Sinkronisasi manual Sophtron gagal
+      no_linked_accounts: Institusi Sophtron ini tidak memiliki rekening tertaut untuk disinkronkan.
+      processing_failed: Sinkronisasi manual Sophtron tidak dapat memproses transaksi yang diperbarui.
+      success: Sinkronisasi dimulai
+    toggle_manual_sync:
+      success_disabled: Institusi Sophtron akan disinkronkan secara otomatis.
+      success_enabled: Institusi Sophtron sekarang memerlukan sinkronisasi manual.
+    manual_sync_complete:
+      close: Tutup
+      description: Saldo rekening akan selesai diperbarui di latar belakang.
+      message: Transaksi telah diunduh setelah verifikasi Sophtron.
+      title: Sinkronisasi Sophtron Dimulai
+    sophtron_setup_required:
+      title: Pengaturan Sophtron Diperlukan
+      message: >
+        Untuk menyelesaikan pengaturan koneksi Sophtron Anda, silakan buka halaman Pengaturan Penyedia dan ikuti petunjuk untuk mengotorisasi dan mengonfigurasi koneksi Sophtron Anda.
+      go_to_provider_settings: Buka Pengaturan Penyedia
+      heading: "ID Pengguna dan Kunci Akses Belum Dikonfigurasi"
+      description: "Sebelum dapat menautkan rekening Sophtron, Anda perlu mengonfigurasi ID Pengguna dan Kunci Akses Sophtron Anda."
+      setup_steps_title: "Langkah Pengaturan:"
+      step_1_html: "Buka <strong>Pengaturan → Penyedia Sinkronisasi Bank</strong>"
+      step_2_html: "Temukan bagian <strong>Sophtron</strong>"
+      step_3_html: "Masukkan ID Pengguna dan Kunci Akses Sophtron Anda"
+      step_4: "Kembali ke sini untuk menautkan rekening Anda"
+    api_error:
+      title: "Kesalahan Koneksi Sophtron"
+      unable_to_connect: "Tidak dapat terhubung ke Sophtron"
+      institution_unable_to_connect: "Tidak dapat terhubung ke institusi"
+      common_issues_title: "Masalah Umum:"
+      incorrect_user_id: "ID Pengguna Salah: Verifikasi ID Pengguna Anda di Pengaturan Penyedia"
+      invalid_access_key: "Kunci Akses Tidak Valid: Periksa Kunci Akses Anda di Pengaturan Penyedia"
+      expired_credentials: "Kredensial Kedaluwarsa: Buat ID Pengguna dan Kunci Akses baru dari Sophtron"
+      network_issue: "Masalah Jaringan: Periksa koneksi internet Anda"
+      service_down: "Layanan Terganggu: API Sophtron mungkin sedang tidak tersedia sementara"
+      bad_credentials: "Kredensial bank: Periksa apakah nama pengguna dan kata sandi sudah benar"
+      verification_code: "Kode verifikasi: Pastikan kode terbaru dimasukkan sebelum kedaluwarsa"
+      institution_timeout: "Waktu habis institusi: Halaman login bank tidak selesai tepat waktu"
+      unsupported_mfa: "Dukungan MFA: Sophtron mungkin tidak mendukung alur verifikasi institusi ini saat ini"
+      check_provider_settings: "Periksa Pengaturan Penyedia"
+      try_again: "Coba hubungkan lagi"
+    select_option: "Pilih %{type}"
+    subtype: "subjenis"
+    type: "jenis"
+    sophtron_panel:
+      setup_instructions_title: "Petunjuk pengaturan:"
+      setup_instructions:
+        step_1_html: 'Kunjungi <a href="%{url}" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a> untuk mendapatkan kredensial API Anda'
+        step_2: "Salin ID Pengguna dan Kunci Akses Anda dari pengaturan akun Sophtron Anda"
+        step_3: "Tempelkan kredensial di bawah ini lalu klik Simpan; Sure akan membuat atau menggunakan kembali ID Pelanggan Sophtron Anda secara otomatis"
+      field_descriptions_title: "Deskripsi kolom:"
+      field_descriptions:
+        user_id_html: "<strong>ID Pengguna:</strong> Kredensial ID Pengguna Sophtron Anda"
+        access_key_html: "<strong>Kunci Akses:</strong> Kredensial Kunci Akses Sophtron Anda"
+        base_url_html: "<strong>URL Dasar:</strong> URL endpoint API Sophtron, biasanya https://api.sophtron.com/api"
+      fields:
+        user_id:
+          label: "ID Pengguna"
+          placeholder_new: "Tempel ID Pengguna Sophtron Anda"
+          placeholder_edit: "••••••••"
+        access_key:
+          label: "Kunci Akses"
+          placeholder_new: "Tempel Kunci Akses Sophtron Anda"
+          placeholder_edit: "••••••••"
+        base_url:
+          label: "URL Dasar"
+          placeholder: "https://api.sophtron.com/api"
+      save: "Simpan Konfigurasi"
+      update: "Perbarui Konfigurasi"
+    syncer:
+      manual_sync_required: "Sinkronisasi manual Sophtron diperlukan untuk institusi ini; melewati rekening-rekening tersebut selama sinkronisasi otomatis."
+      importing_accounts: "Mengimpor rekening dari Sophtron..."
+      checking_account_configuration: "Memeriksa konfigurasi rekening..."
+      accounts_need_setup: "%{count} rekening perlu pengaturan"
+      processing_transactions: "Memproses transaksi untuk rekening tertaut..."
+      calculating_balances: "Menghitung saldo untuk rekening tertaut..."
+    sophtron_entry:
+      processor:
+        unknown_transaction: "Transaksi tidak dikenal"
+    render_connection_timeout:
+      timeout: "Waktu koneksi habis. Silakan coba lagi."
+    redirect_after_account_link:
+      invalid_account_names:
+        one: "Tidak dapat menautkan %{count} rekening dengan nama kosong"
+        other: "Tidak dapat menautkan %{count} rekening dengan nama kosong"
+      partial_invalid: "Menautkan %{created_count} rekening. %{already_linked_count} sudah tertaut, %{invalid_count} memiliki nama tidak valid."
+      partial_success: "Menautkan %{created_count} rekening. %{already_linked_count} rekening sudah tertaut."
+      success:
+        one: "Berhasil menautkan %{count} rekening."
+        other: "Berhasil menautkan %{count} rekening."
+      all_already_linked:
+        one: "Rekening yang dipilih sudah tertaut"
+        other: "Semua %{count} rekening yang dipilih sudah tertaut"
+      link_failed: "Gagal menautkan rekening"
+    start_manual_sync:
+      already_running: "Sinkronisasi sudah sedang berlangsung."
+      no_linked_accounts: "Tidak ada rekening tertaut yang tersedia untuk disinkronkan."
+      api_error: "Kesalahan API: %{message}"
+    start_manual_sync_for_account:
+      failed: "Gagal menyinkronkan rekening"
