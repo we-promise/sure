@@ -27,11 +27,11 @@ class RetirementPlans::SummaryComponent < ViewComponent::Base
   end
 
   # Whole percent for the figure, which keeps counting past 100 once the user
-  # is independent; the bar stops at 100. Both round down, so neither reads
-  # 100 before #financially_independent? does, and the figure stops at 0, as
-  # the bar does.
+  # is independent; the bar stops at 100. Both round toward zero, so neither
+  # reads 100 before #financially_independent? does, and a sliver below zero
+  # reads 0 rather than -1.
   def progress_percent
-    [ (projection.progress * 100).floor, 0 ].max
+    (projection.progress * 100).truncate
   end
 
   def bar_percent
