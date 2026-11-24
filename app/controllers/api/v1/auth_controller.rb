@@ -439,6 +439,83 @@ module Api
         }
       end
 
+      def request_password_reset
+        # Enqueue the lookup and delivery decision unconditionally so the request
+        # thread does identical work regardless of whether the account exists —
+        # no timing side-channel. The job doesn't log its email argument and the
+        # mailer generates the token itself, so neither is written to the logs.
+        MobilePasswordResetJob.perform_later(params[:email].to_s)
+
+        # Generic response regardless of outcome, so the endpoint never reveals
+        # whether an account exists.
+        render json: { message: "If an account exists, you'll receive a reset link shortly." }
+      end
+
+      def reset_password
+        unless AuthConfig.password_features_enabled?
+          render json: { error: "Password reset is not available." }, status: :forbidden
+          return
+        end
+
+        token = params[:token].to_s
+        user = User.find_by_token_for(:password_reset, token)
+        unless user
+          render json: { error: "Reset link is invalid or has expired." }, status: :unprocessable_entity
+          return
+        end
+
+        if user.sso_only?
+          render json: { error: "This account uses social sign-in. Password reset is not available." }, status: :unprocessable_entity
+          return
+        end
+
+        # A non-String password (a JSON number/array/object) would reach
+        # has_secure_password and raise NoMethodError on String methods, turning
+        # a bad request into a 500. has_secure_password also ignores a blank
+        # password silently. Guard both and return a 422 before assignment.
+        password = params[:password]
+        password_confirmation = params[:password_confirmation]
+        unless password.is_a?(String) && password.present?
+          render json: { error: "Password can't be blank", errors: [ "Password can't be blank" ] }, status: :unprocessable_entity
+          return
+        end
+
+        # Rails skips the confirmation check when password_confirmation is nil,
+        # so a request omitting it would still change the password. Require it to
+        # match explicitly (the request contract marks confirmation required).
+        unless password_confirmation == password
+          render json: { error: "Passwords do not match", errors: [ "Password confirmation doesn't match Password" ] }, status: :unprocessable_entity
+          return
+        end
+
+        # Resolve the token and update under a row lock in one transaction so two
+        # overlapping requests with the same token can't both win: the first
+        # commit rotates password_salt (which the token embeds), so the second
+        # re-resolves to nothing under the lock and is rejected as expired.
+        outcome = ActiveRecord::Base.transaction do
+          user.lock!
+          next :stale if User.find_by_token_for(:password_reset, token)&.id != user.id
+          next :invalid unless user.update(password: password, password_confirmation: password_confirmation)
+
+          SecurityAuditLog.log_password_changed!(user: user, request: request)
+          # Signed out everywhere (CWE-613): the password change already revoked
+          # OAuth tokens, so drop every session too.
+          user.sessions.destroy_all
+          :ok
+        end
+
+        case outcome
+        when :ok
+          render json: { message: "Password updated. You've been signed out on all devices." }
+        when :stale
+          render json: { error: "Reset link is invalid or has expired." }, status: :unprocessable_entity
+        else
+          render json: { error: "Password is invalid", errors: user.errors.full_messages }, status: :unprocessable_entity
+        end
+      rescue ActiveRecord::ActiveRecordError
+        render json: { error: "Could not reset your password. Please try again." }, status: :unprocessable_entity
+      end
+
       private
 
         # Mirrors SessionsController#create: with SSO-only mode on, the only

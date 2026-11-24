@@ -403,7 +403,9 @@ Rails.application.routes.draw do
     get :new_user, on: :collection
     post :create_user, on: :collection
   end
-  resource :password_reset, only: %i[new create edit update]
+  resource :password_reset, only: %i[new create edit update] do
+    get :mobile_redirect, on: :collection
+  end
   resource :password, only: %i[edit update]
   resource :email_confirmation, only: :new
 
@@ -838,6 +840,8 @@ Rails.application.routes.draw do
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"
       post "auth/refresh", to: "auth#refresh"
+      post "auth/password_reset", to: "auth#request_password_reset"
+      patch "auth/password_reset", to: "auth#reset_password"
       get "auth/sso_providers", to: "auth#sso_providers"
       post "auth/sso_exchange", to: "auth#sso_exchange"
       post "auth/sso_link", to: "auth#sso_link"
