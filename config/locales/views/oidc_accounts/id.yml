@@ -1,0 +1,42 @@
+---
+id:
+  oidc_accounts:
+    link:
+      no_pending_oidc: Tidak ada autentikasi OIDC yang tertunda
+      title_link: Tautkan Akun OIDC
+      title_create: Buat Akun
+      verify_heading: Verifikasi Identitas Anda
+      verify_description_html: "Untuk menautkan akun %{provider} Anda%{email_suffix}, harap verifikasi identitas Anda dengan memasukkan kata sandi Anda."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: Email
+      email_placeholder: Masukkan email Anda
+      password_label: Kata Sandi
+      password_placeholder: Masukkan kata sandi Anda
+      verify_hint: Ini membantu memastikan bahwa hanya Anda yang dapat menautkan akun eksternal ke profil Anda.
+      submit_link: Tautkan Akun
+      create_heading: Buat Akun Baru
+      create_description_html: "Tidak ditemukan akun dengan email <strong>%{email}</strong>. Klik di bawah untuk membuat akun baru menggunakan identitas %{provider} Anda."
+      info_email: "Email:"
+      info_name: "Nama:"
+      submit_create: Buat Akun
+      submit_accept_invitation: Terima Undangan
+      account_creation_disabled: Pembuatan akun baru melalui single sign-on dinonaktifkan. Silakan hubungi administrator untuk membuat akun Anda.
+      cancel: Batal
+    create_link:
+      no_pending_oidc: Tidak ada autentikasi OIDC yang tertunda
+    new_user:
+      no_pending_oidc: Tidak ada autentikasi OIDC yang tertunda
+      title: Lengkapi Akun Anda
+      heading: Buat Akun Anda
+      description: Harap konfirmasikan detail Anda untuk menyelesaikan pembuatan akun dengan identitas %{provider} Anda.
+      email_label: Email (dari penyedia SSO)
+      first_name_label: Nama Depan
+      first_name_placeholder: Masukkan nama depan Anda
+      last_name_label: Nama Belakang
+      last_name_placeholder: Masukkan nama belakang Anda
+      submit: Buat Akun
+      cancel: Batal
+    create_user:
+      no_pending_oidc: Tidak ada autentikasi OIDC yang tertunda
+      account_creation_disabled: Pembuatan akun SSO dinonaktifkan. Silakan hubungi administrator.
+      account_created: "Selamat datang! Akun Anda telah dibuat."
