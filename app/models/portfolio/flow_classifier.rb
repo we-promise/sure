@@ -8,7 +8,8 @@
 #   :fee               a fee or commission
 #   :internal          cash turning into a security or back, or moving between
 #                      places inside the scope (buy, sell, sweep, exchange, a
-#                      transfer whose other leg is also in scope)
+#                      transfer whose other leg is also in scope -- and, under
+#                      strict_leg_pairing, posted the same day)
 #
 # Returns, allocation, income and contribution-room figures all need this
 # split, and they need the same answer. Deriving it in each reader is how the
@@ -29,9 +30,10 @@
 # (a split child without one reads its parent's); for an unlabelled
 # Transaction its `kind`; and for a transfer, whether the counterpart leg's
 # account is inside the scope on the entry's date and has posted (a pending
-# leg has not moved its balance yet). Direction for an external flow comes
-# from the Trade's quantity sign or the Transaction's amount sign (negative
-# amount = money in).
+# leg has not moved its balance yet) and, under strict_leg_pairing, whether
+# that leg posted the same day and pairs one to one. Direction for an external
+# flow comes from the Trade's quantity sign or the Transaction's amount sign
+# (negative amount = money in).
 #
 # What a caller must do with the answer:
 #
@@ -53,11 +55,12 @@ class Portfolio::FlowClassifier
   # Activity label -> class. Two pseudo-classes resolve at classification
   # time, and both consult the link before the label: :external and :transfer
   # each become :internal when the entry is a linked Transfer whose other leg
-  # is inside the scope, and an inflow or an outflow by direction otherwise.
-  # A label describes what the borrower meant; a Transfer row records where
-  # the money went, and between two accounts in scope it went nowhere. A nil
-  # rule means the label decides nothing and
-  # the fallthrough applies (a Trade is internal; a Transaction goes by kind).
+  # is inside the scope (and, under strict_leg_pairing, posted the same day),
+  # and an inflow or an outflow by direction otherwise. A label describes what
+  # the borrower meant; a Transfer row records where the money went, and
+  # between two accounts in scope it went nowhere. A nil rule means the label
+  # decides nothing and the fallthrough applies (a Trade is internal; a
+  # Transaction goes by kind).
   #
   # "Exchange" is internal on both a Trade and a Transaction here, following
   # Transaction::INTERNAL_MOVEMENT_LABELS. Trade::INTERNAL_MOVEMENT_LABELS
@@ -270,12 +273,7 @@ class Portfolio::FlowClassifier
         END
       LEFT JOIN transactions flow_counterpart_transactions
         ON flow_counterpart_transactions.id = flow_counterpart_entries.entryable_id
-      LEFT JOIN (#{security_transfer_legs_sql}) flow_security_transfers
-        ON entries.entryable_type = 'Trade'
-        AND flow_security_transfers.date = entries.date
-        AND flow_security_transfers.security_id = trades.security_id
-        AND flow_security_transfers.qty = -trades.qty
-      #{same_side_security_transfers_join_sql if strict_leg_pairing}
+      #{security_transfers_join_sql}
     SQL
   end
 
@@ -334,8 +332,9 @@ class Portfolio::FlowClassifier
       # money went; a linked Transfer says where it actually went. When both
       # legs are inside the scope the movement is internal whatever either leg
       # is labelled, so the label cannot outrank the link. #transfer_resolution
-      # falls back to the direction whenever there is no link, or the
-      # counterpart sits outside the scope.
+      # falls back to the direction whenever there is no confirmed link, the
+      # counterpart sits outside the scope, or, under strict_leg_pairing, it
+      # posted another day.
       when :external then transfer_resolution(entry, transaction)
       when :transfer then transfer_resolution(entry, transaction)
       else rule
@@ -343,10 +342,11 @@ class Portfolio::FlowClassifier
     end
 
     # A Contribution or Withdrawal trade (and, under strict_leg_pairing, a
-    # Transfer trade) whose amount is signed like its quantity (qty x price, as the trades form and API write it). The
-    # balance calculators apply it as a buy or a sale, cash for units at the
-    # same value, so nothing crosses the scope. In kind (amount 0, a security
-    # journal) or cash only (qty 0), it is an external flow by direction.
+    # Transfer trade) whose amount is signed like its quantity (qty x price,
+    # as the trades form and API write it). The balance calculators apply it
+    # as a buy or a sale, cash for units at the same value, so nothing crosses
+    # the scope. In kind (amount 0, a security journal) or cash only (qty 0),
+    # it is an external flow by direction.
     def cash_settled?(entry, trade)
       (trade.qty * entry.amount).positive?
     end
@@ -464,10 +464,12 @@ class Portfolio::FlowClassifier
     end
 
     # A Trade's direction is its quantity's sign, and a summing caller takes
-    # the magnitude from -entries.amount. For a Contribution or Withdrawal
-    # trade the two would disagree when the amount is signed like the
-    # quantity, which the trades form and API write; that shape is internal
-    # (#cash_settled?) and never reaches here.
+    # the magnitude from -entries.amount. The two disagree when the amount is
+    # signed like the quantity, which the trades form and API write. For a
+    # Contribution or Withdrawal trade (and, under strict_leg_pairing, a
+    # Transfer trade) that shape is internal (#cash_settled?) and never reaches
+    # here. By default a Transfer trade of that shape with no counterpart does
+    # reach here, and takes its direction from the quantity.
     def direction_sql
       <<~SQL.squish
         CASE
@@ -493,16 +495,16 @@ class Portfolio::FlowClassifier
     # the CASE takes the direction.
     #
     # Under strict_leg_pairing, the SQL twin of
-    # #strictly_paired_security_transfer?: the opposite group holds exactly
-    # one journal leg, in another account, and this entry's own group holds
-    # none but the entry itself, which it holds when the entry is in scope on
-    # its date (a journal leg reaching here is never cash-settled).
+    # #strictly_paired_security_transfer?: the other side holds exactly one
+    # journal leg, in another account, and this entry's own side holds none
+    # but the entry itself, which it holds when the entry is in scope on its
+    # date (a journal leg reaching here is never cash-settled).
     def security_transfer_counterpart_in_scope_sql
       if strict_leg_pairing
         <<~SQL.squish
-          (flow_security_transfers.legs = 1
-            AND flow_security_transfers.min_account_id <> entries.account_id
-            AND COALESCE(flow_security_same_side.legs, 0) <= CASE WHEN #{in_scope_sql('entries.account_id')} THEN 1 ELSE 0 END)
+          (#{security_transfer_side_sql('legs', opposite: true)} = 1
+            AND #{security_transfer_side_sql('account_id', opposite: true)} <> entries.account_id
+            AND COALESCE(#{security_transfer_side_sql('legs', opposite: false)}, 0) <= CASE WHEN #{in_scope_sql('entries.account_id')} THEN 1 ELSE 0 END)
         SQL
       else
         <<~SQL.squish
@@ -512,14 +514,36 @@ class Portfolio::FlowClassifier
       end
     end
 
-    def same_side_security_transfers_join_sql
-      <<~SQL.squish
-        LEFT JOIN (#{security_transfer_legs_sql}) flow_security_same_side
-          ON entries.entryable_type = 'Trade'
-          AND flow_security_same_side.date = entries.date
-          AND flow_security_same_side.security_id = trades.security_id
-          AND flow_security_same_side.qty = trades.qty
-      SQL
+    # Strict pairing reads both sides of a security's day, so its one grouped
+    # join is keyed on the quantity's magnitude and carries each side apart:
+    # legs in (qty > 0), out (qty < 0) and, for a qty 0 leg, whose other side
+    # is itself, zero.
+    def security_transfers_join_sql
+      if strict_leg_pairing
+        <<~SQL.squish
+          LEFT JOIN (#{strict_security_transfer_legs_sql}) flow_security_transfers
+            ON entries.entryable_type = 'Trade'
+            AND flow_security_transfers.date = entries.date
+            AND flow_security_transfers.security_id = trades.security_id
+            AND flow_security_transfers.abs_qty = ABS(trades.qty)
+        SQL
+      else
+        <<~SQL.squish
+          LEFT JOIN (#{security_transfer_legs_sql}) flow_security_transfers
+            ON entries.entryable_type = 'Trade'
+            AND flow_security_transfers.date = entries.date
+            AND flow_security_transfers.security_id = trades.security_id
+            AND flow_security_transfers.qty = -trades.qty
+        SQL
+      end
+    end
+
+    # One column of the strict group, from the entry's own side or the other.
+    def security_transfer_side_sql(column, opposite:)
+      positive, negative = opposite ? %w[out in] : %w[in out]
+      "CASE WHEN trades.qty > 0 THEN flow_security_transfers.#{positive}_#{column} " \
+        "WHEN trades.qty < 0 THEN flow_security_transfers.#{negative}_#{column} " \
+        "ELSE flow_security_transfers.zero_#{column} END"
     end
 
     # Every live Transfer trade in the scope's accounts, grouped by date,
@@ -533,17 +557,42 @@ class Portfolio::FlowClassifier
     # only under include_excluded. entries.excluded is nullable, and a NULL
     # leg is live here as it is to #classify, hence IS NOT TRUE rather than
     # = false. uuid has no MIN or MAX, so the ids are compared as text.
-    # Under strict_leg_pairing only journal legs count, and the count of legs
-    # in a group is what the one-to-one test reads.
     def security_transfer_legs_sql
       <<~SQL.squish
         SELECT
           counterpart_entries.date,
           counterpart_trades.security_id,
           counterpart_trades.qty,
-          COUNT(*) AS legs,
           MIN(counterpart_entries.account_id::text)::uuid AS min_account_id,
           MAX(counterpart_entries.account_id::text)::uuid AS max_account_id
+        #{security_transfer_legs_from_sql}
+        GROUP BY counterpart_entries.date, counterpart_trades.security_id, counterpart_trades.qty
+      SQL
+    end
+
+    # The strict form of the same groups: journal legs only (a cash-settled
+    # one is a purchase or a sale), keyed on the quantity's magnitude, with
+    # each side's leg count and, for a side of one leg, that leg's account.
+    def strict_security_transfer_legs_sql
+      sides = { "in" => "> 0", "out" => "< 0", "zero" => "= 0" }.map do |side, test|
+        "COUNT(*) FILTER (WHERE counterpart_trades.qty #{test}) AS #{side}_legs, " \
+          "MIN(counterpart_entries.account_id::text) FILTER (WHERE counterpart_trades.qty #{test})::uuid AS #{side}_account_id"
+      end
+
+      <<~SQL.squish
+        SELECT
+          counterpart_entries.date,
+          counterpart_trades.security_id,
+          ABS(counterpart_trades.qty) AS abs_qty,
+          #{sides.join(", ")}
+        #{security_transfer_legs_from_sql}
+          AND counterpart_trades.qty * counterpart_entries.amount <= 0
+        GROUP BY counterpart_entries.date, counterpart_trades.security_id, ABS(counterpart_trades.qty)
+      SQL
+    end
+
+    def security_transfer_legs_from_sql
+      <<~SQL.squish
         FROM entries counterpart_entries
         JOIN trades counterpart_trades
           ON counterpart_trades.id = counterpart_entries.entryable_id
@@ -551,8 +600,6 @@ class Portfolio::FlowClassifier
         WHERE #{in_scope_sql('counterpart_entries.account_id', date_expression: 'counterpart_entries.date')}
           #{"AND counterpart_entries.excluded IS NOT TRUE" unless include_excluded}
           AND counterpart_trades.investment_activity_label = '#{TRANSFER_LABEL}'
-          #{"AND counterpart_trades.qty * counterpart_entries.amount <= 0" if strict_leg_pairing}
-        GROUP BY counterpart_entries.date, counterpart_trades.security_id, counterpart_trades.qty
       SQL
     end
 

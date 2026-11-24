@@ -637,6 +637,45 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
       "the corpus must exercise every class"
   end
 
+  # The same agreement under strict leg pairing, alone and combined with the
+  # other options: an excluded leg read as live, and the IRA past its cut-off
+  # (yesterday) for the corpus dated today.
+  test "the SQL form agrees with the Ruby form on every corpus entry under strict leg pairing" do
+    corpus = build_corpus
+    cut_off = { @ira.id => Date.current - 1.day }
+    classifiers = [
+      @strict_family_scope,
+      @strict_brokerage_scope,
+      Portfolio::FlowClassifier.new(scope_account_ids: [ @checking.id, @brokerage.id ], strict_leg_pairing: true),
+      Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], strict_leg_pairing: true, include_excluded: true),
+      Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], strict_leg_pairing: true, active_until_dates: cut_off),
+      Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], strict_leg_pairing: true, include_excluded: true, active_until_dates: cut_off),
+      Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], include_excluded: true, active_until_dates: cut_off)
+    ]
+
+    classifiers.each do |classifier|
+      ruby = corpus.to_h { |entry| [ entry.id, classifier.classify(entry.reload) ] }
+      sql = classifier.classify_ids(corpus.map(&:id))
+
+      assert_equal corpus.size, sql.size
+      options = "strict #{classifier.strict_leg_pairing}, excluded #{classifier.include_excluded}, cut-offs #{classifier.active_until_dates.size}"
+      ruby.each do |id, ruby_class|
+        entry = corpus.find { |e| e.id == id }
+        message = "#{options}, scope #{classifier.scope_account_ids.size} accounts: #{entry.name} " \
+          "(#{entry.entryable_type}, #{entry.entryable.try(:investment_activity_label).inspect}, qty #{entry.entryable.try(:qty).inspect}, amount #{entry.amount})"
+        if ruby_class.nil?
+          assert_nil sql.fetch(id), message
+        else
+          assert_equal ruby_class, sql.fetch(id), message
+        end
+      end
+    end
+
+    strict = classifiers.first
+    assert_not_equal @family_scope.classify_ids(corpus.map(&:id)), strict.classify_ids(corpus.map(&:id)),
+      "the corpus must hold shapes the two modes read differently"
+  end
+
   test "the SQL form only binds the scope ids and never interpolates entry data" do
     sql = @family_scope.sql_case
 
@@ -843,6 +882,25 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
       entries.concat(create_labelled_transaction(account: @brokerage, label: "Dividend", amount: -20)
         .split!([ { name: "Split dividend one", amount: -15 }, { name: "Split dividend two", amount: -5 } ]))
       entries << @brokerage.entries.create!(name: "Valuation", date: Date.current, amount: 1000, currency: "USD", entryable: Valuation.new(kind: "reconciliation"))
+
+      # Shapes the strict pairing reads differently: a cash-only Transfer
+      # trade (qty 0), a journal out with two candidate legs back (one in its
+      # own account), a cash-funded Transfer buy mirroring a journal out, and
+      # a journal pair whose legs carry a NULL and a true excluded flag.
+      entries << create_portfolio_trade(account: @brokerage, security: create_portfolio_security, qty: 0, price: 0, label: "Transfer")
+        .tap { |entry| entry.update!(amount: -100) }
+      ambiguous = create_portfolio_security
+      entries.concat(create_security_transfer(security: ambiguous, from: @brokerage, to: @ira, qty: 5, price: 10))
+      entries << create_portfolio_trade(account: @brokerage, security: ambiguous, qty: 5, price: 10, label: "Transfer")
+        .tap { |entry| entry.update!(amount: 0) }
+      mirrored = create_portfolio_security
+      entries << create_portfolio_trade(account: @brokerage, security: mirrored, qty: -5, price: 100, label: "Transfer")
+        .tap { |entry| entry.update!(amount: 0) }
+      entries << create_portfolio_trade(account: @ira, security: mirrored, qty: 5, price: 100, label: "Transfer")
+      flagged_out, flagged_in = create_security_transfer(security: create_portfolio_security, from: @brokerage, to: @ira, qty: 2, price: 30)
+      flagged_out.update_columns(excluded: true)
+      flagged_in.update_columns(excluded: nil)
+      entries << flagged_out << flagged_in
       entries
     end
 end
