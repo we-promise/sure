@@ -1,0 +1,17 @@
+---
+nb:
+  recurring_allocations:
+    over_allocation: Da ville du fordelt mer enn transaksjonens beløp
+    missing_rate: Ingen valutakurs tilgjengelig. Skriv inn beløpet selv
+    already_allocated: Den transaksjonen er allerede registrert på denne regningen
+    invalid: Betalingen kunne ikke registreres
+    create:
+      success: Betaling registrert
+    destroy:
+      success: Betalingen er koblet fra
+    confirm:
+      success: Betalingen er registrert på regningen
+    reject:
+      success: Avvist. Den transaksjonen blir ikke foreslått for denne regningen igjen.
+    split_counterpart_allocated: "Den transaksjonen er delt opp, og den opprinnelige belastningen eller en av delene er allerede knyttet til en regning"
+    entry_exhausted: "Hele beløpet for den transaksjonen er allerede knyttet til andre forfalte betalinger"

@@ -1751,8 +1751,8 @@ class UserTest < ActiveSupport::TestCase
 
     User.transaction do
       user.update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
-      # Stands in for a concurrent /oauth/token refresh that held the old token's
-      # row lock and committed its replacement after the in-transaction sweep.
+      # Stands in for a token issued without the user lock after the
+      # in-transaction sweep has run.
       late_token = Doorkeeper::AccessToken.create!( # pipelock:ignore
         application: app,
         resource_owner_id: user.id,
