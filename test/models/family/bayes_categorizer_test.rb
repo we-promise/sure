@@ -51,6 +51,20 @@ class Family::BayesCategorizerTest < ActiveSupport::TestCase
     Family::BayesCategorizer.new(@family, settings: Family::BayesSettings.new(TUNED.merge(changes)))
   end
 
+  # A category with a handful of transactions has so few words that any word it
+  # has seen scores far higher there than in a large category: it would win
+  # unfamiliar transactions, overconfidently, until it has enough examples.
+  test "a category with fewer examples than the minimum is never picked" do
+    train_two_categories
+    food = @family.categories.create!(name: "Food")
+    3.times { create_transaction(account: @account, name: "Przelew na telefon BLIK", category: food) }
+    categorizer = Family::BayesCategorizer.new(@family, settings: Family::BayesSettings.new)
+    transaction = create_transaction(account: @account, name: "Przelew na telefon BLIK Paypal").transaction
+
+    assert_nil categorizer.classify(transaction)
+    assert_equal food.id, Family::BayesCategorizer.new(@family, settings: Family::BayesSettings.new(min_category_examples: 3)).classify(transaction)&.first
+  end
+
   test "the defaults are the original model: add-1 multinomial, uniform prior, merchant name as words" do
     train_two_categories
     categorizer = Family::BayesCategorizer.new(@family, settings: Family::BayesSettings.new)

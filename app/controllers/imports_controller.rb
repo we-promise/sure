@@ -216,7 +216,7 @@ class ImportsController < ApplicationController
   private
     def set_import
       @import = Current.family.imports.includes(:account, :account_statement).find(params[:id])
-      raise ActiveRecord::RecordNotFound if @import.account_statement.present? && !@import.account_statement.viewable_by?(Current.user)
+      raise ActiveRecord::RecordNotFound unless @import.viewable_by?(Current.user)
     end
 
     def import_params

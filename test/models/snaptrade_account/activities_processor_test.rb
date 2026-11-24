@@ -2435,7 +2435,63 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
       "db price (priority 1) must beat trade price (priority 2) and holding price (priority 3)"
   end
 
+  test "a Wealthsimple card purchase is an outflow named after the merchant" do
+    process_activities(card_activity(id: "card_buy", description: "CREDIT_CARD PURCHASE: Corner Grocery #12", amount: -42.50))
+
+    entry = snaptrade_entry("card_buy")
+    assert_equal 42.50, entry.amount.to_f
+    assert_equal "Corner Grocery #12", entry.name
+  end
+
+  test "Wealthsimple card refunds and payments are inflows" do
+    process_activities(
+      card_activity(id: "card_refund", description: "CREDIT_CARD REFUND: Clothing Store 7", amount: 80.00),
+      card_activity(id: "card_payment", description: "CREDIT_CARD PAYMENT", amount: 1200.00)
+    )
+
+    assert_equal(-80.00, snaptrade_entry("card_refund").amount.to_f)
+    assert_equal "Clothing Store 7", snaptrade_entry("card_refund").name
+    assert_equal(-1200.00, snaptrade_entry("card_payment").amount.to_f)
+    assert_equal "CREDIT_CARD PAYMENT", snaptrade_entry("card_payment").name
+  end
+
+  test "a bare CREDIT_CARD row keeps the provider sign" do
+    process_activities(card_activity(id: "card_legacy", description: "CREDIT_CARD", amount: 30.00))
+
+    assert_equal 30.00, snaptrade_entry("card_legacy").amount.to_f
+  end
+
+  test "a PREPAID_CARD spend is an outflow" do
+    process_activities(card_activity(id: "prepaid", type: "PREPAID_CARD", description: "PREPAID_CARD", amount: -25.00))
+
+    assert_equal 25.00, snaptrade_entry("prepaid").amount.to_f
+  end
+
+  test "resyncing renames a SnapTrade card entry and corrects its sign" do
+    process_activities(card_activity(id: "card_resync", description: "CREDIT_CARD", amount: -18.40))
+    assert_equal(-18.40, snaptrade_entry("card_resync").amount.to_f)
+
+    result = process_activities(card_activity(id: "card_resync", description: "CREDIT_CARD PURCHASE: Food Hall", amount: -18.40))
+
+    assert_equal 0, result[:failed]
+    entry = snaptrade_entry("card_resync")
+    assert_equal 18.40, entry.amount.to_f
+    assert_equal "Food Hall", entry.name
+  end
+
   private
+
+    def card_activity(id:, description:, amount:, type: "CREDIT_CARD")
+      {
+        "id" => id,
+        "type" => type,
+        "amount" => amount,
+        "description" => description,
+        "trade_date" => Date.current.to_s,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" }
+      }
+    end
 
     def process_activities(*activities)
       @snaptrade_account.update!(raw_activities_payload: activities)

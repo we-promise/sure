@@ -390,6 +390,21 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal 0, rule_run.reload.transactions_awaiting_ai
   end
 
+  # #5709: without a family admin's AI switch nothing is sent, and the rule run ends having changed nothing.
+  test "sends nothing while no family admin has turned AI on, and the rule run succeeds" do
+    @family.users.update_all(ai_enabled: false)
+    txn = create_transaction(account: @account, name: "Shop").transaction
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 1, executed_at: Time.current)
+    rule_run.await_ai!(1)
+    requests = stub_ai(:detect_merchants) { flunk "sent without consent" }
+
+    Ai::GenerationJob.perform_now(:detect_merchants, { ids: [ txn.id ], family_id: @family.id, rule_run_id: rule_run.id })
+
+    assert_empty requests
+    assert_equal [ "success", 0, 0 ], rule_run.reload.values_at(:status, :transactions_modified, :pending_jobs_count)
+  end
+
   private
     def detect(family, transaction_ids)
       Ai::GenerationJob.perform_now(:detect_merchants, { ids: transaction_ids, family_id: family.id })

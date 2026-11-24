@@ -1,0 +1,9 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        mercury_item:
+          attributes:
+            base_url:
+              official_hosts_only: "må være tom, https://api.mercury.com/api/v1 eller https://api-sandbox.mercury.com/api/v1"

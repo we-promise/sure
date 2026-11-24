@@ -171,6 +171,9 @@ de:
       submit: "%{model} speichern"
       update: "%{model} aktualisieren"
   number:
+    nth:
+      ordinals: "."
+      ordinalized: "%{number}."
     currency:
       format:
         delimiter: "."
