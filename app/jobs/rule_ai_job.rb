@@ -35,8 +35,10 @@ class RuleAiJob < ApplicationJob
     @rule_run_id = rule_run_id
     rule_run
 
-    modified_count = enrich(family, transaction_ids)
-    rule_run&.complete_job!(job_id:, modified_count:)
+    # Kept across retries (see serialize): a batch applied before its report
+    # failed is reported, not sent again.
+    @modified_count = enrich(family, transaction_ids) if @modified_count.nil?
+    rule_run&.complete_job!(job_id:, modified_count: @modified_count)
   rescue *TRANSIENT_DB
     raise
   rescue StandardError => error
@@ -53,6 +55,13 @@ class RuleAiJob < ApplicationJob
   def give_up(error)
     Rails.logger.info("[#{self.class.name}] gave up: #{error.class.name} #{error.message.truncate(200)}")
     rule_run&.fail_job!(job_id:, error:, source: self.class.name, transaction_ids: @transaction_ids)
+  end
+
+  def serialize = super.merge("modified_count" => @modified_count)
+
+  def deserialize(job_data)
+    super
+    @modified_count = job_data["modified_count"]
   end
 
   private

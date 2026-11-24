@@ -267,6 +267,27 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     assert_equal 0, @rule_run.pending_jobs_count
   end
 
+  test "a batch counted on a retry keeps what the earlier attempt changed" do
+    applied = create_transaction(account: @account, name: "Coffee shop").transaction
+    left = create_transaction(account: @account, name: "Coffee beans").transaction
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.expects(:auto_categorize).once
+      .returns(provider_success_response([ categorization(applied, "Food"), categorization(left, "Not a category") ]))
+    RuleRun.any_instance.stubs(:complete_job!).raises(ActiveRecord::Deadlocked, "deadlock detected")
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ applied.id, left.id ], rule_run_id: @rule_run.id)
+    RuleRun.any_instance.unstub(:complete_job!)
+    perform_enqueued_jobs
+
+    assert_equal "Food", applied.reload.category.name
+    assert_nil left.reload.category
+    @rule_run.reload
+    assert_equal "success", @rule_run.status
+    assert_equal 1, @rule_run.transactions_modified
+    assert_equal 0, @rule_run.pending_jobs_count
+  end
+
   private
     # Runs the real OpenAI provider, whose request fails with `error` each of `times`.
     def openai_fails_with(error, times:)
