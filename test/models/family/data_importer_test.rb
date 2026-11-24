@@ -1679,7 +1679,9 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     security = securities(:msft)
     account.entries.create!(date: 2.days.ago.to_date, amount: 1000, currency: "USD", name: "Opening",
       entryable: Valuation.new(kind: :opening_anchor))
-    create_trade(security, account: account, qty: 2, price: 100, date: Date.yesterday)
+    ExchangeRate.find_or_initialize_by(date: Date.yesterday, from_currency: "EUR", to_currency: "USD").update!(rate: "1.25")
+    account.entries.create!(date: Date.yesterday, amount: 200, currency: "USD", name: "Buy MSFT",
+      entryable: Trade.new(security: security, qty: 2, price: 80, currency: "EUR", investment_activity_label: "Buy"))
     account.entries.create!(date: Date.current, amount: 1100, currency: "USD", name: "Old total", entryable: Valuation.new)
     Balance::Materializer.new(account, strategy: :forward).materialize_balances
     anchor = account.create_cash_anchor!
@@ -1698,7 +1700,10 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_predicate retained, :cost_basis_inherited?
     Balance::Materializer.new(restored, strategy: :forward).materialize_balances
     assert_equal original_cash, restored.reload.cash_balance
-    restored.entries.trades.sole.destroy!
+    restored_trade_entry = restored.entries.trades.sole
+    assert_equal "USD", restored_trade_entry.currency
+    assert_equal "EUR", restored_trade_entry.trade.currency
+    restored_trade_entry.destroy!
     assert_empty restored.current_holdings
   end
 
