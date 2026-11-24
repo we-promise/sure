@@ -365,6 +365,43 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     refute @entry.reload.excluded?
   end
 
+  test "new and edit refuse an account the user may only annotate" do
+    # A read_write share allows annotating, not editing; the super_admin role does not widen it.
+    account_shares(:credit_card_shared_with_member).update!(permission: "read_write")
+    user = users(:family_member)
+    user.update!(role: :super_admin)
+    sign_in user
+    entry = create_transaction(amount: 100, name: "Card spend", account: accounts(:credit_card))
+    split_entry = create_transaction(amount: 100, name: "Split card spend", account: accounts(:credit_card))
+    split_entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    get new_transaction_split_path(entry)
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+
+    get edit_transaction_split_path(split_entry)
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "new and edit open on an account shared with full_control" do
+    sign_in users(:family_member)
+    split_entry = create_transaction(amount: 100, name: "Split", account: accounts(:depository))
+    split_entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    get new_transaction_split_path(@entry)
+    assert_response :success
+
+    get edit_transaction_split_path(split_entry)
+    assert_response :success
+  end
+
   private
     def sql_queries(&block)
       queries = []

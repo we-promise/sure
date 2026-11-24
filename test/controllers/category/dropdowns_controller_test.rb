@@ -103,4 +103,20 @@ class Category::DropdownsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  test "offers splitting only on an account the user can edit" do
+    get category_dropdown_url(transaction_id: @transaction.id)
+    assert_select "a[href=?]", new_transaction_split_path(@transaction.entry)
+
+    account_shares(:credit_card_shared_with_member).update!(permission: "read_write")
+    user = users(:family_member)
+    user.update!(role: :super_admin)
+    sign_in user
+    entry = create_transaction(account: accounts(:credit_card), name: "Card spend")
+
+    get category_dropdown_url(transaction_id: entry.entryable.id)
+
+    assert_response :success
+    assert_select "a[href=?]", new_transaction_split_path(entry), count: 0
+  end
 end

@@ -142,7 +142,7 @@
           <% end %>
         <% end %>
 
-        <% if @transaction.splittable? %>
+        <% if @transaction.splittable? && can_edit_account?(@transaction.entry.account) %>
           <%= link_to new_transaction_split_path(@transaction.entry),
                   class: "flex text-sm font-medium items-center gap-2 text-secondary w-full rounded-lg p-2 hover:bg-container-inset-hover",
                   data: { turbo_frame: "modal" } do %>
