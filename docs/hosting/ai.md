@@ -372,6 +372,7 @@ AI_DEBUG_MODE=true
 - The `OPENAI_ACCESS_TOKEN` can be any non-empty value (Ollama ignores it)
 - If you don't set a model, chats will fail with a validation error
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
+- Ollama caps each model's context at **4096 tokens by default** and truncates longer requests silently. Sure sends the assistant's tool definitions with every request, so a small context can cut off tool results mid-turn and the assistant then answers that it has no financial data even though `get_accounts` runs fine. Set the context to at least `LLM_CONTEXT_WINDOW` plus headroom for tool definitions, tool results, and the reply. Sure talks to Ollama's OpenAI-compatible endpoint, which cannot set `num_ctx` per request — bake the limit into the model with a Modelfile (`PARAMETER num_ctx 16384`, then `ollama create` a model from it and point `OPENAI_MODEL` at that model) or set the server-wide default by starting `ollama serve` with `OLLAMA_CONTEXT_LENGTH=16384` — and raise the two together if long chats or large batches come back truncated
 - If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits. You can also set this in **Settings → Self-Hosting → OpenAI → Request Timeout** when the environment variable is not configured.
 - Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. `AI_RESPONSE_TIMEOUT` has to cover the whole turn, so size it as `(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT` plus tool execution and queue wait — a sum, not simply a larger number than the per-call limit
 - AI jobs run one at a time by default (`RAILS_AI_MAX_THREADS=1`), which suits a local model with one slot; see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes) before raising it
@@ -395,6 +396,8 @@ services:
     image: ollama/ollama:latest
     ports:
       - "11434:11434"
+    environment:
+      - OLLAMA_CONTEXT_LENGTH=${OLLAMA_CONTEXT_LENGTH:-16384} # must cover LLM_CONTEXT_WINDOW plus tool definitions and the reply
     volumes:
       - ollama_data:/root/.ollama
     # Uncomment if you have an NVIDIA GPU
@@ -1676,12 +1679,16 @@ VECTOR_STORE_PROVIDER=pgvector
 EMBEDDING_MODEL=mxbai-embed-large         # Default: mxbai-embed-large
 EMBEDDING_DIMENSIONS=1024                 # Default: 1024 (must match your model)
 EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to the OpenAI API Base URL (ENV or Settings) if not set
-EMBEDDING_ACCESS_TOKEN=                   # Falls back to the OpenAI Access Token (ENV or Settings) if not set
+EMBEDDING_ACCESS_TOKEN=                   # Falls back to OPENAI_ACCESS_TOKEN, or to the token saved in Settings for the OpenAI URL
 ```
 
 The fallbacks include values saved in **Settings** → **Self-Hosting**. Before this release they
 read only `OPENAI_URI_BASE` and `OPENAI_ACCESS_TOKEN` from the environment, so an install that set
-its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key.
+its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key. The
+access token saved in Settings is sent only to the OpenAI URL it was saved with: a separate
+`EMBEDDING_URI_BASE` that needs a key needs `EMBEDDING_ACCESS_TOKEN`. `OPENAI_ACCESS_TOKEN` set in
+the environment still goes to a separate `EMBEDDING_URI_BASE` when `EMBEDDING_ACCESS_TOKEN` is
+empty, as it did before this release.
 
 Sure enables the `vector` extension when it first provisions the chunks table,
 provided the database user has permission. If the AI status page reports that

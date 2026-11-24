@@ -224,8 +224,12 @@ class AccountsController < ApplicationController
   # Mirrors TransactionsController#clear_filter, but simpler: the account
   # activity feed has no cross-request stored filters to update, so this only
   # needs to redirect with one param removed from the current query string.
+  # The chart's range and view stay: clearing an activity date a chart drag
+  # set must not also reset the chart.
   def clear_filter
-    redirect_to account_path(@account, q: without_cleared_filter(activity_search_params.to_h), tab: "activity", page: params[:page], per_page: params[:per_page])
+    redirect_to account_path(@account, q: without_cleared_filter(activity_search_params.to_h), tab: "activity", page: params[:page], per_page: params[:per_page],
+                                       start_date: params[:start_date], end_date: params[:end_date],
+                                       chart_view: params[:chart_view])
   end
 
   def sparkline
@@ -601,7 +605,7 @@ class AccountsController < ApplicationController
       return unless statement_tab_active?
 
       @statement_coverage = AccountStatement::Coverage.for_year(@account, params[:statement_year])
-      @account_statements = @account.account_statements.with_attached_original_file.ordered.to_a
+      @account_statements = @account.account_statements.with_attached_original_file.by_period.to_a
       @statement_reconciliation_statuses = AccountStatement.reconciliation_statuses_for(@account_statements, account: @account)
       permission = @account.permission_for(Current.user)
       @can_manage_statements = AccountStatement.statement_manager?(Current.user) &&

@@ -1,0 +1,158 @@
+---
+id:
+  providers:
+    sharesight:
+      name: Sharesight
+      connection_description: Hubungkan portofolio Sharesight Anda melalui API Sharesight
+      institution_name: Sharesight
+  sharesight_accounts:
+    settings_fields:
+      title: Kas dan dividen Sharesight
+      description: Pilih di mana kas dan dividen portofolio ini berada, agar Sure tidak menghitungnya dua kali.
+      cash_mode: Kas
+      cash_modes:
+        broker: Disimpan oleh pialang
+        settlement: Diselesaikan melalui rekening lain
+        untracked: Tidak dilacak (hanya saham)
+      cash_mode_help: >-
+        Dengan rekening lain atau tanpa pelacakan kas, rekening ini hanya menampilkan saham. Kas setiap perdagangan
+        diimbangi dengan transfer, yang ditautkan ke rekening tempat penyelesaiannya.
+      settlement_account: Rekening penyelesaian
+      settlement_starts_on: Diselesaikan di sana mulai
+      settlement_window_days: Hari yang dibutuhkan bank untuk menampilkannya
+      settlement_help: >-
+        Setiap pembelian dan penjualan, serta setiap dividen yang dibayarkan di sana, dicocokkan berdasarkan jumlah
+        dengan transaksi di rekening tersebut dan ditautkan sebagai transfer. Rekening manual akan mendapatkan
+        transaksi yang dicatat untuknya. Sebelum tanggal mulai, pialang yang menyimpan kasnya.
+      choose_account: Pilih rekening
+      no_account: Tidak ada
+      funding_account: Rekening pendanaan
+      funding_match_terms: Teks transaksi pendanaan
+      funding_match_terms_placeholder: CMC Share Transfer, CMC Markets
+      funding_help: >-
+        Setoran dan penarikan di rekening pendanaan yang nama atau catatannya mengandung salah satu istilah ini
+        (dipisahkan koma) akan dicerminkan di sini dan ditautkan sebagai transfer.
+      cash_anchor_amount: Kas di pialang
+      cash_anchor_on: "Pada"
+      cash_anchor_help: >-
+        Untuk kas yang tidak dapat dilihat Sharesight: saldo pada tanggal tersebut, diteruskan melalui semua yang
+        dicatat di sini sejak saat itu. Perbarui setiap kali Anda memeriksa pialang.
+      dividend_mode: Dividen dan distribusi
+      dividend_modes:
+        with_cash: Di mana pun kas berada
+        other_account: Dibayarkan ke rekening lain
+        skip: Jangan impor (koneksi lain menampilkannya)
+      dividend_mode_help: >-
+        Yang dibayarkan tetap dihitung sebagai pendapatan di sini, lalu ditautkan ke setoran di rekening tempat
+        pembayarannya.
+      dividend_account: Dibayarkan ke
+      sync_start_date: Impor aktivitas mulai dari
+      sync_start_date_help: Perdagangan dan dividen yang lebih lama tidak disertakan, dan yang sudah diimpor akan dihapus.
+    errors:
+      settlement_account_missing: Pilih rekening tempat penyelesaian portofolio.
+      dividend_account_missing: Pilih rekening tujuan pembayaran dividen.
+      cash_anchor_incomplete: Berikan jumlah kas di pialang dan tanggal saat Anda melihatnya.
+      invalid_date:
+        settlement_starts_on: Tanggal mulai penyelesaian di sana bukan tanggal yang valid.
+        cash_anchor_on: Tanggal saat Anda melihat kas di pialang bukan tanggal yang valid.
+        sync_start_date: Tanggal mulai impor aktivitas bukan tanggal yang valid.
+      account_not_in_family: "%{name} bukan salah satu rekening Anda."
+      account_is_portfolio: "%{name} adalah rekening milik portofolio ini sendiri."
+    notices:
+      unsettled_debit: "Belum ada debit %{amount} di %{account} untuk %{description} pada %{date}."
+      unsettled_credit: "Belum ada kredit %{amount} di %{account} untuk %{description} pada %{date}."
+      units_drift: "%{account}: Sharesight mencatat %{held} %{ticker}, tetapi total perdagangan berjumlah %{traded}."
+  sharesight_items:
+    defaults:
+      name: Sharesight
+      portfolio_name: Portofolio Sharesight %{id}
+    sharesight_item:
+      deletion_in_progress: Penghapusan sedang berlangsung
+      syncing: Menyinkronkan
+      requires_update: Klien API perlu perhatian
+      error: Kesalahan
+      synced: Disinkronkan %{time} lalu. %{summary}.
+      never_synced: Belum pernah disinkronkan.
+      setup_accounts: Atur portofolio
+      delete: Hapus
+      accounts_need_setup: Portofolio perlu pengaturan
+      accounts_need_setup_description: Portofolio Sharesight Anda perlu ditautkan ke rekening Sure.
+      no_accounts_discovered: Belum ada portofolio Sharesight yang ditemukan.
+      no_accounts_discovered_description: Jalankan sinkronisasi setelah menyimpan klien API Anda untuk menemukan portofolio Anda.
+    setup_accounts:
+      page_title: Atur Portofolio Sharesight
+      dialog_title: Atur Portofolio Sharesight Anda
+      subtitle: Tautkan portofolio Sharesight Anda ke rekening investasi.
+      info_box:
+        title: Impor API Sharesight
+        items:
+          item_1: Kepemilikan saat ini beserta harga dan jumlah, serta nilai portofolio
+          item_2: Pembelian, penjualan, saldo awal, pengembalian modal, dan dividen, termasuk yang diinvestasikan kembali
+          item_3: Setoran, penarikan, bunga, dan biaya dari rekening kas Sharesight mana pun
+      status:
+        fetching_accounts: Mengambil portofolio dari Sharesight...
+        no_accounts_found_title: Tidak ada portofolio ditemukan.
+        no_accounts_found_description: Sure tidak dapat menemukan portofolio Sharesight mana pun. Periksa apakah klien API Anda valid.
+      available_accounts:
+        title: Portofolio tersedia
+        account_type_investment: Investasi
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "ID Portofolio: %{account_id}"
+      link_existing:
+        description: Atau tautkan portofolio yang ditemukan ke rekening investasi manual yang sudah ada.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Pilih rekening...
+      linked_accounts:
+        title: Sudah tertaut
+        linked_to_html: "Tertaut ke: %{account}"
+      buttons:
+        refresh: Muat Ulang
+        cancel: Batal
+        back_to_settings: Kembali ke Pengaturan
+        create_selected_accounts: Buat rekening yang dipilih
+        link: Tautkan
+        done: Selesai
+    sync:
+      status:
+        checking_credentials: Memeriksa kredensial Sharesight...
+        importing_portfolios: Mengimpor portofolio Sharesight...
+        checking_configuration: Memeriksa konfigurasi portofolio...
+        accounts_need_setup:
+          one: 1 portofolio Sharesight perlu pengaturan...
+          other: "%{count} portofolio Sharesight perlu pengaturan..."
+        processing_activity: Memproses kepemilikan dan aktivitas...
+        calculating_balances: Menghitung saldo...
+    sync_status:
+      no_accounts: Belum ada portofolio Sharesight yang ditemukan
+      all_linked:
+        one: 1 portofolio tertaut
+        other: "%{count} portofolio tertaut"
+      partial: "%{linked} tertaut, %{unlinked} perlu pengaturan"
+    select_existing_account:
+      title: Tautkan portofolio Sharesight
+      no_accounts_available: Belum ada portofolio Sharesight yang belum tertaut tersedia.
+      run_sync_hint: "Jalankan sinkronisasi dari Pengaturan > Penyedia setelah menyimpan klien API Anda."
+      wait_for_sync: Tunggu hingga sinkronisasi penemuan portofolio selesai.
+      balance: Saldo
+      link: Tautkan
+      cancel: Batal
+    create:
+      success: Sharesight berhasil dikonfigurasi.
+    update:
+      success: Konfigurasi Sharesight berhasil diperbarui.
+    destroy:
+      success: Koneksi Sharesight dijadwalkan untuk dihapus.
+    select_accounts:
+      not_configured: Sharesight belum dikonfigurasi.
+    link_existing_account:
+      not_found: Rekening atau portofolio Sharesight tidak ditemukan.
+      only_manual_investment: Hanya rekening investasi manual yang dapat ditautkan ke Sharesight.
+      already_linked: Portofolio Sharesight ini sudah tertaut.
+      success: Berhasil ditautkan ke portofolio Sharesight.
+      failed: Gagal menautkan ke portofolio Sharesight.
+    complete_account_setup:
+      success:
+        one: Berhasil membuat %{count} rekening Sharesight.
+        other: Berhasil membuat %{count} rekening Sharesight.
+      none_selected: Tidak ada portofolio yang dipilih.
+      none_created: Tidak ada rekening yang dibuat.

@@ -72,36 +72,23 @@ class ChartSidebarResizeTest < ApplicationSystemTestCase
   test "the chart's dates keep their shape and their place at the edges while a sidebar animates" do
     assert_selector "#{NET_WORTH} svg .tick text", count: 2
     page.execute_script(<<~JS)
-      window.__labels = []; window.__sampling = true;
-      // Measured after each frame is painted (resize observers run before the
-      // paint, after requestAnimationFrame callbacks), so it sees what was shown.
-      const afterPaint = (fn) => requestAnimationFrame(() => setTimeout(fn, 0));
-      const sample = () => {
+      window.__labels = [];
+      window.__sample = () => {
         const element = document.querySelector("#{NET_WORTH}");
         const container = element.getBoundingClientRect();
         const svg = element.querySelector("svg");
         const [first, last] = Array.from(element.querySelectorAll("svg .tick text")).map((t) => t.getBoundingClientRect());
-        // On a slow machine this can run after the next animation step has
-        // begun, measuring a layout the chart has not followed yet and that was
-        // never painted: only count frames where the drawing fills its container.
+        // Only frames where the drawing fills its container.
         const painted = svg && Math.round(Number(svg.getAttribute("width"))) === Math.round(container.width);
         if (first && last && painted) window.__labels.push([Math.round(container.width), first.left - container.left, container.right - last.right, first.width, last.width]);
-        if (window.__sampling) afterPaint(sample);
       };
-      // The settled baseline, before the toggle; then after each paint.
-      sample();
+      // The settled baseline, before the toggle.
+      window.__sample();
     JS
     before = net_worth_width
-    toggle_left_sidebar
+    step_left_sidebar
     wait_until_settled(changed_from: before)
-    # The chart can settle between two samples: stop only once one at the
-    # final width is in.
-    final = net_worth_width
-    page.document.synchronize(10) do
-      last = page.evaluate_script("window.__labels.at(-1)?.[0]")
-      raise Capybara::ExpectationNotMet, "no sample at the final width yet (last: #{last.inspect})" unless last == final
-    end
-    page.execute_script("window.__sampling = false")
+    page.execute_script("window.__sample()")
 
     samples = page.evaluate_script("window.__labels")
     widths = samples.map(&:first)
@@ -435,25 +422,21 @@ class ChartSidebarResizeTest < ApplicationSystemTestCase
     wait_until_settled
 
     page.execute_script(<<~JS)
-      window.__frames = []; window.__sampling = true;
-      const afterPaint = (fn) => requestAnimationFrame(() => setTimeout(fn, 0));
+      window.__frames = [];
       const chart = document.querySelector("#{sankey} [data-sankey-chart-target='chart']") || document.querySelector("#{sankey}");
-      const sample = () => {
+      window.__sample = () => {
         const svg = chart.querySelector("svg");
         const width = chart.clientWidth;
         const painted = svg && Math.round(Number(svg.getAttribute("width"))) === Math.round(width);
         // By datum: the subcategory's bar, whether or not its label fits.
         const sub = !!svg && Array.from(svg.querySelectorAll("g > path:not(.sankey-link)")).some((bar) => bar.__data__?.name === "Sankey Groceries");
         if (painted) window.__frames.push([width, sub]);
-        if (window.__sampling) afterPaint(sample);
       };
-      sample();
     JS
     before = net_worth_width
-    toggle_left_sidebar
+    step_left_sidebar
     wait_until_settled(changed_from: before)
-    sleep 0.3
-    page.execute_script("window.__sampling = false")
+    page.execute_script("window.__sample()")
 
     frames = page.evaluate_script("window.__frames")
     widths = frames.map(&:first)
@@ -557,6 +540,38 @@ class ChartSidebarResizeTest < ApplicationSystemTestCase
       # The toggle saves the preference first; the test layout has no csrf meta tag.
       page.execute_script(%(if (!document.querySelector("[name='csrf-token']")) { const m = document.createElement("meta"); m.name = "csrf-token"; m.content = "test"; document.head.append(m) }))
       find("[data-action='app-layout#toggleLeftSidebar']").click
+    end
+
+    # Toggles the left sidebar and moves its width transition through its
+    # duration in `steps`, calling window.__sample() after each step is
+    # painted. Left to run on the clock, the 300ms transition could paint only
+    # its first and last frames on a slow machine. The transition is paused as
+    # it starts and finished after the last step, so the charts see its end.
+    def step_left_sidebar(steps: 20)
+      page.execute_script(<<~JS)
+        window.__transition = null;
+        document.addEventListener("transitionrun", function pause(event) {
+          if (event.propertyName !== "width" || event.target.dataset.appLayoutTarget !== "leftSidebar") return;
+          document.removeEventListener("transitionrun", pause);
+          window.__transition = event.target.getAnimations().find((animation) => animation.transitionProperty === "width");
+          window.__transition.pause();
+        });
+      JS
+      toggle_left_sidebar
+      page.evaluate_async_script(<<~JS, steps)
+        const [steps, done] = arguments;
+        // Resize observers run after requestAnimationFrame callbacks and before
+        // the paint, so a task queued from one sees what the frame showed.
+        const afterPaint = (fn) => requestAnimationFrame(() => setTimeout(fn, 0));
+        const step = (i) => {
+          const transition = window.__transition;
+          if (i > steps) { transition.finish(); done(); return; }
+          transition.currentTime = transition.effect.getComputedTiming().duration * i / steps;
+          afterPaint(() => { window.__sample(); step(i + 1); });
+        };
+        const started = () => window.__transition ? step(0) : requestAnimationFrame(started);
+        started();
+      JS
     end
 
     def net_worth_width

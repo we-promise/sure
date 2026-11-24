@@ -15,6 +15,11 @@ class Property < ApplicationRecord
   }.freeze
 
   has_one :address, as: :addressable, dependent: :destroy
+  # Transactions with this tag count as the property's purchase costs. The
+  # tag must be one of the family's own. A property not yet attached to a
+  # saved account cannot reach the family, so Account checks it on create.
+  belongs_to :cost_tag, class_name: "Tag", optional: true
+  validate :cost_tag_in_family, if: -> { cost_tag_id.present? && will_save_change_to_cost_tag_id? }
 
   accepts_nested_attributes_for :address
 
@@ -62,6 +67,12 @@ class Property < ApplicationRecord
     Trend.new(current: account.balance_money, previous: first_valuation_amount)
   end
 
+  # Whether the given family owns this property's cost tag. An id that
+  # matches no tag (deleted meanwhile, or made up) is not the family's.
+  def cost_tag_in?(family)
+    cost_tag_id.nil? || family.tags.exists?(id: cost_tag_id)
+  end
+
   # Whether the overview should also show the trend in the family currency:
   # the property is valued in another currency and has a purchase value.
   def family_currency_trend_applicable?
@@ -89,7 +100,70 @@ class Property < ApplicationRecord
 
   def reload(*)
     remove_instance_variable(:@first_valuation_entry) if defined?(@first_valuation_entry)
+    @purchase_costs = nil
+    @stored_rates = nil
     super
+  end
+
+  # The transactions carrying the cost tag, in any of the family's accounts
+  # that +user+ can see, closed ones included (the costs stay part of the
+  # purchase). Excluded, pending, scheduled (future-dated) and split-parent
+  # entries and transfers (Transaction::TRANSFER_KINDS, loan payments among
+  # them) are left out, as in spending totals.
+  def cost_entries_for(user)
+    return Entry.none if cost_tag_id.nil?
+
+    tagged = Tagging.where(tag_id: cost_tag_id, taggable_type: "Transaction").select(:taggable_id)
+
+    account.family.entries
+           .where(account_id: user.accessible_accounts.historical.select(:id))
+           .where(entryable_type: "Transaction", entryable_id: Transaction.where(id: tagged).where.not(kind: Transaction::TRANSFER_KINDS).select(:id))
+           .where(excluded: false)
+           .excluding_pending
+           .excluding_scheduled
+           .excluding_split_parents
+  end
+
+  # The sum of the linked costs in the family currency: outflows add and
+  # refunds subtract. Each transaction is converted into the family currency
+  # at the stored rate on its own date (ExchangeRate.rate_sql), the pair
+  # account syncs import for every currency in use. Nil when a cost's
+  # currency has no stored rate at all. One query, run once per viewer,
+  # currency and cost tag, as the overview reads it for several figures.
+  def purchase_costs_for(user)
+    currency = account.family.currency
+    @purchase_costs ||= {}
+    key = [ user.id, currency, cost_tag_id ]
+    return @purchase_costs[key] if @purchase_costs.key?(key)
+
+    rate = ExchangeRate.rate_sql(from: "entries.currency", to: ":currency", on: "entries.date")
+    totals = Entry.sanitize_sql_array([
+      "COALESCE(SUM(entries.amount * #{rate}), 0), COUNT(*) FILTER (WHERE (#{rate}) IS NULL)",
+      { currency: currency }
+    ])
+    total, unconverted = cost_entries_for(user).pick(Arel.sql(totals)) || [ 0, 0 ]
+
+    @purchase_costs[key] = unconverted.zero? ? Money.new(total, currency) : nil
+  end
+
+  # The purchase price, converted at the rate on its own date, plus the
+  # linked costs, in the family currency; nil when a rate is missing.
+  def cost_basis_for(user)
+    currency = account.family.currency
+    purchase = first_valuation_entry
+    purchase_value = convert_with_stored_rate(first_valuation_amount, currency, purchase&.date || Date.current)
+    costs = purchase_costs_for(user)
+    return nil if purchase_value.nil? || costs.nil?
+
+    purchase_value + costs
+  end
+
+  # The current value, at today's rate, against the cost basis, in the
+  # family currency; nil when a rate is missing.
+  def cost_adjusted_trend_for(user)
+    basis = cost_basis_for(user)
+    current = convert_with_stored_rate(account.balance_money, account.family.currency, Date.current)
+    Trend.new(current: current, previous: basis) if basis && current
   end
 
   def balance_display_name
@@ -168,6 +242,13 @@ class Property < ApplicationRecord
   end
 
   private
+    def cost_tag_in_family
+      family = account&.family
+      return if family.nil? || cost_tag_in?(family)
+
+      errors.add(:cost_tag, :other_family)
+    end
+
     # Read up to three times per overview render (the card check, the trend
     # and its purchase value), so it is looked up once.
     def first_valuation_entry
@@ -183,9 +264,17 @@ class Property < ApplicationRecord
     def convert_with_stored_rate(money, to_currency, date)
       return money if money.currency.iso_code == to_currency
 
-      rate = ExchangeRate.find_stored_rate(from: money.currency.iso_code, to: to_currency, date: date)
+      rate = stored_rate(money.currency.iso_code, to_currency, date)
       return nil unless rate
 
       money.exchange_to(to_currency, custom_rate: rate.rate)
+    end
+
+    def stored_rate(from, to, date)
+      @stored_rates ||= {}
+      key = [ from, to, date ]
+      return @stored_rates[key] if @stored_rates.key?(key)
+
+      @stored_rates[key] = ExchangeRate.find_stored_rate(from: from, to: to, date: date)
     end
 end

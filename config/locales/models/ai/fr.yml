@@ -1,0 +1,33 @@
+---
+fr:
+  ai:
+    availability:
+      capability_missing:
+        admin: "%{feature} est indisponible : aucun des modèles d'IA configurés n'en est capable. Vérifiez les modèles dans Paramètres → Auto-hébergement."
+        member: "%{feature} est indisponible : aucun des modèles d'IA configurés n'en est capable."
+      not_configured:
+        admin: "%{feature} est indisponible : aucun modèle d'IA n'est configuré pour cette fonction. Ajoutez-en un dans Paramètres → Auto-hébergement."
+        member: "%{feature} est indisponible : l'IA n'est pas configurée pour cette fonction sur cette instance."
+      user_disabled:
+        member: "%{feature} nécessite que l'IA soit activée. Vous pouvez l'activer depuis l'assistant IA."
+    consent_rows:
+      bill_setup: Factures
+      categorize: Catégories
+      chat: Discussion
+      detect_merchants: Marchands
+      embed: Documents
+      extract_pdf: Import PDF
+    sends:
+      bill_configuration: Les paramètres actuels de la facture
+      category_names: Les noms de vos catégories
+      chat_messages: Vos messages de discussion
+      depends_on_vector_store: Vos documents téléversés, sous forme de fichiers complets vers un magasin vectoriel ou de fragments de texte vers un modèle d'embedding
+      looked_up_financial_data: Les données financières que l'assistant consulte pour répondre
+      merchant_names: Noms des marchands
+      provider_category_hints: Les catégories suggérées par votre banque
+      search_query: Votre texte de recherche
+      stored_document_text: Le texte des relevés stockés dans votre coffre-fort
+      transaction_amounts: Montants des transactions
+      transaction_dates: Dates des transactions
+      transaction_names: Noms des transactions
+      uploaded_document: Le document que vous téléversez

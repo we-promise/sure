@@ -20,11 +20,12 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
   TODAY = Date.new(2027, 1, 15)
   SERIES = %w[actual scheduled projected].freeze
 
-  # Sign in on the pinned date: a session signed in at the real clock would
-  # count as idle beyond Session::INACTIVITY_TIMEOUT once the tests travel to
-  # TODAY, and every visit would land on the login page.
+  # Sign in at the later of TODAY and the real clock. The session must not
+  # count as idle beyond Session::INACTIVITY_TIMEOUT inside travel_to(TODAY),
+  # nor on the real clock, which serves any request the browser makes between
+  # travel_to blocks. Either way an idle session lands on the login page.
   setup do
-    travel_to(TODAY) { sign_in @user = users(:family_admin) }
+    travel_to([ Date.current, TODAY ].max) { sign_in @user = users(:family_admin) }
   end
 
   test "the chart paints all three lines, in the light theme and the dark" do
