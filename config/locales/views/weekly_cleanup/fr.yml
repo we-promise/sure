@@ -1,0 +1,22 @@
+---
+fr:
+  weekly_cleanup:
+    chat_title: 'Nettoyage hebdomadaire : semaine du %{date}'
+    intro: 'Voici votre rapport de nettoyage hebdomadaire. J''ai trouvé %{count} point(s) qui méritent votre attention. Tout ce qui suit est en lecture seule : rien n''a été modifié.'
+    clean: 'Rien à nettoyer cette semaine : vos comptes sont en ordre.'
+    outro: Répondez ici si vous souhaitez approfondir l'un de ces points. Je peux vous aider à catégoriser, à fusionner des marchands ou à examiner les doublons.
+    detectors:
+      uncategorized_transactions:
+        heading: Transactions non catégorisées (7 derniers jours)
+      stale_imports:
+        heading: Imports bloqués ou en échec
+      provider_data_gaps:
+        heading: Problèmes de synchronisation des fournisseurs (7 derniers jours)
+      missing_merchant_info:
+        heading: Transactions sans informations sur le marchand (7 derniers jours)
+      duplicate_imported_entries:
+        heading: Écritures importées potentiellement en double (30 derniers jours)
+      missing_context:
+        heading: Dépenses importantes sans note ni justificatif (7 derniers jours)
+      merchant_duplicates:
+        heading: 'Dédoublonnage des marchands : %{total} marchands, %{clusters} groupes de doublons (%{coverage}% regroupés)'
