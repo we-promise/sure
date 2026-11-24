@@ -58,6 +58,58 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_source_mapping session, "Transaction", "txn-1", transaction
   end
 
+  test "links a property to its cost tag when the tag arrives in a later chunk" do
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    session.attach_chunk!(
+      sequence: 1,
+      client_chunk_id: "property",
+      content: build_ndjson([
+        { type: "Account", data: { id: "home-1", name: "Session Home", balance: "300000", currency: "USD",
+                                   accountable_type: "Property", accountable: { cost_tag_id: "tag-costs" } } }
+      ]),
+      filename: "property.ndjson",
+      content_type: "application/x-ndjson"
+    )
+    session.attach_chunk!(
+      sequence: 2,
+      client_chunk_id: "tags",
+      content: build_ndjson([ { type: "Tag", data: { id: "tag-costs", name: "Home costs", color: "#407706" } } ]),
+      filename: "tags.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    session.publish
+
+    assert session.reload.complete?
+    tag = @family.tags.find_by!(name: "Home costs")
+    assert_equal tag.id, @family.accounts.find_by!(name: "Session Home").property.cost_tag_id
+  end
+
+  test "links a cost tag whose key the property chunk spells with a JSON escape" do
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    property = { type: "Account", data: { id: "home-1", name: "Escaped Home", balance: "300000", currency: "USD",
+                                          accountable_type: "Property", accountable: { cost_tag_id: "tag-costs" } } }
+    content = build_ndjson([ property ]).sub('"cost_tag_id"', '"cost\\u005ftag_id"')
+    assert_includes content, "cost\\u005ftag_id"
+    assert_equal "tag-costs", JSON.parse(content).dig("data", "accountable", "cost_tag_id")
+
+    session.attach_chunk!(sequence: 1, client_chunk_id: "property", content: content,
+                          filename: "property.ndjson", content_type: "application/x-ndjson")
+    session.attach_chunk!(
+      sequence: 2,
+      client_chunk_id: "tags",
+      content: build_ndjson([ { type: "Tag", data: { id: "tag-costs", name: "Home costs", color: "#407706" } } ]),
+      filename: "tags.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    session.publish
+
+    assert session.reload.complete?
+    tag = @family.tags.find_by!(name: "Home costs")
+    assert_equal tag.id, @family.accounts.find_by!(name: "Escaped Home").property.cost_tag_id
+  end
+
   test "publishing session chunks records readback verification for each chunk" do
     session = @family.import_sessions.create!(expected_chunks: 2)
     session.attach_chunk!(
@@ -139,8 +191,8 @@ class ImportSessionTest < ActiveSupport::TestCase
       Object.new.tap do |importer|
         importer.define_singleton_method(:import!) do
           {
-            accounts: [],
-            entries: [],
+            account_ids: [],
+            entry_ids: [],
             summary: { "transactions" => { "created" => 1 } }
           }
         end

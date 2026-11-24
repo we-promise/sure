@@ -1,159 +1,177 @@
 # Encryption key rotation (self-hosted)
 
-If your `SECRET_KEY_BASE` was ever shipped as a default in this project's
-example Compose files (the boot log warns about this explicitly), or your
-Active Record Encryption keys leaked for any other reason, the keys must be
-rotated. Rotation is **not** just "set new keys and run the backfill": data
-already encrypted under the old key must stay readable while it migrates,
-and one class of columns — the deterministic ones — needs an explicit extra
-step. This page is the full procedure the boot warning summarizes.
+If your `SECRET_KEY_BASE` is a publicly known value (a default or
+placeholder from this project's example files or hosting guides; the boot
+log warns about this explicitly), or your Active Record Encryption keys
+leaked for any other reason, the keys must be rotated. Data already encrypted under the old keys has to stay readable
+while it moves to the new ones, so the old keys are given to the backfill
+task as a `previous` scheme
+([Rails key rotation](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation))
+for that one command only.
 
-> Automated rotation tooling (one task covering everything below) is tracked
-> in [we-promise/sure#3233](https://github.com/we-promise/sure/issues/3233).
-> Until it lands, follow the manual steps.
+Take a database backup before starting and stop the app (web and worker)
+for the duration. Docker users: the same steps with `docker compose`
+commands are in the [Docker guide](docker.md#upgrading-an-install-that-is-already-running-keep-your-secret_key_base).
 
-Take a database backup before starting, and expect a short maintenance
-window for step 3–4.
+## Before you start: find the values in use
 
-## 1. Configure the new keys alongside the compromised ones
+You need the `SECRET_KEY_BASE` your data was encrypted with, and the three
+Active Record encryption keys if you set them. They are in your `.env`
+(`SECRET_KEY_BASE`, `ACTIVE_RECORD_ENCRYPTION_*`), in your Rails
+credentials if you configured them there (Rails uses the top-level
+`secret_key_base` when the environment variable is not set, and the keys
+in the `active_record_encryption` block), or, for an install that never
+set `SECRET_KEY_BASE`, in the default of the `compose.yml` it was started
+with. If that file was already
+replaced, read the value from the old container instead. This works without
+a Compose file and also while the container is stopped:
 
-Generate a fresh key set:
+```sh
+docker ps -a --filter "name=web" --format "{{.Names}}"   # find the web container
+read -r WEB_CONTAINER   # paste its name
+docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$WEB_CONTAINER" | grep '^SECRET_KEY_BASE='
+```
+
+`docker compose exec web printenv SECRET_KEY_BASE` does not help here: it
+reads the new `compose.yml` first and stops with the same "Set
+SECRET_KEY_BASE" error.
+
+## 1. Set new keys
+
+Generate a fresh key set and configure it as the current keys via
+`ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`,
+`ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` and
+`ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`:
 
 ```sh
 bin/rails db:encryption:init
 ```
 
-Set the new values as the current keys (via
-`ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`,
-`ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` and
-`ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`), and keep the compromised
-set decryptable as a `previous` scheme — see the
-[Rails key-rotation guide](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation).
-For example, in a temporary initializer that runs after the app's own
-encryption initializer:
+Keep `SECRET_KEY_BASE` unchanged for now.
 
-```ruby
-# config/initializers/zz_encryption_rotation.rb  (TEMPORARY - deleted in step 4)
-Rails.application.config.active_record.encryption.previous_schemes <<
-  ActiveRecord::Encryption::Scheme.new(
-    primary_key: ENV.fetch("OLD_ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"),
-    deterministic_key: ENV.fetch("OLD_ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"),
-    key_derivation_salt: ENV.fetch("OLD_ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT")
-  )
-```
+## 2. Re-encrypt under the new keys
 
-Restart the app. Reads of old ciphertext keep working (Rails tries previous
-schemes when decrypting), and new writes of ordinary encrypted attributes
-use the new key.
+Pass the old keys in the environment of the backfill command only:
 
-## 2. Backfill — plaintext and ordinary encrypted columns
+- Keys auto-derived from `SECRET_KEY_BASE` (no explicit keys were set):
+  put that `SECRET_KEY_BASE` value in
+  `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE`.
+- Explicitly set keys: put the old values in
+  `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_PRIMARY_KEY`,
+  `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_DETERMINISTIC_KEY` and
+  `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_KEY_DERIVATION_SALT`.
 
 ```sh
-bin/rails security:backfill_encryption                    # dry run: reports what would change
-DRY_RUN=false bin/rails security:backfill_encryption      # actually re-encrypts
+read -rs ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE && export ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE   # keeps it out of your shell history
+bin/rails "security:backfill_encryption[100,1]"      # dry run: reports what would change
+bin/rails "security:backfill_encryption[100,0]"      # writes
+unset ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE
 ```
 
-The task defaults to a dry run that changes nothing, so the plain command is
-a safe preview. The write pass migrates never-encrypted legacy rows and
-re-encrypts non-deterministic columns (e.g. `first_name`, `last_name`,
-provider `raw_payload`s) under the new key.
+The write pass encrypts legacy plaintext rows and re-encrypts every
+encrypted column under the new keys, deterministic ones (emails,
+`otp_secret`, tokens) included. A value that neither the new nor the old
+keys decrypt is not touched and is reported under `failed_samples`. Check
+that the task ends with `"ok": true` and `failed_count: 0` for every model;
+it exits with status 1 otherwise.
 
-**It does not migrate deterministic columns** — see the next step.
+## 3. Start the app without the old keys
 
-## 3. Migrate the deterministic attributes explicitly
+Start the app with the `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_*` variables
+unset. While they are set, Rails writes deterministically encrypted values
+with the old key (it keeps equality lookups stable that way), and the app
+logs a warning at boot. Spot-check a login, a provider sync and an MFA
+flow.
 
-Rails treats deterministic attributes (`encrypts ..., deterministic: true`
-— user emails, `otp_secret`, invitation/invite tokens, provider tokens) as
-*fixed*: while any previous scheme is configured, it deliberately
-re-serializes them under the **oldest** scheme so that equality lookups
-produce stable ciphertext
-([`EncryptedAttributeType#serialize_with_oldest`](https://github.com/rails/rails/blob/main/activerecord/lib/active_record/encryption/encrypted_attribute_type.rb)).
-Consequence: the step-2 backfill rewrites those columns right back under
-the compromised key. They must be re-encrypted under the current key with
-an explicit pass **before** the compromised scheme is retired.
+## 4. Settings and `SECRET_KEY_BASE`
 
-List every affected attribute:
+`SECRET_KEY_BASE` itself also signs session cookies and is the key source
+for values saved on the self-hosting settings page (AI and market-data
+provider keys). Once the steps above are done, it is safe to change it.
+Stop the app again and take a fresh database backup first: the app has
+been running since step 3, and a later rollback to the first backup would
+lose what was written in between.
+Existing sessions are signed out. Re-encrypt the settings once, with the
+old value in `OLD_SECRET_KEY_BASE`:
 
 ```sh
-grep -rn "deterministic: true" app/models
+read -rs OLD_SECRET_KEY_BASE && export OLD_SECRET_KEY_BASE
+bin/rails "security:rotate_setting_secrets[1]"     # dry run, check "dry_run":true
+bin/rails "security:rotate_setting_secrets[0]"     # writes
+unset OLD_SECRET_KEY_BASE
 ```
 
-Then, for each model/attribute, decrypt-and-rewrite through a type that
-knows only the current scheme. Example for `User#email` (mirror each
-attribute's own declaration options — here `downcase: true`):
+Re-enter any key the task lists under `not_decryptable`.
 
-```ruby
-# bin/rails runner rotate_deterministic.rb
-new_key_type = ActiveRecord::Encryption::EncryptedAttributeType.new(
-  scheme: ActiveRecord::Encryption::Scheme.new(deterministic: true, downcase: true),
-  cast_type: ActiveRecord::Type::Text.new
-)
+## Upgrading Plaid instance credentials
 
-User.find_each do |user|
-  plain = user.email                    # decrypts under whichever scheme can read it
-  next if plain.blank?
-  user.update_columns(email: new_key_type.serialize(plain))
-end
-```
+Plaid and Plaid EU instance secrets now use the same declared encrypted settings
+as AI and market-data keys. Their provider forms and environment variables are
+unchanged. The required database migration moves existing `dynamic:plaid_secret`
+and `dynamic:plaid_eu_secret` rows to the declared setting names and encrypts their
+values with the existing settings key derived from `SECRET_KEY_BASE`.
 
-Notes:
+Stop old web and worker processes before upgrading, keep `SECRET_KEY_BASE`
+unchanged, and take a protected database backup. Run normal database migrations
+before starting the new web and worker processes. The default Docker web
+entrypoint runs `db:prepare`; custom deployments must include that step too.
+This conversion is mandatory, not an optional backfill task.
 
-- `update_columns` is intentional: it bypasses callbacks/validations and
-  writes the exact ciphertext produced above.
-- Run this while **both** schemes are still configured. Lookups keep
-  matching throughout: `extend_queries` (enabled by this app) extends
-  deterministic queries to every configured scheme, so rows on the old key
-  and rows on the new key are both found during the mixed window.
-- Repeat for every attribute from the grep, adjusting `deterministic:` /
-  `downcase:` / `ignore_case:` to match its `encrypts` declaration.
+A conflict between legacy and declared rows, an unexpected legacy format, or an
+encryption failure stops the migration and preserves the original rows. Resolve
+the reported issue before retrying; do not skip the migration. Missing/empty
+credentials remain empty and ENV-only credentials are not copied to the database.
+After conversion, the existing `security:rotate_setting_secrets` task covers both
+Plaid secrets. The migration is irreversible: it does not recreate plaintext
+credentials for a downgrade.
+Re-enter any key the task lists under `not_decryptable`. Then start the
+app (web and worker) and check a login and a provider sync.
 
-### Verify before retiring the old key
+Re-encrypting does not revoke anything. If the old key was publicly known
+or leaked in any other way, and someone else may have had a copy of the
+database or a backup, they can
+decrypt what was stored with it. In that case also issue new provider API
+keys and tokens at each provider (the keys on the self-hosting settings
+page and those of connected accounts), even if the tasks above decrypted
+them without errors, and revoke the old ones.
 
-A ciphertext that still needs the compromised key must not survive this
-step. Check every rewritten column decrypts under the **new scheme only**
-(`support_unencrypted_data: false` is what makes this check strict — the
-app's global setting would otherwise paper over failures by returning the
-raw ciphertext):
+## What a new `SECRET_KEY_BASE` invalidates
 
-```ruby
-strict_type = ActiveRecord::Encryption::EncryptedAttributeType.new(
-  scheme: ActiveRecord::Encryption::Scheme.new(
-    deterministic: true, downcase: true, support_unencrypted_data: false
-  ),
-  cast_type: ActiveRecord::Type::Text.new
-)
+Data in the database is covered by the steps above, including blocked SSO
+identities of removed users. One exception: blocks created while the
+install had no Active Record encryption keys at all are stored only as a
+digest keyed by `SECRET_KEY_BASE`, and they stop matching once it changes.
+Before changing it, note the entries under removed SSO identities on the
+instance users page; a removed user who signs in again via SSO afterwards
+has to be removed again.
 
-bad = 0
-User.find_each do |user|
-  raw = user.read_attribute_before_type_cast(:email)
-  next if raw.blank?
-  begin
-    strict_type.deserialize(raw)
-  rescue ActiveRecord::Encryption::Errors::Decryption
-    bad += 1
-  end
-end
-puts "rows not yet on the new key: #{bad}"
-```
+These signed values are not stored and simply stop working:
 
-`bad` must be 0 for every deterministic column before moving on. (Legacy
-rows that were never encrypted at all also fail this check — run the
-step-2 backfill first, or re-run step 3 for those rows.)
+- Every session: everyone has to sign in again.
+- Password reset and email confirmation links that were already sent.
+- Subscribed bill calendar links. Copy the link again from the bills
+  calendar page and update the subscription.
+- Connection flows that were in progress, such as a pending Wise login.
 
-## 4. Retire the compromised scheme
+## Rolling back
 
-Only after step 3's verification passes for every deterministic attribute:
-delete `config/initializers/zz_encryption_rotation.rb` (and the
-`OLD_ACTIVE_RECORD_ENCRYPTION_*` variables), restart, and spot-check a
-login, a deterministic lookup (`User.find_by(email:)`), a provider sync and
-an MFA flow.
+If a step fails and you cannot fix the listed rows, go back to the state
+before the rotation:
 
-## What this does not cover
+1. Stop the app (web and worker).
+2. Restore the latest backup taken before the failing step: the one from
+   before step 1, or the one from before step 4. Everything written after
+   that backup is lost, so roll back as early as possible.
+3. Put back the keys that match that backup, and unset every
+   `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_*` variable and `OLD_SECRET_KEY_BASE`:
+   - Backup from before step 1: the old `SECRET_KEY_BASE`, and the old
+     `ACTIVE_RECORD_ENCRYPTION_*` values if you had set any (remove the new
+     ones otherwise).
+   - Backup from before step 4: the old `SECRET_KEY_BASE` only. Keep the
+     new `ACTIVE_RECORD_ENCRYPTION_*` values: the data in this backup is
+     already encrypted with them.
+4. Start the app and check a login and a provider sync.
 
-- **`SECRET_KEY_BASE` itself** still signs session cookies and is the sole
-  key source for `Setting`-encrypted values (AI/market-data provider keys).
-  Rotating it invalidates existing sessions and Setting-stored values,
-  which must be re-entered — there is no automated migration for those two.
-- Rotating `SECRET_KEY_BASE` also changes the auto-derived AR encryption
-  keys on installs that never set them explicitly; that is exactly the
-  scenario this procedure exists for.
+Do not roll back by only putting the old keys back without the backup: rows
+the write pass already moved are encrypted with the new keys and would no
+longer decrypt.

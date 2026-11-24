@@ -206,6 +206,73 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       "the transaction matching the bill amount must survive the fifteen-row cut"
   end
 
+  test "the picker ranks a payment carrying the bill's reference whatever its name or date" do
+    series = @family.recurring_transactions.create!(
+      name: "Strom", account: accounts(:depository), amount: 80, currency: "USD", expected_day_of_month: Date.current.day,
+      anchor_date: Date.current, last_occurrence_date: Date.current, next_expected_date: Date.current, status: "active",
+      manual: true, dedup_scope: "ref-picker", matcher_hints: { "bank_reference" => "VN 4711" }
+    )
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    far = accounts(:depository).entries.create!(
+      date: Date.current - 70, amount: 131.4, currency: "USD", name: "Example Energy", notes: "VN 4711 Abschlag", entryable: Transaction.new
+    )
+
+    get recurring_occurrence_url(occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_includes @controller.view_assigns["ranked_candidates"].map { |entry, _| entry.id }, far.id
+  end
+
+  test "searching the fallback list finds a payment by its note" do
+    series = @family.recurring_transactions.create!(
+      name: "Strom", account: accounts(:depository), amount: 80, currency: "USD", expected_day_of_month: Date.current.day,
+      anchor_date: Date.current, last_occurrence_date: Date.current, next_expected_date: Date.current, status: "active",
+      manual: true, dedup_scope: "ref-search"
+    )
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 55, currency: "USD", name: "Example Energy", notes: "contract 998877", entryable: Transaction.new
+    )
+
+    get recurring_occurrence_url(occurrence, q: "998877"), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_includes @controller.view_assigns["other_entries"].map(&:id), entry.id
+  end
+
+  test "the picker's reference candidates are the ones nearest the occurrence when there are more than it scans" do
+    series = @family.recurring_transactions.create!(
+      name: "Strom", account: accounts(:depository), amount: 80, currency: "USD", expected_day_of_month: Date.current.day,
+      anchor_date: Date.current, last_occurrence_date: Date.current, next_expected_date: Date.current, status: "active",
+      manual: true, dedup_scope: "ref-limit", matcher_hints: { "bank_reference" => "VN 4711" }
+    )
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    with_scan_limit(2) do
+      accounts(:depository).entries.create!(date: occurrence.due_on - 300, amount: 80, currency: "USD", name: "old a", notes: "VN 4711", entryable: Transaction.new)
+      accounts(:depository).entries.create!(date: occurrence.due_on - 280, amount: 80, currency: "USD", name: "old b", notes: "VN 4711", entryable: Transaction.new)
+      near = accounts(:depository).entries.create!(date: [ occurrence.due_on, Date.current ].min, amount: 80, currency: "USD", name: "near", notes: "VN 4711", entryable: Transaction.new)
+
+      get recurring_occurrence_url(occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+      assert_includes @controller.view_assigns["ranked_candidates"].map { |entry, _| entry.id }, near.id
+    end
+  end
+
+  test "the ranked list shows a reference payment ahead of better-scoring ordinary matches" do
+    series = @family.recurring_transactions.create!(
+      name: "Strom", account: accounts(:depository), amount: 80, currency: "USD", expected_day_of_month: Date.current.day,
+      anchor_date: Date.current, last_occurrence_date: Date.current, next_expected_date: Date.current, status: "active",
+      manual: true, dedup_scope: "ref-rank", matcher_hints: { "bank_reference" => "VN 4711" }
+    )
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    8.times do
+      accounts(:depository).entries.create!(date: [ occurrence.due_on, Date.current ].min, amount: 80, currency: "USD", name: "Strom", entryable: Transaction.new)
+    end
+    ref = accounts(:depository).entries.create!(date: Date.current - 60, amount: 131.4, currency: "USD", name: "Example Energy", notes: "VN 4711", entryable: Transaction.new)
+
+    get recurring_occurrence_url(occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_equal ref.id, @controller.view_assigns["ranked_candidates"].first.first.id
+  end
+
   # The mission's own example. The picker ranked by amount distance and nothing
   # else, so a $6.44 Twitch charge scored exactly as well as the $6.44 7-Eleven
   # charge for a 7-Eleven bill. It now asks the matcher, whose identity filter
@@ -272,6 +339,30 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_empty @controller.view_assigns["ranked_candidates"]
   end
 
+  # The picker ranks with the matcher, so it must offer what the matcher would
+  # link: a split charge's parent is excluded by the split, not by the user.
+  test "a split charge is still offered, an excluded one is not" do
+    series = @family.recurring_transactions.create!(
+      name: "MORTGAGE", account: accounts(:depository), amount: 1000, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    split, excluded = 2.times.map do
+      accounts(:depository).entries.create!(
+        date: occurrence.due_on, amount: 1000, currency: "USD",
+        name: "MORTGAGE", entryable: Transaction.new
+      )
+    end
+    split.split!([ { name: "Interest", amount: 400 }, { name: "Principal", amount: 600 } ])
+    excluded.update!(excluded: true)
+
+    get recurring_occurrence_url(occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_equal [ split.id ], @controller.view_assigns["ranked_candidates"].map { |candidate, _| candidate.id }
+  end
+
   # One transaction can legitimately pay more than one bill, which is why the
   # Allocator guards capacity at write time rather than at read time. Excluding
   # every entry that already has a confirmed allocation would have quietly
@@ -296,6 +387,40 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
 
     assert_includes @controller.view_assigns["ranked_candidates"].map { |candidate, _| candidate.id }, entry.id,
       "the rest of that charge can still pay another bill; over-allocation is refused when it is written"
+  end
+
+  test "a transaction another bill partly uses shows what is left of it" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 25, currency: "USD", name: "Netflix charge",
+      entryable: Transaction.new(merchant: merchants(:netflix))
+    )
+    earlier = @series.recurring_occurrences.create!(
+      family: @family, original_due_on: Date.current - 25, due_on: Date.current - 25, currency: "USD"
+    )
+    RecurringTransaction::Allocator.new(earlier).allocate!(entry: entry, amount: 10)
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "span", text: I18n.t("recurring_occurrences.show.amount_left", amount: "$15.00")
+    assert_select "form[action=?] button:not([disabled])", recurring_occurrence_allocations_path(@occurrence, entry_id: entry.id)
+  end
+
+  test "a transaction other bills use in full is shown but cannot be linked" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 10, currency: "USD", name: "Netflix charge",
+      entryable: Transaction.new(merchant: merchants(:netflix))
+    )
+    earlier = @series.recurring_occurrences.create!(
+      family: @family, original_due_on: Date.current - 25, due_on: Date.current - 25, currency: "USD"
+    )
+    RecurringTransaction::Allocator.new(earlier).allocate!(entry: entry, amount: 10)
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "form[action=?] button[disabled]", recurring_occurrence_allocations_path(@occurrence, entry_id: entry.id)
+    assert_select "span", text: I18n.t("recurring_occurrences.show.used_up")
   end
 
   test "searching looks past the date window" do
@@ -534,6 +659,41 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       "positive control: the same-shaped entry on a shared account must render"
   end
 
+  # A transfer into investment is hidden from family_member, who sees only
+  # depository. What it took from a depository charge must not show through.
+  test "usage by a bill the viewer cannot see does not badge the transaction" do
+    visible = @family.recurring_transactions.create!(
+      name: "Gym", account: accounts(:depository), amount: 30, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true, dedup_scope: "visible"
+    ).recurring_occurrences.order(:due_on).first
+    hidden = @family.recurring_transactions.create!(
+      name: "To brokerage", account: accounts(:depository), destination_account: accounts(:investment),
+      amount: 20, currency: "USD", expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true, dedup_scope: "hidden"
+    ).recurring_occurrences.order(:due_on).first
+
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 50, currency: "USD", name: "Gym and brokerage", entryable: Transaction.new
+    )
+    RecurringTransaction::Allocator.new(hidden).allocate!(entry: entry, amount: 20)
+    left = I18n.t("recurring_occurrences.show.amount_left", amount: "$30.00")
+
+    get recurring_occurrence_url(visible, q: entry.name), headers: { "Turbo-Frame" => "drawer" }
+    assert_select "span", text: left
+
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
+    get recurring_occurrence_url(visible, q: entry.name), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_match entry.name, response.body
+    assert_select "span", text: left, count: 0
+  end
+
   # credit_card is shared read-only with family_member in the fixtures; a
   # read-only share can look at the bill but never move its payment state.
   test "a read-only account share cannot mutate an occurrence" do
@@ -575,5 +735,15 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
         next_expected_date: Date.current, status: "active", manual: true
       )
       series.recurring_occurrences.order(:due_on).first
+    end
+
+    def with_scan_limit(limit)
+      original = RecurringOccurrencesController::RANKED_SCAN_LIMIT
+      RecurringOccurrencesController.send(:remove_const, :RANKED_SCAN_LIMIT)
+      RecurringOccurrencesController.const_set(:RANKED_SCAN_LIMIT, limit)
+      yield
+    ensure
+      RecurringOccurrencesController.send(:remove_const, :RANKED_SCAN_LIMIT)
+      RecurringOccurrencesController.const_set(:RANKED_SCAN_LIMIT, original)
     end
 end

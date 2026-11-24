@@ -7,17 +7,61 @@ module ActiveRecordEncryptionConfig
     ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
   ].freeze
 
-  # SECRET_KEY_BASE values ever shipped as a working default in
-  # compose.example.yml / compose.example.ai.yml. Self-hosted installs that
-  # deployed from one of those files without overriding it are running with
-  # a publicly known secret. Since the auto-derived encryption keys
+  # Publicly known SECRET_KEY_BASE values: the working default once shipped in
+  # compose.example.yml / compose.example.ai.yml, the .env.example value, the
+  # placeholders in the Docker, PetHost and Helm guides, and the literal
+  # `$(openssl rand -hex 64)` the Hetzner guide has users write into .env
+  # (Compose does not run it). Installs that kept one of these are running
+  # with a secret anyone can look up. Since the auto-derived encryption keys
   # (config/initializers/active_record_encryption.rb) are a deterministic
   # function of SECRET_KEY_BASE, anyone with this value can compute the same
   # encryption keys, so `ready?` alone is not a meaningful signal of safety
   # for these installs even though it makes `runtime_configured?` true.
-  KNOWN_COMPROMISED_SECRET_KEY_BASES = %w[
-    a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13
+  KNOWN_COMPROMISED_SECRET_KEY_BASES = [
+    "a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13",
+    "secret-value",
+    "$(openssl rand -hex 64)",
+    "replacemewiththegeneratedstringfromthepriorstep",
+    "replacemewiththegeneratedstring",
+    "__SET_SECRET__"
   ].freeze
+
+  # Set only for the one-off commands of a key rotation (see the Docker
+  # hosting guide): the SECRET_KEY_BASE whose derived keys encrypted the
+  # existing data, so it still decrypts while the backfill moves it to the
+  # current keys.
+  PREVIOUS_SECRET_KEY_BASE_ENV = "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE"
+
+  # The same for old keys that were set explicitly rather than derived.
+  PREVIOUS_ENV_KEYS = {
+    primary_key: "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_PRIMARY_KEY",
+    deterministic_key: "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_DETERMINISTIC_KEY",
+    key_derivation_salt: "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_KEY_DERIVATION_SALT"
+  }.freeze
+
+  # Previous-scheme key provider for keys derived from an old
+  # SECRET_KEY_BASE. Rails derives every scheme's keys with the globally
+  # configured salt, so the old salt needs a provider of its own. Keys are
+  # derived on first use, once Rails has settled hash_digest_class.
+  class DerivedKeyProvider
+    def initialize(password, salt)
+      @password = password
+      @salt = salt
+    end
+
+    def encryption_key
+      @encryption_key ||= begin
+        config = ActiveRecord::Encryption.config
+        secret = ActiveSupport::KeyGenerator.new(@password, hash_digest_class: config.hash_digest_class)
+          .generate_key(@salt, ActiveRecord::Encryption.cipher.key_length)
+        ActiveRecord::Encryption::Key.new(secret)
+      end
+    end
+
+    def decryption_keys(_encrypted_message)
+      [ encryption_key ]
+    end
+  end
 
   CONFIG_KEYS = %i[
     primary_key
@@ -33,7 +77,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 10
+  CURRENT_BACKFILL_VERSION = 13
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -54,7 +98,9 @@ module ActiveRecordEncryptionConfig
   # whenever this changes. Session is deliberately excluded: its backfill
   # (lib/tasks/security_backfill.rake#backfill_sessions) also hashes
   # ip_address into ip_address_digest, which isn't a 1:1 encrypted copy of an
-  # existing field the way every entry below is.
+  # existing field the way every entry below is. otp_backup_codes is not
+  # listed: it is a PostgreSQL array column, which Active Record encryption
+  # does not support.
   BACKFILL_MANIFEST = {
     users: [ "User", %i[otp_secret email unconfirmed_email first_name last_name] ],
     invitations: [ "Invitation", %i[token email] ],
@@ -87,10 +133,11 @@ module ActiveRecordEncryptionConfig
     trading212_items: [ "Trading212Item", %i[api_key api_secret raw_instruments_payload] ],
     up_items: [ "UpItem", %i[access_token raw_payload raw_institution_payload] ],
     wise_items: [ "WiseItem", %i[token raw_payload sca_private_key] ],
+    web_push_subscriptions: [ "WebPushSubscription", %i[endpoint p256dh auth] ],
     plaid_accounts: [ "PlaidAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload] ],
     simplefin_accounts: [ "SimplefinAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload] ],
     lunchflow_accounts: [ "LunchflowAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload] ],
-    enable_banking_accounts: [ "EnableBankingAccount", %i[raw_payload raw_transactions_payload] ],
+    enable_banking_accounts: [ "EnableBankingAccount", %i[raw_payload raw_transactions_payload iban] ],
     truelayer_accounts: [ "TruelayerAccount", %i[raw_payload raw_transactions_payload] ],
     fio_accounts: [ "FioAccount", %i[raw_payload raw_transactions_payload iban] ],
     snaptrade_accounts: [ "SnaptradeAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload raw_balances_payload account_number] ],
@@ -116,7 +163,7 @@ module ActiveRecordEncryptionConfig
     wise_accounts: [ "WiseAccount", %i[raw_payload raw_transactions_payload] ],
     api_keys: [ "ApiKey", %i[display_key] ],
     sso_providers: [ "SsoProvider", %i[client_secret] ],
-    sso_identity_blocks: [ "SsoIdentityBlock", %i[identity_label] ],
+    sso_identity_blocks: [ "SsoIdentityBlock", %i[identity_label uid legacy_digest_key] ],
     security_audit_logs: [ "SecurityAuditLog", %i[user_email ip_address user_agent] ]
   }.freeze
 
@@ -256,6 +303,44 @@ module ActiveRecordEncryptionConfig
     KNOWN_COMPROMISED_SECRET_KEY_BASES.include?(secret_key_base)
   rescue NoMethodError
     false
+  end
+
+  # The keys config/initializers/active_record_encryption.rb derives from
+  # SECRET_KEY_BASE when no explicit keys are configured.
+  def derived_keys(secret_key_base)
+    CONFIG_KEYS.to_h do |key|
+      [ key, Digest::SHA256.hexdigest("#{secret_key_base}:#{key}")[0..63] ]
+    end
+  end
+
+  # Previous schemes for `config.active_record.encryption.previous`, built
+  # from the keys derived from PREVIOUS_SECRET_KEY_BASE_ENV or from the
+  # PREVIOUS_ENV_KEYS. Rails applies a global previous scheme only to
+  # attributes with the same determinism, so there is one scheme for each kind.
+  def previous_schemes(env = ENV)
+    keys = previous_keys(env)
+    return [] unless keys
+
+    [
+      { key_provider: DerivedKeyProvider.new(keys[:primary_key], keys[:key_derivation_salt]) },
+      { deterministic: true, key_provider: DerivedKeyProvider.new(keys[:deterministic_key], keys[:key_derivation_salt]) }
+    ]
+  end
+
+  def previous_keys(env = ENV)
+    if env_value_present?(env, PREVIOUS_SECRET_KEY_BASE_ENV)
+      derived_keys(env[PREVIOUS_SECRET_KEY_BASE_ENV])
+    elsif PREVIOUS_ENV_KEYS.values.any? { |key| env_value_present?(env, key) }
+      missing = PREVIOUS_ENV_KEYS.values.reject { |key| env_value_present?(env, key) }
+      raise "Previous Active Record encryption keys are partially configured. Missing: #{missing.join(', ')}" if missing.any?
+
+      PREVIOUS_ENV_KEYS.transform_values { |key| env[key] }
+    end
+  end
+
+  def previous_keys_configured?(env = ENV)
+    env_value_present?(env, PREVIOUS_SECRET_KEY_BASE_ENV) ||
+      PREVIOUS_ENV_KEYS.values.any? { |key| env_value_present?(env, key) }
   end
 
   def env_value_present?(env, key)

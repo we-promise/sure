@@ -21,11 +21,15 @@ class Rule::ConditionRegexTest < ActiveSupport::TestCase
     "a pattern Postgres calls too complex" => [ "^(a{1,255}){1,255}(b)", :regex_invalid ],
     "an over-long pattern" => [ "a" * 201, :regex_too_long ]
   }.each do |description, (pattern, kind)|
+    # Postgres needs a few milliseconds of CPU to reject the too-complex pattern,
+    # and on a loaded machine the probe's time limit could fire first. A
+    # statement_timeout of 0 lifts the limit so each case gets Postgres' verdict;
+    # Rule::SafeRegexTest covers the limit.
     test "a rule with #{description} is rejected and nothing is saved" do
       rule = build_rule(value: pattern)
 
       assert_no_difference [ -> { @family.rules.count }, -> { Rule::Condition.count } ] do
-        assert_not rule.save
+        stub_const(Rule::SafeRegex, :PROBE_TIMEOUT_MS, 0) { assert_not rule.save }
       end
 
       assert rule.conditions.first.errors.of_kind?(:value, kind), rule.conditions.first.errors.details.inspect

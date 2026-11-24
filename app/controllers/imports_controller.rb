@@ -188,7 +188,7 @@ class ImportsController < ApplicationController
   private
     def set_import
       @import = Current.family.imports.includes(:account, :account_statement).find(params[:id])
-      raise ActiveRecord::RecordNotFound if @import.account_statement.present? && !@import.account_statement.viewable_by?(Current.user)
+      raise ActiveRecord::RecordNotFound unless @import.viewable_by?(Current.user)
     end
 
     def import_params
@@ -261,6 +261,12 @@ class ImportsController < ApplicationController
     end
 
     def create_document_import(file)
+      availability = Ai.availability(:embed, family: Current.family, user: Current.user)
+      unless availability.available?
+        redirect_to new_import_path, alert: availability.message_for(Current.user)
+        return
+      end
+
       adapter = VectorStore.adapter
       unless adapter
         redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
@@ -304,10 +310,15 @@ class ImportsController < ApplicationController
     end
 
     def document_upload_supported_extensions
-      adapter = VectorStore.adapter
+      adapter = document_store
       return [] unless adapter
 
       adapter.supported_extensions.map(&:downcase).uniq.sort
+    end
+
+    # Nil when `embed` isn't available, or when its store can't be built (pgvector without its extension).
+    def document_store
+      VectorStore.adapter if Ai.available?(:embed, family: Current.family, user: Current.user)
     end
 
     def document_upload_request?

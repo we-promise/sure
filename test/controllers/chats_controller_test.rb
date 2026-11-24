@@ -47,9 +47,55 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_select "textarea[name='chat[content]'][autofocus]", text: /#{Regexp.escape(insight.title)}/
   end
 
+  test "Dig in with AI asks a user with AI off to turn it on before anything is sent" do
+    @user.update!(ai_enabled: false)
+
+    get new_chat_url(insight_id: insights(:spending_anomaly_dining).id)
+
+    assert_select "h3", text: I18n.t("chats.ai_consent.title")
+    assert_select "textarea[name='chat[content]']", count: 0
+  end
+
   test "new chat ignores another family's insight" do
     insight = insights(:spending_anomaly_dining)
     insight.update_columns(family_id: families(:empty).id)
+
+    get new_chat_url(insight_id: insight.id)
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]']", text: ""
+  end
+
+  # The feed hides an insight about an account not every member can see, so
+  # the chat composer must not hand its text to anyone who has the id.
+  test "new chat ignores an insight about an account the member cannot see" do
+    insight = create_private_account_insight
+    sign_in users(:family_member)
+
+    get new_chat_url(insight_id: insight.id)
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]']", text: ""
+    assert_no_match "Private holds a balance", response.body
+  end
+
+  test "new chat ignores a household total computed from accounts someone can no longer open" do
+    insight = families(:dylan_family).insights.create!(
+      insight_type: "savings_rate_change", priority: "medium", status: "active", title: "Savings",
+      body: "Stale household total", metadata: { "accounts_digest" => "an-account-set-that-changed" },
+      dedup_key: "savings_rate_change:stale", generated_at: Time.current
+    )
+
+    get new_chat_url(insight_id: insight.id)
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]']", text: ""
+    assert_no_match "Stale household total", response.body
+  end
+
+  # Hidden from everyone, owner included, same as the feed.
+  test "new chat ignores an insight about a private account for its owner too" do
+    insight = create_private_account_insight
 
     get new_chat_url(insight_id: insight.id)
 
@@ -113,6 +159,17 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     # in the desktop-only sidebar, which the mobile Assistant entry never shows.
     assert_select "div.max-w-sm h3", text: I18n.t("chats.ai_consent.title")
     assert_select "form textarea", count: 0
+  end
+
+  test "the consent screen tells a family admin, and only an admin, that it also covers the family's background AI" do
+    @user.update!(ai_enabled: false)
+    get new_chat_url
+    assert_includes response.body, I18n.t("chats.ai_consent.family_note")
+
+    sign_in users(:family_member)
+    users(:family_member).update!(ai_enabled: false)
+    get new_chat_url
+    assert_not_includes response.body, I18n.t("chats.ai_consent.family_note")
   end
 
   test "new shows the AI consent screen instead of the compose form when AI is disabled" do
@@ -196,4 +253,15 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     post retry_chat_url(other_chat)
     assert_response :not_found
   end
+
+  private
+    # accounts(:connected) belongs to family_admin and is not shared.
+    def create_private_account_insight
+      @family.insights.create!(
+        insight_type: "idle_cash", priority: "low", status: "active", title: "Idle cash in Private",
+        body: "Private holds a balance with no activity in the last 60 days.",
+        metadata: { "account_id" => accounts(:connected).id },
+        dedup_key: "idle_cash:private:2026-07", generated_at: Time.current
+      )
+    end
 end

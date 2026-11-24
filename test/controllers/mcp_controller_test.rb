@@ -1,6 +1,8 @@
 require "test_helper"
 
 class McpControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   MCP_PROTOCOL_VERSION = "2025-06-18"
 
   setup do
@@ -280,6 +282,84 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # -- Unsupported methods --
+
+  test "GET /mcp returns 405 Method Not Allowed instead of 404" do
+    with_mcp_env do
+      get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream")
+
+      assert_response :method_not_allowed
+      assert_equal "POST", response.headers["Allow"]
+    end
+  end
+
+  test "DELETE /mcp returns 405 Method Not Allowed instead of 404" do
+    with_mcp_env do
+      delete "/mcp", headers: mcp_headers(@token)
+
+      assert_response :method_not_allowed
+      assert_equal "POST", response.headers["Allow"]
+    end
+  end
+
+  test "GET /mcp with an expired session id returns 404" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+        Rails.cache.delete("mcp:session:#{session_id}")
+
+        get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream", "Mcp-Session-Id" => session_id)
+
+        assert_response :not_found
+      end
+    end
+  end
+
+  test "DELETE /mcp with an expired session id returns 404" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+        Rails.cache.delete("mcp:session:#{session_id}")
+
+        delete "/mcp", headers: mcp_headers(@token).merge("Mcp-Session-Id" => session_id)
+
+        assert_response :not_found
+      end
+    end
+  end
+
+  test "GET /mcp with a valid session id returns 405" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+
+        get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream", "Mcp-Session-Id" => session_id)
+
+        assert_response :method_not_allowed
+        assert_equal "POST", response.headers["Allow"]
+      end
+    end
+  end
+
+  test "DELETE /mcp with a valid session id returns 405" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+
+        delete "/mcp", headers: mcp_headers(@token).merge("Mcp-Session-Id" => session_id)
+
+        assert_response :method_not_allowed
+        assert_equal "POST", response.headers["Allow"]
+      end
+    end
+  end
+
+  test "GET /mcp without a token still returns 401" do
+    get "/mcp", headers: { "Accept" => "text/event-stream" }
+
+    assert_response :unauthorized
+  end
+
   # -- initialize --
 
   test "initialize returns server info and capabilities" do
@@ -453,6 +533,22 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an external agent's document search sends nothing for a user who has AI off" do
+    use_ai_routes
+    @user.update!(ai_enabled: false)
+    @user.family.update!(vector_store_id: "vs_test123")
+    adapter = mock("vector_store_adapter")
+    adapter.expects(:search).never
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "search_family_files", arguments: { query: "tax return" } }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_equal "user_disabled", JSON.parse(JSON.parse(response.body)["result"]["content"][0]["text"])["reason"]
+    end
+  end
+
   test "tools/list includes preview tools for an opted-in user" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
 
@@ -465,6 +561,21 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
       Assistant::PREVIEW_FUNCTION_CLASSES.each do |fn_class|
         assert_includes tool_names, fn_class.name
+      end
+    end
+  end
+
+  test "tools/list omits rule write tools for a guest" do
+    with_guest_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+
+      assert_includes tool_names, "get_rules"
+      %w[create_rule update_rule apply_rule preview_rule].each do |name|
+        assert_not_includes tool_names, name
       end
     end
   end
@@ -483,6 +594,66 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       body = JSON.parse(response.body)
       assert_equal(-32602, body["error"]["code"])
       assert_includes body["error"]["message"], "list_account_statements"
+    end
+  end
+
+  test "tools/call creates a rule for an admin" do
+    with_mcp_env do
+      assert_difference "Rule.count", 1 do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "create_rule", arguments: rule_arguments }, id: 7).to_json,
+             headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      assert_nil JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "tools/call rejects create_rule for a guest" do
+    with_guest_mcp_env do
+      assert_no_difference "Rule.count" do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "create_rule", arguments: rule_arguments }, id: 7).to_json,
+             headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      assert_equal(-32602, JSON.parse(response.body)["error"]["code"])
+    end
+  end
+
+  test "tools/call rejects apply_rule for a guest" do
+    # The rule matches a transaction the guest can see, so the preview lists
+    # it and issues a token, and one in an account the guest cannot reach,
+    # whose category would change if the apply ran.
+    shared = accounts(:credit_card)
+    shared.account_shares.create!(user: family_guest, permission: "read_only")
+    hidden = accounts(:depository)
+    assert_not Account.accessible_by(family_guest).exists?(hidden.id)
+    create_transaction(account: shared, name: "Guest reach coffee")
+    hidden_entry = create_transaction(account: hidden, name: "Guest reach coffee", category: categories(:food_and_drink))
+    target = @user.family.categories.create!(name: "Guest rule target")
+
+    rule = @user.family.rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Guest reach coffee" } ],
+      actions_attributes: [ { action_type: "set_transaction_category", value: target.id } ]
+    )
+    # Preview tokens are bound to the user who previewed, so the guest needs its
+    # own. It is issued directly because MCP does not offer preview_rule to a
+    # guest.
+    token = Assistant::Function::PreviewRule.new(family_guest).call("rule_id" => rule.id)[:preview][:preview_token]
+    assert token, "a preview of a saved rule should issue a token"
+
+    with_guest_mcp_env do
+      perform_enqueued_jobs(only: RuleJob) do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "apply_rule", arguments: { rule_id: rule.id, preview_token: token } }, id: 8).to_json,
+             headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      assert_equal categories(:food_and_drink).id, hidden_entry.transaction.reload.category_id, "apply_rule recategorised a transaction the guest cannot reach"
+      assert_not rule.reload.active, "apply_rule activated the rule for a guest"
+      assert_equal(-32602, JSON.parse(response.body).dig("error", "code"))
     end
   end
 
@@ -713,6 +884,28 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools/call import_bank_statement offers and accepts only accounts the user can write to" do
+    use_ai_routes
+    @user = users(:family_member)
+    pdf_import = PdfImport.create!(family: @user.family, document_type: "bank_statement")
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "import_bank_statement", arguments: { pdf_import_id: pdf_import.id } }).to_json,
+           headers: mcp_headers(@token)
+      listed = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+      assert_equal "account_required", listed["error"]
+      assert_not_includes listed["available_accounts"].map { |a| a["id"] }, accounts(:connected).id
+
+      assert_no_difference "Import.count" do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "import_bank_statement", arguments: { pdf_import_id: pdf_import.id, account_id: accounts(:connected).id } }).to_json,
+             headers: mcp_headers(@token)
+      end
+      refused = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+      assert_equal "account_not_found", refused["error"]
+    end
+  end
+
   # -- JSON-RPC id preservation --
 
   test "preserves request id in successful response" do
@@ -743,6 +936,17 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, &block) # pipelock:ignore
     end
 
+    def with_guest_mcp_env(&block)
+      with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => family_guest.email, &block) # pipelock:ignore
+    end
+
+    def rule_arguments
+      {
+        conditions: [ { condition_type: "transaction_name", operator: "like", value: "zxq" } ],
+        actions: [ { action_type: "set_transaction_category", value: categories(:food_and_drink).id } ]
+      }
+    end
+
     def with_mcp_cache
       original_cache = Rails.cache
       Rails.cache = ActiveSupport::Cache::MemoryStore.new
@@ -756,6 +960,12 @@ class McpControllerTest < ActionDispatch::IntegrationTest
         "Content-Type" => "application/json",
         "Authorization" => "Bearer #{token}"
       }
+    end
+
+    def initialize_mcp_session
+      post "/mcp", params: jsonrpc_request("initialize").to_json, headers: mcp_headers(@token)
+      assert_response :ok
+      response.headers["Mcp-Session-Id"]
     end
 
     def jsonrpc_request(method, params = {}, id: 1)

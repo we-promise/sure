@@ -147,8 +147,220 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "value step dates the first valuation on the purchase date" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 150_000_000, currency: "PYG", purchase_date: 3.years.ago.to_date.iso8601 }
+    }
+
+    assert_redirected_to address_property_path(account)
+    account.reload
+    assert_equal "PYG", account.currency
+    assert_equal 150_000_000, account.balance
+
+    valuations = account.entries.valuations
+    assert_equal 1, valuations.count
+    assert_equal 3.years.ago.to_date, valuations.first.date
+    assert_equal "PYG", valuations.first.currency
+    assert_equal Money.new(150_000_000, "PYG"), account.property.purchase_price
+  end
+
+  test "value step defaults the purchase date to today" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: { account: { balance: 500_000, currency: "USD" } }
+
+    assert_redirected_to address_property_path(account)
+    assert_equal [ Date.current ], account.entries.valuations.pluck(:date)
+  end
+
+  test "resubmitting the value step moves the purchase valuation instead of adding one" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100, currency: "EUR", purchase_date: 1.year.ago.to_date.iso8601 }
+    }
+    patch update_balances_property_path(account), params: {
+      account: { balance: 150_000_000, currency: "PYG", purchase_date: 2.years.ago.to_date.iso8601 }
+    }
+
+    valuation = account.entries.valuations.sole
+    assert_equal 2.years.ago.to_date, valuation.date
+    assert_equal 150_000_000, valuation.amount
+    assert_equal "PYG", valuation.currency
+  end
+
+  test "value step rejects a purchase date in the future" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100, currency: "EUR", purchase_date: 1.day.from_now.to_date.iso8601 }
+    }
+
+    assert_response :unprocessable_entity
+    assert_empty account.entries.valuations
+  end
+
+  test "value step shows the purchase date only while the property is being set up" do
+    get balances_property_path(create_draft_property)
+    assert_select "input[name='account[purchase_date]']"
+
+    get balances_property_path(@account)
+    assert_select "input[name='account[purchase_date]']", count: 0
+  end
+
+  test "value step asks for the purchase price while the property is being set up" do
+    get balances_property_path(create_draft_property)
+    assert_select "label", text: "Purchase price"
+    assert_select "label", text: "Estimated market value", count: 0
+    assert_no_match "Zillow", response.body
+
+    get balances_property_path(@account)
+    assert_select "label", text: "Estimated market value"
+    assert_select "label", text: "Purchase price", count: 0
+  end
+
+  test "value step defaults the purchase date to before a value the draft already has" do
+    account = create_draft_property
+    add_reconciliation(account, date: Date.current, amount: 90_000)
+
+    get balances_property_path(account)
+    assert_select "input[name='account[purchase_date]'][value='#{Date.yesterday.iso8601}']"
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100_000, currency: "EUR", purchase_date: Date.yesterday.iso8601 }
+    }
+    assert_redirected_to address_property_path(account)
+    assert_equal Date.yesterday, account.reload.opening_anchor_date
+  end
+
+  test "value step dates a blank purchase date before a value the draft already has" do
+    account = create_draft_property
+    oldest = 5.years.ago.to_date
+    add_reconciliation(account, date: oldest, amount: 90_000)
+
+    patch update_balances_property_path(account), params: { account: { balance: 100_000, currency: "EUR" } }
+
+    assert_redirected_to address_property_path(account)
+    assert_equal oldest.prev_day, account.reload.opening_anchor_date
+  end
+
+  test "value step keeps the default purchase date within the accepted range" do
+    account = create_draft_property
+    add_reconciliation(account, date: Entry.min_supported_date + 1, amount: 90_000)
+
+    get balances_property_path(account)
+    assert_select "input[name='account[purchase_date]'][value='#{(Entry.min_supported_date + 1).iso8601}']"
+  end
+
+  test "value step shows the saved purchase price, not a later value" do
+    account = create_draft_property
+    add_reconciliation(account, date: Date.current, amount: 90_000)
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100_000, currency: "EUR", purchase_date: 1.year.ago.to_date.iso8601 }
+    }
+    account.update!(balance: 90_000)
+
+    get balances_property_path(account)
+    assert_select "input[name='account[balance]'][value='100000.00']"
+  end
+
+  test "value step keeps showing the saved purchase price when a blank price is rejected" do
+    account = create_draft_property
+    add_reconciliation(account, date: Date.current, amount: 90_000)
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100_000, currency: "EUR", purchase_date: 1.year.ago.to_date.iso8601 }
+    }
+    account.update!(balance: 90_000)
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: "", currency: "EUR", purchase_date: 1.day.from_now.to_date.iso8601 }
+    }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='100000.00']"
+  end
+
+  test "value step ignores a malformed account parameter" do
+    get balances_property_path(create_draft_property), params: { account: "x" }
+
+    assert_response :success
+    assert_select "input[name='account[purchase_date]'][value='#{Date.current.iso8601}']"
+  end
+
+  test "value step rejects an unknown currency" do
+    account = create_draft_property
+    add_reconciliation(account, date: 1.year.ago.to_date, amount: 90_000)
+
+    [ 1.day.from_now.to_date, Date.current ].each do |purchase_date|
+      patch update_balances_property_path(account), params: {
+        account: { balance: 250_000, currency: "XXX", purchase_date: purchase_date.iso8601 }
+      }
+
+      assert_response :unprocessable_entity
+      assert_select "input[name='account[balance]'][value='250000.00']"
+    end
+    assert_equal "EUR", account.reload.currency
+    assert_not account.has_opening_anchor?
+  end
+
+  test "value step rejects an unknown currency on a valid submission" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 250_000, currency: "XXX", purchase_date: 1.year.ago.to_date.iso8601 }
+    }
+
+    assert_response :unprocessable_entity
+    assert_match "Choose a currency from the list.", response.body
+    assert_equal "EUR", account.reload.currency
+    assert_not account.has_opening_anchor?
+  end
+
+  test "value step keeps the submitted price when the purchase date is rejected" do
+    account = create_draft_property
+    add_reconciliation(account, date: 1.year.ago.to_date, amount: 90_000)
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 250_000, currency: "EUR", purchase_date: Date.current.iso8601 }
+    }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='250000.00']"
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 260_000, currency: "EUR", purchase_date: 1.day.from_now.to_date.iso8601 }
+    }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='260000.00']"
+  end
+
+  test "value step rejects an oversized or non-string purchase date and keeps the submitted price" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 250_000, currency: "EUR", purchase_date: "2020-03-01#{" " * 119}" }
+    }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='250000.00']"
+
+    patch update_balances_property_path(account),
+          params: { account: { balance: 260_000, currency: "EUR", purchase_date: 20200301 } }.to_json,
+          headers: { "CONTENT_TYPE" => "application/json" }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='260000.00']"
+
+    patch update_balances_property_path(account),
+          params: { account: { balance: 270_000, currency: "EUR", purchase_date: false } }.to_json,
+          headers: { "CONTENT_TYPE" => "application/json" }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='270000.00']"
+
+    assert_not account.reload.has_opening_anchor?
+  end
+
   test "balances update handles validation errors" do
-    Account.any_instance.stubs(:set_current_balance).returns(OpenStruct.new(success?: false, error_message: "Invalid balance"))
+    Account.any_instance.stubs(:set_current_balance)
+      .returns(Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "Invalid balance"))
 
     patch update_balances_property_path(@account), params: {
       account: {
@@ -158,6 +370,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
+    assert_match "Invalid balance", response.body
   end
 
   test "address update handles validation errors" do
@@ -324,6 +537,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
   test "new skips method selector when no AVM provider is configured" do
     Provider::Registry.stubs(:rentcast).returns(nil)
     Provider::Registry.stubs(:realie).returns(nil)
+    Provider::Registry.stubs(:terrascoutx).returns(nil)
 
     get new_property_path(step: "method_select")
 
@@ -551,6 +765,16 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to new_property_path
+  end
+
+  test "new and edit forms let the user keep notes on the property" do
+    @account.update!(notes: "Cadastral number 12345")
+
+    get edit_property_url(@account)
+    assert_select "textarea[name='account[notes]']", text: "Cadastral number 12345"
+
+    get new_property_url
+    assert_select "textarea[name='account[notes]']"
   end
 
   test "edit form leaves out the icon picker, which property updates do not save" do
@@ -855,7 +1079,234 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action*='avm_provider=chimnie']", count: 0
   end
 
+  test "overview shows the trend in the family currency for a foreign-currency property" do
+    purchase_date = 2.years.ago.to_date
+    foreign_property_with_value(purchase_date: purchase_date)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: purchase_date, rate: 1.0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']" do
+      assert_select "h4", text: "Trend in EUR"
+      assert_select "span", text: /-€1,000/
+      assert_select "span", text: "(-1.0%)"
+    end
+  end
+
+  test "overview shows an infinite family-currency trend from a zero purchase value" do
+    purchase_date = 2.years.ago.to_date
+    foreign_property_with_value(purchase_date: purchase_date, purchase_amount: 0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: purchase_date, rate: 1.0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']" do
+      assert_select "span", text: "(＋∞)"
+      assert_select "span", text: /Infinity|NaN/, count: 0
+    end
+  end
+
+  test "overview says the rate is unavailable instead of guessing a family-currency trend" do
+    foreign_property_with_value(purchase_date: 2.years.ago.to_date)
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']", text: /Exchange rate unavailable/
+    assert_select "[data-testid='family-currency-trend']", text: /€/, count: 0
+  end
+
+  test "updates the property's cost tag" do
+    tag = @account.family.tags.create!(name: "Land costs")
+
+    patch property_path(@account), params: {
+      account: { accountable_attributes: { id: @account.accountable.id, cost_tag_id: tag.id } }
+    }
+
+    assert_response :success
+    assert_equal tag.id, @account.property.reload.cost_tag_id
+  end
+
+  test "rejects a cost tag from another family" do
+    other_tag = families(:empty).tags.create!(name: "Not ours")
+
+    patch property_path(@account), params: {
+      account: { accountable_attributes: { id: @account.accountable.id, cost_tag_id: other_tag.id } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil @account.property.reload.cost_tag_id
+  end
+
+  test "rejects a cost tag that no longer exists" do
+    tag = @account.family.tags.create!(name: "Land costs")
+    tag.destroy!
+
+    patch property_path(@account), params: {
+      account: { accountable_attributes: { id: @account.accountable.id, cost_tag_id: tag.id } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil @account.property.reload.cost_tag_id
+  end
+
+  test "edit form offers the family's tags as the cost tag" do
+    get edit_property_path(@account)
+
+    assert_response :success
+    assert_select "input[name='account[accountable_attributes][cost_tag_id]']"
+    assert_select "[role='option']", text: tags(:one).name
+  end
+
+  test "overview shows the purchase costs, cost basis and gain after costs" do
+    tag = cost_tagged_property
+    create_cost(accounts(:depository), 8_000, tag)
+    create_cost(accounts(:credit_card), 2_000, tag)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='purchase-costs']" do
+      assert_select "h4", text: "Purchase costs"
+      assert_select "*", text: /\$10,000/
+      assert_select "a[href*='tags']", text: "2 transactions tagged Land costs"
+      # Costs in closed accounts count too, so the list it opens includes them.
+      assert_select "a[href*='active_accounts_only%5D=false']"
+      # Outside the blurred value, so privacy mode leaves the link clickable.
+      assert_select ".privacy-sensitive a", count: 0
+      assert_select ".privacy-sensitive", text: /\$10,000/
+      assert_select "*", text: /\$510,000/
+      assert_select "span", text: /\$40,000/
+      assert_select "span", text: "(7.8%)"
+    end
+  end
+
+  test "the cost link leaves out transfers, pending transactions and accounts the viewer can't see" do
+    tag = cost_tagged_property
+    create_cost(accounts(:depository), 8_000, tag)
+    create_cost(accounts(:credit_card), 2_000, tag)
+    # A tagged transfer is not a cost.
+    accounts(:depository).entries.create!(
+      date: 1.year.ago.to_date, name: "To savings", amount: 5_000, currency: "USD",
+      entryable: Transaction.new(tags: [ tag ], kind: "funds_movement")
+    )
+    # Pending at the bank, so not counted yet.
+    accounts(:depository).entries.create!(
+      date: 1.year.ago.to_date, name: "Pending deposit", amount: 1_000, currency: "USD",
+      entryable: Transaction.new(tags: [ tag ], extra: { "simplefin" => { "pending" => true } })
+    )
+    # Not shared with the member.
+    create_cost(accounts(:investment), 3_000, tag)
+    AccountShare.create!(account: @account, user: users(:family_member), permission: "read_only")
+    sign_in users(:family_member)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='purchase-costs']" do
+      assert_select "*", text: /\$10,000/
+      assert_select "a[href*='tags']", text: "2 transactions tagged Land costs"
+    end
+
+    # The list the link opens leaves the transfer and the pending one out too.
+    get css_select("[data-testid='purchase-costs'] a[href*='tags']").first["href"]
+    assert_response :success
+    assert_includes response.body, "Notary"
+    assert_not_includes response.body, "To savings"
+    assert_not_includes response.body, "Pending deposit"
+  end
+
+  test "overview says the rate is unavailable for a cost without a stored rate" do
+    tag = cost_tagged_property
+    eur_account = @account.family.accounts.create!(name: "Euro bank", balance: 0, currency: "EUR", owner: @user, accountable: Depository.new)
+    create_cost(eur_account, 1_000, tag, currency: "EUR")
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='purchase-costs']", text: /Exchange rate unavailable/
+    assert_select "[data-testid='purchase-costs'] h4", text: "Gain after costs"
+  end
+
+  test "overview shows the costs of a foreign-currency property in the family currency" do
+    purchase_date = 1.year.ago.to_date
+    tag = cost_tagged_property
+    @account.family.update!(currency: "EUR")
+    eur_account = @account.family.accounts.create!(name: "Euro bank", balance: 0, currency: "EUR", owner: @user, accountable: Depository.new)
+    pyg_account = @account.family.accounts.create!(name: "Guarani bank", balance: 0, currency: "PYG", owner: @user, accountable: Depository.new)
+    create_cost(eur_account, 9_000, tag, currency: "EUR")
+    create_cost(pyg_account, 8_000_000, tag, currency: "PYG")
+    # The pairs sync stores: each account's currency into the family's, and the inverse.
+    [ [ "USD", purchase_date, 1.0 ], [ "USD", Date.current, 0.9 ], [ "PYG", purchase_date, 0.000125 ] ].each do |currency, date, rate|
+      ExchangeRate.create!(from_currency: currency, to_currency: "EUR", date: date, rate: rate)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: currency, date: date, rate: 1 / rate.to_d)
+    end
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='purchase-costs']" do
+      assert_select "h4", text: "Purchase costs in EUR"
+      assert_select "h4", text: "Cost basis in EUR"
+      assert_select "h4", text: "Gain after costs in EUR"
+      assert_select "*", text: /€10[.,]000/
+      assert_select "*", text: /€510[.,]000/
+      assert_select "span", text: /-€15[.,]000/
+      assert_select "*", text: /Exchange rate unavailable/, count: 0
+    end
+  end
+
+  test "overview has no purchase costs without a cost tag" do
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='purchase-costs']", count: 0
+  end
+
+  test "overview has no family-currency trend when the property is in the family currency" do
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']", count: 0
+  end
+
   private
+    def cost_tagged_property
+      tag = @account.family.tags.create!(name: "Land costs")
+      @account.property.update!(cost_tag: tag)
+      @account.entries.valuations.destroy_all
+      @account.entries.create!(
+        date: 1.year.ago.to_date, name: "Original purchase price", amount: 500_000, currency: "USD",
+        entryable: Valuation.new(kind: "opening_anchor")
+      )
+      @account.update!(balance: 550_000)
+      tag
+    end
+
+    def create_cost(account, amount, tag, currency: "USD")
+      account.entries.create!(
+        date: 1.year.ago.to_date, name: "Notary", amount: amount, currency: currency,
+        entryable: Transaction.new(tags: [ tag ])
+      )
+    end
+
+    def foreign_property_with_value(purchase_date:, purchase_amount: 100_000)
+      @account.family.update!(currency: "EUR")
+      @account.entries.valuations.destroy_all
+      @account.entries.create!(
+        date: purchase_date, name: "Original purchase price", amount: purchase_amount, currency: "USD",
+        entryable: Valuation.new(kind: "opening_anchor")
+      )
+      @account.update!(balance: 110_000)
+    end
+
     def valuation_data(valuation)
       Provider::PropertyValuationConcept::PropertyValuation.new(
         valuation: valuation, currency: "USD", property_type: "single_family_home",
@@ -869,5 +1320,19 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
       provider.stubs(:valuation_currency).returns("USD")
       provider.stubs(:fetch_property_valuation).returns(response)
       provider
+    end
+
+    def create_draft_property
+      @user.family.accounts.create!(
+        name: "Land", balance: 0, currency: "EUR", status: "draft", owner: @user,
+        accountable: Property.new(subtype: "plot")
+      )
+    end
+
+    def add_reconciliation(account, date:, amount:)
+      account.entries.create!(
+        date: date, name: "Manual value update", amount: amount, currency: account.currency,
+        entryable: Valuation.new(kind: "reconciliation")
+      )
     end
 end

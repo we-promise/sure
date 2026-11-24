@@ -1,6 +1,8 @@
 require "csv"
 
 class Assistant::Function::ImportBankStatement < Assistant::Function
+  self.ai_feature = :extract_pdf
+
   class << self
     def name
       "import_bank_statement"
@@ -53,7 +55,7 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   def call(params = {})
-    pdf_import = family.imports.find_by(id: params["pdf_import_id"], type: "PdfImport")
+    pdf_import = find_pdf_import(params["pdf_import_id"])
 
     unless pdf_import
       return {
@@ -78,31 +80,28 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         success: false,
         error: "account_required",
         message: "Please specify which account to import transactions into",
-        available_accounts: family.accounts.visible.depository.map { |a| { id: a.id, name: a.name } }
+        available_accounts: account_choices
       }
     end
 
-    account = family.accounts.find_by(id: params["account_id"])
+    account = writable_accounts.find_by(id: params["account_id"]) if valid_uuid?(params["account_id"])
     unless account
       return {
         success: false,
         error: "account_not_found",
-        message: "Account not found",
-        available_accounts: family.accounts.visible.depository.map { |a| { id: a.id, name: a.name } }
+        message: "No writable account matched that account_id",
+        available_accounts: account_choices
       }
     end
 
-    # Extract transactions from the PDF using the configured LLM provider.
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # extract_bank_statement (PR #1985).
+    availability = Ai.availability(:extract_pdf, family:, user:)
+    return ai_unavailable(availability) unless availability.available?
+
+    # The first provider in extract_pdf's route. Settings can clear the last key between the
+    # availability check and this lookup, so a missing provider is the same refusal
+    # (PdfImport::AiProcessor#route_provider refuses the same way).
     provider = Provider::Registry.preferred_llm_provider
-    unless provider
-      return {
-        success: false,
-        error: "provider_not_configured",
-        message: "AI provider is not configured"
-      }
-    end
+    return ai_unavailable(Ai::Availability.unavailable(:extract_pdf, :not_configured)) unless provider
 
     response = provider.extract_bank_statement(
       pdf_content: pdf_import.pdf_file_content,
@@ -168,6 +167,27 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   private
+    # Same visibility as the web's import page: another member's private
+    # statement is not found, so it is neither sent to the model nor echoed back.
+    def find_pdf_import(id)
+      pdf_import = family.imports.find_by(id: id, type: "PdfImport")
+      pdf_import if pdf_import&.viewable_by?(user)
+    end
+
+    # The import writes transactions into the account, so the user needs write
+    # access to it, as the web requires to publish and the API to create.
+    def writable_accounts
+      family.accounts.writable_by(user)
+    end
+
+    def account_choices
+      writable_accounts.visible.depositories.map { |a| { id: a.id, name: a.name } }
+    end
+
+    # The refusal every AI gate on this path returns: the router's reason and its message.
+    def ai_unavailable(availability)
+      { success: false, error: "ai_unavailable", reason: availability.reason.to_s, message: availability.message_for(user) }
+    end
 
     def generate_csv(transactions)
       CSV.generate do |csv|

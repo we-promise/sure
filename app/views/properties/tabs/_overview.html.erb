@@ -19,6 +19,38 @@
     </div>
   <% end %>
 
+  <% if account.property.family_currency_trend_applicable? %>
+    <div data-testid="family-currency-trend">
+      <%= render "properties/currency_trend_card",
+                 title: t(".trend_in_currency", currency: account.family.currency),
+                 trend: account.property.family_currency_trend %>
+    </div>
+  <% end %>
+
+  <% if (cost_tag = account.property.cost_tag) %>
+    <%# The costs are summed in the family currency, the currency stored rates convert into. %>
+    <% foreign = account.currency != account.family.currency %>
+    <div class="contents" data-testid="purchase-costs">
+      <% costs = account.property.purchase_costs_for(Current.user) %>
+      <% cost_link = link_to t(".cost_transactions", count: account.property.cost_entries_for(Current.user).count, tag: cost_tag.name),
+                             transactions_path(q: { tags: [ cost_tag.name ], types: %w[expense income], status: %w[confirmed], active_accounts_only: false }),
+                             class: "block text-sm text-secondary hover:underline",
+                             data: { turbo_frame: "_top" } %>
+      <%= summary_card title: t(foreign ? ".purchase_costs_in_currency" : ".purchase_costs", currency: account.family.currency), footer: cost_link do %>
+        <%= costs ? format_money(costs) : t(".rate_unavailable") %>
+      <% end %>
+
+      <%= summary_card title: t(foreign ? ".cost_basis_in_currency" : ".cost_basis", currency: account.family.currency) do %>
+        <% cost_basis = account.property.cost_basis_for(Current.user) %>
+        <%= cost_basis ? format_money(cost_basis) : t(".rate_unavailable") %>
+      <% end %>
+
+      <%= render "properties/currency_trend_card",
+                 title: t(foreign ? ".gain_after_costs_in_currency" : ".gain_after_costs", currency: account.family.currency),
+                 trend: account.property.cost_adjusted_trend_for(Current.user) %>
+    </div>
+  <% end %>
+
   <%= summary_card title: t(".year_built") do %>
     <%= account.property.year_built || t(".unknown") %>
   <% end %>

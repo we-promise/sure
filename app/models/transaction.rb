@@ -27,11 +27,102 @@ class Transaction < ApplicationRecord
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
+  # A tag can be applied to a transaction only once, but assigning the same
+  # tag twice would insert two taggings. Collapse repeats first, comparing
+  # ids as the database does. The original values go on to `super`: Rails
+  # drops blanks before it casts, so passing a malformed id cast to nil would
+  # discard it silently instead of raising RecordNotFound.
+  def tag_ids=(ids)
+    id_type = Tag.type_for_attribute(:id)
+    super(Array(ids).uniq { |id| id_type.cast(id) || id })
+  end
+
+  def tags=(tags)
+    super(Array(tags).uniq)
+  end
+
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
+  after_save :supersede_automatic_category_claims, if: :saved_change_to_category_id?
+
+  # A leg that becomes a plain transfer (funds_movement, cc_payment) is left
+  # uncategorized (see UNCATEGORIZED_EXCLUDED_KINDS), so the Investment
+  # Contributions category its old kind gave it goes with that kind, as in
+  # Transfer#update_investment_contribution!. A category set in the same save,
+  # or one the user locked, stays.
+  after_save :drop_stale_contribution_category,
+             if: -> { saved_change_to_kind? && !saved_change_to_category_id? }
+
+  # Plain-transfer legs still carrying an Investment Contributions category
+  # from an older kind, where the user has not locked the category. One a
+  # rule of the user's set (and still holds) is theirs too: rules don't lock
+  # what they set, and a rule run after the kind change would set it again.
+  scope :with_stale_contribution_category, -> {
+    without_user_category_lock
+      .joins(:category)
+      .where(kind: UNCATEGORIZED_EXCLUDED_KINDS, categories: { name: Category.all_investment_contributions_names })
+      .where.not(category_from_sql("rule"))
+  }
+
+  # No lock on the category, or only one an automatic categorizer set itself
+  # while the category is still its value: the AI, which locks every category
+  # it assigns, or Bayes with lock_results. A category the user changed since
+  # is theirs, lock and all, as in Enrichable#clear_ai_cache and
+  # Family#clear_bayes_locks!.
+  scope :without_user_category_lock, -> {
+    where("transactions.locked_attributes ->> 'category_id' IS NULL")
+      .or(category_from("ai"))
+      .or(category_from("bayes", metadata: { locked_by_bayes: true }))
+  }
+
+  # Clears the Investment Contributions category from the plain-transfer legs
+  # in `scope` that still carry it without a lock of the user's, and touches
+  # their entries. Rechecked under each row's lock (reassign_category!), so a
+  # category or lock a user sets meanwhile is not overwritten. An automatic
+  # categorizer's lock and claim go with the category it set, leaving the leg
+  # as if never categorized. Returns how many it cleared.
+  def self.drop_stale_contribution_categories!(scope = all)
+    reassign_category!(scope.with_stale_contribution_category, nil) do |ids|
+      where(id: ids).update_all("locked_attributes = locked_attributes - 'category_id'")
+      drop_automatic_category_claims!(ids)
+    end
+  end
+
+  # Drops the automatic categorizers' claim on these transactions' category,
+  # so a lock on it counts as the user's even where it is the value they set:
+  # the AI's enrichment goes (Enrichable#clear_ai_cache treats those as a
+  # cache) and Bayes loses its lock flag, as in Family#clear_bayes_locks!.
+  # Only a claim still current: one a later change superseded no longer
+  # claims anything and stays, as the AI history filter lists it.
+  def self.drop_automatic_category_claims!(ids)
+    enrichments = DataEnrichment.where(enrichable_type: "Transaction", enrichable_id: ids, attribute_name: "category_id")
+                                .where("data_enrichments.metadata->>'superseded' IS DISTINCT FROM 'true'")
+    enrichments.where(source: "ai").delete_all
+    enrichments.where(source: "bayes").drop_metadata_flag!("locked_by_bayes")
+  end
 
   # Accessors for exchange_rate stored in extra jsonb field
   def exchange_rate
     extra&.dig("exchange_rate")
+  end
+
+  # The stored exchange rate as a number, read the way Money#exchange_to reads
+  # it (to_d), or nil when the app would not use it: none is stored, it is not
+  # a positive number that survives the conversion to Float, or the row is
+  # already in the account's currency. The API and the data export read this,
+  # so a malformed value written straight into extra, or an extra that is not
+  # a hash, cannot break them.
+  def numeric_exchange_rate
+    return nil unless extra.is_a?(Hash)
+
+    value = extra["exchange_rate"]
+    return nil unless value.is_a?(Numeric) || value.is_a?(String)
+
+    entry_currency = entry&.currency.to_s.upcase
+    account_currency = entry&.account&.currency.to_s.upcase
+    return nil if entry_currency.blank? || account_currency.blank? || entry_currency == account_currency
+
+    rate = value.to_d.to_f
+    rate if rate.finite? && rate.positive?
   end
 
   def exchange_rate=(value)
@@ -53,6 +144,19 @@ class Transaction < ApplicationRecord
   validate :exchange_rate_must_be_valid
 
   private
+
+    # Checked and cleared in the database under the row lock rather than from
+    # this record's copy, which may predate a category a categorizer or the
+    # user set since it was loaded.
+    def drop_stale_contribution_category
+      return unless UNCATEGORIZED_EXCLUDED_KINDS.include?(kind)
+      return if self.class.drop_stale_contribution_categories!(self.class.where(id: id)).zero?
+
+      # Mirror the cleared row, so a later save or lock_attr! on this copy
+      # does not write the category or its lock back.
+      self.category_id, self.locked_attributes = self.class.where(id: id).pick(:category_id, :locked_attributes)
+      clear_attribute_changes([ :category_id, :locked_attributes ])
+    end
 
     def exchange_rate_must_be_valid
       if extra&.dig("exchange_rate_invalid")
@@ -121,6 +225,10 @@ class Transaction < ApplicationRecord
 
   # DataEnrichment sources that represent automatic category assignment
   AUTO_CATEGORY_SOURCES = %w[ai bayes].freeze
+
+  # Excludes enrichments (aliased de) whose value a later change superseded;
+  # see #supersede_automatic_category_claims.
+  UNSUPERSEDED_ENRICHMENT_SQL = "de.metadata->>'superseded' IS DISTINCT FROM 'true'".freeze
 
   # Stored flag values that do not mark a transaction pending: the strings
   # ActiveModel::Type::Boolean casts to false, plus "" (which it casts to nil).
@@ -205,6 +313,12 @@ class Transaction < ApplicationRecord
 
   scope :excluding_pending, -> { where(Transaction.not_pending_sql) }
 
+  # Transactions carrying any of the given tags. A subquery rather than a
+  # join, so a transaction with several of them is returned once.
+  scope :with_any_tag, ->(tag_ids) {
+    where(id: Tagging.where(tag_id: tag_ids, taggable_type: "Transaction").select(:taggable_id))
+  }
+
   # SQL snippet for raw queries that must exclude pending transactions.
   # Use in income statements, balance sheets, and raw analytics.
   #
@@ -229,8 +343,9 @@ class Transaction < ApplicationRecord
 
   # Transactions whose attribute (category_id, merchant_id; internal callers
   # only) is still the value an automatic source set: that source's
-  # enrichment holds the current value. since: only enrichments written
-  # after it; metadata: only those whose metadata contains it.
+  # enrichment holds the current value and no change has superseded it since.
+  # since: only enrichments written after it; metadata: only those whose
+  # metadata contains it.
   def self.enriched_from_sql(attribute, *sources, since: nil, metadata: nil)
     sql = +<<~SQL.squish
       EXISTS (
@@ -240,10 +355,21 @@ class Transaction < ApplicationRecord
           AND de.attribute_name = :attribute
           AND de.source IN (:sources)
           AND de.value = to_jsonb(transactions.#{attribute}::text)
+          AND #{UNSUPERSEDED_ENRICHMENT_SQL}
     SQL
     sql << " AND de.updated_at > :since" if since
     sql << " AND de.metadata @> CAST(:metadata AS jsonb)" if metadata
     sanitize_sql_array([ "#{sql})", { attribute: attribute, sources: sources.flatten.map(&:to_s), since: since, metadata: metadata&.to_json } ])
+  end
+
+  # Marks the AI's and Bayes' category enrichments of the given transactions
+  # superseded: their category changed, so it is no longer the value they
+  # recorded as theirs, even where it later equals it again. Callers hold the
+  # transactions' row locks, so the enrichments are locked after them, as a
+  # save followed by Enrichable#log_enrichment locks them.
+  def self.supersede_automatic_category_claims!(transaction_ids)
+    DataEnrichment.where(enrichable_type: name, enrichable_id: transaction_ids, attribute_name: "category_id", source: AUTO_CATEGORY_SOURCES)
+                  .update_all(Arel.sql(%(metadata = COALESCE(metadata, '{}'::jsonb) || '{"superseded": true}'::jsonb)))
   end
 
   # Family-scoped query for Enrichable#clear_ai_cache
@@ -255,7 +381,9 @@ class Transaction < ApplicationRecord
   # update_all skips callbacks, so the `has_one :entry, touch: true` bump that
   # every normal save relies on (Family#entries_cache_version) never happens.
   # Expects a relation without eager loading so reselect(:id) produces
-  # a single-column subquery for the IN clause.
+  # a single-column subquery for the IN clause. A block receives the
+  # reassigned ids inside the same transaction, before their entries are
+  # touched.
   def self.reassign_category!(scope, category_id)
     transaction do
       # Lock inside the scope so a concurrent category edit is rechecked before
@@ -274,11 +402,16 @@ class Transaction < ApplicationRecord
 
       next 0 if updated_ids.empty?
 
+      yield updated_ids if block_given?
+
       # Touch exactly the rows the UPDATE reassigned (RETURNING), so a
       # transaction entering the scope mid-merge can't be updated without its
       # entry being touched. Locks are taken transactions-first, matching a
       # normal save; sliced to bound the entries UPDATE on large merges.
       updated_ids.each_slice(REASSIGN_TOUCH_BATCH_SIZE) do |batch|
+        # The UPDATE skips the after_save that ends the automatic
+        # categorizers' claims, so end them here for the rows reassigned.
+        supersede_automatic_category_claims!(batch)
         Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
       end
 
@@ -413,6 +546,29 @@ class Transaction < ApplicationRecord
     tags.reset
   end
 
+  # Applies a tag picker's changes (selected_ids against previous_ids, the set
+  # it last saved) to the tags stored now, so tags another writer added in the
+  # meantime stay. Takes the same row lock as toggle_tag! and the rule tag
+  # action and reads the tags after it, so no concurrent write is lost.
+  def merge_tag_changes!(selected_ids, previous_ids, available_tags:)
+    selected_ids = selected_ids.map(&:to_s)
+    previous_ids = previous_ids.map(&:to_s)
+
+    with_lock do
+      wanted_ids = tag_ids.map(&:to_s) - (previous_ids - selected_ids) | (selected_ids - previous_ids)
+      self.tag_ids = available_tags.where(id: wanted_ids).pluck(:id)
+    end
+  end
+
+  # Replaces the whole tag set with the given ids, limited to available_tags,
+  # under the same row lock as toggle_tag! and merge_tag_changes!, so the
+  # replacement can't interleave with another writer's tag change.
+  def replace_tags!(tag_ids, available_tags:)
+    with_lock do
+      self.tag_ids = available_tags.where(id: tag_ids).pluck(:id)
+    end
+  end
+
   # Marks a category as recently used. Called explicitly from the manual
   # category-assignment controllers (picker, edit form, categorization
   # wizard, create-and-assign) after a successful save — not wired to a
@@ -428,7 +584,31 @@ class Transaction < ApplicationRecord
   end
 
   def activity_security_id
-    extra&.dig("security_id").presence || extra&.dig("security", "id").presence
+    return nil unless extra.is_a?(Hash)
+
+    nested_security = extra["security"]
+    extra["security_id"].presence || (nested_security["id"].presence if nested_security.is_a?(Hash))
+  end
+
+  UUID_FORMAT = /\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/
+
+  # activity_security_id as the API and the data export emit it: a uuid
+  # string, or nil when extra holds anything else under the key.
+  def serializable_security_id
+    id = activity_security_id
+    id if id.is_a?(String) && id.match?(UUID_FORMAT)
+  end
+
+  # The provider's own type for this row, such as IBKR's "Withholding Tax",
+  # read from extra[<entry source>]["type"] where importers keep it. Only this
+  # string is exposed; the rest of the provider payload stays internal.
+  def provider_type
+    source = entry&.source
+    return nil if source.blank? || !extra.is_a?(Hash)
+
+    payload = extra[source]
+    type = payload["type"] if payload.is_a?(Hash)
+    type.presence if type.is_a?(String)
   end
 
   def activity_security
@@ -707,5 +887,15 @@ class Transaction < ApplicationRecord
       return unless family
 
       FamilyMerchantAssociation.where(family: family, merchant: merchant).delete_all
+    end
+
+    # The AI's or Bayes' category counts as theirs while it is still the value
+    # they recorded, which a category changed away and back again would
+    # satisfy too. Any change marks their records superseded; the records stay
+    # as history (the "AI history" filter). A change the source makes itself
+    # rewrites its record's metadata right after the save
+    # (Enrichable#log_enrichment), so only someone else's change ends a claim.
+    def supersede_automatic_category_claims
+      self.class.supersede_automatic_category_claims!([ id ])
     end
 end

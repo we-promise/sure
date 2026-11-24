@@ -11,6 +11,14 @@ class SnaptradeItem::ImporterTest < ActiveSupport::TestCase
     @importer = SnaptradeItem::Importer.new(snaptrade_items(:configured_item), snaptrade_provider: @provider)
   end
 
+  test "a rate-limited Personal key fails the import instead of being swallowed" do
+    @provider.stubs(:list_accounts).returns([])
+    @provider.stubs(:get_positions).returns([])
+    @provider.stubs(:rate_limit_error).returns(Provider::Snaptrade::RateLimitError.new("Rate limit exceeded"))
+
+    assert_raises(Provider::Snaptrade::RateLimitError) { @importer.import }
+  end
+
   # The flag is how anything outside the job chain (the item's syncing state,
   # SnaptradeAccount::SplitSecurityRepair) sees that a fetch is on its way,
   # so the job must never be queued without it.
@@ -22,6 +30,14 @@ class SnaptradeItem::ImporterTest < ActiveSupport::TestCase
     end
 
     assert @snaptrade_account.reload.activities_fetch_pending?
+  end
+
+  test "the first background fetch waits the same 15 seconds as its retries" do
+    freeze_time do
+      assert_enqueued_with(job: SnaptradeActivitiesFetchJob, at: SnaptradeActivitiesFetchJob::RETRY_DELAY.from_now) do
+        @importer.send(:import_activities, @snaptrade_account)
+      end
+    end
   end
 
   test "no background fetch is queued when the pending flag cannot be set" do
@@ -75,5 +91,33 @@ class SnaptradeItem::ImporterTest < ActiveSupport::TestCase
     entry = DebugLogEntry.order(:created_at).last
     assert_equal [ "SnaptradeItem::Importer", "provider_sync", family, @snaptrade_account.account_provider, @snaptrade_account.id ],
                  [ entry.source, entry.category, entry.family, entry.account_provider, entry.metadata["snaptrade_account_id"] ]
+  end
+
+  # An incomplete fetch (the provider's page cap or a missing page) raises, so
+  # the stored history and its sync cursor stay as they were.
+  test "a fetch that raises keeps the stored activities and the sync cursor" do
+    synced_at = 2.days.ago.change(usec: 0)
+    stored = Array.new(SnaptradeItem::Importer::MINIMUM_HISTORY_FOR_INCREMENTAL) { |i| { "id" => "a#{i}" } }
+    @snaptrade_account.update!(raw_activities_payload: stored, last_activities_sync: synced_at)
+    snaptrade_items(:configured_item).update!(last_synced_at: synced_at)
+    @provider.stubs(:get_account_activities).raises(Provider::Snaptrade::ApiError.new("hit the page cap"))
+
+    @importer.send(:import_activities, @snaptrade_account)
+
+    @snaptrade_account.reload
+    assert_equal stored, @snaptrade_account.raw_activities_payload
+    assert_equal synced_at, @snaptrade_account.last_activities_sync
+  end
+
+  # A failed fetch is not SnapTrade still syncing: the job would repeat the
+  # whole fetch (up to the page cap) only to fail the same way.
+  test "a fresh account whose fetch raises is not flagged and queues no background fetch" do
+    @provider.stubs(:get_account_activities).raises(Provider::Snaptrade::ApiError.new("hit the page cap"))
+
+    assert_no_enqueued_jobs(only: SnaptradeActivitiesFetchJob) do
+      @importer.send(:import_activities, @snaptrade_account)
+    end
+
+    assert_not @snaptrade_account.reload.activities_fetch_pending?
   end
 end

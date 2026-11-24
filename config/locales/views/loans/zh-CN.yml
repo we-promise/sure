@@ -11,6 +11,8 @@ zh-CN:
       day_count_convention_actual_365: Actual/365
       day_count_convention_actual_actual: Actual/actual
       day_count_convention_hint: 您的贷款机构如何按年衡量每个周期。Actual/365 按月份实际天数计息，是英国和澳大利亚抵押贷款的标准。30/360 按固定的十二分之一计息，是 Sure 一贯使用的基准。
+      principal_only_transfers: 关联转账仅包含本金
+      principal_only_transfers_hint: 当您仅转账本金并单独记录利息时请开启此项。当关联转账为全额还款时请关闭。
       day_count_convention_thirty_360: 30/360（固定十二分之一）
       rate_type: 利率类型
       term_months: 期限（月）
@@ -123,3 +125,25 @@ zh-CN:
         type: 类型
         unknown: 未知
         edit_loan_details: 编辑贷款详情
+    subtypes:
+      auto:
+        long: 汽车贷款
+        short: 汽车贷款
+      business:
+        long: 商业贷款
+        short: 商业贷款
+      home_equity:
+        long: 房屋净值贷款
+        short: 房屋净值
+      line_of_credit:
+        long: 信用额度
+        short: 信用额度
+      mortgage:
+        long: 抵押贷款
+        short: 抵押贷款
+      other:
+        long: 其他贷款
+        short: 其他贷款
+      student:
+        long: 学生贷款
+        short: 学生贷款
