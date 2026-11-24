@@ -22,18 +22,8 @@
         <div class="max-w-full">
           <%= tag.div class: ["flex items-center gap-3 lg:gap-4 min-w-0"] do %>
             <div class="hidden lg:flex">
-              <% if trade_logo_url.present? %>
-                <%= image_tag Setting.transform_brand_fetch_url(trade_logo_url),
-                    class: "w-9 h-9 rounded-full border border-secondary",
-                    loading: "lazy" %>
-              <% else %>
-                <%= render DS::FilledIcon.new(
-                  variant: :text,
-                  text: trade.security&.ticker || entry.name,
-                  size: "lg",
-                  rounded: true
-                ) %>
-              <% end %>
+              <%= render DS::Logo.new(src: Setting.transform_brand_fetch_url(trade_logo_url),
+                    name: trade.security&.ticker || entry.name) %>
             </div>
 
             <div class="flex lg:hidden">

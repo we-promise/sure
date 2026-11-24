@@ -1,0 +1,8 @@
+<%= tag.span class: container_classes, aria: { hidden: true } do %>
+  <%= render DS::FilledIcon.new(variant: :text, text: name, text_length: text_length, hex_color: color,
+        size: letter_size, rounded: true, class_name: "absolute inset-0 w-full! h-full!") %>
+  <% if src.present? %>
+    <%= image_tag src, alt: "", loading: "lazy", onerror: ProviderLogo::REMOVE_ON_ERROR,
+          class: "absolute inset-0 w-full h-full rounded-full object-contain border border-secondary bg-container" %>
+  <% end %>
+<% end %>

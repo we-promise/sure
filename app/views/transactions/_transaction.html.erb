@@ -35,14 +35,10 @@
 
         <div class="flex md:hidden items-center gap-1 col-span-2 relative shrink-0">
           <%= render "transactions/transaction_category", transaction: transaction, variant: "mobile", in_split_group: in_split_group %>
-          <% if transaction_security_logo_url.present? %>
-            <%= image_tag Setting.transform_brand_fetch_url(transaction_security_logo_url),
-                class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none",
-                loading: "lazy" %>
-          <% elsif transaction.merchant&.logo_url.present? %>
-            <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
-                class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none",
-                loading: "lazy" %>
+          <% badge_url = transaction_security_logo_url.presence || transaction.merchant&.logo_url %>
+          <% if badge_url.present? %>
+            <%= image_tag Setting.transform_brand_fetch_url(badge_url), alt: "", loading: "lazy", onerror: ProviderLogo::REMOVE_ON_ERROR,
+                  class: "w-5 h-5 rounded-full absolute -bottom-1 -right-1 border border-secondary pointer-events-none" %>
           <% end %>
         </div>
 
@@ -56,23 +52,9 @@
                   size: "lg",
                   rounded: true
                 ) %>
-              <% elsif transaction_security_logo_url.present? %>
-                <%= image_tag Setting.transform_brand_fetch_url(transaction_security_logo_url),
-                    class: "w-9 h-9 rounded-full border border-secondary",
-                    loading: "lazy" %>
-              <% elsif transaction.merchant&.logo_url.present? %>
-                <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
-                    class: "w-9 h-9 rounded-full border border-secondary",
-                    loading: "lazy" %>
               <% else %>
-                <div class="hidden lg:flex">
-                  <%= render DS::FilledIcon.new(
-                    variant: :text,
-                    text: entry.name,
-                    size: "lg",
-                    rounded: true
-                  ) %>
-                </div>
+                <%= render DS::Logo.new(src: Setting.transform_brand_fetch_url(transaction_security_logo_url.presence || transaction.merchant&.logo_url),
+                      name: transaction.activity_security&.ticker.presence || transaction.merchant&.name.presence || entry.name) %>
               <% end %>
             </div>
 
