@@ -24,6 +24,8 @@ module Ai::Error
 
   Cancelled      = Class.new(Base)
   Unreachable    = Class.new(Base)   # connection refused, DNS, TLS: no response came back
+  # Every route was marked down for a failure that passes on its own, so no request was sent.
+  MarkedDown     = Class.new(Unreachable)
   Timeout        = Class.new(Base)
   RateLimited    = Class.new(Base)   # 429
   Upstream       = Class.new(Base)   # 5xx
