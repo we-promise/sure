@@ -2925,6 +2925,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    The AI generation outbox comes with it as its own PR
    ([`ai-generation-outbox.md`](ai-generation-outbox.md)): a rule run's AI job is recorded with
    its count and delivered again, never given back.
+   After #5504, the outbox and PR 4 (in three parts, 4a–4c) land as one stack, and 3b and 3c as
+   four feature PRs (bill suggestions, stopping a PDF import, documents, MCP tools) based on it,
+   then 3d: [`stack-sequencer-off-the-web-thread.md`](stack-sequencer-off-the-web-thread.md).
 5. **RubyLLM 2.2 — delivered.** 2.2.0 (`~> 2.2`) ships on the 2f stack (PR #4892, `28cd75e61`).
    The recorded tests replayed and the live ones recorded again; Jev on OpenRouter works again
    (#1264: `…/alpha/decisions`, verified live 2026-11-12 — STARBUCKS → Coffee Shops 0.67,
@@ -3196,6 +3199,7 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 | [`pr-2f-release-e2e.md`](pr-2f-release-e2e.md) | PR 2f's release e2e plan (#4892): the AI features end to end on free live models on every `v*` tag |
 | [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md) | PR 3's implementation plan, in four parts (3a–3d): smart-fill, smart-configure, document indexing, probes and the MCP AI tools in jobs, cancellation, and capsule-only enforcement |
 | [`pr-4-sequencer.md`](pr-4-sequencer.md) | PR 4's implementation plan, merged between 3a and 3b: three lane queues, the `ai_chat` capsule, one gate per local host with interrupts, and #4444's typing hold in the gate |
+| [`stack-sequencer-off-the-web-thread.md`](stack-sequencer-off-the-web-thread.md) | After #5504: one stack (the outbox and PR 4 as 4a–4c) and five feature PRs (3b–3d), their branches, what changed since their plans, and the lessons from Workbench's code |
 
 **Terms this plan defines**, for readers and coding agents:
 

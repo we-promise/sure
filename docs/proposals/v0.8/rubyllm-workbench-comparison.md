@@ -29,6 +29,12 @@ where they disagree with §0.
 
 ## 0. Disposition — what happened to the recommendations (2026-11-17)
 
+**Second review (2026-11-24, `3c9162d`, current upstream bar a Ruby bump):** lessons for the
+outbox, the sequencer and PR 3's features are in
+[`stack-sequencer-off-the-web-thread.md`](stack-sequencer-off-the-web-thread.md) §3e (O1–O6,
+G1–G3, S1–S5, P1–P2, D1–D2, M1–M3). R15's recovery path reaches background generations there
+(O1, O4).
+
 2a and 2b merged (dbeebf14c, 992bfdcd8). 2c is #4775 (head `bd6345a26`, which carries one
 recommendation — finish_reason and the cost/idempotency guarantees). 2d is #4765, 2e is #4771,
 2f is #4892, all stacked on `refactor/ai-plumbing` with #4775 as 2c's branch. R13 shipped as

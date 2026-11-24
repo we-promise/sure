@@ -16,6 +16,10 @@ parallel with 3b and 3c (calls by @josh-sanders, 2026-11-13 and 2026-11-16).
 **Merge order:** after 3a, before 3b, 3c and 3d, which rebase onto it (PR 3's decision 9). It
 doesn't have to share a release with any part of PR 3.
 **Status:** plan; every decision below was made by @josh-sanders on 2026-11-13.
+**Delivery (2026-11-24):** after #5504, with base, branches and order in
+[`stack-sequencer-off-the-web-thread.md`](stack-sequencer-off-the-web-thread.md), which overrides the base and branch lines here.
+PR 4 ships as three PRs: 4a (steps 0–2), 4b (steps 3–4) and 4c (steps 5–9). The design below
+is unchanged.
 
 ## Context
 

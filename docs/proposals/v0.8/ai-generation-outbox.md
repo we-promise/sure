@@ -1,6 +1,8 @@
 # AI generation outbox: record the job with its count, queue after commit, deliver again
 
-Status: planned 2026-11-23, not built · Its own PR, delivered with PR 4 (Sequencer), after #5608 (stack #5504) · Companion to
+Status: planned 2026-11-23, not built · Its own PR, the first in the stack after #5504
+([`stack-sequencer-off-the-web-thread.md`](stack-sequencer-off-the-web-thread.md)), before the
+sequencer · Lessons from Workbench's code added 2026-11-24 (O1–O6) · Companion to
 [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md), [`ai-generation-windowing.md`](ai-generation-windowing.md)
 and [`rubyllm-workbench-comparison.md`](rubyllm-workbench-comparison.md). The problem comes from
 #5077 ("Release a rule run's awaited count when releasing it fails too"), and CodeRabbit's last
@@ -11,6 +13,9 @@ enqueue after save").
 Code references are to `feat/ai-5077-followups` at `ce9ccbd47`. Versions are Rails 8.1.4.1,
 Sidekiq 8.0.5 (OSS) and ruby_llm 2.2.3.
 
+O1–O6 are the lessons from RubyLLM Workbench's code, listed in
+[`stack-sequencer-off-the-web-thread.md`](stack-sequencer-off-the-web-thread.md) §3e.
+
 Each decision is tagged **[product]**, meaning it changes what a user or self-hoster sees and is
 @josh-sanders' call, or **[technical]**, meaning the code or a dependency forces it.
 
@@ -18,7 +23,8 @@ Each decision is tagged **[product]**, meaning it changes what a user or self-ho
 fails. Giving it back is a second write that can fail too, and then the run waits for good. This
 is the last "two failures in a row" case left after #5608. An outbox removes the give-back: the
 count and the job to run commit in one transaction, the job is queued only after that commit, and
-a delivery job queues it again if the queuing failed or the job never started. Nothing is ever
+a delivery job queues it again if the queuing failed, the job never started, or it died
+during its step. Nothing is ever
 given back, so nothing can fail on top of it. #5608's step claims already make a second copy of
 a job harmless, which is the half of Workbench's pattern Sure has.
 
@@ -98,33 +104,45 @@ sequenceDiagram
 5. **`Ai::GenerationDeliveryJob`.** [product] Runs every 15 minutes, by sidekiq-cron in
    `config/schedule.yml` like `PushDelivery`'s claim timeout. For runs with `next_job` set and
    `updated_at` older than an hour, it queues `next_job` again and touches the run.
-   - A job clears `next_job` when it starts, so a run is delivered again only when its next job
-     never started: the queue refused it, raised, or lost it before it ran.
+   - **`next_job` stays until the step commits** (O1, call by @josh-sanders, 2026-11-24). The
+     commit that claims a step writes the next step's `next_job`, or deletes the run with the
+     last step. Today a job clears it when it starts (`generation_job.rb:39` at `14ae81544`),
+     which leaves a job lost mid-step with nothing to deliver.
+     - So a run is delivered again when its next job never started (the queue refused it,
+       raised, or lost it), and also when the job died during its step.
+     - A live step isn't mistaken for a dead one: each step touches the run when it loads, and a
+       step's route budget is minutes, well under the hour.
+   - **The idle check uses the database's clock:** `updated_at < now() - interval '1 hour'` in
+     SQL (O2).
    - A job queued behind other families' work for more than an hour gets a second copy. That's
      expected: the step claims make the second copy stop, or re-queue the step after it, without
      a second model call.
-   - At most 3 deliveries per step, counted in `next_job["deliveries"]`. After that the run is
-     left to the 7-day sweep.
+   - **At most 3 deliveries per step**, counted in `next_job["deliveries"]`.
+     - The count goes up in the same `UPDATE … WHERE … deliveries < 3 RETURNING id` that selects
+       the run, before enqueueing, so two overlapping cron runs can't both pass the cap (O3).
+     - After the third, the run gives up through its requester (`give_up` → `ai_failed`, "the job
+       couldn't be queued"), so a rule run finishes as failed instead of waiting for the 7-day
+       sweep, which never tells it (O4, call by @josh-sanders, 2026-11-24).
+   - **Visible.** Each redelivery and each give-up writes a `DebugLogEntry` (category `ai`).
+     `SidekiqHealth` counts runs whose `next_job` has been idle for more than an hour (O5).
 
 ## 3. What it doesn't cover
 
-- **A job lost after it started.** It cleared `next_job`, then the worker died and Sidekiq OSS
-  didn't put it back (a hard kill; a graceful shutdown re-queues it). Its run is never delivered
-  again, and the 7-day sweep deletes it without telling the requester, so a `RuleRun` waits for
-  good. The fix is the other half of Workbench's pattern: a recovery job that, for a run idle
-  past a limit, delivers its step again or ends it through `give_up`, so the requester always
-  hears. It needs a marker that a step started (the job clears `next_job`, so the marker would
-  be a separate `started_at`). Planned separately, for #5077.
+- **A job lost after it started is now covered** (O1). The step keeps `next_job` until it
+  commits, so a worker killed mid-step leaves the run to be delivered again after an hour, and
+  after 3 deliveries the requester hears (O4). No `started_at` column is needed.
 - **Exactly-once model calls.** Two copies of a step that both start before either commits both
-  call the model; one commits and the other stops at its claim (#5608). The outbox doesn't
-  change that, and Workbench states the same limit.
+  call the model; one commits and the other stops at its claim (#5608). With O1 this also
+  happens when a replay of the step before queues a step that's still running. The outbox
+  doesn't change that, and Workbench states the same limit (its `docs/ARCHITECTURE.md:457`).
 
 ## 4. Side effects
 
-- **`ProviderMerchant::Enhancer`** drops its family lock when `enqueue` reports nothing queued.
-  With the outbox it holds the lock while delivery is pending. The lock lives 10 minutes against
-  the hour before a run is delivered again, so a second enhancement run can start in between.
-  It ties into #5077's "Merchant enhancement lease owned by its run".
+- **`ProviderMerchant::Enhancer`'s family lock goes.** It's a 10-minute boolean lock, which runs
+  out while a run waits an hour for delivery, so a second enhancement run could start in between.
+  - The lease becomes "an unfinished `enhance_merchants` `Ai::GenerationRun` exists for the
+    family". It ends when the run ends or the 7-day sweep deletes it.
+  - This closes #5077's "Merchant enhancement lease owned by its run".
 - **Upgrade.** Runs queued before the release have no `next_job`, so the delivery job never
   touches them; they finish or are swept as today. No migration: `next_job` exists (#5608).
 
@@ -135,7 +153,8 @@ sequenceDiagram
 | Deliver again after a run is idle | 1 hour | Longer than a normal queue wait, so second copies stay rare |
 | Delivery job cadence | every 15 minutes | Matches `PushDelivery`'s claim timeout; cheap, one indexed query |
 | Deliveries per step | 3 | A queue that refuses three times needs an operator, not a fourth try |
-| Recovering a job lost after it started | out of this PR | Needs a started marker and a policy for the requester; §3 |
+| Recovering a job lost after it started | in this PR: `next_job` stays until the step commits (O1) | Call by @josh-sanders, 2026-11-24, after Workbench's lease recovery; §2 |
+| After the delivery cap | give up through the requester (O4) | Call by @josh-sanders, 2026-11-24; the sweep never tells a rule run |
 | A batch that can't be queued | the outbox, not #5710's or #5608's behaviour | Call by @josh-sanders, 2026-11-24. #5710 (on `main`) fails the run and still queues the batches after it; #5608 gives the counts back and queues nothing after it. Both are replaced here. |
 
 ## 6. Tests
@@ -150,5 +169,11 @@ sequenceDiagram
   delivery job queues it.
 - A second copy delivered while the first waits in the queue: one model call per step, and the
   run counts each batch once.
-- The delivery cap: after 3 deliveries the run isn't queued again.
-- `ProviderMerchant::Enhancer` with a refused queue: the lock stays, and the run is delivered.
+- `ProviderMerchant::Enhancer` with a refused queue: a second enhancement waits while the first
+  run exists, and the run is delivered.
+- A worker killed mid-step (after the step loaded, before it committed): `next_job` is still set,
+  and the delivery job queues the step after an hour (O1).
+- The cap: after the third delivery the requester's `ai_failed` runs once, and the rule run
+  finishes as failed (O4). Two delivery jobs at once pass the cap once (O3).
+- The queue took the job but the answer was lost, so the job is delivered twice: one commit and
+  one count (O6, as Workbench's `agent_run_delivery_dispatcher_job_test.rb:85`).

@@ -26,6 +26,10 @@ Worktrees `~/src/sure-ai-3`, `~/src/sure-ai-3-tidy` and `~/src/sure-ai-3-tests`.
 to ship in the same release as another (see [Order with PR 4](#order-with-pr-4)).
 **Status:** 3a, 3a-tidy and 3a-tests restacked onto `d51f2ec20` on 2026-11-21 (3a `cd11a37bf` + `f6b25ff9b`, 3a-tidy `7a8681987`, 3a-tests `3d25c604c`; full suite green on each, e2e 12/12 on the top); 3b–3d
 planned. Decisions 1–8 made by @josh-sanders on 2026-11-13, decision 9 on 2026-11-16.
+**Delivery (2026-11-24):** after #5504, with base, branches and order in
+[`stack-sequencer-off-the-web-thread.md`](stack-sequencer-off-the-web-thread.md), which overrides the base and branch lines here.
+3b ships as two PRs (bill suggestions with their Stop; stopping a PDF import) and 3c as two
+(documents; MCP tools), each based on PR 4's last part. The design below is unchanged.
 
 ## Context
 
