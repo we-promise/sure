@@ -3,7 +3,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
     base_label = "Auto-categorize transactions with AI"
 
     if rule.family.self_hoster?
-      selected_model = rule.family.categorization_model_name
+      selected_model = Ai.plan(:categorize, family: rule.family)&.model&.name
 
       if selected_model.present?
         # Estimate cost for typical batch of 20 transactions

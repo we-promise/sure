@@ -387,4 +387,61 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     assert_equal "TSLA", ranked[0].ticker
     assert_equal "US", ranked[0].country_code, "US Tesla should rank first for US user"
   end
+
+  test "ranking: a valid ISIN query ranks results carrying that ISIN first" do
+    other = build_result(ticker: "SGLDX", name: "Other gold fund", country_code: "GB")
+    match = build_result(ticker: "SGLD", name: "Invesco Physical Gold", country_code: "GB", exchange_operating_mic: "XLON")
+    match.search_isin = "IE00B579F325"
+    other_isin = build_result(ticker: "IE00B579F325", name: "Ticker equals query", country_code: "US")
+    other_isin.search_isin = "IE00B4ND3602"
+
+    ranked = rank([ other, other_isin, match ], "ie00b579f325", "US")
+
+    assert_equal "SGLD", ranked.first.ticker
+  end
+
+  test "ranking: an ISIN-shaped query with a bad check digit is not treated as an ISIN" do
+    wrong = build_result(ticker: "AAA", name: "Wrong")
+    wrong.search_isin = "IE00B579F326"
+    exact_ticker = build_result(ticker: "IE00B579F326", name: "Ticker match")
+
+    ranked = rank([ wrong, exact_ticker ], "IE00B579F326")
+
+    assert_equal "IE00B579F326", ranked.first.ticker
+  end
+
+  test "ranking: results without an ISIN are unaffected by an ISIN query" do
+    a = build_result(ticker: "ZZZ", name: "Zed")
+    b = build_result(ticker: "AAA", name: "Aye")
+
+    assert_equal %w[AAA ZZZ], rank([ a, b ], "IE00B579F325").map(&:ticker)
+  end
+
+  test "search_provider carries the provider ISIN through and tolerates providers without one" do
+    with_isin = mock("with_isin")
+    without_isin = mock("without_isin")
+    with_isin.stubs(:class).returns(Provider::Eodhd)
+    without_isin.stubs(:class).returns(Provider::YahooFinance)
+
+    with_isin.expects(:search_securities).with("IE00B579F325").returns(provider_success_response([
+      Provider::SecurityConcept::Security.new(
+        symbol: "SGLD", name: "Invesco Physical Gold", logo_url: nil,
+        exchange_operating_mic: "XLON", country_code: "GB", currency: "GBP", isin: "IE00B579F325"
+      )
+    ]))
+    without_isin.expects(:search_securities).with("IE00B579F325").returns(provider_success_response([
+      Provider::SecurityConcept::Security.new(
+        symbol: "IE00B579F325.SG", name: "Invesco Physical Gold", logo_url: nil,
+        exchange_operating_mic: "XSTU", country_code: "DE"
+      )
+    ]))
+
+    Security.stubs(:providers).returns([ without_isin, with_isin ])
+
+    results = Security.search_provider("IE00B579F325")
+
+    assert_equal [ "SGLD", "IE00B579F325.SG" ], results.map(&:ticker)
+    assert_equal "IE00B579F325", results.first.to_combobox_option.isin
+    assert_nil results.last.to_combobox_option.isin
+  end
 end
