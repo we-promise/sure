@@ -17,7 +17,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: mock_provider)
   end
 
-  test "removes content-level duplicates with different entry_reference IDs" do
+  test "keeps booked transactions that differ only in entry_reference" do
     transactions = [
       {
         entry_reference: "ref_aaa",
@@ -41,8 +41,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
 
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
-    assert_equal 1, result.count
-    assert_equal "ref_aaa", result.first[:entry_reference]
+    assert_equal %w[ref_aaa ref_bbb], result.map { |tx| tx[:entry_reference] }
   end
 
   test "keeps transactions with different amounts" do
@@ -124,8 +123,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
 
     transactions = [
       base.merge(entry_reference: "ref_1"),
-      base.merge(entry_reference: "ref_2"),
-      base.merge(entry_reference: "ref_3")
+      base.merge(entry_reference: "ref_1"),
+      base.merge(entry_reference: nil)
     ]
 
     result = @importer.send(:deduplicate_api_transactions, transactions)
@@ -144,6 +143,13 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         "status" => "BOOK"
       },
       {
+        "entry_reference" => "ref_aaa",
+        "booking_date" => "2026-02-07",
+        "transaction_amount" => { "amount" => "11.65", "currency" => "EUR" },
+        "creditor" => { "name" => "Spar" },
+        "status" => "BOOK"
+      },
+      {
         "entry_reference" => "ref_bbb",
         "booking_date" => "2026-02-07",
         "transaction_amount" => { "amount" => "11.65", "currency" => "EUR" },
@@ -154,7 +160,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
 
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
-    assert_equal 1, result.count
+    assert_equal %w[ref_aaa ref_bbb], result.map { |tx| tx["entry_reference"] }
   end
 
   test "differentiates by remittance_information" do
@@ -193,7 +199,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         status: "BOOK"
       },
       {
-        entry_reference: "ref_bbb",
+        entry_reference: "ref_aaa",
         booking_date: "2026-02-07",
         transaction_amount: { amount: "11.65", currency: "EUR" },
         creditor: { name: "Spar" },
@@ -233,7 +239,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 2, result.count
   end
 
-  test "deduplicates same transaction_id even with different entry_references" do
+  test "keeps booked rows sharing a transaction_id that differ only in entry_reference" do
     transactions = [
       {
         entry_reference: "ref_aaa",
@@ -255,8 +261,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
 
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
-    assert_equal 1, result.count
-    assert_equal "ref_aaa", result.first[:entry_reference]
+    assert_equal %w[ref_aaa ref_bbb], result.map { |tx| tx[:entry_reference] }
   end
 
   test "preserves transactions with same non-unique transaction_id but different content" do
@@ -297,7 +302,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         status: "BOOK"
       },
       {
-        entry_reference: "ref_2",
+        entry_reference: "ref_1",
         transaction_id: nil,
         value_date: "2026-02-10",
         transaction_amount: { amount: "1.50", currency: "EUR" },

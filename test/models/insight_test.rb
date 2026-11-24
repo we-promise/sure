@@ -166,7 +166,38 @@ class InsightTest < ActiveSupport::TestCase
     assert_not_includes family.insights.visible, insight
   end
 
+  test "an insight about a recurring series follows the series' current account" do
+    family = families(:dylan_family)
+    series = recurring_transactions(:netflix_subscription)
+    insight = subscription_audit_insight(family, series, account_id: series.account_id)
+    assert_includes family.insights.visible, insight
+
+    series.update_columns(account_id: accounts(:connected).id)
+    assert_not_includes family.insights.visible, insight
+
+    series.update_columns(account_id: nil)
+    assert_includes family.insights.visible, insight
+  end
+
+  test "an insight about a deleted recurring series is hidden" do
+    family = families(:dylan_family)
+    series = recurring_transactions(:netflix_subscription)
+    insight = subscription_audit_insight(family, series)
+
+    series.destroy!
+
+    assert_not_includes family.insights.visible, insight
+  end
+
   private
+    def subscription_audit_insight(family, series, account_id: nil)
+      family.insights.create!(
+        insight_type: "subscription_audit", priority: "medium", status: "active", title: "Audit", body: "body",
+        metadata: { "recurring_transaction_id" => series.id, "account_id" => account_id }.compact,
+        dedup_key: "subscription_audit:#{series.id}", generated_at: Time.current
+      )
+    end
+
     def idle_cash_insight(family, account)
       family.insights.create!(
         insight_type: "idle_cash", priority: "low", status: "active", title: "Idle", body: "body",
