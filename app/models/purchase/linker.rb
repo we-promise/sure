@@ -153,7 +153,14 @@ class Purchase::Linker
     end
 
     def allocation
-      Purchase::CategoryAllocator.new(total: purchase.total, items: allocator_items, categories: purchase.family.categories).groups
+      Purchase::CategoryAllocator.new(total: purchase.total, items: allocator_items, categories: purchase.family.categories, precision:).groups
+    end
+
+    # The parts are rounded to the currency's decimals, so they add up to the transaction's amount.
+    def precision
+      Money::Currency.new(purchase.currency.to_s).default_precision
+    rescue Money::Currency::UnknownCurrencyError
+      2
     end
 
     def allocator_items

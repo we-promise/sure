@@ -33,6 +33,19 @@ class Purchase::LinkerTest < ActiveSupport::TestCase
     assert_equal [ @household, @food ], children.map { _1.entryable.category }
   end
 
+  test "a currency with three decimals splits to its smallest unit" do
+    @purchase.update!(total: BigDecimal("1.001"), currency: "KWD")
+    @purchase.items.first.update!(amount: BigDecimal("0.5005"))
+    @purchase.items.second.update!(amount: BigDecimal("0.5005"))
+    entry = create_transaction(account: accounts(:depository), amount: BigDecimal("1.001"), currency: "KWD", date: Date.current - 1.day)
+
+    @purchase.link!(entry)
+
+    children = entry.reload.child_entries
+    assert_equal 2, children.count
+    assert_equal BigDecimal("1.001"), children.sum(:amount)
+  end
+
   test "one category group sets and locks the category, overriding a rule's category" do
     @purchase.items.where(name: "Soap").update_all(category_id: @food.id)
     @entry.entryable.enrich_attribute(:category_id, @shopping.id, source: "rule")
