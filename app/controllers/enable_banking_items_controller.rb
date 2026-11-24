@@ -318,37 +318,39 @@ class EnableBankingItemsController < ApplicationController
   def setup_accounts
     @enable_banking_accounts = @enable_banking_item.enable_banking_accounts.needs_setup
 
-    @account_type_options = [
-      [ "Skip this account", "skip" ],
-      [ "Checking or Savings Account", "Depository" ],
-      [ "Credit Card", "CreditCard" ],
-      [ "Investment Account", "Investment" ],
-      [ "Loan or Mortgage", "Loan" ],
-      [ "Other Asset", "OtherAsset" ]
-    ]
+    account_type_keys = {
+      "depository" => "Depository",
+      "credit_card" => "CreditCard",
+      "investment" => "Investment",
+      "loan" => "Loan",
+      "other_asset" => "OtherAsset"
+    }
+
+    @account_type_options = [ [ t(".account_types.skip"), "skip" ] ] +
+      account_type_keys.map { |key, type| [ t(".account_types.#{key}"), type ] }
 
     @subtype_options = {
       "Depository" => {
-        label: "Account Subtype:",
-        options: Depository::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: t(".subtype_labels.depository"),
+        options: Depository.subtype_options_for_select
       },
       "CreditCard" => {
         label: "",
         options: [],
-        message: "Credit cards will be automatically set up as credit card accounts."
+        message: t(".subtype_messages.credit_card")
       },
       "Investment" => {
-        label: "Investment Type:",
-        options: Investment::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: t(".subtype_labels.investment"),
+        options: Investment.subtype_options_for_select
       },
       "Loan" => {
-        label: "Loan Type:",
-        options: Loan::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: t(".subtype_labels.loan"),
+        options: Loan.subtype_options_for_select
       },
       "OtherAsset" => {
         label: nil,
         options: [],
-        message: "Other assets will be set up as general assets."
+        message: t(".subtype_messages.other_asset")
       }
     }
 

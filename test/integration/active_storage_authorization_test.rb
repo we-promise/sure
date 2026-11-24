@@ -52,6 +52,34 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_url
   end
 
+  test "a disk service url lets the browser keep an account logo for as long as the url is valid" do
+    sign_in @user_a
+    account = @user_a.family.accounts.first
+    account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png", content_type: "image/png")
+
+    get rails_blob_path(account.logo)
+    get response.location
+
+    assert_response :success
+    cache_control = response.headers["Cache-Control"]
+    assert_includes cache_control, "max-age=#{ActiveStorage.service_urls_expire_in.to_i}"
+    assert_includes cache_control, "private"
+    assert_includes cache_control, "immutable"
+  end
+
+  # A cached response would be served without the authorization checks.
+  test "a disk service url for a protected file still has the browser ask every time" do
+    sign_in @user_a
+
+    get rails_blob_path(@statement_a.original_file)
+    get response.location
+
+    assert_response :success
+    cache_control = response.headers["Cache-Control"]
+    assert_not_includes cache_control, "immutable"
+    assert_includes cache_control, "must-revalidate"
+  end
+
   test "disk service urls enforce statement blob authorization" do
     sign_in @user_a
 
