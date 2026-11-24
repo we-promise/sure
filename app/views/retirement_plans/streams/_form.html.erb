@@ -16,6 +16,7 @@
   <div data-retirement-stream-kind-target="endYearField">
     <%= f.number_field :end_year, label: t(".end_year"), step: "1", placeholder: t(".end_year_placeholder") %>
   </div>
+  <%= f.hidden_field :end_year, value: "", disabled: true, id: nil, data: { retirement_stream_kind_target: "noEndYear" } %>
   <div class="flex items-center justify-between gap-3">
     <%= f.label :indexed, t(".indexed"), class: "text-sm text-primary" %>
     <%= f.toggle :indexed %>

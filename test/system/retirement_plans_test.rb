@@ -92,7 +92,9 @@ class RetirementPlansTest < ApplicationSystemTestCase
       fill_in "retirement_plan_stream[start_year]", with: "2030"
       fill_in "retirement_plan_stream[end_year]", with: "2020"
       select I18n.t("retirement_plans.streams.form.kinds.one_off"), from: "retirement_plan_stream[kind]"
-      assert_no_selector "input[name='retirement_plan_stream[end_year]']"
+      assert_no_selector "input[type=number][name='retirement_plan_stream[end_year]']"
+      assert_selector "input[type=number][name='retirement_plan_stream[end_year]'][disabled]", visible: :all
+      assert_selector "input[type=hidden][name='retirement_plan_stream[end_year]']:not([disabled])", visible: :all
       click_button I18n.t("retirement_plans.streams.form.save")
     end
 
@@ -136,5 +138,24 @@ class RetirementPlansTest < ApplicationSystemTestCase
 
     assert_selector "#retirement-plan-streams", text: "Mortgage"
     assert_equal 2041, RetirementPlan.find_by!(user: @user).streams.find_by!(name: "Mortgage").end_year
+  end
+
+  # Editing a stream into a one-off clears the end year it had, which the
+  # form no longer shows.
+  test "an expense edited into a one-off saves without its old end year" do
+    plan = RetirementPlan.create!(user: @user, birth_year: 1985, retirement_date: Date.new(2045, 1, 1), streams_seeded_on: Date.current)
+    stream = plan.streams.create!(kind: "expense", name: "Rent", annual_amount: 12_000, start_year: 2030, end_year: 2041, source: "manual")
+    visit retirement_plan_path
+
+    within("tr[data-stream-id='#{stream.id}']") { find("button[aria-haspopup='menu']").click }
+    click_link I18n.t("retirement_plans.show.edit")
+    within("dialog") do
+      select I18n.t("retirement_plans.streams.form.kinds.one_off"), from: "retirement_plan_stream[kind]"
+      fill_in "retirement_plan_stream[start_year]", with: "2045"
+      click_button I18n.t("retirement_plans.streams.form.save")
+    end
+
+    assert_no_selector "dialog"
+    assert_equal [ "one_off", 2045, nil ], [ stream.reload.kind, stream.start_year, stream.end_year ]
   end
 end
