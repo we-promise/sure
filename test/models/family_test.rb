@@ -463,7 +463,7 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal Money::Currency.as_options.map(&:iso_code), family.reload.enabled_currency_codes
   end
 
-  test "upload_document stores provided metadata on family document" do
+  test "upload_document stores provided metadata and statement on family document" do
     family = families(:dylan_family)
     family.update!(vector_store_id: nil)
 
@@ -481,14 +481,21 @@ class FamilyTest < ActiveSupport::TestCase
 
     VectorStore::Registry.stubs(:adapter).returns(adapter)
 
+    statement = AccountStatement.create_from_upload!(
+      family: family, account: accounts(:connected),
+      file: uploaded_file(filename: "statement.pdf", content_type: "application/pdf", content: "%PDF-1.4 statement")
+    )
+
     document = family.upload_document(
       file_content: "hello",
       filename: "notes.txt",
-      metadata: { "type" => "financial_document" }
+      metadata: { "type" => "financial_document" },
+      account_statement: statement
     )
 
     assert_not_nil document
     assert_equal({ "type" => "financial_document" }, document.metadata)
+    assert_equal statement, document.reload.account_statement
     assert_equal "vs_test123", family.reload.vector_store_id
   end
 

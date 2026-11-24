@@ -308,7 +308,7 @@ class ChartTouchTest < ApplicationSystemTestCase
 
   test "a vertical swipe on the chart scrolls the page and hides the tooltip" do
     page.driver.browser.manage.window.resize_to(1400, 700)
-    page.execute_script(%(document.querySelector("#{CHART}").scrollIntoView({ block: "center" })))
+    center_chart_in_window(height: 700)
     before = scroll_offsets
     start = chart_point(0.5)
 
@@ -398,6 +398,22 @@ class ChartTouchTest < ApplicationSystemTestCase
     def tooltip_visible?
       # Shown and hidden through its inline opacity (the class starts it hidden).
       page.evaluate_script(%(document.querySelector("#{CHART} > .chart-tooltip").style.opacity)) == "1"
+    end
+
+    # Scrolls the chart to the middle of a window resized to `height`. The new
+    # size can reach the page after resize_to returns: centred before it does,
+    # the chart sits where the middle of the taller window was, below the
+    # bottom of the shorter one, and a touch there lands off screen. So it
+    # centres again until the chart is on screen at the new size.
+    def center_chart_in_window(height:)
+      page.document.synchronize(5) do
+        page.execute_script(%(document.querySelector("#{CHART}").scrollIntoView({ block: "center" })))
+        box = chart_box
+        inner = page.evaluate_script("innerHeight")
+        unless inner < height && box["top"] >= 0 && box["top"] + box["height"] <= inner
+          raise Capybara::ExpectationNotMet, "the chart is not on screen in the #{height}px window"
+        end
+      end
     end
 
     # Every scrollable box's offset, since the page scrolls inside the layout.

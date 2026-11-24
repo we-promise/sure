@@ -1,0 +1,23 @@
+---
+nb:
+  settings:
+    llm_usages:
+      show:
+        total_calls: "Kall totalt"
+        requests_in_calls:
+          one: "%{count} forespørsel, inkludert nye forsøk"
+          other: "%{count} forespørsler, inkludert nye forsøk"
+        avg_cost_per_call: "Snittkostnad per kall"
+        based_on_calls: "Basert på %{with_cost} av %{total} kall med kostnadsdata"
+        recent_usage_scope: "Hvert kall viser alle forespørslene sine, også de utenfor de valgte datoene. Derfor kan summen avvike fra totalene ovenfor, som bare teller forespørsler i perioden."
+        cancelled: "Avbrutt"
+      requests:
+        summary:
+          one: "%{count} forespørsel"
+          other: "%{count} forespørsler"
+        request: "Forespørsel %{number}"
+        tokens: "%{prompt}/%{completion} tokens"
+        status:
+          succeeded: "Fullført"
+          failed: "Mislyktes"
+          cancelled: "Avbrutt"
