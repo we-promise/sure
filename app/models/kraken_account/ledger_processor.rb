@@ -18,25 +18,19 @@
 class KrakenAccount::LedgerProcessor
   include KrakenAccount::UsdConverter
 
-  # Ledger types we import. `spend` and `receive` are the two halves of Kraken's
-  # dust sweep -- "convert small balances" -- and they move units like any other
-  # entry. Left out they were not skipped but dropped, silently, by the guard
-  # below, so a swept position stayed on the books at its pre-sweep quantity
-  # forever.
-  SUPPORTED_TYPES = %w[deposit withdrawal staking earn fee spend receive].freeze
-
-  # Types whose fee is charged on top of a movement with an external counterparty,
-  # and so must stay a separate entry for transfer matching to work.
-  SPLIT_FEE_TYPES = %w[deposit withdrawal].freeze
-
-  # Ledger types we intentionally ignore (handled elsewhere or out of scope).
-  SKIP_TYPES = %w[trade transfer margin rollover settled adjustment].freeze
+  REWARD_LABELS = { "staking" => "Dividend", "earn" => "Interest" }.freeze
+  # Spend and receive are the two legs of a dust sweep.
+  ACTIVITY_LABELS = REWARD_LABELS.merge(
+    "deposit" => "Contribution", "withdrawal" => "Withdrawal", "fee" => "Fee",
+    "spend" => "Sweep Out", "receive" => "Sweep In"
+  ).freeze
+  EXTERNAL_TRANSFER_TYPES = %w[deposit withdrawal].freeze
 
   # Kraken Earn internal subtypes that represent fund movements, not income.
   EARN_INTERNAL_SUBTYPES = %w[allocation deallocation].freeze
 
   def self.reward_price_status(metadata)
-    return unless %w[staking earn].include?(metadata["type"].to_s.downcase)
+    return unless REWARD_LABELS.key?(metadata["type"].to_s.downcase)
     # Older rewards have no subtype. Allocations and migrations move existing units.
     return unless [ "", "reward", "rewardallocation" ].include?(metadata["subtype"].to_s.strip.downcase)
 
@@ -111,8 +105,7 @@ class KrakenAccount::LedgerProcessor
       type    = ledger["type"].to_s.downcase
       subtype = ledger["subtype"].to_s.downcase
 
-      return if SKIP_TYPES.include?(type)
-      return unless SUPPORTED_TYPES.include?(type)
+      return unless ACTIVITY_LABELS.key?(type)
 
       # Skip Earn allocation/deallocation — these are internal fund movements, not income.
       return if type == "earn" && EARN_INTERNAL_SUBTYPES.include?(subtype)
@@ -139,13 +132,13 @@ class KrakenAccount::LedgerProcessor
       # is known; and a crypto row still in an older shape -- a cash Transaction
       # from before coin movements were trades, or a trade saved without a
       # price -- which the sync heals whatever the ledger type.
-      if @existing_external_ids.include?(external_id) && !SPLIT_FEE_TYPES.include?(type)
+      if @existing_external_ids.include?(external_id) && !EXTERNAL_TRANSFER_TYPES.include?(type)
         return if fiat || !crypto_row_needs_healing?(external_id)
       end
 
       # A crypto fee is paid in the units themselves, so it only reduces the
       # quantity; there is no second cash movement to split out.
-      split_fee = fiat && SPLIT_FEE_TYPES.include?(type) && !raw_fee.zero?
+      split_fee = fiat && EXTERNAL_TRANSFER_TYPES.include?(type) && !raw_fee.zero?
       net        = raw_amount - raw_fee
       abs_impact = split_fee ? raw_amount.abs : net.abs
 
@@ -275,7 +268,7 @@ class KrakenAccount::LedgerProcessor
           qty: signed_qty,
           price: price,
           currency: target_currency,
-          investment_activity_label: crypto_activity_label(type),
+          investment_activity_label: activity_label(type, crypto: true),
           extra: build_extra(ledger_id, ledger, raw_asset, price_missing)
         )
       )
@@ -341,23 +334,6 @@ class KrakenAccount::LedgerProcessor
       Transfer.where(inflow_transaction_id: transaction.id).or(Transfer.where(outflow_transaction_id: transaction.id)).exists?
     end
 
-    # A coin arriving from outside has a cost nothing here knows, so it is a
-    # Transfer and the basis becomes unknown from that date -- the same treatment
-    # an inbound share transfer already gets. A reward is acquired at the market
-    # price on the day, which is both its basis and the income it represents.
-    def crypto_activity_label(type)
-      case type
-      when "deposit", "withdrawal" then Trade::TRANSFER_LABEL
-      when "staking"               then "Dividend"
-      when "earn"                  then "Interest"
-      when "fee"                   then "Fee"
-      # A dust sweep exchanges one asset for another inside the exchange. Both
-      # halves are internal movements, so neither invents a cost basis.
-      when "spend"                 then "Sweep Out"
-      when "receive"               then "Sweep In"
-      end
-    end
-
     def fiat?(base_symbol)
       KrakenAccount::FIAT_CURRENCIES.include?(KrakenAccount::SecurityResolver.canonical_asset(base_symbol))
     end
@@ -369,7 +345,7 @@ class KrakenAccount::LedgerProcessor
     def warm_crypto_prices
       spans = {}
       raw_ledgers.each_value do |ledger|
-        next unless SUPPORTED_TYPES.include?(ledger["type"].to_s.downcase)
+        next unless ACTIVITY_LABELS.key?(ledger["type"].to_s.downcase)
 
         base_symbol = normalizer.normalize(ledger["asset"].to_s)[:price_symbol]
         next if base_symbol.blank? || fiat?(base_symbol)
@@ -577,23 +553,15 @@ class KrakenAccount::LedgerProcessor
       end
     end
 
-    def activity_label(type)
-      case type
-      when "deposit"    then "Contribution"
-      when "withdrawal" then "Withdrawal"
-      when "staking"    then "Dividend"
-      when "earn"       then "Interest"
-      when "fee"        then "Fee"
-      when "spend"      then "Sweep Out"
-      when "receive"    then "Sweep In"
-      end
+    def activity_label(type, crypto: false)
+      # A coin moved from another wallet carries no known acquisition cost.
+      return Trade::TRANSFER_LABEL if crypto && EXTERNAL_TRANSFER_TYPES.include?(type)
+
+      ACTIVITY_LABELS.fetch(type)
     end
 
     def transaction_kind(type)
-      case type
-      when "deposit", "withdrawal" then "funds_movement"
-      else "standard"
-      end
+      EXTERNAL_TRANSFER_TYPES.include?(type) ? "funds_movement" : "standard"
     end
 
     def build_extra(ledger_id, ledger, raw_asset, price_missing)

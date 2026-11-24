@@ -71,7 +71,7 @@ class NonCashRewardDisplayTest < ActionDispatch::IntegrationTest
 
     provider = stub("reward provider")
     provider.stubs(:reward_price_status).with({ "activity" => "bonus" }).returns(:historical)
-    stub_const(Trade::NonCashReward, :PROVIDERS, { "example" => provider }) do
+    stub_const(Trade, :REWARD_PROVIDERS, { "example" => provider }) do
       get account_url(entry.account, tab: "activity")
       assert_response :success
       assert_reward_row entry, "$25.00"

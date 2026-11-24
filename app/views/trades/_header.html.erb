@@ -6,7 +6,6 @@
 <div id="<%= dom_id(entry, :header) %>">
   <%= tag.header class: "mb-4 space-y-1" do %>
     <% label = trade.investment_activity_label %>
-    <% income_trade = %w[Dividend Interest].include?(label) %>
     <%# The label is what the importer actually recorded, so it wins over the
         amount's sign: a transfer between two accounts you own is neither a
         purchase nor a sale, and calling it one misreads the event. The sign is
@@ -28,7 +27,7 @@
           <span class="text-2xl text-primary"><%= render "trades/reward_value", value: reward.value %></span>
         <% else %>
           <span class="text-2xl text-primary privacy-sensitive">
-            <%= format_money(income_trade ? entry.amount_money.abs : entry.amount_money) %>
+            <%= format_money(trade.income_activity? ? entry.amount_money.abs : entry.amount_money) %>
           </span>
           <span class="text-lg text-secondary"><%= entry.currency %></span>
         <% end %>
