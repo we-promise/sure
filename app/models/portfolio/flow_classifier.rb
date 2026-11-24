@@ -105,7 +105,7 @@ class Portfolio::FlowClassifier
   EXTERNAL_LABELS = labels_for(:external)
   TRANSFER_LABEL = "Transfer".freeze
 
-  attr_reader :scope_account_ids, :include_excluded, :active_until_dates
+  attr_reader :scope_account_ids, :include_excluded, :active_until_dates, :strict_leg_pairing
 
   # include_excluded: classify an excluded entry as if it were not excluded.
   # Excluding hides an entry from budgets and reports, but the balance
@@ -116,9 +116,22 @@ class Portfolio::FlowClassifier
   #
   # active_until_dates: { account_id => last date in scope }. An account with
   # no entry is in scope on every date.
-  def initialize(scope_account_ids:, include_excluded: false, active_until_dates: {})
+  #
+  # strict_leg_pairing: pair two legs as one internal move only when they
+  # moved the same balances on the same day, for a reader that values flows
+  # day by day against those balances (Portfolio::DailyReturns). A linked
+  # transfer is internal only when both legs post the same day. A security
+  # journal is internal only when exactly one journal leg on the other side,
+  # in another account, explains it and no other leg sits on its own side; a
+  # same-account leg on the other side makes the day ambiguous. A
+  # Transfer-labelled trade with a cash amount is a purchase or a sale
+  # (#cash_settled?), so it is internal and is never a journal's other leg.
+  # Off by default: a period total such as InvestmentStatement::Totals reads
+  # a transfer as one move whichever days its legs post on.
+  def initialize(scope_account_ids:, include_excluded: false, active_until_dates: {}, strict_leg_pairing: false)
     @scope_account_ids = Array(scope_account_ids).map(&:to_s).uniq.freeze
     @include_excluded = include_excluded
+    @strict_leg_pairing = strict_leg_pairing
     @active_until_dates = (active_until_dates || {}).compact
       .to_h { |account_id, date| [ account_id.to_s, date.to_date ] }
       .slice(*@scope_account_ids)
@@ -262,6 +275,7 @@ class Portfolio::FlowClassifier
         AND flow_security_transfers.date = entries.date
         AND flow_security_transfers.security_id = trades.security_id
         AND flow_security_transfers.qty = -trades.qty
+      #{same_side_security_transfers_join_sql if strict_leg_pairing}
     SQL
   end
 
@@ -279,7 +293,7 @@ class Portfolio::FlowClassifier
         WHEN #{label_sql} IN (#{quote_list(INCOME_LABELS)}) THEN 'income'
         WHEN #{label_sql} IN (#{quote_list(FEE_LABELS)}) THEN 'fee'
         WHEN #{label_sql} IN (#{quote_list(INTERNAL_LABELS)}) THEN 'internal'
-        WHEN entries.entryable_type = 'Trade' AND #{label_sql} IN (#{quote_list(EXTERNAL_LABELS)})
+        WHEN entries.entryable_type = 'Trade' AND #{label_sql} IN (#{quote_list(cash_settled_labels)})
           AND trades.qty * entries.amount > 0 THEN 'internal'
         WHEN #{label_sql} IN (#{quote_list(EXTERNAL_LABELS)}) THEN #{transfer_resolution_sql}
         WHEN #{label_sql} = '#{TRANSFER_LABEL}' AND entries.entryable_type = 'Trade'
@@ -299,7 +313,8 @@ class Portfolio::FlowClassifier
       case rule
       when nil then :internal
       when :external then cash_settled?(entry, trade) ? :internal : trade_direction(trade)
-      when :transfer then security_transfer_counterpart_in_scope?(entry, trade) ? :internal : trade_direction(trade)
+      when :transfer
+        (strict_leg_pairing && cash_settled?(entry, trade)) || security_transfer_counterpart_in_scope?(entry, trade) ? :internal : trade_direction(trade)
       else rule
       end
     end
@@ -327,13 +342,17 @@ class Portfolio::FlowClassifier
       end
     end
 
-    # A Contribution or Withdrawal trade whose amount is signed like
-    # its quantity (qty x price, as the trades form and API write it). The
+    # A Contribution or Withdrawal trade (and, under strict_leg_pairing, a
+    # Transfer trade) whose amount is signed like its quantity (qty x price, as the trades form and API write it). The
     # balance calculators apply it as a buy or a sale, cash for units at the
     # same value, so nothing crosses the scope. In kind (amount 0, a security
     # journal) or cash only (qty 0), it is an external flow by direction.
     def cash_settled?(entry, trade)
       (trade.qty * entry.amount).positive?
+    end
+
+    def cash_settled_labels
+      strict_leg_pairing ? EXTERNAL_LABELS + [ TRANSFER_LABEL ] : EXTERNAL_LABELS
     end
 
     def trade_direction(trade)
@@ -347,34 +366,37 @@ class Portfolio::FlowClassifier
     # Internal only when the other leg's account is in scope on this entry's
     # date: one of the scope's accounts, and not past its cut-off. A pending
     # leg has not moved its balance at all (Balance::SyncCache leaves it out),
-    # so it is no counterpart until it posts.
+    # so it is no counterpart until it posts. Under strict_leg_pairing the
+    # other leg must also post that day: each leg moves its own balance on its
+    # own date, so across days each is a flow on its day.
     def transfer_resolution(entry, transaction)
-      counterpart_account_id = transfer_counterpart_account_id(entry, transaction)
-      if counterpart_account_id && in_scope_on?(counterpart_account_id, entry.date)
+      counterpart_account_id, counterpart_date = transfer_counterpart(entry, transaction)
+      if counterpart_account_id && in_scope_on?(counterpart_account_id, entry.date) &&
+          (!strict_leg_pairing || counterpart_date == entry.date)
         :internal
       else
         transaction_direction(entry)
       end
     end
 
-    # The account on the other leg of a confirmed Transfer, by id only; the
-    # counterpart account itself is never loaded, so a scope check cannot
-    # leak an account the user is not allowed to see. A pending auto-match
-    # links nothing yet.
-    def transfer_counterpart_account_id(entry, transaction)
+    # The account (by id only) and date of the other leg of a confirmed
+    # Transfer; the counterpart account itself is never loaded, so a scope
+    # check cannot leak an account the user is not allowed to see. A pending
+    # auto-match links nothing yet.
+    def transfer_counterpart(entry, transaction)
       transfer = confirmed_transfer_for(entry, transaction)
       return nil unless transfer
 
       counterpart_id = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction_id : transfer.inflow_transaction_id
-      # One read of the other leg: its account from the entry and its pending
-      # flag from the transaction, so the two can't disagree.
-      account_id, extra = Entry
+      # One read of the other leg: its account and date from the entry, and its
+      # pending flag from the transaction, so the two can't disagree.
+      account_id, date, extra = Entry
         .joins("JOIN transactions ON transactions.id = entries.entryable_id")
         .where(entryable_type: "Transaction", entryable_id: counterpart_id)
-        .pick(:account_id, "transactions.extra")
+        .pick(:account_id, :date, "transactions.extra")
       return nil if Transaction.pending_extra?(extra)
 
-      account_id&.to_s
+      [ account_id&.to_s, date ]
     end
 
     # The transfer #sql_joins picks for this transaction: the confirmed one
@@ -393,15 +415,32 @@ class Portfolio::FlowClassifier
     # count unless include_excluded says to read it as live. entries.excluded
     # is nullable, and a NULL leg is live here as it is to #classify, hence
     # IS NOT TRUE rather than = false.
+    #
+    # Under strict_leg_pairing only journal legs count (a cash-settled one is
+    # a purchase or a sale), and the pairing has to be one to one: exactly one
+    # opposite journal leg in any account, in another account than this one,
+    # and no other journal leg on this leg's side. With more legs than one
+    # move explains, every leg is a flow by direction.
     def security_transfer_counterpart_in_scope?(entry, trade)
+      return strictly_paired_security_transfer?(entry, trade) if strict_leg_pairing
+
+      security_transfer_legs(entry, trade.security_id, -trade.qty).where.not(account_id: entry.account_id).exists?
+    end
+
+    def strictly_paired_security_transfer?(entry, trade)
+      opposite_accounts = security_transfer_legs(entry, trade.security_id, -trade.qty).where.not(id: entry.id).limit(2).pluck(:account_id)
+      same_side = security_transfer_legs(entry, trade.security_id, trade.qty).where.not(id: entry.id)
+      opposite_accounts.size == 1 && opposite_accounts.first != entry.account_id && !same_side.exists?
+    end
+
+    def security_transfer_legs(entry, security_id, qty)
       legs = Entry
         .joins("JOIN trades counterpart_trades ON counterpart_trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'")
         .where(account_id: scope_account_ids.select { |account_id| in_scope_on?(account_id, entry.date) })
-        .where.not(account_id: entry.account_id)
         .where(date: entry.date)
-        .where(counterpart_trades: { security_id: trade.security_id, qty: -trade.qty, investment_activity_label: TRANSFER_LABEL })
-      legs = legs.where("entries.excluded IS NOT TRUE") unless include_excluded
-      legs.exists?
+        .where(counterpart_trades: { security_id: security_id, qty: qty, investment_activity_label: TRANSFER_LABEL })
+      legs = legs.where("counterpart_trades.qty * entries.amount <= 0") if strict_leg_pairing
+      include_excluded ? legs : legs.where("entries.excluded IS NOT TRUE")
     end
 
     # Inside the scope on `date`: one of its accounts, and not past its cut-off.
@@ -440,7 +479,8 @@ class Portfolio::FlowClassifier
     end
 
     def transfer_resolution_sql
-      "CASE WHEN #{in_scope_sql('flow_counterpart_entries.account_id')} " \
+      same_day = "flow_counterpart_entries.date = entries.date AND " if strict_leg_pairing
+      "CASE WHEN #{same_day}#{in_scope_sql('flow_counterpart_entries.account_id')} " \
         "AND #{Transaction.not_pending_sql('flow_counterpart_transactions')} " \
         "THEN 'internal' ELSE #{direction_sql} END"
     end
@@ -451,10 +491,34 @@ class Portfolio::FlowClassifier
     # account id among its legs, so a leg in another account exists exactly
     # when either differs from this entry's. With no group, both are NULL and
     # the CASE takes the direction.
+    #
+    # Under strict_leg_pairing, the SQL twin of
+    # #strictly_paired_security_transfer?: the opposite group holds exactly
+    # one journal leg, in another account, and this entry's own group holds
+    # none but the entry itself, which it holds when the entry is in scope on
+    # its date (a journal leg reaching here is never cash-settled).
     def security_transfer_counterpart_in_scope_sql
+      if strict_leg_pairing
+        <<~SQL.squish
+          (flow_security_transfers.legs = 1
+            AND flow_security_transfers.min_account_id <> entries.account_id
+            AND COALESCE(flow_security_same_side.legs, 0) <= CASE WHEN #{in_scope_sql('entries.account_id')} THEN 1 ELSE 0 END)
+        SQL
+      else
+        <<~SQL.squish
+          (flow_security_transfers.min_account_id <> entries.account_id
+            OR flow_security_transfers.max_account_id <> entries.account_id)
+        SQL
+      end
+    end
+
+    def same_side_security_transfers_join_sql
       <<~SQL.squish
-        (flow_security_transfers.min_account_id <> entries.account_id
-          OR flow_security_transfers.max_account_id <> entries.account_id)
+        LEFT JOIN (#{security_transfer_legs_sql}) flow_security_same_side
+          ON entries.entryable_type = 'Trade'
+          AND flow_security_same_side.date = entries.date
+          AND flow_security_same_side.security_id = trades.security_id
+          AND flow_security_same_side.qty = trades.qty
       SQL
     end
 
@@ -469,12 +533,15 @@ class Portfolio::FlowClassifier
     # only under include_excluded. entries.excluded is nullable, and a NULL
     # leg is live here as it is to #classify, hence IS NOT TRUE rather than
     # = false. uuid has no MIN or MAX, so the ids are compared as text.
+    # Under strict_leg_pairing only journal legs count, and the count of legs
+    # in a group is what the one-to-one test reads.
     def security_transfer_legs_sql
       <<~SQL.squish
         SELECT
           counterpart_entries.date,
           counterpart_trades.security_id,
           counterpart_trades.qty,
+          COUNT(*) AS legs,
           MIN(counterpart_entries.account_id::text)::uuid AS min_account_id,
           MAX(counterpart_entries.account_id::text)::uuid AS max_account_id
         FROM entries counterpart_entries
@@ -484,6 +551,7 @@ class Portfolio::FlowClassifier
         WHERE #{in_scope_sql('counterpart_entries.account_id', date_expression: 'counterpart_entries.date')}
           #{"AND counterpart_entries.excluded IS NOT TRUE" unless include_excluded}
           AND counterpart_trades.investment_activity_label = '#{TRANSFER_LABEL}'
+          #{"AND counterpart_trades.qty * counterpart_entries.amount <= 0" if strict_leg_pairing}
         GROUP BY counterpart_entries.date, counterpart_trades.security_id, counterpart_trades.qty
       SQL
     end
