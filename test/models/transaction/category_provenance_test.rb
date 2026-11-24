@@ -79,8 +79,10 @@ class Transaction::CategoryProvenanceTest < ActiveSupport::TestCase
   test "current when the ai source re-assigns after its claim was superseded" do
     @transaction.enrich_attribute(:category_id, @income.id, source: "ai")
     @transaction.update!(category: @food)
-    @transaction.update!(category: @income)
 
+    # enrich_attribute only logs when the value actually changes, so the
+    # re-assignment has to happen while the category differs — which is also
+    # how the AI re-categorizes in practice.
     @transaction.enrich_attribute(:category_id, @income.id, source: "ai")
 
     provenance = @transaction.reload.category_provenance
