@@ -34,6 +34,18 @@
     data-map-tile-attribution-value="<%= map_tile_attribution %>">
     <div data-map-target="container" class="lg:col-span-2" style="height: 70vh; border-radius: 0.75rem;"></div>
 
-    <ul data-map-target="list" class="flex flex-col gap-1 overflow-y-auto" style="height: 70vh;"></ul>
+    <ul class="flex flex-col gap-1 overflow-y-auto" style="height: 70vh;">
+      <% @map_data.each do |point| %>
+        <li data-map-target="item" data-lat="<%= point[:lat] %>" data-lng="<%= point[:lng] %>">
+          <%= link_to point[:transaction_path], class: "flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-container-hover" do %>
+            <div class="min-w-0">
+              <p class="text-sm text-primary truncate"><%= point[:transaction_name] %></p>
+              <p class="text-xs text-secondary truncate"><%= point[:name] %> &middot; <%= point[:date] %></p>
+            </div>
+            <p class="text-sm text-primary whitespace-nowrap"><%= point[:amount] %></p>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
   </div>
 <% end %>
