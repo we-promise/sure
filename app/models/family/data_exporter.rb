@@ -425,7 +425,7 @@ class Family::DataExporter
         :tags,
         entry: [
           :account,
-          { child_entries: { entryable: :tags } }
+          { child_entries: [ :account, { entryable: :tags } ] }
         ]
       ).find_each do |transaction|
         transaction_data = {
@@ -442,6 +442,13 @@ class Family::DataExporter
           merchant_id: transaction.merchant_id,
           tag_ids: transaction.tag_ids,
           kind: transaction.kind,
+          # Safe reads of what importers keep in extra; the payload itself is
+          # not exported.
+          investment_activity_label: transaction.investment_activity_label,
+          provider_type: transaction.provider_type,
+          security_id: transaction.serializable_security_id,
+          exchange_rate: transaction.numeric_exchange_rate,
+          amount_currency: transaction.entry.currency,
           created_at: transaction.created_at,
           updated_at: transaction.updated_at
         }
@@ -511,6 +518,13 @@ class Family::DataExporter
             price: trade.price,
             amount: trade.entry.amount,
             currency: trade.currency,
+            fee: trade.fee,
+            investment_activity_label: trade.investment_activity_label,
+            exchange_rate: trade.numeric_exchange_rate,
+            # The cost basis applies exchange_rate from currency (the
+            # trade's), the cash balance from amount_currency (the entry's),
+            # which can differ from it.
+            amount_currency: trade.entry.currency,
             lot_total_cost: lot_total_costs[trade.entry.id],
             lot_source_trade_id: trade.lot_source_entry&.entryable_id,
             created_at: trade.created_at,
@@ -626,6 +640,11 @@ class Family::DataExporter
           merchant_id: transaction.merchant_id,
           tag_ids: transaction.tag_ids,
           kind: transaction.kind,
+          investment_activity_label: transaction.investment_activity_label,
+          provider_type: transaction.provider_type,
+          security_id: transaction.serializable_security_id,
+          exchange_rate: transaction.numeric_exchange_rate,
+          amount_currency: child_entry.currency,
           created_at: transaction.created_at,
           updated_at: transaction.updated_at
         }

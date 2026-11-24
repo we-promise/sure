@@ -35,6 +35,17 @@ class Rule::Registry::TransactionResourceTest < ActiveSupport::TestCase
     assert_not_includes keys, "auto_categorize"
   end
 
+  test "AI actions aren't offered while no family admin has turned AI on" do
+    rule = build_rule(action_type: "exclude_transaction")
+    use_ai_routes
+    @family.users.update_all(ai_enabled: false)
+
+    keys = rule.registry.action_executors.map(&:key)
+
+    assert_not_includes keys, "auto_categorize"
+    assert_not_includes keys, "auto_detect_merchants"
+  end
+
   test "auto merchant detection is available when an LLM provider is configured" do
     rule = build_rule(action_type: "exclude_transaction")
     use_ai_routes(categorize: [])

@@ -1,0 +1,9 @@
+---
+nb:
+  messages:
+    create:
+      chat_not_found: Denne chatten er ikke lenger tilgjengelig.
+    chat_form:
+      placeholder: Spør om hva som helst ...
+      disclaimer: AI-svar er kun ment som informasjon. Ikke økonomisk rådgivning!
+      coming_soon: Kommer snart
