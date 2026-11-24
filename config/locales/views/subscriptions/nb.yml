@@ -12,3 +12,13 @@ nb:
       redirect_to_stripe: "I neste trinn vil du bli omdirigert til Stripe, som håndterer kredittkort for oss."
       trialing: "Dataene dine vil bli slettet om %{days} dager"
       trial_over: "Prøveperioden din er over"
+      already_contributing: Du bidrar allerede. Tusen takk!
+      page_title: Oppgrader
+      account_settings: Kontoinnstillinger
+      sign_out: Logg ut
+    create:
+      welcome: Velkommen til Sure!
+      trial_already_used: Du har allerede startet eller fullført en prøveperiode. Oppgrader for å fortsette.
+    success:
+      welcome_with_contribution: Velkommen til Sure! Takk for bidraget ditt.
+      contribution_failed: Noe gikk galt under behandlingen av bidraget ditt. Prøv igjen.

@@ -48,7 +48,8 @@ class ProviderMerchant::Enhancer
     # The run's first job backfills logos before any AI: generating a logo from a known website
     # needs no model, and merchants that already have a website are never sent (issue #2925).
     @family.backfill_provider_merchant_logos if @window.nil? || @window.first?
-    return if unenhanced_merchants.empty?
+    # Logos need no consent; the AI does, so without it the run ends after the backfill.
+    return if unenhanced_merchants.empty? || !Ai.available?(:enhance_merchants, family: @family)
 
     Rails.logger.info("Enhancing #{unenhanced_merchants.size} provider merchants for family #{@family.id}")
     Ai::Generations::EnhanceMerchants.new(merchants: unenhanced_merchants.map { { id: _1.id, name: _1.name } }, family: @family)
