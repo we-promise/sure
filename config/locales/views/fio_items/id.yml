@@ -13,7 +13,7 @@ id:
       account_processing_failed: Tidak dapat menyinkronkan rekening Fio
       account_mismatch: Token ini milik rekening Fio yang berbeda dari yang sudah disinkronkan oleh koneksi ini. Tambahkan sebagai koneksi terpisah.
       account_sync_schedule_failed: Tidak dapat menjadwalkan sinkronisasi rekening Fio
-      statement_too_large: Laporan memiliki lebih banyak transaksi daripada yang disajikan Fio dalam satu permintaan. Majukan tanggal mulai sinkronisasi dan sinkronkan kembali.
+      statement_too_large: Laporan memiliki lebih banyak transaksi daripada yang disajikan Fio dalam satu permintaan. Pilih tanggal mulai sinkronisasi yang lebih baru dan sinkronkan kembali.
       statement_fetch_failed: Tidak dapat mengambil laporan dari Fio
       history_locked: Fio menolak periode laporan ini. Buka kunci riwayat lengkap rekening di internet banking pada Settings → API, lalu sinkronkan lagi dalam 10 menit.
       sync_failed: Tidak dapat menyinkronkan koneksi Fio
