@@ -60,12 +60,8 @@ class Ai::GenerationRun < ApplicationRecord
       DebugLogEntry.capture(category: "ai", level: "warn", message: "AI job delivered again: no job ran its step for an hour",
                             source: self.class.name, family_id:, metadata: delivery_metadata)
       reload.deliver
-    elsif self.class.undelivered.exists?(id:)
-      DebugLogEntry.capture(category: "ai", level: "error", message: "AI run given up: its job couldn't be run after #{MAX_DELIVERIES} deliveries",
-                            source: self.class.name, family_id:, metadata: delivery_metadata)
-      job = next_job.deep_symbolize_keys
-      Ai::GenerationJob.new(feature.to_sym, job[:args], job[:applied], job[:answered_before])
-                       .give_up(Ai::GenerationJob::Undelivered.new("the AI job couldn't be run after #{MAX_DELIVERIES} deliveries"))
+    else
+      give_up_undelivered
     end
   end
 
@@ -83,6 +79,23 @@ class Ai::GenerationRun < ApplicationRecord
       self.class.undelivered.where(id:).where("#{deliveries} < ?", MAX_DELIVERIES)
           .update_all("next_job = jsonb_set(next_job, '{deliveries}', to_jsonb(#{deliveries} + 1)), updated_at = now()")
           .positive?
+    end
+
+    # Under the run's row lock, so a late copy of the step can't start between the check and the
+    # give-up: it waits, then finds the run gone. Only a run still undelivered after the last
+    # delivery is given up; a copy that touched it first, or a run under the cap, is left alone.
+    def give_up_undelivered
+      with_lock do
+        next unless self.class.undelivered.exists?(id:) && next_job["deliveries"].to_i >= MAX_DELIVERIES
+
+        DebugLogEntry.capture(category: "ai", level: "error", message: "AI run given up: its job couldn't be run after #{MAX_DELIVERIES} deliveries",
+                              source: self.class.name, family_id:, metadata: delivery_metadata)
+        job = next_job.deep_symbolize_keys
+        Ai::GenerationJob.new(feature.to_sym, job[:args], job[:applied], job[:answered_before])
+                         .give_up(Ai::GenerationJob::Undelivered.new("the AI job couldn't be run after #{MAX_DELIVERIES} deliveries"))
+      end
+    rescue ActiveRecord::RecordNotFound
+      # Ended while this waited for the lock.
     end
 
     def delivery_metadata

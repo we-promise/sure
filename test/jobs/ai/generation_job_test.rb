@@ -245,6 +245,31 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     assert DebugLogEntry.exists?(category: "ai", level: "error", family: @family)
   end
 
+  test "a run whose late copy starts before the give-up takes its lock isn't given up" do
+    Ai::GenerationRun.enqueue(:detect_merchants, family: @family, ids: ID.values_at("a"))
+    run = Ai::GenerationRun.sole
+    run.update_columns(next_job: run.next_job.merge("deliveries" => 3), updated_at: 2.hours.ago)
+    loaded = Ai::GenerationRun.undelivered.sole   # as the delivery job loaded it
+    run.touch   # a copy delivered earlier starts its step
+
+    loaded.redeliver
+
+    assert_empty Requester.log
+    assert Ai::GenerationRun.exists?(run.id)
+  end
+
+  test "a run under the cap is never given up, even when its delivery can't be claimed" do
+    Ai::GenerationRun.enqueue(:detect_merchants, family: @family, ids: ID.values_at("a"))
+    run = Ai::GenerationRun.sole
+    run.update_columns(next_job: run.next_job.merge("deliveries" => 1), updated_at: 2.hours.ago)
+    run.stubs(:claim_delivery).returns(false)   # touched when claimed, idle again an instant later
+
+    run.redeliver
+
+    assert_empty Requester.log
+    assert Ai::GenerationRun.exists?(run.id)
+  end
+
   test "two deliveries at once pass the cap once" do
     Ai::GenerationRun.enqueue(:detect_merchants, family: @family, ids: ID.values_at("a"))
     enqueued_jobs.clear
