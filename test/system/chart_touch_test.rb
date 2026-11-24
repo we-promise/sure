@@ -318,7 +318,12 @@ class ChartTouchTest < ApplicationSystemTestCase
 
     assert_equal "pan-y pinch-zoom", page.evaluate_script(%(getComputedStyle(document.querySelector("#{CHART} svg")).touchAction)),
       "the chart takes horizontal slides and leaves vertical scrolling and pinch zoom to the browser"
-    assert_not_equal before, scroll_offsets, "the page did not scroll"
+    # Chrome applies touch scrolling asynchronously, so the offsets can still
+    # read as unchanged immediately after touchEnd (#5726). Retry instead of
+    # asserting on a single read.
+    page.document.synchronize(5, errors: Capybara::ExpectationNotMet) do
+      raise Capybara::ExpectationNotMet, "the page did not scroll" if scroll_offsets == before
+    end
     assert_not tooltip_visible?, "the tooltip stayed after the page scrolled"
     assert_no_selector "#{CHART} .touch-selection", visible: :all
     assert_equal "/", URI.parse(page.current_url).path

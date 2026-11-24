@@ -1,8 +1,6 @@
 ---
 de:
   bills:
-    detail:
-      no_payment: "Keine Zahlung verknüpft"
     due_label:
       overdue:
         one: Seit 1 Tag überfällig · fällig am %{date}
@@ -176,6 +174,7 @@ de:
       last_account: "Zuletzt genutztes Konto"
       upcoming: "Demnächst"
       manual_payment: "Manuelle Zahlung"
+      no_payment: "Keine Zahlung verknüpft"
       history: "Verlauf"
       payment_count:
         one: "1 Zahlung"

@@ -3859,6 +3859,19 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 6, 9), allocation.entry.date
   end
 
+  test "a null or blank historical flag on an imported bill occurrence defaults to false" do
+    [ nil, "" ].each do |value|
+      family = Family.create!(name: "Import #{value.inspect}", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+      records = bills_ndjson_records
+      records.find { |record| record[:type] == "RecurringOccurrence" }[:data][:historical] = value
+
+      Family::DataImporter.new(family, build_ndjson(records)).import!
+
+      occurrence = family.recurring_transactions.sole.recurring_occurrences.find_by!(original_due_on: Date.new(2026, 6, 9))
+      assert_equal false, occurrence.historical, "#{value.inspect} must fall back to false"
+    end
+  end
+
   test "replaying a bills export changes nothing the second time" do
     records = bills_ndjson_records
     session = @family.import_sessions.create!

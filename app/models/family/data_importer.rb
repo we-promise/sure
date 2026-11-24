@@ -1006,7 +1006,10 @@ class Family::DataImporter
     def boolean_import_value(data, key, default:)
       return default unless data.key?(key)
 
-      ActiveModel::Type::Boolean.new.cast(data[key])
+      # A key that is present but null or blank casts to nil rather than to the
+      # default, which would store nil in a `null: false` column.
+      value = ActiveModel::Type::Boolean.new.cast(data[key])
+      value.nil? ? default : value
     end
 
     def import_transactions(records)
