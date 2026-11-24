@@ -50,6 +50,54 @@ class Assistant::Function::GetIncomeStatementTest < ActiveSupport::TestCase
     end
   end
 
+  test "group_by month breaks each bucket's expenses down by top-level category" do
+    account = accounts(:depository)
+    account.entries.create!(
+      name: "January dinner", date: Date.parse("2019-01-20"), amount: 40, currency: "USD",
+      entryable: Transaction.new(category: categories(:food_and_drink))
+    )
+    account.entries.create!(
+      name: "February restaurant", date: Date.parse("2019-02-10"), amount: 25, currency: "USD",
+      entryable: Transaction.new(category: categories(:subcategory))
+    )
+
+    result = @fn.call(@params.merge(
+      "start_date" => "2019-01-01",
+      "end_date" => "2019-02-28",
+      "group_by" => "month"
+    ))
+
+    january, february = result[:monthly_series]
+
+    assert_equal [ { name: "Food & Drink", total: "$40.00" } ], january[:expenses_by_category]
+    # A subcategory rolls up into its parent, like the period-wide by_category
+    assert_equal [ { name: "Food & Drink", total: "$25.00" } ], february[:expenses_by_category]
+  end
+
+  test "group_by month leaves zero-spend categories out of a bucket" do
+    result = @fn.call(@params.merge(
+      "start_date" => "2019-01-01",
+      "end_date" => "2019-01-31",
+      "group_by" => "month"
+    ))
+
+    assert_equal [], result[:monthly_series].first[:expenses_by_category]
+  end
+
+  test "group_by month with account_ids keeps buckets to totals only" do
+    account = @family.accounts.visible.first
+
+    result = @fn.call(@params.merge("account_ids" => [ account.id ], "group_by" => "month"))
+
+    result[:monthly_series].each do |bucket|
+      assert_not bucket.key?(:expenses_by_category)
+    end
+  end
+
+  test "description says what the monthly series holds" do
+    assert_includes Assistant::Function::GetIncomeStatement.description, "expenses_by_category"
+  end
+
   test "group_by month caps the bucket count" do
     result = @fn.call(
       "start_date" => "2020-01-01",

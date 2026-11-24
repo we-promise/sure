@@ -17,7 +17,9 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
 
         Spending trends and comparisons:
         - Month over month: pass group_by: "month" for a monthly_series
-          (calendar months, unlike get_budget which honors a custom month start)
+          (calendar months, unlike get_budget which honors a custom month start).
+          Each month has income, expenses, net and expenses_by_category, so
+          one call answers "how much on <category> in each of the last months"
         - Versus the prior period: pass compare_previous_period: true
         - Per account: pass account_ids from get_accounts (totals only; the
           category breakdown is family-wide and is omitted with this filter)
@@ -102,7 +104,7 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
         group_by: {
           type: "string",
           enum: [ "none", "month" ],
-          description: "Pass \"month\" to add a monthly_series of income/expenses/net per calendar month"
+          description: "Pass \"month\" to add a monthly_series of income/expenses/net and expenses_by_category per calendar month"
         },
         compare_previous_period: {
           type: "boolean",
@@ -188,13 +190,24 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
       income = totals.income_money.amount
       expenses = totals.expense_money.amount
 
-      {
+      result = {
         start_date: bucket.start_date,
         end_date: bucket.end_date,
         income: format_money(income),
         expenses: format_money(expenses),
         net: format_money(income - expenses)
       }
+      # Category rollups are family-wide, so a per-account series stays totals only (as scoped_result).
+      result[:expenses_by_category] = bucket_expense_categories(bucket) unless account_ids
+      result
+    end
+
+    # Top-level categories only: a parent's total already includes its subcategories.
+    def bucket_expense_categories(bucket)
+      income_statement.expense_totals(period: bucket).category_totals
+        .select { |ct| ct.category.parent_id.nil? && !ct.total.zero? }
+        .sort_by { |ct| -ct.total }
+        .map { |ct| { name: ct.category.name, total: format_money(ct.total) } }
     end
 
     def previous_period_comparison(period, account_ids)
