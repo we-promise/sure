@@ -34,8 +34,9 @@ class AccountStatement < ApplicationRecord
   belongs_to :account, optional: true
   belongs_to :suggested_account, class_name: "Account", optional: true
 
-  # An import is as private as its statement and loses it when the statement goes
-  # (the foreign key nullifies), so a statement stays while any import carries it.
+  # An import is as private as its statement, so a statement stays while any
+  # import carries it. The foreign key refuses the DELETE too, for an import
+  # committed after this check.
   has_many :imports, dependent: :restrict_with_error
   has_many :pdf_imports, -> { where(type: "PdfImport").ordered }, class_name: "PdfImport"
   has_one_attached :original_file, dependent: :purge_later
