@@ -49,9 +49,6 @@ zh-CN:
       holdings: 持仓
       name: 名称
       new_holding: 新活动
-      negative_position: "%{name} (%{ticker})：自 %{date} 起低于零，最低 %{qty}。"
-      negative_positions_hint: "可能缺少一笔买入或转入。请补上，或更正使持仓低于零的交易。"
-      negative_positions_title: "部分持仓低于零"
       no_holdings: 没有可显示的持仓。
       return: 总回报
       weight: 权重
@@ -105,3 +102,14 @@ zh-CN:
       last_price_update: 最后价格更新
       syncing: 正在同步...
       never: 从未
+    lots:
+      title: 持仓批次
+      opening: 首次交易前已持有
+      unknown: 单价未知
+      per_unit: "每单位 %{amount}"
+      total_cost_label: 此批次总成本
+      total_cost_hint: 您获得该批次时的总花费。删除其对应交易将移除此批次及您设置的成本。
+      save: 保存
+      unlock: 清除手动成本
+      provider_cost_hint: 您的提供商已提供此持仓的成本，因此无法手动设置其批次成本。
+      provider_cost_clear_hint: 您此前设置的成本仍可清除。

@@ -8,6 +8,9 @@ class Account < ApplicationRecord
 
   after_destroy_commit :move_account_statements_to_inbox
 
+  # Property checks its cost tag once it belongs to a saved account; a new
+  # one cannot reach the family yet, so the new account checks it.
+  validate :cost_tag_in_family, if: -> { new_record? && property? && accountable&.cost_tag_id.present? }
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
@@ -846,10 +849,14 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
-    if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
-      holdings
-        .where.not(account_provider_id: nil)
-        .where(date: provider_snapshot_date)
+    if holdings.where.not(account_provider_id: nil).exists?
+      closed_provider_ids = account_providers.where(provider_type: "SimplefinAccount").includes(:provider).filter_map do |link|
+        link.id if link.provider.raw_holdings_payload == []
+      end
+
+      eligible_holdings = holdings.where.not(account_provider_id: [ nil, *closed_provider_ids ])
+      eligible_holdings
+        .where(date: eligible_holdings.maximum(:date))
         .where.not(qty: 0)
         .order(amount: :desc)
     else
@@ -924,12 +931,12 @@ class Account < ApplicationRecord
 
   # Securities whose calculated position dropped below zero on some day, for
   # example after a sale without its purchase or after deleting a purchase.
-  # The holdings tab shows them instead of hiding the gap.
+  # The account status (Account::HealthStatus) shows them instead of hiding the gap.
   # Linked accounts are left out entirely: their provider's holdings are the
   # truth, so a negative quantity there (reported, or carried back by the
   # reverse calculator) is a short position, not missing data.
   def negative_positions
-    return [] if linked?
+    return [] if linked? || balance_type != :investment
 
     rows = holdings
       .joins(:security)
@@ -1106,6 +1113,12 @@ class Account < ApplicationRecord
       return if owner_user&.family_id == family_id
 
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
+    end
+
+    def cost_tag_in_family
+      return if family && accountable.cost_tag_in?(family)
+
+      errors.add(:base, :cost_tag_other_family)
     end
 
     # AASM transition callbacks run after the timestamp is set and before the

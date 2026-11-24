@@ -3,7 +3,7 @@ class AccountsController < ApplicationController
   include FilterClearable
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
-  before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
+  before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports reconcile_all destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
@@ -17,11 +17,6 @@ class AccountsController < ApplicationController
           .with_attached_logo
           .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
-    @reconciliation_indicators = if Current.family.manual_reconciliation?
-      Account::ReconciliationIndicator.for_accounts(@manual_accounts)
-    else
-      {}
-    end
     @financekit_accounts = Current.family.accounts
       .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
       .joins(:account_providers).where(account_providers: { provider_type: "FinancekitAccountLineage" })
@@ -229,8 +224,12 @@ class AccountsController < ApplicationController
   # Mirrors TransactionsController#clear_filter, but simpler: the account
   # activity feed has no cross-request stored filters to update, so this only
   # needs to redirect with one param removed from the current query string.
+  # The chart's range and view stay: clearing an activity date a chart drag
+  # set must not also reset the chart.
   def clear_filter
-    redirect_to account_path(@account, q: without_cleared_filter(activity_search_params.to_h), tab: "activity", page: params[:page], per_page: params[:per_page])
+    redirect_to account_path(@account, q: without_cleared_filter(activity_search_params.to_h), tab: "activity", page: params[:page], per_page: params[:per_page],
+                                       start_date: params[:start_date], end_date: params[:end_date],
+                                       chart_view: params[:chart_view])
   end
 
   def sparkline
@@ -283,6 +282,29 @@ class AccountsController < ApplicationController
   def toggle_exclude_from_reports
     @account.update!(exclude_from_reports: !@account.exclude_from_reports?)
     redirect_to accounts_path
+  end
+
+  # Sets one reconciliation status for every transaction on a manually entered
+  # account. Statement reconciliation columns stay as they are.
+  def reconcile_all
+    return head :not_found unless Current.family.manual_reconciliation?
+
+    status = params[:reconciled_status].to_s
+
+    unless Entry.reconciled_statuses.key?(status)
+      redirect_to account_path(@account), alert: t("accounts.reconcile_all.invalid_status")
+      return
+    end
+
+    unless @account.manual?
+      redirect_to account_path(@account), alert: t("accounts.reconcile_all.not_manual_account")
+      return
+    end
+
+    updated = Entry.set_reconciled_status_for_account!(@account, status)
+
+    redirect_back_or_to account_path(@account),
+      notice: t("accounts.reconcile_all.success", count: updated, status: t("transactions.reconcile.statuses.#{status}"))
   end
 
   def set_default
@@ -458,6 +480,9 @@ class AccountsController < ApplicationController
         :search, :start_date, :end_date, :amount, :amount_operator, :balance_updates,
         categories: [], tags: [], merchants: [], types: [], status: [], reconcile_status: []
       )
+      # Manual reconciliation only applies to accounts without a live sync.
+      # Ignore a stale or crafted filter on a synced account page.
+      q.delete(:reconcile_status) unless @account&.manual?
       q.delete(:amount_operator) unless q[:amount].present?
       q
     end
@@ -580,7 +605,7 @@ class AccountsController < ApplicationController
       return unless statement_tab_active?
 
       @statement_coverage = AccountStatement::Coverage.for_year(@account, params[:statement_year])
-      @account_statements = @account.account_statements.with_attached_original_file.ordered.to_a
+      @account_statements = @account.account_statements.with_attached_original_file.by_period.to_a
       @statement_reconciliation_statuses = AccountStatement.reconciliation_statuses_for(@account_statements, account: @account)
       permission = @account.permission_for(Current.user)
       @can_manage_statements = AccountStatement.statement_manager?(Current.user) &&

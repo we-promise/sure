@@ -1,6 +1,9 @@
 ---
 fr:
   provider_warnings:
+    enable_banking_history_truncated:
+      one: 'Enable Banking : l''historique complet des transactions de %{count} compte n''a pas pu être récupéré, des transactions plus anciennes peuvent donc manquer'
+      other: 'Enable Banking : l''historique complet des transactions de %{count} comptes n''a pas pu être récupéré, des transactions plus anciennes peuvent donc manquer'
     limited_investment_data: Les données d'investissement de ce fournisseur sont limitées.
       Les étiquettes d'activité (Achat, Vente, Dividende) ne sont pas disponibles,
       ce qui peut affecter la précision du budget. Pensez à créer des règles pour
@@ -12,3 +15,21 @@ fr:
     lunchflow_transactions_failed:
       one: 'Import Lunchflow : la récupération des transactions a échoué pour %{count} compte'
       other: 'Import Lunchflow : la récupération des transactions a échoué pour %{count} comptes'
+    truelayer_accounts_failed:
+      one: 'Import TrueLayer : échec de la mise à jour de %{count} compte'
+      other: 'Import TrueLayer : échec de la mise à jour de %{count} comptes'
+    truelayer_balances_failed:
+      one: 'Import TrueLayer : échec de la récupération du solde pour %{count} compte'
+      other: 'Import TrueLayer : échec de la récupération des soldes pour %{count} comptes'
+    truelayer_entries_failed:
+      one: 'Import TrueLayer : %{count} transaction n''a pas pu être importée'
+      other: 'Import TrueLayer : %{count} transactions n''ont pas pu être importées'
+    truelayer_processing_failed:
+      one: 'Import TrueLayer : %{count} compte n''a pas pu être traité'
+      other: 'Import TrueLayer : %{count} comptes n''ont pas pu être traités'
+    truelayer_scheduling_failed:
+      one: 'Import TrueLayer : la mise à jour du solde n''a pas pu être planifiée pour %{count} compte'
+      other: 'Import TrueLayer : la mise à jour des soldes n''a pas pu être planifiée pour %{count} comptes'
+    truelayer_transactions_failed:
+      one: 'Import TrueLayer : échec de la récupération des transactions pour %{count} compte'
+      other: 'Import TrueLayer : échec de la récupération des transactions pour %{count} comptes'

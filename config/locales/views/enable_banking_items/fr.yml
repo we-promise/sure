@@ -117,6 +117,13 @@ fr:
         du menu d'actions du compte.
     setup_accounts:
       account_type_label: "Type de compte :"
+      account_types:
+        skip: Ignorer ce compte
+        depository: Compte courant ou épargne
+        credit_card: Carte de crédit
+        investment: Compte d'investissement
+        loan: Prêt ou hypothèque
+        other_asset: Autre actif
       balance: Solde
       cancel: Annuler
       choose_account_type:
@@ -131,6 +138,16 @@ fr:
         (Livret A, PEL, LEP, LDDS) peuvent avoir un accès limité ou inexistant via
         l'Open Banking (DSP2). Si un compte d'épargne est manquant, vous pouvez
         l'ajouter manuellement."
+      select_subtype: Sélectionnez le sous-type
+      select_type: Sélectionnez le type
+      skip_notice: 'Les comptes ignorés sont mémorisés : Sure arrête de les importer jusqu''à ce que vous les liiez à un compte.'
+      subtype_labels:
+        depository: 'Sous-type de compte :'
+        investment: 'Type d''investissement :'
+        loan: 'Type de prêt :'
+      subtype_messages:
+        credit_card: Les cartes de crédit seront automatiquement configurées comme comptes de carte de crédit.
+        other_asset: Les autres actifs seront configurés comme actifs généraux.
       sync_start_date_help:
         Sélectionnez jusqu'où vous souhaitez synchroniser l'historique
         des transactions. Maximum 2 ans d'historique disponible.

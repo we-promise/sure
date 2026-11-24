@@ -24,6 +24,8 @@ class EnableBankingAccount::Processor
       transactions_ok = process_transactions
 
       if anchor_balance
+        move_pending_adjusted_anchor_forward(date)
+
         result = enable_banking_account.current_account.set_current_balance(
           anchor_balance,
           date: date,
@@ -31,7 +33,11 @@ class EnableBankingAccount::Processor
         )
         raise ProcessingError.new("Failed to set current balance: #{result.error}") unless result.success?
 
-        enable_banking_account.update!(balance_verified: enable_banking_account.balance_evidence_verified?)
+        # The anchor now holds this balance and this sync's pending adjustment.
+        enable_banking_account.update!(
+          balance_verified: enable_banking_account.balance_evidence_verified?,
+          anchor_pending_total: enable_banking_account.pending_total
+        )
       end
     rescue StandardError => e
       Rails.logger.error "EnableBankingAccount::Processor - Failed to process account #{enable_banking_account.id}: #{e.message}"
@@ -40,9 +46,45 @@ class EnableBankingAccount::Processor
       enable_banking_account.update_column(:balance_verified, false) if enable_banking_account.persisted?
       raise
     end
+
+    # Skipped only when the batch itself raised. A run with single failed rows
+    # (success: false) still cleans up: both steps only touch pendings that
+    # already have a booked twin or are older than 8 days, and gating on
+    # success would stop the cleanup for good behind one row that keeps failing.
+    clean_up_pending_transactions unless @transactions_failed
+    transactions_ok
   end
 
   private
+
+    # A previous day's anchor is normally kept as a reconciliation waypoint, which
+    # Balance::ReverseCalculator treats as that day's closing balance. An anchor
+    # that had pending payments added back (see
+    # EnableBankingItem::Importer#pending_balance_adjustment) is only that day's
+    # closing balance if none of them books dated on or before that day, which
+    # is not known when it is written. Such an anchor is moved forward in place
+    # instead, so history before it comes from the booked entries.
+    #
+    # Account::CurrentBalanceManager's ledger check does not cover it: a pending
+    # entry claimed in place by its booked row keeps its created_at, so it counts
+    # as already in the anchor although the anchor left it out.
+    #
+    # The check is on the size of the pending rows counted (anchor_pending_total),
+    # so an expected balance whose pending inflows and outflows cancel out is
+    # moved forward too. An unknown total (nil) is treated the same way: the
+    # anchor may include pending. That is an anchor written before the upgrade
+    # or by an earlier link, an available or expected balance stored with
+    # pending sync off, or one whose pending rows were not all fetched. Only an
+    # anchor known to count no pending rows (zero) can become a waypoint.
+    def move_pending_adjusted_anchor_forward(date)
+      return if enable_banking_account.anchor_pending_total&.zero?
+
+      entry = enable_banking_account.current_account.valuations.current_anchor.includes(:entry)
+        .map(&:entry).max_by { |e| [ e.date, e.created_at, e.id ] }
+      # A same-day anchor is updated in place by set_current_balance anyway, and
+      # a newer one is left for set_current_balance to judge.
+      entry.update!(date: date) if entry && entry.date < date
+    end
 
     def process_account!
       if enable_banking_account.current_account.blank?
@@ -175,8 +217,25 @@ class EnableBankingAccount::Processor
     def process_transactions
       EnableBankingAccount::Transactions::Processor.new(enable_banking_account).process[:success]
     rescue => e
+      @transactions_failed = true
       report_exception(e, "transactions")
       false
+    end
+
+    # Same safety net SimpleFIN runs after each import: a pending entry the import
+    # could not claim unambiguously is excluded once its booked twin shows up, and
+    # a pending that never booked within 8 days is excluded. The latter is marked,
+    # because some ASPSPs keep the same id when a pending books: the import then
+    # re-activates the entry instead of leaving it excluded and pending.
+    def clean_up_pending_transactions
+      account = enable_banking_account.current_account
+
+      Entry.reconcile_pending_duplicates(account: account)
+      Entry.auto_exclude_stale_pending(account: account, mark: true)
+    rescue => e
+      Rails.logger.warn("EnableBankingAccount::Processor - pending cleanup failed for account #{account&.id}: #{e.class} - #{e.message}")
+      capture_debug_log("Pending transaction cleanup failed: #{e.class} - #{e.message}", account) if account
+      report_exception(e, "pending_cleanup")
     end
 
     def report_exception(error, context)

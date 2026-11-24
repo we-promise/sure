@@ -1,0 +1,36 @@
+---
+fr:
+  portfolios:
+    empty_state:
+      add_account: Ajouter un compte d'investissement
+      description: Les comptes de courtage, de retraite et de cryptomonnaies que vous incluez dans vos finances et vos rapports sont listés ici avec leur solde.
+      title: Aucun compte d'investissement à afficher
+    holdings:
+      columns:
+        account: Compte
+        accounts: Comptes
+        avg_cost: Coût moyen
+        cost_basis_per_share: Coût de revient par titre
+        day_change: Jour
+        qty: Qté
+        security: Titre
+        unrealized: "+/- value latente"
+        value: Valeur
+        weight: Poids
+      day_change_partial: "%{covered} positions sur %{total}"
+      label: Titres
+      missing_cost_basis: Aucun coût de revient
+      missing_cost_basis_hint: Au moins une position n'a pas de coût de revient connu. Le coût moyen et le rendement ne couvrent que les positions qui en ont un.
+      no_cost_basis: aucun coût de revient
+      open_position: Ouvrir
+      position_missing_cost_basis_hint: 'Cette position n''a pas de coût de revient connu : elle n''a donc pas de coût moyen et est exclue du rendement de la ligne.'
+      positions_caption: Positions sur %{ticker} par compte
+      toggle_positions: Afficher les positions sur %{ticker}
+    sections:
+      accounts: Comptes
+      holdings: Titres
+    show:
+      section_aria: Section %{title}. Appuyez sur Entrée ou Espace pour la saisir et la réordonner, puis utilisez les flèches pour la déplacer.
+      sections_aria: Sections du portefeuille
+      subtitle: Ce que vous détenez sur l'ensemble de vos comptes d'investissement, et ce que vaut chaque compte.
+      title: Portefeuille

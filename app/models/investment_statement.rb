@@ -14,13 +14,15 @@ class InvestmentStatement
 
   # Get totals for a specific period
   def totals(period: Period.current_month)
-    account_ids = investment_account_ids
+    account_ids = totals_account_ids
 
     result = totals_query(account_ids: account_ids, date_range: period.date_range)
 
     PeriodTotals.new(
       contributions: Money.new(result[:contributions], family.currency),
       withdrawals: Money.new(result[:withdrawals], family.currency),
+      buys: Money.new(result[:buys], family.currency),
+      sells: Money.new(result[:sells], family.currency),
       dividends: Money.new(result[:dividends], family.currency),
       interest: Money.new(result[:interest], family.currency),
       trades_count: result[:trades_count],
@@ -220,6 +222,15 @@ class InvestmentStatement
   HOLDINGS_SORT_KEYS = %w[value weight return day_change name].freeze
   HOLDINGS_SORT_DIRECTIONS = %w[asc desc].freeze
 
+  # The [sort, dir] #holdings_table_rows actually applies, so a caller can
+  # show the table's headers the order its rows are in.
+  def self.holdings_sort(sort, dir)
+    [
+      HOLDINGS_SORT_KEYS.include?(sort.to_s) ? sort.to_s : "value",
+      HOLDINGS_SORT_DIRECTIONS.include?(dir.to_s) ? dir.to_s : "desc"
+    ]
+  end
+
   def holdings_table_rows(sort: "value", dir: "desc")
     rolled_up = holdings_rolled_up_by_security
     return [] if rolled_up.empty?
@@ -406,11 +417,7 @@ class InvestmentStatement
 
   # Investment accounts
   def investment_accounts
-    @investment_accounts ||= begin
-      scope = family.accounts.visible.included_in_reports.where(accountable_type: %w[Investment Crypto])
-      scope = scope.included_in_finances_for(user) if user
-      scope
-    end
+    @investment_accounts ||= report_accounts.where(accountable_type: %w[Investment Crypto])
   end
 
   private
@@ -449,7 +456,7 @@ class InvestmentStatement
       @all_time_totals ||= totals(period: Period.all_time)
     end
 
-    PeriodTotals = Data.define(:contributions, :withdrawals, :dividends, :interest, :trades_count, :currency) do
+    PeriodTotals = Data.define(:contributions, :withdrawals, :buys, :sells, :dividends, :interest, :trades_count, :currency) do
       def net_flow
         contributions - withdrawals
       end
@@ -679,9 +686,12 @@ class InvestmentStatement
     # accounts that hold it, in family currency.
     HoldingsTableRow = Data.define(
       :security, :positions, :accounts_count, :qty, :avg_cost, :amount, :weight,
-      :unrealized, :day_change, :missing_cost_basis
+      :unrealized, :day_change, :day_change_positions, :missing_cost_basis
     ) do
       def ticker = security.ticker
+      # The Day change sums only the positions with a previous snapshot, while
+      # the row's value sums them all.
+      def day_change_partial? = day_change.present? && day_change_positions < positions.size
       def name = security.name.presence || ticker
       def amount_money = amount
     end
@@ -733,13 +743,13 @@ class InvestmentStatement
         weight: total.zero? ? 0 : (value / total * 100).round(2),
         unrealized: unrealized,
         day_change: day_change,
+        day_change_positions: day_changes.size,
         missing_cost_basis: missing_cost_basis
       )
     end
 
     def sort_holdings_table_rows(rows, sort:, dir:)
-      sort = HOLDINGS_SORT_KEYS.include?(sort.to_s) ? sort.to_s : "value"
-      dir = HOLDINGS_SORT_DIRECTIONS.include?(dir.to_s) ? dir.to_s : "desc"
+      sort, dir = self.class.holdings_sort(sort, dir)
 
       # Rows without the sorted figure go last whichever direction is asked.
       # Ties break by name, then security id, in both directions, so rows with
@@ -841,19 +851,77 @@ class InvestmentStatement
       @investment_account_ids ||= investment_accounts.pluck(:id)
     end
 
+    def report_accounts
+      scope = family.accounts.visible.included_in_reports
+      user ? scope.included_in_finances_for(user) : scope
+    end
+
+    # The accounts #totals reads: the investment accounts, plus the cash
+    # account a broker settles their trades on when it keeps the cash in an
+    # account of its own. Trade Republic does: its Cash account is a
+    # depository account, and each trade's settlement there is linked to the
+    # Portfolio or Crypto account as a confirmed transfer
+    # (TradeRepublicAccount.settlement_account_ids_for). Taken as one scope,
+    # those settlements are internal, like a buy paid from an investment
+    # account's own cash, and money is counted where it enters or leaves the
+    # broker: a transfer between the Cash account and the user's bank. As on
+    # every account the totals read, a cash row counts only when it records
+    # a flow (Totals#recorded_flow_sql), so card payments and other unlinked
+    # rows on the Cash account are neither. Nor is a credit card or loan
+    # payment made from it: Totals is told which accounts settle trades, and
+    # leaves those payments out there (see Totals#recorded_flow_sql). Income
+    # the broker books there (dividends, interest) is read with it. The Cash
+    # account passes the same report and visibility filters as the investment
+    # accounts. A user who does not have it in their finances therefore gets
+    # the investment accounts alone, on which each settlement counts as a
+    # contribution or a withdrawal again.
+    #
+    # Only a provider that books trade settlements this way is followed, not
+    # every account of the same connection: a bank connection with a checking
+    # and a brokerage account would otherwise make every deposit from that
+    # checking account internal, and it would never be counted.
+    def totals_account_ids
+      @totals_account_ids ||= (investment_account_ids + settlement_account_ids).uniq
+    end
+
+    def settlement_account_ids
+      @settlement_account_ids ||= if investment_account_ids.empty?
+        []
+      else
+        report_accounts.where(id: TradeRepublicAccount.settlement_account_ids_for(investment_account_ids)).pluck(:id)
+      end
+    end
+
     def totals_query(account_ids:, date_range:)
       if account_ids.empty?
         return Totals.new(family, account_ids: account_ids, date_range: date_range).call
       end
 
-      account_ids_hash = Digest::MD5.hexdigest(account_ids.sort.join(","))
+      # Which of those accounts settle trades changes what Totals counts
+      # (see Totals#recorded_flow_sql), so it is part of the key too.
+      account_ids_hash = Digest::MD5.hexdigest("#{account_ids.sort.join(",")}|#{settlement_account_ids.sort.join(",")}")
 
       Rails.cache.fetch([
-        "investment_statement", "totals_query/v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, family.currency,
+        "investment_statement", "totals_query/v3", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, family.currency,
         account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version,
         # A rate stored later can complete totals that left an amount out.
-        ExchangeRate.updated_at_version
-      ]) { Totals.new(family, account_ids: account_ids, date_range: date_range).call }
+        ExchangeRate.updated_at_version,
+        transfers_version(account_ids)
+      ]) { Totals.new(family, account_ids: account_ids, settlement_account_ids: settlement_account_ids, date_range: date_range).call }
+    end
+
+    # Contributions and withdrawals depend on which transactions a confirmed
+    # Transfer links (Portfolio::FlowClassifier), and linking, confirming or
+    # removing a transfer between two existing transactions need not write
+    # to either entry, so entries_cache_version alone would miss it. The
+    # count catches a removal; the timestamp catches a confirmation.
+    def transfers_version(account_ids)
+      leg_ids = Entry.where(account_id: account_ids, entryable_type: "Transaction").select(:entryable_id)
+      count, max_at = Transfer
+        .where(inflow_transaction_id: leg_ids)
+        .or(Transfer.where(outflow_transaction_id: leg_ids))
+        .pick(Arel.sql("count(*)"), Arel.sql("max(transfers.updated_at)"))
+      "#{count}-#{max_at&.to_f}"
     end
 
     def monetizable_currency
