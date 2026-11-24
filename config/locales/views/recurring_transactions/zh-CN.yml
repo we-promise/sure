@@ -20,6 +20,7 @@ zh-CN:
       annual: 每年
       custom: 自定义安排
       interval: 自定义间隔
+      once: 仅一次
     frequency_interval_units:
       weekly: 周
       monthly: 个月
@@ -37,6 +38,8 @@ zh-CN:
       every_n_years: "每 %{interval} 年的 %{month} %{day} 日"
       custom: 自定义安排
       last_day: 最后一天
+      once: 仅一次
+      once_on: "仅于 %{date} 一次"
     identify_patterns: 识别模式
     cleanup_stale: 清理过期项
     actions:
@@ -153,8 +156,20 @@ zh-CN:
       frequency_second_day_label: 以及第几天
       frequency_weekday_label: "在"
       frequency_month_label: "于"
+      bank_reference_label: 银行参考号
+      bank_reference_placeholder: 合同号或客户编号
+      bank_reference_hint: 付款备注（附言）中的固定标识。只要该账户上的付款备注包含此标识，无论金额或日期如何都会匹配此账单（除非该付款带有与绑定商户不同的商户）。请使用至少 3 个字符的独特标识。
+      reference_only_label: 仅按参考号匹配
+      reference_only_hint: 忽略账单名称和收款方；仅匹配备注中包含该参考号的付款。需要填写银行参考号。
+      once_on_label: 到期日
+      income_once_on_label: 日期
+      once_hint: 仅于此日期到期一次，不会重复。将该交易标记为“一次性”以避免计入您的平均值。
+      income_once_hint: 仅于此日期到账一次，不会重复。将该交易标记为“一次性”以避免计入您的平均值。
+      once_new_hint: 仅于上方日期到期一次，不会重复。将该交易标记为“一次性”以避免计入您的平均值。
+      income_once_new_hint: 仅于上方日期到账一次，不会重复。将该交易标记为“一次性”以避免计入您的平均值。
     update:
       success: 账单已更新
+      once_date_locked: 此付款已有记录，因此无法更改其日期。
       success_with_siblings:
         one: "账单已更新，付款链接已复制到另外 1 笔账单"
         other: "账单已更新，付款链接已复制到另外 %{count} 笔账单"

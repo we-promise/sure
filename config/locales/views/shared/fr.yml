@@ -39,6 +39,14 @@ fr:
       operator_multiply: Multiplier
       operator_subtract: Soustraire
     preview: Aperçu
+    exchange_rate_notes:
+      missing:
+        one: 'Aucun taux de change de %{currencies} vers %{currency} n''est encore enregistré : certains totaux peuvent donc exclure les montants en %{currencies}.'
+        other: 'Aucun taux de change de %{currencies} vers %{currency} n''est encore enregistré : certains totaux peuvent donc exclure les montants dans ces devises.'
+      stale:
+        one: 'Le dernier taux de change vers %{currency} n''est plus à jour : %{rates}. Les totaux du jour l''utilisent.'
+        other: 'Les derniers taux de change vers %{currency} ne sont plus à jour : %{rates}. Les totaux du jour les utilisent.'
+      stale_rate: "%{from} du %{date}"
     require_admin: Seuls les administrateurs peuvent effectuer cette action
     sidekiq_health_banner:
       body: 'Les tâches en arrière-plan ne sont pas traitées : les soldes, le patrimoine net et les synchronisations de comptes peuvent donc être obsolètes ou absents.'

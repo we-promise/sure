@@ -20,6 +20,11 @@ nb:
       household_name_placeholder: Husholdningsnavn
       country: Land
       submit: Fortsett
+      group_name: Gruppenavn
+      group_name_placeholder: Gruppenavn
+      moniker_prompt: Jeg skal bruke %{product_name} sammen med ...
+      moniker_family: Familiemedlemmer (bare meg selv eller med partner, tenåringer osv.)
+      moniker_group: En gruppe personer (bedrift, klubb, forening eller annet)
     preferences:
       title: Konfigurer innstillingene dine
       subtitle: La oss konfigurere innstillingene dine.
@@ -35,7 +40,7 @@ nb:
       submit: Fullfør
     goals:
       title: Hva bringer deg hit?
-      subtitle: Velg ett eller flere mål du har med %{product_name} som ditt personlige økonomverktøy.
+      subtitle: Velg ett eller flere mål du har med %{product_name} som ditt personlige økonomiverktøy.
       unified_accounts: Se alle kontoene mine på ett sted
       cashflow: Forstå kontantstrøm og utgifter
       budgeting: Administrere økonomiplaner og budsjetter

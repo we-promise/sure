@@ -379,6 +379,311 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "a body warmed outside a request is what the page serves" do
+    with_memory_cache do
+      assert ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      assert_not ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd }), "already warm"
+
+      ReportsController.any_instance.expects(:setup_report_data).never
+      get reports_path(period_type: :ytd)
+
+      assert_response :ok
+      assert_select "[data-sortable-list-target=item]"
+    end
+  end
+
+  test "a built body is kept for as many days as the page cache setting says" do
+    with_env_overrides PAGE_CACHE_DAYS: nil do
+      Setting.stubs(:page_cache_days).returns(30)
+      store = ActiveSupport::Cache::MemoryStore.new
+      Rails.stubs(:cache).returns(store)
+      store.stubs(:write).returns(true)
+      store.expects(:write).with(regexp_matches(/\Areports_body\//), anything, expires_in: 30.days).returns(true)
+
+      assert ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+    end
+  end
+
+  test "after the data changes, the old build is served while a rebuild is queued" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/, count: 0
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        @family.entries.first.touch
+        ReportsController.any_instance.expects(:render_report_body).never
+
+        assert_enqueued_with(job: RebuildReportJob, args: [ @user, { period_type: "ytd" }, "en" ]) do
+          get reports_path(period_type: :ytd)
+        end
+        assert_response :ok
+        assert_select "[data-sortable-list-target=item]"
+        assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/
+
+        assert_no_enqueued_jobs(only: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      end
+    end
+  end
+
+  test "a stale build is not rebuilt again within the cooldown" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      @family.entries.first.touch
+
+      assert_no_enqueued_jobs(only: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/
+    end
+  end
+
+  test "refresh rebuilds the report straight away and drops itself from the URL" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      @family.entries.first.touch
+
+      ReportsController.any_instance.expects(:render_report_body).once
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd, refresh: 1)
+      assert_redirected_to reports_path(period_type: :ytd)
+
+      follow_redirect!
+      assert_select "#rebuilt"
+      assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/, count: 0
+    end
+  end
+
+  test "refresh shows a report too big to keep as built, without building it again" do
+    with_memory_cache do
+      PageCache.stubs(:max_bytes).returns(0)
+
+      ReportsController.any_instance.expects(:render_report_body).once
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd, refresh: 1)
+
+      assert_response :ok
+      assert_select "#rebuilt"
+    end
+  end
+
+  test "a default period keeps its cached build from one day to the next" do
+    with_memory_cache do
+      get reports_path(period_type: :all_time)
+
+      travel 1.day do
+        ReportsController.any_instance.expects(:render_report_body).never
+        get reports_path(period_type: :all_time)
+
+        assert_response :ok
+        assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/
+      end
+    end
+  end
+
+  test "arranging the sections reorders the cached report rather than rebuilding it" do
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      @user.update!(preferences: (@user.preferences || {}).merge(
+        "reports_section_order" => %w[transactions_breakdown trends_insights],
+        "reports_collapsed_sections" => { "trends_insights" => true }
+      ))
+
+      ReportsController.any_instance.expects(:render_report_body).never
+      get reports_path(period_type: :ytd)
+
+      keys = css_select("[data-sortable-list-target=item]").map { |node| node["data-section-key"] }
+      assert_equal %w[transactions_breakdown trends_insights], keys.first(2)
+      assert_select "section[data-section-key=trends_insights] details:not([open])"
+    end
+  end
+
+  test "warming several members builds each one's report from their own accounts" do
+    member = users(:family_member)
+    @family.accounts.create!(name: "Admin only", balance: 0, currency: "USD", accountable: Depository.new, owner: @user)
+    assert_not_equal @user.accessible_accounts.pluck(:id).sort, member.accessible_accounts.pluck(:id).sort
+
+    seen = {}
+    ReportsController.any_instance.stubs(:render_report_body).with do
+      seen[Current.user.id] = Current.accessible_accounts.map(&:id).sort
+      true
+    end.returns({ notes: "", has_transactions: false, summary: "", sections: [] })
+
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      ReportsController.warm_body_cache(user: member, query: { period_type: :ytd })
+    end
+
+    assert_equal @user.accessible_accounts.pluck(:id).sort, seen[@user.id]
+    assert_equal member.accessible_accounts.pluck(:id).sort, seen[member.id]
+  end
+
+  test "losing access to an account is never answered with a report built before" do
+    member = users(:family_member)
+    sign_in member
+
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      assert_response :ok
+
+      account_shares(:depository_shared_with_member).destroy!
+      ReportsController.any_instance.expects(:render_report_body).once
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd)
+
+      assert_select "#rebuilt"
+      assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating")}/, count: 0
+    end
+  end
+
+  test "each sort and filter of the breakdown is its own cached report" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+
+      ReportsController.any_instance.expects(:render_report_body).twice
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd, sort_by: "count", sort_direction: "asc")
+      assert_select "#rebuilt"
+      get reports_path(period_type: :ytd, filter_account_id: accounts(:depository).id)
+      assert_select "#rebuilt"
+    end
+  end
+
+  test "a background rebuild repeats the page's sort and filters" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd, sort_by: "count", filter_account_id: accounts(:depository).id)
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        @family.entries.first.touch
+        assert_enqueued_with(job: RebuildReportJob,
+          args: [ @user, { filter_account_id: accounts(:depository).id, period_type: "ytd", sort_by: "count" }, "en" ]) do
+          get reports_path(period_type: :ytd, sort_by: "count", filter_account_id: accounts(:depository).id)
+        end
+      end
+    end
+  end
+
+  test "a report warmed in the background is in the member's own language" do
+    @user.update!(locale: "de")
+
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+
+      ReportsController.any_instance.expects(:render_report_body).never
+      get reports_path(period_type: :ytd)
+      assert_response :ok
+    end
+  end
+
+  test "a stale build in the language the page asked for is rebuilt in that language" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd, locale: "de")
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        @family.entries.first.touch
+        assert_enqueued_with(job: RebuildReportJob, args: [ @user, { period_type: "ytd" }, "de" ]) do
+          get reports_path(period_type: :ytd, locale: "de")
+        end
+        perform_enqueued_jobs(only: RebuildReportJob)
+
+        ReportsController.any_instance.expects(:render_report_body).never
+        get reports_path(period_type: :ytd, locale: "de")
+        assert_select "[data-testid=report-built-at]", text: /#{I18n.t("reports.index.updating", locale: :de)}/, count: 0
+      end
+    end
+  end
+
+  test "the plain Reports page is served from the build warmed for this month" do
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :monthly })
+
+      ReportsController.any_instance.expects(:render_report_body).never
+      get reports_path
+      assert_response :ok
+    end
+  end
+
+  test "a blank period is this month's report, so the plain page can be served from it" do
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
+    budget.budget_categories.find_or_initialize_by(category: @family.categories.expenses.first)
+          .update!(budgeted_spending: Money.new(50000, @family.currency))
+
+    with_memory_cache do
+      get reports_path(period_type: "")
+      assert_select "p", text: I18n.t("reports.summary.of_budget_used")
+
+      ReportsController.any_instance.expects(:render_report_body).never
+      get reports_path
+      assert_select "p", text: I18n.t("reports.summary.of_budget_used")
+    end
+  end
+
+  test "changing whether investment contributions count as spending builds the report again" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      @family.update!(investment_contributions_as_spending: !@family.investment_contributions_as_spending)
+
+      ReportsController.any_instance.expects(:render_report_body).once.returns({ notes: "", has_transactions: false, summary: "", sections: [] })
+      get reports_path(period_type: :ytd)
+    end
+  end
+
+  test "assigning a tag marks the cached report stale" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        transactions(:one).update!(tag_ids: [ tags(:one).id ])
+        assert_enqueued_with(job: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      end
+    end
+  end
+
+  test "a new month's report is built, not served from last month's" do
+    with_memory_cache do
+      travel_to Date.new(2026, 11, 30).noon do
+        get reports_path
+      end
+
+      travel_to Date.new(2026, 12, 1).noon do
+        ReportsController.any_instance.expects(:render_report_body).once.returns({ notes: "", has_transactions: false, summary: "", sections: [] })
+        get reports_path
+      end
+    end
+  end
+
+  test "year to date keeps its build from one day to the next, though it ends today" do
+    with_memory_cache do
+      travel_to Date.new(2026, 11, 20).noon do
+        get reports_path(period_type: :ytd)
+      end
+
+      travel_to Date.new(2026, 11, 21).noon do
+        ReportsController.any_instance.expects(:render_report_body).never
+        get reports_path(period_type: :ytd)
+        assert_response :ok
+      end
+    end
+  end
+
+  test "editing a holding's cost basis marks the cached report stale" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        holdings(:one).set_manual_cost_basis!(80)
+        assert_enqueued_with(job: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      end
+    end
+  end
+
+  test "each member gets their own cached body" do
+    with_memory_cache do
+      ReportsController.warm_body_cache(user: @user, query: { period_type: :ytd })
+      other = @family.users.where.not(id: @user.id).first
+      assert other, "fixtures need a second member"
+
+      assert ReportsController.warm_body_cache(user: other, query: { period_type: :ytd })
+    end
+  end
+
   test "all time runs from the member's first transaction or trade to today" do
     first = @family.earliest_activity_date
     assert first, "fixtures need a transaction or trade"
@@ -449,6 +754,50 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes @response.body, next_month.strftime("%b %Y")
   end
 
+  test "last 12 months uses a twelve month window" do
+    get reports_path(period_type: :last_12_months)
+    assert_response :ok
+
+    expected_end   = Date.current.end_of_month
+    expected_start = (expected_end + 1.day - 12.months).beginning_of_month
+
+    assert_includes @response.body, expected_start.strftime("%b %Y")
+    assert_includes @response.body, expected_end.strftime("%b %Y")
+  end
+
+  test "last 12 months navigation shifts by twelve months" do
+    latest_start = (Date.current.end_of_month + 1.day - 12.months).beginning_of_month
+    start_date   = latest_start - 24.months
+    end_date     = start_date + 12.months - 1.day
+
+    get reports_path(period_type: :last_12_months, start_date: start_date, end_date: end_date)
+    assert_response :ok
+
+    prev_end = start_date - 1.day
+    next_start = start_date + 12.months
+    next_end = next_start + 12.months - 1.day
+
+    assert_select "a[href*='start_date=#{(start_date - 12.months).iso8601}'][href*='end_date=#{prev_end.iso8601}']", minimum: 1
+    assert_select "a[href*='start_date=#{next_start.iso8601}'][href*='end_date=#{next_end.iso8601}']", minimum: 1
+  end
+
+  test "last 12 months next link clamps at the latest window" do
+    latest_start = (Date.current.end_of_month + 1.day - 12.months).beginning_of_month
+    # A start inside the latest window: a plain twelve-month step would end
+    # after today, so the link has to clamp.
+    start_date = latest_start - 5.months
+    end_date   = start_date + 12.months - 1.day
+
+    get reports_path(period_type: :last_12_months, start_date: start_date, end_date: end_date)
+    assert_response :ok
+
+    unclamped_start = start_date + 12.months
+    unclamped_end = unclamped_start + 12.months - 1.day
+
+    assert_select "a[href*='start_date=#{latest_start.iso8601}'][href*='end_date=#{Date.current.end_of_month.iso8601}']", minimum: 1
+    assert_select "a[href*='start_date=#{unclamped_start.iso8601}'][href*='end_date=#{unclamped_end.iso8601}']", count: 0
+  end
+
   test "last 6 months default start date is consistent with navigation" do
     # First load (no params) should produce the same start/end as the navigation arrows would
     get reports_path(period_type: :last_6_months)
@@ -510,6 +859,18 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: I18n.t("reports.trends.title")
     assert_select "thead" do
       assert_select "th", text: I18n.t("reports.trends.month")
+    end
+  end
+
+  test "monthly breakdown month names link to that month's report with the selected tags" do
+    tag = @family.tags.create!(name: "Breakdown tag")
+
+    get reports_path(period_type: :custom, start_date: Date.new(2024, 1, 15), end_date: Date.new(2024, 3, 12), filter_tag_ids: [ tag.id ])
+
+    assert_response :ok
+    [ Date.new(2024, 1, 1), Date.new(2024, 2, 1), Date.new(2024, 3, 1) ].each do |month|
+      href = reports_path(period_type: :monthly, start_date: month, end_date: month.end_of_month, filter_tag_ids: [ tag.id ])
+      assert_select "[data-section-key=trends_insights] a[href=?][data-turbo-frame=_top]", href, text: month.strftime("%b %Y")
     end
   end
 
@@ -1163,10 +1524,15 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     )
     assert_response :ok
 
-    prev_start = 1.month.ago.to_date.beginning_of_month - 1.month
-    next_start = 1.month.ago.to_date.beginning_of_month + 1.month
-    assert_select "a[href*=?]", "start_date=#{prev_start}", count: 0
-    assert_select "a[href*=?]", "start_date=#{next_start}", count: 0
+    assert_select "a[aria-label=?]", I18n.t("reports.index.previous_period"), count: 0
+    assert_select "a[aria-label=?]", I18n.t("reports.index.next_period"), count: 0
+  end
+
+  test "monthly period shows previous period navigation" do
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "a[aria-label=?]", I18n.t("reports.index.previous_period"), count: 1
   end
 
   test "ytd period navigation shows previous year link" do
@@ -1409,6 +1775,365 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     lines = css_select("[data-testid='realized-gain-line']").map(&:text)
     assert lines.any? { |text| text.include?(kept.ticker) }, "the kept disposal must be listed"
     assert lines.none? { |text| text.include?(excluded.ticker) }, "the excluded disposal must not be listed"
+  end
+
+  test "activity breakdown draws one trend line per selected category" do
+    account = accounts(:depository)
+    groceries = @family.categories.create!(name: "Trend groceries", color: "#ABCDEF")
+    dining = @family.categories.create!(name: "Trend dining", color: "#FEDCBA")
+    period_start = 2.months.ago.beginning_of_month.to_date
+
+    create_transaction(account: account, name: "Groceries now", amount: 40, category: groceries, date: Date.current)
+    create_transaction(account: account, name: "Groceries before", amount: 10, category: groceries, date: period_start + 2.days)
+    create_transaction(account: account, name: "Dining now", amount: 25, category: dining, date: Date.current)
+
+    enable_preview!
+    get reports_path(
+      period_type: :custom,
+      start_date: period_start,
+      end_date: Date.current.end_of_month,
+      trend_category_ids: [ groceries.id, dining.id ]
+    )
+
+    assert_response :ok
+    data = trend_chart_data
+
+    assert_select "section[data-section-key='trends_insights'] [data-controller='multi-series-chart']"
+    assert_equal [ "Trend dining", "Trend groceries" ], data["series"].map { |series| series["name"] }.sort
+    groceries_series = data["series"].find { |series| series["name"] == "Trend groceries" }
+
+    assert_equal 3, groceries_series["values"].size
+    assert_equal 40.0, groceries_series["values"].last["value"]
+    assert_equal Date.current.beginning_of_month.iso8601, groceries_series["values"].last["date"]
+  end
+
+  test "a selected parent trend includes its subcategory spending" do
+    parent = @family.categories.create!(name: "Trend parent", color: "#123123")
+    child = @family.categories.create!(name: "Trend child", parent: parent, color: "#321321")
+
+    create_transaction(account: accounts(:depository), name: "Child spend", amount: 30,
+                       category: child, date: Date.current)
+
+    enable_preview!
+    get reports_path(
+      period_type: :custom,
+      start_date: 1.month.ago.beginning_of_month.to_date,
+      end_date: Date.current.end_of_month,
+      trend_category_ids: [ parent.id ]
+    )
+
+    assert_response :ok
+    series = trend_chart_data["series"].sole
+
+    assert_equal "Trend parent", series["name"]
+    assert_equal 2, series["values"].size
+    assert_equal 30.0, series["values"].last["value"]
+  end
+
+  test "year granularity sums the months in each year" do
+    category = @family.categories.create!(name: "Trend yearly", color: "#0F0F0F")
+    last_year_start = 1.year.ago.beginning_of_year.to_date
+    this_year_start = Date.current.beginning_of_year.to_date
+
+    create_transaction(account: accounts(:depository), name: "Last year", amount: 10,
+                       category: category, date: last_year_start + 10.days)
+    create_transaction(account: accounts(:depository), name: "Year first", amount: 10,
+                       category: category, date: this_year_start + 10.days)
+    create_transaction(account: accounts(:depository), name: "Year second", amount: 15,
+                       category: category, date: this_year_start + 70.days)
+
+    enable_preview!
+    get reports_path(
+      period_type: :custom,
+      start_date: last_year_start,
+      end_date: Date.current.end_of_year.to_date,
+      trend_category_ids: [ category.id ],
+      trend_granularity: "year"
+    )
+
+    assert_response :ok
+    series = trend_chart_data["series"].sole
+
+    assert_equal 2, series["values"].size
+    assert_equal 10.0, series["values"].first["value"]
+    assert_equal 25.0, series["values"].last["value"]
+    assert_equal this_year_start.year.to_s, series["values"].last["label"]
+  end
+
+  test "year granularity keeps a one-year period visible as a single point" do
+    category = @family.categories.create!(name: "Trend single year", color: "#0A0A0A")
+    create_transaction(account: accounts(:depository), name: "Single year spend", amount: 12,
+                       category: category, date: Date.current.beginning_of_year)
+
+    enable_preview!
+    get reports_path(
+      period_type: :ytd,
+      trend_category_ids: [ category.id ],
+      trend_granularity: "year"
+    )
+
+    assert_response :ok
+    series = trend_chart_data["series"].sole
+
+    assert_equal 1, series["values"].size
+    assert_equal 12.0, series["values"].sole["value"]
+    assert_equal Date.current.year.to_s, series["values"].sole["label"]
+  end
+
+  test "a category from another family never reaches the trend chart" do
+    foreign = Category.create!(family: families(:empty), name: "Foreign trend category",
+                               color: "#333333", lucide_icon: "shapes")
+
+    enable_preview!
+    get reports_path(
+      period_type: :custom,
+      start_date: 1.month.ago.beginning_of_month.to_date,
+      end_date: Date.current.end_of_month,
+      trend_category_ids: [ foreign.id ]
+    )
+
+    assert_response :ok
+    assert_select "[data-controller='multi-series-chart']", count: 0
+  end
+
+  test "uncategorized can be selected for the trend" do
+    create_transaction(account: accounts(:depository), name: "No category spend",
+                       amount: 12, date: Date.current)
+
+    enable_preview!
+    get reports_path(
+      period_type: :custom,
+      start_date: 1.month.ago.beginning_of_month.to_date,
+      end_date: Date.current.end_of_month,
+      trend_category_ids: [ Category::UNCATEGORIZED_FILTER_VALUE ]
+    )
+
+    assert_response :ok
+    names = trend_chart_data["series"].map { |series| series["name"] }
+
+    assert_includes names, Category.uncategorized.name
+  end
+
+  test "no trend chart renders without a category selection" do
+    enable_preview!
+    get reports_path(
+      period_type: :custom,
+      start_date: 1.month.ago.beginning_of_month.to_date,
+      end_date: Date.current.end_of_month
+    )
+
+    assert_response :ok
+    assert_select "[data-controller='multi-series-chart']", count: 0
+  end
+
+  test "the trend chart stays hidden without preview access" do
+    category = @family.categories.create!(name: "Trend gated", color: "#707070")
+    create_transaction(account: accounts(:depository), name: "Gated spend", amount: 20,
+                       category: category, date: Date.current)
+
+    get reports_path(period_type: :monthly, trend_category_ids: [ category.id ])
+
+    assert_response :ok
+    assert_select "[data-controller='multi-series-chart']", count: 0
+    assert_select "[data-section-key='trends_insights']", count: 1
+    assert_no_match(/#{Regexp.escape(I18n.t("reports.trends.category_trend.title"))}/, @response.body)
+  end
+
+  test "a refund lowers its category in the same bucket" do
+    category = @family.categories.create!(name: "Trend refunded", color: "#717171")
+
+    create_transaction(account: accounts(:depository), name: "Purchase", amount: 100,
+                       category: category, date: Date.current)
+    create_transaction(account: accounts(:depository), name: "Refund", amount: -100,
+                       category: category, date: Date.current)
+
+    enable_preview!
+    get reports_path(period_type: :monthly, trend_category_ids: [ category.id ])
+
+    assert_response :ok
+    series = trend_chart_data["series"].sole
+
+    assert_equal 0.0, series["values"].sum { |point| point["value"] }
+  end
+
+  test "the trend leaves out an entry in a currency with no rate" do
+    category = @family.categories.create!(name: "Trend won rent", color: "#727272")
+    krw = @family.accounts.create!(owner: @user, name: "Seoul trend", balance: 0,
+                                   currency: "KRW", accountable: Depository.new)
+    create_transaction(account: krw, name: "Rent", amount: 130_000, currency: "KRW",
+                       category: category)
+
+    enable_preview!
+    get reports_path(period_type: :monthly, trend_category_ids: [ category.id ])
+
+    assert_response :ok
+    series = trend_chart_data["series"].sole
+
+    assert_equal 0.0, series["values"].sum { |point| point["value"] }
+  end
+
+  test "the category trend uses the selected tags" do
+    category = @family.categories.create!(name: "Trend tagged", color: "#131313")
+    tag = @family.tags.create!(name: "Trend tag")
+    create_transaction(account: accounts(:depository), name: "Tagged spend", amount: 40,
+                       category: category, tags: [ tag ], date: TAGGED_MONTH + 9.days)
+    create_transaction(account: accounts(:depository), name: "Untagged spend", amount: 60,
+                       category: category, date: TAGGED_MONTH + 9.days)
+
+    enable_preview!
+    get reports_path(period_type: :custom, start_date: TAGGED_MONTH,
+                     end_date: TAGGED_MONTH.end_of_month,
+                     filter_tag_ids: [ tag.id ], trend_category_ids: [ category.id ])
+
+    assert_response :ok
+    series = trend_chart_data["series"].sole
+
+    assert_equal 40.0, series["values"].sole["value"]
+  end
+
+  test "the category trend header shows the active tags" do
+    category = @family.categories.create!(name: "Trend header", color: "#141414")
+    tag = @family.tags.create!(name: "Trend header tag")
+
+    enable_preview!
+    get reports_path(period_type: :monthly, filter_tag_ids: [ tag.id ],
+                     trend_category_ids: [ category.id ])
+
+    assert_response :ok
+    assert_select "[data-testid='category-trend-tags']", text: /#{Regexp.escape(tag.name)}/
+  end
+
+  test "the category trend Apply keeps the tag filter" do
+    category = @family.categories.create!(name: "Trend apply", color: "#151515")
+    tag = @family.tags.create!(name: "Trend apply tag")
+
+    enable_preview!
+    get reports_path(period_type: :monthly, filter_tag_ids: [ tag.id ],
+                     trend_category_ids: [ category.id ])
+
+    assert_response :ok
+    form = css_select("form[action='#{reports_path}']").find do |node|
+      node.at_css("input[type=checkbox][name='trend_category_ids[]']")
+    end
+
+    assert form, "the category filter form must render"
+    assert form.at_css("input[type=hidden][name='filter_tag_ids[]'][value='#{tag.id}']"),
+           "the category filter Apply drops the tag filter"
+  end
+
+  test "the tag filter Apply keeps the trend selection and granularity" do
+    category = @family.categories.create!(name: "Trend tag filter", color: "#161616")
+    tag = @family.tags.create!(name: "Trend tag filter tag")
+
+    enable_preview!
+    get reports_path(period_type: :monthly, filter_tag_ids: [ tag.id ],
+                     trend_category_ids: [ category.id ], trend_granularity: "year")
+
+    assert_response :ok
+    form = css_select("form[action='#{reports_path}']").find do |node|
+      node.at_css("input[type=checkbox][name='filter_tag_ids[]']")
+    end
+
+    assert form, "the tag filter form must render"
+    assert form.at_css("input[type=hidden][name='trend_category_ids[]'][value='#{category.id}']"),
+           "the tag filter Apply drops the trend selection"
+    assert form.at_css("input[type=hidden][name='trend_granularity'][value='year']"),
+           "the tag filter Apply drops the trend granularity"
+  end
+
+  test "period links keep the trend selection and granularity" do
+    category = @family.categories.create!(name: "Trend link", color: "#444444")
+
+    get reports_path(period_type: :monthly, trend_category_ids: [ category.id ],
+                     trend_granularity: "year")
+
+    assert_response :ok
+    assert_select "a[href*='trend_category_ids']", minimum: 1
+    assert_select "a[href*='trend_granularity=year']", minimum: 1
+  end
+
+  test "period links keep an explicit month on a long range" do
+    category = @family.categories.create!(name: "Trend long month", color: "#555555")
+
+    get reports_path(
+      period_type: :custom,
+      start_date: 3.years.ago.beginning_of_year.to_date,
+      end_date: Date.current.end_of_month.to_date,
+      trend_category_ids: [ category.id ],
+      trend_granularity: "month"
+    )
+
+    assert_response :ok
+    assert_select "a[href*='trend_granularity=month']", minimum: 1
+  end
+
+  test "period links keep an explicit year on a long range" do
+    category = @family.categories.create!(name: "Trend long year", color: "#575757")
+
+    get reports_path(
+      period_type: :custom,
+      start_date: 3.years.ago.beginning_of_year.to_date,
+      end_date: Date.current.end_of_month.to_date,
+      trend_category_ids: [ category.id ],
+      trend_granularity: "year"
+    )
+
+    assert_response :ok
+    assert_select "a[href*='period_type=monthly'][href*='trend_granularity=year']", minimum: 1
+  end
+
+  test "the custom date form omits an automatic granularity" do
+    enable_preview!
+    get reports_path(
+      period_type: :custom,
+      start_date: 3.years.ago.beginning_of_year.to_date,
+      end_date: Date.current.end_of_month.to_date
+    )
+
+    assert_response :ok
+    assert_select "form input[name='trend_granularity']", count: 0
+  end
+
+  test "the custom date form keeps an explicit granularity" do
+    enable_preview!
+    get reports_path(
+      period_type: :custom,
+      start_date: 3.years.ago.beginning_of_year.to_date,
+      end_date: Date.current.end_of_month.to_date,
+      trend_granularity: "year"
+    )
+
+    assert_response :ok
+    assert_select "form[data-controller='auto-submit-form'] input[name='trend_granularity'][value='year']", count: 1
+    # The category filter and tag filter forms also carry the explicit choice.
+    assert_select "form input[name='trend_granularity'][value='year']", count: 3
+  end
+
+  test "the trend chart lists its values in a data table" do
+    category = @family.categories.create!(name: "Trend table", color: "#787878")
+    create_transaction(account: accounts(:depository), name: "Table spend", amount: 40,
+                       category: category, date: Date.current)
+
+    enable_preview!
+    get reports_path(period_type: :last_6_months, trend_category_ids: [ category.id ])
+
+    assert_response :ok
+    assert_select "details table caption", text: I18n.t("reports.trends.category_trend.data_table_caption")
+    assert_select "details table th[scope='col']", text: "Trend table"
+    assert_select "details table th[scope='row']", minimum: 6
+  end
+
+  test "the amount sort link keeps the trend selection and granularity" do
+    category = @family.categories.create!(name: "Trend sort", color: "#666666")
+    create_transaction(account: accounts(:depository), name: "Sort spend", amount: 25,
+                       category: category, date: Date.current)
+
+    get reports_path(period_type: :last_6_months, trend_category_ids: [ category.id ],
+                     trend_granularity: "year")
+
+    assert_response :ok
+    assert_select "a[href*='sort_by=amount'][href*='trend_category_ids']", minimum: 1
+    assert_select "a[href*='sort_by=amount'][href*='trend_granularity=year']", minimum: 1
   end
 
   # POSTing to settings_api_keys_path is create, which needs api_key params.
@@ -1673,12 +2398,28 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def with_memory_cache
+      Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+      yield
+    end
+
     def biggest_expenses_reports_path(**params)
       reports_path(period_type: :custom, start_date: BIGGEST_MONTH, end_date: BIGGEST_MONTH.end_of_month, **params)
     end
 
     def biggest_expense_names
       css_select("[data-section-key=biggest_expenses] tbody tr td:first-child a").map { |node| node.text.strip }
+    end
+
+    def enable_preview!
+      @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    end
+
+    def trend_chart_data
+      chart = css_select("[data-controller='multi-series-chart']").first
+
+      assert chart, "the trend chart must render"
+      JSON.parse(chart["data-multi-series-chart-data-value"])
     end
 
     # Travel, Work and Other tags on a month of their own, away from the

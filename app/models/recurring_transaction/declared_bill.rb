@@ -49,6 +49,8 @@ class RecurringTransaction
         payment_url: attrs[:payment_url],
         autopay: ActiveModel::Type::Boolean.new.cast(attrs[:autopay]) || false,
         notes: attrs[:notes],
+        bank_reference: (attrs[:bank_reference] unless is_income),
+        reference_only: (attrs[:reference_only] unless is_income),
         status: "active",
         manual: true,
         occurrence_count: 0

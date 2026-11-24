@@ -300,12 +300,12 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     )
 
     income_statement.expects(:build_period_total)
-      .with(classification: "expense", period: kind_of(Period))
+      .with(classification: "expense", period: kind_of(Period), tag_ids: nil)
       .once
       .returns(fake_expense_period_total)
 
     income_statement.expects(:build_period_total)
-      .with(classification: "income", period: kind_of(Period))
+      .with(classification: "income", period: kind_of(Period), tag_ids: nil)
       .once
       .returns(fake_income_period_total)
 
@@ -470,6 +470,18 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_includes sankey_data.fetch("nodes").map { |node| node.fetch("id") }, "cash_flow_node"
     assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
+  end
+
+  test "dashboard donut separates a letter currency symbol from the amount" do
+    @family.update!(currency: "RON")
+    account = @family.accounts.create!(name: "RON account", balance: 0, currency: "RON", accountable: Depository.new)
+    category = @family.categories.create!(name: "Shopping", color: "#FF5733")
+    create_transaction(account: account, name: "Shopping trip", amount: 1234.56, currency: "RON", category: category)
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#segment_#{category.id} [data-donut-chart-target='amount']", text: "Lei\u00A01,234.56"
   end
 
   test "dashboard sankey shows investment contributions as invested when they are not spending" do
