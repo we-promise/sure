@@ -25,6 +25,8 @@ de:
         split_warning_title: Aufgeteilte Buchungen erkannt
         split_warning_description: "Diese QIF-Datei enthält aufgeteilte Buchungen. Aufgeteilte Buchungen werden noch nicht unterstützt – jede aufgeteilte Buchung wird als einzelne Buchung mit ihrem Gesamtbetrag und ohne Kategorie importiert. Die einzelnen Aufteilungsdetails werden nicht übernommen."
         split_badge: aufgeteilt
+        selection_list_changed_title: Kategorien und Tags haben sich geändert
+        selection_list_changed_description: "Mit dem neuen Datumsformat enthält die Datei andere Kategorien oder Tags. Prüfe die Auswahl unten; alle Einträge sind wieder ausgewählt."
         unknown_account_type_name: "„%{type}“"
         unknown_account_type_title:
           one: Unbekannter Kontotyp

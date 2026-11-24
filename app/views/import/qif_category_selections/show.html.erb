@@ -40,6 +40,15 @@
       <% end %>
     <% end %>
 
+    <%# ── Lists changed with the new date format ──────────────── %>
+    <% if @selection_list_changed %>
+      <%= render DS::Alert.new(
+            variant: :info,
+            title: t(".selection_list_changed_title"),
+            message: t(".selection_list_changed_description")
+          ) %>
+    <% end %>
+
     <%# ── Unknown account types ───────────────────────────────── %>
     <% if @unknown_account_types.any? %>
       <%= render DS::Alert.new(
