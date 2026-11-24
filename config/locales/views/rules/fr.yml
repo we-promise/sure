@@ -84,6 +84,8 @@ fr:
         matches_regex: Correspond à l'expression régulière
         not_equal_to: Différent de
         starts_with: Commence par
+      transaction_additional_detail:
+        label: Détails supplémentaires (clé=valeur)
       transaction_type:
         equal_to: Égal à
         expense: Dépense
@@ -116,27 +118,81 @@ fr:
       success: Règle supprimée
     destroy_all:
       success: Toutes les règles supprimées
+    filters:
+      search_label: Rechercher des règles
+      search_placeholder: Rechercher dans le nom, les conditions et les actions
+      reset: Réinitialiser
+      button: Filtrer
+      done: Terminé
+      active_label: Filtres actifs
+      remove: Retirer le filtre %{filter}
+      status:
+        label: Statut
+        all: Tous les statuts
+        active: Actives
+        inactive: Inactives
+      action_type:
+        label: Action
+        all: Toutes les actions
+      condition_type:
+        label: Condition
+        all: Toutes les conditions
+      account:
+        label: Compte
+        all: Tous les comptes
+      group:
+        label: Groupe
+        all: Tous les groupes
+        none: Sans groupe
     form:
       add_action: Ajouter une action
       add_condition: Ajouter une condition
       add_condition_group: Ajouter un groupe de conditions
       all_past_and_future: Tout le passé et le futur %{resource}
+      apply_immediately_description: S'exécute juste après la création ou la modification manuelle d'une transaction, lors d'une modification groupée, dans Catégoriser, via l'API ou par l'assistant, et toujours pendant la nuit.
+      apply_immediately_label: Appliquer immédiatement aux transactions nouvelles et modifiées
+      group_hint: Les groupes servent uniquement à organiser la liste. Une règle d'un groupe s'exécute à la position du groupe dans la liste.
+      group_label: Groupe (facultatif)
+      group_select_label: Groupe
+      new_group_label: Ou nouveau groupe
+      new_group_placeholder: Nom d'un nouveau groupe
+      no_group: Sans groupe
       rule_name_label: Nom de la règle (facultatif)
       rule_name_placeholder: Entrez un nom pour cette règle
       starting_from: À partir de
       stop_processing_description: Les règles situées plus bas dans la liste ne modifient pas les transactions correspondant à cette règle.
       stop_processing_label: Arrêter le traitement des règles suivantes
       then: ALORS
+    group:
+      rules_count:
+        one: "%{count} règle"
+        other: "%{count} règles"
+      inactive_count:
+        one: "%{count} inactive"
+        other: "%{count} inactives"
+      empty: Aucune règle dans ce groupe pour l'instant. Choisissez le groupe dans le formulaire d'une règle.
+      activate_all: Activer toutes les règles
+      deactivate_all: Désactiver toutes les règles
+      rename: Renommer
+      delete: Supprimer le groupe
+      delete_confirm_title: Supprimer le groupe « %{name} » ?
+      delete_confirm_body: Les règles restent à leur place, sans groupe. Aucune règle n'est supprimée.
     index:
       ai_cost_warning: Les actions de règles basées sur l’IA coûteront de l’argent. Assurez-vous
         de filtrer le plus étroitement possible pour éviter des coûts inutiles.
       delete_all_rules: Supprimer toutes les règles
+      filters:
+        no_matches: Aucune règle ne correspond à la recherche ou aux filtres.
+        drag_disabled: Le tri est désactivé tant qu'une recherche ou un filtre est actif. Réinitialisez-les pour modifier l'ordre.
+      fold_rule: Replier ou déplier la règle %{name}
+      new_group: Nouveau groupe
       new_rule: Nouvelle règle
       no_rules_description: Configurez des règles pour effectuer des actions sur vos
         transactions et autres données à chaque synchronisation de compte.
       no_rules_title: Pas encore de règles
       order_hint: Les règles s'exécutent de haut en bas. Dès qu'une règle définit un champ d'une transaction, les règles situées plus bas ne modifient plus ce champ. Les étiquettes sont ajoutées par chaque règle correspondante. Faites glisser les règles pour changer leur ordre.
       page_title: Règles
+      reorder_group: Déplacer le groupe %{name}. Appuyez sur Entrée ou Espace pour le saisir, puis utilisez les flèches pour le déplacer.
       reorder_rule: Déplacer la règle %{name}. Appuyez sur Entrée ou Espace pour la saisir, puis utilisez les flèches pour la déplacer.
       rules_heading: Règles
     no_action: Aucune action
@@ -156,6 +212,7 @@ fr:
       description: Consultez l'historique d'exécution de vos règles, y compris le
         statut de réussite/échec et le nombre de transactions.
       execution_types:
+        immediate: Immédiat
         manual: Manuel
         scheduled: Planifié
       statuses:
@@ -173,6 +230,8 @@ fr:
       and_more_conditions:
         one: et 1 autre condition
         other: et %{count} conditions supplémentaires
+      apply_immediately: Immédiatement
+      apply_immediately_hint: S'exécute aussi juste après la création ou la modification manuelle d'une transaction, lors d'une modification groupée, dans Catégoriser, via l'API ou par l'assistant, avec les règles actives situées au-dessus.
       delete: Supprimer
       edit: Modifier
       on_or_after: "%{resource} le %{date} ou après"
