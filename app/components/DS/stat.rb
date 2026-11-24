@@ -5,7 +5,7 @@
 #
 #   <%= render DS::Stat.new(label: t(".fi_number"), value: money, hint: t(".explainer"), size: :xl) %>
 #
-# When the value is not a single figure, a sentence say, pass it as a block
+# When the value is not a single figure, a sentence, say, pass it as a block
 # and it renders as given:
 #
 #   <%= render DS::Stat.new(label: t(".confident_year")) do |stat| %>

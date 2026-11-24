@@ -62,6 +62,43 @@ class RetirementPlans::StreamsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-stream-id='#{recurring.id}']", text: /2030 to #{Regexp.escape(I18n.t("retirement_plans.show.end_age"))}/
   end
 
+  # A one-off is paid once, so neither the form nor the planner calls its
+  # amount yearly; a recurring stream says each year beside its span.
+  test "an amount is not called yearly for a one-off" do
+    get new_retirement_plan_stream_url
+    assert_select "label", text: /a year/i, count: 0
+    assert_select "p", text: I18n.t("retirement_plans.streams.form.annual_amount_hint")
+
+    plan = RetirementPlan.create!(user: @user)
+    one_off = plan.streams.create!(kind: "one_off", name: "New roof", annual_amount: 20_000, start_year: 2030, source: "manual")
+    recurring = plan.streams.create!(kind: "expense", name: "Rent", annual_amount: 12_000, start_year: 2030, source: "manual")
+
+    get retirement_plan_url
+
+    assert_select "#retirement-plan-streams th", text: /a year/i, count: 0
+    assert_select "tr[data-stream-id='#{one_off.id}']", text: /a year|each year/i, count: 0
+    assert_select "tr[data-stream-id='#{recurring.id}']", text: /each year/i
+  end
+
+  # Each amount in its own currency, whole units, and the fixed tag only on
+  # a stream that does not rise with inflation.
+  test "the planner lists each stream's amount in its own currency, and tags fixed ones" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    plan = RetirementPlan.create!(user: @user)
+    rent = plan.streams.create!(kind: "expense", name: "Rent", annual_amount: 12_000, source: "manual")
+    abroad = plan.streams.create!(kind: "expense", name: "Flat abroad", annual_amount: 10_000, currency: "EUR", source: "manual")
+    loan = plan.streams.create!(kind: "expense", name: "Loan", annual_amount: 6_000, indexed: false, source: "manual")
+
+    get retirement_plan_url
+
+    { rent => "$12,000", abroad => "€10,000", loan => "$6,000" }.each do |stream, amount|
+      assert_select "tr[data-stream-id='#{stream.id}'] td.privacy-sensitive", text: amount
+    end
+    fixed = I18n.t("retirement_plans.show.fixed")
+    assert_select "tr[data-stream-id='#{loan.id}'] span", text: fixed
+    [ rent, abroad ].each { |stream| assert_select "tr[data-stream-id='#{stream.id}'] span", text: fixed, count: 0 }
+  end
+
   test "an invalid stream is refused and nothing is written, not even the plan" do
     assert_no_difference [ "RetirementPlan::Stream.count", "RetirementPlan.count" ] do
       post retirement_plan_streams_url, params: { retirement_plan_stream: { kind: "expense", name: "", annual_amount: "0" } }

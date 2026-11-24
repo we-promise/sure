@@ -63,12 +63,12 @@ en:
         name: Name
         kind: Type
         years: Years
-        amount: A year
+        amount: Amount
       stream_kinds:
         expense: Spending
         income: Income
         one_off: One-off
-      stream_years: "%{from} to %{to}"
+      stream_years: "each year, %{from} to %{to}"
       stream_once: "once, %{year}"
       now: now
       end_age: end of plan
@@ -121,7 +121,8 @@ en:
           income: Income, such as a pension
           one_off: One-off amount
         name: Name
-        annual_amount: Amount a year
+        annual_amount: Amount
+        annual_amount_hint: Each year for spending or income. A one-off is paid once, in the From year.
         start_year: From year
         start_year_placeholder: Now
         end_year: To year

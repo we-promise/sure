@@ -9,7 +9,7 @@
 
   <%= f.select :kind, RetirementPlan::Stream::KINDS.map { |kind| [ t(".kinds.#{kind}"), kind ] }, label: t(".kind") %>
   <%= f.text_field :name, label: t(".name"), required: true %>
-  <%= f.number_field :annual_amount, label: t(".annual_amount"), step: "0.01", min: "0.01", required: true %>
+  <%= f.number_field :annual_amount, label: t(".annual_amount"), help_text: t(".annual_amount_hint"), step: "0.01", min: "0.01", required: true %>
   <%= f.number_field :start_year, label: t(".start_year"), step: "1", placeholder: t(".start_year_placeholder") %>
   <%= f.number_field :end_year, label: t(".end_year"), step: "1", placeholder: t(".end_year_placeholder") %>
   <div class="flex items-center justify-between gap-3">
