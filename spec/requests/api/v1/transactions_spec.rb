@@ -351,7 +351,9 @@ RSpec.describe 'API V1 Transactions', type: :request do
         end
 
         run_test! do |response|
-          expect(JSON.parse(response.body).dig('transfer', 'other_account')).to be_nil
+          transfer = JSON.parse(response.body)['transfer']
+          expect(transfer).to have_key('other_account')
+          expect(transfer['other_account']).to be_nil
         end
       end
 
