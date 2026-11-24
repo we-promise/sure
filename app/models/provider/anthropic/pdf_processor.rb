@@ -156,10 +156,15 @@ class Provider::Anthropic::PdfProcessor
     end
 
     def build_result(parsed)
+      # The Anthropic SDK hands tool input back with symbol keys, while the
+      # OpenAI path JSON-parses to string keys. Stringify here so every
+      # reader of the result can dig with strings; without this the AI
+      # health probe reads nil for institution_name and always fails.
+      extracted_data = parsed["extracted_data"] || parsed[:extracted_data]
       PdfProcessingResult.new(
         summary: parsed["summary"] || parsed[:summary],
         document_type: normalize_document_type(parsed["document_type"] || parsed[:document_type]),
-        extracted_data: parsed["extracted_data"] || parsed[:extracted_data] || {}
+        extracted_data: extracted_data.is_a?(Hash) ? extracted_data.deep_stringify_keys : {}
       )
     end
 

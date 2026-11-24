@@ -5,6 +5,11 @@ fr:
       destroy:
         success: Entrée supprimée avec succès.
   accounts:
+    scheduled_balance_tooltip:
+      description: Votre solde une fois toutes les transactions planifiées validées
+      current: Solde actuel
+      scheduled: Planifié
+      projected: Solde prévisionnel
     account:
       change_simplefin_account: Changer le compte SimpleFIN
       complete_setup: Configuration complète
@@ -37,6 +42,36 @@ fr:
       warning_wallet_connection: Tous les comptes de cette connexion Apple Wallet seront dissociés. Leurs transactions et soldes seront conservés. Vous pourrez vous reconnecter depuis l'app iOS Sure en configurant à nouveau Wallet.
     create:
       success: Compte %{type} créé
+    logo_caption:
+      appstore: Depuis l'App Store
+      brandfetch: Depuis Brandfetch
+      duckduckgo: Depuis DuckDuckGo
+      google: Depuis Google
+      googleplay: Depuis Google Play
+      none: Pas encore d'icône
+      rustore: Depuis RuStore
+      uploaded: Téléversée par vous
+      yandex: Depuis Yandex
+    logo_field:
+      current: actuel
+      domain_needed: Saisissez le domaine de l'établissement, par exemple tbank.ru, pour choisir une icône.
+      empty: Aucune icône trouvée pour ce domaine. Téléversez la vôtre ci-dessous.
+      pick: Choisir l'icône
+      pending: Appliquée à l'enregistrement
+      remove: Supprimer
+      removal: Supprimée à l'enregistrement ; l'icône automatique revient
+      searching: Recherche…
+    logo_options:
+      size: "%{size} px"
+      sources:
+        appstore: App Store
+        brandfetch: Brandfetch
+        duckduckgo: DuckDuckGo
+        google: Google
+        googleplay: Google Play
+        rustore: RuStore
+        yandex: Yandex
+      stored: Icône enregistrée
     destroy:
       cannot_delete_linked: Impossible de supprimer un compte lié. Veuillez d'abord le délier.
       failed: La suppression de la ressource a échoué. Veuillez réessayer plus tard.
@@ -48,13 +83,23 @@ fr:
     form:
       additional_details: Détails supplémentaires
       balance: 'Solde à la date :'
+      cost_basis_method_hint: La façon dont une vente est rattachée aux titres dont elle provient. La modifier recalcule les plus-values réalisées passées et le coût moyen de ce que vous détenez. La vente de titres dont le coût est inconnu affiche une plus-value inconnue.
+      cost_basis_method_label: Méthode de calcul du coût de revient
+      cost_basis_methods:
+        average: Coût moyen
+        fifo: Premier entré, premier sorti (FIFO)
       enable_category_matcher_hint: Lorsque cette option est activée, la catégorie suggérée par le fournisseur est appliquée aux transactions importées. Désactivez-la pour laisser les nouvelles transactions sans catégorie.
       enable_category_matcher_label: Activer l'attribution automatique de catégorie
       exclude_from_reports: Exclure de tous les rapports
+      institution_domain_hint: Sert à trouver l'icône de l'établissement.
       institution_domain_label: Domaine de l'institution
+      institution_domain_missing_logo_key_hint: Sert à trouver l'icône de l'établissement. Les logos Brandfetch ne sont pas disponibles, car aucun ID client Brandfetch n'est configuré.
       institution_domain_placeholder: ex., banquepopulaire.fr
+      institution_domain_settings_link: En ajouter un dans les paramètres d'auto-hébergement
       institution_name_label: Nom de l'institution
       institution_name_placeholder: ex., Banque Populaire
+      logo_hint: Ou téléversez votre propre image PNG, JPEG, GIF, WebP ou ICO, jusqu'à 1 Mo. Elle remplace le logo Brandfetch.
+      logo_label: Icône
       name_label: Nom du compte
       name_placeholder: Nom de compte d'exemple
       notes_label: Notes
@@ -86,7 +131,16 @@ fr:
         manual_entry: Saisir le solde du compte
         title: Comment voulez-vous l'ajouter ?
       title: Que voulez-vous ajouter ?
+    reconciliation_indicator:
+      matched: Toutes les transactions sont réconciliées
+      needs_attention: Des transactions sont à réconcilier
     not_authorized: Vous n'avez pas la permission de gérer ce compte
+    reconcile_all:
+      success:
+        one: "%{count} transaction passée au statut « %{status} »."
+        other: "%{count} transactions passées au statut « %{status} »."
+      invalid_status: Choisissez un statut de réconciliation valide.
+      not_manual_account: La réconciliation groupée n'est disponible que pour les comptes saisis manuellement.
     select_provider:
       already_linked: Le compte est déjà lié à un fournisseur
       description: Choisissez le fournisseur que vous souhaitez utiliser pour lier %{account_name}
@@ -94,6 +148,17 @@ fr:
       title: Sélectionner un fournisseur à lier
     set_default:
       depository_only: Seuls les comptes de liquidités et de carte de crédit peuvent être définis par défaut.
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}) : sous zéro depuis le %{date}, au plus bas %{qty}"
+        hint: "Il manque probablement un achat ou un transfert. Ajoutez-le ou corrigez les opérations qui ont fait passer la position sous zéro."
+        link: "Vérifier les holdings"
+        message: "Certaines positions sont passées sous zéro"
+      sync_failed:
+        message: "La dernière synchronisation a échoué"
+      sync_hint: "Les chiffres affichés peuvent être obsolètes. Relancez la synchronisation pour les mettre à jour."
+      sync_stale:
+        message: "La dernière synchronisation ne s'est pas terminée"
     show:
       activity:
         amount: Montant
@@ -134,10 +199,18 @@ fr:
         import_transactions: Importer des transactions
         include_in_reports: Inclure dans les rapports
         manage: Gérer les comptes
+        reconcile_all:
+          cleared: Tout marquer comme pointé
+          confirm_accept: Tout passer au statut « %{status} »
+          confirm_body: Cette action modifie le statut de réconciliation de toutes les transactions de ce compte. Les relevés téléversés restent inchangés.
+          confirm_title: Passer toutes les transactions au statut « %{status} » ?
+          reconciled: Tout marquer comme réconcilié
+          unreconciled: Tout marquer comme non réconcilié
         sharing: Partage
         statements: Déclarations
       tabs:
         activity: Activité
+        extra_repayments: Remboursements anticipés
         holdings: Titres
         overview: Aperçu
         schedule: Échéancier
@@ -209,6 +282,7 @@ fr:
       success: Compte délié avec succès. C'est maintenant un compte manuel.
     update:
       success: Compte %{type} mis à jour
+      logo_not_applied: Le compte a été enregistré, mais l'icône choisie n'a pas pu être téléchargée. Réessayez ou téléversez la vôtre.
   email_confirmations:
     new:
       invalid_token: Lien de confirmation invalide ou expiré.

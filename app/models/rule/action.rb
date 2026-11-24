@@ -32,6 +32,13 @@ class Rule::Action < ApplicationRecord
   validates_with DatabaseTextValidator, attributes: %i[action_type value]
   before_validation :build_split_value, if: -> { action_type == "split_transaction" && split_rows.present? }
   validate :split_config_valid, if: -> { action_type == "split_transaction" }
+  # The rule runs for the whole family, so the merchant a user picks must be one
+  # they can see. Checked only when a user sets the value; a merchant another
+  # member saved stays as it is (see #options).
+  validate :merchant_assignable_by_user, if: -> {
+    action_type == "set_transaction_merchant" && Current.user && value.present? &&
+      (new_record? || will_save_change_to_value? || will_save_change_to_action_type?)
+  }
 
   # Pre-seed (watermark): when an EMAIL_NOTIFICATION action is created — on a
   # new rule OR added to an existing one — record all currently-matching
@@ -94,7 +101,14 @@ class Rule::Action < ApplicationRecord
   end
 
   def options
-    rule.option_list([ :action, action_type ]) { executor.options }
+    executor_options = rule.option_list([ :action, action_type ]) { executor.options }
+    return executor_options if executor_options.nil? || value.blank?
+    return executor_options if executor_options.any? { |_label, id| id.to_s == value.to_s }
+
+    # Shared across the rules of a page (see Rule.share_option_lists), so a
+    # saved value outside the options is looked up once per request.
+    saved_option = rule.option_list([ :saved_action_option, action_type, value.to_s ]) { executor.option_for(value) }
+    saved_option ? executor_options + [ saved_option ] : executor_options
   end
 
   def claimed_attributes
@@ -127,6 +141,12 @@ class Rule::Action < ApplicationRecord
   end
 
   private
+    def merchant_assignable_by_user
+      return if UuidFormat.valid?(value) && rule&.family&.assignable_merchants_for(Current.user)&.exists?(id: value)
+
+      errors.add(:value, :invalid)
+    end
+
     def execution_value
       executor.type == "multi_select" ? value.to_s.split(",") : value
     end

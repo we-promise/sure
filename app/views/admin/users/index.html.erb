@@ -90,14 +90,14 @@
                 <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
                   <% users.each do |user| %>
                     <tr>
-                      <td class="px-4 py-3">
-                        <div class="flex items-center gap-3">
+                      <td class="px-4 py-3 w-full max-w-0">
+                        <div class="flex items-center gap-3 min-w-0">
                           <div class="w-8 h-8 shrink-0">
                             <%= render "settings/user_avatar", avatar_url: user.profile_image&.variant(:small)&.url, initials: user.initials, lazy: true %>
                           </div>
-                          <div>
-                            <div class="flex items-center gap-2">
-                              <p class="font-medium text-primary"><%= user.display_name %></p>
+                          <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                              <p class="font-medium text-primary break-words min-w-0"><%= user.display_name %></p>
                               <% if user.id == Current.user.id %>
                                 <span class="text-xs font-medium text-secondary"><%= t(".you") %></span>
                               <% end %>
@@ -116,7 +116,7 @@
                                 <%= render DS::Pill.new(label: t(".auth_types.local"), tone: :neutral) %>
                               <% end %>
                             </div>
-                            <p class="text-sm text-secondary"><%= user.email %></p>
+                            <p class="text-sm text-secondary break-all"><%= user.email %></p>
                           </div>
                         </div>
                       </td>
@@ -247,11 +247,11 @@
                   <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200 border-t border-dashed border-primary">
                     <% pending_invitations.each do |invitation| %>
                       <tr class="bg-destructive/5">
-                        <td class="px-4 py-3">
-                          <div class="flex items-center gap-3">
+                        <td class="px-4 py-3 w-full max-w-0">
+                          <div class="flex items-center gap-3 min-w-0">
                             <%= icon "mail", class: "w-5 h-5 text-secondary shrink-0" %>
-                            <div>
-                              <p class="font-medium text-secondary italic"><%= invitation.email %></p>
+                            <div class="min-w-0">
+                              <p class="font-medium text-secondary italic break-all"><%= invitation.email %></p>
                               <p class="text-xs text-secondary"><%= t(".invitations.pending_label") %></p>
                             </div>
                           </div>

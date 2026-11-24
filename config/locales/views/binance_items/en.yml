@@ -14,6 +14,7 @@ en:
       select_connection: Choose a Binance connection in Provider Settings.
     setup_accounts:
       title: Import Binance Account
+      historical_import: Historical import
       subtitle: Select which portfolios to track
       instructions: Select the Binance portfolios you want to import. Only portfolios with balances are shown.
       no_accounts: All accounts have been imported.

@@ -1,7 +1,7 @@
 # Pipelock configuration for Docker Compose
-# See https://github.com/luckyPipewrench/pipelock for full options.
+# See https://github.com/pipelab-org/pipelock for full options.
 #
-# This file is validated in CI with Pipelock 3.4.0. See the release changelog
+# This file is validated in CI with Pipelock 3.8.0. See the release changelog
 # for the full control surface and upgrade notes.
 # Run `pipelock assess init --config <file>` to create an assessment workspace.
 # Run `pipelock audit score --config <file>` for a security posture score (0-100).
@@ -9,6 +9,10 @@
 
 version: 1
 mode: balanced
+
+# /metrics and /stats are served only on a dedicated, unauthenticated listener.
+# Uncomment and publish the port in compose to scrape them; keep agents off it.
+# metrics_listen: "0.0.0.0:9091"
 
 # Trusted domains: allow services whose public DNS resolves to private IPs.
 # Prevents SSRF scanner from blocking legitimate internal traffic.

@@ -1,0 +1,45 @@
+<div id="sharesight-providers-panel" class="space-y-4">
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t(".steps.step_1"),
+               t(".steps.step_2"),
+               t(".steps.step_3")
+             ] %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <% sharesight_item = Current.family.sharesight_items.active.ordered.first || Current.family.sharesight_items.build %>
+  <% is_new_record = sharesight_item.new_record? %>
+
+  <%= styled_form_with model: sharesight_item,
+                       url: is_new_record ? sharesight_items_path : sharesight_item_path(sharesight_item),
+                       scope: :sharesight_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.password_field :client_id,
+                            label: t(".client_id_label"),
+                            placeholder: is_new_record ? t(".client_id_placeholder_new") : t(".client_id_placeholder_existing"),
+                            autocomplete: "off" %>
+
+    <%= form.password_field :client_secret,
+                            label: t(".client_secret_label"),
+                            placeholder: is_new_record ? t(".client_secret_placeholder_new") : t(".client_secret_placeholder_existing"),
+                            autocomplete: "off" %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? t(".save_configuration") : t(".update_configuration") %>
+    </div>
+  <% end %>
+
+  <% unless is_new_record %>
+    <p class="text-sm text-secondary">
+      <%= t(".status_configured_prefix") %>
+      <%= link_to t(".accounts_tab"), accounts_path, class: "link" %>
+      <%= t(".status_configured_suffix") %>
+    </p>
+  <% end %>
+</div>

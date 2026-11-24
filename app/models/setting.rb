@@ -4,13 +4,19 @@ class Setting < RailsSettings::Base
 
   cache_prefix { "v1" }
 
+  # Compose files pass unset variables through as "", which `to_i` would turn
+  # into 0 and show in number fields whose minimum is above 0.
+  def self.integer_from_env(name)
+    ENV[name].to_s.strip.presence&.to_i
+  end
+
   # Third-party API keys
   field :twelve_data_api_key, type: :string, default: ENV["TWELVE_DATA_API_KEY"]
   field :openai_access_token, type: :string, default: ENV["OPENAI_ACCESS_TOKEN"]
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
-  field :openai_request_timeout, type: :integer, default: ENV["OPENAI_REQUEST_TIMEOUT"]&.to_i
+  field :openai_request_timeout, type: :integer, default: integer_from_env("OPENAI_REQUEST_TIMEOUT")
   field :anthropic_access_token, type: :string, default: ENV["ANTHROPIC_ACCESS_TOKEN"].presence || ENV["ANTHROPIC_API_KEY"].presence
   field :anthropic_model, type: :string, default: ENV["ANTHROPIC_MODEL"]
   field :anthropic_base_url, type: :string, default: ENV["ANTHROPIC_BASE_URL"]
@@ -28,27 +34,37 @@ class Setting < RailsSettings::Base
   # merchant detection, enhance-merchants, PDF processing). Defaults track
   # Ollama's historical 2048-token baseline so local small-context models work
   # out of the box. ENV overrides Setting at read time in Provider::Openai.
-  field :llm_context_window, type: :integer, default: ENV["LLM_CONTEXT_WINDOW"]&.to_i
-  field :llm_max_response_tokens, type: :integer, default: ENV["LLM_MAX_RESPONSE_TOKENS"]&.to_i
-  field :llm_max_items_per_call, type: :integer, default: ENV["LLM_MAX_ITEMS_PER_CALL"]&.to_i
+  field :llm_context_window, type: :integer, default: integer_from_env("LLM_CONTEXT_WINDOW")
+  field :llm_max_response_tokens, type: :integer, default: integer_from_env("LLM_MAX_RESPONSE_TOKENS")
+  field :llm_max_items_per_call, type: :integer, default: integer_from_env("LLM_MAX_ITEMS_PER_CALL")
 
   # How long the chat UI waits for an assistant response before treating it as
   # undelivered. Self-hosted users running local models on slow hardware need
   # this well above the 90s default — a local model that takes minutes to
   # generate would otherwise always trip the watchdog. Read via
   # `Chat.response_timeout`, which applies ENV > Setting > default precedence.
-  field :ai_response_timeout, type: :integer, default: ENV["AI_RESPONSE_TIMEOUT"]&.to_i
+  field :ai_response_timeout, type: :integer, default: integer_from_env("AI_RESPONSE_TIMEOUT")
   # Per-request bound for the admin "Run checks" AI probes on System Health.
   # The PDF probes do a full extraction round trip, which cloud models often
   # can't finish inside the 5s default. Read via `AiHealth::Probe.timeout`,
   # which applies ENV > Setting > default precedence.
-  field :ai_health_probe_timeout, type: :integer, default: ENV["AI_HEALTH_PROBE_TIMEOUT"]&.to_i
+  field :ai_health_probe_timeout, type: :integer, default: integer_from_env("AI_HEALTH_PROBE_TIMEOUT")
   field :external_assistant_url, type: :string
   field :external_assistant_token, type: :string
   field :external_assistant_model, type: :string
   field :external_assistant_agent_id, type: :string
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
+
+  # Set by `bin/rails security:backfill_encryption` once every model/field it
+  # covers has been re-encrypted with zero failures. Read at boot (see
+  # ActiveRecordEncryptionConfig.backfill_completed?) to decide whether the
+  # legacy-plaintext fallback (support_unencrypted_data/extend_queries in
+  # config/initializers/active_record_encryption.rb) is still needed.
+  # Versioned rather than a plain boolean so that a *future* expansion of the
+  # backfill task's model coverage doesn't get silently skipped for installs
+  # that completed a backfill under an older, narrower version.
+  field :encryption_backfill_completed_version, type: :integer, default: 0
 
   BRAND_FETCH_LOGO_SIZE_STANDARD = 40
   BRAND_FETCH_LOGO_SIZE_HIGH_RES = 120
@@ -62,12 +78,19 @@ class Setting < RailsSettings::Base
     brand_fetch_high_res_logos ? BRAND_FETCH_LOGO_SIZE_HIGH_RES : BRAND_FETCH_LOGO_SIZE_STANDARD
   end
 
-  # Transforms a stored Brandfetch URL to use the current logo size setting
+  # Transforms a stored Brandfetch URL to use the current logo size and client
+  # id. Stored URLs keep the client id they were generated with, so without
+  # this a changed id in Self-Hosting settings would leave them broken.
   def self.transform_brand_fetch_url(url)
     return url unless url.present? && url.match?(BRAND_FETCH_URL_PATTERN)
 
     size = brand_fetch_logo_size
-    url.gsub(BRAND_FETCH_URL_PATTERN, "\\1w/#{size}/h/#{size}\\2")
+    url = url.gsub(BRAND_FETCH_URL_PATTERN, "\\1w/#{size}/h/#{size}\\2")
+
+    client_id = brand_fetch_client_id
+    return url if client_id.blank?
+
+    url.sub(/\?c=[^&]*/) { "?c=#{client_id}" }
   end
 
   def self.brand_fetch_icon_url(identifier, fallback: "lettermark", namespace: nil, width: nil, height: nil)
@@ -100,6 +123,11 @@ class Setting < RailsSettings::Base
   field :rentcast_api_key, type: :string, default: ENV["RENTCAST_API_KEY"]
   field :realie_api_key, type: :string, default: ENV["REALIE_API_KEY"]
   field :chimnie_api_key, type: :string, default: ENV["CHIMNIE_API_KEY"]
+  field :terrascoutx_api_key, type: :string, default: ENV["TERRASCOUTX_API_KEY"]
+
+  # Instance-wide Plaid credentials; provider configuration handles ENV fallback.
+  field :plaid_secret, type: :string
+  field :plaid_eu_secret, type: :string
 
   # Transparent encryption for API key fields.  The `field` macro defines the
   # raw getter/setter on the class.  By prepending this module we intercept
@@ -119,10 +147,13 @@ class Setting < RailsSettings::Base
       rentcast_api_key
       realie_api_key
       chimnie_api_key
+      terrascoutx_api_key
       openai_access_token
       anthropic_access_token
       jev_api_key
       external_assistant_token
+      plaid_secret
+      plaid_eu_secret
     ].freeze
 
     ENCRYPTED_FIELDS.each do |field_name|
@@ -136,15 +167,51 @@ class Setting < RailsSettings::Base
       end
     end
 
+    # The settings key is derived from SECRET_KEY_BASE alone, so it is not
+    # covered by Active Record encryption's `previous` schemes. After a
+    # SECRET_KEY_BASE change, stored values only decrypt with the old value;
+    # the getters above would then return the ciphertext itself. This moves
+    # every value the old key decrypts to the current key. Values neither key
+    # decrypts are left alone: they are either plaintext from before
+    # encryption (still readable) or need to be re-entered.
+    def reencrypt_secrets_from(old_secret_key_base, dry_run: true)
+      raise ArgumentError, "old secret_key_base is blank" if old_secret_key_base.blank?
+
+      old_encryptor = build_setting_encryptor(old_secret_key_base)
+      stored = where(var: ENCRYPTED_FIELDS.map(&:to_s)).to_h { |row| [ row.var.to_sym, row.value ] }
+
+      transaction do
+        ENCRYPTED_FIELDS.index_with do |field_name|
+          value = stored[field_name]
+          next :not_stored if value.blank?
+          next :current unless try_decrypt(setting_encryptor, value).nil?
+
+          plaintext = try_decrypt(old_encryptor, value)
+          next :not_decryptable if plaintext.nil?
+          next :would_reencrypt if dry_run
+
+          public_send(:"#{field_name}=", plaintext)
+          :reencrypted
+        end
+      end
+    end
+
     private
 
       def setting_encryptor
-        @setting_encryptor ||= begin
-          key = ActiveSupport::KeyGenerator.new(
-            Rails.application.secret_key_base
-          ).generate_key("setting_encryption", 32)
-          ActiveSupport::MessageEncryptor.new(key)
-        end
+        @setting_encryptor ||= build_setting_encryptor(Rails.application.secret_key_base)
+      end
+
+      def build_setting_encryptor(secret_key_base)
+        key = ActiveSupport::KeyGenerator.new(secret_key_base).generate_key("setting_encryption", 32)
+        ActiveSupport::MessageEncryptor.new(key)
+      end
+
+      def try_decrypt(encryptor, value)
+        encryptor.decrypt_and_verify(value)
+      rescue ActiveSupport::MessageVerifier::InvalidSignature,
+             ActiveSupport::MessageEncryptor::InvalidMessage
+        nil
       end
 
       def encrypt_setting(value)
@@ -154,12 +221,10 @@ class Setting < RailsSettings::Base
 
       def decrypt_setting(value)
         return value if value.blank?
-        setting_encryptor.decrypt_and_verify(value)
-      rescue ActiveSupport::MessageVerifier::InvalidSignature,
-             ActiveSupport::MessageEncryptor::InvalidMessage
+
         # Value was stored before encryption was enabled — return as-is.
         # It will be re-encrypted on next write.
-        value
+        try_decrypt(setting_encryptor, value) || value
       end
   end
 
@@ -194,6 +259,57 @@ class Setting < RailsSettings::Base
   # config/schedule.yml entry (22:00 UTC, ~1h after NYSE close) so existing
   # installations see no behavior change unless they actively reconfigure it.
   field :market_data_sync_enabled, type: :boolean, default: ENV.fetch("MARKET_DATA_SYNC_ENABLED", "1") == "1"
+
+  # The page cache (see PageCache). Each value comes from its environment
+  # variable when that is set and in range, else from the Self-Hosting form,
+  # else the default; an out-of-range value from either is ignored.
+  #
+  # How long a cached page is kept when nobody opens it.
+  PAGE_CACHE_DAYS_DEFAULT = 7
+  PAGE_CACHE_DAYS_RANGE = 1..365
+  field :page_cache_days, type: :integer
+  # The most all cached pages may take together, in megabytes.
+  PAGE_CACHE_MAX_MB_DEFAULT = 100
+  PAGE_CACHE_MAX_MB_RANGE = 1..100_000
+  field :page_cache_max_mb, type: :integer
+  # After its data changes, a cached page is still served while it is rebuilt
+  # in the background, but rebuilt at most once in this many minutes. 0
+  # rebuilds on the first visit after every change.
+  PAGE_CACHE_COOLDOWN_MINUTES_DEFAULT = 60
+  PAGE_CACHE_COOLDOWN_MINUTES_RANGE = 0..10_080
+  field :page_cache_cooldown_minutes, type: :integer
+
+  PAGE_CACHE_SETTINGS = {
+    page_cache_days: [ PAGE_CACHE_DAYS_RANGE, PAGE_CACHE_DAYS_DEFAULT ],
+    page_cache_max_mb: [ PAGE_CACHE_MAX_MB_RANGE, PAGE_CACHE_MAX_MB_DEFAULT ],
+    page_cache_cooldown_minutes: [ PAGE_CACHE_COOLDOWN_MINUTES_RANGE, PAGE_CACHE_COOLDOWN_MINUTES_DEFAULT ]
+  }.freeze
+
+  def self.page_cache_value(name)
+    range, default = PAGE_CACHE_SETTINGS.fetch(name)
+    page_cache_env_value(name) || [ public_send(name) ].find { |value| value && range.cover?(value) } || default
+  end
+
+  # The environment's value when it is a usable override (a whole number in
+  # range), else nil: an invalid one is ignored, so it neither applies nor
+  # locks the setting.
+  def self.page_cache_env_value(name)
+    range, _default = PAGE_CACHE_SETTINGS.fetch(name)
+    from_env = Integer(ENV[name.to_s.upcase].to_s.strip, 10, exception: false)
+    from_env if from_env && range.cover?(from_env)
+  end
+
+  def self.page_cache_ttl
+    page_cache_value(:page_cache_days).days
+  end
+
+  def self.page_cache_max_mb_in_effect
+    page_cache_value(:page_cache_max_mb)
+  end
+
+  def self.page_cache_cooldown
+    page_cache_value(:page_cache_cooldown_minutes).minutes
+  end
   field :market_data_sync_time, type: :string, default: ENV.fetch("MARKET_DATA_SYNC_TIME", "22:00")
   field :market_data_sync_timezone, type: :string, default: ENV.fetch("MARKET_DATA_SYNC_TIMEZONE", "UTC")
 
@@ -343,8 +459,9 @@ class Setting < RailsSettings::Base
     uri_base_value = uri_base.nil? ? openai_uri_base : uri_base
     model_value = model.nil? ? openai_model : model
 
-    # If custom URI base is set, model must also be set
-    if uri_base_value.present? && model_value.blank?
+    # If a custom URI base is set, model must also be set. OpenAI's own
+    # hosts (including regional ones) fall back to the default model.
+    if Provider::Openai.custom_endpoint?(uri_base_value) && model_value.blank?
       raise ValidationError, "OpenAI model is required when custom URI base is configured"
     end
   end

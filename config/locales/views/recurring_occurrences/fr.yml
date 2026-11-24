@@ -14,6 +14,7 @@ fr:
       success: Facture rouverte
     show:
       add_heading: Ajouter un autre paiement
+      amount_left: "%{amount} restants"
       cant_find: Vous ne trouvez pas la transaction ?
       due_on: Échéance le %{date}
       find_heading: Trouver un paiement
@@ -45,6 +46,8 @@ fr:
       skipped: Ignorée
       snooze_week: Reporter d'une semaine
       unlink: Délier
+      used_up: Déjà utilisée
+      used_up_hint: "D'autres factures utilisent déjà tout le montant de cette transaction."
       view_bill: Voir la facture
     skip:
       success: Facture ignorée

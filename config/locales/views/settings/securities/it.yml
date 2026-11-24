@@ -6,9 +6,9 @@ it:
         disable_mfa: Disabilita 2FA
         disable_mfa_confirm: Sei sicuro di voler disabilitare l'autenticazione a due fattori? Questo renderà il tuo account meno sicuro.
         enable_mfa: Abilita 2FA
-        mfa_enabled_status_html: "L'autenticazione a due fattori è <span class=\"font-medium text-green-600\">abilitata</span>"
+        mfa_enabled_status_html: L'autenticazione a due fattori è <span class="font-medium text-green-600">abilitata</span>
         mfa_enabled_description: Il tuo account è protetto con un ulteriore livello di sicurezza.
-        mfa_disabled_status_html: "L'autenticazione a due fattori è <span class=\"font-medium text-red-600\">disabilitata</span>"
+        mfa_disabled_status_html: L'autenticazione a due fattori è <span class="font-medium text-red-600">disabilitata</span>
         mfa_disabled_description: Abilita l'A2F per aggiungere un ulteriore livello di sicurezza al tuo account.
         mfa_description: Aggiungi un ulteriore livello di sicurezza al tuo account richiedendo un codice dalla tua app di autenticazione al momento dell'accesso
         mfa_title: Autenticazione a due fattori
@@ -18,18 +18,39 @@ it:
         webauthn_empty: Nessuna passkey o chiave di sicurezza registrata ancora.
         webauthn_last_used: Usata l'ultima volta %{time_ago} fa
         webauthn_name_label: Nome chiave
-        webauthn_code_label: "Codice dell'autenticatore o di backup"
-        webauthn_code_placeholder: "Codice attuale dell'autenticatore o un codice di backup non usato"
+        webauthn_code_label: Codice dell'autenticatore o di backup
+        webauthn_code_placeholder: Codice attuale dell'autenticatore o un codice di backup non usato
         webauthn_name_placeholder: MacBook Touch ID, YubiKey, ecc.
         webauthn_remove: Rimuovi
         webauthn_remove_confirm: Sei sicuro di voler rimuovere questa passkey o chiave di sicurezza?
         webauthn_remove_confirm_body: Dovrai registrare nuovamente questa passkey o chiave di sicurezza prima che possa essere usata per la verifica dell'accesso.
         webauthn_title: Passkey e chiavi di sicurezza
         webauthn_unsupported: Questo browser non supporta passkey o chiavi di sicurezza.
+        page_title: Sicurezza
+        encryption_warning:
+          title: Chiavi di crittografia mancanti
+          intro: 'I dati sensibili (chiavi API, token provider, segreti MFA e dati personali) vengono archiviati non crittografati. Per abilitare la crittografia, imposta le seguenti chiavi nelle variabili d''ambiente o nelle credenziali Rails:'
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: 'Genera un set con: bin/rails db:encryption:init'
+        sso_title: Account collegati
+        sso_subtitle: Gestisci le connessioni al tuo account single sign-on
+        sso_disconnect: Disconnetti
+        sso_last_used: Ultimo utilizzo
+        sso_never: Mai
+        sso_no_email: Nessuna email
+        sso_no_identities: Nessun account SSO collegato
+        sso_connect_hint: Disconnetti e accedi con un provider SSO per collegare un account.
+        sso_confirm_title: Disconnettere l'account?
+        sso_confirm_body: Sei sicuro di voler disconnettere il tuo account %{provider}? Puoi ricollegarlo in seguito accedendo di nuovo con quel provider.
+        sso_confirm_button: Disconnetti
+        sso_warning_message: Questo è il tuo unico metodo di accesso. Dovresti impostare una password nelle impostazioni di sicurezza prima di disconnetterti, altrimenti potresti essere escluso dal tuo account.
   webauthn_credentials:
-    code_already_used: "Questo codice è già stato usato. Attendi il prossimo codice dalla tua app di autenticazione."
-    invalid_code: "Questo codice non è valido. Inserisci un codice attuale dalla tua app di autenticazione o un codice di backup non usato."
-    rate_limited: "Troppi tentativi. Attendi un minuto e riprova."
+    code_already_used: Questo codice è già stato usato. Attendi il prossimo codice dalla tua app di autenticazione.
+    invalid_code: Questo codice non è valido. Inserisci un codice attuale dalla tua app di autenticazione o un codice di backup non usato.
+    rate_limited: Troppi tentativi. Attendi un minuto e riprova.
     default_name: Chiave di sicurezza
     failure: Impossibile salvare la passkey o la chiave di sicurezza. Riprova.
     mfa_required: Abilita l'autenticazione a due fattori prima di aggiungere una passkey o una chiave di sicurezza.

@@ -1,0 +1,30 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) %>
+
+  <% dialog.with_body do %>
+    <%= styled_form_with model: @sync_schedule,
+                         url: sync_schedule_path(syncable_type: @syncable.class.name, syncable_id: @syncable.id),
+                         method: :patch,
+                         data: { turbo_frame: "_top" },
+                         class: "space-y-4" do |form| %>
+      <% if @sync_schedule.errors.any? %>
+        <%= render "shared/form_errors", model: @sync_schedule %>
+      <% end %>
+
+      <p class="text-sm text-secondary">
+        <%= t(".description", name: sync_schedule_syncable_name(@syncable)) %>
+      </p>
+
+      <%# The saved interval, not a rejected one: no option matches a rejected
+          value, so the blank "no schedule" choice would show and a resubmit
+          would delete the schedule. %>
+      <%= form.select :interval_minutes,
+                      sync_schedule_interval_options,
+                      { include_blank: t(".no_schedule"), label: t(".interval_label"), selected: @sync_schedule.interval_minutes_in_database } %>
+
+      <p class="text-xs text-secondary"><%= t(".hint") %></p>
+
+      <%= render DS::Button.new(text: t(".save"), type: "submit", full_width: true) %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -1,0 +1,103 @@
+---
+id:
+  holdings:
+    cash:
+      brokerage_cash: Saldo kas broker
+    destroy:
+      success: Kepemilikan berhasil dihapus
+      cannot_delete: Anda tidak dapat menghapus kepemilikan ini
+    update:
+      success: Dasar biaya berhasil disimpan.
+      error: Nilai dasar biaya tidak valid.
+    unlock_cost_basis:
+      success: Kunci dasar biaya dibuka. Nilai dapat diperbarui pada sinkronisasi berikutnya.
+    remap_security:
+      success: Efek berhasil diperbarui.
+      security_not_found: Tidak dapat menemukan efek yang dipilih.
+    reset_security:
+      success: Efek dikembalikan ke nilai penyedia.
+    sync_prices:
+      success: Data pasar berhasil disinkronkan.
+      unavailable: Sinkronisasi data pasar tidak tersedia untuk efek offline.
+      provider_error: Tidak dapat mengambil harga terbaru. Silakan coba lagi dalam beberapa menit.
+    errors:
+      security_collision: "Tidak dapat memetakan ulang: Anda sudah memiliki kepemilikan untuk %{ticker} pada %{date}."
+    cost_basis_sources:
+      manual: Ditentukan pengguna
+      calculated: Dari transaksi
+      provider: Dari penyedia
+    cost_basis_cell:
+      unknown: "--"
+      set: Atur
+      set_cost_basis_header: "Atur dasar biaya untuk %{ticker}"
+      total_cost_basis_label: Total dasar biaya
+      per_share_label: Per lembar
+      cancel: Batal
+      save: Simpan
+      overwrite_confirm_title: Timpa dasar biaya?
+      overwrite_confirm_body: "Ini akan menggantikan dasar biaya saat ini sebesar %{current}."
+    holding:
+      per_share: per lembar
+      shares: "%{qty} lembar"
+      unknown: "--"
+      no_cost_basis: Tanpa dasar biaya
+    index:
+      average_cost: Biaya rata-rata
+      holdings: Kepemilikan
+      name: Nama
+      new_holding: Aktivitas baru
+      no_holdings: Tidak ada kepemilikan untuk ditampilkan.
+      positions:
+        one: "%{count} posisi"
+        other: "%{count} posisi"
+      return: Total imbal hasil
+      weight: Bobot
+    missing_price_tooltip:
+      description: Investasi ini memiliki nilai yang hilang dan kami tidak dapat menghitung imbal hasil atau nilainya.
+      missing_data: Data hilang
+    show:
+      avg_cost_label: Biaya Rata-Rata
+      current_market_price_label: Harga Pasar Saat Ini
+      delete: Hapus
+      delete_subtitle: Tindakan ini akan menghapus kepemilikan dan semua transaksi terkait pada akun ini. Tindakan ini tidak dapat dibatalkan.
+      delete_title: Hapus kepemilikan
+      edit_security: Edit efek
+      history: Riwayat
+      no_trade_history: Tidak ada riwayat transaksi yang tersedia untuk kepemilikan ini.
+      overview: Ringkasan
+      portfolio_weight_label: Bobot Portofolio
+      settings: Pengaturan
+      security_label: Efek
+      originally: "sebelumnya %{ticker}"
+      search_security: Cari efek
+      search_security_placeholder: Cari berdasarkan ticker atau nama
+      cancel: Batal
+      remap_security: Simpan
+      provider_disabled_warning: "Pembaruan harga dijeda — penyedia %{provider} dinonaktifkan. Beralih ke penyedia lain di bawah atau aktifkan kembali di Pengaturan."
+      truncated_history_warning: "Riwayat harga hanya tersedia mulai %{date} dan seterusnya. Tanggal sebelumnya tidak memiliki data dari penyedia yang dipilih — hal ini dapat terjadi jika aset baru dicatatkan setelah tanggal transaksi Anda, atau penyedia hanya menawarkan rentang historis terbatas pada paket saat ini."
+      switch_provider_label: Beralih penyedia
+      switch_provider_description: "%{provider} dinonaktifkan. Cari efek ini dari penyedia aktif lainnya."
+      switch_provider_button: Beralih
+      no_security_provider: Penyedia efek belum dikonfigurasi. Tidak dapat mencari efek.
+      security_remapped_label: Efek dipetakan ulang
+      provider_sent: "Penyedia mengirimkan: %{ticker}"
+      reset_to_provider: Kembalikan ke penyedia
+      reset_confirm_title: Kembalikan efek ke penyedia?
+      reset_confirm_body: "Ini akan mengubah efek dari %{current} kembali ke %{original} dan memindahkan semua transaksi terkait."
+      ticker_label: Ticker
+      trade_history_entry: "%{qty} lembar %{security} pada harga %{price}"
+      total_return_label: Total Imbal Hasil
+      unknown: Tidak Diketahui
+      cost_basis_locked_label: Dasar biaya terkunci
+      cost_basis_locked_description: Dasar biaya yang diatur secara manual tidak akan diubah oleh sinkronisasi.
+      unlock_cost_basis: Buka kunci
+      unlock_confirm_title: Buka kunci dasar biaya?
+      unlock_confirm_body: Ini akan memungkinkan dasar biaya diperbarui oleh sinkronisasi penyedia atau perhitungan transaksi.
+      shares_label: Lembar
+      book_value_label: Nilai Buku
+      market_value_label: Nilai Pasar
+      market_data_label: Data pasar
+      market_data_sync_button: Perbarui
+      last_price_update: Pembaruan harga terakhir
+      syncing: Menyinkronkan...
+      never: Tidak pernah

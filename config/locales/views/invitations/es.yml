@@ -3,14 +3,37 @@ es:
   invitations:
     accept_choice:
       create_account: Crear cuenta nueva
+      existing_account_hint: "¿Ya tienes una cuenta? Las cuentas existentes no pueden unirse a otro hogar mediante una invitación."
       joined_household: Te has unido a la unidad familiar.
       message: '%{inviter} te ha invitado a unirte como %{role}.'
-      sign_in_existing: Ya tengo una cuenta
       title: Unirse a %{family}
+    bulk_create:
+      download: Descargar informe
+      errors:
+        email_not_queued: Invitación guardada, pero no se ha podido poner en cola el email. Elimínala y vuelve a intentarlo.
+        processing_failed: No se ha podido procesar la invitación. Comprueba si ya hay una invitación pendiente antes de reintentar.
+      invalid_role: Las invitaciones en bloque solo se pueden enviar a miembros e invitados.
+      invite_more: Invitar a más
+      no_emails: Introduce al menos un email.
+      status:
+        invalid: No se ha podido invitar
+        link_only: Lista para compartir
+        sent: Invitación enviada
+      summary: "%{sent} enviadas, %{link_only} listas para compartir, %{invalid} fallidas."
+      title: Resultado de las invitaciones
+      too_many: Puedes invitar hasta %{max} personas a la vez. Envía menos.
+    bulk_new:
+      emails_label: Emails
+      emails_placeholder: Introduce los emails separados por comas o saltos de línea
+      role_guest: Invitado
+      role_label: Rol
+      role_member: Miembro
+      submit: Enviar invitaciones
+      subtitle: Invita a varias personas a unirse a tu cuenta de %{moniker} en %{product_name}
+      title: Invitar a varias personas
     create:
-      existing_user_added: El usuario ha sido añadido a tu unidad familiar.
-      existing_user_has_family_data: Ese usuario ya posee un hogar con cuentas. Debe quitar o transferir esas cuentas antes de unirse al tuyo.
       failure: No se pudo enviar la invitación
+      own_email: No puedes invitarte a ti mismo.
       success: Invitación enviada con éxito
     destroy:
       failure: Hubo un problema al eliminar la invitación.

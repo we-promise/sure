@@ -91,9 +91,14 @@ class IncomeStatement::SpendingComparisonTest < ActiveSupport::TestCase
     (Date.new(2025, 10, 1)...quarter.start_date).each { |d| create_transaction(account: @account, date: d, amount: 10, category: @travel) }
     (quarter.start_date..Date.new(2026, 12, 20)).each { |d| create_transaction(account: @account, date: d, amount: 30, category: @travel) }
 
-    result = IncomeStatement::SpendingComparison.new(IncomeStatement.new(@family), period: quarter, history_start: Date.new(2025, 10, 1), as_of: Date.new(2026, 12, 20))
+    # Entry.excluding_scheduled keys off the real Date.current, so "as_of" in
+    # the future must be the frozen "today" too, or later entries in the
+    # quarter get treated as not-yet-arrived and dropped from the total.
+    travel_to(Date.new(2026, 12, 20)) do
+      result = IncomeStatement::SpendingComparison.new(IncomeStatement.new(@family), period: quarter, history_start: Date.new(2025, 10, 1), as_of: Date.new(2026, 12, 20))
 
-    assert_in_delta 2, result.rows.find { |r| r.category == @travel }.ratio, 0.01
+      assert_in_delta 2, result.rows.find { |r| r.category == @travel }.ratio, 0.01
+    end
   end
 
   test "a bill paid on the 1st reads as normal early in the month" do

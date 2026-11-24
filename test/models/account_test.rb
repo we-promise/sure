@@ -10,6 +10,58 @@ class AccountTest < ActiveSupport::TestCase
     @member = users(:family_member)
   end
 
+  test "negative_positions lists calculated positions below zero" do
+    account = accounts(:investment)
+    msft = securities(:msft)
+    # A sale without its purchase, as an import or a deleted buy can leave behind.
+    account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: msft, qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    positions = account.negative_positions
+
+    assert_equal [ msft ], positions.map(&:security)
+    assert_equal 3.days.ago.to_date, positions.first.first_date
+    assert_equal(-3, positions.first.lowest_qty)
+  end
+
+  test "negative_positions ignores linked accounts" do
+    account = accounts(:investment)
+    account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    account.stubs(:linked?).returns(true)
+
+    assert_empty account.negative_positions
+  end
+
+  test "negative_positions skips the holdings query for an account without holdings" do
+    account = accounts(:depository)
+    account.expects(:holdings).never
+
+    assert_empty account.negative_positions
+  end
+
+  test "linked cash and investment accounts hide balance updates by default" do
+    assert accounts(:connected).hides_balance_updates_by_default?
+
+    investment = accounts(:investment)
+    investment.stubs(:linked?).returns(true)
+    assert investment.hides_balance_updates_by_default?
+  end
+
+  test "manual accounts and linked non-cash accounts show balance updates" do
+    assert_not accounts(:depository).hides_balance_updates_by_default?
+
+    property = accounts(:property)
+    property.stubs(:linked?).returns(true)
+    assert_not property.hides_balance_updates_by_default?
+  end
+
   test "can destroy" do
     assert_difference "Account.count", -1 do
       @account.destroy
@@ -930,6 +982,26 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal %w[CHF EUR], account.current_holdings.pluck(:currency).sort
   end
 
+  test "a closed provider cannot hide an earlier active provider snapshot" do
+    account = accounts(:investment)
+    account.holdings.delete_all
+    item = @family.simplefin_items.create!(name: "Snapshot providers", access_url: "https://example.com/access")
+    closed = item.simplefin_accounts.create!(name: "Closed", account_id: "closed", currency: "USD", account_type: "investment", current_balance: 0, raw_holdings_payload: [])
+    active_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    active = active_item.coinstats_accounts.create!(name: "Active", currency: "USD")
+    closed_link = account.account_providers.create!(provider: closed)
+    active_link = account.account_providers.create!(provider: active)
+    account.holdings.create!(account_provider: closed_link, security: securities(:aapl), date: Date.current,
+      qty: 0, amount: 0, price: 100, currency: "USD")
+    holding = account.holdings.create!(account_provider: active_link, security: securities(:aapl), date: Date.yesterday,
+      qty: 2, amount: 200, price: 100, currency: "USD")
+
+    assert_equal [ holding.id ], account.current_holdings.pluck(:id)
+
+    holding.update!(account_provider: nil)
+    assert_empty account.current_holdings
+  end
+
   test "on account destroyed cascade transfer destroyed" do
     outflow_account = @family.accounts.create!({
       owner: @admin,
@@ -987,6 +1059,121 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
     assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
+  end
+
+  test "projected_balance_money nets scheduled entries against an asset account's balance" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date) # expense, decreases balance
+    create_transaction(account: @account, amount: -50, date: 5.days.from_now.to_date) # income, increases balance
+
+    assert_equal Money.new(-150, "USD"), @account.scheduled_entries_total_money
+    assert_equal Money.new(4850, "USD"), @account.projected_balance_money
+  end
+
+  test "projected_balance_money keeps the sign for a liability account (expense increases debt)" do
+    credit_card = accounts(:credit_card)
+    create_transaction(account: credit_card, amount: 200, date: 3.days.from_now.to_date) # expense, increases debt
+
+    assert_equal Money.new(200, "USD"), credit_card.scheduled_entries_total_money
+    assert_equal Money.new(1200, "USD"), credit_card.projected_balance_money
+  end
+
+  test "projected_balance_money ignores transactions on non-cash valuation-only accounts" do
+    property = accounts(:property)
+    create_transaction(account: property, amount: 5000, date: 3.days.from_now.to_date)
+
+    assert_equal Money.new(0, "USD"), property.scheduled_entries_total_money
+    assert_equal property.balance_money, property.projected_balance_money
+  end
+
+  test "scheduled_entries_total_money ignores future-dated valuations and buy/sell trades" do
+    create_valuation(account: @account, amount: 999_999, date: 3.days.from_now.to_date)
+
+    investment = accounts(:investment)
+    create_trade(securities(:aapl), account: investment, qty: 1, price: 100, date: 3.days.from_now.to_date)
+
+    assert_equal Money.new(0, "USD"), @account.scheduled_entries_total_money
+    assert_equal Money.new(0, "USD"), investment.scheduled_entries_total_money
+  end
+
+  test "scheduled_entries_total_money includes future-dated interest/dividend trades" do
+    investment = accounts(:investment)
+
+    Entry.create!(
+      account: investment,
+      name: "Interest",
+      date: 3.days.from_now.to_date,
+      currency: "USD",
+      amount: -50,
+      entryable: Trade.new(qty: 0, price: 0, currency: "USD", security: securities(:aapl), investment_activity_label: "Interest")
+    )
+
+    assert_equal Money.new(50, "USD"), investment.scheduled_entries_total_money
+    assert_equal investment.balance_money + Money.new(50, "USD"), investment.projected_balance_money
+  end
+
+  test "projected_balance_money equals balance_money when nothing is scheduled" do
+    assert_equal Money.new(0, "USD"), @account.scheduled_entries_total_money
+    assert_equal @account.balance_money, @account.projected_balance_money
+  end
+
+  test "scheduled_entries_total_money uses custom exchange_rate when present" do
+    eur_account = @family.accounts.create!(
+      name: "EUR Checking",
+      balance: 1000,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+
+    transaction = Transaction.new
+    transaction.exchange_rate = 1.10
+
+    Entry.create!(
+      account: eur_account,
+      name: "Scheduled FX expense",
+      date: 3.days.from_now.to_date,
+      currency: "USD",
+      amount: 100,
+      entryable: transaction
+    )
+
+    # 100 USD × custom_rate 1.10 = 110 EUR, negated because asset
+    assert_equal Money.new(-110, "EUR"), eur_account.scheduled_entries_total_money
+  end
+
+  test "scheduled_entries_total_money drops entries with no available exchange rate instead of using the raw amount" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date, currency: "USD")
+    create_transaction(account: @account, amount: 100, date: 3.days.from_now.to_date, currency: "EUR")
+
+    # The EUR entry has no exchange rate to USD in this test and none can be
+    # fetched -- it must be dropped, not added in as a raw 100, to match how
+    # Balance::SyncCache drops it once the date arrives (see #1143).
+    assert_equal Money.new(-200, "USD"), @account.scheduled_entries_total_money
+  end
+
+  test "scheduled_entries_total_money(through_date:) only sums entries on or before that date" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date)
+    create_transaction(account: @account, amount: 50, date: 10.days.from_now.to_date)
+
+    assert_equal Money.new(-200, "USD"), @account.scheduled_entries_total_money(through_date: 5.days.from_now.to_date)
+    assert_equal Money.new(-250, "USD"), @account.scheduled_entries_total_money(through_date: 10.days.from_now.to_date)
+  end
+
+  test "scheduled entries are loaded once per instance and reloaded on reload" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date)
+    create_transaction(account: @account, amount: 50, date: 10.days.from_now.to_date)
+
+    queries = 0
+    counter = ->(*, payload) { queries += 1 if payload[:sql].include?("entries.date >") }
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      @account.scheduled_entries_total_money
+      @account.projected_balance_money
+      @account.scheduled_entries_total_money(through_date: 3.days.from_now.to_date)
+      @account.scheduled_entries_total_money(through_date: 10.days.from_now.to_date)
+    end
+    assert_equal 1, queries
+
+    create_transaction(account: @account, amount: 25, date: 5.days.from_now.to_date)
+    assert_equal Money.new(-275, "USD"), @account.reload.scheduled_entries_total_money
   end
 
   test "history_start_date resolves to the earliest of opening anchor, entries, and balances" do
@@ -1208,6 +1395,16 @@ class AccountTest < ActiveSupport::TestCase
 
     accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
     assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
+  end
+
+  test "linked_to_goal? is true only for an account linked to a goal" do
+    account = @family.accounts.create!(name: "Goal savings", balance: 0, currency: "USD", accountable: Depository.new)
+
+    assert_not account.linked_to_goal?
+
+    goals(:vacation_italy).goal_accounts.create!(account: account)
+
+    assert account.linked_to_goal?
   end
 
   test "institution_domain is normalized to a bare host" do

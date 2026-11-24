@@ -1,0 +1,14 @@
+<%= render DS::EmptyState.new(
+      icon: "briefcase",
+      title: t("portfolios.empty_state.title"),
+      description: t("portfolios.empty_state.description")
+    ) do |empty_state| %>
+  <% empty_state.with_action do %>
+    <%= render DS::Link.new(
+          text: t("portfolios.empty_state.add_account"),
+          href: new_account_path,
+          frame: :modal,
+          icon: "plus"
+        ) %>
+  <% end %>
+<% end %>

@@ -9,6 +9,7 @@ zh-CN:
         first_name: 名字
         last_name: 姓氏
         password: 密码
+        password_challenge: 当前密码
         password_confirmation: 密码确认
     errors:
       models:

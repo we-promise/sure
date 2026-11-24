@@ -1,0 +1,29 @@
+---
+vi:
+  settings:
+    llm_usages:
+      show:
+        page_title: "Sử dụng & Chi phí LLM"
+        subtitle: "Theo dõi lượng sử dụng AI và chi phí ước tính"
+        start_date: "Ngày bắt đầu"
+        end_date: "Ngày kết thúc"
+        filter: "Lọc"
+        total_calls: "Tổng lượt gọi"
+        avg_cost_per_call: "Chi phí tb/lượt gọi"
+        based_on_calls: "Dựa trên %{with_cost} trong %{total} lượt gọi có dữ liệu chi phí"
+        total_tokens: "Tổng token"
+        prompt: "lệnh"
+        completion: "hoàn thành"
+        total_cost: "Tổng chi phí"
+        cost_by_operation: "Chi phí theo thao tác"
+        cost_by_model: "Chi phí theo mô hình"
+        recent_usage: "Sử dụng gần đây"
+        col_date: "Ngày"
+        col_operation: "Thao tác"
+        col_model: "Mô hình"
+        col_tokens: "Token"
+        col_cost: "Chi phí"
+        failed: "Thất bại"
+        no_usage_data: "Không tìm thấy dữ liệu sử dụng cho kỳ đã chọn"
+        cost_estimates_title: "Về ước tính chi phí"
+        cost_estimates_description: "Chi phí được ước tính theo bảng giá công bố của nhà cung cấp, được xác minh lần cuối vào %{date}. Chi phí thực tế có thể khác nhau. Giá tính trên 1 triệu token và thay đổi theo mô hình. Mô hình tùy chỉnh hoặc tự lưu trữ sẽ hiển thị \"N/A\" và không được tính vào tổng chi phí."

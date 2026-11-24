@@ -39,10 +39,10 @@ class Import < ApplicationRecord
 
   DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
 
-  TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport YnabImport CategoryImport RuleImport MerchantImport PdfImport QifImport SureImport].freeze
+  TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport YnabImport MonarchImport CategoryImport RuleImport MerchantImport PdfImport QifImport SureImport].freeze
   # Imports that write family-wide configuration (categories, tags, rules,
   # merchants), which guests may view but not change.
-  FAMILY_CONFIG_TYPES = %w[CategoryImport MerchantImport RuleImport SureImport].freeze
+  FAMILY_CONFIG_TYPES = %w[CategoryImport MerchantImport RuleImport SureImport MonarchImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
 
@@ -252,6 +252,12 @@ class Import < ApplicationRecord
     ImportJob.perform_later(self)
   end
 
+  # Whether publishing would change existing records even when the dry run
+  # counts nothing new. Subclasses that do this override it.
+  def changes_existing_records?
+    false
+  end
+
   # Whether import! already committed rows for this import. Distinguishes a
   # job that died mid-import (single transaction → rolled back, nothing
   # attached) from one that died after the data landed but before the status
@@ -289,6 +295,7 @@ class Import < ApplicationRecord
     import!
 
     family.sync_later
+    EntryScheduledSyncJob.schedule_for_entries(entries)
 
     update! status: :complete
   rescue => error
@@ -329,7 +336,9 @@ class Import < ApplicationRecord
   def revert
     Import.transaction do
       accounts.destroy_all
-      entries.destroy_all
+      # Split parts carry the import too (Entry#split! copies it), but may
+      # only be destroyed through their parent, which takes them along.
+      entries.where(parent_entry_id: nil).destroy_all
       revert_derived_state!
     end
 
@@ -475,8 +484,20 @@ class Import < ApplicationRecord
     complete? || revert_failed?
   end
 
+  # Whether the wizard's upload and configuration steps are closed even to
+  # someone who may edit the import. Subclasses that need this override it.
+  def configuration_locked?
+    false
+  end
+
   def family_config?
     FAMILY_CONFIG_TYPES.include?(type)
+  end
+
+  # A statement-backed import is as private as its statement; any other import
+  # is visible to the whole family.
+  def viewable_by?(user)
+    account_statement.blank? || account_statement.viewable_by?(user)
   end
 
   # Guests may view family configuration but not change it, so they may only
@@ -522,6 +543,10 @@ class Import < ApplicationRecord
     family.accounts.empty? && has_unassigned_account?
   end
 
+  # Hook for subclasses that recognise a known file format on upload
+  def preset_for_uploaded_csv
+  end
+
   # Used to optionally pre-fill the configuration for the current import
   def suggested_template
     family.imports
@@ -532,16 +557,18 @@ class Import < ApplicationRecord
   end
 
   def apply_template!(import_template)
-    update!(
-      import_template.attributes.slice(
-        "date_col_label", "amount_col_label", "name_col_label",
-        "category_col_label", "tags_col_label", "account_col_label",
-        "qty_col_label", "ticker_col_label", "price_col_label",
-        "entity_type_col_label", "notes_col_label", "currency_col_label",
-        "date_format", "signage_convention", "number_format",
-        "exchange_operating_mic_col_label",
-        "rows_to_skip"
-      )
+    update!(template_attributes(import_template))
+  end
+
+  def template_attributes(import_template)
+    import_template.attributes.slice(
+      "date_col_label", "amount_col_label", "name_col_label",
+      "category_col_label", "tags_col_label", "account_col_label",
+      "qty_col_label", "ticker_col_label", "price_col_label",
+      "entity_type_col_label", "notes_col_label", "currency_col_label",
+      "date_format", "signage_convention", "number_format",
+      "exchange_operating_mic_col_label",
+      "rows_to_skip"
     )
   end
 
@@ -553,13 +580,19 @@ class Import < ApplicationRecord
     first_sample = raw_date_samples.find(&:present?)
     return [] if first_sample.blank?
 
-    Family::DATE_FORMATS.filter_map do |label, fmt|
+    date_format_options.filter_map do |label, fmt|
       parsed = try_parse_date_sample(first_sample, format: fmt)
       next unless parsed
       next unless self.class.reasonable_date_range.cover?(Date.parse(parsed))
 
       { label: label, format: fmt, preview: parsed }
     end
+  end
+
+  # [label, strptime format] pairs offered by #valid_date_formats_with_preview.
+  # Subclasses can override to offer formats only their file type uses.
+  def date_format_options
+    Family::DATE_FORMATS
   end
 
   # Returns raw date strings from the import file for format detection/preview.
@@ -770,6 +803,15 @@ class Import < ApplicationRecord
         end
       rescue ArgumentError
         # raw_file_str might have invalid encoding, continue to detection
+      end
+
+      # An upload arrives as binary. Bytes that form valid UTF-8 are UTF-8: text
+      # in a single-byte encoding almost never does, while rchardet can misread a
+      # mostly-ASCII UTF-8 file (one "®" among plain rows reads as EUC-JP).
+      as_utf8 = raw_file_str.dup.force_encoding(Encoding::UTF_8)
+      if as_utf8.valid_encoding?
+        self.raw_file_str = as_utf8
+        return
       end
 
       # Detect encoding using rchardet

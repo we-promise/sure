@@ -13,7 +13,9 @@ nl:
       code_already_used: "Deze code is al gebruikt. Voer de volgende code uit uw authenticatie-app in."
       invalid_code: "Ongeldige verificatiecode. Probeer het opnieuw."
       invalid_password: "Onjuist wachtwoord. Probeer het opnieuw."
+      setup_failed: "Er is iets misgegaan bij het inschakelen van tweefactorauthenticatie. Probeer het opnieuw."
     disable:
+      failure: "Er is iets misgegaan bij het uitschakelen van tweefactorauthenticatie. Probeer het opnieuw."
       invalid_password: "Onjuist wachtwoord. Probeer het opnieuw."
       success: "Tweefactorauthenticatie is uitgeschakeld"
     new:

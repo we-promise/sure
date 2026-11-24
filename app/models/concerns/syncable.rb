@@ -3,6 +3,7 @@ module Syncable
 
   included do
     has_many :syncs, as: :syncable, dependent: :destroy
+    has_one :sync_schedule, as: :syncable, dependent: :destroy
   end
 
   def syncing?

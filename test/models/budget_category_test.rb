@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BudgetCategoryTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @family = families(:dylan_family)
     @budget = budgets(:one)
@@ -115,6 +117,20 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 0, @parent_budget_category.bills_reserved_unconvertible_count
   end
 
+  # Only the interest of a mortgage instalment lands in the bill's category;
+  # the principal is a transfer to the loan. The latest split charge says how
+  # much of the next one will be spending.
+  test "bills_reserved counts only the spending share of a bill whose charges are split" do
+    mortgage = create_bill(category: @parent_category, amount: 1_000, name: "Mortgage")
+    split_payment(pay_bill(mortgage, date: @budget.start_date - 2.months),
+                  { amount: 500, category: @parent_category }, { amount: 500, kind: "funds_movement" })
+    split_payment(pay_bill(mortgage, date: @budget.start_date - 1.month),
+                  { amount: 600, category: @parent_category }, { amount: 400, kind: "funds_movement" })
+    expect_bill(mortgage, due_on: @budget.start_date + 3)
+
+    assert_equal 600, @parent_budget_category.bills_reserved.amount
+  end
+
   test "bills_reserved loads the budget's obligations once for all its categories" do
     bill = @family.recurring_transactions.create!(
       name: "Groceries plan", account: accounts(:depository), amount: 120,
@@ -139,6 +155,66 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     reserved = budget_categories.to_h { |bc| [ bc.category_id, bc.bills_reserved.amount ] }
     assert_equal 120, reserved[@subcategory_with_limit.id]
     assert_equal 0, reserved[@parent_category.id]
+  end
+
+  # Compared against actual_spending, which counts a parent's subcategories,
+  # so a parent's figure includes theirs too. Payments outside the budget
+  # period belong to another month.
+  test "bills_paid sums the period's bill payments, subcategories included" do
+    rent = create_bill(category: @parent_category, amount: 30, name: "Parent bill")
+    dinner_club = create_bill(category: @subcategory_with_limit, amount: 120, name: "Dinner club")
+    pay_bill(rent, date: @budget.start_date)
+    pay_bill(rent, date: @budget.start_date - 1.month)
+    pay_bill(dinner_club, date: @budget.start_date + 1)
+
+    assert_equal 150, @parent_budget_category.bills_paid
+    assert_equal 120, @subcategory_with_limit_bc.bills_paid
+    assert_equal 0, @subcategory_inheriting_bc.bills_paid
+  end
+
+  test "bills_paid loads the budget's payments once for all its categories" do
+    pay_bill(create_bill(category: @subcategory_with_limit, amount: 120), date: @budget.start_date)
+
+    first, *rest = Budget.find(@budget.id).budget_categories.to_a
+    first.bills_paid
+
+    assert_queries_count(0) do
+      rest.each(&:bills_paid)
+    end
+  end
+
+  # Fixed charges that land early fill the envelope without using anything
+  # up, so near_limit? only counts spending outside bills.
+  test "near_limit? ignores a line filled by bills already paid" do
+    pay_bill(create_bill(category: @parent_category, amount: 950, name: "Rent"), date: Date.current)
+
+    assert_operator @parent_budget_category.percent_of_budget_spent, :>=, BudgetCategory::NEAR_LIMIT_PERCENT
+    assert_not @parent_budget_category.near_limit?
+  end
+
+  # The payment is split into its interest, spent in the line, and a transfer
+  # of the principal; the interest is the bill's.
+  test "near_limit? ignores a line filled by a bill paid with a split charge" do
+    mortgage = create_bill(category: @parent_category, amount: 1_400, name: "Mortgage")
+    split_payment(pay_bill(mortgage, date: Date.current),
+                  { amount: 950, category: @parent_category }, { amount: 450, kind: "funds_movement" })
+
+    assert_equal 950, @parent_budget_category.bills_paid
+    assert_not @parent_budget_category.near_limit?
+  end
+
+  # Rent takes 950 of 1,000; 45 of other spending uses 90% of the 50 it leaves.
+  test "near_limit? warns when spending outside bills uses up what bills leave" do
+    pay_bill(create_bill(category: @parent_category, amount: 950, name: "Rent"), date: Date.current)
+    create_transaction(category: @parent_category, amount: 45, date: Date.current)
+
+    assert @parent_budget_category.near_limit?
+  end
+
+  test "near_limit? warns about a line near its limit when it has no bills" do
+    create_transaction(category: @parent_category, amount: 950, date: Date.current)
+
+    assert @parent_budget_category.near_limit?
   end
 
   test "subcategory with zero budget inherits from parent" do
@@ -766,6 +842,158 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
     assert_equal 0, stored_rollover(second)
   end
 
+  test "an unchanged chain is not recomputed" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).never
+    recompute!
+  end
+
+  test "new spending recomputes a chain that was already settled" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    spend(30, budget: first)
+    recompute!
+
+    assert_equal 70, stored_rollover(second)
+  end
+
+  test "an allocation change recomputes a chain that was already settled" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    allocate(first, 40)
+    recompute!
+
+    assert_equal 40, stored_rollover(second)
+  end
+
+  test "a sync recomputes a chain that was already settled" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    @family.touch(:latest_sync_completed_at)
+    Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).once.returns(false)
+    recompute!
+  end
+
+  test "an allocation committed behind a later timestamp recomputes a settled chain" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    budget_category_for(first).update_columns(budgeted_spending: 40, updated_at: 1.day.ago)
+    recompute!
+
+    assert_equal 40, stored_rollover(second)
+  end
+
+  test "an account reassigned without a touch recomputes a settled chain" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    new_owner = @family.users.where.not(id: @account.owner_id).first!
+    Account.where(id: @account.id).update_all(owner_id: new_owner.id)
+    Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).once.returns(false)
+    recompute!
+  end
+
+  test "a balance update keeps a settled chain" do
+    settle_chain
+
+    @account.update!(balance: 1)
+
+    assert_no_recompute
+  end
+
+  test "excluding an account from reports recomputes a settled chain" do
+    second = settle_chain { |first| spend(30, budget: first) }.last
+    assert_equal 70, stored_rollover(second)
+
+    Account.where(id: @account.id).update_all(exclude_from_reports: true)
+    @family = Family.find(@family.id)
+    recompute!
+
+    assert_equal 100, stored_rollover(second)
+  end
+
+  test "a tax-advantaged subtype recomputes a settled chain" do
+    investment = @family.accounts.create!(accountable: Investment.new(subtype: "brokerage"), name: "Brokerage", currency: "USD", balance: 0, status: "active")
+    second = settle_chain { |first| create_transaction(account: investment, date: first.start_date, amount: 30, category: @category) }.last
+    assert_equal 70, stored_rollover(second)
+
+    investment.accountable.update!(subtype: "401k")
+    @family = Family.find(@family.id)
+    recompute!
+
+    assert_equal 100, stored_rollover(second)
+  end
+
+  test "a share permission change keeps a settled chain" do
+    share = AccountShare.create!(account: @account, user: @family.users.first!, include_in_finances: true)
+    settle_chain
+
+    share.update!(permission: "full_control")
+
+    assert_no_recompute
+  end
+
+  test "a share's include in finances flag recomputes a settled chain" do
+    share = AccountShare.create!(account: @account, user: @family.users.first!, include_in_finances: true)
+    settle_chain
+
+    share.update!(include_in_finances: false)
+
+    assert_recompute
+  end
+
+  test "a rate into another currency keeps a settled chain" do
+    settle_chain
+
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "KRW", date: Date.current, rate: 9)
+
+    assert_no_recompute
+  end
+
+  test "a rate into the family currency recomputes a settled chain" do
+    settle_chain
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: Date.current, rate: 1.1)
+
+    assert_recompute
+  end
+
   test "recompute does not clobber an allocation changed underneath it" do
     first = initialized_budget(2.months.ago)
     allocate(first, 100)
@@ -1083,6 +1311,31 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
 
     def recompute!(user: nil)
       Budget::RolloverCalculator.new(family: @family, user: user).recompute!
+    end
+
+    def settle_chain
+      Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+      first = initialized_budget(2.months.ago)
+      allocate(first, 100)
+      yield first if block_given?
+      second = initialized_budget(1.month.ago)
+      allocate(second, 100)
+      recompute!
+      recompute!
+      [ first, second ]
+    end
+
+    # A fresh family, as on the next request: Family memoizes derived reads.
+    def assert_recompute
+      @family = Family.find(@family.id)
+      Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).once.returns(false)
+      recompute!
+    end
+
+    def assert_no_recompute
+      @family = Family.find(@family.id)
+      Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).never
+      recompute!
     end
 
     def budget_category_for(budget)

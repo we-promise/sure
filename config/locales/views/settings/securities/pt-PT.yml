@@ -4,42 +4,54 @@ pt-PT:
     securities:
       show:
         disable_mfa: Desativar 2FA
-        disable_mfa_confirm: Tem a certeza de que pretende desativar a autenticação
-          de dois fatores? Isto tornará a sua conta menos segura.
+        disable_mfa_confirm: Tem a certeza de que pretende desativar a autenticação de dois fatores? Isto tornará a sua conta menos segura.
         enable_mfa: Ativar 2FA
-        mfa_enabled_status_html: "A autenticação de dois fatores está <span class=\"font-medium text-green-600\">ativada</span>"
+        mfa_enabled_status_html: A autenticação de dois fatores está <span class="font-medium text-green-600">ativada</span>
         mfa_enabled_description: A sua conta está protegida com uma camada adicional de segurança.
-        mfa_disabled_status_html: "A autenticação de dois fatores está <span class=\"font-medium text-red-600\">desativada</span>"
+        mfa_disabled_status_html: A autenticação de dois fatores está <span class="font-medium text-red-600">desativada</span>
         mfa_disabled_description: Ative a 2FA para adicionar uma camada extra de segurança à sua conta.
-        mfa_description: Adicione uma camada extra de segurança à sua conta ao exigir
-          um código da sua aplicação de autenticação quando inicia sessão
+        mfa_description: Adicione uma camada extra de segurança à sua conta ao exigir um código da sua aplicação de autenticação quando inicia sessão
         mfa_title: Autenticação de Dois Fatores
         webauthn_add: Adicionar chave de acesso ou chave de segurança
         webauthn_added: Adicionada em %{date}
-        webauthn_description: Utilize uma chave de acesso, Touch ID, Windows Hello
-          ou uma chave de segurança de hardware como segundo fator ao iniciar sessão.
+        webauthn_description: Utilize uma chave de acesso, Touch ID, Windows Hello ou uma chave de segurança de hardware como segundo fator ao iniciar sessão.
         webauthn_empty: Ainda não existem chaves de acesso ou chaves de segurança registadas.
         webauthn_last_used: Utilizada pela última vez há %{time_ago}
         webauthn_name_label: Designação da chave
-        webauthn_code_label: "Código do autenticador ou de cópia de segurança"
-        webauthn_code_placeholder: "Código atual do autenticador ou um código de cópia de segurança não utilizado"
+        webauthn_code_label: Código do autenticador ou de cópia de segurança
+        webauthn_code_placeholder: Código atual do autenticador ou um código de cópia de segurança não utilizado
         webauthn_name_placeholder: MacBook Touch ID, YubiKey, etc.
         webauthn_remove: Eliminar
-        webauthn_remove_confirm: Tem a certeza de que pretende eliminar esta chave de
-          acesso ou chave de segurança?
-        webauthn_remove_confirm_body: Terá de registar novamente esta chave de acesso
-          ou chave de segurança antes de poder ser utilizada para verificação no início
-          de sessão.
+        webauthn_remove_confirm: Tem a certeza de que pretende eliminar esta chave de acesso ou chave de segurança?
+        webauthn_remove_confirm_body: Terá de registar novamente esta chave de acesso ou chave de segurança antes de poder ser utilizada para verificação no início de sessão.
         webauthn_title: Chaves de acesso e chaves de segurança
-        webauthn_unsupported: Este navegador não suporta chaves de acesso ou chaves
-          de segurança.
+        webauthn_unsupported: Este navegador não suporta chaves de acesso ou chaves de segurança.
+        page_title: Segurança
+        encryption_warning:
+          title: Faltam as chaves de encriptação
+          intro: 'Os dados sensíveis (chaves de API, tokens de serviços, segredos de MFA e PII) estão a ser armazenados sem encriptação. Para ativar a encriptação, defina as seguintes chaves nas suas variáveis de ambiente ou nas credenciais do Rails:'
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: 'Gerar um conjunto com: bin/rails db:encryption:init'
+        sso_title: Contas associadas
+        sso_subtitle: Ligações às suas contas SSO
+        sso_disconnect: Desligar
+        sso_last_used: Última utilização
+        sso_never: Nunca
+        sso_no_email: Sem email
+        sso_no_identities: Sem contas SSO associadas
+        sso_connect_hint: Termine a sessão e inicie-a novamente com um serviço SSO para ligar uma conta.
+        sso_confirm_title: Desligar Conta?
+        sso_confirm_body: Tem a certeza de que pretende desligar a sua conta %{provider}? Pode voltar a ligá-la mais tarde ao iniciar sessão com esse serviço novamente.
+        sso_confirm_button: Desligar
+        sso_warning_message: Este é o seu único método de início de sessão. Deve definir uma palavra-passe nas suas definições de segurança antes de desligar, caso contrário poderá ficar bloqueado na sua conta.
   webauthn_credentials:
-    code_already_used: "Esse código já foi utilizado. Aguarde o próximo código da sua aplicação de autenticação."
-    invalid_code: "Esse código não é válido. Introduza um código atual da sua aplicação de autenticação ou um código de cópia de segurança não utilizado."
-    rate_limited: "Demasiadas tentativas. Aguarde um minuto e tente novamente."
+    code_already_used: Esse código já foi utilizado. Aguarde o próximo código da sua aplicação de autenticação.
+    invalid_code: Esse código não é válido. Introduza um código atual da sua aplicação de autenticação ou um código de cópia de segurança não utilizado.
+    rate_limited: Demasiadas tentativas. Aguarde um minuto e tente novamente.
     default_name: Chave de segurança
-    failure: Não foi possível guardar essa chave de acesso ou chave de segurança. Tente
-      novamente.
-    mfa_required: Ative a autenticação de dois fatores antes de adicionar uma chave
-      de acesso ou chave de segurança.
+    failure: Não foi possível guardar essa chave de acesso ou chave de segurança. Tente novamente.
+    mfa_required: Ative a autenticação de dois fatores antes de adicionar uma chave de acesso ou chave de segurança.
     success: Chave de acesso ou chave de segurança removida.

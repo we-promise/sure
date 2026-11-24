@@ -87,7 +87,7 @@ class Provider::Registry
         uri_base = ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base
         model = ENV["OPENAI_MODEL"].presence || Setting.openai_model
 
-        if uri_base.present? && model.blank?
+        if Provider::Openai.custom_endpoint?(uri_base) && model.blank?
           Rails.logger.error("Custom OpenAI provider configured without a model; please set OPENAI_MODEL or Setting.openai_model")
           return nil
         end
@@ -203,6 +203,14 @@ class Provider::Registry
 
         Provider::Chimnie.new(api_key)
       end
+
+      def terrascoutx
+        api_key = ENV["TERRASCOUTX_API_KEY"].presence || Setting.terrascoutx_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::Terrascoutx.new(api_key)
+      end
   end
 
   def initialize(concept)
@@ -245,7 +253,7 @@ class Provider::Registry
         # builds them by name when benchmarking against Jev.
         %i[jev]
       when :property_valuations
-        %i[rentcast realie chimnie]
+        %i[rentcast realie chimnie terrascoutx]
       else
         %i[plaid_us plaid_eu github openai anthropic]
       end

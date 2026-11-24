@@ -1,0 +1,27 @@
+---
+pl:
+  settings:
+    mcp:
+      revoke:
+        revoked: Połączenie cofnięte.
+      show:
+        connect_subtitle: Wklej ten URL do Claude.ai (albo dowolnego klienta kompatybilnego
+          z MCP), aby połączyć go z Twoim kontem Sure.
+        connect_title: Połącz asystenta AI
+        connected_ago: Połączono %{time} temu
+        connected_subtitle: Te aplikacje mają obecnie dostęp do Twoich danych Sure.
+          Cofnij dostęp tym, których już nie używasz.
+        connected_title: Połączeni klienci
+        copied: Skopiowano!
+        copy_url: Kopiuj
+        how_to_connect_title: Jak połączyć Claude
+        page_title: Serwer MCP
+        revoke: Cofnij
+        revoke_confirm: Cofnąć dostęp temu klientowi?
+        step_1: Otwórz Claude.ai i przejdź do Ustawienia → Dostosuj → Konektory.
+        step_2: Kliknij "Dodaj konektor" i wklej powyższy URL serwera MCP.
+        step_3: Kliknij Połącz. Zostaniesz przekierowany do Sure, aby się zalogować
+          i autoryzować dostęp.
+        step_4: Po autoryzacji Claude będzie mógł odczytywać Twoje konta, transakcje
+          i dane o saldach.
+        unknown_client: Nieznany klient

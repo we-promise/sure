@@ -16,6 +16,14 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     @user.sessions.destroy_all
   end
 
+  def with_forgery_protection
+    original = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+    yield
+  ensure
+    ActionController::Base.allow_forgery_protection = original
+  end
+
   test "redirects to root if MFA already enabled" do
     @user.setup_mfa!
     @user.enable_mfa!
@@ -48,6 +56,20 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_equal 8, rendered_codes.length
     assert rendered_codes.all? { |code| code.match?(/\A[0-9a-f]{16}\z/) }
     assert_empty rendered_codes & @user.otp_backup_codes
+
+    assert SecurityAuditLog.exists?(user: @user, event_type: "mfa_enabled")
+  end
+
+  test "does not enable MFA when the audit log write fails" do
+    @user.setup_mfa!
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    SecurityAuditLog.stubs(:log_mfa_enabled!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    post mfa_path, params: { code: totp.now }
+
+    assert_redirected_to new_mfa_path
+    assert_not @user.reload.otp_required?
+    assert_empty @user.otp_backup_codes
   end
 
   # A double-click or browser resubmit replays the correct enrollment code;
@@ -96,11 +118,27 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
   test "does not enable MFA with invalid code" do
     @user.setup_mfa!
 
-    post mfa_path, params: { code: "invalid", password: user_password_test }
+    assert_no_difference "SecurityAuditLog.count" do
+      post mfa_path, params: { code: "invalid", password: user_password_test }
+    end
 
     assert_redirected_to new_mfa_path
     assert_not @user.reload.otp_required?
     assert_empty @user.otp_backup_codes
+  end
+
+  test "create refuses to touch an already-enabled MFA even with a wrong code" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    assert @user.otp_required?
+
+    assert_no_difference "SecurityAuditLog.count" do
+      post mfa_path, params: { code: "invalid" }
+    end
+
+    assert_redirected_to root_path
+    assert @user.reload.otp_required?
+    assert @user.otp_secret.present?
   end
 
   test "verify shows MFA verification page" do
@@ -166,6 +204,23 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
   end
 
+  test "verify_code cannot create a session after the password changed" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    assert_redirected_to verify_mfa_path
+
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    User.find(@user.id).update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+
+    assert_no_difference -> { Session.where(user_id: @user.id).count } do
+      post verify_mfa_path, params: { code: totp.now }
+    end
+    assert_redirected_to new_session_path
+  end
+
   test "verify_code authenticates with valid backup code" do
     @user.setup_mfa!
     backup_code = @user.enable_mfa!.first
@@ -193,6 +248,89 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_not Session.exists?(user_id: @user.id)
+  end
+
+  test "verify_code sends a repeat submit after sign-in to the app" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    # Frozen so the code cannot expire between generating and submitting it.
+    freeze_time do
+      post sessions_path, params: { email: @user.email, password: user_password_test }
+      code = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances").now
+
+      # Forgery protection is on, as in production: the first submit rotates the
+      # session, so the repeat submit arrives with a token that no longer verifies.
+      with_forgery_protection do
+        get verify_mfa_path
+        token = css_select("form[action='#{verify_mfa_path}'] input[name='authenticity_token']").first["value"]
+
+        post verify_mfa_path, params: { code: code, authenticity_token: token }
+        assert_redirected_to root_path
+
+        assert_no_difference -> { Session.where(user_id: @user.id).count } do
+          post verify_mfa_path, params: { code: code, authenticity_token: token }
+        end
+        assert_redirected_to root_path
+        assert_nil flash[:alert]
+      end
+
+      follow_redirect!
+      assert_response :success
+    end
+  end
+
+  test "verify_code still requires a valid token while a sign-in is pending" do
+    @user.setup_mfa!
+    backup_code = @user.enable_mfa!.first
+    sign_out
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+
+    with_forgery_protection do
+      post verify_mfa_path, params: { code: backup_code, authenticity_token: "forged" }
+      assert_response :unprocessable_entity
+    end
+
+    # Rejected before verification: no session, and the single-use code is unspent.
+    assert_not Session.exists?(user_id: @user.id)
+    assert_equal 8, @user.reload.otp_backup_codes.size
+  end
+
+  test "other MFA actions keep requiring a valid token without a pending sign-in" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+
+    with_forgery_protection do
+      delete disable_mfa_path, params: { password: user_password_test, authenticity_token: "forged" }
+      assert_response :unprocessable_entity
+    end
+
+    assert @user.reload.otp_required?
+  end
+
+  test "verify_code without a pending sign-in redirects instead of reporting an invalid code" do
+    sign_out
+
+    post verify_mfa_path, params: { code: "123456" }
+    assert_redirected_to root_path
+
+    follow_redirect!
+    assert_redirected_to new_session_path
+  end
+
+  test "verify form disables its button on submit" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    get verify_mfa_path
+
+    assert_select "form[action=?][data-controller='loading-button'][data-action~='submit->loading-button#showLoading']", verify_mfa_path do
+      assert_select "button[type='submit'][data-loading-button-target='button']"
+    end
   end
 
   test "webauthn_options require a pending MFA session" do
@@ -347,6 +485,47 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_nil @user.otp_secret
     assert_empty @user.otp_backup_codes
     assert_empty @user.webauthn_credentials
+
+    assert SecurityAuditLog.exists?(user: @user, event_type: "mfa_disabled")
+  end
+
+  test "disable while impersonating attributes the audit entry to the impersonator, not the victim" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    impersonator = users(:sure_support_staff)
+    sign_in impersonator
+    post join_impersonation_sessions_path, params: { impersonation_session_id: impersonation_sessions(:in_progress).id }
+    assert_response :redirect
+
+    delete disable_mfa_path, params: { password: user_password_test }
+
+    log = SecurityAuditLog.find_by(user: @user, event_type: "mfa_disabled")
+    assert_not_nil log
+    assert_equal impersonator.id, log.metadata["actor_user_id"]
+  end
+
+  test "still disables MFA when the audit log write fails" do
+    # Log-and-continue, not transactional: a failed audit write must not
+    # block turning off a security control the user is actively trying to
+    # disable (e.g. because they believe it's compromised).
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.webauthn_credentials.create!(
+      nickname: "YubiKey",
+      credential_id: "disable-mfa-audit-fail-credential",
+      public_key: "public-key"
+    )
+    SecurityAuditLog.stubs(:log_mfa_disabled!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    delete disable_mfa_path, params: { password: user_password_test }
+
+    assert_redirected_to settings_security_path
+    assert_not @user.reload.otp_required?
+    assert_nil @user.otp_secret
+    assert_empty @user.webauthn_credentials
+    assert_not SecurityAuditLog.exists?(user: @user, event_type: "mfa_disabled")
   end
 
 

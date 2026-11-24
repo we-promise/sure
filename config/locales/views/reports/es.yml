@@ -6,7 +6,15 @@ es:
       subtitle: Información completa sobre tu salud financiera
       export: Exportar CSV
       print_report: Imprimir informe
-      toggle_section: Mostrar / Ocultar sección
+      tag_filter:
+        all: Todas las etiquetas
+        selected:
+          one: "%{count} etiqueta"
+          other: "%{count} etiquetas"
+        search: Buscar etiquetas
+        apply: Aplicar
+      section_aria: Sección %{title}. Pulsa Intro o Espacio para cogerla y reordenarla; después muévela con las flechas.
+      sections_aria: Secciones de informes
       periods:
         monthly: Mensual
         quarterly: Trimestral
@@ -19,6 +27,7 @@ es:
       showing_period: Mostrando datos desde %{start} hasta %{end}
       previous_period: Periodo anterior
       next_period: Periodo siguiente
+      shortcut_hint: "%{action} (%{key})"
       today: Hoy
       period_label:
         quarterly: T%{quarter} %{year}
@@ -84,6 +93,14 @@ es:
       description: Empieza a registrar tus finanzas añadiendo transacciones o conectando tus cuentas para ver informes completos
       add_transaction: Añadir transacción
       add_account: Añadir cuenta
+    biggest_expenses:
+      title: Mayores gastos
+      one_time: Puntual
+      limit_aria: Número de gastos que mostrar
+      table:
+        name: Nombre
+        category: Categoría
+        amount: Importe
     transactions_breakdown:
       title: Desglose de actividad
       no_transactions: No se ha encontrado actividad para el periodo y filtros seleccionados
@@ -137,6 +154,34 @@ es:
       total_liabilities: Pasivos
       no_assets: Sin activos
       no_liabilities: Sin pasivos
+    spending_vs_normal:
+      title: Gasto frente a lo normal
+      summary_html: "%{total} gastado en este periodo. Lo normal para un periodo de esta duración es %{normal}, según el periodo del %{baseline_start} al %{baseline_end}."
+      summary_so_far_html: "%{total} gastado hasta ahora. Lo normal para estos días es %{normal}, según el periodo del %{baseline_start} al %{baseline_end}."
+      no_history_html: "%{total} gastado en este periodo. Aún no hay historial anterior suficiente para saber qué es lo normal."
+      no_history_short: Aún no hay historial anterior suficiente para comparar.
+      no_spending: No hay gasto en este periodo.
+      no_changes: El gasto fue el normal en todas las categorías.
+      treemap_title: A dónde fue
+      changes_title: Qué ha cambiado
+      direct: "%{category} (sin subcategoría)"
+      tooltip:
+        path: "%{parent} › %{category}"
+        total: "%{category}: %{amount}"
+        normal: 'Normal: %{amount}'
+        more: "%{amount} más de lo normal (%{percent})"
+        less: "%{amount} menos de lo normal (%{percent})"
+        more_no_percent: "%{amount} más de lo normal"
+        less_no_percent: "%{amount} menos de lo normal"
+        no_normal: No hay historial anterior con el que comparar
+        open: Selecciona para ver estas transacciones
+      legend:
+        less: Entre un 50 y un 100 % menos
+        slightly_less: Entre un 15 y un 50 % menos
+        normal: Más o menos lo normal
+        slightly_more: Entre un 15 y un 50 % más
+        more: Entre un 50 y un 100 % más
+        much_more: Un 100 % más o más
     investment_performance:
       title: Rendimiento de inversiones
       portfolio_value: Valor de la cartera
@@ -155,6 +200,9 @@ es:
       realized_gains: Ganancias realizadas
       total_gains: Ganancias totales
       taxable_realized_note: Estas ganancias pueden estar sujetas a impuestos
+      unconverted_note:
+        one: "%{count} ganancia no está incluida: no hay tipo de cambio a %{currency}"
+        other: "%{count} ganancias no están incluidas: no hay tipo de cambio a %{currency}"
       no_data: '-'
       view_details: Ver detalles
       holdings_count:
@@ -236,3 +284,11 @@ es:
         amount: Importe
         percent: '%'
         more_categories: + %{count} más categorías
+      biggest_expenses:
+        title: Mayores gastos
+        date: Fecha
+        name: Nombre
+        category: Categoría
+        account: Cuenta
+        amount: Importe
+        one_time: Puntual

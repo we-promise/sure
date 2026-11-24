@@ -34,12 +34,22 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 2083.92, @statement.holdings_value, 0.001
   end
 
-  test "portfolio_value falls back to 1:1 when FX rate is missing" do
+  # At 1 the EUR account added 1,000 and portfolio_value read 2,921.92 (#3640).
+  test "portfolio_value leaves out an account in a currency with no rate at all" do
+    ExchangeRate.stubs(:provider).returns(nil)
     create_investment_account(balance: 1921.92, currency: "USD")
     create_investment_account(balance: 1000, currency: "EUR")
 
-    # No ExchangeRate row → rates_for defaults to 1
-    assert_in_delta 2921.92, @statement.portfolio_value, 0.001
+    assert_in_delta 1921.92, @statement.portfolio_value, 0.001
+  end
+
+  test "portfolio_value uses the latest stored rate however old" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: 60.days.ago.to_date, rate: 1.1)
+    create_investment_account(balance: 1921.92, currency: "USD")
+    create_investment_account(balance: 1000, currency: "EUR")
+
+    assert_in_delta 3021.92, @statement.portfolio_value, 0.001
   end
 
   test "current_holdings includes holdings from every investment account regardless of currency" do
@@ -259,9 +269,9 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal %w[TOP1], top.map(&:ticker)
   end
 
-  # allocation shares top_holdings' denominator, so its weights sum to the
-  # invested share of the portfolio and cash is the visible residual.
-  test "allocation rolls up duplicate securities and weights leave cash as the residual" do
+  # allocation shares top_holdings' denominator, and the part of the portfolio
+  # no holding accounts for is its own cash row, so the weights sum to 100.
+  test "allocation rolls up duplicate securities and weights sum to 100%" do
     # Coherent balances: each account's balance is its holdings plus its cash,
     # so the weight residual is genuinely cash and not stale balance data.
     ira = create_investment_account(balance: 3000, cash_balance: 0, currency: "USD")
@@ -285,15 +295,16 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     allocation = @statement.allocation
 
-    assert_equal 2, allocation.size
-    assert_equal %w[MSFT AAPL], allocation.map(&:ticker)
+    # Portfolio 5000 (account balances) vs holdings 3500: the 1500 the
+    # holdings do not explain is reported as a cash row so the weights still
+    # sum to 100 and MSFT carries the same 40% here as in top_holdings.
+    assert_equal 3, allocation.size
+    assert_equal %w[MSFT AAPL CASH], allocation.map(&:ticker)
     assert_equal Money.new(1500, "USD"), allocation.find { |a| a.ticker == "AAPL" }.amount
-
-    # 3500 of holdings against a 5000 portfolio: 70% invested, 30% cash.
-    assert_in_delta 70.0, allocation.sum(&:weight), 0.01
-
-    cash_share = @statement.cash_balance / @statement.portfolio_value * 100
-    assert_in_delta 100.0, allocation.sum(&:weight) + cash_share, 0.01
+    assert_in_delta 40.0, allocation.first.weight, 0.01
+    assert allocation.last.cash?
+    assert_equal Money.new(1500, "USD"), allocation.last.amount
+    assert_in_delta 100.0, allocation.sum(&:weight), 0.01
   end
 
   # The latent bug behind the divergence: the two methods used different
@@ -309,10 +320,79 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     )
 
     top_weight = @statement.top_holdings(limit: 1).first.weight
-    allocation_weight = @statement.allocation.find { |a| a.ticker == "VOO" }.weight
+    allocation = @statement.allocation
+    allocation_weight = allocation.find { |row| row.ticker == "VOO" }.weight
 
-    assert_in_delta top_weight, allocation_weight, 0.01
     assert_in_delta 60.0, top_weight, 0.01
+    assert_equal top_weight, allocation_weight
+    assert_equal [ "VOO", "CASH" ], allocation.map(&:ticker)
+    assert_in_delta 40.0, allocation.last.weight, 0.01
+    assert_equal I18n.t("models.investment_statement.cash"), allocation.last.name
+    assert_nil allocation.last.security
+    assert_nil allocation.last.trend
+  end
+
+  test "allocation omits the cash row when account balances are a stale zero" do
+    account = create_investment_account(balance: 0, cash_balance: 0, currency: "USD")
+    security = Security.create!(ticker: "AAPL", name: "Apple")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 200, amount: 2000, currency: "USD"
+    )
+
+    allocation = @statement.allocation
+
+    assert_equal %w[AAPL], allocation.map(&:ticker)
+    assert_in_delta 100.0, allocation.first.weight, 0.01
+  end
+
+  # A margin balance or an unsettled buy puts portfolio value (960) below the
+  # holdings (1000): the residual is negative, so there is no cash row.
+  test "allocation shows no cash row when cash is negative" do
+    account = create_investment_account(balance: 960, cash_balance: -40, currency: "USD")
+    security = Security.create!(ticker: "VOO", name: "Vanguard S&P 500")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD")
+
+    allocation = @statement.allocation
+
+    assert_equal %w[VOO], allocation.map(&:ticker), "negative cash must not produce a cash row"
+    assert_in_delta 100.0, allocation.first.weight, 0.01
+  end
+
+  # A portfolio of cash alone is all cash, as every other grouping reports it,
+  # rather than an empty allocation.
+  test "allocation of a portfolio holding only cash is one cash row" do
+    create_investment_account(balance: 2000, cash_balance: 2000, currency: "USD")
+
+    allocation = @statement.allocation
+
+    assert_equal [ [ "CASH", Money.new(2000, "USD"), BigDecimal("100") ] ], allocation.map { |row| [ row.ticker, row.amount, row.weight ] }
+    assert_equal @statement.allocation_by("asset_class").map(&:amount), allocation.map(&:amount)
+  end
+
+  # Characterisation: every field the dashboard's investment summary, the
+  # Reports investment section and the printed report read from a top_holdings
+  # row, on a portfolio with account cash and one security in two accounts and
+  # two currencies. Allocation's own cash row must leave all of it unchanged.
+  test "top_holdings reports the same rows to its callers whatever allocation adds" do
+    usd = create_investment_account(balance: 3000, cash_balance: 1000, currency: "USD")
+    eur = create_investment_account(balance: 1000, cash_balance: 0, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    voo = Security.create!(ticker: "VOO", name: "Vanguard S&P 500")
+    nameless = Security.create!(ticker: "NONAME")
+    Holding.create!(account: usd, security: voo, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD")
+    Holding.create!(account: eur, security: voo, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "EUR")
+    Holding.create!(account: usd, security: nameless, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+
+    top = @statement.top_holdings(limit: 5)
+
+    # Portfolio 3000 + 1100 = 4100. VOO 1000 + 1100 = 2100 (51.22%); NONAME 1000 (24.39%).
+    assert_equal [ [ voo, "VOO", "Vanguard S&P 500", Money.new(2100, "USD"), BigDecimal("51.22") ],
+                   [ nameless, "NONAME", "NONAME", Money.new(1000, "USD"), BigDecimal("24.39") ] ],
+                 top.map { |row| [ row.security, row.ticker, row.name, row.amount_money, row.weight ] }
+    assert_equal top.map(&:weight), @statement.allocation.first(2).map(&:weight),
+                 "allocation's security rows carry the weights top_holdings reports"
   end
 
   test "allocation weights sum to 100% with mixed currencies" do
@@ -462,6 +542,21 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 0, totals.trades_count
   end
 
+  # A buy in a currency with no rate is not a $1-per-unit buy (#3640).
+  test "totals leave out a trade in a currency with no rate at all" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    usd_account = create_investment_account(balance: 500)
+    krw_account = create_investment_account(balance: 500_000, currency: "KRW")
+
+    create_trade(account: usd_account, qty: 2, amount: 120, date: period.start_date)
+    create_trade(account: krw_account, qty: 1, amount: 500_000, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(120, "USD"), totals.buys
+    assert_equal 2, totals.trades_count
+  end
+
   test "totals aggregate directly from trade entries" do
     # Use the full current month: a month-to-date period collapses to a single
     # day on the 1st, which would drop the start_date + 1.day trade below.
@@ -480,8 +575,10 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     totals = nil
     queries = capture_sql_queries { totals = statement.totals(period: period) }
 
-    assert_equal Money.new(120, "USD"), totals.contributions
-    assert_equal Money.new(40, "USD"), totals.withdrawals
+    assert_equal Money.new(120, "USD"), totals.buys
+    assert_equal Money.new(40, "USD"), totals.sells
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
     assert_equal 2, totals.trades_count
 
     aggregate_queries = queries.grep(/SUM\(CASE WHEN trades\.qty > 0/)
@@ -523,8 +620,9 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     totals = @statement.totals(period: period)
 
     # qty: 0 keeps income out of both direction branches
-    assert_equal Money.new(120, "USD"), totals.contributions
-    assert_equal Money.new(0, "USD"), totals.withdrawals
+    assert_equal Money.new(120, "USD"), totals.buys
+    assert_equal Money.new(0, "USD"), totals.sells
+    assert_equal Money.new(0, "USD"), totals.contributions
     assert_equal Money.new(50, "USD"), totals.dividends
   end
 
@@ -562,7 +660,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
   test "labeled non-income trades still count by direction" do
     # Only Dividend/Interest are excluded from the direction buckets; Buy, Sell
-    # and Reinvestment keep their existing contribution/withdrawal treatment.
+    # and Reinvestment keep their existing buy/sell treatment.
     period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
     account = create_investment_account(balance: 500)
 
@@ -573,9 +671,10 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     totals = @statement.totals(period: period)
 
-    assert_equal Money.new(150, "USD"), totals.contributions
-    # Reinvestment is deliberately not folded into dividend income; doing so
-    # would require removing it from contributions too.
+    assert_equal Money.new(150, "USD"), totals.buys
+    # Neither is money added to the account.
+    assert_equal Money.new(0, "USD"), totals.contributions
+    # Reinvestment is deliberately not folded into dividend income.
     assert_equal Money.new(0, "USD"), totals.dividends
   end
 
@@ -595,6 +694,36 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     totals = @statement.totals(period: period)
 
     assert_equal Money.new(110, "USD"), totals.dividends
+  end
+
+  # Income follows the same rule as contributions (#3640): no rate at all
+  # leaves the amount out rather than counting it at 1.
+  test "a dividend in a currency with no rate is left out of investment income, not counted at 1" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    usd_account = create_investment_account(balance: 500)
+    krw_account = create_investment_account(balance: 500_000, currency: "KRW")
+
+    create_income_trade(account: usd_account, label: "Dividend", amount: 50, date: period.start_date)
+    create_income_trade(account: usd_account, label: "Interest", amount: 5, date: period.start_date)
+    create_income_trade(account: krw_account, label: "Dividend", amount: 100_000, date: period.start_date)
+    create_income_transaction(account: krw_account, label: "Interest", amount: 20_000, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(50, "USD"), totals.dividends
+    assert_equal Money.new(5, "USD"), totals.interest
+  end
+
+  test "a dividend with no rate on its day uses the nearest stored rate" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: period.start_date - 60.days, rate: 1.2)
+
+    create_income_trade(account: account, label: "Dividend", amount: 100, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(120, "USD"), totals.dividends
   end
 
   test "total_dividends and total_interest expose all-time income" do
@@ -667,12 +796,11 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 1, totals.trades_count
   end
 
-  test "contributions and withdrawals count trades only, not external cash transactions" do
-    # None of the non-trade entries below is income, so reading labelled
-    # transactions for income must not let them move the direction buckets.
-    # Totals#contributions is the cash committed to buying securities:
-    # counting the 800 deposit and the 1 000 buy it funded would count that
-    # money twice.
+  test "contributions and withdrawals count external flows, and buys and sells count trades" do
+    # None of the non-trade entries below is income, so reading transactions
+    # for flows must not move the income buckets, and the trades must not
+    # move the flow buckets: counting the 800 deposit and the 1 000 buy it
+    # funded would count that money twice.
     period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
     account = create_investment_account(balance: 500)
     checking = @family.accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
@@ -683,12 +811,473 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     create_labelled_transaction(account: account, label: "Withdrawal", amount: 50, date: period.start_date)
     create_labelled_transaction(account: account, label: nil, kind: "investment_contribution", amount: -200, date: period.start_date)
     create_linked_transfer(family: @family, from: checking, to: account, amount: 800, date: period.start_date)
+    # Pending and excluded flows wait, as pending income does
+    create_labelled_transaction(account: account, label: "Contribution", amount: -70, date: period.start_date, extra: { "plaid" => { "pending" => true } })
+    create_labelled_transaction(account: account, label: "Contribution", amount: -90, date: period.start_date, excluded: true)
+    # Outside the period
+    create_labelled_transaction(account: account, label: "Contribution", amount: -999, date: period.start_date - 1.day)
 
     totals = @statement.totals(period: period)
 
-    assert_equal Money.new(1000, "USD"), totals.contributions, "only the buy is a contribution"
-    assert_equal Money.new(200, "USD"), totals.withdrawals, "only the sale is a withdrawal"
+    assert_equal Money.new(1300, "USD"), totals.contributions
+    assert_equal Money.new(50, "USD"), totals.withdrawals
+    assert_equal Money.new(1000, "USD"), totals.buys, "only the buy is a buy"
+    assert_equal Money.new(200, "USD"), totals.sells, "only the sale is a sell"
+    assert_equal Money.new(0, "USD"), totals.total_income
     assert_equal 2, totals.trades_count
+  end
+
+  test "contributions convert foreign-currency flows into family currency" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: period.start_date, rate: 1.1)
+
+    create_labelled_transaction(account: account, label: "Contribution", amount: -100, date: period.start_date)
+
+    assert_equal Money.new(110, "USD"), @statement.totals(period: period).contributions
+  end
+
+  # A deposit follows the same rule as a trade (#3640): no rate at all leaves
+  # it out rather than counting it at 1.
+  test "a contribution in a currency with no rate at all is left out, not counted at 1" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    usd_account = create_investment_account(balance: 500)
+    krw_account = create_investment_account(balance: 500_000, currency: "KRW")
+
+    create_labelled_transaction(account: usd_account, label: "Contribution", amount: -100, date: period.start_date)
+    create_labelled_transaction(account: krw_account, label: "Contribution", amount: -500_000, date: period.start_date)
+    create_labelled_transaction(account: krw_account, label: "Withdrawal", amount: 200_000, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(100, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+  end
+
+  test "a contribution with no rate on its day uses the nearest stored rate" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: period.start_date - 60.days, rate: 1.2)
+
+    create_labelled_transaction(account: account, label: "Contribution", amount: -100, date: period.start_date)
+    create_labelled_transaction(account: account, label: "Withdrawal", amount: 50, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(120, "USD"), totals.contributions
+    assert_equal Money.new(60, "USD"), totals.withdrawals
+  end
+
+  test "a deposit and the buy it funds count once, as a contribution" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+
+    # The deposit is the money added; the buy only turns part of it into shares.
+    create_labelled_transaction(account: account, label: "Contribution", amount: -1000, date: period.start_date)
+    create_portfolio_trade(account: account, qty: 8, price: 100, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(1000, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+    assert_equal Money.new(800, "USD"), totals.buys
+  end
+
+  test "a buy paid for with cash already in the account is not a contribution" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000, cash_balance: 1000)
+
+    create_portfolio_trade(account: account, qty: 5, price: 100, date: period.start_date)
+    # A rebalance: selling one position to buy another moves no money in or out.
+    create_portfolio_trade(account: account, qty: -2, price: 100, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+    assert_equal Money.new(500, "USD"), totals.buys
+    assert_equal Money.new(200, "USD"), totals.sells
+    assert_equal 2, totals.trades_count
+  end
+
+  test "a withdrawal counts, whether labelled or a transfer to an account outside the card" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+    checking = @family.accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
+
+    create_labelled_transaction(account: account, label: "Withdrawal", amount: 150, date: period.start_date)
+    create_linked_transfer(family: @family, from: account, to: checking, amount: 250, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(400, "USD"), totals.withdrawals
+    assert_equal Money.new(0, "USD"), totals.contributions
+  end
+
+  test "a transfer between two investment accounts on the card is neither a contribution nor a withdrawal" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    from = create_investment_account(balance: 1000)
+    to = create_investment_account(balance: 1000)
+
+    create_linked_transfer(family: @family, from: from, to: to, amount: 600, date: period.start_date)
+    # The same move booked by the broker on both sides, with each leg labelled
+    # as if the money came from outside, then linked and confirmed: the link
+    # wins.
+    out_leg = create_labelled_transaction(account: from, label: "Withdrawal", amount: 40, date: period.start_date)
+    in_leg = create_labelled_transaction(account: to, label: "Contribution", amount: -40, date: period.start_date)
+    Transfer.create!(outflow_transaction: out_leg.entryable, inflow_transaction: in_leg.entryable).confirm!
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+  end
+
+  # Auto-matching creates pending transfers, and Transfer#confirm! promises an
+  # unconfirmed suggestion never moves reports. Until it is confirmed, each
+  # leg is what its label says.
+  test "an unconfirmed transfer suggestion does not change contributions or withdrawals" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    from = create_investment_account(balance: 1000)
+    to = create_investment_account(balance: 1000)
+
+    out_leg = create_labelled_transaction(account: from, label: "Withdrawal", amount: 40, date: period.start_date)
+    in_leg = create_labelled_transaction(account: to, label: "Contribution", amount: -40, date: period.start_date)
+    transfer = Transfer.create!(outflow_transaction: out_leg.entryable, inflow_transaction: in_leg.entryable)
+    assert transfer.pending?
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(40, "USD"), totals.contributions
+    assert_equal Money.new(40, "USD"), totals.withdrawals
+  end
+
+  # The totals depend on transfers, and linking or unlinking two existing
+  # transactions does not always write to their entries.
+  test "creating, confirming and removing a transfer each refresh the cached totals" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    from = create_investment_account(balance: 1000)
+    to = create_investment_account(balance: 1000)
+    out_leg = create_labelled_transaction(account: from, label: "Withdrawal", amount: 40, date: period.start_date)
+    in_leg = create_labelled_transaction(account: to, label: "Contribution", amount: -40, date: period.start_date)
+    contributions = -> { InvestmentStatement.new(@family.reload, user: nil).totals(period: period).contributions }
+
+    assert_equal Money.new(40, "USD"), contributions.call
+
+    transfer = Transfer.create!(outflow_transaction: out_leg.entryable, inflow_transaction: in_leg.entryable, status: "confirmed")
+    assert_equal Money.new(0, "USD"), contributions.call, "after a confirmed link"
+
+    transfer.destroy!
+    assert_equal Money.new(40, "USD"), contributions.call, "after the link is removed"
+
+    suggestion = Transfer.create!(outflow_transaction: out_leg.entryable, inflow_transaction: in_leg.entryable)
+    assert_equal Money.new(40, "USD"), contributions.call, "a suggestion changes nothing"
+
+    suggestion.confirm!
+    assert_equal Money.new(0, "USD"), contributions.call, "after the suggestion is confirmed"
+  end
+
+  # PlaidAccount maps Plaid's investment type "cash", the type of its
+  # dividend and interest rows, to the "Other" label.
+  test "an Other cash row is neither a contribution nor a withdrawal" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+
+    create_labelled_transaction(account: account, label: "Other", amount: -25, date: period.start_date)
+    create_labelled_transaction(account: account, label: "Other", amount: 10, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+  end
+
+  # SimpleFIN writes every investment-account activity, buys and sales
+  # included, as an unlabelled standard Transaction.
+  test "an unlabelled cash row is neither a contribution nor a withdrawal" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+
+    create_labelled_transaction(account: account, label: nil, amount: 500, date: period.start_date)
+    create_labelled_transaction(account: account, label: nil, amount: -300, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+  end
+
+  # A link written without Transfer::Creator or #confirm! (an import, an
+  # older row) can leave both legs standard and unlabelled. Between two
+  # accounts on the card such a pair counts on neither side; from a bank
+  # account outside it, the investment leg is still a contribution.
+  test "a confirmed transfer with unlabelled standard legs counts only when its other leg is off the card" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    from = create_investment_account(balance: 1000)
+    to = create_investment_account(balance: 1000)
+    checking = @family.accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
+
+    link = lambda do |out_account, in_account, label, amount|
+      out_leg = create_labelled_transaction(account: out_account, label: label, amount: amount, date: period.start_date)
+      in_leg = create_labelled_transaction(account: in_account, label: label, amount: -amount, date: period.start_date)
+      Transfer.create!(outflow_transaction: out_leg.entryable, inflow_transaction: in_leg.entryable, status: "confirmed")
+      assert_equal "standard", in_leg.entryable.reload.kind, "precondition: the link did not change the leg's kind"
+    end
+
+    link.call(from, to, nil, 40)
+    link.call(from, to, "Other", 41)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+
+    link.call(checking, to, nil, 300)
+
+    totals = InvestmentStatement.new(@family).totals(period: period)
+
+    assert_equal Money.new(300, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+  end
+
+  # A security moved in from another account is internal to a scope holding
+  # both legs. Two opposite legs in two other accounts still make one
+  # counterpart: the lookup is grouped, so the moved-in leg is read once and
+  # neither the buys nor the trade count grow.
+  #
+  # Withdrawals is not asserted: it reads 0 here although ten shares left the
+  # scope net. The classifier asks whether an opposite leg exists, not how
+  # many legs pair up, so the second source leg is internal too. That is a
+  # known limit of the classifier, not the intended answer.
+  test "a security transfer with two opposite legs in scope is read once" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    target = create_investment_account(balance: 1000)
+    source_a = create_investment_account(balance: 1000)
+    source_b = create_investment_account(balance: 1000)
+    security = create_portfolio_security
+    date = period.start_date
+
+    create_portfolio_trade(account: target, security: security, qty: 10, price: 50, label: "Transfer", date: date)
+    create_portfolio_trade(account: source_a, security: security, qty: -10, price: 50, label: "Transfer", date: date)
+    create_portfolio_trade(account: source_b, security: security, qty: -10, price: 50, label: "Transfer", date: date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(500, "USD"), totals.buys
+    assert_equal Money.new(1000, "USD"), totals.sells
+    assert_equal 3, totals.trades_count
+  end
+
+  # With its Cash account linked, Trade Republic books each trade's cash on
+  # that account and links it to the Portfolio account as a confirmed
+  # transfer. The Cash account is part of the broker, so these are trade
+  # settlements, not money added or taken out.
+  test "Trade Republic buys and sales settled on its Cash account are neither contributions nor withdrawals" do
+    portfolio, cash = create_split_trade_republic_connection
+    sync_trade_republic(portfolio, [
+      trade_republic_order(id: "evt_buy", quantity: "2.0", signed_amount: -1024.92, date: "2026-07-15"),
+      trade_republic_order(id: "evt_sell", quantity: "-1.0", signed_amount: 529.0, date: "2026-07-20")
+    ])
+    sync_trade_republic(cash, [])
+    assert_equal 2, Transfer.confirmed.count, "precondition: both settlements are linked to the portfolio"
+
+    totals = InvestmentStatement.new(@family.reload).totals(period: july_2026)
+
+    assert_equal Money.new(0, "EUR"), totals.contributions
+    assert_equal Money.new(0, "EUR"), totals.withdrawals
+    assert_equal 2, totals.trades_count
+    assert_equal Money.new(1024.92, "EUR"), totals.buys
+  end
+
+  # The money enters the broker once, when it reaches the Cash account from
+  # the user's bank. The buy it then funds moves it within the broker. Income
+  # Trade Republic books on the Cash account is the portfolio's income, and
+  # spending from it is not read as a withdrawal, as on any other cash row.
+  test "a bank deposit into Trade Republic Cash counts once, not again when it buys shares" do
+    portfolio, cash = create_split_trade_republic_connection
+    bank = @family.accounts.create!(name: "Bank", balance: 5000, currency: "EUR", accountable: Depository.new)
+    bank_leg = create_labelled_transaction(account: bank, label: nil, amount: 2000, date: Date.new(2026, 7, 10))
+
+    sync_trade_republic(portfolio, [ trade_republic_order(id: "evt_buy", quantity: "2.0", signed_amount: -800, date: "2026-07-15") ])
+    sync_trade_republic(cash, [
+      { id: "evt_deposit", timestamp: "2026-07-10T10:00:00Z", category: "PAYMENT_RECEIVED", detail: { amount: "2000.00", currency: "EUR" } },
+      { id: "evt_dividend", timestamp: "2026-07-18T10:00:00Z", category: "DIVIDEND", detail: { amount: "12.50", currency: "EUR" } },
+      { id: "evt_card", timestamp: "2026-07-19T10:00:00Z", category: "POC_CREATED", eventType: "CARD_TRANSACTION", title: "Bakery", detail: { amount: "4.20", currency: "EUR" } }
+    ])
+    cash_account = cash.current_account
+    deposit = cash_account.entries.find_by!(external_id: "trade_republic_event_evt_deposit")
+    # As auto-matching suggests it and the user then confirms it.
+    Transfer.create!(inflow_transaction: deposit.entryable, outflow_transaction: bank_leg.entryable).confirm!
+
+    totals = InvestmentStatement.new(@family.reload).totals(period: july_2026)
+
+    assert_equal Money.new(2000, "EUR"), totals.contributions
+    assert_equal Money.new(0, "EUR"), totals.withdrawals
+    assert_equal Money.new(800, "EUR"), totals.buys
+    assert_equal Money.new(12.5, "EUR"), totals.dividends
+  end
+
+  # Only a broker that settles trades on a cash account of its own is read
+  # with it. A bank connection holding both a checking and a brokerage
+  # account keeps them apart, so a deposit from that checking account is
+  # still a contribution.
+  test "a checking account on the same connection as a brokerage account stays off the card" do
+    item = PlaidItem.create!(family: @family, plaid_id: "item_#{SecureRandom.hex(4)}", access_token: "token", name: "Bank")
+    brokerage = create_investment_account(balance: 1000)
+    checking = @family.accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
+    { brokerage => "investment", checking => "depository" }.each do |account, type|
+      plaid_account = item.plaid_accounts.create!(name: account.name, plaid_id: SecureRandom.hex(4), plaid_type: type, currency: "USD", current_balance: account.balance)
+      AccountProvider.create!(account: account, provider: plaid_account)
+    end
+    create_linked_transfer(family: @family, from: checking, to: brokerage, amount: 500, date: Date.current)
+
+    totals = @statement.totals(period: Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month))
+
+    assert_equal Money.new(500, "USD"), totals.contributions
+  end
+
+  # Transfer checks the signs of its legs only when it is saved, so a leg
+  # whose amount later changes sign (a provider re-sync writes it again) can
+  # become another transfer's leg on the other side. The leg is still one
+  # withdrawal.
+  test "a transaction that became another transfer's leg after a sign change counts once" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+    checking = @family.accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
+    savings = @family.accounts.create!(name: "Savings", balance: 5000, currency: "USD", accountable: Depository.new)
+
+    leg = create_linked_transfer(family: @family, from: checking, to: account, amount: 100, date: period.start_date).inflow_transaction.entry
+    leg.update!(amount: 100)
+    savings_leg = create_labelled_transaction(account: savings, label: nil, amount: -100, kind: "funds_movement", date: period.start_date)
+    Transfer.create!(outflow_transaction: leg.entryable, inflow_transaction: savings_leg.entryable, status: "confirmed")
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(100, "USD"), totals.withdrawals
+    assert_equal Money.new(0, "USD"), totals.contributions
+  end
+
+  # A leg whose sign flips with no second transfer to take its place keeps
+  # its link: the sign only chooses between transfers, it never drops one.
+  test "a transfer between two investment accounts stays internal when a leg changes sign" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    from = create_investment_account(balance: 1000)
+    to = create_investment_account(balance: 1000)
+    transfer = create_linked_transfer(family: @family, from: from, to: to, amount: 200, date: period.start_date)
+
+    transfer.inflow_transaction.entry.update!(amount: 200)
+    totals = @statement.totals(period: period)
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals, "one leg flipped"
+
+    # A provider whose sign convention inverts both legs.
+    transfer.outflow_transaction.entry.update!(amount: -200)
+    totals = @statement.totals(period: period)
+    assert_equal Money.new(0, "USD"), totals.contributions, "both legs flipped"
+    assert_equal Money.new(0, "USD"), totals.withdrawals, "both legs flipped"
+  end
+
+  # A re-sync that inverts a settlement's sign writes the Cash leg and its
+  # Portfolio counterpart (always the Cash leg's negation) together, and
+  # #link_settlement_counterpart! leaves an existing link as it is.
+  test "a Trade Republic settlement whose amounts were negated together is still internal" do
+    portfolio, cash = create_split_trade_republic_connection
+    sync_trade_republic(portfolio, [ trade_republic_order(id: "evt_buy", quantity: "2.0", signed_amount: -500, date: "2026-07-15") ])
+    sync_trade_republic(cash, [])
+    transfer = Transfer.confirmed.sole
+    [ transfer.inflow_transaction.entry, transfer.outflow_transaction.entry ].each { |entry| entry.update!(amount: -entry.amount) }
+
+    totals = InvestmentStatement.new(@family.reload).totals(period: july_2026)
+
+    assert_equal Money.new(0, "EUR"), totals.contributions
+    assert_equal Money.new(0, "EUR"), totals.withdrawals
+  end
+
+  # Trade Republic Cash has an IBAN and a card, and many users run it as
+  # their current account. A card bill or a loan instalment paid from it is
+  # spending, as the card purchases on it are; a transfer to the user's bank
+  # still takes money out of the broker.
+  test "credit card and loan payments from Trade Republic Cash are not withdrawals" do
+    portfolio, cash = create_split_trade_republic_connection
+    sync_trade_republic(portfolio, [])
+    sync_trade_republic(cash, [])
+    cash_account = cash.current_account
+    card = @family.accounts.create!(name: "Card", balance: 1000, currency: "EUR", accountable: CreditCard.new)
+    loan = @family.accounts.create!(name: "Loan", balance: 10000, currency: "EUR", accountable: Loan.new)
+    bank = @family.accounts.create!(name: "Bank", balance: 1000, currency: "EUR", accountable: Depository.new)
+    date = Date.new(2026, 7, 20)
+    create_linked_transfer(family: @family, from: cash_account, to: card, amount: 800, date: date)
+    create_linked_transfer(family: @family, from: cash_account, to: loan, amount: 400, date: date)
+    create_linked_transfer(family: @family, from: cash_account, to: bank, amount: 300, date: date)
+    assert_equal %w[cc_payment funds_movement loan_payment],
+      cash_account.entries.where(entryable_type: "Transaction").map { |entry| entry.entryable.kind }.sort, "precondition: the kinds Transfer::Creator gives"
+
+    totals = InvestmentStatement.new(@family.reload).totals(period: july_2026)
+
+    assert_equal Money.new(300, "EUR"), totals.withdrawals
+    assert_equal Money.new(0, "EUR"), totals.contributions
+
+    # A label the user sets still decides.
+    cash_account.entries.joins("JOIN transactions ON transactions.id = entries.entryable_id")
+      .find_by!(transactions: { kind: "cc_payment" }).entryable.update!(investment_activity_label: "Withdrawal")
+    assert_equal Money.new(1100, "EUR"), InvestmentStatement.new(@family.reload).totals(period: july_2026).withdrawals
+  end
+
+  # Only the settlement account is read as a current account. A credit card
+  # paid from a brokerage account still takes money out of it.
+  test "a credit card payment from an investment account is a withdrawal" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+    card = @family.accounts.create!(name: "Card", balance: 1000, currency: "USD", accountable: CreditCard.new)
+    create_linked_transfer(family: @family, from: account, to: card, amount: 250, date: period.start_date)
+
+    assert_equal Money.new(250, "USD"), @statement.totals(period: period).withdrawals
+  end
+
+  # Totals used to turn JIT off with SET LOCAL inside a savepoint. RELEASE
+  # does not undo SET LOCAL, so a caller already in a transaction ran the
+  # rest of it with JIT off.
+  test "totals leave the jit setting of the caller's transaction as it was" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+    create_labelled_transaction(account: account, label: "Contribution", amount: -100, date: period.start_date)
+    connection = ActiveRecord::Base.connection
+
+    ActiveRecord::Base.transaction do
+      before = connection.select_value("SHOW jit")
+      assert_equal Money.new(100, "USD"), @statement.totals(period: period).contributions
+      assert_equal before, connection.select_value("SHOW jit")
+    end
+  end
+
+  # The classifier's security-transfer check used to be a correlated EXISTS
+  # the planner priced per row against every other row, so its estimate grew
+  # with the square of the entries: these 4,500 trades put it near 300,000,
+  # past jit_above_cost, and JIT compilation then took longer than the
+  # query. The grouped join keeps it in the low thousands.
+  test "the totals query is planned below jit_above_cost" do
+    accounts = Array.new(3) { create_investment_account(balance: 1000) }
+    security = create_portfolio_security
+    now = Time.current
+    trades = Array.new(4500) do |n|
+      { id: SecureRandom.uuid, security_id: security.id, qty: n.even? ? 2 : -1, price: 10, currency: "USD",
+        investment_activity_label: n % 3 == 0 ? "Transfer" : "Buy", created_at: now, updated_at: now }
+    end
+    Trade.insert_all!(trades)
+    Entry.insert_all!(trades.each_with_index.map do |trade, n|
+      { account_id: accounts[n % 3].id, entryable_type: "Trade", entryable_id: trade[:id], amount: trade[:qty] * 10,
+        currency: "USD", date: Date.current - (n / 3) % 360, name: "Trade", created_at: now, updated_at: now }
+    end)
+    connection = ActiveRecord::Base.connection
+    connection.execute("ANALYZE entries, trades, transactions, transfers")
+
+    sql = InvestmentStatement::Totals.new(@family, account_ids: accounts.map(&:id), date_range: 1.year.ago.to_date..Date.current).send(:query_sql)
+    cost = JSON.parse(connection.select_value("EXPLAIN (FORMAT JSON) #{sql}")).first.dig("Plan", "Total Cost")
+
+    assert_operator cost, :<, connection.select_value("SHOW jit_above_cost").to_f
   end
 
   test "current_holdings memoizes so repeated dashboard-style calls issue a single query" do
@@ -728,7 +1317,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     period = Period.last_30_days
 
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    dummy_result = { contributions: 0, withdrawals: 0, dividends: 0, interest: 0, trades_count: 0 }
+    dummy_result = { contributions: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0, interest: 0, trades_count: 0 }
     InvestmentStatement::Totals.expects(:new).twice.returns(stub(call: dummy_result))
 
     statement = InvestmentStatement.new(@family)
@@ -738,7 +1327,1040 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     InvestmentStatement.new(@family.reload).totals(period: period)
   end
 
+  test "totals cache invalidates when an exchange rate is stored" do
+    create_investment_account(balance: 500)
+    period = Period.last_30_days
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    dummy_result = { contributions: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0, interest: 0, trades_count: 0 }
+    InvestmentStatement::Totals.expects(:new).twice.returns(stub(call: dummy_result))
+
+    InvestmentStatement.new(@family).totals(period: period)
+
+    ExchangeRate.create!(from_currency: "KRW", to_currency: "USD", date: Date.current, rate: 0.00075)
+    InvestmentStatement.new(@family.reload).totals(period: period)
+  end
+
+  # Two parcels of one security, materialised the way a sync does: 60 bought on
+  # 2024-01-10 at $12 and 40 on 2024-03-05 at $20 (blended $15.20), then 40 sold
+  # on 2024-06-01 at $25 and priced at $30 the day after. Average cost relieves
+  # the sale at the blend, so every figure below follows from $15.20, not from
+  # either parcel's own price.
+  test "investment statement figures on the two-parcel fixture" do
+    travel_to Time.zone.local(2024, 6, 2, 12) do
+      account, security, sale = materialize_two_parcel_example(first_parcel_label: "Buy")
+
+      assert_equal 12, cost_basis_on(account, security, Date.new(2024, 3, 4)), "the first parcel alone"
+      assert_equal BigDecimal("15.2"), cost_basis_on(account, security, Date.new(2024, 5, 31)), "both parcels, before the sale"
+      assert_equal BigDecimal("15.2"), cost_basis_on(account, security, Date.new(2024, 6, 1)), "the sale relieves at the blend"
+
+      holding = @statement.current_holdings.first
+      assert_equal 60, holding.qty
+      assert_equal Money.new(BigDecimal("15.2"), "USD"), holding.avg_cost
+      # 60 x $30 = $1,800 against 60 x $15.20 = $912.
+      assert_equal Money.new(1800, "USD"), holding.trend.current
+      assert_equal Money.new(912, "USD"), holding.trend.previous
+      assert_equal 888, @statement.unrealized_gains
+
+      # 40 x $25 = $1,000 against 40 x $15.20 = $608.
+      gain = sale.realized_gain_loss
+      assert_equal Money.new(1000, "USD"), gain.current
+      assert_equal Money.new(608, "USD"), gain.previous
+      assert_equal Money.new(392, "USD"), gain.value
+    end
+  end
+
+  # The same fixture with the first parcel transferred in rather than bought.
+  # Its cost is unknown, and today that makes the whole position unknown on
+  # every date it is held: the $20 parcel's own price is not applied to the
+  # transferred units, and the sale has no realized gain.
+  test "investment statement figures on the two-parcel fixture with the first parcel transferred in" do
+    travel_to Time.zone.local(2024, 6, 2, 12) do
+      account, security, sale = materialize_two_parcel_example(first_parcel_label: Trade::TRANSFER_LABEL)
+
+      assert_nil cost_basis_on(account, security, Date.new(2024, 3, 4))
+      assert_nil cost_basis_on(account, security, Date.new(2024, 5, 31)), "not the $20 parcel's price"
+      assert_nil cost_basis_on(account, security, Date.new(2024, 6, 2))
+
+      holding = @statement.current_holdings.first
+      assert_equal 60, holding.qty
+      assert_nil holding.avg_cost
+      assert_nil holding.trend
+      assert_equal 0, @statement.unrealized_gains
+
+      assert_nil sale.realized_gain_loss
+    end
+  end
+
+  # ---------------------------------------------- allocation by classification
+
+  test "allocation groups by asset class, and cash counts as liquidity" do
+    account = create_investment_account(balance: 3000, cash_balance: 1000)
+    equity = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    bond = create_classified_security(asset_class: "fixed_income", asset_sub_class: "bond")
+    Holding.create!(account: account, security: equity, date: Date.current, qty: 1, price: 1200, amount: 1200, currency: "USD")
+    Holding.create!(account: account, security: bond, date: Date.current, qty: 1, price: 800, amount: 800, currency: "USD")
+
+    segments = @statement.allocation_by("asset_class").index_by(&:id)
+
+    assert_equal %w[equity fixed_income liquidity], segments.keys.sort
+    assert_equal 1200, segments["equity"].amount.amount
+    assert_equal 800, segments["fixed_income"].amount.amount
+    assert_equal 1000, segments["liquidity"].amount.amount, "the account's cash is liquidity"
+  end
+
+  # The bucket has to be a real segment: a portfolio of unclassified
+  # securities is told it has nothing classified yet rather than handed an
+  # empty list a caller would read as "nothing to show".
+  test "an entirely unclassified portfolio gets one Unclassified segment, not an empty list" do
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    security = create_classified_security(asset_class: nil, asset_sub_class: nil)
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    segments = @statement.allocation_by("asset_class")
+
+    assert_equal 1, segments.length
+    assert_equal InvestmentStatement::UNCLASSIFIED, segments.first.id
+    assert_equal 1000, segments.first.amount.amount
+    assert_in_delta 100, segments.first.weight, 0.01
+  end
+
+  # A cash balance is liquidity, and it is cash as a sub-class -- but it has
+  # no sector and no region, and putting it in one would invent an exposure
+  # the family does not have.
+  test "cash lands in liquidity by asset class and in Unclassified by sector" do
+    account = create_investment_account(balance: 1000, cash_balance: 1000)
+
+    by_class = @statement.allocation_by("asset_class").index_by(&:id)
+    by_sector = @statement.allocation_by("sector").index_by(&:id)
+    by_sub_class = @statement.allocation_by("asset_sub_class").index_by(&:id)
+    by_region = @statement.allocation_by("region").index_by(&:id)
+
+    assert_equal 1000, by_class["liquidity"].amount.amount
+    assert_equal 1000, by_sub_class["cash"].amount.amount
+    assert_equal 1000, by_sector[InvestmentStatement::UNCLASSIFIED].amount.amount,
+                 "cash was given a sector it does not have"
+    assert_equal 1000, by_region[InvestmentStatement::UNCLASSIFIED].amount.amount,
+                 "cash was given a region it does not have"
+  end
+
+  # A non-primary-currency cash POSITION is a real holding -- Security.cash_for
+  # creates one per currency -- and its classification columns may be empty.
+  # Reading the column alone would file the family's euros under Unclassified
+  # while the account's own cash balance sits under Liquidity: two answers for
+  # the same money on one chart.
+  #
+  # The columns are emptied with `update_columns` so the test exercises the
+  # `cash?` rule whatever a callback or default would otherwise put there.
+  test "a cash holding is liquidity, whatever its classification columns say" do
+    account = create_investment_account(balance: 2000, cash_balance: 0)
+    cash_security = Security.create!(ticker: "CASH-EUR-#{SecureRandom.hex(3)}", kind: "cash", offline: true)
+    cash_security.update_columns(asset_class: nil, asset_sub_class: nil, classification_source: nil)
+    assert_nil cash_security.reload.asset_class, "precondition: the taxonomy is empty here"
+    Holding.create!(account: account, security: cash_security, date: Date.current,
+                    qty: 1, price: 2000, amount: 2000, currency: "USD")
+
+    by_class = @statement.allocation_by("asset_class").index_by(&:id)
+    by_sub = @statement.allocation_by("asset_sub_class").index_by(&:id)
+
+    assert_equal 2000, by_class["liquidity"]&.amount&.amount,
+                 "a cash holding was filed as Unclassified"
+    assert_equal 2000, by_sub["cash"]&.amount&.amount
+
+    # And the drill-down agrees, or the parent row and its children disagree.
+    children = @statement.allocation_children("asset_class", "liquidity").index_by(&:id)
+    assert_equal 2000, children["cash"]&.amount&.amount
+  end
+
+  test "allocation groups by sector and region from the security's own columns" do
+    account = create_investment_account(balance: 2000, cash_balance: 0)
+    tech = create_classified_security(sector: "Technology", region: "north_america")
+    bank = create_classified_security(sector: "Financials", region: "europe")
+    Holding.create!(account: account, security: tech, date: Date.current, qty: 1, price: 1500, amount: 1500, currency: "USD")
+    Holding.create!(account: account, security: bank, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+
+    by_sector = @statement.allocation_by("sector").index_by(&:id)
+    by_region = @statement.allocation_by("region").index_by(&:id)
+
+    assert_equal 1500, by_sector["Technology"].amount.amount
+    assert_equal 500, by_sector["Financials"].amount.amount
+    assert_equal 1500, by_region["north_america"].amount.amount
+    assert_equal 500, by_region["europe"].amount.amount
+  end
+
+  test "a partly classified portfolio reports both the classified and the rest" do
+    account = create_investment_account(balance: 2000, cash_balance: 0)
+    known = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    unknown = create_classified_security(asset_class: nil)
+    Holding.create!(account: account, security: known, date: Date.current, qty: 1, price: 1500, amount: 1500, currency: "USD")
+    Holding.create!(account: account, security: unknown, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+
+    segments = @statement.allocation_by("asset_class").index_by(&:id)
+
+    assert_equal 1500, segments["equity"].amount.amount
+    assert_equal 500, segments[InvestmentStatement::UNCLASSIFIED].amount.amount
+    assert_in_delta 100, segments.values.sum(&:weight), 0.02, "weights must still sum to 100"
+  end
+
+  # The drill-down: asset class -> sub-class -> holdings.
+  test "an asset class expands to its sub-classes, and a sub-class to its holdings" do
+    account = create_investment_account(balance: 3000, cash_balance: 0)
+    stock = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    etf = create_classified_security(asset_class: "equity", asset_sub_class: "etf")
+    Holding.create!(account: account, security: stock, date: Date.current, qty: 1, price: 2000, amount: 2000, currency: "USD")
+    Holding.create!(account: account, security: etf, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    sub_classes = @statement.allocation_children("asset_class", "equity").index_by(&:id)
+
+    assert_equal %w[etf stock], sub_classes.keys.sort
+    assert_equal 2000, sub_classes["stock"].amount.amount
+    assert_equal 1000, sub_classes["etf"].amount.amount
+
+    holdings = @statement.allocation_children("asset_sub_class", "stock")
+
+    assert_equal 1, holdings.length
+    assert_equal 2000, holdings.first.amount.amount
+  end
+
+  # Expanding Liquidity has to show the cash, or the children contradict the
+  # parent row's amount.
+  test "Liquidity expands to the account cash it is made of" do
+    create_investment_account(balance: 1000, cash_balance: 1000)
+
+    children = @statement.allocation_children("asset_class", "liquidity").index_by(&:id)
+
+    assert_equal 1000, children["cash"].amount.amount
+  end
+
+  # The bottom level under Cash lists the account cash its parent counts, as ONE
+  # position: two accounts' cash is one exposure, not two rows at half weight.
+  # Asked with and without a parent, because Cash is reached both from
+  # Liquidity (asset class first) and directly (sub-class first).
+  test "two accounts' cash is one position under Cash" do
+    create_investment_account(balance: 1000, cash_balance: 1000)
+    create_investment_account(balance: 500, cash_balance: 500)
+
+    [ nil, "liquidity" ].each do |parent|
+      rows = @statement.allocation_children("asset_sub_class", "cash", parent: parent)
+
+      assert_equal [ "cash" ], rows.map(&:id), "parent=#{parent.inspect}: account cash was not one position"
+      assert_equal 1500, rows.first.amount.amount, "parent=#{parent.inspect}: the position was not both accounts' cash"
+      assert_equal I18n.t("models.investment_statement.cash"), rows.first.name
+    end
+  end
+
+  # Cash held in another currency converts into the family currency at every
+  # level that counts it: 1,000 EUR at 1.1 is 1,100 USD in Liquidity and in the
+  # Cash position below it, not 1,000.
+  test "account cash in another currency converts at every level" do
+    create_investment_account(balance: 1000, cash_balance: 1000, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+
+    liquidity = @statement.allocation_by("asset_class").find { |s| s.id == "liquidity" }
+    cash_sub = @statement.allocation_children("asset_class", "liquidity").find { |s| s.id == "cash" }
+    position = @statement.allocation_children("asset_sub_class", "cash", parent: "liquidity").sole
+
+    [ liquidity, cash_sub, position ].each_with_index do |segment, level|
+      assert_equal 1100, segment.amount.amount, "level #{level}: EUR cash was not converted"
+    end
+  end
+
+  # The parent counts each account's cash only where it is positive, so the
+  # child does too: +1,000 and -500 is 1,000 at both levels, not a netted 500.
+  # The second account's balance is 500 below the position it holds, which is
+  # what makes its cash negative.
+  test "negative account cash is left out below as above" do
+    create_investment_account(balance: 1000, cash_balance: 1000)
+    margin = create_investment_account(balance: 0, cash_balance: -500)
+    Holding.create!(account: margin, security: create_classified_security(asset_class: "equity", asset_sub_class: "stock"),
+                    date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+
+    parent = @statement.allocation_children("asset_class", "liquidity").find { |r| r.id == "cash" }
+    rows = @statement.allocation_children("asset_sub_class", "cash", parent: "liquidity")
+
+    assert_equal 1000, parent.amount.amount, "precondition: the parent counts positive cash only"
+    assert_equal [ 1000 ], rows.map { |r| r.amount.amount }, "the child cash row disagreed with its parent"
+  end
+
+  # Account cash sits on Liquidity/Cash only.
+  test "account cash is not listed under a cash sub-class reached from another asset class" do
+    create_investment_account(balance: 1000, cash_balance: 1000)
+    assert_not_empty @statement.allocation_children("asset_sub_class", "cash", parent: "liquidity"),
+                     "precondition: the cash is listed under Liquidity/Cash"
+
+    assert_empty @statement.allocation_children("asset_sub_class", "cash", parent: "equity"),
+                 "account cash was filed under equity"
+    assert_empty @statement.allocation_children("asset_sub_class", "stock", parent: "liquidity"),
+                 "account cash was listed outside the cash sub-class"
+  end
+
+  # One security held in a USD and a EUR account is one position of its whole
+  # family-currency value, as `allocation` and `top_holdings` already report it.
+  test "a security held in two accounts and two currencies is one row of the summed value" do
+    usd = create_investment_account(balance: 1000, cash_balance: 0, currency: "USD")
+    eur = create_investment_account(balance: 1000, cash_balance: 0, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    etf = create_classified_security(asset_class: "equity", asset_sub_class: "etf")
+    Holding.create!(account: usd, security: etf, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+    Holding.create!(account: eur, security: etf, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "EUR")
+
+    rows = @statement.allocation_children("asset_sub_class", "etf", parent: "equity")
+
+    assert_equal [ etf.id ], rows.map(&:id), "the security was listed once per account"
+    assert_in_delta 2100, rows.first.amount.amount, 0.0001, "1,000 USD plus 1,000 EUR at 1.1 is 2,100"
+    assert_in_delta 100, rows.first.weight, 0.01
+  end
+
+  # At every level, each bucket's children add up to the bucket, from both
+  # entry points of the ladder, on a portfolio with every kind of row the
+  # bottom level can hold: account cash in several accounts (one negative), a
+  # cash security, and one security across two accounts.
+  test "every allocation level sums to the bucket above it" do
+    first = create_investment_account(balance: 3000, cash_balance: 700)
+    second = create_investment_account(balance: 1000, cash_balance: 300)
+    create_investment_account(balance: 0, cash_balance: -200)
+    stock = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    bond = create_classified_security(asset_class: "fixed_income", asset_sub_class: "bond")
+    cash_security = Security.create!(ticker: "CASH-EUR-#{SecureRandom.hex(3)}", kind: "cash", offline: true)
+    Holding.create!(account: first, security: stock, date: Date.current, qty: 1, price: 1200, amount: 1200, currency: "USD")
+    Holding.create!(account: second, security: stock, date: Date.current, qty: 1, price: 400, amount: 400, currency: "USD")
+    Holding.create!(account: first, security: bond, date: Date.current, qty: 1, price: 800, amount: 800, currency: "USD")
+    Holding.create!(account: first, security: cash_security, date: Date.current, qty: 1, price: 300, amount: 300, currency: "USD")
+
+    @statement.allocation_by("asset_class").each do |klass|
+      subs = @statement.allocation_children("asset_class", klass.id)
+      assert_in_delta klass.amount.amount, subs.sum { |s| s.amount.amount }, 0.0001, "#{klass.id}'s sub-classes did not sum to it"
+
+      subs.each do |sub|
+        positions = @statement.allocation_children("asset_sub_class", sub.id, parent: klass.id)
+        assert_in_delta sub.amount.amount, positions.sum { |p| p.amount.amount }, 0.0001,
+                        "#{klass.id}/#{sub.id}'s positions did not sum to it"
+        assert_equal positions.map(&:id).uniq, positions.map(&:id), "#{klass.id}/#{sub.id} listed a position twice"
+      end
+    end
+
+    @statement.allocation_by("asset_sub_class").each do |sub|
+      positions = @statement.allocation_children("asset_sub_class", sub.id)
+      assert_in_delta sub.amount.amount, positions.sum { |p| p.amount.amount }, 0.0001,
+                      "#{sub.id}'s positions did not sum to it from the sub-class grouping"
+    end
+  end
+
+  # Negative control: with no account cash and each security in one account,
+  # the bottom level is the holdings as they are, row for row.
+  test "a portfolio with no account cash and one holding per security lists its holdings unchanged" do
+    account = create_investment_account(balance: 3000, cash_balance: 0)
+    big = create_classified_security(name: "Big", asset_class: "equity", asset_sub_class: "stock")
+    small = create_classified_security(name: "Small", asset_class: "equity", asset_sub_class: "stock")
+    Holding.create!(account: account, security: big, date: Date.current, qty: 1, price: 2000, amount: 2000, currency: "USD")
+    Holding.create!(account: account, security: small, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    rows = @statement.allocation_children("asset_sub_class", "stock", parent: "equity")
+
+    assert_equal [ [ big.id, "Big", 2000, BigDecimal("66.67") ], [ small.id, "Small", 1000, BigDecimal("33.33") ] ],
+                 rows.map { |r| [ r.id, r.name, r.amount.amount, r.weight ] }
+    assert_empty @statement.allocation_children("asset_sub_class", "cash", parent: "liquidity"),
+                 "a cash position appeared with no cash to show"
+  end
+
+  # A sector has no sub-sector here, and inventing one would be a different
+  # chart. These render flat.
+  test "the groupings that do not nest return no children" do
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    security = create_classified_security(sector: "Technology", region: "north_america")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    %w[sector region currency account security].each do |grouping|
+      assert_empty @statement.allocation_children(grouping, "Technology"), "#{grouping} invented a child level"
+    end
+  end
+
+  # A sub-class name is not unique across asset classes, so the bottom level is
+  # scoped to the branch it hangs from. Without it, opening equity's
+  # `unclassified` also lists fixed income's, and the level reports more money
+  # than the child above it.
+  test "an unclassified sub-class opens onto its own asset class only" do
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    # asset_class set, asset_sub_class left blank -> UNCLASSIFIED in both classes.
+    share = create_classified_security(ticker: "UEQ1", asset_class: "equity")
+    bond = create_classified_security(ticker: "UFI1", asset_class: "fixed_income")
+    Holding.create!(account: account, security: share, date: Date.current, qty: 1, price: 600, amount: 600, currency: "USD")
+    Holding.create!(account: account, security: bond, date: Date.current, qty: 1, price: 400, amount: 400, currency: "USD")
+
+    rows = @statement.allocation_children("asset_sub_class", InvestmentStatement::UNCLASSIFIED, parent: "equity")
+
+    assert_equal [ share.id ], rows.map(&:id),
+                 "fixed income's unclassified position leaked into equity's"
+    assert_equal 600, rows.sum { |r| r.amount.amount }.to_i,
+                 "the bottom level reported more than its parent holds"
+  end
+
+  # `build_segments` drops a non-positive ROW, which is right for a row but
+  # makes the levels disagree: a sub-class holding +1,000 and -500 nets to 500
+  # one level up, while the bottom level -- where they are two rows -- drops the
+  # negative and reports 1,000. A negative amount is corrupt data (upsert_all
+  # bypasses Holding's validations), so it is excluded before anything sums.
+  test "a corrupt negative holding is excluded at every level, not just the bottom" do
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    good = create_classified_security(ticker: "POS1", asset_class: "equity", asset_sub_class: "stock")
+    bad = create_classified_security(ticker: "NEG1", asset_class: "equity", asset_sub_class: "stock")
+    Holding.create!(account: account, security: good, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+    corrupt = Holding.create!(account: account, security: bad, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+    # Holding validates a non-negative amount, so reproduce the only way one
+    # lands in production: a write that skips validation.
+    corrupt.update_columns(amount: -500)
+
+    top = @statement.allocation_by("asset_class")
+    equity = top.find { |r| r.id == "equity" }
+    parent = @statement.allocation_children("asset_class", "equity")
+    stock = parent.find { |r| r.id == "stock" }
+    bottom = @statement.allocation_children("asset_sub_class", "stock", parent: "equity")
+
+    assert_equal 1000, equity.amount.amount.to_i, "the top-level segment netted the corrupt row in"
+    assert_equal 1000, stock.amount.amount.to_i, "the negative row netted against the good one a level up"
+    assert_equal 1000, bottom.sum { |r| r.amount.amount }.to_i, "the bottom level disagreed with its parent"
+    assert_equal [ good.id ], bottom.map(&:id), "the corrupt position was still listed"
+  end
+
+  test "every allocation grouping measures the same portfolio" do
+    # One account holding securities plus cash, one all-cash: the shape the
+    # groupings could disagree on, since each reads the holdings plus each
+    # account's cash.
+    mixed = create_investment_account(balance: 10_000, cash_balance: 2_000)
+    create_investment_account(balance: 3_000, cash_balance: 3_000)
+    security = create_portfolio_security
+    Holding.create!(account: mixed, security: security, date: Date.current, qty: 80, price: 100, amount: 8_000, currency: "USD")
+
+    totals = InvestmentStatement::ALLOCATION_GROUPINGS.to_h do |by|
+      segments = @statement.allocation_by(by)
+      assert_in_delta 100.0, segments.sum(&:weight), 0.01, "#{by} weights must sum to 100"
+      [ by, segments.sum { |segment| segment.amount.amount } ]
+    end
+
+    assert_equal [ @statement.portfolio_value ], totals.values.uniq,
+      "every grouping must add up to the portfolio value: #{totals.inspect}"
+  end
+
+  # ------------------------------------------ one cash rule for every grouping
+  #
+  # Account cash is each account's balance less its allocatable holdings, in
+  # the family currency, positive only. Every grouping, and every level of the
+  # asset-class drill-down, files that one figure, so all of them sum to
+  # T = sum over accounts of max(balance, holdings).
+
+  # A balance no holding accounts for and no cash_balance explains -- a manual
+  # crypto account, an account never synced -- is cash in every grouping.
+  test "every grouping sums to the same total when an account has a balance and no holdings" do
+    coherent = create_investment_account(balance: 3000, cash_balance: 1000)
+    create_crypto_account(balance: 10_000, cash_balance: 0)
+    stock = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    Holding.create!(account: coherent, security: stock, date: Date.current, qty: 1, price: 2000, amount: 2000, currency: "USD")
+
+    assert_every_grouping_and_level_sums_to 13_000
+  end
+
+  # The adapter default writes cash_balance = balance for a provider that sends
+  # no cash figure. The holdings must not then be counted a second time.
+  test "a cash_balance that is the whole balance is not counted twice" do
+    account = create_investment_account(balance: 1500, cash_balance: 0)
+    account.update_columns(cash_balance: 1500)
+    stock = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    Holding.create!(account: account, security: stock, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    assert_every_grouping_and_level_sums_to 1500
+  end
+
+  # 1,000 EUR at 1.1 is 1,100 USD, less a 550 USD position: 550 USD of cash.
+  # Subtracting before converting gives 495; reading cash_balance gives 0. The
+  # position is provider-held, since a manual holding in another currency than
+  # its account's is not a current holding.
+  test "account cash is the residual, converted per account" do
+    account = create_investment_account(balance: 1000, cash_balance: 0, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider = AccountProvider.create!(account: account, provider: item.coinstats_accounts.create!(name: "Brokerage", currency: "EUR"))
+    stock = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    Holding.create!(account: account, security: stock, date: Date.current, qty: 1, price: 550, amount: 550, currency: "USD",
+                    account_provider: provider)
+
+    liquidity = @statement.allocation_by("asset_class").find { |s| s.id == "liquidity" }
+    cash_sub = @statement.allocation_children("asset_class", "liquidity").find { |s| s.id == "cash" }
+    position = @statement.allocation_children("asset_sub_class", "cash", parent: "liquidity").find { |s| s.id == "cash" }
+
+    [ liquidity, cash_sub, position ].each_with_index do |segment, level|
+      assert_in_delta 550, segment&.amount&.amount.to_f, 0.0001, "level #{level}"
+    end
+
+    assert_in_delta 1100, @statement.allocation_by("account").sole.amount.amount, 0.0001
+  end
+
+  # The security grouping's Cash row, the kind grouping's cash and the Cash
+  # sub-class are one figure. The third account sits below its holdings, so a
+  # global residual (1,300) would disagree with the per-account rule (1,500).
+  test "the security grouping's cash row is the same cash every grouping files" do
+    first = create_investment_account(balance: 3000, cash_balance: 1000)
+    create_investment_account(balance: 500, cash_balance: 500)
+    margin = create_investment_account(balance: 800, cash_balance: -200)
+    stock = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    Holding.create!(account: first, security: stock, date: Date.current, qty: 1, price: 2000, amount: 2000, currency: "USD")
+    Holding.create!(account: margin, security: stock, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    security_cash = @statement.allocation_by("security").find { |s| s.id == "cash" }
+    kind_cash = @statement.allocation_by("kind").find { |s| s.id == "cash" }
+    sub_class_cash = @statement.allocation_by("asset_sub_class").find { |s| s.id == "cash" }
+
+    assert_equal 1500, @statement.send(:account_cash_total)
+    [ security_cash, kind_cash, sub_class_cash ].each_with_index do |segment, index|
+      assert_equal 1500, segment&.amount&.amount, "segment #{index} did not file the account cash"
+    end
+  end
+
+  # Margin in one account cannot net against cash in another: A is 200 below
+  # its holdings, B is 500 above, so the cash is 500, not 300, and T is 2,500.
+  test "an account below its holdings contributes no cash and offsets no other account's cash" do
+    margin_case_accounts
+
+    assert_equal 500, @statement.allocation_by("asset_sub_class").find { |s| s.id == "cash" }&.amount&.amount
+    assert_equal 500, @statement.allocation_by("security").find { |s| s.id == "cash" }&.amount&.amount
+    assert_every_grouping_and_level_sums_to 2500
+
+    InvestmentStatement::ALLOCATION_GROUPINGS.each do |by|
+      assert @statement.allocation_by(by).all? { |s| s.amount.amount.positive? }, "#{by} has a non-positive segment"
+    end
+  end
+
+  # The control: balances equal holdings plus cash_balance everywhere, so
+  # balance less holdings and cash_balance are the same figure and every
+  # grouping, weight and top_holdings weight is what either source gives.
+  test "a coherent portfolio is unchanged" do
+    first = create_investment_account(balance: 3000, cash_balance: 1000)
+    second = create_investment_account(balance: 500, cash_balance: 500)
+    stock = create_classified_security(ticker: "STK646", name: "Stock", asset_class: "equity", asset_sub_class: "stock", sector: "Technology", region: "north_america")
+    bond = create_classified_security(ticker: "BND646", name: "Bond", asset_class: "fixed_income", asset_sub_class: "bond")
+    Holding.create!(account: first, security: stock, date: Date.current, qty: 1, price: 1200, amount: 1200, currency: "USD")
+    Holding.create!(account: first, security: bond, date: Date.current, qty: 1, price: 800, amount: 800, currency: "USD")
+
+    figures = ->(by) { @statement.allocation_by(by).map { |s| [ s.id, s.amount.amount.to_i, s.weight.to_f ] } }
+
+    # The security grouping ranks its Cash row by value with the securities.
+    assert_equal [ [ "cash", 1500, 42.86 ], [ stock.id, 1200, 34.29 ], [ bond.id, 800, 22.86 ] ], figures.("security")
+    assert_equal [ [ "liquidity", 1500, 42.86 ], [ "equity", 1200, 34.29 ], [ "fixed_income", 800, 22.86 ] ], figures.("asset_class")
+    assert_equal [ [ "unclassified", 2300, 65.71 ], [ "Technology", 1200, 34.29 ] ], figures.("sector")
+    assert_equal [ [ first.id, 3000, 85.71 ], [ second.id, 500, 14.29 ] ], figures.("account")
+    assert_equal [ [ "standard", 2000, 57.14 ], [ "cash", 1500, 42.86 ] ], figures.("kind")
+    assert_equal [ [ "USD", 3500, 100.0 ] ], figures.("currency")
+    assert_equal [ [ "STK646", 34.29 ], [ "BND646", 22.86 ] ], @statement.top_holdings.map { |h| [ h.ticker, h.weight.to_f ] }
+    assert_every_grouping_and_level_sums_to 3500
+  end
+
+  # A stale zero balance beside real holdings: the account shows its holdings
+  # rather than dropping out of the account grouping, and there is no cash.
+  test "a stale zero balance keeps the account in the account grouping" do
+    account = create_investment_account(balance: 0, cash_balance: 0)
+    stock = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    Holding.create!(account: account, security: stock, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    assert_equal [ [ account.id.to_s, 1000 ] ], @statement.allocation_by("account").map { |s| [ s.id, s.amount.amount ] }
+    assert_nil @statement.allocation_by("kind").find { |s| s.id == "cash" }
+    assert_nil @statement.allocation_by("security").find { |s| s.id == "cash" }
+    assert_every_grouping_and_level_sums_to 1000
+  end
+
+  # The mixed case again: a security's weight is its share of T, in
+  # top_holdings and in the allocation alike -- 1,000 of 2,500 is 40%.
+  test "top_holdings and allocation share the denominator in the mixed case" do
+    first, = margin_case_accounts
+
+    top = @statement.top_holdings.find { |h| h.ticker == first.ticker }
+    allocated = @statement.allocation_by("security").find { |s| s.id == first.id }
+
+    assert_in_delta 40.0, top.weight, 0.001
+    assert_equal top.weight, allocated.weight
+  end
+
+  # Each grouping must answer from its own column. One security with all four
+  # columns set, and a different value in each, so a grouping that is missing
+  # (and returns []) or that reads another grouping's column fails here.
+  test "every classification grouping is reachable through allocation_by" do
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    security = create_classified_security(asset_class: "equity", asset_sub_class: "stock",
+                                          sector: "Technology", region: "north_america")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    expected = { "asset_class" => "equity", "asset_sub_class" => "stock", "sector" => "Technology", "region" => "north_america" }
+    assert_empty expected.keys - InvestmentStatement::ALLOCATION_GROUPINGS
+
+    expected.each do |grouping, bucket|
+      assert_equal [ bucket ], @statement.allocation_by(grouping).map(&:id), "#{grouping} did not group by its own column"
+    end
+  end
+
+  test "allocation_by groups the portfolio by account, currency and kind with weights summing to 100" do
+    usd = create_investment_account(balance: 3000, cash_balance: 1000, currency: "USD")
+    eur = create_investment_account(balance: 2000, cash_balance: -50, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    stock = Security.create!(ticker: "AAPL", name: "Apple")
+    coin = Security.create!(ticker: "BTCUSD", name: "Bitcoin", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+    cash_security = Security.cash_for(eur)
+
+    Holding.create!(account: usd, security: stock, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+    Holding.create!(account: usd, security: coin, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+    Holding.create!(account: eur, security: stock, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "EUR")
+    Holding.create!(account: eur, security: cash_security, date: Date.current, qty: 500, price: 1, amount: 500, currency: "EUR")
+
+    by_account = @statement.allocation_by(:account)
+    assert_equal [ usd.id, eur.id ].map(&:to_s), by_account.map(&:id)
+    assert_equal Money.new(3000, "USD"), by_account.first.amount
+    assert_in_delta 100.0, by_account.sum(&:weight), 0.01
+
+    by_currency = @statement.allocation_by("currency")
+    # Account cash is balance less holdings, not cash_balance: the EUR account's
+    # 2,000 balance less its 1,500 of holdings is 500 EUR of cash, whatever its
+    # cash_balance of -50 says. USD: 1000 + 1000 holdings + 1000 cash = 3000;
+    # EUR: (1000 + 500 + 500) * 1.1 = 2200.
+    assert_equal %w[USD EUR], by_currency.map(&:id)
+    assert_equal Money.new(3000, "USD"), by_currency.first.amount
+    assert_in_delta 2200, by_currency.last.amount.amount, 0.001
+    assert_in_delta 100.0, by_currency.sum(&:weight), 0.01
+
+    by_kind = @statement.allocation_by(:kind).index_by(&:id)
+    # standard: 1000 + 1100; cash: 1000 USD account cash + 550 EUR cash
+    # security + 550 EUR account cash; crypto: 1000
+    assert_equal %w[cash crypto standard], by_kind.keys.sort
+    assert_in_delta 2100, by_kind["standard"].amount.amount, 0.001
+    assert_in_delta 2100, by_kind["cash"].amount.amount, 0.001
+    assert_in_delta 1000, by_kind["crypto"].amount.amount, 0.001
+    assert_in_delta 100.0, by_kind.values.sum(&:weight), 0.01
+  end
+
+  # The position groupings cut one portfolio three ways, so each must add up to
+  # the same money as the classification groupings. The shape they could
+  # disagree on: one security in two accounts and two currencies, account cash
+  # in both currencies, a negative cash account, a cash security and a coin.
+  # Cash goes where each grouping files it: inside its account, under its
+  # account's currency, and under the cash kind.
+  test "account, currency and kind each sum to the portfolio, with cash where each files it" do
+    usd = create_investment_account(balance: 2500, cash_balance: 500, currency: "USD")
+    eur = create_investment_account(balance: 1200, cash_balance: 200, currency: "EUR")
+    create_investment_account(balance: 0, cash_balance: -100, currency: "USD")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    stock = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    coin = Security.create!(ticker: "BTCUSD", name: "Bitcoin", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+    euro_cash = Security.cash_for(eur)
+    Holding.create!(account: usd, security: stock, date: Date.current, qty: 1, price: 1500, amount: 1500, currency: "USD")
+    Holding.create!(account: usd, security: coin, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+    Holding.create!(account: eur, security: stock, date: Date.current, qty: 1, price: 800, amount: 800, currency: "EUR")
+    Holding.create!(account: eur, security: euro_cash, date: Date.current, qty: 200, price: 1, amount: 200, currency: "EUR")
+
+    assert_equal %w[security asset_class asset_sub_class sector region account currency kind], InvestmentStatement::ALLOCATION_GROUPINGS
+
+    figures = ->(by) { @statement.allocation_by(by).map { |s| [ s.id, s.amount.amount.to_f.round(2) ] } }
+
+    # Each account at its balance: USD 1500 + 500 + 500 cash; EUR (800 + 200 + 200) * 1.1.
+    assert_equal [ [ usd.id.to_s, 2500.0 ], [ eur.id.to_s, 1320.0 ] ], figures.call("account")
+    # The two-account stock splits by the currency each position is priced in;
+    # each account's cash joins its own currency, and the negative one is left out.
+    assert_equal [ [ "USD", 2500.0 ], [ "EUR", 1320.0 ] ], figures.call("currency")
+    # The two-account stock is one standard figure (1500 + 880); cash is the euro
+    # cash security (220) plus both accounts' positive cash (500 + 220).
+    assert_equal [ [ "standard", 2380.0 ], [ "cash", 940.0 ], [ "crypto", 500.0 ] ], figures.call("kind")
+
+    portfolio = @statement.allocation_by("asset_class").sum { |s| s.amount.amount }
+    assert_in_delta 3820, portfolio, 0.001, "precondition: the classification grouping measures the whole portfolio"
+    assert_in_delta @statement.portfolio_value, portfolio, 0.001
+
+    %w[security account currency kind].each do |by|
+      segments = @statement.allocation_by(by)
+      assert_in_delta portfolio, segments.sum { |s| s.amount.amount }, 0.001, "#{by} did not add up to the portfolio"
+      assert_in_delta 100.0, segments.sum(&:weight), 0.01, "#{by} weights must sum to 100"
+      assert_empty @statement.allocation_children(by, segments.first.id), "#{by} invented a child level"
+    end
+  end
+
+  # The currency grouping is the currency a position is priced in, not the
+  # currency of the account holding it; account cash is the account's currency.
+  # Only a provider's import keeps a row priced in another currency current, so
+  # the account is provider-linked.
+  test "a position priced in another currency than its account groups under its own currency" do
+    account = create_investment_account(balance: 1600, cash_balance: 500, currency: "USD")
+    item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider = AccountProvider.create!(account: account, provider: item.coinstats_accounts.create!(name: "Brokerage", currency: "USD"))
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    asml = create_classified_security(ticker: "ASML1")
+    Holding.create!(account: account, security: asml, date: Date.current, qty: 2, price: 500, amount: 1000, currency: "EUR",
+                    account_provider: provider)
+
+    assert_equal [ [ "EUR", 1100.0 ], [ "USD", 500.0 ] ],
+                 @statement.allocation_by("currency").map { |s| [ s.id, s.amount.amount.to_f.round(2) ] }
+  end
+
+  # Same per-row rule as the classification ladder: a negative amount is corrupt
+  # data (upsert_all skips Holding's validations) and must not net against a good
+  # row before the grouping sums.
+  test "a corrupt negative holding nets into neither the currency nor the kind grouping" do
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    good = create_classified_security(ticker: "POS2")
+    bad = create_classified_security(ticker: "NEG2")
+    Holding.create!(account: account, security: good, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+    corrupt = Holding.create!(account: account, security: bad, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+    corrupt.update_columns(amount: -500)
+
+    assert_equal [ [ "USD", 1000 ] ], @statement.allocation_by("currency").map { |s| [ s.id, s.amount.amount.to_i ] }
+    assert_equal [ [ "standard", 1000 ] ], @statement.allocation_by("kind").map { |s| [ s.id, s.amount.amount.to_i ] }
+  end
+
+  # The security grouping is #allocation as segments: one per security, keyed
+  # by its id, and the cash row keyed `cash`.
+  test "allocation_by security is the allocation roll-up, cash row included" do
+    account = create_investment_account(balance: 1500, cash_balance: 500)
+    security = create_classified_security(name: "Held", asset_class: "equity")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    segments = @statement.allocation_by("security")
+
+    assert_equal [ [ security.id, "Held", 1000, BigDecimal("66.67") ], [ "cash", I18n.t("models.investment_statement.cash"), 500, BigDecimal("33.33") ] ],
+                 segments.map { |s| [ s.id, s.name, s.amount.amount.to_i, s.weight ] }
+  end
+
+  # Segments are sorted largest first in every grouping, so cash larger than a
+  # holding ranks above it here as it does under kind or account. #allocation
+  # itself still lists cash last.
+  test "the security grouping ranks the cash row by size" do
+    account = create_investment_account(balance: 4000, cash_balance: 3000)
+    security = create_classified_security(name: "Held", asset_class: "equity")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    assert_equal [ security.id, "cash" ], @statement.allocation.map { |row| row.cash? ? "cash" : row.security.id }, "precondition: allocation lists cash last"
+    assert_equal [ [ "cash", 3000 ], [ security.id, 1000 ] ],
+                 @statement.allocation_by("security").map { |s| [ s.id, s.amount.amount.to_i ] }
+  end
+
+  # A segment carries no trend, so building one must not pay for the cost-basis
+  # lookups behind it.
+  test "the security grouping computes no trends" do
+    account = create_investment_account(balance: 1500, cash_balance: 500)
+    security = create_classified_security(asset_class: "equity")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    Holding.any_instance.expects(:trend).never
+
+    assert_equal [ security.id, "cash" ], @statement.allocation_by("security").map(&:id)
+  end
+
+  # A grouping name comes from a query string, and a request without one shows
+  # the default, so anything that is not a grouping is the security roll-up
+  # rather than an error.
+  test "an unknown or missing grouping is the security roll-up" do
+    account = create_investment_account(balance: 1500, cash_balance: 500)
+    security = create_classified_security(asset_class: "equity")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+    by_security = @statement.allocation_by("security")
+    assert_not_equal by_security.map(&:id), @statement.allocation_by("asset_class").map(&:id), "precondition: the groupings differ"
+
+    [ "nonsense", nil, "" ].each do |by|
+      assert_equal by_security, @statement.allocation_by(by), "#{by.inspect} did not fall back to the security roll-up"
+    end
+    assert_equal "cash", by_security.last.id
+  end
+
+  test "previous_holdings loads the prior snapshot of every holding in one query" do
+    ira = create_investment_account(balance: 5000)
+    taxable = create_investment_account(balance: 3000)
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    msft = Security.create!(ticker: "MSFT", name: "Microsoft")
+
+    [ [ ira, aapl, 10 ], [ ira, msft, 5 ], [ taxable, aapl, 4 ] ].each do |account, security, qty|
+      Holding.create!(account: account, security: security, date: 2.days.ago.to_date, qty: qty, price: 100, amount: qty * 100, currency: "USD")
+      Holding.create!(account: account, security: security, date: 1.day.ago.to_date, qty: qty, price: 110, amount: qty * 110, currency: "USD")
+      Holding.create!(account: account, security: security, date: Date.current, qty: qty, price: 120, amount: qty * 120, currency: "USD")
+    end
+    # A holding with no prior snapshot has no day change.
+    only_today = Security.create!(ticker: "NEW", name: "New")
+    Holding.create!(account: taxable, security: only_today, date: Date.current, qty: 1, price: 50, amount: 50, currency: "USD")
+
+    @statement.current_holdings.to_a
+    queries = capture_sql_queries { @statement.previous_holdings; @statement.day_change }
+    holdings_queries = queries.grep(/FROM "?holdings"?\b/)
+
+    assert_equal 1, holdings_queries.size, "previous snapshots must come from one query, not one per holding"
+
+    previous = @statement.previous_holdings
+    current = @statement.current_holdings.index_by { |holding| [ holding.account_id, holding.security_id ] }
+    assert_equal 3, previous.size
+    assert_equal 1.day.ago.to_date, previous[current[[ ira.id, aapl.id ]].id].date
+    assert_nil previous[current[[ taxable.id, only_today.id ]].id]
+
+    # Same answer as the per-holding lookup, summed in family currency:
+    # today 19 * 120 = 2280 vs yesterday 19 * 110 = 2090.
+    day_change = @statement.day_change
+    assert_equal Money.new(2280, "USD"), day_change.current
+    assert_equal Money.new(2090, "USD"), day_change.previous
+    per_holding = @statement.current_holdings.filter_map { |h| h.day_change }
+    assert_equal per_holding.sum { |t| t.current.amount }, day_change.current.amount
+  end
+
+  test "holdings_table_rows measures a row's return over the positions whose cost basis is known" do
+    ira = create_investment_account(balance: 5000, cash_balance: 500)
+    taxable = create_investment_account(balance: 3000)
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    msft = Security.create!(ticker: "MSFT", name: "Microsoft")
+
+    Holding.create!(account: ira, security: aapl, date: 1.day.ago.to_date, qty: 10, price: 190, amount: 1900, currency: "USD", cost_basis: 150, cost_basis_locked: true)
+    Holding.create!(account: ira, security: aapl, date: Date.current, qty: 10, price: 200, amount: 2000, currency: "USD", cost_basis: 150, cost_basis_locked: true)
+    # No stored basis and no trades in the second account, so Holding#avg_cost
+    # is nil there and that position is outside the row's return.
+    Holding.create!(account: taxable, security: aapl, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD")
+    Holding.create!(account: ira, security: msft, date: Date.current, qty: 4, price: 500, amount: 2000, currency: "USD", cost_basis: 400, cost_basis_locked: true)
+
+    rows = @statement.holdings_table_rows
+
+    assert_equal %w[AAPL MSFT], rows.map(&:ticker)
+    aapl_row, msft_row = rows
+
+    assert_equal 2, aapl_row.accounts_count
+    assert_equal 15, aapl_row.qty
+    assert_equal Money.new(3000, "USD"), aapl_row.amount_money
+    assert aapl_row.missing_cost_basis, "one position has no known basis, so the row still warns"
+    # Partial credit, the rule unrealized_gains and combined_holding_trend
+    # already use: cost and return cover the 10 shares whose basis is known
+    # (2000 now against 1500 cost), not the 5 that have none.
+    assert_equal Money.new(150, "USD"), aapl_row.avg_cost
+    assert_equal Money.new(2000, "USD"), aapl_row.unrealized.current
+    assert_equal Money.new(1500, "USD"), aapl_row.unrealized.previous
+    assert_equal Money.new(500, "USD"), aapl_row.unrealized.value
+    # Day change from the one position with a prior snapshot: 2000 vs 1900.
+    assert_equal Money.new(100, "USD"), aapl_row.day_change.value
+
+    assert_not msft_row.missing_cost_basis
+    assert_equal Money.new(400, "USD"), msft_row.avg_cost
+    assert_equal Money.new(400, "USD"), msft_row.unrealized.value
+    assert_nil msft_row.day_change
+    # Weights use the same denominator as top_holdings: max(8000, 5000).
+    assert_in_delta 37.5, aapl_row.weight, 0.01
+    assert_in_delta 25.0, msft_row.weight, 0.01
+  end
+
+  test "holdings_table_rows sorts by a whitelisted key and puts rows without the figure last" do
+    account = create_investment_account(balance: 6000)
+    with_basis = Security.create!(ticker: "BBB", name: "Beta")
+    without_basis = Security.create!(ticker: "AAA", name: "Alpha")
+    big = Security.create!(ticker: "CCC", name: "Gamma")
+
+    Holding.create!(account: account, security: with_basis, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD", cost_basis: 800, cost_basis_locked: true)
+    Holding.create!(account: account, security: without_basis, date: Date.current, qty: 1, price: 2000, amount: 2000, currency: "USD")
+    Holding.create!(account: account, security: big, date: Date.current, qty: 1, price: 3000, amount: 3000, currency: "USD", cost_basis: 3500, cost_basis_locked: true)
+
+    assert_equal %w[CCC AAA BBB], @statement.holdings_table_rows.map(&:ticker), "default is value desc"
+    assert_equal %w[BBB AAA CCC], @statement.holdings_table_rows(sort: "value", dir: "asc").map(&:ticker)
+    assert_equal %w[AAA BBB CCC], @statement.holdings_table_rows(sort: "name", dir: "asc").map(&:ticker)
+    assert_equal %w[CCC BBB AAA], @statement.holdings_table_rows(sort: "name", dir: "desc").map(&:ticker)
+    # Return: BBB +200, CCC -500, AAA unknown and therefore last both ways.
+    assert_equal %w[BBB CCC AAA], @statement.holdings_table_rows(sort: "return", dir: "desc").map(&:ticker)
+    assert_equal %w[CCC BBB AAA], @statement.holdings_table_rows(sort: "return", dir: "asc").map(&:ticker)
+    assert_equal %w[CCC AAA BBB], @statement.holdings_table_rows(sort: "drop table", dir: "sideways").map(&:ticker), "unknown keys fall back to the default"
+    assert_equal %w[BBB AAA CCC], @statement.holdings_table_rows(sort: "drop table", dir: "asc").map(&:ticker), "an unknown sort keeps a valid dir"
+    assert_equal %w[CCC BBB AAA], @statement.holdings_table_rows(sort: "name", dir: "sideways").map(&:ticker), "an unknown dir keeps a valid sort"
+  end
+
+  test "holdings_table_rows issues no query per holding" do
+    account = create_investment_account(balance: 10_000)
+    5.times do |i|
+      security = Security.create!(ticker: "S#{i}", name: "Security #{i}")
+      Holding.create!(account: account, security: security, date: 1.day.ago.to_date, qty: 1, price: 90, amount: 90, currency: "USD")
+      Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD", cost_basis: 80)
+    end
+    @statement.current_holdings.to_a
+
+    queries = capture_sql_queries { @statement.holdings_table_rows(sort: "day_change", dir: "desc") }
+
+    assert_equal 1, queries.grep(/FROM "?holdings"?\b/).size, "only the previous-snapshot query may run"
+    assert_empty queries.grep(/FROM "trades"|FROM "security_prices"/), "no cost-basis fallback or price lookups per row"
+  end
+
+  # Positions with no stored basis take their cost from the trade history,
+  # which the table reads for every holding in one query rather than two per
+  # row (Holding.preload_avg_costs).
+  test "holdings_table_rows reads the trade-history cost of every holding in one query" do
+    account = create_investment_account(balance: 10_000)
+    3.times do |i|
+      security = Security.create!(ticker: "T#{i}", name: "Traded #{i}")
+      Holding.create!(account: account, security: security, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+      create_trade_for(account: account, security: security, qty: 10, price: 60 + i * 10, date: 1.day.ago.to_date)
+    end
+    @statement.current_holdings.to_a
+
+    rows = nil
+    queries = Holding.uncached { capture_sql_queries { rows = @statement.holdings_table_rows } }
+
+    assert_equal 1, queries.grep(/FROM "trades"|JOIN trades/).size, "one batched cost query, not two per holding"
+    assert_equal({ "T0" => 60, "T1" => 70, "T2" => 80 }, rows.to_h { |row| [ row.ticker, row.avg_cost.amount.to_i ] })
+    assert rows.none?(&:missing_cost_basis)
+  end
+
+  # The dashboard and the report read unrealized_gains_trend before
+  # top_holdings on one statement, so the gains read the trade-history cost
+  # the same batched way, and top_holdings reuses it.
+  test "unrealized gains read the trade-history cost of every holding in one query" do
+    account = create_investment_account(balance: 10_000)
+    3.times do |i|
+      security = Security.create!(ticker: "G#{i}", name: "Gain #{i}")
+      Holding.create!(account: account, security: security, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+      create_trade_for(account: account, security: security, qty: 10, price: 60 + i * 10, date: 1.day.ago.to_date)
+    end
+    cost_queries = ->(statement, &read) do
+      statement.current_holdings.to_a
+      Holding.uncached { capture_sql_queries { read.call(statement) } }.grep(/FROM "trades"|JOIN trades/).size
+    end
+
+    counts = %i[unrealized_gains unrealized_gains_trend].to_h do |method|
+      [ method, cost_queries.call(InvestmentStatement.new(@family, user: nil)) { |s| s.public_send(method) } ]
+    end
+    assert_equal({ unrealized_gains: 1, unrealized_gains_trend: 1 }, counts)
+
+    trend = nil
+    statement = InvestmentStatement.new(@family, user: nil)
+    dashboard = cost_queries.call(statement) { |s| trend = s.unrealized_gains_trend; s.top_holdings(limit: 5) }
+    assert_equal 1, dashboard, "top_holdings must reuse the cost the gains read"
+
+    # 3000 held at a cost of 600 + 700 + 800
+    assert_equal Money.new(3000), trend.current
+    assert_equal Money.new(2100), trend.previous
+    assert_in_delta 900, statement.unrealized_gains, 0.001
+  end
+
+  # The Value column sums every position, so a Day change built from only the
+  # positions with a previous snapshot says so, with how many it covers.
+  test "holdings_table_rows marks a day change that covers only some positions" do
+    security = Security.create!(ticker: "HALF", name: "Half covered")
+    with_snapshot = create_investment_account(balance: 1_000)
+    without_snapshot = create_investment_account(balance: 1_000)
+    Holding.create!(account: with_snapshot, security: security, date: 1.day.ago.to_date, qty: 1, price: 100, amount: 100, currency: "USD")
+    Holding.create!(account: with_snapshot, security: security, date: Date.current, qty: 1, price: 120, amount: 120, currency: "USD")
+    Holding.create!(account: without_snapshot, security: security, date: Date.current, qty: 9, price: 100, amount: 900, currency: "USD")
+
+    row = @statement.holdings_table_rows.find { |r| r.ticker == "HALF" }
+
+    assert_equal Money.new(20, "USD"), row.day_change.value
+    assert_equal [ 1, 2 ], [ row.day_change_positions, row.positions.size ]
+    assert row.day_change_partial?
+
+    Holding.create!(account: without_snapshot, security: security, date: 1.day.ago.to_date, qty: 9, price: 100, amount: 900, currency: "USD")
+    full = InvestmentStatement.new(@family, user: nil).holdings_table_rows.find { |r| r.ticker == "HALF" }
+    assert_not full.day_change_partial?, "every position has a snapshot"
+  end
+
+  # A provider can report one security in two currencies in the same account on
+  # the same day, and both rows are current. Each compares against its own
+  # currency's previous snapshot, as Holding#day_change does, and the portfolio
+  # day change counts both. Read through the real current_holdings, not a stub,
+  # so a selection that kept one row per account and security would fail here.
+  test "a security held in two currencies in one account keeps a day change per currency" do
+    account = create_investment_account(balance: 10_000)
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider = AccountProvider.create!(account: account, provider: coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD"))
+    security = Security.create!(ticker: "DUAL", name: "Dual listed")
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: 0.5)
+    # The USD snapshot is older than the CAD one, so a lookup that ignored
+    # currency would hand the USD row the newer CAD snapshot.
+    { "USD" => [ 100, 130, 2 ], "CAD" => [ 200, 210, 1 ] }.each do |currency, (before, now, days_ago)|
+      Holding.create!(account: account, account_provider: provider, security: security, date: days_ago.days.ago.to_date, qty: 1, price: before, amount: before, currency: currency)
+        .update_columns(updated_at: days_ago.days.ago) # imported that day, not today
+      Holding.create!(account: account, account_provider: provider, security: security, date: Date.current, qty: 1, price: now, amount: now, currency: currency)
+    end
+
+    current = @statement.current_holdings.sort_by(&:currency)
+    assert_equal %w[CAD USD], current.map(&:currency), "both currencies' rows are current"
+
+    changes = current.to_h { |holding| [ holding.currency, @statement.holding_day_change(holding) ] }
+
+    assert_equal Money.new(100, "USD"), changes["USD"].previous
+    assert_equal Money.new(30, "USD"), changes["USD"].value
+    assert_equal Money.new(200, "CAD"), changes["CAD"].previous
+    assert_equal Money.new(10, "CAD"), changes["CAD"].value
+    current.each do |holding|
+      assert_equal holding.day_change.value, @statement.holding_day_change(holding).value, "#{holding.currency} must match Holding#day_change"
+    end
+
+    # 130 + 210 CAD at 0.5 against 100 + 200 CAD at 0.5
+    assert_equal Money.new(235), @statement.day_change.current
+    assert_equal Money.new(200), @statement.day_change.previous
+  end
+
+  test "holdings table rows with the same figure keep a fixed order in both directions" do
+    account = create_investment_account(balance: 10_000)
+    %w[Beta Alpha Gamma].each_with_index do |name, i|
+      security = Security.create!(ticker: "TIE#{i}", name: name)
+      Holding.create!(account: account, security: security, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+    end
+
+    asc = @statement.holdings_table_rows(sort: "value", dir: "asc").map(&:name)
+    desc = @statement.holdings_table_rows(sort: "value", dir: "desc").map(&:name)
+
+    assert_equal %w[Alpha Beta Gamma], asc
+    assert_equal %w[Alpha Beta Gamma], desc, "ties break by name in both directions"
+  end
+
+  # Pins top_holdings and allocation on a portfolio that exercises every path
+  # the shared roll-up takes: a stored basis, the trade-history fallback, a
+  # position with no basis, an internal movement, a security held in two
+  # accounts and a corrupt negative row.
+  test "top_holdings and allocation keep their figures on a mixed portfolio" do
+    ira = create_investment_account(balance: 6000, cash_balance: 500)
+    taxable = create_investment_account(balance: 3000)
+    stored = Security.create!(ticker: "STO", name: "Stored")
+    traded = Security.create!(ticker: "TRD", name: "Traded")
+    moved = Security.create!(ticker: "MOV", name: "Moved")
+    corrupt = Security.create!(ticker: "BAD", name: "Corrupt")
+
+    Holding.create!(account: ira, security: stored, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD", cost_basis: 50, cost_basis_locked: true)
+    Holding.create!(account: taxable, security: stored, date: Date.current, qty: 5, price: 100, amount: 500, currency: "USD")
+    Holding.create!(account: ira, security: traded, date: Date.current, qty: 10, price: 120, amount: 1200, currency: "USD")
+    create_trade_for(account: ira, security: traded, qty: 10, price: 80, date: 1.day.ago.to_date)
+    Holding.create!(account: taxable, security: moved, date: Date.current, qty: 20, price: 100, amount: 2000, currency: "USD")
+    create_trade_for(account: taxable, security: moved, qty: 20, price: 90, date: 1.day.ago.to_date)
+      .entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    Holding.create!(account: taxable, security: corrupt, date: Date.current, qty: 1, price: 300, amount: 300, currency: "USD")
+      .update_columns(amount: -300)
+
+    figures = ->(rows) { rows.map { |r| [ r.ticker, r.amount.amount.to_i, r.weight.to_f, r.trend&.current&.amount&.to_i, r.trend&.previous&.amount&.to_i ] } }
+
+    # Denominator: 4700 of holdings plus 4300 of account cash (IRA 6000 - 2200,
+    # taxable 3000 - 2500, the corrupt row excluded) = 9000.
+    expected = [
+      [ "MOV", 2000, 22.22, nil, nil ],
+      [ "STO", 1500, 16.67, 1000, 500 ],
+      [ "TRD", 1200, 13.33, 1200, 800 ]
+    ]
+    assert_equal expected, figures.call(InvestmentStatement.new(@family, user: nil).top_holdings)
+    assert_equal expected.first(2), figures.call(InvestmentStatement.new(@family, user: nil).top_holdings(limit: 2))
+    assert_equal expected + [ [ "CASH", 4300, 47.78, nil, nil ] ], figures.call(InvestmentStatement.new(@family, user: nil).allocation)
+  end
+
   private
+    def materialize_two_parcel_example(first_parcel_label:)
+      account = create_investment_account(balance: 1800)
+      security = create_portfolio_security
+      Security::Price.create!(security: security, date: Date.new(2024, 6, 2), price: 30, currency: "USD")
+
+      create_portfolio_trade(account: account, security: security, qty: 60, price: 12, date: Date.new(2024, 1, 10), label: first_parcel_label)
+      create_portfolio_trade(account: account, security: security, qty: 40, price: 20, date: Date.new(2024, 3, 5), label: "Buy")
+      sale = create_portfolio_trade(account: account, security: security, qty: -40, price: 25, date: Date.new(2024, 6, 1), label: "Sell")
+
+      Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+      [ account, security, sale.entryable ]
+    end
+
+    def cost_basis_on(account, security, date)
+      account.holdings.find_by!(security: security, date: date).cost_basis
+    end
+
+    def create_classified_security(**attrs)
+      Security.create!(
+        { ticker: "T#{SecureRandom.hex(6)}", exchange_operating_mic: "XNAS", offline: true }.merge(attrs)
+      )
+    end
+
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(
         name: "Investment #{SecureRandom.hex(3)}",
@@ -747,6 +2369,54 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         currency: currency,
         accountable: Investment.new
       )
+    end
+
+    def create_crypto_account(balance:, cash_balance: 0, currency: "USD")
+      @family.accounts.create!(
+        name: "Crypto #{SecureRandom.hex(3)}",
+        balance: balance,
+        cash_balance: cash_balance,
+        currency: currency,
+        accountable: Crypto.new
+      )
+    end
+
+    # Account A holds 1,000 against a balance of 800 (margin); account B holds
+    # 1,000 against 1,500. Returns the two securities.
+    def margin_case_accounts
+      margin = create_investment_account(balance: 800, cash_balance: -200)
+      funded = create_investment_account(balance: 1500, cash_balance: 500)
+      first = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+      second = create_classified_security(asset_class: "fixed_income", asset_sub_class: "bond")
+      Holding.create!(account: margin, security: first, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+      Holding.create!(account: funded, security: second, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+      [ first, second ]
+    end
+
+    # Every grouping sums to `expected`, and so does every level of the
+    # asset-class drill-down: each segment's children sum to the segment and each
+    # child's positions sum to the child.
+    def assert_every_grouping_and_level_sums_to(expected)
+      sum = ->(segments) { segments.sum { |s| s.amount.amount } }
+
+      InvestmentStatement::ALLOCATION_GROUPINGS.each do |by|
+        assert_in_delta expected, sum.(@statement.allocation_by(by)), 0.0001, "#{by} does not sum to #{expected}"
+      end
+
+      @statement.allocation_by("asset_class").each do |klass|
+        subs = @statement.allocation_children("asset_class", klass.id)
+        assert_in_delta klass.amount.amount, sum.(subs), 0.0001, "#{klass.id}'s sub-classes"
+
+        subs.each do |sub|
+          positions = @statement.allocation_children("asset_sub_class", sub.id, parent: klass.id)
+          assert_in_delta sub.amount.amount, sum.(positions), 0.0001, "#{klass.id}/#{sub.id}'s positions"
+        end
+      end
+
+      @statement.allocation_by("asset_sub_class").each do |sub|
+        positions = @statement.allocation_children("asset_sub_class", sub.id)
+        assert_in_delta sub.amount.amount, sum.(positions), 0.0001, "#{sub.id}'s positions"
+      end
     end
 
     def create_trade_for(account:, security:, qty:, price:, date: Date.current)
@@ -866,6 +2536,44 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         amount: amount,
         source_fee_amount: source_fee_amount
       ).create
+    end
+
+    def july_2026
+      Period.custom(start_date: Date.new(2026, 7, 1), end_date: Date.new(2026, 7, 31))
+    end
+
+    # A Trade Republic connection with its Portfolio and Cash accounts both
+    # linked, as account setup creates them. Returns the provider accounts.
+    def create_split_trade_republic_connection
+      @family.update!(currency: "EUR")
+      item = TradeRepublicItem.create!(family: @family, name: "Trade Republic", currency: "EUR", phone_number: "+4917000#{rand(10**6)}")
+      %w[portfolio cash].map do |kind|
+        provider_account = item.trade_republic_accounts.create!(
+          name: kind, kind: kind, trade_republic_account_id: "#{kind}:DESTMT", currency: "EUR", raw_timeline_payload: []
+        )
+        provider_account.ensure_account_provider!(Account.create_from_trade_republic_account(provider_account))
+        provider_account.reload
+      end
+    end
+
+    # The Cash account also reads the Portfolio's order executions, to book
+    # their settlements, so the Portfolio syncs first.
+    def sync_trade_republic(provider_account, events)
+      provider_account.update!(raw_timeline_payload: events)
+      TradeRepublicAccount::ActivitiesProcessor.new(provider_account.reload).process
+    end
+
+    def trade_republic_order(id:, quantity:, signed_amount:, date:)
+      {
+        id: id,
+        timestamp: "#{date}T09:30:00Z",
+        category: "orderExecution",
+        title: "Core S&P 500 USD (Acc)",
+        detail: {
+          isin: "IE00B5BMR087", name: "Core S&P 500 USD (Acc)", quantity: quantity,
+          amount: signed_amount.abs.to_s, signed_amount: signed_amount, currency: "EUR"
+        }
+      }
     end
 
     def create_trade(account:, qty:, amount:, date:)

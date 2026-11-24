@@ -2,6 +2,8 @@
 uk:
   providers:
     ibkr:
+      named_connection: "Interactive Brokers (%{name})"
+      named_connection_description: "Прив'язати рахунки з Flex-запиту %{name}"
       name: "Interactive Brokers"
       connection_description: "Підключити звіт Interactive Brokers Flex Web Service"
       institution_name: "Interactive Brokers"

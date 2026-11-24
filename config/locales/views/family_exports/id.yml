@@ -1,0 +1,48 @@
+---
+id:
+  family_exports:
+    access_denied: Akses ditolak
+    create:
+      success: Ekspor dimulai. Anda akan dapat mengunduhnya sebentar lagi.
+    delete_confirmation: Apakah Anda yakin ingin menghapus ekspor ini? Tindakan ini tidak dapat dibatalkan.
+    delete_failed_confirmation: Apakah Anda yakin ingin menghapus ekspor yang gagal ini?
+    cancel:
+      cancelled: Ekspor ditandai sebagai gagal. Anda dapat segera membuat ekspor baru.
+      not_cancellable: Ekspor ini tidak dapat ditandai sebagai gagal saat ini — tugasnya mungkin masih berjalan. Coba lagi setelah tidak aktif selama satu jam.
+    destroy:
+      success: Ekspor berhasil dihapus
+    export_not_ready: Ekspor belum siap untuk diunduh
+    exporting: Mengekspor...
+    new:
+      dialog_title: Ekspor data Anda
+      dialog_subtitle: Unduh semua data keuangan Anda
+      whats_included: "Yang disertakan:"
+      accounts_and_balances: Semua akun dan saldo
+      transaction_history: Riwayat transaksi
+      investment_trades: Transaksi investasi
+      categories_tags_rules: Kategori, tag, dan aturan
+      note_label: Catatan
+      note_description: Ekspor ini mencakup semua data Anda, tetapi hanya sebagian data yang dapat diimpor kembali melalui fitur impor CSV. Kami mendukung impor akun, transaksi (dengan kategori dan tag), serta transaksi investasi. Data akun lainnya tidak dapat diimpor dan hanya untuk catatan Anda.
+      cancel: Batal
+      export_data: Ekspor data
+    index:
+      title: Ekspor
+      new: Ekspor Baru
+    table:
+      title: Ekspor
+      header:
+        date: Tanggal
+        filename: Nama file
+        status: Status
+        actions: Tindakan
+      row:
+        status:
+          in_progress: Sedang berlangsung
+          complete: Selesai
+          failed: Gagal
+        actions:
+          delete: Hapus
+          download: Unduh
+          mark_failed: Tandai sebagai gagal
+          confirm_mark_failed: Ekspor ini sudah tidak aktif cukup lama dan proses di latar belakang kemungkinan terputus. Tandai sebagai gagal? Anda dapat segera membuat ekspor baru.
+      empty: Belum ada ekspor.

@@ -22,6 +22,9 @@ class RecurringTransaction
     # holding the entry.
     class EntryExhaustedError < OverAllocationError; end
     class AlreadyAllocatedError < OverAllocationError; end
+    # The entry is one side of a split (the parent, or one of its children)
+    # and the other side already pays a bill. Both sides are the same money.
+    class SplitCounterpartAllocatedError < OverAllocationError; end
     class MissingRateError < StandardError; end
 
     # Postgres keeps single-key and two-key advisory locks in separate spaces,
@@ -42,8 +45,57 @@ class RecurringTransaction
       )
     end
 
+    # Keyed on the split root, so a split parent and its children share one
+    # lock: their counterpart checks then see each other's committed writes.
     def self.entry_lock_id(entry)
-      Digest::MD5.hexdigest(entry.id.to_s).to_i(16) % (2**31)
+      Digest::MD5.hexdigest((entry.parent_entry_id || entry.id).to_s).to_i(16) % (2**31)
+    end
+
+    # Allocations that count toward an entry's capacity: everything except
+    # tombstones from ended series (a deleted or dismissed bill). Counting
+    # those would permanently consume the entry and block re-use on a new
+    # bill (see #3592). Defined once so the capacity checks stay in sync.
+    def self.active_allocations(allocations = RecurringAllocation.all)
+      allocations.joins(recurring_occurrence: :recurring_transaction)
+                 .where.not(recurring_transactions: { status: "ended" })
+    end
+
+    # What guard_entry_capacity! would leave of each entry for another bill,
+    # for many entries in one query. Entries no bill uses yet are omitted.
+    # Pass a narrower allocations scope to count only the bills a viewer can
+    # see; the guard itself always counts every allocation.
+    #
+    # The query also reads the allocations of each entry's split counterparts
+    # (see Entry#split_counterparts): once one side of a split pays a bill, the
+    # other side has nothing left.
+    def self.remaining_by_entry(entries, allocations: RecurringAllocation.all)
+      by_id = entries.index_by(&:id)
+      scope = active_allocations(allocations).joins(:entry)
+
+      rows = scope.where(entry_id: by_id.keys + entries.filter_map(&:parent_entry_id))
+                  .or(scope.where(entries: { parent_entry_id: by_id.keys }))
+                  .group(:entry_id, "entries.parent_entry_id")
+                  .pluck(
+                    :entry_id,
+                    "entries.parent_entry_id",
+                    Arel.sql("SUM(COALESCE(source_amount, allocated_amount))"),
+                    Arel.sql("BOOL_OR(source_amount IS NULL)")
+                  )
+
+      paying_ids = rows.map(&:first).to_set
+      paying_parent_ids = rows.filter_map(&:second).to_set
+      spent_by_counterpart = entries.select do |entry|
+        paying_ids.include?(entry.parent_entry_id) || paying_parent_ids.include?(entry.id)
+      end
+
+      remaining = rows.each_with_object({}) do |(entry_id, _parent_id, used, unmeasurable), result|
+        entry = by_id[entry_id]
+        next unless entry
+
+        result[entry_id] = unmeasurable ? 0 : [ entry.amount.abs - used, 0 ].max
+      end
+      spent_by_counterpart.each { |entry| remaining[entry.id] = 0 }
+      remaining
     end
 
     def initialize(occurrence)
@@ -54,7 +106,10 @@ class RecurringTransaction
     # entry-less manual payment. Amounts are in the occurrence's currency;
     # a cross-currency entry converts at its own date's rate, or requires an
     # explicit amount when no rate exists.
-    def allocate!(amount: nil, entry: nil, paid_on: nil, source: nil, cap_at_remaining: false)
+    #
+    # categorize: true applies the bill's category to the entry. It is opt-in
+    # because only the caller knows whether its user may annotate the transaction.
+    def allocate!(amount: nil, entry: nil, paid_on: nil, source: nil, cap_at_remaining: false, categorize: false)
       occurrence.with_lock do
         with_entry_lock(entry) do
           allocated, source_amount, source_currency = resolve_amounts(amount, entry)
@@ -85,6 +140,8 @@ class RecurringTransaction
           )
 
           learn_from_manual_attach!(allocation) if entry
+          allocation = promote_settlement!(allocation) if entry && amount.blank?
+          apply_bill_category!(entry) if categorize
           refresh_close_state!
           allocation
         end
@@ -105,7 +162,17 @@ class RecurringTransaction
     def allocate_matched!(entry:, state:, confidence:, signals:)
       occurrence.with_lock do
         with_entry_lock(entry) do
-          allocated, source_amount, source_currency = resolve_amounts(nil, entry)
+          # A payment the series' bank reference identified is the bill's own
+          # whatever it amounted to, so it is recorded at what was really paid
+          # instead of being capped at what the cycle still needed.
+          whole_payment = signals.to_h.with_indifferent_access[:reference].present? && entry.currency == occurrence.currency
+
+          # A suggestion pins nothing, so a confirmed reference payment replaces any
+          # it already has (a leftover from an earlier run) rather than being blocked
+          # by the capacity it holds or by the unique index.
+          RecurringAllocation.where(entry_id: entry.id, state: "suggested").destroy_all if whole_payment && state == "confirmed"
+
+          allocated, source_amount, source_currency = resolve_amounts(nil, entry, reference: whole_payment)
           return nil unless allocated.positive?
 
           guard_entry_capacity!(entry, source_amount)
@@ -124,19 +191,45 @@ class RecurringTransaction
             paid_on: entry.date
           )
 
-          refresh_close_state! if state == "confirmed"
+          if state == "confirmed"
+            apply_bill_category!(entry) if matcher_may_categorize?(entry)
+            refresh_close_state!
+          end
           allocation
         end
       end
     end
 
     # Accepting a suggestion makes it a real payment.
-    def confirm_suggestion!(allocation)
+    #
+    # categorize: true for a caller whose user may annotate the transaction; a
+    # read-only account share links a payment without editing it.
+    def confirm_suggestion!(allocation, categorize: false)
       occurrence.with_lock do
         with_entry_lock(allocation.entry) do
           freeze_expected_amount!
+          # Only the move from suggested to confirmed makes a payment: a replayed
+          # confirmation of a confirmed one must not categorize it later.
+          first_confirmation = allocation.reload.allocation_suggested?
           allocation.update!(state: "confirmed", source: "user_confirmed")
+          apply_bill_category!(allocation.entry) if categorize && first_confirmation
           refresh_close_state!
+        end
+      end
+    end
+
+    # The Matcher re-attached a confirmed payment to the transaction that
+    # replaced its original (a provider reposting it): the replacement is the
+    # payment now, so it takes the bill's category the original would have.
+    def categorize_reattached!(allocation)
+      occurrence.with_lock do
+        # The caller's copy may predate a confirmation, so the state is read
+        # again under the lock.
+        allocation.reload
+        next unless allocation.allocation_confirmed? && allocation.entry
+
+        with_entry_lock(allocation.entry) do
+          apply_bill_category!(allocation.entry) if matcher_may_categorize?(allocation.entry)
         end
       end
     end
@@ -214,6 +307,45 @@ class RecurringTransaction
         occurrence.update!(expected_amount: occurrence.resolved_expected_amount)
       end
 
+      # A bill's category says what its payments are, so a payment confirmed
+      # against it picks that category up. Only a blank, unlocked category is
+      # filled: anything the user, a rule or a provider already decided stays,
+      # and releasing the payment later leaves the category in place. Not
+      # locked afterwards, so the user can still change it and a rule can still
+      # override it.
+      #
+      # The transaction row is locked and re-read first: the Matcher loaded it
+      # before getting here, so a category the user committed since would still
+      # look blank on the loaded copy and be overwritten.
+      def apply_bill_category!(entry)
+        category_id = occurrence.recurring_transaction.category_id
+        return if category_id.blank? || entry.nil?
+
+        transaction = entry.entryable
+        return unless transaction.is_a?(Transaction)
+
+        transaction.with_lock do
+          next unless transaction.category_id.blank? && transaction.category_editable?
+          next unless Category.exists?(id: category_id)
+
+          transaction.enrich_attribute(:category_id, category_id, source: "recurring_bill")
+        end
+      rescue ActiveRecord::InvalidForeignKey
+        # The category was deleted between the check and the write. The payment
+        # is still a payment; it just stays uncategorized.
+        nil
+      end
+
+      # Matching runs with no signed-in user, so the user-facing access check
+      # cannot be made. A bill tied to an account only ever matches that
+      # account's transactions, and whoever may edit the bill may annotate them.
+      # A bill that is not tied to an account matches the whole family, so the
+      # matcher categorizes nothing for it; it is categorized when a person
+      # confirms the payment, with that person's own access.
+      def matcher_may_categorize?(_entry)
+        occurrence.recurring_transaction.account_id.present?
+      end
+
       def close_worthy?
         expected = occurrence.resolved_expected_amount
         return false unless expected.positive?
@@ -221,17 +353,21 @@ class RecurringTransaction
         confirmed = occurrence.allocations.confirmed.to_a
         return false if confirmed.empty?
 
+        # Identified by the series' bank reference: that is the cycle's payment
+        # whatever it amounted to, under- or overpaid.
+        return true if confirmed.any? { |allocation| allocation.match_signals.to_h["reference"].present? }
+
         total = confirmed.sum(&:allocated_amount)
 
         if confirmed.size == 1
-          tolerance = expected * (occurrence.recurring_transaction.amount_tolerance_pct / BigDecimal("100"))
+          tolerance = expected * (occurrence.recurring_transaction.effective_amount_tolerance_pct / BigDecimal("100"))
           return true if (confirmed.first.allocated_amount - expected).abs <= tolerance
         end
 
         total >= expected - RecurringOccurrence::CLOSE_EPSILON
       end
 
-      def resolve_amounts(amount, entry)
+      def resolve_amounts(amount, entry, reference: false)
         if entry.nil?
           raise ArgumentError, "an amount is required for a payment without a transaction" if amount.blank?
 
@@ -251,7 +387,12 @@ class RecurringTransaction
             # allocates nothing, never the occurrence's outstanding balance.
             capacity = entry_capacity(entry, entry_total)
             remaining = occurrence.remaining_amount
-            remaining.positive? ? [ capacity, remaining ].min : capacity
+
+            if settles_bill?(entry, entry_total, reference: reference)
+              capacity
+            else
+              remaining.positive? ? [ capacity, remaining ].min : capacity
+            end
           end
 
           [ allocated, allocated, entry.currency ]
@@ -284,17 +425,63 @@ class RecurringTransaction
         end
       end
 
-      # True once any allocation on this entry lacks a source amount, which
-      # makes every capacity sum over it meaningless.
+      # Actual-replaces-estimate: an entry that is the bill itself is recorded at
+      # its real amount instead of being capped at the estimate. It qualifies
+      # only when nothing has been paid against this occurrence or this entry
+      # yet, and its amount sits inside the same tolerance band the matcher uses.
+      # Partial payments and accumulations keep the capped behaviour. A payment
+      # the bill's own bank reference identified is the bill itself whatever it
+      # amounted to and however many payments the cycle already holds.
+      def settles_bill?(entry, entry_total, reference: false)
+        return true if reference
+        return false if occurrence.allocations.confirmed.exists?
+        return false if active_allocations_for(entry).exists?
+
+        within_settlement_band?(entry_total)
+      end
+
+      def within_settlement_band?(entry_total)
+        expected = occurrence.resolved_expected_amount
+        return false unless expected.positive?
+
+        tolerance = expected * (occurrence.recurring_transaction.effective_amount_tolerance_pct / BigDecimal("100"))
+        (entry_total - expected).abs <= tolerance
+      end
+
+      # A manual link can teach the band that covers it (learn_from_manual_attach!),
+      # but only after its own allocation was capped. When the band it just taught
+      # now covers this payment, and it is the only settlement of the bill and the
+      # only use of the entry, record the whole entry so the history shows what
+      # was actually paid. Explicit amounts are never changed.
+      def promote_settlement!(allocation)
+        entry = allocation.entry
+        return allocation unless entry.currency == occurrence.currency
+        return allocation unless occurrence.allocations.confirmed.count == 1
+        return allocation unless active_allocations_for(entry).count == 1
+
+        entry_total = entry.amount.abs
+        return allocation if allocation.allocated_amount == entry_total
+        return allocation unless within_settlement_band?(entry_total)
+
+        allocation.update!(allocated_amount: entry_total, source_amount: entry_total)
+        allocation
+      end
+
+      def active_allocations_for(entry)
+        self.class.active_allocations.where(entry: entry)
+      end
+
+      # True once any allocation on this entry (excluding those from ended
+      # series) lacks a source amount, which makes every capacity sum over it
+      # meaningless.
       def unmeasurable_entry?(entry)
-        RecurringAllocation.where(entry: entry, source_amount: nil).exists?
+        active_allocations_for(entry).where(source_amount: nil).exists?
       end
 
       # How much of the entry is not yet spoken for, in the entry's currency.
       def entry_capacity(entry, entry_total)
-        already = RecurringAllocation.where(entry: entry).sum(
-          "COALESCE(source_amount, allocated_amount)"
-        )
+        already = active_allocations_for(entry)
+          .sum("COALESCE(recurring_allocations.source_amount, recurring_allocations.allocated_amount)")
 
         [ entry_total - already, 0 ].max
       end
@@ -327,12 +514,15 @@ class RecurringTransaction
         expected = occurrence.resolved_expected_amount
         if expected.positive? && occurrence.allocations.confirmed.count == 1 && close_worthy?
           deviation_pct = (entry.amount.abs - expected).abs / expected * 100
-          current = BigDecimal((hints["learned_tolerance_pct"] || 0).to_s)
+          current = BigDecimal(hints["learned_tolerance_pct"].to_s, exception: false)
+          current = BigDecimal("0") unless current&.finite?
 
           if deviation_pct > series.amount_tolerance_pct &&
              deviation_pct > current &&
              deviation_pct <= Matcher::MAX_LEARNED_TOLERANCE_PCT
-            hints["learned_tolerance_pct"] = deviation_pct.round(1).to_f
+            # Round up: a deviation of 7.55% stored as 7.5% would leave the
+            # very payment that taught it outside its own band.
+            hints["learned_tolerance_pct"] = ((deviation_pct * 10).ceil / BigDecimal(10)).to_f
           end
         end
 
@@ -353,10 +543,19 @@ class RecurringTransaction
       # The first such allocation is a judgement the user made about a
       # transaction they can see. A second one is a transaction silently paying
       # an unbounded number of bills, so an unmeasurable entry takes no more
-      # than one.
+      # than one. Allocations from ended series are excluded throughout so a
+      # deleted bill never blocks re-use of the same entry on a replacement.
       def guard_entry_capacity!(entry, source_amount)
+        # A split parent and its children are the same money, so whichever
+        # side pays a bill first (a suggestion included) takes the other side
+        # out. Otherwise the parent could pay one bill and a child another,
+        # counting more than the bank charged.
+        if active_allocations_for(entry.split_counterparts).exists?
+          raise SplitCounterpartAllocatedError, I18n.t("recurring_transactions.allocator.split_counterpart_allocated")
+        end
+
         if source_amount.nil? || unmeasurable_entry?(entry)
-          return if RecurringAllocation.where(entry: entry).none?
+          return if active_allocations_for(entry).none?
 
           raise OverAllocationError, I18n.t("recurring_transactions.allocator.unmeasurable",
                                             currency: entry.currency, date: entry.date)

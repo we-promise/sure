@@ -1,0 +1,78 @@
+---
+id:
+  settings:
+    api_keys_controller:
+      success: "Kunci API Anda berhasil dibuat"
+      revoked_successfully: "Kunci API berhasil dicabut"
+      revoke_failed: "Gagal mencabut kunci API"
+    api_keys:
+      create:
+        success: "Kunci API Anda berhasil dibuat"
+        creation_failed: "Tidak dapat membuat kunci API Anda. Silakan coba lagi."
+      destroy:
+        revoked_successfully: "Kunci API berhasil dicabut"
+        revoke_failed: "Gagal mencabut kunci API"
+      shared:
+        active: "Aktif"
+        created_ago: "Dibuat %{time} yang lalu"
+        last_used_ago: "Terakhir digunakan %{time} yang lalu"
+        never_used: "Belum pernah digunakan"
+        scope_read_only: "Hanya Baca"
+        scope_read_write: "Baca/Tulis"
+      index:
+        title: "Kunci API"
+        subtitle: "Kelola kunci API untuk akses terprogram ke data Anda."
+        new_key: "Kunci API Baru"
+        empty_heading: "Belum ada kunci API"
+        empty_description: "Buat kunci API untuk mengakses data Anda secara terprogram."
+        revoke_key: "Cabut"
+        revoke_confirmation: "Apakah Anda yakin ingin mencabut \"%{name}\"? Tindakan ini akan segera menonaktifkan aplikasi apa pun yang menggunakan kunci ini."
+      key_reveal:
+        copied: "Tersalin!"
+      show:
+        title: "Manajemen Kunci API"
+        newly_created:
+          page_title: "Kunci API Berhasil Dibuat"
+          heading: "Kunci API Berhasil Dibuat!"
+          key_ready: "Kunci API baru Anda \"%{name}\" telah dibuat dan siap digunakan."
+          your_api_key: "Kunci API Anda"
+          copy_store_securely: "Salin dan simpan kunci ini dengan aman. Anda akan membutuhkannya untuk mengautentikasi permintaan API Anda."
+          copy_api_key: "Salin Kunci API"
+          how_to_use: "Cara menggunakan kunci API Anda"
+          continue: "Lanjutkan ke Pengaturan Kunci API"
+        current_api_key:
+          title: "Kunci API Anda"
+          permissions: "Izin"
+          copy_api_key: "Salin Kunci API"
+          copy_store_securely: "Salin dan simpan kunci ini dengan aman. Anda akan membutuhkannya untuk mengautentikasi permintaan API Anda."
+          usage_instructions_title: "Cara menggunakan kunci API Anda"
+          usage_instructions: "Sertakan kunci API Anda dalam header X-Api-Key saat membuat permintaan ke API %{product_name}:"
+          back_to_keys: "Kembali ke Kunci API"
+          revoke_key: "Cabut Kunci"
+          revoke_confirmation: "Apakah Anda yakin ingin mencabut kunci API ini? Tindakan ini tidak dapat dibatalkan dan akan segera menonaktifkan semua aplikasi yang menggunakan kunci ini."
+      new:
+        title: "Buat Kunci API"
+        create_new_api_key: "Buat Kunci API Baru"
+        subtitle: "Buat kunci API baru untuk mengakses data Sure Anda secara terprogram."
+        description: "Konfigurasikan kunci API baru Anda dengan nama deskriptif dan izin yang sesuai."
+        name_label: "Nama Kunci API"
+        name_placeholder: "mis. Aplikasi Anggaran Saya, Pelacak Portofolio"
+        name_help_text: "Pilih nama deskriptif untuk membantu Anda mengidentifikasi kunci ini nanti."
+        name_help: "Pilih nama deskriptif untuk membantu Anda mengidentifikasi tujuan kunci ini."
+        permissions_label: "Izin"
+        permissions_help: "Pilih izin yang harus dimiliki kunci API ini:"
+        scope_read_only: "Hanya Baca"
+        scope_read_only_description: "Lihat akun, transaksi, dan saldo Anda"
+        scope_read_write: "Baca/Tulis"
+        scope_read_write_description: "Lihat data Anda dan buat transaksi baru"
+        scope_details:
+          read_accounts: "Lihat informasi akun, saldo, dan data tingkat akun"
+          read_transactions: "Lihat data transaksi, kategori, dan detail transaksi"
+          read_balances: "Lihat data saldo historis dan tren nilai akun"
+          write_transactions: "Buat dan perbarui catatan transaksi (segera hadir)"
+        security_warning_title: "Peringatan Keamanan"
+        security_warning_body: "Kunci API Anda hanya akan ditampilkan satu kali setelah dibuat. Pastikan untuk menyalin dan menyimpannya dengan aman. Siapa pun yang memiliki akses ke kunci ini dapat mengakses data Anda sesuai dengan izin yang Anda pilih."
+        security_warning: "Kunci API Anda hanya akan ditampilkan sekali setelah dibuat. Simpan dengan aman dan jangan pernah membagikannya secara publik. Jika hilang, Anda harus membuat yang baru."
+        create_key: "Buat Kunci API"
+        cancel: "Batal"
+        save_api_key: "Simpan Kunci API"

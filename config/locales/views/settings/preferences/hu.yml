@@ -1,0 +1,41 @@
+---
+hu:
+  settings:
+    preferences:
+      show:
+        country: Ország
+        currency: Pénznem
+        date_format: Dátumformátum
+        general_subtitle: Preferenciáid beállítása
+        general_title: Általános
+        default_period: Alapértelmezett időszak
+        default_account_order: Számlák alapértelmezett sorrendje
+        language: Nyelv
+        language_auto: Böngésző nyelve
+        page_title: Preferenciák
+        timezone: Időzóna
+        month_start_day: A költségvetési hónap kezdete
+        month_start_day_hint: Állítsd be, mikor kezdődjön a költségvetési hónapod (pl. fizetési nap)
+        month_start_day_warning: A költségvetéseid és a hónapközi számítások ezt az egyéni kezdőnapot használják az 1-je helyett.
+        currencies_title: "%{moniker} pénznemek"
+        currencies_subtitle: Válaszd ki, mely pénznemek jelenjenek meg a pénzmezőkben a %{moniker} számára
+        base_currency_label: Alappénznem
+        base_currency_badge: Alappénznem
+        additional_currencies_label: További pénznemek
+        no_additional_currencies: Nincs kiválasztva
+        currencies_more: "+%{count} további"
+        manage_currencies: Pénznemek kezelése
+        manage_currencies_subtitle: Szüntess meg olyan pénznemeket, amelyeket sosem használsz, vagy szűkítsd le a listát néhányra.
+        select_all_currencies: Összes kijelölése
+        select_base_only: Csak alappénznem
+        currency_search_placeholder: Pénznem keresése
+        no_matching_currencies: Nem található pénznem
+        selected_currencies_count:
+          one: "%{count} kijelölve"
+          other: "%{count} kijelölve"
+        save_currencies: Pénznemek mentése
+        sharing_title: "%{moniker} megosztás"
+        sharing_subtitle: "Szabályozd, hogyan kerüljenek megosztásra a számlák a %{moniker} tagjaival"
+        sharing_default_label: Új számlák alapértelmezett megosztása
+        sharing_shared: Megosztás az összes taggal
+        sharing_private: Alapértelmezetten privát

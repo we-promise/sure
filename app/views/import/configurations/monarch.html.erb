@@ -1,0 +1,117 @@
+<%= content_for :header_nav do %>
+  <%= render "imports/nav", import: @import %>
+<% end %>
+
+<%= content_for :previous_path, import_upload_path(@import) %>
+
+<% type_options = Accountable::TYPES.map { |type| [ type.constantize.singular_display_name, type ] } %>
+<% target_options = [ [ t(".new_account"), "" ] ] + @target_accounts.map { |account| [ account.name, account.id ] } %>
+<% master_toggle = lambda do |group, label|
+     safe_join([
+       tag.span(label),
+       render(DS::Toggle.new(id: "monarch_all_#{group}", name: "all[#{group}]", checked: true,
+         aria: { label: t(".toggle_all_label", column: label) },
+         data: { checkbox_group_master: group, action: "checkbox-group#toggleAll", checkbox_group_group_param: group }))
+     ], " ")
+   end %>
+
+<div class="space-y-6">
+  <div class="text-center space-y-2 mx-auto max-w-2xl">
+    <h1 class="text-3xl text-primary font-medium"><%= t(".title") %></h1>
+    <p class="text-secondary text-sm"><%= t(".description") %></p>
+  </div>
+
+  <div class="mx-auto max-w-2xl">
+    <%= render DS::Alert.new(variant: :info, title: t(".help_title")) do %>
+      <ul class="list-disc pl-4 space-y-1 text-sm">
+        <li><%= t(".help_account") %></li>
+        <li><%= t(".help_closed", days: MonarchImport::Exports::STALE_AFTER_DAYS) %></li>
+        <li><%= t(".help_transactions") %></li>
+        <li><%= t(".help_balance") %></li>
+      </ul>
+    <% end %>
+  </div>
+
+  <%= styled_form_with url: import_configuration_path(@import), method: :patch, class: "space-y-4",
+        data: { turbo: false, controller: "checkbox-group", action: "change->checkbox-group#sync" } do |form| %>
+    <%= render DS::Table.new(rows: @import.ordered_account_mappings, label: t(".table_label")) do |table| %>
+      <% table.with_column(tag.span(master_toggle.call("include", t(".import_column")), class: "inline-flex items-center gap-2")) do |mapping| %>
+        <%= render DS::Toggle.new(id: dom_id(mapping, :include), name: "accounts[#{mapping.id}][include]",
+              checked: mapping.include, aria: { label: t(".import_label", name: mapping.key) }, data: { checkbox_group: "include" }) %>
+      <% end %>
+
+      <% table.with_column(t(".account_column"), row_header: true) do |mapping| %>
+        <% suggestion = @import.suggestion_for(mapping.key) %>
+        <div class="min-w-56 max-w-80 space-y-1">
+          <div class="form-field">
+            <%= form.text_field "accounts[#{mapping.id}][name]", value: mapping.account_name, label: false,
+                  placeholder: mapping.key, id: dom_id(mapping, :name), aria: { label: t(".name_label", name: mapping.key) } %>
+          </div>
+          <% if mapping.account_name != mapping.key %>
+            <p class="text-xs text-secondary break-words"><%= t(".monarch_name", name: mapping.key) %></p>
+          <% end %>
+          <p class="text-xs text-secondary">
+            <%= suggestion&.last_activity ? t(".last_activity", date: l(suggestion.last_activity, format: :long)) : t(".no_activity") %>
+          </p>
+        </div>
+      <% end %>
+
+      <% table.with_column(t(".destination_column")) do |mapping| %>
+        <div class="form-field min-w-44">
+          <%= form.select "accounts[#{mapping.id}][target_id]", target_options,
+                { selected: mapping.mappable_id.to_s, label: false },
+                { id: dom_id(mapping, :target), aria: { label: t(".destination_label", name: mapping.key) } } %>
+        </div>
+      <% end %>
+
+      <% table.with_column(t(".type_column")) do |mapping| %>
+        <div class="form-field min-w-36">
+          <%= form.select "accounts[#{mapping.id}][type]", type_options,
+                { selected: mapping.type, label: false },
+                { id: dom_id(mapping, :type), aria: { label: t(".type_label", name: mapping.key) } } %>
+        </div>
+      <% end %>
+
+      <% table.with_column(t(".status_column")) do |mapping| %>
+        <%# On means open. The label follows the switch without script: the wrapper shows "Open" while it holds a checked box. %>
+        <div class="group/status flex items-center gap-2">
+          <%= render DS::Toggle.new(id: dom_id(mapping, :closed), name: "accounts[#{mapping.id}][closed]",
+                checked: !mapping.to_converter_choice.closed, checked_value: "0", unchecked_value: "1",
+                aria: { label: t(".status_label", name: mapping.key) }) %>
+          <span class="text-sm text-primary hidden group-has-[:checked]/status:inline"><%= t(".status_open") %></span>
+          <span class="text-sm text-secondary group-has-[:checked]/status:hidden"><%= t(".status_closed") %></span>
+          <% if @import.suggestion_for(mapping.key)&.closed %>
+            <%= render DS::Pill.new(label: t(".inactive"), tone: :warning, marker: false, size: :sm) %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% table.with_column(tag.span(master_toggle.call("transactions", t(".transactions_column")), class: "inline-flex items-center gap-2")) do |mapping| %>
+        <% count = @import.suggestion_for(mapping.key)&.transactions_count.to_i %>
+        <% if count.positive? %>
+          <div class="flex items-center gap-2">
+            <%= render DS::Toggle.new(id: dom_id(mapping, :transactions), name: "accounts[#{mapping.id}][transactions]",
+                  checked: mapping.transactions, aria: { label: t(".transactions_label", name: mapping.key) },
+                  data: { checkbox_group: "transactions" }) %>
+            <span class="text-sm text-secondary tabular-nums"><%= number_with_delimiter(count) %></span>
+          </div>
+        <% else %>
+          <span class="text-sm text-secondary"><%= t(".no_transactions") %></span>
+        <% end %>
+      <% end %>
+
+      <% table.with_column(t(".balance_column"), numeric: true) do |mapping| %>
+        <div class="form-field w-32 ml-auto">
+          <%= form.text_field "accounts[#{mapping.id}][current_balance]",
+                value: mapping.current_balance.presence || @import.suggested_current_balance(mapping),
+                label: false, inputmode: "decimal", class: "form-field__input text-right tabular-nums",
+                id: dom_id(mapping, :current_balance), aria: { label: t(".balance_label", name: mapping.key) } %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <div class="flex justify-end">
+      <%= form.submit t(".submit"), disabled: @import.complete? %>
+    </div>
+  <% end %>
+</div>

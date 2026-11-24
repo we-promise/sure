@@ -45,7 +45,10 @@
     "active": true,
     "targets": ["app", "dmg"],
     "icon": ["icons/icon.icns"],
-    "category": "public.app-category.finance"
+    "category": "public.app-category.finance",
+    "macOS": {
+      "signingIdentity": "-"
+    }
   },
   "plugins": {
     "deep-link": {

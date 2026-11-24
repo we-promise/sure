@@ -28,6 +28,9 @@ en:
       no_candidates: No nearby transactions to link.
       no_search_results: "Nothing matching %{query}."
       link_payment: Link payment
+      amount_left: "%{amount} left"
+      used_up: Already used
+      used_up_hint: Other bills already use the full amount of this transaction.
       not_this_one: Not this one
       cant_find: Can't find the transaction?
       manual_explainer: Record a payment you know happened when no transaction here matches it.

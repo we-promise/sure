@@ -20,6 +20,7 @@ de:
     categories: Kategorien
     categorize: Kategorisieren
     changelog: Was ist neu
+    classifier: Automatische Zuordnung
     chats: Chats
     coinbase_items: Coinbase
     coinstats_items: CoinStats
@@ -61,6 +62,7 @@ de:
     pending_duplicate_merges: Duplikatprüfung
     plaid_items: Plaid
     plan: Plan
+    portfolio: Portfolio
     preferences: Einstellungen
     profile: Profil
     profiles: Profil

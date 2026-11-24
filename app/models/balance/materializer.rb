@@ -15,6 +15,11 @@ class Balance::Materializer
 
   def materialize_balances
     Balance.transaction do
+      # Every materialization of an account -- a sync, or a lot edit's
+      # restatement -- locks the account row before writing anything, so two of
+      # them serialise in one lock order rather than deadlocking on each other's
+      # holding rows.
+      account.lock!
       materialize_holdings
       calculate_balances
 
@@ -35,9 +40,15 @@ class Balance::Materializer
     end
 
     def update_account_info
-      # Query fresh balance from DB to get generated column values
+      # Query fresh balance from DB to get generated column values.
+      # Excludes future-dated rows defensively: purge_stale_balances should
+      # already remove any balance row beyond the freshly calculated range,
+      # but if a scheduled (future-dated) row ever survives (e.g. a race
+      # between overlapping incremental syncs), account.balance must never
+      # surface it as the *current* balance. See Entry#scheduled?.
       current_balance = account.balances
         .where(currency: account.currency)
+        .where(date: ..Date.current)
         .order(date: :desc)
         .first
 

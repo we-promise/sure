@@ -48,6 +48,7 @@
             <%= icon("refresh-cw", as_button: true, href: sync_questrade_item_path(questrade_item), disabled: questrade_item.syncing?) %>
 
             <%= render DS::Menu.new do |menu| %>
+              <% sync_schedule_menu_item(menu, questrade_item) %>
               <% menu.with_item(
                 variant: "button",
                 text: t(".delete"),

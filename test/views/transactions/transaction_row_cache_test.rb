@@ -63,6 +63,14 @@ class Transactions::TransactionRowCacheTest < ActionView::TestCase
     assert_not_equal base, row_key
   end
 
+  test "the key changes when manual reconciliation is toggled" do
+    base = row_key
+
+    Current.family.update!(manual_reconciliation: true)
+
+    assert_not_equal base, row_key
+  end
+
   test "renaming the merchant renders the row fresh, a balance sync does not" do
     merchant = merchants(:netflix)
     @transaction.update!(merchant: merchant)
@@ -124,6 +132,14 @@ class Transactions::TransactionRowCacheTest < ActionView::TestCase
     end
 
     assert_includes row_key, TransactionsHelper::TRANSACTION_ROW_SOURCES_DIGEST
+  end
+
+  test "a row cached with a transfer hint is drawn without it once the hint no longer applies" do
+    @transfer_hint_transaction_ids = Set[@transaction.id]
+    assert_includes render_row, dom_id(@transaction, :transfer_hint)
+
+    @transfer_hint_transaction_ids = Set.new
+    assert_not_includes render_row, dom_id(@transaction, :transfer_hint)
   end
 
   test "the key changes with the BUILD_COMMIT_SHA of the deployed image" do

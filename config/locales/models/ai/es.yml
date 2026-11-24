@@ -1,0 +1,33 @@
+---
+es:
+  ai:
+    availability:
+      capability_missing:
+        admin: "%{feature} no está disponible: ninguno de los modelos de IA configurados puede hacerlo. Revisa los modelos en Ajustes → Autoalojamiento."
+        member: "%{feature} no está disponible: ninguno de los modelos de IA configurados puede hacerlo."
+      not_configured:
+        admin: "%{feature} no está disponible: no hay ningún modelo de IA configurado para ello. Añade uno en Ajustes → Autoalojamiento."
+        member: "%{feature} no está disponible: la IA no está configurada para ello en esta instancia."
+      user_disabled:
+        member: "%{feature} necesita la IA activada. Puedes activarla desde el asistente de IA."
+    consent_rows:
+      bill_setup: Recibos
+      categorize: Categorías
+      chat: Chat
+      detect_merchants: Comercios
+      embed: Documentos
+      extract_pdf: Importación de PDF
+    sends:
+      bill_configuration: La configuración actual del recibo
+      category_names: Los nombres de tus categorías
+      chat_messages: Tus mensajes del chat
+      depends_on_vector_store: Los documentos que subes, como ficheros completos a un almacén vectorial o como fragmentos de texto a un modelo de embeddings
+      looked_up_financial_data: Los datos financieros que consulta el asistente para responder
+      merchant_names: Nombres de comercios
+      provider_category_hints: Las categorías que sugiere tu banco
+      search_query: El texto que buscas
+      stored_document_text: El texto de los extractos guardados en tu archivo
+      transaction_amounts: Importes de las transacciones
+      transaction_dates: Fechas de las transacciones
+      transaction_names: Nombres de las transacciones
+      uploaded_document: El documento que subes

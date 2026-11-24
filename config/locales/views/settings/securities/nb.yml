@@ -4,9 +4,42 @@ nb:
     securities:
       show:
         disable_mfa: Deaktiver 2FA
-        disable_mfa_confirm: Er du sikker på at du vil deaktivere to-faktor autentisering?
-          Dette vil gjøre kontoen din mindre sikker.
+        disable_mfa_confirm: Er du sikker på at du vil deaktivere tofaktorautentisering? Dette vil gjøre kontoen din mindre sikker.
         enable_mfa: Aktiver 2FA
-        mfa_description: Legg til et ekstra lag med sikkerhet til kontoen din ved å kreve
-          en kode fra autentiseringsappen din når du logger inn
-        mfa_title: To-faktor autentisering
+        mfa_description: Legg til et ekstra lag med sikkerhet til kontoen din ved å kreve en kode fra autentiseringsappen din når du logger inn
+        mfa_title: Tofaktorautentisering
+        page_title: Sikkerhet
+        mfa_enabled_status_html: Tofaktorautentisering er <span class="font-medium text-green-600">aktivert</span>
+        mfa_enabled_description: Kontoen din er beskyttet med et ekstra sikkerhetslag.
+        mfa_disabled_status_html: Tofaktorautentisering er <span class="font-medium text-red-600">deaktivert</span>
+        mfa_disabled_description: Aktiver 2FA for å legge til et ekstra sikkerhetslag på kontoen din.
+        webauthn_add: Legg til passnøkkel eller sikkerhetsnøkkel
+        webauthn_added: Lagt til %{date}
+        webauthn_description: Bruk en passnøkkel, Touch ID, Windows Hello eller en fysisk sikkerhetsnøkkel som andre faktor når du logger inn.
+        webauthn_empty: Ingen passnøkler eller sikkerhetsnøkler er registrert ennå.
+        webauthn_last_used: Sist brukt for %{time_ago} siden
+        webauthn_name_label: Navn på nøkkel
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey osv.
+        webauthn_remove: Fjern
+        webauthn_remove_confirm: Er du sikker på at du vil fjerne denne passnøkkelen eller sikkerhetsnøkkelen?
+        webauthn_remove_confirm_body: Du må registrere denne passnøkkelen eller sikkerhetsnøkkelen på nytt før den kan brukes til å bekrefte innlogging.
+        webauthn_title: Passnøkler og sikkerhetsnøkler
+        webauthn_unsupported: Denne nettleseren støtter ikke passnøkler eller sikkerhetsnøkler.
+        webauthn_code_label: "Autentiseringskode eller sikkerhetskode"
+        webauthn_code_placeholder: "Gjeldende kode fra autentiseringsappen eller en ubrukt sikkerhetskode"
+        disable_mfa_password_label: "Bekreft med passordet ditt"
+        disable_mfa_password_placeholder: "Skriv inn passordet ditt"
+        mfa_sso_only: "Tofaktorautentisering administreres via identitetsleverandøren din."
+        compromised_secret_warning:
+          title: "Krypteringsnøklene er ikke egentlig hemmelige"
+          intro: "Krypteringsnøklene i denne installasjonen ble automatisk utledet fra en offentlig kjent SECRET_KEY_BASE-verdi (en standardverdi eller plassholder fra prosjektets eksempelfiler eller hostingveiledninger). Alle som kjenner den verdien, kan beregne de samme krypteringsnøklene, så disse dataene er ikke reelt beskyttet."
+          generate: "IKKE bare sett en ny SECRET_KEY_BASE og kjør backfill-oppgaven. Hvis noen data allerede er kryptert med den kompromitterte nøkkelen, kan ikke backfill-oppgaven skille den chifferteksten fra ekte klartekst, og vil kryptere den på nytt oppå, slik at den ikke kan gjenopprettes. Roter i stedet trygt mens appen er stoppet: generer nye nøkler med bin/rails db:encryption:init og sett dem som ACTIVE_RECORD_ENCRYPTION_*-variablene. Kjør deretter bin/rails \"security:backfill_encryption[100,0]\" med denne SECRET_KEY_BASE i miljøvariabelen ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE, bare for den kommandoen, slik at eksisterende data fortsatt kan dekrypteres og flyttes over til de nye nøklene. Se veiledningen for hosting med Docker."
+          settings_secrets: "API-nøkler og tokener som er lagret i innstillingene, krypteres med en nøkkel som er utledet fra selve SECRET_KEY_BASE, og som den forrige fremgangsmåten ikke dekker. Når du har endret SECRET_KEY_BASE, krypterer du dem på nytt med bin/rails \"security:rotate_setting_secrets[0]\", med den gamle verdien i miljøvariabelen OLD_SECRET_KEY_BASE (se veiledningen for hosting med Docker). Legg inn på nytt alle nøkler den rapporterer at ikke kan dekrypteres."
+  webauthn_credentials:
+    default_name: Sikkerhetsnøkkel
+    failure: Kunne ikke lagre passnøkkelen eller sikkerhetsnøkkelen. Prøv igjen.
+    mfa_required: Aktiver tofaktorautentisering før du legger til en passnøkkel eller sikkerhetsnøkkel.
+    success: Passnøkkelen eller sikkerhetsnøkkelen er fjernet.
+    code_already_used: "Den koden er allerede brukt. Vent på neste kode fra autentiseringsappen din."
+    invalid_code: "Koden er ikke gyldig. Skriv inn en gjeldende kode fra autentiseringsappen din eller en ubrukt sikkerhetskode."
+    rate_limited: "For mange forsøk. Vent ett minutt og prøv igjen."

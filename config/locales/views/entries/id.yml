@@ -1,0 +1,23 @@
+---
+id:
+  entries:
+    create:
+      success: Entri berhasil dibuat
+    destroy:
+      success: Entri berhasil dihapus
+    empty:
+      description: Coba tambahkan entri, edit filter, atau perjelas pencarian Anda
+      title: Tidak ada entri ditemukan
+    loading:
+      loading: Memuat entri...
+    update:
+      success: Entri berhasil diperbarui
+    unlock:
+      success: Kunci entri dibuka. Entri dapat diperbarui pada sinkronisasi berikutnya.
+    protection:
+      tooltip: Dilindungi dari sinkronisasi
+      title: Dilindungi dari sinkronisasi
+      description: Perubahan Anda pada entri ini tidak akan ditimpa oleh sinkronisasi penyedia.
+      locked_fields_label: "Kolom terkunci:"
+      unlock_button: Izinkan sinkronisasi memperbarui
+      unlock_confirm: Izinkan sinkronisasi memperbarui entri ini? Perubahan Anda dapat ditimpa pada sinkronisasi berikutnya.

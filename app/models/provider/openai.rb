@@ -16,6 +16,30 @@ class Provider::Openai < Provider
   SUPPORTED_MODELS = %w[gpt-4 gpt-5 gpt-6 o1 o3].freeze
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 gpt-6 o1 o3].freeze
   PDF_COMPLETION_LIMIT_MODEL_PREFIXES = %w[gpt-6 o1 o3].freeze
+  # api.openai.com and its regional hosts (us.api.openai.com), which some keys must use
+  HOSTED_API_HOST = /\A(?:[a-z0-9-]+\.)?api\.openai\.com\z/
+
+  # Whether a base URL points at OpenAI's own API rather than an
+  # OpenAI-compatible provider, so OpenAI-only features stay enabled.
+  # @param uri_base [String, nil] the configured base URL
+  # @return [Boolean]
+  def self.hosted_endpoint?(uri_base)
+    uri = URI.parse(uri_base.to_s)
+    normalized_path = uri.path.to_s.sub(%r{/+\z}, "")
+
+    uri.scheme == "https" && uri.host.to_s.downcase.match?(HOSTED_API_HOST) &&
+      uri.port == 443 && normalized_path.in?([ "", "/v1" ])
+  rescue URI::InvalidURIError
+    false
+  end
+
+  # Whether a base URL points at an OpenAI-compatible provider other than
+  # OpenAI. A blank base URL means OpenAI's default endpoint.
+  # @param uri_base [String, nil] the configured base URL
+  # @return [Boolean]
+  def self.custom_endpoint?(uri_base)
+    uri_base.present? && !hosted_endpoint?(uri_base)
+  end
 
   # Keep the provider's response budget and the PDF request parameter in sync.
   # @return [Boolean] whether native PDF vision uses max_completion_tokens
@@ -70,6 +94,9 @@ class Provider::Openai < Provider
     {}
   end
 
+  # The model a call uses when it doesn't name one.
+  attr_reader :default_model
+
   # Builds a client that uses the effective request timeout for every OpenAI call.
   # Static extra headers from OPENAI_EXTRA_HEADERS are attached at construction;
   # session-valued headers are withheld for per-request resolution.
@@ -89,7 +116,9 @@ class Provider::Openai < Provider
     static_headers = parsed_headers.except(*@session_extra_headers.keys)
     client_options[:extra_headers] = static_headers if static_headers.present?
 
-    @client = ::OpenAI::Client.new(**client_options)
+    # The proxy and TLS settings come from Ai::Transport::Http, the one resolver every AI client
+    # uses (loopback never proxied, HTTPS_PROXY then HTTP_PROXY, NO_PROXY with CIDR blocks).
+    @client = ::OpenAI::Client.new(**client_options, &Ai::Transport::Http.faraday_options(llm_uri_base || Ai::Transport::Http::OPENAI_BASE))
     @uri_base = llm_uri_base
     if custom_provider? && llm_model.blank?
       raise Error, "Model is required when using a custom OpenAI‑compatible provider"
@@ -129,7 +158,7 @@ class Provider::Openai < Provider
   end
 
   def custom_provider?
-    @uri_base.present?
+    self.class.custom_endpoint?(@uri_base)
   end
 
   # Token-budget knobs. Precedence: ENV > Setting > default. Defaults match
@@ -604,7 +633,9 @@ class Provider::Openai < Provider
             user_identifier: user_identifier,
             start_time: start_time
           )
-          record_llm_usage(family: family, model: model, operation: "chat", error: e)
+          # A failed or incomplete stream still reports the tokens it consumed
+          stream_usage = collected_chunks.find { |chunk| chunk.type == "error" }&.usage
+          record_llm_usage(family: family, model: model, operation: "chat", usage: stream_usage, error: e)
           raise
         end
       end
@@ -819,6 +850,14 @@ class Provider::Openai < Provider
       Rails.logger.warn("Langfuse logging failed: #{e.message}\n#{e.full_message}")
     end
 
+    def extract_token_counts(usage)
+      [
+        usage["prompt_tokens"] || usage["input_tokens"] || 0,
+        usage["completion_tokens"] || usage["output_tokens"] || 0,
+        usage["total_tokens"] || 0
+      ]
+    end
+
     def record_llm_usage(family:, model:, operation:, usage: nil, error: nil)
       return unless family
 
@@ -829,15 +868,21 @@ class Provider::Openai < Provider
         # Extract HTTP status code if available from the error
         http_status_code = extract_http_status_code(error)
 
+        # Tokens are counted when the failed call still reported usage (e.g. response.incomplete)
+        prompt_tokens, completion_tokens, total_tokens = usage ? extract_token_counts(usage) : [ 0, 0, 0 ]
+        estimated_cost = if usage
+          LlmUsage.calculate_cost(model: model, prompt_tokens: prompt_tokens, completion_tokens: completion_tokens)
+        end
+
         inferred_provider = LlmUsage.infer_provider(model)
         family.llm_usages.create!(
           provider: inferred_provider,
           model: model,
           operation: operation,
-          prompt_tokens: 0,
-          completion_tokens: 0,
-          total_tokens: 0,
-          estimated_cost: nil,
+          prompt_tokens: prompt_tokens,
+          completion_tokens: completion_tokens,
+          total_tokens: total_tokens,
+          estimated_cost: estimated_cost,
           metadata: {
             error: safe_error_message(error),
             http_status_code: http_status_code
@@ -855,9 +900,7 @@ class Provider::Openai < Provider
       # Handle both old and new OpenAI API response formats
       # Old format: prompt_tokens, completion_tokens, total_tokens
       # New format: input_tokens, output_tokens, total_tokens
-      prompt_tokens = usage["prompt_tokens"] || usage["input_tokens"] || 0
-      completion_tokens = usage["completion_tokens"] || usage["output_tokens"] || 0
-      total_tokens = usage["total_tokens"] || 0
+      prompt_tokens, completion_tokens, total_tokens = extract_token_counts(usage)
 
       Rails.logger.info("Extracted tokens - prompt: #{prompt_tokens}, completion: #{completion_tokens}, total: #{total_tokens}")
 

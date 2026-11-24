@@ -6,7 +6,6 @@ zh-TW:
       subtitle: 深入洞察您的財務健康狀況
       export: 匯出 CSV
       print_report: 列印報表
-      toggle_section: 切換區塊顯示狀態
       periods:
         monthly: 按月
         quarterly: 按季

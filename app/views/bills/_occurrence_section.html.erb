@@ -1,7 +1,7 @@
-<%# locals: (title:, occurrences:, suggestions: {}, meta: nil, pay_periods: []) %>
+<%# locals: (title:, occurrences:, suggestions: {}, meta: nil, pay_periods: [], pay_period_occurrences: occurrences) %>
 <% return if occurrences.empty? %>
 
-<% markers = bills_pay_period_markers(occurrences, pay_periods) %>
+<% markers = bills_pay_period_markers(occurrences, pay_periods, currency: Current.family.currency, counted: pay_period_occurrences) %>
 
 <%# No shell by default: bills/index stacks the month sections in one. %>
 <%= render DS::Section.new(title: title, count: occurrences.size, inset: false, divided: false) do |section| %>

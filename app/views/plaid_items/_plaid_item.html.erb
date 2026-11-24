@@ -67,6 +67,7 @@
             <% end %>
 
             <%= render DS::Menu.new do |menu| %>
+              <% sync_schedule_menu_item(menu, plaid_item) %>
               <% menu.with_item(
                 variant: "button",
                 text: t(".delete"),

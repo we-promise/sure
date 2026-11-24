@@ -7,6 +7,7 @@ export default class extends Controller {
   showLoading() {
     // Don't prevent form submission, just show loading state
     if (this.hasButtonTarget) {
+      this.originalContent = this.buttonTarget.innerHTML
       this.buttonTarget.disabled = true
       this.buttonTarget.setAttribute("aria-disabled", "true")
       this.buttonTarget.setAttribute("aria-busy", "true")
@@ -17,5 +18,18 @@ export default class extends Controller {
         </span>
       `
     }
+  }
+
+  // The browser's back/forward cache hands a page back as it was left, so
+  // after a full-page submit the button would return disabled and spinning.
+  // Wire with pageshow@window->loading-button#restoreIfPersisted.
+  restoreIfPersisted(event) {
+    if (!event.persisted || !this.hasButtonTarget || this.originalContent === undefined) return
+
+    this.buttonTarget.disabled = false
+    this.buttonTarget.removeAttribute("aria-disabled")
+    this.buttonTarget.removeAttribute("aria-busy")
+    this.buttonTarget.innerHTML = this.originalContent
+    this.originalContent = undefined
   }
 }

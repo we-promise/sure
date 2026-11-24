@@ -200,6 +200,34 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
   end
 
   # ============================================================================
+  # SECURITY AUDIT LOG MODEL TESTS
+  # ============================================================================
+
+  test "security audit log user_email, ip_address and user_agent are encrypted at rest" do
+    request = ActionDispatch::TestRequest.create
+    request.remote_addr = "203.0.113.5"
+    request.user_agent = "EncryptionVerification/1.0"
+
+    log = SecurityAuditLog.log_mfa_enabled!(user: users(:family_admin), request: request)
+
+    assert_equal users(:family_admin).email, log.user_email
+    assert_equal "203.0.113.5", log.ip_address
+    assert_equal "EncryptionVerification/1.0", log.user_agent
+
+    raw_email = log.read_attribute_before_type_cast(:user_email).to_s
+    raw_ip = log.read_attribute_before_type_cast(:ip_address).to_s
+    raw_agent = log.read_attribute_before_type_cast(:user_agent).to_s
+    assert_not_includes raw_email, users(:family_admin).email
+    assert_not_includes raw_ip, "203.0.113.5"
+    assert_not_includes raw_agent, "EncryptionVerification/1.0"
+
+    log.reload
+    assert_equal users(:family_admin).email, log.user_email
+    assert_equal "203.0.113.5", log.ip_address
+    assert_equal "EncryptionVerification/1.0", log.user_agent
+  end
+
+  # ============================================================================
   # MOBILE DEVICE MODEL TESTS
   # ============================================================================
 
@@ -391,6 +419,44 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     assert_column_not_plaintext(PlaidAccount, account.id, :raw_holdings_payload, "sec_probe")
   end
 
+  test "provider account identifiers are encrypted at rest" do
+    family = families(:dylan_family)
+
+    eb_item = EnableBankingItem.create!(
+      family: family, name: "EB probe", country_code: "FI", application_id: "app", client_certificate: "cert",
+      last_psu_ip: "203.0.113.42"
+    )
+    akahu_account = AkahuAccount.create!(
+      akahu_item: AkahuItem.create!(family: family, name: "Akahu probe", app_token: "app", user_token: "user"),
+      name: "Everyday", account_id: "acc_probe", currency: "NZD", formatted_account: "12-3456-7654321-00"
+    )
+    lunchflow_account = lunchflow_items(:one).lunchflow_accounts.create!(
+      name: "Brokerage", currency: "GBP", account_id: "holdings-probe",
+      raw_holdings_payload: [ { "symbol" => "HOLDPROBE" } ]
+    )
+
+    assert_equal "203.0.113.42", eb_item.reload.last_psu_ip
+    assert_equal "12-3456-7654321-00", akahu_account.reload.formatted_account
+    assert_equal "HOLDPROBE", lunchflow_account.reload.raw_holdings_payload.first["symbol"]
+
+    assert_column_not_plaintext(EnableBankingItem, eb_item.id, :last_psu_ip, "203.0.113.42")
+    assert_column_not_plaintext(AkahuAccount, akahu_account.id, :formatted_account, "7654321")
+    assert_column_not_plaintext(LunchflowAccount, lunchflow_account.id, :raw_holdings_payload, "HOLDPROBE")
+  end
+
+  test "provider identifiers stored before encryption stay readable" do
+    eb_item = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "EB legacy", country_code: "FI", application_id: "app", client_certificate: "cert"
+    )
+    EnableBankingItem.where(id: eb_item.id).update_all("last_psu_ip = '203.0.113.50'")
+
+    # The global setting can be on during the backfill window, so turn it off
+    # here: the attribute's own option must cover the legacy value by itself.
+    with_unencrypted_data_supported(false) do
+      assert_equal "203.0.113.50", eb_item.reload.last_psu_ip
+    end
+  end
+
   # ============================================================================
   # DATABASE VERIFICATION TESTS
   # ============================================================================
@@ -418,9 +484,9 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
 
   private
 
-    def with_unencrypted_data_supported
+    def with_unencrypted_data_supported(enabled = true)
       previous = ActiveRecord::Encryption.config.support_unencrypted_data
-      ActiveRecord::Encryption.config.support_unencrypted_data = true
+      ActiveRecord::Encryption.config.support_unencrypted_data = enabled
       yield
     ensure
       ActiveRecord::Encryption.config.support_unencrypted_data = previous

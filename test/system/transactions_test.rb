@@ -140,7 +140,112 @@ class TransactionsTest < ApplicationSystemTestCase
     assert_text @transaction.name
   end
 
+  test "keeps pending status beside the amount without crowding the name" do
+    @user.update!(show_ai_sidebar: false)
+    entry = create_transaction("Streaming subscription with a long merchant name", Date.current, 12.99)
+    entry.entryable.update!(extra: { "plaid" => { "pending" => true } })
+    pending = "[title='#{I18n.t("transactions.transaction.pending_tooltip")}']"
+
+    [ 390, 820, 1024, 1440 ].each do |width|
+      page.current_window.resize_to(width, 900)
+      visit transactions_url(per_page: @page_size)
+
+      row = find("##{dom_id(entry)} [data-controller='clickable-row']")
+      assert_no_selector "##{dom_id(entry)} [data-tag-fit-bounds='0.5'] #{pending}"
+      pill = row.find(pending).evaluate_script("this.getBoundingClientRect().toJSON()")
+      amount = row.find("p.privacy-sensitive").evaluate_script("this.getBoundingClientRect().toJSON()")
+      bounds = row.evaluate_script("this.getBoundingClientRect().toJSON()")
+
+      if page.evaluate_script("window.matchMedia('(min-width: 64rem)').matches")
+        assert_operator pill["right"], :<=, amount["left"], "Pending must precede the amount at #{width}px"
+        assert_in_delta pill["y"] + pill["height"] / 2, amount["y"] + amount["height"] / 2, 0.5
+      else
+        assert_operator pill["top"], :>=, amount["bottom"], "Pending must sit below the amount at #{width}px"
+        assert_in_delta pill["right"], amount["right"], 1
+      end
+      assert_operator pill["left"], :>=, bounds["left"]
+      columns = row.all(:xpath, "./div[contains(@class, 'col-span-5') or contains(@class, 'col-span-3')]", visible: true)
+      columns.each do |column|
+        right = column.evaluate_script("this.getBoundingClientRect().right")
+        assert_operator pill["left"], :>=, right - 1, "Pending must clear the name and category at #{width}px"
+      end
+      assert_operator amount["right"], :<=, bounds["right"]
+      assert_operator amount["height"], :<=, 24, "the amount should stay on one line at #{width}px"
+    end
+
+    entry.entryable.update!(extra: { "plaid" => { "pending" => false } })
+    visit transactions_url(per_page: @page_size)
+    assert_no_selector "##{dom_id(entry)} #{pending}"
+  end
+
+  test "keeps pending amounts contained with both sidebars open" do
+    @user.update!(show_ai_sidebar: true)
+    entry = create_transaction("Pending payment", Date.current, 4321.09)
+    entry.entryable.update!(extra: { "plaid" => { "pending" => true } })
+
+    [ 1100, 1280, 1440 ].each do |width|
+      page.current_window.resize_to(width, 900)
+      visit transactions_url(per_page: @page_size)
+      assert_selector "[data-app-layout-target='rightSidebar']", visible: true
+      row = find("##{dom_id(entry)} [data-controller='clickable-row']")
+      column = row.find("[data-tag-fit-bounds='1']").find(:xpath, "..").evaluate_script("this.getBoundingClientRect().toJSON()")
+      amount = row.find("p.privacy-sensitive").evaluate_script("this.getBoundingClientRect().toJSON()")
+      pill = row.find("[title='#{I18n.t("transactions.transaction.pending_tooltip")}']").evaluate_script("this.getBoundingClientRect().toJSON()")
+      [ pill, amount ].each do |bounds|
+        assert_operator bounds["left"], :>=, column["left"] - 1
+        assert_operator bounds["right"], :<=, column["right"] + 1
+      end
+      assert_operator amount["height"], :<=, 24
+    end
+  end
+
+  test "the Match? pill opens the suggested transfer with both transactions' names and amounts" do
+    @user.update!(show_ai_sidebar: false)
+    page.current_window.resize_to(1440, 900)
+    outflow = create_transaction("Card bill sent from checking", Date.current, 100)
+    inflow = create_transaction("Payment received, thank you", Date.current, -100, account: accounts(:credit_card))
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
+    visit transactions_url(per_page: @page_size)
+
+    find("##{dom_id(outflow.entryable, :transfer_match)} [data-testid='transfer-match-pill']", visible: true).click
+
+    within "dialog[open]" do
+      [ outflow, inflow ].each do |entry|
+        row = find("dd", exact_text: entry.name).find(:xpath, "ancestor::div[contains(@class, 'space-y-3')][1]")
+        assert row.has_selector?("dd", exact_text: entry.name)
+        assert row.has_selector?("dd.privacy-sensitive", text: entry.amount_money.abs.format), "#{entry.name}'s amount is not beside it"
+      end
+    end
+  end
+
+  test "a long transaction name wraps inside the transfer drawer instead of being cut off" do
+    @user.update!(show_ai_sidebar: false)
+    page.current_window.resize_to(390, 900)
+    long_reference = "SUNDAY*QUALITYWINESLONDONGBR-REF-0001234567890ABCDEF0123456789GHIJKLMNOPQRSTUVWXYZ-TXN-9876543210"
+    outflow = create_transaction(long_reference, Date.current, 100)
+    inflow = create_transaction("Payment received", Date.current, -100, account: accounts(:credit_card))
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
+    visit transactions_url(per_page: @page_size)
+
+    find("##{dom_id(outflow.entryable, :transfer_match)} [data-testid='transfer-match-pill']", visible: true).click
+
+    name = find("dialog[open] dd", exact_text: long_reference)
+    fit = name.evaluate_script(<<~JS)
+      (() => {
+        const drawer = this.closest("dialog").getBoundingClientRect();
+        const box = this.getBoundingClientRect();
+        return { cut: this.scrollWidth > this.clientWidth + 1, inside: box.left >= drawer.left && box.right <= drawer.right + 0.5,
+                 pageScrolls: document.documentElement.scrollWidth > document.documentElement.clientWidth };
+      })()
+    JS
+    assert_not fit["cut"], "the name is cut off; on a phone there is no way to read the rest"
+    assert fit["inside"], "the name runs out of the drawer"
+    assert_not fit["pageScrolls"], "the long name makes the page scroll sideways"
+  end
+
   test "confirms an auto-matched transfer from beside the amount" do
+    @user.update!(show_ai_sidebar: false)
+    page.current_window.resize_to(1440, 900)
     outflow = create_transaction("Payment to credit card", Date.current, 100)
     inflow = create_transaction("Payment received", Date.current, -100, account: accounts(:credit_card))
     transfer = Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
@@ -148,6 +253,10 @@ class TransactionsTest < ApplicationSystemTestCase
     visit transactions_url(per_page: @page_size)
 
     assert_selector match
+    pill_bounds = find("#{match} [data-testid='transfer-match-pill']", visible: true).evaluate_script("this.getBoundingClientRect().toJSON()")
+    amount_bounds = find("##{dom_id(outflow)} p.privacy-sensitive").evaluate_script("this.getBoundingClientRect().toJSON()")
+    assert_in_delta pill_bounds["y"] + pill_bounds["height"] / 2,
+                    amount_bounds["y"] + amount_bounds["height"] / 2, 0.5
     assert_no_selector "[data-tag-fit-bounds='0.5'] #{match}"
 
     within(match) { click_button I18n.t("transactions.transfer_match.confirm_match") }

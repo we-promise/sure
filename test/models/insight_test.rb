@@ -1,6 +1,7 @@
 require "test_helper"
 
 class InsightTest < ActiveSupport::TestCase
+  include InsightTestHelper
   setup do
     @insight = insights(:spending_anomaly_dining)
   end
@@ -166,7 +167,100 @@ class InsightTest < ActiveSupport::TestCase
     assert_not_includes family.insights.visible, insight
   end
 
+  test "an insight about a recurring series follows the series' current account" do
+    family = families(:dylan_family)
+    series = recurring_transactions(:netflix_subscription)
+    insight = subscription_audit_insight(family, series, account_id: series.account_id)
+    assert_includes family.insights.visible, insight
+
+    series.update_columns(account_id: accounts(:connected).id)
+    assert_not_includes family.insights.visible, insight
+
+    series.update_columns(account_id: nil)
+    assert_includes family.insights.visible, insight
+  end
+
+  test "an insight about a deleted recurring series is hidden" do
+    family = families(:dylan_family)
+    series = recurring_transactions(:netflix_subscription)
+    insight = subscription_audit_insight(family, series)
+
+    series.destroy!
+
+    assert_not_includes family.insights.visible, insight
+  end
+
+  # A total names no single account, so it carries the set it was computed
+  # from. Once that set is no longer the one every active member can open, the
+  # figures may come from an account someone lost, and the row hides until the
+  # next run rewrites it.
+  test "revoking a share hides a household total right away" do
+    family = families(:dylan_family)
+    total = household_total(family)
+    assert_includes family.insights.visible, total
+
+    accounts(:depository).unshare_with!(users(:family_member))
+
+    assert_not_includes family.insights.visible, total
+    assert_includes family.insights.visible, @insight, "a row without a digest is untouched"
+  end
+
+  test "restoring access shows the household total again as it was" do
+    family = families(:dylan_family)
+    total = household_total(family).tap(&:mark_read!)
+    before = total.reload.attributes
+
+    accounts(:depository).unshare_with!(users(:family_member))
+    accounts(:depository).share_with!(users(:family_member))
+
+    assert_includes family.insights.visible, total
+    assert_equal before, total.reload.attributes, "hiding writes nothing"
+  end
+
+  test "a member leaving hides a household total" do
+    family = families(:dylan_family)
+    total = household_total(family)
+
+    users(:family_member).deactivate
+
+    assert_not_includes family.insights.visible, total
+  end
+
+  test "a member joining hides a household total" do
+    family = families(:dylan_family)
+    total = household_total(family)
+
+    family.users.create!(email: "newcomer@example.com", password: "password123!A", first_name: "New", last_name: "Member", role: "member")
+
+    assert_not_includes family.insights.visible, total
+  end
+
+  test "an access change leaves an insight about a still shared account visible" do
+    family = families(:dylan_family)
+    per_account = idle_cash_insight(family, accounts(:depository))
+
+    accounts(:credit_card).unshare_with!(users(:family_member))
+
+    assert_includes family.insights.visible, per_account
+  end
+
+  test "a household total is checked against its own family's accounts" do
+    total = household_total(families(:empty))
+
+    accounts(:depository).unshare_with!(users(:family_member))
+
+    assert_includes families(:empty).insights.visible, total
+  end
+
   private
+    def subscription_audit_insight(family, series, account_id: nil)
+      family.insights.create!(
+        insight_type: "subscription_audit", priority: "medium", status: "active", title: "Audit", body: "body",
+        metadata: { "recurring_transaction_id" => series.id, "account_id" => account_id }.compact,
+        dedup_key: "subscription_audit:#{series.id}", generated_at: Time.current
+      )
+    end
+
     def idle_cash_insight(family, account)
       family.insights.create!(
         insight_type: "idle_cash", priority: "low", status: "active", title: "Idle", body: "body",

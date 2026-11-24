@@ -35,28 +35,49 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("invitations.create.success"), flash[:notice]
   end
 
-  test "should add existing user to household when inviting their email" do
+  test "inviting an email that already belongs to an account answers like any invitation and moves no one" do
     existing_user = users(:empty)
-    assert existing_user.family_id != @admin.family_id
+    original_family_id = existing_user.family_id
 
-    assert_difference("Invitation.count") do
-      assert_no_enqueued_jobs only: ActionMailer::MailDeliveryJob do
-        post invitations_url, params: {
-          invitation: {
-            email: existing_user.email,
-            role: "member"
-          }
-        }
-      end
+    assert_difference("Invitation.count", 1) do
+      post invitations_url, params: { invitation: { email: existing_user.email, role: "member" } }
     end
 
-    invitation = Invitation.order(created_at: :desc).first
-    assert invitation.accepted_at.present?, "Invitation should be accepted"
     existing_user.reload
-    assert_equal @admin.family_id, existing_user.family_id
-    assert_equal "member", existing_user.role
+    assert_equal original_family_id, existing_user.family_id
+    assert_equal "admin", existing_user.role
     assert_redirected_to settings_profile_path
-    assert_equal I18n.t("invitations.create.existing_user_added"), flash[:notice]
+    assert_equal I18n.t("invitations.create.success"), flash[:notice]
+  end
+
+  test "admin cannot invite their own email and keeps the admin role" do
+    assert_no_difference("Invitation.count") do
+      post invitations_url, params: { invitation: { email: " #{@admin.email.upcase} ", role: "member" } }
+    end
+
+    assert_equal "admin", @admin.reload.role
+    assert_equal I18n.t("invitations.create.own_email"), flash[:alert]
+  end
+
+  test "inviting a current household member does not change their role" do
+    member = users(:family_member)
+
+    post invitations_url, params: { invitation: { email: member.email, role: "admin" } }
+
+    assert_equal "member", member.reload.role
+    assert_equal I18n.t("invitations.create.success"), flash[:notice]
+  end
+
+  test "super admin cannot invite their own email and keeps the super admin role" do
+    sign_in staff = users(:sure_support_staff)
+
+    assert_no_difference("Invitation.count") do
+      post invitations_url, params: { invitation: { email: staff.email, role: "member" } }
+    end
+
+    assert_redirected_to settings_profile_path
+    assert_equal "super_admin", staff.reload.role
+    assert_equal I18n.t("invitations.create.own_email"), flash[:alert]
   end
 
   test "non-admin cannot create invitations" do
@@ -105,33 +126,6 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "guest", invitation.role
     assert_equal @admin.family, invitation.family
     assert_equal @admin, invitation.inviter
-  end
-
-  test "inviting an existing user as guest applies intro defaults" do
-    existing_user = users(:empty)
-    existing_user.update!(
-      role: :member,
-      ui_layout: :dashboard,
-      show_sidebar: true,
-      show_ai_sidebar: true,
-      ai_enabled: false
-    )
-
-    assert_difference("Invitation.count") do
-      post invitations_url, params: {
-        invitation: {
-          email: existing_user.email,
-          role: "guest"
-        }
-      }
-    end
-
-    existing_user.reload
-    assert_equal "guest", existing_user.role
-    assert existing_user.ui_layout_intro?
-    assert_not existing_user.show_sidebar?
-    assert_not existing_user.show_ai_sidebar?
-    assert existing_user.ai_enabled?
   end
 
   test "re-inviting an email whose prior invitation expired succeeds instead of 500ing" do
@@ -187,11 +181,172 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("invitations.create.failure"), flash[:alert]
   end
 
-  test "should accept invitation and show choice between sign in and create account" do
+  test "should get bulk_new" do
+    get bulk_new_invitations_url
+    assert_response :success
+    assert_select "option[value=?]", "member"
+    assert_select "option[value=?]", "admin", count: 0
+  end
+
+  test "bulk_create rejects the admin role" do
+    assert_no_difference("Invitation.count") do
+      post bulk_create_invitations_url, params: {
+        bulk_invitation: {
+          emails: "escalate@example.com",
+          role: "admin"
+        }
+      }
+    end
+
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.bulk_create.invalid_role"), flash[:alert]
+  end
+
+  test "bulk_create handles a non-hash bulk_invitation param without 500ing" do
+    assert_no_difference("Invitation.count") do
+      post bulk_create_invitations_url, params: { bulk_invitation: "member" }
+    end
+
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.bulk_create.invalid_role"), flash[:alert]
+  end
+
+  test "non-admin cannot get bulk_new" do
+    sign_in users(:family_member)
+    get bulk_new_invitations_url
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.create.failure"), flash[:alert]
+  end
+
+  test "bulk_create sends invitations to multiple new emails" do
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
+
+    assert_difference("Invitation.count", 2) do
+      assert_enqueued_jobs 2, only: ActionMailer::MailDeliveryJob do
+        post bulk_create_invitations_url, params: {
+          bulk_invitation: {
+            emails: "one@example.com, two@example.com",
+            role: "member"
+          }
+        }
+      end
+    end
+
+    assert_response :success
+    assert @admin.family.invitations.pending.where(email: "one@example.com").exists?
+    assert @admin.family.invitations.pending.where(email: "two@example.com").exists?
+  end
+
+  test "bulk_create de-duplicates emails within the batch" do
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
+
+    assert_difference("Invitation.count", 1) do
+      post bulk_create_invitations_url, params: {
+        bulk_invitation: {
+          emails: "dup@example.com\ndup@example.com\n DUP@example.com ",
+          role: "member"
+        }
+      }
+    end
+
+    assert_response :success
+    assert_equal 1, @admin.family.invitations.where(email: "dup@example.com").count
+  end
+
+  test "bulk_create invites an existing user's email without moving them and skips blanks" do
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
+    existing_user = users(:empty)
+    original_family_id = existing_user.family_id
+    assert original_family_id != @admin.family_id
+
+    assert_difference("Invitation.count", 2) do
+      post bulk_create_invitations_url, params: {
+        bulk_invitation: {
+          emails: "#{existing_user.email}, , new-person@example.com",
+          role: "member"
+        }
+      }
+    end
+
+    assert_response :success
+    # An invitation never moves an existing account; the blank entry is dropped.
+    assert_equal original_family_id, existing_user.reload.family_id
+    assert @admin.family.invitations.pending.where(email: existing_user.email).exists?
+    assert @admin.family.invitations.pending.where(email: "new-person@example.com").exists?
+  end
+
+  test "bulk_create processes a batch of exactly the cap" do
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
+    emails = Array.new(BulkInvitation::MAX_BULK_INVITES) { |i| "exact#{i}@example.com" }.join("\n")
+
+    assert_difference("Invitation.count", BulkInvitation::MAX_BULK_INVITES) do
+      post bulk_create_invitations_url, params: {
+        bulk_invitation: { emails: emails, role: "member" }
+      }
+    end
+
+    assert_response :success
+  end
+
+  test "bulk_create rejects an empty batch" do
+    assert_no_difference("Invitation.count") do
+      post bulk_create_invitations_url, params: {
+        bulk_invitation: { emails: "   \n  ", role: "member" }
+      }
+    end
+
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.bulk_create.no_emails"), flash[:alert]
+  end
+
+  test "bulk_create rejects batches over the cap before creating any invitations" do
+    emails = Array.new(BulkInvitation::MAX_BULK_INVITES + 1) { |i| "cap#{i}@example.com" }.join("\n")
+
+    assert_no_difference("Invitation.count") do
+      post bulk_create_invitations_url, params: {
+        bulk_invitation: { emails: emails, role: "member" }
+      }
+    end
+
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.bulk_create.too_many", max: BulkInvitation::MAX_BULK_INVITES), flash[:alert]
+  end
+
+  test "non-admin cannot bulk_create invitations" do
+    sign_in users(:family_member)
+
+    assert_no_difference("Invitation.count") do
+      post bulk_create_invitations_url, params: {
+        bulk_invitation: {
+          emails: "new@example.com",
+          role: "admin"
+        }
+      }
+    end
+
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.create.failure"), flash[:alert]
+  end
+
+  test "accepting an invitation offers account creation only" do
     get accept_invitation_url(@invitation.token)
     assert_response :success
     assert_select "a[href=?]", new_registration_path(invitation: @invitation.token), text: /Create new account/i
-    assert_select "a[href=?]", new_session_path(invitation: @invitation.token), text: /already have an account/i
+    assert_select "a[href=?]", new_session_path(invitation: @invitation.token), count: 0
+    assert_select "p", text: I18n.t("invitations.accept_choice.existing_account_hint")
+  end
+
+  test "accept page looks the same when the invited email already has an account" do
+    # Dialogs get random element ids on every render.
+    page = -> { response.body.gsub(/dialog-title-\h+/, "") }
+    get accept_invitation_url(@invitation.token)
+    new_email_page = page.call
+
+    @invitation.update_columns(email: users(:family_member).email)
+    get accept_invitation_url(@invitation.token)
+
+    assert_response :success
+    assert_equal new_email_page, page.call
   end
 
   test "should not accept invalid invitation token" do

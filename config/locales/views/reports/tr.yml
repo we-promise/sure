@@ -62,7 +62,6 @@ tr:
       subtitle: Finansal sağlığınıza dair kapsamlı içgörüler
       title: Raporlar
       today: Bugün
-      toggle_section: Bölüm görünürlüğünü değiştir
     invalid_date_range: Bitiş tarihi başlangıç tarihinden önce olamaz. Tarihler yer
       değiştirildi.
     investment_flows:

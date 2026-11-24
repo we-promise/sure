@@ -346,6 +346,36 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes Provider::FamilyGenerator::RESERVED_ITEM_COLUMNS, "institution_id"
   end
 
+  # Every hand-written *_item.rb / *_account.rb model in app/models encrypts its raw
+  # provider payload columns (they hold full API responses, which can contain secrets).
+  # These templates generate the starting point for every *new* provider, so a gap here
+  # means every future provider ships with unencrypted payloads until someone notices.
+  def template_path(name)
+    File.expand_path("../../../../../lib/generators/provider/family/templates/#{name}", __FILE__)
+  end
+
+  test "item model template encrypts raw_payload and raw_institution_payload" do
+    template = File.read(template_path("item_model.rb.tt"))
+    encryption_block = template[/if encryption_ready\?.*?\n  end/m]
+
+    assert encryption_block, "expected an `if encryption_ready?` block in item_model.rb.tt"
+    assert_includes encryption_block, "encrypts :raw_payload"
+    assert_includes encryption_block, "encrypts :raw_institution_payload"
+  end
+
+  test "account model template includes Encryptable and encrypts raw payload columns" do
+    template = File.read(template_path("account_model.rb.tt"))
+
+    assert_includes template, "Encryptable"
+    encryption_block = template[/if encryption_ready\?.*?\n  end/m]
+
+    assert encryption_block, "expected an `if encryption_ready?` block in account_model.rb.tt"
+    assert_includes encryption_block, "encrypts :raw_payload"
+    assert_includes encryption_block, "encrypts :raw_transactions_payload"
+    assert_includes encryption_block, "encrypts :raw_holdings_payload"
+    assert_includes encryption_block, "encrypts :raw_activities_payload"
+  end
+
   # The old templates built opening tags with "<" + and closing ones with "%" + ">".
   # A string-built closer that ends a multi-line tag breaks the compiled Ruby, so
   # the parse check catches it, but one standing alone still parses and renders a
@@ -372,7 +402,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes generated, "<%= tag.div id: dom_id(gocardless_item) do %>"
   end
 
-  test "the generated item card renders the visible accounts it is given" do
+  test "the generated item card renders sync frequency and the visible accounts it is given" do
     Current.session = Session.create!(user: users(:family_admin))
     item = redbark_items(:one)
     linked = accounts(:depository)
@@ -388,6 +418,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     other = render_card.call(-> { [ accounts(:investment) ] })
 
     assert_includes after, item.name
+    assert_includes after, I18n.t("sync_schedules.menu_item")
     assert_not_includes before, linked.name
     assert_includes after, linked.name
     assert_not_includes after, accounts(:investment).name

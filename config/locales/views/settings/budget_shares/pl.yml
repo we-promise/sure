@@ -1,0 +1,6 @@
+---
+pl:
+  settings:
+    budget_shares:
+      update:
+        success: Zaktualizowano ustawienia udostępniania budżetu

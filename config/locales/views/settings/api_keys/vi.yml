@@ -13,6 +13,7 @@ vi:
     api_keys:
       create:
         success: "Khóa API của bạn đã được tạo thành công"
+        creation_failed: "Không thể tạo khóa API của bạn. Vui lòng thử lại."
       destroy:
         not_found: "Không tìm thấy khóa API"
         cannot_revoke: "Không thể thu hồi khóa API này"

@@ -107,6 +107,30 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert local.supports_model?("qwen2.5:32b")
   end
 
+  # Some keys only work on a regional host, so setting one must not turn off
+  # the OpenAI-only paths like the Responses API and max_completion_tokens.
+  test "an OpenAI regional host is hosted OpenAI, not a custom provider" do
+    with_env_overrides("OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => nil) do
+      regional = Provider::Openai.new("test-token", uri_base: "https://us.api.openai.com")
+
+      assert_not regional.custom_provider?
+      assert regional.supports_responses_endpoint?
+      assert_equal "OpenAI", regional.provider_name
+      assert Provider::Openai.native_pdf_completion_limit?(model: "gpt-6-luna", custom_provider: regional.custom_provider?)
+    end
+  end
+
+  test "only OpenAI's own hosts count as a hosted OpenAI endpoint" do
+    [ "https://api.openai.com", "https://api.openai.com/v1/", "https://us.api.openai.com", "https://EU.api.openai.com/v1" ].each do |url|
+      assert Provider::Openai.hosted_endpoint?(url), url
+    end
+
+    [ "http://us.api.openai.com", "https://evil-api.openai.com", "https://api.openai.com.example.com",
+      "https://us.api.openai.com/proxy", "https://us.api.openai.com:8443", "https://custom.example/v1", "not a url" ].each do |url|
+      assert_not Provider::Openai.hosted_endpoint?(url), url
+    end
+  end
+
   test "legacy and custom PDF processing preserve the fallback output limit" do
     with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
       Setting.stubs(:llm_max_response_tokens).returns(nil)
@@ -855,6 +879,60 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_match(/previous_response_not_found/, response.error.message)
   end
 
+  test "streaming records the billed usage of a response.incomplete event" do
+    family = families(:dylan_family)
+    fake_responses = mock
+    fake_client = mock
+    fake_client.stubs(:responses).returns(fake_responses)
+    @subject.stubs(:client).returns(fake_client)
+
+    fake_responses.expects(:create).with do |*_args, **kwargs|
+      kwargs.dig(:parameters, :stream).call({
+        "type" => "response.incomplete",
+        "response" => {
+          "incomplete_details" => { "reason" => "max_output_tokens" },
+          "usage" => { "input_tokens" => 120, "output_tokens" => 80, "total_tokens" => 200 }
+        }
+      })
+      true
+    end.returns(nil)
+
+    assert_difference -> { family.llm_usages.count }, 1 do
+      response = @subject.chat_response("hi", model: @subject_model, streamer: proc { |_| }, family: family)
+
+      assert_not response.success?
+    end
+
+    usage = family.llm_usages.order(:created_at).last
+    assert_equal 120, usage.prompt_tokens
+    assert_equal 80, usage.completion_tokens
+    assert_equal 200, usage.total_tokens
+    assert_match(/incomplete/, usage.metadata["error"])
+  end
+
+  test "streaming records zero tokens when a failed response reports no usage" do
+    family = families(:dylan_family)
+    fake_responses = mock
+    fake_client = mock
+    fake_client.stubs(:responses).returns(fake_responses)
+    @subject.stubs(:client).returns(fake_client)
+
+    fake_responses.expects(:create).with do |*_args, **kwargs|
+      kwargs.dig(:parameters, :stream).call({
+        "type" => "response.failed",
+        "response" => { "error" => { "message" => "boom", "code" => "server_error" } }
+      })
+      true
+    end.returns(nil)
+
+    assert_difference -> { family.llm_usages.count }, 1 do
+      @subject.chat_response("hi", model: @subject_model, streamer: proc { |_| }, family: family)
+    end
+
+    usage = family.llm_usages.order(:created_at).last
+    assert_equal 0, usage.total_tokens
+  end
+
   test "streaming surfaces a useful error when the stream ends with no response and no error event" do
     fake_responses = mock
     fake_client = mock
@@ -1110,6 +1188,16 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     recorded = family.llm_usages.order(:created_at).last
     assert_equal BigDecimal("0"), recorded.estimated_cost
     assert_equal [ 10, 5, 15 ], [ recorded.prompt_tokens, recorded.completion_tokens, recorded.total_tokens ]
+  end
+
+  test "the client takes its proxy from Ai::Transport::Http, never proxying loopback" do
+    ClimateControl.modify(HTTPS_PROXY: "http://proxy.internal:8888", HTTP_PROXY: nil, NO_PROXY: nil, no_proxy: nil) do
+      cloud = Faraday.new.tap { Provider::Openai.new("token").send(:client).faraday_middleware.call(_1) }
+      local = Faraday.new.tap { Provider::Openai.new("token", uri_base: "http://127.0.0.1:8080/v1", model: "qwen3").send(:client).faraday_middleware.call(_1) }
+
+      assert_equal URI("http://proxy.internal:8888"), cloud.proxy.uri
+      assert_nil local.proxy
+    end
   end
 
   private

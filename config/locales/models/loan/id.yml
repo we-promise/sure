@@ -1,0 +1,8 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Baris perubahan suku bunga memerlukan tanggal berlaku dan suku bunga.
+          rate_change_before_origination: Perubahan suku bunga tidak dapat berlaku sebelum pinjaman dimulai.

@@ -1,6 +1,14 @@
 ---
 fr:
   reports:
+    biggest_expenses:
+      title: Plus grosses dépenses
+      one_time: Ponctuelle
+      limit_aria: Nombre de dépenses à afficher
+      table:
+        name: Nom
+        category: Catégorie
+        amount: Montant
     budget_performance:
       budgeted: Budgété
       no_budgets: Aucune catégorie de budget définie pour ce mois
@@ -41,6 +49,7 @@ fr:
       next_period: Période suivante
       next_year: L'année prochaine
       period_label:
+        all_time: "%{start} – %{end}"
         last_6_months: "%{start} – %{end}"
         past_year: "%{year}"
         quarterly: Q%{quarter} %{year}
@@ -49,6 +58,7 @@ fr:
         quarter: Q%{quarter} %{year}
         ytd: Depuis le début de l'année %{year}
       periods:
+        all_time: Tout le temps
         custom: Plage personnalisée
         last_6_months: 6 derniers mois
         monthly: Mensuel
@@ -58,13 +68,20 @@ fr:
       previous_period: Période précédente
       previous_year: Année précédente
       print_report: Imprimer le rapport
+      section_aria: Section %{title}. Appuyez sur Entrée ou Espace pour la saisir et la réordonner, puis utilisez les flèches pour la déplacer.
       sections_aria: Sections des rapports
       shortcut_hint: "%{action} (%{key})"
       showing_period: Affichage des données du %{start} au %{end}
       subtitle: Aperçus complets de votre santé financière
+      tag_filter:
+        all: Toutes les étiquettes
+        selected:
+          one: "%{count} étiquette"
+          other: "%{count} étiquettes"
+        search: Rechercher des étiquettes
+        apply: Appliquer
       title: Rapports
       today: Aujourd'hui
-      toggle_section: Basculer la visibilité de la section
     invalid_date_range: La date de fin ne peut pas être antérieure à la date de début.
       Les dates ont été inversées.
     investment_flows:
@@ -100,6 +117,9 @@ fr:
       top_holdings: Principaux holdings
       total_gains: Gains totaux
       total_return: Rendement total
+      unconverted_note:
+        one: "%{count} plus-value n'est pas incluse : aucun taux de change vers %{currency}"
+        other: "%{count} plus-values ne sont pas incluses : aucun taux de change vers %{currency}"
       unrealized_gains: Plus-values latentes
       value: Valeur
       view_details: Voir les détails
@@ -115,6 +135,14 @@ fr:
       total_assets: Actifs
       total_liabilities: Passifs
     print:
+      biggest_expenses:
+        title: Plus grosses dépenses
+        date: Date
+        name: Nom
+        category: Catégorie
+        account: Compte
+        amount: Montant
+        one_time: Ponctuelle
       document_title: Rapport financier
       generated_on: Généré le %{date}
       investments:

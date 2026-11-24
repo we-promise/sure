@@ -17,6 +17,14 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "create sends a reset email to a user whose email row is still legacy plaintext" do
+    email = store_legacy_plaintext_email(@user)
+
+    assert_enqueued_emails 1 do
+      post password_reset_path, params: { email: email }
+    end
+  end
+
   test "edit" do
     get edit_password_reset_path(token: @user.generate_token_for(:password_reset))
     assert_response :ok
@@ -26,6 +34,51 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     patch password_reset_path(token: @user.generate_token_for(:password_reset)),
       params: { user: { password: "password", password_confirmation: "password" } }
     assert_redirected_to new_session_url
+
+    assert SecurityAuditLog.exists?(user: @user, event_type: "password_changed")
+  end
+
+  test "update with an invalid password does not write an audit log" do
+    assert_no_difference "SecurityAuditLog.count" do
+      patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+        params: { user: { password: "short", password_confirmation: "short" } }
+    end
+    assert_response :unprocessable_entity
+  end
+
+  test "update rejects a mismatched confirmation" do
+    original_digest = @user.password_digest
+
+    assert_no_difference "SecurityAuditLog.count" do
+      patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+        params: { user: { password: "password", password_confirmation: "different" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal original_digest, @user.reload.password_digest
+  end
+
+  test "update with a blank password does not report success or write an audit log" do
+    original_digest = @user.password_digest
+
+    assert_no_difference "SecurityAuditLog.count" do
+      patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+        params: { user: { password: "", password_confirmation: "" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal original_digest, @user.reload.password_digest
+  end
+
+  test "rolls back the password change when the audit log write fails" do
+    SecurityAuditLog.stubs(:log_password_changed!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+    original_digest = @user.password_digest
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "password", password_confirmation: "password" } }
+
+    assert_response :unprocessable_entity
+    assert_equal original_digest, @user.reload.password_digest
   end
 
   test "all actions redirect when password features are disabled" do
@@ -86,5 +139,46 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     # Verify password was not set
     sso_user.reload
     assert_nil sso_user.password_digest, "SSO-only user should still have nil password_digest"
+  end
+
+  test "update signs the user out everywhere" do
+    sign_in @user
+    @user.sessions.create!
+    assert_operator @user.sessions.count, :>=, 2
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "NewPassword123!", password_confirmation: "NewPassword123!" } }
+
+    assert_redirected_to new_session_path
+    assert_equal 0, @user.sessions.reload.count
+  end
+
+  test "update revokes the user's OAuth tokens and grants, so a refresh token stops working" do
+    oauth_app = Doorkeeper::Application.create!(name: "Sure Mobile", redirect_uri: "https://client.example.com/callback", scopes: "read_write")
+    access_token = Doorkeeper::AccessToken.create!(application: oauth_app, resource_owner_id: @user.id, expires_in: 2.hours, scopes: "read_write", use_refresh_token: true)
+    refresh_token = access_token.plaintext_refresh_token
+    grant = Doorkeeper::AccessGrant.create!(application: oauth_app, resource_owner_id: @user.id, expires_in: 10.minutes, redirect_uri: oauth_app.redirect_uri, scopes: "read_write")
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "NewPassword123!", password_confirmation: "NewPassword123!" } }
+    assert_redirected_to new_session_path
+
+    assert access_token.reload.revoked?, "the access token must not outlive a password reset"
+    assert grant.reload.revoked?, "an unexchanged grant must not be redeemable after a password reset"
+
+    post "/oauth/token", params: { grant_type: "refresh_token", refresh_token: refresh_token, client_id: oauth_app.uid, client_secret: oauth_app.secret }
+    assert_response :bad_request
+    assert_equal "invalid_grant", JSON.parse(response.body)["error"]
+  end
+
+  test "a rejected reset leaves the user's OAuth tokens alone" do
+    oauth_app = Doorkeeper::Application.create!(name: "Sure Mobile", redirect_uri: "https://client.example.com/callback", scopes: "read_write")
+    access_token = Doorkeeper::AccessToken.create!(application: oauth_app, resource_owner_id: @user.id, expires_in: 2.hours, scopes: "read_write")
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "NewPassword123!", password_confirmation: "Mismatch123!" } }
+
+    assert_response :unprocessable_entity
+    assert_not access_token.reload.revoked?
   end
 end

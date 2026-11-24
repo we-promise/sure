@@ -1,8 +1,33 @@
 class Transactions::BulkUpdatesController < ApplicationController
   def new
+    # The selection bar sends these flags so the drawer can hide fields that
+    # do not apply to the selected entries. They control display only; the
+    # server still enforces the same rules in Entry.bulk_update!.
+    @has_transaction_entry = params[:has_transaction_entry] != "false"
+    @has_transfer_entry = params[:has_transfer_entry] == "true"
+    @has_category_editable_entry = params[:has_category_editable_entry] != "false"
+    @has_normal_transaction_entry = params[:has_normal_transaction_entry] != "false"
   end
 
   def create
+    # Reject an out-of-range reconciled_status before it ever reaches
+    # bulk_update! — the enum's `validate: true` means an invalid value
+    # would otherwise raise ActiveRecord::RecordInvalid partway through the
+    # bulk transaction. The single-row TransactionsController#reconcile
+    # action can't hit this (advance_reconciled_status! only ever assigns a
+    # value from RECONCILED_STATUS_CYCLE), but this form field takes
+    # arbitrary user input, so it needs the same graceful-failure handling.
+    reconciled_status = bulk_update_params[:reconciled_status]
+    if reconciled_status.present? && !Current.family.manual_reconciliation?
+      redirect_back_or_to transactions_path, alert: t("transactions.reconcile.unavailable")
+      return
+    end
+
+    if reconciled_status.present? && !Entry.reconciled_statuses.key?(reconciled_status)
+      redirect_back_or_to transactions_path, alert: t("transactions.reconcile.failure")
+      return
+    end
+
     # Skip split parents from bulk update - update children instead
     scoped_params = family_scoped_bulk_update_params
     selected = Current.annotatable_entries
@@ -16,25 +41,49 @@ class Transactions::BulkUpdatesController < ApplicationController
     full_ids = rows.select(&:last).map(&:first).uniq
     annotate_ids = rows.map(&:first).uniq - full_ids
 
+    changed_ids = []
+    collect_changed = ->(entry) { changed_ids << entry.entryable_id }
+
     updated = Entry.transaction do
-      bulk_update_entries(full_ids, scoped_params) +
-        bulk_update_entries(annotate_ids, scoped_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES))
+      # The two groups below lock their rows in different orders. Lock the full
+      # selection first, so requests with opposite permissions cannot deadlock.
+      Entry.lock_for_bulk_update!(full_ids + annotate_ids)
+
+      bulk_update_entries(full_ids, scoped_params, &collect_changed) +
+        bulk_update_entries(annotate_ids, scoped_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES), &collect_changed)
     end
 
+    Rule.apply_immediately_later(Current.family, changed_ids)
+
     redirect_back_or_to transactions_path, notice: "#{updated} transactions updated"
+  rescue ActiveRecord::RecordInvalid => e
+    DebugLogEntry.capture(
+      category: "reconciliation",
+      level: "error",
+      message: "Bulk transaction update failed: #{e.message}",
+      source: "Transactions::BulkUpdatesController#create",
+      family: Current.family,
+      user: Current.user,
+      metadata: {
+        error_class: e.class.name,
+        error_message: e.message,
+        entry_ids: bulk_update_params[:entry_ids]
+      }
+    )
+    redirect_back_or_to transactions_path, alert: t("transactions.reconcile.failure")
   end
 
   private
-    def bulk_update_entries(entry_ids, attributes)
+    def bulk_update_entries(entry_ids, attributes, &on_change)
       return 0 if entry_ids.empty?
 
       Current.family.entries.where(id: entry_ids).includes(:entryable)
-             .bulk_update!(attributes, update_tags: attributes.key?(:tag_ids))
+             .bulk_update!(attributes, update_tags: attributes.key?(:tag_ids), &on_change)
     end
 
     def bulk_update_params
       params.require(:bulk_update)
-            .permit(:date, :notes, :name, :category_id, :merchant_id, entry_ids: [], tag_ids: [])
+            .permit(:date, :notes, :name, :category_id, :merchant_id, :reconciled_status, entry_ids: [], tag_ids: [])
     end
 
     # Resolve category, merchant and tag IDs through the current family so IDs

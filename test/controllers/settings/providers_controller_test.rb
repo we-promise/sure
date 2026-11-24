@@ -327,17 +327,13 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "correctly identifies declared vs dynamic fields" do
-    # All current provider fields are dynamic, but the logic should correctly
-    # distinguish between declared and dynamic fields
     with_self_hosting do
       # plaid_client_id is a dynamic field (not defined in Setting)
       refute Setting.singleton_class.method_defined?(:plaid_client_id=),
         "plaid_client_id= should NOT be defined on Setting's singleton class"
 
-      # openai_model IS a declared field (defined in Setting)
-      # but it's not a provider field, so it won't go through this controller
-      assert Setting.singleton_class.method_defined?(:openai_model=),
-        "openai_model= should be defined on Setting's singleton class"
+      assert Setting.singleton_class.method_defined?(:plaid_secret=)
+      assert Setting.singleton_class.method_defined?(:plaid_eu_secret=)
     end
   end
 
@@ -356,7 +352,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "batches multiple dynamic fields from same provider atomically" do
+  test "batches declared and dynamic fields from same provider atomically" do
     # Test that multiple fields from Plaid are updated as individual entries
     with_self_hosting do
       # Clear existing fields
@@ -381,7 +377,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "batches dynamic fields from multiple providers atomically" do
+  test "batches provider fields from multiple providers atomically" do
     # Test that fields from different providers are stored as individual entries
     with_self_hosting do
       # Clear existing fields
@@ -457,6 +453,36 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
       # Secret should remain unchanged
       assert_equal "real_secret", Setting["plaid_secret"]
+    end
+  end
+
+  test "existing provider forms save and mask declared Plaid secrets" do
+    %w[plaid plaid_eu].each do |provider|
+      key = "#{provider}_secret"
+      secret = "synthetic-#{provider}-secret"
+      patch settings_providers_url, params: { setting: {
+        "#{provider}_client_id" => "synthetic-client", key => secret
+      } }
+
+      assert_redirected_to settings_providers_url
+      ciphertext = Setting.find_by!(var: key).value
+      refute_includes ciphertext, secret
+      assert_equal secret, Setting[key]
+      assert_not Setting.exists?(var: "dynamic:#{key}")
+
+      get connect_form_settings_providers_path(provider_key: provider)
+      assert_response :success
+      assert_select "input[name=?][type=password][value=?]", "setting[#{key}]", "********"
+      refute_includes response.body, secret
+      refute_includes response.body, ciphertext
+
+      patch settings_providers_url, params: { setting: { key => "********" } }
+      assert_redirected_to settings_providers_url
+      assert_equal ciphertext, Setting.find_by!(var: key).value
+
+      patch settings_providers_url, params: { setting: { key => "" } }
+      assert_redirected_to settings_providers_url
+      assert_nil Setting[key]
     end
   end
 
@@ -675,7 +701,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   test "GET show warns on configured provider forms when self-hosted encryption keys are not explicitly configured" do
     Setting["plaid_client_id"] = "test-client-id"
     Setting["plaid_secret"] = "test-secret"
-    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
 
     with_self_hosting do
       get settings_providers_url
@@ -683,7 +709,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
       assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                    "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                    "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                     minimum: 1
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
       assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
@@ -697,20 +723,69 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     Setting["plaid_client_id"] = "test-client-id"
     Setting["plaid_secret"] = "test-secret"
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
-    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
 
     get settings_providers_url
 
     assert_response :success
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
     assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                   count: 0
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
     refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
   ensure
     Setting["plaid_client_id"] = nil
     Setting["plaid_secret"] = nil
+  end
+
+  test "GET show warns when encryption keys are auto-derived from a known compromised secret" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
+  # Explicit keys are not derived from SECRET_KEY_BASE, so the banner's
+  # "encryption keys are not actually secret" does not apply to them.
+  test "GET show hides compromised secret warning when encryption keys are set explicitly" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
+  test "GET show hides compromised secret warning when encryption keys are not explicitly configured" do
+    # The "not configured at all" warning takes priority; don't show both.
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
+  test "GET show hides compromised secret warning in managed mode" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
   end
 
   test "GET connect_form renders Interactive Brokers panel" do
@@ -721,16 +796,28 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Query ID/i, response.body)
   end
 
+  test "GET connect_form lists every Interactive Brokers connection" do
+    families(:dylan_family).ibkr_items.create!(name: "IBKR Ireland", query_id: "Q1", token: "T1")
+    families(:dylan_family).ibkr_items.create!(name: "IBKR US", query_id: "Q2", token: "T2")
+
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    assert_includes response.body, "IBKR Ireland"
+    assert_includes response.body, "IBKR US"
+    assert_includes response.body, I18n.t("settings.providers.ibkr_panel.add_connection")
+  end
+
   test "GET connect_form warns when self-hosted encryption keys are not explicitly configured" do
     with_self_hosting do
-      ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+      ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
 
       get connect_form_settings_providers_path(provider_key: "ibkr")
 
       assert_response :success
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
       assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                    "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                    "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                     minimum: 1
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
       assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
@@ -740,14 +827,14 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
   test "GET connect_form hides encryption warning when self-hosted encryption keys are configured" do
     with_self_hosting do
-      ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+      ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
 
       get connect_form_settings_providers_path(provider_key: "ibkr")
 
       assert_response :success
       refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
       assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                    "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                    "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                     count: 0
       refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
       assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
@@ -757,14 +844,14 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
   test "GET connect_form hides encryption warning in managed mode" do
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
-    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
 
     get connect_form_settings_providers_path(provider_key: "ibkr")
 
     assert_response :success
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
     assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                   count: 0
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
     assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
@@ -773,14 +860,14 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
   test "GET connect_form uses shared encryption warning for provider panels" do
     with_self_hosting do
-      ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+      ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
 
       get connect_form_settings_providers_path(provider_key: "wise")
 
       assert_response :success
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
       assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                    "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                    "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                     minimum: 1
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
       refute_includes response.body, I18n.t("wise_items.provider_panel.encryption_warning.title")
@@ -806,6 +893,26 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(I18n.t("settings.providers.trade_republic_panel.phone_number_label"), response.body)
   end
 
+  test "GET show hides provider form encryption warning when only runtime-generated keys are available" do
+    # Regression test for issue #3142: self-hosted installs relying on the
+    # SECRET_KEY_BASE auto-generation fallback (explicitly_configured? false,
+    # runtime_configured? true) must NOT see the "encryption keys missing" warning.
+    Setting["plaid_client_id"] = "test-client-id"
+    Setting["plaid_secret"] = "test-secret"
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:runtime_configured?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+  ensure
+    Setting["plaid_client_id"] = nil
+    Setting["plaid_secret"] = nil
+  end
+
   test "GET connect_form for snaptrade shows OAuth setup instructions when instance is not configured" do
     Provider::Snaptrade.stubs(:oauth_configured?).returns(false)
 
@@ -815,6 +922,32 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("providers.snaptrade.oauth_setup_step_3")
     refute_includes response.body, I18n.t("providers.snaptrade.oauth_connect_button")
     refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready")
+  end
+
+  test "GET index lists SnapTrade connections for an OAuth item only while the OAuth app is configured" do
+    item = snaptrade_items(:configured_item)
+
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(false)
+    get settings_providers_path(manage: 1)
+    assert_response :success
+    refute_includes response.body, connections_snaptrade_item_path(item)
+
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    get settings_providers_path(manage: 1)
+    assert_response :success
+    assert_includes response.body, connections_snaptrade_item_path(item)
+  end
+
+  test "GET connect_form for snaptrade offers the Personal API key form when instance is not configured" do
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "snaptrade")
+
+    assert_response :success
+    assert_select "form[action='#{personal_key_snaptrade_items_path}']" do
+      assert_select "input[name='snaptrade_item[client_id]']"
+      assert_select "input[name='snaptrade_item[consumer_key]'][type=password]"
+    end
   end
 
   test "GET connect_form for snaptrade shows connect CTA when configured but item is not authorized" do
@@ -831,6 +964,34 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("providers.snaptrade.oauth_device_button")
     refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_authorized")
     refute_includes response.body, I18n.t("providers.snaptrade.oauth_reauthorize_button")
+  end
+
+  test "GET connect_form for snaptrade shows a Personal-key item as syncing when an OAuth app is configured later" do
+    sign_in users(:empty)
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    Provider::Snaptrade.stubs(:authorization_code_configured?).returns(false)
+    users(:empty).family.snaptrade_items.create!(name: "SnapTrade").apply_personal_key!(client_id: "c", consumer_key: "k")
+
+    get connect_form_settings_providers_path(provider_key: "snaptrade")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_personal_key")
+    refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready_device")
+  end
+
+  test "GET connect_form for snaptrade asks to authorize a rejected Personal key once an OAuth app is configured" do
+    sign_in users(:empty)
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    Provider::Snaptrade.stubs(:authorization_code_configured?).returns(false)
+    item = users(:empty).family.snaptrade_items.create!(name: "SnapTrade")
+    item.apply_personal_key!(client_id: "c", consumer_key: "k")
+    item.update!(status: :requires_update)
+
+    get connect_form_settings_providers_path(provider_key: "snaptrade")
+
+    assert_response :success
+    refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_personal_key")
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready_device")
   end
 
   test "GET connect_form for snaptrade offers only the device code without a confidential client" do

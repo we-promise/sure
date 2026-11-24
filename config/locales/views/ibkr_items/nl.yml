@@ -2,6 +2,8 @@
 nl:
   providers:
     ibkr:
+      named_connection: "Interactive Brokers (%{name})"
+      named_connection_description: "Koppel rekeningen uit je Flex-query %{name}"
       name: Interactive Brokers
       connection_description: Koppel een Interactive Brokers Flex Web Service-rapport
       institution_name: Interactive Brokers

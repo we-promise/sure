@@ -6,13 +6,25 @@ zh-CN:
       subtitle: 您财务健康状况的全面洞察
       export: 导出 CSV
       print_report: 打印报表
+      section_aria: "%{title} 分区。按 Enter 或空格键抓取以重新排序，然后使用方向键移动。"
       sections_aria: 报表各部分
-      toggle_section: 切换模块可见性
+      tag_filter:
+        all: 全部标签
+        selected:
+          one: "%{count} 个标签"
+          other: "%{count} 个标签"
+        search: 搜索标签
+        apply: 应用
+      built_at: "%{time}前更新"
+      updating: 正在后台更新
+      refresh: 刷新
       periods:
         monthly: 按月
         quarterly: 按季度
         ytd: 年初至今
         last_6_months: 最近 6 个月
+        last_12_months: 最近 12 个月
+        all_time: 全部时间
         custom: 自定义范围
       date_range:
         from: 从
@@ -27,6 +39,8 @@ zh-CN:
         ytd: "%{year} 年初至今"
         past_year: "%{year}"
         last_6_months: "%{start} – %{end}"
+        last_12_months: "%{start} – %{end}"
+        all_time: "%{start} – %{end}"
       period_picker:
         quarter: "%{year} 年第 %{quarter} 季度"
         ytd: "%{year} 年初至今"
@@ -81,6 +95,33 @@ zh-CN:
       insight_higher_weekday: 您在工作日的每笔消费比周末高 %{percent}%
       insight_similar: 您在工作日和周末的每笔消费相近
       no_spending_data: 此周期没有消费数据
+      category_trend:
+        title: 分类趋势
+        subtitle: 所选分类的按月或按年总计（已扣除退款）。
+        filtered_by_tags: 已按标签筛选
+        select: 选择分类
+        selected:
+          one: "%{count} 个分类"
+          other: "%{count} 个分类"
+        search: 搜索分类
+        apply: 应用
+        clear: 清除
+        month: 按月
+        year: 按年
+        granularity_aria: 趋势粒度
+        data_table: 显示数据表
+        data_table_caption: 各周期趋势值
+        data_table_period: 周期
+        no_data: 请选择更长的时间段以查看趋势。
+        prompt: 请选择分类以查看其趋势。
+    biggest_expenses:
+      title: 最大支出
+      one_time: 一次性
+      limit_aria: 显示的支出条数
+      table:
+        name: 名称
+        category: 分类
+        amount: 金额
     empty_state:
       title: 暂无可用数据
       description: 通过添加交易或连接账户开始跟踪您的财务，以查看完整报表
@@ -196,6 +237,9 @@ zh-CN:
       holdings: 持仓
       sell_trades: 卖出交易
       and_more: 还有 %{count} 项
+      unconverted_note:
+        one: "有 %{count} 笔收益未计入：缺少换算为 %{currency} 的汇率"
+        other: "有 %{count} 笔收益未计入：缺少换算为 %{currency} 的汇率"
     investment_flows:
       title: 投资资金流
       description: 跟踪通过投入和提取流入与流出投资账户的资金。
@@ -266,3 +310,11 @@ zh-CN:
         amount: 金额
         percent: "%"
         more_categories: 还有 %{count} 个分类
+      biggest_expenses:
+        title: 最大支出
+        date: 日期
+        name: 名称
+        category: 分类
+        account: 账户
+        amount: 金额
+        one_time: 一次性

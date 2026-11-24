@@ -79,12 +79,13 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "admin removing a family member also destroys their invitation" do
-    # Create an invitation for the member
+    # The member joined through this invitation before their account existed
     invitation = @admin.family.invitations.create!(
-      email: @member.email,
+      email: "member-before-signup@example.com",
       role: "member",
       inviter: @admin
     )
+    invitation.update_columns(email: @member.email, accepted_at: Time.current)
 
     sign_in @admin
 

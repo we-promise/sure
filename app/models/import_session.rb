@@ -264,12 +264,18 @@ class ImportSession < ApplicationRecord
 
     Rails.logger.info("ImportSession publish started import_session_id=#{id}")
 
-    imports.ordered_by_sequence.each do |import|
+    # Loaded once, so the link pass below reuses each chunk's downloaded file.
+    chunks = imports.ordered_by_sequence.to_a
+    chunks.each do |import|
       process_chunk!(import)
     end
+    # A property and its cost tag can arrive in different chunks, so the links
+    # are restored again once every tag is in.
+    chunks.each { |import| import.link_property_cost_tags!(import_session: self) }
 
     update!(status: :complete, summary: aggregate_chunk_summaries, error_details: {})
     enqueue_family_sync
+    EntryScheduledSyncJob.schedule_for_entries(Entry.where(import_id: imports.select(:id)))
     Rails.logger.info("ImportSession publish completed import_session_id=#{id}")
   rescue => error
     update!(

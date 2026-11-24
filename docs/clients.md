@@ -95,6 +95,11 @@ app clients.
 Start with the OpenAPI spec at [docs/api/openapi.yaml](api/openapi.yaml) and
 endpoint guides such as [docs/api/transactions.md](api/transactions.md).
 
+Native clients can acknowledge a proactive insight with
+[`PATCH /api/v1/insights/:id/acknowledge`](api/insights.md). This requires
+`read_write` credentials and preview-feature access; a successful response is
+`204 No Content`.
+
 ## Choosing a client
 
 - Start with the web app when a person needs the complete Sure experience.

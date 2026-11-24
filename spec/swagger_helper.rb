@@ -5,6 +5,17 @@ require 'rails_helper'
 RSpec.configure do |config|
   config.openapi_root = Rails.root.join('docs', 'api').to_s
   reset_count_keys = Family::FinancialDataReset::STATUS_COUNT_KEYS.map(&:to_s)
+  budget_owner_schema = {
+    type: :object,
+    nullable: true,
+    description: 'Null for the household budget. For a personal budget, the family member it belongs to: ' \
+                 'the caller, or a member who shared their budget with the caller.',
+    required: %w[id name],
+    properties: {
+      id: { type: :string, format: :uuid },
+      name: { type: :string }
+    }
+  }
 
   config.openapi_specs = {
     'openapi.yaml' => {
@@ -53,6 +64,15 @@ RSpec.configure do |config|
           }
         },
         schemas: {
+          Version: {
+            type: :object,
+            additionalProperties: false,
+            required: %w[version commit_sha],
+            properties: {
+              version: { type: :string, description: 'Running Sure version, without a v prefix.' },
+              commit_sha: { type: :string, nullable: true, description: 'Build commit SHA, or null when unavailable.' }
+            }
+          },
           SplitRequest: {
             type: :object,
             required: %w[split],
@@ -115,6 +135,73 @@ RSpec.configure do |config|
               per_page: { type: :integer, minimum: 1 },
               total_count: { type: :integer, minimum: 0 },
               total_pages: { type: :integer, minimum: 0 }
+            }
+          },
+          AccountStatementAccount: {
+            type: :object,
+            required: %w[id name currency],
+            properties: {
+              id: { type: :string, format: :uuid },
+              name: { type: :string },
+              currency: { type: :string }
+            }
+          },
+          AccountStatement: {
+            type: :object,
+            required: %w[id filename content_type byte_size content_sha256 review_status created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              filename: { type: :string },
+              content_type: { type: :string },
+              byte_size: { type: :integer, minimum: 1 },
+              content_sha256: { type: :string, description: 'SHA-256 of the file (lowercase hex); the vault stores each file once per family' },
+              review_status: { type: :string, enum: %w[unmatched linked rejected] },
+              period_start_on: { type: :string, format: :date, nullable: true },
+              period_end_on: { type: :string, format: :date, nullable: true },
+              currency: { type: :string, nullable: true },
+              opening_balance: { type: :string, nullable: true },
+              closing_balance: { type: :string, nullable: true },
+              institution_name_hint: { type: :string, nullable: true },
+              account_last4_hint: { type: :string, nullable: true },
+              account: {
+                allOf: [ { '$ref' => '#/components/schemas/AccountStatementAccount' } ],
+                nullable: true,
+                description: 'Account the statement is linked to'
+              },
+              suggested_account: {
+                allOf: [ { '$ref' => '#/components/schemas/AccountStatementAccount' } ],
+                nullable: true,
+                description: 'Account the vault suggests for an unlinked statement; linking it is confirmed in the app'
+              },
+              match_confidence: { type: :number, nullable: true, minimum: 0, maximum: 1 },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          AccountStatementResponse: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: { '$ref' => '#/components/schemas/AccountStatement' },
+              meta: {
+                type: :object,
+                required: %w[duplicate],
+                properties: {
+                  duplicate: { type: :boolean, description: 'True when the uploaded file was already in the vault; the existing statement is returned and nothing is created' }
+                }
+              }
+            }
+          },
+          AccountStatementCollection: {
+            type: :object,
+            required: %w[data meta],
+            properties: {
+              data: {
+                type: :array,
+                maxItems: 100,
+                items: { '$ref' => '#/components/schemas/AccountStatement' }
+              },
+              meta: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
           FamilyExportFile: {
@@ -357,7 +444,7 @@ RSpec.configure do |config|
           },
           AccountDetail: {
             type: :object,
-            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency classification account_type status created_at updated_at],
+            required: %w[id name balance balance_cents cash_balance cash_balance_cents currency classification account_type status exclude_from_reports created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string },
@@ -370,6 +457,7 @@ RSpec.configure do |config|
               account_type: { type: :string, nullable: true },
               subtype: { type: :string, nullable: true },
               status: { type: :string, enum: %w[active draft disabled pending_deletion] },
+              exclude_from_reports: { type: :boolean, readOnly: true, description: 'Whether this account is excluded from financial reports' },
               institution_name: { type: :string, nullable: true },
               institution_domain: { type: :string, nullable: true },
               created_at: { type: :string, format: :'date-time' },
@@ -412,12 +500,13 @@ RSpec.configure do |config|
           },
           BudgetSummary: {
             type: :object,
-            required: %w[id start_date end_date name currency initialized current created_at updated_at],
+            required: %w[id start_date end_date name owner currency initialized current created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               start_date: { type: :string, format: :date },
               end_date: { type: :string, format: :date },
               name: { type: :string },
+              owner: budget_owner_schema,
               currency: { type: :string },
               initialized: { type: :boolean },
               current: { type: :boolean },
@@ -433,12 +522,13 @@ RSpec.configure do |config|
           },
           Budget: {
             type: :object,
-            required: %w[id start_date end_date name currency initialized current created_at updated_at],
+            required: %w[id start_date end_date name owner currency initialized current created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               start_date: { type: :string, format: :date },
               end_date: { type: :string, format: :date },
               name: { type: :string },
+              owner: budget_owner_schema,
               currency: { type: :string },
               initialized: { type: :boolean },
               current: { type: :boolean },
@@ -749,7 +839,7 @@ RSpec.configure do |config|
           },
           Rule: {
             type: :object,
-            required: %w[id resource_type active position stop_processing conditions actions created_at updated_at],
+            required: %w[id resource_type active position stop_processing apply_immediately conditions actions created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string, nullable: true },
@@ -758,6 +848,7 @@ RSpec.configure do |config|
               effective_date: { type: :string, format: :date, nullable: true },
               position: { type: :integer, description: 'Run order within the family; rules run from the lowest position up and the top rule wins per attribute' },
               stop_processing: { type: :boolean, description: 'When true, rules further down do not change transactions this rule matches' },
+              apply_immediately: { type: :boolean, description: 'When true, the rule also runs right after a transaction is created or edited by hand, in a bulk edit, in Categorize, via the API or by the assistant (splits, transfers and conversions to trades wait for the nightly run); otherwise it only runs on the nightly and sync runs' },
               conditions: {
                 type: :array,
                 items: { '$ref' => '#/components/schemas/RuleCondition' }
@@ -806,7 +897,7 @@ RSpec.configure do |config|
               id: { type: :string, format: :uuid },
               rule_id: { type: :string, format: :uuid },
               rule_name: { type: :string, nullable: true },
-              execution_type: { type: :string, enum: %w[manual scheduled] },
+              execution_type: { type: :string, enum: %w[manual scheduled immediate] },
               status: { type: :string, enum: %w[pending success failed] },
               transactions_queued: { type: :integer, minimum: 0 },
               transactions_processed: { type: :integer, minimum: 0 },
@@ -967,6 +1058,31 @@ RSpec.configure do |config|
               },
               excluded: { type: :boolean, description: 'Whether the transaction is excluded from budget and report totals. Splitting a transaction marks it excluded.' },
               split_parent: { type: :boolean, description: 'Whether the transaction has been split; its amount is then carried by its split children.' },
+              investment_activity_label: {
+                type: :string,
+                nullable: true,
+                description: 'Investment activity of a brokerage cash row, such as Dividend, Interest or Fee'
+              },
+              provider_type: {
+                type: :string,
+                nullable: true,
+                description: "The importing provider's type for the row, such as IBKR's \"Withholding Tax\", when one is recorded. For CoinSpot, Sure sets it from the kind of movement."
+              },
+              security_id: {
+                type: :string,
+                format: :uuid,
+                nullable: true,
+                description: 'Sure security the row relates to (for example the one that paid a dividend), when the importer recorded it. GET /api/v1/securities/{id} finds it only if an account holds or has traded it.'
+              },
+              exchange_rate: {
+                type: :number,
+                nullable: true,
+                description: "Rate from the transaction's currency to the account's currency stored on it. Null when none is stored or the transaction is in the account's currency."
+              },
+              amount_currency: {
+                type: :string,
+                description: 'Currency of the amount, always the same as currency on a transaction.'
+              },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },
               merchant: { '$ref' => '#/components/schemas/Merchant', nullable: true },
@@ -1101,27 +1217,6 @@ RSpec.configure do |config|
               message: { type: :string }
             }
           },
-          TransactionResponse: {
-            type: :object,
-            required: %w[id date amount currency name entryable_type account],
-            properties: {
-              id: { type: :string, format: :uuid },
-              date: { type: :string, format: :date },
-              amount: { type: :string },
-              currency: { type: :string },
-              name: { type: :string },
-              entryable_type: { type: :string },
-              account: {
-                type: :object,
-                required: %w[id name account_type],
-                properties: {
-                  id: { type: :string, format: :uuid },
-                  name: { type: :string },
-                  account_type: { type: :string, nullable: true }
-                }
-              }
-            }
-          },
           ImportConfiguration: {
             type: :object,
             properties: {
@@ -1252,7 +1347,7 @@ RSpec.configure do |config|
             type: :object,
             required: %w[type valid content stats errors warnings],
             properties: {
-              type: { type: :string, enum: Import::TYPES },
+              type: { type: :string, enum: Import::Preflight::IMPORT_TYPES },
               valid: { type: :boolean },
               content: { '$ref' => '#/components/schemas/ImportPreflightContent' },
               stats: { '$ref' => '#/components/schemas/ImportPreflightStats' },
@@ -1676,6 +1771,18 @@ RSpec.configure do |config|
               qty: { type: :string },
               price: { type: :string },
               investment_activity_label: { type: :string, nullable: true },
+              fee: { type: :string, description: 'Fee charged on the trade, formatted like price' },
+              fee_decimal: { type: :string, description: 'Fee as the exact stored, unrounded, locale-independent decimal string. A purchase fee adds to the cost and a sale fee comes off the proceeds' },
+              exchange_rate: {
+                type: :number,
+                nullable: true,
+                description: "Rate to the account's currency stored on the trade, such as one reported by the provider. The cost basis applies it to price and fee, from currency; the cash balance applies it to amount, from amount_currency. The two match unless an edit changed only the amount's currency. It was recorded for currency; when amount_currency differs, the cash balance reuses it unchanged. Null when none is stored or both currencies are the account's."
+              },
+              amount_currency: {
+                type: :string,
+                description: "Currency of the trade's amount (the entry's), which the cash balance converts from with exchange_rate. It can differ from currency, the trade's own."
+              },
+              lot_source_trade_id: { type: :string, format: :uuid, nullable: true, description: 'For a sale, the trade whose lot it names to sell from first. It applies only while the account sells by FIFO; an account that sells by average keeps it but sells from the pooled average.' },
               account: { '$ref' => '#/components/schemas/Account' },
               security: {
                 type: :object,
@@ -1731,8 +1838,27 @@ RSpec.configure do |config|
                 }
               },
               avg_cost: { type: :string, nullable: true },
+              lots: {
+                type: :array,
+                nullable: true,
+                description: "The position's open lots, the opening lot first and then by acquisition. Present only on the position's latest row, while its lots add up to the holding; null otherwise.",
+                items: { '$ref' => '#/components/schemas/HoldingLot' }
+              },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          HoldingLot: {
+            type: :object,
+            required: %w[id opening qty manual_cost],
+            properties: {
+              id: { type: :string, format: :uuid },
+              opening: { type: :boolean, description: 'Units held before the first imported trade' },
+              acquired_on: { type: :string, format: :date, nullable: true, description: 'Null for the opening lot' },
+              qty: { type: :string, description: 'Units of the lot still held' },
+              unit_cost: { type: :string, nullable: true, description: 'Formatted cost per unit; null when unknown' },
+              manual_cost: { type: :boolean, description: 'Whether the cost was set by the user' },
+              trade_id: { type: :string, format: :uuid, nullable: true, description: 'The trade that acquired the lot; null for the opening lot' }
             }
           },
           HoldingCollection: {
@@ -1812,6 +1938,59 @@ RSpec.configure do |config|
                 items: { '$ref' => '#/components/schemas/SecurityPrice' }
               },
               pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          SecurityPriceImportRequest: {
+            type: :object,
+            required: %w[security_id prices],
+            properties: {
+              security_id: { type: :string, format: :uuid, description: 'An offline security no provider has ever matched (no offline_reason or price_provider), traded in an account the caller can write to, or held in a linked one' },
+              prices: {
+                type: :array,
+                minItems: 1,
+                maxItems: 1000,
+                description: 'Daily closes, all in one currency. A date already stored is replaced.',
+                items: {
+                  type: :object,
+                  required: %w[date price currency],
+                  properties: {
+                    date: { type: :string, format: :date, description: 'Not after today in the family time zone' },
+                    price: { type: :string, description: 'Positive decimal with at most 4 decimal places', example: '12.3400' },
+                    currency: { type: :string, description: "ISO 4217 code; must match the security's existing prices, or the caller's trades in it" }
+                  }
+                }
+              }
+            }
+          },
+          SecurityPriceImportResult: {
+            type: :object,
+            required: %w[security_id currency created updated start_date end_date],
+            properties: {
+              security_id: { type: :string, format: :uuid },
+              currency: { type: :string },
+              created: { type: :integer },
+              updated: { type: :integer },
+              start_date: { type: :string, format: :date },
+              end_date: { type: :string, format: :date }
+            }
+          },
+          SecurityPriceImportError: {
+            type: :object,
+            required: %w[error errors],
+            properties: {
+              error: { type: :string },
+              message: { type: :string },
+              errors: {
+                type: :array,
+                items: {
+                  type: :object,
+                  required: %w[index message],
+                  properties: {
+                    index: { type: :integer, nullable: true, description: 'Position of the offending row in prices, or null for the request as a whole' },
+                    message: { type: :string }
+                  }
+                }
+              }
             }
           },
           Money: {

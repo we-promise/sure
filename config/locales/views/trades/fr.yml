@@ -26,6 +26,9 @@ fr:
       type_interest: Intérêts
       type_sell: Vendre
       type_withdrawal: Retrait
+    trade:
+      scheduled: Planifiée
+      scheduled_tooltip: Datée dans le futur — n'affectera votre solde qu'à cette date
     header:
       buy: Acheter
       contribution: Contribution
@@ -62,6 +65,9 @@ fr:
       exclude_subtitle: Cette transaction ne sera pas incluse dans les rapports et les calculs
       exclude_title: Exclure des analyses
       fee_label: Frais de transaction
+      lot_label: Vendu depuis le lot
+      lot_oldest_first: Le plus ancien d'abord
+      lot_option: "%{date} · %{qty} à %{price}"
       no_category: Aucune catégorie
       note_label: Note
       note_placeholder: Ajoutez tout commentaire supplémentaire ici...
