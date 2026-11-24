@@ -1083,6 +1083,24 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Private loan payment", response.body
   end
 
+  test "show does not name or link a source account the user cannot see" do
+    private_savings = families(:dylan_family).accounts.create!(name: "Member Savings", owner: users(:family_member), balance: 0,
+                                                               currency: "USD", accountable: Depository.new)
+    transfer = Transfer::Creator.new(
+      family: families(:dylan_family), source_account_id: private_savings.id,
+      destination_account_id: accounts(:depository).id, date: Date.current, amount: 100
+    ).create
+
+    get transfer_url(transfer)
+
+    assert_response :success
+    assert_select "dd", text: "Another account"
+    assert_select "dd", text: "Transfer from another account"
+    assert_select "a[href=?]", account_path(private_savings), count: 0
+    assert_select "a[href=?]", account_path(accounts(:depository))
+    assert_no_match "Member Savings", response.body
+  end
+
   test "show offers the investment contribution switch only for transfers into an investment account" do
     contribution = create_confirmed_transfer(to: accounts(:investment))
     payment = create_confirmed_transfer(to: accounts(:credit_card))
