@@ -45,6 +45,9 @@ zh-CN:
           paused:
             one: 1 个已暂停
             other: "%{count} 个已暂停"
+          pace_unknown:
+            one: 1 个进度未知
+            other: "%{count} 个进度未知"
         on_track_sub_all_good: 所有进行中的目标进度正常
         on_track_all_caught_up: 全部已赶上进度
       goals_section:
@@ -161,6 +164,7 @@ zh-CN:
         behind_covered: 待确认承诺可以补足差距
         on_track: 预计在 %{date} 左右达成目标
         no_target_date: 设置目标日期以预测完成时间
+        pace_unknown: 尚无法根据这些账户衡量进度；需要过去一年内的余额更新以及满一年的余额历史记录
       pending_pledge:
         title:
           zero: 待确认：%{amount} 存入 %{account} · 今天过期
@@ -202,6 +206,7 @@ zh-CN:
         reached: 你已达到目标，无需预测。
         no_target_date: 尚未设置目标日期。设置后可预测完成时间。
         no_pace: 还没有存入资金。向关联账户存钱后即可开始预测。
+        pace_unknown: 这些账户尚无足够的历史记录来衡量进度，因此暂无预测。
         behind: 按当前进度会低于目标。
         on_track_html: 按当前进度，你大约会在 <strong class="text-primary whitespace-nowrap">%{date}</strong> 达成此目标。
         aria_label: "%{name} 的预测图表"
@@ -267,6 +272,7 @@ zh-CN:
       reached: 已达成
       completed: 已完成
       no_target_date: 开放
+      pace_unknown: 进度未知
       paused: 已暂停
       archived: 已归档
     empty_state:
@@ -294,6 +300,8 @@ zh-CN:
         other: 剩余 %{count} 天
       pace_with_target: 平均 %{avg}/月 · 目标 %{target}/月
       pace_no_target: 平均 %{avg}/月
+      pace_unknown_with_target: 进度未知 · 目标 %{target}/月
+      pace_unknown: 进度未知
       footer_paused: 已暂停
       footer_archived: 已归档
       footer_reserve_intact: 储备完好
