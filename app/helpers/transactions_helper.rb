@@ -451,13 +451,20 @@ module TransactionsHelper
   # What the viewer may do with a pending transfer match, mirroring
   # TransfersController#update: confirming rewrites both legs, so it needs
   # write access to both accounts; rejecting unlinks them, which one is
-  # enough for.
+  # enough for, but also deletes any fee transactions, so it needs write
+  # access to every account holding one.
   #
   # @return [Hash] { confirm: Boolean, reject: Boolean }
   def pending_transfer_match_actions(match)
-    account_ids = [ match.transfer.from_account&.id, match.transfer.to_account&.id ].compact
-    writable_count = Current.family.accounts.writable_by(Current.user).where(id: account_ids).count
+    transfer = match.transfer
+    endpoint_ids = [ transfer.from_account&.id, transfer.to_account&.id ].compact
+    fee_account_ids = transfer.fee_transactions.joins(:entry).pluck("entries.account_id")
+    writable_ids = Current.family.accounts.writable_by(Current.user)
+      .where(id: endpoint_ids + fee_account_ids).pluck(:id).to_set
 
-    { confirm: account_ids.size == 2 && writable_count == 2, reject: writable_count.positive? }
+    {
+      confirm: endpoint_ids.size == 2 && endpoint_ids.all? { |id| writable_ids.include?(id) },
+      reject: endpoint_ids.any? { |id| writable_ids.include?(id) } && fee_account_ids.all? { |id| writable_ids.include?(id) }
+    }
   end
 end

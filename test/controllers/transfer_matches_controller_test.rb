@@ -109,6 +109,21 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select "dialog form[action=?]", transfer_path(transfer, transfer: { status: "confirmed" }), count: 0
   end
 
+  test "new offers no rejection when a fee of the pending match sits on an account the user cannot write to" do
+    sign_in users(:family_member)
+    # family_member has full control of depository and read-only access to credit_card.
+    outflow = create_transaction(amount: 90, account: accounts(:depository), name: "Fee match outflow")
+    inflow = create_transaction(amount: -90, account: accounts(:investment), name: "Fee match inflow")
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+    create_transaction(amount: 2, account: accounts(:credit_card), name: "Fee match fee").transaction.update!(transfer: transfer)
+
+    get new_transaction_transfer_match_path(outflow)
+
+    assert_response :success
+    assert_select "dialog form[action=?]", transfer_path(transfer, transfer: { status: "rejected" }), count: 0
+    assert_select "dialog form[action=?]", transfer_path(transfer, transfer: { status: "confirmed" }), count: 0
+  end
+
   test "new does not name a pending match's other side in an account the user cannot see" do
     sign_in users(:family_member)
     # family_member cannot see investment.
