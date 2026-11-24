@@ -1,5 +1,7 @@
 <%= settings_section title: t("web_push.title"), subtitle: t("web_push.description") do %>
-  <div class="space-y-4"
+  <%# Permanent: a save elsewhere on this page morphs it, and the morph would put
+      back the server's "checking" placeholder over the controller's state. %>
+  <div id="web-push-device" class="space-y-4" data-turbo-permanent
        data-controller="web-push"
        data-web-push-public-key-value="<%= @web_push_public_key %>"
        data-web-push-registrations-value="<%= @web_push_registrations.to_json %>"
@@ -19,17 +21,5 @@
             data: { action: "web-push#test", web_push_target: "test" }) %>
     </div>
     <p class="text-sm text-secondary"><%= t("web_push.session_notice") %></p>
-    <%= form_with url: settings_preferences_path, method: :patch,
-          data: { controller: "auto-submit-form" } do %>
-      <label for="user_push_budget_warnings_enabled" class="flex cursor-pointer items-center justify-between gap-4">
-        <div class="text-sm space-y-1">
-          <p class="font-medium text-primary"><%= t("web_push.budget_title") %></p>
-          <p class="text-secondary"><%= t("web_push.budget_description") %></p>
-        </div>
-        <%= render DS::Toggle.new(id: "user_push_budget_warnings_enabled",
-              name: "user[push_budget_warnings_enabled]", checked: @user.push_budget_warnings_enabled?,
-              data: { auto_submit_form_target: "auto" }) %>
-      </label>
-    <% end %>
   </div>
 <% end %>
