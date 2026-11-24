@@ -1259,7 +1259,7 @@ class Family::DataImporter
           date: Date.parse(data["date"].to_s),
           amount: data["amount"].to_d,
           name: "#{data["qty"].to_d >= 0 ? 'Buy' : 'Sell'} #{ticker}",
-          currency: data["currency"] || account.currency
+          currency: data["amount_currency"].presence || data["currency"] || account.currency
         )
         if @import_session
           entry.external_id = session_entry_external_id("Trade", old_id)
