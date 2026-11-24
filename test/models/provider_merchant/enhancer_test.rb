@@ -143,30 +143,19 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     assert_equal 0, Ai::GenerationRun.count
   end
 
-  # Issue #2925: a website that arrived before Brandfetch was configured left the merchant
-  # without a logo. A click refreshes logos in a job of its own; the AI run never touches one.
-  test "a click refreshes logos of merchants that already have a website, outside the AI run" do
+  # Logos aren't AI: a merchant that already has a website but no logo (issue #2925) waits for
+  # the family sync's backfill, and a click queues only the AI run.
+  test "a click queues only the AI run, which never touches a logo" do
     merchant = provider_merchant("Amazon", website_url: "amazon.com")
     merchant.update_column(:logo_url, nil)
     requests = stub_websites({})
 
-    assert_enqueued_with(job: MerchantLogoBackfillJob, args: [ @family ], queue: "default") do
-      ProviderMerchant::Enhancer.enhance_later(@family)
-    end
-    perform_enqueued_jobs(only: Ai::GenerationJob)
-    assert_nil merchant.reload.logo_url, "the AI run left the logo alone"
+    assert_enqueued_jobs(1) { ProviderMerchant::Enhancer.enhance_later(@family) }
+    assert_enqueued_with(job: Ai::GenerationJob)
+    perform_enqueued_jobs
 
-    perform_enqueued_jobs(only: MerchantLogoBackfillJob)
     assert_empty requests
-    assert_equal "https://cdn.brandfetch.io/amazon.com/icon/fallback/lettermark/w/40/h/40?c=test_client_id", merchant.reload.logo_url
-  end
-
-  test "a click while a run is going still refreshes logos" do
-    ProviderMerchant::Enhancer.enhance_later(@family)
-
-    assert_enqueued_with(job: MerchantLogoBackfillJob) do
-      assert_not ProviderMerchant::Enhancer.enhance_later(@family)
-    end
+    assert_nil merchant.reload.logo_url
   end
 
   test "keeps a provider-supplied logo when adding the website" do
@@ -199,19 +188,15 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
   end
 
   # #5709: without a family admin's AI switch nothing is sent, and the run fails, saying why.
-  # Logos aren't AI, so they're still refreshed.
-  test "sends nothing while no family admin has turned AI on, records the failure, and still refreshes logos" do
+  test "sends nothing while no family admin has turned AI on, and records the failure" do
     @family.users.update_all(ai_enabled: false)
     merchant = provider_merchant("Walmart")
-    with_website = provider_merchant("Amazon", website_url: "amazon.com")
-    with_website.update_column(:logo_url, nil)
     requests = stub_websites("Walmart" => "walmart.com")
 
     enhance
 
     assert_empty requests
     assert_nil merchant.reload.website_url
-    assert_predicate with_website.reload.logo_url, :present?
     assert_equal 0, Ai::GenerationRun.count, "the run ended, so the next click can start one"
     entry = DebugLogEntry.where(category: "merchant_enhancement").order(:created_at).last
     assert_equal "Ai::Error::Unavailable", entry.metadata["error_class"]
