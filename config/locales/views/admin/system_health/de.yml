@@ -399,6 +399,7 @@ de:
             model_not_available: Das konfigurierte Modell wurde vom Anbieter nicht zurückgegeben
             no_tool_call: Das Modell hat geantwortet, ohne das Prüfwerkzeug aufzurufen
             tools_refused: Der Dienst hat dieselbe Anfrage ohne Werkzeuge beantwortet, sie mit Werkzeugen jedoch abgelehnt
+            images_refused: Das Modell nimmt keine Bilder an. PDFs mit Textebene werden weiterhin importiert.
             invalid_response: Der Dienst hat eine unerwartete Antwort zurückgegeben
             dimensions_mismatch: Die Dimensionen des Embedding-Vektors stimmen nicht mit den konfigurierten Dimensionen überein
             extension_not_enabled: Die PostgreSQL-Erweiterung vector ist nicht aktiviert

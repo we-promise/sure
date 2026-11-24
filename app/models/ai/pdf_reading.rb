@@ -211,7 +211,8 @@ class Ai::PdfReading
       render_error = attempts.filter_map { _1[:render_error] }.last || @page_count_error
       last_reason = attempts.filter_map { _1[:error] }.last
       reason =
-        if WAYS.include?(read_as.to_s.presence&.to_sym) then last_reason
+        if read_as.to_s == "images" && last_reason == "UnsupportedInput" then :needs_vision
+        elsif WAYS.include?(read_as.to_s.presence&.to_sym) then last_reason
         elsif text_layer? then last_reason || ways.values.compact.first
         elsif render_error == :too_large then :page_too_large
         elsif render_error == :unreadable then :unreadable

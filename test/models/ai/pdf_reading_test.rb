@@ -91,6 +91,20 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     assert_not_equal PdfImport.unavailable_message(:default), PdfImport.unavailable_message(:page_too_large)
   end
 
+  test "a server that refuses images: Images says so, Auto says the scan has no text" do
+    Pdf::PageImages.stubs(:page_count).returns(1)
+    Pdf::PageImages.stubs(:render).returns([ "png" ])
+    stub_ai(:extract_pdf, raises: Ai::Error::UnsupportedInput.new("image input is not supported", status: 500))
+
+    with_reading_routes(vision_model) do
+      { images: :needs_vision, auto: :no_text_layer }.each do |read_as, reason|
+        error = assert_raises(Ai::Error::Unavailable) { reading(@scan).read(read_as:) }
+
+        assert_equal reason, error.reason
+      end
+    end
+  end
+
   test "a file that can't be opened stays unreadable under Auto, whatever its size" do
     Pdf::PageImages.stubs(:page_count).raises(Pdf::PageImages::Error.new("PDF does not contain EOF marker", code: :unreadable))
     stub_ai(:extract_pdf)

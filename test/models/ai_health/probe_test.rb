@@ -592,6 +592,18 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_equal :missing_binary, result.failure_code
   end
 
+  test "the PDF vision probe reports a model that takes no images as such, not as a failed request" do
+    Pdf::PageImages.stubs(:render).returns([ "png" ])
+    stub_ai(:extract_pdf, raises: Ai::Error::UnsupportedInput.new("image input is not supported", status: 500))
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.pdf_vision_processing(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                                          model: "text-model")
+
+    assert_equal :images_refused, result.failure_code
+  end
+
   test "a PDF probe neither skips nor marks down production's routes" do
     stub_ai(:extract_pdf, raises: Ai::Error::Timeout.new("slow"))
     Rails.logger.stubs(:error)

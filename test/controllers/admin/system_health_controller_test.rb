@@ -394,6 +394,22 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/sk-secret-openai/, response.body)
   end
 
+  test "AI status reports a model that takes no images as not supported, with no alert" do
+    sign_in users(:sure_support_staff)
+    AiHealth::Probe.any_instance.stubs(:pdf_vision_processing).returns(
+      probe_result(:failing, failure_code: :images_refused)
+    )
+
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+      get ai_status_admin_system_health_url
+    end
+
+    assert_response :success
+    assert_match(/Disabled or not supported by the effective provider\/model/, response.body)
+    assert_match(/take images\. PDFs with a text layer still import/, response.body)
+    assert_no_match(/The synthetic PDF vision\/native check failed/, response.body)
+  end
+
   test "AI status surfaces LLM and probe request timeouts as distinct values" do
     sign_in users(:sure_support_staff)
 
