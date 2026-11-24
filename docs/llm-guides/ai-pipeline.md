@@ -222,6 +222,10 @@ flowchart LR
   one release. `ApplicationJob` runs each job in its queue's lane (`Ai::Sequencer.lane`, fiber
   storage, so Jev's threads share it); evals and the console choose one with
   `Ai::Sequencer.with_lane(:prompt) { }`, and a call outside any lane counts as interactive.
+- **Down marks wait only for jobs.** When every route is marked down (`Ai::DownMarks`), a call in
+  the interactive lane, where someone waits, tries the routes anyway; prompt and background jobs
+  fail at once with `Ai::Error::MarkedDown`, which `Ai::GenerationJob` waits out without spending
+  a try. Marks are written in every lane, and a marked route is skipped while another is up.
 - **No prompt heredocs.** `Sure/NoPromptHeredoc` flags heredocs over ten lines in
   `app/models/ai/**` and controllers.
 - **Prompts change only with evals.** `test/architecture/ai_prompts_test.rb` renders each prompt

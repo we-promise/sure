@@ -139,11 +139,13 @@ class Ai::Generation
   # shadow: false when the caller samples the shadow itself, once its answer is applied.
   # down_marks: false for a diagnostic, which must neither skip a route production marked down nor
   # mark one down for production.
-  # waiting: true when a person waits for the answer (a click). When every route is marked down,
-  # the routes are tried anyway, as a click always tried the provider; a job fails at once.
-  def call(batches: nil, cancelled: nil, plan: nil, answered_before: false, shadow: true, down_marks: true, waiting: false)
+  #
+  # In the interactive lane someone waits for the answer (a click, or a job they wait on): when
+  # every route is marked down, the routes are tried anyway, as a click always tried the provider.
+  # In the prompt and background lanes a job fails at once, and waits the mark out.
+  def call(batches: nil, cancelled: nil, plan: nil, answered_before: false, shadow: true, down_marks: true)
     @down_marks = down_marks ? Ai::DownMarks : Ai::DownMarks::Ignored
-    @waiting = waiting
+    @waiting = Ai::Sequencer.lane == :interactive
     plan ||= Ai::Router.new(family:, user:).resolve(feature_key)
     return Ai::Result.unavailable(plan) unless plan.is_a?(Ai::Plan)
 
