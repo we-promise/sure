@@ -1,6 +1,12 @@
 module ApplicationHelper
   include Pagy::Frontend
 
+  # Whether an AI feature (a key in Ai::Routes::MATRIX) can run for the current family and user,
+  # so a view shows its AI affordance only then.
+  def ai_feature_available?(feature)
+    Ai.available?(feature, family: Current.family, user: Current.user)
+  end
+
   def product_name
     Rails.configuration.x.product_name
   end
