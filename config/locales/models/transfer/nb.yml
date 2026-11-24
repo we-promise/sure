@@ -18,5 +18,6 @@ nb:
           opposite_amounts: Må ha motsatte beløp
           within_days: Må være innenfor %{count} dager
   transfer:
+    hidden_account: en annen konto
     name: Overføring til %{to_account}
     payment_name: Betaling til %{to_account}
