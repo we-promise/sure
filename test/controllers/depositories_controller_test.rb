@@ -9,6 +9,15 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:depository)
   end
 
+  # The select sits on the account form, not inside `fields_for :accountable`,
+  # so `label: true` would read Account's attribute name. The form passes the
+  # Depository one instead.
+  test "the account type select is labelled from the locale" do
+    get new_depository_url
+    assert_response :success
+    assert_select "label[for=account_subtype]", text: "Account type"
+  end
+
   # The provider link's visibility and the controller's gate are two
   # expressions of one rule, and they disagreed. ConnectorAuthorizable requires
   # `member_connectable? && Current.user&.member?`; the selector asked only

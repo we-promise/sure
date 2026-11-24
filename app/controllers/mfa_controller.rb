@@ -3,6 +3,12 @@ class MfaController < ApplicationController
 
   layout :determine_layout
   skip_authentication only: [ :verify, :verify_code, :webauthn_options, :verify_webauthn ]
+  # Completing the sign-in rotates the Rails session, so a repeat submit of the
+  # code form carries a token that no longer verifies. Without a pending
+  # sign-in verify_code only redirects, which leaves the token nothing to
+  # protect. One predicate on purpose: passed as separate `only:` and `if:`
+  # options, each would skip the check on its own.
+  skip_forgery_protection if: :code_submit_without_pending_sign_in?
   before_action :require_mfa_enrollment_allowed, only: [ :new, :create ]
   before_action :require_local_password, only: [ :new, :create, :disable ]
 
@@ -57,13 +63,20 @@ class MfaController < ApplicationController
   def verify_code
     @user = User.find_by(id: session[:mfa_user_id])
 
+    # No sign-in is pending, so there is no code to check. A repeat submit of
+    # the form lands here once the first one has completed the sign-in:
+    # root_path then shows the app. Without a session (a stale code page) it
+    # sends the browser to the sign-in page, or to registration on a
+    # self-hosted instance with no users.
+    return redirect_to root_path if @user.nil?
+
     # Check before verify_otp? — a backup code is single-use and gets consumed
     # by verification, so a deactivated user shouldn't be able to burn one on
     # a login attempt that was always going to be rejected.
-    if @user && !@user.active?
+    if !@user.active?
       session.delete(:mfa_user_id)
       redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
-    elsif @user&.verify_otp?(params[:code])
+    elsif @user.verify_otp?(params[:code])
       if complete_mfa_sign_in(@user)
         redirect_to root_path
       else
@@ -179,6 +192,10 @@ class MfaController < ApplicationController
       return if Current.user.has_local_password?
 
       redirect_to settings_security_path, alert: t("mfa.local_password_required")
+    end
+
+    def code_submit_without_pending_sign_in?
+      action_name == "verify_code" && session[:mfa_user_id].blank?
     end
 
     def determine_layout
