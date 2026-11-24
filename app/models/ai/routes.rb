@@ -18,10 +18,10 @@ module Ai::Routes
     search_documents:  { lane: :interactive, route_of: :embed, consent_as: :embed, consent: :user,
                          sends: %i[search_query] },
     categorize:        { lane: :background,  needs: { generation: %i[structured_output], judgement: %i[judge] }, consent: :family,
-                         sends: %i[transaction_names transaction_notes transaction_amounts merchant_names category_names] },
+                         sends: %i[transaction_names transaction_notes transaction_amounts transaction_types merchant_names category_names] },
     shadow_categorize: { lane: :background,  shadow_of: :categorize,            consent: :family },
     detect_merchants:  { lane: :background,  needs: %i[structured_output],      consent: :family,
-                         sends: %i[transaction_names transaction_notes transaction_amounts merchant_names] },
+                         sends: %i[transaction_names transaction_notes transaction_amounts transaction_types merchant_names] },
     enhance_merchants: { lane: :background,  needs: %i[structured_output], consent_as: :detect_merchants, consent: :family,
                          sends: %i[merchant_names] }
   }.freeze

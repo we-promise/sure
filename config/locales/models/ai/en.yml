@@ -32,4 +32,5 @@ en:
       transaction_dates: Transaction dates
       transaction_names: Transaction names
       transaction_notes: Transaction notes
+      transaction_types: Whether each transaction is income or an expense
       uploaded_document: The document you upload

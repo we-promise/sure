@@ -32,4 +32,5 @@ zh-CN:
       transaction_dates: 交易日期
       transaction_names: 交易名称
       transaction_notes: 交易备注
+      transaction_types: 每笔交易是收入还是支出
       uploaded_document: 您上传的文档

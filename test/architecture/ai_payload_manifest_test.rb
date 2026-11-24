@@ -7,12 +7,13 @@ class AiPayloadManifestTest < ActiveSupport::TestCase # pipelock:ignore ("AiPaâ€
   include EntriesTestHelper, ProviderTestHelper
 
   # What each field of each provider argument discloses. Record ids are opaque
-  # and disclose nothing; `classification` is the amount's sign.
+  # and disclose nothing. Amounts go unsigned, so `classification` (income or
+  # expense) is the only direction sent.
   FIELD_ITEMS = {
     transactions: {
       id: [],
       amount: %i[transaction_amounts],
-      classification: %i[transaction_amounts],
+      classification: %i[transaction_types],
       description: %i[transaction_names transaction_notes],
       merchant: %i[merchant_names]
     },

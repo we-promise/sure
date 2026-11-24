@@ -30,4 +30,5 @@ fr:
       transaction_dates: Dates des transactions
       transaction_names: Noms des transactions
       transaction_notes: Remarques des transactions
+      transaction_types: Si chaque transaction est un revenu ou une dépense
       uploaded_document: Le document que vous téléversez

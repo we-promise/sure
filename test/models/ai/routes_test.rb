@@ -22,7 +22,7 @@ class Ai::RoutesTest < ActiveSupport::TestCase
   end
 
   test "a consent row's manifest is everything its group sends" do
-    assert_equal %i[transaction_names transaction_notes transaction_amounts merchant_names], Ai::Routes.sends_for(:detect_merchants)
+    assert_equal %i[transaction_names transaction_notes transaction_amounts transaction_types merchant_names], Ai::Routes.sends_for(:detect_merchants)
     assert_equal %i[depends_on_vector_store search_query], Ai::Routes.sends_for(:embed)
     assert_equal Ai::Routes.sends_for(:categorize), Ai::Routes.sends_for(:shadow_categorize)
   end
