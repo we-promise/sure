@@ -495,6 +495,19 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "a family member cannot access a receipt scan file on an account not shared with them" do
+    scan = receipt_scans(:processing)
+    scan.files.attach(io: StringIO.new("Family A Receipt"), filename: "receipt.jpg", content_type: "image/jpeg")
+    member = users(:family_member)
+    scan.account.account_shares.where(user: member).destroy_all
+
+    sign_in member
+
+    get rails_blob_path(scan.files.first)
+
+    assert_response :not_found
+  end
+
   test "every attachment is either access-checked or intentionally public" do
     # Logos and avatars are not sensitive. Archived exports have no owning family;
     # ArchivedExportsController releases them by download token.
