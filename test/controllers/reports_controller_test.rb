@@ -2399,6 +2399,24 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Rent/, rows.second)
   end
 
+  test "the printed report does not name an account the viewer cannot open in a contribution's name" do
+    brokerage = @family.accounts.create!(name: "Hidden Brokerage", owner: users(:family_admin), balance: 0,
+                                         currency: "USD", accountable: Investment.new)
+    Transfer::Creator.new(
+      family: @family, source_account_id: accounts(:depository).id, destination_account_id: brokerage.id,
+      date: BIGGEST_MONTH + 1, amount: 700
+    ).create
+    sign_in users(:family_member)
+
+    get print_reports_path(period_type: :custom, start_date: BIGGEST_MONTH, end_date: BIGGEST_MONTH.end_of_month)
+
+    assert_response :ok
+    section = css_select("section").find { |node| node.text.include?(I18n.t("reports.print.biggest_expenses.title")) }
+    assert section, "the biggest expenses section is printed"
+    assert_match(/Transfer to another account/, section.text)
+    assert_no_match "Hidden Brokerage", response.body
+  end
+
   test "the reports preferences endpoint stores an offered biggest expenses limit only" do
     patch update_preferences_reports_path, params: { preferences: { reports_biggest_expenses_limit: 25 } }, as: :json
     assert_response :ok
