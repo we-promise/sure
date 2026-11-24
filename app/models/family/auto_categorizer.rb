@@ -24,6 +24,9 @@ class Family::AutoCategorizer
   end
 
   def ai_generation
+    # Without the family's consent nothing is sent, and the run ends having changed nothing.
+    return unless Ai.available?(:categorize, family:)
+
     @cached_ids = cached_transaction_ids
     @blocked_ids = protected_transaction_ids - @cached_ids
     log_cache_usage(@cached_ids) if @cached_ids.any?
