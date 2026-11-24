@@ -212,7 +212,13 @@ class TransactionTest < ActiveSupport::TestCase
   test "category_editable? keeps a matched transfer's category on its outflow leg" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
     inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "funds_movement")
-    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "pending")
+
+    assert outflow_entry.transaction.reload.category_editable?
+    assert inflow_entry.transaction.reload.category_editable?
+    assert_not inflow_entry.transaction.category_set_on_transfer_outflow?
+
+    transfer.confirm!
 
     # Budgets count the outflow leg, so only that leg takes a category; the
     # inflow leg shows the outflow's category read-only instead of a picker
@@ -224,7 +230,7 @@ class TransactionTest < ActiveSupport::TestCase
 
     fm_outflow = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "funds_movement")
     fm_inflow = create_transaction(date: Date.current, account: accounts(:connected), amount: -500, kind: "funds_movement")
-    Transfer.create!(inflow_transaction: fm_inflow.transaction, outflow_transaction: fm_outflow.transaction)
+    Transfer.create!(inflow_transaction: fm_inflow.transaction, outflow_transaction: fm_outflow.transaction, status: "confirmed")
 
     assert_not fm_outflow.transaction.reload.category_editable?
     assert_not fm_inflow.transaction.reload.category_editable?
@@ -234,7 +240,7 @@ class TransactionTest < ActiveSupport::TestCase
   test "a matched inflow leg stays read-only after its kind is edited to standard" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
     inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "funds_movement")
-    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
     inflow_entry.transaction.update!(kind: "standard")
 
     assert inflow_entry.transaction.reload.category_set_on_transfer_outflow?
@@ -249,7 +255,7 @@ class TransactionTest < ActiveSupport::TestCase
     # directly -- keeps category_editable? correct despite the stale kind.
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
     inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "funds_movement")
-    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
     outflow_entry.transaction.update_column(:kind, "funds_movement")
 
     assert outflow_entry.transaction.reload.category_editable?

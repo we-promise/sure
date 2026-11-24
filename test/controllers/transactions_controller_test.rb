@@ -2541,6 +2541,30 @@ end
     assert_select "##{dom_id(outflow, "category_menu_desktop")} [data-ds--popover-frame-id-value='category_dropdown']"
   end
 
+  test "a dividend with a pending transfer match shows its activity and edits its own category" do
+    outflow = create_transaction(amount: 9.63, category: categories(:food_and_drink))
+    dividend = create_transaction(account: accounts(:investment), amount: -9.63,
+      entryable: Transaction.new(investment_activity_label: "Dividend", category: categories(:income)))
+    Transfer.create!(inflow_transaction: dividend.transaction, outflow_transaction: outflow.transaction, status: "pending")
+
+    get transaction_url(dividend), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "details[open]" do
+      assert_select "button#category_id_trigger:not([disabled])", text: /#{categories(:income).name}/
+      assert_select "select[name='entry[entryable_attributes][investment_activity_label]'] option[selected][value=Dividend]", text: "Dividend"
+    end
+    assert_select "p", text: I18n.t("transactions.show.category_set_on_outflow"), count: 0
+
+    patch transaction_url(dividend), params: {
+      entry: { entryable_attributes: { id: dividend.entryable_id, category_id: categories(:one).id } }
+    }
+
+    assert_redirected_to account_path(dividend.account)
+    assert_equal categories(:one), dividend.transaction.reload.category
+    assert_equal categories(:food_and_drink), outflow.transaction.reload.category
+  end
+
   test "update drops a category sent for a matched transfer's inflow leg" do
     outflow = Transaction.create!(kind: "investment_contribution")
     Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)

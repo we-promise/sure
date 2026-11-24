@@ -95,6 +95,19 @@
             </div>
           <% end %>
         <% end %>
+        <% if @entry.account.investment? || @entry.account.crypto? %>
+          <%= styled_form_with model: @entry,
+                url: transaction_path(@entry),
+                data: { controller: "auto-submit-form" } do |f| %>
+            <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+            <%= f.fields_for :entryable do |ef| %>
+              <%= ef.select :investment_activity_label,
+                    Transaction::ACTIVITY_LABELS.map { |label| [investment_activity_label_name(label), label] },
+                    { label: t(".activity_type"), label_tooltip: t(".activity_type_description"), include_blank: t(".none") },
+                    { data: { auto_submit_form_target: "auto" }, disabled: edit_locked } %>
+            <% end %>
+          <% end %>
+        <% end %>
         <% if @entry.transaction.category_editable? || @entry.transaction.category_set_on_transfer_outflow? %>
           <%= styled_form_with model: @entry,
                 url: transaction_path(@entry),
@@ -327,32 +340,6 @@
                 </div>
                 <%= f.toggle :excluded, { data: { auto_submit_form_target: "auto" } } %>
               </div>
-            <% end %>
-          </div>
-        <% end %>
-        <% if @entry.account.investment? || @entry.account.crypto? %>
-          <div class="pb-4">
-            <%= styled_form_with model: @entry,
-                  url: transaction_path(@entry),
-                  class: "p-3",
-                  data: { controller: "auto-submit-form" } do |f| %>
-              <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
-              <%= f.fields_for :entryable do |ef| %>
-                <div class="flex cursor-pointer items-center gap-4 justify-between">
-                  <div class="text-sm space-y-1">
-                    <h4 class="text-primary"><%= t(".activity_type") %></h4>
-                    <p class="text-secondary"><%= t(".activity_type_description") %></p>
-                  </div>
-                  <%= ef.select :investment_activity_label,
-                        options_for_select(
-                          [["—", nil]] + Transaction::ACTIVITY_LABELS.map { |l| [investment_activity_label_name(l), l] },
-                          @entry.entryable.investment_activity_label
-                        ),
-                        { label: false },
-                        { class: "form-field__input border border-secondary rounded-lg px-3 py-1.5 max-w-40 text-sm",
-                          data: { auto_submit_form_target: "auto" } } %>
-                </div>
-              <% end %>
             <% end %>
           </div>
         <% end %>

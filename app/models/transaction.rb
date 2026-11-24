@@ -484,11 +484,9 @@ class Transaction < ApplicationRecord
 
   # Whether the user can assign a category (and merchant/tags) to this
   # transaction. Regular transactions always qualify. For transfers:
-  #   - No Transfer record yet (e.g. an unmatched provider-imported leg):
-  #     stay editable, same as a regular transaction, since there's no
-  #     counterpart to defer to and no other way for the user to fix a
-  #     provider mislabel.
-  #   - Once matched, the category belongs to the outflow leg, the one
+  #   - Until a match is confirmed, both transactions keep their own
+  #     editable categories, including unmatched provider-imported legs.
+  #   - Once confirmed, the category belongs to the outflow leg, the one
   #     budgets and reports count. Only that leg is editable, and only when
   #     Transfer#categorizable?, which is based on the (stable) destination
   #     account rather than either leg's kind, so it stays correct even if
@@ -498,18 +496,19 @@ class Transaction < ApplicationRecord
   #     would look saved but never reach a budget.
   def category_editable?
     return false if category_set_on_transfer_outflow?
-    return true unless transfer?
-    return true unless transfer
+    return true unless transfer? && transfer&.confirmed?
 
     transfer.categorizable? && transfer.outflow_transaction_id == id
   end
 
-  # The inflow leg of a categorizable transfer: its category is the
+  # The inflow leg of a confirmed, categorizable transfer: its category is the
   # outflow's, shown read-only. Decided by the Transfer record rather than
   # this leg's kind, so editing the kind (e.g. to standard) cannot bypass
   # the outflow's ownership.
   def category_set_on_transfer_outflow?
-    transfer_as_inflow.present? && transfer_as_inflow.categorizable?
+    return false unless transfer_as_inflow&.confirmed?
+
+    transfer_as_inflow.categorizable?
   end
 
   # Whether this non-editable transfer leg is a liability payment (shown
