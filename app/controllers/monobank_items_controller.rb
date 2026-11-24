@@ -343,9 +343,6 @@ class MonobankItemsController < ApplicationController
 
     # Create and sync a Sure account from a Monobank account snapshot.
     def create_account_from_monobank(monobank_account, account_type)
-      # Linking an account clears any prior skip so a future unlink re-prompts for setup.
-      monobank_account.update!(ignored: false) if monobank_account.ignored?
-
       balance = monobank_account.current_balance || 0
       subtype = if account_type == "Depository" && monobank_account.suggested_account_type == account_type
         monobank_account.suggested_subtype
