@@ -58,6 +58,20 @@ class RetirementPlansControllerTest < ActionDispatch::IntegrationTest
     assert_equal BigDecimal("0.03"), others.reload.safe_withdrawal_rate
   end
 
+  # Two first saves at once (a double submit) race on the one-plan-per-user
+  # index; the loser saves onto the plan the winner created.
+  test "a first save that loses the race for the plan saves onto the winner's" do
+    winner = RetirementPlan.create!(user: @user, end_age: 90)
+    RetirementPlan.stubs(:for).returns(RetirementPlan.new(user: @user))
+
+    assert_no_difference "RetirementPlan.count" do
+      patch retirement_plan_url, params: { retirement_plan: { end_age: "85" } }
+    end
+
+    assert_redirected_to retirement_plan_path
+    assert_equal 85, winner.reload.end_age
+  end
+
   test "a user id in the request is ignored" do
     patch retirement_plan_url, params: { retirement_plan: { user_id: @other.id, safe_withdrawal_rate_percent: "5" } }
 

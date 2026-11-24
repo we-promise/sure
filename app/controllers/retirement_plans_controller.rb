@@ -26,18 +26,17 @@ class RetirementPlansController < ApplicationController
   def edit
   end
 
-  # Seeded after a save, never on a page view, and only the first time. The
-  # settings and the seeding commit together, so a failure part-way leaves
-  # neither behind.
+  # Saved from the modal: a refusal re-renders the form inside it, and a
+  # save sends the page that opened it back to itself.
   def update
-    saved = RetirementPlan.transaction do
-      @retirement_plan.update(retirement_plan_params) || raise(ActiveRecord::Rollback)
-      @retirement_plan.seed_streams!(as_of: Date.current)
-      true
-    end
-
-    if saved
-      redirect_back_or_to retirement_plan_path, notice: t(".success")
+    if save_settings
+      respond_to do |format|
+        format.html { redirect_back_or_to retirement_plan_path, notice: t(".success") }
+        format.turbo_stream do
+          flash[:notice] = t(".success")
+          render turbo_stream: turbo_stream.action(:redirect, request.referer || retirement_plan_path)
+        end
+      end
     else
       render :edit, status: :unprocessable_entity
     end
@@ -48,6 +47,23 @@ class RetirementPlansController < ApplicationController
     # `user_id` is not a permitted parameter.
     def set_retirement_plan
       @retirement_plan = RetirementPlan.for(Current.user)
+    end
+
+    # Seeded after a save, never on a page view, and only the first time. The
+    # settings and the seeding commit together, so a failure part-way leaves
+    # neither behind. Two first saves at once race on the one-plan-per-user
+    # index; the one that loses saves onto the plan the other created.
+    def save_settings
+      RetirementPlan.transaction do
+        @retirement_plan.update(retirement_plan_params) || raise(ActiveRecord::Rollback)
+        @retirement_plan.seed_streams!(as_of: Date.current)
+        true
+      end
+    rescue ActiveRecord::RecordNotUnique
+      raise unless @retirement_plan.new_record?
+
+      @retirement_plan = RetirementPlan.find_by!(user: Current.user)
+      retry
     end
 
     def retirement_plan_params

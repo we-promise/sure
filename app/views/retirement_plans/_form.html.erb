@@ -1,6 +1,6 @@
 <%# locals: (retirement_plan:) %>
 
-<%= styled_form_with model: retirement_plan, url: retirement_plan_path, method: :patch, class: "space-y-4", data: { turbo_frame: :_top } do |f| %>
+<%= styled_form_with model: retirement_plan, url: retirement_plan_path, method: :patch, class: "space-y-4" do |f| %>
   <% if retirement_plan.errors.any? %>
     <%= render "shared/form_errors", model: retirement_plan %>
   <% end %>
