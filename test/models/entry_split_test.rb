@@ -340,4 +340,17 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert_not stale.unsplit_once!
     assert_not @entry.reload.split_parent?
   end
+
+  test "bulk_update! moving one split part moves the parent and every part" do
+    children = @entry.split!([
+      { name: "Groceries", amount: 70, category_id: nil },
+      { name: "Household", amount: 30, category_id: nil }
+    ])
+    new_date = @entry.date - 3.days
+
+    assert_equal 1, Entry.where(id: children.first.id).bulk_update!({ date: new_date })
+
+    assert_equal new_date, @entry.reload.date
+    children.each { |child| assert_equal new_date, child.reload.date }
+  end
 end
