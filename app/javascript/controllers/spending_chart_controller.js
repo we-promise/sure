@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
+import SettledResize from "utils/settled_resize";
 
 // Cumulative spending chart for the dashboard "spending" widget: the selected
 // month's running total (green, ending today while the month is in progress)
@@ -11,6 +12,9 @@ import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 const CURRENT_COLOR = "var(--color-success)";
 const PREVIOUS_COLOR = "var(--color-gray-400)";
 
+// The axis column on the right is part of the margin.
+const MARGIN = { top: 8, right: 48, bottom: 20, left: 4 };
+
 export default class extends Controller {
   static values = {
     data: Object,
@@ -19,24 +23,32 @@ export default class extends Controller {
     previousLabel: { type: String, default: "Previous" },
   };
 
-  _resizeObserver = null;
+  _settledResize = null;
 
   connect() {
     this._install();
     document.addEventListener("turbo:load", this._reinstall);
-    this._resizeObserver = new ResizeObserver(() => this._reinstall());
-    this._resizeObserver.observe(this.element);
+    // The axis column on the right keeps its width while a resize stretches
+    // the drawing.
+    this._settledResize = new SettledResize(this.element, this._reinstall, {
+      margins: { left: MARGIN.left, right: MARGIN.right },
+      // The day axis spans the whole month on wide screens and the days so
+      // far on narrow ones: a resize across that width redraws at once.
+      layoutChanges: () => this._wideAxis !== this._isWide(),
+    });
+    this._settledResize.start();
   }
 
   disconnect() {
     this._teardown();
     document.removeEventListener("turbo:load", this._reinstall);
-    this._resizeObserver?.disconnect();
+    this._settledResize?.stop();
   }
 
   _reinstall = () => {
     this._teardown();
     this._install();
+    this._settledResize?.drew();
   };
 
   _teardown() {
@@ -59,7 +71,7 @@ export default class extends Controller {
 
     // Room on the right for the axis labels ($0, $1.5K, …), like the
     // reference design; the curves run to the axis, not the card edge.
-    const margin = { top: 8, right: 48, bottom: 20, left: 4 };
+    const margin = MARGIN;
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -167,13 +179,19 @@ export default class extends Controller {
       )
       .call((g) => g.select(".domain").remove())
       .selectAll("text")
+      .attr("data-settled-resize-edge", "right")
       .attr("class", "text-secondary fill-current")
       .style("font-size", "12px")
       .style("font-weight", "500");
   }
 
+  _isWide() {
+    return window.matchMedia("(min-width: 640px)").matches;
+  }
+
   _drawXAxis(group, x, days, innerHeight, axisLabels, currentDays = days) {
-    const mobile = !window.matchMedia("(min-width: 640px)").matches;
+    this._wideAxis = this._isWide();
+    const mobile = !this._wideAxis;
     const span = mobile ? Math.min(days, currentDays) : days;
     const tickDays = [...new Set([1, Math.round((1 + span) / 2), span])];
 

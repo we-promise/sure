@@ -1,3 +1,4 @@
+<%# locals: (transactions:, period_type:, start_date:, end_date:, filter_tags:) %>
 <div>
   <%# Export Controls %>
   <div class="flex items-center justify-end mb-4 flex-wrap gap-3">
@@ -8,7 +9,8 @@
         start_date: start_date,
         end_date: end_date,
         sort_by: params[:sort_by],
-        sort_direction: params[:sort_direction]
+        sort_direction: params[:sort_direction],
+        filter_tag_ids: filter_tags.map(&:id).presence
       }.compact
     %>
 
@@ -61,7 +63,8 @@
               current_sort_by: current_sort_by,
               current_sort_direction: current_sort_direction,
               start_date: start_date,
-              end_date: end_date %>
+              end_date: end_date,
+              filter_tags: filter_tags %>
       <% end %>
 
       <%# Expenses Section %>
@@ -74,7 +77,8 @@
               current_sort_by: current_sort_by,
               current_sort_direction: current_sort_direction,
               start_date: start_date,
-              end_date: end_date %>
+              end_date: end_date,
+              filter_tags: filter_tags %>
       <% end %>
     </div>
 
