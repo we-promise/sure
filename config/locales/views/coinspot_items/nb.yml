@@ -1,0 +1,92 @@
+---
+nb:
+  coinspot_items:
+    provider_connection:
+      default_name: CoinSpot
+      default_description: Koble til en CoinSpot-børskonto
+      name: CoinSpot – %{name}
+      description: Koble til %{name}
+    create:
+      default_name: CoinSpot
+      success: Koblet til CoinSpot. Børskontoen din synkroniseres nå.
+    update:
+      success: CoinSpot-tilkoblingen er oppdatert.
+    destroy:
+      success: CoinSpot-tilkoblingen er satt opp for sletting.
+      unlink_failed: Kunne ikke koble fra CoinSpot-tilkoblingen
+    select_accounts:
+      select_connection: Velg en CoinSpot-tilkobling i leverandørinnstillingene.
+      no_credentials_configured: Legg til API-legitimasjon for CoinSpot før du setter opp kontoer.
+    link_accounts:
+      select_connection: Velg en CoinSpot-tilkobling før du kobler til kontoer.
+    select_existing_account:
+      title: Koble til CoinSpot-konto
+      no_accounts_found: Fant ingen CoinSpot-kontoer.
+      wait_for_sync: Vent til CoinSpot er ferdig med å synkronisere.
+      check_provider_health: Sjekk at API-legitimasjonen for CoinSpot er gyldig.
+      link: Koble til
+      cancel: Avbryt
+    link_existing_account:
+      success: Koblet til CoinSpot-kontoen
+      select_connection: Velg en CoinSpot-tilkobling før du kobler til kontoer.
+      errors:
+        only_manual: Bare manuelle kryptobørskontoer uten eksisterende leverandørkobling kan kobles til CoinSpot
+        invalid_coinspot_account: Ugyldig CoinSpot-konto
+        coinspot_account_already_linked: Denne CoinSpot-kontoen er allerede koblet til
+    setup_accounts:
+      title: Importer CoinSpot-konto
+      subtitle: Velg børskontoen du vil følge
+      instructions: CoinSpot importerer én samlet kryptobørskonto for denne tilkoblingen, med saldoer, verdier i AUD, overføringer, innskudd, uttak og ordrehistorikk.
+      no_accounts: Alle CoinSpot-kontoer er importert.
+      accounts_count:
+        one: '%{count} konto tilgjengelig'
+        other: '%{count} kontoer tilgjengelig'
+      select_all: Velg alle
+      import_selected: Importer valgte
+      cancel: Avbryt
+      creating: Importerer...
+    complete_account_setup:
+      success:
+        one: Importerte %{count} konto
+        other: Importerte %{count} kontoer
+      none_selected: Ingen kontoer valgt
+      no_accounts: Ingen kontoer å importere
+      setup_failed:
+        one: Kunne ikke importere %{count} konto
+        other: Kunne ikke importere %{count} kontoer
+    coinspot_item:
+      provider_name: CoinSpot
+      syncing: Synkroniserer...
+      reconnect: Legitimasjonen må oppdateres
+      deletion_in_progress: Sletter...
+      sync_status:
+        no_accounts: Fant ingen kontoer
+        all_synced:
+          one: '%{count} konto synkronisert'
+          other: '%{count} kontoer synkronisert'
+        partial_sync: '%{linked_count} synkronisert, %{unlinked_count} må settes opp'
+      status: Sist synkronisert for %{timestamp} siden
+      status_with_summary: Sist synkronisert for %{timestamp} siden – %{summary}
+      status_never: Aldri synkronisert
+      delete: Slett
+      no_accounts_title: Fant ingen kontoer
+      no_accounts_message: CoinSpot-børskontoen din vises her etter synkronisering.
+      setup_needed: Kontoen er klar til import
+      setup_description: Importer denne CoinSpot-tilkoblingen som en kryptobørskonto.
+      setup_action: Importer konto
+      import_accounts_menu: Importer konto
+      stale_rate_warning: Saldoen er omtrentlig fordi den nøyaktige valutakursen for %{date} ikke var tilgjengelig. Oppdateres ved neste synkronisering.
+  coinspot_item:
+    syncer:
+      checking_credentials: Kontrollerer legitimasjon...
+      credentials_invalid: Ugyldig API-legitimasjon for CoinSpot. Sjekk API-nøkkelen og hemmeligheten.
+      importing_accounts: Importerer kontoer fra CoinSpot...
+      checking_configuration: Kontrollerer kontokonfigurasjonen...
+      accounts_need_setup:
+        one: '%{count} konto må settes opp'
+        other: '%{count} kontoer må settes opp'
+      processing_accounts: Behandler kontodata...
+      processing_failed:
+        one: '%{count} CoinSpot-konto kunne ikke behandles'
+        other: '%{count} CoinSpot-kontoer kunne ikke behandles'
+      calculating_balances: Beregner saldoer...
