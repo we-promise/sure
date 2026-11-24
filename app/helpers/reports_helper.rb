@@ -2,10 +2,18 @@ module ReportsHelper
   # Where a breakdown row links: its category's transactions in the period.
   # /transactions only lists Transaction rows, so trade-only rows (e.g. Other
   # Investments) link nowhere rather than to an empty list.
-  def breakdown_transactions_path(item, start_date, end_date)
+  def breakdown_transactions_path(item, start_date, end_date, tags: [])
     return unless item[:has_transactions] && start_date.present? && end_date.present?
 
-    transactions_path(q: { categories: [ item[:category_filter_value] ], start_date: start_date, end_date: end_date })
+    query = { categories: [ item[:category_filter_value] ], start_date: start_date, end_date: end_date }
+    query[:tags] = tags.map(&:filter_value) if tags.any?
+    transactions_path(q: query)
+  end
+
+  # The Reports filters that period controls carry over, so changing the dates
+  # keeps the filter that is applied.
+  def reports_filter_params
+    { filter_tag_ids: filter_tags.map(&:id).presence }.compact
   end
 
   # Returns the DS::Pill tone for a given tax treatment. Mirrors the
