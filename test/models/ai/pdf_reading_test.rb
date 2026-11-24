@@ -542,6 +542,29 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     end
   end
 
+  test "pages the server can't render say why, under Auto and by name" do
+    stub_ai(:extract_pdf)
+    { missing_binary: :missing_binary, failed: :render_failed, timeout: :render_failed, blank_page: :render_failed }.each do |code, reason|
+      Pdf::PageImages.stubs(:render).raises(Pdf::PageImages::Error.new("pdftoppm: #{code}", code:))
+
+      with_reading_routes(vision_model) do
+        %i[auto images].each do |read_as|
+          error = assert_raises(Ai::Error::Unavailable) { reading(@scan).read(read_as:) }
+
+          assert_equal [ reason, code ], [ error.reason, error.code ], read_as.to_s
+        end
+      end
+      assert_not_equal PdfImport.unavailable_message(:default), PdfImport.unavailable_message(reason)
+    end
+  end
+
+  test "without pdftoppm, a PDF with text is still read as text" do
+    stub_ai(:extract_pdf, returns: { document_type: "bank_statement", summary: "YourBank", extracted_data: nil })
+    Pdf::PageImages.stubs(:executable).returns(nil)
+
+    with_reading_routes(vision_model) { assert_equal :text, reading(@bac).read.way }
+  end
+
   test "a scan nothing can render keeps the renderer's code on the unavailable error" do
     stub_ai(:extract_pdf)
     Pdf::PageImages.stubs(:render).raises(Pdf::PageImages::Error.new("pdftoppm is not installed (poppler-utils)", code: :missing_binary))

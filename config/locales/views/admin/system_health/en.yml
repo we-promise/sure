@@ -405,6 +405,7 @@ en:
             extension_not_enabled: The PostgreSQL vector extension is not enabled
             table_not_found: The vector_store_chunks table was not found
             missing_binary: The pdftoppm renderer (poppler-utils) is not available in this container
+            render_failed: pdftoppm (poppler-utils) could not render the test page in this container. Check the worker's memory limit and logs.
             timeout: The service did not respond before the probe timeout
             no_credit: The service refused the request because the key's balance is spent
             unauthorized: The service rejected the API key

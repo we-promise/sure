@@ -217,7 +217,8 @@ class AiHealth
           rescue Ai::Error::UnsupportedInput
             raise Failure, :images_refused
           rescue Pdf::PageImages::Error => error
-            raise Failure, error.code   # :missing_binary and the like, not a generic request failure
+            # Not a generic request failure: a missing pdftoppm needs installing, anything else looking into.
+            raise Failure, error.code == :missing_binary ? :missing_binary : :render_failed
           end
           raise Failure, :invalid_response unless SyntheticPdf.valid_result?(value)
         end
@@ -371,6 +372,7 @@ class AiHealth
           failure_code: result.failure_code,
           exception_class: error.class.name,
           http_status: result.http_status,
+          renderer_error: renderer_error(error.cause),
           process_identity: WorkerAiHealth.current_process_identity
         }.compact
 
@@ -383,6 +385,11 @@ class AiHealth
           provider_key: provider_key.to_s,
           metadata: metadata
         )
+      end
+
+      # What pdftoppm did with the synthetic PDF, which holds no customer data.
+      def renderer_error(cause)
+        "#{cause.code}: #{cause.message.truncate(200)}" if cause.is_a?(Pdf::PageImages::Error)
       end
 
       def record_store_failure(error)
