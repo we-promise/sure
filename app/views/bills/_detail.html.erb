@@ -13,8 +13,14 @@
       <%# Why this bill matches what it matches, in words rather than engine terms. %>
       <div class="space-y-1.5">
         <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.rules") %></p>
+        <%# What the app has learned from corrections, prepared by
+            BillsHelper#bills_matcher_hints. %>
+        <% hints = bills_matcher_hints(series) %>
         <div class="flex flex-wrap gap-1.5">
-          <%= render DS::Pill.new(label: t("bills.detail.rule_named", name: series.merchant&.name.presence || series.name), tone: :neutral, marker: false) %>
+          <%# A reference-only bill is not matched by its name, so the name is not offered as the rule. %>
+          <% unless hints[:reference_only] %>
+            <%= render DS::Pill.new(label: t("bills.detail.rule_named", name: series.merchant&.name.presence || series.name), tone: :neutral, marker: false) %>
+          <% end %>
           <% amount_label = series.has_amount_variance? ?
                t("bills.detail.rule_amount_range", min: format_money(series.expected_amount_min_money), max: format_money(series.expected_amount_max_money)) :
                format_money(Money.new(series.amount.abs, series.currency)) %>
@@ -25,15 +31,17 @@
           <% end %>
         </div>
 
-        <%# What the app has learned from corrections, prepared by
-            BillsHelper#bills_matcher_hints. %>
-        <% hints = bills_matcher_hints(series) %>
-        <% if hints[:aliases].any? %>
+        <% if hints[:reference].present? %>
+          <p class="text-xs text-secondary">
+            <%= t(hints[:reference_only] ? "bills.detail.rule_reference_only" : "bills.detail.rule_reference", reference: hints[:reference]) %>
+          </p>
+        <% end %>
+        <% if !hints[:reference_only] && hints[:aliases].any? %>
           <p class="text-xs text-secondary">
             <%= t("bills.detail.rule_aliases", names: hints[:aliases].to_sentence) %>
           </p>
         <% end %>
-        <% if hints[:detected_name].present? && hints[:detected_name] != (series.merchant&.name.presence || series.name) %>
+        <% if !hints[:reference_only] && hints[:detected_name].present? && hints[:detected_name] != (series.merchant&.name.presence || series.name) %>
           <p class="text-xs text-secondary">
             <%= t("bills.detail.rule_detected", name: hints[:detected_name]) %>
           </p>

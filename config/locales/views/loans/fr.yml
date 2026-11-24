@@ -51,7 +51,58 @@ fr:
       term: Durée
       type: Type
       unknown: Inconnu
+    subtypes:
+      auto:
+        long: Prêt auto
+        short: Prêt auto
+      business:
+        long: Prêt professionnel
+        short: Prêt professionnel
+      home_equity:
+        long: Prêt hypothécaire sur la valeur du logement
+        short: Prêt sur valeur du logement
+      line_of_credit:
+        long: Ligne de crédit
+        short: Ligne de crédit
+      mortgage:
+        long: Hypothèque
+        short: Hypothèque
+      other:
+        long: Autre prêt
+        short: Autre prêt
+      student:
+        long: Prêt étudiant
+        short: Prêt étudiant
     tabs:
+      extra_repayments:
+        amount_label: Remboursement anticipé
+        amount_placeholder: '0.00'
+        apply: Appliquer
+        baseline_not_cleared: 'Avec le remboursement actuel, ce prêt n''est pas soldé à l''échéance initiale et il resterait %{balloon} à payer : il n''y a donc pas de date anticipée ni d''économie d''intérêts à comparer. Avec ce supplément, il est soldé à la date ci-dessus.'
+        clear: Effacer
+        comparison_basis: Par rapport au paiement du remboursement actuel sans supplément, à partir du solde d'aujourd'hui.
+        dated_note: 'Les suppléments hebdomadaires et toutes les deux semaines sont pris en compte au remboursement qui suit chacun d''eux : les intérêts économisés sont donc, le cas échéant, sous-estimés.'
+        extra_not_cleared: Même avec ce supplément, le prêt n'est pas soldé à l'échéance initiale. Essayez un montant plus élevé.
+        frequencies:
+          fortnightly: Toutes les deux semaines
+          monthly: Mensuelle
+          weekly: Hebdomadaire
+        frequency_label: Fréquence
+        interest_saved: Intérêts économisés
+        intro: Découvrez combien de temps plus tôt le prêt est soldé, et combien d'intérêts vous économisez, si vous versez un montant supplémentaire chaque semaine, toutes les deux semaines ou chaque mois en plus de vos remboursements.
+        invalid_amount: Saisissez un montant supérieur ou égal à zéro, en chiffres.
+        invalid_frequency: Choisissez hebdomadaire, toutes les deux semaines ou mensuelle.
+        months_sooner:
+          zero: Soldé le même mois
+          one: "%{count} mois plus tôt"
+          other: "%{count} mois plus tôt"
+        no_scheduled_repayments: 'Aucun remboursement n''est plus prévu sur ce prêt, mais un solde reste dû : il n''y a donc pas de remboursement auquel ajouter un supplément.'
+        not_applicable: 'Il ne reste rien à rembourser sur ce prêt : il n''y a donc pas de remboursement anticipé à simuler.'
+        payoff_with_extra: Fin du prêt avec supplément
+        total_cost: Coût total à partir d'aujourd'hui
+        total_cost_not_cleared: Non soldé à l'échéance initiale
+        total_cost_saved: "%{amount} de moins que sans le supplément"
+        variable_rate_notice: Le taux de ce prêt évolue dans le temps. Ces chiffres appliquent les changements de taux déjà enregistrés ; un changement pas encore enregistré les modifiera.
       overview:
         edit_loan_details: Modifier les détails du prêt
         insurance_rate_only: "%{rate} par an"
