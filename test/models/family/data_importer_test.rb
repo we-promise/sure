@@ -1679,9 +1679,12 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     security = securities(:msft)
     account.entries.create!(date: 2.days.ago.to_date, amount: 1000, currency: "USD", name: "Opening",
       entryable: Valuation.new(kind: :opening_anchor))
-    ExchangeRate.find_or_initialize_by(date: Date.yesterday, from_currency: "EUR", to_currency: "USD").update!(rate: "1.25")
-    account.entries.create!(date: Date.yesterday, amount: 200, currency: "USD", name: "Buy MSFT",
-      entryable: Trade.new(security: security, qty: 2, price: 80, currency: "EUR", investment_activity_label: "Buy"))
+    %w[CAD EUR].each do |currency|
+      ExchangeRate.find_or_initialize_by(date: Date.yesterday, from_currency: currency, to_currency: "USD").update!(rate: "1.1")
+    end
+    account.entries.create!(date: Date.yesterday, amount: 160, currency: "CAD", name: "Buy MSFT",
+      entryable: Trade.new(security: security, qty: 2, price: 80, currency: "EUR", exchange_rate: "1.25",
+        investment_activity_label: "Buy"))
     account.entries.create!(date: Date.current, amount: 1100, currency: "USD", name: "Old total", entryable: Valuation.new)
     Balance::Materializer.new(account, strategy: :forward).materialize_balances
     anchor = account.create_cash_anchor!
@@ -1701,8 +1704,9 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     Balance::Materializer.new(restored, strategy: :forward).materialize_balances
     assert_equal original_cash, restored.reload.cash_balance
     restored_trade_entry = restored.entries.trades.sole
-    assert_equal "USD", restored_trade_entry.currency
+    assert_equal "CAD", restored_trade_entry.currency
     assert_equal "EUR", restored_trade_entry.trade.currency
+    assert_equal 1.25, restored_trade_entry.trade.numeric_exchange_rate
     restored_trade_entry.destroy!
     assert_empty restored.current_holdings
   end
