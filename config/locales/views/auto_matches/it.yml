@@ -23,6 +23,9 @@ it:
       from: Da
       to: A
       date: Data
+      days_apart:
+        one: "%{count} giorno di distanza"
+        other: "%{count} giorni di distanza"
       actions: Azioni
       separator: "·"
     bulk_actions:
