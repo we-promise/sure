@@ -3,5 +3,7 @@ nb:
   other_assets:
     edit:
       edit: Rediger %{account}
+      balance_tracking_info: Andre eiendeler følges opp med manuelle verdivurderinger via «Ny saldo», ikke med transaksjoner. Kontantstrømmen påvirker ikke kontosaldoen.
     new:
       title: Angi eiendelsdetaljer
+      balance_tracking_info: Andre eiendeler følges opp med manuelle verdivurderinger via «Ny saldo», ikke med transaksjoner. Kontantstrømmen påvirker ikke kontosaldoen.

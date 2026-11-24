@@ -7,6 +7,13 @@ de:
       subtitle: Umfassende Einblicke in deine finanzielle Situation
       export: CSV exportieren
       print_report: Bericht drucken
+      tag_filter:
+        all: Alle Tags
+        selected:
+          one: "%{count} Tag ausgewählt"
+          other: "%{count} Tags ausgewählt"
+        search: Tags suchen
+        apply: Übernehmen
       section_aria: "Abschnitt %{title}. Drücke Enter oder Leertaste, um ihn zum Umsortieren zu greifen, dann bewege ihn mit den Pfeiltasten."
       sections_aria: Berichtsbereiche
       periods:
@@ -14,16 +21,19 @@ de:
         quarterly: Vierteljährlich
         ytd: Jahr bis heute
         last_6_months: Letzte 6 Monate
+        all_time: Gesamter Zeitraum
         custom: Benutzerdefinierter Zeitraum
       date_range:
         from: Von
         to: Bis
       showing_period: "Zeitraum: %{start} bis %{end}"
+      shortcut_hint: "%{action} (%{key})"
       next_decade: Nächstes Jahrzehnt
       next_period: Nächster Zeitraum
       next_year: Nächstes Jahr
       period_label:
         last_6_months: "%{start} – %{end}"
+        all_time: "%{start} – %{end}"
         past_year: "%{year}"
         quarterly: Q%{quarter} %{year}
         ytd: "%{year} bis heute"
@@ -109,6 +119,34 @@ de:
       total_liabilities: Verbindlichkeiten
       no_assets: Keine Vermögenswerte
       no_liabilities: Keine Verbindlichkeiten
+    spending_vs_normal:
+      title: Ausgaben im Vergleich zum Üblichen
+      summary_html: "%{total} in diesem Zeitraum ausgegeben. Üblich für einen so langen Zeitraum sind %{normal}, gemessen an %{baseline_start} bis %{baseline_end}."
+      summary_so_far_html: "%{total} bisher ausgegeben. Üblich für so viele Tage sind %{normal}, gemessen an %{baseline_start} bis %{baseline_end}."
+      no_history_html: "%{total} in diesem Zeitraum ausgegeben. Für einen Vergleich mit dem Üblichen reicht der bisherige Verlauf noch nicht."
+      no_history_short: Für einen Vergleich reicht der bisherige Verlauf noch nicht.
+      no_spending: Keine Ausgaben in diesem Zeitraum.
+      no_changes: In jeder Kategorie lagen die Ausgaben im üblichen Rahmen.
+      treemap_title: Wohin das Geld ging
+      changes_title: Was sich geändert hat
+      direct: "%{category} (ohne Unterkategorie)"
+      tooltip:
+        path: "%{parent} › %{category}"
+        total: "%{category}: %{amount}"
+        normal: "Üblich: %{amount}"
+        more: "%{amount} mehr als üblich (%{percent})"
+        less: "%{amount} weniger als üblich (%{percent})"
+        more_no_percent: "%{amount} mehr als üblich"
+        less_no_percent: "%{amount} weniger als üblich"
+        no_normal: Kein bisheriger Verlauf zum Vergleichen
+        open: Auswählen, um diese Transaktionen zu sehen
+      legend:
+        less: 50–100% weniger
+        slightly_less: 15–50% weniger
+        normal: Etwa üblich
+        slightly_more: 15–50% mehr
+        more: 50–100% mehr
+        much_more: Über 100% mehr
     investment_performance:
       title: Anlageperformance
       portfolio_value: Portfoliowert
@@ -138,6 +176,9 @@ de:
       sell_trades: Verkaufstrades
       and_more: "+%{count} weitere"
       period_return: Rendite im Zeitraum
+      unconverted_note:
+        one: "%{count} Gewinn ist nicht enthalten: kein Wechselkurs nach %{currency}"
+        other: "%{count} Gewinne sind nicht enthalten: kein Wechselkurs nach %{currency}"
     investment_flows:
       title: Anlageflüsse
       description: Verfolge Geldflüsse in und aus deinen Anlagekonten
@@ -147,6 +188,14 @@ de:
       contributions_description: In Investments eingezahlt
       net_flow_description: Nettoveränderung gesamt
       withdrawals_description: Aus Investments entnommen
+    biggest_expenses:
+      title: Größte Ausgaben
+      one_time: Einmalig
+      limit_aria: Anzahl der angezeigten Ausgaben
+      table:
+        name: Name
+        category: Kategorie
+        amount: Betrag
     transactions_breakdown:
       title: Transaktionsübersicht
       no_transactions: Keine Transaktionen für den ausgewählten Zeitraum und Filter gefunden
@@ -252,3 +301,11 @@ de:
         amount: Betrag
         percent: "%"
         more_categories: "+ %{count} weitere Kategorien"
+      biggest_expenses:
+        title: Größte Ausgaben
+        date: Datum
+        name: Name
+        category: Kategorie
+        account: Konto
+        amount: Betrag
+        one_time: Einmalig

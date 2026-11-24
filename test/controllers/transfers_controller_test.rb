@@ -689,6 +689,46 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Test notes", transfer.reload.notes
   end
 
+  test "a category chosen in the transfer editor is locked as the user's" do
+    transfer = transfers(:one)
+    category = families(:dylan_family).investment_contributions_category
+
+    patch transfer_url(transfer), params: { transfer: { category_id: category.id } }
+
+    outflow = transfer.outflow_transaction.reload
+    assert_equal category, outflow.category
+    assert outflow.locked?(:category_id), "a cleanup or sync would treat an unlocked choice as its own"
+  end
+
+  test "a category re-chosen in the transfer editor stays the user's where the AI had set it" do
+    transfer = transfers(:one)
+    category = families(:dylan_family).investment_contributions_category
+    outflow = transfer.outflow_transaction
+    outflow.enrich_attribute(:category_id, category.id, source: "ai")
+    outflow.lock_attr!(:category_id)
+
+    patch transfer_url(transfer), params: { transfer: { category_id: category.id } }
+
+    assert_empty Transaction.where(id: outflow.id).without_user_category_lock
+    outflow.reload.update!(kind: "funds_movement")
+    assert_equal category, outflow.reload.category
+  end
+
+  test "a different category chosen in the transfer editor keeps the AI's superseded suggestion" do
+    transfer = transfers(:one)
+    outflow = transfer.outflow_transaction
+    outflow.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "ai")
+    outflow.lock_attr!(:category_id)
+    category = families(:dylan_family).investment_contributions_category
+
+    patch transfer_url(transfer), params: { transfer: { category_id: category.id } }
+
+    assert_equal category, outflow.reload.category
+    suggestion = DataEnrichment.find_by(enrichable: outflow, attribute_name: "category_id", source: "ai")
+    assert suggestion, "the AI's suggestion was deleted, so the transaction leaves the AI history filter"
+    assert_equal true, suggestion.metadata["superseded"]
+  end
+
   test "confirming a transfer keeps the outflow category" do
     transfer = transfers(:one)
     transfer.outflow_transaction.update!(category: categories(:food_and_drink))
@@ -1016,6 +1056,33 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "show names each side's transaction beside its amount" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.entry.update!(name: "Card bill sent from checking")
+    transfer.inflow_transaction.entry.update!(name: "Payment received, thank you")
+
+    get transfer_url(transfer)
+
+    assert_response :success
+    assert_select "dt", text: I18n.t("transfers.show.transaction"), count: 2
+    assert_select "dd", text: "Card bill sent from checking"
+    assert_select "dd", text: "Payment received, thank you"
+  end
+
+  test "show leaves out the name of a side whose account the user cannot see" do
+    transfer = cross_owner_transfer(outflow_account: member_loan, inflow_account: accounts(:depository))
+    transfer.outflow_transaction.entry.update!(name: "Private loan payment")
+    transfer.inflow_transaction.entry.update!(name: "Money in")
+
+    get transfer_url(transfer)
+
+    assert_response :success
+    assert_select "dt", text: I18n.t("transfers.show.transaction"), count: 1
+    assert_select "dd", text: "Money in"
+    assert_select "dd", text: "Private loan payment", count: 0
+    assert_no_match "Private loan payment", response.body
+  end
+
   test "show offers the investment contribution switch only for transfers into an investment account" do
     contribution = create_confirmed_transfer(to: accounts(:investment))
     payment = create_confirmed_transfer(to: accounts(:credit_card))
@@ -1092,6 +1159,68 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("recurring_transactions.transfer_already_exists"), flash[:alert]
   end
 
+  test "mark_as_recurring accepts two transfers with the same accounts and amount on different days" do
+    family = users(:family_admin).family
+    family.recurring_transactions.destroy_all
+    first = create_dated_transfer(date: Date.new(2026, 1, 1))
+    second = create_dated_transfer(date: Date.new(2026, 1, 28))
+
+    assert_difference -> { RecurringTransaction.where(family: family).count }, +2 do
+      post mark_as_recurring_transfer_url(first)
+      assert_equal I18n.t("recurring_transactions.transfer_marked_as_recurring"), flash[:notice]
+      post mark_as_recurring_transfer_url(second)
+      assert_equal I18n.t("recurring_transactions.transfer_marked_as_recurring"), flash[:notice]
+    end
+
+    assert_equal [ 1, 28 ], RecurringTransaction.where(family: family).order(:expected_day_of_month).pluck(:expected_day_of_month)
+  end
+
+  test "mark_as_recurring recognises a transfer posted a weekend later than its series" do
+    family = users(:family_admin).family
+    family.recurring_transactions.destroy_all
+    july = create_dated_transfer(date: Date.new(2026, 7, 1))
+    # August 1 is a Saturday: the standing order posts on Monday the 3rd.
+    august = create_dated_transfer(date: Date.new(2026, 8, 3))
+
+    post mark_as_recurring_transfer_url(july)
+
+    assert_no_difference -> { RecurringTransaction.where(family: family).count } do
+      post mark_as_recurring_transfer_url(august)
+    end
+    assert_equal I18n.t("recurring_transactions.transfer_already_exists"), flash[:alert]
+  end
+
+  test "mark_as_recurring flags a second transfer on the same day of the same series as already existing" do
+    family = users(:family_admin).family
+    family.recurring_transactions.destroy_all
+    january = create_dated_transfer(date: Date.new(2026, 1, 28))
+    february = create_dated_transfer(date: Date.new(2026, 2, 28))
+
+    post mark_as_recurring_transfer_url(january)
+
+    assert_no_difference -> { RecurringTransaction.where(family: family).count } do
+      post mark_as_recurring_transfer_url(february)
+    end
+    assert_equal I18n.t("recurring_transactions.transfer_already_exists"), flash[:alert]
+  end
+
+  test "mark_as_recurring reports already-exists when a concurrent request wins the insert" do
+    family = users(:family_admin).family
+    family.recurring_transactions.destroy_all
+    transfer = create_dated_transfer(date: Date.new(2026, 1, 28))
+    winner = RecurringTransaction.create_from_transfer(transfer)
+
+    # Our lookup misses, the other request's insert has already landed when
+    # ours collides with it.
+    RecurringTransaction.stubs(:transfer_series_for).returns(nil).then.returns(winner)
+    RecurringTransaction.stubs(:create_from_transfer).raises(ActiveRecord::RecordNotUnique)
+
+    assert_no_difference -> { RecurringTransaction.where(family: family).count } do
+      post mark_as_recurring_transfer_url(transfer)
+    end
+    assert_equal I18n.t("recurring_transactions.transfer_already_exists"), flash[:alert]
+  end
+
   test "mark_as_recurring is rejected when recurring_transactions_disabled" do
     transfer = transfers(:one)
     family = users(:family_admin).family
@@ -1105,6 +1234,13 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def create_dated_transfer(date:, amount: 2000)
+      outflow_entry = create_transaction(date: date, account: accounts(:depository), amount: amount)
+      inflow_entry = create_transaction(date: date, account: accounts(:investment), amount: -amount)
+
+      Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction).tap(&:confirm!)
+    end
+
     def create_confirmed_transfer(to:)
       outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
       inflow_entry = create_transaction(date: Date.current, account: to, amount: -500)

@@ -16,6 +16,14 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     @user.sessions.destroy_all
   end
 
+  def with_forgery_protection
+    original = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+    yield
+  ensure
+    ActionController::Base.allow_forgery_protection = original
+  end
+
   test "redirects to root if MFA already enabled" do
     @user.setup_mfa!
     @user.enable_mfa!
@@ -240,6 +248,89 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_not Session.exists?(user_id: @user.id)
+  end
+
+  test "verify_code sends a repeat submit after sign-in to the app" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    # Frozen so the code cannot expire between generating and submitting it.
+    freeze_time do
+      post sessions_path, params: { email: @user.email, password: user_password_test }
+      code = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances").now
+
+      # Forgery protection is on, as in production: the first submit rotates the
+      # session, so the repeat submit arrives with a token that no longer verifies.
+      with_forgery_protection do
+        get verify_mfa_path
+        token = css_select("form[action='#{verify_mfa_path}'] input[name='authenticity_token']").first["value"]
+
+        post verify_mfa_path, params: { code: code, authenticity_token: token }
+        assert_redirected_to root_path
+
+        assert_no_difference -> { Session.where(user_id: @user.id).count } do
+          post verify_mfa_path, params: { code: code, authenticity_token: token }
+        end
+        assert_redirected_to root_path
+        assert_nil flash[:alert]
+      end
+
+      follow_redirect!
+      assert_response :success
+    end
+  end
+
+  test "verify_code still requires a valid token while a sign-in is pending" do
+    @user.setup_mfa!
+    backup_code = @user.enable_mfa!.first
+    sign_out
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+
+    with_forgery_protection do
+      post verify_mfa_path, params: { code: backup_code, authenticity_token: "forged" }
+      assert_response :unprocessable_entity
+    end
+
+    # Rejected before verification: no session, and the single-use code is unspent.
+    assert_not Session.exists?(user_id: @user.id)
+    assert_equal 8, @user.reload.otp_backup_codes.size
+  end
+
+  test "other MFA actions keep requiring a valid token without a pending sign-in" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+
+    with_forgery_protection do
+      delete disable_mfa_path, params: { password: user_password_test, authenticity_token: "forged" }
+      assert_response :unprocessable_entity
+    end
+
+    assert @user.reload.otp_required?
+  end
+
+  test "verify_code without a pending sign-in redirects instead of reporting an invalid code" do
+    sign_out
+
+    post verify_mfa_path, params: { code: "123456" }
+    assert_redirected_to root_path
+
+    follow_redirect!
+    assert_redirected_to new_session_path
+  end
+
+  test "verify form disables its button on submit" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    get verify_mfa_path
+
+    assert_select "form[action=?][data-controller='loading-button'][data-action~='submit->loading-button#showLoading']", verify_mfa_path do
+      assert_select "button[type='submit'][data-loading-button-target='button']"
+    end
   end
 
   test "webauthn_options require a pending MFA session" do
