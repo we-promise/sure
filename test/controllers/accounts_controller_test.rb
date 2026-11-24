@@ -51,8 +51,8 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get account_url(account)
 
     assert_response :success
-    assert_select "[data-testid=balance-gap-status]" do
-      assert_select "p", text: /#{Regexp.escape(I18n.t("accounts.show.balance_gap.title"))}/
+    assert_select "[data-testid=account-health-status]" do
+      assert_select "p", text: /#{Regexp.escape(I18n.t("accounts.health_status.balance_gap.message"))}/
       assert_select "p", text: /#{Regexp.escape(Money.new(50, account.currency).format)} higher/
       assert_select "a[href=?]", transactions_path(q: { account_ids: [ account.id ], start_date: 10.days.ago.to_date })
     end
@@ -66,7 +66,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get account_url(account)
 
     assert_response :success
-    assert_select "[data-testid=balance-gap-status]", count: 0
+    assert_no_match I18n.t("accounts.health_status.balance_gap.message"), response.body
   end
 
   test "show warns the owner about a private account's balance gap" do
@@ -77,7 +77,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     get account_url(account)
 
-    assert_select "[data-testid=balance-gap-status]", count: 1
+    assert_select "[data-testid=account-health-status] p", text: /#{Regexp.escape(I18n.t("accounts.health_status.balance_gap.message"))}/, count: 1
   end
 
   # Opening the account groups makes the list scroll; reserving the scrollbar's

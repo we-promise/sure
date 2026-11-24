@@ -19,7 +19,7 @@ class Account::HealthStatus
   end
 
   def issues
-    @issues ||= [ sync_issue, negative_positions_issue ].compact
+    @issues ||= [ sync_issue, balance_gap_issue, negative_positions_issue ].compact
   end
 
   private
@@ -36,6 +36,25 @@ class Account::HealthStatus
         severity: sync.failed? ? :error : :warning,
         message: I18n.t("accounts.health_status.#{key}.message"),
         hint: I18n.t("accounts.health_status.sync_hint")
+      )
+    end
+
+    # A gap between the balance the bank reports and the transaction history
+    # while it is open (Balance::IntegrityChecker.open_gap_for). The link opens
+    # the transactions since the last date both agreed.
+    def balance_gap_issue
+      gap = Balance::IntegrityChecker.open_gap_for(account)
+      return unless gap
+
+      Issue.new(
+        severity: :warning,
+        message: I18n.t("accounts.health_status.balance_gap.message"),
+        details: [ gap ],
+        hint: I18n.t("accounts.health_status.balance_gap.hint"),
+        link: {
+          text: I18n.t("accounts.health_status.balance_gap.link"),
+          href: Rails.application.routes.url_helpers.transactions_path(q: { account_ids: [ account.id ], start_date: gap.anchor_waypoint.date })
+        }
       )
     end
 

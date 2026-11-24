@@ -42,4 +42,22 @@ class UI::Account::HealthStatusTest < ViewComponent::TestCase
 
     assert_selector ".privacy-sensitive", exact_text: "Microsoft (MSFT): below zero from 10.04.2026, lowest -1.5"
   end
+
+  test "states how far the bank's balance is off and since when" do
+    @account.family.update!(date_format: "%d.%m.%Y")
+    gap = Balance::IntegrityChecker::Gap.new(
+      anchor_waypoint: Balance::IntegrityChecker::Waypoint.new(date: Date.new(2026, 4, 1), value: 1000, kind: "reconciliation"),
+      first_open_waypoint: Balance::IntegrityChecker::Waypoint.new(date: Date.new(2026, 4, 10), value: 950, kind: "reconciliation"),
+      latest_waypoint: Balance::IntegrityChecker::Waypoint.new(date: Date.new(2026, 4, 12), value: 950, kind: "reconciliation"),
+      implied_value: 1000, actual_value: 950, difference: -50
+    )
+    Balance::IntegrityChecker.stubs(:open_gap_for).with(@account).returns(gap)
+
+    render_inline(UI::Account::HealthStatus.new(account: @account))
+
+    assert_text I18n.t("accounts.health_status.balance_gap.message")
+    assert_selector ".privacy-sensitive", text: /#{Regexp.escape(Money.new(50, @account.currency).format)} lower .* since 10\.04\.2026/
+    assert_link I18n.t("accounts.health_status.balance_gap.link")
+    assert_no_selector ".translation_missing"
+  end
 end
