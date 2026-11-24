@@ -62,6 +62,24 @@ class RetirementPlans::StreamsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-stream-id='#{recurring.id}']", text: /2030 to #{Regexp.escape(I18n.t("retirement_plans.show.end_age"))}/
   end
 
+  # A one-off is paid once, so neither the form nor the planner calls its
+  # amount yearly; a recurring stream says each year beside its span.
+  test "an amount is not called yearly for a one-off" do
+    get new_retirement_plan_stream_url
+    assert_select "label", text: /a year/i, count: 0
+    assert_select "p", text: I18n.t("retirement_plans.streams.form.annual_amount_hint")
+
+    plan = RetirementPlan.create!(user: @user)
+    one_off = plan.streams.create!(kind: "one_off", name: "New roof", annual_amount: 20_000, start_year: 2030, source: "manual")
+    recurring = plan.streams.create!(kind: "expense", name: "Rent", annual_amount: 12_000, start_year: 2030, source: "manual")
+
+    get retirement_plan_url
+
+    assert_select "#retirement-plan-streams th", text: /a year/i, count: 0
+    assert_select "tr[data-stream-id='#{one_off.id}']", text: /a year|each year/i, count: 0
+    assert_select "tr[data-stream-id='#{recurring.id}']", text: /each year/i
+  end
+
   test "an invalid stream is refused and nothing is written, not even the plan" do
     assert_no_difference [ "RetirementPlan::Stream.count", "RetirementPlan.count" ] do
       post retirement_plan_streams_url, params: { retirement_plan_stream: { kind: "expense", name: "", annual_amount: "0" } }
