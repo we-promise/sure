@@ -459,6 +459,33 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
   end
 
 
+  # The floor judges the raw date, the occurrence's identity: Saturday the
+  # 28th, paid on Friday the 27th, is the schedule's first occurrence.
+  test "a restart floor projects nothing before it, on the raw date" do
+    schedule = RecurringTransaction::Schedule.new(
+      expected_day_of_month: 28, rules: [ rule(frequency: "monthly", day_of_month: 28) ],
+      weekend_adjust: "before", starts_on: Date.new(2026, 11, 28)
+    )
+
+    pairs = schedule.occurrence_pairs_between(Date.new(2026, 10, 1), Date.new(2027, 1, 31))
+    assert_equal [ Date.new(2026, 11, 28), Date.new(2026, 12, 28), Date.new(2027, 1, 28) ], pairs.map(&:original_due_on)
+    assert_equal Date.new(2026, 11, 27), pairs.first.due_on
+    assert_equal Date.new(2026, 11, 27), schedule.first_occurrence_after(Date.new(2026, 10, 1))
+    assert_equal Date.new(2026, 11, 27), schedule.cycle_for(Date.new(2026, 11, 23)).begin
+  end
+
+  test "under a restart floor the legacy shim gives way to the engine, and matching is left alone" do
+    travel_to Date.new(2026, 11, 23) do
+      schedule = RecurringTransaction::Schedule.new(
+        expected_day_of_month: 24, rules: [ rule(frequency: "monthly", day_of_month: 24) ],
+        starts_on: Date.new(2027, 5, 24)
+      )
+
+      assert_equal Date.new(2027, 5, 24), schedule.next_occurrence_from_today
+      assert schedule.matches_day?(Date.new(2026, 10, 24)), "past payments still read against the cadence"
+    end
+  end
+
   # The legacy shim builds Date.new from expected_day_of_month, and a nil there
   # raises TypeError past the ArgumentError rescue.
   test "a rules-backed schedule with no legacy day never enters the shim" do

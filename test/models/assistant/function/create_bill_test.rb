@@ -203,6 +203,18 @@ class Assistant::Function::CreateBillTest < ActiveSupport::TestCase
     end
   end
 
+  # The grid of an every-N cadence runs backward from its anchor; the dates
+  # before the first due date were never this bill's.
+  test "upcoming due dates start at a first due date still ahead" do
+    travel_to Date.new(2026, 11, 23) do
+      result = call_tool("name" => "Hairdresser", "amount" => 30, "anchor_date" => "2027-01-05",
+                         "frequency" => "custom", "interval_count" => 3, "interval_unit" => "week")
+
+      assert result[:created], result[:error]
+      assert_equal %w[2027-01-05 2027-01-26 2027-02-16], result[:upcoming_due_dates]
+    end
+  end
+
   test "a custom count of days is stored in whole weeks, and refused otherwise" do
     travel_to Date.new(2026, 11, 23) do
       result = call_tool("name" => "Hairdresser", "amount" => 30, "first_due_on" => "2026-11-24",

@@ -26,12 +26,11 @@ class RecurringTransaction
 
       # A declared bill's anchor is its first obligation, so the cycle lookback
       # must not fabricate a previous-cycle debt. Auto-detected series keep the
-      # cycle start, since their history predates the row.
-      from = [ from, series.anchor_date ].compact.max if series.manual?
-
-      # The same holds for any re-anchored schedule: before its start, the
-      # cycle lookback would only fabricate debt the new schedule never had.
-      from = [ from, series.schedule_starts_on ].compact.max
+      # cycle start, since their history predates the row. A re-anchored
+      # schedule needs no clamp: its own floor already projects nothing
+      # before the start, and judges the raw date, so an anchor moved to the
+      # day before by weekend handling still counts.
+      from = [ from, series.anchor_date ].compact.max if series.manual? && series.schedule_starts_on.nil?
 
       # A one-payment plan's only date can already be past. The clamp above
       # refuses to look behind today, which would drop that only occurrence.
@@ -62,10 +61,6 @@ class RecurringTransaction
     # happens to uncovered past occurrences; this only creates rows.
     def backfill!(from:, through: Date.current)
       return 0 unless series.active?
-
-      # History before a re-anchoring was the replaced schedule's; rebuilding
-      # it on the new grid would invent cycles that never existed.
-      from = [ from, series.schedule_starts_on ].compact.max
 
       upsert_window(from, through)
     end
@@ -158,7 +153,7 @@ class RecurringTransaction
         current = nearby.map(&:original_due_on).to_set
 
         kept = series.recurring_occurrences.where(due_on: (from - reach)..(through + reach))
-        kept = kept.where(due_on: series.schedule_starts_on..) if series.schedule_starts_on
+        kept = kept.where(original_due_on: series.schedule_starts_on..) if series.schedule_starts_on
 
         kept.pluck(:original_due_on, :due_on)
             .reject { |original_due_on, _due_on| current.include?(original_due_on) }

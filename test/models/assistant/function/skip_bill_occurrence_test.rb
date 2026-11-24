@@ -50,10 +50,27 @@ class Assistant::Function::SkipBillOccurrenceTest < ActiveSupport::TestCase
     assert_includes result[:hint], open.due_on.iso8601
   end
 
-  test "an unparseable date is refused" do
+  test "an unparseable or partial date is refused" do
     series = create_series(name: "Gym", amount: 40)
 
-    assert_equal "occurrence_due_on is not a valid date", call_tool(series.id, "occurrence_due_on" => "soon")[:error]
+    %w[soon 2026-12 2026-W48-2].each do |value|
+      assert_equal "occurrence_due_on is not a valid date", call_tool(series.id, "occurrence_due_on" => value)[:error], value
+    end
+  end
+
+  # Weekend handling can put two cycles on one day; the tool names
+  # occurrences by due date only, so it must not pick one of them.
+  test "two open occurrences on one due date are refused, not guessed between" do
+    series = create_series(name: "Gym", amount: 40)
+    due = Date.current + 40
+    rows = [ due - 2, due - 1 ].map do |original|
+      series.recurring_occurrences.create!(family: @family, original_due_on: original, due_on: due, currency: "USD")
+    end
+
+    result = call_tool(series.id, "occurrence_due_on" => due.iso8601)
+
+    assert_match(/more than one open occurrence/, result[:error])
+    assert rows.all? { |row| row.reload.scheduled? }
   end
 
   test "a read-only account share cannot skip an occurrence" do

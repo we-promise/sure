@@ -25,11 +25,15 @@ class RecurringTransaction
     Rule = Data.define(:frequency, :interval, :day_of_month, :weekday, :weekday_ordinal, :month_of_year)
 
     attr_reader :rules, :anchor_date, :weekend_adjust, :end_mode, :end_on, :end_after_count,
-                :expected_day_of_month
+                :expected_day_of_month, :starts_on
 
     # Rules marked for destruction are leaving with the next save. Mid-edit,
     # FrequencyPreset has already built their replacements beside them, so
     # counting both would schedule the old cadence and the new one at once.
+    #
+    # starts_on is where a re-anchored schedule begins (see
+    # RecurringTransaction#schedule_starts_on): no occurrence is projected
+    # before it, so the grid no longer reaches back past the user's new start.
     def self.for(recurring_transaction)
       new(
         expected_day_of_month: recurring_transaction.expected_day_of_month,
@@ -47,12 +51,13 @@ class RecurringTransaction
         weekend_adjust: recurring_transaction.weekend_adjust,
         end_mode: recurring_transaction.end_mode,
         end_on: recurring_transaction.end_on,
-        end_after_count: recurring_transaction.end_after_count
+        end_after_count: recurring_transaction.end_after_count,
+        starts_on: recurring_transaction.schedule_starts_on
       )
     end
 
     def initialize(expected_day_of_month:, rules: [], anchor_date: nil, weekend_adjust: "none",
-                   end_mode: "never", end_on: nil, end_after_count: nil)
+                   end_mode: "never", end_on: nil, end_after_count: nil, starts_on: nil)
       @expected_day_of_month = expected_day_of_month
       @rules = rules.presence || [ implicit_monthly_rule ]
       @anchor_date = anchor_date
@@ -60,6 +65,7 @@ class RecurringTransaction
       @end_mode = end_mode
       @end_on = end_on
       @end_after_count = end_after_count
+      @starts_on = starts_on
 
       if @rules.any? { |rule| rule.interval > 1 } && @anchor_date.nil?
         raise ArgumentError, "an anchor_date is required when a rule repeats every 2 or more periods"
@@ -107,10 +113,13 @@ class RecurringTransaction
     # Every occurrence whose due date falls in the range, as (original, due)
     # pairs. Occurrence rows key on the original, so identity survives weekend
     # adjustment and rule edits that do not move the raw date.
+    #
+    # The starts_on floor applies to the raw date, like the occurrence's
+    # identity: an anchor on a Saturday paid the Friday before still exists.
     def occurrence_pairs_between(start_date, end_date)
       return [] if start_date > end_date
 
-      if end_mode == "after_count"
+      pairs = if end_mode == "after_count"
         # Both bounds: lifetime_pairs computes through the anchor even when
         # the anchor sits past end_date, so a future-anchored plan would
         # otherwise leak its first occurrence into a window that ends today.
@@ -118,6 +127,8 @@ class RecurringTransaction
       else
         adjusted_pairs(start_date, end_date)
       end
+
+      starts_on ? pairs.select { |pair| pair.original_due_on >= starts_on } : pairs
     end
 
     # Every occurrence with start_date <= date <= end_date, weekend-adjusted,
@@ -240,12 +251,14 @@ class RecurringTransaction
       end
 
       # True for the one shape the pre-rules code could express: a single
-      # monthly day-of-month rule with no interval, adjustment, or end. Only
-      # these series get the preserved quirks.
+      # monthly day-of-month rule with no interval, adjustment, end or restart
+      # floor. Only these series get the preserved quirks; the engine is what
+      # honors a floor.
       def legacy_monthly?
         # The shim builds Date.new from this value, and a nil raises TypeError,
         # which the ArgumentError rescue does not cover.
-        expected_day_of_month.present? &&
+        starts_on.nil? &&
+          expected_day_of_month.present? &&
           rules.size == 1 &&
           rules.first.frequency == "monthly" &&
           rules.first.day_of_month.present? &&

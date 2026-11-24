@@ -460,6 +460,59 @@ class Assistant::Function::UpdateBillTest < ActiveSupport::TestCase
     assert_match(/plan of 6 payments/, result[:error])
   end
 
+  # Once rewrites the count to one before any later check could see the
+  # plan, so the remaining payments would have been dropped silently.
+  test "frequency once does not slip an installment plan past the re-anchoring guard" do
+    series = create_series(name: "Sofa", amount: 100, bill_type: "installment",
+                           end_mode: "after_count", end_after_count: 6)
+    rows_before = series.recurring_occurrences.pluck(:id, :due_on, :status)
+
+    result = call_tool(series.id, "frequency" => "once", "anchor_date" => (Date.current + 10).iso8601)
+
+    assert_match(/plan of 6 payments/, result[:error])
+    assert_equal 6, series.reload.end_after_count
+    assert_equal rows_before, series.recurring_occurrences.pluck(:id, :due_on, :status)
+  end
+
+  test "a bill re-anchored beyond the generation horizon reports and shows its new start" do
+    travel_to Date.new(2026, 11, 23) do
+      created = Assistant::Function::CreateBill.new(@user).call(
+        "name" => "Insurance", "amount" => 80, "first_due_on" => "2026-12-24"
+      )
+      series = @family.recurring_transactions.find(created[:bill][:id])
+
+      result = call_tool(series.id, "anchor_date" => "2027-05-24")
+
+      assert result[:updated], result[:error]
+      assert_equal "2027-05-24", result[:bill][:next_due_date], "not a date of the grid before the new start"
+      assert_equal %w[2027-05-24], open_due_dates(series), "the horizon reaches the new start"
+
+      details = Assistant::Function::GetBillDetails.new(@user).call("bill_id" => series.id.to_s)
+      assert_equal %w[2027-05-24 2027-06-24 2027-07-24], details[:upcoming_due_dates]
+    end
+  end
+
+  test "an anchor that weekend handling pays the day before still opens the schedule" do
+    travel_to Date.new(2026, 11, 23) do
+      series = create_series(name: "Rent", amount: 900, weekend_adjust: "before")
+
+      result = call_tool(series.id, "anchor_date" => "2026-11-28")
+
+      assert result[:updated], result[:error]
+      first = series.recurring_occurrences.find_by!(original_due_on: Date.new(2026, 11, 28))
+      assert_equal Date.new(2026, 11, 27), first.due_on, "Saturday the 28th is paid on Friday the 27th"
+      assert_equal "2026-11-27", result[:bill][:next_due_date]
+    end
+  end
+
+  test "an anchor_date short of a full YYYY-MM-DD is refused" do
+    series = create_series(name: "Gym", amount: 40)
+
+    %w[2026-12 2026-W48-2 20261124].each do |value|
+      assert_equal "anchor_date is not a valid date", call_tool(series.id, "anchor_date" => value)[:error], value
+    end
+  end
+
   private
 
     def call_tool(bill_id, params)

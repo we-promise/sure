@@ -126,10 +126,14 @@ class Assistant::Function::CreateBill < Assistant::Function
       }
     end
 
+    # From the first due date when it is still ahead: the schedule's grid runs
+    # backward too, and dates before it were never this bill's obligations.
+    from = [ Date.current, series.anchor_date ].compact.max
+
     {
       created: true,
       bill: serialize_series(series),
-      upcoming_due_dates: series.schedule.occurrences_between(Date.current, Date.current + 400).first(3).map(&:iso8601)
+      upcoming_due_dates: series.schedule.occurrences_between(from, from + 400).first(3).map(&:iso8601)
     }
   end
 

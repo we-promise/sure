@@ -37,6 +37,9 @@ module Assistant::Function::BillsSupport
   CUSTOM_INTERVAL_UNITS = ([ "day" ] + INTERVAL_UNITS.keys).freeze
   DAYS_PER_WEEK = 7
 
+  # The only date shape the write tools take for an anchor or an occurrence.
+  ISO_DATE = /\A\d{4}-\d{2}-\d{2}\z/
+
   INTERVAL_COUNT_DESCRIPTION = "With frequency custom only, and then required: repeat every this many units, " \
                                "a whole number from 1 (3 with interval_unit week is every 3 weeks)."
   INTERVAL_UNIT_DESCRIPTION = "With frequency custom only, and then required. day counts only in whole weeks " \
@@ -185,10 +188,12 @@ module Assistant::Function::BillsSupport
     end
 
     # YYYY-MM-DD only. Date.parse reads "3" as the 3rd of this month and
-    # "next tuesday" as a date, and a schedule's anchor is the wrong place to
-    # guess. nil when the value is absent or does not parse.
+    # "next tuesday" as a date, and even Date.iso8601 takes "2026-12" as the
+    # 1st or "2026-W48-2" as a week day; a schedule's anchor is the wrong
+    # place to guess. The parse still runs to refuse dates like 2026-02-30.
+    # nil when the value is absent or not a full calendar date.
     def strict_date(value)
-      Date.iso8601(value.to_s) if value.present?
+      Date.iso8601(value.to_s) if value.to_s.match?(ISO_DATE)
     rescue Date::Error
       nil
     end

@@ -14,7 +14,8 @@ class Assistant::Function::SkipBillOccurrence < Assistant::Function
         - Use it for a cycle that does not apply: a duplicate, a phantom date left by an
           earlier schedule, a month the service was not used.
         - occurrence_due_on is the open occurrence's due date (YYYY-MM-DD), as listed in
-          get_bill_details' open_occurrences.
+          get_bill_details' open_occurrences. When two open occurrences share that date,
+          the call is refused: the user skips the right one on the Bills page.
         - Payments already recorded on it are kept. A skipped occurrence can be reopened
           on the Bills page.
         - Not for a paid cycle: record_bill_payment settles one instead.
@@ -48,8 +49,19 @@ class Assistant::Function::SkipBillOccurrence < Assistant::Function
     return { error: "occurrence_due_on is not a valid date", hint: "Use YYYY-MM-DD." } if date.nil?
 
     occurrences = series.recurring_occurrences.where(due_on: date)
-    occurrence = occurrences.open_status.first
+    open = occurrences.open_status.limit(2).to_a
 
+    # Weekend handling can move two cycles onto one day (a Saturday and a
+    # Sunday both paid on Friday). The tools name occurrences by due date
+    # only, so skipping one of them would be a guess at which cycle was meant.
+    if open.size > 1
+      return {
+        error: "#{series.display_name} has more than one open occurrence due on #{date.iso8601}",
+        hint: "This tool cannot tell them apart. Ask the user to skip the right one on the Bills page."
+      }
+    end
+
+    occurrence = open.first
     if occurrence.nil?
       closed = occurrences.first
       return closed_error(series, closed) if closed
@@ -60,7 +72,15 @@ class Assistant::Function::SkipBillOccurrence < Assistant::Function
       }
     end
 
-    occurrence.skip!
+    # Under the row lock the payment paths take, re-read: a payment that
+    # settled the occurrence since it was selected must not be overwritten.
+    skipped = occurrence.with_lock do
+      next false unless occurrence.scheduled?
+
+      occurrence.skip!
+      true
+    end
+    return closed_error(series, occurrence) unless skipped
 
     {
       skipped: true,

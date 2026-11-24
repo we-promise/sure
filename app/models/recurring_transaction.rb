@@ -1036,9 +1036,9 @@ class RecurringTransaction < ApplicationRecord
 
   # Re-anchors the schedule: `date` becomes the next due date and the one an
   # every-N cadence counts from. Occurrence rows before it belong to the
-  # schedule it replaces, so generation never reaches behind it again (see
-  # #schedule_starts_on). Kept in matcher_hints beside the pin, which travels
-  # with exports. Assigns rather than saves, like pin_schedule.
+  # schedule it replaces, so the schedule never projects an occurrence before
+  # it again (see #schedule_starts_on). Kept in matcher_hints beside the pin,
+  # which travels with exports. Assigns rather than saves, like pin_schedule.
   def restart_schedule_on(date)
     self.anchor_date = date
     self.next_expected_date = date
@@ -1046,8 +1046,9 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # The date a re-anchored schedule starts on, or nil when it never was.
-  # A declared bill's anchor already plays this part for generation; this
-  # carries it to detected series, and to the rows an earlier schedule left.
+  # Schedule.for takes it as a floor on raw occurrence dates, so the bill
+  # page, next_due_date and generation all start there, and rows an earlier
+  # schedule left before it stand in for none of the new occurrences.
   def schedule_starts_on
     value = matcher_hints.to_h["schedule_starts_on"]
     Date.iso8601(value) if value.present?

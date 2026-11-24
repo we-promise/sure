@@ -352,6 +352,18 @@ class Assistant::Function::UpdateBill < Assistant::Function
       anchor = strict_date(params["anchor_date"])
       return { error: "anchor_date is not a valid date", hint: "Use YYYY-MM-DD." } if anchor.nil?
 
+      # A counted plan's payments run from its anchor, so moving it would
+      # restart the plan. Read before anything below changes the series:
+      # frequency once rewrites the count to one, which would wave the plan
+      # through as a one-off and drop its remaining payments.
+      if (payments = counted_plan_payments(series))
+        return {
+          error: "#{series.display_name} is a plan of #{payments} #{'payment'.pluralize(payments)} counted from its first one",
+          hint: "Moving its start would restart that count, so installment plans cannot be re-anchored here. " \
+                "Tell the user to adjust it on the Bills page."
+        }
+      end
+
       if frequency.nil?
         frequency, interval, error = current_cadence(series)
         return error if error
@@ -377,16 +389,6 @@ class Assistant::Function::UpdateBill < Assistant::Function
       _, error = apply_cadence(series, frequency, interval, params, anchor: anchor)
       return error if error
 
-      # Leaving Once releases its one-payment cap; an installment keeps its
-      # count, which runs from the anchor, so moving it would restart the plan.
-      if series.ends_after_count? && frequency != RecurringTransaction::FrequencyPreset::ONCE
-        return {
-          error: "#{series.display_name} is a plan of #{series.end_after_count} payments counted from its first one",
-          hint: "Moving its start would restart that count, so installment plans cannot be re-anchored here. " \
-                "Tell the user to adjust it on the Bills page."
-        }
-      end
-
       unless frequency == RecurringTransaction::FrequencyPreset::ONCE || due_on_schedule?(series, anchor)
         return {
           error: "No occurrence of the resulting schedule falls on anchor_date #{anchor.iso8601}",
@@ -400,6 +402,18 @@ class Assistant::Function::UpdateBill < Assistant::Function
       series.pin_schedule
       changed << "schedule"
       nil
+    end
+
+    # The payment count of a saved installment or counted plan, or nil for
+    # any other bill. From the stored row: an earlier step of this call may
+    # already have reassigned bill_type. A one-off is a plan of one only in
+    # storage, and moves like any date.
+    def counted_plan_payments(series)
+      return nil unless series.attribute_in_database("end_mode") == "after_count"
+
+      count = series.attribute_in_database("end_after_count").to_i
+      installment = series.attribute_in_database("bill_type") == "installment"
+      count if installment || count > 1
     end
 
     # [applied, nil] or [nil, error]. A refused cadence (a paid one-off's

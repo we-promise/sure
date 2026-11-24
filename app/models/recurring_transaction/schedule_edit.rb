@@ -66,11 +66,17 @@ class RecurringTransaction
         RecurringOccurrence.where(recurring_transaction_id: series.id)
       end
 
+      # Each row is re-read under the lock the payment paths take, so a
+      # payment that lands after the selection is never overwritten.
       def skip_open_rows_before_anchor
         occurrences.open_status
                    .where(due_on: ...[ anchor, Date.current ].min)
                    .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
-                   .find_each(&:skip!)
+                   .find_each do |occurrence|
+          occurrence.with_lock do
+            occurrence.skip! if occurrence.scheduled? && occurrence.allocations.none?
+          end
+        end
       end
 
       def snapshot
