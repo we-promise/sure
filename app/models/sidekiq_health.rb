@@ -49,7 +49,7 @@ class SidekiqHealth
   REASONS = %i[redis_unreachable no_worker_processes stale_heartbeat ai_queues_not_polled queue_backed_up].freeze
 
   attr_reader :processes_count, :last_heartbeat_at, :max_queue_latency, :queue_breakdown,
-              :enqueued_count, :failed_count, :processed_count, :retry_count
+              :enqueued_count, :failed_count, :processed_count, :retry_count, :undelivered_ai_runs
 
   class << self
     # Convenience for view helpers / banners that just need the boolean.
@@ -84,9 +84,11 @@ class SidekiqHealth
     @failed_count = 0
     @processed_count = 0
     @retry_count = 0
+    @undelivered_ai_runs = 0
     @load_failure = nil
 
     load_state!
+    count_undelivered_ai_runs!
   end
 
   def healthy?
@@ -108,6 +110,14 @@ class SidekiqHealth
   end
 
   private
+    # AI runs whose saved step no job has run for an hour (Ai::GenerationDeliveryJob queues them
+    # again). Postgres, not Redis, so a failure here doesn't read as Redis unreachable.
+    def count_undelivered_ai_runs!
+      @undelivered_ai_runs = Ai::GenerationRun.undelivered.count
+    rescue StandardError => e
+      Rails.logger.warn("[SidekiqHealth] couldn't count undelivered AI runs: #{e.class}: #{e.message}")
+    end
+
     # Eagerly fetches every Sidekiq stat we need in one pass so we can
     # catch Redis failures at the boundary instead of relying on lazy
     # Sidekiq client calls inside view code. Any failure is recorded as

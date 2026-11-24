@@ -71,6 +71,10 @@
         <dt class="text-secondary"><%= t("admin.system_health.show.labels.processed_total") %></dt>
         <dd class="text-primary font-medium"><%= number_with_delimiter(health.processed_count) %></dd>
       </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.undelivered_ai_runs") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(health.undelivered_ai_runs) %></dd>
+      </div>
     </dl>
   <% end %>
 

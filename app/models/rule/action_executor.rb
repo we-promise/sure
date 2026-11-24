@@ -77,35 +77,21 @@ class Rule::ActionExecutor
 
   DEFERRED_AI_JOBS = :rule_action_executor_deferred_ai_jobs
 
-  # A counted AI job, queued later. queue! queues it, or gives its count back and raises; release!
-  # gives the count back without queuing. A failure while giving it back is logged, so it doesn't
-  # replace the error that stopped the job being queued.
-  AiJob = Struct.new(:name, :rule_run, :count, :queue, keyword_init: true) do
+  # An AI action's job, collected while the rule's actions run. queue! counts it on the rule run and
+  # starts its Ai::GenerationRun; called inside queue_all's transaction.
+  AiJob = Struct.new(:rule_run, :count, :queue, keyword_init: true) do
     def queue!
-      queued = begin
-        queue.call
-      rescue StandardError
-        release!
-        raise
-      end
-      return if queued
-
-      release!
-      raise ActiveJob::EnqueueError, "the AI job couldn't be queued"
-    end
-
-    def release!
-      rule_run&.release_ai_job!(count)
-    rescue StandardError => error
-      Rails.logger.error("[#{name}] couldn't release #{count} awaited transactions: #{error.class}: #{error.message}")
+      rule_run&.await_ai!(count)
+      queue.call
     end
   end
 
-  # Runs the block, a rule's actions, with each AI action's job counted at once and queued after
-  # them all, so no job can finish the run before the rule's last AI action has counted its own.
-  # When an action raises, the jobs the actions before it counted are still queued, as they were
-  # when each queued its own, and the error is raised. A job that can't be queued gives its count
-  # back, as do the ones after it, which are never queued.
+  # Runs the block, a rule's actions, collecting each AI action's job, then counts them all and
+  # starts their runs in one transaction. Each run's first job is queued after that commits
+  # (Ai::GenerationRun.enqueue), so none can finish the rule run before every job is counted, and
+  # a failed transaction leaves no count and no run, so nothing is given back. When an action
+  # raises, the jobs the actions before it collected are still counted and queued, and the
+  # action's error is raised.
   def self.queue_ai_jobs_after
     jobs = []
     previous = ActiveSupport::IsolatedExecutionState[DEFERRED_AI_JOBS]
@@ -114,7 +100,11 @@ class Rule::ActionExecutor
       yield
     rescue StandardError
       ActiveSupport::IsolatedExecutionState[DEFERRED_AI_JOBS] = previous
-      queue_all(jobs, raise_errors: false)
+      begin
+        queue_all(jobs)
+      rescue StandardError => error
+        Rails.logger.error("[Rule::ActionExecutor] couldn't queue the AI jobs before a failed action: #{error.class}: #{error.message}")
+      end
       raise
     end
     ActiveSupport::IsolatedExecutionState[DEFERRED_AI_JOBS] = previous
@@ -122,18 +112,9 @@ class Rule::ActionExecutor
     result
   end
 
-  def self.queue_all(jobs, raise_errors: true)
-    jobs.each_with_index do |job, index|
-      job.queue!
-    rescue StandardError => error
-      jobs.drop(index + 1).each(&:release!)
-      raise if raise_errors
-
-      Rails.logger.error("[Rule::ActionExecutor] couldn't queue an AI job after a failed action: #{error.class}: #{error.message}")
-      break
-    end
+  def self.queue_all(jobs)
+    RuleRun.transaction { jobs.each(&:queue!) } if jobs.any?
   end
-  private_class_method :queue_all
 
   protected
     # Helper method to track modified count during enrichment
@@ -165,21 +146,19 @@ class Rule::ActionExecutor
     end
 
   private
-    # For an AI action: one Ai::GenerationJob for every transaction in `scope`, which sends one batch
-    # sized for the model and queues the rest behind other families' work. The run counts the job
-    # and awaits the transactions now, and the job counts them down and hears back once
-    # (RuleRun#complete_job!). The block queues the job and returns whether it was queued; when it
-    # wasn't, or raised, the run stops waiting for both and the error is raised. Inside
-    # Rule::ActionExecutor.queue_ai_jobs_after, the job is queued once every action has run.
+    # For an AI action: one Ai::GenerationJob run over every transaction in `scope`, which sends
+    # one batch sized for the model and queues the rest behind other families' work. The rule run
+    # awaits the job and its transactions, and the job counts them down and hears back once
+    # (RuleRun#complete_job!). The block starts the run (Ai::GenerationRun.enqueue). Inside
+    # Rule::ActionExecutor.queue_ai_jobs_after it runs once every action has; on its own, at once.
     def enqueue_ai_job(scope, rule_run:, &queue)
       transactions = scope.select(:id).to_a   # one read, so the count matches what's queued
       count = transactions.size
       Rails.logger.info("Scheduling #{key} for #{count} transactions")
-      rule_run&.await_ai!(count)
 
-      job = AiJob.new(name: self.class.name, rule_run:, count:, queue: -> { queue.call(transactions) })
+      job = AiJob.new(rule_run:, count:, queue: -> { queue.call(transactions) })
       deferred = ActiveSupport::IsolatedExecutionState[DEFERRED_AI_JOBS]
-      deferred ? deferred << job : job.queue!
+      deferred ? deferred << job : Rule::ActionExecutor.queue_all([ job ])
 
       { async: true }
     end

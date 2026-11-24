@@ -112,24 +112,35 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     assert_equal 0, Ai::GenerationRun.count
   end
 
-  test "a second run isn't queued while one holds the lock" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+  test "a second run isn't queued while the family's run is unfinished, and is once it ends" do
+    stub_websites({})
 
     assert_enqueued_jobs 1, only: Ai::GenerationJob do
       assert ProviderMerchant::Enhancer.enhance_later(@family)
       assert_not ProviderMerchant::Enhancer.enhance_later(@family)
     end
+    perform_enqueued_jobs
+
+    assert ProviderMerchant::Enhancer.enhance_later(@family)
   end
 
-  test "makes no call when nothing needs a website, and releases the lock" do
+  test "a run waiting for delivery still holds the lease, however long it waits" do
+    Ai::GenerationJob.stubs(:perform_later).returns(false)
+
+    assert ProviderMerchant::Enhancer.enhance_later(@family)
+    travel 2.hours
+    assert_not ProviderMerchant::Enhancer.enhance_later(@family)
+    assert Ai::GenerationRun.sole.next_job
+  end
+
+  test "makes no call when nothing needs a website, and ends the run" do
     provider_merchant("Amazon", website_url: "amazon.com")
-    Rails.stubs(:cache).returns(cache = ActiveSupport::Cache::MemoryStore.new)
     requests = stub_websites({})
 
     enhance
 
     assert_empty requests
-    assert_not cache.exist?(ProviderMerchant::Enhancer.lock_key(@family))
+    assert_equal 0, Ai::GenerationRun.count
   end
 
   # Issue #2925: a website that arrived before Brandfetch was configured left the merchant
@@ -167,46 +178,22 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
   end
 
   # Drift bug 3: a failed batch used to be skipped without a word.
-  test "a failure is logged and releases the lock" do
+  test "a failure is logged and ends the run" do
     provider_merchant("Walmart")
-    Rails.stubs(:cache).returns(cache = ActiveSupport::Cache::MemoryStore.new)
     stub_ai(:enhance_merchants, raises: Ai::Error::Refused.new("bad", status: 400))
 
     assert_difference -> { DebugLogEntry.where(category: "merchant_enhancement", level: "error").count }, 1 do
       enhance
     end
-    assert_not cache.exist?(ProviderMerchant::Enhancer.lock_key(@family))
+    assert_equal 0, Ai::GenerationRun.count
   end
 
-  test "a run that can't be queued releases its lock and says so" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    Ai::GenerationJob.stubs(:perform_later).returns(false)
-
-    assert_raises(ActiveJob::EnqueueError) { ProviderMerchant::Enhancer.enhance_later(@family) }
-    assert_not Rails.cache.exist?(ProviderMerchant::Enhancer.lock_key(@family))
-  end
-
-  test "a run whose enqueue raises releases its lock and raises EnqueueError, keeping the cause" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    Ai::GenerationJob.stubs(:perform_later).raises(Redis::CannotConnectError, "queue down")
+  test "a run that can't be saved raises EnqueueError, keeping the cause, and holds nothing" do
+    Ai::GenerationRun.stubs(:start!).raises(ActiveRecord::StatementInvalid, "connection lost")
 
     error = assert_raises(ActiveJob::EnqueueError) { ProviderMerchant::Enhancer.enhance_later(@family) }
-    assert_kind_of Redis::CannotConnectError, error.cause
-    assert_not Rails.cache.exist?(ProviderMerchant::Enhancer.lock_key(@family))
-  end
-
-  test "each batch renews the lock, so a run longer than its TTL keeps it" do
-    Rails.stubs(:cache).returns(cache = ActiveSupport::Cache::MemoryStore.new)
-    provider_merchant("Walmart")
-    stub_websites({})
-    ProviderMerchant::Enhancer.enhance_later(@family)
-    key = ProviderMerchant::Enhancer.lock_key(@family)
-
-    travel ProviderMerchant::Enhancer::LOCK_TTL - 1.minute
-    ProviderMerchant::Enhancer.new(@family, window: later_window([])).ai_generation
-    travel 2.minutes
-
-    assert cache.exist?(key)
+    assert_kind_of ActiveRecord::StatementInvalid, error.cause
+    assert_equal 0, Ai::GenerationRun.count
   end
 
   # #5709: without a family admin's AI switch nothing is sent, and the run fails, saying why.
@@ -219,7 +206,7 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
 
     assert_empty requests
     assert_nil merchant.reload.website_url
-    assert_nil Rails.cache.read(ProviderMerchant::Enhancer.lock_key(@family))
+    assert_equal 0, Ai::GenerationRun.count, "the run ended, so the next click can start one"
     entry = DebugLogEntry.where(category: "merchant_enhancement").order(:created_at).last
     assert_equal "Ai::Error::Unavailable", entry.metadata["error_class"]
     assert_includes entry.metadata["error_message"], "no_family_consent"

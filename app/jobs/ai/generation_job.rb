@@ -10,6 +10,10 @@
 # whose step already committed queues that next job rather than reporting the batch again, and a
 # second copy of a job stops at the claim, so the requester hears each batch, and the end, once.
 #
+# The run keeps the step's job in next_job until the step commits (Ai::GenerationRun.enqueue saves
+# the first). A step whose job the queue refused, lost, or that died before committing is queued
+# again from there by Ai::GenerationDeliveryJob.
+#
 # On a failure, the transport has already retried 429s and 5xxs and the generation
 # has failed over and escalated; what's left is retried later when it may pass, and discarded
 # when it can't. Any other error ends the run. Either way the requester hears once, so a RuleRun
@@ -19,6 +23,8 @@ class Ai::GenerationJob < ApplicationJob
 
   # Another copy of this job committed its step first; that copy carries the run on.
   StepTaken = Class.new(StandardError)
+  # The run's step was delivered Ai::GenerationRun::MAX_DELIVERIES times and never committed.
+  Undelivered = Class.new(StandardError)
 
   RETRIED = [ Ai::Error::RateLimited, Ai::Error::Timeout, Ai::Error::Upstream, Ai::Error::Unreachable ].freeze
   DISCARDED = [ Ai::Error::Unavailable, Ai::Error::Refused, Ai::Error::Unauthorized, Ai::Error::NoCredit,
@@ -36,7 +42,6 @@ class Ai::GenerationJob < ApplicationJob
     return if requester.nil?
     return resume if @window.run.step > @step
 
-    runs.where(step: @step).update_all(next_job: nil)   # started: a replay of the step before won't queue this one again
     Ai::CallContext.job(correlation_id) do
       generation = requester.ai_generation
       next commit_step(last: true) { finish(applied) } if generation.nil?
@@ -65,6 +70,18 @@ class Ai::GenerationJob < ApplicationJob
     # requester told once, so a RuleRun doesn't stay pending through Sidekiq's retries.
     Rails.error.report(error, handled: true, context: { feature: arguments.first })
     give_up(error)
+  end
+
+  # Queues a step. Returns whether it was queued: a queue that refuses or raises is reported here,
+  # and the step stays in its run's next_job for Ai::GenerationDeliveryJob.
+  def self.enqueue_step(*arguments)
+    return true if perform_later(*arguments)
+
+    Rails.logger.warn("[Ai::GenerationJob] #{arguments.first} step couldn't be queued; left for delivery")
+    false
+  rescue StandardError => error
+    Rails.error.report(error, handled: true, context: { feature: arguments.first })
+    false
   end
 
   # retry_on doesn't check that the retry was queued, so one the queue refused, or failed to take,
@@ -135,10 +152,7 @@ class Ai::GenerationJob < ApplicationJob
       requester
     end
 
-    # An enqueue that fails returns false rather than raising, and would leave the requester waiting.
-    def enqueue_next
-      raise ActiveJob::EnqueueError, "the next batch couldn't be queued" unless self.class.perform_later(*arguments)
-    end
+    def enqueue_next = self.class.enqueue_step(*arguments)
 
     # Inside commit_step, which has ended the run.
     def finish(applied)
@@ -152,7 +166,7 @@ class Ai::GenerationJob < ApplicationJob
       klass = Ai::Requesters.fetch(arguments.first)
       args = arguments.second.to_h.symbolize_keys
       run = Ai::GenerationRun.find_by!(id: args.delete(:run_id), family_id: args[:family_id])
-      run.touch   # progress, which the sweep goes by
+      run.touch   # progress, which the sweep and Ai::GenerationDeliveryJob go by
       @step = args.delete(:step).to_i
       @window = run.window(cursor: args.delete(:cursor), pending: args.delete(:pending),
                            size: Ai::Config.current.window_for(arguments.first))

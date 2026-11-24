@@ -34,6 +34,27 @@ class SidekiqHealthTest < ActiveSupport::TestCase
     assert_equal 100, health.processed_count
   end
 
+  test "counts AI runs waiting for redelivery, without making the check unhealthy" do
+    stub_sidekiq(processes: [ fresh_process ], queues: [ fake_queue ])
+    run = Ai::GenerationRun.start!(family: families(:dylan_family), feature: :categorize, ids: [ SecureRandom.uuid ])
+    run.update_columns(next_job: { args: {} }, updated_at: 2.hours.ago)
+
+    health = SidekiqHealth.new
+
+    assert_equal 1, health.undelivered_ai_runs
+    assert health.healthy?
+  end
+
+  test "a failure to count AI runs doesn't read as Redis unreachable" do
+    stub_sidekiq(processes: [ fresh_process ], queues: [ fake_queue ])
+    Ai::GenerationRun.stubs(:undelivered).raises(ActiveRecord::StatementInvalid, "connection lost")
+
+    health = SidekiqHealth.new
+
+    assert_equal 0, health.undelivered_ai_runs
+    assert health.healthy?
+  end
+
   test "reports no_worker_processes when ProcessSet is empty" do
     stub_sidekiq(processes: [], queues: [])
 

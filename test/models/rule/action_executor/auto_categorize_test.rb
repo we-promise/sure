@@ -96,13 +96,14 @@ class Rule::ActionExecutor::AutoCategorizeTest < ActiveSupport::TestCase
     assert_equal [ blocked_transaction.id ], blocked_entry.metadata["blocked_transaction_ids"]
   end
 
-  test "a job that can't be queued stops the run waiting for it and its transactions" do
+  test "a job the queue refuses, or raises on, stays counted with its run saved for delivery" do
     3.times { |i| create_transaction(account: @account, name: "Coffee #{i}") }
     rule_run = RuleRun.create!(rule: @rule, execution_type: "manual", status: "pending", transactions_queued: 3, executed_at: Time.current)
     Ai::GenerationJob.stubs(:perform_later).returns(false).then.raises(RedisClient::CannotConnectError)
 
-    assert_raises(ActiveJob::EnqueueError) { @executor.execute(@account.transactions, rule_run:) }
-    assert_raises(RedisClient::CannotConnectError) { @executor.execute(@account.transactions, rule_run:) }
-    assert_equal [ 0, 0 ], rule_run.reload.values_at(:pending_jobs_count, :transactions_awaiting_ai)
+    2.times { assert_equal({ async: true }, @executor.execute(@account.transactions, rule_run:)) }
+
+    assert_equal [ 2, 6 ], rule_run.reload.values_at(:pending_jobs_count, :transactions_awaiting_ai)
+    assert_equal 2, Ai::GenerationRun.where.not(next_job: nil).count
   end
 end

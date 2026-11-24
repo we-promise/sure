@@ -220,15 +220,15 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal "success", run.reload.status
   end
 
-  test "a run whose second AI action can't be queued still waits for the first action's job" do
+  test "an AI job the queue refuses stays counted, and the run waits for its delivery" do
     use_ai_routes
     rule = ai_rule("AI", "Whole Foods", "auto_categorize", "auto_detect_merchants")
     Ai::GenerationJob.stubs(:perform_later).returns(true).then.returns(false)
 
     run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.last.reload
 
-    assert_equal [ "failed", 1, 1 ], run.values_at(:status, :pending_jobs_count, :transactions_awaiting_ai)
-    assert_not run.finished?, "the first action's job is still queued"
+    assert_equal [ "pending", 2, 2 ], run.values_at(:status, :pending_jobs_count, :transactions_awaiting_ai)
+    assert_equal 2, Ai::GenerationRun.count
   end
 
   test "an action that raises after an AI action still queues the AI job the rule counted" do
@@ -245,15 +245,19 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal [ "failed", 1, 1 ], run.values_at(:status, :pending_jobs_count, :transactions_awaiting_ai)
   end
 
-  test "when the first counted AI job can't be queued, the ones after it give their counts back too" do
+  test "when one of a rule's AI runs can't be saved, none is counted or queued" do
     use_ai_routes
     rule = ai_rule("AI", "Whole Foods", "auto_categorize", "auto_detect_merchants")
-    Ai::GenerationJob.stubs(:perform_later).returns(false)
+    Family.any_instance.stubs(:auto_detect_transaction_merchants_later).raises(ActiveRecord::StatementInvalid, "connection lost")
 
-    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.last.reload
+    run = nil
+    assert_no_enqueued_jobs only: Ai::GenerationJob do
+      run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.last.reload
+    end
 
     assert_equal [ "failed", 0, 0 ], run.values_at(:status, :pending_jobs_count, :transactions_awaiting_ai)
     assert run.finished?
+    assert_equal 0, Ai::GenerationRun.count
   end
 
   test "a rule above that cannot be matched does not stop the applied rule" do

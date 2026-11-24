@@ -242,6 +242,7 @@ de:
           retries: Zur Wiederholung vorgemerkt
           failed: Fehlgeschlagen
           processed_total: Insgesamt verarbeitet
+          undelivered_ai_runs: KI-Läufe, die erneut eingereiht werden
           queue: Warteschlange
           size: Anzahl der Aufgaben
           latency: Wartezeit

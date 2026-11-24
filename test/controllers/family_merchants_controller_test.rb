@@ -201,9 +201,9 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to family_merchants_path
   end
 
-  test "enhance that can't be queued says so instead of failing" do
+  test "enhance that can't be started says so instead of failing" do
     use_ai_routes
-    Ai::GenerationJob.stubs(:perform_later).returns(false)
+    Ai::GenerationRun.stubs(:start!).raises(ActiveRecord::StatementInvalid, "connection lost")
 
     post enhance_family_merchants_path
 

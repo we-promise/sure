@@ -51,6 +51,13 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     end
   end
 
+  # Ai::GenerationRun.undelivered compares with the database's clock, which travel_to doesn't move.
+  def deliver_after_an_hour
+    Ai::GenerationRun.update_all(updated_at: 61.minutes.ago)
+    Ai::GenerationDeliveryJob.perform_now
+    run_queue
+  end
+
   test "runs one batch per job and enqueues the rest at the back, then finishes once" do
     use_ai_model_settings(batch_size: 2)
     stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
@@ -93,7 +100,7 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     assert_equal [ [ :applied, @family.id, %w[a b] ], [ :applied, @family.id, %w[c] ], [ :finished, @family.id, 3 ] ], Requester.log
   end
 
-  test "a replay of a step whose next step has started queues nothing" do
+  test "a replay of a step whose next step has started queues that step again, and only one copy commits it" do
     use_ai_model_settings(batch_size: 1)
     stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
     Ai::GenerationJob.perform_later(:detect_merchants, ai_run_args(:detect_merchants, ids: ID.values_at(*%w[a b c]), family: @family))
@@ -106,10 +113,13 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     assert_equal 1, enqueued_jobs.size
 
     ActiveJob::Base.execute(first)    # behind the run: step 1 has committed since
-    ActiveJob::Base.execute(second)   # the latest committed step, but the step it queued has started
+    ActiveJob::Base.execute(second)   # the latest committed step: the step it queued keeps next_job until it commits
 
-    assert_equal 1, enqueued_jobs.size, "only step 2's retry"
-    assert_equal [ [ :applied, @family.id, %w[a] ], [ :applied, @family.id, %w[b] ] ], Requester.log
+    assert_equal 2, enqueued_jobs.size, "step 2's retry and a second copy of step 2"
+    stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+    run_queue
+    assert_equal [ [ :applied, @family.id, %w[a] ], [ :applied, @family.id, %w[b] ], [ :applied, @family.id, %w[c] ],
+                   [ :finished, @family.id, 3 ] ], Requester.log
   end
 
   test "a copy of a job that loses its step to another copy applies nothing and queues nothing" do
@@ -174,15 +184,79 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
                    [ :finished, @family.id, 2 ] ], Requester.log
   end
 
-  test "a next batch that can't be queued tells the requester" do
+  test "a next batch that can't be queued stays saved in the run, and delivery queues it" do
     use_ai_model_settings(batch_size: 1)
     stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
     Ai::GenerationJob.stubs(:perform_later).returns(false)
 
     Ai::GenerationJob.perform_now(:detect_merchants, ai_run_args(:detect_merchants, ids: ID.values_at(*%w[a b]), family: @family))
 
-    assert_equal [ [ :applied, @family.id, %w[a] ], [ :failed, @family.id, ActiveJob::EnqueueError ] ], Requester.log
+    assert_equal [ [ :applied, @family.id, %w[a] ] ], Requester.log, "no give-up"
+    run = Ai::GenerationRun.sole
+    assert_equal 1, run.next_job.dig("args", "step")
+
+    Ai::GenerationJob.unstub(:perform_later)
+    deliver_after_an_hour
+    assert_equal [ [ :applied, @family.id, %w[a] ], [ :applied, @family.id, %w[b] ], [ :finished, @family.id, 2 ] ], Requester.log
+  end
+
+  test "a job that dies during its step leaves the step saved, and delivery runs it again after an hour" do
+    use_ai_model_settings(batch_size: 2)
+    stub_ai(:detect_merchants) { raise Interrupt }   # the worker is killed while the model answers
+    Ai::GenerationRun.enqueue(:detect_merchants, family: @family, ids: ID.values_at(*%w[a b c]))
+
+    assert_raises(Interrupt) { ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys) }
+    assert_equal 0, Ai::GenerationRun.sole.next_job.dig("args", "step"), "the step's job stays saved until the step commits"
+
+    Ai::GenerationDeliveryJob.perform_now
+    assert_empty enqueued_jobs, "not within the hour: the step may still be running"
+
+    stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+    deliver_after_an_hour
+    assert_equal [ [ :applied, @family.id, %w[a b] ], [ :applied, @family.id, %w[c] ], [ :finished, @family.id, 3 ] ], Requester.log
+  end
+
+  test "a step the queue took but whose answer was lost runs twice, and commits and counts once" do
+    use_ai_model_settings(batch_size: 2)
+    requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+    Ai::GenerationRun.enqueue(:detect_merchants, family: @family, ids: ID.values_at(*%w[a b c]))
+    assert_equal 1, enqueued_jobs.size
+
+    deliver_after_an_hour   # the first copy waited in the queue past the hour
+
+    assert_equal [ [ :applied, @family.id, %w[a b] ], [ :applied, @family.id, %w[c] ], [ :finished, @family.id, 3 ] ], Requester.log
+    assert_operator requests.size, :>=, 2
     assert_equal 0, Ai::GenerationRun.count
+  end
+
+  test "a step that's never run is delivered three times, then the requester hears once" do
+    Ai::GenerationJob.stubs(:perform_later).returns(true)   # the queue takes each copy and loses it
+    Ai::GenerationRun.enqueue(:detect_merchants, family: @family, ids: ID.values_at("a"))
+
+    4.times do
+      Ai::GenerationRun.update_all(updated_at: 2.hours.ago)
+      Ai::GenerationDeliveryJob.perform_now
+    end
+    Ai::GenerationDeliveryJob.perform_now
+
+    assert_equal [ [ :failed, @family.id, Ai::GenerationJob::Undelivered ] ], Requester.log
+    assert_equal 0, Ai::GenerationRun.count
+    assert_equal 3, DebugLogEntry.where(category: "ai", level: "warn").count, "each delivery is logged"
+    assert DebugLogEntry.exists?(category: "ai", level: "error", family: @family)
+  end
+
+  test "two deliveries at once pass the cap once" do
+    Ai::GenerationRun.enqueue(:detect_merchants, family: @family, ids: ID.values_at("a"))
+    enqueued_jobs.clear
+    run = Ai::GenerationRun.sole
+    run.update_columns(next_job: run.next_job.merge("deliveries" => 2), updated_at: 2.hours.ago)
+    copies = Ai::GenerationRun.undelivered.to_a + Ai::GenerationRun.undelivered.to_a   # loaded by two delivery jobs
+
+    copies.each(&:redeliver)
+
+    assert_equal 1, enqueued_jobs.size
+    assert_equal 3, run.reload.next_job["deliveries"]
+    assert_empty Requester.log, "the second saw the run touched by the first, not a run to give up"
   end
 
   test "a feature that became unavailable is discarded, and the requester hears once" do
