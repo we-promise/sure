@@ -192,7 +192,7 @@ zh-CN:
           title: 断开外部助手？
           body: 断开后将无法继续使用此远程助手。
         type_mcp_only: 应用内不启用（通过 MCP 连接您自己的代理）
-        mcp_only_help: 此家庭中的所有成员均关闭应用内助手。账单 AI 快捷方式和 AI 编写的洞察文本也将停止。MCP 和后台分类仍然可用；可在“设置 > MCP”中连接外部代理。
+        mcp_only_help: 此家庭中的所有成员均关闭应用内助手。账单 AI 快捷方式和洞察上的“借助 AI 深入分析”也将停止。MCP 和后台分类仍然可用；可在“设置 > MCP”中连接外部代理。
         agent_discovery_configure_first: 保存有效的端点 URL 和 API 令牌以加载可用代理。
         external_agent_required: 保存前请选择一个外部代理。
         external_agent_invalid: 请选择配置的端点所返回的代理。
