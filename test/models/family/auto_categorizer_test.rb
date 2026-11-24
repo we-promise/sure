@@ -508,8 +508,8 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal category, other.reload.category
   end
 
-  # #5709: without a family admin's AI switch nothing is sent, and the rule run ends having changed nothing.
-  test "sends nothing while no family admin has turned AI on, and the rule run succeeds" do
+  # #5709: without a family admin's AI switch nothing is sent, and the rule run says why.
+  test "sends nothing while no family admin has turned AI on, and the rule run fails" do
     @family.users.update_all(ai_enabled: false)
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
@@ -520,7 +520,8 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     Ai::GenerationJob.perform_now(:categorize, { ids: [ txn.id ], family_id: @family.id, rule_run_id: rule_run.id })
 
     assert_empty requests
-    assert_equal [ "success", 0, 0 ], rule_run.reload.values_at(:status, :transactions_modified, :pending_jobs_count)
+    assert_equal [ "failed", 0, 0 ], rule_run.reload.values_at(:status, :transactions_modified, :pending_jobs_count)
+    assert_includes rule_run.error_message.to_s, "no_family_consent"
   end
 
   private
