@@ -1,0 +1,15 @@
+---
+nb:
+  demo_family_refresh_mailer:
+    completed:
+      subject: "Demohusholdningen er tilbakestilt"
+      activity_heading: "Aktivitet i denne perioden"
+      sessions_label: "Unike innloggingsøkter for forrige demohusholdning"
+      families_label: "Nye husholdningskontoer opprettet"
+      period_heading: "Rapporteringsperiode (UTC)"
+      from_label: "Fra:"
+      to_label: "Til:"
+      time_format: "%-d. %b %Y kl. %H:%M:%S UTC"
+      family_heading: "Forrige demohusholdning"
+      family_not_found: "Ikke funnet"
+      id_label: "ID:"

@@ -67,28 +67,31 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal "importing", processed_import.reload.status
   end
 
-  test "uploads non-bank PDF to vector store with classified type metadata" do
-    pdf_content = attach_pdf!(@import)
+  test "uploads non-bank PDF to vector store with classified type metadata and its statement" do
+    import = statement_backed_import
+    statement = import.account_statement
     process_result = Struct.new(:document_type).new("financial_document")
 
-    @import.expects(:process_with_ai).once.returns(process_result)
-    @import.stubs(:send_next_steps_email)
-    @import.expects(:extract_transactions).never
+    import.expects(:process_with_ai).once.returns(process_result)
+    import.stubs(:send_next_steps_email)
+    import.expects(:extract_transactions).never
 
-    @family.expects(:upload_document).with do |file_content:, filename:, metadata:|
-      assert_equal pdf_content, file_content
+    import.family.expects(:upload_document).with do |file_content:, filename:, metadata:|
+      assert_equal statement.original_file.download, file_content
       assert_equal "sample_bank_statement.pdf", filename
-      assert_equal({ "type" => "financial_document", "pdf_import_id" => @import.id }, metadata)
+      assert_equal({ "type" => "financial_document", "pdf_import_id" => import.id,
+                     "account_statement_id" => statement.id, "account_id" => statement.account_id }, metadata)
       true
     end.returns(family_documents(:tax_return))
 
-    ProcessPdfJob.perform_now(@import)
+    ProcessPdfJob.perform_now(import)
 
-    assert_equal "complete", @import.reload.status
+    assert_equal "complete", import.reload.status
   end
 
-  test "skips the vector store when embed is unavailable" do
-    use_ai_routes(embed: [])
+  # Who finds a search copy follows its statement (FamilyDocument.readable_by). An import from
+  # before statements existed has none to follow.
+  test "keeps a PDF without a statement out of the vector store" do
     attach_pdf!(@import)
     @import.expects(:process_with_ai).once.returns(Struct.new(:document_type).new("financial_document"))
     @import.stubs(:send_next_steps_email)
@@ -99,27 +102,41 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal "complete", @import.reload.status
   end
 
+  test "skips the vector store when embed is unavailable" do
+    use_ai_routes(embed: [])
+    import = statement_backed_import
+    import.expects(:process_with_ai).once.returns(Struct.new(:document_type).new("financial_document"))
+    import.stubs(:send_next_steps_email)
+    import.family.expects(:upload_document).never
+
+    ProcessPdfJob.perform_now(import)
+
+    assert_equal "complete", import.reload.status
+  end
+
   test "uploads bank statement PDF to vector store with classified type metadata" do
-    pdf_content = attach_pdf!(@import)
+    import = statement_backed_import
+    statement = import.account_statement
     process_result = Struct.new(:document_type).new("bank_statement")
 
-    @import.expects(:process_with_ai).once.returns(process_result)
-    @import.define_singleton_method(:extract_transactions) do |reread_token: nil|
+    import.expects(:process_with_ai).once.returns(process_result)
+    import.define_singleton_method(:extract_transactions) do |reread_token: nil|
       { "transactions" => [] }
     end
-    @import.expects(:sync_mappings).once
-    @import.stubs(:send_next_steps_email)
+    import.expects(:sync_mappings).once
+    import.stubs(:send_next_steps_email)
 
-    @family.expects(:upload_document).with do |file_content:, filename:, metadata:|
-      assert_equal pdf_content, file_content
+    import.family.expects(:upload_document).with do |file_content:, filename:, metadata:|
+      assert_equal statement.original_file.download, file_content
       assert_equal "sample_bank_statement.pdf", filename
-      assert_equal({ "type" => "bank_statement", "pdf_import_id" => @import.id }, metadata)
+      assert_equal({ "type" => "bank_statement", "pdf_import_id" => import.id,
+                     "account_statement_id" => statement.id, "account_id" => statement.account_id }, metadata)
       true
     end.returns(family_documents(:tax_return))
 
-    ProcessPdfJob.perform_now(@import)
+    ProcessPdfJob.perform_now(import)
 
-    assert_equal "complete", @import.reload.status
+    assert_equal "complete", import.reload.status
   end
 
   test "discards permanently and marks failed with the reason when no model can read the PDF" do
@@ -300,6 +317,19 @@ class ProcessPdfJobTest < ActiveJob::TestCase
   end
 
   private
+    def statement_backed_import
+      statement = AccountStatement.create_from_upload!(
+        family: @family,
+        account: accounts(:depository),
+        file: uploaded_file(
+          filename: "sample_bank_statement.pdf",
+          content_type: "application/pdf",
+          content: file_fixture("imports/sample_bank_statement.pdf").binread
+        )
+      )
+      PdfImport.create_from_statement!(statement: statement)
+    end
+
 
     def attach_pdf!(import)
       pdf_content = file_fixture("imports/sample_bank_statement.pdf").binread

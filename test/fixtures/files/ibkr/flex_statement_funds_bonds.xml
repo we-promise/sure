@@ -1,0 +1,40 @@
+<FlexQueryResponse queryName="Sure Test" type="AF">
+  <FlexStatements count="1">
+    <FlexStatement accountId="U0000042" fromDate="2025-05-08" toDate="2026-05-08" whenGenerated="2026-05-08;12:00:00">
+      <AccountInformation accountId="U0000042" currency="EUR" />
+      <ChangeInPositionValues>
+        <ChangeInPositionValue accountId="U0000042" currency="BASE_SUMMARY" assetCategory="BOND" endOfPeriodValue="9850.00" />
+        <ChangeInPositionValue accountId="U0000042" currency="EUR" assetCategory="BOND" endOfPeriodValue="9850.00" />
+        <ChangeInPositionValue accountId="U0000042" currency="BASE_SUMMARY" assetCategory="FUND" endOfPeriodValue="2500.00" />
+        <ChangeInPositionValue accountId="U0000042" currency="EUR" assetCategory="FUND" endOfPeriodValue="2500.00" />
+        <ChangeInPositionValue accountId="U0000042" currency="BASE_SUMMARY" assetCategory="OPT" endOfPeriodValue="300.00" />
+        <ChangeInPositionValue accountId="U0000042" currency="EUR" assetCategory="OPT" endOfPeriodValue="300.00" />
+        <ChangeInPositionValue accountId="U0000042" currency="BASE_SUMMARY" assetCategory="STK" endOfPeriodValue="1500.00" />
+        <ChangeInPositionValue accountId="U0000042" currency="EUR" assetCategory="STK" endOfPeriodValue="1500.00" />
+      </ChangeInPositionValues>
+      <CashReport>
+        <CashReportCurrency currency="BASE_SUMMARY" endingCash="1000.00" />
+        <CashReportCurrency currency="EUR" endingCash="1000.00" />
+      </CashReport>
+      <EquitySummaryInBase>
+        <EquitySummaryByReportDateInBase currency="EUR" reportDate="2026-05-08" cash="1000.00" stock="1500.00" bonds="9850.00" funds="2500.00" options="300.00" total="15150.00" />
+      </EquitySummaryInBase>
+      <OpenPositions>
+        <OpenPosition assetCategory="STK" conid="900001" securityID="XX0000000011" securityIDType="ISIN" symbol="SURETST" description="SURE TEST WORLD ETF" position="20" multiplier="1" markPrice="100.00" positionValue="2000.00" currency="EUR" fxRateToBase="1" costBasisPrice="90.00" costBasisMoney="1800.00" reportDate="2026-05-08" side="Long" />
+        <OpenPosition assetCategory="FUND" conid="900002" securityID="XX0000000029" securityIDType="ISIN" symbol="SURFUND" description="SURE TEST GLOBAL FUND ACC" position="12.5" multiplier="1" markPrice="200.00" positionValue="2500.00" currency="EUR" fxRateToBase="1" costBasisPrice="180.00" costBasisMoney="2250.00" reportDate="2026-05-08" side="Long" />
+        <OpenPosition assetCategory="BOND" conid="900003" securityID="XX0000000037" securityIDType="ISIN" symbol="SURCO 3 1/2 06/15/30" description="SURCO 3 1/2 06/15/30" position="10000" multiplier="0.01" markPrice="98.50" positionValue="9850.00" currency="EUR" fxRateToBase="1" costBasisPrice="97.25" costBasisMoney="9725.00" reportDate="2026-05-08" side="Long" />
+        <OpenPosition assetCategory="OPT" conid="900004" securityID="" securityIDType="" symbol="SURETST 260619C00110000" description="SURETST 19JUN26 110 C" position="2" multiplier="100" markPrice="1.50" positionValue="300.00" currency="EUR" fxRateToBase="1" costBasisPrice="1.20" costBasisMoney="240.00" reportDate="2026-05-08" side="Long" />
+        <OpenPosition assetCategory="STK" conid="900005" securityID="XX0000000045" securityIDType="ISIN" symbol="SURSHRT" description="SURE TEST SHORTED CO" position="-5" multiplier="1" markPrice="100.00" positionValue="-500.00" currency="EUR" fxRateToBase="1" costBasisPrice="110.00" costBasisMoney="-550.00" reportDate="2026-05-08" side="Short" />
+      </OpenPositions>
+      <Trades>
+        <Trade assetCategory="FUND" tradeID="9101" transactionID="9101a" conid="900002" symbol="SURFUND" quantity="12.5" multiplier="1" tradePrice="180.00" proceeds="-2250.00" currency="EUR" fxRateToBase="1" buySell="BUY" tradeDate="2026-04-01" ibCommission="0" ibCommissionCurrency="EUR" />
+        <Trade assetCategory="BOND" tradeID="9102" transactionID="9102a" conid="900003" symbol="SURCO 3 1/2 06/15/30" quantity="10000" multiplier="0.01" tradePrice="97.25" proceeds="-9725.00" currency="EUR" fxRateToBase="1" buySell="BUY" tradeDate="2026-04-02" ibCommission="-5.00" ibCommissionCurrency="EUR" />
+        <Trade assetCategory="OPT" tradeID="9103" transactionID="9103a" conid="900004" symbol="SURETST 260619C00110000" quantity="2" multiplier="100" tradePrice="1.20" proceeds="-240.00" currency="EUR" fxRateToBase="1" buySell="BUY" tradeDate="2026-04-03" ibCommission="-1.30" ibCommissionCurrency="EUR" />
+        <Trade assetCategory="CASH" tradeID="9104" transactionID="9104a" conid="900006" symbol="EUR.USD" quantity="1000" tradePrice="1.10" proceeds="-1100.00" currency="USD" fxRateToBase="0.91" buySell="BUY" tradeDate="2026-04-04" ibCommission="-2.00" ibCommissionCurrency="EUR" />
+      </Trades>
+      <CashTransactions>
+        <CashTransaction transactionID="9201" type="Bond Interest Paid" amount="-15.00" currency="EUR" fxRateToBase="1" reportDate="2026-04-02" conid="900003" />
+      </CashTransactions>
+    </FlexStatement>
+  </FlexStatements>
+</FlexQueryResponse>

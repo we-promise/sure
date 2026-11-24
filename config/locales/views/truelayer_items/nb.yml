@@ -1,0 +1,113 @@
+---
+nb:
+  truelayer_items:
+    default_name: "TrueLayer-tilkobling"
+    redirect_blocked: "Kunne ikke åpne TrueLayer. Prøv igjen."
+    create:
+      success: "TrueLayer-påloggingsinformasjonen er lagret. Nå kan du koble til en bank."
+    update:
+      success: "TrueLayer-påloggingsinformasjonen er oppdatert."
+    destroy:
+      success: "TrueLayer-tilkoblingen er satt opp for sletting."
+    connect:
+      credentials_required: "Legg til klient-ID og hemmelighet for TrueLayer først."
+    sync:
+      not_connected: "Koble til en bank før du synkroniserer."
+    callback:
+      authorization_error: "TrueLayer-autoriseringen mislyktes: %{error}"
+      authorization_failed: "Kunne ikke fullføre TrueLayer-tilkoblingen: %{message}"
+      invalid_callback: "TrueLayer-innloggingen er utløpt eller hører ikke til denne økten. Start på nytt."
+      success: "Banken er koblet til. Kontoene dine importeres nå. Sett dem opp når synkroniseringen er ferdig."
+    truelayer_item:
+      consent_expiring: "Banktilgangen utløper %{date}"
+      delete: "Slett tilkobling"
+      deletion_in_progress: "sletting pågår..."
+      error: "Feil"
+      history_missed: "Eldre historikk ble ikke importert. Koble til på nytt for å hente den."
+      no_accounts_description: "Denne tilkoblingen har ingen koblede kontoer ennå."
+      no_accounts_title: "Ingen kontoer"
+      reconnect: "Koble til på nytt"
+      requires_update: "Koble til banken på nytt for å fortsette synkroniseringen"
+      setup_action: "Sett opp nye kontoer"
+      setup_description: "%{linked} av %{total} kontoer er koblet til. Velg kontotype for de nylig importerte TrueLayer-kontoene dine."
+      setup_needed: "Nye kontoer er klare til å settes opp"
+      status: "Synkronisert for %{timestamp} siden"
+      status_never: "Aldri synkronisert"
+      status_with_summary: "Sist synkronisert for %{timestamp} siden • %{summary}"
+      syncing: "Synkroniserer..."
+      sync_status:
+        no_accounts: "Fant ingen kontoer"
+        synced:
+          one: "%{count} konto synkronisert"
+          other: "%{count} kontoer synkronisert"
+        partial_setup:
+          one: "%{linked} synkronisert, %{unlinked} må settes opp"
+          other: "%{linked} synkronisert, %{unlinked} må settes opp"
+    subtype_select:
+      placeholder:
+        subtype: "Velg undertype"
+        type: "Velg type"
+    setup_accounts:
+      account_type_label: "Kontotype:"
+      all_accounts_linked: "Alle TrueLayer-kontoene dine er allerede satt opp."
+      cancel: "Avbryt"
+      choose_account_type: "Velg riktig kontotype for hver TrueLayer-konto:"
+      create_accounts: "Opprett kontoer"
+      creating_accounts: "Oppretter kontoer..."
+      kind_account: "Bankkonto"
+      kind_card: "Kort"
+      no_accounts_to_setup: "Ingen kontoer å sette opp"
+      page_title: "Sett opp TrueLayer-kontoer"
+      subtitle: "Velg riktig kontotype for de importerte kontoene dine"
+      sync_start_date_help: "Transaksjoner fra før denne datoen tas ikke med. La feltet stå tomt for å beholde alt banken har levert."
+      sync_start_date_label: "Importer transaksjoner fra"
+      title: "Sett opp TrueLayer-kontoene dine"
+      account_types:
+        skip: "Hopp over denne kontoen"
+        depository: "Brukskonto eller sparekonto"
+        credit_card: "Kredittkort"
+        loan: "Lån eller boliglån"
+      subtype_labels:
+        depository: "Kontoundertype:"
+        credit_card: ""
+        loan: "Lånetype:"
+      subtype_messages:
+        credit_card: "Kredittkort settes automatisk opp som kredittkortkontoer."
+    complete_account_setup:
+      all_skipped: "Alle kontoene ble hoppet over. Ingen kontoer ble opprettet."
+      creation_failed: "Kunne ikke opprette kontoer: %{error}"
+      success:
+        one: "Opprettet %{count} konto."
+        other: "Opprettet %{count} kontoer."
+    select_existing_account:
+      cancel: "Avbryt"
+      description: "Velg TrueLayer-kontoen du vil koble til. Transaksjonene fra den synkroniseres inn i denne kontoen."
+      link_account: "Koble til konto"
+      no_accounts: "Det finnes ingen ukoblede TrueLayer-kontoer. Koble til en bank under Innstillinger → Leverandører først."
+      title: "Koble %{account_name} til TrueLayer"
+    link_existing_account:
+      already_linked: "Den TrueLayer-kontoen er allerede koblet til en annen konto."
+      only_manual: "Bare manuelle kontoer kan kobles til TrueLayer."
+      success: "Koblet %{account_name} til TrueLayer."
+  settings:
+    providers:
+      truelayer_panel:
+        client_id_label: "Klient-ID"
+        client_id_placeholder: "f.eks. sure-abc123 (sandbox-... for Mock Bank)"
+        client_secret_label: "Klienthemmelighet"
+        client_secret_placeholder_new: "Lim inn klienthemmeligheten din"
+        client_secret_placeholder_update: "La stå tomt for å beholde gjeldende hemmelighet"
+        connect_bank: "Koble til en bank"
+        consent_expires: "Banktilgangen utløper %{date}"
+        reconnect: "Koble til på nytt"
+        reconnect_required: "Må kobles til på nytt"
+        remove: "Fjern"
+        remove_confirm: "Vil du fjerne denne banktilkoblingen? Koblede kontoer beholder historikken, men slutter å synkronisere."
+        save_credentials: "Lagre påloggingsinformasjon"
+        step_1_html: "Opprett en app på %{link} og kopier klient-ID-en og hemmeligheten."
+        step_2_html: "Legg til %{callback_url} under appens Allowed redirect URIs."
+        step_3: "Lagre påloggingsinformasjonen nedenfor, og koble deretter til en bank. Sure importerer hele historikken i løpet av noen minutter etter at du har godkjent tilgangen."
+        step_4: "Britiske banker ber deg koble til på nytt hver 90. dag. Sure viser en «Koble til på nytt»-knapp før tilgangen utløper."
+        sync: "Synkroniser"
+        syncing: "Synkroniserer..."
+        update_credentials: "Oppdater påloggingsinformasjon"

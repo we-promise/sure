@@ -262,6 +262,8 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
     assert_includes @family.family_documents.readable_by(users(:family_admin)), document
   end
 
+  # Only what a vault upload records: a type with no statement or import is a PDF main's
+  # ProcessPdfJob processed before #5701, which could be any account's, so it's hidden.
   test "a document that is not a statement stays family-wide for a guest" do
     guest = users(:family_member)
     guest.update!(role: :guest)
@@ -270,7 +272,7 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
       filename: "contrat.pdf",
       content_type: "application/pdf",
       status: "ready",
-      metadata: { "type" => "contract" }
+      metadata: {}
     )
 
     assert_includes @family.family_documents.readable_by(guest), document
