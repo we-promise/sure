@@ -20,6 +20,40 @@ class Provider::SophtronTest < ActiveSupport::TestCase
     assert_equal "FIApiAUTH:developer-user:#{expected_signature}:#{expected_auth_path}", auth_header
   end
 
+  # HTTParty resends caller-supplied headers on a redirect; its host-change
+  # protection only covers basic_auth. The credential lives in a custom header
+  # here, so a redirect off the allow-listed host would carry it along.
+  test "does not follow a redirect off the allow-listed host with the credential" do
+    stub_request(:get, "https://api.sophtron.com/api/v2/customers")
+      .to_return(status: 302, headers: { "Location" => "https://evil.example/collect" })
+    leak = stub_request(:get, "https://evil.example/collect").to_return(status: 200, body: "[]")
+
+    response = @provider.list_customers
+
+    assert_not response.success?
+    assert_not_requested leak
+  end
+
+  # The shapes the provider tolerates are rebuilt before the allow-list
+  # decides, so the rebuilding must not turn a foreign value into an accepted one.
+  test "tolerates shapes of its own URL but nothing that leaves its host" do
+    [ "https://api.sophtron.com", "https://API.sophtron.com/api/", "https://api.sophtron.com/api/v2" ].each do |value|
+      assert_equal Provider::Sophtron::DEFAULT_BASE_URL, Provider::Sophtron.normalize_base_url(value), value
+    end
+
+    [
+      "https://evil.example.com",
+      "https://api.sophtron.com.evil.test",
+      "https://api.sophtron.com@evil.test",
+      "https://api.sophtron.com?x=1",
+      "https://api.sophtron.com/other",
+      "http://api.sophtron.com/api"
+    ].each do |value|
+      assert_nil Provider::Sophtron.normalize_base_url(value), "#{value} must be refused"
+      assert_equal Provider::Sophtron::DEFAULT_BASE_URL, Provider::Sophtron.new("u", "a2V5", base_url: value).base_url
+    end
+  end
+
   test "lists v2 customers" do
     stub_request(:get, "https://api.sophtron.com/api/v2/customers")
       .to_return(status: 200, body: [ { CustomerID: "cust-1", CustomerName: "Sure family 1" } ].to_json)
