@@ -97,7 +97,7 @@ module AccountsHelper
       .pick(Arel.sql("count(*)"), Arel.sql("max(account_providers.updated_at)"))
 
     [
-      family.build_cache_key("account_sidebar_tabs_v11", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v12", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
       providers_version,
