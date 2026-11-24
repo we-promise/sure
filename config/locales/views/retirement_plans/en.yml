@@ -23,6 +23,24 @@ en:
       returns_hint: The expected return is your yearly compound return before inflation. Figures are before tax.
     update:
       success: Financial independence settings saved
+    summary:
+      fi_number: Financial independence number
+      fi_number_explainer: "%{expenses} a year of spending at a %{rate} withdrawal rate"
+      assets: "%{amount} in cash and investments"
+      progress: "%{percent}% of the way"
+      independent: "Financially independent · %{percent}%"
+      progress_aria: Progress towards your financial independence number
+      projected_total: Projected at retirement
+      at_retirement: on %{date}
+      no_retirement_date: Set a retirement date to see this
+      savings_rate: Savings rate
+      derived: from your income and spending
+      no_expenses: Add some spending to see your financial independence number. It is worked out from your median monthly spending.
+      unconverted:
+        one: 1 account is not counted because it has no exchange rate for today.
+        other: "%{count} accounts are not counted because they have no exchange rate for today."
+      edit: Settings
+      planner: Year-by-year planner
     show:
       title: Retirement planner
       subtitle: Your portfolio year by year, to the age you plan to.

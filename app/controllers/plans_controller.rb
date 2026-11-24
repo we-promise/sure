@@ -8,7 +8,10 @@ class PlansController < ApplicationController
   before_action :redirect_to_budgets_unless_preview
 
   def show
-    @budget = resolve_budget(Date.current)
+    # Captured once: the retirement card's projection takes it, and the
+    # budget below resolves the same day.
+    @as_of = Date.current
+    @budget = resolve_budget(@as_of)
     @editable = @budget.editable_by?(Current.user)
     @switch_options = budget_switch_options(@budget)
     @top_budget_categories = @budget.initialized? ? @budget.top_spending_categories : []
@@ -23,6 +26,9 @@ class PlansController < ApplicationController
                                      .where(accountable_type: Goal::FUNDABLE_ACCOUNT_TYPES)
                                      .visible
                                      .count
+
+    @retirement_plan = RetirementPlan.for(Current.user)
+    @retirement_projection = @retirement_plan.projection(as_of: @as_of)
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.plan"), nil ] ]
   end

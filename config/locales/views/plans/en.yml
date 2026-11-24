@@ -16,6 +16,8 @@ en:
       view_budget: View full budget
       empty_body: Set a monthly spending target and per-category limits to see how this month is tracking.
       set_up: Set up this month's budget
+    retirement_card:
+      title: Financial independence
     goals_card:
       title: Your goals
       currency_warning:

@@ -1,0 +1,61 @@
+<div id="retirement-plan-summary" class="space-y-4">
+  <% if fi_number? %>
+    <%= render DS::Stat.new(
+      label: t("retirement_plans.summary.fi_number"), value: money(projection.fi_number), size: :xl,
+      hint: t("retirement_plans.summary.fi_number_explainer", expenses: money(projection.annual_expenses), rate: withdrawal_rate),
+      value_class: "privacy-sensitive", value_opts: { data: { fi_number: true } }
+    ) %>
+
+    <div>
+      <div class="flex items-baseline justify-between text-sm">
+        <span class="text-secondary privacy-sensitive"><%= t("retirement_plans.summary.assets", amount: money(projection.current_assets)) %></span>
+        <span class="text-primary tabular-nums font-medium" data-fi-progress>
+          <%= t(projection.financially_independent? ? "retirement_plans.summary.independent" : "retirement_plans.summary.progress", percent: progress_percent) %>
+        </span>
+      </div>
+      <%# The same bar as the budget and goals cards beside it. %>
+      <div class="h-1.5 bg-container-inset rounded-full overflow-hidden mt-2"
+           role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= bar_percent %>"
+           aria-label="<%= t("retirement_plans.summary.progress_aria") %>">
+        <div class="h-full <%= projection.financially_independent? ? "bg-success" : "bg-inverse" %> rounded-full"
+             data-fi-bar style="inline-size: <%= bar_percent %>%"></div>
+      </div>
+    </div>
+
+    <dl class="grid grid-cols-2 gap-3 text-sm">
+      <div>
+        <dt class="text-xs text-secondary"><%= t("retirement_plans.summary.projected_total") %></dt>
+        <dd class="text-primary tabular-nums privacy-sensitive">
+          <% if projection.projected_total %>
+            <%= money(projection.projected_total) %>
+            <span class="text-xs text-subdued"><%= t("retirement_plans.summary.at_retirement", date: I18n.l(projection.retirement_date, format: :long)) %></span>
+          <% else %>
+            <span class="text-subdued"><%= t("retirement_plans.summary.no_retirement_date") %></span>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-xs text-secondary"><%= t("retirement_plans.summary.savings_rate") %></dt>
+        <dd class="text-primary tabular-nums">
+          <%= savings_rate %>
+          <% if savings_rate_derived? %>
+            <span class="text-xs text-subdued"><%= t("retirement_plans.summary.derived") %></span>
+          <% end %>
+        </dd>
+      </div>
+    </dl>
+  <% else %>
+    <p class="text-sm text-secondary"><%= t("retirement_plans.summary.no_expenses") %></p>
+  <% end %>
+
+  <% if unconverted_count.positive? %>
+    <p class="text-xs text-warning"><%= t("retirement_plans.summary.unconverted", count: unconverted_count) %></p>
+  <% end %>
+
+  <div class="flex flex-wrap gap-2">
+    <%= render DS::Link.new(text: t("retirement_plans.summary.edit"), variant: "secondary", size: "sm",
+                            icon: "settings-2", href: helpers.edit_retirement_plan_path, frame: :modal) %>
+    <%= render DS::Link.new(text: t("retirement_plans.summary.planner"), variant: "secondary", size: "sm",
+                            icon: "table-2", href: helpers.retirement_plan_path) %>
+  </div>
+</div>

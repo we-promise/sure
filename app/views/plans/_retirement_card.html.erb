@@ -1,0 +1,16 @@
+<%# locals: (plan:, projection:, as_of:) %>
+
+<%= render DS::Card.new do %>
+  <div class="flex flex-wrap items-center gap-2 mb-4">
+    <span class="w-7 h-7 rounded-lg bg-surface-inset text-secondary flex items-center justify-center shrink-0">
+      <%= icon("sunrise", size: "sm") %>
+    </span>
+    <h2 class="text-sm font-medium text-primary shrink-0"><%= t(".title") %></h2>
+  </div>
+
+  <%= render RetirementPlans::SummaryComponent.new(
+    projection: projection,
+    currency: plan.user.family.currency,
+    unconverted_count: plan.unconverted_account_count(as_of: as_of)
+  ) %>
+<% end %>
