@@ -108,6 +108,122 @@ void main() {
 
     expect(providers, isNull);
   });
+
+  test('requestPasswordReset succeeds for any 2xx response', () async {
+    final result = await _withRawServer(
+      method: 'POST',
+      statusCode: 204,
+      responseBody: '',
+      body: () => AuthService().requestPasswordReset(
+        email: 'user@example.test',
+      ),
+    );
+
+    expect(result, {'success': true});
+  });
+
+  test('requestPasswordReset identifies rate limiting', () async {
+    final result = await _withRawServer(
+      method: 'POST',
+      statusCode: 429,
+      responseBody: '{"error":"Too many requests"}',
+      body: () => AuthService().requestPasswordReset(
+        email: 'user@example.test',
+      ),
+    );
+
+    expect(result['success'], false);
+    expect(result['rateLimited'], true);
+  });
+
+  test('requestPasswordReset identifies network failures as retryable',
+      () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final unavailableUrl = 'http://${server.address.host}:${server.port}';
+    await server.close(force: true);
+    ApiConfig.setBaseUrl(unavailableUrl);
+
+    final result = await AuthService().requestPasswordReset(
+      email: 'user@example.test',
+    );
+
+    expect(result['success'], false);
+    expect(result['retryable'], true);
+    expect(result['error'], isNotEmpty);
+  });
+
+  test('resetPassword succeeds with a valid response', () async {
+    final result = await _withRawServer(
+      method: 'PATCH',
+      statusCode: 200,
+      responseBody: '{}',
+      body: () => AuthService().resetPassword(
+        token: 'reset-token',
+        password: 'new-password',
+        passwordConfirmation: 'new-password',
+      ),
+    );
+
+    expect(result, {'success': true});
+  });
+
+  test('resetPassword returns a generic code for a 422 response', () async {
+    final result = await _withRawServer(
+      method: 'PATCH',
+      statusCode: 422,
+      responseBody: '{"errors":{"password":["is too short"]}}',
+      body: () => AuthService().resetPassword(
+        token: 'reset-token',
+        password: 'short',
+        passwordConfirmation: 'short',
+      ),
+    );
+
+    expect(result['success'], false);
+    expect(result['code'], 'generic');
+  });
+
+  test('resetPassword returns a generic code for a non-JSON error response', () async {
+    final result = await _withRawServer(
+      method: 'PATCH',
+      statusCode: 502,
+      responseBody: '<html>Bad gateway</html>',
+      body: () => AuthService().resetPassword(
+        token: 'reset-token',
+        password: 'new-password',
+        passwordConfirmation: 'new-password',
+      ),
+    );
+
+    expect(result['success'], false);
+    expect(result['code'], 'generic');
+  });
+}
+
+Future<T> _withRawServer<T>({
+  required String method,
+  required int statusCode,
+  required String responseBody,
+  required Future<T> Function() body,
+}) async {
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  final subscription = server.listen((request) async {
+    final matched = request.method == method &&
+        request.uri.path == '/api/v1/auth/password_reset';
+    request.response
+      ..statusCode = matched ? statusCode : 404
+      ..headers.contentType = ContentType.json
+      ..write(matched ? responseBody : '{"error":"Not found"}');
+    await request.response.close();
+  });
+
+  try {
+    ApiConfig.setBaseUrl('http://${server.address.host}:${server.port}');
+    return await body();
+  } finally {
+    await subscription.cancel();
+    await server.close(force: true);
+  }
 }
 
 Future<T> _withServer<T>(

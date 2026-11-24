@@ -15,6 +15,7 @@ import 'screens/backend_config_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/biometric_lock_screen.dart';
 import 'screens/main_navigation_screen.dart';
+import 'screens/reset_password_screen.dart';
 import 'screens/sso_onboarding_screen.dart';
 import 'services/api_config.dart';
 import 'services/connectivity_service.dart';
@@ -134,6 +135,7 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
   bool _isLocked = false;
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
+  String? _handledResetToken;
 
   final _upgrader = Upgrader(
     durationUntilAlertAgain: const Duration(days: 7),
@@ -193,7 +195,9 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
         TelemetryService.instance.addBreadcrumb(
           'deep_links',
           'initial_link_received',
-          data: {'recognized': _isSsoCallback(uri)},
+          data: {
+            'recognized': _isSsoCallback(uri) || _isPasswordReset(uri),
+          },
         );
         _handleDeepLink(uri);
       }
@@ -228,20 +232,46 @@ class _AppWrapperState extends State<AppWrapper> with WidgetsBindingObserver {
 
   void _handleDeepLink(Uri uri) {
     final isSsoCallback = _isSsoCallback(uri);
+    final isPasswordReset = _isPasswordReset(uri);
     TelemetryService.instance.addBreadcrumb(
       'deep_links',
       'link_received',
-      data: {'recognized': isSsoCallback},
+      data: {'recognized': isSsoCallback || isPasswordReset},
     );
 
     if (isSsoCallback) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       authProvider.handleSsoCallback(uri);
+    } else if (isPasswordReset) {
+      _handlePasswordResetLink(uri);
     }
   }
 
   bool _isSsoCallback(Uri uri) =>
       uri.scheme == 'sureapp' && uri.host == 'oauth';
+
+  bool _isPasswordReset(Uri uri) =>
+      uri.scheme == 'sureapp' && uri.host == 'password-reset';
+
+  void _handlePasswordResetLink(Uri uri) {
+    final token = uri.queryParameters['token']?.trim();
+    if (token == null || token.isEmpty || token == _handledResetToken) return;
+
+    // Dedupe only while this token's screen is open (the initial-link and
+    // stream paths can both deliver it). Clear the marker once the route
+    // closes so backing out without submitting doesn't dead-end a user who
+    // taps the same still-valid link again.
+    _handledResetToken = token;
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => ResetPasswordScreen(token: token),
+          ),
+        )
+        .whenComplete(() {
+          if (_handledResetToken == token) _handledResetToken = null;
+        });
+  }
 
   Future<void> _checkBackendConfig() async {
     final hasUrl = await TelemetryService.instance.traceAsync(

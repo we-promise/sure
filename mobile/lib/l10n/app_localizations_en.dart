@@ -67,6 +67,95 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginSignIn => 'Sign in';
 
   @override
+  String get loginForgotPassword => 'Forgot password?';
+
+  @override
+  String get forgotPasswordTitle => 'Reset password';
+
+  @override
+  String get forgotPasswordInstructions =>
+      'Enter the email address for your account and we\'ll send you a reset link.';
+
+  @override
+  String get forgotPasswordEmailLabel => 'Email';
+
+  @override
+  String get forgotPasswordEmailRequired => 'Please enter your email';
+
+  @override
+  String get forgotPasswordEmailInvalid => 'Please enter a valid email';
+
+  @override
+  String get forgotPasswordSendLink => 'Send reset link';
+
+  @override
+  String get forgotPasswordConfirmationTitle => 'Check your inbox';
+
+  @override
+  String get forgotPasswordConfirmationMessage =>
+      'If an account exists for that email, you\'ll receive a reset link shortly.';
+
+  @override
+  String get forgotPasswordBackToSignIn => 'Back to sign in';
+
+  @override
+  String get forgotPasswordRateLimitedError =>
+      'Too many reset requests. Please wait and try again.';
+
+  @override
+  String get forgotPasswordNetworkError =>
+      'We couldn\'t reach your server. Check your connection and try again.';
+
+  @override
+  String get forgotPasswordGenericError =>
+      'We couldn\'t request a reset link. Please try again.';
+
+  @override
+  String get resetPasswordTitle => 'New password';
+
+  @override
+  String get resetPasswordInstructions =>
+      'Choose a strong password for your account.';
+
+  @override
+  String get resetPasswordNewPasswordLabel => 'New password';
+
+  @override
+  String get resetPasswordConfirmationLabel => 'Confirm password';
+
+  @override
+  String get resetPasswordPasswordRequired => 'Please enter a password';
+
+  @override
+  String get resetPasswordPasswordMinLength =>
+      'Password must be at least 8 characters';
+
+  @override
+  String get resetPasswordConfirmationRequired =>
+      'Please confirm your password';
+
+  @override
+  String get resetPasswordPasswordsDoNotMatch => 'Passwords do not match';
+
+  @override
+  String get resetPasswordUpdateButton => 'Update password';
+
+  @override
+  String get resetPasswordSuccess => 'Password updated. Please sign in.';
+
+  @override
+  String get resetPasswordGenericError =>
+      'We couldn\'t reset your password. The link may be invalid or expired.';
+
+  @override
+  String get resetPasswordNetworkError =>
+      'We couldn\'t reach your server. Check your connection and try again.';
+
+  @override
+  String get resetPasswordDisabledError =>
+      'Password reset isn\'t available for this account.';
+
+  @override
   String get loginSignInWithGoogle => 'Sign in with Google';
 
   @override

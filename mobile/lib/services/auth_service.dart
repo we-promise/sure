@@ -273,6 +273,118 @@ class AuthService {
     }
   }
 
+  Future<Map<String, dynamic>> requestPasswordReset({
+    required String email,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/password_reset');
+      final response = await http
+          .post(
+            url,
+            headers: ApiConfig.jsonHeaders(),
+            body: jsonEncode({'email': email}),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {'success': true};
+      }
+      if (response.statusCode == 429) {
+        return {'success': false, 'rateLimited': true};
+      }
+
+      return {
+        'success': false,
+        'error': _responseErrorMessage(
+          _tryDecodeResponse(response.body),
+          'Unable to request a password reset',
+        ),
+      };
+    } on SocketException catch (e) {
+      _logAuthException('Password reset request', e);
+      return {
+        'success': false,
+        'retryable': true,
+        'error': 'Network unavailable',
+      };
+    } on TimeoutException catch (e) {
+      _logAuthException('Password reset request', e);
+      return {
+        'success': false,
+        'retryable': true,
+        'error': 'Request timed out',
+      };
+    } on FormatException catch (e) {
+      _logAuthException('Password reset request', e);
+      return {
+        'success': false,
+        'retryable': true,
+        'error': 'Invalid response from server',
+      };
+    } catch (e) {
+      _logAuthException('Password reset request', e);
+      return {
+        'success': false,
+        'retryable': true,
+        'error': 'An unexpected error occurred',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> resetPassword({
+    required String token,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/password_reset');
+      final response = await http
+          .patch(
+            url,
+            headers: ApiConfig.jsonHeaders(),
+            body: jsonEncode({
+              'token': token,
+              'password': password,
+              'password_confirmation': passwordConfirmation,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {'success': true};
+      }
+
+      // Return a semantic category, not the server's (English) prose, so the
+      // screen can show a message in the app's locale.
+      if (response.statusCode == 403) {
+        return {'success': false, 'code': 'disabled'};
+      }
+      return {'success': false, 'code': 'generic'};
+    } on SocketException catch (e) {
+      _logAuthException('Password reset', e);
+      return {'success': false, 'code': 'network'};
+    } on TimeoutException catch (e) {
+      _logAuthException('Password reset', e);
+      return {'success': false, 'code': 'network'};
+    } on FormatException catch (e) {
+      _logAuthException('Password reset', e);
+      return {'success': false, 'code': 'generic'};
+    } catch (e) {
+      _logAuthException('Password reset', e);
+      return {'success': false, 'code': 'generic'};
+    }
+  }
+
+  dynamic _tryDecodeResponse(String body) {
+    if (body.trim().isEmpty) return null;
+
+    try {
+      return jsonDecode(body);
+    } on FormatException {
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>> refreshToken({
     required String refreshToken,
     required Map<String, String> deviceInfo,

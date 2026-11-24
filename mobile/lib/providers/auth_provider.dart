@@ -553,7 +553,9 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await _authService.logout();
+    // Clear in-memory auth state and notify first, so deleting the persisted
+    // credentials can never fail in a way that leaves the app looking signed
+    // in or strands a caller awaiting logout.
     _tokens = null;
     _user = null;
     _apiKey = null;
@@ -566,6 +568,16 @@ class AuthProvider with ChangeNotifier {
       await TelemetryService.instance.clearUser();
     });
     notifyListeners();
+
+    // Best-effort: deleting stored credentials can throw on some platforms
+    // (e.g. keystore errors). Report it but never surface it as a failed
+    // logout — the in-memory session is already gone, and a later successful
+    // auth write overwrites any residue.
+    try {
+      await _authService.logout();
+    } catch (e, stackTrace) {
+      _captureTelemetryException(e, stackTrace, operation: 'auth.logout');
+    }
   }
 
   Future<bool> _refreshToken() async {

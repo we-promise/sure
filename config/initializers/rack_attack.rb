@@ -77,8 +77,14 @@ class Rack::Attack
     nil
   end
 
+  # Match the precedence the controllers use: Rails' `params[:email]` is
+  # request_parameters.merge(query_parameters), so the query value wins over a
+  # form body. `request.params` is the reverse (body wins), which would let a
+  # caller throttle one email bucket while the controller acts on another. Read
+  # query first, then form body, then a JSON body, so the throttle keys on the
+  # same address the controller will use.
   credential_guess_email = ->(request) {
-    email = request.params["email"].presence || json_request_email.call(request)
+    email = request.GET["email"].presence || request.POST["email"].presence || json_request_email.call(request)
     email.to_s.downcase.strip.presence
   }
 
@@ -141,6 +147,17 @@ class Rack::Attack
 
   throttle("api_sso_link/email", limit: 10, period: 1.minute) do |request|
     credential_guess_email.call(request) if request.post? && credential_guess_path.call(request, "/api/v1/auth/sso_link")
+  end
+
+  # Mobile password-reset request (POST): bound reset-email abuse by both IP
+  # and normalized email. Only the POST carries an email; the PATCH that
+  # submits a new password has no email param and stays bounded by api/ip.
+  throttle("api_password_reset/ip", limit: 10, period: 1.minute) do |request|
+    request.ip if request.post? && credential_guess_path.call(request, "/api/v1/auth/password_reset")
+  end
+
+  throttle("api_password_reset/email", limit: 10, period: 1.minute) do |request|
+    credential_guess_email.call(request) if request.post? && credential_guess_path.call(request, "/api/v1/auth/password_reset")
   end
 
   # Self-service password change checks the current password

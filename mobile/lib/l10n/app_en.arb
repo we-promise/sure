@@ -58,6 +58,84 @@
   "loginSignIn": "Sign in",
   "@loginSignIn": { "description": "Primary sign-in button label." },
 
+  "loginForgotPassword": "Forgot password?",
+  "@loginForgotPassword": { "description": "Link from the login screen to password reset." },
+
+  "forgotPasswordTitle": "Reset password",
+  "@forgotPasswordTitle": { "description": "Title of the password-reset request screen." },
+
+  "forgotPasswordInstructions": "Enter the email address for your account and we'll send you a reset link.",
+  "@forgotPasswordInstructions": { "description": "Instructions on the password-reset request screen." },
+
+  "forgotPasswordEmailLabel": "Email",
+  "@forgotPasswordEmailLabel": { "description": "Email field label on the password-reset request screen." },
+
+  "forgotPasswordEmailRequired": "Please enter your email",
+  "@forgotPasswordEmailRequired": { "description": "Validation message for an empty password-reset email." },
+
+  "forgotPasswordEmailInvalid": "Please enter a valid email",
+  "@forgotPasswordEmailInvalid": { "description": "Validation message for an invalid password-reset email." },
+
+  "forgotPasswordSendLink": "Send reset link",
+  "@forgotPasswordSendLink": { "description": "Button that requests a password-reset email." },
+
+  "forgotPasswordConfirmationTitle": "Check your inbox",
+  "@forgotPasswordConfirmationTitle": { "description": "Heading after a password-reset request succeeds." },
+
+  "forgotPasswordConfirmationMessage": "If an account exists for that email, you'll receive a reset link shortly.",
+  "@forgotPasswordConfirmationMessage": { "description": "Account-enumeration-safe confirmation after a reset request." },
+
+  "forgotPasswordBackToSignIn": "Back to sign in",
+  "@forgotPasswordBackToSignIn": { "description": "Button returning from password reset to sign in." },
+
+  "forgotPasswordRateLimitedError": "Too many reset requests. Please wait and try again.",
+  "@forgotPasswordRateLimitedError": { "description": "Recoverable error when reset requests are rate limited." },
+
+  "forgotPasswordNetworkError": "We couldn't reach your server. Check your connection and try again.",
+  "@forgotPasswordNetworkError": { "description": "Recoverable connection error for a reset request." },
+
+  "forgotPasswordGenericError": "We couldn't request a reset link. Please try again.",
+  "@forgotPasswordGenericError": { "description": "Fallback error for a reset request." },
+
+  "resetPasswordTitle": "New password",
+  "@resetPasswordTitle": { "description": "Title of the new-password screen." },
+
+  "resetPasswordInstructions": "Choose a strong password for your account.",
+  "@resetPasswordInstructions": { "description": "Instructions on the new-password screen." },
+
+  "resetPasswordNewPasswordLabel": "New password",
+  "@resetPasswordNewPasswordLabel": { "description": "New-password field label." },
+
+  "resetPasswordConfirmationLabel": "Confirm password",
+  "@resetPasswordConfirmationLabel": { "description": "Password-confirmation field label." },
+
+  "resetPasswordPasswordRequired": "Please enter a password",
+  "@resetPasswordPasswordRequired": { "description": "Validation message for an empty new password." },
+
+  "resetPasswordPasswordMinLength": "Password must be at least 8 characters",
+  "@resetPasswordPasswordMinLength": { "description": "Validation message for a short new password." },
+
+  "resetPasswordConfirmationRequired": "Please confirm your password",
+  "@resetPasswordConfirmationRequired": { "description": "Validation message for empty password confirmation." },
+
+  "resetPasswordPasswordsDoNotMatch": "Passwords do not match",
+  "@resetPasswordPasswordsDoNotMatch": { "description": "Validation message when password confirmation differs." },
+
+  "resetPasswordUpdateButton": "Update password",
+  "@resetPasswordUpdateButton": { "description": "Button that submits a new password." },
+
+  "resetPasswordSuccess": "Password updated. Please sign in.",
+  "@resetPasswordSuccess": { "description": "Snackbar after a password is reset successfully." },
+
+  "resetPasswordGenericError": "We couldn't reset your password. The link may be invalid or expired.",
+  "@resetPasswordGenericError": { "description": "Fallback error after a password reset fails." },
+
+  "resetPasswordNetworkError": "We couldn't reach your server. Check your connection and try again.",
+  "@resetPasswordNetworkError": { "description": "Recoverable connection error when resetting a password." },
+
+  "resetPasswordDisabledError": "Password reset isn't available for this account.",
+  "@resetPasswordDisabledError": { "description": "Error when password features are disabled for the account or instance." },
+
   "loginSignInWithGoogle": "Sign in with Google",
   "@loginSignInWithGoogle": { "description": "Google SSO button label." },
 

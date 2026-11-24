@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:sure_mobile/l10n/app_localizations.dart';
 import 'package:sure_mobile/models/sso_provider.dart';
 import 'package:sure_mobile/providers/auth_provider.dart';
+import 'package:sure_mobile/screens/forgot_password_screen.dart';
 import 'package:sure_mobile/screens/login_screen.dart';
 import 'package:sure_mobile/theme/sure_theme.dart';
 
@@ -74,5 +75,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sign in with Google'), findsOneWidget);
+  });
+
+  testWidgets('opens password reset from the forgot-password link',
+      (tester) async {
+    await pumpLogin(tester, const []);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Forgot password?'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ForgotPasswordScreen), findsOneWidget);
   });
 }

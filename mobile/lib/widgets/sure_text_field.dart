@@ -50,6 +50,7 @@ class SureTextField extends StatelessWidget {
     this.onTap,
     this.focusNode,
     this.autovalidateMode,
+    this.autofillHints,
   });
 
   final TextEditingController? controller;
@@ -87,6 +88,7 @@ class SureTextField extends StatelessWidget {
   final VoidCallback? onTap;
   final FocusNode? focusNode;
   final AutovalidateMode? autovalidateMode;
+  final Iterable<String>? autofillHints;
 
   @override
   Widget build(BuildContext context) {
@@ -127,6 +129,7 @@ class SureTextField extends StatelessWidget {
       onFieldSubmitted: onFieldSubmitted,
       onTap: onTap,
       autovalidateMode: autovalidateMode,
+      autofillHints: autofillHints,
       style: theme.textTheme.bodyLarge?.copyWith(color: palette.textPrimary),
       cursorColor: palette.textPrimary,
       decoration: InputDecoration(
