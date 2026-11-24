@@ -3,6 +3,17 @@ require "test_helper"
 class Transactions::TransactionRowCacheTest < ActionView::TestCase
   include TransactionsHelper
 
+  # The real app gets this from ApplicationController's PreviewGateable
+  # concern (a helper_method, not a view helper module), which this bare
+  # ActionView::TestCase has no controller instance to provide. Defining the
+  # method alone isn't enough here -- ActionView::TestCase only exposes it to
+  # the rendered view via its own `helper_method` declaration.
+  helper_method :preview_features_enabled?
+
+  def preview_features_enabled?
+    Current.user&.preview_features_enabled? == true
+  end
+
   setup do
     Current.session = Session.create!(user: users(:family_admin))
 

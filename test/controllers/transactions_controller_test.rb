@@ -203,6 +203,28 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{merchant_path(merchant)}'][data-turbo-frame=_top][title=?]", I18n.t("transactions.transaction.view_merchant")
   end
 
+  test "index shows a located transaction's place to a user with preview access" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    create_transaction(account: accounts(:depository), name: "Trattoria", date: Date.current)
+      .update!(location_lat: 43.77, location_lng: 11.26, location_name: "Florence, Italy")
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "span", text: "Florence, Italy"
+  end
+
+  test "index hides a located transaction's place without preview access" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+    create_transaction(account: accounts(:depository), name: "Trattoria", date: Date.current)
+      .update!(location_lat: 43.77, location_lng: 11.26, location_name: "Florence, Italy")
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "span", text: "Florence, Italy", count: 0
+  end
+
   test "the investment activity badge shows translated labels" do
     @user.update!(locale: "ru")
     accounts(:investment).entries.create!(

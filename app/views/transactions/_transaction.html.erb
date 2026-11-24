@@ -200,6 +200,13 @@
                     </div>
                   <% end %>
                 </div>
+
+                <% if preview_features_enabled? && entry.located? %>
+                  <div class="text-secondary text-xs font-normal flex items-center gap-1 min-w-0">
+                    <%= icon "map-pin", size: "xs", color: "current" %>
+                    <span class="truncate"><%= entry.location_name %></span>
+                  </div>
+                <% end %>
               </div>
             </div>
           <% end %>
