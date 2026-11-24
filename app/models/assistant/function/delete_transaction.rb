@@ -86,7 +86,7 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     #    wraps itself in a transaction (atomic: fully destroyed or it raises).
     #    This is the exact record the native destroy action destroys.
     begin
-      entry.destroy!
+      entry.destroy_by_user!
     rescue ActiveRecord::RecordNotDestroyed
       # A before_destroy guard aborted the destroy (e.g. a split child that
       # slipped past the pre-check, or another constraint). `throw :abort` in

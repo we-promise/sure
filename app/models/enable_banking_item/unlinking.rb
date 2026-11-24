@@ -33,7 +33,12 @@ module EnableBankingItem::Unlinking
 
           # Destroy all provider links
           links.each do |ap|
+            account = ap.account
             ap.destroy!
+
+            # A fresh link must import the provider's history from scratch
+            # instead of inheriting the old link's deletions.
+            ProviderImportTombstone.clear_for_account!(account: account, source: "enable_banking")
           end
         end
       rescue => e

@@ -491,6 +491,20 @@ class Entry < ApplicationRecord
     Rule.apply_immediately_later(account.family, entryable_id)
   end
 
+  # Destroys an entry the user chose to delete and tombstones its provider
+  # identities, so a later sync doesn't import it again. Sync code that
+  # replaces or prunes provider entries (reclassification, settings changes)
+  # calls destroy! instead, because the provider may send those rows again.
+  #
+  # @return [Entry] the destroyed entry
+  def destroy_by_user!
+    # Entry#transaction is the Transaction entryable, so open the DB transaction on the class.
+    self.class.transaction do
+      ProviderImportTombstone.record_for_entry!(self)
+      destroy!
+    end
+  end
+
   # Enqueues an account sync whose window starts at the earliest date this
   # entry has occupied since it was loaded, so balances are recomputed from
   # wherever the entry used to sit.

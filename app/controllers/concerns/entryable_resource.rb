@@ -33,7 +33,7 @@ module EntryableResource
   def destroy
     return unless require_account_permission!(@entry.account)
 
-    @entry.destroy!
+    @entry.destroy_by_user!
     @entry.sync_account_later
 
     redirect_back_or_to account_path(@entry.account), notice: t("account.entries.destroy.success")
