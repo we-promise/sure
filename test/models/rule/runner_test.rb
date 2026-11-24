@@ -328,7 +328,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     rule = create_rule("Mixed", "o", tags: [ @tag_a ])
     rule.actions.create!(action_type: "auto_categorize")
 
-    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first.reload
+    run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.first   # as returned, not reloaded
 
     assert_equal 5, run.transactions_queued
     assert_equal 4, run.job_transactions_modified
