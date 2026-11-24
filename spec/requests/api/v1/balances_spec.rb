@@ -37,6 +37,7 @@ RSpec.describe 'API V1 Balances', type: :request do
       user: user,
       name: 'No Read Docs Key',
       key: key,
+      display_key: key,
       scopes: %w[write],
       source: 'web'
     ).tap { |api_key| api_key.save!(validate: false) }
@@ -47,6 +48,7 @@ RSpec.describe 'API V1 Balances', type: :request do
   let!(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Checking Account',
       balance: 1500.50,
       currency: 'USD',

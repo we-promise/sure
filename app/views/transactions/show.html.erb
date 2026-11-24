@@ -106,7 +106,7 @@
                       form: ef,
                       categories: Current.family.categories.alphabetically_by_hierarchy,
                       selected_id: ef.object.category_id,
-                      disabled: @entry.split_child? || annotate_locked,
+                      disabled: annotate_locked,
                       auto_submit: true,
                       blank_label: t(".uncategorized"),
                       locked: Current.family.categories_locked?
@@ -155,7 +155,7 @@
                     selected_id: ef.object.merchant_id,
                     include_blank: t(".none"),
                     label: t(".merchant_label"),
-                    disabled: @entry.split_child? || !can_annotate_entry?,
+                    disabled: !can_annotate_entry?,
                     auto_submit: true
                   ) %>
             <% end %>

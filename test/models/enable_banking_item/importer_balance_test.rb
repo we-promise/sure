@@ -27,6 +27,10 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
 
     @mock_provider = OpenStruct.new
     @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: @mock_provider)
+    # These tests run the balance step on its own. With pending sync on, an
+    # available or expected balance also needs the transaction step that runs
+    # before it in a sync (see importer_pending_balance_test.rb).
+    @importer.stubs(:include_pending?).returns(false)
   end
 
   test "FRESHNESS_BALANCE_TYPES only lists normalized spellings that BALANCE_TYPE_PRIORITY itself accepts" do
