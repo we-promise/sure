@@ -17,6 +17,7 @@ class RetirementPlans::SummaryComponentTest < ViewComponent::TestCase
     assert_text "60%"
     assert_text I18n.t("retirement_plans.summary.derived")
     assert_text I18n.t("retirement_plans.summary.no_retirement_date")
+    assert_no_selector ".text-warning"
   end
 
   # Independence needs progress of at least 1, so the figure and the bar must
