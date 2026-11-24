@@ -11,6 +11,12 @@
                             icon: "settings-2", href: edit_retirement_plan_path, frame: :modal) %>
   </header>
 
+  <% @unconverted.each do |kind, count| %>
+    <%= tag.div data: { unconverted: kind } do %>
+      <%= render DS::Alert.new(variant: :warning, message: t(".unconverted_#{kind}", count: count)) %>
+    <% end %>
+  <% end %>
+
   <%= render DS::Card.new do %>
     <%= render RetirementPlans::PlannerComponent.new(
       plan: @retirement_plan, simulation: @simulation, solution: @solution,

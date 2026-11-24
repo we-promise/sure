@@ -82,6 +82,22 @@ class RetirementPlans::PlannerTest < ActionDispatch::IntegrationTest
     assert_select "#retirement-planner-table", count: 0
   end
 
+  test "amounts left out for want of an exchange rate are warned about, and only then" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    plan = RetirementPlan.create!(user: @user, birth_year: 1980, end_age: 90, retirement_date: Date.new(2045, 1, 1))
+
+    get retirement_plan_url
+    assert_select "[data-unconverted]", count: 0
+
+    plan.streams.create!(kind: "expense", name: "Rent abroad", annual_amount: 1_000, currency: "EUR", source: "manual")
+    account = @user.family.accounts.create!(owner: @user, accountable: Depository.new, name: "Euro savings", currency: "EUR", balance: 5_000)
+    Balance.create!(account: account, date: Date.current, balance: 5_000, currency: "EUR")
+
+    get retirement_plan_url
+    assert_select "[data-unconverted='streams']", text: /#{Regexp.escape(I18n.t("retirement_plans.show.unconverted_streams", count: 1))}/
+    assert_select "[data-unconverted='accounts']", text: /#{Regexp.escape(I18n.t("retirement_plans.show.unconverted_accounts", count: 1))}/
+  end
+
   test "opening the planner seeds nothing and writes nothing" do
     RetirementPlan.create!(user: @user, birth_year: 1980, retirement_date: Date.new(2045, 1, 1))
 

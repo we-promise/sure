@@ -15,6 +15,12 @@ class RetirementPlansController < ApplicationController
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.plan"), plan_path ], [ t("breadcrumbs.retirement_plan"), nil ] ]
     @milestones = @simulation ? @retirement_plan.milestones(as_of: @as_of, simulation: @simulation) : []
+    # Left out of the figures for want of an exchange rate: an expense left
+    # out makes the plan look better than it is, so the page says so.
+    @unconverted = {
+      streams: @retirement_plan.unconverted_stream_count(as_of: @as_of),
+      accounts: @retirement_plan.unconverted_account_count(as_of: @as_of)
+    }.select { |_, count| count.positive? }
   end
 
   def edit

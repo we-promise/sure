@@ -27,6 +27,12 @@ en:
       title: Retirement planner
       subtitle: Your portfolio year by year, to the age you plan to.
       settings: Settings
+      unconverted_streams:
+        one: 1 spending or income line is left out of the plan because it has no exchange rate for today.
+        other: "%{count} spending or income lines are left out of the plan because they have no exchange rate for today."
+      unconverted_accounts:
+        one: 1 account is left out of the plan because it has no exchange rate for today.
+        other: "%{count} accounts are left out of the plan because they have no exchange rate for today."
     planner:
       settings: Settings
       needs:
