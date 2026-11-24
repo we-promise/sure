@@ -7,6 +7,7 @@ class Rule::Registry::TransactionResource < Rule::Registry
     Rule::ConditionFilter::TransactionCategory,
     Rule::ConditionFilter::TransactionTag,
     Rule::ConditionFilter::TransactionDetails,
+    Rule::ConditionFilter::TransactionAdditionalDetail,
     Rule::ConditionFilter::TransactionNotes,
     Rule::ConditionFilter::TransactionAccount
   ].freeze
@@ -86,11 +87,11 @@ class Rule::Registry::TransactionResource < Rule::Registry
     end
 
     def auto_categorization_enabled?
-      family.resolved_categorization_provider.present?
+      Ai.available?(:categorize, family:)
     end
 
     def auto_merchant_detection_enabled?
-      Provider::Registry.preferred_llm_provider.present?
+      Ai.available?(:detect_merchants, family:)
     end
 
     def existing_action?(action_type)

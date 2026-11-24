@@ -52,7 +52,7 @@ fr:
           title: Configuration de l'IA externe
         external_not_configured: Non configuré. Saisissez l'URL et le token ci-dessous, ou définissez les variables d'environnement EXTERNAL_ASSISTANT_URL et EXTERNAL_ASSISTANT_TOKEN.
         external_status: Endpoint de l'assistant externe
-        mcp_only_help: L'assistant intégré est désactivé pour tout le foyer. Les raccourcis IA des factures et les textes d'analyse rédigés par l'IA s'arrêtent aussi. MCP et la catégorisation en arrière-plan restent disponibles ; connectez des agents externes dans Paramètres > MCP.
+        mcp_only_help: L'assistant intégré est désactivé pour tout le foyer. Les raccourcis IA des factures et « Approfondir avec l'IA » sur les analyses s'arrêtent aussi. MCP et la catégorisation en arrière-plan restent disponibles ; connectez des agents externes dans Paramètres > MCP.
         title: Assistant IA
         token_help: Le token d'authentification fourni par votre agent externe. Il est envoyé en tant que Bearer token avec chaque requête.
         token_label: Token API
