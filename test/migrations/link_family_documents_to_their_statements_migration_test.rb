@@ -82,6 +82,22 @@ class LinkFamilyDocumentsToTheirStatementsMigrationTest < ActiveSupport::TestCas
     assert_not_linked document
   end
 
+  test "logs each family's processed PDFs that stay hidden, once, and not the linked ones" do
+    statement = create_statement("march.pdf", "%PDF-1.4 March")
+    processed_document("march.pdf", statement.original_file.byte_size)
+    hidden = [ processed_document("old-1.pdf", 1), processed_document("old-2.pdf", 2) ]
+
+    assert_difference -> { DebugLogEntry.where(category: "documents", family_id: @family.id).count }, 1 do
+      run_migration
+    end
+
+    entry = DebugLogEntry.where(category: "documents", family_id: @family.id).sole
+    assert_equal "warn", entry.level
+    assert_equal 2, entry.metadata["count"]
+    assert_equal hidden.map(&:id).sort, entry.metadata["family_document_ids"].sort
+    assert_equal %w[old-1.pdf old-2.pdf], entry.metadata["filenames"].sort
+  end
+
   test "keeps a link already in metadata" do
     statement = create_statement("march.pdf", "%PDF-1.4 March")
     document = @family.family_documents.create!(filename: "march.pdf", file_size: statement.original_file.byte_size,
