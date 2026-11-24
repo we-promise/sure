@@ -10,9 +10,9 @@
 class RuleAiJob < ApplicationJob
   queue_as :ai_low_priority
   # The budget below handles every failure perform raises. Sidekiq's few
-  # retries only catch what escapes it: the run's row failing to settle when
-  # the job gives up, or a retry that can't be queued. They reuse the job_id,
-  # so the run still counts the job once.
+  # retries only catch what escapes it: the run's row failing to load or settle
+  # when the job gives up, or a retry that can't be queued. They reuse the
+  # job_id, so the run still counts the job once.
   sidekiq_options retry: 3
 
   ATTEMPTS = 5
@@ -21,18 +21,29 @@ class RuleAiJob < ApplicationJob
   DISCARDED = [ Ai::Error::Unauthorized, Ai::Error::NoCredit, Ai::Error::ModelMissing, Ai::Error::ContextTooLong,
                 Ai::Error::InvalidOutput, Ai::Error::Refused, Ai::Error::Cancelled ].freeze
 
+  # ActiveJob checks the handler declared last first, so this one only takes an
+  # Ai::Error that neither list below names.
+  discard_on(Ai::Error::Base) { |job, error| job.give_up(error) }
+  # Also replaces ApplicationJob's retry_on ActiveRecord::Deadlocked, which
+  # re-raises when attempts run out instead of telling the run.
   retry_on(*RETRIED, wait: :polynomially_longer, attempts: ATTEMPTS) { |job, error| job.give_up(error) }
   retry_on(*TRANSIENT_DB, attempts: ATTEMPTS) { |job, error| job.give_up(error) }
   discard_on(*DISCARDED) { |job, error| job.give_up(error) }
 
   def perform(family, transaction_ids: [], rule_run_id: nil, user_id: nil)
     @transaction_ids = transaction_ids
-    @rule_run = RuleRun.find_by(id: rule_run_id) if rule_run_id.present?
+    @rule_run_id = rule_run_id
+    # Sidekiq runs a job again when its process dies before acknowledging it.
+    return if rule_run&.job_settled?(job_id)
 
-    # Access may have changed since the rule queued the batch (Rule::AiEnrichment).
-    user = family.users.find_by(id: user_id)
-    modified_count = enrich(family, Rule::AiEnrichment.permitted_ids(family, transaction_ids, user:))
-    @rule_run&.complete_job!(job_id:, modified_count:)
+    # Kept across retries (see serialize): a batch applied before its report
+    # failed is reported, not sent again.
+    if @modified_count.nil?
+      # Access may have changed since the rule queued the batch (Rule::AiEnrichment).
+      user = family.users.find_by(id: user_id)
+      @modified_count = enrich(family, Rule::AiEnrichment.permitted_ids(family, transaction_ids, user:))
+    end
+    rule_run&.complete_job!(job_id:, modified_count: @modified_count)
   rescue *TRANSIENT_DB
     raise
   rescue StandardError => error
@@ -44,12 +55,25 @@ class RuleAiJob < ApplicationJob
     give_up(error)
   end
 
+  # Loads the run if no attempt could: if it still can't, the error reaches
+  # Sidekiq's retries instead of the job passing as done.
   def give_up(error)
     Rails.logger.info("[#{self.class.name}] gave up: #{error.class.name} #{error.message.truncate(200)}")
-    @rule_run&.fail_job!(job_id:, error:, source: self.class.name, transaction_ids: @transaction_ids)
+    rule_run&.fail_job!(job_id:, error:, source: self.class.name, transaction_ids: @transaction_ids)
+  end
+
+  def serialize = super.merge("modified_count" => @modified_count)
+
+  def deserialize(job_data)
+    super
+    @modified_count = job_data["modified_count"]
   end
 
   private
+    def rule_run
+      @rule_run ||= RuleRun.find_by(id: @rule_run_id) if @rule_run_id.present?
+    end
+
     # @return [Integer] how many transactions the batch changed
     def enrich(family, transaction_ids)
       raise NotImplementedError

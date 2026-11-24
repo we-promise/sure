@@ -248,6 +248,20 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal 2, run.pending_jobs_count
   end
 
+  test "a batch that can't be queued is recorded again, as the same job, when recording it deadlocks" do
+    rule = create_ai_rule("auto_categorize")
+    Family.any_instance.stubs(:auto_categorize_transactions_later).returns(false)
+    job_ids = []
+    RuleRun.any_instance.expects(:fail_job!).twice
+      .with { |job_id:, **| job_ids << job_id }
+      .raises(ActiveRecord::Deadlocked, "deadlock detected").then.returns(nil)
+    Rails.error.expects(:report).never
+
+    Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual", user: users(:empty)).run
+
+    assert_equal 1, job_ids.uniq.size
+  end
+
   test "a rule above that cannot be matched does not stop the applied rule" do
     broken = create_rule("Broken", "Whole Foods", category: @groceries)
     broken.conditions.first.update!(condition_type: "transaction_notes")

@@ -83,6 +83,7 @@ class Rule::ActionExecutor
   end
 
   DEFERRED_AI_JOBS = :rule_action_executor_deferred_ai_jobs
+  UNQUEUED_SETTLE_ATTEMPTS = 3
 
   # Runs a rule's actions (the block) with their AI jobs queued after the last
   # one, so no job can finish the run before every AI action has counted its
@@ -151,8 +152,21 @@ class Rule::ActionExecutor
       fail_unqueued_job(rule_run, error, ids)
     end
 
+    # Recorded under one job_id, so an attempt that committed before failing
+    # is counted once. A database still out of reach after the last attempt
+    # leaves the batch counted as pending: there is nothing left to record on.
     def fail_unqueued_job(rule_run, error, ids)
-      rule_run&.fail_job!(job_id: SecureRandom.uuid, error:, source: self.class.name, transaction_ids: ids)
+      return unless rule_run
+
+      job_id = SecureRandom.uuid
+      attempts = 0
+      begin
+        attempts += 1
+        rule_run.fail_job!(job_id:, error:, source: self.class.name, transaction_ids: ids)
+      rescue *RuleAiJob::TRANSIENT_DB
+        retry if attempts < UNQUEUED_SETTLE_ATTEMPTS
+        raise
+      end
     rescue StandardError => settle_error
       Rails.error.report(settle_error, handled: true, context: { rule_run_id: rule_run.id, source: self.class.name })
     end

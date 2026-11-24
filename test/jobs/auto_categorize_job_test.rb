@@ -3,6 +3,9 @@ require "test_helper"
 class AutoCategorizeJobTest < ActiveJob::TestCase
   include EntriesTestHelper, ProviderTestHelper
 
+  # An Ai::Error class neither RuleAiJob::RETRIED nor RuleAiJob::DISCARDED names.
+  Unlisted = Class.new(Ai::Error::Base)
+
   setup do
     use_ai_routes
     @family = families(:empty)
@@ -237,6 +240,68 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
 
     assert_raises(ActiveRecord::ConnectionNotEstablished) { job.perform_now }
     assert_operator AutoCategorizeJob.get_sidekiq_options["retry"], :>, 0
+  end
+
+  test "a run that can't be loaded on any attempt is left to Sidekiq to retry" do
+    Family.any_instance.expects(:auto_categorize_transactions).never
+    RuleRun.stubs(:find_by).raises(ActiveRecord::ConnectionTimeoutError, "could not obtain a connection")
+
+    AutoCategorizeJob.perform_later(@family, transaction_ids: [ SecureRandom.uuid ], rule_run_id: @rule_run.id, user_id: @user_id)
+
+    assert_raises(ActiveRecord::ConnectionTimeoutError) do
+      RuleAiJob::ATTEMPTS.times { perform_enqueued_jobs(at: 1.hour.from_now) }
+    end
+
+    assert_equal RuleAiJob::ATTEMPTS, performed_jobs.size
+    assert_equal 1, @rule_run.reload.pending_jobs_count
+  end
+
+  test "an AI error neither retried nor discarded ends the batch after one call" do
+    Family.any_instance.expects(:auto_categorize_transactions).once.raises(Unlisted, "preempted")
+
+    perform_enqueued_jobs do
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ SecureRandom.uuid ], rule_run_id: @rule_run.id, user_id: @user_id)
+    end
+
+    assert_no_enqueued_jobs
+    @rule_run.reload
+    assert_equal "failed", @rule_run.status
+    assert_equal "AutoCategorizeJobTest::Unlisted: preempted", @rule_run.error_message
+    assert_equal 0, @rule_run.pending_jobs_count
+  end
+
+  test "a batch counted on a retry keeps what the earlier attempt changed" do
+    applied = create_transaction(account: @account, name: "Coffee shop").transaction
+    left = create_transaction(account: @account, name: "Coffee beans").transaction
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.expects(:auto_categorize).once
+      .returns(provider_success_response([ categorization(applied, "Food"), categorization(left, "Not a category") ]))
+    RuleRun.any_instance.stubs(:complete_job!).raises(ActiveRecord::Deadlocked, "deadlock detected")
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ applied.id, left.id ], rule_run_id: @rule_run.id, user_id: @user_id)
+    RuleRun.any_instance.unstub(:complete_job!)
+    perform_enqueued_jobs
+
+    assert_equal "Food", applied.reload.category.name
+    assert_nil left.reload.category
+    @rule_run.reload
+    assert_equal "success", @rule_run.status
+    assert_equal 1, @rule_run.transactions_modified
+    assert_equal 0, @rule_run.pending_jobs_count
+  end
+
+  test "a job Sidekiq runs again after it was counted sends nothing again" do
+    @rule_run.update!(pending_jobs_count: 2)
+    left = create_transaction(account: @account, name: "Coffee beans").transaction
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.expects(:auto_categorize).once.returns(provider_success_response([ categorization(left, "Not a category") ]))
+    payload = AutoCategorizeJob.new(@family, transaction_ids: [ left.id ], rule_run_id: @rule_run.id, user_id: @user_id).serialize
+
+    2.times { ActiveJob::Base.execute(payload) }
+
+    assert_equal 1, @rule_run.reload.pending_jobs_count
   end
 
   private
