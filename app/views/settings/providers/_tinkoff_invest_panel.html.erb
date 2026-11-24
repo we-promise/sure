@@ -1,0 +1,91 @@
+<div id="tinkoff_invest-providers-panel" class="space-y-4">
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t(".steps.step_1"),
+               t(".steps.step_2"),
+               t(".steps.step_3")
+             ] %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <% tinkoff_invest_item = Current.family.tinkoff_invest_items.active.ordered.first || Current.family.tinkoff_invest_items.build %>
+  <% is_new_record = tinkoff_invest_item.new_record? %>
+
+  <% if tinkoff_invest_item.persisted? %>
+    <% if tinkoff_invest_item.requires_update? %>
+      <%= render DS::Alert.new(
+        title: t(".requires_update_title"),
+        message: t(".requires_update_message"),
+        variant: :warning
+      ) %>
+    <% end %>
+
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <%= render DS::Pill.new(
+          label: tinkoff_invest_item.requires_update? ? t(".status_requires_update") : t(".status_connected"),
+          tone: tinkoff_invest_item.requires_update? ? :warning : :success,
+          show_dot: true,
+          size: :sm
+        ) %>
+        <span class="text-xs text-secondary"><%= tinkoff_invest_item.sync_status_summary %></span>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <%= render DS::Button.new(
+          text: t(".sync"),
+          icon: "refresh-cw",
+          variant: :outline,
+          href: sync_tinkoff_invest_item_path(tinkoff_invest_item, source: "panel"),
+          method: :post,
+          disabled: tinkoff_invest_item.syncing?
+        ) %>
+
+        <%= render DS::Button.new(
+          icon: "trash-2",
+          variant: :outline_destructive,
+          href: tinkoff_invest_item_path(tinkoff_invest_item),
+          method: :delete,
+          confirm: t(".disconnect_confirm"),
+          aria_label: t(".disconnect")
+        ) %>
+      </div>
+    </div>
+  <% end %>
+
+  <%= styled_form_with model: tinkoff_invest_item,
+                       url: is_new_record ? tinkoff_invest_items_path : tinkoff_invest_item_path(tinkoff_invest_item),
+                       scope: :tinkoff_invest_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.password_field :api_key,
+                            label: t(".api_key_label"),
+                            placeholder: is_new_record ? t(".api_key_placeholder_new") : t(".api_key_placeholder_existing"),
+                            value: nil,
+                            autocomplete: "off" %>
+
+    <%= form.select :environment,
+                    [ [ t(".environment_live"), "live" ], [ t(".environment_sandbox"), "sandbox" ] ],
+                    { label: t(".environment_label"), selected: tinkoff_invest_item.environment || "live" } %>
+
+    <%= form.text_field :base_url,
+                        label: t(".base_url_label"),
+                        placeholder: t(".base_url_placeholder") %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? t(".save_configuration") : t(".update_configuration") %>
+    </div>
+  <% end %>
+
+  <% unless is_new_record %>
+    <p class="text-sm text-secondary">
+      <%= t(".status_configured_prefix") %>
+      <%= link_to t(".accounts_tab"), accounts_path, class: "link" %>
+      <%= t(".status_configured_suffix") %>
+    </p>
+  <% end %>
+</div>

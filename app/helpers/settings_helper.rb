@@ -137,6 +137,9 @@ module SettingsHelper
     when "sharesight"
       return { status: :off } unless @sharesight_items&.any?
       sync_based_summary(key)
+    when "tinkoff_invest"
+      return { status: :off } unless @tinkoff_invest_items&.any?
+      tinkoff_invest_summary
     else
       { status: :off }
     end
@@ -252,6 +255,15 @@ module SettingsHelper
       end
 
       base.merge(last_synced_at: last_synced_at)
+    end
+
+    def tinkoff_invest_summary
+      summary = sync_based_summary("tinkoff_invest")
+      if @tinkoff_invest_items.any?(&:requires_update?)
+        return summary.merge(status: :warn, meta: t("settings.providers.tinkoff_invest_panel.requires_update_meta"))
+      end
+
+      summary
     end
 
     def enable_banking_summary

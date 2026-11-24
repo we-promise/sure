@@ -1,0 +1,102 @@
+---
+en:
+  providers:
+    tinkoff_invest:
+      name: T-Invest (T-Bank)
+      connection_description: Connect your T-Bank Invest brokerage accounts via a read-only API token
+      institution_name: T-Bank Invest
+  tinkoff_invest_items:
+    defaults:
+      name: T-Invest (T-Bank)
+      account_name: T-Invest account %{id}
+    tinkoff_invest_item:
+      deletion_in_progress: Deletion in progress
+      sandbox_badge: Sandbox
+      syncing: Syncing
+      requires_update: API token requires update
+      error: Error
+      synced: Synced %{time} ago. %{summary}.
+      never_synced: Never synced.
+      setup_accounts: Set up accounts
+      delete: Delete
+      accounts_need_setup: Accounts need setup
+      accounts_need_setup_description: Your T-Invest brokerage accounts need to be linked to Sure accounts.
+      no_accounts_discovered: No T-Invest accounts discovered yet.
+      no_accounts_discovered_description: Run a sync after saving your read-only API token to discover your accounts.
+    setup_accounts:
+      page_title: Set Up T-Invest Accounts
+      dialog_title: Set Up Your T-Invest Accounts
+      subtitle: Link your T-Bank Invest accounts to investment accounts.
+      info_box:
+        title: T-Invest API Import
+        items:
+          item_1: Open brokerage, IIS, and Invest Box accounts with live portfolio and cash balances
+          item_2: Stocks, ETFs, and bonds (including accrued interest and amortization)
+          item_3: Full executed operation history (buys, sells, dividends, coupons, fees, taxes, deposits, withdrawals)
+      status:
+        fetching_accounts: Fetching accounts from T-Invest...
+        no_accounts_found_title: No accounts found.
+        no_accounts_found_description: Sure could not find any open T-Invest accounts. Check that your read-only API token is valid.
+      available_accounts:
+        title: Available accounts
+        account_type_investment: Investment
+        account_summary: "%{account_type} • Balance: %{balance}"
+        account_id: "Account ID: %{account_id}"
+      link_existing:
+        description: Or link a discovered T-Invest account to an existing manual investment account.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Select an account...
+      linked_accounts:
+        title: Already linked
+        linked_to_html: "Linked to: %{account}"
+      buttons:
+        refresh: Refresh
+        cancel: Cancel
+        back_to_settings: Back to Settings
+        create_selected_accounts: Create selected accounts
+        link: Link
+        done: Done
+    sync:
+      status:
+        checking_credentials: Checking T-Invest credentials...
+        importing_accounts: Importing T-Invest accounts...
+        checking_configuration: Checking account configuration...
+        accounts_need_setup:
+          one: 1 T-Invest account needs setup...
+          other: "%{count} T-Invest accounts need setup..."
+        processing_activity: Processing holdings and operations...
+        calculating_balances: Calculating balances...
+    sync_status:
+      no_accounts: No T-Invest accounts discovered yet
+      all_linked:
+        one: 1 account linked
+        other: "%{count} accounts linked"
+      partial: "%{linked} linked, %{unlinked} need setup"
+    select_existing_account:
+      title: Link T-Invest account
+      no_accounts_available: No unlinked T-Invest accounts are available yet.
+      run_sync_hint: "Run a sync from Settings > Providers after saving your API token."
+      wait_for_sync: Wait for the account discovery sync to finish.
+      balance: Balance
+      link: Link
+      cancel: Cancel
+    create:
+      success: Successfully configured T-Invest.
+    update:
+      success: Successfully updated T-Invest configuration.
+    destroy:
+      success: Scheduled T-Invest connection for deletion.
+    select_accounts:
+      not_configured: T-Invest is not configured.
+    link_existing_account:
+      not_found: Account or T-Invest account not found.
+      only_manual_investment: Only manual investment accounts can be linked to T-Invest.
+      already_linked: This T-Invest account is already linked.
+      success: Successfully linked to T-Invest account.
+      failed: Failed to link T-Invest account.
+    complete_account_setup:
+      success:
+        one: Successfully created %{count} T-Invest account.
+        other: Successfully created %{count} T-Invest accounts.
+      none_selected: No accounts were selected.
+      none_created: No accounts were created.

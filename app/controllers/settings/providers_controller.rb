@@ -231,7 +231,8 @@ class Settings::ProvidersController < ApplicationController
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
       { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" },
-      { key: "sharesight",     title: "Sharesight",      turbo_id: "sharesight",     partial: "sharesight_panel" }
+      { key: "sharesight",     title: "Sharesight",      turbo_id: "sharesight",     partial: "sharesight_panel" },
+      { key: "tinkoff_invest", title: "T-Invest (T-Bank)", turbo_id: "tinkoff_invest", partial: "tinkoff_invest_panel" }
     ].freeze
 
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
@@ -260,6 +261,7 @@ class Settings::ProvidersController < ApplicationController
       "snaptrade"      => "SnaptradeItem",
       "questrade"      => "QuestradeItem",
       "sharesight"     => "SharesightItem",
+      "tinkoff_invest" => "TinkoffInvestItem",
       "ibkr"           => "IbkrItem",
       "trading212"     => "Trading212Item",
       "trade_republic" => "TradeRepublicItem",
@@ -321,6 +323,8 @@ class Settings::ProvidersController < ApplicationController
         @questrade_items = Current.family.questrade_items.active.ordered
       when "sharesight"
         @sharesight_items = Current.family.sharesight_items.active.ordered
+      when "tinkoff_invest"
+        @tinkoff_invest_items = Current.family.tinkoff_invest_items.active.ordered
       end
     end
 
@@ -361,6 +365,7 @@ class Settings::ProvidersController < ApplicationController
       @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
       @sharesight_items = Current.family.sharesight_items.active.ordered
+      @tinkoff_invest_items = Current.family.tinkoff_invest_items.active.ordered
       @fio_items = Current.family.fio_items.active.ordered
 
       # Wallet uploads are managed on iOS. Only expose linked accounts the
@@ -410,6 +415,7 @@ class Settings::ProvidersController < ApplicationController
         "snaptrade"      => @snaptrade_items,
         "questrade"      => @questrade_items,
         "sharesight"     => @sharesight_items,
+        "tinkoff_invest" => @tinkoff_invest_items,
         "ibkr"           => @ibkr_items,
         "trading212"     => @trading212_items,
         "trade_republic" => @trade_republic_items,

@@ -1,0 +1,108 @@
+---
+ru:
+  providers:
+    tinkoff_invest:
+      name: Т-Инвестиции (Т-Банк)
+      connection_description: Подключите брокерские счета Т-Инвестиций с помощью API-токена только для чтения
+      institution_name: Т-Банк Инвестиции
+  tinkoff_invest_items:
+    defaults:
+      name: Т-Инвестиции (Т-Банк)
+      account_name: Счёт Т-Инвестиции %{id}
+    tinkoff_invest_item:
+      deletion_in_progress: Удаление в процессе
+      sandbox_badge: Песочница
+      syncing: Синхронизация
+      requires_update: Требуется обновить API-токен
+      error: Ошибка
+      synced: Синхронизировано %{time} назад. %{summary}.
+      never_synced: Синхронизация ещё не выполнялась.
+      setup_accounts: Настроить счета
+      delete: Удалить
+      accounts_need_setup: Требуется настройка счетов
+      accounts_need_setup_description: Найденные счета Т-Инвестиций нужно связать со счетами в Sure.
+      no_accounts_discovered: Счета Т-Инвестиций ещё не найдены.
+      no_accounts_discovered_description: Запустите синхронизацию после сохранения API-токена, чтобы найти счета.
+    setup_accounts:
+      page_title: Настроить счета Т-Инвестиций
+      dialog_title: Настройте ваши счета Т-Инвестиций
+      subtitle: Свяжите брокерские счета Т-Банк Инвестиций с инвестиционными счетами.
+      info_box:
+        title: Импорт через API Т-Инвестиций
+        items:
+          item_1: Открытые брокерские счета, ИИС и Инвесткопилка с актуальным балансом и остатком средств
+          item_2: Акции, фонды (БПИФ/ETF) и облигации (включая НКД и амортизацию)
+          item_3: Полная история исполненных операций (покупки, продажи, дивиденды, купоны, комиссии, налоги, пополнения, выводы)
+      status:
+        fetching_accounts: Получение счетов из Т-Инвестиций...
+        no_accounts_found_title: Счета не найдены.
+        no_accounts_found_description: Sure не удалось найти открытые счета Т-Инвестиций. Проверьте, что токен только для чтения действителен.
+      available_accounts:
+        title: Доступные счета
+        account_type_investment: Инвестиционный
+        account_summary: "%{account_type} • Баланс: %{balance}"
+        account_id: "ID счёта: %{account_id}"
+      link_existing:
+        description: Или свяжите найденный счёт Т-Инвестиций с существующим ручным инвестиционным счётом.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Выберите счёт...
+      linked_accounts:
+        title: Уже связаны
+        linked_to_html: "Связан с: %{account}"
+      buttons:
+        refresh: Обновить
+        cancel: Отмена
+        back_to_settings: Назад к настройкам
+        create_selected_accounts: Создать выбранные счета
+        link: Связать
+        done: Готово
+    sync:
+      status:
+        checking_credentials: Проверка учётных данных Т-Инвестиций...
+        importing_accounts: Импорт счетов Т-Инвестиций...
+        checking_configuration: Проверка конфигурации счетов...
+        accounts_need_setup:
+          one: "%{count} счёт Т-Инвестиций требует настройки..."
+          few: "%{count} счёта Т-Инвестиций требуют настройки..."
+          many: "%{count} счетов Т-Инвестиций требуют настройки..."
+          other: "%{count} счёта Т-Инвестиций требуют настройки..."
+        processing_activity: Обработка позиций и операций...
+        calculating_balances: Расчёт балансов...
+    sync_status:
+      no_accounts: Счета Т-Инвестиций ещё не найдены
+      all_linked:
+        one: "%{count} счёт связан"
+        few: "%{count} счёта связаны"
+        many: "%{count} счетов связано"
+        other: "%{count} счёта связаны"
+      partial: "%{linked} связано, %{unlinked} требуют настройки"
+    select_existing_account:
+      title: Связать счёт Т-Инвестиций
+      no_accounts_available: Пока нет несвязанных счетов Т-Инвестиций.
+      run_sync_hint: Сохраните API-токен и запустите синхронизацию в разделе Настройки > Синхронизация с банком.
+      wait_for_sync: Дождитесь завершения синхронизации для поиска счетов.
+      balance: Баланс
+      link: Связать
+      cancel: Отмена
+    create:
+      success: Т-Инвестиции успешно настроены.
+    update:
+      success: Конфигурация Т-Инвестиций успешно обновлена.
+    destroy:
+      success: Подключение Т-Инвестиций запланировано на удаление.
+    select_accounts:
+      not_configured: Т-Инвестиции не настроены.
+    link_existing_account:
+      not_found: Счёт или счёт Т-Инвестиций не найден.
+      only_manual_investment: С Т-Инвестициями можно связать только ручные инвестиционные счета.
+      already_linked: Этот счёт Т-Инвестиций уже связан.
+      success: Счёт успешно связан с Т-Инвестициями.
+      failed: Не удалось связать счёт Т-Инвестиций.
+    complete_account_setup:
+      success:
+        one: Успешно создан %{count} счёт Т-Инвестиций.
+        few: Успешно созданы %{count} счёта Т-Инвестиций.
+        many: Успешно создано %{count} счетов Т-Инвестиций.
+        other: Успешно создано %{count} счёта Т-Инвестиций.
+      none_selected: Счета не выбраны.
+      none_created: Счета не созданы.

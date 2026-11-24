@@ -310,6 +310,7 @@ ru:
         trading212: Синхронизируйте инвестиционный портфель Trading 212 с помощью API-ключа только для чтения.
         trade_republic: Синхронизируйте инвестиционный счёт Trade Republic через защищённый веб-вход только для чтения.
         questrade: Синхронизируйте инвестиционные счета Questrade напрямую через Questrade API.
+        tinkoff_invest: Синхронизируйте брокерские счета, позиции и операции Т-Инвестиций (Т-Банк) с помощью токена только для чтения.
       up_panel:
         step_1_html: Перейдите по ссылке %{link} и создайте персональный токен доступа.
         step_2: Скопируйте персональный токен доступа.
@@ -455,3 +456,29 @@ ru:
         accounts_tab: Счета
         status_configured_suffix: вкладку, чтобы управлять обнаруженными счетами.
         not_configured: Не настроено.
+      tinkoff_invest_panel:
+        steps:
+          step_1: Откройте Т-Инвестиции (tbank.ru) → Настройки → Токены для T-Invest API.
+          step_2: Выпустите токен только для чтения (без прав на торговлю).
+          step_3: Вставьте токен ниже, выберите контур (Боевой или Песочница) и сохраните.
+        api_key_label: API-токен (только чтение)
+        api_key_placeholder_new: Вставьте токен Т-Инвестиций только для чтения
+        api_key_placeholder_existing: Оставьте пустым, чтобы сохранить текущий токен
+        environment_label: Контур
+        environment_live: Боевой (Live)
+        environment_sandbox: Песочница (Sandbox)
+        base_url_label: Пользовательский Base URL (необязательно)
+        base_url_placeholder: Оставьте пустым для стандартного адреса T-Invest API
+        requires_update_title: Требуется обновить токен
+        requires_update_message: Т-Инвестиции отклонили сохранённый токен (HTTP 401/403). Вставьте новый токен только для чтения и сохраните для возобновления синхронизации.
+        requires_update_meta: Токен истёк или недействителен
+        status_connected: Подключено
+        status_requires_update: Требуется переподключение
+        sync: Синхронизировать
+        disconnect: Отключить Т-Инвестиции
+        disconnect_confirm: Отключить Т-Инвестиции? Синхронизированные счета останутся в виде ручных счетов.
+        save_configuration: Сохранить конфигурацию
+        update_configuration: Обновить конфигурацию
+        status_configured_prefix: Настроено. Перейдите на
+        accounts_tab: Счета
+        status_configured_suffix: вкладку, чтобы связать брокерские счета.
