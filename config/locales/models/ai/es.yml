@@ -30,4 +30,5 @@ es:
       transaction_dates: Fechas de las transacciones
       transaction_names: Nombres de las transacciones
       transaction_notes: Notas de las transacciones
+      transaction_types: Si cada transacción es un ingreso o un gasto
       uploaded_document: El documento que subes

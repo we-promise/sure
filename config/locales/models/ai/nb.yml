@@ -30,4 +30,5 @@ nb:
       transaction_dates: "Transaksjonsdatoer"
       transaction_names: "Transaksjonsnavn"
       transaction_notes: "Transaksjonsnotater"
+      transaction_types: "Om hver transaksjon er en inntekt eller en utgift"
       uploaded_document: "Dokumentet du laster opp"

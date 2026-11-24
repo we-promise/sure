@@ -173,11 +173,12 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Family::AutoCategorizer and Family::AutoMerchantDetector send each transaction's
-  # name with its notes, its amount and merchant, plus the family's categories.
+  # name with its notes, its unsigned amount and merchant, whether it is income or an
+  # expense, plus the family's categories.
   test "the family notice names everything background AI sends" do
     family_note = I18n.t("chats.ai_consent.family_note", locale: :en)
 
-    [ "transaction names", "notes", "amounts", "merchant names", "category names" ].each do |item|
+    [ "transaction names", "notes", "amounts", "merchant names", "income or an expense", "category names" ].each do |item|
       assert_includes family_note, item
     end
   end
