@@ -1,7 +1,7 @@
 require "application_system_test_case"
 
-# The planner's critical path in a browser: the planner page and the
-# settings modal.
+# The planner's critical paths in a browser: the settings modal, and a
+# stream added from its own modal.
 class RetirementPlansTest < ApplicationSystemTestCase
   setup do
     @user = users(:family_admin)
@@ -41,5 +41,22 @@ class RetirementPlansTest < ApplicationSystemTestCase
     assert_selector "dialog input[name='retirement_plan[end_age]'][value='30']"
     assert_selector "h1", text: I18n.t("retirement_plans.show.title")
     assert_equal 90, RetirementPlan.find_by(user: @user)&.end_age || 90
+  end
+
+  test "a user adds a pension from its own modal" do
+    RetirementPlan.create!(user: @user, birth_year: 1985, retirement_date: Date.new(2045, 1, 1), streams_seeded_on: Date.current)
+    visit retirement_plan_path
+
+    click_link I18n.t("retirement_plans.show.add_stream")
+    within("dialog") do
+      select I18n.t("retirement_plans.streams.form.kinds.income"), from: "retirement_plan_stream[kind]"
+      fill_in "retirement_plan_stream[name]", with: "Pension"
+      fill_in "retirement_plan_stream[annual_amount]", with: "12000"
+      fill_in "retirement_plan_stream[start_year]", with: "2052"
+      click_button I18n.t("retirement_plans.streams.form.save")
+    end
+
+    assert_selector "#retirement-plan-streams", text: "Pension"
+    assert_equal 2052, RetirementPlan.find_by!(user: @user).streams.find_by!(name: "Pension").start_year
   end
 end

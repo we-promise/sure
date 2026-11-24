@@ -512,7 +512,9 @@ Rails.application.routes.draw do
 
   # The signed-in user's retirement plan. Singular: a user edits only their
   # own plan, so no id ever reaches the route.
-  resource :retirement_plan, only: %i[show edit update]
+  resource :retirement_plan, only: %i[show edit update] do
+    resources :streams, only: %i[new create edit update destroy], controller: "retirement_plans/streams"
+  end
 
   # Family-wide investment hub, built on the Reports section framework.
   resource :portfolio, only: :show do

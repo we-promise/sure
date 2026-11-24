@@ -51,6 +51,25 @@ en:
       unconverted_accounts:
         one: 1 account is left out of the plan because it has no exchange rate for today.
         other: "%{count} accounts are left out of the plan because they have no exchange rate for today."
+      streams: Spending and income
+      add_stream: Add
+      no_streams: Nothing added yet. Your living costs and loan repayments are added the first time you save your settings.
+      columns:
+        name: Name
+        kind: Type
+        years: Years
+        amount: A year
+      stream_kinds:
+        expense: Spending
+        income: Income
+        one_off: One-off
+      stream_years: "%{from} to %{to}"
+      now: now
+      end_age: end of plan
+      fixed: fixed amount
+      edit: Edit
+      delete: Delete
+      confirm_delete: Delete %{name}?
     planner:
       settings: Settings
       needs:
@@ -89,3 +108,28 @@ en:
     streams:
       seeded:
         living_costs: Living costs
+      form:
+        kind: Type
+        kinds:
+          expense: Spending
+          income: Income, such as a pension
+          one_off: One-off amount
+        name: Name
+        annual_amount: Amount a year
+        start_year: From year
+        start_year_placeholder: Now
+        end_year: To year
+        end_year_placeholder: End of plan
+        indexed: Rises with inflation
+        indexed_hint: Turn off for fixed amounts, such as a loan repayment.
+        save: Save
+      new:
+        heading: Add spending or income
+      edit:
+        heading: Edit spending or income
+      create:
+        success: Added
+      update:
+        success: Saved
+      destroy:
+        success: Deleted
