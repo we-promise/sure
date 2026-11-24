@@ -20,6 +20,7 @@ class DataEnrichment < ApplicationRecord
     recurring_bill: "recurring_bill",
     redbark: "redbark",
     rule: "rule",
+    scalable_capital: "scalable_capital",
     sharesight: "sharesight",
     similar: "similar",
     simplefin: "simplefin",

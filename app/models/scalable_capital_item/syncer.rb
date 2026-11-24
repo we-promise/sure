@@ -165,19 +165,20 @@ class ScalableCapitalItem::Syncer
       broker_leg = import_transaction(broker_adapter, leg.merge(amount: -trade.amount))
       return unless broker_leg
 
-      unless cash_adapter
-        detach_unbalanced_settlement(broker_leg)
-        return
-      end
+      cash_leg = import_transaction(cash_adapter, leg.merge(amount: trade.amount)) if cash_adapter
+      broker_transaction = broker_leg.transaction
+      cash_transaction = cash_leg&.transaction
+      reconcile_settlement_transfers([ broker_transaction, cash_transaction ].compact)
+      return unless cash_transaction
 
-      cash_leg = import_transaction(cash_adapter, leg.merge(amount: trade.amount))
-      return unless cash_leg
-
-      inflow, outflow = (trade.amount.positive? ? [ broker_leg, cash_leg ] : [ cash_leg, broker_leg ]).map(&:entryable)
+      inflow, outflow = trade.amount.positive? ? [ broker_transaction, cash_transaction ] : [ cash_transaction, broker_transaction ]
       return if inflow.transfer.present? || outflow.transfer.present?
       return if RejectedTransfer.exists?(inflow_transaction: inflow, outflow_transaction: outflow)
 
-      transfer = Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: :confirmed)
+      # A locked date can keep the two imported legs too far apart to pair.
+      transfer = Transfer.new(inflow_transaction: inflow, outflow_transaction: outflow, status: :confirmed)
+      return unless transfer.save
+
       transfer.update_investment_contribution!(false) if transfer.investment_contribution_switchable?
     end
 
@@ -213,14 +214,16 @@ class ScalableCapitalItem::Syncer
       entry.update!(amount: 0)
     end
 
-    def detach_unbalanced_settlement(broker_leg)
-      transaction = broker_leg.transaction
-      transfer = transaction.transfer
-      # The cash account may have been unlinked after these legs were paired.
-      return if !transfer || transfer.reload.valid?
+    def reconcile_settlement_transfers(transactions)
+      # A corrected trade can change both signs. Validate against the final amounts.
+      invalid_transfers = transactions.filter_map(&:transfer).uniq.reject { |transfer| transfer.reload.valid? }
+      return if invalid_transfers.empty?
 
-      detach_transfer(transfer)
-      transaction.reload.update!(kind: "funds_movement")
+      invalid_transfers.each { |transfer| detach_transfer(transfer) }
+      transactions.each do |transaction|
+        transaction.reload
+        transaction.update!(kind: "funds_movement") unless transaction.transfer
+      end
     end
 
     def detach_transfer(transfer)

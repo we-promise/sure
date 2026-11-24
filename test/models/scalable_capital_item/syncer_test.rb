@@ -510,6 +510,81 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_equal cash_leg.id, cash.entries.where(external_id: "settlement:sell").sole.id
   end
 
+  test "a trade side correction repairs the existing settlement without duplicating its legs" do
+    stub_snapshot
+    run_sync
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    original_trade = brokerage.entries.trades.find_by!(external_id: "sell")
+    broker_leg = brokerage.entries.find_by!(external_id: "settlement:sell")
+    cash_leg = cash.entries.find_by!(external_id: "settlement:sell")
+    original_transfer = broker_leg.transaction.transfer
+    fee = cash.entries.create!(entryable: Transaction.new(transfer_id: original_transfer.id), date: cash_leg.date,
+                               amount: 1, currency: "EUR", name: "Separate transfer fee")
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "BUY", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "BUY", "1", "100", "103")))
+    run_sync
+
+    assert_equal 103.to_d, original_trade.reload.amount
+    assert_equal 1.to_d, original_trade.trade.qty
+    assert_equal [ -103.to_d, 103.to_d ], [ broker_leg.reload.amount, cash_leg.reload.amount ]
+    refute Transfer.exists?(original_transfer.id)
+    transfer = broker_leg.transaction.transfer
+    assert_equal transfer, cash_leg.transaction.transfer
+    assert_equal broker_leg.entryable_id, transfer.inflow_transaction_id
+    assert_equal cash_leg.entryable_id, transfer.outflow_transaction_id
+    assert_predicate transfer, :confirmed?
+    assert_predicate transfer, :valid?
+    refute_predicate transfer, :investment_contribution?
+    assert_equal "funds_movement", broker_leg.transaction.kind
+    assert_equal "funds_movement", cash_leg.transaction.kind
+    assert_nil fee.reload.transaction.transfer_id
+    assert_equal 1.to_d, fee.amount
+
+    travel 1.day
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "BUY", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "BUY", "1", "100", "105")))
+    run_sync
+
+    assert_equal [ -105.to_d, 105.to_d ], [ broker_leg.reload.amount, cash_leg.reload.amount ]
+    assert_equal transfer, broker_leg.transaction.transfer
+    assert_equal transfer, cash_leg.transaction.transfer
+    assert_equal original_trade.id, brokerage.entries.trades.where(external_id: "sell").sole.id
+    assert_equal broker_leg.id, brokerage.entries.where(external_id: "settlement:sell").sole.id
+    assert_equal cash_leg.id, cash.entries.where(external_id: "settlement:sell").sole.id
+  end
+
+  test "a corrected settlement retains both legs when a locked date prevents pairing" do
+    stub_snapshot
+    run_sync
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    broker_leg = brokerage.entries.find_by!(external_id: "settlement:sell")
+    cash_leg = cash.entries.find_by!(external_id: "settlement:sell")
+    original_transfer = broker_leg.transaction.transfer
+    broker_date = broker_leg.date
+    broker_leg.lock_attr!(:date)
+
+    travel 45.days
+    stub_snapshot
+    stub_broker_trades(cash_event("sell", "BUY", at: 1.hour.ago))
+    @client.stubs(:trade).with("portfolio", "sell").returns(broker(trade("sell", "BUY", "1", "100", "103")))
+    run_sync
+
+    assert_equal [ -103.to_d, 103.to_d ], [ broker_leg.reload.amount, cash_leg.reload.amount ]
+    assert_equal broker_date, broker_leg.date
+    assert_equal Date.current, cash_leg.date
+    refute Transfer.exists?(original_transfer.id)
+    assert_nil broker_leg.transaction.transfer
+    assert_nil cash_leg.transaction.transfer
+    assert_equal [ "funds_movement", "funds_movement" ], [ broker_leg.transaction.kind, cash_leg.transaction.kind ]
+    assert_equal Time.current, @item.reload.broker_synced_through
+  end
+
   test "zero and nonzero replays preserve each trade with a protected settlement leg" do
     stub_snapshot
     run_sync
