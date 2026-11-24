@@ -1,0 +1,48 @@
+[
+  {
+    "entry_reference": "reference-a",
+    "transaction_id": null,
+    "booking_date": "2026-01-15",
+    "value_date": "2026-01-15",
+    "transaction_date": null,
+    "transaction_amount": {
+      "currency": "EUR",
+      "amount": "12.00"
+    },
+    "credit_debit_indicator": "DBIT",
+    "remittance_information": [
+      "Synthetic card top-up"
+    ],
+    "status": "BOOK",
+    "reference_number": null,
+    "merchant_category_code": null,
+    "bank_transaction_code": {
+      "description": null,
+      "code": "PMNT",
+      "sub_code": null
+    }
+  },
+  {
+    "entry_reference": "reference-b",
+    "transaction_id": null,
+    "booking_date": "2026-01-15",
+    "value_date": "2026-01-15",
+    "transaction_date": null,
+    "transaction_amount": {
+      "currency": "EUR",
+      "amount": "12.00"
+    },
+    "credit_debit_indicator": "DBIT",
+    "remittance_information": [
+      "Synthetic card top-up"
+    ],
+    "status": "BOOK",
+    "reference_number": null,
+    "merchant_category_code": null,
+    "bank_transaction_code": {
+      "description": null,
+      "code": "PMNT",
+      "sub_code": null
+    }
+  }
+]
