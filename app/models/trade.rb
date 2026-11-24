@@ -28,6 +28,9 @@ class Trade < ApplicationRecord
   # excluded, and an ambiguous one is left where the user can see it.
   INTERNAL_MOVEMENT_LABELS = %w[Transfer Sweep\ In Sweep\ Out].freeze
 
+  # The labels that only say which side of the trade it is.
+  SIDE_LABELS = Trade::CreateForm::SECURITY_TRADE_LABELS.values_at("buy", "sell").freeze
+
   # Kept as the provider-facing label for direct wallet transfers. Cost-basis
   # calculations use INTERNAL_MOVEMENT_LABELS so API-created sweeps follow the
   # same ownership-preserving rule.
@@ -39,6 +42,34 @@ class Trade < ApplicationRecord
 
   def exchange_rate
     extra&.dig("exchange_rate")
+  end
+
+  # The stored exchange rate as a number, read the way Money#exchange_to reads
+  # it (to_d), or nil when the app would not use it. The app applies it on two
+  # paths: the cost basis (Holding::TradeCalculatorHelpers) converts price and
+  # fee from trade.currency, and the cash balance (Balance::SyncCache) converts
+  # entry.amount_money from entry.currency. The two currencies are the same
+  # unless the web form or PATCH /api/v1/trades/:id changed entry.currency,
+  # which leaves trade.currency as it was. So the rate is returned when either
+  # currency differs from the account's, and is nil when none is stored, it is
+  # not a positive number that survives the conversion to Float, or both are
+  # the account's currency. The API and the data export read this, so a
+  # malformed value written straight into extra, or an extra that is not a
+  # hash, cannot break them.
+  def numeric_exchange_rate
+    return nil unless extra.is_a?(Hash)
+
+    value = extra["exchange_rate"]
+    return nil unless value.is_a?(Numeric) || value.is_a?(String)
+
+    account_currency = entry&.account&.currency.to_s.upcase
+    return nil if account_currency.blank?
+
+    foreign = [ currency, entry&.currency ].compact_blank.map(&:upcase)
+    return nil unless foreign.any? { |code| code != account_currency }
+
+    rate = value.to_d.to_f
+    rate if rate.finite? && rate.positive?
   end
 
   def exchange_rate=(value)
@@ -58,6 +89,7 @@ class Trade < ApplicationRecord
 
   validate :exchange_rate_must_be_valid
   validate :lot_source_entry_must_be_a_lot_choice, if: -> { lot_source_entry_id_changed? && lot_source_entry_id }
+  before_validation :drop_lot_source_entry, if: -> { lot_source_entry_id && !lot_source_entry_id_changed? && qty && !disposal? }
 
   # Trade types for categorization
   def buy?
@@ -66,6 +98,11 @@ class Trade < ApplicationRecord
 
   def sell?
     qty.negative?
+  end
+
+  # A sale that can name the lot it sold from.
+  def disposal?
+    sell? && !internal_movement?
   end
 
   # A negative quantity that left for another account you own. It looks exactly
@@ -84,7 +121,7 @@ class Trade < ApplicationRecord
   # holds is always among them, so an edit keeps it, and is replayed only
   # while it names a lot that is still open; a new choice must be open by then.
   def lot_choices
-    return Entry.none unless sell? && !internal_movement? && entry&.account&.cost_basis_fifo?
+    return Entry.none unless disposal? && entry&.account&.cost_basis_fifo?
 
     acquisitions = entry.account.entries
       .where(entryable_type: "Trade", entryable_id: Trade.where(security_id: security_id).where("qty > 0").select(:id))
@@ -180,6 +217,48 @@ class Trade < ApplicationRecord
     trades.each { |trade| trade.preloaded_exchange_rates = rates }
   end
 
+  # Set by callers that list many sales: the holdings this sale's basis is read
+  # from. Authoritative once set, so an empty list means there is no position
+  # to measure against, not that one should be looked up.
+  def preloaded_holdings=(value)
+    @preloaded_holdings = value
+    remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
+  end
+
+  # Each disposal's basis position, for a whole set in one query: per trade,
+  # its security's latest holding on or before the trade date. Loading the
+  # accounts' holdings instead reads a row per security per day of their whole
+  # history, which on a long-lived brokerage account is hundreds of thousands.
+  # A same-day tie (another currency, as a security remap can leave) resolves
+  # as basis_holding does: the account's currency, then the lower id.
+  def self.preload_basis_holdings(trades)
+    return if trades.empty?
+
+    wanted = [ trades.map { |t| t.entry.id }, trades.map { |t| t.entry.account_id },
+               trades.map(&:security_id), trades.map { |t| t.entry.date } ]
+    holdings = Holding.find_by_sql([ <<~SQL.squish, *wanted ])
+      SELECT basis.*, wanted.entry_id AS basis_for_entry_id
+      FROM unnest(ARRAY[?]::uuid[], ARRAY[?]::uuid[], ARRAY[?]::uuid[], ARRAY[?]::date[])
+        AS wanted(entry_id, account_id, security_id, date)
+      CROSS JOIN LATERAL (
+        SELECT holdings.* FROM holdings
+        JOIN accounts ON accounts.id = holdings.account_id
+        WHERE holdings.account_id = wanted.account_id
+          AND holdings.security_id = wanted.security_id
+          AND holdings.date <= wanted.date
+        ORDER BY holdings.date DESC, (holdings.currency = accounts.currency) DESC, holdings.id
+        LIMIT 1
+      ) AS basis
+    SQL
+
+    # A sale is measured against its holding's average cost, which for a
+    # position without a stored basis is two or more queries each.
+    Holding.preload_avg_costs(holdings)
+
+    by_entry = holdings.index_by { |holding| holding["basis_for_entry_id"] }
+    trades.each { |trade| trade.preloaded_holdings = Array(by_entry[trade.entry.id]) }
+  end
+
   # The currency this disposal's basis is carried in, where it can be answered
   # without a query. `Holding#avg_cost` is Money in the HOLDING's own currency,
   # which is not always the account's, and that is what the proceeds are
@@ -213,6 +292,15 @@ class Trade < ApplicationRecord
   # They represent portfolio management, not living expenses
   def excluded_from_budget?
     true
+  end
+
+
+  # The label for this trade once it is on the given side: Buy and Sell
+  # follow the side, any other activity (Sweep In, Reinvestment...) is kept.
+  def label_for_side(sell:)
+    return investment_activity_label if investment_activity_label.present? && SIDE_LABELS.exclude?(investment_activity_label)
+
+    Trade::CreateForm::SECURITY_TRADE_LABELS[sell ? "sell" : "buy"]
   end
 
   private
@@ -264,6 +352,13 @@ class Trade < ApplicationRecord
       end
     end
 
+    # Only a disposal names a lot: an edit that turns it into a buy or an
+    # internal movement lets the stored lot go. A lot named in the same edit
+    # is left for lot_source_entry_must_be_a_lot_choice to refuse.
+    def drop_lot_source_entry
+      self.lot_source_entry_id = nil
+    end
+
     def lot_source_entry_must_be_a_lot_choice
       errors.add(:lot_source_entry, :invalid) unless lot_choices.exists?(id: lot_source_entry_id)
     end
@@ -273,20 +368,25 @@ class Trade < ApplicationRecord
     #
     # Uses preloaded holdings when the caller set them, and treats a
     # defined-but-empty preload as authoritative rather than falling back to a
-    # query. `select` + `max_by` rather than `find`, so the answer does not
-    # depend on the order the caller's array happens to be in.
+    # query. The answer never depends on the order the caller's array happens
+    # to be in: two snapshots on the latest date (another currency, as a
+    # security remap can leave) resolve to the account's currency, then the
+    # lower id, the same rule as Trade.preload_basis_holdings.
     # Not memoised: `realized_gain_loss` already is, and a memo here would hold
     # a holding selected before a caller set `@preloaded_holdings`.
     def basis_holding
       if defined?(@preloaded_holdings)
-        (@preloaded_holdings || [])
-          .select { |h| h.security_id == security_id && h.date <= entry.date }
-          .max_by(&:date)
+        candidates = (@preloaded_holdings || []).select { |h| h.security_id == security_id && h.date <= entry.date }
+        latest = candidates.map(&:date).max
+        tied = candidates.select { |h| h.date == latest }
+        tied.one? ? tied.first : tied.min_by { |h| [ h.currency == entry.account.currency ? 0 : 1, h.id ] }
       else
         entry.account.holdings
           .where(security_id: security_id)
           .where("date <= ?", entry.date)
           .order(date: :desc)
+          .order(Arel.sql(Holding.sanitize_sql_array([ "holdings.currency = ? DESC", entry.account.currency ])))
+          .order(:id)
           .first
       end
     end
