@@ -102,13 +102,15 @@ class ExchangeRate::BalanceRefresh
     # Holding::PortfolioCache prices the security from even at amount 0 (a
     # transfer or split) -- at a date whose lookback holds a new rate and no
     # other usable one stored before it, so the conversion found none before.
-    # A rate another write stored later is not one the balance had.
+    # A rate another write stored later is not one the balance had. A
+    # valuation counts even at amount 0: it sets the balance, and a sync drops
+    # it without a rate like any other entry.
     def affected_accounts(from, to, dates, stored_at)
       sql = <<~SQL
         SELECT converted.account_id, MIN(converted.date)
         FROM (
           SELECT entries.account_id, entries.date FROM entries
-          WHERE entries.currency = :from AND entries.amount <> 0
+          WHERE entries.currency = :from AND (entries.amount <> 0 OR entries.entryable_type = 'Valuation')
             AND entries.date BETWEEN :first_date AND LEAST(:last_date, CAST(:today AS date))
           UNION ALL
           SELECT holdings.account_id, holdings.date FROM holdings
