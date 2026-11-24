@@ -1,0 +1,21 @@
+[
+  {
+    "currency": "BTC",
+    "available": "1.25000000",
+    "reserved": "0.10000000",
+    "total": "1.35000000"
+  },
+  {
+    "currency": "ETH",
+    "available": "10.00000000",
+    "reserved": "0.00000000",
+    "staked": "32.00000000",
+    "total": "42.00000000"
+  },
+  {
+    "currency": "USD",
+    "available": "5400.50",
+    "reserved": "100.00",
+    "total": "5500.50"
+  }
+]

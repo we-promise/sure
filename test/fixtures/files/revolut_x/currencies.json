@@ -1,0 +1,16 @@
+{
+  "BTC": {
+    "symbol": "BTC",
+    "name": "Bitcoin",
+    "scale": 8,
+    "asset_type": "crypto",
+    "status": "active"
+  },
+  "ETH": {
+    "symbol": "ETH",
+    "name": "Ethereum",
+    "scale": 8,
+    "asset_type": "crypto",
+    "status": "active"
+  }
+}

@@ -70,6 +70,9 @@ module SettingsHelper
     when "enable_banking" then enable_banking_summary
     when "truelayer" then truelayer_summary
     when "trade_republic" then trade_republic_summary
+    when "revolut_x"
+      return { status: :warn, meta: t("settings.providers.meta.api_key_needed") } unless items.any?(&:credentials_configured?)
+      sync_based_summary(key)
     else sync_based_summary(key)
     end
   end

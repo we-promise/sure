@@ -124,6 +124,12 @@
       <% end %>
     <% end %>
 
+    <% if @revolut_x_items.any? %>
+      <% @revolut_x_items.sort_by(&:created_at).each do |item| %>
+        <%= render item, visible_accounts: visible_card_accounts(item) %>
+      <% end %>
+    <% end %>
+
     <% if @coinspot_items.any? %>
       <% @coinspot_items.sort_by(&:created_at).each do |item| %>
         <%= render item, visible_accounts: visible_card_accounts(item) %>

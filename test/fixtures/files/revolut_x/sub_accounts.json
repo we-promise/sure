@@ -1,0 +1,28 @@
+{
+  "data": {
+    "sub_accounts": [
+      {
+        "name": "Primary",
+        "total_balance": {
+          "amount": "53200.50",
+          "currency": "USD"
+        },
+        "created_date": 1733011200000,
+        "updated_date": 1785313433816
+      },
+      {
+        "name": "TradingBot",
+        "total_balance": {
+          "amount": "12500.00",
+          "currency": "USD"
+        },
+        "created_date": 1774953600000,
+        "updated_date": 1785223200000
+      }
+    ]
+  },
+  "metadata": {
+    "timestamp": 1785313433816,
+    "convert_to": "USD"
+  }
+}

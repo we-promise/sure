@@ -1,0 +1,177 @@
+<div id="revolut_x-providers-panel" class="space-y-4">
+  <% items = local_assigns[:revolut_x_items] || @revolut_x_items || Current.family.revolut_x_items.active.ordered %>
+
+  <%= render DS::Alert.new(
+        variant: :warning,
+        title: t("settings.providers.revolut_x_panel.read_only_title"),
+        message: t("settings.providers.revolut_x_panel.read_only_body")
+      ) %>
+
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("settings.providers.revolut_x_panel.step1"),
+               t("settings.providers.revolut_x_panel.step2"),
+               t("settings.providers.revolut_x_panel.step3")
+             ] %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <% if items.any? %>
+    <div class="space-y-3">
+      <% items.each do |item| %>
+        <% configured = item.credentials_configured? %>
+        <%= render DS::Disclosure.new(variant: :card, open: !configured) do |disclosure| %>
+          <% disclosure.with_summary_content do %>
+            <div class="flex items-center justify-between gap-3 w-full">
+              <div class="flex items-center gap-3 min-w-0">
+                <%= render ProviderLogo.new(provider_key: :revolut_x) %>
+                <div class="min-w-0">
+                  <p class="font-medium text-primary truncate"><%= item.name %></p>
+                  <p class="text-xs text-secondary">
+                    <% if item.syncing? %>
+                      <%= t("settings.providers.revolut_x_panel.syncing") %>
+                    <% elsif !configured %>
+                      <%= t("settings.providers.revolut_x_panel.awaiting_api_key") %>
+                    <% else %>
+                      <%= item.sync_status_summary %>
+                    <% end %>
+                  </p>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <div class="mt-4 space-y-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <% if configured %>
+                <%= render DS::Button.new(
+                  text: t("settings.providers.revolut_x_panel.sync"),
+                  icon: "refresh-cw",
+                  variant: :outline,
+                  size: :sm,
+                  href: sync_revolut_x_item_path(item, source: "panel"),
+                  method: :post,
+                  disabled: item.syncing?
+                ) %>
+
+                <%= render DS::Link.new(
+                  text: t("settings.providers.revolut_x_panel.setup_accounts"),
+                  icon: "settings",
+                  variant: "secondary",
+                  size: :sm,
+                  href: setup_accounts_revolut_x_item_path(item),
+                  frame: :modal
+                ) %>
+              <% end %>
+
+              <%= render DS::Button.new(
+                text: t("settings.providers.revolut_x_panel.disconnect"),
+                icon: "trash-2",
+                variant: :outline_destructive,
+                size: :sm,
+                href: revolut_x_item_path(item),
+                method: :delete,
+                data: { turbo_confirm: t("settings.providers.revolut_x_panel.disconnect_confirm", name: item.name) }
+              ) %>
+            </div>
+
+            <div class="p-3 rounded-md bg-container-inset space-y-2">
+              <p class="text-sm font-medium text-primary"><%= t("settings.providers.revolut_x_panel.public_key.title") %></p>
+              <p class="text-xs text-secondary"><%= t("settings.providers.revolut_x_panel.public_key.description") %></p>
+              <div class="bg-container rounded-lg p-3 border border-primary" data-controller="clipboard" data-clipboard-copied-text-value="<%= t("settings.providers.revolut_x_panel.public_key.copied") %>">
+                <div class="flex flex-col items-start gap-2">
+                  <code class="font-mono text-xs text-primary break-all whitespace-pre-wrap" data-clipboard-target="source"><%= item.public_key_pem.strip %></code>
+                  <%= render DS::Button.new(
+                    text: t("settings.providers.revolut_x_panel.public_key.copy"),
+                    variant: "ghost",
+                    size: :sm,
+                    icon: "copy",
+                    data: { action: "clipboard#copy" }
+                  ) %>
+                </div>
+              </div>
+            </div>
+
+            <% unless configured %>
+              <%= render "settings/providers/setup_steps",
+                         eyebrow: t("settings.providers.revolut_x_panel.register_steps.eyebrow"),
+                         steps: [
+                           t("settings.providers.revolut_x_panel.register_steps.open_app"),
+                           t("settings.providers.revolut_x_panel.register_steps.add_key"),
+                           t("settings.providers.revolut_x_panel.register_steps.paste_public_key"),
+                           t("settings.providers.revolut_x_panel.register_steps.copy_api_key")
+                         ] %>
+            <% end %>
+
+            <%= styled_form_with model: item,
+                                 url: revolut_x_item_path(item),
+                                 scope: :revolut_x_item,
+                                 method: :patch,
+                                 data: { turbo: true },
+                                 class: "space-y-3" do |form| %>
+              <% if configured %>
+                <%= form.text_field :name,
+                                    label: t("settings.providers.revolut_x_panel.connection_name_label"),
+                                    placeholder: t("settings.providers.revolut_x_panel.connection_name_placeholder"),
+                                    help_text: t("settings.providers.revolut_x_panel.connection_name_help") %>
+              <% end %>
+
+              <%= form.text_field :api_key,
+                                  label: t("settings.providers.revolut_x_panel.api_key_label"),
+                                  placeholder: configured ? t("settings.providers.revolut_x_panel.keep_api_key_placeholder") : t("settings.providers.revolut_x_panel.api_key_placeholder"),
+                                  type: :password,
+                                  autocomplete: "off",
+                                  value: nil %>
+
+              <% if configured %>
+                <%= form.text_area :private_key,
+                                   label: t("settings.providers.revolut_x_panel.replace_private_key_label"),
+                                   placeholder: t("settings.providers.revolut_x_panel.private_key_placeholder"),
+                                   help_text: t("settings.providers.revolut_x_panel.replace_private_key_help"),
+                                   rows: 4,
+                                   autocomplete: "off",
+                                   value: nil %>
+              <% end %>
+
+              <div class="flex justify-end">
+                <%= form.submit configured ? t("settings.providers.revolut_x_panel.update_connection") : t("settings.providers.revolut_x_panel.save_api_key") %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% revolut_x_item = Current.family.revolut_x_items.build(name: t("settings.providers.revolut_x_panel.default_connection_name")) %>
+  <% if items.any? %>
+    <%= render "settings/providers/add_connection_heading", label: t("settings.providers.revolut_x_panel.add_connection") %>
+  <% end %>
+
+  <%= styled_form_with model: revolut_x_item,
+                       url: revolut_x_items_path,
+                       scope: :revolut_x_item,
+                       method: :post,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :name,
+                        label: t("settings.providers.revolut_x_panel.connection_name_label"),
+                        placeholder: t("settings.providers.revolut_x_panel.connection_name_placeholder"),
+                        help_text: t("settings.providers.revolut_x_panel.connection_name_help") %>
+
+    <%= form.text_area :private_key,
+                       label: t("settings.providers.revolut_x_panel.existing_private_key_label"),
+                       placeholder: t("settings.providers.revolut_x_panel.private_key_placeholder"),
+                       help_text: t("settings.providers.revolut_x_panel.existing_private_key_help"),
+                       rows: 4,
+                       autocomplete: "off",
+                       value: nil %>
+
+    <div class="flex justify-end">
+      <%= form.submit t("settings.providers.revolut_x_panel.add_connection") %>
+    </div>
+  <% end %>
+</div>

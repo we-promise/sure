@@ -1,0 +1,63 @@
+{
+  "data": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef0123456789",
+      "status": "completed",
+      "type": "buy",
+      "source": {
+        "amount": "1000.00",
+        "currency": "USD",
+        "account": {
+          "type": "revolut"
+        }
+      },
+      "destination": {
+        "amount": "0.01",
+        "currency": "BTC",
+        "account": {
+          "type": "revolut_x"
+        }
+      },
+      "created_date": 1700000000000,
+      "processed_date": 1700000001000
+    },
+    {
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "status": "completed",
+      "type": "reward",
+      "destination": {
+        "amount": "0.005",
+        "currency": "ETH",
+        "account": {
+          "type": "revolut_x"
+        }
+      },
+      "created_date": 1700000100000,
+      "processed_date": 1700000101000
+    },
+    {
+      "id": "c3d4e5f6-a7b8-9012-cdef-234567890123",
+      "status": "pending",
+      "type": "send",
+      "source": {
+        "amount": "0.5",
+        "currency": "BTC",
+        "account": {
+          "type": "revolut_x"
+        }
+      },
+      "destination": {
+        "amount": "0.5",
+        "currency": "BTC",
+        "account": {
+          "type": "external_crypto_wallet"
+        }
+      },
+      "created_date": 1700000200000
+    }
+  ],
+  "metadata": {
+    "timestamp": 1785313433816,
+    "next_cursor": "ZGF0ZT0xNzY0OTMxNTAyODU0O2lkPTM3YjExMWJlLTcwMzYtNGYzNC1hYWYyLTM4ZDVjYTEyN2M1Yw=="
+  }
+}

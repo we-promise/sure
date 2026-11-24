@@ -45,6 +45,7 @@ When you arrive at the main dashboard, showing **No accounts yet**, you're all s
 > - [**Up**](https://up.com.au/) (Australian bank)
 > - [**Akahu**](https://www.akahu.nz/) (New Zealand banks)
 > - [**CoinStats**](https://coinstats.app/) (beta, crypto)
+> - [**Revolut X**](../providers/revolut_x.md) (beta, crypto exchange)
 >
 > See **Settings > Bank sync** in your instance for the full list of supported providers and their setup options. Only **admin** users can connect a provider.
 >
