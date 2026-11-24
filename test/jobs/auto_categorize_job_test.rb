@@ -4,6 +4,7 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
   include EntriesTestHelper, ProviderTestHelper
 
   setup do
+    use_ai_routes
     @family = families(:empty)
     @account = @family.accounts.create!(name: "Rule test", balance: 100, currency: "USD", accountable: Depository.new)
     @family.categories.create!(name: "Food")
@@ -107,5 +108,19 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     assert_equal "AI categorization failed: no categories available", categorization_entry.message
     assert_equal [ transaction.id ], categorization_entry.metadata["requested_transaction_ids"]
     assert_equal "No categories available for auto-categorization", rule_run_entry.metadata["error_message"]
+  end
+
+  test "sends nothing while no family admin has turned AI on" do
+    @family.users.update_all(ai_enabled: false)
+    transaction = create_transaction(account: @account, name: "Coffee shop").transaction
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.expects(:auto_categorize).never
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+
+    @rule_run.reload
+    assert_equal "success", @rule_run.status
+    assert_equal 0, @rule_run.pending_jobs_count
   end
 end
