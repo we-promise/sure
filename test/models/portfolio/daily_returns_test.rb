@@ -1131,7 +1131,7 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     deposit account: @account, date: @day_two, amount: 1_000
 
     expected = daily_returns.rows
-    original = Portfolio::FlowClassifier.new(scope_account_ids: [ @account.id ]).sql_case
+    original = daily_returns.send(:flow_classifier).sql_case
     Portfolio::FlowClassifier.any_instance.stubs(:sql_case)
       .returns("CASE WHEN false THEN ':probe' ELSE (#{original}) END")
 
