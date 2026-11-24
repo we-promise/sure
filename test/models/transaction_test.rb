@@ -987,6 +987,21 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal "Transfer to another account", transfer.outflow_transaction.reload.name_for(account_ids_of(users(:family_member)))
   end
 
+  test "an imported label does not name the hidden account in another case" do
+    transfer = transfer_to_hidden_account
+    transfer.outflow_transaction.entry.update!(name: "TRANSFER TO HIDDEN SAVINGS REF 4471")
+
+    assert_equal "TRANSFER TO another account REF 4471", transfer.outflow_transaction.reload.name_for(account_ids_of(users(:family_member)))
+  end
+
+  test "an imported label in the generated shape does not name a hidden account renamed since" do
+    transfer = transfer_to_hidden_account
+    transfer.outflow_transaction.entry.update!(name: "TRANSFER TO HIDDEN SAVINGS")
+    hidden_account.update!(name: "Rainy Day Fund")
+
+    assert_equal "TRANSFER TO another account", transfer.outflow_transaction.reload.name_for(account_ids_of(users(:family_member)))
+  end
+
   test "a name the user wrote is kept when it does not name the hidden account" do
     transfer = transfer_to_hidden_account
     transfer.outflow_transaction.entry.update!(name: "Monthly savings")

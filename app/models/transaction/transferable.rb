@@ -31,8 +31,9 @@ module Transaction::Transferable
 
   # The names Sure gives a transfer's legs and fees, which end in the other
   # account's name as it was then: "Transfer to Savings", "Payment from
-  # Checking", "Transfer fee — Transfer to Savings".
-  GENERATED_TRANSFER_NAME = /\A((?:Transfer fee — )?(?:Transfer|Payment) (?:to|from) ).+\z/
+  # Checking", "Transfer fee — Transfer to Savings". Case-insensitive, as a
+  # bank's label for a leg the matcher paired often comes in capitals.
+  GENERATED_TRANSFER_NAME = /\A((?:Transfer fee — )?(?:Transfer|Payment) (?:to|from) ).+\z/i
 
   def transfer
     transfer_as_inflow || transfer_as_outflow
@@ -63,8 +64,9 @@ module Transaction::Transferable
     return name if hidden_account.nil? || accessible_account_ids.include?(hidden_account.id)
 
     placeholder = I18n.t("transfer.hidden_account")
-    if name.include?(hidden_account.name)
-      name.gsub(hidden_account.name, placeholder)
+    account_name = /#{Regexp.escape(hidden_account.name)}/i
+    if name.match?(account_name)
+      name.gsub(account_name, placeholder)
     elsif (generated = GENERATED_TRANSFER_NAME.match(name))
       "#{generated[1]}#{placeholder}"
     else
