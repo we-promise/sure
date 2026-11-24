@@ -356,7 +356,7 @@ class Family < ApplicationRecord
   # self-heal (issue #2925). Returns the number of logos generated.
   #
   # Logos are cosmetic: a failure here must not fail the callers (post-sync
-  # rule application, LLM merchant enhancement).
+  # rule application, MerchantLogoBackfillJob).
   def backfill_provider_merchant_logos
     ProviderMerchant.where(id: transactions.select(:merchant_id)).backfill_logos
   rescue StandardError => e

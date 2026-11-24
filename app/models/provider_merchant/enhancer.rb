@@ -12,7 +12,11 @@ class ProviderMerchant::Enhancer
   # going, so a second click doesn't queue the same merchants again. The run is the lease: it ends
   # when the run ends, gives up, or is swept, and lasts while the run waits for delivery. Under the
   # family's row lock, so two clicks at once start one run. Returns false when one is going.
+  #
+  # Logos aren't AI: a job of their own refreshes them, whatever happens to the run.
   def self.enhance_later(family)
+    MerchantLogoBackfillJob.perform_later(family)
+
     family.with_lock do
       next false if Ai::GenerationRun.exists?(family:, feature: ai_feature)
 
@@ -32,9 +36,6 @@ class ProviderMerchant::Enhancer
   end
 
   def ai_generation
-    # The run's first job backfills logos before any AI: generating a logo from a known website
-    # needs no model, and merchants that already have a website are never sent (issue #2925).
-    @family.backfill_provider_merchant_logos if @window.nil? || @window.first?
     return if unenhanced_merchants.empty?
 
     Rails.logger.info("Enhancing #{unenhanced_merchants.size} provider merchants for family #{@family.id}")
