@@ -1,8 +1,10 @@
-<%# locals: (title:, content:) %>
+<%# locals: (title:, content:, footer: nil) %>
 
 <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4">
   <h4 class="text-secondary text-sm"><%= title %></h4>
   <p class="text-xl font-medium text-primary privacy-sensitive">
     <%= content %>
   </p>
+  <%# Outside the privacy-sensitive value so a link here stays clickable in privacy mode. %>
+  <%= footer %>
 </div>

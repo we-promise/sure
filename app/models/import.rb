@@ -565,6 +565,12 @@ class Import < ApplicationRecord
     FAMILY_CONFIG_TYPES.include?(type)
   end
 
+  # A statement-backed import is as private as its statement; any other import
+  # is visible to the whole family.
+  def viewable_by?(user)
+    account_statement.blank? || account_statement.viewable_by?(user)
+  end
+
   # Guests may view family configuration but not change it, so they may only
   # edit an import that doesn't write family configuration and isn't being
   # (or already) published.

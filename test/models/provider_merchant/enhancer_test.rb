@@ -209,6 +209,22 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     assert cache.exist?(key)
   end
 
+  # #5709: without a family admin's AI switch nothing is sent, and the run fails, saying why.
+  test "sends nothing while no family admin has turned AI on, and records the failure" do
+    @family.users.update_all(ai_enabled: false)
+    merchant = provider_merchant("Walmart")
+    requests = stub_websites("Walmart" => "walmart.com")
+
+    enhance
+
+    assert_empty requests
+    assert_nil merchant.reload.website_url
+    assert_nil Rails.cache.read(ProviderMerchant::Enhancer.lock_key(@family))
+    entry = DebugLogEntry.where(category: "merchant_enhancement").order(:created_at).last
+    assert_equal "Ai::Error::Unavailable", entry.metadata["error_class"]
+    assert_includes entry.metadata["error_message"], "no_family_consent"
+  end
+
   private
     # A window after the run's first, its ids left over from the batch before.
     def later_window(ids)
