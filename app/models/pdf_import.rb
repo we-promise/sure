@@ -618,8 +618,8 @@ class PdfImport < Import
 
       if currency_compatible
         # The statement text's own figure keeps its account-derived sign.
-        updates[:opening_balance] = opening_balance if opening_balance.present? && !account_statement.detected_balance?(:opening_balance, opening_balance)
-        updates[:closing_balance] = closing_balance if closing_balance.present? && !account_statement.detected_balance?(:closing_balance, closing_balance)
+        updates[:opening_balance] = opening_balance if opening_balance.present? && !account_statement.detected_balance?(:opening_balance, opening_balance, currency: target_currency)
+        updates[:closing_balance] = closing_balance if closing_balance.present? && !account_statement.detected_balance?(:closing_balance, closing_balance, currency: target_currency)
       else
         DebugLogEntry.capture(
           category: "import",
@@ -671,7 +671,13 @@ class PdfImport < Import
 
       return if updates.empty?
 
-      unless account_statement.update(updates)
+      # An AI balance the statement text doesn't give in the target currency
+      # is the AI's from then on, even when it equals the stored balance, so
+      # the statement keeps it rather than reading it again in a new currency.
+      account_statement.assign_attributes(updates)
+      account_statement.mark_balances_edited(updates.slice(:opening_balance, :closing_balance).keys)
+
+      unless account_statement.save
         DebugLogEntry.capture(
           category: "import",
           level: "warn",
