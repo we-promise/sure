@@ -1,5 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
-import evaluateAmountExpression from "utils/evaluate_amount_expression";
+import evaluateAmountExpression, {
+  precisionFromStep,
+} from "utils/evaluate_amount_expression";
 
 export default class extends Controller {
   static targets = [
@@ -118,7 +120,9 @@ export default class extends Controller {
     // comma and silently truncates it. exchangeRateFieldTarget is a plain
     // type="number" input, which the browser already normalizes to a dot
     // decimal or empty string, so parseFloat is safe there.
-    const amount = evaluateAmountExpression(this.amountTarget.value);
+    const amount = evaluateAmountExpression(this.amountTarget.value, {
+      precision: precisionFromStep(this.amountTarget.step),
+    });
     const rate = Number.parseFloat(this.exchangeRateFieldTarget.value);
 
     if (amount && rate && rate !== 0) {
@@ -144,7 +148,9 @@ export default class extends Controller {
 
     // Same reasoning as calculateConvertDestination above: amountTarget
     // needs expression-aware parsing, destinationAmountTarget doesn't.
-    const amount = evaluateAmountExpression(this.amountTarget.value);
+    const amount = evaluateAmountExpression(this.amountTarget.value, {
+      precision: precisionFromStep(this.amountTarget.step),
+    });
     const destAmount = Number.parseFloat(this.destinationAmountTarget.value);
 
     if (amount && destAmount && amount !== 0) {
