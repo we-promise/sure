@@ -597,13 +597,15 @@ module Security::Provided
       raw_exchange = entry[:exchange] || entry["exchange"]
       exchange = raw_exchange.is_a?(String) ? raw_exchange.strip.upcase.presence : nil
       name = (entry[:name] || entry["name"]).to_s.strip.presence
-      raw_weight = entry[:weight] || entry["weight"]
+      raw_weight = entry[:weight].nil? ? entry["weight"] : entry[:weight]
       weight = begin
         raw_weight.present? ? BigDecimal(raw_weight.to_s) : nil
       rescue ArgumentError, TypeError
         :non_numeric
       end
       weight = :non_numeric if weight.is_a?(BigDecimal) && !weight.finite?
+      # `false` is blank, so it would otherwise be stored as no weight.
+      weight = :non_numeric if raw_weight == true || raw_weight == false
 
       # Postgres refuses a NUL in a text column, as it would the rows below.
       reason = if !raw_ticker.nil? && !raw_ticker.is_a?(String) then "non_string_ticker"
