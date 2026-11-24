@@ -154,7 +154,8 @@ class Loan
           period_start: state.period_start,
           period_end: payment.date,
           day_count_convention: day_count_convention,
-          full_period: scheduled_period_start?(state.period_start)
+          full_period: scheduled_period_start?(state.period_start),
+          compounding: compounding
         )
 
         state.period_interest = (state.period_principal * factor).round(precision)
@@ -404,6 +405,10 @@ class Loan
 
       def day_count_convention
         @day_count_convention ||= (loan.day_count_convention.presence || Loan::DEFAULT_DAY_COUNT_CONVENTION).to_sym
+      end
+
+      def compounding
+        @compounding ||= (loan.interest_compounding.presence || Loan::DEFAULT_INTEREST_COMPOUNDING).to_sym
       end
 
       def precision

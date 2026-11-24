@@ -76,6 +76,16 @@
       <p class="text-xs text-secondary"><%= t("loans.form.day_count_convention_hint") %></p>
 
       <div class="flex items-center gap-2">
+        <%# How often the lender compounds the stated rate. The default
+            compounds once per payment, which is what every existing loan was
+            built on, so leaving this alone changes nothing. %>
+        <%= loan_form.select :interest_compounding,
+                           loan_interest_compounding_options,
+                           { label: t("loans.form.interest_compounding") } %>
+      </div>
+      <p class="text-xs text-secondary"><%= t("loans.form.interest_compounding_hint") %></p>
+
+      <div class="flex items-center gap-2">
         <%# The premium many lenders quote beside the instalment. Charged
             alongside it rather than inside it, so it moves the loan's total
             cost without moving its repayment. %>

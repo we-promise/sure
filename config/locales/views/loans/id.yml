@@ -15,6 +15,11 @@ id:
         dan merupakan standar hipotek di Inggris Raya dan Australia. 30/360 mengenakan
         bunga satu per dua belas tetap, basis yang selalu digunakan Sure.
       day_count_convention_thirty_360: 30/360 (satu per dua belas tetap)
+      interest_compounding: "Kapitalisasi bunga"
+      interest_compounding_annual: "Tahunan"
+      interest_compounding_hint: "Seberapa sering pemberi pinjaman mengkapitalisasi suku bunga yang dinyatakan. Sebagian besar pinjaman dikapitalisasi setiap pembayaran, termasuk pinjaman yang bunganya dihitung harian dan dibebankan bulanan, seperti di Australia dan Inggris Raya: biarkan pada “Setiap pembayaran”. Hipotek suku bunga tetap di Kanada dikapitalisasi setengah tahunan."
+      interest_compounding_per_period: "Setiap pembayaran"
+      interest_compounding_semi_annual: "Setengah tahunan"
       rate_type: Jenis suku bunga
       term_months: Jangka waktu (bulan)
       term_months_placeholder: '360'

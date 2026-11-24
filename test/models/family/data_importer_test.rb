@@ -50,6 +50,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
         insurance_rate: 0.35,
         insurance_rate_type: "level_term",
         day_count_convention: "actual_365",
+        interest_compounding: "semi_annual",
         principal_only_transfers: true,
         variable_rate_schedule: { "2026-01-01" => "6.5" }
       )
@@ -68,6 +69,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.35"), loan.insurance_rate
     assert_equal "level_term", loan.insurance_rate_type
     assert_equal "actual_365", loan.day_count_convention
+    assert_equal "semi_annual", loan.interest_compounding
     assert loan.principal_only_transfers
     assert_equal [ [ Date.new(2026, 1, 1), BigDecimal("6.5") ] ], loan.variable_rates
   end
@@ -152,6 +154,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "auto", loan.subtype
     assert_nil loan.interest_rate
     assert_equal Loan::DEFAULT_DAY_COUNT_CONVENTION, loan.day_count_convention
+    assert_equal Loan::DEFAULT_INTEREST_COMPOUNDING, loan.interest_compounding
     assert_not loan.principal_only_transfers
     assert_equal({}, loan.variable_rate_schedule)
 
@@ -190,7 +193,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
         type: "Account",
         data: {
           id: "old-loan", name: "Null Loan", balance: "1000", currency: "USD", accountable_type: "Loan",
-          accountable: { interest_rate: "5.0", day_count_convention: nil, principal_only_transfers: nil, variable_rate_schedule: nil, start_date: nil }
+          accountable: { interest_rate: "5.0", day_count_convention: nil, interest_compounding: nil, principal_only_transfers: nil, variable_rate_schedule: nil, start_date: nil }
         }
       }
     ])
@@ -200,6 +203,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     loan = @family.accounts.find_by!(name: "Null Loan").accountable
     assert_equal BigDecimal("5"), loan.interest_rate
     assert_equal Loan::DEFAULT_DAY_COUNT_CONVENTION, loan.day_count_convention
+    assert_equal Loan::DEFAULT_INTEREST_COMPOUNDING, loan.interest_compounding
     assert_not loan.principal_only_transfers
     assert_equal({}, loan.variable_rate_schedule)
   end

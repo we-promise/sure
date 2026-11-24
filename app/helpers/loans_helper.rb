@@ -46,4 +46,11 @@ module LoansHelper
       [ t("loans.form.day_count_convention_#{convention}", raise: true), convention ]
     end
   end
+
+  # Same contract as above, for how often the stated rate compounds.
+  def loan_interest_compounding_options
+    Loan::INTEREST_COMPOUNDINGS.map do |compounding|
+      [ t("loans.form.interest_compounding_#{compounding}", raise: true), compounding ]
+    end
+  end
 end
