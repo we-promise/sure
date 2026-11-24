@@ -267,12 +267,7 @@ class Portfolio::FlowClassifier
           WHEN flow_transfers.inflow_transaction_id = transactions.id THEN flow_transfers.outflow_transaction_id
           ELSE flow_transfers.inflow_transaction_id
         END
-      LEFT JOIN (#{security_transfer_legs_sql}) flow_security_transfers
-        ON entries.entryable_type = 'Trade'
-        AND flow_security_transfers.date = entries.date
-        AND flow_security_transfers.security_id = trades.security_id
-        AND flow_security_transfers.qty = -trades.qty
-      #{same_side_security_transfers_join_sql if strict_leg_pairing}
+      #{security_transfers_join_sql}
     SQL
   end
 
@@ -480,16 +475,16 @@ class Portfolio::FlowClassifier
     # the CASE takes the direction.
     #
     # Under strict_leg_pairing, the SQL twin of
-    # #strictly_paired_security_transfer?: the opposite group holds exactly
-    # one journal leg, in another account, and this entry's own group holds
-    # none but the entry itself, which it holds when the entry is in scope on
-    # its date (a journal leg reaching here is never cash-settled).
+    # #strictly_paired_security_transfer?: the other side holds exactly one
+    # journal leg, in another account, and this entry's own side holds none
+    # but the entry itself, which it holds when the entry is in scope on its
+    # date (a journal leg reaching here is never cash-settled).
     def security_transfer_counterpart_in_scope_sql
       if strict_leg_pairing
         <<~SQL.squish
-          (flow_security_transfers.legs = 1
-            AND flow_security_transfers.min_account_id <> entries.account_id
-            AND COALESCE(flow_security_same_side.legs, 0) <= CASE WHEN #{in_scope_sql('entries.account_id')} THEN 1 ELSE 0 END)
+          (#{security_transfer_side_sql('legs', opposite: true)} = 1
+            AND #{security_transfer_side_sql('account_id', opposite: true)} <> entries.account_id
+            AND COALESCE(#{security_transfer_side_sql('legs', opposite: false)}, 0) <= CASE WHEN #{in_scope_sql('entries.account_id')} THEN 1 ELSE 0 END)
         SQL
       else
         <<~SQL.squish
@@ -499,14 +494,36 @@ class Portfolio::FlowClassifier
       end
     end
 
-    def same_side_security_transfers_join_sql
-      <<~SQL.squish
-        LEFT JOIN (#{security_transfer_legs_sql}) flow_security_same_side
-          ON entries.entryable_type = 'Trade'
-          AND flow_security_same_side.date = entries.date
-          AND flow_security_same_side.security_id = trades.security_id
-          AND flow_security_same_side.qty = trades.qty
-      SQL
+    # Strict pairing reads both sides of a security's day, so its one grouped
+    # join is keyed on the quantity's magnitude and carries each side apart:
+    # legs in (qty > 0), out (qty < 0) and, for a qty 0 leg, whose other side
+    # is itself, zero.
+    def security_transfers_join_sql
+      if strict_leg_pairing
+        <<~SQL.squish
+          LEFT JOIN (#{strict_security_transfer_legs_sql}) flow_security_transfers
+            ON entries.entryable_type = 'Trade'
+            AND flow_security_transfers.date = entries.date
+            AND flow_security_transfers.security_id = trades.security_id
+            AND flow_security_transfers.abs_qty = ABS(trades.qty)
+        SQL
+      else
+        <<~SQL.squish
+          LEFT JOIN (#{security_transfer_legs_sql}) flow_security_transfers
+            ON entries.entryable_type = 'Trade'
+            AND flow_security_transfers.date = entries.date
+            AND flow_security_transfers.security_id = trades.security_id
+            AND flow_security_transfers.qty = -trades.qty
+        SQL
+      end
+    end
+
+    # One column of the strict group, from the entry's own side or the other.
+    def security_transfer_side_sql(column, opposite:)
+      positive, negative = opposite ? %w[out in] : %w[in out]
+      "CASE WHEN trades.qty > 0 THEN flow_security_transfers.#{positive}_#{column} " \
+        "WHEN trades.qty < 0 THEN flow_security_transfers.#{negative}_#{column} " \
+        "ELSE flow_security_transfers.zero_#{column} END"
     end
 
     # Every live Transfer trade in the scope's accounts, grouped by date,
@@ -520,17 +537,42 @@ class Portfolio::FlowClassifier
     # only under include_excluded. entries.excluded is nullable, and a NULL
     # leg is live here as it is to #classify, hence IS NOT TRUE rather than
     # = false. uuid has no MIN or MAX, so the ids are compared as text.
-    # Under strict_leg_pairing only journal legs count, and the count of legs
-    # in a group is what the one-to-one test reads.
     def security_transfer_legs_sql
       <<~SQL.squish
         SELECT
           counterpart_entries.date,
           counterpart_trades.security_id,
           counterpart_trades.qty,
-          COUNT(*) AS legs,
           MIN(counterpart_entries.account_id::text)::uuid AS min_account_id,
           MAX(counterpart_entries.account_id::text)::uuid AS max_account_id
+        #{security_transfer_legs_from_sql}
+        GROUP BY counterpart_entries.date, counterpart_trades.security_id, counterpart_trades.qty
+      SQL
+    end
+
+    # The strict form of the same groups: journal legs only (a cash-settled
+    # one is a purchase or a sale), keyed on the quantity's magnitude, with
+    # each side's leg count and, for a side of one leg, that leg's account.
+    def strict_security_transfer_legs_sql
+      sides = { "in" => "> 0", "out" => "< 0", "zero" => "= 0" }.map do |side, test|
+        "COUNT(*) FILTER (WHERE counterpart_trades.qty #{test}) AS #{side}_legs, " \
+          "MIN(counterpart_entries.account_id::text) FILTER (WHERE counterpart_trades.qty #{test})::uuid AS #{side}_account_id"
+      end
+
+      <<~SQL.squish
+        SELECT
+          counterpart_entries.date,
+          counterpart_trades.security_id,
+          ABS(counterpart_trades.qty) AS abs_qty,
+          #{sides.join(", ")}
+        #{security_transfer_legs_from_sql}
+          AND counterpart_trades.qty * counterpart_entries.amount <= 0
+        GROUP BY counterpart_entries.date, counterpart_trades.security_id, ABS(counterpart_trades.qty)
+      SQL
+    end
+
+    def security_transfer_legs_from_sql
+      <<~SQL.squish
         FROM entries counterpart_entries
         JOIN trades counterpart_trades
           ON counterpart_trades.id = counterpart_entries.entryable_id
@@ -538,8 +580,6 @@ class Portfolio::FlowClassifier
         WHERE #{in_scope_sql('counterpart_entries.account_id', date_expression: 'counterpart_entries.date')}
           #{"AND counterpart_entries.excluded IS NOT TRUE" unless include_excluded}
           AND counterpart_trades.investment_activity_label = '#{TRANSFER_LABEL}'
-          #{"AND counterpart_trades.qty * counterpart_entries.amount <= 0" if strict_leg_pairing}
-        GROUP BY counterpart_entries.date, counterpart_trades.security_id, counterpart_trades.qty
       SQL
     end
 
