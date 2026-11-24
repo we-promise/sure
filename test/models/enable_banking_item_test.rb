@@ -292,4 +292,63 @@ class EnableBankingItemTest < ActiveSupport::TestCase
 
     assert_equal({}, @item.build_psu_headers)
   end
+
+  test "an ignored account no longer needs setup" do
+    @item.save!
+    open_account = @item.enable_banking_accounts.create!(name: "Mine", uid: "hash_mine", currency: "EUR")
+    @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", currency: "EUR").ignore!
+    Sync.create!(syncable: @item)
+
+    assert_equal 1, @item.unlinked_accounts_count
+    assert_equal "0 synced, 1 need setup", @item.sync_status_summary
+
+    open_account.ignore!
+    assert_equal 0, @item.unlinked_accounts_count
+    assert_equal "0 accounts synced", @item.sync_status_summary
+  end
+
+  test "re-authorizing refreshes only the session identifiers of an ignored account" do
+    @item.save!
+    ignored = @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", account_id: "uid_old", currency: "EUR")
+    ignored.ignore!
+    provider = mock("enable_banking_provider")
+    provider.stubs(:create_session).returns(
+      session_id: "sess_new",
+      accounts: [
+        { uid: "uid_theirs", identification_hash: "hash_theirs", identification_hashes: [ "hash_theirs", "hash_alt" ],
+          currency: "EUR", name: "Renamed", iban: "FR7600001", balance: { amount: "10.00" } },
+        { uid: "uid_mine", identification_hash: "hash_mine", currency: "EUR", name: "Mine" }
+      ]
+    )
+    @item.stubs(:enable_banking_provider).returns(provider)
+
+    assert_no_changes -> { ignored.reload.attributes.except("account_id", "identification_hashes", "updated_at") } do
+      @item.complete_authorization(code: "code")
+    end
+    assert_equal "uid_theirs", ignored.account_id
+    assert_equal [ "hash_theirs", "hash_alt" ], ignored.identification_hashes
+    assert @item.enable_banking_accounts.exists?(uid: "hash_mine")
+  end
+
+  test "re-authorizing does not write back an account ignored after it was read" do
+    @item.save!
+    account = @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", account_id: "uid_old", currency: "EUR")
+    stale = EnableBankingAccount.find(account.id)
+    # Another request ignores the account after the re-authorization has read it.
+    account.ignore!
+    @item.enable_banking_accounts.stubs(:find_or_initialize_by).with(uid: "hash_theirs").returns(stale)
+    @item.stubs(:enable_banking_provider).returns(stub(create_session: {
+      session_id: "sess_new",
+      accounts: [ { uid: "uid_new", identification_hash: "hash_theirs", currency: "EUR", name: "Renamed", iban: "FR7600001" } ]
+    }))
+
+    @item.complete_authorization(code: "code")
+
+    account.reload
+    assert account.ignored?
+    assert_equal "Theirs", account.name
+    assert_nil account.raw_payload
+    assert_nil account.iban
+    assert_equal "uid_new", account.account_id
+  end
 end

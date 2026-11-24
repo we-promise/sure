@@ -195,7 +195,10 @@ class Provider::YahooFinance < Provider
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
-      cache_key = "search_#{symbol}_#{country_code}_#{exchange_operating_mic}"
+      # The cached values are Security Data objects. Rails treats an entry that no
+      # longer fits the class (TypeError: struct size differs) as an error, not a
+      # miss, so bump the version here whenever Security's members change.
+      cache_key = "search_v2_#{symbol}_#{country_code}_#{exchange_operating_mic}"
       if cached_result = get_cached_result(cache_key)
         cached_result
       else
