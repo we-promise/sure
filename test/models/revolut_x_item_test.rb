@@ -42,20 +42,19 @@ class RevolutXItemTest < ActiveSupport::TestCase
     assert plain.valid?
   end
 
-  test "a failed import is captured to the debug log and re-raised" do
+  test "a failed import is re-raised and leaves the status alone unless the credentials were rejected" do
     item = revolut_x_items(:one)
     provider = mock
     provider.stubs(:get_balances).raises(Provider::RevolutX::ApiError, "boom")
     item.stubs(:revolut_x_provider).returns(provider)
 
-    assert_difference -> { DebugLogEntry.where(provider_key: "revolut_x", level: "error").count }, 1 do
-      assert_raises(Provider::RevolutX::ApiError) { item.import_latest_revolut_x_data }
-    end
+    assert_raises(Provider::RevolutX::ApiError) { item.import_latest_revolut_x_data }
+    assert item.reload.good?
 
-    log = DebugLogEntry.where(provider_key: "revolut_x").order(:created_at).last
-    assert_equal "Revolut X import failed: boom", log.message
-    assert_equal item.family, log.family
-    assert_equal "Provider::RevolutX::ApiError", log.metadata["error_class"]
+    provider.stubs(:get_balances).raises(Provider::RevolutX::AuthenticationError, "bad key")
+
+    assert_raises(Provider::RevolutX::AuthenticationError) { item.import_latest_revolut_x_data }
+    assert item.reload.requires_update?
   end
 
   test "rejects an Ed25519 public key, which cannot sign" do

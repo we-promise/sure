@@ -72,17 +72,27 @@ en:
           one: "%{count} account synced"
           other: "%{count} accounts synced"
         partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
-  revolut_x_item:
     syncer:
-      checking_credentials: Checking credentials...
-      credentials_invalid: Revolut X API key missing or invalid. Add the API key Revolut X issued for this connection's public key.
-      importing_accounts: Importing accounts from Revolut X...
-      checking_configuration: Checking account configuration...
+      account_processing_failed:
+        one: "%{count} Revolut X account failed while processing."
+        other: "%{count} Revolut X accounts failed while processing."
+      account_sync_failed:
+        one: "%{count} Revolut X account sync could not be scheduled."
+        other: "%{count} Revolut X account syncs could not be scheduled."
+      accounts_failed:
+        one: "%{count} Revolut X account failed to import."
+        other: "%{count} Revolut X accounts failed to import."
       accounts_need_setup:
-        one: "%{count} account needs setup"
-        other: "%{count} accounts need setup"
-      processing_accounts: Processing account data...
-      processing_failed:
-        one: "%{count} Revolut X account failed to sync"
-        other: "%{count} Revolut X accounts failed to sync"
+        one: "%{count} account needs setup..."
+        other: "%{count} accounts need setup..."
       calculating_balances: Calculating balances...
+      checking_account_configuration: Checking account configuration...
+      credentials_invalid: Revolut X API key missing or invalid. Add the API key Revolut X issued for this connection's public key.
+      failed: Sync failed. Please try again or contact support.
+      import_failed: Revolut X import failed.
+      import_failed_with_error: "Revolut X import failed: %{error}"
+      importing_accounts: Importing accounts from Revolut X...
+      processing_transactions: Processing transactions...
+      transactions_failed:
+        one: "%{count} Revolut X account had transaction import failures."
+        other: "%{count} Revolut X accounts had transaction import failures."

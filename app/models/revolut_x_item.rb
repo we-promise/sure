@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-class RevolutXItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
+class RevolutXItem < ProviderItem
+  include Provided, Encryptable, DestroyableLater
 
   API_KEY_FORMAT = /\A[A-Za-z0-9]{64}\z/
 
@@ -35,22 +35,16 @@ class RevolutXItem < ApplicationRecord
   # connection ends up with a key the user can register.
   before_validation :generate_private_key, on: :create
 
-  def import_latest_revolut_x_data
+  # Revolut X keeps its own history floor, so sync_start_date is unused.
+  def import_latest_revolut_x_data(sync_start_date: nil)
     provider = revolut_x_provider
-    raise StandardError, "Revolut X credentials not configured" unless provider
+    raise Provider::RevolutX::AuthenticationError, "Revolut X credentials not configured" unless provider
 
-    RevolutXItem::Importer.new(self, revolut_x_provider: provider).import
-  rescue StandardError => e
-    Rails.logger.error "RevolutXItem #{id} - Failed to import: #{e.full_message}"
-    DebugLogEntry.capture(
-      category: "provider_sync_error",
-      level: "error",
-      message: "Revolut X import failed: #{e.message}",
-      source: self.class.name,
-      provider_key: "revolut_x",
-      family: family,
-      metadata: { revolut_x_item_id: id, error_class: e.class.name }
-    )
+    result = RevolutXItem::Importer.new(self, revolut_x_provider: provider).import
+    update!(status: :good) if requires_update?
+    result
+  rescue Provider::RevolutX::AuthenticationError
+    update!(status: :requires_update)
     raise
   end
 

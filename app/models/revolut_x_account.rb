@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class RevolutXAccount < ApplicationRecord
+class RevolutXAccount < ProviderAccount
   include Encryptable
 
   if encryption_ready?
@@ -10,14 +10,7 @@ class RevolutXAccount < ApplicationRecord
 
   belongs_to :revolut_x_item
 
-  has_one :account_provider, as: :provider, dependent: :destroy
-  has_one :account, through: :account_provider, source: :account
-
   validates :name, :account_id, :account_type, :currency, presence: true
-
-  def current_account
-    account
-  end
 
   # An asset left out of the account's value because nothing prices it.
   def report_unvalued_asset(symbol, source:)
