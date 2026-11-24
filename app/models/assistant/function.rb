@@ -9,6 +9,11 @@ class Assistant::Function
     end
   end
 
+  # The AI feature (a key in Ai::Routes::MATRIX) a tool calls a model for, if any. A tool that
+  # sets one is listed only while that feature is available, so chat and MCP clients never see a
+  # tool that can't work by setup.
+  class_attribute :ai_feature, instance_accessor: false
+
   MAX_PAGE_SIZE = 100
 
   def initialize(user)
