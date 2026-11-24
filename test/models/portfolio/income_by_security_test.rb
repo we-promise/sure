@@ -230,7 +230,7 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
     lay_flat_balances cash_by_date: { @mar => 30 }
 
     expected = daily_returns_over_period.income_by_security
-    original = Portfolio::FlowClassifier.new(scope_account_ids: [ @account.id ]).sql_case
+    original = daily_returns_over_period.send(:flow_classifier).sql_case
     Portfolio::FlowClassifier.any_instance.stubs(:sql_case)
       .returns("CASE WHEN false THEN ':probe' ELSE (#{original}) END")
 
