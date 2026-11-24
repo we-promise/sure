@@ -1,0 +1,79 @@
+<div id="retirement-planner" class="space-y-4">
+  <% if missing_input %>
+    <div data-planner-needs="<%= missing_input %>">
+      <p class="text-sm text-secondary"><%= t("retirement_plans.planner.needs.#{missing_input}") %></p>
+      <div class="mt-3">
+        <%= render DS::Link.new(text: t("retirement_plans.planner.settings"), variant: "secondary", size: "sm",
+                                icon: "settings-2", href: helpers.edit_retirement_plan_path, frame: :modal) %>
+      </div>
+    </div>
+  <% else %>
+    <% if fire? && solution.retirement_year %>
+      <p class="text-sm text-primary" data-planner-outcome="fire" data-retirement-year="<%= solution.retirement_year %>">
+        <%= t("retirement_plans.planner.outcome.fire", year: solution.retirement_year, age: solution.retirement_age) %>
+      </p>
+    <% elsif fire? %>
+      <p class="text-sm text-warning" data-planner-outcome="fire-unreachable">
+        <%= t("retirement_plans.planner.outcome.fire_unreachable", end_age: plan.end_age, age: solution.depletion_age) %>
+      </p>
+    <% elsif simulation.survives? %>
+      <p class="text-sm text-primary" data-planner-outcome="lasts">
+        <%= t("retirement_plans.planner.outcome.lasts", end_age: plan.end_age) %>
+      </p>
+    <% else %>
+      <p class="text-sm text-warning" data-planner-outcome="runs-out">
+        <%= t("retirement_plans.planner.outcome.runs_out", age: simulation.depletion_age) %>
+      </p>
+    <% end %>
+    <p class="text-xs text-subdued"><%= t("retirement_plans.planner.assumptions") %></p>
+
+    <% if milestones.any? %>
+      <div id="retirement-planner-milestones">
+        <p class="text-xs text-secondary mb-2"><%= t("retirement_plans.planner.milestones.title") %></p>
+        <ul class="text-sm space-y-1">
+          <% milestones.each do |milestone| %>
+            <%= tag.li class: "flex justify-between gap-4",
+                       data: { milestone: milestone.key, milestone_reached: (true if milestone.reached_already), milestone_year: milestone.year }.compact do %>
+              <span class="text-primary"><%= milestone_name(milestone) %></span>
+              <span class="text-secondary tabular-nums"><%= milestone_when(milestone) %></span>
+            <% end %>
+          <% end %>
+        </ul>
+        <% if coast? %>
+          <p class="text-xs text-subdued mt-2"><%= t("retirement_plans.planner.milestones.coast_hint", year: plan.retirement_date.year) %></p>
+        <% end %>
+        <% if fi_before_fi_number? %>
+          <p class="text-xs text-subdued mt-2" data-fire-before-fi-number><%= fi_before_fi_number_note %></p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if rows.size >= 2 %>
+      <div>
+        <p class="text-xs text-secondary mb-2"><%= t("retirement_plans.planner.chart") %></p>
+        <div class="w-full h-64 privacy-sensitive" data-planner-chart
+             data-controller="time-series-chart"
+             data-time-series-chart-data-value="<%= chart_series.to_json %>"></div>
+      </div>
+    <% end %>
+
+    <% if rows.any? %>
+      <%= render DS::Table.new(rows: rows, id: "retirement-planner-table", sticky_header: true,
+                               label: t("retirement_plans.planner.table_label"),
+                               row_class: ->(row) { row_class(row) }, row_opts: ->(row) { row_attributes(row) }) do |table| %>
+        <% table.with_column(t("retirement_plans.planner.columns.year"), row_header: true) do |row| %>
+          <%= row.year %>
+          <% milestones_in(row.year).each do |milestone| %>
+            <span class="text-xs text-secondary ml-1" data-row-milestone="<%= milestone.key %>"><%= milestone_name(milestone) %></span>
+          <% end %>
+        <% end %>
+        <% table.with_column(t("retirement_plans.planner.columns.age")) { |row| row.age.to_s } %>
+        <% table.with_column(t("retirement_plans.planner.columns.contribution"), numeric: true, class: "privacy-sensitive text-secondary") { |row| money(row.contribution) } %>
+        <% table.with_column(t("retirement_plans.planner.columns.withdrawal"), numeric: true, class: "privacy-sensitive text-secondary") { |row| money(row.withdrawal) } %>
+        <% table.with_column(t("retirement_plans.planner.columns.growth"), numeric: true, class: "privacy-sensitive text-secondary") { |row| money(row.growth) } %>
+        <% table.with_column(t("retirement_plans.planner.columns.end_value"), numeric: true, class: "privacy-sensitive") { |row| money(row.end_value) } %>
+        <% table.with_column(t("retirement_plans.planner.columns.end_value_real"), numeric: true, class: "privacy-sensitive text-secondary") { |row| money(row.end_value_real) } %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>
