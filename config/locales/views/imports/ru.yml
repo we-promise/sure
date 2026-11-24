@@ -451,7 +451,6 @@ ru:
         вернитесь к импортам.
       unknown_state_title: Неизвестное состояние
       errors:
-        provider_not_configured: ИИ-провайдер не настроен
         provider_no_pdf_support: ИИ-провайдер не поддерживает обработку PDF
       view_summary: Открыть сводку импорта
       already_recorded_note:

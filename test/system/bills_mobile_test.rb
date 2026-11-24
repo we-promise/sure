@@ -28,6 +28,7 @@ class BillsMobileTest < ApplicationSystemTestCase
     # The AI chips render only with consent plus a provider, so without this
     # the overview would be measured without a whole strip it can carry.
     Provider::Registry.stubs(:preferred_llm_provider).returns(OpenStruct.new)
+    use_ai_routes
 
     # A long name, a five-figure amount and a note: the row at its widest.
     bill = @family.recurring_transactions.create!(

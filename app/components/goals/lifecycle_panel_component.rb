@@ -100,9 +100,12 @@ class Goals::LifecyclePanelComponent < ApplicationComponent
 
   def show_catch_up? = goal.status == :behind && goal.monthly_target_amount.present?
 
-  def show_projection_legend? = goal.target_date.present?
+  # No swatch for a projection line the chart does not draw.
+  def show_projection_legend? = goal.target_date.present? && goal.pace_measurable?
 
+  # The chart draws the required line from the target alone, so this swatch
+  # does not depend on a measurable pace.
   def show_required_legend?
-    goal.monthly_target_amount.to_d.positive? && goal.remaining_amount.to_d.positive?
+    goal.target_date.present? && goal.monthly_target_amount.to_d.positive? && goal.remaining_amount.to_d.positive?
   end
 end
