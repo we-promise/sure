@@ -3,9 +3,10 @@ nb:
   properties:
     edit:
       edit: Rediger %{account}
+      title: Legg inn eiendom manuelt
     form:
       address_line1: Gateadresse
-      address_line1_placeholder: Slottspplassen 1
+      address_line1_placeholder: Slottsplassen 1
       area: Boareal
       area_placeholder: '35'
       area_unit: Måleenhet
@@ -23,6 +24,36 @@ nb:
       year_built_placeholder: '1849'
     new:
       title: Angi eiendomsdetaljer
+      next: Neste
+      avm_option: Legg til via %{provider}
+      avm_title: Legg til eiendom via %{provider}
+      avm_description: Skriv inn et navn på eiendommen og adressen. %{provider} slår opp eiendomsdetaljene og estimert markedsverdi for deg.
+      avm_us_only: '%{provider} støtter bare eiendommer i USA.'
+      avm_submit: Slå opp eiendom
+      avm_preview_title: Bekreft eiendomsdetaljer
+      avm_preview_description: Dette er hva %{provider} fant. Se over detaljene før du legger til eiendommen – ingenting er opprettet ennå.
+      avm_preview_no_record: '%{provider} fant ingen eiendomsregistrering på denne adressen, så verdien som vises, er et estimat basert på området rundt. Dobbeltsjekk adressen før du fortsetter.'
+      avm_preview_back: Tilbake
+      avm_preview_confirm: Legg til eiendom
+      avm_uk_only: "%{provider} støtter bare boligeiendommer i Storbritannia."
+      avm_uprn_label: "UPRN"
+      avm_uprn_placeholder: "100023336956"
+      avm_uprn_help: "UPRN (Unique Property Reference Number, opptil 12 sifre) identifiserer hver adresse i Storbritannia. Du finner det på GeoPlace sin findmyaddress.co.uk, eller du kan spørre kommunen. %{provider} bruker det til å verdsette eiendommen gratis."
+      avm_county_label: "Fylke (valgfritt)"
+      avm_town_label: "By eller tettsted"
+      avm_postcode_label: "Postnummer"
+      avm_descriptions:
+        terrascoutx: "Skriv inn et navn på eiendommen og adressen. %{provider} slår opp eiendomsdetaljene og den takserte verdien fra fylkets nyeste eiendomsskatteliste. Det er ikke et estimat av dagens markedsverdi."
+      avm_roll_value_notes:
+        terrascoutx: "%{provider} oppgir den takserte verdien fra fylkets nyeste eiendomsskatteliste. Den er ikke et estimat av dagens markedsverdi, så den kan avvike fra hva eiendommen ville blitt solgt for."
+      avm_preview_uprn: "UPRN"
+      avm_preview_range: "Estimatintervall"
+      avm_preview_confidence: "Pålitelighet"
+      avm_confidence:
+        high: "Høy"
+        medium: "Middels"
+        low: "Lav"
+      avm_attribution_chimnie: "Verdidata fra Chimnie. Inneholder OS-data © Crown copyright and database right, Royal Mail-data © Royal Mail copyright and database right og HM Land Registry-data © Crown copyright and database right, lisensiert under Open Government Licence v3.0."
     overview:
       living_area: Boareal
       market_value: Markedsverdi
@@ -30,3 +61,82 @@ nb:
       trend: Trend
       unknown: Ukjent
       year_built: Byggeår
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+      chimnie: "Chimnie"
+      terrascoutx: "TerraScoutX"
+    address:
+      title: Legg inn eiendom manuelt
+      address_line1_label: Adresselinje 1
+      address_line1_placeholder: Storgata 1
+      city_label: Poststed
+      city_placeholder: Oslo
+      state_region_label: Fylke/region
+      state_region_placeholder: Oslo
+      postal_code_label: Postnummer
+      postal_code_placeholder: '0150'
+      country_label: Land
+      country_placeholder: Norge
+      save: Lagre
+    balances:
+      title: Legg inn eiendom manuelt
+      market_value_label: Estimert markedsverdi
+      market_value_tooltip: Den estimerte markedsverdien til eiendommen din. Tallet finner du ofte på nettsteder som Zillow eller Redfin, og det er aldri helt nøyaktig.
+      save: Lagre
+      next: Neste
+    overview_fields:
+      name_label: Navn
+      name_placeholder: Hytte
+      subtype_prompt: Velg type
+      property_type_label: Eiendomstype
+      year_built_label: Byggeår (valgfritt)
+      year_built_placeholder: '1990'
+      area_label: Areal (valgfritt)
+      area_placeholder: '1200'
+      square_feet: Kvadratfot
+      square_meters: Kvadratmeter
+      area_unit_label: Arealenhet
+    tabs:
+      overview:
+        living_area: Boareal
+        market_value: Markedsverdi
+        purchase_price: Kjøpspris
+        trend: Trend
+        unknown: Ukjent
+        year_built: Byggeår
+        edit_account_details: Rediger kontodetaljer
+        trend_in_currency: "Utvikling i %{currency}"
+        rate_unavailable: "Valutakurs utilgjengelig"
+        refresh_valuation: "Oppdater verdivurdering"
+        valuation_source: "Verdivurdert av %{provider}, sist oppdatert %{date}"
+        link_valuation: "Oppdater verdien automatisk med %{provider}"
+        link_valuation_description: "Verdien på denne eiendommen oppdateres bare manuelt."
+    subtypes:
+      apartment:
+        short: Leilighet
+        long: Leilighet
+      plot:
+        short: Tomt
+        long: Tomt / grunn
+      commercial:
+        short: Næring
+        long: Næringseiendom
+      rented:
+        short: Utleie
+        long: Utleieeiendom
+      agri_land:
+        short: Landbruk
+        long: Landbrukseiendom
+    form_tabs:
+      address: Adresse
+      overview: Oversikt
+      value: Verdi
+    refresh_valuation:
+      queued: "Oppdateringen av verdivurderingen har startet. Den nye verdien vises snart."
+      not_linked: "Denne eiendommen er ikke koblet til en leverandør av verdivurderinger."
+      not_configured: "%{provider} er ikke konfigurert. Legg til API-nøkkelen under Innstillinger → Selvhosting for å oppdatere denne verdivurderingen."
+    link_valuation:
+      linked: "Koblet til %{provider}, og eiendommens verdi er oppdatert."
+      link_failed: "%{provider} kunne ikke verdsette denne eiendommen, så den ble ikke koblet til. Sjekk at adressen er riktig, og prøv igjen."
+      not_linkable: "Denne eiendommen kan ikke kobles til den leverandøren. Sjekk at adressen er fullstendig og i et støttet land, og at kontovalutaen samsvarer med leverandøren."
