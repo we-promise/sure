@@ -25,6 +25,35 @@ class RecurringTransaction::AiSetupSuggesterTest < ActiveSupport::TestCase
     assert_includes error.message, "no JSON"
   end
 
+  # A click waits for its answer: a failure marks the route down for jobs, but the next click, in
+  # this family or another, still tries the provider, as each click did before down marks.
+  [ Ai::Error::Timeout, Ai::Error::RateLimited, Ai::Error::Unauthorized ].each do |error|
+    test "a click that failed with #{error.name.demodulize} doesn't lock bill setup out: the next one reaches the provider" do
+      Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+      stub_ai(:bill_setup, raises: error.new("the provider failed"))
+      assert_raises(Suggester::Error) { Suggester.new(@family, user: @user).suggest_from_entries(@entries) }
+
+      requests = stub_ai(:bill_setup, returns: raw(name: "Gym"))
+      suggestion = Suggester.new(@family, user: @user).suggest_from_entries(@entries)
+
+      assert_equal 1, requests.size, "the second click reached the provider"
+      assert_equal "Gym", suggestion.name
+    end
+  end
+
+  test "one family's failed click doesn't lock bill setup out for another family" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    stub_ai(:bill_setup, raises: Ai::Error::RateLimited.new("429"))
+    assert_raises(Suggester::Error) { Suggester.new(@family, user: @user).suggest_from_entries(@entries) }
+
+    requests = stub_ai(:bill_setup, returns: raw(name: "Gym"))
+    other = users(:empty)
+    suggestion = Suggester.new(other.family, user: other).suggest_from_entries(@entries)
+
+    assert_equal 1, requests.size, "the other family's click reached the provider"
+    assert_equal "Gym", suggestion.name
+  end
+
   test "sends the charges and the family's categories through the bill_setup prompt" do
     requests = stub_ai(:bill_setup, returns: raw(name: "Gym"))
 

@@ -485,7 +485,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     Ai::DownMarks.stubs(:state).returns(:failing)
     stub_ai(:detect_merchants) { flunk "no route should be called" }
 
-    assert_kind_of Ai::Error::Refused, generation(1).call(batches: 1).error
+    assert_kind_of Ai::Error::Refused, Ai::Sequencer.with_lane(:background) { generation(1).call(batches: 1) }.error
   end
 
   test "routes all marked down for a passing failure stay unreachable, so the job retries" do
@@ -493,7 +493,40 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     Ai::DownMarks.stubs(:state).returns(:passing)
     stub_ai(:detect_merchants) { flunk "no route should be called" }
 
-    assert_kind_of Ai::Error::Unreachable, generation(1).call(batches: 1).error
+    error = Ai::Sequencer.with_lane(:background) { generation(1).call(batches: 1) }.error
+    assert_kind_of Ai::Error::Unreachable, error
+    assert_kind_of Ai::Error::MarkedDown, error, "nothing was sent, so the job waits the mark out"
+  end
+
+  test "an interactive call tries every route when all are marked down, for any reason" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    Ai::DownMarks.stubs(:state).returns(:failing)
+    Ai::DownMarks.stubs(:state).with { _1.endpoint.name == "gpu" }.returns(:passing)
+    requests = stub_ai(:detect_merchants) { _1.model.endpoint.name == "gpu" ? raise(Ai::Error::Timeout, "slow") : AiTestGeneration.answer(_1) }
+
+    result = generation(1).call(batches: 1)   # outside a job: interactive
+
+    assert result.success?
+    assert_equal %w[gpu openai], requests.map { _1.model.endpoint.name }
+  end
+
+  test "an interactive call still skips a marked route while another is up" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    Ai::DownMarks.stubs(:state).returns(:up)
+    Ai::DownMarks.stubs(:state).with { _1.endpoint.name == "gpu" }.returns(:passing)
+    requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+
+    assert generation(1).call(batches: 1).success?
+    assert_equal %w[openai], requests.map { _1.model.endpoint.name }
+  end
+
+  test "a failed interactive call still marks the route down, so a background job after it sends nothing" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    requests = stub_ai(:detect_merchants, raises: Ai::Error::Timeout.new("slow"))
+
+    assert_kind_of Ai::Error::Timeout, generation(1).call(batches: 1).error, "a request was sent, so it isn't MarkedDown"
+    assert_kind_of Ai::Error::MarkedDown, Ai::Sequencer.with_lane(:background) { generation(1).call(batches: 1) }.error
+    assert_equal 1, requests.size
   end
 
   test "an item the answer leaves out is logged as unanswered, while the rest of the batch is kept" do

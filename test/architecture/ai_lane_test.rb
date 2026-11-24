@@ -62,4 +62,33 @@ class AiLaneTest < ActiveSupport::TestCase
     end
     assert_nil Fiber[:ai_lane]
   end
+
+  # Down marks: someone waits in the interactive lane, so a call there tries routes every one of
+  # which is marked down; prompt and background jobs fail at once and wait the mark out.
+  { interactive: 1, prompt: 0, background: 0 }.each do |lane, sent|
+    test "with every route marked down, a call in the #{lane} lane sends #{sent} request#{"s" unless sent == 1}" do
+      use_ai_routes(detect_merchants: %w[gpu/qwen3-8b])
+      Ai::DownMarks.stubs(:state).returns(:passing)
+      requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+      generation = AiTestGeneration.new(transactions: [ { id: "t1", description: "AMZN", merchant: nil } ], family: families(:dylan_family))
+
+      result = Ai::Sequencer.with_lane(lane) { generation.call(batches: 1) }
+
+      assert_equal sent, requests.size
+      assert_kind_of Ai::Error::MarkedDown, result.error if sent.zero?
+    end
+  end
+
+  test "a job on the interactive queue tries past down marks; one on the background queue doesn't" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b])
+    Ai::DownMarks.stubs(:state).returns(:passing)
+    requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+    job = Class.new(ApplicationJob) do
+      def perform = AiTestGeneration.new(transactions: [ { id: "t1", description: "AMZN", merchant: nil } ], family: Family.first).call(batches: 1)
+    end
+
+    assert job.set(queue: Ai::Routes::QUEUES.fetch(:interactive)).perform_now.success?
+    assert_kind_of Ai::Error::MarkedDown, job.set(queue: Ai::Routes::QUEUES.fetch(:background)).perform_now.error
+    assert_equal 1, requests.size
+  end
 end

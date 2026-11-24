@@ -58,6 +58,16 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     run_queue
   end
 
+  # Like run_queue, moving the clock to each job's scheduled time, so down marks expire as they would.
+  def run_queue_in_time
+    until enqueued_jobs.empty?
+      job = enqueued_jobs.shift
+      at = job[:at] || job["at"]
+      travel_to Time.at(at) if at && at > Time.now.to_f
+      ActiveJob::Base.execute(job.stringify_keys)
+    end
+  end
+
   test "runs one batch per job and enqueues the rest at the back, then finishes once" do
     use_ai_model_settings(batch_size: 2)
     stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
@@ -390,6 +400,27 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     run_queue
 
     assert_equal [ [ :failed, @family.id, Ai::Error::Timeout ] ], Requester.log
+  end
+
+  test "a job that finds every route marked down waits the mark out, without spending one of its five tries" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    requests = stub_ai(:detect_merchants, raises: Ai::Error::Timeout.new("slow"))
+
+    Ai::GenerationJob.perform_later(:detect_merchants, ai_run_args(:detect_merchants, ids: ID.values_at(*%w[a]), family: @family))
+    run_queue_in_time
+
+    assert_equal 5, requests.size, "each of the five tries reached the provider"
+    assert_equal [ [ :failed, @family.id, Ai::Error::Timeout ] ], Requester.log
+  end
+
+  test "a job that only ever finds its routes marked down gives up through the requester, without a request" do
+    Ai::DownMarks.stubs(:state).returns(:passing)
+    stub_ai(:detect_merchants) { flunk "no route should be called" }
+
+    Ai::GenerationJob.perform_later(:detect_merchants, ai_run_args(:detect_merchants, ids: ID.values_at(*%w[a]), family: @family))
+    run_queue
+
+    assert_equal [ [ :failed, @family.id, Ai::Error::MarkedDown ] ], Requester.log
   end
 
   test "any other error ends the run and tells the requester once" do

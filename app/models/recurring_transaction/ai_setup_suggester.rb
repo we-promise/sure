@@ -45,7 +45,8 @@ class RecurringTransaction
     end
 
     private
-      # Runs on the web thread: smart-fill and smart-configure wait for the answer.
+      # Runs on the web thread: smart-fill and smart-configure wait for the answer. Outside a job the
+      # lane is interactive, so a click tries the provider even while every route is marked down.
       def run(charges:, current_config:)
         raise Error, "No charge history to analyze" if charges.empty?
 

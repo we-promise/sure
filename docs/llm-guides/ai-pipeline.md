@@ -222,6 +222,10 @@ flowchart LR
   one release. `ApplicationJob` runs each job in its queue's lane (`Ai::Sequencer.lane`, fiber
   storage, so Jev's threads share it); evals and the console choose one with
   `Ai::Sequencer.with_lane(:prompt) { }`, and a call outside any lane counts as interactive.
+- **Down marks wait only for jobs.** When every route is marked down (`Ai::DownMarks`), a call in
+  the interactive lane, where someone waits, tries the routes anyway; prompt and background jobs
+  fail at once with `Ai::Error::MarkedDown`, which `Ai::GenerationJob` waits out without spending
+  a try. Marks are written in every lane, and a marked route is skipped while another is up.
 - **Each local model host has a gate.** Every request to a local endpoint holds a place at its
   host's `Ai::Gate` while it runs (`Ai::Transport::Instrumenter`), one gate per host and port in
   each process (`Ai::Sequencer.gate_for`), sized by llama.cpp's `total_slots` (`GET /props`),
