@@ -127,6 +127,7 @@ en:
         start_year_placeholder: Now
         end_year: To year
         end_year_placeholder: End of plan
+        end_year_hint: Not used for a one-off.
         indexed: Rises with inflation
         indexed_hint: Turn off for fixed amounts, such as a loan repayment.
         save: Save
