@@ -68,7 +68,11 @@ class Tag < ApplicationRecord
     begin
       # A savepoint, so a unique-index error leaves an enclosing transaction usable.
       transaction(requires_new: true) do
-        move_taggings_to(replacement) if replacement
+        if replacement
+          move_taggings_to(replacement)
+          # Properties counting this tag's transactions as costs follow them.
+          Property.where(cost_tag_id: id).update_all cost_tag_id: replacement.id
+        end
         destroy!
       end
     rescue ActiveRecord::RecordNotUnique => e
