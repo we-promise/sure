@@ -651,14 +651,33 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_equal "negative_weight", last_holdings_log.metadata["reason"]
   end
 
+  # A Boolean is not a weight. `true` raised in `BigDecimal`, but `false` read
+  # as blank and was stored with no weight.
   test "a non-numeric weight skips that row and stores the rest" do
-    assert_difference -> { holdings_log_count }, 1 do
-      import(info(constituents: [ constituent("AAA", "Unknown", "n/a"), constituent("BBB", "Other", 2) ]))
-    end
+    [ "n/a", true, false ].each do |weight|
+      @security.update_columns(constituents_fetched_at: nil)
 
-    assert_not_nil @security.reload.constituents_fetched_at, "the fund was left unstamped"
-    assert_equal %w[BBB], @security.constituents.pluck(:ticker)
-    assert_equal "non_numeric_weight", last_holdings_log.metadata["reason"]
+      assert_difference -> { holdings_log_count }, 1, "for weight #{weight.inspect}" do
+        import(info(constituents: [ constituent("AAA", "Unknown", weight), constituent("BBB", "Other", 2) ]))
+      end
+
+      assert_not_nil @security.reload.constituents_fetched_at, "unstamped for weight #{weight.inspect}"
+      assert_equal %w[BBB], @security.constituents.pluck(:ticker), "for weight #{weight.inspect}"
+      assert_equal "non_numeric_weight", last_holdings_log.metadata["reason"]
+    end
+  end
+
+  test "a missing weight is stored as no weight" do
+    [ nil, "" ].each do |weight|
+      @security.update_columns(constituents_fetched_at: nil)
+
+      assert_no_difference -> { holdings_log_count }, "for weight #{weight.inspect}" do
+        import(info(constituents: [ constituent("AAA", "Unweighted", weight), constituent("BBB", "Other", 2) ]))
+      end
+
+      assert_equal({ "AAA" => nil, "BBB" => 2 }, @security.reload.constituents.pluck(:ticker, :weight).to_h,
+                   "for weight #{weight.inspect}")
+    end
   end
 
   test "a blank ticker skips that row and stores the rest" do
