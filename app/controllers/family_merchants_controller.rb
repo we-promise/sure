@@ -1,5 +1,8 @@
 class FamilyMerchantsController < ApplicationController
+  include AiFeatureGuard
+
   before_action :require_non_guest!, except: %i[index]
+  requires_ai :enhance_merchants, only: :enhance
   before_action :set_merchant, only: %i[edit update destroy]
 
   def index
@@ -29,7 +32,7 @@ class FamilyMerchantsController < ApplicationController
     @unlinked_merchants = ProviderMerchant.where(id: recently_unlinked_ids - assigned_ids).alphabetically
 
     @enhanceable_count = @all_provider_merchants.where(website_url: [ nil, "" ]).count
-    @llm_available = Provider::Registry.get_provider(:openai).present?
+    @llm_available = Ai.available?(:enhance_merchants, family: Current.family, user: Current.user)
 
     @pagy_family_merchants, @family_merchants = pagy(family_scope.with_attached_logo, page_param: :family_page, limit: safe_per_page)
     @pagy_provider_merchants, @provider_merchants = pagy(provider_scope, page_param: :provider_page, limit: safe_per_page)

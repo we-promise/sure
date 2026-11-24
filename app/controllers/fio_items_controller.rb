@@ -335,9 +335,6 @@ class FioItemsController < ApplicationController
 
     # Create and sync a Sure account from the Fio account's statement header.
     def create_account_from_fio(fio_account, account_type)
-      # Linking clears any prior skip so a future unlink re-prompts for setup.
-      fio_account.update!(ignored: false) if fio_account.ignored?
-
       # Same normalization FioAccount::Processor applies: Fio reports a drawn loan or
       # overdraft negative, Sure holds a liability positive. Without it the new account
       # shows a negative debt until a sync corrects it, and the next sync may well be
