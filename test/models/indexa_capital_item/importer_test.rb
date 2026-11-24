@@ -1,0 +1,83 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class IndexaCapitalItem::ImporterTest < ActiveSupport::TestCase
+  setup do
+    @item = indexa_capital_items(:configured_with_token)
+    @ignored = indexa_capital_accounts(:pension_plan)
+    @ignored.ignore!
+    @provider = mock("indexa_capital_provider")
+    @provider.stubs(:list_accounts).returns([
+      { account_number: "LPYH3MCQ", name: "Mutual Fund", type: "mutual", status: "active", currency: "EUR" },
+      { account_number: "DCU8HWEP", name: "Someone else's pension", type: "pension", status: "active", currency: "EUR" }
+    ])
+  end
+
+  test "an ignored account is neither fetched nor updated, and survives the sync" do
+    @provider.expects(:get_account_balance).with(account_number: "LPYH3MCQ").returns(100)
+    @provider.expects(:get_account_balance).with(account_number: "DCU8HWEP").never
+
+    assert_no_changes -> { @ignored.reload.attributes } do
+      IndexaCapitalItem::Importer.new(@item, indexa_capital_provider: @provider).import
+    end
+
+    assert @ignored.reload.ignored?
+    assert_equal 100, indexa_capital_accounts(:mutual_fund).reload.current_balance
+  end
+
+  test "an account ignored while its balance is being fetched is not written back" do
+    mutual_fund = indexa_capital_accounts(:mutual_fund)
+    provider = Object.new
+    provider.define_singleton_method(:list_accounts) do
+      [ { account_number: "LPYH3MCQ", name: "Mutual Fund", type: "mutual", status: "active", currency: "EUR" } ]
+    end
+    provider.define_singleton_method(:get_account_balance) do |account_number:|
+      # The user skips the account from another request while this call is in flight.
+      IndexaCapitalAccount.find(mutual_fund.id).ignore!
+      100
+    end
+
+    IndexaCapitalItem::Importer.new(@item, indexa_capital_provider: provider).import
+
+    mutual_fund.reload
+    assert mutual_fund.ignored?
+    assert_nil mutual_fund.current_balance
+    assert_nil mutual_fund.raw_payload
+  end
+
+  test "an account unlinked and ignored while its holdings are being fetched is not written back" do
+    mutual_fund = indexa_capital_accounts(:mutual_fund)
+    mutual_fund.ensure_account_provider!(
+      Account.create!(family: @item.family, name: "My Fund", balance: 0, currency: "EUR", accountable: Investment.new)
+    )
+    provider = Object.new
+    provider.define_singleton_method(:list_accounts) do
+      [ { account_number: "LPYH3MCQ", name: "Mutual Fund", type: "mutual", status: "active", currency: "EUR" } ]
+    end
+    provider.define_singleton_method(:get_account_balance) { |account_number:| 100 }
+    provider.define_singleton_method(:get_holdings) do |account_number:|
+      # The user unlinks and skips the account from another request while this call is in flight.
+      AccountProvider.find_by!(provider: mutual_fund).destroy!
+      IndexaCapitalAccount.find(mutual_fund.id).ignore!
+      [ { instrument: { identifier: "IE00B03HCZ61" }, titles: 10, amount: 1000 } ]
+    end
+
+    IndexaCapitalItem::Importer.new(@item, indexa_capital_provider: provider).import
+
+    mutual_fund.reload
+    assert mutual_fund.ignored?
+    assert_equal [], mutual_fund.raw_holdings_payload
+    assert_nil mutual_fund.last_holdings_sync
+    assert_not @item.reload.raw_payload.key?("holdings_found")
+  end
+
+  test "an account still listed upstream is kept when importing it fails" do
+    @provider.stubs(:get_account_balance).returns(100)
+    IndexaCapitalAccount.any_instance.stubs(:upsert_from_indexa_capital!).raises(ActiveRecord::RecordInvalid)
+
+    assert_no_difference -> { @item.indexa_capital_accounts.count } do
+      IndexaCapitalItem::Importer.new(@item, indexa_capital_provider: @provider).import
+    end
+  end
+end
