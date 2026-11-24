@@ -324,6 +324,37 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
       let(:id) { transaction.id }
 
+      response '200', 'transfer whose other account the caller cannot open' do
+        schema '$ref' => '#/components/schemas/Transaction'
+
+        # A transfer from an account shared with the caller to one they cannot
+        # open, so the null other_account is checked against the schema.
+        let(:id) do
+          owner = family.users.create!(
+            email: 'api-transfer-owner@example.com',
+            password: 'password123',
+            password_confirmation: 'password123'
+          )
+          shared_account = Account.create!(
+            family: family, owner: owner, name: 'Shared Checking', balance: 1000,
+            currency: 'USD', accountable: Depository.new
+          )
+          shared_account.account_shares.create!(user: user, permission: 'read_only', include_in_finances: true)
+          hidden_account = Account.create!(
+            family: family, owner: owner, name: 'Hidden Savings', balance: 0,
+            currency: 'USD', accountable: Depository.new
+          )
+          Transfer::Creator.new(
+            family: family, source_account_id: shared_account.id, destination_account_id: hidden_account.id,
+            date: Date.current, amount: 100
+          ).create.outflow_transaction_id
+        end
+
+        run_test! do |response|
+          expect(JSON.parse(response.body).dig('transfer', 'other_account')).to be_nil
+        end
+      end
+
       response '200', 'transaction retrieved' do
         schema '$ref' => '#/components/schemas/Transaction'
 
