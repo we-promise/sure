@@ -152,6 +152,63 @@ class RedbarkAccount::LoanDetailsProcessorTest < ActiveSupport::TestCase
                  DebugLogEntry.order(:created_at).last.message
   end
 
+  test "a single tiered entry whose band misses the balance records nothing" do
+    detail lendingRates: [ tiered("0.0699", 0, 250_000) ]
+
+    process
+
+    assert_empty schedule, "a rate that applies to another balance band was recorded as the loan's rate"
+  end
+
+  # The likeliest real shape: the top band has no maximum.
+  test "an open top band holds the balance" do
+    detail lendingRates: [ tiered("0.0693", 0, 300_000), tiered("0.0693", 300_000, nil) ]
+
+    process
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.93") }, rates)
+  end
+
+  test "a band with no minimum starts at zero" do
+    detail lendingRates: [ tiered("0.0693", nil, 500_000) ]
+
+    process
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.93") }, rates)
+  end
+
+  test "empty-string bounds count as absent" do
+    detail lendingRates: [ tiered("0.0693", "", "") ]
+
+    process
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.93") }, rates)
+  end
+
+  test "a balance on a band's upper bound is inside it" do
+    detail lendingRates: [ tiered("0.0693", 0, 400_000) ]
+
+    process
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.93") }, rates)
+  end
+
+  test "a band in a unit other than dollars does not hold the balance" do
+    detail lendingRates: [ tiered("0.0693", 0, 500_000, unit: "PERCENT") ]
+
+    process
+
+    assert_empty schedule, "a band measured in another unit was read as dollars"
+  end
+
+  test "a band with an unparseable bound does not hold the balance" do
+    detail lendingRates: [ tiered("0.0693", 0, "lots") ]
+
+    process
+
+    assert_empty schedule, "a band whose bound could not be read was taken to hold the balance"
+  end
+
   test "a variable entry with an unusable rate makes the rate unknown" do
     detail lendingRates: [
       { "rateType" => "VARIABLE", "rate" => "0.0699" },
@@ -679,11 +736,10 @@ class RedbarkAccount::LoanDetailsProcessorTest < ActiveSupport::TestCase
       RedbarkAccount::LoanDetailsProcessor.new(@redbark_account, as_of: @as_of).process
     end
 
-    def tiered(rate, minimum, maximum)
-      {
-        "rateType" => "VARIABLE", "rate" => rate,
-        "tiers" => [ { "name" => "DEBIT", "minimumValue" => minimum, "maximumValue" => maximum } ]
-      }
+    # A nil bound is left out of the tier, as a bank omitting it would.
+    def tiered(rate, minimum, maximum, unit: nil)
+      tier = { "name" => "DEBIT", "minimumValue" => minimum, "maximumValue" => maximum, "unitOfMeasure" => unit }.compact
+      { "rateType" => "VARIABLE", "rate" => rate, "tiers" => [ tier ] }
     end
 
     def schedule

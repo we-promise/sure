@@ -123,9 +123,9 @@ class RedbarkAccount::LoanDetailsProcessor
       distinct.first
     end
 
-    # A tier is read as a dollar band (an absent minimum is zero, an absent
-    # maximum is open); a tier in any other unit, or with bounds that do not
-    # parse, is not taken to hold the balance.
+    # A tier is read as a dollar band: an absent or blank minimum is zero and an
+    # absent or blank maximum is open. A tier in any other unit, or with bounds
+    # that do not parse, is not taken to hold the balance.
     def band_holds_balance?(entry)
       tiers = Array(entry[:tiers])
       balance = account.balance&.abs
@@ -137,8 +137,8 @@ class RedbarkAccount::LoanDetailsProcessor
         unit = tier[:unitOfMeasure].to_s
         next false unless unit.blank? || unit.casecmp("DOLLAR").zero?
 
-        minimum = BigDecimal((tier[:minimumValue] || 0).to_s)
-        maximum = tier[:maximumValue].nil? ? nil : BigDecimal(tier[:maximumValue].to_s)
+        minimum = BigDecimal((tier[:minimumValue].presence || 0).to_s)
+        maximum = tier[:maximumValue].presence && BigDecimal(tier[:maximumValue].to_s)
         balance >= minimum && (maximum.nil? || balance <= maximum)
       rescue ArgumentError, TypeError
         false
