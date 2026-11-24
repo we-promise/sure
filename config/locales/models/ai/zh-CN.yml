@@ -10,6 +10,8 @@ zh-CN:
         member: "%{feature} 不可用：此实例尚未为此功能配置 AI。"
       user_disabled:
         member: "%{feature} 需要开启 AI。您可以在 AI 助手中将其开启。"
+      no_family_consent:
+        member: "%{feature} 需要家庭管理员开启 AI。他们可以在 AI 助手中将其开启。"
     consent_rows:
       bill_setup: 账单
       categorize: 分类

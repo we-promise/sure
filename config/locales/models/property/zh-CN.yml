@@ -1,0 +1,12 @@
+---
+zh-CN:
+  activerecord:
+    attributes:
+      property:
+        cost_tag: 成本标签
+    errors:
+      models:
+        property:
+          attributes:
+            cost_tag:
+              other_family: 必须是您自己的标签之一
