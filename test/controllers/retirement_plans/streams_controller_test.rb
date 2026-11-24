@@ -99,10 +99,22 @@ class RetirementPlans::StreamsControllerTest < ActionDispatch::IntegrationTest
     [ rent, abroad ].each { |stream| assert_select "tr[data-stream-id='#{stream.id}'] span", text: fixed, count: 0 }
   end
 
-  test "the To year says it is not used for a one-off" do
+  test "the To year says to leave it blank for a one-off" do
     get new_retirement_plan_stream_url
 
-    assert_select "#retirement_plan_stream_end_year_help_text", text: I18n.t("retirement_plans.streams.form.end_year_hint")
+    assert_select "#retirement_plan_stream_end_year_help_text", text: "Leave blank for a one-off."
+  end
+
+  # The model checks a one-off's years like any other kind's, so the hint asks
+  # for a blank To year rather than promising it is ignored.
+  test "a one-off ending before it starts is refused, and one with no To year saves" do
+    params = ->(end_year) { { retirement_plan_stream: { kind: "one_off", name: "New roof", annual_amount: "20000", start_year: "2045", end_year: end_year } } }
+
+    assert_no_difference("RetirementPlan::Stream.count") { post retirement_plan_streams_url, params: params.call("2041") }
+    assert_response :unprocessable_entity
+
+    assert_difference("RetirementPlan::Stream.count", 1) { post retirement_plan_streams_url, params: params.call("") }
+    assert_nil RetirementPlan.find_by!(user: @user).streams.sole.end_year
   end
 
   test "an invalid stream is refused and nothing is written, not even the plan" do
