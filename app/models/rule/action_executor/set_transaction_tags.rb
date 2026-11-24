@@ -7,7 +7,7 @@ class Rule::ActionExecutor::SetTransactionTags < Rule::ActionExecutor
     family.tags.alphabetically.pluck(:name, :id)
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil, modified_transaction_ids: nil, already_modified_count: 0)
     tag_ids = Array(value).compact_blank
     selected_tag_ids = family.tags.where(id: tag_ids).pluck(:id)
     return 0 if selected_tag_ids.empty?
@@ -18,7 +18,7 @@ class Rule::ActionExecutor::SetTransactionTags < Rule::ActionExecutor
       scope = scope.enrichable(:tag_ids)
     end
 
-    count_modified_resources(scope) do |txn|
+    count_modified_resources(scope, modified_transaction_ids: modified_transaction_ids) do |txn|
       # `with_lock` closes the read-modify-write race window: without it, two
       # concurrent rule applications on the same transaction could each read
       # the same "before" tag_ids and one write could clobber the other.

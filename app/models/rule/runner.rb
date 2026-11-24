@@ -139,8 +139,29 @@ class Rule::Runner
           skip_action_types: skip_action_types
         )
 
-        rule_run.update!(**run_counts(result, queued: matched_ids.size, rule: rule))
-        @changed_now_count += changed_now(result)
+        counts = run_counts(result, queued: matched_ids.size, rule: rule)
+        @changed_now_count += counts[:transactions_modified].to_i
+
+        if counts[:status] == "pending"
+          # An AI job may already have reported its changes via
+          # RuleRun#complete_job!, so add the run's own count instead of
+          # overwriting what is stored.
+          rule_run.with_lock do
+            counts[:transactions_modified] += rule_run.transactions_modified
+            if rule_run.success?
+              # Every job finished before the run recorded its counts.
+              counts[:status] = "success"
+              counts[:pending_jobs_count] = 0
+            elsif rule_run.failed?
+              # One job failed; the others may still be running.
+              counts[:status] = "failed"
+              counts[:pending_jobs_count] = rule_run.pending_jobs_count
+            end
+            rule_run.update!(**counts)
+          end
+        else
+          rule_run.update!(**counts)
+        end
       rescue => e
         rule_run = record_failure(rule, rule_run, e, executed_at: executed_at, queued: matched_ids.size)
       ensure
@@ -154,23 +175,13 @@ class Rule::Runner
 
     def run_counts(result, queued:, rule:)
       if result.is_a?(Hash) && result[:async]
-        # The async jobs report the modified count back via RuleRun#complete_job!
-        { status: "pending", transactions_processed: result[:modified_count] || 0, pending_jobs_count: result[:jobs_count] || 0 }
+        # The async jobs add their own changes via RuleRun#complete_job!.
+        { status: "pending", transactions_processed: queued, transactions_modified: result[:modified_count] || 0, pending_jobs_count: result[:jobs_count] || 0 }
       elsif result.is_a?(Integer)
         { status: "success", transactions_processed: queued, transactions_modified: result }
       else
         Rails.logger.warn("Rule::Runner: Unexpected result type from rule.apply: #{result.class} for rule #{rule.id}")
-        { status: "success" }
-      end
-    end
-
-    def changed_now(result)
-      if result.is_a?(Hash) && result[:async]
-        result[:changed_now_count] || 0
-      elsif result.is_a?(Integer)
-        result
-      else
-        0
+        { status: "success", transactions_modified: 0 }
       end
     end
 

@@ -1,9 +1,12 @@
 class Family::AutoMerchantDetector
   Error = Class.new(StandardError)
 
-  def initialize(family, transaction_ids: [])
+  def initialize(family, transaction_ids: [], exclude_transaction_ids: [])
     @family = family
     @transaction_ids = transaction_ids
+    # The rule run already counts these as modified, so the job still applies
+    # its answer but leaves them out of its modified count.
+    @exclude_transaction_ids = exclude_transaction_ids.map(&:to_s).to_set
   end
 
   def auto_detect
@@ -42,14 +45,14 @@ class Family::AutoMerchantDetector
         if merchant_id.present?
           was_modified = transaction.enrich_attribute(:merchant_id, merchant_id, source: "ai")
           transaction.lock_attr!(:merchant_id)
-          modified_count += 1 if was_modified
+          modified_count += 1 if was_modified && !excluded_transaction_id?(transaction.id)
         end
 
       elsif existing_merchant.is_a?(ProviderMerchant) && existing_merchant.source != "ai"
         # Case 2: Has provider merchant (non-AI) - enhance it with AI data
         if enhance_provider_merchant(existing_merchant, auto_detection)
           transaction.lock_attr!(:merchant_id)
-          modified_count += 1
+          modified_count += 1 unless excluded_transaction_id?(transaction.id)
         end
       end
       # Case 3: AI merchant or FamilyMerchant - skip (already good or user-set)
@@ -59,7 +62,11 @@ class Family::AutoMerchantDetector
   end
 
   private
-    attr_reader :family, :transaction_ids
+    attr_reader :family, :transaction_ids, :exclude_transaction_ids
+
+    def excluded_transaction_id?(transaction_id)
+      exclude_transaction_ids.include?(transaction_id.to_s)
+    end
 
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # auto_detect_merchants (PR #1984), so batch merchant detection routes to the

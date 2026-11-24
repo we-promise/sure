@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Rule::RunnerTest < ActiveSupport::TestCase
-  include EntriesTestHelper
+  include EntriesTestHelper, ProviderTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:empty)
@@ -270,6 +270,61 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     @whole_foods.reload
     assert_equal @groceries, @whole_foods.category
     assert_equal [ @tag_a.id ], @whole_foods.tag_ids
+  end
+
+  test "a rule counts a transaction once when an AI action changes one its other action changed" do
+    rule = @family.rules.create!(
+      name: "Tag and categorize with AI",
+      resource_type: "transaction",
+      active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "o") ],
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_tags", value: [ @tag_a.id ]),
+        Rule::Action.new(action_type: "auto_categorize")
+      ]
+    )
+    # Already tagged, so the tag action only changes @other and the AI is the
+    # only action that changes this transaction.
+    @whole_foods.update!(tag_ids: [ @tag_a.id ])
+
+    llm_provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(llm_provider)
+    llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      Provider::LlmConcept::AutoCategorization.new(transaction_id: @whole_foods.id, category_name: @groceries.name),
+      Provider::LlmConcept::AutoCategorization.new(transaction_id: @other.id, category_name: @dining.name)
+    ])).once
+
+    runner = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual")
+    perform_enqueued_jobs(only: AutoCategorizeJob) { runner.run }
+
+    rule_run = rule.rule_runs.sole.reload
+
+    assert_equal 2, rule_run.transactions_processed
+    # @other changed by the tag action and the AI, @whole_foods only by the AI.
+    assert_equal 2, rule_run.transactions_modified
+    assert_equal @groceries, @whole_foods.reload.category
+    assert_equal @dining, @other.reload.category
+  end
+
+  test "a rule whose only action is AI leaves the modified count to its jobs" do
+    rule = @family.rules.create!(
+      name: "Categorize with AI",
+      resource_type: "transaction",
+      active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "o") ],
+      actions: [ Rule::Action.new(action_type: "auto_categorize") ]
+    )
+
+    assert_enqueued_jobs 1, only: AutoCategorizeJob do
+      Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run
+    end
+
+    rule_run = rule.rule_runs.sole.reload
+
+    assert_equal 2, rule_run.transactions_processed
+    assert_equal 0, rule_run.transactions_modified
+    assert_equal 1, rule_run.pending_jobs_count
+    assert_equal 0, rule_run.transactions_blocked
   end
 
   test "applying a single rule sees the changes the rules above make" do

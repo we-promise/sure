@@ -27,7 +27,11 @@ class RuleRun < ApplicationRecord
     status == "failed"
   end
 
+  # AI jobs still to report may yet change the transactions, so nothing is
+  # blocked until the last one is done.
   def transactions_blocked
+    return 0 if pending_jobs_count.positive?
+
     [ transactions_processed - transactions_modified, 0 ].max
   end
 
@@ -48,8 +52,10 @@ class RuleRun < ApplicationRecord
     nil
   end
 
-  # Thread-safe method to complete a job and update the run
-  def complete_job!(modified_count: 0)
+  # Thread-safe method to complete a job and update the run.
+  # already_modified_count is what the rule's other actions changed before the
+  # job was queued; only changes beyond it are worth a new toast.
+  def complete_job!(modified_count: 0, already_modified_count: 0)
     drained = false
 
     with_lock do
@@ -65,10 +71,10 @@ class RuleRun < ApplicationRecord
 
     # A Sidekiq retry of a job that failed before finds nothing left to
     # drain, so its changes are offered on their own.
-    offer_job_results if pending_jobs_count.zero? && (drained || modified_count.positive?)
+    offer_job_results(already_modified_count: already_modified_count) if pending_jobs_count.zero? && (drained || modified_count.positive?)
   end
 
-  def fail_job!(error:, source:, transaction_ids: [])
+  def fail_job!(error:, source:, transaction_ids: [], already_modified_count: 0)
     should_log = false
     drained = false
     current_error_message = "#{error.class}: #{error.message}"
@@ -87,14 +93,15 @@ class RuleRun < ApplicationRecord
     capture_failure_debug_log(error:, source:, transaction_ids:) if should_log
     # Earlier jobs of the run may already have changed transactions. A retry
     # of a job that already failed drains nothing, so it offers nothing again.
-    offer_job_results if drained
+    offer_job_results(already_modified_count: already_modified_count) if drained
   end
 
   private
     # The jobs of an immediate run with AI actions offer what they changed once
     # the last one is done; ApplyImmediateRulesJob offers the run's other changes.
-    def offer_job_results
-      return unless execution_type == "immediate" && transactions_modified.positive?
+    def offer_job_results(already_modified_count: 0)
+      return unless execution_type == "immediate"
+      return unless transactions_modified > already_modified_count
 
       self.class.offer_immediate_result(rule.family)
     end

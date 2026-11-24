@@ -37,7 +37,11 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
     false
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
+  def async?
+    true
+  end
+
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil, modified_transaction_ids: nil, already_modified_count: 0)
     protected_scope = protected_transactions(transaction_scope)
     cached_transaction_ids = cached_transaction_ids(protected_scope)
     blocked_transaction_ids = protected_scope.pluck(:id) - cached_transaction_ids
@@ -54,20 +58,24 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
 
     batch_size = Provider::LlmConcept.max_items_per_call
     jobs_count = 0
+    enrichable_count = enrichable_transactions.count
+    already_modified_ids = Array(modified_transaction_ids)
 
     enrichable_transactions.in_batches(of: batch_size).each_with_index do |transactions, idx|
-      Rails.logger.info("Scheduling auto-categorization for batch #{idx + 1} of #{enrichable_transactions.count}")
-      rule.family.auto_categorize_transactions_later(transactions, rule_run_id: rule_run&.id)
+      Rails.logger.info("Scheduling auto-categorization for batch #{idx + 1} of #{enrichable_count}")
+      rule.family.auto_categorize_transactions_later(
+        transactions,
+        rule_run_id: rule_run&.id,
+        exclude_transaction_ids: already_modified_ids & transactions.pluck(:id),
+        already_modified_count: already_modified_count
+      )
       jobs_count += 1
     end
 
-    # Return metadata about async jobs
-    # Note: modified_count is set to queued_count here because we don't know
-    # the actual modified count until the async jobs complete
-    # The actual modified count will be reported back via rule_run.complete_job!
+    # The jobs report what they changed via rule_run.complete_job!, leaving out
+    # the transactions the rule's other actions already changed.
     {
       async: true,
-      modified_count: enrichable_transactions.count,
       jobs_count: jobs_count
     }
   end

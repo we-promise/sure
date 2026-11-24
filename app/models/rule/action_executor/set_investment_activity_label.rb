@@ -19,7 +19,7 @@ class Rule::ActionExecutor::SetInvestmentActivityLabel < Rule::ActionExecutor
     Transaction::ACTIVITY_LABELS.include?(value)
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil, modified_transaction_ids: nil, already_modified_count: 0)
     return 0 unless Transaction::ACTIVITY_LABELS.include?(value)
 
     scope = transaction_scope
@@ -28,7 +28,7 @@ class Rule::ActionExecutor::SetInvestmentActivityLabel < Rule::ActionExecutor
       scope = scope.enrichable(:investment_activity_label)
     end
 
-    count_modified_resources(scope) do |txn|
+    count_modified_resources(scope, modified_transaction_ids: modified_transaction_ids) do |txn|
       txn.enrich_attribute(
         :investment_activity_label,
         value,

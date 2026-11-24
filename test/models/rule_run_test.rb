@@ -104,6 +104,22 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run.complete_job!(modified_count: 0)
   end
 
+  test "an immediate run whose jobs only confirm already counted changes offers no second result" do
+    rule_run = create_rule_run
+    rule_run.update!(execution_type: "immediate", transactions_modified: 1)
+
+    RuleRun.expects(:offer_immediate_result).never
+    rule_run.complete_job!(modified_count: 0, already_modified_count: 1)
+  end
+
+  test "an immediate run whose jobs change more than the other actions offer their result" do
+    rule_run = create_rule_run
+    rule_run.update!(execution_type: "immediate", transactions_modified: 1)
+
+    RuleRun.expects(:offer_immediate_result).with(@rule.family).once
+    rule_run.complete_job!(modified_count: 1, already_modified_count: 1)
+  end
+
   test "an immediate run whose jobs changed nothing offers no result" do
     rule_run = create_rule_run(pending_jobs_count: 2)
     rule_run.update!(execution_type: "immediate")

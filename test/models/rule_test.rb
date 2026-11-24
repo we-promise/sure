@@ -597,6 +597,35 @@ class RuleTest < ActiveSupport::TestCase
       "Transaction on other account should not be categorized"
   end
 
+  test "counts changes an action reports beyond the transaction ids it tracked" do
+    transaction = create_transaction(account: @account, name: "Whole Foods").transaction
+    rule = @family.rules.create!(
+      resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    executor = Class.new(Rule::ActionExecutor) do
+      def claimed_attributes
+        []
+      end
+
+      # Tracks one transaction but reports two changes, like an executor that
+      # also changes something outside count_modified_resources.
+      def execute(scope, modified_transaction_ids: nil, **)
+        modified_transaction_ids&.add(scope.first.id)
+        2
+      end
+    end.new(rule)
+
+    scope = rule.scope_for_transaction_ids([ transaction.id ])
+
+    registry = mock
+    registry.stubs(:get_executor!).returns(executor)
+    rule.stubs(:registry).returns(registry)
+
+    assert_equal 2, rule.apply(scope: scope)
+  end
+
   test "new rules are added at the end of the run order" do
     first = create_exclude_rule
     second = create_exclude_rule

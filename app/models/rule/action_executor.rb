@@ -1,11 +1,6 @@
 class Rule::ActionExecutor
   TYPES = [ "select", "multi_select", "function", "text", "split" ]
 
-  # Rule#apply passes a set here so several actions that change the same
-  # transaction count it once. Executors that report their own count without
-  # using #count_modified_resources leave it untouched.
-  attr_accessor :modified_transaction_ids
-
   def initialize(rule)
     @rule = rule
   end
@@ -24,6 +19,13 @@ class Rule::ActionExecutor
 
   def type
     "function"
+  end
+
+  # Whether the action hands its work to background jobs (the AI actions).
+  # Rule#apply runs those last, so the jobs can leave out the transactions the
+  # other actions changed when they report their own changes.
+  def async?
+    false
   end
 
   def options
@@ -60,7 +62,7 @@ class Rule::ActionExecutor
     true
   end
 
-  def execute(scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
+  def execute(scope, value: nil, ignore_attribute_locks: false, rule_run: nil, modified_transaction_ids: nil, already_modified_count: 0)
     raise NotImplementedError, "Action executor #{self.class.name} must implement #execute"
   end
 
@@ -81,10 +83,12 @@ class Rule::ActionExecutor
   end
 
   protected
-    # Helper method to track modified count during enrichment
-    # The block should return true if the resource was modified, false otherwise
-    # If the block doesn't return a value, we'll check previous_changes as a fallback
-    def count_modified_resources(scope)
+    # Helper method to track modified count during enrichment.
+    # The block should return true if the resource was modified, false otherwise.
+    # If the block doesn't return a value, we'll check previous_changes as a fallback.
+    # modified_transaction_ids collects the ids, so Rule#apply can count a
+    # transaction once even when several actions change it.
+    def count_modified_resources(scope, modified_transaction_ids: nil)
       modified_count = 0
       scope.each do |resource|
         # Yield the resource and capture the return value if the block returns one
