@@ -944,9 +944,15 @@ class Portfolio::DailyReturns
     # account's leg would stay out of the denominator while the cut-off
     # account's leg is dropped by the flow window, and the move would read as
     # a loss.
+    #
+    # strict_leg_pairing, because each row reconciles one day's balances: a
+    # transfer whose legs post on different days moved each balance on its own
+    # day, and a journal leg is netted against another only when the pair is
+    # unambiguous.
     def flow_classifier
       @flow_classifier ||= Portfolio::FlowClassifier.new(
-        scope_account_ids: account_ids, include_excluded: true, active_until_dates: active_until_dates
+        scope_account_ids: account_ids, include_excluded: true, active_until_dates: active_until_dates,
+        strict_leg_pairing: true
       )
     end
 
