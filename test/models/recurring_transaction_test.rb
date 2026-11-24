@@ -529,6 +529,19 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     series.update!(status: "active")
   end
 
+  test "resuming a paused bill with a start date reconstructs its history" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Resumed", amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "paused", manual: true
+    )
+    series.update_column(:started_on, 2.months.ago.to_date)
+    series.expects(:reconstruct_history!).once.returns(true)
+
+    series.update!(status: "active")
+  end
+
   test "a stale next expected date does not reject a persisted start date" do
     series = @family.recurring_transactions.create!(
       account: @account, name: "Dated", amount: 80, currency: "USD",
