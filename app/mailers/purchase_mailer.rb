@@ -20,6 +20,7 @@ class PurchaseMailer < ApplicationMailer
 
   def rejected
     @reason = params[:purchase].review_reasons.reverse.find { _1["reason"].in?(%w[duplicate not_an_order]) }
+    @existing_purchase_url = purchase_url(@reason["purchase_id"]) if @reason&.dig("purchase_id")
     purchase_mail(:rejected)
   end
 
@@ -40,6 +41,8 @@ class PurchaseMailer < ApplicationMailer
       @purchase = params[:purchase]
       @user = @purchase.user
       I18n.with_locale(locale_for(@user)) do
+        @purchase_url = purchase_url(@purchase)
+        @to_match_url = purchases_url(tab: "to_match")
         mail(to: @user.email, subject: t("purchase_mailer.#{action}.subject", merchant: merchant_name, total: purchase_total))
       end
     end

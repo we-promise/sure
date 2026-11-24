@@ -778,6 +778,17 @@ Rails.application.routes.draw do
 
   resources :receipt_scans, only: %i[new create]
 
+  resources :purchases, only: %i[index show] do
+    member do
+      post :dismiss
+      post :reprocess
+      post :apply_categories
+      get :original_email
+    end
+
+    resource :link, only: %i[new create destroy], controller: "purchase_links"
+  end
+
   resources :account_statements, only: %i[index show create update destroy] do
     member do
       patch :link
