@@ -76,6 +76,7 @@ fr:
       manual_payment: Paiement manuel
       next_payment: Prochain paiement
       notes: Remarques
+      once_kind_hint: Marquez la transaction comme ponctuelle pour l'exclure de vos moyennes.
       overview: Aperçu
       payment_count:
         one: 1 paiement
@@ -205,6 +206,7 @@ fr:
       pulse_next_seven: 7 prochains jours
       pulse_overdue: en retard
       pulse_paid: payé
+      pulse_until: jusqu'au %{date}
       unconvertible:
         one: 1 facture n'est pas incluse, aucun taux de change disponible
         other: "%{count} factures ne sont pas incluses, aucun taux de change disponible"

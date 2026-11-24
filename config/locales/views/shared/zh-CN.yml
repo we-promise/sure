@@ -63,3 +63,11 @@ zh-CN:
         stale_heartbeat: Sidekiq 工作进程近期未上报心跳。可能已卡住或崩溃。
         ai_queues_not_polled: 没有工作进程正在处理 AI 队列（聊天、商户识别、分类）。请检查工作进程是否加载了 config/sidekiq.yml。
         queue_backed_up: 队列中最早的任务等待时间已超出延迟预算。工作进程仍在运行但已落后。
+    exchange_rate_notes:
+      missing:
+        one: "尚未存储从 %{currencies} 到 %{currency} 的汇率，因此部分总计可能未包含以 %{currencies} 计价的金额。"
+        other: "尚未存储从 %{currencies} 到 %{currency} 的汇率，因此部分总计可能未包含以这些货币计价的金额。"
+      stale:
+        one: "换算为 %{currency} 的最新汇率已过时：%{rates}。今日总计使用了该汇率。"
+        other: "换算为 %{currency} 的最新汇率已过时：%{rates}。今日总计使用了这些汇率。"
+      stale_rate: "%{from}（%{date}）"

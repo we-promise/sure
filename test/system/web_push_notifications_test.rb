@@ -48,6 +48,20 @@ class WebPushNotificationsTest < ApplicationSystemTestCase
     assert_empty @user.web_push_subscriptions
   end
 
+  test "saving another preference leaves the device card in its state" do
+    visit settings_preferences_path
+    install_browser_push_double(web_push_attributes)
+    click_on I18n.t("web_push.enable")
+    assert_text I18n.t("web_push.status.enabled")
+
+    # The save redirects back and Turbo morphs the page.
+    find("#user_push_budget_warnings_enabled + label").click
+    assert_selector "#user_push_budget_warnings_enabled[checked]"
+    assert_no_text I18n.t("web_push.status.checking")
+    assert_text I18n.t("web_push.status.enabled")
+    assert_selector "[data-web-push-target='test']:not([disabled])"
+  end
+
   private
     def capture_notification_card
       card = "[data-controller='web-push']"
