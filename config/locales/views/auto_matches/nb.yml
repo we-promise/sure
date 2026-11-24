@@ -1,0 +1,32 @@
+---
+nb:
+  auto_matches:
+    title: "Automatiske koblinger"
+    settings:
+      enable_label: "Aktiver automatisk kobling"
+      enable_description: "Finn og foreslå koblinger av overføringer mellom kontoer automatisk ved hver synkronisering. Forslagene tas ikke i bruk før du bekrefter dem nedenfor."
+      admin_only: "Bare administratorer kan endre denne innstillingen."
+    update_settings:
+      settings_updated: "Innstillingene for automatisk kobling er oppdatert"
+    bulk_update:
+      invalid_selection: "Velg minst ett forslag å bekrefte eller avvise"
+      bulk_confirmed:
+        one: "Bekreftet %{count} overføring"
+        other: "Bekreftet %{count} overføringer"
+      bulk_rejected:
+        one: "Avviste %{count} overføring"
+        other: "Avviste %{count} overføringer"
+    empty:
+      title: "Ingen ventende forslag til automatisk kobling"
+      description: "Når en synkronisering finner en sannsynlig overføring mellom to av kontoene dine, vises den her slik at du kan se gjennom den."
+    table:
+      from: "Fra"
+      to: "Til"
+      date: "Dato"
+      actions: "Handlinger"
+      separator: "·"
+    bulk_actions:
+      selected_label: "valgt"
+      confirm_selected: "Bekreft valgte"
+      reject_selected: "Avvis valgte"
+      select_all: "Velg alle"
