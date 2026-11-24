@@ -12,6 +12,7 @@ const {
   default: evaluateAmountExpression,
   amountBoundViolation,
   formatAmountForDisplay,
+  hasWholeNumberGrouping,
   precisionFromStep,
 } = await import(MODULE_URL)
 
@@ -403,6 +404,144 @@ describe("evaluateAmountExpression", () => {
   })
 })
 
+describe("whole-number fields (precision 0, e.g. PYG, CLP, JPY)", () => {
+  // A currency with no decimals has no decimal point to type, so a dot or
+  // comma there can only be grouping. Without this, "150.000.000" typed into
+  // a PYG field was read as 150.000000, i.e. 150.
+  const whole = { precision: 0 }
+
+  it("reads dot-grouped thousands as one whole amount", () => {
+    assert.equal(evaluateAmountExpression("150.000.000", whole), 150000000)
+    assert.equal(evaluateAmountExpression("500.000", whole), 500000)
+    assert.equal(evaluateAmountExpression("1.500", whole), 1500)
+  })
+
+  it("reads comma-grouped thousands as one whole amount", () => {
+    assert.equal(evaluateAmountExpression("150,000,000", whole), 150000000)
+    assert.equal(evaluateAmountExpression("1,500", whole), 1500)
+  })
+
+  it("groups every added or subtracted term in an expression", () => {
+    assert.equal(evaluateAmountExpression("150.000.000+5.000", whole), 150005000)
+    assert.equal(evaluateAmountExpression("1.000-500", whole), 500)
+  })
+
+  it("keeps the decimal reading for a factor of * or /", () => {
+    // 10% consumption tax on a JPY amount; on main this gave 1100.
+    assert.equal(Math.round(evaluateAmountExpression("1000*1.1", whole)), 1100)
+    assert.equal(evaluateAmountExpression("10000*1.5", whole), 15000)
+    assert.equal(evaluateAmountExpression("3000/1,5", whole), 2000)
+    assert.equal(evaluateAmountExpression("1.000+1000*1.5", whole), 2500)
+  })
+
+  it("rejects a factor of * or / that reads both as grouping and as a decimal", () => {
+    // "150.000*12" could be 150000 a month for a year or 150 times 12.
+    assert.equal(evaluateAmountExpression("150.000*12", whole), null)
+    assert.equal(evaluateAmountExpression("12*150.000", whole), null)
+    assert.equal(evaluateAmountExpression("150.000+150.000*2", whole), null)
+    assert.equal(evaluateAmountExpression("1.000*1.1", whole), null)
+    assert.equal(evaluateAmountExpression("1,500/3", whole), null)
+    assert.equal(evaluateAmountExpression("-1.500*2", whole), null)
+    // Not a thousands group, so still a plain decimal factor.
+    assert.equal(evaluateAmountExpression("1000*0.125", whole), 125)
+    assert.equal(evaluateAmountExpression("1000*1.25", whole), 1250)
+    // Fields with decimals are unaffected.
+    assert.equal(evaluateAmountExpression("1.500*2", { precision: 2 }), 3)
+  })
+
+  it("accepts only a plain decimal multiplier as a factor", () => {
+    // The same text as an amount is a likely typo, so it is not a multiplier.
+    assert.equal(evaluateAmountExpression("150.00*12", whole), null)
+    assert.equal(evaluateAmountExpression("150,00*12", whole), null)
+    assert.equal(evaluateAmountExpression("10.00*12", whole), null)
+    assert.equal(evaluateAmountExpression("150.000+150.00*12", whole), null)
+    assert.equal(evaluateAmountExpression("05.000*2", whole), null)
+    assert.equal(evaluateAmountExpression("00.000*2", whole), null)
+    assert.equal(evaluateAmountExpression("1500.000*2", whole), null)
+    assert.equal(evaluateAmountExpression("1500,000*2", whole), null)
+    assert.equal(evaluateAmountExpression("150.0000*12", whole), null)
+    assert.equal(evaluateAmountExpression("1000*1.125", whole), null)
+    assert.equal(evaluateAmountExpression("1000*1.0", whole), null)
+    // Plain decimal multipliers.
+    assert.equal(evaluateAmountExpression("1000*1.10", whole), 1100)
+    assert.equal(evaluateAmountExpression("1000*0.5", whole), 500)
+    assert.equal(evaluateAmountExpression("1000*0,125", whole), 125)
+    assert.equal(evaluateAmountExpression("2*1500", whole), 3000)
+    // Fields with decimals are unaffected.
+    assert.equal(evaluateAmountExpression("150.00*12", { precision: 2 }), 1800)
+  })
+
+  it("rejects a factor whose decimal point is the currency's thousands delimiter", () => {
+    // PYG writes a hundred and fifty thousand as 150.000, so a dot is never
+    // its decimal point. Without the delimiter, "150.50*12" was 1806.
+    const pyg = { precision: 0, delimiter: "." }
+    assert.equal(evaluateAmountExpression("150.50*12", pyg), null)
+    assert.equal(evaluateAmountExpression("1000*1.1", pyg), null)
+    assert.equal(evaluateAmountExpression("150,50*12", pyg), 1806)
+    assert.equal(Math.round(evaluateAmountExpression("1000*1,1", pyg)), 1100)
+    assert.equal(evaluateAmountExpression("150.000.000", pyg), 150000000)
+    assert.equal(evaluateAmountExpression("150.000*12", pyg), null)
+    // JPY groups with a comma, so a dot stays a decimal there.
+    const jpy = { precision: 0, delimiter: "," }
+    assert.equal(evaluateAmountExpression("165.5*40", jpy), 6620)
+    assert.equal(evaluateAmountExpression("165,5*40", jpy), null)
+    assert.equal(Math.round(evaluateAmountExpression("1000*1.1", jpy)), 1100)
+    // HUF groups with a space, so neither character is ruled out.
+    const huf = { precision: 0, delimiter: " " }
+    assert.equal(evaluateAmountExpression("165.5*40", huf), 6620)
+    assert.equal(evaluateAmountExpression("165,5*40", huf), 6620)
+    // Fields with decimals are unaffected.
+    assert.equal(evaluateAmountExpression("165.5*40", { precision: 2, delimiter: "." }), 6620)
+  })
+
+  it("rejects a leading zero group instead of reading it as grouping", () => {
+    assert.equal(evaluateAmountExpression("0.500", whole), null)
+    assert.equal(evaluateAmountExpression("05.000", whole), null)
+    assert.equal(evaluateAmountExpression("0.500,00", whole), null)
+    assert.equal(evaluateAmountExpression("01,00,000", whole), null)
+    assert.equal(evaluateAmountExpression("0", whole), 0)
+  })
+
+  it("accepts a zero cents part on a whole amount", () => {
+    assert.equal(evaluateAmountExpression("1.500.000,00", whole), 1500000)
+    assert.equal(evaluateAmountExpression("1500.00", whole), 1500)
+    assert.equal(evaluateAmountExpression("1,000.00", whole), 1000)
+    assert.equal(evaluateAmountExpression("1.000.00", whole), null)
+    assert.equal(evaluateAmountExpression("1.50", whole), null)
+    // Up to three ungrouped digits could be a mistyped group ("150.000").
+    assert.equal(evaluateAmountExpression("150.00", whole), null)
+    assert.equal(evaluateAmountExpression("150,00", whole), null)
+  })
+
+  it("rejects a separator that is not a three-digit group instead of rounding it", () => {
+    assert.equal(evaluateAmountExpression("150.5", whole), null)
+    assert.equal(evaluateAmountExpression("150.000000", whole), null)
+    assert.equal(evaluateAmountExpression("1.23.456", whole), null)
+    assert.equal(evaluateAmountExpression("1234.567", whole), null)
+    assert.equal(evaluateAmountExpression("12.", whole), null)
+  })
+
+  it("rejects mixed grouping characters", () => {
+    assert.equal(evaluateAmountExpression("1.234,567", whole), null)
+  })
+
+  it("reads Indian grouping the same as a paste does", () => {
+    assert.equal(evaluateAmountExpression("1,00,000", whole), 100000)
+    assert.equal(evaluateAmountExpression("12,34,567.00", whole), 1234567)
+    assert.equal(evaluateAmountExpression("1.00.000", whole), null)
+  })
+
+  it("leaves plain integers alone", () => {
+    assert.equal(evaluateAmountExpression("150000000", whole), 150000000)
+  })
+
+  it("keeps the decimal reading for fields with decimals", () => {
+    assert.equal(evaluateAmountExpression("1.500", { precision: 2 }), 1.5)
+    assert.equal(evaluateAmountExpression("150.000.000", { precision: 2 }), null)
+    assert.equal(evaluateAmountExpression("1.500", { precision: null }), 1.5)
+  })
+})
+
 describe("formatAmountForDisplay", () => {
   it("renders a dot when the raw text had no comma", () => {
     assert.equal(formatAmountForDisplay(12.5, 2, "12.50"), "12.50")
@@ -512,5 +651,26 @@ describe("amountBoundViolation", () => {
 
   it("checks the unrounded amount when the field has no precision", () => {
     assert.equal(amountBoundViolation(-0.001, { min: 0, precision: null }), "min")
+  })
+})
+
+describe("hasWholeNumberGrouping", () => {
+  // Decides whether text a whole-number currency rejected still has a
+  // grouping reading that a switch to a currency with decimals would change.
+  it("is true when a number reads as thousands grouping", () => {
+    assert.equal(hasWholeNumberGrouping("150.000*12"), true)
+    assert.equal(hasWholeNumberGrouping("12*-1.500"), true)
+    assert.equal(hasWholeNumberGrouping("1,500/3"), true)
+    assert.equal(hasWholeNumberGrouping("1.500,00*2"), true)
+  })
+
+  it("is false for text that is only invalid", () => {
+    assert.equal(hasWholeNumberGrouping("25.50"), false)
+    assert.equal(hasWholeNumberGrouping("1000*1.1"), false)
+    assert.equal(hasWholeNumberGrouping("150.00*12"), false)
+    // A zero cents part alone is 1500 in either currency.
+    assert.equal(hasWholeNumberGrouping("1500,00*12"), false)
+    assert.equal(hasWholeNumberGrouping("abc"), false)
+    assert.equal(hasWholeNumberGrouping(null), false)
   })
 })

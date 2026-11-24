@@ -4,6 +4,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
   include EntriesTestHelper, ProviderTestHelper, ActiveJob::TestHelper
 
   setup do
+    use_ai_routes
     @family = families(:empty)
     @account = @family.accounts.create!(name: "Runner test", balance: 1000, currency: "USD", accountable: Depository.new)
     @groceries = @family.categories.create!(name: "Groceries")
