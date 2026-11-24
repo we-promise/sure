@@ -1,6 +1,5 @@
 ---
 zh-CN:
-  no_pending_change: 当前没有待处理的邮箱更改请求！
   users:
     destroy:
       success: 您的账户已删除。

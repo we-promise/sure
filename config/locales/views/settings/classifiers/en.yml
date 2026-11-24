@@ -31,6 +31,8 @@ en:
         rule_hint: The Category classifier rule, on and off with it in Rules. It categorizes uncategorized transactions in your rule order, after each sync; what it isn't sure about is left for an Auto-categorize rule.
         threshold: Threshold
         threshold_hint: Lowest score Bayes acts on (0.05–0.99). Lower categorizes more, with more mistakes.
+        min_category_examples: Fewest examples per category
+        min_category_examples_hint: A category is only picked once this many of your transactions have it (1–100). A category with very few examples otherwise wins unfamiliar transactions with a high score.
       clear_locks:
         success: Bayes' locks are being cleared. This may take a few moments.
       evaluation:

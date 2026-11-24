@@ -1,0 +1,16 @@
+---
+nb:
+  rule_notification_mailer:
+    digest:
+      subject:
+        one: '%{count} ny transaksjon samsvarte med regelen din på %{product_name}'
+        other: '%{count} nye transaksjoner samsvarte med regelen din på %{product_name}'
+      heading:
+        one: '%{count} ny transaksjon samsvarte med regelen din'
+        other: '%{count} nye transaksjoner samsvarte med regelen din'
+      intro: 'Disse transaksjonene samsvarte med regelen «%{rule}»:'
+      date: Dato
+      name: Navn
+      account: Konto
+      amount: Beløp
+      cta: Se transaksjoner

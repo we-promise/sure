@@ -12,4 +12,19 @@ nb:
       unauthorized: Du er ikke autorisert til å utføre denne handlingen.
     reset_with_sample_data:
       success: Kontoen din har blitt tilbakestilt og demodata forberedes. Du vil snart se eksempeldata.
+    resend_confirmation_email:
+      success: En ny bekreftelses-e-post står i kø for utsending.
+      no_pending_change: Ingen endring av e-postadresse venter for øyeblikket!
+    roles:
+      admin: Administrator
+      member: Medlem
+      super_admin: Superadministrator
+    user_menu:
+      aria_label: Åpne kontomenyen
+      version: Versjon
+      settings: Innstillinger
+      changelog: Endringslogg
+      feedback: Tilbakemelding
+      contact: Kontakt
+      log_out: Logg ut
 
