@@ -8,6 +8,10 @@ module Ai::Transport::RubyLlmAdapter
   RUBY_LLM_PATH = Gem.loaded_specs.fetch("ruby_llm").full_gem_path.freeze
   ARITY_ERROR = /wrong number of arguments|(?:missing|unknown) keywords?/
   LOCAL_CONNECT_TIMEOUT = 10
+  # A generation on a local endpoint streams, though nothing reads the chunks: a server that's
+  # streaming stops work when an interrupt closes the connection (Ai::Gate), and RubyLLM still
+  # returns the whole message, usage included (it asks for usage whenever it streams).
+  STREAMED = proc { |_chunk| }
   # The assistant declares its tools strict in both OpenAI protocols (Assistant::Function#strict_mode?),
   # so the probe does too: a gateway that refuses strict tools fails the check, not the chat.
   STRICT_TOOL_OPTIONS = {
@@ -76,7 +80,7 @@ module Ai::Transport::RubyLlmAdapter
       chat.with_provider_options(options) if options.any?
       chat.add_message(role: :user, content: request.input, attachments: ruby_llm_attachments(request.attachments).presence)
 
-      message = mapping_errors { chat.generate }
+      message = mapping_errors { endpoint.local? ? chat.generate(&STREAMED) : chat.generate }
       [ message.content.to_s, Ai::Tokens.from_ruby_llm(message.tokens), message.finish_reason ]
     end
 

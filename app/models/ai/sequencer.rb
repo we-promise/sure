@@ -60,7 +60,12 @@ module Ai::Sequencer
   def gate_for(endpoint)
     return unless endpoint.local?
 
-    sized = GATES.compute_if_absent(host_key(endpoint)) { Sized.new(Ai::Gate.new(slots(endpoint)), now) }
+    key = host_key(endpoint)
+    # Asked outside the map's lock, which compute_if_absent would hold for every host meanwhile.
+    sized = GATES[key] || begin
+      fresh = Sized.new(Ai::Gate.new(slots(endpoint)), now)
+      GATES.put_if_absent(key, fresh) || fresh
+    end
     if now - sized.at > RESIZE_AFTER
       sized.at = now
       sized.gate.size = slots(endpoint)

@@ -17,7 +17,11 @@
 # RubyLLM logs to Rails' logger but never logs request or response bodies, even at debug: they
 # carry financial data. At debug it still logs each request line and an error's message, and a
 # gateway can quote the key back there, so RubyLLM writes its configured keys as [FILTERED].
+#
+# Local generations stream (Ai::Gate), and RubyLLM logs each raw chunk at debug when
+# RUBYLLM_STREAM_DEBUG is set, whatever log_bodies says, so that's off too. Contexts copy both.
 RubyLLM.configure do |config|
   config.logger = Rails.logger
   config.log_bodies = false
+  config.log_stream_debug = false
 end

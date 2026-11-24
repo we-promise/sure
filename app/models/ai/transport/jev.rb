@@ -19,7 +19,13 @@ class Ai::Transport::Jev < Ai::Transport::Base
   PATH = "/v1/systemone".freeze
   DEFAULT_PARALLEL_REQUESTS = { cloud: 8, local: 1 }.freeze
 
-  def parallel_requests = endpoint.parallel_requests || DEFAULT_PARALLEL_REQUESTS.fetch(endpoint.location)
+  # Never more than the lane may hold at a local server's gate: a background judgement with more
+  # would find no place for the rest, and be Busy for good.
+  def parallel_requests
+    wanted = endpoint.parallel_requests || DEFAULT_PARALLEL_REQUESTS.fetch(endpoint.location)
+    places = Ai::Sequencer.gate_for(endpoint)&.places_for(Ai::Sequencer.lane)
+    places ? [ wanted, places ].min : wanted
+  end
 
   private
     def run_judge(request)

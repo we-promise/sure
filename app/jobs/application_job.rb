@@ -17,6 +17,16 @@ class ApplicationJob < ActiveJob::Base
   discard_on ActiveJob::DeserializationError
   queue_as :low_priority # default queue
 
+  # Seconds before a job that found its local model host busy runs again.
+  BUSY_WAIT = 5..15
+
+  # A background AI request never waits at a full local model host (Ai::Gate): the job runs again
+  # in a few seconds, at the back of its queue. Not a retry, so it counts no attempt.
+  rescue_from(Ai::Error::Busy) do
+    queued = self.class.set(wait: rand(BUSY_WAIT).seconds).perform_later(*arguments)
+    Rails.logger.warn("[#{self.class.name}] couldn't be queued again after the model host was busy") unless queued
+  end
+
   # A callback rather than Sidekiq middleware, so it also runs under the test adapter and
   # `perform_now`.
   around_perform :run_in_ai_capsule

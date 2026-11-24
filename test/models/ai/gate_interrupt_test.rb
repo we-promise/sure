@@ -107,14 +107,15 @@ class Ai::GateInterruptTest < ActiveSupport::TestCase
       end
   end
 
+  # Real sockets, to the stub servers on 127.0.0.1 only.
   setup do
-    WebMock.disable!
+    open_loopback_sockets
     @servers = []
   end
 
   teardown do
     @servers.each(&:close)
-    WebMock.enable!
+    close_loopback_sockets
   end
 
   test "interrupts a request while the server is still reading the prompt" do
@@ -187,6 +188,12 @@ class Ai::GateInterruptTest < ActiveSupport::TestCase
     holder = Ai::Gate::Holder.new(lane: :background)
 
     assert_raises(Faraday::ConnectionFailed) { Ai::Gate.holding(holder) { post(stub) } }
+  end
+
+  test "with real sockets open, any host but 127.0.0.1 is refused" do
+    error = assert_raises(ArgumentError) { Faraday.new(url: "http://llm.example.test") { _1.adapter Ai::Transport::Http::ProxyNetHttp }.get("/") }
+
+    assert_includes error.message, "llm.example.test"
   end
 
   private

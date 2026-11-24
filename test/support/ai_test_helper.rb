@@ -276,6 +276,36 @@ module AiTestHelper
     Rails.root.join("test/vcr_cassettes/ai/#{preset}/#{name}.yml").exist?
   end
 
+  # Real Net::HTTP for a test that talks to its own stub servers on 127.0.0.1 and needs what
+  # WebMock can't give: a streamed body read as it arrives, and a socket shut from another thread
+  # (test/models/ai/gate_interrupt_test.rb). WebMock buffers a real response whole. Requests to
+  # any other host raise. Call in setup, and close_loopback_sockets in teardown.
+  def open_loopback_sockets
+    Ai::Transport::Http::ProxyNetHttp.prepend(LoopbackOnly) unless Ai::Transport::Http::ProxyNetHttp < LoopbackOnly
+    LoopbackOnly.on = true
+    WebMock.disable!
+  end
+
+  def close_loopback_sockets
+    WebMock.enable!
+    LoopbackOnly.on = false
+  end
+
+  module LoopbackOnly
+    class << self
+      attr_accessor :on
+    end
+
+    def net_http_connection(env)
+      host = env[:url].hostname
+      if LoopbackOnly.on && host != "127.0.0.1"
+        raise ArgumentError, "with_loopback_sockets reaches only 127.0.0.1, not #{host}"
+      end
+
+      super
+    end
+  end
+
   def with_ai_live
     raise ArgumentError, "with_ai_live needs AI_LIVE=1 or RECORD_CASSETTES=1" unless ENV["AI_LIVE"] == "1" || ENV["RECORD_CASSETTES"] == "1"
 

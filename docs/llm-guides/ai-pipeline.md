@@ -222,6 +222,18 @@ flowchart LR
   one release. `ApplicationJob` runs each job in its queue's lane (`Ai::Sequencer.lane`, fiber
   storage, so Jev's threads share it); evals and the console choose one with
   `Ai::Sequencer.with_lane(:prompt) { }`, and a call outside any lane counts as interactive.
+- **Each local model host has a gate.** Every request to a local endpoint holds a place at its
+  host's `Ai::Gate` while it runs (`Ai::Transport::Instrumenter`), one gate per host and port in
+  each process (`Ai::Sequencer.gate_for`), sized by llama.cpp's `total_slots` (`GET /props`),
+  else `parallel_requests`, else 1. Interactive requests wait first and interrupt the lowest
+  running lane by shutting its socket (`ProxyNetHttp` reports each request's connection); prompt
+  requests wait; background requests raise `Ai::Error::Busy`, and `ApplicationJob` queues the job
+  again in 5 to 15 seconds, with no retry counted (a generation step stays in `next_job`). The
+  interrupted request raises `Ai::Gate::Interrupted` (its usage row is `cancelled`) and the
+  transport's `attempt` sends it again as `Ai::Error::Preempted`: not a try, a down mark or a
+  failover. Local generations stream so the server stops when the socket closes. Time waiting at
+  the gate is added to the call's deadline. Cloud endpoints have no gate. Tests: `ai_gate_test`,
+  `gate_interrupt_test` (real sockets, direct and through a proxy), `ai_transport_local_stream_test`.
 - **No prompt heredocs.** `Sure/NoPromptHeredoc` flags heredocs over ten lines in
   `app/models/ai/**` and controllers.
 - **Prompts change only with evals.** `test/architecture/ai_prompts_test.rb` renders each prompt

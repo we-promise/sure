@@ -270,6 +270,14 @@ class AiGateTest < ActiveSupport::TestCase
     Ai::Sequencer.ask_servers = false
   end
 
+  test "a local Jev server's fan-out never asks for more places than its lane may hold" do
+    jev = Ai::Transport::Jev.new(ai_endpoint(protocol: :jev, base_url: "http://jev.local:8090", location: :local, parallel_requests: 4))
+
+    assert_equal 4, jev.parallel_requests
+    assert_equal 3, Ai::Sequencer.with_lane(:background) { jev.parallel_requests }
+    assert_equal 8, Ai::Transport::Jev.new(ai_endpoint(protocol: :jev)).parallel_requests
+  end
+
   test "a local endpoint connects within ten seconds; a cloud one keeps RubyLLM's default" do
     local = Ai::Transport::Compatible.new(ai_endpoint(base_url: "http://gpu.local:8080/v1", location: :local, timeout_seconds: 300))
     short = Ai::Transport::Compatible.new(ai_endpoint(base_url: "http://gpu.local:8080/v1", location: :local, timeout_seconds: 4))

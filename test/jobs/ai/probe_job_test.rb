@@ -4,6 +4,7 @@ require "turbo/broadcastable/test_helper"
 class Ai::ProbeJobTest < ActiveSupport::TestCase
   # turbo-rails adds this only once Action Cable has loaded, which a test run alone may not do.
   include Turbo::Broadcastable::TestHelper
+  include ActiveJob::TestHelper
 
   AI_ENVIRONMENT = %w[
     OPENAI_ACCESS_TOKEN OPENAI_URI_BASE OPENAI_MODEL ANTHROPIC_ACCESS_TOKEN ANTHROPIC_API_KEY VECTOR_STORE_PROVIDER
@@ -40,6 +41,16 @@ class Ai::ProbeJobTest < ActiveSupport::TestCase
     assert_equal :failing, page.llm_status
     assert_equal :no_credit, page.llm_probe.failure_code
     assert_includes WorkerAiHealth.recent.sole.failure_codes, :no_credit
+  end
+
+  test "a busy local model host isn't a failing check: the job runs again in a few seconds" do
+    Ai::Transport::Compatible.any_instance.stubs(:probe).raises(Ai::Error::Busy, "full")
+
+    freeze_time do
+      assert_enqueued_jobs(1, only: Ai::ProbeJob) { with_openai_token { Ai::ProbeJob.perform_now } }
+      assert_includes 5..15, Time.iso8601(enqueued_jobs.sole["scheduled_at"]) - Time.current
+    end
+    assert_empty WorkerAiHealth.recent, "nothing stored until the checks run"
   end
 
   test "a stored result doesn't stop the job probing again" do

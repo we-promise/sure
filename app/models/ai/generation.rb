@@ -157,6 +157,8 @@ class Ai::Generation
     end
     Ai::Shadow.enqueue(self, result) if shadow && !shadow_run?
     result
+  rescue Ai::Error::Busy
+    raise   # not a failure: the job runs again later (ApplicationJob)
   rescue Ai::Error::Base => error
     Ai::Result.failure(error)
   end
