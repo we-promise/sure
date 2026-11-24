@@ -13,6 +13,9 @@ class Provider::Eodhd < Provider
   # Maximum API calls per day (EODHD free/basic plans are very restrictive)
   MAX_REQUESTS_PER_DAY = 20
 
+  # EODHD bills each fundamentals request as 10 API calls against the daily allowance
+  FUNDAMENTALS_REQUEST_COST = 10
+
   # The free tier provides ~1 year of EOD data; paid plans go back 30+ years.
   # Raising EODHD_MAX_REQUESTS_PER_DAY above the free cap signals a paid key.
   def max_history_days
@@ -46,9 +49,16 @@ class Provider::Eodhd < Provider
     "XBOM" => "BSE",
     "XNSE" => "NSE",
     "XWAR" => "WAR",
+    # Further European venues, using the MICs from EODHD's own exchange list
+    # (https://eodhd.com/list-of-stock-markets)
+    "XFRA" => "F", "XBRU" => "BR", "XLIS" => "LS", "XWBO" => "VI", "XDUB" => "IR",
+    # German regional exchanges
+    "XBER" => "BE", "XDUS" => "DU", "XHAM" => "HM", "XHAN" => "HA", "XMUN" => "MU", "XSTU" => "STU",
     # Still accept legacy rows / inputs that store the raw EODHD code as MIC.
     # Persistence always canonicalizes WAR → XWAR via Security::MIC_ALIASES.
     "WAR" => "WAR",
+    "F" => "F", "BR" => "BR", "LS" => "LS", "VI" => "VI", "IR" => "IR",
+    "BE" => "BE", "DU" => "DU", "HM" => "HM", "HA" => "HA", "MU" => "MU", "STU" => "STU",
     "EUFUND" => "EUFUND"
   }.freeze
 
@@ -59,7 +69,9 @@ class Provider::Eodhd < Provider
     "TSE" => "XTKS", "MI" => "XMIL", "MC" => "XMAD",
     "OL" => "XOSL", "HE" => "XHEL", "CO" => "XCSE",
     "ST" => "XSTO", "KS" => "XKRX", "BSE" => "XBOM",
-    "NSE" => "XNSE", "WAR" => "XWAR"
+    "NSE" => "XNSE", "WAR" => "XWAR",
+    "F" => "XFRA", "BR" => "XBRU", "LS" => "XLIS", "VI" => "XWBO", "IR" => "XDUB",
+    "BE" => "XBER", "DU" => "XDUS", "HM" => "XHAM", "HA" => "XHAN", "MU" => "XMUN", "STU" => "XSTU"
   }.freeze
 
   EODHD_COUNTRY_TO_CODE = {
@@ -79,6 +91,8 @@ class Provider::Eodhd < Provider
     "ST" => "SEK", "KS" => "KRW", "BSE" => "INR",
     "NSE" => "INR",
     "WAR" => "PLN",
+    "F" => "EUR", "BR" => "EUR", "LS" => "EUR", "VI" => "EUR", "IR" => "EUR",
+    "BE" => "EUR", "DU" => "EUR", "HM" => "EUR", "HA" => "EUR", "MU" => "EUR", "STU" => "EUR",
     "EUFUND" => "EUR"
   }.freeze
 
@@ -161,7 +175,8 @@ class Provider::Eodhd < Provider
           logo_url: nil,
           exchange_operating_mic: mic,
           country_code: country,
-          currency: currency
+          currency: currency,
+          isin: security.dig("ISIN").presence&.to_s&.strip&.upcase
         )
       end
     end
@@ -175,7 +190,7 @@ class Provider::Eodhd < Provider
       failed_key = "eodhd:fundamentals_failed:#{Digest::SHA256.hexdigest(api_key.to_s)[0, 8]}:#{ticker}"
       raise Error, "Fundamentals for #{ticker} failed recently; retrying later" if Rails.cache.read(failed_key)
 
-      enforce_daily_limit!
+      counted_on = enforce_daily_limit!(cost: FUNDAMENTALS_REQUEST_COST)
       throttle_request
 
       begin
@@ -186,8 +201,19 @@ class Provider::Eodhd < Provider
 
         parsed = JSON.parse(response.body)
         check_api_error!(parsed)
-      rescue Faraday::ForbiddenError, Faraday::ResourceNotFound, Error
+      rescue Faraday::ForbiddenError, Faraday::ResourceNotFound, Error => e
         Rails.cache.write(failed_key, true, expires_in: 7.days)
+        # EODHD documents that a lookup for an unknown ticker (404) is billed at its
+        # full price, but not whether a request the plan does not include (403, e.g.
+        # fundamentals on the free plan) is. Count it as one request rather than ten:
+        # under-counting a refused call is safer than refusing the day's prices.
+        # An error in a 200 answer (Error, from check_api_error!) was served, and
+        # EODHD bills failed lookups, so it keeps its full price.
+        refund_daily_requests(FUNDAMENTALS_REQUEST_COST - 1, key: counted_on) if e.is_a?(Faraday::ForbiddenError)
+        raise
+      rescue Faraday::ClientError => e
+        # EODHD answers 402 when the day's calls are used up and does not bill it
+        refund_daily_requests(FUNDAMENTALS_REQUEST_COST, key: counted_on) if e.response_status == 402
         raise
       end
 
@@ -320,12 +346,29 @@ class Provider::Eodhd < Provider
 
     # Enforces the daily rate limit. Raises RateLimitError if the limit is exhausted.
     # Uses atomic increment-then-check to avoid TOCTOU races between concurrent workers.
-    def enforce_daily_limit!
-      new_count = Rails.cache.increment(daily_cache_key, 1, expires_in: 24.hours).to_i
+    # `cost` is how many API calls EODHD bills for the request. A refused request is
+    # taken back off the count, so a refused fundamentals call leaves the rest for prices.
+    # Between the increment and the refund a concurrent request sees the higher count and
+    # may be refused although it would fit; that costs it one retry on the next sync.
+    # Returns the counter key, so a later refund goes to the same day even after midnight.
+    def enforce_daily_limit!(cost: 1)
+      key = daily_cache_key
+      new_count = Rails.cache.increment(key, cost, expires_in: 24.hours).to_i
 
       if new_count > max_requests_per_day
+        refund_daily_requests(cost, key: key)
         raise RateLimitError, "EODHD daily rate limit of #{max_requests_per_day} requests exhausted"
       end
+
+      key
+    end
+
+    # Takes requests back off the count they were added to. If the counter vanished in
+    # the meantime (evicted, or the cache cleared), the decrement recreates it below zero;
+    # put it back to zero so it does not hand out free requests.
+    def refund_daily_requests(amount, key:)
+      count = Rails.cache.decrement(key, amount, expires_in: 24.hours).to_i
+      Rails.cache.increment(key, -count, expires_in: 24.hours) if count.negative?
     end
 
     # throttle_request and min_request_interval provided by RateLimitable

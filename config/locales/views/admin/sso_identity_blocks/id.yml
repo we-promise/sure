@@ -1,0 +1,5 @@
+id:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: "Identitas SSO dapat masuk atau membuat akun lagi."
