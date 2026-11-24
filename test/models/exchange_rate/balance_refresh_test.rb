@@ -163,11 +163,14 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
   # Any other entry at amount 0 adds nothing to the balance, converted or not.
   test "a zero-amount transaction in the changed currency does not sync its account" do
     @account.entries.create!(name: "EUR zero", date: @date, amount: 0, currency: "EUR", entryable: Transaction.new)
+    with_amount = usd_account
+    eur_deposit(account: with_amount, date: @date, amount: 100)
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date, rate: 1.1)
 
-    assert_no_difference "Sync.count" do
-      ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
-    end
+    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
+
+    assert_equal 1, with_amount.syncs.count, "precondition: the refresh syncs an account with an amount in the changed currency"
+    assert_equal 0, @account.syncs.count
   end
 
   # A running sync cannot widen its window, so it is asked for a full resync
