@@ -57,6 +57,29 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_select "textarea[name='chat[content]']", text: ""
   end
 
+  # The feed hides an insight about an account not every member can see, so
+  # the chat composer must not hand its text to anyone who has the id.
+  test "new chat ignores an insight about an account the member cannot see" do
+    insight = create_private_account_insight
+    sign_in users(:family_member)
+
+    get new_chat_url(insight_id: insight.id)
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]']", text: ""
+    assert_no_match "Private holds a balance", response.body
+  end
+
+  # Hidden from everyone, owner included, same as the feed.
+  test "new chat ignores an insight about a private account for its owner too" do
+    insight = create_private_account_insight
+
+    get new_chat_url(insight_id: insight.id)
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]']", text: ""
+  end
+
   test "creates chat" do
     Usage.stubs(:capture)
     Usage.expects(:capture).with("ai_assistant_served_daily").never
@@ -196,4 +219,15 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     post retry_chat_url(other_chat)
     assert_response :not_found
   end
+
+  private
+    # accounts(:connected) belongs to family_admin and is not shared.
+    def create_private_account_insight
+      @family.insights.create!(
+        insight_type: "idle_cash", priority: "low", status: "active", title: "Idle cash in Private",
+        body: "Private holds a balance with no activity in the last 60 days.",
+        metadata: { "account_id" => accounts(:connected).id },
+        dedup_key: "idle_cash:private:2026-07", generated_at: Time.current
+      )
+    end
 end
