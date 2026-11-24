@@ -181,7 +181,7 @@ class Rule::ActionExecutor
       deferred = ActiveSupport::IsolatedExecutionState[DEFERRED_AI_JOBS]
       deferred ? deferred << job : job.queue!
 
-      { async: true }
+      { async: true, modified_count: count }
     end
 
     attr_reader :rule
