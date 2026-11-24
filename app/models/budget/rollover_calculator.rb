@@ -139,7 +139,7 @@ class Budget::RolloverCalculator
         digest_of(AccountShare.where(account_id: accounts.select(:id)).select(:id, :account_id, :user_id, :include_in_finances)),
         family.tax_advantaged_account_ids.sort.join(","),
         family.entries_cache_version,
-        ExchangeRate.where(to_currency: family.currency).maximum(:updated_at)&.to_f,
+        ExchangeRate.where(to_currency: family.currency).updated_at_version,
         family.updated_at.to_f
       ].join("|")
     end
