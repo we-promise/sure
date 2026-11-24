@@ -130,16 +130,22 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     assert_not @plan.streams.exists?(source: "seeded_loan")
   end
 
+  # Seeding marks the plan even when a foreign loan has no rate yet, so a
+  # seeded stream the user deletes is never seeded again.
   test "streams are seeded once: a deleted seeded stream does not come back" do
     checking = own_account(amount: 1_000)
     create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 1_000)
+    own_loan(balance: 45_000, term_months: 60, currency: "EUR")
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
 
     @plan.seed_streams!(as_of: AS_OF)
+    assert_equal [ "seeded_living_costs", "seeded_loan" ], @plan.streams.pluck(:source).sort
     @plan.streams.destroy_all
-    @plan.seed_streams!(as_of: AS_OF)
 
+    assert_no_difference "@plan.streams.count" do
+      @plan.seed_streams!(as_of: AS_OF)
+    end
     assert_equal AS_OF, @plan.reload.streams_seeded_on
-    assert_equal 0, @plan.streams.count
   end
 
   # The marker and the streams are written in one transaction: a seed whose
@@ -157,7 +163,7 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
   # A foreign loan's repayment is kept in the loan's currency, as any stream
   # can be, so a loan with no rate yet is seeded all the same and the plan
   # marked seeded. The simulation leaves it out, and counts it, until the
-  # rate arrives.
+  # rate arrives, and then draws the converted repayment.
   test "a foreign loan seeds its repayment in its own currency, and joins the plan once a rate exists" do
     euros = own_loan(balance: 45_000, term_months: 60, currency: "EUR")
     payment = euros.loan.amortization_schedule.payment_in_force(AS_OF)
@@ -168,28 +174,27 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     stream = @plan.streams.find_by!(source: "seeded_loan")
     assert_equal AS_OF, @plan.reload.streams_seeded_on
     assert_equal [ "EUR", payment.amount * 12, euros ], [ stream.currency, stream.annual_amount, stream.account ]
-    assert_equal 1, RetirementPlan.find(@plan.id).unconverted_stream_count(as_of: AS_OF)
+    before = RetirementPlan.find(@plan.id)
+    assert_equal 1, before.unconverted_stream_count(as_of: AS_OF)
+    withdrawal_before = before.simulation(as_of: AS_OF, retirement_year: AS_OF.year).rows.first.withdrawal
 
     ExchangeRate.unstub(:find_or_fetch_rate)
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: AS_OF, rate: BigDecimal("1.1"))
 
-    assert_equal 0, RetirementPlan.find(@plan.id).unconverted_stream_count(as_of: AS_OF)
+    after = RetirementPlan.find(@plan.id)
+    assert_equal 0, after.unconverted_stream_count(as_of: AS_OF)
+    withdrawal_after = after.simulation(as_of: AS_OF, retirement_year: AS_OF.year).rows.first.withdrawal
+    assert_in_delta payment.amount * 12 * BigDecimal("1.1"), withdrawal_after - withdrawal_before, 0.01
   end
 
-  # A loan without a rate used to leave seeding open, so the next save
-  # seeded again and brought back a seeded stream the user had deleted.
-  test "a seeded stream deleted while a foreign loan has no rate does not come back" do
-    checking = own_account(amount: 1_000)
-    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 1_000)
-    own_loan(balance: 45_000, term_months: 60, currency: "EUR")
-    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+  test "loans in different currencies each seed their repayment in their own currency" do
+    dollars = own_loan(balance: 45_000, term_months: 60)
+    euros = own_loan(balance: 45_000, term_months: 60, currency: "EUR")
 
     @plan.seed_streams!(as_of: AS_OF)
-    @plan.streams.find_by!(source: "seeded_living_costs").destroy!
 
-    assert_no_difference -> { @plan.streams.where(source: "seeded_living_costs").count } do
-      @plan.seed_streams!(as_of: AS_OF)
-    end
+    currencies = @plan.streams.where(source: "seeded_loan").to_h { |stream| [ stream.account_id, stream.currency ] }
+    assert_equal({ dollars.id => "USD", euros.id => "EUR" }, currencies)
   end
 
   # Two requests that each loaded the plan before either seeded: the second
