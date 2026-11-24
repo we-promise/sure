@@ -689,6 +689,215 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_equal 2080, series.recurring_price_changes.order(:effective_on).last.new_amount
   end
 
+  # A bill's category is the user's statement of what its payments are, so a
+  # confirmed payment inherits it instead of being categorized a second time.
+  # Only a blank, unlocked category is filled: a locked one is a user, rule or
+  # provider decision, and the bill must not undo it.
+  test "a confirmed manual attach gives an uncategorized transaction the bill's category" do
+    category = bill_category!
+    entry = entry_for(2000)
+
+    @allocator.allocate!(entry: entry, categorize: true)
+
+    transaction = entry.transaction.reload
+    assert_equal category, transaction.category
+    assert_not transaction.locked?(:category_id), "a bill-set category stays overridable by the user"
+    assert_equal "recurring_bill", transaction.data_enrichments.find_by(attribute_name: "category_id").source
+  end
+
+  # The caller knows whether its user may annotate the transaction, so
+  # categorizing is something it asks for, never something it gets by default.
+  test "allocate! does not categorize unless asked to" do
+    bill_category!
+    entry = entry_for(2000)
+
+    @allocator.allocate!(entry: entry)
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "confirm_suggestion! does not categorize unless asked to" do
+    bill_category!
+    entry = entry_for(2000)
+    allocation = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.8, signals: {})
+
+    @allocator.confirm_suggestion!(allocation)
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "a confirmed auto match gives an uncategorized transaction the bill's category" do
+    category = bill_category!
+    entry = entry_for(2000)
+
+    @allocator.allocate_matched!(entry: entry, state: "confirmed", confidence: 1, signals: {})
+
+    assert_equal category, entry.transaction.reload.category
+  end
+
+  test "a suggested match leaves the category alone until the suggestion is confirmed" do
+    category = bill_category!
+    entry = entry_for(2000)
+
+    allocation = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.8, signals: {})
+    assert_nil entry.transaction.reload.category
+
+    @allocator.confirm_suggestion!(allocation, categorize: true)
+    assert_equal category, entry.transaction.reload.category
+  end
+
+  test "a transaction that already has a category keeps it" do
+    bill_category!
+    other = @family.categories.create!(name: "Other pick", color: "#e99537", lucide_icon: "shapes")
+    entry = entry_for(2000)
+    entry.transaction.update!(category: other)
+
+    @allocator.allocate!(entry: entry, categorize: true)
+
+    assert_equal other, entry.transaction.reload.category
+  end
+
+  test "an uncategorized transaction whose category the user locked stays uncategorized" do
+    bill_category!
+    entry = entry_for(2000)
+    entry.transaction.lock_attr!(:category_id)
+
+    @allocator.allocate!(entry: entry, categorize: true)
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "a bill without a category changes nothing" do
+    entry = entry_for(2000)
+
+    @allocator.allocate!(entry: entry, categorize: true)
+
+    assert_nil entry.transaction.reload.category
+    assert_empty entry.transaction.data_enrichments
+  end
+
+  test "releasing the payment leaves the category the transaction picked up" do
+    category = bill_category!
+    entry = entry_for(2000)
+    allocation = @allocator.allocate!(entry: entry, categorize: true)
+
+    @allocator.unallocate!(allocation)
+
+    assert_equal category, entry.transaction.reload.category,
+      "the user may have relied on it; un-matching is not a request to uncategorize"
+  end
+
+  test "a payment without a transaction has nothing to categorize" do
+    bill_category!
+
+    assert_nothing_raised { @allocator.allocate!(amount: 500, categorize: true) }
+  end
+
+  # Auto-matching has no signed-in user, and a bill that is not tied to an
+  # account matches anything in the family, so only a person's own confirmation
+  # (with their own access) categorizes for it.
+  test "an account-less bill does not categorize an auto match" do
+    bill_category!
+    @rent.update!(account: nil)
+    entry = card_entry_for(2000)
+
+    @allocator.allocate_matched!(entry: entry, state: "confirmed", confidence: 1, signals: {})
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "an account-less bill categorizes when a person confirms the suggestion" do
+    category = bill_category!
+    @rent.update!(account: nil)
+    entry = card_entry_for(2000)
+    suggestion = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.7, signals: {})
+    assert_nil entry.transaction.reload.category
+
+    @allocator.confirm_suggestion!(suggestion, categorize: true)
+
+    assert_equal category, entry.transaction.reload.category
+  end
+
+  test "an account-less bill does not categorize a repaired orphan on its own" do
+    bill_category!
+    @rent.update!(account: nil)
+    entry = card_entry_for(2000)
+    allocation = @allocator.allocate!(entry: entry)
+
+    @allocator.categorize_reattached!(allocation)
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "a category committed after the matcher loaded the transaction is not overwritten" do
+    bill_category!
+    other = @family.categories.create!(name: "Picked meanwhile", color: "#e99537", lucide_icon: "shapes")
+    entry = entry_for(2000)
+    stale = Entry.includes(:entryable).find(entry.id)
+    stale.entryable # loaded while still blank
+
+    Transaction.where(id: entry.entryable_id).update_all(category_id: other.id)
+    @allocator.allocate_matched!(entry: stale, state: "confirmed", confidence: 1, signals: {})
+
+    assert_equal other, entry.transaction.reload.category
+  end
+
+  test "confirming an allocation that is already confirmed does not categorize it later" do
+    entry = entry_for(2000)
+    allocation = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.8, signals: {})
+    @allocator.confirm_suggestion!(allocation, categorize: true)
+    assert_nil entry.transaction.reload.category
+
+    bill_category!
+    @allocator.confirm_suggestion!(allocation.reload, categorize: true)
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "a transaction whose category is not editable is not categorized" do
+    bill_category!
+    entry = entry_for(2000)
+    Transaction.any_instance.stubs(:category_editable?).returns(false)
+
+    @allocator.allocate!(entry: entry, categorize: true)
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "a category that cannot be written does not stop the payment from being confirmed" do
+    bill_category!
+    entry = entry_for(2000)
+    Transaction.any_instance.stubs(:enrich_attribute).raises(ActiveRecord::InvalidForeignKey)
+
+    allocation = @allocator.allocate!(entry: entry, categorize: true)
+
+    assert allocation.persisted?
+    assert allocation.allocation_confirmed?
+  end
+
+  test "re-attaching a payment confirmed since it was loaded still categorizes the replacement" do
+    category = bill_category!
+    entry = entry_for(2000)
+    allocation = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.8, signals: {})
+    stale = RecurringAllocation.find(allocation.id)
+    assert stale.allocation_suggested?
+
+    allocation.update!(state: "confirmed", source: "user_confirmed")
+    @allocator.categorize_reattached!(stale)
+
+    assert_equal category, entry.transaction.reload.category
+  end
+
+  test "re-attaching a payment that is still only a suggestion does not categorize" do
+    bill_category!
+    entry = entry_for(2000)
+    allocation = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.8, signals: {})
+
+    @allocator.categorize_reattached!(allocation)
+
+    assert_nil entry.transaction.reload.category
+  end
+
   private
 
     def foreign_entry(amount:, currency:)
@@ -713,6 +922,18 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
         currency: "USD", expected_amount: expected, status: "scheduled"
       )
     end
+    def bill_category!
+      category = @family.categories.create!(name: "Housing bills", color: "#e99537", lucide_icon: "house")
+      @rent.update!(category: category)
+      category
+    end
+
+    def card_entry_for(amount)
+      accounts(:credit_card).entries.create!(
+        date: Date.current, amount: amount, currency: "USD", name: "Watson Property", entryable: Transaction.new
+      )
+    end
+
     def entry_for(amount)
       @account.entries.create!(
         date: Date.current,

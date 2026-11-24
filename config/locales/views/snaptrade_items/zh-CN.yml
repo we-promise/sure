@@ -2,6 +2,9 @@
 zh-CN:
   snaptrade_items:
     default_name: "SnapTrade 连接"
+    personal_key:
+      success: "SnapTrade 个人 API 密钥已保存。正在同步您的账户..."
+      missing_fields: "请同时输入 SnapTrade Client ID 和 Consumer Key。"
     destroy:
       success: "SnapTrade 连接已安排删除。"
     connect:
@@ -150,6 +153,13 @@ zh-CN:
       oauth_status_ready: "授权 Sure 读取您的 SnapTrade 账户数据。"
       oauth_status_ready_device: "使用设备代码授权 Sure 读取您的 SnapTrade 账户数据。"
       oauth_status_authorized: "已完成 SnapTrade 授权。"
+      oauth_status_personal_key: "正在使用您的 SnapTrade 个人 API 密钥进行同步。通过 OAuth 授权会将此连接切换为 OAuth。"
+      oauth_alternative: "为他人运行 Sure？请改用注册 SnapTrade OAuth 应用的方式："
+      personal_key_title: "SnapTrade 个人 API 密钥"
+      personal_key_description_html: '为您自己的券商账户使用免费的个人密钥。在 <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a> 创建密钥，并将 Client ID 和 Consumer Key 粘贴到此处。'
+      personal_key_client_id_label: "Client ID"
+      personal_key_consumer_key_label: "Consumer Key"
+      personal_key_save_button: "保存密钥"
       oauth_connect_button: "通过 SnapTrade 连接"
       oauth_device_button: "使用设备代码"
       oauth_reauthorize_button: "重新授权"
