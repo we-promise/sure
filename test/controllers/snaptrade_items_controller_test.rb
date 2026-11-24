@@ -535,6 +535,112 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to setup_accounts_snaptrade_item_path(@snaptrade_item, accountable_type: "Investment", return_to: "/accounts")
   end
 
+  test "personal_key stores a SnapTrade Personal API key and starts a sync" do
+    sign_out
+    sign_in @user = users(:empty)
+    snaptrade_item = snaptrade_items(:unauthorized_item)
+    snaptrade_item.update!(snaptrade_user_id: "legacy-user", snaptrade_user_secret: "legacy-secret")
+
+    with_snaptrade_oauth(nil, nil) do
+      assert_difference "Sync.count", 1 do
+        post personal_key_snaptrade_items_url,
+             params: { snaptrade_item: { client_id: " PERSONAL-CLIENT ", consumer_key: "personal-key" } },
+             as: :turbo_stream
+      end
+    end
+
+    assert_response :success
+    snaptrade_item.reload
+    assert_equal "PERSONAL-CLIENT", snaptrade_item.client_id
+    assert_equal "personal-key", snaptrade_item.consumer_key
+    assert_nil snaptrade_item.snaptrade_user_secret
+    assert snaptrade_item.good?
+    assert snaptrade_item.personal_key_configured?
+    assert_includes SnaptradeItem.syncable, snaptrade_item
+  end
+
+  # The instance dropped its OAuth app: the stale token must not win over the new key.
+  test "personal_key switches a formerly OAuth item to the key" do
+    @snaptrade_item.update!(oauth_token_expires_at: 1.minute.ago)
+
+    with_snaptrade_oauth(nil, nil) do
+      post personal_key_snaptrade_items_url,
+           params: { snaptrade_item: { client_id: "PERSONAL", consumer_key: "pk" } }, as: :turbo_stream
+
+      signed = stub_request(:get, %r{\Ahttps://api\.snaptrade\.com/api/v1/accounts\?clientId=PERSONAL&}).to_return(status: 200, body: "[]")
+      @snaptrade_item.reload.snaptrade_provider.list_accounts
+      assert_requested signed
+    end
+  end
+
+  test "personal_key re-renders the panel for the item it saved the key on" do
+    @user.family.snaptrade_items.create!(name: "Newer, never authorized", created_at: 1.minute.from_now)
+
+    with_snaptrade_oauth(nil, nil) do
+      post personal_key_snaptrade_items_url,
+           params: { snaptrade_item: { client_id: "PERSONAL", consumer_key: "pk" } }, as: :turbo_stream
+    end
+
+    assert_response :success
+    assert @snaptrade_item.reload.personal_key_configured?
+    assert_includes response.body, connections_snaptrade_item_path(@snaptrade_item)
+  end
+
+  test "personal_key is refused when an OAuth app is configured" do
+    sign_out
+    sign_in @user = users(:empty)
+
+    with_snaptrade_oauth("oauth-client", nil) do
+      post personal_key_snaptrade_items_url,
+           params: { snaptrade_item: { client_id: "PERSONAL", consumer_key: "pk" } }, as: :turbo_stream
+    end
+
+    assert_response :not_found
+    assert_not snaptrade_items(:unauthorized_item).reload.personal_key_configured?
+  end
+
+  test "personal_key creates the family's item when it has none" do
+    @user.family.snaptrade_items.update_all(scheduled_for_deletion: true)
+
+    with_snaptrade_oauth(nil, nil) do
+      assert_difference "@user.family.snaptrade_items.active.count", 1 do
+        post personal_key_snaptrade_items_url,
+             params: { snaptrade_item: { client_id: "PERSONAL-CLIENT", consumer_key: "personal-key" } }
+      end
+    end
+
+    assert_redirected_to settings_providers_path
+    assert @user.family.snaptrade_items.active.sole.personal_key_configured?
+  end
+
+  test "personal_key rejects a missing half of the key" do
+    sign_out
+    sign_in @user = users(:empty)
+
+    with_snaptrade_oauth(nil, nil) do
+      assert_no_difference "Sync.count" do
+        post personal_key_snaptrade_items_url,
+             params: { snaptrade_item: { client_id: "PERSONAL-CLIENT", consumer_key: "" } },
+             as: :turbo_stream
+      end
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, I18n.t("snaptrade_items.personal_key.missing_fields")
+    assert_not snaptrade_items(:unauthorized_item).reload.personal_key_configured?
+  end
+
+  test "select_accounts sends unregistered users to the Personal key form without an OAuth app" do
+    sign_out
+    sign_in @user = users(:empty)
+
+    with_snaptrade_oauth(nil, nil) do
+      get select_accounts_snaptrade_items_url, params: { accountable_type: "Investment", return_to: "setup_accounts" }
+
+      assert_redirected_to settings_providers_path
+    end
+  end
+
   test "preload_accounts redirects unregistered users into connect flow" do
     sign_out
     sign_in @user = users(:empty)

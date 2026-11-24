@@ -23,8 +23,22 @@ fr:
         currency: Devise
         family: Famille
         family_id: Famille
+        logo: Logo
         name: Nom
         subtype: Sous-type
+      depository:
+        subtype: Type de compte
+      investment:
+        subtype: Type d'investissement
+      loan:
+        subtype: Type de prêt
+    errors:
+      models:
+        account:
+          attributes:
+            logo:
+              invalid_content_type: doit être une image PNG, JPEG, GIF, WebP ou ICO
+              too_large: doit faire moins de %{max_size} Mo
     models:
       account: Compte
       account/credit: Carte de Crédit
