@@ -31,6 +31,16 @@ class ReceiptScan::EvaluationTest < ActiveSupport::TestCase
     assert_equal report, JSON.parse(File.read(@dir.join("report.json")))
   end
 
+  test "a receipt named report stops the run before its expected values are overwritten" do
+    write_pair("report", merchant: "Corner Grocer", date: "2026-11-14", total: "50.00", currency: "USD")
+    expected = @dir.join("report.json").read
+    provider = stub(supports_receipt_extraction?: true)
+    provider.expects(:extract_receipt).never
+
+    assert_raises(ArgumentError) { ReceiptScan::Evaluation.new(dir: @dir, family: @family, provider:).run }
+    assert_equal expected, @dir.join("report.json").read
+  end
+
   test "counts a failed extraction as wrong on every field" do
     provider = stub(supports_receipt_extraction?: true)
     provider.stubs(:extract_receipt).returns(Provider::Response.new(success?: false, data: nil, error: Provider::Error.new("boom")))

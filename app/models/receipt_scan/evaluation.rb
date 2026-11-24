@@ -18,8 +18,12 @@ class ReceiptScan::Evaluation
     @clock = clock
   end
 
+  REPORT = "report".freeze
+
   def run
     raise ArgumentError, "No receipt-capable AI provider is configured" unless provider&.supports_receipt_extraction?
+    # The report is written to report.json, which would overwrite that receipt's expected values.
+    raise ArgumentError, "Rename the receipt called #{REPORT}: the report is written to #{REPORT}.json" if receipts.any? { _1.first == REPORT }
 
     results = receipts.map { |name, path, expected| evaluate(name, path, expected) }
     report = {
@@ -29,7 +33,7 @@ class ReceiptScan::Evaluation
       "mean_latency_seconds" => results.empty? ? 0.0 : (results.sum { _1["latency_seconds"] } / results.size).round(2),
       "results" => results
     }
-    File.write(dir.join("report.json"), JSON.pretty_generate(report))
+    File.write(dir.join("#{REPORT}.json"), JSON.pretty_generate(report))
     report
   end
 
