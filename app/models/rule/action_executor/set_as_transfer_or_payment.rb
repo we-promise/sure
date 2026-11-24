@@ -18,7 +18,7 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     target_account = family.accounts.find_by_id(value)
     return 0 unless target_account
-    scope = transaction_scope.with_entry
+    scope = transaction_scope.with_entry.where.missing(:transfer_as_inflow, :transfer_as_outflow)
     # Checked once per run, not per transaction.
     reconcile_pledges = target_account.linked_to_goal?
 
