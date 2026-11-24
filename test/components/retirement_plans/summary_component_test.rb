@@ -17,7 +17,7 @@ class RetirementPlans::SummaryComponentTest < ViewComponent::TestCase
     assert_text "60%"
     assert_text I18n.t("retirement_plans.summary.derived")
     assert_text I18n.t("retirement_plans.summary.no_retirement_date")
-    assert_no_selector ".text-warning"
+    assert_no_text I18n.t("retirement_plans.summary.unconverted", count: 0)
   end
 
   # Independence needs progress of at least 1, so the figure and the bar must
@@ -27,6 +27,13 @@ class RetirementPlans::SummaryComponentTest < ViewComponent::TestCase
 
     assert_selector "[data-fi-progress]", text: "99% of the way"
     assert_no_text "Financially independent"
+  end
+
+  # Rounding down a sliver below zero would read -1% beside an empty bar.
+  test "progress a sliver below zero reads 0%" do
+    render_inline(RetirementPlans::SummaryComponent.new(projection: projection(current_assets: -4_000), currency: "USD"))
+
+    assert_selector "[data-fi-progress]", text: /\A\s*0% of the way/
   end
 
   test "the bar just short of the FI number stops short of full" do

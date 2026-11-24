@@ -79,4 +79,44 @@ class RetirementPlansTest < ApplicationSystemTestCase
     assert_selector "#retirement-plan-streams", text: "Pension"
     assert_equal 2052, RetirementPlan.find_by!(user: @user).streams.find_by!(name: "Pension").start_year
   end
+
+  # A one-off is paid once, in its start year, so the form hides its To year
+  # and clears one typed before the kind changed; the model would otherwise
+  # refuse an end before the start over a field the plan never reads.
+  test "a one-off saves without the To year typed before its kind changed" do
+    RetirementPlan.create!(user: @user, birth_year: 1985, retirement_date: Date.new(2045, 1, 1), streams_seeded_on: Date.current)
+    visit retirement_plan_path
+
+    click_link I18n.t("retirement_plans.show.add_stream")
+    within("dialog") do
+      fill_in "retirement_plan_stream[name]", with: "New roof"
+      fill_in "retirement_plan_stream[annual_amount]", with: "20000"
+      fill_in "retirement_plan_stream[start_year]", with: "2030"
+      fill_in "retirement_plan_stream[end_year]", with: "2020"
+      select I18n.t("retirement_plans.streams.form.kinds.one_off"), from: "retirement_plan_stream[kind]"
+      assert_no_field "retirement_plan_stream[end_year]"
+      click_button I18n.t("retirement_plans.streams.form.save")
+    end
+
+    assert_selector "#retirement-plan-streams", text: "New roof"
+    stream = RetirementPlan.find_by!(user: @user).streams.find_by!(name: "New roof")
+    assert_equal [ "one_off", 2030, nil ], [ stream.kind, stream.start_year, stream.end_year ]
+  end
+
+  test "spending keeps the To year it is given" do
+    RetirementPlan.create!(user: @user, birth_year: 1985, retirement_date: Date.new(2045, 1, 1), streams_seeded_on: Date.current)
+    visit retirement_plan_path
+
+    click_link I18n.t("retirement_plans.show.add_stream")
+    within("dialog") do
+      select I18n.t("retirement_plans.streams.form.kinds.expense"), from: "retirement_plan_stream[kind]"
+      fill_in "retirement_plan_stream[name]", with: "Mortgage"
+      fill_in "retirement_plan_stream[annual_amount]", with: "18000"
+      fill_in "retirement_plan_stream[end_year]", with: "2041"
+      click_button I18n.t("retirement_plans.streams.form.save")
+    end
+
+    assert_selector "#retirement-plan-streams", text: "Mortgage"
+    assert_equal 2041, RetirementPlan.find_by!(user: @user).streams.find_by!(name: "Mortgage").end_year
+  end
 end
