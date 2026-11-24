@@ -1,0 +1,32 @@
+<%# locals: (expenses:) %>
+<div>
+  <%= render DS::Table.new(rows: expenses, inset: true, label: t("reports.biggest_expenses.title")) do |table| %>
+    <% table.with_column(t("reports.biggest_expenses.table.name")) do |expense| %>
+      <%# Name and details wrap rather than truncate, so the amount stays in view on a narrow screen. %>
+      <div class="space-y-0.5">
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <%= link_to expense[:entry].name, entry_path(expense[:entry]),
+                      class: "font-medium text-primary hover:underline",
+                      data: { turbo_frame: "drawer", turbo_prefetch: false } %>
+          <% if expense[:transaction].one_time? %>
+            <%= render DS::Pill.new(label: t("reports.biggest_expenses.one_time"), tone: :warning, marker: false) %>
+          <% end %>
+        </div>
+        <div class="text-xs text-subdued">
+          <%= format_date(expense[:entry].date) %> · <%= expense[:entry].account.name %>
+        </div>
+      </div>
+    <% end %>
+    <% table.with_column(t("reports.biggest_expenses.table.category")) do |expense| %>
+      <div class="hidden lg:block">
+        <%= render "categories/badge", category: expense[:transaction].category %>
+      </div>
+      <div class="flex lg:hidden">
+        <%= render "categories/badge_mobile", category: expense[:transaction].category %>
+      </div>
+    <% end %>
+    <% table.with_column(t("reports.biggest_expenses.table.amount"), numeric: true) do |expense| %>
+      <span class="text-primary whitespace-nowrap privacy-sensitive"><%= expense[:amount].format %></span>
+    <% end %>
+  <% end %>
+</div>
