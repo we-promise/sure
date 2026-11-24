@@ -502,8 +502,8 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal txns.first(2).map(&:id), entry.metadata["requested_transaction_ids"]
   end
 
-  # #5709: without a family admin's AI switch nothing is sent, and the rule run ends having changed nothing.
-  test "sends nothing while no family admin has turned AI on, and the rule run succeeds" do
+  # #5709: without a family admin's AI switch nothing is sent, and the rule run says why.
+  test "sends nothing while no family admin has turned AI on, and the rule run fails" do
     @family.users.update_all(ai_enabled: false)
     txns = 2.times.map { |i| create_transaction(account: @account, name: "Coffee shop #{i}").transaction }
     rule_run = ai_rule_run(txns.size)
@@ -513,7 +513,8 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys) until enqueued_jobs.empty?
 
     assert_empty requests
-    assert_equal [ 0, 0, "success" ], rule_run.reload.values_at(:transactions_awaiting_ai, :transactions_modified, :status)
+    assert_equal [ 0, 0, "failed" ], rule_run.reload.values_at(:transactions_awaiting_ai, :transactions_modified, :status)
+    assert_includes rule_run.error_message.to_s, "no_family_consent"
     assert_equal 0, Ai::GenerationRun.count
   end
 

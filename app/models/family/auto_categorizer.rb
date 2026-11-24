@@ -14,9 +14,6 @@ class Family::AutoCategorizer
   Error = Class.new(StandardError)
 
   def ai_generation
-    # Without the family's consent nothing is sent, and the run ends having changed nothing.
-    return unless Ai.available?(:categorize, family:)
-
     ids = matching_transaction_ids
     @cached_ids = cached_transaction_ids
     @blocked_ids = protected_transaction_ids - @cached_ids
