@@ -20,12 +20,17 @@ class Ai::GenerationJob < ApplicationJob
   # Another copy of this job committed its step first; that copy carries the run on.
   StepTaken = Class.new(StandardError)
 
+  MARKED_DOWN_WAITS = 10
   RETRIED = [ Ai::Error::RateLimited, Ai::Error::Timeout, Ai::Error::Upstream, Ai::Error::Unreachable ].freeze
   DISCARDED = [ Ai::Error::Unavailable, Ai::Error::Refused, Ai::Error::Unauthorized, Ai::Error::NoCredit,
                 Ai::Error::ModelMissing, Ai::Error::ContextTooLong, Ai::Error::InvalidOutput, Ai::Error::Cancelled ].freeze
 
   retry_on(*RETRIED, wait: :polynomially_longer, attempts: 5) { |job, error| job.give_up(error) }
   retry_on(ActiveRecord::Deadlocked, attempts: 5) { |job, error| job.give_up(error) }
+  # Every route was marked down, so nothing was sent: wait the mark out and try again, without
+  # spending one of the five tries above (declared after them, so it's matched first). Capped, so
+  # marks other jobs keep writing during a long outage still end the run through its requester.
+  retry_on(Ai::Error::MarkedDown, wait: ->(_executions) { Ai::DownMarks::TTL.to_i + rand(1..10) }, attempts: MARKED_DOWN_WAITS) { |job, error| job.give_up(error) }
   discard_on(*DISCARDED) { |job, error| job.give_up(error) }
 
   # feature: a key in Ai::Requesters; args: `run_id:`, `cursor:` (the run's next unread position),
