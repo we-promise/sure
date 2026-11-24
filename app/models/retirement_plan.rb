@@ -129,9 +129,8 @@ class RetirementPlan < ApplicationRecord
   # Seeds the plan's streams from the user's spending and loans, once. Called
   # by the controller after a save, never on a page view, with the page's
   # reference date. The row lock reloads the plan, so two saves that race
-  # here seed once between them. A loan that cannot be converted for want of
-  # an exchange rate leaves the plan unmarked, so a later seed adds it; what
-  # was already seeded is not seeded again.
+  # here seed once between them. The plan is marked seeded every time, so a
+  # seeded stream the user deletes does not come back.
   def seed_streams!(as_of:)
     # with_lock reloads the row; a new record has none, and would either fail
     # on streams.create! or be saved here as a side effect.
@@ -141,8 +140,8 @@ class RetirementPlan < ApplicationRecord
       next if streams_seeded_on.present?
 
       seed_living_costs(as_of)
-      skipped_loans = seed_loans(as_of)
-      update!(streams_seeded_on: as_of) if skipped_loans.zero?
+      seed_loans(as_of)
+      update!(streams_seeded_on: as_of)
     end
   end
 
@@ -251,11 +250,12 @@ class RetirementPlan < ApplicationRecord
     # longer clears has no payoff date, but the contract still asks for that
     # repayment until maturity, so its stream ends there. A loan whose
     # projection does not apply (nothing left to pay, or no payments left)
-    # seeds nothing rather than an invented figure. Returns how many loans
-    # were skipped for want of an exchange rate.
+    # seeds nothing rather than an invented figure. The repayment is kept in
+    # the loan's own currency and converted when the plan is simulated, as
+    # any stream is, so a loan with no rate yet is seeded all the same and
+    # counted by #unconverted_stream_count until the rate arrives.
     def seed_loans(as_of)
       seeded = streams.where(source: "seeded_loan").pluck(:account_id).compact
-      skipped = 0
 
       finance_accounts.where(accountable_type: "Loan").where.not(id: seeded).includes(:accountable).find_each do |account|
         projection = Loan::PayoffProjection.new(account.accountable, as_of: as_of)
@@ -267,14 +267,9 @@ class RetirementPlan < ApplicationRecord
 
         end_date = projection.payoff_date || schedule.payoff_date
         # Twelve: AmortizationSchedule#payment_schedule is monthly.
-        annual = payment.exchange_to(user.family.currency, date: as_of).amount * 12
-        streams.create!(kind: "expense", source: "seeded_loan", indexed: false, account: account,
-                        name: account.name, annual_amount: annual, end_year: end_date.year)
-      rescue Money::ConversionError
-        skipped += 1
+        streams.create!(kind: "expense", source: "seeded_loan", indexed: false, account: account, name: account.name,
+                        annual_amount: payment.amount * 12, currency: payment.currency.iso_code, end_year: end_date.year)
       end
-
-      skipped
     end
 
     # The same scope InvestmentStatement#investment_accounts uses:
