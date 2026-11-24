@@ -16,6 +16,13 @@ class DS::StatTest < ViewComponent::TestCase
     assert_equal 2, page.all("p").size
   end
 
+  test "renders no empty figure when given neither a value nor a value slot" do
+    render_inline(DS::Stat.new(label: "Earliest year", hint: "Not yet known"))
+
+    assert_equal [ "Earliest year", "Not yet known" ], page.all("p").map(&:text)
+    assert_no_selector "p.tabular-nums"
+  end
+
   test "takes a larger size and a tone, and falls back for unknown ones" do
     render_inline(DS::Stat.new(label: "FI number", value: "$1,050,000", size: :xl, tone: :success))
     assert_selector "p.text-3xl.text-success", text: "$1,050,000"

@@ -2,7 +2,7 @@
   <p class="text-xs text-secondary"><%= label %></p>
   <% if value? %>
     <%= value %>
-  <% else %>
+  <% elsif plain_value.present? %>
     <%= tag.p plain_value, class: value_classes, **value_attributes %>
   <% end %>
   <% if hint.present? %>
