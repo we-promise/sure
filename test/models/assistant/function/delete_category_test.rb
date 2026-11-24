@@ -105,6 +105,22 @@ class Assistant::Function::DeleteCategoryTest < ActiveSupport::TestCase
     assert Category.exists?(@category.id)
   end
 
+  test "names only the bills in accounts the user can open, and counts them all" do
+    hidden = @family.accounts.create!(name: "Hidden Savings", balance: 0, currency: "USD", accountable: Depository.new, owner: @user)
+    recurring_transactions(:netflix_subscription).update!(category: @category)
+    @family.recurring_transactions.create!(
+      account: hidden, name: "Secret rent", category: @category, amount: 900, currency: "USD",
+      expected_day_of_month: 1, status: "active", occurrence_count: 3,
+      last_occurrence_date: 1.month.ago.to_date, next_expected_date: 5.days.from_now.to_date
+    )
+
+    preview = Assistant::Function::DeleteCategory.new(users(:family_member)).call("id" => @category.id)[:preview]
+
+    assert_equal [ recurring_transactions(:netflix_subscription).id ], preview[:uncategorized_bills].map { |bill| bill[:id] }
+    assert_equal 2, preview[:uncategorized_bill_count]
+    assert_not_includes preview.to_json, "Secret rent"
+  end
+
   test "refuses a forged token, another category's token, another user's token and an expired one" do
     other_token = @fn.call("id" => categories(:income).id)[:preview_token]
     member_token = Assistant::Function::DeleteCategory.new(users(:family_member)).call("id" => @category.id)[:preview_token]

@@ -79,17 +79,21 @@ class Assistant::Function::DeleteCategory < Assistant::Function
   end
 
   private
-    # What deleting the category would change; the token is bound to it.
+    # What deleting the category would change; the token is bound to it. The
+    # counts cover the whole family, as the deletion does; bills are named
+    # only where the user can open their accounts.
     def preview(category, replacement)
+      # The recurring_transactions foreign key nullifies their category, even
+      # with a replacement.
+      bills = family.recurring_transactions.where(category_id: category.id)
       {
         category: { id: category.id, name: category.name_with_parent },
         transaction_count: category.transactions.count,
         replacement: replacement && { id: replacement.id, name: replacement.name_with_parent },
         subcategories: category.subcategories.order(:name).pluck(:name),
         budget_allocations: category.budget_categories.count,
-        # The recurring_transactions foreign key nullifies their category, even
-        # with a replacement.
-        uncategorized_bills: RecurringTransaction.where(category_id: category.id).includes(:merchant).order(:id).map { |bill| { id: bill.id, name: bill.display_name } }
+        uncategorized_bill_count: bills.count,
+        uncategorized_bills: bills.accessible_by(user).includes(:merchant).order(:id).map { |bill| { id: bill.id, name: bill.display_name } }
       }
     end
 
