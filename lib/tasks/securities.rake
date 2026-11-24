@@ -42,6 +42,7 @@ namespace :securities do
               # Splits would otherwise go with the duplicate (dependent: :destroy)
               split_counts = Security::Split.move!(from: security, to: canonical)
               puts "    - #{split_counts[:moved]} splits moved, #{split_counts[:dropped]} dropped (canonical already had that ex-date)"
+              security.move_taggings_to!(canonical)
 
               # Delete the duplicate
               security.destroy!
@@ -102,6 +103,7 @@ namespace :securities do
             # Splits would otherwise go with the duplicates (dependent: :destroy)
             split_counts = Security::Split.move!(from: duplicates, to: canonical)
             puts "    - #{split_counts[:moved]} splits moved, #{split_counts[:dropped]} dropped (canonical already had that ex-date)"
+            duplicates.each { |duplicate| duplicate.move_taggings_to!(canonical) }
 
             # Delete the duplicates
             duplicates.each(&:destroy!)

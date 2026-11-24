@@ -234,6 +234,324 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("100"), @snaptrade_account.cash_equivalent_position_value("USD")
   end
 
+  test "option positions are valued per contract, short ones as a liability" do
+    security = securities(:aapl)
+
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("9999.00"),
+      cash_balance: BigDecimal("1000.00"),
+      raw_holdings_payload: [
+        { "instrument" => { "kind" => "stock", "symbol" => security.ticker }, "units" => "10", "price" => "150.00", "currency" => "USD" },
+        option_position("AAPL  261218C00240000", "CALL", units: "2", price: "5.10", cost_basis: "4.00"),
+        option_position("AAPL  261218P00200000", "PUT", units: "-1", price: "2.00")
+      ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    # 1500 stock + 2 x 510 long call - 1 x 200 short put + 1000 cash
+    assert_equal BigDecimal("3320"), @account.reload.balance
+
+    call = @account.holdings.joins(:security).find_by(securities: { ticker: "AAPL  261218C00240000" })
+    assert_equal [ BigDecimal("2"), BigDecimal("510"), BigDecimal("1020"), BigDecimal("400") ],
+                 [ call.qty, call.price, call.amount, call.cost_basis ]
+    # Holdings cannot be negative, so the short leg only counts in the total
+    assert_nil @account.holdings.joins(:security).find_by(securities: { ticker: "AAPL  261218P00200000" })
+    assert_nil Security.find_by(ticker: "AAPL  261218P00200000")
+  end
+
+  test "a short option on its own reduces the total below a stale cash-only API total" do
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("1000.00"),
+      cash_balance: BigDecimal("1000.00"),
+      raw_holdings_payload: [ option_position("AAPL  261218P00200000", "PUT", units: "-1", price: "2.00") ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    # 1000 cash - 1 x 200 short put
+    assert_equal BigDecimal("800"), @account.reload.balance
+  end
+
+  test "a short option next to an unpriced long keeps the API total" do
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("20900.00"),
+      cash_balance: BigDecimal("1000.00"),
+      raw_holdings_payload: [
+        { "instrument" => { "kind" => "stock", "symbol" => securities(:aapl).ticker }, "units" => "100", "price" => nil, "currency" => "USD" },
+        option_position("AAPL  261218C00240000", "CALL", units: "-1", price: "1.00")
+      ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    assert_equal BigDecimal("20900"), @account.reload.balance
+  end
+
+  test "a short option next to a long without units keeps the API total" do
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("20900.00"),
+      cash_balance: BigDecimal("1000.00"),
+      raw_holdings_payload: [
+        { "instrument" => { "kind" => "stock", "symbol" => securities(:aapl).ticker }, "units" => nil, "price" => "200.00", "currency" => "USD" },
+        option_position("AAPL  261218C00240000", "CALL", units: "-1", price: "1.00")
+      ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    assert_equal BigDecimal("20900"), @account.reload.balance
+  end
+
+  test "a short option next to cash in another currency keeps the API total" do
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("1680.00"),
+      cash_balance: BigDecimal("1000.00"),
+      raw_balances_payload: [
+        { "currency" => { "code" => "USD" }, "cash" => "1000.00" },
+        { "currency" => { "code" => "EUR" }, "cash" => "800.00" }
+      ],
+      raw_holdings_payload: [ option_position("AAPL  261218P00200000", "PUT", units: "-1", price: "2.00") ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    # The EUR cash is imported as a holding, not counted in 1000 - 200.
+    assert_equal BigDecimal("1680"), @account.reload.balance
+  end
+
+  test "a cash-equivalent option is subtracted from cash at contract value" do
+    @snaptrade_account.update!(
+      raw_holdings_payload: [ option_position("AAPL  261218C00240000", "CALL", units: "2", price: "5.00").merge("cash_equivalent" => true) ]
+    )
+
+    assert_equal BigDecimal("1000"), @snaptrade_account.cash_equivalent_position_value("USD")
+  end
+
+  test "option positions use the contract multiplier and position currency" do
+    @snaptrade_account.update!(
+      raw_holdings_payload: [ option_position("XYZ   261218C00050000", "CALL", units: "3", price: "1.50", multiplier: "10", currency: "CAD") ]
+    )
+
+    SnaptradeAccount::HoldingsProcessor.new(@snaptrade_account).process
+
+    holding = @account.holdings.joins(:security).find_by!(securities: { ticker: "XYZ   261218C00050000" })
+    assert_equal [ BigDecimal("15"), BigDecimal("45"), "CAD" ], [ holding.price, holding.amount, holding.currency ]
+  end
+
+  test "an option position without option_type still uses its contract multiplier" do
+    @snaptrade_account.update!(raw_holdings_payload: [ option_position("XYZ   261218C00050000", nil, units: "3", price: "1.50") ])
+
+    SnaptradeAccount::HoldingsProcessor.new(@snaptrade_account).process
+
+    holding = @account.holdings.joins(:security).find_by!(securities: { ticker: "XYZ   261218C00050000" })
+    assert_equal BigDecimal("450"), holding.amount
+  end
+
+  test "position-created option security gets the trade importer's name and exchange" do
+    occ = "AAPL  261218C00240000"
+    @snaptrade_account.update!(
+      currency: "USD",
+      raw_holdings_payload: [ option_position(occ, "CALL", units: "2", price: "5.10") ],
+      raw_activities_payload: [ {
+        "id" => "b1", "type" => "BUY", "units" => 2, "price" => 4, "amount" => -800,
+        "settlement_date" => 3.days.ago.to_date.to_s, "currency" => { "code" => "USD" },
+        "option_symbol" => {
+          "ticker" => occ, "option_type" => "CALL", "strike_price" => 240, "expiration_date" => "2026-12-18",
+          "underlying_symbol" => { "symbol" => "AAPL", "exchange" => { "mic_code" => "XNAS" } }
+        }
+      } ]
+    )
+
+    # Holdings run before activities, so the position creates the security
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    security = Security.find_by!(ticker: occ)
+    assert_equal 1, Security.where(ticker: occ).count
+    assert_equal [ "AAPL $240 CALL (2026-12-18)", "XNAS" ], [ security.name, security.exchange_mic ]
+  end
+
+  test "an expired contract is not carried through the reverse history walk" do
+    buy = option_trade("b1", "BUY", units: 2, price: 4, amount: -800, date: "2026-12-01")
+    expiry = option_trade("x1", "OPTIONEXPIRATION", units: -2, price: 0, amount: 0, date: "2026-12-21")
+    travel_to(Date.new(2026, 12, 18)) { sync_positions!([ option_position(OCC, "CALL", units: "2", price: "5.10") ], [ buy ]) }
+
+    travel_to(Date.new(2026, 12, 28)) do
+      sync_positions!([], [ buy, expiry ])
+      Holding::Materializer.new(@account.reload, strategy: :reverse).materialize_holdings
+
+      assert_equal BigDecimal("2"), @account.holdings.find_by!(date: Date.new(2026, 12, 10)).qty
+    end
+  end
+
+  test "an empty snapshot clears positions the broker stopped reporting" do
+    travel_to(Date.new(2026, 12, 18)) { sync_positions!([ stock_position, option_position(OCC, "CALL", units: "2", price: "5.10") ]) }
+    travel_to(Date.new(2026, 12, 28)) { sync_positions!([]) }
+
+    assert_empty current_tickers
+  end
+
+  test "a position closed between two syncs on the same day leaves current holdings" do
+    sync_positions!([ stock_position, stock_position(securities(:msft).ticker) ])
+    sync_positions!([ stock_position, stock_position(securities(:msft).ticker, units: "-5") ]) # now short: no holding
+
+    assert_equal [ securities(:aapl).ticker ], current_tickers
+  end
+
+  test "a position that fails to import is not cleared" do
+    travel_to(1.day.ago) { sync_positions!([ stock_position ]) }
+    SnaptradeAccount::HoldingsProcessor.any_instance.stubs(:process_holding).raises(StandardError)
+    sync_positions!([ stock_position ])
+
+    assert_equal [ securities(:aapl).ticker ], current_tickers
+  end
+
+  test "a position skipped for a null units or price is not cleared" do
+    [ { "price" => nil }, { "units" => nil } ].each do |gap|
+      travel_to(1.day.ago) { sync_positions!([ stock_position ]) }
+      sync_positions!([ stock_position.merge(gap) ])
+
+      assert_equal [ securities(:aapl).ticker ], current_tickers
+    end
+  end
+
+  test "an empty snapshot is not trusted while the account total holds non-cash value" do
+    travel_to(1.day.ago) { sync_positions!([ stock_position ]) }
+    sync_positions!([], total: 2500)
+
+    assert_equal [ securities(:aapl).ticker ], current_tickers
+    assert_not @account.holdings.exists?(qty: 0)
+  end
+
+  test "an empty snapshot is trusted after 3 days whatever the total" do
+    usd_only = [ { "currency" => { "code" => "USD" }, "cash" => 1000 } ]
+    # Unlisted futures value, cents of unavailable cash, no total, CAD total vs USD cash
+    [ { total: 1000.37 }, { total: 1000.42 }, { total: nil }, { total: 1360, currency: "CAD", raw_balances_payload: usd_only } ].each_with_index do |shape, i|
+      travel_to(Date.new(2026, 12, 18) + i.months) { sync_positions!([ stock_position ], **shape) }
+      travel_to(Date.new(2026, 12, 21) + i.months) { sync_positions!([], **shape) }
+      assert_equal [ securities(:aapl).ticker ], current_tickers, shape.inspect
+
+      travel_to(Date.new(2026, 12, 22) + i.months) { sync_positions!([], **shape) }
+      assert_empty current_tickers, shape.inspect
+    end
+  end
+
+  test "an empty snapshot does not clear positions on an account SnapTrade flags holdings_unavailable" do
+    meta = { "sync_status" => { "holdings" => { "holdings_unavailable" => true } } }
+    travel_to(Date.new(2026, 12, 18)) { sync_positions!([ stock_position ]) }
+    travel_to(Date.new(2026, 12, 28)) { sync_positions!([], institution_metadata: meta) }
+
+    assert_equal [ securities(:aapl).ticker ], current_tickers
+  end
+
+  test "a positions list this sync did not fetch does not clear positions" do
+    travel_to(Date.new(2026, 12, 18)) { sync_positions!([ stock_position ]) }
+    travel_to(Date.new(2026, 12, 28)) { sync_positions!([], last_holdings_sync: 2.hours.ago) }
+
+    assert_equal [ securities(:aapl).ticker ], current_tickers
+  end
+
+  test "a row without a symbol that is not cash does not clear the other positions" do
+    sync_positions!([ stock_position, stock_position(securities(:msft).ticker) ])
+    sync_positions!([ stock_position, { "instrument" => { "kind" => "stock" }, "units" => "5", "price" => "300", "currency" => "USD" } ])
+
+    assert_equal [ securities(:aapl).ticker, securities(:msft).ticker ].sort, current_tickers
+  end
+
+  test "a cash row without a symbol still lets sold positions clear" do
+    sync_positions!([ stock_position, stock_position(securities(:msft).ticker) ])
+    sync_positions!([ stock_position, { "instrument" => { "kind" => "cash", "code" => "USD" }, "units" => "1", "price" => "1", "currency" => "USD" } ])
+
+    assert_equal [ securities(:aapl).ticker ], current_tickers
+  end
+
+  test "clearing a sold position leaves another source's row for the same security today" do
+    travel_to(1.day.ago) { sync_positions!([ stock_position ]) }
+    plaid = AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    other = @account.holdings.create!(security: securities(:aapl), date: Date.current, currency: "USD", qty: 5, price: 150, amount: 750,
+                                      account_provider_id: plaid.id)
+    sync_positions!([])
+
+    assert_equal 5, other.reload.qty
+  end
+
+  test "an empty list kept against the account total is logged for support" do
+    travel_to(1.day.ago) { sync_positions!([ stock_position ]) }
+
+    Rails.logger.stubs(:warn)
+    Rails.logger.expects(:warn).with(regexp_matches(/kept positions/)).at_least_once
+    sync_positions!([], total: 2500)
+    assert_equal [ securities(:aapl).ticker ], current_tickers
+  end
+
+  test "a calculated holding without a provider does not stop a sold position from clearing" do
+    travel_to(1.day.ago) { sync_positions!([ stock_position ]) }
+    sync_positions!([], total: 2500) # kept: the total still reports holdings
+    @account.holdings.create!(security: securities(:aapl), date: Date.current, currency: "USD", qty: 10, price: 150, amount: 1500)
+    sync_positions!([])
+
+    assert_empty current_tickers
+  end
+
+  test "clearing a remapped position does not collide with today's calculated row" do
+    travel_to(Date.new(2026, 12, 17)) do
+      sync_positions!([ stock_position ])
+      @account.holdings.find_by!(security: securities(:aapl)).remap_security!(securities(:msft))
+    end
+    travel_to(Time.zone.local(2026, 12, 18, 9)) do
+      sync_positions!([], total: 2500)
+      Holding::Materializer.new(@account.reload, strategy: :reverse).materialize_holdings
+    end
+    travel_to(Time.zone.local(2026, 12, 18, 15)) do
+      assert_nothing_raised { sync_positions!([], total: 1000) }
+      assert_empty current_tickers
+    end
+  end
+
+  test "clearing a position keeps the user's cost-basis lock" do
+    travel_to(Date.new(2026, 12, 17)) do
+      sync_positions!([ stock_position ])
+      @account.holdings.find_by!(security: securities(:aapl)).update!(cost_basis: 42, cost_basis_source: "manual", cost_basis_locked: true)
+    end
+    travel_to(Time.zone.local(2026, 12, 18, 9)) do
+      sync_positions!([], total: 2500)
+      Holding::Materializer.new(@account.reload, strategy: :reverse).materialize_holdings
+    end
+    travel_to(Time.zone.local(2026, 12, 18, 15)) do
+      sync_positions!([], total: 1000)
+      row = @account.holdings.find_by!(security: securities(:aapl), date: Date.current)
+      assert row.cost_basis_locked
+      assert_equal 42, row.cost_basis
+    end
+  end
+
+  test "an empty list from a holdings_unavailable account is not logged" do
+    travel_to(Date.new(2026, 12, 17)) { sync_positions!([ stock_position ]) }
+    Rails.logger.stubs(:warn)
+    Rails.logger.expects(:warn).with(regexp_matches(/kept positions/)).never
+    travel_to(Date.new(2026, 12, 18)) do
+      sync_positions!([], institution_metadata: { "sync_status" => { "holdings" => { "holdings_unavailable" => true } } })
+    end
+  end
+
+  test "clearing a remapped position leaves another provider's row on the user's security" do
+    travel_to(1.day.ago) do
+      sync_positions!([ stock_position ])
+      @account.holdings.find_by!(security: securities(:aapl)).remap_security!(securities(:msft))
+    end
+    plaid = AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    other = @account.holdings.create!(security: securities(:msft), date: Date.current, currency: "USD", qty: 5, price: 1, amount: 5,
+                                      account_provider_id: plaid.id)
+
+    assert_nothing_raised { sync_positions!([]) }
+    assert_equal 5, other.reload.qty
+  end
+
   # === ActivitiesProcessor Tests ===
 
   test "activities processor maps BUY type to Buy label" do
@@ -791,4 +1109,281 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal 0.0, entry.amount.to_f
     assert_equal 0.0, entry.entryable.price.to_f
   end
+
+  test "reverse-synced history holds shares deposited as OTHER only until they are sold" do
+    # Twice, shares vest with no price and no cash, are sold, and the proceeds
+    # leave the account; nothing is held now. The second deposit settles before
+    # its trade date.
+    @snaptrade_account.update!(
+      current_balance: 0,
+      cash_balance: 0,
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        snaptrade_activity("vest_1", "OTHER", 40, units: 10, price: 0, amount: 0),
+        snaptrade_activity("sale_1", "SELL", 39, units: -10, price: 100, amount: 1000),
+        snaptrade_activity("payout_1", "TRANSFER", 37, amount: -1000),
+        snaptrade_activity("vest_2", "OTHER", 20, trade_days_ago: 17, units: 5, price: 0, amount: 0),
+        snaptrade_activity("sale_2", "SELL", 16, units: -5, price: 90, amount: 449, fee: 1),
+        snaptrade_activity("payout_2", "TRANSFER", 14, amount: -449)
+      ]
+    )
+
+    reverse_sync!
+
+    held = [ 41, 40, 39, 30, 21, 20, 17, 16, 0 ].index_with { |days_ago| held_qty(days_ago) }
+    assert_equal({ 41 => 0, 40 => 10, 39 => 0, 30 => 0, 21 => 0, 20 => 5, 17 => 5, 16 => 0, 0 => 0 }, held)
+
+    # With no market prices, a deposit day is valued at the nearest price the
+    # account has: the first at the sale that follows it, the second at the
+    # last one before it.
+    balance = [ 41, 40, 39, 38, 37, 30, 20, 17, 16, 15, 14, 0 ].index_with { |days_ago| balance_on(days_ago) }
+    assert_equal({ 41 => 0, 40 => 1000, 39 => 1000, 38 => 1000, 37 => 0, 30 => 0, 20 => 500, 17 => 500, 16 => 449, 15 => 449, 14 => 0, 0 => 0 }, balance,
+                 "the shares until their sale, then the proceeds until they leave")
+    assert_no_negative_history
+
+    sale = @account.entries.find_by!(external_id: "sale_1").entryable
+    assert_nil sale.realized_gain_loss, "shares that arrived at no known cost claim no gain when sold"
+
+    synced_once = synced_series
+    reverse_sync!
+    assert_equal synced_once, synced_series, "a second sync changes nothing"
+  end
+
+  test "a position held across a share movement at no price keeps its value without market prices" do
+    @snaptrade_account.update!(
+      current_balance: 10945,
+      cash_balance: 0,
+      raw_holdings_payload: [ snaptrade_position("RSUCO", 99.5, 110) ],
+      raw_activities_payload: [
+        snaptrade_activity("deposit", "CONTRIBUTION", 61, amount: 10000),
+        snaptrade_activity("buy", "BUY", 60, units: 100, price: 100, amount: -10000),
+        snaptrade_activity("removed", "OTHER", 30, units: -0.5, price: 0, amount: 0)
+      ]
+    )
+
+    reverse_sync!
+
+    assert_equal BigDecimal("100"), held_qty(31)
+    assert_equal BigDecimal("99.5"), held_qty(30)
+    assert_equal 9950, holdings_value(30), "valued at the last price the account has, not at the movement's zero"
+    assert_equal 9950, holdings_value(1)
+  end
+
+  test "shares kept from a vest with a same-day sell-to-cover are valued at the sale price" do
+    @snaptrade_account.update!(
+      current_balance: 3600,
+      cash_balance: 0,
+      raw_holdings_payload: [ snaptrade_position("RSUCO", 60, 60) ],
+      raw_activities_payload: [
+        snaptrade_activity("vest", "OTHER", 30, units: 100, price: 0, amount: 0),
+        snaptrade_activity("sell_to_cover", "SELL", 30, units: -40, price: 50, amount: 2000),
+        snaptrade_activity("tax_out", "TRANSFER", 29, amount: -2000)
+      ]
+    )
+
+    reverse_sync!
+
+    assert_equal BigDecimal("0"), held_qty(31)
+    assert_equal BigDecimal("60"), held_qty(30)
+    assert_equal 3000, holdings_value(30), "the deposit's zero is not the day's price"
+    assert_equal 3000, holdings_value(1)
+  end
+
+  test "a same-day journal out and back in leaves the cost basis and realized gain alone" do
+    @snaptrade_account.update!(
+      current_balance: 12500,
+      cash_balance: 6000,
+      raw_holdings_payload: [ snaptrade_position("RSUCO", 50, 130) ],
+      raw_activities_payload: [
+        snaptrade_activity("deposit", "CONTRIBUTION", 61, amount: 10000),
+        snaptrade_activity("buy", "BUY", 60, units: 100, price: 100, amount: -10000),
+        snaptrade_activity("journal_out", "JOURNAL", 30, units: -100, price: 110, amount: 0),
+        snaptrade_activity("journal_in", "JOURNAL", 30, units: 100, price: 110, amount: 0),
+        snaptrade_activity("sale", "SELL", 10, units: -50, price: 120, amount: 6000)
+      ]
+    )
+
+    reverse_sync!
+
+    assert_equal BigDecimal("100"), @account.holdings.find_by!(date: 20.days.ago.to_date).cost_basis
+    gain = @account.entries.find_by!(external_id: "sale").entryable.realized_gain_loss
+    assert_equal Money.new(1000, "USD"), gain&.value
+  end
+
+  test "shares deposited as OTHER and moved out as TRANSFER both move the history" do
+    security = Security.create!(ticker: "RSUCO", name: "RSU Co")
+    (71.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: security, date: date, price: 100) }
+
+    @snaptrade_account.update!(
+      current_balance: 100,
+      cash_balance: 100,
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        snaptrade_activity("deposit", "CONTRIBUTION", 70, amount: 100),
+        snaptrade_activity("vest", "OTHER", 40, units: 10, price: 0, amount: 0),
+        snaptrade_activity("moved_out", "TRANSFER", 35, units: -10, price: 0)
+      ]
+    )
+
+    reverse_sync!
+
+    held = [ 50, 41, 40, 36, 35, 0 ].index_with { |days_ago| held_qty(days_ago) }
+    assert_equal({ 50 => 0, 41 => 0, 40 => 10, 36 => 10, 35 => 0, 0 => 0 }, held)
+    assert_equal 100, balance_on(50)
+    assert_equal 1100, balance_on(38)
+    assert_no_negative_history
+  end
+
+  test "a deposit dated after the sale of its own shares does not leave negative holdings" do
+    @snaptrade_account.update!(
+      current_balance: 0,
+      cash_balance: 0,
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        snaptrade_activity("vest", "OTHER", 28, trade_days_ago: 30, units: 10, price: 0, amount: 0),
+        snaptrade_activity("sale", "SELL", 29, trade_days_ago: 30, units: -10, price: 100, amount: 1000),
+        snaptrade_activity("payout", "TRANSFER", 25, amount: -1000)
+      ]
+    )
+
+    reverse_sync!
+
+    held = [ 31, 30, 29, 28, 0 ].index_with { |days_ago| held_qty(days_ago) }
+    assert_equal({ 31 => 0, 30 => 10, 29 => 0, 28 => 0, 0 => 0 }, held)
+    assert_equal 1000, balance_on(30)
+    assert_no_negative_history
+  end
+
+  test "shares moved out are not booked before the buy that delivered them" do
+    @snaptrade_account.update!(
+      current_balance: 0,
+      cash_balance: 0,
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        snaptrade_activity("deposit", "CONTRIBUTION", 10, amount: 1000),
+        snaptrade_activity("buy", "BUY", 4, trade_days_ago: 5, units: 10, price: 100, amount: -1000),
+        snaptrade_activity("moved_out", "TRANSFER_OUT", 3, trade_days_ago: 5, units: 10, price: 0)
+      ]
+    )
+
+    reverse_sync!
+
+    held = [ 5, 4, 3, 0 ].index_with { |days_ago| held_qty(days_ago) }
+    assert_equal({ 5 => 0, 4 => 10, 3 => 0, 0 => 0 }, held)
+    assert_no_negative_history
+  end
+
+  test "shares moved in after the provider priced the position at nothing are not valued at an older price" do
+    security = Security.create!(ticker: "RSUCO", name: "RSU Co")
+    # An earlier sync's snapshot, once the position had become worthless
+    @account.holdings.create!(security: security, date: 20.days.ago.to_date, qty: 100, price: 0, amount: 0, currency: "USD",
+                              account_provider: @snaptrade_account.account_provider)
+
+    @snaptrade_account.update!(
+      current_balance: 0,
+      cash_balance: 0,
+      raw_holdings_payload: [ snaptrade_position("RSUCO", 150, 0) ],
+      raw_activities_payload: [
+        snaptrade_activity("buy", "BUY", 40, units: 100, price: 10, amount: -1000),
+        snaptrade_activity("moved_in", "TRANSFER_IN", 10, units: 50, price: 0)
+      ]
+    )
+
+    reverse_sync!
+
+    assert_equal BigDecimal("150"), held_qty(5)
+    assert_equal 0, holdings_value(5), "the provider's zero, not the price paid before it"
+  end
+
+  private
+
+    OCC = "AAPL  261218C00240000".freeze
+
+    def sync_positions!(positions, activities = [], total: 1000, **attrs)
+      @snaptrade_account.update!(currency: "USD", cash_balance: 1000, current_balance: total, last_holdings_sync: Time.current,
+        raw_holdings_payload: positions, raw_activities_payload: activities, **attrs)
+      SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+    end
+
+    def current_tickers
+      @account.reload.current_holdings.map { |h| h.security.ticker }.sort
+    end
+
+    def stock_position(ticker = securities(:aapl).ticker, units: "10")
+      { "instrument" => { "kind" => "stock", "symbol" => ticker }, "units" => units, "price" => "150.00", "currency" => "USD" }
+    end
+
+    def option_trade(id, type, units:, price:, amount:, date:)
+      { "id" => id, "type" => type, "units" => units, "price" => price, "amount" => amount, "trade_date" => date,
+        "settlement_date" => date, "currency" => { "code" => "USD" },
+        "option_symbol" => { "ticker" => OCC, "option_type" => "CALL", "strike_price" => 240, "expiration_date" => "2026-12-18",
+          "underlying_symbol" => { "symbol" => "AAPL", "exchange" => { "mic_code" => "XNAS" } } } }
+    end
+
+    # Shaped like a SnapTrade /positions/all OptionInstrument position
+    def option_position(symbol, option_type, units:, price:, cost_basis: nil, multiplier: "100", currency: "USD")
+      {
+        "instrument" => {
+          "kind" => "option", "symbol" => symbol, "option_type" => option_type,
+          "strike_price" => "240", "expiration_date" => "2026-12-18", "multiplier" => multiplier,
+          "underlying" => { "kind" => "stock", "symbol" => symbol.split.first, "exchange" => "XNAS", "currency" => currency }
+        },
+        "units" => units, "price" => price, "cost_basis" => cost_basis, "currency" => currency
+      }
+    end
+
+    # A SnapTrade activity settling `days_ago`, in the made-up security RSUCO when it has units
+    def snaptrade_activity(id, type, days_ago, trade_days_ago: days_ago, units: nil, price: nil, amount: nil, fee: nil)
+      {
+        "id" => id,
+        "type" => type,
+        "symbol" => (units ? { "symbol" => "RSUCO", "description" => "RSU Co" } : nil),
+        "units" => units,
+        "price" => price,
+        "amount" => amount,
+        "fee" => fee,
+        "trade_date" => trade_days_ago.days.ago.to_date.to_s,
+        "settlement_date" => days_ago.days.ago.to_date.to_s,
+        "currency" => { "code" => "USD" }
+      }
+    end
+
+    def snaptrade_position(ticker, units, price)
+      {
+        "symbol" => { "symbol" => { "symbol" => ticker, "description" => "#{ticker} Co" } },
+        "units" => units.to_s,
+        "price" => price.to_s,
+        "currency" => "USD"
+      }
+    end
+
+    def reverse_sync!
+      SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+      Balance::Materializer.new(@account.reload, strategy: :reverse).materialize_balances
+    end
+
+    def held_qty(days_ago)
+      @account.holdings.where(date: days_ago.days.ago.to_date).sum(:qty)
+    end
+
+    def holdings_value(days_ago)
+      @account.holdings.where(date: days_ago.days.ago.to_date).sum(:amount)
+    end
+
+    def balance_on(days_ago)
+      @account.balances.find_by!(date: days_ago.days.ago.to_date).balance
+    end
+
+    def assert_no_negative_history
+      assert @account.balances.where("balance < 0 OR cash_balance < 0").none?, "no day has a negative balance"
+      assert @account.holdings.where("qty < 0").none?, "no day holds negative shares"
+    end
+
+    def synced_series
+      [
+        @account.entries.order(:id).pluck(:id, :amount),
+        @account.holdings.order(:date).pluck(:date, :qty, :amount),
+        @account.balances.order(:date).pluck(:date, :balance, :cash_balance)
+      ]
+    end
 end

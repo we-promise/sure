@@ -43,6 +43,31 @@ class Loan::DayCountConventionTest < ActiveSupport::TestCase
     end
   end
 
+  test "30/360 charges a partial period by its own days" do
+    factor = Loan::AmortizationMath.accrual_factor(
+      annual_percentage: RATE,
+      period_start: Date.new(2026, 2, 15),
+      period_end: Date.new(2026, 3, 1),
+      day_count_convention: :thirty_360,
+      full_period: false
+    )
+
+    assert_equal (BigDecimal(RATE.to_s) / 100) * (BigDecimal("16") / 360), factor,
+                 "15 February to 1 March is 16 thirty-360 days"
+  end
+
+  test "30/360 keeps a scheduled period at a flat twelfth" do
+    factor = Loan::AmortizationMath.accrual_factor(
+      annual_percentage: RATE,
+      period_start: Date.new(2026, 2, 15),
+      period_end: Date.new(2026, 3, 1),
+      day_count_convention: :thirty_360,
+      full_period: true
+    )
+
+    assert_equal BigDecimal(RATE.to_s) / 100 / 12, factor
+  end
+
   test "an unspecified convention is the default one" do
     from = Date.new(2026, 2, 1)
 

@@ -15,17 +15,19 @@
    end %>
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
-    <div class="group group/transaction flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= "pl-8 lg:pl-12" if in_split_group %>"
+    <div class="group group/transaction flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 [html[data-layout-animating]_&:not(:has([aria-expanded=true])):not(:has([role=tooltip]:not(.hidden)))]:[content-visibility:auto] [contain-intrinsic-size:auto_--spacing(18)] <%= "pl-8 lg:pl-12" if in_split_group %>"
          data-controller="clickable-row"
          data-action="click->clickable-row#open">
 
       <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-5 min-w-0 max-md:flex-1">
         <%= check_box_tag dom_id(entry, "selection"),
-            disabled: transaction.transfer.present?,
+            disabled: transaction.transfer.present? && !bulk_reconcilable_transfer?(entry),
             class: "checkbox checkbox--light hidden lg:block",
             data: {
               id: entry.id,
               entry_type: entry.entryable_type,
+              transfer: transaction.transfer.present?,
+              category_editable: transaction.category_editable?,
               "bulk-select-target": "row",
               action: "bulk-select#toggleRowSelection",
               checkbox_toggle_target: "selectionEntry"
@@ -96,6 +98,9 @@
                         <%= icon "asterisk", size: "sm", color: "current" %>
                       </span>
                     <% end %>
+
+                    <%# Manual reconciliation status (manual accounts only) %>
+                    <%= render "transactions/reconcile_badge", entry: entry, compact: true %>
 
                     <%# Scheduled (future-dated) indicator %>
                     <% if entry.scheduled? %>

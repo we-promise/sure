@@ -1,7 +1,7 @@
 ---
 de:
   admin:
-    unauthorized: "Sie sind nicht berechtigt, auf diesen Bereich zuzugreifen."
+    unauthorized: "Du bist nicht berechtigt, auf diesen Bereich zuzugreifen."
     sso_providers:
       index:
         title: "SSO-Provider"
@@ -119,7 +119,7 @@ de:
         idp_metadata_url: "IdP-Metadaten-URL"
         idp_metadata_url_help: URL zu den SAML-Metadaten deines IdP. Andere SAML-Einstellungen werden dann automatisch gesetzt.
         manual_saml_config: "Manuelle Konfiguration (ohne Metadaten-URL)"
-        manual_saml_help: "Nur verwenden, wenn Ihr IdP keine Metadaten-URL bereitstellt."
+        manual_saml_help: "Nur verwenden, wenn dein IdP keine Metadaten-URL bereitstellt."
         idp_sso_url: "IdP-SSO-URL"
         idp_slo_url: "IdP-SLO-URL (optional)"
         idp_certificate: "IdP-Zertifikat"

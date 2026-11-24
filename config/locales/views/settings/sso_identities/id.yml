@@ -1,0 +1,7 @@
+---
+id:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: "Tidak dapat memutuskan tautan identitas terakhir"
+        success: "Berhasil"

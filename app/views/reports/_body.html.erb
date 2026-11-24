@@ -1,0 +1,24 @@
+<%# locals: (report:, sections:) %>
+<%# `report` is ReportsController#render_report_body, usually from the cache. %>
+<div class="w-full space-y-6 lg:pb-6">
+  <%= report[:notes].html_safe %>
+
+  <% if report[:has_transactions] %>
+    <%# Summary Dashboard - Always visible, not collapsible %>
+    <section class="@container">
+      <%= report[:summary].html_safe %>
+    </section>
+
+    <%# Collapsible & Reorderable Sections %>
+    <%= render "shared/reorderable_sections",
+          sections: sections,
+          namespace: "reports",
+          url: update_preferences_reports_path,
+          i18n_scope: "reports.index" %>
+  <% else %>
+    <%# Empty State %>
+    <section>
+      <%= render partial: "reports/empty_state" %>
+    </section>
+  <% end %>
+</div>

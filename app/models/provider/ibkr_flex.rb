@@ -23,9 +23,15 @@ class Provider::IbkrFlex
   MAX_RETRIES = 3
   INITIAL_RETRY_DELAY = 2
   MAX_RETRY_DELAY = 30
-  POLL_INTERVAL = 3
   MAX_POLL_ATTEMPTS = 20
   PENDING_ERROR_CODES = %w[1004 1019].freeze
+  # IBKR allows 10 requests a minute per token, so polling waits REQUEST_INTERVAL
+  # (20 attempts, no less time than before). 1018 says that limit was hit,
+  # 1001 and 1009 that the server is busy: all three mean "try again shortly".
+  REQUEST_INTERVAL = 6
+  THROTTLED_ERROR_CODES = %w[1001 1009 1018].freeze
+  THROTTLE_RETRY_DELAY = 10
+  MAX_THROTTLE_RETRIES = 3
 
   RETRYABLE_ERRORS = [
     SocketError,
@@ -47,19 +53,20 @@ class Provider::IbkrFlex
     @token = token.to_s.strip
   end
 
-  def download_statement
-    reference_code = request_reference_code
+  # Without dates IBKR uses the period saved on the query; fd/td (yyyymmdd)
+  # ask for that range instead, at most 365 days.
+  def download_statement(from_date: nil, to_date: nil)
+    query = { t: token, q: query_id, v: 3 }
+    query.merge!(fd: from_date.strftime("%Y%m%d"), td: to_date.strftime("%Y%m%d")) if from_date
+
+    reference_code = request_reference_code(query)
     poll_statement(reference_code)
   end
 
   private
 
-    def request_reference_code
-      response = with_retries("SendRequest") do
-        self.class.get("/SendRequest", query: { t: token, q: query_id, v: 3 })
-      end
-
-      xml = parse_xml(response.body)
+    def request_reference_code(query)
+      response, xml = flex_get("SendRequest", query)
       error = response_error(xml, response)
       raise error if error
 
@@ -74,23 +81,42 @@ class Provider::IbkrFlex
 
       loop do
         attempts += 1
-        response = with_retries("GetStatement") do
-          self.class.get("/GetStatement", query: { t: token, q: reference_code, v: 3 })
-        end
-
-        xml = parse_xml(response.body)
+        response, xml = flex_get("GetStatement", { t: token, q: reference_code, v: 3 })
         return response.body if xml.at_xpath("//FlexQueryResponse")
 
         error = response_error(xml, response)
         if error.is_a?(ApiError) && PENDING_ERROR_CODES.include?(error.error_code.to_s)
           raise ApiError.new("IBKR Flex statement is still being generated.", error_code: error.error_code) if attempts >= MAX_POLL_ATTEMPTS
 
-          sleep(POLL_INTERVAL)
           next
         end
 
         raise(error || ApiError.new("IBKR Flex returned an unexpected response.", status_code: response.code, response_body: response.body))
       end
+    end
+
+    # Every call, network retries included, is spaced REQUEST_INTERVAL from
+    # the previous one, which also paces the polling, and retried a few times
+    # while IBKR is throttling.
+    def flex_get(operation, query)
+      throttled = 0
+      loop do
+        response = with_retries(operation) do
+          wait_for_request_slot
+          self.class.get("/#{operation}", query: query)
+        end
+        xml = parse_xml(response.body)
+        return [ response, xml ] unless THROTTLED_ERROR_CODES.include?(xml.at_xpath("//ErrorCode")&.text.to_s.strip) && throttled < MAX_THROTTLE_RETRIES
+
+        throttled += 1
+        sleep(THROTTLE_RETRY_DELAY)
+      end
+    end
+
+    def wait_for_request_slot
+      wait = @last_request_at && @last_request_at + REQUEST_INTERVAL - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      sleep(wait) if wait&.positive?
+      @last_request_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
 
     def response_error(xml, response)

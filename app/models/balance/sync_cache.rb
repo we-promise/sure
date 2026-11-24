@@ -41,6 +41,18 @@ class Balance::SyncCache
     entries_by_date[date]&.select { |e| e.transaction? || e.trade? } || []
   end
 
+  # Every entry converted to the account currency, in date order.
+  def entries
+    converted_entries
+  end
+
+  # One replay per loan per cache, so a calculator that asks twice does not
+  # walk the ledger twice.
+  def loan_principal_payments(loan)
+    @loan_principal_payments ||= {}
+    @loan_principal_payments[loan.id] ||= Loan::PrincipalPayments.for(loan, entries: entries)
+  end
+
   private
     attr_reader :account
 
@@ -149,11 +161,11 @@ class Balance::SyncCache
       )
     end
 
-    # Which FX backend was configured when the rate came up missing, so support can filter
-    # these entries by provider. Read from the setting rather than `ExchangeRate.provider`,
-    # which raises on an unrecognized configuration — diagnostics must never fail the sync.
+    # Which FX backend was in use when the rate came up missing, so support can filter
+    # these entries by provider. `ExchangeRate.provider_name` raises on an unrecognized
+    # configuration — diagnostics must never fail the sync.
     def exchange_rate_provider_key
-      ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
+      ExchangeRate.provider_name
     rescue StandardError
       nil
     end

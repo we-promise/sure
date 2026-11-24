@@ -45,18 +45,18 @@ class SessionsController < ApplicationController
     user = nil
 
     if AuthConfig.local_login_enabled?
-      user = User.authenticate_by(email: params[:email], password: params[:password])
+      user = User.authenticate_by_email(email: params[:email], password: params[:password])
     else
       # Local login is disabled. Only allow attempts when an emergency super-admin
       # override is enabled and the email belongs to a super-admin.
       if AuthConfig.local_admin_override_enabled?
-        candidate = User.find_by(email: params[:email])
+        candidate = User.find_by_email_with_legacy_fallback(params[:email])
         unless candidate&.super_admin?
           redirect_to new_session_path, alert: t("sessions.create.local_login_disabled")
           return
         end
 
-        user = User.authenticate_by(email: params[:email], password: params[:password])
+        user = User.authenticate_by_email(email: params[:email], password: params[:password])
       else
         redirect_to new_session_path, alert: t("sessions.create.local_login_disabled")
         return
@@ -76,11 +76,11 @@ class SessionsController < ApplicationController
 
       if user.otp_required?
         log_super_admin_override_login(user)
-        session[:mfa_user_id] = user.id
+        begin_mfa_handoff(user, password_fingerprint: user.password_fingerprint)
         redirect_to verify_mfa_path
       else
         log_super_admin_override_login(user)
-        @session = create_session_for(user)
+        @session = create_session_for(user, password_fingerprint: user.password_fingerprint)
 
         if @session
           redirect_to root_path
@@ -225,7 +225,7 @@ class SessionsController < ApplicationController
     end
 
     if user.otp_required?
-      session[:mfa_user_id] = user.id
+      begin_mfa_handoff(user)
       redirect_to verify_mfa_path
     else
       @session = create_session_for(user)
@@ -301,16 +301,21 @@ class SessionsController < ApplicationController
         return
       end
 
-      # Store id_token and provider for RP-initiated logout
-      session[:id_token_hint] = auth.credentials&.id_token if auth.credentials&.id_token
+      # Store id_token and provider for RP-initiated logout. The two move
+      # together: a callback that returns no id_token has to clear the
+      # previous one. Updating the provider while keeping a stale hint makes
+      # #destroy send the token minted by an earlier provider to this
+      # provider's end-session endpoint (CWE-200).
+      id_token = auth.credentials&.id_token
+      session[:id_token_hint] = id_token.presence
       session[:sso_login_provider] = auth.provider
 
       # MFA check: If user has MFA enabled, require verification
       if user.otp_required?
-        session[:mfa_user_id] = user.id
+        begin_mfa_handoff(user, from_oidc: true)
         redirect_to verify_mfa_path
       else
-        @session = create_session_for(user)
+        @session = create_session_for(user, preserve_oidc_handoff: true)
         unless @session
           redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
           return
@@ -572,6 +577,21 @@ class SessionsController < ApplicationController
           end_session_endpoint = discovery["end_session_endpoint"]
 
           return nil unless end_session_endpoint.present?
+
+          # The endpoint comes out of the provider's discovery document, so the
+          # app does not choose it. Forwarding the ID token to a cleartext
+          # endpoint would put the user's claims in a plain URL (CWE-319), so
+          # fall back to a local logout instead.
+          endpoint_uri = begin
+            URI.parse(end_session_endpoint)
+          rescue URI::InvalidURIError
+            nil
+          end
+
+          unless endpoint_uri&.scheme == "https" && endpoint_uri.host.present?
+            Rails.logger.warn("[SSO] Ignoring non-HTTPS end_session_endpoint for #{oidc_identity.provider}")
+            return nil
+          end
 
           # Build the logout URL with post_logout_redirect_uri
           post_logout_redirect = "#{request.base_url}/auth/logout/callback"

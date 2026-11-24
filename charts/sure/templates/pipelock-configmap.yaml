@@ -135,6 +135,9 @@ data:
   pipelock.yaml: |
     version: 1
     mode: {{ .Values.pipelock.mode | default "balanced" }}
+{{- if include "sure.pipelockMetricsEnabled" . }}
+    metrics_listen: "0.0.0.0:{{ include "sure.pipelockMetricsPort" . }}"
+{{- end }}
 {{- if .Values.pipelock.trustedDomains }}
     trusted_domains:
 {{- range .Values.pipelock.trustedDomains }}

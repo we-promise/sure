@@ -2,6 +2,10 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :web_push_subscriptions, only: [ :create, :show, :destroy ] do
+    post :test_notification, on: :member
+  end
+
   resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -173,6 +177,7 @@ Rails.application.routes.draw do
       get :oauth_callback
       get :oauth_device_authorize
       post :start_oauth_device_flow
+      post :personal_key
     end
 
     member do
@@ -301,7 +306,7 @@ Rails.application.routes.draw do
   get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
   post "register", to: "oauth_registration#create"
   use_doorkeeper do |mapping|
-    mapping.controllers authorizations: "oauth/authorizations"
+    mapping.controllers authorizations: "oauth/authorizations", tokens: "oauth/tokens"
   end
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
@@ -542,7 +547,9 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :merchants, only: :show
+  resources :merchants, only: :show do
+    delete :clear_filter, on: :member
+  end
 
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do
@@ -587,6 +594,10 @@ Rails.application.routes.draw do
       post :reset_security
       post :sync_prices
     end
+
+    resources :lots, only: :update, controller: "holding_lots" do
+      post :unlock, on: :member
+    end
   end
   resources :trades, only: %i[show new create update destroy] do
     member do
@@ -618,6 +629,7 @@ Rails.application.routes.draw do
     collection do
       delete :clear_filter
       get :name_suggestions
+      get :filters, to: "transactions/filters#show"
     end
 
     member do
@@ -627,6 +639,7 @@ Rails.application.routes.draw do
       post :merge_duplicate
       post :dismiss_duplicate
       post :unlock
+      patch :reconcile
       patch :tags, action: :update_tags
     end
   end
@@ -740,6 +753,7 @@ Rails.application.routes.draw do
       get :sparkline
       patch :toggle_active
       patch :toggle_exclude_from_reports
+      patch :reconcile_all
       patch :set_default
       patch :remove_default
       get :select_provider
@@ -1065,6 +1079,7 @@ Rails.application.routes.draw do
 
   # MCP server endpoint for external AI assistants (JSON-RPC 2.0)
   post "mcp", to: "mcp#handle"
+  match "mcp", to: "mcp#method_not_allowed", via: %i[get delete]
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.

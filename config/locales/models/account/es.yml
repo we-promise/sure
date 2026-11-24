@@ -7,6 +7,9 @@ es:
     balance_desc:
       label: Saldo (de mayor a menor)
       label_short: Saldo ↓
+    manual:
+      label: Manual (arrastra para reordenar)
+      label_short: Manual
     name_asc:
       label: Nombre (A-Z)
       label_short: Nombre ↑
@@ -20,8 +23,16 @@ es:
         currency: Moneda
         family: '%{moniker}'
         family_id: '%{moniker}'
+        logo: Logotipo
         name: Nombre
         subtype: Subtipo
+    errors:
+      models:
+        account:
+          attributes:
+            logo:
+              invalid_content_type: debe ser una imagen PNG, JPEG, GIF, WebP o ICO
+              too_large: debe ocupar menos de %{max_size} MB
     models:
       account: Cuenta
       account/credit: Tarjeta de crédito

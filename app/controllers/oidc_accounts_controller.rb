@@ -14,7 +14,7 @@ class OidcAccountsController < ApplicationController
     end
 
     @email = @pending_auth["email"]
-    @user_exists = User.exists?(email: @email) if @email.present?
+    @user_exists = User.find_by_email_with_legacy_fallback(@email).present? if @email.present?
 
     # Check for a pending invitation for this email
     @pending_invitation = Invitation.pending.find_by(email: @email) if @email.present?
@@ -33,7 +33,7 @@ class OidcAccountsController < ApplicationController
     end
 
     # Verify user's password to confirm identity
-    user = User.authenticate_by(email: params[:email], password: params[:password])
+    user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
     if user&.active?
       linked = user.transaction do
@@ -49,7 +49,7 @@ class OidcAccountsController < ApplicationController
         )
 
         unless user.otp_required?
-          @session = create_session_for(user)
+          @session = create_session_for(user, password_fingerprint: user.password_fingerprint)
           raise ActiveRecord::Rollback unless @session
         end
 
@@ -65,14 +65,14 @@ class OidcAccountsController < ApplicationController
       session.delete(:pending_oidc_auth)
 
       if user.otp_required?
-        session[:mfa_user_id] = user.id
+        begin_mfa_handoff(user, password_fingerprint: user.password_fingerprint)
         redirect_to verify_mfa_path
       else
         redirect_to root_path, notice: t("sessions.openid_connect.account_linked", provider: @pending_auth["provider"])
       end
     else
       @email = params[:email]
-      @user_exists = User.exists?(email: @email) if @email.present?
+      @user_exists = User.find_by_email_with_legacy_fallback(@email).present? if @email.present?
       flash.now[:alert] = "Invalid email or password"
       render :link, status: :unprocessable_entity
     end

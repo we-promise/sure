@@ -70,6 +70,47 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal Date.current, holdings.second.date
   end
 
+  test "uses the supplied snapshot currency when a holding omits its own currency" do
+    account = @plaid_account.current_account
+    account.update!(currency: "USD")
+    holding_date = 5.days.ago.to_date
+    @plaid_account.update!(
+      currency: "EUR",
+      raw_holdings_payload: {
+        securities: [],
+        holdings: [
+          {
+            "security_id" => "123",
+            "quantity" => 1,
+            "institution_price" => 10,
+            "institution_price_as_of" => holding_date
+          }
+        ],
+        transactions: []
+      }
+    )
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "123")
+                      .returns(
+                        OpenStruct.new(
+                          security: securities(:aapl),
+                          cash_equivalent?: false,
+                          brokerage_cash?: false
+                        )
+                      )
+
+    processor = PlaidAccount::Investments::HoldingsProcessor.new(
+      @plaid_account,
+      security_resolver: @security_resolver,
+      currency: @plaid_account.currency
+    )
+    processor.process
+
+    holding = Holding.find_by!(account: account, security: securities(:aapl), date: holding_date)
+    assert_equal "EUR", holding.currency
+  end
+
   # Plaid does not delete future holdings because it doesn't support holdings deletion
   # (PlaidAdapter#can_delete_holdings? returns false). This test verifies that future
   # holdings are NOT deleted when processing Plaid holdings data.

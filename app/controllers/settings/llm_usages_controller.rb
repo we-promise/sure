@@ -17,11 +17,10 @@ class Settings::LlmUsagesController < ApplicationController
       @start_date, @end_date = @end_date - 30.days, @end_date
     end
 
-    # Get usage data
-    @llm_usages = @family.llm_usages
-                         .for_date_range(@start_date.beginning_of_day, @end_date.end_of_day)
-                         .recent
-                         .limit(100)
+    # One row per call; a call's requests (retries, resends) open beneath it.
+    @llm_calls = @family.llm_usages
+                        .for_date_range(@start_date.beginning_of_day, @end_date.end_of_day)
+                        .recent_calls(limit: 100)
 
     # Get statistics
     @statistics = LlmUsage.statistics_for_family(@family, start_date: @start_date.beginning_of_day, end_date: @end_date.end_of_day)

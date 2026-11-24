@@ -10,7 +10,7 @@ class PasswordResetsController < ApplicationController
   end
 
   def create
-    if (user = User.find_by(email: params[:email]))
+    if (user = User.find_by_email_with_legacy_fallback(params[:email]))
       # Security: Block password reset for SSO-only users.
       # These users have no local password and must authenticate via SSO.
       unless user.sso_only?
@@ -59,6 +59,10 @@ class PasswordResetsController < ApplicationController
         next false unless @user.update(password_params)
 
         SecurityAuditLog.log_password_changed!(user: @user, request: request)
+        # The user is signed out on this path, so every session goes
+        # (CWE-613). User#revoke_oauth_access has already revoked every OAuth
+        # token (mobile app included) as part of the update.
+        @user.sessions.destroy_all
 
         true
       end

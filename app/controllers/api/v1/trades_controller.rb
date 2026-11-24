@@ -3,16 +3,19 @@
 class Api::V1::TradesController < Api::V1::BaseController
   include Pagy::Backend
 
+  UPDATE_NATURES = %w[inflow outflow].freeze
+
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_trade, only: [ :show, :update, :destroy ]
+  before_action :ensure_write_permission, only: [ :update, :destroy ]
 
   def index
     family = current_resource_owner.family
     trades_query = family.trades.visible
 
-    trades_query = apply_filters(trades_query)
-    trades_query = trades_query.includes({ entry: :account }, :security, :category).reverse_chronological
+    trades_query = apply_filters(accessible_trades)
+    trades_query = trades_query.includes({ entry: :account }, :security, :category, :lot_source_entry).reverse_chronological
 
     @pagy, @trades = pagy(
       trades_query,
@@ -39,7 +42,7 @@ class Api::V1::TradesController < Api::V1::BaseController
       return render_validation_error("Account ID is required", [ "Account ID is required" ])
     end
 
-    account = current_resource_owner.family.accounts.visible.find(trade_params[:account_id])
+    account = current_resource_owner.family.accounts.writable_by(current_resource_owner).visible.find(trade_params[:account_id])
 
     unless account.supports_trades?
       return render_validation_error(
@@ -98,15 +101,27 @@ class Api::V1::TradesController < Api::V1::BaseController
     return unless valid_trade_update_semantics?
 
     updatable = build_entry_params_for_update
+    return if performed? # build_entry_params_for_update may have rendered validation errors
 
-    if @entry.update(updatable.except(:nature))
-      @entry.lock_saved_attributes!
-      @entry.mark_user_modified!
-      @entry.sync_account_later
-      @trade = @entry.trade
-      render :show
-    else
-      render_validation_error("Trade could not be updated", @entry.errors.full_messages)
+    # The edit and its follow-up writes commit together, as in
+    # TransactionsController#update: if one fails, a retry still finds the
+    # change to make.
+    Entry.transaction do
+      if @entry.update(updatable.except(:nature))
+        # Read before the follow-up writes below reset saved_changes. A request
+        # that changes nothing must not mark the entry user-modified, which would
+        # stop provider imports from updating it.
+        if @entry.saved_changes.any? || @entry.entryable.saved_changes.any?
+          @entry.lock_saved_attributes!
+          @entry.mark_user_modified!
+          @entry.sync_account_later
+        end
+        @trade = @entry.trade
+        render :show
+      else
+        render_validation_error("Trade could not be updated", @entry.errors.full_messages)
+        raise ActiveRecord::Rollback
+      end
     end
   rescue => e
     log_and_render_error("update", e)
@@ -124,12 +139,25 @@ class Api::V1::TradesController < Api::V1::BaseController
 
   private
 
-    def set_trade
+    # Trades on accounts the caller can at least read.
+    def accessible_trades
       family = current_resource_owner.family
-      @trade = family.trades.visible.find(params[:id])
+      family.trades.visible
+        .where(entries: { account_id: family.accounts.accessible_by(current_resource_owner).select(:id) })
+    end
+
+    def set_trade
+      # Load through accessible accounts only: a trade on an account the caller
+      # cannot see is a 404. Write access is checked next (ensure_write_permission).
+      @trade = accessible_trades.find(params[:id])
       @entry = @trade.entry
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Trade not found" }, status: :not_found
+    end
+
+    # A trade the caller can see but not change is a 403, not a 404.
+    def ensure_write_permission
+      require_api_account_permission!(@entry.account, resource: "trade")
     end
 
     def ensure_read_scope
@@ -163,7 +191,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_params
       params.require(:trade).permit(
         :account_id, :date, :qty, :price, :currency,
-        :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id,
+        :security_id, :ticker, :manual_ticker, :investment_activity_label,
         :fee, :type, :amount, :transfer_account_id
       )
     end
@@ -171,7 +199,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_update_params
       params.require(:trade).permit(
         :name, :date, :amount, :currency, :notes, :nature, :type,
-        :qty, :price, :investment_activity_label, :category_id
+        :qty, :price, :investment_activity_label
       )
     end
 
@@ -186,27 +214,27 @@ class Api::V1::TradesController < Api::V1::BaseController
         entryable_type: "Trade",
         entryable_attributes: {
           id: @trade.id,
-          investment_activity_label: flat[:investment_activity_label],
-          category_id: flat[:category_id]
+          investment_activity_label: flat[:investment_activity_label]
         }.compact_blank
       }.compact
 
-      original_qty = flat[:qty]
-      original_price = flat[:price]
-      type_or_nature = flat[:type].presence || flat[:nature]
+      type_or_nature = flat[:type].presence || flat[:nature].presence
+      return entry_params unless flat.key?(:qty) || flat.key?(:price) || type_or_nature
 
-      if original_qty.present? || original_price.present?
-        qty = original_qty.present? ? original_qty : @trade.qty.abs
-        price = original_price.present? ? original_price : @trade.price
-        is_sell = type_or_nature.present? ? trade_sell_from_type_or_nature?(type_or_nature) : @trade.qty.negative?
-        signed_qty = is_sell ? -qty.to_d.abs : qty.to_d.abs
-        entry_params[:entryable_attributes][:qty] = signed_qty
-        entry_params[:amount] = signed_qty * price.to_d
-        ticker = @trade.security&.ticker
-        entry_params[:name] = Trade.build_name(is_sell ? "sell" : "buy", signed_qty.abs, ticker) if ticker.present?
-        type_label = Trade::CreateForm::SECURITY_TRADE_LABELS[flat[:type].to_s.downcase]
-        entry_params[:entryable_attributes][:investment_activity_label] = flat[:investment_activity_label].presence || type_label || @trade.investment_activity_label.presence || (is_sell ? "Sell" : "Buy")
-      end
+      # Any of qty, price, type or nature rewrites the trade as create builds
+      # it, taking what the request leaves out from the stored trade. A qty or
+      # price sent blank is invalid, not left out.
+      qty, price = parse_qty_and_price!(flat.fetch(:qty) { @trade.qty.abs }, flat.fetch(:price) { @trade.price })
+      return if performed?
+
+      is_sell = type_or_nature ? trade_sell_from_type_or_nature?(type_or_nature) : @trade.qty.negative?
+      signed_qty = is_sell ? -qty : qty
+      entry_params[:entryable_attributes].merge!(qty: signed_qty, price: price)
+      entry_params[:amount] = signed_qty * price + @trade.fee
+      ticker = @trade.security&.ticker
+      entry_params[:name] = Trade.build_name(is_sell ? "sell" : "buy", qty, ticker) if ticker.present?
+      type_label = Trade::CreateForm::SECURITY_TRADE_LABELS[flat[:type].to_s.downcase]
+      entry_params[:entryable_attributes][:investment_activity_label] = flat[:investment_activity_label].presence || type_label || @trade.label_for_side(sell: is_sell)
 
       entry_params
     end
@@ -312,25 +340,18 @@ class Api::V1::TradesController < Api::V1::BaseController
         return nil
       end
 
-      qty_raw = trade_params[:qty].to_s.strip
-      price_raw = trade_params[:price].to_s.strip
-      return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ]) if qty_raw.blank? || price_raw.blank?
+      qty, price = parse_qty_and_price!(trade_params[:qty], trade_params[:price])
+      return if performed?
 
-      qty = qty_raw.to_d
-      price = price_raw.to_d
-      if qty <= 0 || price <= 0
-        # Non-numeric input (e.g. "abc") becomes 0 with to_d; give a clearer message than "must be present"
-        non_numeric = (qty.zero? && qty_raw !~ /\A0(\.0*)?\z/) || (price.zero? && price_raw !~ /\A0(\.0*)?\z/)
-        return render_validation_error("Quantity and price must be valid numbers", [ "qty and price must be valid positive numbers" ]) if non_numeric
-        return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ])
-      end
+      fee = parse_fee!(trade_params[:fee])
+      return if performed?
 
       {
         account: account,
         date: trade_params[:date],
         qty: qty,
         price: price,
-        fee: trade_params[:fee].to_d,
+        fee: fee,
         currency: trade_params[:currency].presence || account.currency,
         type: trade_params[:type].to_s.downcase,
         ticker: ticker_value,
@@ -391,14 +412,6 @@ class Api::V1::TradesController < Api::V1::BaseController
         end
         attrs[:investment_activity_label] = label
       end
-      if trade_params[:category_id].present?
-        category = current_resource_owner.family.categories.find_by(id: trade_params[:category_id])
-        unless category
-          render_validation_error("Category not found or does not belong to your family", [ "category_id is invalid" ])
-          return {}
-        end
-        attrs[:category_id] = category.id
-      end
       attrs
     end
 
@@ -410,6 +423,12 @@ class Api::V1::TradesController < Api::V1::BaseController
     end
 
     def valid_trade_update_semantics?
+      nature = trade_update_params[:nature]
+      if nature.present? && UPDATE_NATURES.exclude?(nature.to_s.downcase)
+        render_validation_error("Invalid nature", [ "nature must be one of: #{UPDATE_NATURES.join(", ")}" ])
+        return false
+      end
+
       type = trade_update_params[:type].to_s.downcase
       label = trade_update_params[:investment_activity_label]
       return true if type.blank?
@@ -474,15 +493,38 @@ class Api::V1::TradesController < Api::V1::BaseController
     end
 
     def parse_positive_amount!(raw, context:)
-      value_raw = raw.to_s.strip
-      return render_validation_error("Amount is required", [ "amount must be present for #{context}" ]) if value_raw.blank?
+      return render_validation_error("Amount is required", [ "amount must be present for #{context}" ]) if raw.to_s.strip.blank?
 
-      value = value_raw.to_d
-      non_numeric = value.zero? && value_raw !~ /\A0(\.0*)?\z/
-      return render_validation_error("Amount must be a valid number", [ "amount must be a valid positive number" ]) if non_numeric || value <= 0
+      value = parse_decimal(raw)
+      return render_validation_error("Amount must be a valid number", [ "amount must be a valid positive number" ]) if value.nil? || value <= 0
 
       value
-         end
+    end
+
+    # Positive quantity and price, or nothing after rendering a 422.
+    def parse_qty_and_price!(qty_raw, price_raw)
+      if qty_raw.to_s.strip.blank? || price_raw.to_s.strip.blank?
+        return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ])
+      end
+
+      values = [ qty_raw, price_raw ].map { |raw| parse_decimal(raw) }
+      if values.any?(&:nil?)
+        return render_validation_error("Quantity and price must be valid numbers", [ "qty and price must be valid positive numbers" ])
+      end
+      return render_validation_error("Quantity and price are required", [ "qty and price must be present and positive" ]) unless values.all?(&:positive?)
+
+      values
+    end
+
+    # A non-negative fee, zero when absent, or nothing after rendering a 422.
+    def parse_fee!(raw)
+      return 0 if raw.to_s.strip.blank?
+
+      fee = parse_decimal(raw)
+      return render_validation_error("Fee must be a valid number", [ "fee must be a valid non-negative number" ]) if fee.nil? || fee.negative?
+
+      fee
+    end
 
     def safe_page_param
       page = params[:page].to_i

@@ -1,16 +1,7 @@
 class SnaptradeItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, DestroyableLater
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
-
-  # Helper to detect if ActiveRecord Encryption is configured for this app
-  def self.encryption_ready?
-    creds_ready = Rails.application.credentials.active_record_encryption.present?
-    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
-    creds_ready || env_ready
-  end
 
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
   # client_id/consumer_key use deterministic encryption (may need querying)
@@ -22,6 +13,8 @@ class SnaptradeItem < ApplicationRecord
     encrypts :snaptrade_user_secret
     encrypts :oauth_access_token
     encrypts :oauth_refresh_token
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true
@@ -32,11 +25,15 @@ class SnaptradeItem < ApplicationRecord
   has_many :snaptrade_accounts, dependent: :destroy
   has_many :linked_accounts, through: :snaptrade_accounts
 
+  # Requests are signed with the stored consumer key instead of a Bearer token.
+  PERSONAL_KEY_TOKEN_TYPE = "personal_key".freeze
+
   scope :active, -> { where(scheduled_for_deletion: false) }
-  # Syncable = active + authorized via OAuth (has an access token).
+  # Syncable = active + authorized, via OAuth (has an access token) or a
+  # SnapTrade Personal API key (see #personal_key_configured?).
   # oauth_access_token is non-deterministically encrypted, so it can only be
   # queried with an IS NULL check (never persisted as "" -- see apply_oauth_tokens!).
-  scope :syncable, -> { active.where.not(oauth_access_token: nil) }
+  scope :syncable, -> { active.where.not(oauth_access_token: nil).or(active.where(oauth_token_type: PERSONAL_KEY_TOKEN_TYPE)) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
@@ -113,9 +110,25 @@ class SnaptradeItem < ApplicationRecord
     update!(
       oauth_access_token: payload["access_token"],
       oauth_refresh_token: payload["refresh_token"].presence || oauth_refresh_token,
-      oauth_token_type: payload["token_type"].presence || oauth_token_type,
+      oauth_token_type: payload["token_type"].presence || (oauth_token_type unless personal_key_configured?),
       oauth_scope: payload["scope"].presence || oauth_scope,
       oauth_token_expires_at: payload["expires_in"].present? ? Time.current + payload["expires_in"].to_i.seconds : oauth_token_expires_at
+    )
+  end
+
+  # Switch the item to a SnapTrade Personal API key. Any OAuth token or legacy
+  # user is cleared, so the key is what signs requests from now on.
+  def apply_personal_key!(client_id:, consumer_key:)
+    update!(
+      client_id: client_id,
+      consumer_key: consumer_key,
+      oauth_access_token: nil,
+      oauth_refresh_token: nil,
+      oauth_token_expires_at: nil,
+      oauth_token_type: PERSONAL_KEY_TOKEN_TYPE,
+      snaptrade_user_id: nil,
+      snaptrade_user_secret: nil,
+      status: :good
     )
   end
 
@@ -180,10 +193,21 @@ class SnaptradeItem < ApplicationRecord
   def oauth_configured?
     oauth_access_token.present?
   end
-  alias_method :credentials_configured?, :oauth_configured?
+
+  # A SnapTrade Personal API key: the family's own clientId + consumerKey, which
+  # SnapTrade provisions together with its user, so there is no userId or
+  # userSecret. Marked explicitly when the key is saved, because items from the
+  # pre-OAuth integration also stored client_id and consumer_key.
+  def personal_key_configured?
+    oauth_token_type == PERSONAL_KEY_TOKEN_TYPE
+  end
+
+  def credentials_configured?
+    oauth_configured? || personal_key_configured?
+  end
 
   def fully_configured?
-    oauth_configured?
+    credentials_configured?
   end
 
   # Override Syncable#syncing? to also show syncing state when activities are being
