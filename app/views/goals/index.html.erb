@@ -59,8 +59,13 @@
           <p class="text-3xl font-medium text-primary mt-2">
             <%= t(".kpi.on_track_all_caught_up") %>
           </p>
+          <%# A goal whose pace cannot be measured is outside the fraction too,
+              but "All caught up" must not read as covering it. %>
           <p class="text-xs text-secondary mt-1">
-            <%= t(".kpi.on_track_sub_parts.reached", count: @kpi[:reached_count]) %>
+            <%= [
+              t(".kpi.on_track_sub_parts.reached", count: @kpi[:reached_count]),
+              (t(".kpi.on_track_sub_parts.pace_unknown", count: @kpi[:pace_unknown_count]) if @kpi[:pace_unknown_count].positive?)
+            ].compact.join(" · ") %>
           </p>
         <% else %>
           <p class="text-3xl font-medium text-primary tabular-nums mt-2">
@@ -77,6 +82,7 @@
               parts << t(".kpi.on_track_sub_parts.behind", count: @kpi[:behind_count]) if @kpi[:behind_count].positive?
               parts << t(".kpi.on_track_sub_parts.no_date", count: @kpi[:no_date_count]) if @kpi[:no_date_count].positive?
               parts << t(".kpi.on_track_sub_parts.paused", count: @kpi[:paused_count]) if @kpi[:paused_count].positive?
+              parts << t(".kpi.on_track_sub_parts.pace_unknown", count: @kpi[:pace_unknown_count]) if @kpi[:pace_unknown_count].positive?
             %>
             <% if parts.any? %>
               <%= parts.join(" · ") %>

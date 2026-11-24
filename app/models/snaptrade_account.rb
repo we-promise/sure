@@ -215,7 +215,9 @@ class SnaptradeAccount < ApplicationRecord
       units = parse_decimal(data[:units]) || BigDecimal("0")
       price = parse_decimal(data[:price]) || BigDecimal("0")
 
-      units * price
+      # Valued as the holding is (Processor#calculate_holdings_value), so a
+      # flagged option cancels at contract value.
+      units * price * contract_multiplier(extract_symbol_data(data))
     end
   end
 

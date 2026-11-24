@@ -33,7 +33,7 @@ class Apns::ClientTest < ActiveSupport::TestCase
       result = Apns::Client.new(environment: "sandbox").deliver(
         token: "ab" * 32,
         title: "New financial insight",
-        body: "Open Sure to review your latest AI insight.",
+        body: "Open Sure to review your latest insight.",
         insight_id: "insight-id"
       )
 
