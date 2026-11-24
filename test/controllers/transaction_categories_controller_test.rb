@@ -20,6 +20,16 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @entry.account.family, { transaction_ids: [ @transaction.id ] } ])
   end
 
+  test "the rule prompt does not name an account the user cannot open in a transfer fee's name" do
+    fee = create_transfer_fee_to_hidden_account
+    sign_in users(:family_member)
+
+    patch transaction_category_url(fee),
+      params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: fee.entryable_id, category_id: categories(:food_and_drink).id } } }
+
+    assert_equal "Transfer fee — Transfer to another account", flash[:cta][:merchant_name]
+  end
+
   test "assigning a category touches its last_used_at" do
     category = categories(:income)
     assert_nil category.last_used_at

@@ -27,9 +27,7 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show leaves out a payment named after an account the user cannot open" do
-    loan = @family.accounts.create!(name: "Hidden Mortgage", owner: @user, balance: 1_000, currency: "USD", accountable: Loan.new)
-    Transfer::Creator.new(family: @family, source_account_id: @account.id, destination_account_id: loan.id,
-                          date: Date.current, amount: 300).create
+    create_transfer_to_hidden_account(name: "Hidden Mortgage", accountable: Loan.new, from: @account, amount: 300)
     create_transaction(account: @account, name: "Starbucks")
     sign_in users(:family_member)
 

@@ -613,7 +613,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index does not name an account the viewer cannot open in a transfer's name" do
-    transfer = transfer_to_hidden_savings
+    transfer = create_transfer_to_hidden_account
     sign_in users(:family_member)
 
     get transactions_url
@@ -624,7 +624,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index does not name an account the viewer cannot open in a transfer fee's name" do
-    transfer = transfer_to_hidden_savings(source_fee_amount: 2)
+    transfer = create_transfer_to_hidden_account(source_fee_amount: 2)
     sign_in users(:family_member)
 
     get transactions_url
@@ -635,7 +635,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index names the other account in a transfer's name for a viewer who can open it" do
-    transfer = transfer_to_hidden_savings
+    transfer = create_transfer_to_hidden_account
 
     get transactions_url
 
@@ -644,7 +644,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the transaction drawer does not name an account the viewer cannot open in a transfer's name" do
-    transfer = transfer_to_hidden_savings
+    transfer = create_transfer_to_hidden_account
     sign_in users(:family_member)
 
     get transaction_url(transfer.outflow_transaction.entry)
@@ -655,7 +655,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "name suggestions leave out transfer names that name an account the viewer cannot open" do
-    transfer_to_hidden_savings
+    create_transfer_to_hidden_account
     sign_in users(:family_member)
 
     get name_suggestions_transactions_url(q: "Transfer to"), as: :turbo_stream
@@ -666,13 +666,47 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
   test "recent name suggestions leave out transfer names that name an account the viewer cannot open" do
     families(:dylan_family).update!(auto_generate_transaction_names: true)
-    transfer_to_hidden_savings
+    create_transfer_to_hidden_account
     sign_in users(:family_member)
 
     get name_suggestions_transactions_url, as: :turbo_stream
 
     assert_response :success
     assert_no_match "Hidden Savings", response.body
+  end
+
+  test "index does not name an account the viewer cannot open in a split transfer fee's name" do
+    fee = create_transfer_fee_to_hidden_account
+    fee.split!([ { name: "Bank charge", amount: 1 }, { name: "FX charge", amount: 1 } ])
+    sign_in users(:family_member)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "a[href=?]", entry_path(fee), text: "Transfer fee — Transfer to another account"
+    assert_no_match "Hidden Savings", response.body
+  end
+
+  test "a duplicate does not copy an account the user cannot open from a transfer fee's name" do
+    fee = create_transfer_fee_to_hidden_account
+    sign_in users(:family_member)
+
+    get new_transaction_url(duplicate_entry_id: fee.id)
+
+    assert_response :success
+    assert_select "input[name='entry[name]'][value='Transfer fee — Transfer to another account']"
+    assert_no_match "Hidden Savings", response.body
+  end
+
+  test "the rule prompt after categorizing does not name an account the user cannot open" do
+    fee = create_transfer_fee_to_hidden_account
+    sign_in users(:family_member)
+
+    patch transaction_url(fee), params: {
+      entry: { entryable_type: "Transaction", entryable_attributes: { id: fee.entryable_id, category_id: categories(:food_and_drink).id } }
+    }
+
+    assert_equal "Transfer fee — Transfer to another account", flash[:cta][:merchant_name]
   end
 
   test "updates with transaction details" do
@@ -2764,21 +2798,6 @@ end
   end
 
   private
-    # A transfer from the checking account shared with family_member into an
-    # account only family_admin can open.
-    def transfer_to_hidden_savings(source_fee_amount: nil)
-      hidden = families(:dylan_family).accounts.create!(name: "Hidden Savings", owner: users(:family_admin), balance: 0,
-                                                        currency: "USD", accountable: Depository.new)
-      Transfer::Creator.new(
-        family: families(:dylan_family),
-        source_account_id: accounts(:depository).id,
-        destination_account_id: hidden.id,
-        date: Date.current,
-        amount: 100,
-        source_fee_amount: source_fee_amount
-      ).create
-    end
-
     def create_immediate_rule
       @user.family.rules.create!(
         name: "Immediate", resource_type: "transaction", active: true, apply_immediately: true,

@@ -222,7 +222,7 @@ class Assistant::Function::GetTransactionsTest < ActiveSupport::TestCase
   end
 
   test "does not name an inaccessible account in a transfer's name" do
-    transfer = transfer_to_hidden_savings
+    transfer = create_transfer_to_hidden_account
 
     result = Assistant::Function::GetTransactions.new(users(:family_member)).call("search" => "Transfer to")
     row = result[:transactions].find { |item| item[:id] == transfer.outflow_transaction_id }
@@ -270,19 +270,4 @@ class Assistant::Function::GetTransactionsTest < ActiveSupport::TestCase
     assert_equal "FNAC", row[:clean_name]
     assert_not row.key?(:operation_date), "no point repeating the date the row already carries"
   end
-
-  private
-    # A transfer from the checking account shared with family_member into an
-    # account only family_admin can open.
-    def transfer_to_hidden_savings
-      hidden = families(:dylan_family).accounts.create!(name: "Hidden Savings", owner: users(:family_admin), balance: 0,
-                                                        currency: "USD", accountable: Depository.new)
-      Transfer::Creator.new(
-        family: families(:dylan_family),
-        source_account_id: accounts(:depository).id,
-        destination_account_id: hidden.id,
-        date: Date.current,
-        amount: 100
-      ).create
-    end
 end

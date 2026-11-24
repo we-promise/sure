@@ -27,6 +27,7 @@ require "rack/test"
 require "tempfile"
 require "uri"
 require Rails.root.join("test/support/sql_query_capture").to_s
+require Rails.root.join("test/support/hidden_transfer_test_helper").to_s
 require Rails.root.join("test/support/rake_task_test_helper").to_s
 require Rails.root.join("test/support/family_lock_test_helper").to_s
 require Rails.root.join("test/support/secret_key_base_rotation_helper").to_s
@@ -92,6 +93,7 @@ module ActiveSupport
     setup { Setting.clear_cache }
 
     include SqlQueryCapture
+    include HiddenTransferTestHelper
     include AiTestHelper
 
     # Add more helper methods to be used by all tests here...

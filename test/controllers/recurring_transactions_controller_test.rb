@@ -1463,6 +1463,19 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal baseline, with_more_rows
   end
 
+  test "a bill started from a transfer fee does not name an account the user cannot open" do
+    fee = create_transfer_fee_to_hidden_account
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
+
+    get new_recurring_transaction_url(entry_id: fee.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match "Transfer fee — Transfer to another account", response.body
+    assert_no_match "Hidden Savings", response.body
+  end
+
   test "picker filters by sign in each mode" do
     picker_entry(name: "PAYCHECK DEPOSIT", amount: -900)
     picker_entry(name: "ACME POWER", amount: 120)

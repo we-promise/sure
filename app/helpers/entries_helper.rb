@@ -56,7 +56,7 @@ module EntriesHelper
   # The entry's name as the current user may read it: a transfer leg or fee
   # does not name an account they cannot open (Transaction#name_for).
   def entry_display_name(entry)
-    entry.name_for(Current.accessible_account_ids)
+    entry&.name_for(Current.accessible_account_ids)
   end
 
   def entry_name_detailed(entry)
@@ -64,7 +64,7 @@ module EntriesHelper
       entry.date,
       format_money(entry.amount_money),
       entry.account.name,
-      entry.name
+      entry_display_name(entry)
     ].join(" • ")
   end
 end

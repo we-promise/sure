@@ -130,7 +130,7 @@ class Assistant::Function
 
     # The entry's name as this user may read it (Entry#name_for).
     def entry_name(entry)
-      entry.name_for(accessible_account_ids)
+      entry&.name_for(accessible_account_ids)
     end
 
     def valid_uuid?(str)

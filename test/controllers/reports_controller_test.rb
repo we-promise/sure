@@ -2289,12 +2289,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "biggest expenses does not name an account the viewer cannot open in a contribution's name" do
-    brokerage = @family.accounts.create!(name: "Hidden Brokerage", owner: users(:family_admin), balance: 0,
-                                         currency: "USD", accountable: Investment.new)
-    Transfer::Creator.new(
-      family: @family, source_account_id: accounts(:depository).id, destination_account_id: brokerage.id,
-      date: BIGGEST_MONTH + 1, amount: 700
-    ).create
+    create_transfer_to_hidden_account(name: "Hidden Brokerage", accountable: Investment.new, date: BIGGEST_MONTH + 1, amount: 700)
     sign_in users(:family_member)
 
     get biggest_expenses_reports_path
@@ -2400,12 +2395,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the printed report does not name an account the viewer cannot open in a contribution's name" do
-    brokerage = @family.accounts.create!(name: "Hidden Brokerage", owner: users(:family_admin), balance: 0,
-                                         currency: "USD", accountable: Investment.new)
-    Transfer::Creator.new(
-      family: @family, source_account_id: accounts(:depository).id, destination_account_id: brokerage.id,
-      date: BIGGEST_MONTH + 1, amount: 700
-    ).create
+    create_transfer_to_hidden_account(name: "Hidden Brokerage", accountable: Investment.new, date: BIGGEST_MONTH + 1, amount: 700)
     sign_in users(:family_member)
 
     get print_reports_path(period_type: :custom, start_date: BIGGEST_MONTH, end_date: BIGGEST_MONTH.end_of_month)

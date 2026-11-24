@@ -2180,6 +2180,43 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "POWER CO REFUND", response.body, "a pending match paid nothing"
   end
 
+  test "history does not name an account the member cannot open in a transfer fee's name" do
+    bill = create_bill(name: "Bank fees", amount: 2)
+    due = 3.months.ago.to_date
+    occurrence = bill.recurring_occurrences.create!(family: @family, original_due_on: due, due_on: due, currency: "USD")
+    fee = create_transfer_fee_to_hidden_account
+    # Created directly: attaching through the allocator also stores the name
+    # as one the bill matches, which the bill shows as it was written.
+    occurrence.allocations.create!(entry: fee, allocated_amount: 2, currency: "USD", source: "user_confirmed")
+    occurrence.close!("paid", source: "user")
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
+
+    get_bill_history(bill)
+
+    assert_response :success
+    assert_match "Transfer fee — Transfer to another account", response.body
+    assert_no_match "Hidden Savings", response.body
+  end
+
+  test "the payment review queue does not name an account the member cannot open in a transfer fee's name" do
+    bill = declare_bill(name: "Bank fees", amount: 2, due: Date.current - 3)
+    fee = create_transfer_fee_to_hidden_account
+    RecurringTransaction::Allocator.new(bill.recurring_occurrences.order(:due_on).first).allocate_matched!(
+      entry: fee, state: "suggested", confidence: 0.7, signals: { name: 0.35 }
+    )
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.index.suggestion_line", entry: "Transfer fee — Transfer to another account", bill: "Bank fees"), response.body
+    assert_no_match "Hidden Savings", response.body
+  end
+
   # History is the only list of cycles older than this month, and the payment
   # drawer it points into is the only place a payment can be unlinked. Rows
   # were static text, so a past payment was a dead end here.

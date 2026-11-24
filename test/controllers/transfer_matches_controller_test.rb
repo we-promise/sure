@@ -207,4 +207,15 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
       delete transaction_transfer_match_path(outflow)
     end
   end
+
+  test "new does not name an account the user cannot open in a transfer fee's name" do
+    fee = create_transfer_fee_to_hidden_account
+    sign_in users(:family_member)
+
+    get new_transaction_transfer_match_path(fee)
+
+    assert_response :success
+    assert_match "Transfer fee — Transfer to another account", response.body
+    assert_no_match "Hidden Savings", response.body
+  end
 end

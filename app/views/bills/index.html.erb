@@ -116,7 +116,7 @@
           <% end %>
           <p class="text-sm text-primary @md:truncate">
             <%= t(".suggestion_line",
-                  entry: suggestion.entry&.name.presence || t(".suggestion_unknown_entry"),
+                  entry: entry_display_name(suggestion.entry).presence || t(".suggestion_unknown_entry"),
                   bill: series.display_name) %>
           </p>
           <%# The matcher stores WHY it proposed each of these. This line

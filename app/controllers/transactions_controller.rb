@@ -187,7 +187,7 @@ class TransactionsController < ApplicationController
           type: "category_rule",
           category_id: transaction.category_id,
           category_name: transaction.category.name,
-          merchant_name: @entry.name
+          merchant_name: @entry.name_for(Current.accessible_account_ids)
         }
       end
 
@@ -650,7 +650,7 @@ class TransactionsController < ApplicationController
     def apply_duplicate_attributes!
       return unless duplicate_source
       @entry.assign_attributes(
-        name: duplicate_source.name,
+        name: duplicate_source.name_for(Current.accessible_account_ids),
         amount: duplicate_source.amount.abs,
         currency: duplicate_source.currency,
         notes: duplicate_source.notes

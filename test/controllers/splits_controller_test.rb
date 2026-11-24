@@ -365,6 +365,24 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     refute @entry.reload.excluded?
   end
 
+  test "the split editor does not name an account the user cannot open in a transfer fee's name" do
+    fee = create_transfer_fee_to_hidden_account
+    sign_in users(:family_member)
+
+    get new_transaction_split_path(fee)
+
+    assert_response :success
+    assert_match "Transfer fee — Transfer to another account", response.body
+    assert_no_match "Hidden Savings", response.body
+
+    fee.split!([ { name: "Bank charge", amount: 1 }, { name: "FX charge", amount: 1 } ])
+    get edit_transaction_split_path(fee)
+
+    assert_response :success
+    assert_match "Transfer fee — Transfer to another account", response.body
+    assert_no_match "Hidden Savings", response.body
+  end
+
   private
     def sql_queries(&block)
       queries = []

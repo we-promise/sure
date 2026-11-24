@@ -270,7 +270,7 @@ class RecurringTransactionsController < ApplicationController
     def prefill_recurring_from_entry(entry)
       @source_entry = entry
       @covering_series = covering_series_for(entry)
-      @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name
+      @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name_for(Current.accessible_account_ids)
       @recurring_transaction.amount = entry.amount.abs
       @recurring_transaction.currency = entry.currency
       @recurring_transaction.account_id = entry.account_id

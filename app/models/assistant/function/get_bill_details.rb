@@ -47,7 +47,7 @@ class Assistant::Function::GetBillDetails < Assistant::Function
 
     open_occurrences = series.recurring_occurrences.open_status.order(:due_on).to_a
     closed = series.recurring_occurrences.closed
-    history = closed.order(due_on: :desc).limit(HISTORY_LIMIT).includes(allocations: :entry).to_a
+    history = closed.order(due_on: :desc).limit(HISTORY_LIMIT).includes(allocations: { entry: :entryable }).to_a
     preload_allocation_sums(open_occurrences + history)
 
     changes = price_changes(series)
@@ -146,7 +146,7 @@ class Assistant::Function::GetBillDetails < Assistant::Function
             paid_on: allocation.paid_on&.iso8601,
             source: allocation.source,
             state: allocation.state,
-            transaction_name: allocation.entry&.name
+            transaction_name: entry_name(allocation.entry)
           }.compact
         end
       )

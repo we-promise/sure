@@ -164,7 +164,7 @@ class BillsController < ApplicationController
     # bill costs no more than its summary, and the aggregates behind the chart
     # and the per-year totals run only once it is scrolled to.
     if params[:display] == "history"
-      @history = @series.recurring_occurrences.closed.order(due_on: :desc).limit(12).includes(allocations: :entry)
+      @history = @series.recurring_occurrences.closed.order(due_on: :desc).limit(12).includes(allocations: { entry: :entryable })
       @upcoming = @series.schedule.occurrences_between(Date.current + 1, Date.current + 400).first(3)
       @analytics = paid_analytics
       load_deep_extras
@@ -651,7 +651,7 @@ class BillsController < ApplicationController
         # Income never reviews here: the matcher no longer suggests it, and
         # this filter also retires any suggestion written before that rule.
         .merge(RecurringTransaction.not_typed_income)
-        .includes(:entry, recurring_occurrence: { recurring_transaction: { merchant: { logo_attachment: :blob } } })
+        .includes({ entry: :entryable }, recurring_occurrence: { recurring_transaction: { merchant: { logo_attachment: :blob } } })
         # The confidence the matcher scored these with was sitting unused on
         # the row while the queue ordered itself by when the job happened to
         # run. Most-certain question first.

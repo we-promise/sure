@@ -25,6 +25,20 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size
   end
 
+  test "show does not name an account the member cannot open in a transfer fee's name" do
+    fee = create_transfer_fee_to_hidden_account
+    @occurrence.allocations.create!(entry: fee, allocated_amount: 2, currency: "USD", state: "suggested", source: "auto_matched")
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_match "Transfer fee — Transfer to another account", response.body
+    assert_no_match "Hidden Savings", response.body
+  end
+
   # A manual payment is typed into the same boxed money and date fields as
   # every other form, in the bill's own currency, which can't be changed here.
   test "the manual payment form uses the app's money and date fields" do

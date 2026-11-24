@@ -24,7 +24,7 @@
           <div class="bg-surface-inset border border-secondary rounded-lg p-4">
             <div class="flex items-center justify-between">
               <div class="space-y-1">
-                <p class="text-primary font-medium"><%= @transaction.entry.name %></p>
+                <p class="text-primary font-medium"><%= entry_display_name(@transaction.entry) %></p>
                 <p class="text-xs text-secondary">
                   <%= @transaction.entry.account.name %>
                   • <%= I18n.l(@transaction.entry.date, format: :long) %>
@@ -50,7 +50,7 @@
                   <label class="flex items-center gap-3 p-3 border border-secondary rounded-lg cursor-pointer hover:bg-surface-inset transition-colors">
                     <%= f.radio_button :posted_entry_id, entry.id, class: "form-radio" %>
                     <div class="flex-1 text-sm">
-                      <div class="font-medium text-primary"><%= entry.name %></div>
+                      <div class="font-medium text-primary"><%= entry_display_name(entry) %></div>
                       <div class="text-xs text-secondary">
                         <%= entry.date ? I18n.l(entry.date, format: :short) : "—" %> •
                         <%= number_to_currency(entry.amount.abs, unit: Money::Currency.new(entry.currency).symbol) %>
