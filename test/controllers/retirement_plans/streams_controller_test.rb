@@ -99,6 +99,23 @@ class RetirementPlans::StreamsControllerTest < ActionDispatch::IntegrationTest
     [ rent, abroad ].each { |stream| assert_select "tr[data-stream-id='#{stream.id}'] span", text: fixed, count: 0 }
   end
 
+  # A one-off has no end year. Its form carries an empty end year, enabled only
+  # while the kind is one-off, so editing a stream into one clears the end
+  # year it had rather than being refused over it.
+  test "an expense edited into a one-off saves without its old end year" do
+    stream = RetirementPlan.create!(user: @user).streams.create!(
+      kind: "expense", name: "Rent", annual_amount: 12_000, start_year: 2030, end_year: 2041, source: "manual"
+    )
+
+    get edit_retirement_plan_stream_url(stream)
+    assert_select "input[type=hidden][name='retirement_plan_stream[end_year]'][value=''][disabled]"
+
+    patch retirement_plan_stream_url(stream), params: { retirement_plan_stream: { kind: "one_off", start_year: "2045", end_year: "" } }
+
+    assert_redirected_to retirement_plan_path
+    assert_equal [ "one_off", 2045, nil ], [ stream.reload.kind, stream.start_year, stream.end_year ]
+  end
+
   test "an invalid stream is refused and nothing is written, not even the plan" do
     assert_no_difference [ "RetirementPlan::Stream.count", "RetirementPlan.count" ] do
       post retirement_plan_streams_url, params: { retirement_plan_stream: { kind: "expense", name: "", annual_amount: "0" } }

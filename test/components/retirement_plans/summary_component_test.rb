@@ -36,11 +36,12 @@ class RetirementPlans::SummaryComponentTest < ViewComponent::TestCase
     assert_selector "[data-fi-progress]", text: /\A\s*0% of the way/
   end
 
-  # A real shortfall still reads as one; only the sliver rounds to 0.
-  test "progress well below zero reads its negative percent" do
+  # The figure stops at 0 beside an empty bar; the assets line shows the
+  # shortfall itself.
+  test "progress well below zero reads 0%" do
     render_inline(RetirementPlans::SummaryComponent.new(projection: projection(current_assets: -500_000), currency: "USD"))
 
-    assert_selector "[data-fi-progress]", text: /\A\s*-50% of the way/
+    assert_selector "[data-fi-progress]", text: /\A\s*0% of the way/
     assert_selector "[data-fi-bar][style*='inline-size: 0.0%']"
   end
 
