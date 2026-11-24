@@ -68,6 +68,25 @@ class Purchase::FromReceiptScanTest < ActiveSupport::TestCase
     end
   end
 
+  # The uploader is read again under its row lock, which a family transfer also takes: a transfer
+  # that committed after the scan loaded its uploader is seen.
+  test "an uploader moved to another family after the scan loaded them gets no purchase" do
+    @scan.user
+    User.where(id: @scan.user_id).update_all(family_id: families(:empty).id)
+
+    assert_no_difference -> { Purchase.count } do
+      assert_nil Purchase::FromReceiptScan.sync!(@scan, extraction_hash: @extraction, ai_metadata: {})
+    end
+  end
+
+  test "a scan whose account moved to another family after it was loaded gets no purchase" do
+    ReceiptScan.where(id: @scan.id).update_all(family_id: families(:empty).id)
+
+    assert_no_difference -> { Purchase.count } do
+      assert_nil Purchase::FromReceiptScan.sync!(@scan, extraction_hash: @extraction, ai_metadata: {})
+    end
+  end
+
   test "a transaction that already has an email purchase keeps it; the receipt purchase stays unlinked" do
     email_purchase = purchases(:allegro_awaiting)
     email_purchase.update!(linked_transaction: @entry.entryable, status: :matched)

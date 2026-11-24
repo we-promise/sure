@@ -40,6 +40,9 @@ class PurchasesMailbox < ApplicationMailbox
       purchase = nil
       store_original_failing(-> { purchase }) do
         Purchase.transaction do
+          # A family transfer takes the same lock, so the purchase lands in the family the user
+          # is in now.
+          user.lock!
           purchase = Purchase.create!(
             family: user.family, user:, source: :email, status: :processing, inbound_email_message_id: mail.message_id
           )

@@ -18,21 +18,32 @@ class Purchase::FromReceiptScan
   # @return [Purchase, nil] nil when the member who uploaded the scan was removed or is no longer
   #   in the scan's family: a purchase is always someone's in its own family.
   def sync!
-    return if scan.user.nil? || scan.user.family_id != scan.family_id
+    Purchase.transaction do
+      uploader = scan.user
+      next if uploader.nil?
 
-    purchase = Purchase.find_or_initialize_by(receipt_scan_id: scan.id)
-    claimed_meanwhile = false
-    begin
-      record(purchase, transaction_owner(purchase))
-    rescue ActiveRecord::RecordNotUnique
-      # An order email linked the transaction between the lookup and the write; read the owner
-      # again, once.
-      raise if claimed_meanwhile
+      # The uploader, the account and the scan, in the order User#transfer_to_family! locks
+      # them, so a transfer of the uploader or of the account's owner can't move either between
+      # this check and the write. Locking reads them again.
+      uploader.lock!
+      scan.account.lock!
+      scan.lock!
+      next unless uploader.family_id == scan.family_id
 
-      claimed_meanwhile = true
-      retry
+      purchase = Purchase.find_or_initialize_by(receipt_scan_id: scan.id)
+      claimed_meanwhile = false
+      begin
+        record(purchase, transaction_owner(purchase))
+      rescue ActiveRecord::RecordNotUnique
+        # An order email linked the transaction between the lookup and the write; read the owner
+        # again, once.
+        raise if claimed_meanwhile
+
+        claimed_meanwhile = true
+        retry
+      end
+      purchase
     end
-    purchase
   end
 
   private

@@ -40,6 +40,18 @@ class PurchasesMailboxTest < ActionMailbox::TestCase
     end
   end
 
+  test "a purchase goes to the family its owner is in when it's created" do
+    stale = User.find(@user.id)
+    PurchaseInbox::SenderResolver.any_instance.stubs(:result)
+      .returns(PurchaseInbox::SenderResolver::Result.new(user: stale, route_kind: :sender, reason: nil))
+    other_family = families(:empty)
+    User.where(id: @user.id).update_all(family_id: other_family.id)
+
+    receive_inbound_email_from_source(fixture("amazon_manual_forward.eml"))
+
+    assert_equal other_family, Purchase.order(:created_at).last.family
+  end
+
   test "routing the same email again reuses its purchase" do
     inbound = receive_inbound_email_from_source(fixture("amazon_manual_forward.eml"))
 
