@@ -1,5 +1,3 @@
 <%= t(".heading", merchant: @purchase.merchant || t("purchase_mailer.unknown_merchant")) %>
 
 <%= t(".body", total: purchase_total, days: Purchase::DEADLINE_DAYS) %>
-
-<%= t(".link_button") %>: <%= @to_match_url %>

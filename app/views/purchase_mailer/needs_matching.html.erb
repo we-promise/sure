@@ -1,3 +1,2 @@
 <h1><%= t(".heading", merchant: @purchase.merchant || t("purchase_mailer.unknown_merchant")) %></h1>
 <p><%= t(".body", total: purchase_total) %></p>
-<%= link_to t(".link_button"), @purchase_url, class: "button" %>

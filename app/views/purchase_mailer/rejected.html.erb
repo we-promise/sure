@@ -4,7 +4,6 @@
 <% end %>
 <% if @reason&.dig("reason") == "duplicate" %>
   <p><%= t(".duplicate") %></p>
-  <% if @existing_purchase_url %><%= link_to t("purchase_mailer.view_purchase"), @existing_purchase_url, class: "button" %><% end %>
 <% else %>
   <p><%= t(".not_an_order", reason: @purchase.ai_metadata.dig("raw_output", "not_order_reason").presence || t(".no_reason")) %></p>
 <% end %>

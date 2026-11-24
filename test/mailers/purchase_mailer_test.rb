@@ -16,7 +16,6 @@ class PurchaseMailerTest < ActionMailer::TestCase
     assert_includes body, "Coffee beans"
     assert_includes body, "Food & Drink"
     assert_includes body, "Starbucks"
-    assert_includes body, purchase_url(@purchase)
   end
 
   test "an unknown currency is shown as read, not a crash" do
@@ -47,24 +46,28 @@ class PurchaseMailerTest < ActionMailer::TestCase
     body = PurchaseMailer.with(purchase: @purchase).matched.text_part.body.decoded
 
     assert_includes body, "Starbucks"
-    assert_includes body, purchase_url(@purchase)
   end
 
-  test "needs_matching links to the purchase to pick the payment" do
+  test "needs_matching says the payment couldn't be picked" do
     purchase = purchases(:allegro_awaiting)
 
     mail = PurchaseMailer.with(purchase:).needs_matching
 
     assert_equal [ @user.email ], mail.to
-    assert_includes mail.text_part.body.decoded, purchase_url(purchase)
+    assert_includes mail.text_part.body.decoded, I18n.t("purchase_mailer.needs_matching.body", total: purchase.amount_text(purchase.total))
   end
 
-  test "unmatched links to the purchases waiting for a match" do
+  # The purchase pages come with the web UI; until then the emails link nowhere.
+  test "no email links to a purchase page" do
     purchase = purchases(:allegro_awaiting)
+    purchase.update!(status: :rejected)
+    purchase.flag!(:duplicate, purchase_id: @purchase.id)
 
-    body = PurchaseMailer.with(purchase:).unmatched.text_part.body.decoded
-
-    assert_includes body, purchases_url(tab: "to_match")
+    %i[processed matched unmatched needs_matching failed].each do |action|
+      mail = PurchaseMailer.with(purchase: @purchase).public_send(action)
+      [ mail.text_part, mail.html_part ].each { |part| refute_match %r{/purchases}, part.body.decoded, action }
+    end
+    refute_match %r{/purchases}, PurchaseMailer.with(purchase:).rejected.html_part.body.decoded
   end
 
   test "rejected gives the model's reason and the email subject" do
@@ -78,14 +81,14 @@ class PurchaseMailerTest < ActionMailer::TestCase
     assert_includes body, "Your package has shipped"
   end
 
-  test "rejected as a duplicate links the existing purchase" do
+  test "rejected as a duplicate says the order is already there" do
     purchase = purchases(:allegro_awaiting)
     purchase.update!(status: :rejected)
     purchase.flag!(:duplicate, purchase_id: @purchase.id)
 
     body = PurchaseMailer.with(purchase:).rejected.text_part.body.decoded
 
-    assert_includes body, purchase_url(@purchase)
+    assert_includes body, I18n.t("purchase_mailer.rejected.duplicate")
   end
 
   test "failed never shows the provider's error message" do

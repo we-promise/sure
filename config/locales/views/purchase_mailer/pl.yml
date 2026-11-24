@@ -2,28 +2,25 @@
 pl:
   purchase_mailer:
     unknown_merchant: Twoje zamówienie
-    view_purchase: Zobacz zakup
     linked_to: "Powiązano z transakcją %{name} na koncie %{account}, %{date}."
     processed:
       subject: "Odczytano zamówienie: %{merchant}, %{total}"
       heading: "Odczytaliśmy Twoje zamówienie z %{merchant}"
       summary: "Zamówione %{date}, kwota %{total}."
       waiting: Czekamy, aż płatność pojawi się na Twoich kontach, i powiążemy ją automatycznie.
-      needs_matching: Ta płatność może być jedną z kilku transakcji. Wybierz właściwą na stronie zakupu.
-      manual: To zamówienie nie zostanie dopasowane automatycznie. Powiąż płatność na stronie zakupu, gdy się pojawi.
+      needs_matching: Ta płatność może być jedną z kilku transakcji, więc nie jest jeszcze powiązana.
+      manual: To zamówienie nie zostanie automatycznie dopasowane do płatności.
     matched:
       subject: "Znaleziono płatność: %{merchant}, %{total}"
       heading: "Znaleźliśmy płatność za Twoje zamówienie z %{merchant}"
     unmatched:
       subject: "Nie znaleziono jeszcze płatności: %{merchant}, %{total}"
       heading: "Nie znaleźliśmy płatności za Twoje zamówienie z %{merchant}"
-      body: "Przez %{days} dni od zamówienia nie pojawiła się transakcja na kwotę %{total}. Będziemy szukać dalej, możesz też powiązać ją samodzielnie."
-      link_button: Przejrzyj zakupy do dopasowania
+      body: "Przez %{days} dni od zamówienia nie pojawiła się transakcja na kwotę %{total}."
     needs_matching:
       subject: "Wybierz płatność: %{merchant}, %{total}"
       heading: "Która płatność dotyczy Twojego zamówienia z %{merchant}?"
-      body: "Kilka transakcji na kwotę %{total} może być tym zamówieniem. Wybierz właściwą, żeby przypisać do niej pozycje."
-      link_button: Wybierz płatność
+      body: "Kilka transakcji na kwotę %{total} może być tym zamówieniem, więc pozycje nie są jeszcze przypisane do żadnej z nich."
     rejected:
       subject: "Nie dodano maila: %{merchant}"
       heading: Nie udało się dodać przekazanego maila
@@ -34,7 +31,7 @@ pl:
     failed:
       subject: "Nie udało się odczytać maila z zamówieniem: %{merchant}"
       heading: Nie udało się odczytać przekazanego maila z zamówieniem
-      body: Coś poszło nie tak podczas odczytu. Otwórz zakup, żeby spróbować ponownie.
+      body: Coś poszło nie tak podczas odczytu. Przekaż mail ponownie, żeby spróbować jeszcze raz.
     preview_required:
       subject: "Włącz funkcje testowe, aby korzystać ze skrzynki zamówień w %{product_name}"
       heading: Przekazany mail nie został dodany
