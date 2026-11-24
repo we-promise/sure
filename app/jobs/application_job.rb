@@ -21,11 +21,9 @@ class ApplicationJob < ActiveJob::Base
   BUSY_WAIT = 5..15
 
   # A background AI request never waits at a full local model host (Ai::Gate): the job runs again
-  # in a few seconds, at the back of its queue. Not a retry, so it counts no attempt.
-  rescue_from(Ai::Error::Busy) do
-    queued = self.class.set(wait: rand(BUSY_WAIT).seconds).perform_later(*arguments)
-    Rails.logger.warn("[#{self.class.name}] couldn't be queued again after the model host was busy") unless queued
-  end
+  # in a few seconds, at the back of its queue, as often as it takes. It's the same job, so the
+  # other errors' retry counts carry on.
+  retry_on Ai::Error::Busy, wait: ->(_executions) { rand(BUSY_WAIT) }, attempts: :unlimited
 
   # A callback rather than Sidekiq middleware, so it also runs under the test adapter and
   # `perform_now`.

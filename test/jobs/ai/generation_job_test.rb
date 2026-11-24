@@ -284,7 +284,7 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     assert_empty Requester.log, "the second saw the run touched by the first, not a run to give up"
   end
 
-  test "a busy local host puts the step back on its queue in 5 to 15 seconds, on the same window, counting nothing" do
+  test "a busy local host puts the step back on its queue in 5 to 15 seconds, on the same window, with no delivery or step counted" do
     use_ai_model_settings(batch_size: 2)
     busy = true
     stub_ai(:detect_merchants) { busy ? raise(Ai::Error::Busy, "full") : AiTestGeneration.answer(_1) }
@@ -297,7 +297,6 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
       requeued = enqueued_jobs.sole
       assert_includes (5.seconds.from_now.to_f..15.seconds.from_now.to_f), requeued["scheduled_at"].then { Time.iso8601(_1).to_f }
       assert_equal args["arguments"], requeued["arguments"], "the same step and window"
-      assert_equal 0, requeued["executions"].to_i - args["executions"].to_i, "no retry counted"
     end
     assert_empty Requester.log
     assert_equal 0, run.reload.step
@@ -318,6 +317,26 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
 
     assert_empty Requester.log, "six Busy re-enqueues and a timeout are still within the five retries"
     assert_equal 1, enqueued_jobs.size
+  end
+
+  test "a busy host between timeouts keeps the timeout count: the fifth timeout still gives up" do
+    errors = [ Ai::Error::Timeout, Ai::Error::Timeout, Ai::Error::Timeout, Ai::Error::Timeout, Ai::Error::Busy, Ai::Error::Timeout ]
+    stub_ai(:detect_merchants) { raise errors.shift, "again" }
+
+    Ai::GenerationJob.perform_later(:detect_merchants, ai_run_args(:detect_merchants, ids: ID.values_at(*%w[a]), family: @family))
+    6.times { ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys) }
+
+    assert_equal [ [ :failed, @family.id, Ai::Error::Timeout ] ], Requester.log
+    assert_empty enqueued_jobs
+  end
+
+  test "a busy host's job the queue refuses tells the requester, as a refused retry does" do
+    stub_ai(:detect_merchants, raises: Ai::Error::Busy.new("full"))
+    Ai::GenerationJob.any_instance.stubs(:enqueue).returns(false)
+
+    Ai::GenerationJob.perform_now(:detect_merchants, ai_run_args(:detect_merchants, ids: ID.values_at(*%w[a]), family: @family))
+
+    assert_equal [ [ :failed, @family.id, Ai::Error::Busy ] ], Requester.log
   end
 
   test "a feature that became unavailable is discarded, and the requester hears once" do
