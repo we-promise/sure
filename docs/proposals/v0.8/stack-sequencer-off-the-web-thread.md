@@ -167,6 +167,17 @@ A PR whose built diff goes over 2,000 lines is split at a step boundary before r
   test runs a windowed `categorize` through `Busy` and checks the window's counts.
 - **`config/schedule.yml` (4a).** `VectorStore::RequeueIndexPollsJob` names `ai_low_priority`, so
   it moves to `ai_background`. `ai_lane_test` also checks the queues `schedule.yml` names.
+- **Merchant logos leave the AI run (4a; call by @josh-sanders, 2026-11-24).** Logos aren't AI,
+  yet the Enhancer's first step backfills them, so a run without the family's consent changes
+  logos and then fails.
+  - Each family sync already backfills logos (`Family::Syncer#perform_post_sync`). The Enhancer
+    doesn't need the backfill to choose what it sends: merchants with a website are left out by
+    their `website_url`.
+  - The Enhancer drops the backfill. The Enhance action queues it as its own job on the default
+    queue, next to the AI run, so a click still refreshes logos.
+  - It goes after the outbox, which replaces the Enhancer's boolean lock.
+  - Tests: an Enhance without consent fails the run and still refreshes logos. The AI run never
+    touches a logo.
 - **Steps 0 and 9** (the measurements) run on venus, with one local model and one test at a time.
 
 ### Bill suggestions
