@@ -10,6 +10,9 @@ class Goals::StatusPillComponent < ApplicationComponent
     reached:        { tone: :green, icon: "star" },
     completed:      { tone: :green, icon: "circle-check-big" },
     no_target_date: { tone: :gray,  icon: "infinity" },
+    # No measurable pace: neither on track nor behind, so neutral, with a
+    # question mark rather than the open-ended goal's infinity.
+    pace_unknown:   { tone: :gray,  icon: "circle-help" },
     # A reserve at its floor is steady, not celebratory: green, but a shield
     # rather than the star a one-off gets for finishing. Below its floor it
     # reads like `behind` — something to top back up.

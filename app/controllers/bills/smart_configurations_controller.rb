@@ -1,9 +1,9 @@
 class Bills::SmartConfigurationsController < ApplicationController
-  include BillsHelper
+  include AiFeatureGuard
   include RecurringFeatureGuardable
 
-  guard_feature unless: -> { bills_one_shot_ai_available? }
   before_action :ensure_recurring_enabled
+  requires_ai :bill_setup
 
   # Proposes configuration corrections for one bill from its own charge
   # history (configure mode: only fields the history contradicts come back).
