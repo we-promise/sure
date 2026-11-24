@@ -8,6 +8,9 @@ zh-CN:
         start_date: 开始日期
         end_date: 结束日期
         filter: 筛选
+        total_calls: "调用总数"
+        avg_cost_per_call: "平均每次调用费用"
+        based_on_calls: "基于 %{with_cost} / %{total} 次带费用数据的调用"
         total_tokens: Token 总数
         prompt: 提示词
         completion: 补全
