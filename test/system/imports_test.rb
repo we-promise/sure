@@ -282,6 +282,10 @@ class ImportsTest < ApplicationSystemTestCase
     assert_no_selector "input[type=checkbox][data-checkbox-group=transactions]:checked", visible: :all
     click_on "Review import"
 
+    # The account choices form opts out of Turbo, so this is a full page load.
+    # Wait for the new URL before reading any text: Chrome can fail to read the
+    # outgoing page's h1 with an error Capybara does not retry.
+    assert_current_path import_path(MonarchImport.where(family: @user.family).sole)
     assert_selector "h1", text: "Confirm your import data"
     click_on "Publish import"
 
