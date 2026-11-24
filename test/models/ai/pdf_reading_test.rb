@@ -59,6 +59,52 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     end
   end
 
+  test "a scan over the PDF limits that nothing else can read says it's too large under Auto" do
+    Pdf::PageImages.stubs(:page_count).returns(101)   # over the OpenAI preset's 100 pages
+    Pdf::PageImages.stubs(:render).raises(Pdf::PageImages::Error.new("pdftoppm isn't installed", code: :missing_binary))
+    stub_ai(:extract_pdf)
+    endpoint = Ai::Config::Endpoint.new(name: :limited, protocol: :compatible, preset: :openai, base_url: "https://api.openai.com/v1")
+
+    [ %i[structured_output documents], %i[structured_output documents vision] ].each do |capabilities|
+      with_reading_routes(Ai::Config::Model.new(endpoint:, name: "gpt-4.1-mini", capabilities:)) do
+        error = assert_raises(Ai::Error::Unavailable) { reading(@scan).read }
+
+        assert_equal :too_large, error.reason, capabilities.inspect
+      end
+    end
+  end
+
+  test "a page too large to render says so, under Auto and by name" do
+    Pdf::PageImages.stubs(:page_count).returns(1)
+    Pdf::PageImages.stubs(:render).raises(Pdf::PageImages::Error.new("page 1 would be 400 million pixels", code: :too_large))
+    stub_ai(:extract_pdf)
+
+    with_reading_routes(vision_model) do
+      %i[auto images].each do |read_as|
+        error = assert_raises(Ai::Error::Unavailable) { reading(@scan).read(read_as:) }
+
+        assert_equal :page_too_large, error.reason
+        assert_equal :too_large, error.code
+      end
+    end
+    assert_equal I18n.t("imports.pdf_import.errors.unavailable.page_too_large"), PdfImport.unavailable_message(:page_too_large)
+    assert_not_equal PdfImport.unavailable_message(:default), PdfImport.unavailable_message(:page_too_large)
+  end
+
+  test "a file that can't be opened stays unreadable under Auto, whatever its size" do
+    Pdf::PageImages.stubs(:page_count).raises(Pdf::PageImages::Error.new("PDF does not contain EOF marker", code: :unreadable))
+    stub_ai(:extract_pdf)
+    endpoint = Ai::Config::Endpoint.new(name: :limited, protocol: :compatible, preset: :openai, base_url: "https://api.openai.com/v1")
+    model = Ai::Config::Model.new(endpoint:, name: "gpt-4.1-mini", capabilities: %i[structured_output documents vision])
+    endpoint.class.any_instance.stubs(:pdf_limits).returns({ bytes: 10, pages: 100 })
+
+    with_reading_routes(model) do
+      error = assert_raises(Ai::Error::Unavailable) { reading(@scan).read }
+
+      assert_equal :unreadable, error.reason
+    end
+  end
+
   test "a text model reads the text layer, page by page, and every check runs on it" do
     requests = stub_ai(:extract_pdf, returns: statement(BAC_ROWS))
 
