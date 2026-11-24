@@ -190,6 +190,21 @@ class Ai::GateInterruptTest < ActiveSupport::TestCase
     assert_raises(Faraday::ConnectionFailed) { Ai::Gate.holding(holder) { post(stub) } }
   end
 
+  test "a local generation still streaming when its budget runs out raises Timeout and frees its place" do
+    stub = server(:streaming)
+    endpoint = ai_endpoint(name: "gpu", base_url: "#{stub.url}/v1", location: :local, timeout_seconds: 1)
+    request = Ai::Transport::Base::Request.new(feature: :items, model: ai_model(endpoint:), instructions: "Name it.", input: "AMZN",
+                                               schema: { type: "object" }, schema_name: "items", json_mode: :strict)
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    assert_raises(Ai::Error::Timeout) { Timeout.timeout(5) { Ai::Transport.for(endpoint).generate(request) } }
+
+    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 2
+    assert_equal :request, stub.events.pop(timeout: 1)
+    assert_equal :closed, stub.events.pop(timeout: 2), "the server should see the connection close"
+    assert_empty Ai::Sequencer.gate_for(endpoint).holders
+  end
+
   test "with real sockets open, any host but 127.0.0.1 is refused" do
     error = assert_raises(ArgumentError) { Faraday.new(url: "http://llm.example.test") { _1.adapter Ai::Transport::Http::ProxyNetHttp }.get("/") }
 

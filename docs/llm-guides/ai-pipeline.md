@@ -227,12 +227,13 @@ flowchart LR
   each process (`Ai::Sequencer.gate_for`), sized by llama.cpp's `total_slots` (`GET /props`),
   else `parallel_requests`, else 1. Interactive requests wait first and interrupt the lowest
   running lane by shutting its socket (`ProxyNetHttp` reports each request's connection); prompt
-  requests wait; background requests raise `Ai::Error::Busy`, and `ApplicationJob` queues the job
-  again in 5 to 15 seconds, with no retry counted (a generation step stays in `next_job`). The
+  requests wait; background requests raise `Ai::Error::Busy`, and `ApplicationJob` runs the job
+  again in 5 to 15 seconds (`retry_on`, uncapped; a generation step stays in `next_job`). The
   interrupted request raises `Ai::Gate::Interrupted` (its usage row is `cancelled`) and the
   transport's `attempt` sends it again as `Ai::Error::Preempted`: not a try, a down mark or a
-  failover. Local generations stream so the server stops when the socket closes. Time waiting at
-  the gate is added to the call's deadline. Cloud endpoints have no gate. Tests: `ai_gate_test`,
+  failover. Local generations stream so the server stops when the socket closes, and check the
+  call's budget on each chunk. Time waiting at the gate, and an interrupted request's run, are
+  added to the call's deadline. Cloud endpoints have no gate. Tests: `ai_gate_test`,
   `gate_interrupt_test` (real sockets, direct and through a proxy), `ai_transport_local_stream_test`.
 - **No prompt heredocs.** `Sure/NoPromptHeredoc` flags heredocs over ten lines in
   `app/models/ai/**` and controllers.

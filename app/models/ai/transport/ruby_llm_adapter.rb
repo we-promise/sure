@@ -10,8 +10,11 @@ module Ai::Transport::RubyLlmAdapter
   LOCAL_CONNECT_TIMEOUT = 10
   # A generation on a local endpoint streams, though nothing reads the chunks: a server that's
   # streaming stops work when an interrupt closes the connection (Ai::Gate), and RubyLLM still
-  # returns the whole message, usage included (it asks for usage whenever it streams).
-  STREAMED = proc { |_chunk| }
+  # returns the whole message, usage included (it asks for usage whenever it streams). Each chunk
+  # resets the read timeout, so the call's budget is checked on each one instead: a generation
+  # still streaming when it runs out raises Timeout, which closes the connection, as a read
+  # timeout did before it streamed.
+  STREAMED = proc { |_chunk| Ai::CallContext.check_budget!(after: true) }
   # The assistant declares its tools strict in both OpenAI protocols (Assistant::Function#strict_mode?),
   # so the probe does too: a gateway that refuses strict tools fails the check, not the chat.
   STRICT_TOOL_OPTIONS = {
