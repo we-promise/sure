@@ -77,4 +77,19 @@ class RetirementPlan::MonteCarloCacheTest < ActiveSupport::TestCase
     assert_equal 0, plan.unconverted_stream_count(as_of: @as_of), "the rate must now convert it"
     assert_not_equal before, key
   end
+
+  # Streams are converted at the stored rate for `as_of`, and a stored rate is
+  # revised in place, so a revision must change the key as a new date does.
+  test "the key changes when the rate a stream is converted at is revised" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    rate = ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @as_of, rate: 1.1)
+    @plan.streams.create!(kind: "expense", name: "Rent abroad", annual_amount: 10_000, currency: "EUR", source: "manual")
+    before = key
+
+    travel 1.minute do
+      rate.update!(rate: 1.2)
+    end
+
+    assert_not_equal before, key
+  end
 end

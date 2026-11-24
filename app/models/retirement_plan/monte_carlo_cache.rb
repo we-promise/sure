@@ -36,9 +36,10 @@ class RetirementPlan::MonteCarloCache
     end
 
     # Every input the run reads, so a changed setting, stream, balance or
-    # spending figure is a new key. Streams are converted at `as_of`'s rate,
-    # which the date in the key pins; one left out for want of a rate joins
-    # the run when the rate arrives, so the count left out is an input too.
+    # spending figure is a new key. Streams are converted at `as_of`'s stored
+    # rate, and a stored rate is revised in place, so the rates' version is an
+    # input; one left out for want of a rate joins the run when the rate
+    # arrives, so the count left out is an input too.
     def key(plan, as_of:)
       projection = plan.projection(as_of: as_of)
       funding = plan.birth_year && plan.simulation(as_of: as_of, retirement_year: plan.birth_year + plan.end_age)
@@ -49,7 +50,8 @@ class RetirementPlan::MonteCarloCache
         income: projection.annual_income, expenses: projection.annual_expenses,
         funding: funding&.current_assets,
         streams: plan.streams.order(:id).map { |s| s.attributes.slice(*%w[kind annual_amount currency start_year end_year indexed]) },
-        unconverted_streams: plan.unconverted_stream_count(as_of: as_of)
+        unconverted_streams: plan.unconverted_stream_count(as_of: as_of),
+        rates: ExchangeRate.updated_at_version
       }
       "retirement_plan/monte_carlo/v#{VERSION}/#{Digest::SHA256.hexdigest(fingerprint.to_json)}"
     end
