@@ -39,16 +39,18 @@ class TinkoffInvestItem::Importer
 
     def import_account(acct)
       account_id = acct["id"].to_s
+      fetch_to = Time.current.utc
       portfolio = provider.fetch_portfolio(account_id, currency: "RUB")
 
       total_balance, currency = parse_money(portfolio["totalAmountPortfolio"], tinkoff_invest_item.family.currency || "RUB")
       cash_balance, = parse_money(portfolio["totalAmountCurrencies"], currency)
 
-      enriched_portfolio = enrich_portfolio(portfolio, currency)
+      enriched_portfolio = enrich_portfolio(portfolio, currency).merge("_fetched_at" => fetch_to.iso8601)
 
       tinkoff_account = tinkoff_invest_item.tinkoff_invest_accounts.find_or_initialize_by(
         tinkoff_invest_account_id: account_id
       )
+      prior_pending_cursor = tinkoff_account.raw_portfolio_payload&.dig("_pending_cursor").presence
       tinkoff_account.assign_attributes(
         name: acct["name"].presence || I18n.t("tinkoff_invest_items.defaults.account_name", id: account_id),
         account_type: acct["type"].presence,
@@ -64,14 +66,18 @@ class TinkoffInvestItem::Importer
         ops_result = provider.fetch_operations(
           account_id,
           from: operations_from_time(tinkoff_account, acct),
-          to: Time.current.utc
+          to: fetch_to
         )
         enriched_ops = enrich_operations(ops_result[:items], currency)
+        merged_ops = merge_retained_operations(tinkoff_account.raw_operations_payload, enriched_ops)
 
+        # Hold last_synced_at and operations_cursor until Processor succeeds
+        # so a failure between import and processing never loses operations.
         tinkoff_account.assign_attributes(
-          raw_operations_payload: enriched_ops,
-          operations_cursor: ops_result[:next_cursor].presence || tinkoff_account.operations_cursor,
-          last_synced_at: Time.current
+          raw_operations_payload: merged_ops,
+          raw_portfolio_payload: enriched_portfolio.merge(
+            "_pending_cursor" => ops_result[:next_cursor].presence || prior_pending_cursor || tinkoff_account.operations_cursor
+          ).compact
         )
       end
 
@@ -165,11 +171,21 @@ class TinkoffInvestItem::Importer
       }.compact
     end
 
-    def remove_unlinked_accounts_missing_from(account_ids)
-      return if account_ids.empty?
+    def merge_retained_operations(existing_ops, fresh_ops)
+      existing = Array(existing_ops)
+      return fresh_ops if existing.empty?
 
-      tinkoff_invest_item.unlinked_tinkoff_invest_accounts
-        .where.not(tinkoff_invest_account_id: account_ids)
-        .destroy_all
+      fresh_ids = fresh_ops.filter_map { |op| op["id"]&.to_s.presence }.to_set
+      retained = existing.reject do |op|
+        op_id = op["id"]&.to_s.presence
+        op_id && fresh_ids.include?(op_id)
+      end
+      fresh_ops + retained
+    end
+
+    def remove_unlinked_accounts_missing_from(account_ids)
+      scope = tinkoff_invest_item.unlinked_tinkoff_invest_accounts
+      scope = scope.where.not(tinkoff_invest_account_id: account_ids) if account_ids.any?
+      scope.destroy_all
     end
 end

@@ -1,3 +1,7 @@
+require "digest"
+require "ipaddr"
+require "uri"
+
 # T-Bank (Tinkoff) Invest brokerage REST API client for portfolio sync.
 # Uses the per-family read-only token and shares instrument helpers with
 # Provider::TinkoffInvest (which remains the global market-data provider).
@@ -8,6 +12,7 @@ class Provider::TinkoffInvest::PortfolioClient
   class Error < StandardError; end
   class AuthenticationError < Error; end
   class ConfigurationError < Error; end
+  class PaginationTruncatedError < Error; end
   class RateLimitError < Error; end
 
   class ApiError < Error
@@ -48,6 +53,26 @@ class Provider::TinkoffInvest::PortfolioClient
 
   attr_reader :environment, :base_url
 
+  def self.valid_base_url?(url)
+    uri = URI.parse(url.to_s.strip)
+    return false unless uri.host.present?
+    return true if uri.is_a?(URI::HTTPS)
+
+    uri.is_a?(URI::HTTP) && loopback_host?(uri.host)
+  rescue URI::InvalidURIError
+    false
+  end
+
+  def self.loopback_host?(host)
+    normalized = host.to_s.downcase.delete_prefix("[").delete_suffix("]")
+    return true if normalized == "localhost"
+
+    IPAddr.new(normalized).loopback?
+  rescue IPAddr::InvalidAddressError
+    false
+  end
+  private_class_method :loopback_host?
+
   def initialize(api_key:, environment: :live, base_url: nil)
     raise ConfigurationError, "T-Invest API token is required" if api_key.blank?
 
@@ -77,6 +102,7 @@ class Provider::TinkoffInvest::PortfolioClient
     current_cursor = cursor.presence
     seen_cursors = Set.new
     last_next_cursor = nil
+    completed = false
 
     MAX_OPERATION_PAGES.times do
       payload = {
@@ -101,11 +127,19 @@ class Provider::TinkoffInvest::PortfolioClient
       next_cursor = resp["nextCursor"].presence
       last_next_cursor = next_cursor if next_cursor
 
-      break unless has_next && next_cursor
+      unless has_next && next_cursor
+        completed = true
+        break
+      end
+
       raise Error, "Pagination loop detected for account #{account_id}: repeated cursor" if seen_cursors.include?(next_cursor)
 
       seen_cursors.add(next_cursor)
       current_cursor = next_cursor
+    end
+
+    unless completed
+      raise PaginationTruncatedError, "T-Invest operations pagination exceeded #{MAX_OPERATION_PAGES} pages for account #{account_id}"
     end
 
     newest_cursor = items.first&.dig("cursor").presence || last_next_cursor
@@ -191,7 +225,13 @@ class Provider::TinkoffInvest::PortfolioClient
       candidate = explicit_base_url.to_s.strip.presence ||
         ENV["TINKOFF_INVEST_URL"].to_s.strip.presence ||
         (environment == "sandbox" ? SANDBOX_BASE_URL : LIVE_BASE_URL)
-      candidate.sub(%r{/+\z}, "")
+      normalized = candidate.sub(%r{/+\z}, "")
+
+      unless self.class.valid_base_url?(normalized)
+        raise ConfigurationError, "T-Invest base URL must use HTTPS (HTTP is only allowed for loopback addresses)"
+      end
+
+      normalized
     end
 
     def post(service, method, body)
@@ -268,7 +308,7 @@ class Provider::TinkoffInvest::PortfolioClient
       id_type = uid ? "INSTRUMENT_ID_TYPE_UID" : "INSTRUMENT_ID_TYPE_FIGI"
 
       if id_val
-        cached = Rails.cache.fetch("tinkoff_invest_portfolio:instrument:#{id_type}:#{id_val}", expires_in: INSTRUMENT_CACHE_TTL, skip_nil: true) do
+        cached = Rails.cache.fetch(scoped_cache_key("instrument", id_type, id_val), expires_in: INSTRUMENT_CACHE_TTL, skip_nil: true) do
           get_instrument_by(id_val, id_type: id_type).presence
         end
         return cached if cached.present?
@@ -294,7 +334,7 @@ class Provider::TinkoffInvest::PortfolioClient
       bond_id = uid || figi
       id_type = uid ? "INSTRUMENT_ID_TYPE_UID" : "INSTRUMENT_ID_TYPE_FIGI"
 
-      bond_raw = Rails.cache.fetch("tinkoff_invest_portfolio:bond:#{id_type}:#{bond_id}", expires_in: INSTRUMENT_CACHE_TTL, skip_nil: true) do
+      bond_raw = Rails.cache.fetch(scoped_cache_key("bond", id_type, bond_id), expires_in: INSTRUMENT_CACHE_TTL, skip_nil: true) do
         get_bond_by(bond_id, id_type: id_type).presence
       end
       return [ nil, nil, false ] if bond_raw.blank?
@@ -307,6 +347,11 @@ class Provider::TinkoffInvest::PortfolioClient
       raise
     rescue Error
       [ nil, nil, false ]
+    end
+
+    def scoped_cache_key(kind, id_type, id_val)
+      endpoint_hash = Digest::SHA256.hexdigest(base_url).first(16)
+      "tinkoff_invest_portfolio:#{endpoint_hash}:#{kind}:#{id_type}:#{id_val}"
     end
 
     def redact_secret(text)

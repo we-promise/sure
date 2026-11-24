@@ -59,4 +59,24 @@ class TinkoffInvestItem::SyncerTest < ActiveSupport::TestCase
     assert @item.reload.requires_update?
     assert_equal "auth_error", @sync.reload.sync_stats.dig("errors", 0, "category")
   end
+
+  test "records sync_error and raises when an account fails partial processing" do
+    tinkoff_acct = @item.tinkoff_invest_accounts.create!(
+      name: "Brokerage",
+      tinkoff_invest_account_id: "acct-1",
+      currency: "RUB",
+      raw_portfolio_payload: { "positions" => [] }
+    )
+    account = @family.accounts.create!(name: "Brokerage", balance: 0, currency: "RUB", accountable: Investment.new)
+    tinkoff_acct.ensure_account_provider!(account)
+
+    @item.stubs(:import_latest_data).returns(true)
+    @item.stubs(:process_accounts).returns([ { tinkoff_invest_account_id: tinkoff_acct.id, success: false, error: "Partial failure" } ])
+
+    assert_raises(RuntimeError) do
+      TinkoffInvestItem::Syncer.new(@item).perform_sync(@sync)
+    end
+
+    assert_equal "sync_error", @sync.reload.sync_stats.dig("errors", 0, "category")
+  end
 end

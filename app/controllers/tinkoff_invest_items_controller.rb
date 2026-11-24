@@ -97,9 +97,7 @@ class TinkoffInvestItemsController < ApplicationController
 
     raise "Failed to create AccountProvider link" unless provider
 
-    process_after_linking(tinkoff_account)
-
-    tinkoff_account.tinkoff_invest_item.sync_later unless tinkoff_account.tinkoff_invest_item.syncing?
+    enqueue_post_link_sync(tinkoff_account.tinkoff_invest_item)
     redirect_to account_path(account), notice: t(".success"), status: :see_other
   rescue => e
     DebugLogEntry.capture(
@@ -147,7 +145,6 @@ class TinkoffInvestItemsController < ApplicationController
       tinkoff_account = @tinkoff_invest_item.tinkoff_invest_accounts.find_by(id: tinkoff_account_id)
       next unless tinkoff_account
 
-      linked = false
       tinkoff_account.with_lock do
         next if tinkoff_account.current_account.present?
 
@@ -155,14 +152,11 @@ class TinkoffInvestItemsController < ApplicationController
         raise ActiveRecord::Rollback unless tinkoff_account.ensure_account_provider!(account)
 
         created_accounts << account
-        linked = true
       end
-
-      process_after_linking(tinkoff_account) if linked
     end
 
     @tinkoff_invest_item.update!(pending_account_setup: @tinkoff_invest_item.unlinked_accounts_count.positive?)
-    @tinkoff_invest_item.sync_later if created_accounts.any?
+    enqueue_post_link_sync(@tinkoff_invest_item) if created_accounts.any?
 
     if created_accounts.any?
       redirect_to accounts_path, notice: t(".success", count: created_accounts.count), status: :see_other
@@ -188,17 +182,11 @@ class TinkoffInvestItemsController < ApplicationController
       Current.family.accounts.writable_by(Current.user)
     end
 
-    def process_after_linking(tinkoff_account)
-      TinkoffInvestAccount::Processor.new(tinkoff_account.reload).process
-    rescue => e
-      DebugLogEntry.capture(
-        category: "sync",
-        level: "error",
-        message: "Failed to process T-Invest account #{tinkoff_account.id} after linking: #{e.class} - #{e.message}",
-        source: "tinkoff_invest",
-        family: Current.family,
-        provider_key: "tinkoff_invest"
-      )
+    def enqueue_post_link_sync(item = @tinkoff_invest_item)
+      target = item || Current.family.tinkoff_invest_items.active.ordered.first
+      return unless target
+
+      target.sync_later unless target.syncing?
     end
 
     def tinkoff_invest_item_params

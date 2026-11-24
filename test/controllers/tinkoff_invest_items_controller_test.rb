@@ -24,6 +24,29 @@ class TinkoffInvestItemsControllerTest < ActionDispatch::IntegrationTest
     assert_empty @family.tinkoff_invest_items
   end
 
+  test "update switches environment from sandbox to live cleanly, unlinking sandbox accounts" do
+    item = tinkoff_invest_item(status: :requires_update, environment: :sandbox)
+    sandbox_account = item.tinkoff_invest_accounts.create!(
+      name: "Sandbox Account",
+      currency: "RUB",
+      tinkoff_invest_account_id: "sb-acct-1",
+      operations_cursor: "sb-cursor"
+    )
+    sure_account = investment_account(owner: @user)
+    sandbox_account.ensure_account_provider!(sure_account)
+
+    patch tinkoff_invest_item_url(item), params: {
+      tinkoff_invest_item: { api_key: "", environment: "live" }
+    }
+
+    item.reload
+    assert_equal "secret-token", item.api_key
+    assert_equal "live", item.environment
+    assert item.good?
+    assert_empty item.tinkoff_invest_accounts
+    assert_empty sure_account.reload.account_providers
+  end
+
   test "update keeps stored token when blank and resets requires_update status" do
     item = tinkoff_invest_item(status: :requires_update)
 
@@ -70,6 +93,8 @@ class TinkoffInvestItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "input[name='account_ids[]']", 2
 
+    TinkoffInvestAccount::Processor.expects(:new).never
+
     assert_difference -> { @family.accounts.count }, 2 do
       post complete_account_setup_tinkoff_invest_item_url(item), params: { account_ids: [ broker.id, box.id ] }
     end
@@ -78,9 +103,10 @@ class TinkoffInvestItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "brokerage", broker.reload.current_account.accountable.subtype
     assert_equal "other", box.reload.current_account.accountable.subtype
     assert_not item.reload.pending_account_setup?
+    assert_equal 1, item.syncs.count
   end
 
-  test "links a discovered account to an existing manual investment account" do
+  test "links a discovered account to an existing manual investment account asynchronously" do
     item = tinkoff_invest_item
     tinkoff_account = item.tinkoff_invest_accounts.create!(
       name: "Main Brokerage",
@@ -90,6 +116,8 @@ class TinkoffInvestItemsControllerTest < ActionDispatch::IntegrationTest
     )
     account = investment_account(owner: @user)
 
+    TinkoffInvestAccount::Processor.expects(:new).never
+
     post link_existing_account_tinkoff_invest_items_url, params: {
       account_id: account.id,
       tinkoff_invest_account_id: tinkoff_account.id
@@ -97,6 +125,7 @@ class TinkoffInvestItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to account_url(account)
     assert_equal account, tinkoff_account.reload.current_account
+    assert_equal 1, item.syncs.count
   end
 
   test "accounts page displays the T-Invest connection card and requires_update badge" do

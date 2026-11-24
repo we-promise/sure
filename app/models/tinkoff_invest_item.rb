@@ -16,7 +16,9 @@ class TinkoffInvestItem < ApplicationRecord
   has_many :tinkoff_invest_accounts, dependent: :destroy
 
   validates :api_key, presence: true, on: :create
-  validates :base_url, format: { with: /\Ahttps?:\/\/\S+\z/i }, allow_blank: true
+  validate :base_url_must_use_safe_transport, if: -> { base_url.present? }
+
+  after_update :reset_environment_state!, if: :saved_change_to_environment?
 
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :syncable, -> { active.where.not(api_key: [ nil, "" ]) }
@@ -144,4 +146,20 @@ class TinkoffInvestItem < ApplicationRecord
   def institution_display_name
     I18n.t("tinkoff_invest_items.defaults.name")
   end
+
+  private
+
+    def base_url_must_use_safe_transport
+      return if Provider::TinkoffInvest::PortfolioClient.valid_base_url?(base_url)
+
+      errors.add(:base_url, "must use HTTPS (HTTP is only allowed for loopback addresses)")
+    end
+
+    # Switching live <-> sandbox invalidates discovered accounts, raw payloads,
+    # cursors, and account links from the prior environment.
+    def reset_environment_state!
+      unlink_all!(dry_run: false)
+      tinkoff_invest_accounts.destroy_all
+      update_columns(raw_accounts_payload: [], pending_account_setup: false, updated_at: Time.current)
+    end
 end

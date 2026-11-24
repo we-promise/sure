@@ -246,15 +246,194 @@ class TinkoffInvestAccount::ProcessorTest < ActiveSupport::TestCase
     initial_entries = @account.entries.count
     initial_holdings = @account.holdings.count
 
+    @tinkoff_account.update!(raw_operations_payload: OPERATIONS)
     processor.process
 
     assert_equal initial_entries, @account.entries.count
     assert_equal initial_holdings, @account.holdings.count
   end
 
+  test "reconciles changing operation IDs across overlapping syncs without duplicating trades or legacy entries" do
+    legacy_security = Security.find_by!(ticker: "SBER", exchange_operating_mic: "MISX")
+    legacy_entry = Account::ProviderImportAdapter.new(@account).import_trade(
+      external_id: "tinkoff_invest_op_legacy-buy-1",
+      security: legacy_security,
+      quantity: 5,
+      price: 250,
+      amount: 1250,
+      currency: "RUB",
+      date: Date.new(2025, 1, 10),
+      source: "tinkoff_invest",
+      activity_label: "Buy"
+    )
+    legacy_entry.entryable.update!(
+      extra: {
+        "tinkoff_invest" => {
+          "operation_id" => "legacy-buy-1",
+          "trade_numbers" => [ "TRD-9001" ]
+        }
+      }
+    )
+
+    @tinkoff_account.update!(
+      raw_portfolio_payload: { "positions" => [] },
+      raw_operations_payload: [
+        {
+          "id" => "reloaded-buy-999",
+          "date" => "2025-01-10T10:00:00Z",
+          "type" => "OPERATION_TYPE_BUY",
+          "state" => "OPERATION_STATE_EXECUTED",
+          "instrumentUid" => "uid-sber",
+          "quantity" => "5",
+          "price" => { "currency" => "rub", "units" => "250", "nano" => 0 },
+          "payment" => { "currency" => "rub", "units" => "-1250", "nano" => 0 },
+          "trades" => [ { "num" => "TRD-9001", "quantity" => "5" } ],
+          "resolved_instrument" => { "ticker" => "SBER", "name" => "Sberbank", "exchange_operating_mic" => "MISX" }
+        },
+        {
+          "id" => "op-div-v1",
+          "date" => "2025-02-01T09:00:00.123456Z",
+          "type" => "OPERATION_TYPE_DIVIDEND",
+          "state" => "OPERATION_STATE_EXECUTED",
+          "instrumentUid" => "uid-sber",
+          "payment" => { "currency" => "rub", "units" => "1000", "nano" => 0 },
+          "resolved_instrument" => { "ticker" => "SBER", "name" => "Sberbank", "exchange_operating_mic" => "MISX" }
+        }
+      ]
+    )
+
+    TinkoffInvestAccount::Processor.new(@tinkoff_account).process
+    assert_equal 2, @account.entries.where(source: "tinkoff_invest").count
+    assert_equal 1, @account.entries.where(entryable_type: "Trade").count
+    assert_equal "reloaded-buy-999", legacy_entry.entryable.reload.extra.dig("tinkoff_invest", "operation_id")
+
+    # Re-sync with both IDs changed again
+    @tinkoff_account.update!(
+      raw_operations_payload: [
+        {
+          "id" => "reloaded-buy-1000",
+          "date" => "2025-01-10T10:00:00Z",
+          "type" => "OPERATION_TYPE_BUY",
+          "state" => "OPERATION_STATE_EXECUTED",
+          "instrumentUid" => "uid-sber",
+          "quantity" => "5",
+          "price" => { "currency" => "rub", "units" => "250", "nano" => 0 },
+          "payment" => { "currency" => "rub", "units" => "-1250", "nano" => 0 },
+          "trades" => [ { "num" => "TRD-9001", "quantity" => "5" } ],
+          "resolved_instrument" => { "ticker" => "SBER", "name" => "Sberbank", "exchange_operating_mic" => "MISX" }
+        },
+        {
+          "id" => "op-div-v2",
+          "date" => "2025-02-01T09:00:00.123456Z",
+          "type" => "OPERATION_TYPE_DIVIDEND",
+          "state" => "OPERATION_STATE_EXECUTED",
+          "instrumentUid" => "uid-sber",
+          "payment" => { "currency" => "rub", "units" => "1000", "nano" => 0 },
+          "resolved_instrument" => { "ticker" => "SBER", "name" => "Sberbank", "exchange_operating_mic" => "MISX" }
+        }
+      ]
+    )
+
+    TinkoffInvestAccount::Processor.new(@tinkoff_account).process
+    assert_equal 2, @account.entries.where(source: "tinkoff_invest").count
+    assert_equal 1, @account.entries.where(entryable_type: "Trade").count
+  end
+
+  test "retains failed operations and keeps checkpoint unchanged until retry succeeds" do
+    good_op = {
+      "id" => "op-good-1",
+      "date" => "2025-02-10T10:00:00Z",
+      "type" => "OPERATION_TYPE_INPUT",
+      "state" => "OPERATION_STATE_EXECUTED",
+      "payment" => { "currency" => "rub", "units" => "5000", "nano" => 0 }
+    }
+    bad_op = {
+      "id" => "op-bad-1",
+      "date" => "2025-02-11T10:00:00Z",
+      "type" => "OPERATION_TYPE_INPUT",
+      "state" => "OPERATION_STATE_EXECUTED",
+      "payment" => { "currency" => "rub", "units" => "1000", "nano" => 0 }
+    }
+
+    @tinkoff_account.update!(
+      last_synced_at: Time.utc(2025, 2, 1, 0, 0, 0),
+      raw_portfolio_payload: { "positions" => [] },
+      raw_operations_payload: [ good_op, bad_op ]
+    )
+
+    adapter = Account::ProviderImportAdapter.new(@account)
+    Account::ProviderImportAdapter.stubs(:new).returns(adapter)
+    original_import = adapter.method(:import_transaction)
+    adapter.define_singleton_method(:import_transaction) do |**kwargs|
+      raise "transient DB write failure" if kwargs[:notes]&.include?("op-bad-1")
+
+      original_import.call(**kwargs)
+    end
+
+    assert_raises(TinkoffInvestAccount::Processor::PartialProcessingError) do
+      TinkoffInvestAccount::Processor.new(@tinkoff_account).process
+    end
+
+    @tinkoff_account.reload
+    assert_equal Time.utc(2025, 2, 1, 0, 0, 0), @tinkoff_account.last_synced_at
+    assert_equal [ "op-bad-1" ], @tinkoff_account.raw_operations_payload.map { |op| op["id"] }
+    assert_equal 1, @account.entries.where(source: "tinkoff_invest").count
+  end
+
+  test "reconciles sold holdings across same-day and empty snapshots without dropping on nil payload" do
+    @tinkoff_account.update!(raw_operations_payload: [])
+    TinkoffInvestAccount::Processor.new(@tinkoff_account).process
+    assert_equal [ "SBER", "SU26238RMFS4" ].sort, @account.current_holdings.map(&:ticker).sort
+
+    # Missing positions key preserves existing holdings
+    @tinkoff_account.update!(raw_portfolio_payload: {})
+    TinkoffInvestAccount::Processor.new(@tinkoff_account.reload).process
+    assert_equal [ "SBER", "SU26238RMFS4" ].sort, @account.current_holdings.map(&:ticker).sort
+
+    # Same-day snapshot omits bond position -> zeroed
+    @tinkoff_account.update!(raw_portfolio_payload: { "positions" => [ PORTFOLIO["positions"].first ] })
+    TinkoffInvestAccount::Processor.new(@tinkoff_account.reload).process
+    assert_equal [ "SBER" ], @account.current_holdings.map(&:ticker)
+
+    # Empty snapshot -> all positions zeroed
+    @tinkoff_account.update!(raw_portfolio_payload: { "positions" => [] })
+    TinkoffInvestAccount::Processor.new(@tinkoff_account.reload).process
+    assert_empty @account.current_holdings
+  end
+
+  test "skips negative short positions safely with a DebugLogEntry warning" do
+    @tinkoff_account.update!(
+      raw_operations_payload: [],
+      raw_portfolio_payload: {
+        "positions" => [
+          {
+            "figi" => "BBG004730N88",
+            "instrumentUid" => "uid-sber",
+            "instrumentType" => "share",
+            "quantity" => { "units" => "-10", "nano" => 0 },
+            "currentPrice" => { "currency" => "rub", "units" => "260", "nano" => 0 },
+            "resolved_instrument" => { "ticker" => "SBER", "name" => "Sberbank", "exchange_operating_mic" => "MISX" }
+          }
+        ]
+      }
+    )
+
+    assert_difference -> { DebugLogEntry.where(source: "tinkoff_invest", level: "warn").count }, 1 do
+      result = TinkoffInvestAccount::Processor.new(@tinkoff_account).process
+      assert_equal 0, result[:holdings]
+    end
+    assert_empty @account.holdings
+  end
+
   private
 
     def entry(op_id)
-      @account.entries.find_by!(external_id: "tinkoff_invest_op_#{op_id}", source: "tinkoff_invest")
+      Entry.joins("LEFT JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'")
+        .joins("LEFT JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(account_id: @account.id, source: "tinkoff_invest")
+        .where(
+          "trades.extra -> 'tinkoff_invest' ->> 'operation_id' = ? OR transactions.extra -> 'tinkoff_invest' ->> 'operation_id' = ?",
+          op_id, op_id
+        ).first!
     end
 end

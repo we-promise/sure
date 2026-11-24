@@ -124,7 +124,7 @@ class TinkoffInvestItem::ImporterTest < ActiveSupport::TestCase
     assert_empty provider.calls.select { |c| c.first == :operations }
   end
 
-  test "fetches operations for linked accounts, persists cursor, and uses lookback overlap on subsequent syncs" do
+  test "stages operations without advancing checkpoint until Processor completes, then uses lookback overlap" do
     tinkoff_acct = @item.tinkoff_invest_accounts.create!(
       name: "Main Brokerage",
       tinkoff_invest_account_id: "acct-broker-01",
@@ -132,9 +132,18 @@ class TinkoffInvestItem::ImporterTest < ActiveSupport::TestCase
     )
     account = @family.accounts.create!(name: "Main Brokerage", balance: 0, currency: "RUB", accountable: Investment.new)
     tinkoff_acct.ensure_account_provider!(account)
+    Security.find_or_create_by!(ticker: "SBER", exchange_operating_mic: "MISX")
 
     ops = {
-      items: [ { "id" => "op-1", "date" => "2024-02-12T11:15:00Z", "type" => "OPERATION_TYPE_BUY", "instrumentUid" => "uid-sber" } ],
+      items: [ {
+        "id" => "op-1",
+        "date" => "2024-02-12T11:15:00Z",
+        "type" => "OPERATION_TYPE_BUY",
+        "state" => "OPERATION_STATE_EXECUTED",
+        "instrumentUid" => "uid-sber",
+        "quantity" => "10",
+        "payment" => { "currency" => "rub", "units" => "-2600", "nano" => 0 }
+      } ],
       next_cursor: "cursor-v1"
     }
     provider = FakeProvider.new(
@@ -149,14 +158,33 @@ class TinkoffInvestItem::ImporterTest < ActiveSupport::TestCase
     end
 
     tinkoff_acct.reload
-    assert_equal "cursor-v1", tinkoff_acct.operations_cursor
-    assert_equal Time.utc(2026, 6, 15, 12, 0, 0), tinkoff_acct.last_synced_at
+    # Checkpoint stays nil until Processor finishes, protecting against crashes.
+    assert_nil tinkoff_acct.last_synced_at
+    assert_nil tinkoff_acct.operations_cursor
     assert_equal "SBER", tinkoff_acct.raw_operations_payload.dig(0, "resolved_instrument", "ticker")
 
     initial_op_call = provider.calls.find { |c| c.first == :operations }
     assert_equal Time.utc(2021, 3, 15, 0, 0, 0), initial_op_call[2]
 
-    # Second sync uses a 7-day lookback overlap from last_synced_at
+    # Retained operations stay staged if re-imported before processing completes.
+    provider_retry = FakeProvider.new(
+      accounts: ACCOUNTS,
+      portfolios: { "acct-broker-01" => PORTFOLIO },
+      operations: { "acct-broker-01" => { items: [], next_cursor: nil } },
+      instruments: { "uid-sber" => SBER_META }
+    )
+    travel_to Time.utc(2026, 6, 16, 12, 0, 0) do
+      TinkoffInvestItem::Importer.new(@item, provider: provider_retry).import
+    end
+    assert_equal [ "op-1" ], tinkoff_acct.reload.raw_operations_payload.map { |op| op["id"] }
+
+    TinkoffInvestAccount::Processor.new(tinkoff_acct.reload).process
+    tinkoff_acct.reload
+    assert_equal Time.utc(2026, 6, 16, 12, 0, 0), tinkoff_acct.last_synced_at
+    assert_equal "cursor-v1", tinkoff_acct.operations_cursor
+    assert_empty tinkoff_acct.raw_operations_payload
+
+    # Subsequent sync uses a 7-day lookback overlap from last_synced_at.
     provider2 = FakeProvider.new(
       accounts: ACCOUNTS,
       portfolios: { "acct-broker-01" => PORTFOLIO },
@@ -168,8 +196,21 @@ class TinkoffInvestItem::ImporterTest < ActiveSupport::TestCase
     end
 
     incremental_op_call = provider2.calls.find { |c| c.first == :operations }
-    assert_equal Time.utc(2026, 6, 8, 12, 0, 0), incremental_op_call[2]
+    assert_equal Time.utc(2026, 6, 9, 12, 0, 0), incremental_op_call[2]
     assert_equal "cursor-v1", tinkoff_acct.reload.operations_cursor
+  end
+
+  test "removes stale unlinked accounts even when GetAccounts returns no open accounts" do
+    stale = @item.tinkoff_invest_accounts.create!(name: "Old", currency: "RUB", tinkoff_invest_account_id: "acct-gone-1")
+    linked = @item.tinkoff_invest_accounts.create!(name: "Kept", currency: "RUB", tinkoff_invest_account_id: "acct-gone-2")
+    account = @family.accounts.create!(name: "Kept", balance: 0, currency: "RUB", accountable: Investment.new)
+    linked.ensure_account_provider!(account)
+
+    provider = FakeProvider.new(accounts: [], portfolios: {}, instruments: {})
+    TinkoffInvestItem::Importer.new(@item, provider: provider).import
+
+    assert_not TinkoffInvestAccount.exists?(stale.id)
+    assert TinkoffInvestAccount.exists?(linked.id)
   end
 
   test "removes unlinked accounts missing from GetAccounts and keeps linked ones" do

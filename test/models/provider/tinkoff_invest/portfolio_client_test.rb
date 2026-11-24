@@ -151,6 +151,56 @@ class Provider::TinkoffInvest::PortfolioClientTest < ActiveSupport::TestCase
     assert_requested req, times: 4
   end
 
+  test "raises PaginationTruncatedError when pagination stops at MAX_OPERATION_PAGES with hasNext true" do
+    stub_request(:post, "#{LIVE_API}/#{NS}.OperationsService/GetOperationsByCursor")
+      .to_return(
+        json_response({ items: [ { id: "op-1" } ], hasNext: true, nextCursor: "cur-1" }),
+        json_response({ items: [ { id: "op-2" } ], hasNext: true, nextCursor: "cur-2" })
+      )
+
+    original = Provider::TinkoffInvest::PortfolioClient::MAX_OPERATION_PAGES
+    Provider::TinkoffInvest::PortfolioClient.send(:remove_const, :MAX_OPERATION_PAGES)
+    Provider::TinkoffInvest::PortfolioClient.const_set(:MAX_OPERATION_PAGES, 2)
+
+    assert_raises(Provider::TinkoffInvest::PortfolioClient::PaginationTruncatedError) do
+      @client.fetch_operations("acct-1")
+    end
+  ensure
+    Provider::TinkoffInvest::PortfolioClient.send(:remove_const, :MAX_OPERATION_PAGES)
+    Provider::TinkoffInvest::PortfolioClient.const_set(:MAX_OPERATION_PAGES, original)
+  end
+
+  test "rejects non-loopback HTTP base_url and allows loopback HTTP" do
+    assert_raises(Provider::TinkoffInvest::PortfolioClient::ConfigurationError) do
+      Provider::TinkoffInvest::PortfolioClient.new(api_key: "tok", base_url: "http://evil.example/rest")
+    end
+
+    [ "http://127.0.0.1:8080/rest", "http://localhost:8080/rest", "http://[::1]:8080/rest" ].each do |loopback|
+      client = Provider::TinkoffInvest::PortfolioClient.new(api_key: "tok", base_url: loopback)
+      assert_equal loopback, client.base_url
+    end
+  end
+
+  test "scopes Rails.cache instrument and bond keys by base_url" do
+    live_client = Provider::TinkoffInvest::PortfolioClient.new(api_key: "secret-test-token", environment: :live)
+    sandbox_client = Provider::TinkoffInvest::PortfolioClient.new(api_key: "secret-test-token", environment: :sandbox)
+    live_client.stubs(:throttle_request)
+    sandbox_client.stubs(:throttle_request)
+
+    stub_tinvest(LIVE_API, "InstrumentsService", "GetInstrumentBy", {
+      instrument: { uid: "uid-1", ticker: "SBER", name: "Sberbank Live", instrumentType: "share", currency: "rub" }
+    })
+    stub_tinvest(SANDBOX_API, "InstrumentsService", "GetInstrumentBy", {
+      instrument: { uid: "uid-1", ticker: "SBER", name: "Sberbank Sandbox", instrumentType: "share", currency: "rub" }
+    })
+
+    live_meta = live_client.resolve_instrument(instrument_uid: "uid-1")
+    sandbox_meta = sandbox_client.resolve_instrument(instrument_uid: "uid-1")
+
+    assert_equal "Sberbank Live", live_meta.name
+    assert_equal "Sberbank Sandbox", sandbox_meta.name
+  end
+
   private
 
     def stub_tinvest(base, service, method, body, token: "secret-test-token")

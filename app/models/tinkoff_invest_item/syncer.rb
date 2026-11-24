@@ -32,7 +32,11 @@ class TinkoffInvestItem::Syncer
 
     if linked_accounts.any?
       sync.update!(status_text: I18n.t("tinkoff_invest_items.sync.status.processing_activity")) if sync.respond_to?(:status_text)
-      tinkoff_invest_item.process_accounts
+      process_results = tinkoff_invest_item.process_accounts
+      failed_accounts = Array(process_results).select { |result| result.is_a?(Hash) && result[:success] == false }
+      if failed_accounts.any?
+        raise "Failed to process #{failed_accounts.size} T-Invest account(s): #{failed_accounts.map { |r| r[:error] }.join('; ')}"
+      end
 
       sync.update!(status_text: I18n.t("tinkoff_invest_items.sync.status.calculating_balances")) if sync.respond_to?(:status_text)
       tinkoff_invest_item.schedule_account_syncs(

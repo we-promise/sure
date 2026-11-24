@@ -5,14 +5,50 @@ class TinkoffInvestItemTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
   end
 
-  test "requires api_key on create and validates base_url format" do
+  test "requires api_key on create and validates base_url transport safety" do
     missing_key = @family.tinkoff_invest_items.build(name: "T-Invest")
     assert_not missing_key.valid?
     assert_includes missing_key.errors[:api_key], "can't be blank"
 
-    bad_url = @family.tinkoff_invest_items.build(name: "T-Invest", api_key: "tok", base_url: "ftp://invalid")
-    assert_not bad_url.valid?
-    assert_predicate bad_url.errors[:base_url], :present?
+    bad_scheme = @family.tinkoff_invest_items.build(name: "T-Invest", api_key: "tok", base_url: "ftp://invalid")
+    assert_not bad_scheme.valid?
+    assert_predicate bad_scheme.errors[:base_url], :present?
+
+    public_http = @family.tinkoff_invest_items.build(name: "T-Invest", api_key: "tok", base_url: "http://tinvest.example.test/rest")
+    assert_not public_http.valid?
+    assert_predicate public_http.errors[:base_url], :present?
+
+    loopback_http = @family.tinkoff_invest_items.build(name: "T-Invest", api_key: "tok", base_url: "http://127.0.0.1:8080/rest")
+    assert loopback_http.valid?
+  end
+
+  test "switching environment isolates and resets prior linked accounts, payloads, and cursors" do
+    item = @family.tinkoff_invest_items.create!(
+      name: "T-Invest",
+      api_key: "tok",
+      environment: :sandbox,
+      pending_account_setup: true,
+      raw_accounts_payload: [ { "id" => "sb-1" } ]
+    )
+    tinkoff_account = item.tinkoff_invest_accounts.create!(
+      name: "Sandbox Brokerage",
+      tinkoff_invest_account_id: "sb-1",
+      currency: "RUB",
+      operations_cursor: "sb-cursor-1",
+      last_synced_at: Time.current,
+      raw_portfolio_payload: { "positions" => [] },
+      raw_operations_payload: [ { "id" => "sb-op-1" } ]
+    )
+    account = @family.accounts.create!(name: "Sandbox Brokerage", balance: 0, currency: "RUB", accountable: Investment.new)
+    tinkoff_account.ensure_account_provider!(account)
+
+    item.update!(environment: :live)
+
+    assert_empty item.reload.tinkoff_invest_accounts
+    assert_empty item.raw_accounts_payload
+    assert_not item.pending_account_setup?
+    assert_not AccountProvider.exists?(provider_type: "TinkoffInvestAccount", provider_id: tinkoff_account.id)
+    assert Account.exists?(account.id)
   end
 
   test "resolves effective_base_url for live, sandbox, and custom endpoint" do
