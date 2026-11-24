@@ -78,8 +78,9 @@ class RetirementPlansTest < ApplicationSystemTestCase
   end
 
   # A one-off is paid once, in its start year, so the form hides its To year
-  # and clears one typed before the kind changed; the model would otherwise
-  # refuse an end before the start over a field the plan never reads.
+  # and leaves one typed before the kind changed out of the submission; the
+  # model would otherwise refuse an end before the start over a field the plan
+  # never reads.
   test "a one-off saves without the To year typed before its kind changed" do
     RetirementPlan.create!(user: @user, birth_year: 1985, retirement_date: Date.new(2045, 1, 1), streams_seeded_on: Date.current)
     visit retirement_plan_path
@@ -91,7 +92,7 @@ class RetirementPlansTest < ApplicationSystemTestCase
       fill_in "retirement_plan_stream[start_year]", with: "2030"
       fill_in "retirement_plan_stream[end_year]", with: "2020"
       select I18n.t("retirement_plans.streams.form.kinds.one_off"), from: "retirement_plan_stream[kind]"
-      assert_no_field "retirement_plan_stream[end_year]"
+      assert_no_selector "input[name='retirement_plan_stream[end_year]']"
       click_button I18n.t("retirement_plans.streams.form.save")
     end
 
@@ -110,6 +111,26 @@ class RetirementPlansTest < ApplicationSystemTestCase
       fill_in "retirement_plan_stream[name]", with: "Mortgage"
       fill_in "retirement_plan_stream[annual_amount]", with: "18000"
       fill_in "retirement_plan_stream[end_year]", with: "2041"
+      click_button I18n.t("retirement_plans.streams.form.save")
+    end
+
+    assert_selector "#retirement-plan-streams", text: "Mortgage"
+    assert_equal 2041, RetirementPlan.find_by!(user: @user).streams.find_by!(name: "Mortgage").end_year
+  end
+
+  # Switching to one-off and back must not lose a To year already typed.
+  test "spending keeps its To year after a switch to one-off and back" do
+    RetirementPlan.create!(user: @user, birth_year: 1985, retirement_date: Date.new(2045, 1, 1), streams_seeded_on: Date.current)
+    visit retirement_plan_path
+
+    click_link I18n.t("retirement_plans.show.add_stream")
+    within("dialog") do
+      select I18n.t("retirement_plans.streams.form.kinds.expense"), from: "retirement_plan_stream[kind]"
+      fill_in "retirement_plan_stream[name]", with: "Mortgage"
+      fill_in "retirement_plan_stream[annual_amount]", with: "18000"
+      fill_in "retirement_plan_stream[end_year]", with: "2041"
+      select I18n.t("retirement_plans.streams.form.kinds.one_off"), from: "retirement_plan_stream[kind]"
+      select I18n.t("retirement_plans.streams.form.kinds.expense"), from: "retirement_plan_stream[kind]"
       click_button I18n.t("retirement_plans.streams.form.save")
     end
 
