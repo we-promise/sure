@@ -103,6 +103,26 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
                     "a level reaches the tooltip with two decimals, not thirty")
   end
 
+  # The first point has nothing before it to have moved from. The tooltip
+  # reads each point's trend, so a first trend measured against zero shows a
+  # flat index of 100 as a gain of 100 on its first day.
+  test "the index chart's first point shows no change" do
+    perf = Portfolio::Performance.new(family: @family, account_ids: [], period: @period)
+    perf.stubs(:index_series).returns([
+      [ Date.new(2026, 3, 1), BigDecimal("100") ],
+      [ Date.new(2026, 3, 2), BigDecimal("100") ],
+      [ Date.new(2026, 3, 3), BigDecimal("104.5") ]
+    ])
+    @statement.stubs(:performance).returns(perf)
+
+    series = registry.sections.find { |s| s[:key] == "index_chart" }[:locals][:series]
+    trends = series.as_json[:values].map { |v| v[:trend].as_json }
+
+    assert_equal [ 0, 0, BigDecimal("4.5") ], trends.map { |t| t[:value] },
+                 "the first day is no change, and each later day still moves from the one before"
+    assert_equal "flat", series.values.first.trend.direction
+  end
+
   # from_raw_values demands two points, and a period with one day or none has
   # no line to draw. An empty chart says nothing the performance cards above
   # have not already said, so the section hides rather than drawing a blank box.

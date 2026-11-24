@@ -202,9 +202,16 @@ class Portfolio::SectionRegistry
           # _extractFormattedValue returns it verbatim. The hover would read
           # every one of those digits. The percentage half is already fine:
           # Trend#percent_formatted rounds it.
-          Series.from_raw_values(
+          series = Series.from_raw_values(
             levels.map { |date, level| { date: date, value: level.round(2) } }
           )
+          # from_raw_values measures the first point against zero, which the
+          # tooltip would show as a gain of the whole first level. Nothing
+          # precedes the first day, so it reads as no change. Not a nil trend:
+          # the chart's tooltip reads every point's trend.
+          first = series.values.first
+          first.trend = Trend.new(current: first.value, previous: first.value)
+          series
         end
     end
 
