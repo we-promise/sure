@@ -31,11 +31,13 @@ class ReceiptScan::Processor
     @extraction = extract
     return unless extraction
 
-    scan.with_lock do
+    outcome = with_completion_locks do
       next unless scan.processing? && placeholder_still_there?
+      next :no_access unless uploader_can_write?
 
       apply_extraction
     end
+    record_failure(StandardError.new("The uploader can no longer change this account")) if outcome == :no_access
   rescue StandardError => e
     record_failure(e)
   end
@@ -50,6 +52,22 @@ class ReceiptScan::Processor
     attr_reader :scan, :extraction, :problems, :placeholder
 
     def family = scan.family
+
+    # The uploader, then the account, then the scan: the order User#transfer_to_family! takes
+    # them in, so a transfer and a scan finishing at the same time don't wait on each other.
+    def with_completion_locks
+      ReceiptScan.transaction do
+        scan.user&.lock!
+        scan.account.lock!
+        scan.lock!
+        yield
+      end
+    end
+
+    # The upload's own rule, checked again: access can be lost while the receipt is read.
+    def uploader_can_write?
+      scan.user.present? && Account.writable_by(scan.user).exists?(scan.account_id)
+    end
 
     def placeholder_still_there?
       Transaction.exists?(placeholder.id) or raise StandardError, "The receipt's transaction was deleted"
@@ -133,8 +151,9 @@ class ReceiptScan::Processor
       bank_entry.lock!
       bank_transaction.lock!
       # The bank may have changed the entry since the matcher picked it (a pending booked at
-      # another amount); then it is no longer this payment.
-      unless bank_entry.amount == extraction.total && bank_entry.currency == extraction.currency && !bank_entry.excluded?
+      # another amount, or one recognised as a transfer); then it is no longer this payment.
+      unless bank_entry.amount == extraction.total && bank_entry.currency == extraction.currency && !bank_entry.excluded? &&
+             Transaction::TRANSFER_KINDS.exclude?(bank_transaction.kind)
         return placeholder
       end
 

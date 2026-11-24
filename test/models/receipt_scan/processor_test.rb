@@ -179,6 +179,52 @@ class ReceiptScan::ProcessorTest < ActiveSupport::TestCase
     assert_nil bank.entryable.reload.extra["receipt"]
   end
 
+  test "a bank transaction that became a transfer after matching keeps the placeholder" do
+    bank = Entry.create!(account: @account, name: "CARD CORNER GROCER", date: @date + 1.day, currency: "USD",
+                         amount: BigDecimal("50.00"), entryable: Transaction.new)
+    scan = upload("rotated.jpg", "image/jpeg")
+    placeholder = scan.linked_transaction
+    stub_extraction(line_items: [ item("Cheese", "50.00", "Food & Drink") ])
+    ReceiptScan::Matcher.any_instance.stubs(:result).returns(ReceiptScan::Matcher::Result.new(kind: :single, entries: [ bank ]))
+    Transaction.find(bank.entryable_id).update!(kind: "funds_movement")
+
+    process(scan)
+
+    assert_equal placeholder, scan.reload.linked_transaction
+    assert Entry.exists?(placeholder.entry.id)
+    assert_nil bank.entryable.reload.extra["receipt"]
+  end
+
+  test "a scan whose uploader lost access to the account while it was read fails and leaves it alone" do
+    scan = upload("rotated.jpg", "image/jpeg")
+    placeholder = scan.linked_transaction
+    stub_extraction(line_items: [ item("Cheese", "50.00", "Food & Drink") ])
+    Account.stubs(:writable_by).with(@user).returns(Account.none)
+
+    process(scan)
+
+    assert scan.reload.failed?
+    assert_equal placeholder, scan.linked_transaction
+    assert_equal 0, placeholder.entry.reload.amount
+    assert_equal "needs_review", placeholder.reload.extra.dig("receipt", "status")
+  end
+
+  test "a scan whose uploader was removed while it was read fails" do
+    scan = upload("rotated.jpg", "image/jpeg")
+    extraction = build_receipt_extraction(date: @date, line_items: [ item("Cheese", "50.00", "Food & Drink") ])
+    provider = stub(supports_receipt_extraction?: true)
+    provider.stubs(:extract_receipt).with do
+      ReceiptScan.where(id: scan.id).update_all(user_id: nil)
+      true
+    end.returns(Provider::Response.new(success?: true, data: extraction, error: nil))
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+
+    process(scan)
+
+    assert scan.reload.failed?
+    assert_equal 0, scan.linked_transaction.entry.amount
+  end
+
   test "a run that fails after another run finished the scan leaves the finished scan alone" do
     scan = upload("rotated.jpg", "image/jpeg")
     provider = stub(supports_receipt_extraction?: true)
