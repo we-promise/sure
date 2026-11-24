@@ -22,6 +22,8 @@ class ApplicationJob < ActiveJob::Base
   around_perform :run_in_ai_capsule
 
   private
-    # A job on an AI queue may call a model.
-    def run_in_ai_capsule(&block) = Ai::Capsule.within(queue_name, &block)
+    # A job on an AI queue may call a model, in its queue's lane.
+    def run_in_ai_capsule(&block)
+      Ai::Capsule.within(queue_name) { Ai::Sequencer.with_lane(Ai::Routes.lane_for_queue(queue_name), &block) }
+    end
 end

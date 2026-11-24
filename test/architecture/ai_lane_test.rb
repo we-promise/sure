@@ -1,8 +1,12 @@
 require "test_helper"
 
-# Every AI job runs on its lane's queue (Ai::Routes::QUEUES), and the queue names live only in
-# Ai::Routes.
+# Every AI job runs on its lane's queue (Ai::Routes::QUEUES) and in that lane (Ai::Sequencer),
+# and the queue names live only in Ai::Routes.
 class AiLaneTest < ActiveSupport::TestCase
+  class LaneJob < ApplicationJob
+    def perform = Fiber[:ai_lane]
+  end
+
   test "every AI job is queued on its feature's lane" do
     jobs = {
       AssistantResponseJob.new => :chat,
@@ -36,5 +40,26 @@ class AiLaneTest < ActiveSupport::TestCase
       assert_includes Ai::Routes::QUEUES.values, entry["queue"]
       assert_equal entry["class"].constantize.new.queue_name, entry["queue"], entry["class"]
     end
+  end
+
+  test "a job runs in its queue's lane, a legacy queue's job in the lane it moved to, other jobs in none" do
+    lanes = %w[ai_interactive ai_prompt ai_background ai_high_priority ai_low_priority default].to_h do |queue|
+      [ queue, LaneJob.set(queue:).perform_now ]
+    end
+
+    assert_equal({ "ai_interactive" => :interactive, "ai_prompt" => :prompt, "ai_background" => :background,
+                   "ai_high_priority" => :interactive, "ai_low_priority" => :background, "default" => nil }, lanes)
+  end
+
+  test "a call outside any lane counts as interactive, and with_lane nests" do
+    assert_equal :interactive, Ai::Sequencer.lane
+
+    Ai::Sequencer.with_lane(:prompt) do
+      Ai::Sequencer.with_lane(:background) { assert_equal :background, Ai::Sequencer.lane }
+      Ai::Sequencer.with_lane(nil) { assert_equal :prompt, Ai::Sequencer.lane }
+      assert_raises(ArgumentError) { Ai::Sequencer.with_lane(:urgent) { } }
+      assert_equal :prompt, Ai::Sequencer.lane
+    end
+    assert_nil Fiber[:ai_lane]
   end
 end

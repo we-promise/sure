@@ -92,6 +92,19 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
     assert_operator peak.value, :>=, 2, "the requests ran concurrently"
   end
 
+  test "each parallel request runs in the caller's lane, on its own thread" do
+    seen = Concurrent::Array.new
+    stub_request(:post, URL).to_return(lambda do |_request|
+      seen << [ Ai::Sequencer.lane, Thread.current ]
+      { status: 200, headers: JSON_HEADERS, body: answer("Salary", 0.8).to_json }
+    end)
+
+    Ai::Sequencer.with_lane(:background) { judge((1..4).to_h { [ "txn_#{_1}", { description: "row #{_1}" } ] }, parallel_requests: 2) }
+
+    assert_equal [ :background ], seen.map(&:first).uniq
+    assert_not_includes seen.map(&:last), Thread.current
+  end
+
   test "an endpoint can't be built with fewer than one request in flight" do
     error = assert_raises(ArgumentError) { jev_endpoint(parallel_requests: 0) }
     assert_match "parallel_requests must be at least 1", error.message
