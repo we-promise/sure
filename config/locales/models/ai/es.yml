@@ -24,10 +24,10 @@ es:
       depends_on_vector_store: Los documentos que subes, como ficheros completos a un almacén vectorial o como fragmentos de texto a un modelo de embeddings
       looked_up_financial_data: Los datos financieros que consulta el asistente para responder
       merchant_names: Nombres de comercios
-      provider_category_hints: Las categorías que sugiere tu banco
       search_query: El texto que buscas
       stored_document_text: El texto de los extractos guardados en tu archivo
       transaction_amounts: Importes de las transacciones
       transaction_dates: Fechas de las transacciones
       transaction_names: Nombres de las transacciones
+      transaction_notes: Notas de las transacciones
       uploaded_document: El documento que subes

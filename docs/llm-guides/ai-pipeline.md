@@ -116,9 +116,9 @@ flowchart LR
 | `extract_pdf` | prompt | structured_output | PDF import (user) | The document you upload |
 | `embed` | prompt | embedding | Documents (user) | Your uploaded documents, as whole files to a vector store or as text chunks to an embedding model |
 | `search_documents` | interactive | embedding | Documents (user) | Your search text |
-| `categorize` | background | generation: structured_output; judgement: judge | Categories (family) | Transaction names; Transaction amounts; Categories your bank suggests; Your category names |
-| `shadow_categorize` | background | generation: structured_output; judgement: judge | Categories (shadow runs) (family) | Transaction names; Transaction amounts; Categories your bank suggests; Your category names |
-| `detect_merchants` | background | structured_output | Merchants (family) | Transaction names; Merchant names |
+| `categorize` | background | generation: structured_output; judgement: judge | Categories (family) | Transaction names; Transaction notes; Transaction amounts; Merchant names; Your category names |
+| `shadow_categorize` | background | generation: structured_output; judgement: judge | Categories (shadow runs) (family) | Transaction names; Transaction notes; Transaction amounts; Merchant names; Your category names |
+| `detect_merchants` | background | structured_output | Merchants (family) | Transaction names; Transaction notes; Transaction amounts; Merchant names |
 | `enhance_merchants` | background | structured_output | Merchants (family) | Merchant names |
 <!-- /ai:routes_doc -->
 

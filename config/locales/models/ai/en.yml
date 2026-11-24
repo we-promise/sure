@@ -26,10 +26,10 @@ en:
       depends_on_vector_store: Your uploaded documents, as whole files to a vector store or as text chunks to an embedding model
       looked_up_financial_data: The financial data the assistant looks up to answer
       merchant_names: Merchant names
-      provider_category_hints: Categories your bank suggests
       search_query: Your search text
       stored_document_text: The text of statements stored in your vault
       transaction_amounts: Transaction amounts
       transaction_dates: Transaction dates
       transaction_names: Transaction names
+      transaction_notes: Transaction notes
       uploaded_document: The document you upload
