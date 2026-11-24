@@ -11,12 +11,8 @@ class Api::V1::AccountStatementsController < Api::V1::BaseController
   helper_method :accessible_account_ids
 
   def index
-    # Mirrors AccountStatement#viewable_by? for a statement manager in SQL, so
-    # pages are never underfilled: unlinked statements are visible, linked ones
-    # follow the account.
     statements = family.account_statements
-      .where(account_id: nil)
-      .or(family.account_statements.where(account_id: current_resource_owner.accessible_accounts.select(:id)))
+      .viewable_by(current_resource_owner)
       .includes(:account, :suggested_account)
       .ordered
 

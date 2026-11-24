@@ -44,6 +44,9 @@ zh-CN:
       rule_aliases: "同时匹配 %{names}"
       rule_detected: "匹配名为 %{name} 的交易"
       rule_learned_tolerance: "金额与常规金额相差在 %{percent} 以内的交易将匹配此账单"
+      once_kind_hint: 将此交易标记为“一次性”以避免计入您的平均值。
+      rule_reference: "无论金额或日期如何，备注中包含“%{reference}”的付款均匹配此账单"
+      rule_reference_only: "无论金额或日期如何，仅备注中包含“%{reference}”的付款匹配此账单"
       history_title: 最近 12 个月
       history_aria: 最近 12 个月的付款记录
       key_metrics: 每年
@@ -98,6 +101,7 @@ zh-CN:
     match:
       same_merchant: 相同商户
       name_matches: 名称匹配
+      reference: "付款备注包含“%{reference}”"
       same_transfer: 转入同一账户
       exact_amount: 金额完全一致
       amount_off: "相差 %{amount}"

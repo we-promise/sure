@@ -20,6 +20,8 @@ nb:
       submit_create: Opprett konto
       account_creation_disabled: Kontooppretting via enkel pålogging er deaktivert. Kontakt en administrator.
       cancel: Avbryt
+      no_pending_oidc: Fant ingen ventende OIDC-autentisering
+      submit_accept_invitation: Godta invitasjon
     new_user:
       title: Fullfør kontoen din
       heading: Opprett kontoen din
@@ -31,3 +33,10 @@ nb:
       last_name_placeholder: Skriv inn etternavnet ditt
       submit: Opprett konto
       cancel: Avbryt
+      no_pending_oidc: Fant ingen ventende OIDC-autentisering
+    create_link:
+      no_pending_oidc: Fant ingen ventende OIDC-autentisering
+    create_user:
+      no_pending_oidc: Fant ingen ventende OIDC-autentisering
+      account_creation_disabled: Kontooppretting via SSO er deaktivert. Kontakt en administrator.
+      account_created: Velkommen! Kontoen din er opprettet.

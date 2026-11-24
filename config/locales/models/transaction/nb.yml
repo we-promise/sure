@@ -1,0 +1,11 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        transaction:
+          attributes:
+            attachments:
+              too_many: kan ikke overstige %{max} filer per transaksjon
+              too_large: fil %{index} er for stor (maksimalt %{max_mb} MB)
+              invalid_format: fil %{index} har et format som ikke støttes (%{file_format})

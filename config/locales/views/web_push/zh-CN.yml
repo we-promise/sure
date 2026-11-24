@@ -1,0 +1,37 @@
+---
+zh-CN:
+  web_push:
+    title: 浏览器通知
+    description: 在此浏览器或已安装的应用上接收新的高优先级洞察。通知会在锁屏界面隐藏财务详情。
+    enable: 启用此设备
+    disable: 禁用此设备
+    test: 测试此设备
+    preview: 预览
+    session_notice: 当您退出登录或会话在 30 天无活动后过期时，通知将停止。请定期打开 Sure 以保持会话活跃。
+    ios_guidance: 在 iPhone 或 iPad 上，请使用 Safari 打开 Sure，选择“共享 → 添加到主屏幕”，然后在已安装的应用中启用通知。需要 iOS 或 iPadOS 16.4 及更高版本。
+    notification:
+      body: 您有一条新的财务提醒。打开 Sure 查看。
+      test_body: 您的测试通知已送达。打开 Sure 继续。
+    status:
+      checking: 正在检查此设备…
+      enabled: 此设备和会话的通知已启用。
+      disabled: 此设备的通知已禁用。
+      denied: 通知已在浏览器设置中被阻止。请在浏览器设置中允许通知，然后重新启用此设备。
+      unsupported: 此浏览器不支持通知。请通过 HTTPS 使用兼容的浏览器或已安装的应用。
+      unconfigured: 此服务器尚未配置浏览器通知。
+      queued: 测试已加入队列，正在等待推送服务接收。
+      accepted: 推送服务已接收。请在此设备上查收通知；接收成功并不代表已实际显示。
+      skipped: 由于此会话或预览权限已更改，或测试已过期，测试已跳过。请启用此设备后重试。
+      rejected: 推送服务拒绝了此测试。请先禁用此设备，然后再重新启用。
+      failed: 测试通知无法送达。请稍后重试。
+      enqueue_failed: 无法将测试加入队列。请稍后重试。
+      pending: 测试已加入队列或正在重试，送达可能需要片刻时间。
+      expired: 测试仍在队列中。请检查后台 Worker 或稍后重新测试。
+    errors:
+      registration: 无法注册此设备。请先禁用它，然后再重新启用。
+      preview: 请先启用预览功能，再使用浏览器通知。
+      unconfigured: 此服务器尚未配置浏览器通知。
+      rate_limited: 通知请求过多。请等待一分钟后再试。
+      enqueue: 无法将测试通知加入队列。请稍后重试。
+      request: 无法更新浏览器通知。请检查您的网络连接并重试。
+      permission: 未授予通知权限。

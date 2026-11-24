@@ -12,14 +12,15 @@ class RecurringAllocationsController < ApplicationController
     occurrence = find_occurrence(params[:recurring_occurrence_id])
     ensure_series_writable(occurrence)
     entry = find_entry(occurrence, params[:entry_id])
-    paid_on = parse_paid_on(params[:paid_on])
     # A manual payment without a date is recorded when it was entered, not on
     # the cycle's due date. The form offers the real date when it is known.
+    paid_on = parse_paid_on(params[:paid_on])
 
     RecurringTransaction::Allocator.new(occurrence).allocate!(
       entry: entry,
       amount: params[:amount].presence,
-      paid_on: paid_on
+      paid_on: paid_on,
+      categorize: annotatable?(entry)
     )
 
     redirect_with notice: t(".success")
@@ -48,7 +49,7 @@ class RecurringAllocationsController < ApplicationController
     occurrence = allocation.recurring_occurrence
     ensure_series_writable(occurrence)
 
-    RecurringTransaction::Allocator.new(occurrence).confirm_suggestion!(allocation)
+    RecurringTransaction::Allocator.new(occurrence).confirm_suggestion!(allocation, categorize: annotatable?(allocation.entry))
 
     redirect_with_return notice: t(".success")
   end
@@ -82,6 +83,12 @@ class RecurringAllocationsController < ApplicationController
       return if Account.writable_by(Current.user).where(id: series.account_id).exists?
 
       raise ActiveRecord::RecordNotFound
+    end
+
+    # Linking only needs read access to the transaction; setting its category
+    # needs the right to annotate it.
+    def annotatable?(entry)
+      entry.nil? || Current.annotatable_entries.exists?(id: entry.id)
     end
 
     def find_allocation
