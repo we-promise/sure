@@ -37,6 +37,15 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
                  "the depleted reserve's bar stayed neutral"
   end
 
+  # The budget pill follows the same near-limit rule as each budget line.
+  test "the budget card keeps a budget filled by bills out of the near-limit state" do
+    assert_equal I18n.t("reports.budget_performance.status.good"), budget_pill(bills_paid: 950)
+  end
+
+  test "the budget card marks a budget near its limit by spending outside bills" do
+    assert_equal I18n.t("reports.budget_performance.status.warning"), budget_pill(bills_paid: 0)
+  end
+
   test "goals missing an exchange rate share one warning line" do
     2.times do |i|
       account = @user.family.accounts.create!(name: "Euro reserve #{i}", accountable: Depository.new,
@@ -109,6 +118,20 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("plans.budget_card.empty_body"), response.body
     assert_select "a[href=?]", edit_budget_path(Budget.date_to_param(Date.current))
   end
+
+  private
+    # The budget card's status pill for a 1,000 budget with 950 spent.
+    def budget_pill(bills_paid:)
+      budgets(:one).update!(budgeted_spending: 1_000)
+      Budget.any_instance.stubs(:actual_spending).returns(950)
+      Budget.any_instance.stubs(:bills_paid).returns(bills_paid)
+
+      get plan_url
+
+      assert_response :success
+      labels = %w[good warning over].map { |status| I18n.t("reports.budget_performance.status.#{status}") }
+      css_select("span[title]").map { |span| span["title"] }.find { |title| labels.include?(title) }
+    end
 end
 
 class PlansControllerHouseholdSwitchingTest < ActionDispatch::IntegrationTest
