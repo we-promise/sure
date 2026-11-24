@@ -3,6 +3,9 @@ require "test_helper"
 class AutoCategorizeJobTest < ActiveJob::TestCase
   include EntriesTestHelper, ProviderTestHelper
 
+  # An Ai::Error class neither RuleAiJob::RETRIED nor RuleAiJob::DISCARDED names.
+  Unlisted = Class.new(Ai::Error::Base)
+
   setup do
     use_ai_routes
     @family = families(:empty)
@@ -248,6 +251,20 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
 
     assert_equal RuleAiJob::ATTEMPTS, performed_jobs.size
     assert_equal 1, @rule_run.reload.pending_jobs_count
+  end
+
+  test "an AI error neither retried nor discarded ends the batch after one call" do
+    Family.any_instance.expects(:auto_categorize_transactions).once.raises(Unlisted, "preempted")
+
+    perform_enqueued_jobs do
+      AutoCategorizeJob.perform_later(@family, transaction_ids: [ SecureRandom.uuid ], rule_run_id: @rule_run.id)
+    end
+
+    assert_no_enqueued_jobs
+    @rule_run.reload
+    assert_equal "failed", @rule_run.status
+    assert_equal "AutoCategorizeJobTest::Unlisted: preempted", @rule_run.error_message
+    assert_equal 0, @rule_run.pending_jobs_count
   end
 
   private

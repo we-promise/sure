@@ -21,6 +21,11 @@ class RuleAiJob < ApplicationJob
   DISCARDED = [ Ai::Error::Unauthorized, Ai::Error::NoCredit, Ai::Error::ModelMissing, Ai::Error::ContextTooLong,
                 Ai::Error::InvalidOutput, Ai::Error::Refused, Ai::Error::Cancelled ].freeze
 
+  # ActiveJob checks the handler declared last first, so this one only takes an
+  # Ai::Error that neither list below names.
+  discard_on(Ai::Error::Base) { |job, error| job.give_up(error) }
+  # Also replaces ApplicationJob's retry_on ActiveRecord::Deadlocked, which
+  # re-raises when attempts run out instead of telling the run.
   retry_on(*RETRIED, wait: :polynomially_longer, attempts: ATTEMPTS) { |job, error| job.give_up(error) }
   retry_on(*TRANSIENT_DB, attempts: ATTEMPTS) { |job, error| job.give_up(error) }
   discard_on(*DISCARDED) { |job, error| job.give_up(error) }
