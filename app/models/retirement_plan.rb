@@ -309,8 +309,6 @@ class RetirementPlan < ApplicationRecord
     end
 
     def seed_living_costs(as_of)
-      return if streams.exists?(source: "seeded_living_costs")
-
       monthly = income_statement.median_expense(
         interval: "month", excluding_kinds: LIVING_COSTS_EXCLUDED_KINDS, period: living_costs_period(as_of)
       ).to_d
@@ -330,9 +328,7 @@ class RetirementPlan < ApplicationRecord
     # any stream is, so a loan with no rate yet is seeded all the same and
     # counted by #unconverted_stream_count until the rate arrives.
     def seed_loans(as_of)
-      seeded = streams.where(source: "seeded_loan").pluck(:account_id).compact
-
-      finance_accounts.where(accountable_type: "Loan").where.not(id: seeded).includes(:accountable).find_each do |account|
+      finance_accounts.where(accountable_type: "Loan").includes(:accountable).find_each do |account|
         projection = Loan::PayoffProjection.new(account.accountable, as_of: as_of)
         next unless projection.applicable?
 
