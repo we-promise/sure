@@ -139,8 +139,11 @@ class Ai::Generation
   # shadow: false when the caller samples the shadow itself, once its answer is applied.
   # down_marks: false for a diagnostic, which must neither skip a route production marked down nor
   # mark one down for production.
-  def call(batches: nil, cancelled: nil, plan: nil, answered_before: false, shadow: true, down_marks: true)
+  # waiting: true when a person waits for the answer (a click). When every route is marked down,
+  # the routes are tried anyway, as a click always tried the provider; a job fails at once.
+  def call(batches: nil, cancelled: nil, plan: nil, answered_before: false, shadow: true, down_marks: true, waiting: false)
     @down_marks = down_marks ? Ai::DownMarks : Ai::DownMarks::Ignored
+    @waiting = waiting
     plan ||= Ai::Router.new(family:, user:).resolve(feature_key)
     return Ai::Result.unavailable(plan) unless plan.is_a?(Ai::Plan)
 
@@ -282,18 +285,23 @@ class Ai::Generation
         end
       end
 
+      # Someone waiting tries every route when none is up, rather than fail without a request.
+      try_marked = @waiting && routes.none? { @down_marks.state(_1) == :up }
+      tried = false
+
       routes.each do |route|
         state = @down_marks.state(route)
-        unless state == :up
+        unless state == :up || try_marked
           transient = true
           down = "#{route.endpoint.name}/#{route.model.name} is marked down"
           if state == :passing
-            passing ||= Ai::Error::Unreachable.new(down)
+            passing ||= Ai::Error::MarkedDown.new(down)
           else
             needs_fix ||= Ai::Error::Refused.new("#{down} for a failure that needs a fix")
           end
           next
         end
+        tried = true
 
         begin
           done, pending = split_pending_runs(route, pending, pending_positions, pending_offset)
@@ -315,7 +323,8 @@ class Ai::Generation
       # A route found the answer unusable and none answered the rest: one odd transaction can derail
       # a model, so look for it by halving on that route, rather than lose the whole batch. A later
       # route that couldn't fit the batch doesn't change that.
-      if unusable_on && pending && pending.size > 1 && @down_marks.state(route = unusable_on) == :up
+      if unusable_on && pending && pending.size > 1 && (try_marked || @down_marks.state(unusable_on) == :up)
+        route = unusable_on
         begin
           done, pending = bisect_pending_runs(route, pending, pending_positions, pending_offset)
           answers.concat(remap.call(done, pending_offset).map { |at, value| [ at, route, value ] })
@@ -347,8 +356,11 @@ class Ai::Generation
       # instead of the slice being skipped (Ai::Generation#call_batched). With no route tried, a
       # failure that needs a fix still ends the run rather than being retried as an outage.
       unfit = last_error.is_a?(Ai::Error::ContextTooLong)
-      raise passing || (unusable if unfit) || (needs_fix if unfit) || last_error || needs_fix ||
-            Ai::Error::Unreachable.new("every route for #{feature_key} is marked down")
+      error = passing || (unusable if unfit) || (needs_fix if unfit) || last_error || needs_fix ||
+              Ai::Error::MarkedDown.new("every route for #{feature_key} is marked down")
+      # MarkedDown means no request was sent (a job waits the mark out without spending a try).
+      error = Ai::Error::Unreachable.new(error.message) if tried && error.is_a?(Ai::Error::MarkedDown)
+      raise error
     end
 
     # Where a pending item started in the original slice, after a route answered only part of it.
