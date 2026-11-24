@@ -141,6 +141,38 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
     end
   end
 
+  # A valuation sets the balance whatever its amount, so a zero one (an
+  # account reset to nothing) needs a rate like any other and is dropped
+  # without one.
+  test "a rate stored after a sync dropped a zero valuation rebuilds the balance with it" do
+    @account.entries.create!(name: "USD deposit", date: @date - 1.day, amount: -500, currency: "USD", entryable: Transaction.new)
+    @account.entries.create!(name: "EUR reset", date: @date, amount: 0, currency: "EUR",
+                             entryable: Valuation.new(kind: "reconciliation"))
+    Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+    assert_equal 500, closing_balance(@account), "precondition: the sync dropped the valuation it had no rate for"
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date, rate: 1.1)
+    perform_enqueued_jobs do
+      ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
+    end
+
+    assert_equal [ @date ], @account.syncs.pluck(:window_start_date)
+    assert_equal 0, closing_balance(@account), "the zero EUR valuation now resets the balance"
+  end
+
+  # Any other entry at amount 0 adds nothing to the balance, converted or not.
+  test "a zero-amount transaction in the changed currency does not sync its account" do
+    @account.entries.create!(name: "EUR zero", date: @date, amount: 0, currency: "EUR", entryable: Transaction.new)
+    with_amount = usd_account
+    eur_deposit(account: with_amount, date: @date, amount: 100)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date, rate: 1.1)
+
+    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
+
+    assert_equal 1, with_amount.syncs.count, "precondition: the refresh syncs an account with an amount in the changed currency"
+    assert_equal 0, @account.syncs.count
+  end
+
   # A running sync cannot widen its window, so it is asked for a full resync
   # when it finishes rather than having the request dropped.
   test "an account already syncing is resynced in full after it finishes" do
