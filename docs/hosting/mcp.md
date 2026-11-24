@@ -192,7 +192,7 @@ Every tool in `tools/list` carries MCP [tool annotations](https://modelcontextpr
 
 The token is bound to the user, the record and what the preview showed, and expires after 30 minutes. A token for another record, user or tool, or an expired one, returns `preview_required`. The confirming call locks the record and rebuilds the preview before it writes; if that differs from what the token was issued for (a changed transaction, split or fee; for a category, also a different `replacement_id`, new transactions or bills in it; for a transfer, a different `reject` or a new fee), the call returns `preview_stale` with a fresh preview and token. In every one of these cases nothing changes.
 
-`delete_transaction` refuses a transfer leg with `transfer_spans_unwritable_account` when one of the transfer's fee transactions is in an account the caller cannot write, since deleting the leg deletes the fees. The web's transfer unlink refuses the same case.
+`delete_transaction` and `unmatch_transfer` refuse a transfer with `transfer_spans_unwritable_account` when one of its fee transactions is in an account the caller cannot write, since deleting a leg or unlinking deletes the fees. The web's transfer unlink refuses the same case.
 
 Clients written against the earlier one-call contract get a preview instead of the change until they pass the token. `unmatch_transfer` no longer takes `dry_run`: a call without a token is the preview.
 

@@ -187,15 +187,39 @@ class Assistant::Function::UnmatchTransferTest < ActiveSupport::TestCase
     assert Transfer.exists?(@transfer.id)
   end
 
-  test "never previews or deletes fees on an account the user cannot write" do
-    # family_member writes the checking account and only reads the credit card.
+  test "never previews or deletes fees on an account the user cannot write, even with both legs writable" do
+    # Transfer::Creator only puts fees on the legs' accounts; this fee is
+    # attached by hand to a third account family_member only reads.
+    accounts(:investment).account_shares.create!(user: users(:family_member), permission: "full_control")
+    transfer = create_transfer(from_account: accounts(:depository), to_account: accounts(:investment), amount: 100)
     fee = create_transaction(account: accounts(:credit_card), name: "Card fee", amount: 2).entryable
-    @transfer.fee_transactions << fee
+    transfer.fee_transactions << fee
 
-    result = Assistant::Function::UnmatchTransfer.new(users(:family_member)).call("transaction_id" => @transfer.outflow_transaction_id)
+    result = Assistant::Function::UnmatchTransfer.new(users(:family_member)).call("transfer_id" => transfer.id)
 
-    assert_equal "not_found", result[:error]
+    assert_equal "transfer_spans_unwritable_account", result[:error]
     assert_nil result[:preview]
+    assert_not_includes result.to_json, "Card fee"
+    assert Transaction.exists?(fee.id)
+  end
+
+  test "rechecks write access to the fee accounts under the lock" do
+    accounts(:investment).account_shares.create!(user: users(:family_member), permission: "full_control")
+    transfer = create_transfer(from_account: accounts(:depository), to_account: accounts(:investment), amount: 100)
+    fee = create_transaction(account: accounts(:connected), name: "Third-account fee", amount: 2).entryable
+    transfer.fee_transactions << fee
+    share = accounts(:connected).account_shares.create!(user: users(:family_member), permission: "full_control")
+    function = Assistant::Function::UnmatchTransfer.new(users(:family_member))
+    params = { "transfer_id" => transfer.id }
+    token = function.call(params)[:preview_token]
+    assert token.present?
+
+    # A downgrade to read-only leaves the preview unchanged.
+    change_after_token_check(function) { share.update!(permission: "read_only") }
+    result = function.call(params.merge("preview_token" => token))
+
+    assert_equal "transfer_spans_unwritable_account", result[:error]
+    assert Transfer.exists?(transfer.id)
     assert Transaction.exists?(fee.id)
   end
 

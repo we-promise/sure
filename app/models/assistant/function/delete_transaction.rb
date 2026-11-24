@@ -107,7 +107,7 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
 
     entry = transaction.entry
     return error("split_child", "Split child transactions cannot be deleted individually. Delete the split parent instead.") if entry.split_child?
-    return unwritable_fee_error if unwritable_fees?(transaction)
+    return unwritable_fee_error if unwritable_fees?(transaction.transfer)
 
     # The preview is both what the user confirms and the deleted record in the
     # response, taken before destruction so the response never reads destroyed
@@ -116,7 +116,7 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     # Write access to the fee accounts is checked again under the lock: a
     # share downgraded since the preview leaves the preview unchanged.
     result = confirm_with_preview(params, transaction, -> { preview(transaction, entry) }, lock: [ transaction, entry ]) do |snapshot|
-      next unwritable_fee_error if unwritable_fees?(transaction)
+      next unwritable_fee_error if unwritable_fees?(transaction.transfer)
 
       destroy_entry(entry, snapshot)
     end
@@ -175,35 +175,25 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
       query.find_by(id: id)
     end
 
-    # Whether deleting the transaction would delete a transfer fee on an
-    # account the user cannot write. Fees go with the transfer whichever leg
-    # is deleted.
-    def unwritable_fees?(transaction)
-      transfer = transaction.transfer
-      transfer.present? && transfer.fee_transactions.where.not(id: writable_transactions.select(:id)).exists?
-    end
-
-    def unwritable_fee_error
-      error("transfer_spans_unwritable_account", "This transaction is part of a transfer with fee transactions in an account you cannot write to, and deleting it would delete them. Nothing was deleted. Someone who can write to both accounts has to delete it.")
-    end
-
     # What deleting the transaction removes: the transaction itself, a split's
     # children and, for a transfer leg, the transfer and its fee transactions
     # (the other leg stays and becomes a standard transaction). Entries in an
-    # account the user cannot open show only that (see serialize_brief).
+    # account the user cannot open show only that (see serialize_brief). The
+    # confirmation rebuilds it under the lock, so access is read each time.
     def preview(transaction, entry)
       snapshot = serialize(transaction, entry)
+      visible = accessible_account_ids
 
       children = entry.child_entries.in_split_order.to_a
-      snapshot[:split_children] = children.map { |child| serialize_brief(child) } if children.any?
+      snapshot[:split_children] = children.map { |child| serialize_brief(child, visible) } if children.any?
 
       if (transfer = transaction.transfer)
         counterpart = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction : transfer.inflow_transaction
         snapshot[:transfer] = {
           id: transfer.id,
           status: transfer.status,
-          counterpart: serialize_brief(counterpart.entry),
-          deleted_fee_transactions: transfer.fee_transactions.order(:id).map { |fee| serialize_brief(fee.entry) }
+          counterpart: serialize_brief(counterpart.entry, visible),
+          deleted_fee_transactions: transfer.fee_transactions.order(:id).map { |fee| serialize_brief(fee.entry, visible) }
         }
       end
 
@@ -227,8 +217,8 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
       }
     end
 
-    def serialize_brief(entry)
-      return { account: HIDDEN_ACCOUNT } unless accessible_account_ids.include?(entry.account_id)
+    def serialize_brief(entry, visible)
+      return { account: HIDDEN_ACCOUNT } unless visible.include?(entry.account_id)
 
       {
         id: entry.entryable_id,

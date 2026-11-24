@@ -37,7 +37,8 @@ class Assistant::Function::UnmatchTransfer < Assistant::Function
 
         Pass the id of either transaction in the transfer (get_transactions
         marks them is_transfer), or the transfer_id. Works on confirmed and
-        pending transfers. Both accounts must be writable.
+        pending transfers. Both accounts must be writable, and so must any
+        account holding one of its fee transactions.
 
         By default the pairing is also recorded as rejected, so Sure's
         auto-match won't suggest it again; pass reject: false to only unlink.
@@ -83,6 +84,7 @@ class Assistant::Function::UnmatchTransfer < Assistant::Function
   def call(params = {})
     transfer = lookup_transfer(params)
     return transfer if transfer.is_a?(Hash)
+    return unwritable_fee_error if unwritable_fees?(transfer)
 
     # Only an explicit false skips the rejection; null counts as omitted.
     reject = params["reject"].nil? || ActiveModel::Type::Boolean.new.cast(params["reject"])
@@ -97,11 +99,13 @@ class Assistant::Function::UnmatchTransfer < Assistant::Function
   end
 
   private
-    # Runs under the transfer's lock. Re-finds it within the writable scope, so
-    # write access lost since the lookup is caught.
+    # Runs under the transfer's lock. Re-finds it within the writable scope and
+    # rechecks the fee accounts, so write access lost since the lookup is
+    # caught (a downgrade leaves the preview unchanged).
     def unmatch(transfer, reject, snapshot)
       locked = scoped_transfers.find_by(id: transfer.id)
       return error("not_found", "The transfer was already unlinked, or you can no longer write to its accounts.") unless locked
+      return unwritable_fee_error if unwritable_fees?(locked)
 
       accounts = ([ locked.from_account, locked.to_account ] + locked.fee_transactions.map { |t| t.entry.account }).compact.uniq
       reject ? locked.reject! : locked.destroy!

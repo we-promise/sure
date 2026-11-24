@@ -65,9 +65,10 @@ class Assistant::Function::GetTransferMatchCandidates < Assistant::Function
     rows = matcher.candidates
     counterparts = Transaction.includes(entry: :account).where(id: rows.map { |row| matcher.counterpart_id(row) }).index_by(&:id)
 
+    visible = accessible_account_ids
     result[:candidates] = rows.filter_map do |row|
       counterpart = counterparts[matcher.counterpart_id(row)]
-      next unless counterpart && accessible_account_ids.include?(counterpart.entry.account_id)
+      next unless counterpart && visible.include?(counterpart.entry.account_id)
 
       serialize_transaction(counterpart).merge(
         days_apart: row.date_diff.to_i,

@@ -168,6 +168,25 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
     assert_equal "standard", transfer.inflow_transaction.reload.kind
   end
 
+  test "rereads account access when the delete is confirmed" do
+    share = accounts(:investment).account_shares.create!(user: users(:family_member), permission: "read_only")
+    transfer = create_transfer(from_account: accounts(:depository), to_account: accounts(:investment), amount: 100)
+    transfer.outflow_transaction.entry.update!(name: "Brokerage top-up")
+    member = Assistant::Function::DeleteTransaction.new(users(:family_member))
+    params = { "id" => transfer.outflow_transaction.id }
+    preview = member.call(params)
+    assert_equal transfer.inflow_transaction.id, preview[:preview][:transfer][:counterpart][:id]
+
+    # The same instance confirms, as in one chat response.
+    change_after_token_check(member) { share.destroy! }
+    result = member.call(params.merge("preview_token" => preview[:preview_token]))
+
+    assert_equal "preview_stale", result[:error]
+    assert_equal({ account: "another account" }, result[:preview][:transfer][:counterpart])
+    assert_not_includes result.to_json, accounts(:investment).name
+    assert Transaction.exists?(transfer.outflow_transaction.id)
+  end
+
   test "refuses to delete a transfer leg whose fees sit on an account the user cannot write" do
     member = Assistant::Function::DeleteTransaction.new(users(:family_member))
     # family_member cannot open the hidden account and only reads the credit card.
