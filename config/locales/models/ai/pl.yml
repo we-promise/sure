@@ -26,7 +26,8 @@ pl:
       depends_on_vector_store: Przesłane dokumenty, jako całe pliki do bazy wektorowej albo jako fragmenty tekstu do modelu embeddingów
       looked_up_financial_data: Dane finansowe, które asystent sprawdza, by odpowiedzieć
       merchant_names: Nazwy sprzedawców
-      order_email_text: Treść oraz załączone zdjęcia i pliki PDF maili z zamówieniami, które przekazujesz
+      order_email_attachments: Zdjęcia i pliki PDF załączone do maili z zamówieniami, które przekazujesz
+      order_email_text: Treść maili z zamówieniami, które przekazujesz
       provider_category_hints: Kategorie sugerowane przez Twój bank
       receipt_images: Przesyłane zdjęcia i pliki paragonów
       search_query: Twoje wyszukiwane hasło
