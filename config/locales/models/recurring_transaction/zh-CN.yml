@@ -21,10 +21,13 @@ zh-CN:
               same_as_source: 不能与源账户相同
               family_mismatch: 必须与源账户属于同一家庭
               wrong_family: 必须属于该家庭
+            bank_reference:
+              needs_account_and_expense: 仅适用于已指定账户的支出账单，因为它将与该账户的付款记录进行匹配
     attributes:
       recurring_transaction:
         payment_url: 付款链接
         frequency_interval: 重复间隔
+        bank_reference: 银行参考号
   recurring_transactions:
     allocator:
       missing_rate: 从 %{from} 到 %{to} 没有可用汇率；请明确输入金额
@@ -33,3 +36,4 @@ zh-CN:
       entry_exhausted: 此交易的全部金额已应用至其他待付账款
       already_allocated: 此交易已应用至该账单
       exceeds_remaining: "%{amount} 超出了本周期剩余的 %{remaining}"
+      split_counterpart_allocated: 此交易已拆分，且原始支出或其某个拆分项已应用至账单

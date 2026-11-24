@@ -222,6 +222,17 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert flash[:alert].present?
   end
 
+  test "enhance is refused while no family admin has turned AI on" do
+    use_ai_routes
+    families(:dylan_family).users.update_all(ai_enabled: false)
+
+    assert_no_enqueued_jobs(only: Ai::GenerationJob) do
+      post enhance_family_merchants_path
+    end
+
+    assert_equal Ai::Availability.unavailable(:enhance_merchants, :no_family_consent).message_for(users(:family_admin)), flash[:alert]
+  end
+
   test "the Enhance button shows whenever enhance_merchants has a model, Anthropic included" do
     merchant = ProviderMerchant.create!(name: "Enhanceable Shop", source: "plaid")
     transactions(:one).update_columns(merchant_id: merchant.id)
