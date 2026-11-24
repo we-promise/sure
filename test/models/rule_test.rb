@@ -197,6 +197,26 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal @groceries_category, transaction_entry.transaction.category
   end
 
+  test "apply with an AI action counts only the other actions' changes as modified" do
+    Family.any_instance.stubs(:auto_categorize_transactions_later).returns(true)
+    tag = @family.tags.create!(name: "Groceries tag")
+    create_transaction(date: Date.current, account: @account, name: "Whole Foods 1").transaction.tags << tag
+    create_transaction(date: Date.current, account: @account, name: "Whole Foods 2")
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_tags", value: [ tag.id ]),
+        Rule::Action.new(action_type: "auto_categorize")
+      ]
+    )
+
+    result = rule.apply
+
+    assert_equal({ modified_count: 1, async: true }, result)
+  end
+
   test "split_transaction rule end to end" do
     transaction_entry = create_transaction(
       date: Date.current,
