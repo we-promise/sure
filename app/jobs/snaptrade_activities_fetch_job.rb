@@ -18,7 +18,8 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
                   on_conflict: :log
 
   # Configuration for retry behavior
-  RETRY_DELAY = 10.seconds
+  # SnapTrade asks to poll an account no more than every 15 seconds.
+  RETRY_DELAY = 15.seconds
   MAX_RETRIES = 6
 
   def perform(snaptrade_account, start_date:, end_date: nil, retry_count: 0)
@@ -40,8 +41,15 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
       return
     end
 
-    # Fetch activities from API
-    activities_data = fetch_activities(snaptrade_account, provider, start_date, end_date)
+    # Fetch activities from API. Over the rate limit, retry on the schedule
+    # below like "no activities yet", but remember why for the last attempt.
+    rate_limited = false
+    activities_data = begin
+      fetch_activities(snaptrade_account, provider, start_date, end_date)
+    rescue Provider::Snaptrade::RateLimitError
+      rate_limited = true
+      []
+    end
 
     if activities_data.any?
       Rails.logger.info(
@@ -68,6 +76,25 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
         end_date: end_date,
         retry_count: retry_count + 1
       )
+    elsif rate_limited
+      # Still rate limited: activities are missing, not absent, so record it
+      # for support before clearing the flag.
+      Rails.logger.error(
+        "SnaptradeActivitiesFetchJob - Max retries reached for account #{snaptrade_account.id} while rate limited"
+      )
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "error",
+        message: "SnapTrade activities fetch was still rate limited after #{MAX_RETRIES} retries",
+        source: self.class.name,
+        provider_key: "snaptrade",
+        family: snaptrade_item.family,
+        account_provider: snaptrade_account.account_provider,
+        metadata: { snaptrade_account_id: snaptrade_account.id, start_date: start_date.to_s, end_date: end_date.to_s }
+      )
+
+      snaptrade_account.update!(activities_fetch_pending: false)
+      snaptrade_item.broadcast_sync_complete
     else
       Rails.logger.warn(
         "SnaptradeActivitiesFetchJob - Max retries reached for account #{snaptrade_account.id}, " \

@@ -54,6 +54,28 @@ de:
       term: Laufzeit
       type: Typ
       unknown: Unbekannt
+    subtypes:
+      auto:
+        long: Autokredit
+        short: Autokredit
+      business:
+        long: Geschäftskredit
+        short: Geschäftskredit
+      home_equity:
+        long: Darlehen gegen Immobilienbeleihung
+        short: Immobilienbeleihung
+      line_of_credit:
+        long: Kreditlinie (Rahmenkredit)
+        short: Kreditrahmen
+      mortgage:
+        long: Baufinanzierung (Hypothek)
+        short: Baufinanzierung
+      other:
+        long: Sonstiges Darlehen
+        short: Sonstiges Darlehen
+      student:
+        long: Studienkredit
+        short: Studienkredit
     tabs:
       extra_repayments:
         amount_label: Sondertilgung
