@@ -145,6 +145,7 @@ class Rule::Runner
           # changes are added to the stored count in one statement rather than written over it.
           rule_run.update!(**counts.except(:transactions_modified))
           RuleRun.where(id: rule_run.id).update_all([ "transactions_modified = LEAST(transactions_modified + ?, transactions_queued)", counts[:transactions_modified] ])
+          rule_run.reload   # the run returned shows the stored counts, including the AI jobs'
         else
           rule_run.update!(**counts)
         end
