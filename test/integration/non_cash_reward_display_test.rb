@@ -1,6 +1,6 @@
 require "test_helper"
 
-class KrakenRewardDisplayTest < ActionDispatch::IntegrationTest
+class NonCashRewardDisplayTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
 
   setup do
@@ -62,6 +62,21 @@ class KrakenRewardDisplayTest < ActionDispatch::IntegrationTest
     assert_reward_row entry, "< €0.01"
     assert_reward_header entry, "< €0.01 EUR"
     assert_select "dt", text: "Unrealized gain/loss", count: 0
+  end
+
+  test "another provider can use both reward views with its own metadata" do
+    entry = entries(:trade)
+    entry.update!(source: "example", amount: 0)
+    entry.trade.update!(qty: 0.125, price: 200, extra: { "example" => { "activity" => "bonus" } })
+
+    provider = stub("reward provider")
+    provider.stubs(:reward_price_status).with({ "activity" => "bonus" }).returns(:historical)
+    stub_const(Trade::NonCashReward, :PROVIDERS, { "example" => provider }) do
+      get account_url(entry.account, tab: "activity")
+      assert_response :success
+      assert_reward_row entry, "$25.00"
+      assert_reward_header entry, "$25.00 USD"
+    end
   end
 
   test "ordinary trades and cash dividends keep their cash amounts in the list and drawer" do

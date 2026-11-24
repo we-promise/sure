@@ -37,7 +37,7 @@
                   step: "any",
                   disabled: @entry.linked? %>
           <% end %>
-          <% unless trade.qty.zero? || trade.non_cash_reward? %>
+          <% unless trade.qty.zero? || trade.non_cash_reward %>
             <div class="flex items-center gap-2">
               <%= f.select :nature,
                             [[t(".buy"), "outflow"], [t(".sell"), "inflow"]],

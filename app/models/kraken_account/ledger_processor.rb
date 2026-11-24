@@ -35,6 +35,15 @@ class KrakenAccount::LedgerProcessor
   # Kraken Earn internal subtypes that represent fund movements, not income.
   EARN_INTERNAL_SUBTYPES = %w[allocation deallocation].freeze
 
+  def self.reward_price_status(metadata)
+    return unless %w[staking earn].include?(metadata["type"].to_s.downcase)
+    # Older rewards have no subtype. Allocations and migrations move existing units.
+    return unless [ "", "reward", "rewardallocation" ].include?(metadata["subtype"].to_s.strip.downcase)
+
+    # The stored price can be a spot fallback until a sync finds the historical price.
+    metadata["price_missing"] ? :unavailable : :historical
+  end
+
   def initialize(kraken_account)
     @kraken_account = kraken_account
     @normalizer = KrakenAccount::AssetNormalizer.new(raw_payload&.dig("asset_metadata") || {})

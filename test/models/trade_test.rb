@@ -11,8 +11,7 @@ class TradeTest < ActiveSupport::TestCase
 
     [ nil, 0, -1 ].each do |price|
       trade.price = price
-      assert_predicate trade, :non_cash_reward?
-      assert_nil trade.reward_value
+      assert_nil trade.non_cash_reward.value
     end
   end
 
@@ -20,6 +19,7 @@ class TradeTest < ActiveSupport::TestCase
     trade = entries(:trade).trade
     [
       [ nil, "staking", "", 2, 0 ],
+      [ "coinbase", "staking", "", 2, 0 ],
       [ "kraken", "deposit", "", 2, 0 ],
       [ "kraken", "earn", "migration", 2, 0 ],
       [ "kraken", "earn", "reward", -2, 0 ],
@@ -28,8 +28,7 @@ class TradeTest < ActiveSupport::TestCase
       trade.entry.assign_attributes(source: source, amount: amount)
       trade.assign_attributes(qty: qty, investment_activity_label: "Dividend",
                               extra: { "kraken" => { "type" => type, "subtype" => subtype } })
-      assert_not trade.non_cash_reward?
-      assert_nil trade.reward_value
+      assert_nil trade.non_cash_reward
     end
   end
 

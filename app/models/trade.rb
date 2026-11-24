@@ -72,23 +72,8 @@ class Trade < ApplicationRecord
     qty.negative?
   end
 
-  def non_cash_reward?
-    kraken = extra["kraken"]
-    return false unless kraken && entry&.source == "kraken" && entry.amount.zero? && qty&.positive?
-
-    # Older rewards have no subtype. Allocations and migrations move existing units.
-    %w[staking earn].include?(kraken["type"].to_s.downcase) &&
-      [ "", "reward", "rewardallocation" ].include?(kraken["subtype"].to_s.strip.downcase)
-  end
-
-  def reward_unit_price
-    # The importer can store a positive spot price while waiting for history.
-    price_money if non_cash_reward? && price&.positive? && !extra.dig("kraken", "price_missing")
-  end
-
-  def reward_value
-    unit_price = reward_unit_price
-    unit_price * qty if unit_price
+  def non_cash_reward
+    NonCashReward.for(self)
   end
 
   # A sale that can name the lot it sold from.
@@ -134,7 +119,8 @@ class Trade < ApplicationRecord
     return nil unless qty.positive?
     current_price = security.current_price
     return nil if current_price.nil?
-    return nil if non_cash_reward? && reward_unit_price&.currency != current_price.currency
+    reward = non_cash_reward
+    return nil if reward && reward.unit_price&.currency != current_price.currency
 
     current_value = current_price * qty.abs
     cost_basis = price_money * qty.abs + fee_money
