@@ -193,19 +193,10 @@ module TransactionsHelper
   # Name of the category an automatic assignment recorded — falls back to a
   # generic label when that category has since been deleted.
   def category_provenance_category_name(transaction, provenance)
-    if provenance.current?
-      transaction.category&.name
-    else
-      # Memoize so a page of history rows issues one query per distinct
-      # category id instead of one per row.
-      @category_provenance_category_names ||= {}
-      unless @category_provenance_category_names.key?(provenance.category_id)
-        @category_provenance_category_names[provenance.category_id] =
-          Current.family.categories.find_by(id: provenance.category_id)&.name
-      end
-      @category_provenance_category_names[provenance.category_id] ||
-        t("transactions.category_provenance.deleted_category")
-    end
+    return transaction.category&.name if provenance.current?
+
+    Current.family.categories.find_by(id: provenance.category_id)&.name ||
+      t("transactions.category_provenance.deleted_category")
   end
 
   # Whether the current user may annotate (e.g. re-tag) entries on this

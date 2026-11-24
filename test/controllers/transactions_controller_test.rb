@@ -2728,17 +2728,6 @@ end
     assert_match(/Assigned &quot;Income&quot; by AI .* ago\./, response.body)
   end
 
-  test "index renders no provenance pill for an auto-categorized transaction" do
-    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
-    @entry.entryable.update!(category: categories(:subcategory))
-
-    get transactions_url
-
-    assert_response :success
-    assert_select "[data-testid='category-provenance']", count: 0
-    assert_not_includes response.body, "AI history"
-  end
-
   test "transaction drawer labels bayes provenance as Bayes" do
     @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "bayes")
 

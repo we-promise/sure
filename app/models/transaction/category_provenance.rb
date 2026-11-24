@@ -11,7 +11,7 @@ class Transaction::CategoryProvenance
     # A row superseded by a later manual or automatic assignment never counts
     # as current, matching Transaction::Search's un-superseded filter.
     matching = enrichments.find do |e|
-      e.value.to_s == transaction.category_id.to_s && !superseded?(e)
+      e.value.to_s == transaction.category_id.to_s && e.metadata&.dig("superseded") != true
     end
 
     # The association is ordered updated_at DESC, so .first is the latest
@@ -25,11 +25,6 @@ class Transaction::CategoryProvenance
       recorded_at: row.updated_at
     )
   end
-
-  def self.superseded?(enrichment)
-    enrichment.metadata.is_a?(Hash) && enrichment.metadata["superseded"].to_s == "true"
-  end
-  private_class_method :superseded?
 
   def initialize(status:, source:, category_id:, recorded_at:)
     @status = status

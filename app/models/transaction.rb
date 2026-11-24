@@ -8,8 +8,8 @@ class Transaction < ApplicationRecord
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
-  # Enrichment rows recording automatic category assignments (AI, Bayes) —
-  # scoped so the index can preload them for the provenance pill.
+  # Enrichment rows recording automatic category assignments (AI, Bayes),
+  # newest first; read by Transaction::CategoryProvenance.
   has_many :auto_category_enrichments,
     -> { where(attribute_name: "category_id", source: AUTO_CATEGORY_SOURCES).order(updated_at: :desc) },
     class_name: "DataEnrichment", as: :enrichable
