@@ -1,0 +1,11 @@
+<%= tag.div **opts do %>
+  <p class="text-xs text-secondary"><%= label %></p>
+  <% if value? %>
+    <%= value %>
+  <% else %>
+    <%= tag.p plain_value, class: value_classes, **value_opts %>
+  <% end %>
+  <% if hint.present? %>
+    <p class="text-xs text-subdued mt-1"><%= hint %></p>
+  <% end %>
+<% end %>
