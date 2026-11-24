@@ -9,7 +9,7 @@
       <div class="flex items-center justify-between gap-2">
         <span class="text-sm text-secondary"><%= t(".title") %></span>
         <%= render DS::Pill.new(
-          label: t("transactions.transaction.category_provenance.#{provenance.status}"),
+          label: t("transactions.category_provenance.labels.#{provenance.source}.#{provenance.status}"),
           tone: :neutral,
           marker: false,
           icon: provenance.current? ? "sparkles" : "history"

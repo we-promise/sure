@@ -2728,42 +2728,37 @@ end
     assert_match(/Assigned &quot;Income&quot; by AI .* ago\./, response.body)
   end
 
-  test "index shows auto-categorization pill for a current match" do
-    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
-
-    get transactions_url
-
-    assert_response :success
-    assert_select "span[title=?]", "Category assigned by AI", count: 1
-  end
-
-  test "index shows history pill after the category was changed" do
+  test "index renders no provenance pill for an auto-categorized transaction" do
     @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
     @entry.entryable.update!(category: categories(:subcategory))
 
     get transactions_url
 
     assert_response :success
-    assert_select "span[title=?]", "Auto-categorized by AI, then changed", count: 1
+    assert_select "[data-testid='category-provenance']", count: 0
+    assert_not_includes response.body, "AI history"
   end
 
-  test "index shows no provenance pill for transactions without auto-categorization" do
-    get transactions_url
+  test "transaction drawer labels bayes provenance as Bayes" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "bayes")
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
 
     assert_response :success
-    assert_select "span[title=?]", "Category assigned by AI", count: 0
-    assert_select "span[title=?]", "Auto-categorized by AI, then changed", count: 0
+    assert_select "[data-testid='category-provenance'] span[title=?]", "Bayes"
+    assert_match(/Assigned &quot;Income&quot; by the local Bayes classifier .* ago\./, response.body)
   end
 
-  test "index preloads auto-categorization enrichments without N+1" do
-    3.times do |i|
-      entry = create_transaction(account: accounts(:depository), amount: 10 + i, category: categories(:food_and_drink))
-      entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
-    end
+  test "transaction drawer shows history for a category returned to a superseded claim" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    @entry.entryable.update!(category: categories(:subcategory))
+    @entry.entryable.update!(category: categories(:income))
 
-    queries = capture_sql_queries { get transactions_url }
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
 
-    assert_equal 1, queries.count { |sql| sql.include?('"data_enrichments"') }
+    assert_response :success
+    assert_select "[data-testid='category-provenance'] span[title=?]", "AI history"
+    assert_includes response.body, "The category was changed afterwards."
   end
 
   private

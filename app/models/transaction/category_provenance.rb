@@ -7,8 +7,12 @@ class Transaction::CategoryProvenance
 
     # value is the jsonb string of the category UUID (see
     # Family::AutoCategorizer#cached_transaction_ids:
-    # `data_enrichments.value = to_jsonb(transactions.category_id::text)`)
-    matching = enrichments.find { |e| e.value.to_s == transaction.category_id.to_s }
+    # `data_enrichments.value = to_jsonb(transactions.category_id::text)`).
+    # A row superseded by a later manual or automatic assignment never counts
+    # as current, matching Transaction::Search's un-superseded filter.
+    matching = enrichments.find do |e|
+      e.value.to_s == transaction.category_id.to_s && !superseded?(e)
+    end
 
     # The association is ordered updated_at DESC, so .first is the latest
     # automatic assignment when none matches the current category.
@@ -21,6 +25,11 @@ class Transaction::CategoryProvenance
       recorded_at: row.updated_at
     )
   end
+
+  def self.superseded?(enrichment)
+    enrichment.metadata.is_a?(Hash) && enrichment.metadata["superseded"].to_s == "true"
+  end
+  private_class_method :superseded?
 
   def initialize(status:, source:, category_id:, recorded_at:)
     @status = status
