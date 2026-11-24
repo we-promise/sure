@@ -505,6 +505,31 @@ class Assistant::Function::UpdateBillTest < ActiveSupport::TestCase
     end
   end
 
+  # The paid cycle's raw date (Saturday the 28th) is before the new start,
+  # but it fell due on the anchor itself: it is the start's cycle, not an
+  # earlier one, and must not be owed a second time.
+  test "an anchor on a paid cycle's weekend-adjusted due date keeps that cycle paid" do
+    series = travel_to(Date.new(2026, 10, 28)) do
+      create_series(name: "Rent", amount: 900, weekend_adjust: "after")
+    end
+
+    travel_to Date.new(2026, 11, 30) do
+      october = series.recurring_occurrences.find_by!(original_due_on: Date.new(2026, 10, 28))
+      RecurringTransaction::Allocator.new(october).mark_paid!(paid_on: Date.new(2026, 10, 28))
+      paid = series.recurring_occurrences.find_by!(original_due_on: Date.new(2026, 11, 28))
+      assert_equal Date.new(2026, 11, 30), paid.due_on, "Saturday the 28th is paid on Monday the 30th"
+      RecurringTransaction::Allocator.new(paid).mark_paid!(paid_on: Date.new(2026, 11, 30))
+
+      result = call_tool(series.id, "anchor_date" => "2026-11-30")
+
+      assert result[:updated], result[:error]
+      assert_not_includes result[:occurrences][:created], "2026-11-30"
+      assert_equal "2026-12-30", result[:bill][:next_due_date]
+      assert_not_includes open_due_dates(series), "2026-11-30"
+      assert paid.reload.paid?
+    end
+  end
+
   test "an anchor_date short of a full YYYY-MM-DD is refused" do
     series = create_series(name: "Gym", amount: 40)
 

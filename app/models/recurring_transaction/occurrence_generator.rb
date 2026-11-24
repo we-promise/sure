@@ -139,7 +139,9 @@ class RecurringTransaction
       #
       # Rows before a re-anchored schedule's start stand in for nothing: the
       # user moved the series on purpose, so last week's leftover is not the
-      # cycle the new start date opens.
+      # cycle the new start date opens. A row due on or after the start's due
+      # date is not before it, whatever its raw date: a Saturday cycle paid on
+      # the Monday the new schedule starts already is that first cycle.
       def stood_in_for(schedule, from, through)
         # A Once bill is a date the user chose. Rows kept from an earlier
         # schedule are other obligations, not stand-ins for it, and a yearly
@@ -153,7 +155,7 @@ class RecurringTransaction
         current = nearby.map(&:original_due_on).to_set
 
         kept = series.recurring_occurrences.where(due_on: (from - reach)..(through + reach))
-        kept = kept.where(original_due_on: series.schedule_starts_on..) if series.schedule_starts_on
+        kept = from_schedule_start(kept, nearby) if series.schedule_starts_on
 
         kept.pluck(:original_due_on, :due_on)
             .reject { |original_due_on, _due_on| current.include?(original_due_on) }
@@ -163,6 +165,16 @@ class RecurringTransaction
                     &.original_due_on
             end
             .to_set
+      end
+
+      # The start's due date is known only when the window reaches the start.
+      # Otherwise every kept row is either well after it or before a window
+      # with nothing projected, and the raw date alone decides.
+      def from_schedule_start(kept, nearby)
+        starts_on = series.schedule_starts_on
+        from_start = kept.where(original_due_on: starts_on..)
+        start_due = nearby.find { |pair| pair.original_due_on == starts_on }&.due_on
+        start_due ? from_start.or(kept.where(due_on: start_due..)) : from_start
       end
 
       # Just under half the cycle length, as RecurringTransaction::Matcher's
