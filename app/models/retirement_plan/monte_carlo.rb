@@ -88,9 +88,8 @@ class RetirementPlan::MonteCarlo
   #
   # Costly: a full run of every path for each candidate year, with no cap and
   # no early exit, because lasting is not monotonic in the year (a later start
-  # can fail where an earlier one lasts). A cold search can take around 2
-  # seconds, so a page should run it outside its own render, such as in a lazy
-  # frame, and cache the answer.
+  # can fail where an earlier one lasts). Keep it out of a page's own render,
+  # such as in a lazy frame, and cache the answer.
   def confident_year(target)
     target = target.to_f
     (first_year..last_year).detect { |year| success_rate(retirement_year: year) >= target }
