@@ -600,6 +600,21 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a blank period is this month's report, so the plain page can be served from it" do
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
+    budget.budget_categories.find_or_initialize_by(category: @family.categories.expenses.first)
+          .update!(budgeted_spending: Money.new(50000, @family.currency))
+
+    with_memory_cache do
+      get reports_path(period_type: "")
+      assert_select "p", text: I18n.t("reports.summary.of_budget_used")
+
+      ReportsController.any_instance.expects(:render_report_body).never
+      get reports_path
+      assert_select "p", text: I18n.t("reports.summary.of_budget_used")
+    end
+  end
+
   test "changing whether investment contributions count as spending builds the report again" do
     with_memory_cache do
       get reports_path(period_type: :ytd)
