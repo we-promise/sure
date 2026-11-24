@@ -37,7 +37,11 @@
         <% table.with_column(t(".columns.name"), row_header: true) { |stream| stream.name } %>
         <% table.with_column(t(".columns.kind")) { |stream| t(".stream_kinds.#{stream.kind}") } %>
         <% table.with_column(t(".columns.years")) do |stream| %>
-          <%= t(".stream_years", from: stream.start_year || t(".now"), to: stream.end_year || t(".end_age")) %>
+          <% if stream.kind == "one_off" %>
+            <%= t(".stream_once", year: stream.start_year || t(".now")) %>
+          <% else %>
+            <%= t(".stream_years", from: stream.start_year || t(".now"), to: stream.end_year || t(".end_age")) %>
+          <% end %>
           <% unless stream.indexed %><span class="text-xs text-subdued"><%= t(".fixed") %></span><% end %>
         <% end %>
         <% table.with_column(t(".columns.amount"), numeric: true, class: "privacy-sensitive") { |stream| Money.new(stream.annual_amount, stream.currency).format(precision: 0) } %>

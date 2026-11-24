@@ -43,6 +43,23 @@ class RetirementPlansTest < ApplicationSystemTestCase
     assert_equal 90, RetirementPlan.find_by(user: @user)&.end_age || 90
   end
 
+  test "a refused stream is shown in the modal, over the planner" do
+    RetirementPlan.create!(user: @user, birth_year: 1985, retirement_date: Date.new(2045, 1, 1), streams_seeded_on: Date.current)
+    visit retirement_plan_path
+    click_link I18n.t("retirement_plans.show.add_stream")
+
+    within("dialog") do
+      page.execute_script("document.querySelector('dialog form').noValidate = true")
+      fill_in "retirement_plan_stream[name]", with: "Nothing"
+      fill_in "retirement_plan_stream[annual_amount]", with: "0"
+      click_button I18n.t("retirement_plans.streams.form.save")
+    end
+
+    assert_selector "dialog input[name='retirement_plan_stream[name]'][value='Nothing']"
+    assert_selector "h1", text: I18n.t("retirement_plans.show.title")
+    assert_equal 0, RetirementPlan.find_by!(user: @user).streams.count
+  end
+
   test "a user adds a pension from its own modal" do
     RetirementPlan.create!(user: @user, birth_year: 1985, retirement_date: Date.new(2045, 1, 1), streams_seeded_on: Date.current)
     visit retirement_plan_path

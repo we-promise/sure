@@ -2,8 +2,7 @@
 
 <%= styled_form_with model: stream, scope: :retirement_plan_stream,
                      url: stream.persisted? ? retirement_plan_stream_path(stream) : retirement_plan_streams_path,
-                     method: stream.persisted? ? :patch : :post, class: "space-y-4",
-                     data: { turbo_frame: :_top } do |f| %>
+                     method: stream.persisted? ? :patch : :post, class: "space-y-4" do |f| %>
   <% if stream.errors.any? %>
     <%= render "shared/form_errors", model: stream %>
   <% end %>

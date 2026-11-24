@@ -37,6 +37,31 @@ class RetirementPlans::StreamsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#retirement-plan-streams tr[data-stream-id='#{stream.id}']", text: /State pension/
   end
 
+  test "a first stream that loses the race for the plan is added to the winner's" do
+    winner = RetirementPlan.create!(user: @user)
+    RetirementPlan.stubs(:for).returns(RetirementPlan.new(user: @user))
+
+    assert_no_difference "RetirementPlan.count" do
+      post retirement_plan_streams_url, params: { retirement_plan_stream: { kind: "expense", name: "Rent", annual_amount: "1000" } }
+    end
+
+    assert_redirected_to retirement_plan_path
+    assert_equal [ "Rent" ], winner.streams.pluck(:name)
+  end
+
+  # A one-off is paid once, in its start year, so it shows that year alone.
+  test "a one-off shows the year it is paid, and a recurring stream its span" do
+    plan = RetirementPlan.create!(user: @user)
+    one_off = plan.streams.create!(kind: "one_off", name: "New roof", annual_amount: 20_000, start_year: 2030, source: "manual")
+    recurring = plan.streams.create!(kind: "expense", name: "Rent", annual_amount: 12_000, start_year: 2030, source: "manual")
+
+    get retirement_plan_url
+
+    assert_select "tr[data-stream-id='#{one_off.id}']", text: /#{Regexp.escape(I18n.t("retirement_plans.show.stream_once", year: 2030))}/
+    assert_select "tr[data-stream-id='#{one_off.id}']", text: /#{Regexp.escape(I18n.t("retirement_plans.show.end_age"))}/, count: 0
+    assert_select "tr[data-stream-id='#{recurring.id}']", text: /2030 to #{Regexp.escape(I18n.t("retirement_plans.show.end_age"))}/
+  end
+
   test "an invalid stream is refused and nothing is written, not even the plan" do
     assert_no_difference [ "RetirementPlan::Stream.count", "RetirementPlan.count" ] do
       post retirement_plan_streams_url, params: { retirement_plan_stream: { kind: "expense", name: "", annual_amount: "0" } }

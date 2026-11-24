@@ -64,6 +64,7 @@ en:
         income: Income
         one_off: One-off
       stream_years: "%{from} to %{to}"
+      stream_once: "once, %{year}"
       now: now
       end_age: end of plan
       fixed: fixed amount

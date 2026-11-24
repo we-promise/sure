@@ -10,17 +10,9 @@ class RetirementPlans::StreamsController < ApplicationController
     @stream = @retirement_plan.streams.new(kind: "expense", indexed: true)
   end
 
-  # A user's first stream also saves their plan. One transaction, so an invalid
-  # stream leaves no empty plan behind.
   def create
-    saved = RetirementPlan.transaction do
-      @retirement_plan.save! if @retirement_plan.new_record?
-      @stream = @retirement_plan.streams.new(stream_params.merge(source: "manual"))
-      @stream.save || raise(ActiveRecord::Rollback)
-    end
-
-    if saved
-      redirect_to retirement_plan_path, notice: t(".success")
+    if save_new_stream
+      saved
     else
       render :new, status: :unprocessable_entity
     end
@@ -31,7 +23,7 @@ class RetirementPlans::StreamsController < ApplicationController
 
   def update
     if @stream.update(stream_params)
-      redirect_to retirement_plan_path, notice: t(".success")
+      saved
     else
       render :edit, status: :unprocessable_entity
     end
@@ -43,6 +35,35 @@ class RetirementPlans::StreamsController < ApplicationController
   end
 
   private
+    # Saved from the modal: a refusal re-renders the form inside it, and a
+    # save sends the planner back to itself.
+    def saved
+      respond_to do |format|
+        format.html { redirect_to retirement_plan_path, notice: t(".success") }
+        format.turbo_stream do
+          flash[:notice] = t(".success")
+          render turbo_stream: turbo_stream.action(:redirect, retirement_plan_path)
+        end
+      end
+    end
+
+    # A user's first stream also saves their plan. One transaction, so an
+    # invalid stream leaves no empty plan behind. Two first saves at once
+    # race on the one-plan-per-user index; the one that loses adds its
+    # stream to the plan the other created.
+    def save_new_stream
+      RetirementPlan.transaction do
+        @retirement_plan.save! if @retirement_plan.new_record?
+        @stream = @retirement_plan.streams.new(stream_params.merge(source: "manual"))
+        @stream.save || raise(ActiveRecord::Rollback)
+      end
+    rescue ActiveRecord::RecordNotUnique
+      raise unless @retirement_plan.new_record?
+
+      @retirement_plan = RetirementPlan.find_by!(user: Current.user)
+      retry
+    end
+
     def set_retirement_plan
       @retirement_plan = RetirementPlan.for(Current.user)
     end
