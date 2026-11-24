@@ -1,4 +1,5 @@
 require "test_helper"
+require Rails.root.join("db/migrate/20261115120000_add_original_quantity_to_holding_lots")
 
 class HoldingLotDisposalTest < ActiveSupport::TestCase
   include EntriesTestHelper
@@ -788,6 +789,30 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       assert_nil trade.realized_gain_loss
       assert_equal [ [ nil, 2 ], [ first.id, 2 ] ],
         HoldingLotDisposal.where(sale_entry: sale).map { |d| [ d.lot_source_entry_id, d.qty ] }.sort_by { |id, _| id.to_s }
+    end
+  end
+
+  test "unlink and forward sync: opening lot is not inflated by shortfall disposals during backfill" do
+    travel_to TODAY do
+      build_reverse_fixture(pre_history: 2)
+      materialize(:reverse)
+      opening_lot = HoldingLot.where(account: @account, security: @security).opening.sole
+      assert_equal 0, opening_lot.qty
+      assert_equal 2, opening_lot.original_quantity
+
+      @account_provider.destroy!
+      trade(@security, -30, 300, 6)
+      materialize(:forward)
+
+      opening_lot.update_columns(original_quantity: nil)
+
+      AddOriginalQuantityToHoldingLots.new.up
+
+      assert_equal 2, opening_lot.reload.original_quantity, "original_quantity must be 2, not 14"
+
+      materialize(:forward)
+      assert_equal 2, opening_lot.reload.original_quantity
+      assert_equal 0, opening_lot.qty
     end
   end
 
