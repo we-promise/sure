@@ -4,7 +4,7 @@ class ReportsController < ApplicationController
   SIGN_AGNOSTIC_EXPENSE_KINDS = %w[loan_payment investment_contribution].freeze
 
   # Bump when the body's markup changes, so a deploy never serves the old one.
-  REPORT_BODY_CACHE_VERSION = 6
+  REPORT_BODY_CACHE_VERSION = 7
   # Every parameter the body is built from, as a background rebuild repeats
   # it and as part of the cache key: the period, the tag and entry filters,
   # the breakdown's sort and the trend chart's selection.
