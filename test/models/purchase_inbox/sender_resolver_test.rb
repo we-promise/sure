@@ -60,6 +60,25 @@ class PurchaseInbox::SenderResolverTest < ActiveSupport::TestCase
     assert_equal "sender_not_authenticated", resolve(mail.to_s).reason
   end
 
+  test "a domain inside a comment doesn't stand in for the signing domain" do
+    forged = "mx.google.com; dkim=pass (header.d=bobdylan.com diagnostic) header.d=attacker.example; " \
+             "dmarc=fail (header.from=bobdylan.com) header.from=attacker.example"
+
+    assert_equal "sender_not_authenticated", resolve(with_results(forged)).reason
+  end
+
+  test "a domain inside a quoted reason doesn't stand in for the signing domain" do
+    forged = 'mx.google.com; dkim=pass reason="header.d=bobdylan.com; x" header.d=attacker.example'
+
+    assert_equal "sender_not_authenticated", resolve(with_results(forged)).reason
+  end
+
+  test "comments around a real aligned result still pass" do
+    results = "mx.google.com (Google (mail) server); dkim=pass (2048-bit key; \\) quoted) header.d=bobdylan.com; dmarc=none"
+
+    assert_nil resolve(with_results(results)).reason
+  end
+
   test "DKIM aligned with the sender's domain passes without DMARC" do
     mail = Mail.new(fixture("amazon_manual_forward.eml"))
     mail.header["Authentication-Results"] = nil

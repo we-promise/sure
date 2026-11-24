@@ -82,9 +82,31 @@ class PurchaseInbox::SenderResolver
     def trusted_results
       return if config.authserv_id.blank?
 
-      Array(mail.header["Authentication-Results"]).map { _1.value.to_s }.find do |value|
+      Array(mail.header["Authentication-Results"]).map { without_comments(_1.value.to_s) }.find do |value|
         value.split(";").first.to_s.strip.split(/\s+/).first.to_s.downcase == config.authserv_id
       end
+    end
+
+    # The header without its RFC 8601 comments and quoted strings, which the sender's own text can
+    # end up in: "dkim=pass (header.d=a.example) header.d=b.example" reads as header.d=b.example.
+    def without_comments(value)
+      kept = +""
+      depth = 0
+      quoted = escaped = false
+      value.each_char do |char|
+        if escaped then escaped = false
+        elsif char == "\\" && (quoted || depth.positive?) then escaped = true
+        elsif quoted then quoted = char != '"'
+        elsif char == "(" then depth += 1
+        elsif depth.positive? then depth -= 1 if char == ")"
+        elsif char == '"' then quoted = true
+        else
+          kept << char
+          next
+        end
+        kept << " " unless kept.end_with?(" ")
+      end
+      kept
     end
 
     def dmarc_pass?(method)
