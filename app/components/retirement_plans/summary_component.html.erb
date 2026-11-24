@@ -3,7 +3,7 @@
     <%= render DS::Stat.new(
       label: t("retirement_plans.summary.fi_number"), value: money(projection.fi_number), size: :xl,
       hint: t("retirement_plans.summary.fi_number_explainer", expenses: money(projection.annual_expenses), rate: withdrawal_rate),
-      value_class: "privacy-sensitive", value_opts: { data: { fi_number: true } }
+      value_class: "privacy-sensitive", value_opts: { data: { fi_number: true } }, hint_class: "privacy-sensitive"
     ) %>
 
     <div>

@@ -19,6 +19,15 @@ class RetirementPlans::SummaryComponentTest < ViewComponent::TestCase
     assert_text I18n.t("retirement_plans.summary.no_retirement_date")
   end
 
+  # The hint names the spending the FI number comes from, which with the
+  # withdrawal rate gives the number away, so it hides with the figures.
+  test "the FI number and the spending behind it are both privacy-sensitive" do
+    render_inline(RetirementPlans::SummaryComponent.new(projection: projection, currency: "USD"))
+
+    assert_selector ".privacy-sensitive[data-fi-number]", text: "$1,000,000"
+    assert_selector "p.privacy-sensitive", text: "$40,000 a year of spending"
+  end
+
   test "a saved savings rate is not called derived, and a retirement date gives a projected total" do
     render_inline(RetirementPlans::SummaryComponent.new(
       projection: projection(savings_rate: BigDecimal("0.1"), retirement_date: Date.new(2029, 1, 1)), currency: "USD"
