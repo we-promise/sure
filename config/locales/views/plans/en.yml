@@ -18,6 +18,9 @@ en:
       set_up: Set up this month's budget
     retirement_card:
       title: Financial independence
+      empty_title: When could you stop working?
+      empty_body: Set up a plan to see your financial independence number, how far along you are, and the year your savings could let you retire.
+      set_up: Set up your plan
     goals_card:
       title: Your goals
       currency_warning:

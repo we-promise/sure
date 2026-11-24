@@ -1,6 +1,6 @@
 <%# locals: (plan:, projection:, as_of:) %>
 
-<%= render DS::Card.new do %>
+<%= render DS::Card.new(id: "retirement-plan-card") do %>
   <div class="flex flex-wrap items-center gap-2 mb-4">
     <span class="w-7 h-7 rounded-lg bg-surface-inset text-secondary flex items-center justify-center shrink-0">
       <%= icon("sunrise", size: "sm") %>
@@ -8,9 +8,19 @@
     <h2 class="text-sm font-medium text-primary shrink-0"><%= t(".title") %></h2>
   </div>
 
-  <%= render RetirementPlans::SummaryComponent.new(
-    projection: projection,
-    currency: plan.user.family.currency,
-    unconverted_count: plan.unconverted_account_count(as_of: as_of)
-  ) %>
+  <% if projection %>
+    <%= render RetirementPlans::SummaryComponent.new(
+      projection: projection,
+      currency: plan.user.family.currency,
+      unconverted_count: plan.unconverted_account_count(as_of: as_of)
+    ) %>
+  <% else %>
+    <%= render DS::EmptyState.new(icon: "sunrise", title: t(".empty_title"), description: t(".empty_body"),
+                                  data: { retirement_plan_empty: true }) do |empty| %>
+      <% empty.with_action do %>
+        <%= render DS::Link.new(text: t(".set_up"), variant: "primary", icon: "settings-2",
+                                href: edit_retirement_plan_path, frame: :modal) %>
+      <% end %>
+    <% end %>
+  <% end %>
 <% end %>

@@ -27,9 +27,20 @@ class RetirementPlans::PlanCardTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "without a saved plan the card invites one and works out no figures" do
+    RetirementPlan.any_instance.expects(:projection).never
+
+    get plan_url
+
+    assert_response :success
+    assert_select "#retirement-plan-card [data-retirement-plan-empty] a[href='#{edit_retirement_plan_path}']"
+    assert_select "#retirement-plan-summary", count: 0
+  end
+
   test "with no spending to go on, the card asks for it instead of showing a figure" do
     IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("0"))
     IncomeStatement.any_instance.stubs(:median_income).returns(BigDecimal("0"))
+    RetirementPlan.create!(user: @user)
 
     get plan_url
 
@@ -41,6 +52,7 @@ class RetirementPlans::PlanCardTest < ActionDispatch::IntegrationTest
     IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("1"))
     IncomeStatement.any_instance.stubs(:median_income).returns(BigDecimal("0"))
     RetirementPlan::Projection.any_instance.stubs(:current_assets).returns(BigDecimal("336"))
+    RetirementPlan.create!(user: @user)
 
     get plan_url
 

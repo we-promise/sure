@@ -28,7 +28,8 @@ class PlansController < ApplicationController
                                      .count
 
     @retirement_plan = RetirementPlan.for(Current.user)
-    @retirement_projection = @retirement_plan.projection(as_of: @as_of)
+    # Medians and converted balances are not free, so they wait for a saved plan.
+    @retirement_projection = @retirement_plan.projection(as_of: @as_of) if @retirement_plan.persisted?
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.plan"), nil ] ]
   end
