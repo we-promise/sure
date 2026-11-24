@@ -3,9 +3,9 @@
   <% if value? %>
     <%= value %>
   <% else %>
-    <%= tag.p plain_value, class: value_classes, **value_opts %>
+    <%= tag.p plain_value, class: value_classes, **value_attributes %>
   <% end %>
   <% if hint.present? %>
-    <p class="text-xs text-subdued mt-1"><%= hint %></p>
+    <p class="<%= hint_classes %>"><%= hint %></p>
   <% end %>
 <% end %>

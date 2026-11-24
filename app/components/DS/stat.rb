@@ -17,7 +17,7 @@ class DS::Stat < DesignSystemComponent
 
   renders_one :value
 
-  attr_reader :label, :plain_value, :hint, :value_opts, :opts
+  attr_reader :label, :plain_value, :hint, :opts
 
   # @param label [String] what the figure is
   # @param value [String, nil] the figure; omit when using the value slot
@@ -25,9 +25,12 @@ class DS::Stat < DesignSystemComponent
   # @param size [Symbol] :lg (default) or :xl, for a page's lead figure
   # @param tone [Symbol] :primary (default), :success or :warning
   # @param value_class [String, nil] extra classes for the figure, e.g. "privacy-sensitive"
-  # @param value_opts [Hash] attributes for the figure's element, e.g. data
-  # @param opts [Hash] forwarded to the wrapping div; :class merges
-  def initialize(label:, value: nil, hint: nil, size: :lg, tone: :primary, value_class: nil, value_opts: {}, **opts)
+  # @param value_opts [Hash] attributes for the figure's element, e.g. data;
+  #   a :class adds to the figure's classes
+  # @param hint_class [String, nil] extra classes for the hint, e.g. "privacy-sensitive"
+  #   when it carries an amount
+  # @param opts [Hash] forwarded to the wrapping div
+  def initialize(label:, value: nil, hint: nil, size: :lg, tone: :primary, value_class: nil, value_opts: {}, hint_class: nil, **opts)
     @label = label
     @plain_value = value
     @hint = hint
@@ -35,10 +38,20 @@ class DS::Stat < DesignSystemComponent
     @tone = TONES.key?(tone.to_s.to_sym) ? tone.to_s.to_sym : :primary
     @value_class = value_class
     @value_opts = value_opts
+    @hint_class = hint_class
     @opts = opts
   end
 
   def value_classes
-    class_names("font-medium tabular-nums", SIZES.fetch(@size), TONES.fetch(@tone), @value_class)
+    class_names("font-medium tabular-nums", SIZES.fetch(@size), TONES.fetch(@tone), @value_class, @value_opts[:class])
+  end
+
+  # The figure's attributes other than :class, which value_classes has merged.
+  def value_attributes
+    @value_opts.except(:class)
+  end
+
+  def hint_classes
+    class_names("text-xs text-subdued mt-1", @hint_class)
   end
 end

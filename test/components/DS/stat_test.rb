@@ -31,6 +31,18 @@ class DS::StatTest < ViewComponent::TestCase
     assert_selector "div#fi.mt-2 p.privacy-sensitive[data-fi-number]", text: "$1"
   end
 
+  test "a class in value_opts adds to the figure's classes rather than replacing them" do
+    render_inline(DS::Stat.new(label: "FI number", value: "$1", value_class: "privacy-sensitive", value_opts: { class: "mt-1" }))
+
+    assert_selector "p.text-2xl.font-medium.tabular-nums.text-primary.privacy-sensitive.mt-1", text: "$1"
+  end
+
+  test "a hint can take its own classes, such as privacy-sensitive" do
+    render_inline(DS::Stat.new(label: "FI number", value: "$1", hint: "$42,000 a year", hint_class: "privacy-sensitive"))
+
+    assert_selector "p.text-xs.text-subdued.privacy-sensitive", text: "$42,000 a year"
+  end
+
   test "renders a value slot as given, in place of the figure" do
     render_inline(DS::Stat.new(label: "Earliest year")) do |stat|
       stat.with_value { "<p class='text-sm text-warning' data-none>None before 90</p>".html_safe }
