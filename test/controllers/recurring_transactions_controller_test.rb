@@ -1441,6 +1441,28 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", new_recurring_transaction_path(entry_id: entry.id)
   end
 
+  test "picker rows load their transactions and transfer fees' transfers without a query per row" do
+    savings = @family.accounts.create!(name: "Picker Savings", owner: @user, balance: 0, currency: "USD", accountable: Depository.new)
+    add_rows = lambda do
+      picker_entry(name: "ACME POWER", amount: 120)
+      Transfer::Creator.new(family: @family, source_account_id: accounts(:depository).id, destination_account_id: savings.id,
+                            date: Date.current, amount: 50, source_fee_amount: 2).create
+    end
+    picker_queries = lambda do
+      capture_sql_queries { get new_recurring_transaction_url(picker: 1), headers: { "Turbo-Frame" => "modal" } }
+        .count { |sql| sql.match?(/FROM "(transactions|transfers|entries|accounts)"/) }
+    end
+
+    add_rows.call
+    baseline = picker_queries.call
+    3.times { add_rows.call }
+    with_more_rows = picker_queries.call
+
+    assert_response :success
+    assert_select "span", text: "Transfer fee — Transfer to Picker Savings", count: 4
+    assert_equal baseline, with_more_rows
+  end
+
   test "picker filters by sign in each mode" do
     picker_entry(name: "PAYCHECK DEPOSIT", amount: -900)
     picker_entry(name: "ACME POWER", amount: 120)
