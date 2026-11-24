@@ -1,6 +1,6 @@
 # AI generation outbox: record the job with its count, queue after commit, deliver again
 
-Status: planned 2026-11-23, not built · Its own PR, the first in the stack after #5504
+Status: built as #5745 (2026-11-24), in review · Its own PR, the first in the stack after #5504
 ([`stack-sequencer-off-the-web-thread.md`](stack-sequencer-off-the-web-thread.md)), before the
 sequencer · Lessons from Workbench's code added 2026-11-24 (O1–O6) · Companion to
 [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md), [`ai-generation-windowing.md`](ai-generation-windowing.md)

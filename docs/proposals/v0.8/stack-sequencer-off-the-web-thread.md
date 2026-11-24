@@ -6,8 +6,14 @@
 [`rubyllm-workbench-comparison.md`](rubyllm-workbench-comparison.md). Those plans hold the design and
 the steps. This one holds how they're cut into PRs, the branches, and what changed since they were
 written.
-**Status:** planned 2026-11-24, nothing built. Code references are to `feat/ai-5077-followups` at
-`14ae81544` (the top of stack #5504) and RubyLLM 2.2.3.
+**Status** (2026-11-25): the outbox (#5745), 4a (#5756) and 4b (#5758) are built and in review, as
+stack #5748. 4c and the feature PRs aren't built. Code references are to `feat/ai-5077-followups` at
+`14ae81544` (the top of stack #5504 when this was written) and RubyLLM 2.2.3. What was built
+differently is in [`pr-4-sequencer.md`](pr-4-sequencer.md#built-differently-4a-and-4b).
+
+- **Under the outbox:** #5744, the replica of jaysbeekay's #5477.
+- **Beside the stack, on #5608:** #5663 (luis-ibanez) and #5769, the fixes before the landing (down
+  marks, shims for the job classes `main` queued). #5769 is merged up through 4b.
 
 **Summary.** Nine PRs, cut by feature (Luis's suggestion; call by @josh-sanders, 2026-11-24). The
 plumbing is one stack: the outbox, then the sequencer in three parts. Four feature PRs are each
@@ -45,7 +51,7 @@ flowchart LR
 - **4a** (steps 0–2):
   - the three lane queues, with the old two drained for one release, and the `ai_chat` capsule;
   - queue names only in `Ai::Routes`, health on the new queues, and `Ai::Sequencer.with_lane`;
-  - `VectorStore::RequeueIndexPollsJob` moves to `ai_background` in `config/schedule.yml`;
+  - `VectorStore::RequeueIndexPollsJob` moves to its own queue, `ai_prompt`, in `config/schedule.yml`;
   - the baseline measurement (step 0).
 
   On its own, 4a already gives chat its own thread.
@@ -166,18 +172,20 @@ A PR whose built diff goes over 2,000 lines is split at a step boundary before r
 - **#5521's windows (4b).** A `Busy` re-enqueue keeps its window, since nothing was examined. A
   test runs a windowed `categorize` through `Busy` and checks the window's counts.
 - **`config/schedule.yml` (4a).** `VectorStore::RequeueIndexPollsJob` names `ai_low_priority`, so
-  it moves to `ai_background`. `ai_lane_test` also checks the queues `schedule.yml` names.
+  it moves to `ai_prompt`: `embed` is a prompt-lane feature. `ai_lane_test` also checks that a cron
+  entry uses the job's own queue.
 - **Merchant logos leave the AI run (4a; call by @josh-sanders, 2026-11-24).** Logos aren't AI,
   yet the Enhancer's first step backfills them, so a run without the family's consent changes
   logos and then fails.
   - Each family sync already backfills logos (`Family::Syncer#perform_post_sync`). The Enhancer
     doesn't need the backfill to choose what it sends: merchants with a website are left out by
     their `website_url`.
-  - The Enhancer drops the backfill. The Enhance action queues it as its own job on the default
-    queue, next to the AI run, so a click still refreshes logos.
+  - The Enhancer drops the backfill, and the Enhance button queues only the AI run (call by
+    @josh-sanders in review, 2026-11-24). A website the AI saves gets its logo as it's saved, and
+    the family sync does the rest.
   - It goes after the outbox, which replaces the Enhancer's boolean lock.
-  - Tests: an Enhance without consent fails the run and still refreshes logos. The AI run never
-    touches a logo.
+  - Tests: an Enhance without consent sends nothing and fails the run. The AI run never touches a
+    logo.
 - **Steps 0 and 9** (the measurements) run on venus, with one local model and one test at a time.
 
 ### Bill suggestions

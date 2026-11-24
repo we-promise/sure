@@ -935,6 +935,19 @@ end
     endpoint in front of many models, and its 503 or 429 usually belongs to one upstream model,
     so the rest of the gateway stays in use. A 429 on the whole key costs one call per listed
     model on it before the list moves on.
+- **When every route is marked down, who is waiting decides.** A mark is keyed by server, key or
+  model, not by family, so on a feature with one route a single failure would otherwise refuse
+  every family's clicks for 60 seconds without a request (found by luis-ibanez testing the stack).
+  Call by @josh-sanders, 2026-11-24, for any mark, a wrong key or a spent balance included:
+  - **Someone is waiting** (the interactive lane: a click on the web thread, or a job on
+    `ai_interactive`): the routes are tried anyway, in order.
+  - **A job** (the prompt and background lanes) fails at once and sends nothing. When the marks
+    are for failures that pass on their own, that is `Ai::Error::MarkedDown`, and
+    `Ai::GenerationJob` waits out the mark (60 seconds plus 1–10) up to ten times, without spending
+    its five tries. Then it gives up through its requester.
+  - Every lane still writes marks, and a marked route is still skipped while another is up.
+
+  Built in #5769 as an option on the call; 4a (#5756) takes it from the lane.
 - **What the user sees.** Chat shows the serving model below the message input
   (`claude-sonnet-4-6 · Anthropic`) and says so after a failover
   (`claude-sonnet-4-6 · Anthropic (gpu unreachable)`) or an escalation
@@ -1931,6 +1944,7 @@ module Ai::Error
   Busy           = Class.new(Base)   # background job found its host's gate taken; re-enqueued, not an error
   Preempted      = Class.new(Base)   # an interactive call took the host; Generation#call resends, never raised further
   Unreachable    = Class.new(Base)   # connection refused / DNS; failover + down mark
+  MarkedDown     = Class.new(Unreachable)   # every route marked down for a passing failure, nothing sent (section 5.4)
   Timeout        = Class.new(Base)   # failover + down mark
   RateLimited    = Class.new(Base)   # 429; failover + key mark, retryable
   Upstream       = Class.new(Base)   # 5xx; failover + down mark
@@ -2925,6 +2939,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    The AI generation outbox comes with it as its own PR
    ([`ai-generation-outbox.md`](ai-generation-outbox.md)): a rule run's AI job is recorded with
    its count and delivered again, never given back.
+   Built and in review: the outbox (#5745), 4a (#5756) and 4b (#5758).
    After #5504, the outbox and PR 4 (in three parts, 4a–4c) land as one stack, and 3b and 3c as
    four feature PRs (bill suggestions, stopping a PDF import, documents, MCP tools) based on it,
    then 3d: [`stack-sequencer-off-the-web-thread.md`](stack-sequencer-off-the-web-thread.md).

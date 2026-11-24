@@ -15,11 +15,29 @@ copy of its own.
 parallel with 3b and 3c (calls by @josh-sanders, 2026-11-13 and 2026-11-16).
 **Merge order:** after 3a, before 3b, 3c and 3d, which rebase onto it (PR 3's decision 9). It
 doesn't have to share a release with any part of PR 3.
-**Status:** plan; every decision below was made by @josh-sanders on 2026-11-13.
+**Status** (2026-11-25): 4a is built (#5756) and 4b is built (#5758), both in review; 4c isn't
+built. Every decision below was made by @josh-sanders on 2026-11-13. Where the build differs, the
+section [Built differently](#built-differently-4a-and-4b) is what counts.
 **Delivery (2026-11-24):** after #5504, with base, branches and order in
 [`stack-sequencer-off-the-web-thread.md`](stack-sequencer-off-the-web-thread.md), which overrides the base and branch lines here.
-PR 4 ships as three PRs: 4a (steps 0–2), 4b (steps 3–4) and 4c (steps 5–9). The design below
-is unchanged.
+PR 4 ships as three PRs: 4a (steps 0–2), 4b (steps 3–4) and 4c (steps 5–9).
+
+## Built differently: 4a and 4b
+
+| Part | Planned below | Built | Why |
+|---|---|---|---|
+| 4a | `RequeueIndexPollsJob`'s cron on `ai_background` | `ai_prompt`, the job's own queue | `embed` is a prompt-lane feature, and `ai_lane_test` makes a cron entry use its job's queue |
+| 4a | nothing | `Ai::Generation` takes "someone is waiting" from the lane, and tries past down marks (redesign §5.4) | call by @josh-sanders, 2026-11-24; replaces #5769's option |
+| 4a | nothing | the Enhance button queues no logo job | call by @josh-sanders, 2026-11-24 |
+| 4b | `ai_low_priority` drains in the background lane | in the prompt lane | it held PDF imports and indexing, which mustn't meet `Busy` midway |
+| 4b | `Preempted` is resent in `Ai::Generation#on_routes` | in `Ai::Transport::Base#attempt` | OCR, embeddings and Jev don't go through `on_routes`; still the same route, not an attempt |
+| 4b | `Busy` re-enqueued by `GenerationJob`, `ShadowJob` and `ProbeJob` each | `retry_on Ai::Error::Busy` once in `ApplicationJob`, 5–15 s, no cap | one place; the same job, so other errors' retry counts carry on |
+| 4b | the interrupt calls `finish` | the socket's `shutdown` | decision 6's fallback: it wakes a blocked read |
+| 4b | the cancel check while waiting | once a place is free, before sending | no database check under the gate's lock |
+| 4b | the proxy setting is read before waiting (stack plan §3b) | not needed yet | `proxy_or_warn` never raises on the stack; it matters again with #5487 |
+| 4b | nothing | each streamed chunk checks the call's budget | a chunk resets the read timeout, so a slow stream could outlast the budget |
+
+The baseline (step 0) is in #5756's description.
 
 ## Context
 
