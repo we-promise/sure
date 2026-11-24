@@ -20,6 +20,8 @@ zh-CN:
       models:
         account:
           attributes:
+            base:
+              cost_tag_other_family: "成本标签必须是您自己的标签之一"
             logo:
               invalid_content_type: "必须是 PNG、JPEG、GIF、WebP 或 ICO 格式的图片"
               too_large: "大小不能超过 %{max_size} MB"

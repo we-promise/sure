@@ -76,6 +76,7 @@ zh-CN:
       title: 手动输入房产
       market_value_label: 估算市值
       market_value_tooltip: 您房产的估算市值。这个数字通常可以在 Zillow 或 Redfin 等网站上找到，但不会是完全精确的数值。
+      purchase_date_label: 购入日期
       save: 保存
       next: 下一步
     overview_fields:
@@ -90,6 +91,11 @@ zh-CN:
       square_feet: 平方英尺
       square_meters: 平方米
       area_unit_label: 面积单位
+      notes_label: 备注
+      notes_placeholder: 登记号或地籍号、契约编号、公证处等
+      cost_tag_label: 成本标签（可选）
+      cost_tag_prompt: 无
+      cost_tag_hint: 带有此标签的交易（如公证费和税费）将计入该房产的成本基础。
     overview:
       living_area: 居住面积
       market_value: 市值
@@ -102,6 +108,15 @@ zh-CN:
         living_area: 居住面积
         market_value: 市值
         purchase_price: 购入价格
+        purchase_costs: 购入成本
+        purchase_costs_in_currency: "以 %{currency} 计价的购入成本"
+        cost_transactions:
+          one: "1 笔标记为 %{tag} 的交易"
+          other: "%{count} 笔标记为 %{tag} 的交易"
+        cost_basis: 成本基础
+        cost_basis_in_currency: "以 %{currency} 计价的成本基础"
+        gain_after_costs: 扣除成本后的收益
+        gain_after_costs_in_currency: "以 %{currency} 计价的扣除成本后的收益"
         trend: 趋势
         trend_in_currency: "以 %{currency} 计价的趋势"
         rate_unavailable: 暂无可用汇率
@@ -136,7 +151,11 @@ zh-CN:
       agri_land:
         short: 农业用地
         long: 农业用地
+    update_balances:
+      invalid_currency: 请从列表中选择一种货币。
+      invalid_purchase_date: 请输入一个不在未来且距今不超过 30 年的购入日期。
     form_tabs:
+      aria_label: 房产详情
       address: 地址
       overview: 概览
       value: 价值
