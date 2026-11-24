@@ -98,7 +98,7 @@ class ReportsController < ApplicationController
   end
 
   def export_transactions
-    @period_type = params[:period_type]&.to_sym || :monthly
+    @period_type = requested_period_type
     @start_date = parse_date_param(:start_date) || default_start_date
     @end_date = parse_date_param(:end_date) || default_end_date
 
@@ -157,7 +157,7 @@ class ReportsController < ApplicationController
   end
 
   def picker
-    @period_type = params[:period_type]&.to_sym || :monthly
+    @period_type = requested_period_type
     @start_date = parse_date_param(:start_date) || Date.current.beginning_of_month
     @category_selection = category_selection
     @trend_granularity = trend_granularity
@@ -168,8 +168,13 @@ class ReportsController < ApplicationController
   end
 
   private
+    # A blank period_type (`?period_type=`) means the default, as report_query keys it.
+    def requested_period_type
+      params[:period_type].presence&.to_sym || :monthly
+    end
+
     def setup_report_period(show_flash: false)
-      @period_type = params[:period_type]&.to_sym || :monthly
+      @period_type = requested_period_type
       @start_date = parse_date_param(:start_date) || default_start_date
       @end_date = parse_date_param(:end_date) || default_end_date
 
