@@ -236,6 +236,33 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
     assert_equal few, many, "2 disposals and 6 must cost the same number of queries"
   end
 
+  # A holding with no stored cost basis reads its average cost from the buys
+  # behind it, which is two or more queries per holding unless the set is
+  # preloaded through Holding.preload_avg_costs.
+  test "the query count does not grow with disposals that have no stored cost basis" do
+    seed = lambda do |count|
+      @seeded ||= 0
+      count.times do
+        security = create_security
+        date = @march + (@seeded += 1)
+        buy_trade account: @account, date: @march - 30, qty: 5, price: 100, security: security
+        holding_snapshot account: @account, date: @march, cost_basis: nil, security: security
+        sell_trade account: @account, date: date, qty: 1, price: 150, security: security
+      end
+    end
+
+    seed.call(2)
+    few = capture_sql_queries { measure_fully(realized) }.size
+
+    seed.call(4)
+    gains = realized
+    many = capture_sql_queries { measure_fully(gains) }.size
+
+    assert_equal 6, gains.trade_count, "every disposal must measure from its buys, or this proves nothing"
+    assert_equal BigDecimal(300), gains.net
+    assert_equal few, many, "2 disposals and 6 without a stored basis must cost the same number of queries"
+  end
+
   # The test above prices every disposal in the account's currency, which
   # never needs a rate. A foreign-priced disposal converts its proceeds into
   # the basis currency, and without Trade.preload_exchange_rates that is one
