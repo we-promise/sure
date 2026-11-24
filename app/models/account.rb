@@ -10,6 +10,9 @@ class Account < ApplicationRecord
 
   normalizes :custom_group, with: ->(value) { value.squish.presence }
 
+  # Property checks its cost tag once it belongs to a saved account; a new
+  # one cannot reach the family yet, so the new account checks it.
+  validate :cost_tag_in_family, if: -> { new_record? && property? && accountable&.cost_tag_id.present? }
   validates :name, :balance, :currency, presence: true
   validates :custom_group, length: { maximum: AccountGrouping::CUSTOM_GROUP_MAX_LENGTH }, allow_nil: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
@@ -1113,6 +1116,12 @@ class Account < ApplicationRecord
       return if owner_user&.family_id == family_id
 
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
+    end
+
+    def cost_tag_in_family
+      return if family && accountable.cost_tag_in?(family)
+
+      errors.add(:base, :cost_tag_other_family)
     end
 
     # AASM transition callbacks run after the timestamp is set and before the

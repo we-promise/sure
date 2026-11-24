@@ -130,6 +130,28 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "loan_payment", checking_entry.transaction.reload.kind
   end
 
+  test "a broker deposit labelled as a contribution keeps no category once matched as a plain transfer leg" do
+    broker = Account::ProviderImportAdapter.new(accounts(:investment))
+    deposit = { external_id: "broker_deposit_1", amount: -250.00, currency: "USD", date: Date.current,
+                name: "Deposit", source: "plaid", investment_activity_label: "Contribution" }
+    broker_entry = broker.import_transaction(**deposit)
+    assert_equal @family.investment_contributions_category, broker_entry.transaction.category
+
+    checking_entry = @account.entries.create!(
+      name: "To broker", date: Date.current, amount: 250, currency: "USD", entryable: Transaction.new
+    )
+    transfer = Transfer.create!(inflow_transaction: broker_entry.transaction, outflow_transaction: checking_entry.transaction)
+    transfer.confirm!
+
+    assert_equal "funds_movement", broker_entry.transaction.reload.kind
+    assert_nil broker_entry.transaction.category
+
+    broker.import_transaction(**deposit)
+
+    assert_equal "funds_movement", broker_entry.transaction.reload.kind
+    assert_nil broker_entry.transaction.category
+  end
+
   test "re-importing a contribution the user turned into a plain transfer keeps that choice" do
     checking_entry = @adapter.import_transaction(
       external_id: "plaid_checking_to_broker",

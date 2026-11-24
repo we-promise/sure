@@ -30,7 +30,16 @@
                       [[t(".square_feet"), "sqft"], [t(".square_meters"), "sqm"]],
                       { label: t(".area_unit_label") } %>
     </div>
+
+    <%= property_form.collection_select :cost_tag_id,
+                Current.family.tags.alphabetically, :id, :name,
+                { include_blank: t(".cost_tag_prompt"), label: t(".cost_tag_label") } %>
+    <p class="text-xs text-secondary"><%= t(".cost_tag_hint") %></p>
   <% end %>
 
   <%= render "accounts/custom_group_field", form: form %>
+  <%= form.text_area :notes,
+                  label: t(".notes_label"),
+                  placeholder: t(".notes_placeholder"),
+                  rows: 4 %>
 </div>

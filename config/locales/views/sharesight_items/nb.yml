@@ -1,0 +1,147 @@
+---
+nb:
+  providers:
+    sharesight:
+      name: "Sharesight"
+      connection_description: "Koble til Sharesight-porteføljene dine via Sharesight API"
+      institution_name: "Sharesight"
+  sharesight_accounts:
+    settings_fields:
+      title: "Kontanter og utbytte i Sharesight"
+      description: "Velg hvor kontantene og utbyttet i denne porteføljen hører hjemme, slik at Sure ikke teller dem to ganger."
+      cash_mode: "Kontanter"
+      cash_modes:
+        broker: "Hos megleren"
+        settlement: "Gjøres opp via en annen konto"
+        untracked: "Følges ikke opp (bare aksjer)"
+      cash_mode_help: "Med en annen konto, eller uten kontanter, viser denne kontoen bare aksjer. Kontantbeløpet for hver handel motposteres med en overføring, koblet til kontoen den ble gjort opp via."
+      settlement_account: "Oppgjørskonto"
+      settlement_starts_on: "Gjøres opp der fra"
+      settlement_window_days: "Antall dager banken kan bruke på å vise den"
+      settlement_help: "Hvert kjøp og salg, og hvert utbytte som betales dit, matches på beløp mot en transaksjon på den kontoen og kobles som en overføring. For en manuell konto bokføres transaksjonen automatisk. Før startdatoen var kontantene hos megleren."
+      choose_account: "Velg en konto"
+      no_account: "Ingen"
+      funding_account: "Innskuddskonto"
+      funding_match_terms: "Tekst på innskuddstransaksjoner"
+      funding_match_terms_placeholder: "CMC Share Transfer, CMC Markets"
+      funding_help: "Innskudd og uttak på innskuddskontoen der navnet eller notatene inneholder noen av disse (kommaseparert), speiles her og kobles som overføringer."
+      cash_anchor_amount: "Kontanter hos megleren"
+      cash_anchor_on: "Dato"
+      cash_anchor_help: "For kontanter Sharesight ikke ser: saldoen på den datoen, rullet videre med alt som er bokført her siden. Oppdater den hver gang du sjekker hos megleren."
+      dividend_mode: "Utbytte og utdelinger"
+      dividend_modes:
+        with_cash: "Der kontantene er"
+        other_account: "Utbetales til en annen konto"
+        skip: "Ikke importer (en annen tilkobling viser dem)"
+      dividend_mode_help: "Utbetalt utbytte telles fortsatt som inntekt her, og kobles deretter til innskuddet på kontoen det ble utbetalt til."
+      dividend_account: "Utbetales til"
+      sync_start_date: "Importer aktivitet fra"
+      sync_start_date_help: "Eldre handler og utbytter utelates, og de som allerede er importert, fjernes."
+    errors:
+      settlement_account_missing: "Velg kontoen porteføljen gjøres opp via."
+      dividend_account_missing: "Velg kontoen utbyttet utbetales til."
+      cash_anchor_incomplete: "Fyll inn både kontantbeløpet hos megleren og datoen du så det."
+      invalid_date:
+        settlement_starts_on: "Datoen den gjøres opp der fra, er ikke en gyldig dato."
+        cash_anchor_on: "Datoen du så kontantene hos megleren, er ikke en gyldig dato."
+        sync_start_date: "Datoen du vil importere aktivitet fra, er ikke en gyldig dato."
+      account_not_in_family: "%{name} er ikke en av kontoene dine."
+      account_is_portfolio: "%{name} er denne porteføljens egen konto."
+    notices:
+      unsettled_debit: "Ingen debitering på %{amount} i %{account} for %{description} den %{date} ennå."
+      unsettled_credit: "Ingen kreditering på %{amount} i %{account} for %{description} den %{date} ennå."
+      units_drift: "%{account}: Sharesight har %{held} %{ticker}, men handlene summerer seg til %{traded}."
+  sharesight_items:
+    defaults:
+      name: "Sharesight"
+      portfolio_name: "Sharesight-portefølje %{id}"
+    sharesight_item:
+      deletion_in_progress: "Sletting pågår"
+      syncing: "Synkroniserer"
+      requires_update: "API-klienten må sjekkes"
+      error: "Feil"
+      synced: "Synkronisert for %{time} siden. %{summary}."
+      never_synced: "Aldri synkronisert."
+      setup_accounts: "Sett opp porteføljer"
+      delete: "Slett"
+      accounts_need_setup: "Porteføljene må settes opp"
+      accounts_need_setup_description: "Sharesight-porteføljene dine må kobles til kontoer i Sure."
+      no_accounts_discovered: "Fant ingen Sharesight-porteføljer ennå."
+      no_accounts_discovered_description: "Lagre API-klienten og kjør en synkronisering for å finne porteføljene dine."
+    setup_accounts:
+      page_title: "Sett opp Sharesight-porteføljer"
+      dialog_title: "Sett opp Sharesight-porteføljene dine"
+      subtitle: "Koble Sharesight-porteføljene dine til investeringskontoer."
+      info_box:
+        title: "Import fra Sharesight API"
+        items:
+          item_1: "Nåværende beholdninger med kurser og antall, og porteføljens verdi"
+          item_2: "Kjøp, salg, inngående saldoer, kapitaltilbakebetalinger og utbytte, også reinvestert utbytte"
+          item_3: "Innskudd, uttak, renter og gebyrer fra alle kontantkontoer i Sharesight"
+      status:
+        fetching_accounts: "Henter porteføljer fra Sharesight..."
+        no_accounts_found_title: "Fant ingen porteføljer."
+        no_accounts_found_description: "Sure fant ingen Sharesight-porteføljer. Sjekk at API-klienten din er gyldig."
+      available_accounts:
+        title: "Tilgjengelige porteføljer"
+        account_type_investment: "Investering"
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "Portefølje-ID: %{account_id}"
+      link_existing:
+        description: "Eller koble en funnet portefølje til en eksisterende manuell investeringskonto."
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: "Velg en konto..."
+      linked_accounts:
+        title: "Allerede tilkoblet"
+        linked_to_html: "Koblet til: %{account}"
+      buttons:
+        refresh: "Oppdater"
+        cancel: "Avbryt"
+        back_to_settings: "Tilbake til innstillinger"
+        create_selected_accounts: "Opprett valgte kontoer"
+        link: "Koble til"
+        done: "Ferdig"
+    sync:
+      status:
+        checking_credentials: "Sjekker påloggingsinformasjonen for Sharesight..."
+        importing_portfolios: "Importerer Sharesight-porteføljer..."
+        checking_configuration: "Sjekker porteføljeoppsettet..."
+        accounts_need_setup:
+          one: "%{count} Sharesight-portefølje må settes opp..."
+          other: "%{count} Sharesight-porteføljer må settes opp..."
+        processing_activity: "Behandler beholdninger og aktivitet..."
+        calculating_balances: "Beregner saldoer..."
+    sync_status:
+      no_accounts: "Fant ingen Sharesight-porteføljer ennå"
+      all_linked:
+        one: "%{count} portefølje koblet til"
+        other: "%{count} porteføljer koblet til"
+      partial: "%{linked} koblet til, %{unlinked} må settes opp"
+    select_existing_account:
+      title: "Koble til Sharesight-portefølje"
+      no_accounts_available: "Ingen Sharesight-porteføljer uten kobling er tilgjengelige ennå."
+      run_sync_hint: "Lagre API-klienten og kjør en synkronisering fra Innstillinger > Leverandører."
+      wait_for_sync: "Vent til synkroniseringen som finner porteføljer, er ferdig."
+      balance: "Saldo"
+      link: "Koble til"
+      cancel: "Avbryt"
+    create:
+      success: "Sharesight er konfigurert."
+    update:
+      success: "Sharesight-konfigurasjonen er oppdatert."
+    destroy:
+      success: "Sharesight-tilkoblingen er planlagt for sletting."
+    select_accounts:
+      not_configured: "Sharesight er ikke konfigurert."
+    link_existing_account:
+      not_found: "Fant ikke kontoen eller Sharesight-porteføljen."
+      only_manual_investment: "Bare manuelle investeringskontoer kan kobles til Sharesight."
+      already_linked: "Denne Sharesight-porteføljen er allerede koblet til."
+      success: "Koblet til Sharesight-porteføljen."
+      failed: "Kunne ikke koble til Sharesight-porteføljen."
+    complete_account_setup:
+      success:
+        one: "Opprettet %{count} Sharesight-konto."
+        other: "Opprettet %{count} Sharesight-kontoer."
+      none_selected: "Ingen porteføljer ble valgt."
+      none_created: "Ingen kontoer ble opprettet."
