@@ -288,6 +288,19 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     assert_equal 0, @rule_run.pending_jobs_count
   end
 
+  test "a job Sidekiq runs again after it was counted sends nothing again" do
+    @rule_run.update!(pending_jobs_count: 2)
+    left = create_transaction(account: @account, name: "Coffee beans").transaction
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.expects(:auto_categorize).once.returns(provider_success_response([ categorization(left, "Not a category") ]))
+    payload = AutoCategorizeJob.new(@family, transaction_ids: [ left.id ], rule_run_id: @rule_run.id).serialize
+
+    2.times { ActiveJob::Base.execute(payload) }
+
+    assert_equal 1, @rule_run.reload.pending_jobs_count
+  end
+
   private
     # Runs the real OpenAI provider, whose request fails with `error` each of `times`.
     def openai_fails_with(error, times:)

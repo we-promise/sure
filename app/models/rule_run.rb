@@ -66,6 +66,8 @@ class RuleRun < ApplicationRecord
     offer_job_results if drained
   end
 
+  def job_settled?(job_id) = settled_job_ids.include?(job_id)
+
   def fail_job!(job_id:, error:, source:, transaction_ids: [])
     should_log = false
     current_error_message = "#{error.class}: #{error.message}"
@@ -90,7 +92,7 @@ class RuleRun < ApplicationRecord
       drained = false
 
       with_lock do
-        next if settled_job_ids.include?(job_id)
+        next if job_settled?(job_id)
 
         drained = pending_jobs_count == 1
         self.settled_job_ids += [ job_id ]
