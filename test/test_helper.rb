@@ -94,6 +94,11 @@ module ActiveSupport
     # test so each starts from the rolled-back DB state.
     setup { Setting.clear_cache }
 
+    # Local model hosts' gates are per process: each test sizes its own, without asking the host
+    # (test/architecture/ai_gate_test.rb asks a stubbed one).
+    Ai::Sequencer.ask_servers = false
+    setup { Ai::Sequencer.forget_gates }
+
     include SqlQueryCapture
     include AiTestHelper
 

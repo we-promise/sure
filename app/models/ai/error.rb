@@ -36,6 +36,12 @@ module Ai::Error
   Refused        = Class.new(Base)   # any other 4xx: not retried anywhere
   # The model can't take this input (an image to a model without vision): the next route may.
   UnsupportedInput = Class.new(Refused)
+  # A local model host is full and the request is in the background lane, which never waits
+  # (Ai::Gate). Not an outage: the job comes back later, with no attempt counted.
+  Busy           = Class.new(Base)
+  # An interactive request interrupted this one at a local model host (Ai::Gate). The transport
+  # sends it again once the gate lets it back in; it never leaves the transport.
+  Preempted      = Class.new(Base)
 
   # Errors a transport retries itself, up to the endpoint's max_retries.
   RETRYABLE = [ RateLimited, Upstream, Timeout ].freeze

@@ -1,10 +1,23 @@
-# The lane an AI call runs in: interactive, prompt or background (Ai::Routes::MATRIX). A job takes
-# its queue's lane (ApplicationJob); evals and the console choose one with `with_lane`.
+# The lane an AI call runs in: interactive, prompt or background (Ai::Routes::MATRIX), and the
+# gate of each local model host, where the lanes take turns (Ai::Gate). A job takes its queue's
+# lane (ApplicationJob); evals and the console choose one with `with_lane`.
 #
 # The lane is fiber storage, like Ai::CallContext and Ai::Capsule's mark, so threads a job starts
 # (Jev's parallel requests) run in the job's lane.
 module Ai::Sequencer
   LANES = %i[interactive prompt background].freeze
+  # How long a gate's size stands before its host is asked again.
+  RESIZE_AFTER = 10.minutes
+  PROPS_TIMEOUT = 2
+
+  Sized = Struct.new(:gate, :at)
+  GATES = Concurrent::Map.new
+
+  class << self
+    # Whether a gate asks its host for its slots. Off in tests, which make no unplanned requests.
+    attr_accessor :ask_servers
+  end
+  self.ask_servers = true
 
   module_function
 
@@ -25,4 +38,61 @@ module Ai::Sequencer
       Fiber[:ai_lane] = previous
     end
   end
+
+  # The check a request makes once it has a place at a gate, before it's sent (§12's cancel
+  # point): when it answers true, the request raises Ai::Error::Cancelled instead.
+  def cancelled = Fiber[:ai_cancelled]
+
+  def cancellable(check)
+    return yield if check.nil?
+
+    begin
+      previous = Fiber[:ai_cancelled]
+      Fiber[:ai_cancelled] = check
+      yield
+    ensure
+      Fiber[:ai_cancelled] = previous
+    end
+  end
+
+  # The gate of a local endpoint's host, shared by every endpoint on that host and port, or nil
+  # for a cloud endpoint, which has none. Sized by the host's slots, asked again after RESIZE_AFTER.
+  def gate_for(endpoint)
+    return unless endpoint.local?
+
+    sized = GATES.compute_if_absent(host_key(endpoint)) { Sized.new(Ai::Gate.new(slots(endpoint)), now) }
+    if now - sized.at > RESIZE_AFTER
+      sized.at = now
+      sized.gate.size = slots(endpoint)
+    end
+    sized.gate
+  end
+
+  # llama.cpp's `total_slots`, or else the endpoint's parallel_requests, or 1.
+  def slots(endpoint) = (server_slots(endpoint) if ask_servers) || endpoint.parallel_requests || 1
+
+  # llama.cpp answers GET /props with its slots; any other server has no such page. Through
+  # Ai::Transport::Http, so the proxy setting applies. Not a model call, so it holds no place.
+  def server_slots(endpoint)
+    base = Ai::Transport::Http.compatible_base(endpoint.base_url).delete_suffix("/v1")
+    headers = Ai::Transport::Http.headers(endpoint)
+    headers = headers.merge("Authorization" => "Bearer #{endpoint.api_key}") if endpoint.api_key
+    response = Ai::Transport::Http.faraday(base, timeout: PROPS_TIMEOUT).get("#{base}/props", nil, headers)
+    slots = JSON.parse(response.body)["total_slots"] if response.success?
+    slots if slots.is_a?(Integer) && slots.positive?
+  rescue StandardError
+    nil
+  end
+
+  def host_key(endpoint)
+    uri = URI.parse(endpoint.base_url.to_s)
+    uri.host ? "#{uri.host}:#{uri.port}" : endpoint.name
+  rescue URI::InvalidURIError
+    endpoint.name
+  end
+
+  # Tests start each case without the gates an earlier one sized.
+  def forget_gates = GATES.clear
+
+  def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 end
