@@ -49,6 +49,52 @@ class Provider::TinkoffInvest < Provider
 
   INSTRUMENT_CACHE_TTL = 24.hours
   SEARCH_CACHE_TTL = 5.minutes
+  SUFFIX = /\.(ME|MOEX|MISX|MCX)\z/i
+
+  class << self
+    def quotation_to_decimal(quotation)
+      return nil if quotation.blank?
+
+      units = BigDecimal(quotation["units"].to_s.presence || "0")
+      nano = BigDecimal(quotation["nano"].to_s.presence || "0")
+      units + (nano / BigDecimal("1000000000"))
+    end
+
+    def money_to_decimal_and_currency(money_value, default_currency = "RUB")
+      fallback = default_currency.to_s.strip.upcase.presence || "RUB"
+      return [ nil, fallback ] if money_value.blank?
+
+      amount = quotation_to_decimal(money_value)
+      currency = money_value["currency"].to_s.strip.upcase.presence || fallback
+      [ amount, currency ]
+    end
+
+    def mic_for(class_code, exchange)
+      ex = exchange.to_s.downcase
+      return MOEX_MIC if class_code.to_s.start_with?("TQ") || ex.include?("moex")
+      return SPB_MIC if ex.include?("spb")
+
+      nil
+    end
+
+    def surfaced_kind(instrument_type)
+      case instrument_type.to_s.downcase.delete_prefix("instrument_type_")
+      when "share" then "stock"
+      when "etf" then "fund"
+      when "bond" then "bond"
+      end
+    end
+
+    def logo_url_for(logo_name)
+      return nil if logo_name.blank?
+
+      "#{LOGO_CDN}/#{logo_name.to_s.sub(/\.png\z/i, '')}#{LOGO_SIZE}.png"
+    end
+
+    def strip_exchange_suffix(symbol)
+      symbol.to_s.strip.sub(SUFFIX, "")
+    end
+  end
 
   def initialize(api_key)
     @api_key = api_key # pipelock:ignore
@@ -219,10 +265,7 @@ class Provider::TinkoffInvest < Provider
 
     # Quotation { units, nano } -> BigDecimal. Absent/blank -> nil.
     def quotation_to_d(q)
-      return nil if q.blank?
-      units = BigDecimal(q["units"].to_s.presence || "0")
-      nano = BigDecimal(q["nano"].to_s.presence || "0")
-      units + (nano / BigDecimal("1000000000"))
+      self.class.quotation_to_decimal(q)
     end
 
     # ================================
@@ -232,10 +275,8 @@ class Provider::TinkoffInvest < Provider
     # Users (and the MoexPublic resolver) paste exchange-suffixed tickers like
     # "T.MOEX"/"SBER.ME"; T-Invest only knows the bare SECID, so strip the suffix
     # before querying.
-    SUFFIX = /\.(ME|MOEX|MISX|MCX)\z/i
-
     def find_instruments(query)
-      q = query.to_s.strip.sub(SUFFIX, "")
+      q = self.class.strip_exchange_suffix(query)
       Rails.cache.fetch("tinkoff_invest:find:#{q.downcase}", expires_in: SEARCH_CACHE_TTL) do
         # Return all matches (not just apiTradeAvailableFlag) — a ticker can have
         # several non-tradeable listings plus one tradeable board; resolve_short
@@ -341,25 +382,17 @@ class Provider::TinkoffInvest < Provider
     # ================================
 
     def logo_url(logo_name)
-      return nil if logo_name.blank?
-      "#{LOGO_CDN}/#{logo_name.to_s.sub(/\.png\z/i, '')}#{LOGO_SIZE}.png"
+      self.class.logo_url_for(logo_name)
     end
 
     # T-Invest instrumentType -> the security kinds we surface (skip futures,
     # currencies, options, etc.).
     def surfaced_kind(instrument_type)
-      case instrument_type.to_s.downcase
-      when "share" then "stock"
-      when "etf" then "fund"
-      when "bond" then "bond"
-      end
+      self.class.surfaced_kind(instrument_type)
     end
 
     def mic_for(class_code, exchange)
-      ex = exchange.to_s.downcase
-      return MOEX_MIC if class_code.to_s.start_with?("TQ") || ex.include?("moex")
-      return SPB_MIC if ex.include?("spb")
-      nil
+      self.class.mic_for(class_code, exchange)
     end
 
     def parse_time(raw)

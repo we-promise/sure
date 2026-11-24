@@ -566,6 +566,24 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_tinkoff_invest_account(tinkoff_invest_account)
+      family = tinkoff_invest_account.tinkoff_invest_item.family
+
+      attributes = {
+        family: family,
+        name: tinkoff_invest_account.name.presence || I18n.t("tinkoff_invest_items.defaults.name"),
+        balance: 0,
+        cash_balance: 0,
+        currency: tinkoff_invest_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: tinkoff_invest_account.accountable_subtype
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
     TRADE_REPUBLIC_ACCOUNT_TYPES = {
       "portfolio" => [ "Investment", "brokerage", "Trade Republic Portfolio" ],
       "cash" => [ "Depository", "checking", "Trade Republic Cash" ],

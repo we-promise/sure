@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_23_220100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2790,6 +2790,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_220100) do
     t.index ["family_id", "name"], name: "index_tags_on_family_id_and_name", unique: true
   end
 
+  create_table "tinkoff_invest_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "tinkoff_invest_item_id", null: false
+    t.string "name"
+    t.string "tinkoff_invest_account_id"
+    t.string "account_type"
+    t.string "account_status"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.decimal "cash_balance", precision: 19, scale: 4
+    t.string "operations_cursor"
+    t.datetime "last_synced_at"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_portfolio_payload", default: {}, null: false
+    t.jsonb "raw_operations_payload", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tinkoff_invest_item_id", "tinkoff_invest_account_id"], name: "index_tinkoff_invest_accounts_on_item_and_account_id", unique: true, where: "(tinkoff_invest_account_id IS NOT NULL)"
+    t.index ["tinkoff_invest_item_id"], name: "index_tinkoff_invest_accounts_on_tinkoff_invest_item_id"
+  end
+
+  create_table "tinkoff_invest_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "status", default: "good", null: false
+    t.string "environment", default: "live", null: false
+    t.string "base_url"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.datetime "sync_start_date"
+    t.text "api_key"
+    t.jsonb "raw_accounts_payload", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_tinkoff_invest_items_on_family_id"
+    t.index ["status"], name: "index_tinkoff_invest_items_on_status"
+  end
+
   create_table "tool_calls", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.jsonb "extra_content"
@@ -3352,6 +3389,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_220100) do
   add_foreign_key "syncs", "syncs", column: "parent_id"
   add_foreign_key "taggings", "tags"
   add_foreign_key "tags", "families"
+  add_foreign_key "tinkoff_invest_accounts", "tinkoff_invest_items"
+  add_foreign_key "tinkoff_invest_items", "families"
   add_foreign_key "tool_calls", "messages"
   add_foreign_key "trade_republic_accounts", "trade_republic_items"
   add_foreign_key "trade_republic_items", "families"

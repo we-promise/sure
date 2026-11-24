@@ -24,6 +24,7 @@ class Provider
       sophtron:       { region: "US",      kinds: %w[Bank Investment], maturity: :alpha,  logo_text: "SO", logo_color: "#0d9488", domain: "sophtron.com" },
       trading212:     { region: "EU",      kinds: %w[Investment],      maturity: :alpha,  logo_text: "T2", logo_color: "#0d9488", domain: "trading212.com" },
       trade_republic: { region: "EU",      kinds: %w[Bank Investment], maturity: :beta,   logo_text: "TR", logo_color: nil,       domain: "traderepublic.com" },
+      tinkoff_invest: { region: "RU",      kinds: %w[Investment],      maturity: :beta,   logo_text: "TI", logo_color: "#ffdd2d", domain: "tbank.ru", name: "T-Invest (T-Bank)" },
       plaid:          { region: "US",      kinds: %w[Bank],            maturity: :stable, logo_text: "PL", logo_color: "#4f46e5", domain: "plaid.com", tier: "Paid" },
       plaid_eu:       { region: "EU",      kinds: %w[Bank],            maturity: :stable, logo_text: "PL", logo_color: "#4f46e5", domain: "plaid.com", tier: "Paid", name: "Plaid EU" },
       questrade:      { region: "CA",      kinds: %w[Investment],      maturity: :beta,   logo_text: "QT", logo_color: "#0d9488", domain: "questrade.com" },
