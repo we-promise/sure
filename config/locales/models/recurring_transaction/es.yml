@@ -6,6 +6,7 @@ es:
       unmeasurable: esta transacción tiene una asignación que no se puede convertir a %{currency}, así que no se puede medir lo que queda de ella. Añade un tipo de cambio para %{date} o quita primero el pago existente
       over_allocated: asignar %{amount} supera lo que queda de la transacción, %{capacity} %{currency}
       entry_exhausted: el importe completo de esta transacción ya está aplicado a otros pagos pendientes
+      split_counterpart_allocated: esta transacción está dividida y el cargo original o una de sus partes ya paga un recibo
       already_allocated: esta transacción ya está aplicada a este recibo
       exceeds_remaining: "%{amount} supera los %{remaining} pendientes de este ciclo"
   activerecord:

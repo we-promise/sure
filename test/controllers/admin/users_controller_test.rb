@@ -348,6 +348,17 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_not Session.exists?(other.id)
   end
 
+  test "setting a user's password revokes that user's OAuth access tokens" do
+    target = users(:family_member)
+    oauth_app = Doorkeeper::Application.create!(name: "Sure Mobile", redirect_uri: "https://client.example.com/callback", scopes: "read_write")
+    access_token = Doorkeeper::AccessToken.create!(application: oauth_app, resource_owner_id: target.id, expires_in: 2.hours, scopes: "read_write", use_refresh_token: true)
+
+    patch admin_user_url(target), params: { user: { role: target.role, password: "Secure1!pass" } }
+
+    assert_redirected_to admin_users_url
+    assert access_token.reload.revoked?, "a mobile or OAuth token must not outlive an admin password reset"
+  end
+
   test "a role-only change leaves the user's sessions alone" do
     target = users(:family_member)
     session_record = target.sessions.create!

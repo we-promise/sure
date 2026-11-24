@@ -76,11 +76,11 @@ class SessionsController < ApplicationController
 
       if user.otp_required?
         log_super_admin_override_login(user)
-        begin_mfa_handoff(user)
+        begin_mfa_handoff(user, password_fingerprint: user.password_fingerprint)
         redirect_to verify_mfa_path
       else
         log_super_admin_override_login(user)
-        @session = create_session_for(user)
+        @session = create_session_for(user, password_fingerprint: user.password_fingerprint)
 
         if @session
           redirect_to root_path

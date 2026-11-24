@@ -47,6 +47,10 @@ export default class extends Controller {
   }
 
   handleTimeout() {
+    // A sidebar sparkline sits in a wrapper Turbo carries across visits; the
+    // badge must not be carried with it, so the next page fetches it again.
+    this.element.closest("[data-turbo-permanent]")?.removeAttribute("data-turbo-permanent")
+
     // Replace loading content with error state
     this.element.innerHTML = `
       <div class="flex items-center justify-end gap-1">

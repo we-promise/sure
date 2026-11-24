@@ -1,4 +1,4 @@
-<%# locals: (transfer:, form: nil) %>
+<%# locals: (transfer:, form: nil, readable_account_ids: nil) %>
 
 <% if form %>
   <p class="text-xs text-secondary"><%= t("transfers.show.transaction_name_help") %></p>
@@ -22,6 +22,10 @@
             method: :outflow_name,
             account: transfer.from_account,
             value: transfer.outflow_transaction.entry.name %>
+    <% elsif readable_account_ids&.include?(transfer.from_account&.id) %>
+      <%# Read-only viewers still see each leg's own name, just without the
+          rename control. %>
+      <%= render DS::DetailRow.new(label: t("transfers.show.transaction_name"), value: transfer.outflow_transaction.entry.name, value_class: "font-medium") %>
     <% end %>
     <%= render DS::DetailRow.new(label: t("transfers.show.date"), value: l(transfer.outflow_transaction.entry.date, format: :long), value_class: "font-medium") %>
     <%= render DS::DetailRow.new(label: t("transfers.show.transfer_amount"), value: format_money(transfer.outflow_transaction.entry.amount_money * -1), value_class: "font-medium text-destructive privacy-sensitive") %>
@@ -50,6 +54,8 @@
             method: :inflow_name,
             account: transfer.to_account,
             value: transfer.inflow_transaction.entry.name %>
+    <% elsif readable_account_ids&.include?(transfer.to_account&.id) %>
+      <%= render DS::DetailRow.new(label: t("transfers.show.transaction_name"), value: transfer.inflow_transaction.entry.name, value_class: "font-medium") %>
     <% end %>
     <%= render DS::DetailRow.new(label: t("transfers.show.date"), value: l(transfer.inflow_transaction.entry.date, format: :long), value_class: "font-medium") %>
     <%= render DS::DetailRow.new(label: t("transfers.show.transfer_amount"), value: "+#{format_money(transfer.inflow_transaction.entry.amount_money * -1)}", value_class: "font-medium text-success privacy-sensitive") %>

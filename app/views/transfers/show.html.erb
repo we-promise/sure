@@ -28,7 +28,7 @@
         <% end %>
       <% else %>
         <div class="pb-4 px-3 pt-2 text-sm space-y-3 text-primary">
-          <%= render "transfers/overview", transfer: @transfer %>
+          <%= render "transfers/overview", transfer: @transfer, readable_account_ids: @readable_account_ids %>
         </div>
       <% end %>
     <% end %>

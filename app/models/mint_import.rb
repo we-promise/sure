@@ -88,18 +88,29 @@ class MintImport < Import
     CSV.parse(template, headers: true)
   end
 
+  # The Transaction Type column carries the direction, so the amount is read as
+  # a magnitude whatever its sign.
   def signed_csv_amount(csv_row)
-    amount = csv_row[amount_col_label]
+    amount = sanitize_number(with_leading_zero(csv_row[amount_col_label])).to_d.abs
     type = csv_row["Transaction Type"]
 
     if type == "credit"
-      amount.to_d
+      amount
     else
-      amount.to_d * -1
+      amount * -1
     end
   end
 
   private
+    # sanitize_number needs a digit before the decimal separator, so ".50"
+    # becomes "0.50" first.
+    def with_leading_zero(value)
+      separator = NUMBER_FORMATS.dig(number_format, :separator)
+      return value if value.nil? || separator.blank?
+
+      value.to_s.strip.sub(/\A-?(?=#{Regexp.escape(separator)}\d)/) { |sign| "#{sign}0" }
+    end
+
     def set_mappings
       assign_attributes(self.class.default_column_mappings)
       save!
