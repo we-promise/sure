@@ -1078,6 +1078,31 @@ RSpec.configure do |config|
               },
               excluded: { type: :boolean, description: 'Whether the transaction is excluded from budget and report totals. Splitting a transaction marks it excluded.' },
               split_parent: { type: :boolean, description: 'Whether the transaction has been split; its amount is then carried by its split children.' },
+              investment_activity_label: {
+                type: :string,
+                nullable: true,
+                description: 'Investment activity of a brokerage cash row, such as Dividend, Interest or Fee'
+              },
+              provider_type: {
+                type: :string,
+                nullable: true,
+                description: "The importing provider's type for the row, such as IBKR's \"Withholding Tax\", when one is recorded. For CoinSpot, Sure sets it from the kind of movement."
+              },
+              security_id: {
+                type: :string,
+                format: :uuid,
+                nullable: true,
+                description: 'Sure security the row relates to (for example the one that paid a dividend), when the importer recorded it. GET /api/v1/securities/{id} finds it only if an account holds or has traded it.'
+              },
+              exchange_rate: {
+                type: :number,
+                nullable: true,
+                description: "Rate from the transaction's currency to the account's currency stored on it. Null when none is stored or the transaction is in the account's currency."
+              },
+              amount_currency: {
+                type: :string,
+                description: 'Currency of the amount, always the same as currency on a transaction.'
+              },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },
               merchant: { '$ref' => '#/components/schemas/Merchant', nullable: true },
@@ -1766,6 +1791,17 @@ RSpec.configure do |config|
               qty: { type: :string },
               price: { type: :string },
               investment_activity_label: { type: :string, nullable: true },
+              fee: { type: :string, description: 'Fee charged on the trade, formatted like price' },
+              fee_decimal: { type: :string, description: 'Fee as the exact stored, unrounded, locale-independent decimal string. A purchase fee adds to the cost and a sale fee comes off the proceeds' },
+              exchange_rate: {
+                type: :number,
+                nullable: true,
+                description: "Rate to the account's currency stored on the trade, such as one reported by the provider. The cost basis applies it to price and fee, from currency; the cash balance applies it to amount, from amount_currency. The two match unless an edit changed only the amount's currency. It was recorded for currency; when amount_currency differs, the cash balance reuses it unchanged. Null when none is stored or both currencies are the account's."
+              },
+              amount_currency: {
+                type: :string,
+                description: "Currency of the trade's amount (the entry's), which the cash balance converts from with exchange_rate. It can differ from currency, the trade's own."
+              },
               lot_source_trade_id: { type: :string, format: :uuid, nullable: true, description: 'For a sale, the trade whose lot it names to sell from first. It applies only while the account sells by FIFO; an account that sells by average keeps it but sells from the pooled average.' },
               account: { '$ref' => '#/components/schemas/Account' },
               security: {

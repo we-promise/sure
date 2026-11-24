@@ -7,6 +7,9 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
     # Fresh family: fixture families carry categorized transactions that
     # would pollute the Bayes training set.
     @family = Family.create!(name: "Bayes Entry Family")
+    # An admin who turned AI on: categorizing needs the family's consent (#5709).
+    @family.users.create!(email: "bayes-admin@example.com", password: "password123!A", first_name: "Bayes", last_name: "Admin",
+                          role: "admin", ai_enabled: true)
     @account = @family.accounts.create!(name: "Entry test", balance: 100, currency: "USD", accountable: Depository.new)
     @coffee = @family.categories.create!(name: "Coffee")
     @groceries = @family.categories.create!(name: "Groceries")

@@ -192,4 +192,17 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
 
     assert cache.exist?(key)
   end
+
+  # #5709: without a family admin's AI switch nothing is sent, and the run ends.
+  test "sends nothing while no family admin has turned AI on" do
+    @family.users.update_all(ai_enabled: false)
+    merchant = provider_merchant("Walmart")
+    requests = stub_websites("Walmart" => "walmart.com")
+
+    enhance
+
+    assert_empty requests
+    assert_nil merchant.reload.website_url
+    assert_nil Rails.cache.read(ProviderMerchant::Enhancer.lock_key(@family))
+  end
 end

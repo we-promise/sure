@@ -1,0 +1,127 @@
+---
+nb:
+  providers:
+    akahu:
+      name: Akahu
+      description: Koble til bankkontoer i New Zealand via Akahu
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Akahu-tilkobling
+  akahu_account:
+    fallback: Akahu-konto
+  akahu_entry:
+    notes:
+      reference: Referanse
+      particulars: Detaljer
+      code: Kode
+      other_account: Motkonto
+  akahu_item:
+    errors:
+      account_processing_failed: Kunne ikke synkronisere Akahu-kontoen
+      account_sync_schedule_failed: Kunne ikke planlegge synkronisering av Akahu-kontoen
+      pending_transactions_failed: Kunne ikke hente reserverte transaksjoner fra Akahu
+      transactions_failed: Kunne ikke hente transaksjoner fra Akahu
+      sync_failed: Kunne ikke synkronisere Akahu-tilkoblingen
+    sync_status:
+      no_accounts: Ingen kontoer funnet
+      all_synced:
+        one: '%{count} konto synkronisert'
+        other: '%{count} kontoer synkronisert'
+      partial: '%{linked} synkronisert, %{unlinked} må settes opp'
+    institution_summary:
+      none: Ingen institusjoner tilkoblet
+      one: 1 institusjon
+      count:
+        one: '%{count} institusjon'
+        other: '%{count} institusjoner'
+  akahu_items:
+    provider_panel:
+      default_connection_name: Akahu-tilkobling
+      add_connection: Legg til Akahu-tilkobling
+      update_connection: Oppdater tilkobling
+      connection_name_label: Navn på tilkobling
+      connection_name_placeholder: Hoved-Akahu
+      app_token_label: App-token
+      app_token_placeholder: Lim inn app-tokenet ditt fra Akahu
+      keep_app_token_placeholder: La stå tomt for å beholde det eksisterende app-tokenet
+      user_token_label: Brukertoken
+      user_token_placeholder: Lim inn brukertokenet ditt fra Akahu
+      keep_user_token_placeholder: La stå tomt for å beholde det eksisterende brukertokenet
+      setup_accounts: Sett opp kontoer
+      syncing: Synkroniserer...
+      sync: Synkroniser
+      disconnect: Koble fra
+      disconnect_confirm: Er du sikker på at du vil koble fra %{name}?
+    create:
+      success: Akahu-tilkoblingen er lagret.
+    update:
+      success: Akahu-tilkoblingen er oppdatert.
+    destroy:
+      success: Akahu-tilkoblingen er planlagt for sletting.
+      unlink_failed: Kunne ikke koble fra Akahu-tilkoblingen
+    select_accounts:
+      title: Koble til Akahu-kontoer
+      description: Velg Akahu-kontoene du vil legge til.
+      no_accounts_found: Fant ingen Akahu-kontoer som ikke er koblet til.
+      no_credentials_configured: Konfigurer Akahu i leverandørinnstillingene først.
+      cancel: Avbryt
+      link_accounts: Koble til kontoer
+    link_accounts:
+      success:
+        one: Koblet til %{count} Akahu-konto.
+        other: Koblet til %{count} Akahu-kontoer.
+      no_accounts_selected: Velg minst én konto.
+      no_credentials_configured: Konfigurer Akahu i leverandørinnstillingene først.
+      unsupported_account_type: Akahu støtter ikke den kontotypen.
+      link_failed: Ingen kontoer ble koblet til.
+    select_existing_account:
+      title: Koble Akahu-konto til %{account_name}
+      description: Velg en Akahu-konto som ikke er koblet til, for å koble den til denne kontoen.
+      no_accounts_found: Fant ingen Akahu-kontoer som ikke er koblet til.
+      no_credentials_configured: Konfigurer Akahu i leverandørinnstillingene først.
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør.
+      cancel: Avbryt
+      link_account: Koble til konto
+    link_existing_account:
+      success: Akahu-kontoen ble koblet til %{account_name}.
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør.
+      akahu_account_already_linked: Denne Akahu-kontoen er allerede koblet til.
+    setup_accounts:
+      title: Sett opp Akahu-kontoer
+      subtitle: Velg hvordan hver Akahu-konto skal vises i Sure.
+      no_credentials: Konfigurer Akahu-legitimasjonen først.
+      api_error: Kunne ikke hente Akahu-kontoer.
+      fetch_failed: Kunne ikke hente kontoer
+      no_accounts_to_setup: Ingen kontoer å sette opp
+      all_accounts_linked: Alle Akahu-kontoer er allerede koblet til.
+      choose_account_type: Velg en kontotype
+      choose_account_type_description: Hopp over kontoer du ikke vil følge med på.
+      account_type_label: Kontotype
+      account_types:
+        skip: Hopp over
+        depository: Bankkonto
+        credit_card: Kredittkort
+        investment: Investering
+        loan: Lån
+      create_accounts: Opprett kontoer
+      cancel: Avbryt
+    complete_account_setup:
+      success:
+        one: Opprettet %{count} Akahu-konto.
+        other: Opprettet %{count} Akahu-kontoer.
+      all_skipped: Ingen Akahu-kontoer ble opprettet.
+      no_accounts: Ingen Akahu-kontoer ble valgt.
+      creation_failed: Kunne ikke opprette Akahu-kontoer.
+    akahu_item:
+      deletion_in_progress: Sletting pågår
+      syncing: Synkroniserer
+      error: Feil
+      status_with_summary: Synkronisert for %{timestamp} siden · %{summary}
+      status_never: Aldri synkronisert
+      delete: Slett
+      setup_needed: Kontoene må settes opp
+      setup_description: '%{linked} av %{total} kontoer er koblet til.'
+      setup_action: Sett opp kontoer
+      no_accounts_title: Ingen kontoer importert ennå
+      no_accounts_description: Hent Akahu-kontoer og velg hvilke du vil koble til.

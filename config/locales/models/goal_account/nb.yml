@@ -1,0 +1,9 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Denne kontoen er allerede helt øremerket for «%{goal_name}». Angi et beløp for å fordele den.
