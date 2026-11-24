@@ -1,0 +1,21 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        monarch_import:
+          missing_columns: "Filen %{file} mangler kolonnene %{columns}. Er det riktig eksport fra Monarch?"
+          malformed_csv: "Filen %{file} er ikke en lesbar CSV-fil: %{error}"
+          invalid_number: "%{value} er ikke et tall"
+          invalid_date: "%{value} er ikke en dato på formen 2024-01-31"
+          date_out_of_range: "%{value} er utenfor datoene Sure importerer (%{from} til %{to})"
+          blank_account: "En rad mangler kontonavn. Sjekk at filen er en eksport fra Monarch."
+          blank_transaction_id: "En transaksjon mangler Id. Sjekk at filen er en transaksjonseksport fra Monarch."
+          opening_balance_changed: "Den inngående saldoen for %{account} ble endret under importen. Se gjennom importen og publiser den på nytt."
+          target_not_supported: "Sure kan ikke lenger importere til %{accounts}. Kontoene det importeres til, må være manuelle kontoer uten beholdninger eller handler. Velg andre kontoer og publiser på nytt."
+          no_accounts: "Eksportene inneholder ingen kontoer. Sjekk at du eksporterte riktige filer fra Monarch."
+          files:
+            balances: "saldoer"
+            transactions: "transaksjoner"
+        "import/monarch_account_mapping":
+          target_taken: "%{account} er allerede valgt for en annen Monarch-konto. Velg en annen konto for %{monarch}, eller importer den som en ny konto."
