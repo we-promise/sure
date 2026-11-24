@@ -1252,6 +1252,7 @@ class Family::DataImporter
           price: data["price"].to_d,
           currency: data["currency"] || account.currency
         )
+        trade.exchange_rate = data["exchange_rate"] if data.key?("exchange_rate")
 
         entry ||= Entry.new(entryable: trade)
         entry.assign_attributes(
