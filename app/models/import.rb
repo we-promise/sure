@@ -336,7 +336,9 @@ class Import < ApplicationRecord
   def revert
     Import.transaction do
       accounts.destroy_all
-      entries.destroy_all
+      # Split parts carry the import too (Entry#split! copies it), but may
+      # only be destroyed through their parent, which takes them along.
+      entries.where(parent_entry_id: nil).destroy_all
       revert_derived_state!
     end
 
@@ -492,6 +494,12 @@ class Import < ApplicationRecord
     FAMILY_CONFIG_TYPES.include?(type)
   end
 
+  # A statement-backed import is as private as its statement; any other import
+  # is visible to the whole family.
+  def viewable_by?(user)
+    account_statement.blank? || account_statement.viewable_by?(user)
+  end
+
   # Guests may view family configuration but not change it, so they may only
   # edit an import that doesn't write family configuration and isn't being
   # (or already) published.
@@ -572,13 +580,19 @@ class Import < ApplicationRecord
     first_sample = raw_date_samples.find(&:present?)
     return [] if first_sample.blank?
 
-    Family::DATE_FORMATS.filter_map do |label, fmt|
+    date_format_options.filter_map do |label, fmt|
       parsed = try_parse_date_sample(first_sample, format: fmt)
       next unless parsed
       next unless self.class.reasonable_date_range.cover?(Date.parse(parsed))
 
       { label: label, format: fmt, preview: parsed }
     end
+  end
+
+  # [label, strptime format] pairs offered by #valid_date_formats_with_preview.
+  # Subclasses can override to offer formats only their file type uses.
+  def date_format_options
+    Family::DATE_FORMATS
   end
 
   # Returns raw date strings from the import file for format detection/preview.
@@ -789,6 +803,15 @@ class Import < ApplicationRecord
         end
       rescue ArgumentError
         # raw_file_str might have invalid encoding, continue to detection
+      end
+
+      # An upload arrives as binary. Bytes that form valid UTF-8 are UTF-8: text
+      # in a single-byte encoding almost never does, while rchardet can misread a
+      # mostly-ASCII UTF-8 file (one "®" among plain rows reads as EUC-JP).
+      as_utf8 = raw_file_str.dup.force_encoding(Encoding::UTF_8)
+      if as_utf8.valid_encoding?
+        self.raw_file_str = as_utf8
+        return
       end
 
       # Detect encoding using rchardet
