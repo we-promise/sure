@@ -85,8 +85,8 @@ module PortfolioReturnsTestHelper
     )
   end
 
-  # A dividend or interest payment, in the Trade shape #1311 introduced
-  # (qty: 0, price: 0, value in the entry amount).
+  # A dividend or interest payment, recorded as a Trade with qty: 0,
+  # price: 0 and the value in the entry amount.
   def income_trade(account:, date:, amount:, label: "Dividend", currency: nil, security: nil)
     account.entries.create!(
       name: label,
