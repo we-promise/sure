@@ -24,6 +24,23 @@ class BackfillCarriedForwardOnSecurityPricesMigrationTest < ActiveSupport::TestC
     assert_equal 4, updates
   end
 
+  # A refresh can make every row of a batch real before its update runs.
+  test "an update that a refresh emptied does not end the backfill" do
+    rows = (0..1).map { |day| price(FRIDAY + day.days, 100, provisional: true) }
+    migration = BackfillCarriedForwardOnSecurityPrices.new
+    migration.stubs(:batch_size).returns(1)
+    emptied = false
+    migration.define_singleton_method(:exec_update) do |*args|
+      next super(*args) if emptied
+      emptied = true
+      0
+    end
+
+    ActiveRecord::Migration.suppress_messages { migration.up }
+
+    assert_equal [ true ] * 2, rows.map { |p| p.reload.carried_forward }
+  end
+
   # A weekend row repeating Friday may be a pegged or crypto quote.
   test "leaves every non-provisional row, repeats included" do
     rows = [ price(FRIDAY, 100), price(FRIDAY + 1.day, 100), price(FRIDAY + 4.days, 100) ]
@@ -72,6 +89,8 @@ class BackfillCarriedForwardOnSecurityPricesRaceTest < ActiveSupport::TestCase
   test "skips a row a refresh made real while the update waited for it" do
     refresh = ActiveRecord::Base.connection_pool.checkout
     refresh.begin_db_transaction
+    # A raw BEGIN is not tracked by transaction_open?, so track it here.
+    refresh_open = true
     refresh.exec_update("UPDATE security_prices SET provisional = false, price = 101 WHERE id = #{refresh.quote(@row.id)}")
 
     backfill = Thread.new do
@@ -82,13 +101,15 @@ class BackfillCarriedForwardOnSecurityPricesRaceTest < ActiveSupport::TestCase
 
     assert wait_for_blocked_update, "the backfill must be waiting on the refresh's row lock"
     refresh.commit_db_transaction
-    backfill.join(10)
+    refresh_open = false
+    assert backfill.join(10), "the backfill must finish once the refresh commits"
 
     @row.reload
     assert_equal [ false, false ], [ @row.provisional, @row.carried_forward ]
   ensure
-    refresh&.rollback_db_transaction if refresh&.transaction_open?
+    refresh.rollback_db_transaction if refresh_open
     ActiveRecord::Base.connection_pool.checkin(refresh) if refresh
+    backfill&.kill if backfill&.alive?
   end
 
   private

@@ -1915,7 +1915,7 @@ RSpec.configure do |config|
               price_amount: { type: :string, description: 'Exact decimal security price' },
               currency: { type: :string },
               provisional: { type: :boolean },
-              carried_forward: { type: :boolean, description: 'The price repeats an earlier one: no quote was available for this date' },
+              carried_forward: { type: :boolean, description: 'The price repeats an earlier one: no quote was available for this date. A non-provisional price stored before this field was added reads false even when it repeats an earlier one' },
               security: {
                 type: :object,
                 required: %w[id ticker],

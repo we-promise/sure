@@ -3543,7 +3543,8 @@ components:
         carried_forward:
           type: boolean
           description: 'The price repeats an earlier one: no quote was available for
-            this date'
+            this date. A non-provisional price stored before this field was added
+            reads false even when it repeats an earlier one'
         security:
           type: object
           required:

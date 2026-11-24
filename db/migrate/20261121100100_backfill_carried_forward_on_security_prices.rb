@@ -8,7 +8,8 @@
 # Batched outside a transaction so a large table is not locked in one
 # statement. Rows already marked are skipped, so it can run more than once.
 # The outer update repeats the predicate so a row a refresh made real after
-# the subquery read it is skipped.
+# the subquery read it is skipped. Such a skip can empty a whole batch, so the
+# loop ends only when no eligible row is left.
 class BackfillCarriedForwardOnSecurityPrices < ActiveRecord::Migration[8.1]
   disable_ddl_transaction!
 
@@ -24,7 +25,7 @@ class BackfillCarriedForwardOnSecurityPrices < ActiveRecord::Migration[8.1]
         )
         AND provisional = true AND carried_forward = false
       SQL
-      break if updated.zero?
+      break if updated.zero? && !eligible_rows_remain?
     end
   end
 
@@ -35,5 +36,13 @@ class BackfillCarriedForwardOnSecurityPrices < ActiveRecord::Migration[8.1]
   private
     def batch_size
       10_000
+    end
+
+    # Uncached: the updates do not clear the query cache, so a cached answer
+    # would keep the loop running.
+    def eligible_rows_remain?
+      connection.uncached do
+        connection.select_value("SELECT 1 FROM security_prices WHERE provisional = true AND carried_forward = false LIMIT 1").present?
+      end
     end
 end
