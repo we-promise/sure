@@ -96,6 +96,7 @@ nb:
         password_missing_case: Passordet må inneholde både store og små bokstaver.
         password_missing_number: Passordet må inneholde minst ett tall.
         password_missing_special: Passordet må inneholde minst ett spesialtegn.
+        password_too_long: "Passordet kan være maks %{count} byte langt (bokstaver med aksenter og emoji bruker mer enn én byte)."
         last_super_admin_error: Kan ikke nedgradere den siste superadministratoren i systemet.
         password_disabled: "Passord kan ikke angis, fordi brukere bare kan logge inn med SSO."
       destroy:
