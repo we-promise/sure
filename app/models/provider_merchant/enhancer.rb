@@ -82,9 +82,12 @@ class ProviderMerchant::Enhancer
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # enhance_provider_merchants (PR #1984), so merchant enhancement routes to the
     # configured provider, with fallback handled by
-    # Provider::Registry.preferred_llm_provider.
+    # Provider::Registry.preferred_llm_provider. Nil while the router says the
+    # family may not enhance merchants, its consent included.
     def llm_provider
-      @llm_provider ||= Provider::Registry.preferred_llm_provider
+      return @llm_provider if defined?(@llm_provider)
+
+      @llm_provider = (Provider::Registry.preferred_llm_provider if Ai.available?(:enhance_merchants, family: @family))
     end
 
     def unenhanced_merchants

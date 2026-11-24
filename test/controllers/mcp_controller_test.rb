@@ -533,6 +533,22 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an external agent's document search sends nothing for a user who has AI off" do
+    use_ai_routes
+    @user.update!(ai_enabled: false)
+    @user.family.update!(vector_store_id: "vs_test123")
+    adapter = mock("vector_store_adapter")
+    adapter.expects(:search).never
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "search_family_files", arguments: { query: "tax return" } }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_equal "user_disabled", JSON.parse(JSON.parse(response.body)["result"]["content"][0]["text"])["reason"]
+    end
+  end
+
   test "tools/list includes preview tools for an opted-in user" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
 

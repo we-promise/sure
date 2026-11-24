@@ -23,6 +23,7 @@ class DataEnrichment < ApplicationRecord
     sharesight: "sharesight",
     similar: "similar",
     simplefin: "simplefin",
+    snaptrade: "snaptrade",
     sophtron: "sophtron",
     synth: "synth",
     trade_republic: "trade_republic",
