@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BudgetsControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     @user = users(:family_admin)
     sign_in @user
@@ -88,6 +90,34 @@ class BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", budget_budget_category_path(budget, shared_budget_category), count: 0
   end
 
+  # The pill, the bar and the remaining figure all read near_limit?, so a line
+  # filled by bills paid early stays green on every one of them.
+  test "show keeps a line filled by bills out of the near-limit state" do
+    budget_category = gym_line
+
+    get budget_url(Budget.date_to_param(Date.current))
+
+    assert_response :success
+    assert_select "a[href=?]", budget_budget_category_path(budget_category.budget, budget_category) do
+      assert_select "*", text: I18n.t("reports.budget_performance.status.good")
+      assert_select ".bg-warning, .text-yellow-500", count: 0
+    end
+  end
+
+  test "show marks a line near its limit by spending outside bills" do
+    budget_category = gym_line
+    create_transaction(category: budget_category.category, amount: 9, date: Date.current)
+
+    get budget_url(Budget.date_to_param(Date.current))
+
+    assert_response :success
+    assert_select "a[href=?]", budget_budget_category_path(budget_category.budget, budget_category) do
+      assert_select "*", text: I18n.t("reports.budget_performance.status.warning")
+      assert_select ".bg-warning", count: 1
+      assert_select ".text-yellow-500", count: 1
+    end
+  end
+
   test "show displays ring-fenced child carry on the parent card" do
     budget = budgets(:one)
     parent_category = budget.family.categories.create!(name: "Parent rollover card", color: "#4da568")
@@ -169,6 +199,15 @@ class BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_select free_row.parent, "dd.text-2xl", count: 1
     assert_select free_row, "dd.text-2xl", count: 1
   end
+
+  private
+    # A 100 line whose 90 bill was paid today: 90% spent, none of it outside bills.
+    def gym_line
+      budget = budgets(:one)
+      category = budget.family.categories.create!(name: "Gym line presentation", color: "#4da568")
+      pay_bill(create_bill(category: category, amount: 90, name: "Gym"), date: Date.current)
+      budget.budget_categories.create!(category: category, budgeted_spending: 100, currency: "USD")
+    end
 end
 
 class BudgetsControllerSharingTest < ActionDispatch::IntegrationTest
