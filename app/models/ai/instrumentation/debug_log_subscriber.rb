@@ -1,10 +1,10 @@
 # A DebugLogEntry for every AI call that fails, so an operator sees it on the
-# debug page with its feature, route and error, never its key or prompt. Health probes are
-# skipped: AiHealth::Probe logs its own failures, with its failure codes.
+# debug page with its feature, route and error, never its key or prompt. Health probes and
+# busy model hosts are skipped (Ai::Instrumentation.unreported?).
 class Ai::Instrumentation::DebugLogSubscriber
   def call(event)
     payload = event.payload
-    return if payload[:error].blank? || event.name == "probe.ai"
+    return if payload[:error].blank? || Ai::Instrumentation.unreported?(event)
 
     DebugLogEntry.capture(
       category: "ai",

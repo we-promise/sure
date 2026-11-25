@@ -37,6 +37,11 @@ module Ai::Instrumentation
     subscriptions
   end
 
+  # The `.ai` events neither logged as a failure nor traced: health probes, which AiHealth::Probe
+  # logs itself and which carry no family data, and a background call that found its model host
+  # busy, whose job comes back every few seconds until it's free.
+  def unreported?(event) = event.name == "probe.ai" || event.payload[:error] == Ai::Error::Busy.name
+
   # Once per process: metadata mode sets the global OpenTelemetry tracer provider.
   def start_tracing!(env: ENV)
     case mode(env:)
