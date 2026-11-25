@@ -39,7 +39,7 @@ The `GET /api/v1/categories` endpoint supports the following query parameters fo
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `page` | integer | Page number (default: 1) |
-| `per_page` | integer | Items per page (default: 25, max: 100) |
+| `per_page` | integer | Items per page (default: 25, max: 100; larger values are capped at 100) |
 | `roots_only` | boolean | Return only root categories (categories without a parent). Accepts `true`, `false`, `1` or `0` |
 | `parent_id` | uuid | Filter subcategories by parent category ID |
 

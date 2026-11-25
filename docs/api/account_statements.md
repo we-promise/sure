@@ -66,7 +66,7 @@ Uploading the same file again is safe, so clients can retry or re-send without c
 | `content_sha256` | The statement for a file, by its SHA-256 (hex). |
 | `start_date` | Statements whose period ends on or after this date (`YYYY-MM-DD`). |
 | `end_date` | Statements whose period starts on or before this date (`YYYY-MM-DD`). |
-| `page`, `per_page` | Pagination (default 25, max 100). |
+| `page`, `per_page` | Pagination (default 25, max 100; a larger `per_page` is capped at 100). |
 
 A filter that is present must be valid: a malformed `account_id`, an unknown `review_status`, or a date that is not `YYYY-MM-DD` returns `422` with `error: "validation_failed"`, and so does an empty value for any of them. An empty `content_sha256` is ignored.
 

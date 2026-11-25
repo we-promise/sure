@@ -78,8 +78,7 @@ RSpec.describe 'API V1 Rejected Transfers', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
       parameter name: :account_id, in: :query, required: false,
                 schema: { type: :string, format: :uuid },
                 description: 'Filter rejected transfers involving this account'

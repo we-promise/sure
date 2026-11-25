@@ -138,8 +138,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100; larger values are capped at 100)'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
       parameter name: :account_id, in: :query, required: false,
                 description: 'Filter by account ID. With account_ids, only ids in both match.',
                 schema: { type: :string, format: :uuid }

@@ -62,8 +62,7 @@ RSpec.describe 'API V1 Budgets', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
       parameter name: :start_date, in: :query, required: false,
                 schema: { type: :string, format: :date },
                 description: 'Filter budgets starting on or after this date'

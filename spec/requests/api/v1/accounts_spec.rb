@@ -87,8 +87,7 @@ RSpec.describe 'API V1 Accounts', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
       parameter name: :include_disabled, in: :query, type: :boolean, required: false,
                 description: 'Include disabled accounts in the response: true or false (also 1 or 0, any case). Defaults to false; any other value returns 422.'
 

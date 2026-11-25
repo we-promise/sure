@@ -2,6 +2,8 @@
 
 require 'rails_helper'
 
+API_PER_PAGE_DESCRIPTION = 'Items per page (default: 25, max: 100; larger values are capped at 100)'
+
 RSpec.configure do |config|
   config.openapi_root = Rails.root.join('docs', 'api').to_s
   reset_count_keys = Family::FinancialDataReset::STATUS_COUNT_KEYS.map(&:to_s)

@@ -21,7 +21,7 @@ The `GET /api/v1/imports` endpoint supports the following query parameters:
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `page` | integer | Page number (default: 1) |
-| `per_page` | integer | Items per page (default: 25, max: 100) |
+| `per_page` | integer | Items per page (default: 25, max: 100; larger values are capped at 100) |
 | `status` | string | Filter by status: `pending`, `importing`, `complete`, `failed`, `reverting`, `revert_failed` |
 | `type` | string | Filter by import type: `TransactionImport`, `TradeImport`, etc. The full list is in [`openapi.yaml`](openapi.yaml). |
 

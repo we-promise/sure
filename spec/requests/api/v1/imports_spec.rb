@@ -92,8 +92,7 @@ RSpec.describe 'API V1 Imports', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
       parameter name: :status, getter: :status_filter, in: :query, required: false,
                 description: 'Filter by status',
                 schema: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] }
@@ -361,8 +360,7 @@ RSpec.describe 'API V1 Imports', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
 
       let(:id) { pending_import.id }
 

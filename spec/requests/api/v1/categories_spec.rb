@@ -65,8 +65,7 @@ RSpec.describe 'API V1 Categories', type: :request do
       produces 'application/json'
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
-      parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
+      parameter name: :per_page, in: :query, type: :integer, required: false, description: API_PER_PAGE_DESCRIPTION
       parameter name: :roots_only, in: :query, required: false,
                 description: 'Return only root categories (no parent). Accepts true, false, 1 or 0',
                 schema: { type: :boolean }

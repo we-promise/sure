@@ -5112,7 +5112,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       responses:
@@ -5263,7 +5264,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: include_disabled
@@ -5990,7 +5992,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: account_id
@@ -6104,7 +6107,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: budget_id
@@ -6219,7 +6223,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: start_date
@@ -6405,7 +6410,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: roots_only
@@ -6735,7 +6741,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       responses:
@@ -7858,7 +7865,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: account_id
@@ -8237,7 +8245,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: status
@@ -8617,7 +8626,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       responses:
@@ -9177,7 +9187,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: status
@@ -9489,7 +9500,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: account_id
@@ -9595,7 +9607,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: rule_id
@@ -9722,7 +9735,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: resource_type
@@ -9820,7 +9834,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: ticker
@@ -9932,7 +9947,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: security_id
@@ -10245,7 +10261,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       responses:
@@ -10485,7 +10502,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: account_id
@@ -11247,7 +11265,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: status
@@ -11453,7 +11472,8 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: account_id
