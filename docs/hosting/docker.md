@@ -734,8 +734,10 @@ writers stopped and use [Restoring after an interrupted rotation](#restoring-aft
 
 Stop `web`, `worker`, and every other writer before restoring, including any
 web-only recovery session. Choose the backup by its recorded folder name, not
-`latest`: restoring replaces the database and uploaded files, discarding changes
-made since that backup. Use the [supported restore method](#backup-and-restore-prerequisites)
+`latest`: restoring replaces the database and local uploaded files, discarding
+changes made since that backup. External uploads need the separate provider
+restore described in the [backup prerequisites](#backup-and-restore-prerequisites).
+Use the [supported restore method](#backup-and-restore-prerequisites)
 and restore the matching image and configuration, including credentials files and
 keys stored outside `.env`. An in-place restore does not replace your live
 configuration automatically.
@@ -909,7 +911,8 @@ You can also run backups with the script on its own, without the `backup` servic
 curl --fail --location --silent --show-error --output sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup
 ```
 
-Then, from that folder:
+Then, from that folder, [select the same Compose project and configuration](#selecting-the-standalone-backup-target)
+that you use to manage the installation:
 
 ```bash
 sh sure-backup create                   # Take a backup now
@@ -921,6 +924,48 @@ sh sure-backup recover backups/<version>/<backup>   # Restore into a new folder
 The script finds your `web` container and runs itself once in a container from that exact image, with your uploaded-files volume, network and database settings. It reads the version from the image and checks it against the database, so no `--version` is needed. Backups go to `./backups`, or `BACKUP_DIR` from `.env`. `restore` refuses while `web` or `worker` is running.
 
 To take a backup every day without the service, add a cron job on the host, for example `0 2 * * * cd /opt/sure && sh sure-backup scheduled`. That takes a backup and removes scheduled backups older than `BACKUP_KEEP_DAYS`.
+
+#### Selecting the standalone backup target
+
+The script calls `docker compose` internally; it does not accept Compose's `-p`,
+`-f`, or `--env-file` options. Before stopping writers or running the script,
+set the equivalent [Compose environment variables](https://docs.docker.com/compose/how-tos/environment-variables/envvars/)
+in the same shell. For example, replace these example values with those from
+your existing deployment; do not introduce a new project name:
+
+```bash
+export COMPOSE_PROJECT_NAME="sure-production"                  # Same as -p
+export COMPOSE_FILE="compose.yml:compose.production.yml"      # Same files/order as -f
+export COMPOSE_ENV_FILES=".env.production"                    # Same as --env-file
+docker compose config --quiet
+docker compose ps -aq web
+```
+
+Set only the overrides your deployment needs, and preserve any exported values
+and profiles it already uses. Multiple environment files in `COMPOSE_ENV_FILES`
+are comma-separated, in the same order as your `--env-file` options. Multiple
+Compose files use `:` on macOS/Linux (`;` on Windows, unless
+`COMPOSE_PATH_SEPARATOR` overrides it). Run from the original configuration
+directory and preserve the same Docker context. Confirm that `docker compose
+ps -aq web` returns the same container ID as your usual command with its explicit
+options, including any `--project-directory`. If configuration validation fails,
+the ID is missing, or it differs, resolve the selection before stopping or
+backing up anything. Do not recreate containers just to make this check pass.
+
+Keep these settings for stopping writers, creating the backup, in-place restore,
+and subsequent rotation commands. A new shell or cron job needs the same setup;
+the cron example above assumes the default configuration.
+
+Selecting a custom environment file does **not** make the backup script archive
+it. The script copies `.env` and the standard Compose/override filenames from the
+project directory; separately preserve custom Compose files, `env_file` files,
+included files, shell-supplied configuration and external keys with the named
+backup. Its host-side `BACKUP_DIR`, `BACKUP_KEEP_DAYS`, and `INSTANCE_ID` settings
+also come from that directory's `.env`, not `COMPOSE_ENV_FILES`. Confirm the actual
+backup location rather than assuming the custom env file selected it. Before
+restarting a restored installation, restore the matching configuration and keys;
+in-place restore does not replace live configuration, and `recover`/`restore.sh`
+cannot automatically reconstruct configuration that was not archived.
 
 ### Upgrading from the database-only backup service (v0.7.5)
 
@@ -970,9 +1015,22 @@ in-progress key rotation.
 With the standalone method, substitute `sh sure-backup create` for the service's
 `backup create` command, and `sh sure-backup restore` followed by the recorded
 backup folder name for `backup restore`. Keep writers stopped and use the same
-Compose project and configuration for both methods. Confirm that the backup
-contains the database, uploads, and configuration; preserve external keys
-separately. Do not proceed on a failed or database-only backup.
+Compose project and configuration for both methods; follow
+[Selecting the standalone backup target](#selecting-the-standalone-backup-target)
+when using the script, including for in-place restore.
+
+Confirm that the backup contains the database and configuration, with any custom
+configuration files and external keys preserved separately. For local uploads,
+verify that `storage.tar.gz` includes the installation's uploaded files. For S3,
+R2, GCS, or another external store, verify a separate, restorable provider backup
+of the objects referenced by the database snapshot while writers remain stopped.
+A local storage archive does not prove that external uploads are backed up, and
+enabling versioning or replication alone does not verify a usable restore point.
+Record the provider snapshot or object versions with the named database backup
+and restore the matching objects when rolling back. Keep access credentials and
+any required storage encryption keys securely available. Do not proceed on a
+failed backup or a database-only dump without the corresponding configuration,
+keys, and upload backups.
 
 ### Generate the keys
 
