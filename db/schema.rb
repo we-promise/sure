@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2217,6 +2217,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
     t.index ["recurring_transaction_id", "effective_on"], name: "idx_recurring_price_changes_identity", unique: true
   end
 
+  create_table "recurring_transaction_suggestions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "user_id", null: false
+    t.uuid "recurring_transaction_id"
+    t.uuid "entry_id"
+    t.boolean "income", default: false, null: false
+    t.string "mode", null: false
+    t.string "status", default: "pending", null: false
+    t.jsonb "result"
+    t.string "error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["entry_id"], name: "index_recurring_transaction_suggestions_on_entry_id"
+    t.index ["family_id", "created_at"], name: "idx_on_family_id_created_at_6dd3058987"
+    t.index ["family_id"], name: "index_recurring_transaction_suggestions_on_family_id"
+    t.index ["recurring_transaction_id"], name: "idx_on_recurring_transaction_id_508da50dc8"
+    t.index ["user_id"], name: "index_recurring_transaction_suggestions_on_user_id"
+    t.check_constraint "(recurring_transaction_id IS NOT NULL) <> (entry_id IS NOT NULL)", name: "recurring_transaction_suggestions_one_subject"
+  end
+
   create_table "recurring_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id"
     t.decimal "amount", precision: 19, scale: 4, null: false
@@ -3346,6 +3366,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
   add_foreign_key "recurring_occurrences", "recurring_transactions", on_delete: :cascade
   add_foreign_key "recurring_price_changes", "entries", on_delete: :nullify
   add_foreign_key "recurring_price_changes", "recurring_transactions", on_delete: :cascade
+  add_foreign_key "recurring_transaction_suggestions", "entries", on_delete: :cascade
+  add_foreign_key "recurring_transaction_suggestions", "families", on_delete: :cascade
+  add_foreign_key "recurring_transaction_suggestions", "recurring_transactions", on_delete: :cascade
+  add_foreign_key "recurring_transaction_suggestions", "users", on_delete: :cascade
   add_foreign_key "recurring_transactions", "accounts", column: "destination_account_id", on_delete: :cascade
   add_foreign_key "recurring_transactions", "accounts", on_delete: :cascade
   add_foreign_key "recurring_transactions", "categories", on_delete: :nullify
