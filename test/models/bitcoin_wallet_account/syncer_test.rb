@@ -29,7 +29,7 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     @provider.fund(RECEIVE, 20_000_000)
     price_provider = mock
     rate_provider = mock
-    @wallet.security.stubs(:price_data_provider).returns(price_provider)
+    Security.any_instance.stubs(:price_data_provider).returns(price_provider)
     ExchangeRate.stubs(:provider_name).returns("frankfurter")
     ExchangeRate.stubs(:provider).with("frankfurter").returns(rate_provider)
 
@@ -54,7 +54,7 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     @wallet.security.prices.delete_all
     @provider.fund(RECEIVE, 20_000_000)
     price_provider = mock
-    @wallet.security.stubs(:price_data_provider).returns(price_provider)
+    Security.any_instance.stubs(:price_data_provider).returns(price_provider)
     price_provider.expects(:fetch_security_prices).raises(StandardError, "Price unavailable")
 
     BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
