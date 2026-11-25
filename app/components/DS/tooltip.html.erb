@@ -42,12 +42,12 @@
         shrink-to-fit width is bounded by its nearest *positioned* ancestor, so
         on an icon-sized trigger the text collapsed to its longest word.
 
-      `max-w-[20rem]` on the content still wraps long copy. %>
+      `max-w-80` on the content still wraps long copy. %>
   <div role="tooltip"
        id="<%= tooltip_id %>"
        data-DS--tooltip-target="tooltip"
        class="<%= class_names("hidden fixed z-50 w-max", panel_classes) %>">
-    <%# `max-w-[20rem]` scales with the root font-size so AT users with
+    <%# `max-w-80` scales with the root font-size so AT users with
         a larger base font don't see the tooltip clipped. %>
     <div class="<%= content_classes %>">
       <%= tooltip_content %>

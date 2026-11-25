@@ -1,4 +1,4 @@
-<%# locals: (form:, exclude: [], clear_filters_path: nil, balance_updates: false) %>
+<%# locals: (form:, exclude: [], clear_filters_path: nil, balance_updates: false, filtered: @q.present?) %>
 <% filters = transaction_search_filters(exclude: exclude, balance_updates: balance_updates) %>
 
 <%= render DS::Tabs.new(
@@ -28,7 +28,7 @@
 
       <div class="flex justify-between items-center gap-2 bg-container p-3 shrink-0">
         <div>
-          <% if @q.present? %>
+          <% if filtered %>
             <%= render DS::Link.new(
             text: t(".clear_filters"),
             variant: "ghost",

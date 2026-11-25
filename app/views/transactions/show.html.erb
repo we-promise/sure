@@ -63,6 +63,7 @@
               url: transaction_path(@entry),
               data: { controller: "auto-submit-form" } do |f| %>
           <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+          <%= compact_row_context_fields %>
           <%# "change", not "blur": leaving the field untouched must not send its stale value. %>
           <%= f.text_field :name,
                 label: t(".name_label"),
@@ -75,6 +76,7 @@
               class: "space-y-2",
               data: { controller: "auto-submit-form" } do |f| %>
           <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+          <%= compact_row_context_fields %>
           <%= f.date_field :date,
                 label: t(".date_label"),
                 disabled: @entry.linked? || split_locked || edit_locked,
@@ -100,6 +102,7 @@
                 url: transaction_path(@entry),
                 data: { controller: "auto-submit-form" } do |f| %>
             <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+            <%= compact_row_context_fields %>
             <% if @entry.transaction.category_editable? %>
               <%= f.fields_for :entryable do |ef| %>
                 <%= render DS::CategorySelect.new(
@@ -139,6 +142,7 @@
               class: "space-y-2",
               data: { controller: "auto-submit-form" } do |f| %>
           <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+          <%= compact_row_context_fields %>
           <% unless @entry.transaction.transfer? %>
             <%= f.select :account,
                 options_for_select(
@@ -166,6 +170,7 @@
                 url: transaction_path(@entry),
                 data: { controller: "auto-submit-form" } do |f| %>
             <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+            <%= compact_row_context_fields %>
             <%= f.fields_for :entryable do |ef| %>
               <%= render DS::TagSelect.new(
                     form: ef,
@@ -320,6 +325,7 @@
                   class: "p-3",
                   data: { controller: "auto-submit-form" } do |f| %>
               <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+              <%= compact_row_context_fields %>
               <div class="flex cursor-pointer items-center gap-4 justify-between">
                 <div class="text-sm space-y-1">
                   <h4 class="text-primary"><%= t(".exclude") %></h4>
@@ -337,6 +343,7 @@
                   class: "p-3",
                   data: { controller: "auto-submit-form" } do |f| %>
               <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+              <%= compact_row_context_fields %>
               <%= f.fields_for :entryable do |ef| %>
                 <div class="flex cursor-pointer items-center gap-4 justify-between">
                   <div class="text-sm space-y-1">
@@ -363,6 +370,7 @@
                   class: "p-3",
                   data: { controller: "auto-submit-form" } do |f| %>
               <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+              <%= compact_row_context_fields %>
               <%= f.fields_for :entryable do |ef| %>
                 <div class="flex cursor-pointer items-center gap-4 justify-between">
                   <div class="text-sm space-y-1">

@@ -11,7 +11,7 @@ class DialogBackTest < ApplicationSystemTestCase
     # opens the transaction drawer instead of the transfer's.
     @transfer.outflow_transaction.update!(kind: "cc_payment")
     @transfer.inflow_transaction.update!(kind: "funds_movement")
-    @row_link = "a[data-turbo-frame='drawer'][href='#{transfer_path(@transfer)}']"
+    @row_link = "a[data-turbo-frame='drawer'][href^='#{transfer_path(@transfer)}']"
     @account = accounts(:depository)
   end
 

@@ -1,0 +1,12 @@
+<div class="@container/compact-table">
+  <%= render DS::CompactRow.new(show_date: show_date, show_balance: show_balance, show_notes: show_notes, muted: muted, indent: indent, header: header) do |row| %>
+    <% row.with_checkbox { check_box_tag("preview_selection", "1", false, class: "hidden @3xl/compact-table:block", aria: { label: t("transactions.list.transaction") }) } %>
+    <% row.with_date { header ? t("transactions.show.date_label") : format_date(Date.current) } %>
+    <% row.with_primary { t("transactions.list.transaction") } %>
+    <% row.with_notes { t("transactions.show.notes") } %>
+    <% row.with_category { t("transactions.form.category_label") } %>
+    <% row.with_labels { t("transactions.show.labels") } %>
+    <% row.with_amount { header ? t("transactions.show.amount") : format_money(Money.new(-10, "USD")) } %>
+    <% row.with_balance { header ? t("accounts.show.activity.balance") : format_money(Money.new(1000, "USD")) } %>
+  <% end %>
+</div>
