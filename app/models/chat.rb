@@ -137,8 +137,7 @@ class Chat < ApplicationRecord
     end
 
     if assistant_message
-      # The watchdog's time counts from here, not from while the reply was queued.
-      assistant_message.update_columns(updated_at: Time.current)
+      assistant_message.started!
       broadcast_pending_status(assistant_message, I18n.t("chats.thinking"))
     end
     assistant.respond_to(message, assistant_message: assistant_message)
@@ -146,8 +145,8 @@ class Chat < ApplicationRecord
 
   # What a pending bubble says: how many requests the reply waits for at its local model host, or
   # "Thinking". It's rendered again once the job starts.
-  def pending_status
-    ahead = requests_ahead
+  def pending_status(assistant_message)
+    ahead = requests_ahead(assistant_message)
     ahead.positive? ? I18n.t("chats.waiting_for_model", count: ahead) : I18n.t("chats.thinking")
   end
 
@@ -215,8 +214,8 @@ class Chat < ApplicationRecord
   def handle_undelivered_response!(assistant_message)
     return false unless assistant_message.is_a?(AssistantMessage)
 
-    if assistant_message.pending? && requests_ahead.positive?
-      broadcast_pending_status(assistant_message, pending_status)
+    if assistant_message.pending? && requests_ahead(assistant_message).positive?
+      broadcast_pending_status(assistant_message, pending_status(assistant_message))
       return false
     end
 
@@ -243,8 +242,11 @@ class Chat < ApplicationRecord
 
   private
 
-    def requests_ahead
-      BackgroundJobHealth.model_gate(Ai::Sequencer.chat_endpoint(user))&.ahead_of(correlation_id) || 0
+    def requests_ahead(assistant_message)
+      gate = BackgroundJobHealth.model_gate(Ai::Sequencer.chat_endpoint(user))
+      return 0 unless gate
+
+      assistant_message.started? ? gate.ahead_of(correlation_id) : gate.ahead
     end
 
     def undelivered_error_payload(assistant_message)

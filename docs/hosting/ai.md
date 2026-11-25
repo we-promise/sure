@@ -381,7 +381,7 @@ ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2
 # nothing, so this covers every call the turn makes, not just the first token.
 # Size it as a sum:
 #   (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) * OPENAI_REQUEST_TIMEOUT
-#     + tool execution + queue wait
+#     + tool execution
 # Here (1 + 2) * 180 = 540s of model time, plus headroom, so 720.
 AI_RESPONSE_TIMEOUT=720
 
@@ -396,7 +396,7 @@ AI_DEBUG_MODE=true
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
 - Ollama caps each model's context at **4096 tokens by default** and truncates longer requests silently. Sure sends the assistant's tool definitions with every request, so a small context can cut off tool results mid-turn and the assistant then answers that it has no financial data even though `get_accounts` runs fine. Set the context to at least `LLM_CONTEXT_WINDOW` plus headroom for tool definitions, tool results, and the reply. Sure talks to Ollama's OpenAI-compatible endpoint, which cannot set `num_ctx` per request — bake the limit into the model with a Modelfile (`PARAMETER num_ctx 16384`, then `ollama create` a model from it and point `OPENAI_MODEL` at that model) or set the server-wide default by starting `ollama serve` with `OLLAMA_CONTEXT_LENGTH=16384` — and raise the two together if long chats or large batches come back truncated
 - If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits. You can also set this in **Settings → Self-Hosting → OpenAI → Request Timeout** when the environment variable is not configured.
-- Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. `AI_RESPONSE_TIMEOUT` has to cover the whole turn, so size it as `(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT` plus tool execution and queue wait — a sum, not simply a larger number than the per-call limit
+- Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. `AI_RESPONSE_TIMEOUT` has to cover the whole turn, so size it as `(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT` plus tool execution — a sum, not simply a larger number than the per-call limit
 - AI jobs run one at a time by default (`RAILS_AI_MAX_THREADS=1`), which suits a local model with one slot; see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes) before raising it
 
 ### Docker Compose Example
@@ -1462,7 +1462,7 @@ Then restart both `web` and `worker` so the new env var is loaded. If you are us
 
 - `OPENAI_REQUEST_TIMEOUT` (default `60`) — applies to **each HTTP call** to the model, on its own.
 - `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` (default `8`) — how many chained tool-call rounds one turn may make. A turn costs up to `1 + this` model calls. On the final permitted round the model is offered no tools, so it answers in text instead of erroring.
-- `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**. Its clock starts when the reply's job starts. A message whose job hasn't started within it is given up on too, unless it's waiting for a local model host (see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes)). Chats run one at a time, so a chat can wait in the queue for another one's turn.
+- `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**. Its clock starts when the reply's job starts. A message whose job hasn't started within it is given up on too, unless it's waiting for a local model host (see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes)). A worker answers `RAILS_AI_MAX_THREADS` chats at once (one by default), so a chat can wait in the queue for another one's turn.
 
 Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated. Worse, the assistant only shows text once a response actually contains some — a tool-call-only response produces nothing to display — so a turn that chains several tool calls sits on "Thinking…" through all of them. At the defaults the worst case is nine sequential model calls plus eight tool-round executions.
 
@@ -1470,7 +1470,7 @@ Responses from custom OpenAI-compatible providers are **not streamed**, so nothi
 
 ```text
 AI_RESPONSE_TIMEOUT ≥ (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT
-                      + tool execution + queue wait
+                      + tool execution
 ```
 
 You have two levers, and the cheaper one is usually the tool-call cap, because it divides the first term. With `ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2` a turn costs at most three model calls instead of nine, cutting the timeout you need by two-thirds. The trade-off is that genuinely long tool chains fail earlier, with a clear "exceeded the tool-call limit" error rather than a timeout.

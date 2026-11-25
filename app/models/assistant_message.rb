@@ -5,6 +5,14 @@ class AssistantMessage < Message
     "assistant"
   end
 
+  # Marks that the reply's job runs, where the watchdog's time starts (Chat#handle_undelivered_response!).
+  # Nothing else updates a pending reply.
+  def started!
+    update_columns(updated_at: Time.current)
+  end
+
+  def started? = updated_at > created_at
+
   # Appends streamed (or, for non-streaming providers, whole) response text.
   #
   # Returns false without saving if the bubble is no longer awaiting a response.

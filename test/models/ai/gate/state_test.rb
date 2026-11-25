@@ -106,14 +106,22 @@ class Ai::Gate::StateTest < ActiveSupport::TestCase
     assert_nil BackgroundJobHealth.model_gate(nil)
   end
 
-  test "an interactive job waits for the other interactive requests, not for work it interrupts" do
+  test "a new interactive request would wait for the interactive ones, not for work it interrupts" do
+    chat, batch = request("interactive", "chat:1"), request("background", "run:1")
+
+    assert_equal 0, built.ahead
+    assert_equal 0, built(holders: [ batch ]).ahead
+    assert_equal 2, built(holders: [ chat ], waiters: [ request("interactive", "chat:2"), request("prompt", "pdf_import:1") ]).ahead
+  end
+
+  test "a job's waiting request waits for the interactive ones before it, or the one it interrupted" do
     chat, other, batch = request("interactive", "chat:1"), request("interactive", "chat:2"), request("background", "run:1")
 
-    assert_equal 0, built(holders: [ batch ]).ahead_of("chat:1")
-    assert_equal 1, built(holders: [ other ]).ahead_of("chat:1")
-    assert_equal 1, built(holders: [ batch ], waiters: [ chat ]).ahead_of("chat:1"), "the interrupted request is letting go"
     assert_equal 1, built(holders: [ other ], waiters: [ chat ]).ahead_of("chat:1")
+    assert_equal 1, built(holders: [ other ], waiters: [ chat, request("interactive", "chat:3") ]).ahead_of("chat:1"), "a later one isn't ahead"
+    assert_equal 1, built(holders: [ batch ], waiters: [ chat ]).ahead_of("chat:1"), "the interrupted request is letting go"
     assert_equal 0, built(holders: [ chat ], waiters: [ other ]).ahead_of("chat:1"), "it's running"
+    assert_equal 0, built(holders: [ other ]).ahead_of("chat:1"), "its tools are running"
     assert_equal 0, built(waiters: [ chat ]).ahead_of("chat:1"), "the host is free: it's about to run"
   end
 
