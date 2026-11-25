@@ -985,8 +985,8 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, "outflow_candidates.amount = -inflow_candidates.amount"
     assert_includes sql, "LEFT JOIN exchange_rates direct_rates"
     assert_includes sql, "to_currency = :family_currency"
-    assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = inflow_accounts.id)"
-    assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)"
+    assert_includes sql, "account_providers.account_id = inflow_accounts.id AND account_providers.provider_type <> 'BitcoinWalletAccount'"
+    assert_includes sql, "account_providers.account_id = outflow_accounts.id AND account_providers.provider_type <> 'BitcoinWalletAccount'"
     assert_includes sql, ":restrict_cross_currency_to_linked_accounts = FALSE"
     assert_equal 2, sql.scan(":require_common_writer = FALSE").size
     assert_equal 2, sql.scan(":exclude_same_connection_pairs = FALSE").size
