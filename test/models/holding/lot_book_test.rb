@@ -162,6 +162,31 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     assert_equal BigDecimal("7.6"), book.average_cost
   end
 
+  test "a reverse split closing a lot scales its original_qty once" do
+    book = Holding::LotBook.new(method: "fifo")
+    book.add_unknown(BigDecimal("100"))
+    book.apply(nil, -BigDecimal("99.999999999999999999"), source_id: "s1")
+    book.apply(BigDecimal("20"), 10, source_id: "buy")
+
+    book.split(Rational(1, 10))
+
+    opening = book.ledger.find { |lot| lot.source_id.nil? }
+    assert_equal 0, opening.qty
+    assert_equal 10, opening.original_qty
+  end
+
+  test "a reverse split closing the only open lot scales its original_qty once" do
+    book = Holding::LotBook.new(method: "fifo")
+    book.add_unknown(BigDecimal("100"))
+    book.apply(nil, -BigDecimal("99.999999999999999999"), source_id: "s1")
+
+    book.split(Rational(1, 10))
+
+    opening = book.ledger.find { |lot| lot.source_id.nil? }
+    assert_equal 0, opening.qty
+    assert_equal 10, opening.original_qty
+  end
+
   test "a transfer-in is a lot of unknown cost and does not move the average" do
     book = Holding::LotBook.new
     book.apply(BigDecimal("20"), 40, source_id: "buy")

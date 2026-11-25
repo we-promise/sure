@@ -724,6 +724,39 @@ class HoldingLotTest < ActiveSupport::TestCase
     assert_not HoldingLot.exists?(empty.id)
   end
 
+  test "merging a consumed opening lot keeps target cost and adds original_quantity" do
+    setup_account
+    old_security = priced_security("LOTC1", 30)
+    new_security = priced_security("LOTC2", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 0, price: 30, amount: 0, currency: "USD")
+    consumed = opening_lot(old_security, 0)
+    consumed.update!(original_quantity: 4, unit_cost: nil)
+    kept = opening_lot(new_security, 5)
+    kept.update!(original_quantity: 5, unit_cost: 50, currency: "USD")
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ 5, 9, 50, "USD" ], [ kept.reload.qty, kept.original_quantity, kept.unit_cost, kept.currency ]
+    assert_not HoldingLot.exists?(consumed.id)
+  end
+
+  test "merging an open lot onto a consumed opening lot uses moved cost and adds original_quantity" do
+    setup_account
+    old_security = priced_security("LOTC3", 30)
+    new_security = priced_security("LOTC4", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 5, price: 30, amount: 150, currency: "EUR")
+    moved = opening_lot(old_security, 5)
+    moved.update!(original_quantity: 5, unit_cost: 50, currency: "EUR")
+    consumed_target = opening_lot(new_security, 0)
+    consumed_target.update!(original_quantity: 4, unit_cost: nil, currency: "USD")
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ 5, 9, 50, "EUR" ],
+      [ consumed_target.reload.qty, consumed_target.original_quantity, consumed_target.unit_cost, consumed_target.currency ]
+    assert_not HoldingLot.exists?(moved.id)
+  end
+
   # --- User-set lot cost --------------------------------------------------------
 
   test "a user-set cost on a transfer-in lot resolves the position, forward" do

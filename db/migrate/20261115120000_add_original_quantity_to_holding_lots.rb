@@ -27,10 +27,15 @@ class AddOriginalQuantityToHoldingLots < ActiveRecord::Migration[8.1]
 
       sales = Entry.joins("JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'")
                    .where(account_id: account.id)
+                   .where("entries.date <= ?", Date.current)
                    .where("trades.security_id = ?", security_id)
                    .where("trades.qty < 0")
                    .order(Arel.sql("entries.date ASC, entries.created_at ASC, entries.id ASC"))
                    .includes(:entryable)
+                   .to_a
+
+      disposals_by_sale = HoldingLotDisposal.where(sale_entry_id: sales.map(&:id)).group_by(&:sale_entry_id)
+      splits = Security::Split.where(security_id: security_id, ex_date: ..Date.current).order(:ex_date).to_a
 
       opening_consumed = BigDecimal("0")
       opening_depleted = false
@@ -38,29 +43,21 @@ class AddOriginalQuantityToHoldingLots < ActiveRecord::Migration[8.1]
       sales.each do |sale|
         break if opening_depleted
 
-        disposals = HoldingLotDisposal.where(sale_entry_id: sale.id)
-        nil_disposals = disposals.where(lot_source_entry_id: nil)
-        has_buy_disposals = disposals.where.not(lot_source_entry_id: nil).exists?
+        disposals = disposals_by_sale.fetch(sale.id, [])
+        named_lot_id = sale.entryable&.lot_source_entry_id
+        nil_qty = disposals.sum(BigDecimal("0")) { |d| d.lot_source_entry_id.nil? ? d.qty : BigDecimal("0") }
+        # A disposal from a lot other than the sale's named lot means FIFO reached past the opening lot.
+        unnamed_buy_disposal = disposals.any? { |d| d.lot_source_entry_id.present? && d.lot_source_entry_id != named_lot_id }
 
-        if nil_disposals.exists?
-          qty = nil_disposals.sum(:qty)
-          factor = split_factor_between(security_id, sale.date, Date.current)
-          scaled_qty = factor == 1 ? qty : Security::Split.scale(qty, factor)
+        if nil_qty.positive?
+          factor = splits.reduce(Rational(1)) { |acc, split| split.ex_date > sale.date ? acc * split.ratio : acc }
+          scaled_qty = factor == 1 ? nil_qty : Security::Split.scale(nil_qty, factor)
           opening_consumed += scaled_qty
         end
 
-        opening_depleted = true if has_buy_disposals
+        opening_depleted = true if unnamed_buy_disposal
       end
 
       [ hl.qty.to_d + opening_consumed, hl.qty.to_d, BigDecimal("0") ].max
-    end
-
-    def split_factor_between(security_id, from, to)
-      return Rational(1) if from.nil? || to.nil? || from >= to
-
-      Security::Split.where(security_id: security_id)
-                     .where("ex_date > ? AND ex_date <= ?", from, to)
-                     .order(:ex_date)
-                     .reduce(Rational(1)) { |factor, split| factor * split.ratio }
     end
 end

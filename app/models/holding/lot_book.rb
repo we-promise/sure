@@ -135,13 +135,11 @@ class Holding::LotBook
     rescale_lots(Security::Split.scale(open_qty, ratio)) do |lot|
       lot.with(
         qty: Security::Split.scale(lot.qty, ratio),
-        original_qty: Security::Split.scale(lot.original_qty, ratio),
         unit_cost: lot.unit_cost && lot.unit_cost * ratio.denominator / ratio.numerator
       )
     end
-    @closed = @closed.map do |lot|
-      lot.with(original_qty: Security::Split.scale(lot.original_qty, ratio))
-    end
+    @lots = @lots.map { |lot| lot.with(original_qty: Security::Split.scale(lot.original_qty, ratio)) }
+    @closed = @closed.map { |lot| lot.with(original_qty: Security::Split.scale(lot.original_qty, ratio)) }
   end
 
   # Current weighted-average cost per share, or nil when nothing is held or

@@ -171,7 +171,7 @@ class Holding::ForwardCalculator
 
     def seed_opening_lots
       opening_lots.each do |lot|
-        factor = portfolio_cache.split_factor_between(lot.security_id, account.start_date, Date.current)
+        factor = portfolio_cache.split_factor_between(lot.security_id, account.start_date - 1, Date.current)
         orig_qty = lot.original_quantity || lot.qty
         initial_qty = factor == 1 ? orig_qty : Security::Split.unscale(orig_qty, factor)
         @lot_books[lot.security_id].add_unknown(initial_qty, original_qty: initial_qty)

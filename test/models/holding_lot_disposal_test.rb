@@ -816,6 +816,87 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
+  test "unlink and forward sync: split on account.start_date is included when seeding opening lots" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      link_account
+      security = priced_security("FIFSD", 30)
+      first = trade(security, 10, 100, 3)
+      sale = trade(security, -4, 300, 4)
+      # Account#start_date is first_entry_date - 1 day (d(2)).
+      Security::Split.create!(security: security, ex_date: d(2), numerator: 2, denominator: 1, source: "manual")
+      @account.holdings.create!(security: security, date: d(10), qty: 10, price: 30, amount: 300, currency: "USD",
+        account_provider: @account_provider)
+
+      materialize(:reverse)
+      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+      assert_equal 0, opening_lot.qty
+      assert_equal 4, opening_lot.original_quantity
+
+      @account_provider.destroy!
+      materialize(:forward)
+
+      assert_nil Trade.find(sale.entryable_id).realized_gain_loss
+      assert_equal [ [ nil, 4 ] ],
+        HoldingLotDisposal.where(sale_entry: sale).map { |d| [ d.lot_source_entry_id, d.qty ] }
+      assert_equal 10, HoldingLot.where(account: @account, security: security).sum(:qty),
+        "only the 10 bought units remain open, not 14 from double-scaling the opening lot"
+      assert_equal 10, HoldingLot.find_by!(account: @account, source_entry: first).qty
+    end
+  end
+
+  test "backfill keeps counting opening disposals after a sale from a named purchased lot" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      link_account
+      security = priced_security("FIFNL", 30)
+      buy = trade(security, 10, 100, 2)
+      named_sale = trade(security, -2, 300, 3)
+      name_lot(named_sale, buy)
+      trade(security, -6, 300, 4)
+      @account.holdings.create!(security: security, date: d(10), qty: 8, price: 30, amount: 240, currency: "USD",
+        account_provider: @account_provider)
+
+      materialize(:reverse)
+      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+      assert_equal 0, opening_lot.qty
+      assert_equal 6, opening_lot.original_quantity
+
+      opening_lot.update_columns(original_quantity: nil)
+      AddOriginalQuantityToHoldingLots.new.up
+
+      assert_equal 6, opening_lot.reload.original_quantity
+    end
+  end
+
+  test "backfill excludes shortfall after named-lot sale followed by ordinary FIFO depletion" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      link_account
+      security = priced_security("FIFNS", 30)
+      buy = trade(security, 10, 100, 2)
+      named_sale = trade(security, -2, 300, 3)
+      name_lot(named_sale, buy)
+      trade(security, -7, 300, 4)
+      @account.holdings.create!(security: security, date: d(10), qty: 7, price: 30, amount: 210, currency: "USD",
+        account_provider: @account_provider)
+
+      materialize(:reverse)
+      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+      assert_equal 0, opening_lot.qty
+      assert_equal 6, opening_lot.original_quantity
+
+      @account_provider.destroy!
+      trade(security, -20, 300, 6)
+      materialize(:forward)
+
+      opening_lot.update_columns(original_quantity: nil)
+      AddOriginalQuantityToHoldingLots.new.up
+
+      assert_equal 6, opening_lot.reload.original_quantity
+    end
+  end
+
   test "a materialization scoped to one security restates only that security's disposals" do
     travel_to TODAY do
       setup_account(method: "fifo")
