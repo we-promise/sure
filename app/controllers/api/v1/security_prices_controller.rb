@@ -99,10 +99,6 @@ class Api::V1::SecurityPricesController < Api::V1::BaseController
       @security_price = security_prices_scope.find(params[:id])
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def security_prices_scope
       Security::Price
         .where(security_id: scoped_security_ids)

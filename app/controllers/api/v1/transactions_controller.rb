@@ -253,10 +253,6 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       ).empty?
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def accessible_account_ids
       current_resource_owner.family.accounts
         .accessible_by(current_resource_owner)

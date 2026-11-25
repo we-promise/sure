@@ -128,10 +128,6 @@ class Api::V1::AccountStatementsController < Api::V1::BaseController
       }, status: :forbidden
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def ensure_write_scope
       authorize_scope!(:write)
     end

@@ -15,8 +15,6 @@ class Holding::Search
     relation = relation.where(account_id: account_ids) unless account_ids.nil?
     relation = relation.where(security_id:) unless security_id.nil?
     relation = relation.where(date:) unless date.nil?
-    relation = relation.where(date: start_date..) unless start_date.nil?
-    relation = relation.where(date: ..end_date) unless end_date.nil?
-    relation
+    within_range(relation, :date, start_date, end_date)
   end
 end

@@ -11,18 +11,21 @@
 # - One public method, `<plural>_scope`, returns the filtered relation with no
 #   ordering, includes or pagination, normalising values to the column's form
 #   (upcased currency, downcased ticker...).
+# - A from/to pair on one column goes through `within_range`.
 #
 #   class Holding::Search
 #     include ScopedSearch
 #
 #     attribute :account_ids # an Array; ActiveModel ignores `array: true`
 #     attribute :date, :date
+#     attribute :start_date, :date
+#     attribute :end_date, :date
 #
 #     def holdings_scope
 #       relation = scope
 #       relation = relation.where(account_id: account_ids) unless account_ids.nil?
 #       relation = relation.where(date:) unless date.nil?
-#       relation
+#       within_range(relation, :date, start_date, end_date)
 #     end
 #   end
 #
@@ -40,4 +43,13 @@ module ScopedSearch
 
   private
     attr_reader :scope
+
+    # `column` between `from` and `to`, both inclusive; a nil bound is open and
+    # two nil bounds leave the relation as it is. `column` may be qualified
+    # ("entries.date").
+    def within_range(relation, column, from, to)
+      return relation if from.nil? && to.nil?
+
+      relation.where(column => from..to)
+    end
 end

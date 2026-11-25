@@ -494,11 +494,6 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     assert_invalid_filter "flag must be true or false", :boolean_filter_param, "yes", "", "2", [ "true" ], { "a" => "true" }
   end
 
-  test "boolean_filter_param with required: rejects an absent key" do
-    assert_raises_filter("flag must be true or false") { filter_reader({}).send(:boolean_filter_param, :flag, required: true) }
-    assert_equal true, filter_reader(flag: "1").send(:boolean_filter_param, :flag, required: true)
-  end
-
   test "date_filter_param reads YYYY-MM-DD only" do
     assert_equal Date.new(2024, 1, 5), read_filter(:date_filter_param, "2024-01-05")
     assert_equal Date.new(2024, 1, 5), read_filter(:date_filter_param, " 2024-01-05 ")

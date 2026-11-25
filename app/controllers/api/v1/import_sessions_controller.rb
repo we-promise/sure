@@ -73,10 +73,6 @@ class Api::V1::ImportSessionsController < Api::V1::BaseController
       @import_session = current_resource_owner.family.import_sessions.find(params[:id])
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def ensure_write_scope
       authorize_scope!(:write)
     end

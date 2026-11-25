@@ -46,10 +46,6 @@ class Api::V1::HoldingsController < Api::V1::BaseController
       @accessible_account_ids ||= current_resource_owner.family.accounts.accessible_by(current_resource_owner).select(:id)
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def set_search
       @search = Holding::Search.new(accessible_holdings, filters: {
         account_id: uuid_filter_param(:account_id),

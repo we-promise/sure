@@ -12,8 +12,6 @@ class Trade::Search
     relation = scope.with_entry
     relation = relation.where(entries: { account_id: }) unless account_id.nil?
     relation = relation.where(entries: { account_id: account_ids }) unless account_ids.nil?
-    relation = relation.where(entries: { date: start_date.. }) unless start_date.nil?
-    relation = relation.where(entries: { date: ..end_date }) unless end_date.nil?
-    relation
+    within_range(relation, "entries.date", start_date, end_date)
   end
 end

@@ -33,10 +33,6 @@ class Api::V1::SecuritiesController < Api::V1::BaseController
       @security = securities_scope.find(params[:id])
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def securities_scope
       Security
         .where(id: scoped_security_ids)

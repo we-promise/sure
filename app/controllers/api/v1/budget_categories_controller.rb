@@ -44,10 +44,6 @@ class Api::V1::BudgetCategoriesController < Api::V1::BaseController
       @budget_category = budget_categories_scope.find(params[:id])
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     # `rolled_over_amount` is materialized, and the web pages that show it
     # recompute on the way in — every one of them goes through
     # Budget.find_or_bootstrap. This endpoint reads the column straight, so

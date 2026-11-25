@@ -152,10 +152,6 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
       scope.includes(:account, :merchant).find(params[:id])
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def ensure_write_scope
       authorize_scope!(:write)
     end

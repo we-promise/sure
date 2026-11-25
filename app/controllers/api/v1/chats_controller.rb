@@ -65,10 +65,6 @@ class Api::V1::ChatsController < Api::V1::BaseController
 
   private
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def ensure_write_scope
       authorize_scope!(:write)
     end

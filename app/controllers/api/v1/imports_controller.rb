@@ -217,10 +217,6 @@ class Api::V1::ImportsController < Api::V1::BaseController
       render json: { error: "not_found", message: "Import not found" }, status: :not_found
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def ensure_write_scope
       authorize_scope!(:write)
     end

@@ -19,10 +19,7 @@ class Transfer::Search
   private
 
     def dated_leg_entries
-      entries = leg_entries
-      entries = entries.where(date: start_date..) unless start_date.nil?
-      entries = entries.where(date: ..end_date) unless end_date.nil?
-      entries
+      within_range(leg_entries, :date, start_date, end_date)
     end
 
     def leg_entries

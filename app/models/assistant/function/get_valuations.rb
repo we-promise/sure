@@ -53,10 +53,9 @@ class Assistant::Function::GetValuations < Assistant::Function
       .where(entryable_type: "Valuation", account_id: accessible_ids)
       .includes(:account, :entryable)
 
-    if params["account_id"].present?
-      return error("invalid_account_id", "account_id must be a UUID from get_accounts.") unless valid_uuid?(params["account_id"])
-
-      scope = scope.where(account_id: params["account_id"])
+    account_id = params["account_id"].presence
+    if account_id && !valid_uuid?(account_id)
+      return error("invalid_account_id", "account_id must be a UUID from get_accounts.")
     end
 
     start_date = parse_date(params["start_date"])
@@ -72,8 +71,7 @@ class Assistant::Function::GetValuations < Assistant::Function
       return error("invalid_date", "start_date must be on or before end_date.")
     end
 
-    scope = scope.where(date: start_date..) if start_date
-    scope = scope.where(date: ..end_date) if end_date
+    scope = Valuation::Search.new(scope, filters: { account_id:, start_date:, end_date: }).valuations_scope
 
     ordered = scope.reverse_chronological
     pagy = Pagy.new(count: ordered.count, page: resolved_page(params), limit: self.class.default_page_size)

@@ -14,8 +14,7 @@ class Security::Price::Search
     relation = scope
     relation = relation.where(security_id:) unless security_id.nil?
     relation = relation.where(currency: currency.upcase) unless currency.nil?
-    relation = relation.where(date: start_date..) unless start_date.nil?
-    relation = relation.where(date: ..end_date) unless end_date.nil?
+    relation = within_range(relation, :date, start_date, end_date)
     relation = relation.where(provisional:) unless provisional.nil?
     relation = relation.where(carried_forward:) unless carried_forward.nil?
     relation

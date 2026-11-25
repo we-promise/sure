@@ -94,10 +94,6 @@ class Api::V1::FamilyExportsController < Api::V1::BaseController
       @family_export = current_resource_owner.family.family_exports.find(params[:id])
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def ensure_write_scope
       authorize_scope!(:write)
     end

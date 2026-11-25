@@ -12,8 +12,6 @@ class RuleRun::Search
     relation = relation.where(rule_id:) unless rule_id.nil?
     relation = relation.where(status:) unless status.nil?
     relation = relation.where(execution_type:) unless execution_type.nil?
-    relation = relation.where(executed_at: start_executed_at..) unless start_executed_at.nil?
-    relation = relation.where(executed_at: ..end_executed_at) unless end_executed_at.nil?
-    relation
+    within_range(relation, :executed_at, start_executed_at, end_executed_at)
   end
 end

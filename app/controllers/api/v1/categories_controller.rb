@@ -87,10 +87,6 @@ class Api::V1::CategoriesController < Api::V1::BaseController
       }, status: :not_found
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def ensure_write_scope
       authorize_scope!(:read_write)
     end

@@ -32,10 +32,6 @@ class Api::V1::InsightsController < Api::V1::BaseController
   end
 
   private
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def require_preview_features_for_api
       return if current_resource_owner.preview_features_enabled?
 

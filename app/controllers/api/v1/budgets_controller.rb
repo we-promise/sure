@@ -38,10 +38,6 @@ class Api::V1::BudgetsController < Api::V1::BaseController
       @budget = budgets_scope.find(params[:id])
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     # This API is read-only, so read-write and read-only shares count alike.
     def budgets_scope
       current_resource_owner.family.budgets

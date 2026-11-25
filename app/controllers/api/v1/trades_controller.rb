@@ -152,10 +152,6 @@ class Api::V1::TradesController < Api::V1::BaseController
       require_api_account_permission!(@entry.account, resource: "trade")
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def ensure_write_scope
       authorize_scope!(:write)
     end
@@ -448,16 +444,6 @@ class Api::V1::TradesController < Api::V1::BaseController
 
       current_resource_owner.family.accounts.writable_by(current_resource_owner)
         .find(trade_params[:transfer_account_id]).id
-    end
-
-    # Write actions list several errors; the filter readers' 422s, rendered by
-    # the base class, pass only the message.
-    def render_validation_error(message, errors = [ message ])
-      render json: {
-        error: "validation_failed",
-        message: message,
-        errors: errors
-      }, status: :unprocessable_entity
     end
 
     def log_and_render_error(action, exception)

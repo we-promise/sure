@@ -39,8 +39,6 @@ class Api::V1::BaseController < ApplicationController
   before_action :check_api_key_rate_limit
   before_action :log_api_access
 
-
-
   # Override Doorkeeper's default behavior to return JSON instead of redirecting
   def doorkeeper_unauthorized_render_options(error: nil)
     { json: { error: "unauthorized", message: "Access token is invalid, expired, or missing" } }
@@ -287,11 +285,11 @@ class Api::V1::BaseController < ApplicationController
       end
     end
 
-    def render_validation_error(message)
+    def render_validation_error(message, errors = [ message ])
       render_json({
         error: "validation_failed",
         message: message,
-        errors: [ message ]
+        errors: errors
       }, status: :unprocessable_entity)
     end
 
@@ -333,12 +331,6 @@ class Api::V1::BaseController < ApplicationController
       nil
     end
 
-    def parse_date_param(key)
-      Date.iso8601(params[key].to_s)
-    rescue ArgumentError
-      raise InvalidFilterError, "#{key} must be an ISO 8601 date"
-    end
-
     # Typed filter readers. Each returns nil when the key is absent and the
     # typed value when it is valid; anything else raises InvalidFilterError,
     # which renders a 422. A key that is present must be valid, so `key=` is a
@@ -346,8 +338,8 @@ class Api::V1::BaseController < ApplicationController
     # Actions with a catch-all `rescue` must call them from a before_action so
     # the 422 is not swallowed into a 500.
 
-    def boolean_filter_param(key, required: false)
-      read_filter(key, "must be true or false", required:) { |raw| BOOLEAN_FILTER_VALUES[raw.downcase] }
+    def boolean_filter_param(key)
+      read_filter(key, "must be true or false") { |raw| BOOLEAN_FILTER_VALUES[raw.downcase] }
     end
 
     def date_filter_param(key)
@@ -390,9 +382,9 @@ class Api::V1::BaseController < ApplicationController
 
     # Yields the stripped scalar value of a present key and returns what the
     # block makes of it; raises "KEY <message>" when the value is not a scalar
-    # or the block returns nil. `required:` makes an absent key invalid too.
-    def read_filter(key, message, required: false)
-      return unless required || params.key?(key)
+    # or the block returns nil.
+    def read_filter(key, message)
+      return unless params.key?(key)
 
       raw = scalar_filter_value(params[key])
       value = yield raw unless raw.nil?

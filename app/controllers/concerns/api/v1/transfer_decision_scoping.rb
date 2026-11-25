@@ -40,6 +40,6 @@ module Api::V1::TransferDecisionScoping
     end
 
     def accessible_account_ids
-      @accessible_account_ids ||= Current.family.accounts.accessible_by(Current.user).select(:id)
+      @accessible_account_ids ||= current_resource_owner.family.accounts.accessible_by(current_resource_owner).select(:id)
     end
 end

@@ -5269,7 +5269,8 @@ paths:
       - name: include_disabled
         in: query
         required: false
-        description: Include disabled accounts in the response. Defaults to false.
+        description: 'Include disabled accounts in the response: true or false (also
+          1 or 0, any case). Defaults to false; any other value returns 422.'
         schema:
           type: boolean
       responses:
@@ -5279,6 +5280,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/AccountCollection"
+        '422':
+          description: invalid include_disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/accounts/{id}":
     parameters:
     - name: id
@@ -5298,7 +5305,8 @@ paths:
       - name: include_disabled
         in: query
         required: false
-        description: Allow retrieving a disabled account. Defaults to false.
+        description: 'Allow retrieving a disabled account: true or false (also 1 or
+          0, any case). Defaults to false; any other value returns 422.'
         schema:
           type: boolean
       responses:
@@ -5322,6 +5330,12 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid include_disabled
           content:
             application/json:
               schema:
@@ -5982,27 +5996,29 @@ paths:
       - name: account_id
         in: query
         required: false
-        description: Filter by account ID
+        description: Filter by account ID. Must be a UUID; anything else returns 422.
         schema:
           type: string
           format: uuid
       - name: currency
         in: query
         required: false
-        description: Filter by currency code
+        description: Filter by ISO 4217 currency code, in any case
         schema:
           type: string
       - name: start_date
         in: query
         required: false
-        description: Filter balances from this date
+        description: Filter balances on or after this date (YYYY-MM-DD; anything else
+          returns 422)
         schema:
           type: string
           format: date
       - name: end_date
         in: query
         required: false
-        description: Filter balances until this date
+        description: Filter balances on or before this date (YYYY-MM-DD; anything
+          else returns 422)
         schema:
           type: string
           format: date
@@ -6395,7 +6411,8 @@ paths:
       - name: roots_only
         in: query
         required: false
-        description: Return only root categories (no parent)
+        description: Return only root categories (no parent). Accepts true, false,
+          1 or 0
         schema:
           type: boolean
       - name: parent_id
@@ -6412,6 +6429,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/CategoryCollection"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
     post:
       summary: Create category
       tags:
@@ -7844,6 +7867,7 @@ paths:
         description: Filter by account ID
         schema:
           type: string
+          format: uuid
       - name: account_ids
         in: query
         required: false
@@ -7852,6 +7876,7 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: date
         in: query
         required: false
@@ -7879,6 +7904,7 @@ paths:
         description: Filter by security ID
         schema:
           type: string
+          format: uuid
       responses:
         '200':
           description: holdings paginated
@@ -7893,7 +7919,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: invalid date filter
+          description: invalid id filter
           content:
             application/json:
               schema:
@@ -8254,6 +8280,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ImportCollection"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
     post:
       summary: Create import
       description: Create a new import from raw CSV content, inline Sure NDJSON content,
@@ -9151,8 +9183,11 @@ paths:
         schema:
           type: string
           enum:
+          - suggested
           - active
+          - paused
           - inactive
+          - ended
       - name: account_id
         in: query
         required: false
@@ -9162,7 +9197,7 @@ paths:
           format: uuid
       responses:
         '200':
-          description: recurring transactions listed
+          description: recurring transactions filtered by status
           content:
             application/json:
               schema:
@@ -9174,7 +9209,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: validation error - malformed account filter
+          description: validation error - unknown status
           content:
             application/json:
               schema:
@@ -10455,6 +10490,7 @@ paths:
         description: Filter by account ID
         schema:
           type: string
+          format: uuid
       - name: account_ids
         in: query
         required: false
@@ -10463,6 +10499,7 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: start_date
         in: query
         required: false
@@ -10491,7 +10528,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: invalid date filter
+          description: invalid id filter
           content:
             application/json:
               schema:
@@ -10783,57 +10820,63 @@ paths:
       - name: per_page
         in: query
         required: false
-        description: 'Items per page (default: 25, max: 100)'
+        description: 'Items per page (default: 25, max: 100; larger values are capped
+          at 100)'
         schema:
           type: integer
       - name: account_id
         in: query
         required: false
-        description: Filter by account ID
+        description: Filter by account ID. With account_ids, only ids in both match.
         schema:
           type: string
+          format: uuid
       - name: category_id
         in: query
         required: false
-        description: Filter by category ID
+        description: Filter by category ID (subcategories are not included). With
+          category_ids, only ids in both match.
         schema:
           type: string
+          format: uuid
       - name: merchant_id
         in: query
         required: false
-        description: Filter by merchant ID
+        description: Filter by merchant ID. With merchant_ids, only ids in both match.
         schema:
           type: string
+          format: uuid
       - name: start_date
         in: query
         required: false
-        description: Filter transactions from this date
+        description: Filter transactions from this date (inclusive)
         schema:
           type: string
           format: date
       - name: end_date
         in: query
         required: false
-        description: Filter transactions until this date
+        description: Filter transactions until this date (inclusive)
         schema:
           type: string
           format: date
       - name: min_amount
         in: query
         required: false
-        description: Filter by minimum amount
+        description: Minimum signed amount, inclusive (inflows are negative)
         schema:
           type: number
       - name: max_amount
         in: query
         required: false
-        description: Filter by maximum amount
+        description: Maximum signed amount, inclusive
         schema:
           type: number
       - name: type
         in: query
         required: false
-        description: Filter by transaction type
+        description: income lists negative amounts and expense positive ones, transfers
+          included
         schema:
           type: string
           enum:
@@ -10842,7 +10885,8 @@ paths:
       - name: search
         in: query
         required: false
-        description: Search by name, notes, or merchant name
+        description: Search by name, notes, or merchant name; surrounding spaces are
+          ignored
         schema:
           type: string
       - name: account_ids
@@ -10853,6 +10897,7 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: category_ids
         in: query
         required: false
@@ -10861,6 +10906,7 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: merchant_ids
         in: query
         required: false
@@ -10869,14 +10915,16 @@ paths:
           type: array
           items:
             type: string
+            format: uuid
       - name: tag_ids
         in: query
         required: false
-        description: Filter by tag IDs
+        description: Transactions carrying any of these tags
         schema:
           type: array
           items:
             type: string
+            format: uuid
       - name: budget_id
         in: query
         required: false
@@ -10920,7 +10968,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: invalid report filter
+          description: 'invalid filter: a date that is not YYYY-MM-DD'
           content:
             application/json:
               schema:
@@ -11401,21 +11449,23 @@ paths:
       - name: account_id
         in: query
         required: false
-        description: Filter by account ID
+        description: Filter by account ID. Must be a UUID; anything else returns 422.
         schema:
           type: string
           format: uuid
       - name: start_date
         in: query
         required: false
-        description: Filter valuations from this date
+        description: Filter valuations on or after this date (YYYY-MM-DD; anything
+          else returns 422)
         schema:
           type: string
           format: date
       - name: end_date
         in: query
         required: false
-        description: Filter valuations until this date
+        description: Filter valuations on or before this date (YYYY-MM-DD; anything
+          else returns 422)
         schema:
           type: string
           format: date
