@@ -37,7 +37,7 @@
       <% if depth.zero? %>
         <span class="h-3 w-3 rounded-full shrink-0" style="background-color: <%= allocation_color(index) %>"></span>
       <% end %>
-      <span class="truncate"><%= allocation_segment_name(segment, by) %></span>
+      <span><%= allocation_segment_name(segment, by) %></span>
     <% end %>
   <% end %>
   <% table.with_column(t("portfolios.allocation.value"), numeric: true, class: "privacy-sensitive") { |segment| format_money(segment.amount) } %>

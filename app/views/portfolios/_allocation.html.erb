@@ -7,7 +7,7 @@
 %>
 
 <div id="portfolio-allocation" class="@container space-y-4">
-  <%= render DS::SegmentedControl.new(aria_label: t("portfolios.allocation.grouping_aria_label")) do |sc| %>
+  <%= render DS::SegmentedControl.new(aria_label: t("portfolios.allocation.grouping_aria_label"), class: "overflow-x-auto max-w-full") do |sc| %>
     <% InvestmentStatement::ALLOCATION_GROUPINGS.each do |grouping| %>
       <% sc.with_segment(
         t("portfolios.allocation.groupings.#{grouping}"),

@@ -545,8 +545,11 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
 
   # The fallback is labelled `security`, so its rows must be the per-security
   # allocation, not whatever allocation_by's else branch happens to return.
+  # Segments are listed largest first, so the rows are compared in that order.
   test "the default grouping lists one row per security plus cash" do
-    expected = InvestmentStatement.new(@family, user: @user).allocation.map { |row| row.cash? ? "cash" : row.security.id }
+    expected = InvestmentStatement.new(@family, user: @user).allocation
+      .sort_by { |row| -row.amount.amount }
+      .map { |row| row.cash? ? "cash" : row.security.id }
     assert_operator expected.size, :>=, 2
 
     get portfolio_path
