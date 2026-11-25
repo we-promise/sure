@@ -1,38 +1,26 @@
 # The simple FIRE tier's arithmetic, and nothing else.
 #
-# Pure: every input is a number handed in, and the reference date is one of
-# them. Nothing here reads the clock, the database or the current request, so a
-# page that shows several of these figures captures one `as_of` and they all
-# agree.
-#
-# Compounding is annual, with the year's contribution added at the end of the
-# year:
-#
-#   V(n + 1) = V(n) * (1 + r) + C
-#
-# Named here because "matches a hand-computed table to the cent" only means
-# something once the recurrence is fixed.
+# Pure: every input is a number handed in. Nothing here reads the clock, the
+# database or the current request.
 class RetirementPlan::Projection
-  # How far the chart runs when the user has not set a retirement date.
-  DEFAULT_HORIZON_YEARS = 30
-
   # BigDecimal bounds, because `clamp` returns the bound itself when it applies
   # and an Integer bound would hand callers an Integer.
   ZERO = BigDecimal("0")
   ONE = BigDecimal("1")
 
-  attr_reader :as_of, :annual_expenses, :annual_income, :current_assets,
-              :safe_withdrawal_rate, :expected_annual_return, :savings_rate, :retirement_date
+  # Two spending figures, on purpose. `annual_living_costs` is what a retired
+  # portfolio has to fund, so it drives the FI number. `annual_expenses` is
+  # everything the user spends now, loan payments included, so it drives the
+  # derived savings rate.
+  attr_reader :annual_living_costs, :annual_expenses, :annual_income, :current_assets, :safe_withdrawal_rate, :savings_rate
 
-  def initialize(as_of:, annual_expenses:, annual_income:, current_assets:, safe_withdrawal_rate:, expected_annual_return:, savings_rate: nil, retirement_date: nil)
-    @as_of = as_of.to_date
+  def initialize(annual_living_costs:, annual_expenses:, annual_income:, current_assets:, safe_withdrawal_rate:, savings_rate: nil)
+    @annual_living_costs = annual_living_costs.to_d
     @annual_expenses = annual_expenses.to_d
     @annual_income = annual_income.to_d
     @current_assets = current_assets.to_d
     @safe_withdrawal_rate = safe_withdrawal_rate.to_d
-    @expected_annual_return = expected_annual_return.to_d
     @savings_rate = savings_rate&.to_d
-    @retirement_date = retirement_date&.to_date
   end
 
   # The portfolio that would fund a year's spending at the withdrawal rate.
@@ -41,9 +29,9 @@ class RetirementPlan::Projection
   # not end at the cent); rounding is the view's job, so compare it with a
   # tolerance or after rounding, never with `==`.
   def fi_number
-    return nil unless annual_expenses.positive? && safe_withdrawal_rate.positive?
+    return nil unless annual_living_costs.positive? && safe_withdrawal_rate.positive?
 
-    annual_expenses / safe_withdrawal_rate
+    annual_living_costs / safe_withdrawal_rate
   end
 
   # The true ratio, which passes 1 once the user is independent. The bar uses
@@ -78,36 +66,4 @@ class RetirementPlan::Projection
 
     annual_income * effective_savings_rate
   end
-
-  # Whole years only: a retirement date eleven months away is zero years of
-  # compounding, not one. A date already passed projects nothing forward.
-  def years_to_retirement
-    return nil if retirement_date.nil?
-    return 0 if retirement_date <= as_of
-
-    years = retirement_date.year - as_of.year
-    years -= 1 if as_of.advance(years: years) > retirement_date
-    years
-  end
-
-  # One point per year, starting with today's assets at `as_of`.
-  def yearly_series
-    value = current_assets
-
-    (0..horizon_years).map do |year|
-      value = value * (1 + expected_annual_return) + annual_contribution unless year.zero?
-      { date: as_of.advance(years: year), value: value }
-    end
-  end
-
-  def projected_total
-    return nil if retirement_date.nil?
-
-    yearly_series.last[:value]
-  end
-
-  private
-    def horizon_years
-      years_to_retirement || DEFAULT_HORIZON_YEARS
-    end
 end
