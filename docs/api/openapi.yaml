@@ -1496,6 +1496,8 @@ components:
       - position
       - stop_processing
       - apply_immediately
+      - owner
+      - applies_to
       - conditions
       - actions
       - created_at
@@ -1531,6 +1533,24 @@ components:
             created or edited by hand, in a bulk edit, in Categorize, via the API
             or by the assistant (splits, transfers and conversions to trades wait
             for the nightly run); otherwise it only runs on the nightly and sync runs
+        owner:
+          type: object
+          nullable: true
+          description: Whom the rule acts for. Null for rules without an owner.
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        applies_to:
+          type: string
+          enum:
+          - owner_accounts
+          - family
+          description: 'owner_accounts: the rule changes only accounts its owner may
+            change. family: every account in the family (an admin-owned rule, or one
+            without an owner).'
         conditions:
           type: array
           items:
@@ -7935,7 +7955,9 @@ paths:
     post:
       summary: Create import session
       description: Create or idempotently retrieve a multi-file SureImport session
-        keyed by client_session_id.
+        keyed by client_session_id. The session records the user who opened it; only
+        that user or an admin may reuse it, add chunks or publish it. Sessions opened
+        before creators were recorded are admin-only.
       tags:
       - Import Sessions
       security:
@@ -7962,6 +7984,12 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '409':
           description: client session conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: client_session_id belongs to a session another user opened
           content:
             application/json:
               schema:
@@ -8121,7 +8149,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: import session not found
+          description: import session not found, or opened by another user
           content:
             application/json:
               schema:
@@ -8142,8 +8170,10 @@ paths:
         type: string
     post:
       summary: Publish import session
-      description: Queue ordered chunk processing for a SureImport session. Later
-        chunks can reference source IDs mapped by earlier chunks.
+      description: 'Queue ordered chunk processing for a SureImport session. Later
+        chunks can reference source IDs mapped by earlier chunks. Every chunk must
+        pass the checks a single import publish does: write access to the accounts
+        it touches, and an admin for chunks that contain rules.'
       tags:
       - Import Sessions
       security:
@@ -8162,7 +8192,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or the publish was refused (account access
+            or rules)
           content:
             application/json:
               schema:
@@ -8186,7 +8217,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: import session not found
+          description: import session not found, or opened by another user
           content:
             application/json:
               schema:
@@ -8271,8 +8302,10 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ImportResponse"
         '403':
-          description: guest users cannot import family configuration, or the account
-            is shared without write access
+          description: guest users cannot import family configuration, the account
+            is shared without write access, or the publish was refused (account access,
+            rules, guest categories or tags; the import is kept and its import_id
+            returned)
           content:
             application/json:
               schema:
@@ -8280,8 +8313,9 @@ paths:
                 - "$ref": "#/components/schemas/ErrorResponse"
                 - "$ref": "#/components/schemas/ErrorResponseWithImportId"
         '422':
-          description: validation error, publish rejection, invalid_import_type, or
-            unsupported_type (MonarchImport)
+          description: validation error, invalid_import_type, unsupported_type (MonarchImport),
+            or publish rejected (not_publishable, max_row_count_exceeded, preflight_failed);
+            a rejected import is kept pending and its import_id returned
           content:
             application/json:
               schema:

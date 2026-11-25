@@ -62,7 +62,7 @@ class Assistant::Function::PreviewRule < Assistant::Function
     else
       return error("invalid_arguments", "Pass rule_id or a definition with conditions and actions.") unless definition_given
 
-      rule = family.rules.build(resource_type: "transaction", active: false)
+      rule = family.rules.build(resource_type: "transaction", active: false, user: user)
       problems = assign_definition(rule, params.slice("conditions", "actions", "effective_date"))
       problems = validate_rule(rule) if problems.empty?
       return error("invalid_rule", "The rule definition is not valid.", problems: problems) if problems.any?

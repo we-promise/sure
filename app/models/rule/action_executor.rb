@@ -1,5 +1,7 @@
 class Rule::ActionExecutor
   TYPES = [ "select", "multi_select", "function", "text", "split" ]
+  # What an annotate-only share may change (#annotation?).
+  ANNOTATE_ATTRIBUTES = (AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES + AccountShare::ANNOTATE_ENTRY_ATTRIBUTES).freeze
 
   def initialize(rule)
     @rule = rule
@@ -25,6 +27,13 @@ class Rule::ActionExecutor
     nil
   end
 
+  # What options depends on besides the family and the current user, so
+  # rules listed together (Rule.share_option_lists) don't share lists that
+  # differ between them.
+  def options_cache_key
+    []
+  end
+
   # The option for a saved value that options leaves out (e.g. a merchant only
   # on accounts the current user can't see, or one no longer assigned), so
   # editing the rule keeps the value instead of silently switching to the
@@ -39,6 +48,19 @@ class Rule::ActionExecutor
   # such as tags claim nothing.
   def claimed_attributes
     []
+  end
+
+  # Attributes the action writes, on the transaction or its entry, by their
+  # real names (:notes for an entry's notes, not a name of the executor's
+  # own). Additive actions that claim nothing (tags) list theirs here.
+  def written_attributes
+    claimed_attributes
+  end
+
+  # Whether the action changes only what an annotate-only share may change
+  # (AccountShare::ANNOTATE_*); see Rule#permitted_accounts.
+  def annotation?
+    written_attributes.any? && (written_attributes - ANNOTATE_ATTRIBUTES).empty?
   end
 
   # Whether matching this action keeps rules further down from setting

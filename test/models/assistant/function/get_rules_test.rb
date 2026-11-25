@@ -18,6 +18,15 @@ class Assistant::Function::GetRulesTest < ActiveSupport::TestCase
     )
   end
 
+  test "says whom each rule acts for" do
+    @rule.update!(user: users(:family_member))
+
+    rule = @fn.call[:rules].find { |r| r[:id] == @rule.id }
+
+    assert_equal users(:family_member).display_name, rule[:owner]
+    assert_equal "owner_accounts", rule[:applies_to]
+  end
+
   test "lists rules with ids resolved to names" do
     result = @fn.call
 

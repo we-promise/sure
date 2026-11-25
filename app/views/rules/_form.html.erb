@@ -33,6 +33,15 @@
     <p class="ml-6 text-xs text-secondary"><%= t(".group_hint") %></p>
   </section>
 
+  <% if Current.user&.admin? %>
+    <section class="space-y-2">
+      <%= f.select :user_id,
+            rule.family.users.order(:first_name, :email).map { |user| [ user.display_name, user.id ] },
+            { include_blank: t(".owner_none"), label: t(".owner_label") } %>
+      <p class="text-xs text-secondary"><%= t(".owner_hint") %></p>
+    </section>
+  <% end %>
+
   <section class="space-y-4">
     <div class="flex items-center gap-1 text-secondary">
       <h3 class="text-sm font-medium text-primary">IF</h3>

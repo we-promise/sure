@@ -48,6 +48,7 @@ class SecurityAuditLog < ApplicationRecord
     password_changed
     webauthn_credential_added
     webauthn_credential_removed
+    rule_owner_changed
   ].freeze
 
   validates :event_type, presence: true, inclusion: { in: EVENT_TYPES }
@@ -128,6 +129,21 @@ class SecurityAuditLog < ApplicationRecord
         ip_address: request.remote_ip,
         user_agent: request.user_agent&.truncate(500),
         metadata: actor_metadata(actor, user, credential_id: credential.id, nickname: credential.nickname)
+      )
+    end
+
+    # A rule acts for its owner, so who owns it decides which accounts it
+    # changes. Logged against whoever made the change (nil when the app did,
+    # e.g. a removed admin's rules losing their owner); the request details
+    # come from Current, as the change happens in the model.
+    def log_rule_owner_changed!(rule:, from_user_id:, actor:)
+      create!(
+        user: actor,
+        user_email: actor&.email,
+        event_type: "rule_owner_changed",
+        ip_address: Current.ip_address,
+        user_agent: Current.user_agent&.truncate(500),
+        metadata: { rule_id: rule.id, family_id: rule.family_id, from_user_id: from_user_id, to_user_id: rule.user_id }
       )
     end
 

@@ -2,6 +2,7 @@
 es:
   rules:
     no_action: Sin acción
+    not_manageable: Solo la persona por la que actúa la regla o un administrador pueden cambiarla.
     no_condition: Sin condición
     notification_baseline_timed_out: Esta regla sigue desactivada. Comprobar qué transacciones cumple ya tardó demasiado y, sin esa comprobación, enviaría un correo por todas ellas. Simplifica sus condiciones y vuelve a activarla.
     category_rule_cta:
@@ -68,6 +69,7 @@ es:
       action_label_to: '%{label} a %{value}'
       all_past_and_future: Todas las %{resource} pasadas y futuras
       on_or_after: '%{resource} a partir del %{date}'
+      restricted_to: Solo cambia las cuentas que %{name} puede editar
       stop_processing: Parar
       stop_processing_hint: Las reglas de más abajo no cambian las transacciones que cumple esta regla.
     form:
@@ -79,6 +81,9 @@ es:
       all_past_and_future: Todas las %{resource} pasadas y futuras
       starting_from: A partir de
       then: ENTONCES
+      owner_label: Actúa por
+      owner_none: Toda la familia
+      owner_hint: La regla solo cambia las cuentas que esta persona puede editar. La regla de un administrador actúa en toda la familia.
       stop_processing_label: No procesar más reglas
       stop_processing_description: Las reglas que están más abajo en la lista no cambian las transacciones que cumplen esta regla.
       group_label: Grupo (opcional)

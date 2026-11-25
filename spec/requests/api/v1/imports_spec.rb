@@ -253,7 +253,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '403', 'guest users cannot import family configuration, or the account is shared without write access' do
+      response '403', 'guest users cannot import family configuration, the account is shared without write access, or the publish was refused (account access, rules, guest categories or tags; the import is kept and its import_id returned)' do
         schema oneOf: [
           { '$ref' => '#/components/schemas/ErrorResponse' },
           { '$ref' => '#/components/schemas/ErrorResponseWithImportId' }
@@ -272,7 +272,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '422', 'validation error, publish rejection, invalid_import_type, or unsupported_type (MonarchImport)' do
+      response '422', 'validation error, invalid_import_type, unsupported_type (MonarchImport), or publish rejected (not_publishable, max_row_count_exceeded, preflight_failed); a rejected import is kept pending and its import_id returned' do
         schema oneOf: [
           { '$ref' => '#/components/schemas/ErrorResponse' },
           { '$ref' => '#/components/schemas/ErrorResponseWithImportId' }

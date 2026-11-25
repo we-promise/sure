@@ -26,6 +26,7 @@
       </div>
 
       <%= render DS::Alert.new(title: t(".note_label"), message: t(".note_description"), variant: :warning) %>
+      <p class="text-xs text-secondary"><%= t(".rules_note") %></p>
 
       <%= form_with url: family_exports_path, method: :post, class: "space-y-4" do |form| %>
         <div class="flex gap-3">

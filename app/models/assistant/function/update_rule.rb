@@ -60,6 +60,7 @@ class Assistant::Function::UpdateRule < Assistant::Function
   def call(params = {})
     rule = find_rule(params["rule_id"])
     return error("not_found", "No rule with id '#{params["rule_id"]}'.") unless rule
+    return not_manageable_error unless rule.manageable_by?(user)
 
     active = params.key?("active") ? ActiveModel::Type::Boolean.new.cast(params["active"]) : nil
     return error("cannot_activate", "update_rule cannot activate a rule. Use apply_rule with a preview_token from a preview.") if active == true

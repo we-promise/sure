@@ -31,6 +31,41 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert_equal 1, @rule.rule_runs.count
   end
 
+  test "a member can't apply a rule they don't own" do
+    create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
+    token = preview_token
+
+    result = Assistant::Function::ApplyRule.new(users(:family_member)).call("rule_id" => @rule.id, "preview_token" => token)
+
+    assert_equal "not_manageable", result[:error]
+    assert_not @rule.reload.active?
+  end
+
+  test "a member's own rule changes only accounts they can write" do
+    member = users(:family_member)
+    @rule.update!(user: member)
+    writable = create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
+    unshared = create_transaction(account: accounts(:investment), name: "ZXQ Coffee Bar")
+    token = Assistant::Function::PreviewRule.new(member).call("rule_id" => @rule.id)[:preview][:preview_token]
+
+    result = perform_enqueued_jobs(only: RuleJob) do
+      Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
+    end
+
+    assert result[:success], result.inspect
+    assert_equal 1, result[:applied_to]
+    assert_equal @category, writable.entryable.reload.category
+    assert_nil unshared.entryable.reload.category
+  end
+
+  test "a preview stops being valid when the rule's owner changes" do
+    create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
+    token = preview_token
+    @rule.update_column(:user_id, users(:family_member).id)
+
+    assert_equal "preview_stale", @fn.call("rule_id" => @rule.id, "preview_token" => token)[:error]
+  end
+
   # Activating a rule with an email action records its current matches as
   # delivered. If that times out the rule stays off (Rule#seed_notification_baseline),
   # and queuing the run anyway would email every past match.
@@ -132,7 +167,7 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     )
     assert_equal "preview_required", @fn.call("rule_id" => other_rule.id, "preview_token" => token)[:error]
 
-    other_user = users(:family_member)
+    other_user = @family.users.create!(email: "other-admin@example.com", password: user_password_test, role: "admin", first_name: "Other", last_name: "Admin")
     assert_equal "preview_required",
       Assistant::Function::ApplyRule.new(other_user).call("rule_id" => @rule.id, "preview_token" => token)[:error]
 

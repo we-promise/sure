@@ -48,7 +48,7 @@ class Assistant::Function::CreateRule < Assistant::Function
   def call(params = {})
     return error("invalid_arguments", "conditions and actions are required.") unless params.key?("conditions") && params.key?("actions")
 
-    rule = family.rules.build(resource_type: "transaction", active: false, name: params["name"].to_s.strip.presence)
+    rule = family.rules.build(resource_type: "transaction", active: false, name: params["name"].to_s.strip.presence, user: user)
     problems = assign_definition(rule, params.slice("conditions", "actions", "effective_date"))
     problems = validate_rule(rule) if problems.empty?
     return error("invalid_rule", "The rule was not saved.", problems: problems) if problems.any?

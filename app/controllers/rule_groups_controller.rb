@@ -44,7 +44,7 @@ class RuleGroupsController < ApplicationController
   # rule keeps its own switch.
   def activation
     active = ActiveModel::Type::Boolean.new.cast(params.require(:active))
-    unchanged = @rule_group.switch_rules(active)
+    unchanged = @rule_group.switch_rules(active, user: Current.user)
 
     if unchanged.any?
       redirect_to rules_path, alert: t(".partially_switched", count: unchanged.size)

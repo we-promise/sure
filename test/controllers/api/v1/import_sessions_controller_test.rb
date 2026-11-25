@@ -112,6 +112,38 @@ class Api::V1::ImportSessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "API Weekly" ], transaction.tags.map(&:name)
   end
 
+  test "a member cannot publish a session that writes rules" do
+    member_key = member_api_key
+    post api_v1_import_sessions_url, params: { type: "SureImport" }, headers: api_headers(member_key)
+    session = ImportSession.find(JSON.parse(response.body).dig("data", "id"))
+    assert_equal users(:family_member), session.created_by
+
+    rule = { type: "Rule", version: 1, data: { id: "rule-1", name: "Imported", resource_type: "transaction", active: true, conditions: [], actions: [ { action_type: "exclude_transaction" } ] } }
+    post chunks_api_v1_import_session_url(session), params: { sequence: 1, raw_file_content: build_ndjson([ rule ]) }, headers: api_headers(member_key)
+    assert_response :created
+
+    assert_no_enqueued_jobs(only: ImportSessionJob) do
+      post publish_api_v1_import_session_url(session), headers: api_headers(member_key)
+    end
+    assert_response :forbidden
+    assert session.reload.pending?
+  end
+
+  test "a member cannot add to or publish a session someone else opened" do
+    member_key = member_api_key
+    session = @family.import_sessions.create!(created_by: @user)
+
+    post chunks_api_v1_import_session_url(session), params: { sequence: 1, raw_file_content: build_ndjson(entity_records) }, headers: api_headers(member_key)
+    assert_response :not_found
+
+    post publish_api_v1_import_session_url(session), headers: api_headers(member_key)
+    assert_response :not_found
+
+    post api_v1_import_sessions_url, params: { type: "SureImport", client_session_id: "admin-session" }, headers: api_headers(@api_key)
+    post api_v1_import_sessions_url, params: { type: "SureImport", client_session_id: "admin-session" }, headers: api_headers(member_key)
+    assert_response :not_found
+  end
+
   test "rejects replayed chunk with different content" do
     session = build_import_session
     params = {
@@ -241,6 +273,12 @@ class Api::V1::ImportSessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def member_api_key
+      ApiKey.create!(user: users(:family_member), name: "Member Key", scopes: [ "read_write" ], display_key: "test_member_#{SecureRandom.hex(8)}", source: "web").tap do |key|
+        Redis.new.del("api_rate_limit:#{key.id}")
+      end
+    end
+
     def build_import_session
       @family.import_sessions.create!(expected_chunks: 2)
     end

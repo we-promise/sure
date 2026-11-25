@@ -397,6 +397,8 @@ class TransfersController < ApplicationController
       # category and notes alone unless the form actually submitted them.
       if transfer_update_params.key?(:category_id)
         outflow = @transfer.outflow_transaction
+        category_id = transfer_update_params[:category_id].presence
+        category = category_id && Current.family.categories.find(category_id)
         # Reloaded under its row lock, so a cleanup clearing the category
         # meanwhile cannot leave an unchanged choice saved as a locked blank.
         # The lock marks it the user's choice, which syncs and the
@@ -404,7 +406,7 @@ class TransfersController < ApplicationController
         # transaction itself. Dropping the automatic categorizers' claim keeps
         # it the user's even where it is the value the AI or Bayes had set.
         outflow.with_lock do
-          outflow.update!(category_id: transfer_update_params[:category_id])
+          outflow.update!(category: category)
           outflow.lock_attr!(:category_id)
           Transaction.drop_automatic_category_claims!([ outflow.id ])
         end

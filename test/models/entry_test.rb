@@ -58,6 +58,16 @@ class EntryTest < ActiveSupport::TestCase
     assert_not_nil category.reload.last_used_at
   end
 
+  test "bulk_update! refuses a category from another family" do
+    entry = create_transaction(account: accounts(:depository))
+    foreign_category = families(:empty).categories.create!(name: "Elsewhere")
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      Entry.where(id: entry.id).bulk_update!({ category_id: foreign_category.id })
+    end
+    assert_nil entry.transaction.reload.category_id
+  end
+
   test "bulk_update! with a block reads the tags of all entries in one query" do
     entries = Array.new(3) { create_transaction(account: accounts(:depository)) }
     yielded = []
