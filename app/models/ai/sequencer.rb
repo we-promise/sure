@@ -99,8 +99,27 @@ module Ai::Sequencer
   # The local endpoint a user's chat route uses, whose gate chat takes and whose host the typing
   # hold keeps free. Nil for a cloud model, an external assistant (it calls its own models) or no chat.
   def chat_endpoint(user)
-    endpoint = user && Ai.plan(:chat, family: user.family, user:)&.route&.endpoint
+    endpoint = chat_route(user)&.endpoint
     endpoint if endpoint&.local? && !endpoint.agent?
+  end
+
+  def external_chat?(user) = chat_route(user)&.agent? || false
+
+  def chat_route(user) = user && Ai.plan(:chat, family: user.family, user:)&.route
+
+  def local_endpoints = Ai::Config.current.endpoints.select { _1.local? && !_1.agent? }
+
+  # Runs an external assistant's turn with no new background request starting on this worker's local
+  # hosts, one of which may serve the assistant's own models: its calls don't pass a gate. The
+  # message has been sent, so it ends the typing hold. The turn holds no place, so a tool it calls
+  # in Sure never waits for it.
+  def external_chat
+    gates = local_endpoints.filter_map { gate_for(_1) }.uniq
+    ChatReservation.release(local_endpoints)
+    gates.each(&:hold_off_background)
+    yield
+  ensure
+    gates&.each(&:let_background_in)
   end
 
   # Temporary, until chat's requests pass Ai::Transport::Instrumenter like every other one's: runs a
@@ -110,7 +129,7 @@ module Ai::Sequencer
     return yield unless endpoint
 
     gate_for(endpoint).hold(:interactive, feature: "chat") do
-      ChatReservation.release(endpoint)
+      ChatReservation.release([ endpoint ])
       yield
     end
   end

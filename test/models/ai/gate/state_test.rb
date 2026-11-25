@@ -41,26 +41,26 @@ class Ai::Gate::StateTest < ActiveSupport::TestCase
   end
 
   test "work the typing hold put off is published until some starts" do
-    ChatReservation.hold!(@endpoint)
+    ChatReservation.new([ @endpoint ], lanes: %i[prompt background]).hold!
     assert_raises(Ai::Error::Busy) { @gate.hold(:background) { } }
     assert_predicate state, :put_off?
 
     @gate.hold(:interactive) { }
     assert_predicate state, :put_off?, "the message doesn't start it"
 
-    ChatReservation.release(@endpoint)
+    ChatReservation.release([ @endpoint ])
     @gate.hold(:background) { }
     assert_not_predicate state, :put_off?
   end
 
   test "a prompt request the typing hold keeps waiting is published as put off" do
-    ChatReservation.hold!(@endpoint)
+    ChatReservation.new([ @endpoint ], lanes: %i[prompt background]).hold!
     prompt = Thread.new { @gate.hold(:prompt) { } }
     Timeout.timeout(5) { sleep 0.05 until state&.put_off? }
 
     assert_equal 1, state.waiters.size
   ensure
-    ChatReservation.release(@endpoint)
+    ChatReservation.release([ @endpoint ])
     prompt.join(3)
   end
 

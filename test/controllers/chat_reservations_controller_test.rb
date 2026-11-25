@@ -12,14 +12,14 @@ class ChatReservationsControllerTest < ActionDispatch::IntegrationTest
     post chat_reservation_url, as: :turbo_stream
 
     assert_response :success
-    assert ChatReservation.held?("gpu.local:8080")
+    assert ChatReservation.held?("gpu.local:8080", :background)
     assert_select "turbo-stream[action=update][targets='.chat-reservation'] template", text: /put off some background tasks/
   end
 
   test "no bubble when no other AI work runs or waits" do
     post chat_reservation_url, as: :turbo_stream
 
-    assert ChatReservation.held?("gpu.local:8080")
+    assert ChatReservation.held?("gpu.local:8080", :background)
     assert_select "turbo-stream[action=update][targets='.chat-reservation'] template", text: ""
   end
 
@@ -43,7 +43,7 @@ class ChatReservationsControllerTest < ActionDispatch::IntegrationTest
 
   test "forbidden without AI consent" do
     users(:family_admin).update!(ai_enabled: false)
-    ChatReservation.expects(:hold!).never
+    ChatReservation.any_instance.expects(:hold!).never
 
     post chat_reservation_url, as: :turbo_stream
 

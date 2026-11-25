@@ -78,12 +78,12 @@ class AiNestedCallTest < ActiveSupport::TestCase
   end
 
   test "a chat request ends the typing hold on its host" do
-    ChatReservation.hold!(@endpoint)
+    ChatReservation.new([ @endpoint ], lanes: %i[prompt background]).hold!
     stub_request(:post, "http://gpu.local:8080/v1/embeddings").to_return(status: 500)
 
     AssistantResponseJob.perform_now(@message, @reply)
 
-    assert_not ChatReservation.held?("gpu.local:8080")
+    assert_not ChatReservation.held?("gpu.local:8080", :background)
   end
 
   test "a chat request interrupts the background request its host is running" do
@@ -122,6 +122,41 @@ class AiNestedCallTest < ActiveSupport::TestCase
 
     assert_equal "agent", Ai.plan(:chat, family: @user.family, user: @user).route.endpoint.name
     assert_nil Ai::Sequencer.chat_endpoint(@user)
+    assert Ai::Sequencer.external_chat?(@user)
+    assert_empty Ai::Sequencer.local_endpoints
+  end
+
+  test "an external assistant's turn holds background requests off every local host and ends the typing hold" do
+    use_ai_routes
+    gpu = AiTestHelper.test_config.endpoint(:gpu)
+    ChatReservation.new([ gpu ], lanes: %i[background]).hold!
+    @user.family.update!(assistant_type: "external")
+    Assistant::External.stubs(configured?: true, allowed_user?: true)
+    refused = nil
+    client = Object.new
+    client.define_singleton_method(:chat) do |**, &answer|
+      refused = %i[gpu embed].map do |name|
+        Ai::Sequencer.gate_for(AiTestHelper.test_config.endpoint(name)).hold(:background) { :ran }
+      rescue Ai::Error::Busy
+        :refused
+      end
+      answer.call("Hello")
+      nil
+    end
+    Assistant::External.any_instance.stubs(:build_client).returns(client)
+
+    AssistantResponseJob.perform_now(UserMessage.find(@message.id), @reply)
+
+    assert_equal %i[refused refused], refused
+    assert_equal "Hello", @reply.reload.content
+    assert_equal :ran, Ai::Sequencer.gate_for(gpu).hold(:background) { :ran }, "the turn is over, and the message ended the hold"
+  end
+
+  test "background requests start again after an external assistant's turn fails" do
+    use_ai_routes
+    assert_raises(RuntimeError) { Ai::Sequencer.external_chat { raise "boom" } }
+
+    assert_equal :ran, Ai::Sequencer.gate_for(AiTestHelper.test_config.endpoint(:gpu)).hold(:background) { :ran }
   end
 
   private

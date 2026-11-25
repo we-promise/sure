@@ -244,7 +244,8 @@ flowchart LR
 - **The typing hold is at the gate.** Typing in the chat box holds the local host of chat's route
   (`Ai::Sequencer.chat_endpoint`, `ChatReservation`): no new prompt or background request starts
   there for 60 seconds. A prompt request waits, a background one raises `Busy`, and the chat
-  message ends the hold.
+  message ends the hold. An external assistant's own calls pass no gate, so typing to it and its
+  whole turn (`Ai::Sequencer.external_chat`) hold new background requests off every local host.
 - **The web reads the gate, never a worker's queues.** A worker publishes each gate in use
   (`Ai::Gate::State`: holders, waiters, interruptions, put-off work) to `Ai::SharedState` on every
   change and on its heartbeat. `BackgroundJobHealth.model_gate` reads it, for a pending chat's

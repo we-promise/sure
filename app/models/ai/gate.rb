@@ -10,7 +10,8 @@
 #   and its job comes back later.
 #
 # While someone types in the chat box (ChatReservation), no new prompt or background request
-# starts on chat's host: the prompt request waits, and the background one raises Busy.
+# starts on chat's host: the prompt request waits, and the background one raises Busy. While an
+# external assistant answers (Ai::Sequencer.external_chat), no new background request starts.
 #
 # With two or more places, one is kept for interactive requests. A gate lives in one worker's
 # memory (Ai::Sequencer.gate_for), so a worker that dies takes its places with it. The worker
@@ -120,6 +121,7 @@ class Ai::Gate
     @arrivals = 0
     @interruptions = 0
     @put_off = false
+    @external_chats = 0
   end
 
   def size=(size)
@@ -135,6 +137,9 @@ class Ai::Gate
   def holders = @monitor.synchronize { @holders.dup }
   def waiters = @monitor.synchronize { @waiters.dup }
   def in_use? = @monitor.synchronize { @holders.any? || @waiters.any? }
+
+  def hold_off_background = @monitor.synchronize { @external_chats += 1 }
+  def let_background_in = @monitor.synchronize { @external_chats -= 1 }
 
   # Writes the gate's state for the web, never under the gate's lock and never failing the request.
   # Only a worker's, which its heartbeat keeps current: a web process's would overwrite it.
@@ -187,7 +192,7 @@ class Ai::Gate
     # Whether the typing hold keeps the request off the host. Read before the gate's lock is taken,
     # so a slow Redis never keeps other requests from it.
     def held?(holder)
-      !holder.interactive? && @host && ChatReservation.held?(@host)
+      !holder.interactive? && @host && ChatReservation.held?(@host, holder.lane)
     rescue StandardError => e
       Rails.logger.warn("[Ai::Gate] typing hold of #{@host} not read: #{e.class}: #{e.message}")
       false
@@ -197,6 +202,7 @@ class Ai::Gate
     # waits for the gate to change before it answers; a background request raises Busy instead.
     def admitted?(holder, held:)
       @monitor.synchronize do
+        held ||= holder.lane == :background && @external_chats.positive?
         if !held && @waiters.first.equal?(holder) && room_for?(holder)
           @waiters.delete(holder)
           @holders << holder
