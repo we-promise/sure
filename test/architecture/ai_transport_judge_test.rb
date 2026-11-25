@@ -129,6 +129,28 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
     chat&.join(2)
   end
 
+  test "a background batch that has begun finishes during an external assistant's turn; the next one raises Busy" do
+    local = local_jev
+    Ai::Sequencer.stubs(:local_endpoints).returns([ local ])
+    chat = nil
+    over = Queue.new
+    stub_local_jev do |nth|
+      next unless nth == 1
+
+      begun = Queue.new
+      chat = Thread.new { Ai::Sequencer.external_chat { begun << true; over.pop(timeout: 10) } }
+      begun.pop(timeout: 5)
+    end
+
+    Ai::Sequencer.with_lane(:background) do
+      assert_equal 3, judge_local(local, 3).answers.size
+      assert_raises(Ai::Error::Busy) { judge_local(local, 3) }
+    end
+  ensure
+    over << true
+    chat&.join(2)
+  end
+
   test "a background batch that finds a local server busy before it begins raises Busy" do
     local = local_jev
     stub_local_jev
