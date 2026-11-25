@@ -15,7 +15,8 @@ class Import::ConfigurationsController < ApplicationController
 
     redirect_to import_upload_path(@import) and return unless @import.uploaded?
 
-    @target_accounts = monarch_target_accounts
+    @target_accounts = monarch_target_accounts.to_a
+    @target_account_currencies = @target_accounts.to_h { |account| [ account.id, account.currency ] }
     render :monarch
   end
 

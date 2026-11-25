@@ -91,7 +91,10 @@ export default class extends Controller {
     // An input event is an edit, even one that leaves the same text (select
     // all and paste it again): the text is then the user's for the selected
     // currency.
-    if (event?.type === "input") this.unreadText = undefined;
+    if (event?.type === "input") {
+      this.unreadText = undefined;
+      this.pastedDuringSwitch = undefined;
+    }
 
     const raw = this.amountTarget.value.trim();
     if (raw === "") {
@@ -99,9 +102,12 @@ export default class extends Controller {
       return;
     }
 
-    const result = this.#isUnreadAfterCurrencySwitch()
-      ? null
-      : evaluateAmountExpression(raw, this.#readOptions());
+    // "1,234" pasted while the currency loads reads 1234 or 1.234 depending
+    // on that currency, so the form is not submitted before it lands.
+    const result =
+      this.#isUnreadAfterCurrencySwitch() || this.#pasteAwaitingLookup()
+        ? null
+        : evaluateAmountExpression(raw, this.#readOptions());
     if (result === null) {
       this.amountTarget.setCustomValidity(
         this.invalidMessageValue || "Enter a valid amount or expression.",
@@ -173,6 +179,8 @@ export default class extends Controller {
     new CurrenciesService().get(currency).then((currencyData) => {
       if (requestId !== this.requestSequence) return;
       this.switchUnsettled = false;
+      const pasted = this.#pasteAwaitingLookup();
+      this.pastedDuringSwitch = undefined;
 
       // Text already there was typed for the previous currency, so it is read
       // with that currency's rules. Text edited while the lookup was pending
@@ -197,8 +205,6 @@ export default class extends Controller {
       const rawValue = this.amountTarget.value.trim();
       if (rawValue !== "") {
         const wasUnread = this.#isUnreadAfterCurrencySwitch();
-        const pasted = this.pastedDuringSwitch === this.amountTarget.value;
-        this.pastedDuringSwitch = undefined;
         let parsedAmount = null;
         if (pasted) {
           parsedAmount = parseAmountPaste(rawValue, {
@@ -250,7 +256,11 @@ export default class extends Controller {
     }).catch(() => {
       // Catch prevents Unhandled Promise Rejection for network failures.
       // Silently ignored as they are unactionable by the user.
-      if (requestId === this.requestSequence) this.switchUnsettled = false;
+      if (requestId !== this.requestSequence) return;
+      this.switchUnsettled = false;
+      // Without the currency the paste is read like typed text.
+      this.pastedDuringSwitch = undefined;
+      this.updateValidity();
     });
   }
 
@@ -271,8 +281,10 @@ export default class extends Controller {
     if (pending && this.#pasteReadsBothWays(text)) {
       event.preventDefault();
       this.amountTarget.value = text.trim();
-      this.pastedDuringSwitch = this.amountTarget.value;
       this.amountTarget.dispatchEvent(new Event("input", { bubbles: true }));
+      // Set after the "input" above, which clears it as an edit.
+      this.pastedDuringSwitch = this.amountTarget.value;
+      this.updateValidity();
       return;
     }
     const parsed = parseAmountPaste(text, {
@@ -386,6 +398,10 @@ export default class extends Controller {
 
     if (this.#isUnreadAfterCurrencySwitch()) return null;
 
+    // A paste kept for the pending lookup has no reading yet (see
+    // updateValidity, which holds the submit until it lands).
+    if (this.#pasteAwaitingLookup()) return null;
+
     // While a currency switch is still loading, the installed precision is
     // the previous currency's; submit unrounded rather than round to it.
     const precision = this.#currencyPending() ? null : this.#fieldPrecision();
@@ -422,6 +438,14 @@ export default class extends Controller {
     const withDot = parseAmountPaste(text, { separator: ".", precision: null });
     const withComma = parseAmountPaste(text, { separator: ",", precision: null });
     return withDot !== withComma;
+  }
+
+  // True while the field holds a paste kept for the pending lookup.
+  #pasteAwaitingLookup() {
+    return (
+      this.pastedDuringSwitch !== undefined &&
+      this.amountTarget.value === this.pastedDuringSwitch
+    );
   }
 
   // True when the text changed after the last currency switch started.

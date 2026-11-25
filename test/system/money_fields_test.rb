@@ -137,10 +137,15 @@ class MoneyFieldsTest < ApplicationSystemTestCase
       input.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }))
     JS
 
+    # Its reading depends on the currency, so the form waits for the lookup.
+    validity = 'document.querySelector("input[name=\'transfer[amount]\']").validity.valid'
+    assert_equal false, page.evaluate_script(validity)
+
     page.execute_script("window.heldCurrencyLookups.forEach((release) => release())")
     within(amount_field) { assert_selector "[data-money-field-target='symbol']", text: "$" }
     # A USD statement's "1,234" is a thousands amount, not 1.234.
     assert_equal "1234.00", find_field("transfer[amount]").value
+    assert_equal true, page.evaluate_script(validity)
   end
 
   test "split rows add up typed comma amounts" do

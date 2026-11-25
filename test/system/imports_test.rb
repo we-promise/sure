@@ -300,6 +300,27 @@ class ImportsTest < ApplicationSystemTestCase
     assert_equal 0, accounts.where(name: %w[Checking Card]).joins(:entries).where(entries: { entryable_type: "Transaction" }).count
   end
 
+  test "monarch balance follows the destination account's currency" do
+    @user.family.accounts.create!(name: "Yen Wallet", balance: 0, currency: "JPY", accountable: Depository.new)
+
+    visit new_import_path
+    click_on "Financial Tools"
+    click_on "Import from Monarch"
+    attach_file "import[balances_file]", file_fixture("imports/monarch_balances.csv")
+    attach_file "import[transactions_file]", file_fixture("imports/monarch_transactions.csv")
+    click_on "Upload exports"
+
+    assert_selector "h1", text: "Check each Monarch account"
+    balance = find_field("Balance today for Checking").ancestor("[data-controller='money-field']")
+    within(balance) { assert_selector "[data-money-field-target='symbol']", text: "$" }
+
+    find("select[aria-label='Where to import Checking']").select("Yen Wallet")
+    within(balance) { assert_selector "[data-money-field-target='symbol']", text: "¥" }
+
+    find("select[aria-label='Where to import Checking']").select("New account")
+    within(balance) { assert_selector "[data-money-field-target='symbol']", text: "$" }
+  end
+
   private
     # DS::Toggle hides its checkbox; people click the switch, its label.
     def click_toggle(aria_label)
