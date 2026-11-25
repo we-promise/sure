@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
+# The securities an API caller may see: those held or traded in an account
+# they can access. Filtering lives in Security::Search and
+# Security::Price::Search.
 module Api::V1::SecurityResourceFiltering
-  class InvalidFilterError < StandardError; end
-
   private
 
     def scoped_security_ids
@@ -23,19 +24,5 @@ module Api::V1::SecurityResourceFiltering
 
     def accessible_account_ids
       @accessible_account_ids ||= current_resource_owner.family.accounts.visible.accessible_by(current_resource_owner).select(:id)
-    end
-
-    def parse_boolean_filter_param(key)
-      boolean_filter_param(key, required: true)
-    end
-
-    def parse_date_param(key)
-      Date.iso8601(params[key].to_s)
-    rescue ArgumentError
-      invalid_filter!("#{key} must be an ISO 8601 date")
-    end
-
-    def invalid_filter!(message)
-      raise InvalidFilterError, message
     end
 end
