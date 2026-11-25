@@ -15,20 +15,21 @@ copy of its own.
 parallel with 3b and 3c (calls by @josh-sanders, 2026-11-13 and 2026-11-16).
 **Merge order:** after 3a, before 3b, 3c and 3d, which rebase onto it (PR 3's decision 9). It
 doesn't have to share a release with any part of PR 3.
-**Status** (2026-11-25): 4a is built (#5756) and 4b is built (#5758), both in review; 4c isn't
-built. Every decision below was made by @josh-sanders on 2026-11-13. Where the build differs, the
-section [Built differently](#built-differently-4a-and-4b) is what counts.
+**Status** (2026-11-25): 4a (#5756) and 4b (#5758) are built and in review, and 4c (#5784) is built.
+Every decision below was made by @josh-sanders on 2026-11-13. Where the build differs, the
+section [Built differently](#built-differently-4a-4b-and-4c) is what counts.
 **Delivery (2026-11-24):** after #5504, with base, branches and order in
 [`stack-sequencer-off-the-web-thread.md`](stack-sequencer-off-the-web-thread.md), which overrides the base and branch lines here.
 PR 4 ships as three PRs: 4a (steps 0–2), 4b (steps 3–4) and 4c (steps 5–9).
 
-## Built differently: 4a and 4b
+## Built differently: 4a, 4b and 4c
 
 | Part | Planned below | Built | Why |
 |---|---|---|---|
 | 4a | `RequeueIndexPollsJob`'s cron on `ai_background` | `ai_prompt`, the job's own queue | `embed` is a prompt-lane feature, and `ai_lane_test` makes a cron entry use its job's queue |
 | 4a | nothing | `Ai::Generation` takes "someone is waiting" from the lane, and tries past down marks (redesign §5.4) | call by @josh-sanders, 2026-11-24; replaces #5769's option |
 | 4a | nothing | the Enhance button queues no logo job | call by @josh-sanders, 2026-11-24 |
+| 4a | the `ai_chat` capsule has one thread | `RAILS_AI_MAX_THREADS` threads, default 1 | call by @josh-sanders, 2026-11-25; a raised setting answered that many chats at once on `main`, external assistants' long turns included |
 | 4b | `ai_low_priority` drains in the background lane | in the prompt lane | it held PDF imports and indexing, which mustn't meet `Busy` midway |
 | 4b | `Preempted` is resent in `Ai::Generation#on_routes` | in `Ai::Transport::Base#attempt` | OCR, embeddings and Jev don't go through `on_routes`; still the same route, not an attempt |
 | 4b | `Busy` re-enqueued by `GenerationJob`, `ShadowJob` and `ProbeJob` each | `retry_on Ai::Error::Busy` once in `ApplicationJob`, 5–15 s, no cap | one place; the same job, so other errors' retry counts carry on |
@@ -36,8 +37,19 @@ PR 4 ships as three PRs: 4a (steps 0–2), 4b (steps 3–4) and 4c (steps 5–9)
 | 4b | the cancel check while waiting | once a place is free, before sending | no database check under the gate's lock |
 | 4b | the proxy setting is read before waiting (stack plan §3b) | not needed yet | `proxy_or_warn` never raises on the stack; it matters again with #5487 |
 | 4b | nothing | each streamed chunk checks the call's budget | a chunk resets the read timeout, so a slow stream could outlast the budget |
+| 4b | nothing | `Busy` isn't logged as a failed call or traced | found in step 9: the debug log got an error each time a background job came back |
+| 4c | "ready" when the gate has waiters | also when the hold refused background work | background calls come back later instead of waiting |
+| 4c | "N tasks ahead" counts holders and waiters | only interactive requests, at the gate | chat interrupts the rest. Chats still in Sidekiq's queue aren't counted, so it can be too low |
+| 4c | the watchdog waits for a reply at the gate | also for one still queued behind an interactive request, and every reply's time counts from its job's start | call by @josh-sanders, 2026-11-25, for every model; with one chat thread a chat seldom waits long at the gate itself |
+| 4c | the busy bubble is broadcast when the message is sent | rendered with the pending reply, broadcast at the job's start, and "Thinking" as each request gets its place | the page load after sending replaced the broadcast; found in the browser |
+| 4c | the typing hold's key is per host (`ai/hold/<host>`) | per host and lane | a built-in chat holds prompt and background, an external one background only |
+| 4c | an external assistant holds nothing | typing to it, and its whole turn, hold new background requests off every local host | call by @josh-sanders, 2026-11-25; its own calls pass no gate, and may be on the same server |
+| 4c | state in each process | only a Sidekiq worker publishes, on changes and its heartbeat | a web process's gate would overwrite the worker's |
 
-The baseline (step 0) is in #5756's description.
+The baseline (step 0) is in #5756's description. Step 9's numbers are in #5784's: chat replies in
+6.1, 2.7 and 1.9 s, against 106.2, 78.6 and 97.6 s. #5784 also records the browser tests with
+llama.cpp, Jev and OpenClaw. An OpenClaw chat that shares llama.cpp with categorization still waits
+for the batch already running, and then reads its prompt again.
 
 ## Context
 

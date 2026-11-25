@@ -6,14 +6,15 @@
 [`rubyllm-workbench-comparison.md`](rubyllm-workbench-comparison.md). Those plans hold the design and
 the steps. This one holds how they're cut into PRs, the branches, and what changed since they were
 written.
-**Status** (2026-11-25): the outbox (#5745), 4a (#5756) and 4b (#5758) are built and in review, as
-stack #5748. 4c and the feature PRs aren't built. Code references are to `feat/ai-5077-followups` at
+**Status** (2026-11-25): the outbox (#5745), 4a (#5756) and 4b (#5758) are built and in review, and
+4c (#5784) is built, all in stack #5748. The feature PRs aren't built. Code references are to `feat/ai-5077-followups` at
 `14ae81544` (the top of stack #5504 when this was written) and RubyLLM 2.2.3. What was built
-differently is in [`pr-4-sequencer.md`](pr-4-sequencer.md#built-differently-4a-and-4b).
+differently is in [`pr-4-sequencer.md`](pr-4-sequencer.md#built-differently-4a-4b-and-4c).
 
 - **Under the outbox:** #5744, the replica of jaysbeekay's #5477.
 - **Beside the stack, on #5608:** #5663 (luis-ibanez) and #5769, the fixes before the landing (down
-  marks, shims for the job classes `main` queued). #5769 is merged up through 4b.
+  marks, shims for the job classes `main` queued). #5769's first two commits are merged up through 4c; the later ones wait for a
+  merge of both stacks.
 
 **Summary.** Nine PRs, cut by feature (Luis's suggestion; call by @josh-sanders, 2026-11-24). The
 plumbing is one stack: the outbox, then the sequencer in three parts. Four feature PRs are each
@@ -104,6 +105,8 @@ including tests and excluding locale files.
 | Documents in a job | 300–500 |
 | MCP tools in a job | 700–1,000 |
 | Capsule-only | 600–900, mostly one line in each of about 60 test files |
+
+4c was built at 1,014 lines added and 527 removed, locale files included.
 
 A PR whose built diff goes over 2,000 lines is split at a step boundary before review.
 

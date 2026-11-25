@@ -2094,21 +2094,22 @@ adding a feature never adds a queue.
 
 | Lane | Queue | Capsule | Features |
 |---|---|---|---|
-| Interactive | `ai_interactive` | `ai_chat`, 1 thread | `chat`, `bill_setup`, `search_documents` |
+| Interactive | `ai_interactive` | `ai_chat`, `RAILS_AI_MAX_THREADS` threads | `chat`, `bill_setup`, `search_documents` |
 | Prompt | `ai_prompt` | `ai`, strict order | `extract_pdf`, `embed` |
 | Background | `ai_background` | `ai`, strict order | `categorize`, `shadow_categorize`, `detect_merchants`, `enhance_merchants`, and probes |
 
 They replace `ai_high_priority` and `ai_low_priority`. For one release the `ai` capsule also
 drains the old queues. The old AI job classes are gone since 2c, with no shims.
 
-- **Chat has its own thread.** In the spike, one `ai` capsule of four threads took four merchant
+- **Chat has its own threads.** In the spike, one `ai` capsule of four threads took four merchant
   jobs (three at the server, one waiting for the host), and the chat job sat in Sidekiq's queue
   for 136 s until a thread came free: strict queue order only decides what a free thread takes
   next. A one-thread `ai_chat` capsule gave chat its first word as fast as a fiber worker did
   (48.3 s against 48.2 s).
 - **Thread counts.** `config/sidekiq.yml` keeps its sizing for the default capsule
   (`RAILS_MAX_THREADS - RAILS_AI_MAX_THREADS`) and the `ai` capsule (`RAILS_AI_MAX_THREADS`,
-  default 1). The `ai_chat` capsule's thread comes on top and isn't counted in the database pool:
+  default 1). The `ai_chat` capsule has as many again (call by @josh-sanders, 2026-11-25; one
+  thread before), which come on top and aren't counted in the database pool:
   Rails 8.1 returns a connection after each query outside a transaction, and in the spike a pool
   of 3 served 200 threads making AI calls. The exception is a transaction held across an AI call,
   which keeps its connection; the plumbing never opens one around a call.
@@ -2184,7 +2185,9 @@ interrupt each other.
   on the local host that chat's route uses don't start: they re-enqueue as under Rule 3. The hold lasts
   60 seconds from the last keystroke, with #4444's 15-minute cap and its "ready" and "busy" bubble.
   So a long prompt read rarely starts just before a chat is sent. #4444's 60-second hold after
-  each reply goes: spike A shows the follow-up keeps its cache anyway.
+  each reply goes: spike A shows the follow-up keeps its cache anyway. An external assistant's own
+  calls pass no gate, so typing to it, and its whole turn, hold new background calls off every local
+  host (call by @josh-sanders, 2026-11-25).
 
 **Rule 3: background jobs never wait.** If a background call finds its host's gate taken, the
 gate raises `Ai::Error::Busy`, and the job re-enqueues itself after 5 to 15 seconds (random) and
