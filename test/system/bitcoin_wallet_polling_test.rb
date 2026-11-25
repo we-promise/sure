@@ -44,11 +44,11 @@ class BitcoinWalletPollingTest < ApplicationSystemTestCase
     sync.update!(status: :completed)
 
     # Keep the old response pending through the next polling tick.
-    page.execute_async_script(<<~JS)
+    page.evaluate_async_script(<<~JS)
       const done = arguments[arguments.length - 1];
       const frame = document.querySelector("turbo-frame[data-polling-url-value]");
       const interval = Number(frame.dataset.pollingIntervalValue || 3000);
-      setTimeout(done, interval + 100);
+      setTimeout(() => done(true), interval + 100);
     JS
     assert_equal "1", page.evaluate_script("document.documentElement.dataset.walletPolls")
     page.execute_script("window.releaseWalletPoll()")
