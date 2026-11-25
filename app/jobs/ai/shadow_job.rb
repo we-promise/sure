@@ -6,12 +6,12 @@
 # `compare.ai_shadow` event, which Ai::Instrumentation::ComparisonSubscriber writes to
 # Ai::Comparison. Nothing is applied.
 #
-# Never retried: a diagnostic that failed is skipped, and a deadlock is discarded rather than
-# retried by ApplicationJob's retry_on.
+# Never retried: a diagnostic that failed is skipped, and a deadlock or a busy model host is
+# discarded rather than retried by ApplicationJob's retry_on.
 class Ai::ShadowJob < ApplicationJob
   queue_as { Ai::Routes.queue_for(Ai::Shadow.feature_for(arguments.first)) }
   sidekiq_options retry: false
-  discard_on ActiveRecord::Deadlocked
+  discard_on ActiveRecord::Deadlocked, Ai::Error::Busy
 
   # feature: a key in Ai::Requesters whose requester defines ai_shadow_generation; sent:
   # Ai::Shadow.fingerprint of the items the primary was sent; primary: Ai::Shadow.side of the call
