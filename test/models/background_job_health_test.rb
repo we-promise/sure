@@ -35,11 +35,27 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
     assert_not BackgroundJobHealth.healthy?
   end
 
+  test "a reply is in line while its job is queued and a worker polls the chat queue" do
+    reply, other = messages(:chat1_assistant_response), AssistantMessage.new(id: SecureRandom.uuid)
+    job = stub(args: [ { "arguments" => [ { "_aj_globalid" => other.to_global_id.to_s }, { "_aj_globalid" => reply.to_global_id.to_s } ] } ])
+    Sidekiq::Queue.stubs(:new).with(BackgroundJobHealth::CHAT_QUEUE).returns([ stub(args: []), job ])
+
+    BackgroundJobHealth.stubs(:current).returns(polls_chat_queue: true)
+    assert BackgroundJobHealth.reply_queued?(reply)
+    assert_not BackgroundJobHealth.reply_queued?(AssistantMessage.new(id: SecureRandom.uuid))
+
+    BackgroundJobHealth.stubs(:current).returns(polls_chat_queue: false)
+    assert_not BackgroundJobHealth.reply_queued?(reply), "no worker would run it"
+    BackgroundJobHealth.stubs(:current).returns(polls_chat_queue: nil)
+    assert_not BackgroundJobHealth.reply_queued?(reply), "Sidekiq can't be read"
+  end
+
   test "fails open when Sidekiq/Redis is unreachable" do
     Sidekiq::ProcessSet.stubs(:new).raises(StandardError.new("no redis"))
 
     assert BackgroundJobHealth.healthy?
     assert BackgroundJobHealth.snapshot[:error]
+    assert_not BackgroundJobHealth.reply_queued?(AssistantMessage.new(id: SecureRandom.uuid))
   end
 
   private

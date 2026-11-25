@@ -108,24 +108,16 @@ class Ai::Gate::StateTest < ActiveSupport::TestCase
     assert_nil BackgroundJobHealth.model_gate(nil)
   end
 
-  test "a new interactive request would wait for the interactive ones, not for work it interrupts" do
-    chat, batch = request("interactive", "chat:1"), request("background", "run:1")
+  test "a job's waiting request is behind the interactive ones before it, not work it interrupts" do
+    chat, other, batch = request("interactive", "reply:1"), request("interactive", "reply:2"), request("background", "run:1")
 
-    assert_equal 0, built.ahead
-    assert_equal 0, built(holders: [ batch ]).ahead
-    assert_equal 2, built(holders: [ chat ], waiters: [ request("interactive", "chat:2"), request("prompt", "pdf_import:1") ]).ahead
-  end
-
-  test "a job's waiting request waits for the interactive ones before it" do
-    chat, other, batch = request("interactive", "chat:1"), request("interactive", "chat:2"), request("background", "run:1")
-
-    assert_equal 1, built(holders: [ other ], waiters: [ chat ]).ahead_of("chat:1")
-    assert_equal 1, built(holders: [ other ], waiters: [ chat, request("interactive", "chat:3") ]).ahead_of("chat:1"), "a later one isn't ahead"
-    assert_equal 0, built(holders: [ batch ], waiters: [ chat ]).ahead_of("chat:1"), "the interrupted request is letting go"
-    assert built(holders: [ batch ], waiters: [ chat ]).waiting?("chat:1")
-    assert_equal 0, built(holders: [ chat ], waiters: [ other ]).ahead_of("chat:1"), "it's running"
-    assert_equal 0, built(holders: [ other ]).ahead_of("chat:1"), "its tools are running"
-    assert_not built(holders: [ chat ], waiters: [ other ]).waiting?("chat:1")
+    assert built(holders: [ other ], waiters: [ chat ]).behind_interactive?("reply:1")
+    assert built(holders: [ batch ], waiters: [ other, chat ]).behind_interactive?("reply:1")
+    assert_not built(holders: [ batch ], waiters: [ chat, other ]).behind_interactive?("reply:1"), "a later one isn't ahead"
+    assert_not built(holders: [ chat ], waiters: [ other ]).behind_interactive?("reply:1"), "it's running"
+    assert_not built(holders: [ other ]).behind_interactive?("reply:1"), "its tools are running"
+    assert built(holders: [ batch ], waiters: [ chat ]).waiting?("reply:1")
+    assert_not built(holders: [ chat ]).waiting?("reply:1")
   end
 
   private

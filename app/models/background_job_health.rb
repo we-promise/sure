@@ -41,6 +41,14 @@ class BackgroundJobHealth
       nil
     end
 
+    # Whether a reply's job still waits in the chat queue, which a worker polls: it's in line, not lost.
+    def reply_queued?(assistant_message)
+      current[:polls_chat_queue] == true && Sidekiq::Queue.new(CHAT_QUEUE).any? { _1.args.to_s.include?(assistant_message.id) }
+    rescue => e
+      Rails.logger.warn("BackgroundJobHealth reply check failed: #{e.class}: #{e.message}")
+      false
+    end
+
     def summary
       h = current
       "workers=#{h[:workers].inspect} polls_#{CRITICAL_QUEUE}=#{h[:polls_critical_queue].inspect} polls_#{CHAT_QUEUE}=#{h[:polls_chat_queue].inspect} latency=#{h[:latency].inspect}s"

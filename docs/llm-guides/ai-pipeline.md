@@ -250,7 +250,7 @@ flowchart LR
 - **The web reads the gate, never a worker's queues.** A worker publishes each gate in use
   (`Ai::Gate::State`: holders, waiters, interruptions, put-off work) to `Ai::SharedState` on every
   change and on its heartbeat. `BackgroundJobHealth.model_gate` reads it, for a pending chat's
-  "tasks ahead", its watchdog and the typing bubble. Only Sidekiq publishes, and one worker should
+  "Waiting in line", its watchdog and the typing bubble. Only Sidekiq publishes, and one worker should
   serve a local host: two would overwrite each other.
 - **No prompt heredocs.** `Sure/NoPromptHeredoc` flags heredocs over ten lines in
   `app/models/ai/**` and controllers.

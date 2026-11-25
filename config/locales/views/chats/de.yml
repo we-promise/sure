@@ -4,9 +4,7 @@ de:
     demo_banner_title: "Demo-Modus aktiv"
     demo_banner_message: "Kostenlose LLM-Tokens dank Vercel AI Gateway. Die Ergebnisse können variieren, da wir die Modellgewichte häufig zu Testzwecken wechseln. In der Dokumentation von Vercel erfährst du, wohin deine Gespräche gelangen! 🤖"
     thinking: "Wird verarbeitet ..."
-    waiting_for_model:
-      one: "Wartet auf das Modell; noch 1 Aufgabe davor ..."
-      other: "Wartet auf das Modell; noch %{count} Aufgaben davor ..."
+    waiting_in_line: "In der Warteschlange ..."
     reservation:
       ready_html: "Ich habe ein paar Hintergrundaufgaben aufgeschoben, damit ich gleich mit deiner Nachricht loslegen kann. In %{countdown} s schleichen sie sich zurück, also tipp weiter!"
       busy: "Ich erledige nur noch schnell eine Hintergrundaufgabe, dann bin ich ganz für dich da. Tipp ruhig weiter!"

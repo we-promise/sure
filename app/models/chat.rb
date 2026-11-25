@@ -143,12 +143,12 @@ class Chat < ApplicationRecord
     assistant.respond_to(message, assistant_message: assistant_message)
   end
 
-  # What a pending bubble says: how many requests the reply waits for at its local model host, or
-  # "Thinking". Broadcast when its job starts, and as each of its requests does.
+  # What a pending bubble says: whether other interactive requests are ahead of the reply at its
+  # local model host. Broadcast when its job starts, and as each of its requests does.
   def pending_status(assistant_message)
     gate = model_gate
-    ahead = gate ? (assistant_message.started? ? gate.ahead_of(assistant_message.gate_id) : gate.ahead) : 0
-    ahead.positive? ? I18n.t("chats.waiting_for_model", count: ahead) : I18n.t("chats.thinking")
+    in_line = gate && (assistant_message.started? ? gate.behind_interactive?(assistant_message.gate_id) : gate.interactive?)
+    I18n.t(in_line ? "chats.waiting_in_line" : "chats.thinking")
   end
 
   def broadcast_pending_status(assistant_message, status = pending_status(assistant_message))
@@ -209,14 +209,13 @@ class Chat < ApplicationRecord
   # Driven by an untrusted client watchdog, so the state change is gated behind a
   # row lock + a server-side age check: we re-read the row under lock and only act
   # if it is *still* pending and has genuinely waited past the timeout, so we never
-  # race a worker that is finishing a legitimate (slow) response. A reply waiting
-  # for its local model host isn't undelivered: its bubble says what it waits for,
-  # and the watchdog asks again.
+  # race a worker that is finishing a legitimate (slow) response. A reply still in
+  # line isn't undelivered: its bubble says so, and the watchdog asks again.
   def handle_undelivered_response!(assistant_message)
     return false unless assistant_message.is_a?(AssistantMessage)
 
-    if assistant_message.pending? && waiting_for_model?(assistant_message)
-      broadcast_pending_status(assistant_message)
+    if assistant_message.pending? && in_line?(assistant_message)
+      broadcast_pending_status(assistant_message, I18n.t("chats.waiting_in_line"))
       return false
     end
 
@@ -245,20 +244,25 @@ class Chat < ApplicationRecord
 
     def model_gate = BackgroundJobHealth.model_gate(Ai::Sequencer.chat_endpoint(user))
 
-    # Queued behind other interactive requests, or waiting for its place at the gate.
-    def waiting_for_model?(assistant_message)
-      gate = model_gate
-      return false unless gate
+    # Its job is queued, or its request waits for a place at its local model host's gate.
+    def in_line?(assistant_message)
+      return BackgroundJobHealth.reply_queued?(assistant_message) unless assistant_message.started?
 
-      assistant_message.started? ? gate.waiting?(assistant_message.gate_id) : gate.ahead.positive?
+      model_gate&.waiting?(assistant_message.gate_id) || false
     end
 
+    # A reply whose job started took too long; one whose job never did was lost, or no worker runs it.
     def undelivered_error_payload(assistant_message)
+      reason = if assistant_message.started?
+        "AssistantResponseJob started and didn't answer within #{self.class.response_timeout.inspect}"
+      else
+        "The background worker did not process AssistantResponseJob"
+      end
+
       {
-        message: I18n.t("chat.errors.no_response"),
-        technical_message: "Assistant response was never delivered. The background worker did not process " \
-          "AssistantResponseJob for message ##{assistant_message.id} (model #{assistant_message.ai_model}). " \
-          "#{BackgroundJobHealth.summary}",
+        message: I18n.t(assistant_message.started? ? "chat.errors.timed_out" : "chat.errors.no_response"),
+        technical_message: "Assistant response was never delivered. #{reason} " \
+          "for message ##{assistant_message.id} (model #{assistant_message.ai_model}). #{BackgroundJobHealth.summary}",
         type: "DeliveryTimeout"
       }
     end
@@ -267,7 +271,7 @@ class Chat < ApplicationRecord
       DebugLogEntry.capture(
         category: "assistant",
         level: "error",
-        message: "Assistant response not delivered — background worker likely down or not polling the AI queues",
+        message: assistant_message.started? ? "Assistant response not delivered in time" : "Assistant response not delivered — background worker likely down or not polling the AI queues",
         source: "chat.delivery_timeout",
         metadata: {
           chat_id: id,

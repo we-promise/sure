@@ -37,14 +37,10 @@ class Ai::Gate::State
 
   def interactive? = (holders + waiters).any?(&:interactive?)
 
-  # How many requests an interactive one sent now would wait for. It would interrupt the others.
-  def ahead = (holders + waiters).count(&:interactive?)
-
   def waiting?(job) = waiters.any? { _1.job == job }
 
-  # How many interactive requests a job's waiting one waits for. 0 when none of its requests waits.
-  def ahead_of(job)
-    position = waiters.index { _1.job == job }
-    position ? (holders + waiters.first(position)).count(&:interactive?) : 0
+  # Whether a job's request waits behind an interactive one. It interrupts the others.
+  def behind_interactive?(job)
+    waiting?(job) && (holders + waiters.take_while { _1.job != job }).any?(&:interactive?)
   end
 end
