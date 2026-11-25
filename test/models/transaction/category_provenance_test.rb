@@ -65,6 +65,45 @@ class Transaction::CategoryProvenanceTest < ActiveSupport::TestCase
     assert_equal @food.id, provenance.category_id
   end
 
+  test "history when the category returns to a superseded ai claim" do
+    @transaction.enrich_attribute(:category_id, @income.id, source: "ai")
+    @transaction.update!(category: @food)
+    @transaction.update!(category: @income)
+
+    provenance = @transaction.reload.category_provenance
+
+    assert provenance.history?
+    assert_equal @income.id, provenance.category_id
+  end
+
+  test "current when the ai source re-assigns after its claim was superseded" do
+    @transaction.enrich_attribute(:category_id, @income.id, source: "ai")
+    @transaction.update!(category: @food)
+
+    # enrich_attribute only logs when the value actually changes, so the
+    # re-assignment has to happen while the category differs — which is also
+    # how the AI re-categorizes in practice.
+    @transaction.enrich_attribute(:category_id, @income.id, source: "ai")
+
+    provenance = @transaction.reload.category_provenance
+
+    assert provenance.current?
+    assert_equal "ai", provenance.source
+    assert_equal @income.id, provenance.category_id
+  end
+
+  test "history when the category returns to a superseded bayes claim" do
+    @transaction.enrich_attribute(:category_id, @income.id, source: "bayes")
+    @transaction.update!(category: @food)
+    @transaction.update!(category: @income)
+
+    provenance = @transaction.reload.category_provenance
+
+    assert provenance.history?
+    assert_equal "bayes", provenance.source
+    assert_equal @income.id, provenance.category_id
+  end
+
   test "returns nil when there are no enrichments" do
     assert_nil @transaction.category_provenance
   end

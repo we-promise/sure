@@ -75,19 +75,19 @@ class PushSubscription < ApplicationRecord
     raise PushDelivery::TransientError, e.message
   end
 
-  # A response may arrive after the app has registered again. Only remove the
-  # exact registration sent, and respect APNs' invalidation timestamp when given.
-  # Destroy (not delete) so the subscription's ledger rows are cleaned up with
-  # it; a surviving row would claim against a parent that no longer exists.
-  def invalidate_if_unchanged!(response)
-    return unless response.status.to_i == 410
-
+  # APNs answers 410 with the moment the token stopped being valid. A device
+  # that registered again after that moment keeps its row.
+  def unregistered_by?(response)
     timestamp = response.body.is_a?(Hash) && response.body["timestamp"]
-    if timestamp
-      return unless timestamp.is_a?(Numeric) && timestamp.positive? && timestamp.finite?
-      return if last_registered_at.to_f * 1000 > timestamp
-    end
+    return true unless timestamp
 
+    timestamp.is_a?(Numeric) && timestamp.positive? && timestamp.finite? &&
+      last_registered_at.to_f * 1000 <= timestamp
+  end
+
+  # A response may arrive after the app has registered again: only remove the
+  # exact registration sent. Destroy (not delete) so its ledger rows go with it.
+  def invalidate_if_unchanged!
     self.class.where(id: id, token: token, environment: environment,
       last_registered_at: last_registered_at).destroy_all
   end
