@@ -738,7 +738,9 @@ class User < ApplicationRecord
   # Built-in AI turns this user's assistant on; no AI and an external agent turn it off.
   # For an admin that switch is also the household's AI consent (Family#ai_consented?).
   # Guests always have AI on, so they aren't asked.
-  def save_onboarding_tools_and_ai(tools:, other_tool:, ai_mode:)
+  # rendered_ai_mode is the choice the page showed: when the user left it as it was,
+  # the AI switch stays as it is now, even if it changed after the page rendered.
+  def save_onboarding_tools_and_ai(tools:, other_tool:, ai_mode:, rendered_ai_mode: nil)
     chosen = Array(tools).map(&:to_s)
     chosen = chosen.include?(ONBOARDING_NO_TOOLS) ? [ ONBOARDING_NO_TOOLS ] : chosen & ONBOARDING_TOOLS
     other = other_tool.to_s.strip.first(ONBOARDING_OTHER_TOOL_MAX_LENGTH).presence if chosen.include?("other")
@@ -751,7 +753,7 @@ class User < ApplicationRecord
         other ? prefs["onboarding_other_tool"] = other : prefs.delete("onboarding_other_tool")
       end
       attributes = { set_onboarding_goals_at: Time.current, onboarded_at: Time.current }
-      attributes[:ai_enabled] = mode == "builtin" unless guest?
+      attributes[:ai_enabled] = mode == "builtin" unless guest? || mode == rendered_ai_mode.to_s
       update!(attributes)
     end
   end

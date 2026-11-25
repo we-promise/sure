@@ -71,6 +71,17 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "external", user.onboarding_ai_mode
   end
 
+  test "an untouched AI choice leaves a switch changed after the page rendered" do
+    user = users(:family_admin)
+    user.update!(ai_enabled: false)
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "builtin", rendered_ai_mode: "builtin")
+    assert_not user.reload.ai_enabled
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "builtin", rendered_ai_mode: "none")
+    assert user.reload.ai_enabled
+  end
+
   test "guests keep AI on and aren't asked about it" do
     guest = users(:intro_user)
 
