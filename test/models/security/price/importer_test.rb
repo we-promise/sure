@@ -618,6 +618,293 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_not old_price.provisional, "Old gap-filled price should not be provisional"
   end
 
+  test "an old gap-filled price is carried forward, the quote it repeats is not" do
+    Security::Price.delete_all
+
+    start_date = 20.days.ago.to_date
+    end_date = start_date + 2.days
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: start_date, price: 150, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: end_date
+    ).import_provider_prices
+
+    rows = Security::Price.where(security: @security).order(:date)
+    assert_equal [ [ start_date, false, false ], [ start_date + 1.day, true, false ], [ end_date, true, false ] ],
+      rows.map { |p| [ p.date, p.carried_forward, p.provisional ] },
+      "the filled days are carried forward though too old to be provisional"
+  end
+
+  test "a stored price the provider has no quote for is not marked carried forward" do
+    Security::Price.delete_all
+
+    start_date = 20.days.ago.to_date
+    user_date = start_date + 1.day
+    end_date = start_date + 2.days
+    Security::Price.create!(security: @security, date: user_date, price: 120, currency: "USD")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: start_date, price: 150, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: end_date
+    ).import_provider_prices
+
+    kept = Security::Price.find_by!(security: @security, date: user_date)
+    filled = Security::Price.find_by!(security: @security, date: end_date)
+    assert_equal [ 120, false ], [ kept.price, kept.carried_forward ], "the stored price is kept as a real one"
+    assert_equal [ 120, true ], [ filled.price, filled.carried_forward ], "the day after repeats it"
+  end
+
+  test "a carried-forward price the provider later quotes is no longer carried forward" do
+    Security::Price.delete_all
+
+    test_date = Date.current
+    test_date += 1.day while test_date.saturday? || test_date.sunday?
+
+    travel_to test_date do
+      Security::Price.create!(security: @security, date: Date.current, price: 100, currency: "USD", provisional: true, carried_forward: true)
+
+      @provider.expects(:fetch_security_prices).returns(provider_success_response([
+        OpenStruct.new(security: @security, date: Date.current, price: 165, currency: "USD")
+      ]))
+
+      Security::Price::Importer.new(
+        security: @security,
+        security_provider: @provider,
+        start_date: Date.current,
+        end_date: Date.current
+      ).import_provider_prices
+
+      price = Security::Price.find_by!(security: @security, date: Date.current)
+      assert_equal [ 165, false, false ], [ price.price, price.provisional, price.carried_forward ]
+    end
+  end
+
+  # The quote's day was re-closed at 110 after 100 had been carried past it.
+  test "a fill anchors on the last real quote, not a carried-forward one" do
+    Security::Price.delete_all
+
+    quote_date = 20.days.ago.to_date
+    Security::Price.create!(security: @security, date: quote_date, price: 110, currency: "USD")
+    Security::Price.create!(security: @security, date: quote_date + 1.day, price: 100, currency: "USD", carried_forward: true)
+    end_date = quote_date + 4.days
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: end_date, price: 130, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: quote_date,
+      end_date: end_date
+    ).import_provider_prices
+
+    filled = Security::Price.where(security: @security, date: (quote_date + 2.days)..end_date).order(:date)
+    assert_equal [ 110, 110, 130 ], filled.map(&:price)
+  end
+
+  test "a fill with only carried-forward prices before it anchors on the latest one" do
+    Security::Price.delete_all
+
+    first_date = 40.days.ago.to_date
+    Security::Price.create!(security: @security, date: first_date, price: 100, currency: "USD", carried_forward: true)
+    Security::Price.create!(security: @security, date: first_date + 1.day, price: 105, currency: "USD", carried_forward: true)
+    end_date = first_date + 4.days
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: end_date, price: 130, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: first_date,
+      end_date: end_date
+    ).import_provider_prices
+
+    filled = Security::Price.where(security: @security, date: (first_date + 2.days)..end_date).order(:date)
+    assert_equal [ 105, 105, 130 ], filled.map(&:price)
+    assert_nil @security.reload.first_provider_price_on, "the stored history is not treated as pre-listing"
+  end
+
+  # Crypto trades at the weekend: a carried Saturday at the end of the
+  # stored prices is asked for again whatever the day.
+  test "a carried-forward tail is replaced by a quote the provider publishes later" do
+    Security::Price.delete_all
+
+    saturday = recent_day(:saturday?, at_least: 8)
+    import_with([ [ saturday - 1.day, 100, false ], [ saturday, 100, true ] ],
+                quotes: { saturday => 104 }, fetch_from: saturday)
+
+    price = Security::Price.find_by!(security: @security, date: saturday)
+    assert_equal [ 104, false ], [ price.price, price.carried_forward ]
+  end
+
+  test "a carried weekday before later quotes, a holiday, is not asked for again" do
+    Security::Price.delete_all
+
+    monday = recent_day(:monday?, at_least: 14)
+    rows = (0..4).map { |day| [ monday + day.days, 100, day == 2 ] }
+    import_with(rows, quotes: nil)
+  end
+
+  # A Sunday-to-Thursday market: Friday and Saturday are its weekend.
+  test "a carried Friday before the next quote is settled" do
+    Security::Price.delete_all
+
+    thursday = recent_day(:thursday?, at_least: 14)
+    rows = [ [ thursday, 100, false ], [ thursday + 1.day, 100, true ], [ thursday + 2.days, 100, true ], [ thursday + 3.days, 101, false ] ]
+    import_with(rows, quotes: nil)
+  end
+
+  test "a provisional weekend price older than the lookback is not asked for again" do
+    Security::Price.delete_all
+
+    saturday = recent_day(:saturday?, at_least: 8)
+    rows = (-1..2).map { |day| [ saturday + day.days, 100, day.zero? ] }
+    import_with(rows, quotes: nil, provisional: saturday)
+  end
+
+  test "the tail is asked for only within the refetch window, and the days after a new quote follow it" do
+    Security::Price.delete_all
+
+    window = Security::Price::Importer::CARRIED_FORWARD_REFETCH_DAYS
+    last_quote = (window + 5).days.ago.to_date
+    outside = (window + 2).days.ago.to_date
+    inside = (window - 1).days.ago.to_date
+    rows = (last_quote..Date.current).map { |date| [ date, 100, date != last_quote ] }
+
+    import_with(rows, quotes: { outside => 90, inside => 110 }, fetch_from: window.days.ago.to_date, end_date: Date.current)
+
+    stored = Security::Price.where(security: @security, date: [ outside, inside, Date.current ]).order(:date)
+    assert_equal [ [ 100, true ], [ 110, false ], [ 110, true ] ], stored.map { |p| [ p.price, p.carried_forward ] }
+  end
+
+  # Friday was carried at 100; the provider now has its close at 110.
+  test "carried prices an import passes through follow a corrected price before them" do
+    Security::Price.delete_all
+
+    monday = recent_day(:monday?, at_least: 8)
+    wednesday, thursday, friday = monday - 5.days, monday - 4.days, monday - 3.days
+    stored = [ [ thursday, 100, false ], [ friday, 100, true ], [ friday + 1.day, 100, true ], [ friday + 2.days, 100, true ], [ monday, 100, false ] ]
+    import_with(stored, quotes: { wednesday => 100, thursday => 100, friday => 110 }, start_date: wednesday)
+
+    rows = Security::Price.where(security: @security, date: friday..monday).order(:date)
+    assert_equal [ [ 110, false ], [ 110, true ], [ 110, true ], [ 100, false ] ], rows.map { |p| [ p.price, p.carried_forward ] }
+  end
+
+  test "a stored real quote survives a contradicting provider quote" do
+    Security::Price.delete_all
+
+    tail = recent_day(:tuesday?, at_least: 8)
+    real = tail - 1.day
+    start = tail - 2.days
+    import_with([ [ real, 120, false ], [ tail, 100, true ] ], quotes: { start => 100, real => 999, tail => 104 }, start_date: start)
+
+    assert_equal [ 120, 104 ], Security::Price.where(security: @security, date: [ real, tail ]).order(:date).map(&:price)
+  end
+
+  # The fill starts at the carried day, after the real quote, so it never
+  # passes the day the provider contradicts.
+  test "a refetched tail anchors on the stored real quote, not a contradicting provider close" do
+    Security::Price.delete_all
+
+    real = 9.days.ago.to_date
+    import_with([ [ real, 120, false ], [ real + 1.day, 120, true ] ], quotes: { real => 100 })
+
+    assert_equal [ 120, 120 ], Security::Price.where(security: @security).order(:date).map(&:price)
+  end
+
+  # A stored zero is no quote: the fill would not carry it either.
+  test "a refetched tail does not anchor on a stored zero" do
+    Security::Price.delete_all
+
+    real = 10.days.ago.to_date
+    import_with([ [ real, 120, false ], [ real + 1.day, 0, false ], [ real + 2.days, 120, true ] ], quotes: { real => 100 })
+
+    assert_equal 120, Security::Price.find_by!(security: @security, date: real + 2.days).price
+  end
+
+  # The import starts on the carried day itself, so the fill starts at its
+  # requested start date.
+  test "an import starting on a carried day anchors on the stored real quote before it" do
+    Security::Price.delete_all
+
+    real = 9.days.ago.to_date
+    Security::Price.create!(security: @security, date: real, price: 120, currency: "USD")
+    import_with([ [ real + 1.day, 120, true ] ], quotes: { real => 100 })
+
+    assert_equal 120, Security::Price.find_by!(security: @security, date: real + 1.day).price
+  end
+
+  test "an import starting on a carried day takes the provider's quote for that day" do
+    Security::Price.delete_all
+
+    real = 9.days.ago.to_date
+    Security::Price.create!(security: @security, date: real, price: 120, currency: "USD")
+    import_with([ [ real + 1.day, 120, true ] ], quotes: { real => 100, real + 1.day => 104 })
+
+    assert_equal [ 104, false ], Security::Price.find_by!(security: @security, date: real + 1.day).then { |p| [ p.price, p.carried_forward ] }
+  end
+
+  # A stored zero is no quote, so the carried price before it is still the tail.
+  test "a stored zero does not settle the carried price before it" do
+    Security::Price.delete_all
+
+    real = 20.days.ago.to_date
+    import_with([ [ real, 120, false ], [ real + 1.day, 120, true ], [ real + 2.days, 0, false ] ], quotes: { real + 1.day => 125 })
+
+    assert_equal [ 125, false ], Security::Price.find_by!(security: @security, date: real + 1.day).then { |p| [ p.price, p.carried_forward ] }
+  end
+
+  # A quote in another currency is no anchor for prices in the provider's.
+  test "a refetched tail does not anchor on a stored quote in another currency" do
+    Security::Price.delete_all
+
+    real = 9.days.ago.to_date
+    Security::Price.create!(security: @security, date: real, price: 90, currency: "EUR")
+    import_with([ [ real + 1.day, 120, true ] ], quotes: { real - 1.day => 100 }, start_date: real)
+
+    assert_equal [ 100, "USD" ], Security::Price.find_by!(security: @security, date: real + 1.day).then { |p| [ p.price, p.currency ] }
+  end
+
+  # Beyond the refetch window the carried days stay as stored, so a provider
+  # close among them is newer than the stored real quote and anchors the tail.
+  test "a refetched tail anchors on a provider close newer than the stored real quote" do
+    Security::Price.delete_all
+
+    real = 40.days.ago.to_date
+    rows = [ [ real, 120, false ] ] + (1..11).map { |day| [ real + day.days, 120, true ] }
+    import_with(rows, quotes: { 31.days.ago.to_date => 130 })
+
+    tail = Security::Price.where(security: @security, date: 30.days.ago.to_date..).order(:date)
+    assert_equal [ 130, 130 ], tail.map(&:price)
+  end
+
+  # A first import whose start date holds only a carried price: no real quote
+  # anchors the fill, and the stored history is not pre-listing.
+  test "a first import fills from a carried price at its start date" do
+    Security::Price.delete_all
+
+    start_date = recent_day(:tuesday?, at_least: 10)
+    import_with([ [ start_date, 100, true ] ], quotes: { start_date + 3.days => 130 }, end_date: start_date + 3.days)
+
+    assert_equal [ 100, 100, 100, 130 ], Security::Price.where(security: @security).order(:date).map(&:price)
+    assert_nil @security.reload.first_provider_price_on
+  end
+
   test "provisional weekend prices get fixed via cascade from Friday" do
     Security::Price.delete_all
 
@@ -718,6 +1005,37 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
   end
 
   private
+    # The most recent day matching `predicate` at least `at_least` days ago.
+    def recent_day(predicate, at_least:)
+      date = at_least.days.ago.to_date
+      date -= 1.day until date.public_send(predicate)
+      date
+    end
+
+    # Stores [date, price, carried_forward] rows, then imports from the first
+    # (or start_date) to the last (or end_date). quotes: nil expects no
+    # provider call; fetch_from pins the requested start date.
+    def import_with(rows, quotes:, fetch_from: nil, start_date: nil, end_date: nil, provisional: nil)
+      rows.each do |date, price, carried|
+        Security::Price.create!(security: @security, date: date, price: price, currency: "USD", carried_forward: carried, provisional: date == provisional)
+      end
+      start_date ||= rows.first.first
+      end_date ||= rows.last.first
+
+      if quotes.nil?
+        @provider.expects(:fetch_security_prices).never
+      else
+        expectation = @provider.expects(:fetch_security_prices)
+        if fetch_from
+          expectation = expectation.with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                                         start_date: get_provider_fetch_start_date(fetch_from), end_date: end_date)
+        end
+        expectation.returns(provider_success_response(quotes.map { |date, price| OpenStruct.new(security: @security, date: date, price: price, currency: "USD") }))
+      end
+
+      Security::Price::Importer.new(security: @security, security_provider: @provider, start_date: start_date, end_date: end_date).import_provider_prices
+    end
+
     def get_provider_fetch_start_date(start_date)
       start_date - Security::Price::Importer::PROVISIONAL_LOOKBACK_DAYS.days
     end
