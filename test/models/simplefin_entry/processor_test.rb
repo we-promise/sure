@@ -480,6 +480,30 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "resync replaces the SimpleFIN snapshot and preserves unrelated metadata" do
+    @simplefin_account.update!(org_data: { domain: "fidelity.com" })
+    tx = { id: "synthetic_namespace_resync", amount: "1.00", currency: "USD",
+           description: "DIRECT DEBIT", posted: Date.current.to_s }
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+    entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
+    entry.transaction.update!(extra: entry.transaction.extra.deep_merge(
+      "simplefin" => { "fx_from" => "EUR", "fx_date" => "2000-01-01" },
+      "unrelated_provider" => { "keep" => true }, "exchange_rate" => "1.1"
+    ))
+
+    @simplefin_account.update!(org_data: { domain: "example.com" })
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+    entry.reload
+    sf = entry.transaction.extra.fetch("simplefin")
+    assert_equal(-1, entry.amount)
+    assert_not sf.key?("amount_normalization")
+    assert_not sf.key?("fx_from")
+    assert_not sf.key?("fx_date")
+    assert_equal false, sf.fetch("pending")
+    assert_equal({ "keep" => true }, entry.transaction.extra.fetch("unrelated_provider"))
+    assert_equal "1.1", entry.transaction.extra.fetch("exchange_rate")
+  end
+
   test "matches the exact Fidelity domain before the fallback name" do
     # Synthetic organization and amount inputs; no account/provider observations.
     cases = [
