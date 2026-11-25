@@ -41,6 +41,16 @@ class Trade < ApplicationRecord
   validates :price, :currency, presence: true
   validates :investment_activity_label, inclusion: { in: ACTIVITY_LABELS }, allow_nil: true
 
+  def self.quantity_as_of(security, date)
+    trades = where(security: security).joins(:entry).where(entries: { date: ..date }).group("entries.date").sum(:qty)
+    ratios = security.splits.where(ex_date: ..date).to_h { |split| [ split.ex_date, split.ratio ] }
+    (trades.keys | ratios.keys).sort.reduce(0.to_d) do |quantity, day|
+      # Trades on the ex-date are already in post-split units.
+      quantity = Security::Split.scale(quantity, ratios[day]) if ratios.key?(day)
+      quantity + trades.fetch(day, 0)
+    end
+  end
+
   def exchange_rate
     extra&.dig("exchange_rate")
   end
@@ -357,9 +367,11 @@ class Trade < ApplicationRecord
     def position_provider_owns_quantity
       return if provider_importing || new_record?
       return unless entry && entry.account
+      return if entry.manual_quantity_neutral_fee?(self)
       return unless qty_changed? || security_id_changed? || price_changed? || fee_changed? || investment_activity_label_changed? || lot_source_entry_id_changed?
       ids = [ security_id, security_id_in_database ].compact.uniq
-      return unless entry.date && ids.any? { |id| entry.account.provider_managed_security?(id, date: entry.date) }
+      dates = [ entry.date, entry.date_in_database ].compact.uniq
+      return unless ids.product(dates).any? { |id, date| entry.account.provider_managed_security?(id, date: date) }
 
       errors.add(:base, I18n.t("bitcoin_wallet.managed_position"))
     end

@@ -3,6 +3,7 @@ class HoldingsController < ApplicationController
 
   before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security sync_prices]
   before_action :require_holding_write_permission!, only: %i[update destroy unlock_cost_basis remap_security reset_security sync_prices]
+  rescue_from Holding::ManagedPositionError, with: :redirect_managed_position
 
   def index
     @account = accessible_accounts.find(params[:account_id])
@@ -21,6 +22,10 @@ class HoldingsController < ApplicationController
     # cleared.
     @lots_provider_cost = @lots.any? && @holding.provider_cost_position?
     @can_write_lots = Account.writable_by(Current.user).exists?(id: @holding.account_id)
+    @can_delete_holding = @can_write_lots && @holding.account.can_delete_holding?(@holding)
+    @can_remap_security = @can_write_lots && !@holding.account.provider_managed_security?(@holding.security_id)
+    @can_reset_security = @can_remap_security && @holding.security_remapped? && @holding.account.linked? &&
+      !@holding.account.provider_managed_security?(@holding.provider_security_id)
   end
 
   def update
@@ -54,9 +59,11 @@ class HoldingsController < ApplicationController
   end
 
   def destroy
-    if @holding.account.can_delete_holdings?
+    if @holding.account.can_delete_holding?(@holding)
       @holding.destroy_holding_and_entries!
       flash[:notice] = t(".success")
+    elsif @holding.account.provider_managed_security?(@holding.security_id)
+      flash[:alert] = t("bitcoin_wallet.managed_position")
     else
       flash[:alert] = t(".cannot_delete")
     end
@@ -68,6 +75,8 @@ class HoldingsController < ApplicationController
   end
 
   def remap_security
+    return redirect_managed_position if @holding.account.provider_managed_security?(@holding.security_id)
+
     # Combobox returns "TICKER|EXCHANGE|PROVIDER" format
     parsed = Security.parse_combobox_id(params[:security_id])
 
@@ -94,8 +103,6 @@ class HoldingsController < ApplicationController
     new_security.failed_fetch_count = 0
     new_security.failed_fetch_at = nil
 
-    new_security.save!
-
     # The remap and the re-materialization with the new security's prices
     # commit together under the account row lock, taken first as a sync and a
     # lot edit take it. The materializer's own lock! reloads the account, so
@@ -104,8 +111,9 @@ class HoldingsController < ApplicationController
     # for this request, so Date.current is correct here.
     account = Account.find(@holding.account_id)
     account.with_lock do
+      new_security.save!
       @holding.remap_security!(new_security)
-      strategy = account.linked? ? :reverse : :forward
+      strategy = account.balance_calculation_strategy
       Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
     end
 
@@ -144,7 +152,7 @@ class HoldingsController < ApplicationController
       return
     end
 
-    strategy = @holding.account.linked? ? :reverse : :forward
+    strategy = @holding.account.balance_calculation_strategy
     Balance::Materializer.new(@holding.account, strategy: strategy, security_ids: [ @holding.security_id ]).materialize_balances
     @holding.reload
     @last_price_updated = @holding.security.prices.maximum(:updated_at)
@@ -166,7 +174,7 @@ class HoldingsController < ApplicationController
     account.with_lock do
       @holding.reset_security_to_provider!
       if reset
-        strategy = account.linked? ? :reverse : :forward
+        strategy = account.balance_calculation_strategy
         Balance::Materializer.new(account, strategy: strategy, security_ids: security_ids).materialize_balances
       end
     end
@@ -180,6 +188,16 @@ class HoldingsController < ApplicationController
   end
 
   private
+
+    def redirect_managed_position
+      path = account_path(@holding.account, tab: "holdings")
+      alert = t("bitcoin_wallet.managed_position")
+
+      respond_to do |format|
+        format.html { redirect_to path, alert: alert }
+        format.turbo_stream { stream_redirect_to path, alert: alert }
+      end
+    end
 
     def trade_republic_categories_for(account)
       provider = account.account_providers.includes(:provider).map(&:provider).find do |candidate|

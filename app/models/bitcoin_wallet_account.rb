@@ -77,7 +77,7 @@ class BitcoinWalletAccount < ApplicationRecord
   end
 
   def record_reconciliation!
-    recorded = account.trades.where(security: security).joins(:entry).where("entries.date <= ?", Date.current).sum(:qty)
+    recorded = account.trades.quantity_as_of(security, Date.current)
     difference = quantity - recorded
     return if difference.zero?
 
@@ -98,6 +98,15 @@ class BitcoinWalletAccount < ApplicationRecord
   # Keep the previous valuation until the first BTC price is available.
   def initial_valuation_pending?
     account_provider && !account_provider.holdings.exists?
+  end
+
+  # The caller holds the wallet lock during sync publication and consumption.
+  # Keep the window until balances commit so a lost job cannot lose ledger history.
+  def materialize_balances!(window_start_date: nil)
+    window = [ account.materialization_window(window_start_date), pending_materialization_start_date ].compact.min
+    Balance::Materializer.new(account, strategy: account.balance_calculation_strategy,
+      window_start_date: window).materialize_balances
+    update!(pending_materialization_start_date: nil) if pending_materialization_start_date
   end
 
   def pending_quantity

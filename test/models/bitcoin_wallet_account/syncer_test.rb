@@ -96,6 +96,36 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     assert @wallet.status_failed?
   end
 
+  test "a failed account enqueue leaves the published journal and its window for a later refresh" do
+    @wallet.update!(status: :preview, last_synced_at: Time.current)
+    @wallet.connect!
+    movement_date = Date.current - 3.days
+    @wallet.update!(baseline_at: 1.week.ago)
+    @wallet.security.prices.find_or_create_by!(date: movement_date, currency: "USD") { |price| price.price = 10_000 }
+    movement = bitcoin_transaction(confirmed: false, outputs: [ [ RECEIVE, 100 ] ])
+    @wallet.bitcoin_wallet_transactions.create!(txid: movement.fetch("txid"), amount_sats: 100,
+      occurred_at: 3.days.ago, confirmed: false, present: true)
+    @provider.transactions[RECEIVE] = [ movement ]
+    sync = @wallet.syncs.create!
+    SyncJob.queue_adapter.expects(:enqueue).raises(IOError, "queue unavailable")
+
+    assert_raises(IOError) { BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform_sync(sync) }
+    SyncJob.queue_adapter.unstub(:enqueue)
+    entry = @wallet.account.entries.find_by!(source: "bitcoin_wallet")
+    assert_equal movement_date, entry.date
+    assert_equal movement_date, @wallet.reload.pending_materialization_start_date
+
+    retry_sync = @wallet.syncs.create!
+    BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform_sync(retry_sync)
+    account_sync = retry_sync.children.sole
+    assert_equal movement_date, account_sync.window_start_date
+    assert_equal entry.id, @wallet.account.entries.find_by!(source: "bitcoin_wallet").id
+
+    account_sync.perform
+    assert account_sync.reload.completed?
+    assert_nil @wallet.reload.pending_materialization_start_date
+  end
+
   test "a preview retains newly observed change when its pending transaction confirms" do
     @wallet.bitcoin_wallet_sources.destroy_all
     source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB,

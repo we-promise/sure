@@ -220,6 +220,46 @@ class BitcoinWalletAccount::IntegrationTest < ActiveSupport::TestCase
     assert_equal 2500, @account.reload.balance
   end
 
+  test "wallet holdings display the latest journal valuation between explorer reads" do
+    @wallet.connect!
+    published = @wallet.account_provider.holdings.sole
+    travel 1.day do
+      @wallet.security.prices.create!(date: Date.current, price: 12_000, currency: "USD")
+      materialize
+
+      # A fresh manual observation cannot take ownership of the linked security.
+      @account.holdings.create!(security: @wallet.security, date: Date.current, qty: 9, price: 1,
+        amount: 9, currency: "EUR")
+      holding = @account.current_holdings.find_by!(security: @wallet.security)
+      assert_equal Date.current, holding.date
+      assert_equal published.qty, holding.qty
+      assert_equal 12_000, holding.price
+      assert_equal 2400, holding.amount
+    end
+  end
+
+  test "manual Bitcoin fees change cash without allowing a change to wallet units" do
+    @wallet.connect!
+    fee = @account.entries.create!(date: Date.current, amount: 5, currency: "USD", name: "Wallet fee",
+      entryable: Trade.new(security: @wallet.security, qty: 0, price: 0, currency: "USD", investment_activity_label: "Fee"))
+    materialize
+    assert_equal 95, @account.reload.cash_balance
+    assert_equal BigDecimal("0.2"), @account.current_holdings.find_by!(security: @wallet.security).qty
+
+    assert fee.update(amount: 7)
+    refute fee.trade.update(qty: 1)
+    assert fee.reload.destroy
+    materialize
+    assert_equal 100, @account.reload.cash_balance
+
+    published = Account::ProviderImportAdapter.new(@account).import_trade(
+      security: @wallet.security, quantity: 0, price: 0, amount: 0, currency: "USD",
+      date: Date.current, source: "bitcoin_wallet", activity_label: "Fee"
+    )
+    refute published.update(amount: 1)
+    refute published.destroy
+  end
+
   test "a wallet can only track a manual account" do
     linked = accounts(:crypto).dup.tap { |account| account.update!(name: "Linked crypto") }
     linked.account_providers.create!(provider: kraken_accounts(:one))

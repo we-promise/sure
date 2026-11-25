@@ -315,7 +315,7 @@ class Holding < ApplicationRecord
   end
 
   def reconcile_trade_quantity!
-    recorded = account.trades.where(security: security).joins(:entry).where(entries: { date: ..date }).sum(:qty)
+    recorded = account.trades.quantity_as_of(security, date)
     difference = qty - recorded
     return if difference.zero?
 

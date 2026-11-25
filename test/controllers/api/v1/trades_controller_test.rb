@@ -32,6 +32,29 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert Entry.exists?(entry.id)
   end
 
+  test "manual Bitcoin fees can be created, edited and deleted on a wallet-linked account" do
+    wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current)
+    wallet.connect!
+    headers = api_headers(read_write_api_key)
+
+    post api_v1_trades_url, params: { trade: {
+      account_id: wallet.account_id, security_id: wallet.security_id, type: "fee",
+      date: Date.current, currency: "USD", amount: "2.50"
+    } }, headers: headers
+    assert_response :created
+    trade = Trade.find(JSON.parse(response.body).fetch("id"))
+    assert_equal wallet.security_id, trade.security_id
+    assert_equal 0, trade.qty
+
+    patch api_v1_trade_url(trade), params: { trade: { amount: "3.50" } }, headers: headers
+    assert_response :success
+    assert_equal BigDecimal("3.50"), trade.entry.reload.amount
+
+    delete api_v1_trade_url(trade), headers: headers
+    assert_response :success
+    refute Trade.exists?(trade.id)
+  end
+
   test "create dividend with security returns 201" do
     post "/api/v1/trades",
       params: { trade: {

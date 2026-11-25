@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_23_220100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -321,6 +321,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_220100) do
     t.datetime "last_synced_at"
     t.boolean "needs_reconciliation", default: false, null: false
     t.uuid "onchain_wallet_item_id", null: false
+    t.date "pending_materialization_start_date"
     t.uuid "security_id", null: false
     t.string "status", default: "discovering", null: false
     t.datetime "updated_at", null: false

@@ -1048,10 +1048,19 @@ class Entry < ApplicationRecord
     trade? && account && date && account.provider_managed_security?(entryable.security_id, date: date)
   end
 
+  def manual_quantity_neutral_fee?(trade = entryable)
+    return false unless trade? && import_id.nil? && !statement_cleared?
+    return false unless trade.qty&.zero? && trade.investment_activity_label == "Fee"
+
+    new_record? || (trade.qty_in_database&.zero? && trade.investment_activity_label_in_database == "Fee")
+  end
+
   private
 
     def position_provider_owns_trade_entry
       return unless trade? && account && date && !entryable.provider_importing
+      return if manual_quantity_neutral_fee?
+
       wallet_metadata_changed = source.in?(%w[bitcoin_wallet bitcoin_wallet_reconciliation]) && (name_changed? || notes_changed?)
       return unless new_record? || date_changed? || amount_changed? || currency_changed? || excluded_changed? || wallet_metadata_changed
       return unless provider_managed_trade? ||
@@ -1062,6 +1071,7 @@ class Entry < ApplicationRecord
 
     def prevent_managed_trade_deletion
       return if destroyed_by_association&.active_record == Account || !trade? || entryable.provider_importing
+      return if manual_quantity_neutral_fee?
       return unless provider_managed_trade?
 
       errors.add(:base, I18n.t("bitcoin_wallet.managed_position"))

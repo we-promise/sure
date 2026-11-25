@@ -48,37 +48,41 @@
                   </span>
                   <%= icon "lock", size: "xs", class: "text-secondary" %>
                 <% end %>
-                <button type="button"
-                        data-action="click->holding-security-remap#toggle"
-                  class="text-secondary hover:text-primary"
-                  aria-label="<%= t(".edit_security") %>">
-                  <%= icon "pencil", size: "xs" %>
-                </button>
+                <% if @can_remap_security %>
+                  <button type="button"
+                          data-action="click->holding-security-remap#toggle"
+                    class="text-secondary hover:text-primary"
+                    aria-label="<%= t(".edit_security") %>">
+                    <%= icon "pencil", size: "xs" %>
+                  </button>
+                <% end %>
               </dd>
             </div>
-            <div data-holding-security-remap-target="form" class="hidden mt-3 space-y-3">
-              <% if Security.providers.any? %>
-                <%= styled_form_with url: remap_security_holding_path(@holding), method: :patch, class: "space-y-3" do |f| %>
-                  <div class="form-field combobox">
-                    <%= f.combobox :security_id,
-                                  securities_path(country_code: Current.family.country),
-                                  label: t(".search_security"),
-                                  placeholder: t(".search_security_placeholder"),
-                                  required: true %>
-                  </div>
-                  <div class="flex justify-end gap-2">
-                    <button type="button"
-                            class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary button-bg-secondary-strong hover:button-bg-secondary-strong-hover"
-                            data-action="click->holding-security-remap#toggle">
-                      <%= t(".cancel") %>
-                    </button>
-                    <%= f.submit t(".remap_security") %>
-                  </div>
+            <% if @can_remap_security %>
+              <div data-holding-security-remap-target="form" class="hidden mt-3 space-y-3">
+                <% if Security.providers.any? %>
+                  <%= styled_form_with url: remap_security_holding_path(@holding), method: :patch, class: "space-y-3" do |f| %>
+                    <div class="form-field combobox">
+                      <%= f.combobox :security_id,
+                                    securities_path(country_code: Current.family.country),
+                                    label: t(".search_security"),
+                                    placeholder: t(".search_security_placeholder"),
+                                    required: true %>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                      <button type="button"
+                              class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary button-bg-secondary-strong hover:button-bg-secondary-strong-hover"
+                              data-action="click->holding-security-remap#toggle">
+                        <%= t(".cancel") %>
+                      </button>
+                      <%= f.submit t(".remap_security") %>
+                    </div>
+                  <% end %>
+                <% else %>
+                  <p class="text-xs text-secondary"><%= t(".no_security_provider") %></p>
                 <% end %>
-              <% else %>
-                <p class="text-xs text-secondary"><%= t(".no_security_provider") %></p>
-              <% end %>
-            </div>
+              </div>
+            <% end %>
           </div>
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".current_market_price_label") %></dt>
@@ -185,10 +189,10 @@
         </div>
       </div>
     <% end %>
-    <% if @holding.cost_basis_locked? || (@holding.security_remapped? && @holding.account.linked?) || @holding.account.can_delete_holdings? || !@holding.security.offline? || @holding.security.provider_status == :provider_unavailable %>
+    <% if @holding.cost_basis_locked? || @can_reset_security || @can_delete_holding || !@holding.security.offline? || (@can_remap_security && @holding.security.provider_status == :provider_unavailable) %>
       <% dialog.with_section(title: t(".settings"), open: true) do %>
         <div class="pb-4">
-          <% if @holding.security.provider_status == :provider_unavailable %>
+          <% if @can_remap_security && @holding.security.provider_status == :provider_unavailable %>
             <div class="flex items-center justify-between gap-2 p-3 border-b border-tertiary">
               <div class="text-sm space-y-1 flex-1">
                 <h4 class="text-primary"><%= t(".switch_provider_label") %></h4>
@@ -209,7 +213,7 @@
               </div>
             </div>
           <% end %>
-          <% if @holding.security_remapped? && @holding.account.linked? %>
+          <% if @can_reset_security %>
             <div class="flex items-center justify-between gap-2 p-3 border-b border-tertiary">
               <div class="text-sm space-y-1">
                 <h4 class="text-primary"><%= t(".security_remapped_label") %></h4>
@@ -266,17 +270,19 @@
                   ) %>
             </div>
           <% end %>
-          <% if @holding.account.can_delete_holdings? %>
+          <% if @can_delete_holding %>
             <div class="flex items-center justify-between gap-2 p-3">
               <div class="text-sm space-y-1">
                 <h4 class="text-primary"><%= t(".delete_title") %></h4>
                 <p class="text-secondary"><%= t(".delete_subtitle") %></p>
               </div>
-              <%= button_to t(".delete"),
-                  holding_path(@holding),
-                  method: :delete,
-                  class: "rounded-lg px-3 py-2 text-red-500 text-sm font-medium border border-secondary",
-                  data: { turbo_confirm: true } %>
+              <%= render DS::Button.new(
+                    text: t(".delete"),
+                    variant: :outline_destructive,
+                    href: holding_path(@holding),
+                    method: :delete,
+                    confirm: true
+                  ) %>
             </div>
           <% end %>
         </div>
