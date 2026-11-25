@@ -75,7 +75,7 @@ class ChatTest < ActiveSupport::TestCase
     chat = chats(:one)
     first, second = late_reply(chat), late_reply(chat)
     first.started!
-    publish_gate(holders: [ interactive(chat.correlation_id) ])
+    publish_gate(holders: [ interactive(first.gate_id) ])
 
     assert_equal I18n.t("chats.thinking"), chat.pending_status(first)
     assert_equal "Waiting for the model; 1 task ahead ...", chat.pending_status(second)
@@ -91,8 +91,9 @@ class ChatTest < ActiveSupport::TestCase
     publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ])
     assert_equal I18n.t("chats.thinking"), chat.pending_status(pending)
 
-    publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ], waiters: [ interactive(chat.correlation_id) ])
-    assert_equal I18n.t("chats.thinking"), chat.pending_status(late_reply(chat, started: 4.minutes.ago)), "it's being interrupted"
+    started = late_reply(chat, started: 4.minutes.ago)
+    publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ], waiters: [ interactive(started.gate_id) ])
+    assert_equal I18n.t("chats.thinking"), chat.pending_status(started), "it's being interrupted"
 
     publish_gate(holders: [ interactive("chat:other") ])
     use_ai_routes(chat: %w[openai/gpt-4.1-mini])
@@ -266,7 +267,7 @@ class ChatTest < ActiveSupport::TestCase
     use_ai_routes(chat: %w[gpu/qwen3-8b])
     chat = chats(:two)
     pending = late_reply(chat, started: 4.minutes.ago)
-    publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ], waiters: [ interactive(chat.correlation_id) ])
+    publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ], waiters: [ interactive(pending.gate_id) ])
 
     assert_not chat.handle_undelivered_response!(pending)
   end
@@ -278,8 +279,9 @@ class ChatTest < ActiveSupport::TestCase
     publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ])
     assert chat.handle_undelivered_response!(late_reply(chat)), "its request would interrupt that one"
 
-    publish_gate(holders: [ interactive(chat.correlation_id) ])
-    assert chat.handle_undelivered_response!(late_reply(chat, started: 4.minutes.ago)), "its own request runs"
+    running = late_reply(chat, started: 4.minutes.ago)
+    publish_gate(holders: [ interactive(running.gate_id) ], waiters: [ interactive("reply:another") ])
+    assert chat.handle_undelivered_response!(running), "its own request runs"
 
     publish_gate(holders: [ interactive("chat:other") ])
     travel Ai::Gate::State::TTL + 1.second
@@ -296,6 +298,26 @@ class ChatTest < ActiveSupport::TestCase
 
     travel Chat.response_timeout
     assert chat.handle_undelivered_response!(pending.reload)
+  end
+
+  test "handle_undelivered_response! gives up on a late running reply while the chat's next one waits behind it" do
+    use_ai_routes(chat: %w[gpu/qwen3-8b])
+    chat = chats(:two)
+    running, waiting = late_reply(chat, started: 4.minutes.ago), late_reply(chat, started: 4.minutes.ago)
+    publish_gate(holders: [ interactive(running.gate_id) ], waiters: [ interactive(waiting.gate_id) ])
+
+    assert_not chat.handle_undelivered_response!(waiting)
+    assert chat.handle_undelivered_response!(running)
+  end
+
+  test "a reply's time starts later by what its request waited for its place" do
+    chat = chats(:two)
+    reply = late_reply(chat, started: Chat.response_timeout.ago - 5.seconds)
+    reply.waited!(30)
+
+    assert_not chat.handle_undelivered_response!(reply.reload)
+    travel 31.seconds
+    assert chat.handle_undelivered_response!(reply.reload)
   end
 
   test "handle_undelivered_response! is a no-op for non-pending messages" do

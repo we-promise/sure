@@ -147,7 +147,7 @@ class Chat < ApplicationRecord
   # "Thinking". Broadcast when its job starts, and as each of its requests does.
   def pending_status(assistant_message)
     gate = model_gate
-    ahead = gate ? (assistant_message.started? ? gate.ahead_of(correlation_id) : gate.ahead) : 0
+    ahead = gate ? (assistant_message.started? ? gate.ahead_of(assistant_message.gate_id) : gate.ahead) : 0
     ahead.positive? ? I18n.t("chats.waiting_for_model", count: ahead) : I18n.t("chats.thinking")
   end
 
@@ -155,7 +155,7 @@ class Chat < ApplicationRecord
     broadcast_update target: ActionView::RecordIdentifier.dom_id(assistant_message, :status), html: status
   end
 
-  # The id its AI requests carry, the model host's gate's included (Ai::CallContext.job).
+  # The id its tools' AI requests carry (Ai::CallContext.job).
   def correlation_id = "chat:#{id}"
 
   # How long a pending "Thinking…" bubble may wait before the browser watchdog
@@ -250,7 +250,7 @@ class Chat < ApplicationRecord
       gate = model_gate
       return false unless gate
 
-      assistant_message.started? ? gate.waiting?(correlation_id) : gate.ahead.positive?
+      assistant_message.started? ? gate.waiting?(assistant_message.gate_id) : gate.ahead.positive?
     end
 
     def undelivered_error_payload(assistant_message)

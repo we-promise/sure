@@ -113,10 +113,10 @@ module Ai::Sequencer
   # hosts, one of which may serve the assistant's own models: its calls don't pass a gate. The
   # message has been sent, so it ends the typing hold. The turn holds no place, so a tool it calls
   # in Sure never waits for it.
-  def external_chat
+  def external_chat(user)
     gates = local_endpoints.filter_map { gate_for(_1) }.uniq
-    ChatReservation.release(local_endpoints)
     gates.each(&:hold_off_background)
+    ChatReservation.release(local_endpoints, user:)
     yield
   ensure
     gates&.each(&:let_background_in)
@@ -125,12 +125,13 @@ module Ai::Sequencer
   # Temporary, until chat's requests pass Ai::Transport::Instrumenter like every other one's: runs a
   # chat request holding a place at its model host's gate. The message has been sent, so it ends
   # the typing hold. Around one request, never a turn, so a tool's own AI call can have the place.
-  def hold_for_chat(endpoint)
-    return yield unless endpoint
+  # Yields the seconds the request waited for it.
+  def hold_for_chat(endpoint, user:, reply:)
+    return yield(0) unless endpoint
 
-    gate_for(endpoint).hold(:interactive, feature: "chat") do
-      ChatReservation.release([ endpoint ])
-      yield
+    gate_for(endpoint).hold(:interactive, feature: "chat", job: reply) do |waited|
+      ChatReservation.release([ endpoint ], user:)
+      yield waited
     end
   end
 

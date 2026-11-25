@@ -1,7 +1,7 @@
 # Focusing or typing in the chat box keeps the local model hosts free for the message: for TTL, no
 # new request of the held lanes starts there (Ai::Gate), so a long prompt read rarely starts just
 # before the message is sent. Back-to-back holds stop CAP after the first one and resume TTL later,
-# so that work gets a turn. The message ends its hosts' hold.
+# so that work gets a turn. The message ends the hold of the person who typed it.
 #
 # A built-in chat holds its model's host, if that's local. An external assistant calls its own
 # models, which may be on any of the local hosts, so it holds new background requests off them all;
@@ -14,18 +14,18 @@ class ChatReservation
   class << self
     def for(user)
       endpoint = Ai::Sequencer.chat_endpoint(user)
-      return new([ endpoint ], lanes: %i[prompt background]) if endpoint
+      return new([ endpoint ], lanes: %i[prompt background], user:) if endpoint
 
-      new(Ai::Sequencer.external_chat?(user) ? Ai::Sequencer.local_endpoints : [], lanes: %i[background])
+      new(Ai::Sequencer.external_chat?(user) ? Ai::Sequencer.local_endpoints : [], lanes: %i[background], user:)
     end
 
     def held?(host, lane) = Ai::SharedState.read(key(host, lane)).present?
 
-    # Never fails the message: a hold left standing lapses by itself.
-    def release(endpoints)
-      endpoints.map { Ai::Sequencer.host_key(_1) }.uniq.each do |host|
-        %i[prompt background].each { |lane| Ai::SharedState.delete(key(host, lane)) }
-      end
+    # Ends the user's own holds: the last to type on a host has its hold. Never fails the message: a
+    # hold left standing lapses by itself.
+    def release(endpoints, user:)
+      keys = endpoints.map { Ai::Sequencer.host_key(_1) }.uniq.product(%i[prompt background]).map { key(*_1) }
+      keys.each { |key| Ai::SharedState.delete(key) if Ai::SharedState.read(key) == user&.id }
     rescue StandardError => e
       Rails.logger.warn("ChatReservation not released: #{e.class}: #{e.message}")
     end
@@ -33,9 +33,10 @@ class ChatReservation
     def key(host, lane) = "ai/hold/#{host}/#{lane}"
   end
 
-  def initialize(endpoints, lanes:)
+  def initialize(endpoints, lanes:, user:)
     @endpoints = endpoints.uniq { Ai::Sequencer.host_key(_1) }
     @lanes = lanes
+    @user = user
   end
 
   # Returns the seconds held, or nil when nothing is: no local host, or the cap was reached.
@@ -65,7 +66,7 @@ class ChatReservation
       seconds = [ TTL.to_i, started + CAP.to_i - now ].min
       return unless seconds.positive?
 
-      @lanes.each { |lane| Ai::SharedState.write(self.class.key(host, lane), true, expires_in: seconds) }
+      @lanes.each { |lane| Ai::SharedState.write(self.class.key(host, lane), @user.id, expires_in: seconds) }
       seconds
     end
 

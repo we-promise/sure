@@ -136,7 +136,7 @@ class AiGateTest < ActiveSupport::TestCase
     prompt = occupy(gate, :prompt, admitted: false)
 
     assert_equal :sent, gate.hold(:interactive) { :sent }
-    ChatReservation.release([ @local ])
+    ChatReservation.release([ @local ], user: users(:family_admin))
     assert prompt.admitted?
   end
 
@@ -397,7 +397,7 @@ class AiGateTest < ActiveSupport::TestCase
   private
     def hold_for_typing
       @local = ai_endpoint(base_url: "http://gpu.local:8080/v1", location: :local)
-      assert_equal 60, ChatReservation.new([ @local ], lanes: %i[prompt background]).hold!
+      assert_equal 60, ChatReservation.new([ @local ], lanes: %i[prompt background], user: users(:family_admin)).hold!
     end
 
     def occupy(gate, lane, admitted: true)

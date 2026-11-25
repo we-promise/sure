@@ -63,6 +63,7 @@ class AiNestedCallTest < ActiveSupport::TestCase
 
     assert_equal "Found it.", @reply.reload.content
     assert_equal 2, @llm.holders.compact.uniq.size, "each round holds a place of its own"
+    assert_equal [ "reply:#{@reply.id}" ], @llm.holders.map(&:job).uniq, "under the reply's own id"
     assert_equal [ :interactive, "chat:#{@chat.id}" ], nested, "the nested call runs in chat's lane, under the chat's correlation id"
     assert_empty Ai::Sequencer.gate_for(@endpoint).holders
   end
@@ -77,8 +78,37 @@ class AiNestedCallTest < ActiveSupport::TestCase
     assert_equal [ [ "Thinking ...", false ], [ "Thinking ...", true ], [ "Thinking ...", true ] ], held, "the job's start, then each request"
   end
 
+  test "the time a chat request waits for its place isn't the reply's" do
+    gate = Ai::Sequencer.gate_for(@endpoint)
+    stub_request(:post, "http://gpu.local:8080/v1/embeddings").to_return(status: 500)
+    released = Queue.new
+    other = Thread.new { gate.hold(:interactive) { released.pop(timeout: 5) } }
+    Timeout.timeout(5) { sleep 0.01 until gate.holders.any? }
+    moved = nil
+    AssistantMessage.any_instance.stubs(:waited!).with { |seconds| moved ||= seconds }
+    reply = Thread.new { AssistantResponseJob.perform_now(@message, @reply) }
+    Timeout.timeout(5) { sleep 0.01 until gate.waiters.any? }
+    sleep 0.3
+    released << true
+    reply.join(10)
+
+    assert_operator moved, :>=, 0.3
+  ensure
+    released << true
+    [ other, reply ].compact.each { _1.join(2) }
+  end
+
+  test "a chat request ends its own user's typing hold, and no one else's" do
+    ChatReservation.new([ @endpoint ], lanes: %i[prompt background], user: users(:family_member)).hold!
+    stub_request(:post, "http://gpu.local:8080/v1/embeddings").to_return(status: 500)
+
+    AssistantResponseJob.perform_now(@message, @reply)
+
+    assert ChatReservation.held?("gpu.local:8080", :prompt)
+  end
+
   test "a chat request ends the typing hold on its host" do
-    ChatReservation.new([ @endpoint ], lanes: %i[prompt background]).hold!
+    ChatReservation.new([ @endpoint ], lanes: %i[prompt background], user: users(:family_admin)).hold!
     stub_request(:post, "http://gpu.local:8080/v1/embeddings").to_return(status: 500)
 
     AssistantResponseJob.perform_now(@message, @reply)
@@ -95,7 +125,7 @@ class AiNestedCallTest < ActiveSupport::TestCase
         preempted = true
       end
     end
-    sleep 0.01 until gate.holders.any?
+    Timeout.timeout(5) { sleep 0.01 until gate.holders.any? }
     stub_request(:post, "http://gpu.local:8080/v1/embeddings").to_return(status: 500)
 
     Timeout.timeout(10) { AssistantResponseJob.perform_now(@message, @reply) }
@@ -103,7 +133,7 @@ class AiNestedCallTest < ActiveSupport::TestCase
     assert preempted
     assert_equal "Found it.", @reply.reload.content
   ensure
-    running.kill
+    running.kill.join(2)
   end
 
   test "a cloud chat holds no place" do
@@ -129,7 +159,7 @@ class AiNestedCallTest < ActiveSupport::TestCase
   test "an external assistant's turn holds background requests off every local host and ends the typing hold" do
     use_ai_routes
     gpu = AiTestHelper.test_config.endpoint(:gpu)
-    ChatReservation.new([ gpu ], lanes: %i[background]).hold!
+    ChatReservation.new([ gpu ], lanes: %i[background], user: users(:family_admin)).hold!
     @user.family.update!(assistant_type: "external")
     Assistant::External.stubs(configured?: true, allowed_user?: true)
     refused = nil
@@ -154,7 +184,7 @@ class AiNestedCallTest < ActiveSupport::TestCase
 
   test "background requests start again after an external assistant's turn fails" do
     use_ai_routes
-    assert_raises(RuntimeError) { Ai::Sequencer.external_chat { raise "boom" } }
+    assert_raises(RuntimeError) { Ai::Sequencer.external_chat(@user) { raise "boom" } }
 
     assert_equal :ran, Ai::Sequencer.gate_for(AiTestHelper.test_config.endpoint(:gpu)).hold(:background) { :ran }
   end

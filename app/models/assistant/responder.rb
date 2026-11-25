@@ -16,11 +16,13 @@ class Assistant::Responder
     function_results.chunk_while { |a, b| a[:round] == b[:round] }.to_a
   end
 
-  def initialize(message:, instructions:, function_tool_caller:, llm:)
+  # reply: the id the reply has at its model host's gate (AssistantMessage#gate_id).
+  def initialize(message:, instructions:, function_tool_caller:, llm:, reply: nil)
     @message = message
     @instructions = instructions
     @function_tool_caller = function_tool_caller
     @llm = llm
+    @reply = reply
   end
 
   def on(event_name, &block)
@@ -72,7 +74,7 @@ class Assistant::Responder
   end
 
   private
-    attr_reader :message, :instructions, :function_tool_caller, :llm
+    attr_reader :message, :instructions, :function_tool_caller, :llm, :reply
 
     def request_response(function_results: [], previous_response_id: nil, tool_choice: nil)
       response_has_text = false
@@ -120,8 +122,8 @@ class Assistant::Responder
 
     def get_llm_response(streamer:, function_results: [], previous_response_id: nil, tool_choice: nil)
       Usage.capture("ai_assistant_served_daily")
-      response = Ai::Sequencer.hold_for_chat(chat_endpoint) do
-        emit(:request)
+      response = Ai::Sequencer.hold_for_chat(chat_endpoint, user: chat&.user, reply:) do |waited|
+        emit(:request, waited)
         llm.chat_response(
           message.content,
           model: message.ai_model,

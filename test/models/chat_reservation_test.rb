@@ -4,7 +4,7 @@ class ChatReservationTest < ActiveSupport::TestCase
   setup do
     @endpoint = ai_endpoint(base_url: "http://gpu.local:8080/v1", location: :local)
     @host = "gpu.local:8080"
-    @reservation = ChatReservation.new([ @endpoint ], lanes: %i[prompt background])
+    @reservation = ChatReservation.new([ @endpoint ], lanes: %i[prompt background], user: users(:family_admin))
   end
 
   test "hold! holds chat's host for the TTL" do
@@ -19,7 +19,7 @@ class ChatReservationTest < ActiveSupport::TestCase
   test "without a local host for chat, nothing is held" do
     Ai::SharedState.expects(:write).never
 
-    assert_nil ChatReservation.new([], lanes: %i[background]).hold!
+    assert_nil ChatReservation.new([], lanes: %i[background], user: users(:family_admin)).hold!
   end
 
   test "a built-in chat holds both lanes of its own host, an external one background requests off every local host" do
@@ -29,10 +29,21 @@ class ChatReservationTest < ActiveSupport::TestCase
     ChatReservation.for(user).hold!
     assert_equal [ true, true, false ], held([ "gpu.local:8080", :prompt ], [ "gpu.local:8080", :background ], [ "embed.local:8081", :background ])
 
-    ChatReservation.release(Ai::Sequencer.local_endpoints)
+    ChatReservation.release(Ai::Sequencer.local_endpoints, user: users(:family_admin))
     user.family.update!(assistant_type: "external")
     assert_equal 60, ChatReservation.for(user).hold!
     assert_equal [ false, true, true ], held([ "gpu.local:8080", :prompt ], [ "gpu.local:8080", :background ], [ "embed.local:8081", :background ])
+  end
+
+  test "a message ends its own user's hold, and the last to type on a host has its hold" do
+    mine, theirs = [ users(:family_admin), users(:family_member) ].map { ChatReservation.new([ @endpoint ], lanes: %i[prompt background], user: _1) }
+    mine.hold!
+    theirs.hold!
+
+    ChatReservation.release([ @endpoint ], user: users(:family_admin))
+    assert ChatReservation.held?(@host, :prompt)
+    ChatReservation.release([ @endpoint ], user: users(:family_member))
+    assert_not ChatReservation.held?(@host, :prompt)
   end
 
   test "back-to-back holds stop at the cap and resume a TTL later" do
@@ -55,7 +66,7 @@ class ChatReservationTest < ActiveSupport::TestCase
     travel_to Time.zone.parse("2026-10-23 09:14:50")
     assert_equal 60, @reservation.hold!
 
-    ChatReservation.release([ @endpoint ])
+    ChatReservation.release([ @endpoint ], user: users(:family_admin))
     assert_not ChatReservation.held?(@host, :background)
     travel_to Time.zone.parse("2026-10-23 09:29:40")
     assert_equal 60, @reservation.hold!

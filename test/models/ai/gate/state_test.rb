@@ -21,15 +21,17 @@ class Ai::Gate::StateTest < ActiveSupport::TestCase
 
   test "a request is published while it waits, and an interruption is counted" do
     running = Thread.new { @gate.hold(:prompt) { sleep 0.01 until Ai::Gate.holder.preempted? } }
-    sleep 0.01 until @gate.holders.any?
+    Timeout.timeout(5) { sleep 0.01 until @gate.holders.any? }
     prompt = Thread.new { Ai::CallContext.job("pdf_import:1") { @gate.hold(:prompt) { } } }
-    sleep 0.01 until state&.waiters&.any?
+    Timeout.timeout(5) { sleep 0.01 until state&.waiters&.any? }
 
     assert_equal [ "pdf_import:1" ], state.waiters.map(&:job)
     @gate.hold(:interactive) { }
     [ running, prompt ].each { _1.join(2) }
 
     assert_equal 1, state.interruptions
+  ensure
+    [ running, prompt ].compact.each { _1.kill.join(2) }
   end
 
   test "a refused background request leaves the line" do
@@ -41,26 +43,26 @@ class Ai::Gate::StateTest < ActiveSupport::TestCase
   end
 
   test "work the typing hold put off is published until some starts" do
-    ChatReservation.new([ @endpoint ], lanes: %i[prompt background]).hold!
+    ChatReservation.new([ @endpoint ], lanes: %i[prompt background], user: users(:family_admin)).hold!
     assert_raises(Ai::Error::Busy) { @gate.hold(:background) { } }
     assert_predicate state, :put_off?
 
     @gate.hold(:interactive) { }
     assert_predicate state, :put_off?, "the message doesn't start it"
 
-    ChatReservation.release([ @endpoint ])
+    ChatReservation.release([ @endpoint ], user: users(:family_admin))
     @gate.hold(:background) { }
     assert_not_predicate state, :put_off?
   end
 
   test "a prompt request the typing hold keeps waiting is published as put off" do
-    ChatReservation.new([ @endpoint ], lanes: %i[prompt background]).hold!
+    ChatReservation.new([ @endpoint ], lanes: %i[prompt background], user: users(:family_admin)).hold!
     prompt = Thread.new { @gate.hold(:prompt) { } }
     Timeout.timeout(5) { sleep 0.05 until state&.put_off? }
 
     assert_equal 1, state.waiters.size
   ensure
-    ChatReservation.release([ @endpoint ])
+    ChatReservation.release([ @endpoint ], user: users(:family_admin))
     prompt.join(3)
   end
 

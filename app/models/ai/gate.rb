@@ -32,7 +32,7 @@ class Ai::Gate
   class Holder
     attr_reader :lane, :feature, :job, :arrival, :since
 
-    # job: the correlation id of the job sending the request (Ai::CallContext.job).
+    # job: what the request is for: the correlation id of its job (Ai::CallContext.job), or a chat reply.
     def initialize(lane:, feature: nil, job: nil, arrival: 0)
       raise ArgumentError, "unknown lane: #{lane.inspect}" unless RANKS.key?(lane)
 
@@ -155,9 +155,9 @@ class Ai::Gate
   # Runs the block holding a place and yields the seconds it waited for one. Raises
   # Ai::Error::Busy for a background request that would wait, and Ai::Error::Cancelled when
   # `cancelled` answers true once a place is free, before the request is sent.
-  def hold(lane, feature: nil, cancelled: nil)
+  def hold(lane, feature: nil, job: Ai::CallContext.correlation_id, cancelled: nil)
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    holder = enter(lane, feature)
+    holder = enter(lane, feature, job)
     begin
       raise Ai::Error::Cancelled, "cancelled while waiting for the model host" if cancelled&.call
 
@@ -168,8 +168,8 @@ class Ai::Gate
   end
 
   private
-    def enter(lane, feature)
-      holder = join(lane, feature)
+    def enter(lane, feature, job)
+      holder = join(lane, feature, job)
       begin
         publish
         publish until admitted?(holder, held: held?(holder))
@@ -180,9 +180,9 @@ class Ai::Gate
       holder
     end
 
-    def join(lane, feature)
+    def join(lane, feature, job)
       @monitor.synchronize do
-        holder = Holder.new(lane:, feature:, job: Ai::CallContext.correlation_id, arrival: @arrivals += 1)
+        holder = Holder.new(lane:, feature:, job:, arrival: @arrivals += 1)
         @waiters << holder
         @waiters.sort_by! { [ _1.rank, _1.arrival ] }
         holder

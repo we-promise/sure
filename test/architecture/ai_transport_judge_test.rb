@@ -138,7 +138,7 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
       next unless nth == 1
 
       begun = Queue.new
-      chat = Thread.new { Ai::Sequencer.external_chat { begun << true; over.pop(timeout: 10) } }
+      chat = Thread.new { Ai::Sequencer.external_chat(users(:family_admin)) { begun << true; over.pop(timeout: 10) } }
       begun.pop(timeout: 5)
     end
 
