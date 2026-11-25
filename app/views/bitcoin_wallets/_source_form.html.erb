@@ -1,5 +1,5 @@
-<%# locals: (url:, securities: [], values: {}, errors: nil, submit_label: t("bitcoin_wallets.discover")) %>
-<% hd = values[:address_or_key].to_s.strip.match?(/\A[xz]pub/) %>
+<%# locals: (url:, securities: [], values: {}, errors: nil, source_kind: nil, submit_label: t("bitcoin_wallets.discover")) %>
+<% hd = source_kind == "bip84" %>
 <% key_attribute = hd ? :extended_public_key : :receive_address %>
 <% key_error = errors&.include?(key_attribute) %>
 <% address_error = hd && errors&.include?(:receive_address) %>

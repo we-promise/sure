@@ -5,10 +5,6 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
   static targets = ["key", "hdFields"];
 
-  connect() {
-    this.toggle();
-  }
-
   toggle() {
     const hd = /^[xz]pub/.test(this.keyTarget.value.trim());
     this.hdFieldsTarget.hidden = !hd;

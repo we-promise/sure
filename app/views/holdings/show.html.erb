@@ -185,7 +185,7 @@
                   <div>
                     <p class="text-secondary text-xs uppercase"><%= l(trade_entry.date, format: :long) %></p>
                     <% if trade_entry.amount.zero? && trade_entry.trade.internal_movement? %>
-                      <p class="text-primary"><%= t(".trade_history_transfer", name: trade_entry.name,
+                      <p class="text-primary privacy-sensitive"><%= t(".trade_history_transfer", name: trade_entry.name,
                             qty: format_quantity_change(trade_entry.trade.qty)) %></p>
                     <% else %>
                       <p class="text-primary"><%= t(

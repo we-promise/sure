@@ -14,7 +14,6 @@ class Family < ApplicationRecord
   include TradeRepublicConnectable
   include QuestradeConnectable
   include RedbarkConnectable
-  include OnchainWalletConnectable
   include SharesightConnectable
   include AiPromptable
   include AiSettings
@@ -40,6 +39,8 @@ class Family < ApplicationRecord
 
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
+  # Accounts remove their Bitcoin wallets before their shared connection is destroyed.
+  include OnchainWalletConnectable
   has_many :invitations, dependent: :destroy
 
   has_many :imports, dependent: :destroy

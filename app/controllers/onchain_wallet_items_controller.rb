@@ -19,7 +19,12 @@ class OnchainWalletItemsController < ApplicationController
   end
 
   def destroy
-    @onchain_wallet_item.destroy_later
+    @onchain_wallet_item.destroy_later do
+      unless @onchain_wallet_item.provider_deletable?
+        return redirect_to settings_providers_path, alert: t(".disconnect_bitcoin_first"), status: :see_other
+      end
+    end
+
     redirect_to settings_providers_path, notice: t(".success"), status: :see_other
   end
 

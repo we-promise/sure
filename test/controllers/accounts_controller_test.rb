@@ -1,8 +1,10 @@
 require "test_helper"
+require "support/bitcoin_wallet_test_helper"
 
 class AccountsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
   include OnchainTestHelper
+  include BitcoinWalletTestHelper
   include EntriesTestHelper
   include TradeRepublicSessionTestHelper
 
@@ -206,6 +208,37 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, unshared.name
   ensure
     unregister_fake_chain!
+  end
+
+  test "index shows Bitcoin accounts and address counts only to admins with account access" do
+    account = accounts(:crypto)
+    owner = users(:family_member)
+    owner.update!(role: :admin)
+    account.update!(owner: owner)
+    account.account_shares.destroy_all
+    wallet = build_bitcoin_wallet(account: account, status: :active)
+    wallet.create_account_provider!(account: account)
+    wallet.bitcoin_wallet_addresses.create!(address: BitcoinWalletTestHelper::RECEIVE)
+    item = wallet.onchain_wallet_item
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item, :accounts_index)}" do
+      assert_select "##{dom_id(account)}", count: 0
+      assert_select "p", text: I18n.t("onchain_wallet_items.wallet_card.addresses_tracked", count: 0)
+      assert_select "form[action=?]", onchain_wallet_item_path(item), count: 0
+    end
+
+    account.account_shares.create!(user: @user, permission: :read_only)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item, :accounts_index)}" do
+      assert_select "##{dom_id(account)}", count: 1
+      assert_select "p", text: I18n.t("onchain_wallet_items.wallet_card.addresses_tracked", count: 1)
+      assert_select "form[action=?]", onchain_wallet_item_path(item), count: 0
+    end
   end
 
   # #3630. A provider card is admitted for a member as soon as ONE of its

@@ -55,12 +55,9 @@ class AccountsController < ApplicationController
       family.trade_republic_items.ordered.includes(trade_republic_accounts: { account_provider: :account })
     )
 
-    # An on-chain item is admitted as soon as ONE of its accounts is accessible,
-    # so the card is told which of them this viewer may actually see. nil is the
-    # admin case, which visible_provider_items already lets through whole.
-    allowed_ids = Current.user&.admin? ? nil : @accessible_account_ids
+    allowed_ids = @accessible_account_ids.to_set
     @onchain_wallet_cards = @onchain_wallet_items.to_h do |item|
-      visible = item.accounts_visible_to(allowed_ids)
+      visible = item.accounts_visible_to(allowed_ids, include_all_legacy: Current.user.admin?)
       [ item.id, { accounts: visible, address_count: item.address_count_for(visible) } ]
     end
 
@@ -548,7 +545,7 @@ class AccountsController < ApplicationController
         next true if Current.user.admin?
 
         account_ids = if item.is_a?(OnchainWalletItem)
-          item.accounts_visible_to(nil).map(&:id)
+          item.accounts_visible_to(accessible_ids).map(&:id)
         else
           item.respond_to?(:accounts) ? item.accounts.map(&:id) : []
         end

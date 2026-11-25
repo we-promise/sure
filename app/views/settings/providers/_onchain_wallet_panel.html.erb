@@ -64,15 +64,17 @@
           </div>
         <% end %>
 
-        <%= render DS::Button.new(
-              text: t("settings.providers.onchain_wallet_panel.disconnect_all"),
-              icon: "trash-2",
-              variant: :outline_destructive,
-              size: :sm,
-              href: onchain_wallet_item_path(connection),
-              method: :delete,
-              confirm: t("settings.providers.onchain_wallet_panel.disconnect_all_confirm")
-            ) %>
+        <% if connection.provider_deletable? %>
+          <%= render DS::Button.new(
+                text: t("settings.providers.onchain_wallet_panel.disconnect_all"),
+                icon: "trash-2",
+                variant: :outline_destructive,
+                size: :sm,
+                href: onchain_wallet_item_path(connection),
+                method: :delete,
+                confirm: t("settings.providers.onchain_wallet_panel.disconnect_all_confirm")
+              ) %>
+        <% end %>
       </div>
     <% end %>
   <% end %>

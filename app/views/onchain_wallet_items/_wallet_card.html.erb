@@ -61,14 +61,16 @@
                  ) %>
             <% end %>
 
-            <% menu.with_item(
-                 variant: "button",
-                 text: t(".delete"),
-                 icon: "trash-2",
-                 href: onchain_wallet_item_path(onchain_wallet_item),
-                 method: :delete,
-                 confirm: CustomConfirm.for_resource_deletion(onchain_wallet_item.institution_display_name, high_severity: true)
-               ) %>
+            <% if onchain_wallet_item.provider_deletable? %>
+              <% menu.with_item(
+                   variant: "button",
+                   text: t(".delete"),
+                   icon: "trash-2",
+                   href: onchain_wallet_item_path(onchain_wallet_item),
+                   method: :delete,
+                   confirm: CustomConfirm.for_resource_deletion(onchain_wallet_item.institution_display_name, high_severity: true)
+                 ) %>
+            <% end %>
           <% end %>
         <% end %>
       </div>

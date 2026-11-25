@@ -9,8 +9,8 @@ class BitcoinWalletAccount::Processor
   end
 
   # Provider I/O happens before taking accounting locks.
-  def prepare_prices
-    Account::MarketDataImporter.new(account).import_all
+  def prepare_prices(include_account: true)
+    Account::MarketDataImporter.new(account).import_all if include_account
     if wallet.security.price_data_provider.present? && !wallet.security.prices.exists?(date: Date.current)
       wallet.security.import_provider_prices(start_date: wallet.baseline_at&.to_date || Date.current, end_date: Date.current)
     end

@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "support/bitcoin_wallet_test_helper"
 
 class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
   include OnchainTestHelper
+  include BitcoinWalletTestHelper
 
   setup do
     sign_in users(:family_admin)
@@ -46,6 +48,27 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("settings.providers.onchain_wallet_panel.sync_start_date_label"), response.body
     assert_select "form[action=?]", sync_onchain_wallet_item_path(item)
     assert_select "a[href=?]", manage_onchain_wallet_item_path(item)
+  end
+
+  test "provider deletion requires cancelling even an unconnected Bitcoin setup first" do
+    wallet = build_bitcoin_wallet
+    source = manual_bitcoin_source(wallet)
+    item = wallet.onchain_wallet_item
+
+    get connect_form_settings_providers_path(provider_key: "onchain_wallet")
+
+    assert_response :success
+    assert_select "form[action=?] input[name='_method'][value='delete']", onchain_wallet_item_path(item), count: 0
+
+    assert_no_enqueued_jobs(only: DestroyJob) { delete onchain_wallet_item_path(item) }
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("onchain_wallet_items.destroy.disconnect_bitcoin_first"), flash[:alert]
+    assert_not item.reload.scheduled_for_deletion?
+    assert BitcoinWalletSource.exists?(source.id)
+
+    wallet.disconnect!
+    assert_enqueued_with(job: DestroyJob) { delete onchain_wallet_item_path(item) }
+    assert item.reload.scheduled_for_deletion?
   end
 
   test "the price provider warning appears only when no crypto provider is enabled" do

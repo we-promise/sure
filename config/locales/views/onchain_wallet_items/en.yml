@@ -8,6 +8,7 @@ en:
       subtitle: "%{address}"
       title: Which network?
     destroy:
+      disconnect_bitcoin_first: Disconnect Bitcoin wallets or cancel their setup from their individual accounts before deleting this connection.
       success: Scheduled the self-custody connection for deletion.
     disconnect_asset:
       success: "Stopped tracking %{symbol}. Its account and history were kept."

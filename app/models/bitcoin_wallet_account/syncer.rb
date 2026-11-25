@@ -92,7 +92,7 @@ class BitcoinWalletAccount::Syncer
       end
 
       processor = BitcoinWalletAccount::Processor.new(wallet)
-      processor.prepare_prices if wallet.account_provider
+      processor.prepare_prices(include_account: wallet.account_provider.present?)
       invalid_claim = false
       window = wallet.with_lock do
         if source_signature != @source_signature

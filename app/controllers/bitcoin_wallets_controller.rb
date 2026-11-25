@@ -22,8 +22,9 @@ class BitcoinWalletsController < ApplicationController
       end
 
       security = selected_security
+      # Keep the connection active until the draft has been committed.
       @wallet = BitcoinWalletAccount.new(account: @account, security: security,
-        onchain_wallet_item: Current.family.onchain_wallet_item!)
+        onchain_wallet_item: Current.family.onchain_wallet_item!(lock: true))
       @wallet.save!
       @wallet.bitcoin_wallet_sources.create!(source_params)
     end
@@ -88,12 +89,15 @@ class BitcoinWalletsController < ApplicationController
   private
     # Bound address rendering and prepare quantities, progress and safe error copy.
     def prepare_show
+      @wallet_syncing = @wallet.syncing?
+      # The job can publish between loading the wallet and checking for live work.
+      @wallet.reload unless @wallet_syncing
+      @discovering = @wallet.status_discovering? && @wallet_syncing
       @address_count = @wallet.bitcoin_wallet_addresses.count
       @addresses = @wallet.bitcoin_wallet_addresses.order(:branch, :address_index, :address).limit(100)
       @sources = @wallet.bitcoin_wallet_sources.order(:created_at)
       @previous_quantity = @account.current_holdings.find_by(security: @wallet.security)&.qty || 0
       @pending_quantity = @wallet.pending_quantity
-      @wallet_syncing = @wallet.syncing?
       price = BitcoinWalletAccount::Processor.new(@wallet).price_on(Date.current) if @wallet.last_synced_at
       @value = Money.new(@wallet.quantity * price, @account.currency) if price
       @quantity_difference = @wallet.quantity - @previous_quantity.to_d
@@ -128,6 +132,8 @@ class BitcoinWalletsController < ApplicationController
     # over. Source field errors show beside the inputs; any other error stays in the alert.
     def keep_failed_source(error)
       @form_values = params.fetch(:source, {}).permit(:address_or_key, :receive_address, :gap_limit).to_h.symbolize_keys
+      @source_kind = source_kind(@form_values[:address_or_key])
+      @form_values[:gap_limit] = nil unless @form_values[:gap_limit].to_s.match?(/\A[0-9]{1,4}\z/)
       # A mistyped public input can be corrected in place. Do not echo private
       # keys or recovery phrases accidentally entered into a public field.
       @form_values[:address_or_key] = editable_public_input(@form_values[:address_or_key], /\A(?:[xz]pub|bc1|[13])[[:alnum:]-]*\z/i)
@@ -149,12 +155,16 @@ class BitcoinWalletsController < ApplicationController
     def source_params
       input = params.require(:source).permit(:address_or_key, :receive_address, :gap_limit)
       key = input[:address_or_key].to_s.strip
-      if key.match?(/\A[xz]pub/)
+      if source_kind(key) == "bip84"
         { kind: "bip84", extended_public_key: key, receive_address: input[:receive_address],
           gap_limit: input[:gap_limit].presence || 20 }
       else
         { kind: "address", receive_address: key }
       end
+    end
+
+    def source_kind(input)
+      input.to_s.strip.match?(/\A[xz]pub/) ? "bip84" : "address"
     end
 
     # Find existing BTC-like positions in this account, avoiding a separate

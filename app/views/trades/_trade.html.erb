@@ -44,7 +44,7 @@
               <%= link_to entry.name,
                         entry_path(entry),
                         data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
-                        class: "hover:underline" %>
+                        class: ["hover:underline", "privacy-sensitive privacy-sensitive-interactive": entry.source == BitcoinWalletAccount::Processor::SOURCE] %>
             </div>
 
             <%= render DS::Pill.new(label: t(".pending"), tone: :warning, marker: false) if trade.pending? %>

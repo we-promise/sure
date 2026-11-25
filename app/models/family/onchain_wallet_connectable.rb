@@ -13,12 +13,12 @@ module Family::OnchainWalletConnectable
 
   # A family needs only one self-custody connection; every address it tracks
   # hangs off the same item.
-  def onchain_wallet_item
-    onchain_wallet_items.active.ordered.last
+  def onchain_wallet_item(lock: false)
+    onchain_wallet_items.active.ordered.lock(lock).last
   end
 
-  def onchain_wallet_item!
-    onchain_wallet_item || create_onchain_wallet_item!
+  def onchain_wallet_item!(lock: false)
+    onchain_wallet_item(lock: lock) || create_onchain_wallet_item!
   end
 
   def create_onchain_wallet_item!

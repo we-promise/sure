@@ -1,9 +1,12 @@
 require "test_helper"
 require "support/bitcoin_wallet_test_helper"
+require "support/provider_test_helper"
+require "ostruct"
 
 class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
   include BitcoinWalletTestHelper
+  include ProviderTestHelper
 
   setup do
     @wallet = build_bitcoin_wallet
@@ -19,6 +22,46 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     assert_equal 1_234_567, @wallet.balance_sats
     assert_equal before, @wallet.account.reload.balance
     refute @wallet.account.linked?
+  end
+
+  test "a funded draft loads its first quote and exchange rate before publishing a preview" do
+    @wallet.security.prices.delete_all
+    @provider.fund(RECEIVE, 20_000_000)
+    price_provider = mock
+    rate_provider = mock
+    @wallet.security.stubs(:price_data_provider).returns(price_provider)
+    ExchangeRate.stubs(:provider_name).returns("frankfurter")
+    ExchangeRate.stubs(:provider).with("frankfurter").returns(rate_provider)
+
+    price_provider.expects(:fetch_security_prices).with(has_entries(symbol: @wallet.security.ticker, end_date: Date.current))
+      .returns(provider_success_response([ OpenStruct.new(date: Date.current, price: 10_000, currency: "EUR") ]))
+    rate_provider.expects(:fetch_exchange_rates).with(has_entries(from: "EUR", to: "USD", end_date: Date.current))
+      .returns(provider_success_response([ OpenStruct.new(date: Date.current, rate: 1.25) ]))
+
+    account = @wallet.account
+    assert_no_changes -> { account.reload.balance } do
+      assert_no_difference [ -> { account.holdings.count }, -> { account.entries.count }, -> { account.account_providers.count } ] do
+        BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
+      end
+    end
+
+    assert @wallet.reload.status_preview?
+    price = BitcoinWalletAccount::Processor.new(@wallet).price_on(Date.current)
+    assert_equal BigDecimal("2500"), @wallet.quantity * price
+  end
+
+  test "a price provider error still leaves a funded draft ready to preview" do
+    @wallet.security.prices.delete_all
+    @provider.fund(RECEIVE, 20_000_000)
+    price_provider = mock
+    @wallet.security.stubs(:price_data_provider).returns(price_provider)
+    price_provider.expects(:fetch_security_prices).raises(StandardError, "Price unavailable")
+
+    BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
+
+    assert @wallet.reload.status_preview?
+    assert_equal 20_000_000, @wallet.balance_sats
+    assert_nil @wallet.last_error
   end
 
   test "a draft sync finds a deposit to the next unused address" do

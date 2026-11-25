@@ -16,8 +16,9 @@ class OnchainWalletItem < ApplicationRecord
 
   belongs_to :family
 
+  # A queued deletion may run after another request has added a wallet.
+  has_many :bitcoin_wallet_accounts, dependent: :restrict_with_error
   has_many :onchain_wallet_accounts, dependent: :destroy
-  has_many :bitcoin_wallet_accounts, dependent: :destroy
   has_many :accounts, through: :onchain_wallet_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
@@ -106,21 +107,19 @@ class OnchainWalletItem < ApplicationRecord
     onchain_wallet_accounts.for_wallet(chain, address).exists?
   end
 
-  # The accounts a viewer may see on this item, and how many addresses those
-  # cover. An item is surfaced on the accounts page as soon as ONE of its
-  # accounts is accessible, so a card rendering them all would show a
-  # partially-authorised member the names and balances of accounts nobody
-  # shared with them. Passing nil means "no restriction", which is what an
-  # admin gets.
-  #
-  # Both read the preloaded associations rather than opening new relations: the
-  # accounts page renders one card per item, and a scope here would cost a
-  # query per row.
-  def accounts_visible_to(allowed_account_ids)
-    visible_accounts = (accounts.to_a + bitcoin_wallet_accounts.filter_map(&:current_account)).uniq(&:id)
-    return visible_accounts if allowed_account_ids.nil?
+  # Linked Bitcoin wallets inherit the visibility of their existing accounts.
+  # Admins retain their existing access to legacy provider accounts.
+  def accounts_visible_to(allowed_account_ids, include_all_legacy: false)
+    legacy_accounts = accounts.to_a
+    legacy_accounts = legacy_accounts.select { |account| allowed_account_ids.include?(account.id) } unless include_all_legacy
+    bitcoin_accounts = bitcoin_wallet_accounts.filter_map do |wallet|
+      wallet.current_account if allowed_account_ids.include?(wallet.account_id)
+    end
+    (legacy_accounts + bitcoin_accounts).uniq(&:id)
+  end
 
-    visible_accounts.select { |account| allowed_account_ids.include?(account.id) }
+  def provider_deletable?
+    bitcoin_wallet_accounts.empty?
   end
 
   def address_count_for(visible_accounts)

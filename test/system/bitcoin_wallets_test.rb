@@ -1,15 +1,16 @@
 require "application_system_test_case"
 require "support/bitcoin_wallet_test_helper"
+require "support/provider_test_helper"
+require "ostruct"
 
 class BitcoinWalletsTest < ApplicationSystemTestCase
   include BitcoinWalletTestHelper
+  include ProviderTestHelper
 
   setup do
     @user = users(:family_admin)
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
     @account = accounts(:crypto)
-    @security = Security.find_or_create_by!(ticker: "CRYPTO:BTC") { |row| row.name = "Bitcoin" }
-    @security.prices.find_or_initialize_by(date: Date.current).update!(price: 10_000, currency: "USD")
     @provider = FakeProvider.new
     @provider.fund(RECEIVE, 20_000_000)
     Provider::MempoolSpace.stubs(:new).returns(@provider)
@@ -17,6 +18,11 @@ class BitcoinWalletsTest < ApplicationSystemTestCase
   end
 
   test "a public address is previewed and connected to the existing account" do
+    Onchain::SecurityResolver.enable_price_provider!
+    Provider::BinancePublic.any_instance.stubs(:fetch_security_prices).returns(
+      provider_success_response([ OpenStruct.new(date: Date.current, price: 10_000, currency: "USD") ])
+    )
+
     visit account_path(@account)
     within "[data-testid='account-menu']" do
       find("button").click
@@ -29,13 +35,16 @@ class BitcoinWalletsTest < ApplicationSystemTestCase
     wallet = @account.reload.bitcoin_wallet_account
     SyncJob.perform_now(wallet.syncs.ordered.first)
     assert_text "0.2 BTC"
+    within "turbo-frame[id^='status_']" do
+      assert_text Money.new(2_000, "USD").format
+    end
     assert_text I18n.t("bitcoin_wallets.start_tracking")
     page.save_screenshot(Rails.root.join("tmp", "bitcoin-wallet-preview.png"))
     click_on I18n.t("bitcoin_wallets.start_tracking")
     assert_current_path account_path(@account)
     assert_text I18n.t("bitcoin_wallets.header_badge")
     assert @account.reload.bitcoin_wallet_account.account_provider
-    assert_equal BigDecimal("0.2"), @account.reload.current_holdings.find_by!(security: @security).qty
+    assert_equal BigDecimal("0.2"), @account.reload.current_holdings.find_by!(security: wallet.security).qty
     visit account_bitcoin_wallet_path(@account)
     assert_selector "summary", text: /#{Regexp.escape(I18n.t("bitcoin_wallets.details"))}/i
     page.save_screenshot(Rails.root.join("tmp", "bitcoin-wallet-connected.png"))
@@ -54,15 +63,28 @@ class BitcoinWalletsTest < ApplicationSystemTestCase
     page.current_window.resize_to(1400, 900)
   end
 
+  test "a cleared invalid key keeps its error and verification field visible" do
+    visit new_account_bitcoin_wallet_path(@account)
+    fill_in I18n.t("bitcoin_wallets.key_label"), with: "zpub.bad"
+    fill_in I18n.t("bitcoin_wallets.verification_address"), with: RECEIVE
+    click_on I18n.t("bitcoin_wallets.discover")
+
+    assert_text I18n.t("bitcoin_wallets.errors.invalid_key")
+    assert_field I18n.t("bitcoin_wallets.key_label"), with: ""
+    assert_field I18n.t("bitcoin_wallets.verification_address"), with: RECEIVE
+  end
+
   test "status polling refreshes addresses and keeps the source field focused with its typed value" do
     wallet = build_bitcoin_wallet(status: :discovering)
     manual_bitcoin_source(wallet)
+    sync = wallet.sync_later
     visit account_bitcoin_wallet_path(@account)
     find("summary", text: /#{Regexp.escape(I18n.t("bitcoin_wallets.details"))}/i).click
     assert_text I18n.t("bitcoin_wallets.address_count", count: 0)
     fill_in I18n.t("bitcoin_wallets.key_label"), with: CHANGE
     wallet.bitcoin_wallet_addresses.create!(family: wallet.family, address: RECEIVE, used: true)
     wallet.update!(status: :preview, balance_sats: 20_000_000, last_synced_at: Time.current)
+    sync.update!(status: "completed")
     assert_text I18n.t("bitcoin_wallets.start_tracking")
     within "turbo-frame[id^='addresses_']" do
       assert_text I18n.t("bitcoin_wallets.address_count", count: 1)
@@ -87,6 +109,6 @@ class BitcoinWalletsTest < ApplicationSystemTestCase
     assert_selector "[data-testid='activity-menu'] button"
     assert_nil @account.reload.bitcoin_wallet_account
     assert @account.reload.manual_accounting?
-    assert_equal BigDecimal("0.2"), @account.current_holdings.find_by!(security: @security).qty
+    assert_equal BigDecimal("0.2"), @account.current_holdings.find_by!(security: wallet.security).qty
   end
 end

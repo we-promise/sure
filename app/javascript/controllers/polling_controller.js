@@ -31,17 +31,26 @@ export default class extends Controller {
       clearInterval(this.poll);
       this.poll = null;
     }
+    this.request?.abort();
   }
 
   async refresh() {
-    try {
-      const frame = this.frameElement();
-      if (!frame) {
-        this.stopPolling();
-        return;
-      }
+    if (this.request) return;
 
+    const frame = this.frameElement();
+    const dialog =
+      this.element.closest("dialog") || this.element.querySelector("dialog");
+    if (!frame || (dialog && !dialog.open)) {
+      this.stopPolling();
+      return;
+    }
+
+    const request = new AbortController();
+    this.request = request;
+
+    try {
       const response = await fetch(this.urlValue, {
+        signal: request.signal,
         headers: {
           Accept: "text/html",
           "Turbo-Frame": frame.id,
@@ -50,13 +59,22 @@ export default class extends Controller {
 
       if (response.ok) {
         const html = await response.text();
+        if (
+          request.signal.aborted ||
+          !this.element.isConnected ||
+          !frame.isConnected ||
+          (dialog && !dialog.open)
+        ) {
+          return;
+        }
+
         const template = document.createElement("template");
         template.innerHTML = html;
 
         const newFrame = template.content.querySelector(
           `turbo-frame#${this.cssEscape(frame.id)}`,
         );
-        if (newFrame && frame.isConnected) {
+        if (newFrame) {
           if (frame === this.element) {
             this.syncPollingAttributes(newFrame);
           }
@@ -72,7 +90,6 @@ export default class extends Controller {
             }
           }
 
-          // Check if we should stop polling (no more pending/processing exports)
           if (
             frame === this.element &&
             !newFrame.hasAttribute("data-polling-url-value")
@@ -82,7 +99,9 @@ export default class extends Controller {
         }
       }
     } catch (error) {
-      console.error("Polling error:", error);
+      if (!request.signal.aborted) console.error("Polling error:", error);
+    } finally {
+      this.request = null;
     }
   }
 

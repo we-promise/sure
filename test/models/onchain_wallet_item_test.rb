@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "support/bitcoin_wallet_test_helper"
 
 class OnchainWalletItemTest < ActiveSupport::TestCase
   include OnchainTestHelper, ActiveJob::TestHelper
+  include BitcoinWalletTestHelper
 
   setup do
     register_fake_chain!
@@ -61,6 +63,19 @@ class OnchainWalletItemTest < ActiveSupport::TestCase
 
     assert @item.reload.scheduled_for_deletion
     assert_not_includes OnchainWalletItem.active, @item
+  end
+
+  test "queued deletion preserves a Bitcoin wallet added before the job runs" do
+    legacy_account = create_onchain_wallet_account(item: @item)
+    @item.destroy_later
+    wallet = build_bitcoin_wallet
+    source = manual_bitcoin_source(wallet)
+
+    perform_enqueued_jobs(only: DestroyJob)
+
+    assert_not @item.reload.scheduled_for_deletion?
+    assert BitcoinWalletSource.exists?(source.id)
+    assert OnchainWalletAccount.exists?(legacy_account.id)
   end
 
   test "family only reports linked addresses it actually tracks" do

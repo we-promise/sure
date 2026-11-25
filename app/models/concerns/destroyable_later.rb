@@ -24,8 +24,9 @@
 module DestroyableLater
   extend ActiveSupport::Concern
 
-  def destroy_later
-    claimed = claim_scheduled_for_deletion
+  # An optional guard runs with the item locked before the deletion flag changes.
+  def destroy_later(&guard)
+    claimed = claim_scheduled_for_deletion(&guard)
 
     enqueued = begin
       DestroyJob.perform_later(self)
@@ -55,6 +56,7 @@ module DestroyableLater
     # destroys the item; the connection just reappears until it runs.
     def claim_scheduled_for_deletion
       with_lock do
+        yield if block_given?
         next false if scheduled_for_deletion?
 
         update_column(:scheduled_for_deletion, true)

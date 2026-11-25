@@ -48,6 +48,19 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "creates a draft on an active connection when the old one is scheduled for deletion" do
+    scheduled_item = @account.family.onchain_wallet_item!
+    scheduled_item.destroy_later
+
+    post account_bitcoin_wallet_path(@account), params: { source: { address_or_key: RECEIVE } }
+
+    assert_redirected_to account_bitcoin_wallet_path(@account)
+    item = @account.reload.bitcoin_wallet_account.onchain_wallet_item
+    assert_not_equal scheduled_item.id, item.id
+    assert_not item.scheduled_for_deletion?
+    assert item.bitcoin_wallet_accounts.exists?
+  end
+
   test "invalid source input does not leave a wallet behind" do
     assert_no_difference [ "BitcoinWalletAccount.count", "OnchainWalletItem.count", "Security.count" ] do
       post account_bitcoin_wallet_path(@account), params: { source: { address_or_key: "zpub-not-a-public-key", receive_address: RECEIVE } }
@@ -92,6 +105,21 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-bitcoin-wallet-source-target='hdFields']:not([hidden])"
     assert_select "input[name='source[receive_address]'][value='#{RECEIVE}']"
     assert_select "input[name='source[gap_limit]'][value='50']"
+    assert_select "p.text-destructive", text: I18n.t("bitcoin_wallets.errors.invalid_key")
+  end
+
+  test "a cleared malformed key retains its field error and HD fields" do
+    rejected = "zpub.bad"
+    post account_bitcoin_wallet_path(@account), params: { source: {
+      address_or_key: rejected, receive_address: RECEIVE, gap_limit: "private words"
+    } }
+
+    assert_response :unprocessable_entity
+    refute_includes response.body, rejected
+    refute_includes response.body, "private words"
+    assert_select "input[name='source[address_or_key]'][aria-invalid='true']:not([value])"
+    assert_select "[data-bitcoin-wallet-source-target='hdFields']:not([hidden])"
+    assert_select "input[name='source[receive_address]'][value='#{RECEIVE}']:not([disabled])"
     assert_select "p.text-destructive", text: I18n.t("bitcoin_wallets.errors.invalid_key")
   end
 
@@ -239,6 +267,54 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
     manual_bitcoin_source(wallet)
     assert_enqueued_with(job: SyncJob) { post sync_account_bitcoin_wallet_path(@account) }
     assert_redirected_to account_bitcoin_wallet_path(@account)
+  end
+
+  test "cancelled or lost discovery offers a new read and stops polling" do
+    wallet = build_bitcoin_wallet
+    manual_bitcoin_source(wallet)
+    sync = wallet.sync_later
+    get account_bitcoin_wallet_path(@account)
+    assert_select "turbo-frame[data-controller='polling']"
+    assert_select "button", text: I18n.t("bitcoin_wallets.read_again"), count: 0
+
+    sync.request_cancel!
+    2.times do
+      get account_bitcoin_wallet_path(@account)
+      assert_response :success
+      assert_select "turbo-frame[data-controller='polling']", count: 0
+      assert_select "p", text: I18n.t("bitcoin_wallets.discovering_title"), count: 0
+      assert_select "button", text: I18n.t("bitcoin_wallets.read_again")
+      assert_enqueued_with(job: SyncJob) { post sync_account_bitcoin_wallet_path(@account) }
+      wallet.syncs.ordered.first.update!(created_at: 6.minutes.ago)
+    end
+  end
+
+  test "marks the prior quantity and change as privacy sensitive" do
+    wallet = build_bitcoin_wallet(status: :preview, last_synced_at: Time.current, balance_sats: 50_000_000)
+    manual_bitcoin_source(wallet)
+    @account.holdings.create!(security: wallet.security, date: Date.current, qty: 1, price: 10_000, amount: 10_000, currency: @account.currency)
+
+    get account_bitcoin_wallet_path(@account)
+    assert_select "p.privacy-sensitive", text: /#{Regexp.escape(I18n.t("bitcoin_wallets.connect_explainer_replace",
+      previous: "1", difference: "-0.5"))}/
+  end
+
+  test "marks Bitcoin transfer titles and holding history as privacy sensitive" do
+    wallet = build_bitcoin_wallet
+    holding = @account.holdings.create!(security: wallet.security, date: Date.current,
+      qty: 1, price: 10_000, amount: 10_000, currency: @account.currency)
+    name = I18n.t("bitcoin_wallet.movements.received", quantity: "1.0")
+    Account::ProviderImportAdapter.new(@account).import_trade(security: wallet.security, quantity: 1,
+      price: 10_000, amount: 0, currency: @account.currency, date: Date.current,
+      name: name, source: BitcoinWalletAccount::Processor::SOURCE, activity_label: Trade::TRANSFER_LABEL)
+
+    get account_path(@account, tab: "activity")
+    assert_response :success
+    assert_select "a.privacy-sensitive", text: name
+
+    get holding_path(holding)
+    assert_response :success
+    assert_select "p.privacy-sensitive", text: /#{Regexp.escape(name)}/
   end
 
   test "an exhausted explorer error offers a manual retry without showing an unread balance" do
