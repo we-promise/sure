@@ -95,7 +95,9 @@ class Holding < ApplicationRecord
   # Trades count when they sort strictly before `entry` in Entry.chronological
   # order, so a buy earlier the same day counts and the sale itself does not.
   # A split with an ex-date on or before the sale's date counts, since a split
-  # applies at the open of its ex-date.
+  # applies at the open of its ex-date. Units a sale sells beyond the position
+  # are priced at the acquisitions that cover them (.shortfall_cover_cost),
+  # and the figure is the cost per unit across the whole sale.
   def avg_cost_before(entry)
     calculate_avg_cost(through: entry.date, before: entry)
   end
@@ -526,8 +528,11 @@ class Holding < ApplicationRecord
   # ([date, qty, unit cost, internal movement?, replayed?], oldest first in
   # AVG_COST_REPLAY_ORDER) and `splits` (ex-date order) as the calculators do,
   # starting from the position the rows do not explain, and returns the
-  # average cost in `currency`, or nil when it is unknown.
-  def self.replay_avg_cost(rows, all_splits, qty:, date:, through:, currency:)
+  # average cost in `currency`, or nil when it is unknown. With `sale_qty`,
+  # the units sold by the first row not replayed, the figure is that sale's
+  # cost per unit: the average for the units held and the covering
+  # acquisitions' cost for the rest.
+  def self.replay_avg_cost(rows, all_splits, qty:, date:, through:, currency:, sale_qty: nil)
     book = Holding::LotBook.new
     transferred = false
     position = opening_position(rows, all_splits, qty: qty, date: date)
@@ -535,7 +540,7 @@ class Holding < ApplicationRecord
     # the calculators book them, so a sale from them relieves units the book
     # holds rather than leaving a shortfall the next buy would fill.
     book.add_unknown(position)
-    splits = all_splits.select { |split| split.ex_date <= through }
+    splits, later_splits = all_splits.partition { |split| split.ex_date <= through }
 
     apply_splits = lambda do |up_to|
       while splits.any? && splits.first.ex_date <= up_to
@@ -569,9 +574,17 @@ class Holding < ApplicationRecord
     end
     apply_splits.call(through)
 
-    return nil if transferred
+    average = book.average_cost unless transferred
+    held = [ sale_qty, book.open_qty ].min if sale_qty
+    if held && held < sale_qty
+      return nil if held.positive? && average.nil?
 
-    average = book.average_cost
+      cover = shortfall_cover_cost(rows.drop_while { |row| row[4] }.drop(1), later_splits,
+                                   ahead: book.shortfall, short: sale_qty - held)
+      return nil unless cover
+
+      average = ((average || 0) * held + cover) / sale_qty
+    end
     return nil unless average
 
     # Rounded to the scale `cost_basis` is stored at, so the figure is the one
@@ -580,6 +593,32 @@ class Holding < ApplicationRecord
     # scale keeps its precision rather than rounding to a free position.
     rounded = average.round(columns_hash["cost_basis"].scale)
     Money.new(rounded.zero? && !average.zero? ? average : rounded, currency)
+  end
+
+  # What `short` units sold beyond the position cost, priced as
+  # Holding::LotBook prices a fifo sale's shortfall (#add_lot and #cover): the
+  # acquisitions in `rows`, those after the sale, fill the oldest shortfall
+  # first, `ahead` being what earlier sales left uncovered, each at its own
+  # cost. nil when an acquisition that covers it has no known cost (a transfer
+  # in, a buy with no rate), when a split comes first (#split: a cover after
+  # it is in other shares), or when the rows never cover it all.
+  def self.shortfall_cover_cost(rows, splits, ahead:, short:)
+    cost = BigDecimal("0")
+    rows.each do |trade_date, trade_qty, unit_cost, internal_movement|
+      return nil if splits.any? { |split| split.ex_date <= trade_date }
+      next unless trade_qty.positive?
+
+      ahead_filled = [ trade_qty, ahead ].min
+      ahead -= ahead_filled
+      filled = [ trade_qty - ahead_filled, short ].min
+      next unless filled.positive?
+      return nil if internal_movement || unit_cost.nil?
+
+      cost += filled * unit_cost
+      short -= filled
+      return cost if short.zero?
+    end
+    nil
   end
 
   # The position held before the first of `rows`: this holding's quantity
@@ -670,9 +709,11 @@ class Holding < ApplicationRecord
       return nil if HoldingLot.where(account_id: account_id, security_id: security_id, clamped: true).exists?
       return before ? nil : self.class.fifo_avg_costs([ self ])[id] if account.cost_basis_fifo?
 
-      all_splits = Security::Split.where(security_id: security_id, ex_date: ..[ through, date ].max).order(:ex_date).to_a
-      self.class.replay_avg_cost(avg_cost_trade_rows(through: through, before: before), all_splits,
-                                 qty: qty, date: date, through: through, currency: currency)
+      splits = Security::Split.where(security_id: security_id).order(:ex_date)
+      splits = splits.where(ex_date: ..[ through, date ].max) unless before
+      sale_qty = -before.entryable.qty if before && before.entryable.try(:qty).to_d.negative?
+      self.class.replay_avg_cost(avg_cost_trade_rows(through: through, before: before), splits.to_a,
+                                 qty: qty, date: date, through: through, currency: currency, sale_qty: sale_qty)
     end
 
     # This security's trades up to this holding's date and up to the replay's
@@ -681,7 +722,8 @@ class Holding < ApplicationRecord
     # [date, qty, unit cost, internal movement?, replayed?] (see
     # .avg_cost_row_sql). Both sets are a prefix of that order, so the replayed
     # rows lead and one query serves the walk back to the opening position and
-    # the replay.
+    # the replay. With `before`, the trades after it come too, since what
+    # covers a sale beyond the position comes later.
     def avg_cost_trade_rows(through:, before:)
       quoted = { holding_currency: self.class.connection.quote(currency), account_currency: self.class.connection.quote(account.currency) }
       unit_cost, internal_movement = self.class.avg_cost_row_sql(**quoted)
@@ -708,7 +750,7 @@ class Holding < ApplicationRecord
         ]))
         .joins(lot_joins)
         .where(security_id: security_id)
-        .where("(#{cutoff}) OR entries.date <= ?", date)
+        .then { |trades| before ? trades : trades.where("(#{cutoff}) OR entries.date <= ?", date) }
         .reorder(Arel.sql(AVG_COST_REPLAY_ORDER))
         .pluck(Arel.sql("entries.date"), Arel.sql("trades.qty"), Arel.sql(unit_cost), Arel.sql(internal_movement), Arel.sql("COALESCE(#{cutoff}, FALSE)"))
     end

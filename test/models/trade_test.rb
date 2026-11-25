@@ -314,6 +314,67 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(600), gain.value.amount
   end
 
+  # Units sold beyond the position are priced at the acquisitions that cover
+  # them, as a fifo sale's shortfall is (Holding::LotBook#cover): 5 held at
+  # 100 and 5 covered by the same day's later buy at 200 is 1,500 against
+  # 1,800 of proceeds.
+  test "a sale beyond the position prices the units held at the average and the rest at their cover" do
+    account, security = cross_currency_account
+    closed_snapshot(account, security, Date.new(2026, 3, 1))
+    create_trade(security, account: account, qty: 5, date: Date.new(2026, 3, 2), price: 100)
+    sale = create_trade(security, account: account, qty: -10, date: Date.new(2026, 3, 3), price: 180)
+    cover = create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 3), price: 200)
+    cover.update_columns(created_at: sale.created_at + 1.second)
+
+    assert_equal BigDecimal(300), sale.entryable.realized_gain_loss.value.amount
+  end
+
+  # An earlier sale's shortfall is covered first, so this one takes the 200.
+  test "a sale beyond the position is covered after an earlier sale's shortfall" do
+    account, security = cross_currency_account
+    closed_snapshot(account, security, Date.new(2026, 3, 1))
+    create_trade(security, account: account, qty: -5, date: Date.new(2026, 3, 2), price: 180)
+    sale = create_trade(security, account: account, qty: -5, date: Date.new(2026, 3, 3), price: 180)
+    create_trade(security, account: account, qty: 5, date: Date.new(2026, 3, 4), price: 100)
+    create_trade(security, account: account, qty: 5, date: Date.new(2026, 3, 5), price: 200)
+
+    assert_equal BigDecimal(-100), sale.entryable.realized_gain_loss.value.amount
+  end
+
+  # Nothing covers the shortfall, a transfer in or a foreign buy with no rate
+  # covers it at a cost nothing here knows, a split comes before the cover, or
+  # the units held have no known cost: each leaves the sale's cost unknown.
+  test "a sale beyond the position with no known cover realises no gain" do
+    cases = {
+      uncovered: [ [ 5, 100, 2 ], [ :sale, 3 ] ],
+      transfer_cover: [ [ :sale, 2 ], [ :transfer, 3 ], [ 5, 100, 4 ] ],
+      unpriced_cover: [ [ :sale, 2 ], [ :unpriced, 3 ] ],
+      split_first: [ [ :sale, 2 ], [ :split, 3 ], [ 10, 100, 4 ] ],
+      unknown_held: [ [ :transfer, 2 ], [ :sale, 3 ], [ 10, 200, 4 ] ]
+    }
+
+    gains = cases.transform_values do |steps|
+      account, security = cross_currency_account
+      closed_snapshot(account, security, Date.new(2026, 3, 1))
+      sale = nil
+      steps.each do |kind, *rest|
+        day = Date.new(2026, 3, rest.last)
+        case kind
+        when :sale then sale = create_trade(security, account: account, qty: -10, date: day, price: 180)
+        when :transfer
+          moved_in = create_trade(security, account: account, qty: 5, date: day, price: 100)
+          moved_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+        when :split then security.splits.create!(ex_date: day, numerator: 2, denominator: 1, source: "manual")
+        when :unpriced then create_trade(security, account: account, qty: 10, date: day, price: 100, currency: "CAD")
+        else create_trade(security, account: account, qty: kind, date: day, price: rest.first)
+        end
+      end
+      sale.entryable.realized_gain_loss
+    end
+
+    assert_equal cases.keys.index_with(nil), gains
+  end
+
   # A reverse-synced account with two shares from before its first imported
   # trade: 10 bought, 5 moved in, 15 sold, 8 bought at 150, then 3 sold. The
   # -15 sale left two shares, so the transferred units were never cleared out
