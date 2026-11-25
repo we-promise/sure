@@ -39,6 +39,47 @@ zh-CN:
       date_format: 日期格式
       submit: 完成
     tools:
+      title: 欢迎，把这里当成自己家。
+      subtitle: 做几个选择，让 %{product_name} 更贴合您。
+      starting_point:
+        eyebrow: 您的起点
+        title: 您之前用过哪些工具？
+        description: 选择您用来管理家庭财务的工具。
+        select: 选择您的工具
+        other_placeholder: 其他工具（可选）
+        hint: 可多选。这有助于我们为您推荐起点，并不代表支持从这些工具导入。
+        tools:
+          nothing_yet: 还没用过
+          other: 其他
+      ai:
+        eyebrow: 您的 AI 偏好
+        title: 您希望如何使用 %{product_name}？
+        description: 由您做主，选择最适合您的方式。
+        default: 默认
+        modes:
+          none:
+            title: 不使用 AI
+            description: 不使用应用内助手来管理财务。
+          builtin:
+            title: 内置 AI
+            description: 开启应用内助手，使用此实例的 AI 提供商。
+          external:
+            title: 使用您自己的 AI 智能体
+            description: 使用您自己的助手，经您授权后连接。
+        panels:
+          admin_on: 作为管理员，此选择也代表您的家庭同意在后台运行的 AI 功能，例如分类。
+          admin_off: 作为管理员，此选择也会撤回您对在后台运行的 AI 功能（例如分类）的同意。只有在其他管理员开启了 AI 时，这些功能才会保持开启。
+          none:
+            title: 您的助手将保持关闭。
+            body: 这将为您的账户关闭应用内助手。
+          builtin:
+            title: 您的助手将开启。
+            body: 这将为您的账户开启应用内助手。它使用哪个 AI 提供商、是否可用，仍取决于此实例的 AI 设置。
+            not_configured: 此实例尚未设置 AI 提供商。管理员可以在“设置 → 自托管”中添加。
+            unavailable: 您家庭当前的 AI 设置不运行应用内助手，因此在管理员更改设置之前，它不会响应。
+          external:
+            title: 准备好后再连接您的 AI 智能体。
+            body: 这将为您的账户关闭应用内助手。要让您自己的助手与 %{product_name} 配合使用，请在“设置 → MCP”中连接。此选择不会创建、更改或删除任何连接。
       submit: 下一步
     trial:
       title: 试用 Sure 45 天

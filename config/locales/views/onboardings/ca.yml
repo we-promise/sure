@@ -41,6 +41,47 @@ ca:
       subtitle: Primer de tot, completem el teu perfil.
       title: Configurem el teu compte
     tools:
+      title: Fes com si fossis a casa.
+      subtitle: Un parell de decisions per fer teu %{product_name}.
+      starting_point:
+        eyebrow: El teu punt de partida
+        title: Què has fet servir fins ara?
+        description: Tria les eines que fas servir per gestionar les finances de la teva llar.
+        select: Selecciona les teves eines
+        other_placeholder: Una altra eina (opcional)
+        hint: Marca totes les que corresponguin. Ens ajuda a suggerir-te un punt de partida, no implica que puguem importar-ne les dades.
+        tools:
+          nothing_yet: Cap encara
+          other: Una altra
+      ai:
+        eyebrow: La teva preferència d'IA
+        title: Com vols fer servir %{product_name}?
+        description: Tu decideixes. Tria el que et vagi millor.
+        default: Per defecte
+        modes:
+          none:
+            title: Sense IA
+            description: Gestiona les teves finances sense l'assistent de l'app.
+          builtin:
+            title: IA integrada
+            description: Activa l'assistent de l'app, amb el proveïdor d'IA d'aquesta instància.
+          external:
+            title: Fes servir el teu propi agent d'IA
+            description: Fes servir el teu propi assistent, connectat amb el teu permís.
+        panels:
+          admin_on: Com a administrador, això també dona el consentiment de la teva llar per a les funcions d'IA que s'executen en segon pla, com la categorització.
+          admin_off: Com a administrador, això també retira el teu consentiment per a les funcions d'IA que s'executen en segon pla, com la categorització. Només continuen actives si un altre administrador té la IA activada.
+          none:
+            title: El teu assistent continua desactivat.
+            body: Això desactiva l'assistent de l'app per al teu compte.
+          builtin:
+            title: El teu assistent s'activa.
+            body: Això activa l'assistent de l'app per al teu compte. Quin proveïdor d'IA fa servir, i si està disponible, continua depenent de la configuració d'IA d'aquesta instància.
+            not_configured: Aquesta instància encara no té cap proveïdor d'IA configurat. Un administrador en pot afegir un a Configuració → Self hosting.
+            unavailable: La configuració d'IA actual de la teva llar no permet fer servir l'assistent de l'app, així que no respondrà fins que un administrador la canviï.
+          external:
+            title: Connecta el teu agent quan vulguis.
+            body: Això desactiva l'assistent de l'app per al teu compte. Perquè el teu propi assistent treballi amb %{product_name}, connecta'l des de Configuració → MCP. Aquesta elecció no crea, canvia ni elimina cap connexió.
       submit: Següent
     trial:
       continue_trial: Continua la prova

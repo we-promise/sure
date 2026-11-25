@@ -39,6 +39,47 @@ hu:
       date_format: Dátumformátum
       submit: Befejezés
     tools:
+      title: Érezd magad otthon.
+      subtitle: Néhány választás, hogy a(z) %{product_name} igazán a tiéd legyen.
+      starting_point:
+        eyebrow: A kiindulópontod
+        title: Mit használtál eddig?
+        description: Válaszd ki, milyen eszközökkel kezeled a háztartásod pénzügyeit.
+        select: Válaszd ki az eszközeidet
+        other_placeholder: Egyéb eszköz (nem kötelező)
+        hint: Jelölj be mindent, ami illik rád. Ez segít kiindulópontot javasolni, de nem jelenti, hogy az importálás kompatibilis.
+        tools:
+          nothing_yet: Még semmit
+          other: Egyéb
+      ai:
+        eyebrow: Az MI-preferenciád
+        title: Hogyan szeretnéd használni a(z) %{product_name} alkalmazást?
+        description: Te döntesz. Válaszd azt, ami neked megfelel.
+        default: Alapértelmezett
+        modes:
+          none:
+            title: MI nélkül
+            description: Kezeld a pénzügyeidet az alkalmazáson belüli asszisztens nélkül.
+          builtin:
+            title: Beépített MI
+            description: Kapcsold be az alkalmazáson belüli asszisztenst, amely ennek a példánynak az MI-szolgáltatóját használja.
+          external:
+            title: Saját MI-ügynök
+            description: Használd a saját asszisztensedet, az engedélyeddel csatlakoztatva.
+        panels:
+          admin_on: Adminisztrátorként ez egyben a háztartásod hozzájárulása is a háttérben futó MI-funkciókhoz, például a kategorizáláshoz.
+          admin_off: Adminisztrátorként ezzel egyben visszavonod a hozzájárulásodat a háttérben futó MI-funkciókhoz, például a kategorizáláshoz. Ezek csak akkor maradnak bekapcsolva, ha egy másik adminisztrátornál be van kapcsolva az MI.
+          none:
+            title: Az asszisztensed kikapcsolva marad.
+            body: Ez kikapcsolja az alkalmazáson belüli asszisztenst a fiókodban.
+          builtin:
+            title: Az asszisztensed bekapcsol.
+            body: Ez bekapcsolja az alkalmazáson belüli asszisztenst a fiókodban. Hogy melyik MI-szolgáltatót használja, és hogy elérhető-e, továbbra is a példány MI-beállításaitól függ.
+            not_configured: 'Ezen a példányon még nincs beállítva MI-szolgáltató. Egy adminisztrátor itt adhat hozzá egyet: Beállítások → Saját üzemeltetés.'
+            unavailable: A háztartásod jelenlegi MI-beállításai nem futtatják az alkalmazáson belüli asszisztenst, ezért nem fog válaszolni, amíg egy adminisztrátor meg nem változtatja őket.
+          external:
+            title: Csatlakoztasd az ügynöködet, amikor készen állsz.
+            body: 'Ez kikapcsolja az alkalmazáson belüli asszisztenst a fiókodban. Ha azt szeretnéd, hogy a saját asszisztensed a(z) %{product_name} alkalmazással dolgozzon, csatlakoztasd itt: Beállítások → MCP. Ez a választás nem hoz létre, nem módosít és nem töröl egyetlen kapcsolatot sem.'
       submit: Tovább
     trial:
       title: Próbáld ki a Sure-t 45 napig

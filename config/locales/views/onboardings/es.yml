@@ -39,6 +39,47 @@ es:
       date_format: Formato de fecha
       submit: Completar
     tools:
+      title: Siéntete como en casa.
+      subtitle: Un par de decisiones para hacer tuyo %{product_name}.
+      starting_point:
+        eyebrow: Tu punto de partida
+        title: ¿Qué has estado usando?
+        description: Elige las herramientas que usas para gestionar las finanzas de tu hogar.
+        select: Selecciona tus herramientas
+        other_placeholder: Otra herramienta (opcional)
+        hint: Marca todas las que correspondan. Nos ayuda a sugerirte un punto de partida, no implica que podamos importar sus datos.
+        tools:
+          nothing_yet: Ninguna todavía
+          other: Otra
+      ai:
+        eyebrow: Tu preferencia de IA
+        title: ¿Cómo quieres usar %{product_name}?
+        description: Tú decides. Elige lo que mejor te encaje.
+        default: Por defecto
+        modes:
+          none:
+            title: Sin IA
+            description: Gestiona tus finanzas sin el asistente de la app.
+          builtin:
+            title: IA integrada
+            description: Activa el asistente de la app, con el proveedor de IA de esta instancia.
+          external:
+            title: Usa tu propio agente de IA
+            description: Usa tu propio asistente, conectado con tu permiso.
+        panels:
+          admin_on: Como administrador, esto también da el consentimiento de tu hogar para las funciones de IA que se ejecutan en segundo plano, como la categorización.
+          admin_off: Como administrador, esto también retira tu consentimiento para las funciones de IA que se ejecutan en segundo plano, como la categorización. Solo siguen activas si otro administrador tiene la IA activada.
+          none:
+            title: Tu asistente sigue desactivado.
+            body: Esto desactiva el asistente de la app para tu cuenta.
+          builtin:
+            title: Tu asistente se activa.
+            body: Esto activa el asistente de la app para tu cuenta. El proveedor de IA que use, y si está disponible, sigue dependiendo de la configuración de IA de esta instancia.
+            not_configured: Esta instancia aún no tiene ningún proveedor de IA configurado. Un administrador puede añadir uno en Ajustes → Autoalojamiento.
+            unavailable: La configuración de IA actual de tu hogar no permite usar el asistente de la app, así que no responderá hasta que un administrador la cambie.
+          external:
+            title: Conecta tu agente cuando quieras.
+            body: Esto desactiva el asistente de la app para tu cuenta. Para que tu propio asistente trabaje con %{product_name}, conéctalo desde Ajustes → MCP. Esta elección no crea, cambia ni elimina ninguna conexión.
       submit: Siguiente
     trial:
       title: Prueba Sure durante 45 días

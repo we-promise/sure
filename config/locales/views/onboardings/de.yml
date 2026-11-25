@@ -39,6 +39,47 @@ de:
       date_format: Datumsformat
       submit: Abschließen
     tools:
+      title: Fühl dich wie zu Hause.
+      subtitle: Ein paar Entscheidungen, um %{product_name} zu deinem zu machen.
+      starting_point:
+        eyebrow: Dein Ausgangspunkt
+        title: Was hast du bisher genutzt?
+        description: Wähle die Tools, mit denen du die Finanzen deines Haushalts verwaltest.
+        select: Tools auswählen
+        other_placeholder: Anderes Tool (optional)
+        hint: Wähle alle zutreffenden aus. So können wir dir einen passenden Einstieg vorschlagen; Import-Kompatibilität setzen wir damit nicht voraus.
+        tools:
+          nothing_yet: Noch keins
+          other: Andere
+      ai:
+        eyebrow: Deine KI-Präferenz
+        title: Wie möchtest du %{product_name} nutzen?
+        description: Du hast die Kontrolle. Wähle, was zu dir passt.
+        default: Standard
+        modes:
+          none:
+            title: Keine KI
+            description: Verwalte deine Finanzen ohne den integrierten Assistenten.
+          builtin:
+            title: Integrierte KI
+            description: Aktiviere den integrierten Assistenten mit dem KI-Anbieter dieser Instanz.
+          external:
+            title: Eigenen KI-Agenten nutzen
+            description: Nutze deinen eigenen Assistenten, verbunden mit deiner Erlaubnis.
+        panels:
+          admin_on: Als Admin gibst du damit auch die Zustimmung deines Haushalts für KI-Funktionen, die im Hintergrund laufen, etwa die Kategorisierung.
+          admin_off: Als Admin ziehst du damit auch deine Zustimmung für KI-Funktionen zurück, die im Hintergrund laufen, etwa die Kategorisierung. Sie bleiben nur aktiv, wenn ein anderer Admin KI aktiviert hat.
+          none:
+            title: Dein Assistent bleibt aus.
+            body: Damit wird der integrierte Assistent für dein Konto deaktiviert.
+          builtin:
+            title: Dein Assistent wird aktiviert.
+            body: Damit wird der integrierte Assistent für dein Konto aktiviert. Welchen KI-Anbieter er nutzt und ob er verfügbar ist, hängt weiterhin von den KI-Einstellungen dieser Instanz ab.
+            not_configured: Auf dieser Instanz ist noch kein KI-Anbieter eingerichtet. Ein Admin kann einen unter Einstellungen → Self-Hosting hinzufügen.
+            unavailable: Mit den aktuellen KI-Einstellungen deines Haushalts läuft der integrierte Assistent nicht. Er antwortet erst, wenn ein Admin sie ändert.
+          external:
+            title: Verbinde deinen Agenten, wann immer du bereit bist.
+            body: Damit wird der integrierte Assistent für dein Konto deaktiviert. Damit dein eigener Assistent mit %{product_name} arbeiten kann, verbinde ihn unter Einstellungen → MCP. Diese Auswahl erstellt, ändert oder entfernt keine Verbindung.
       submit: Weiter
     trial:
       title: Sure 45 Tage kostenlos testen

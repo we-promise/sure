@@ -34,6 +34,47 @@ ro:
       date_format: Format dată
       submit: Finalizare
     tools:
+      title: Simte-te ca acasă.
+      subtitle: Câteva alegeri ca %{product_name} să fie al tău.
+      starting_point:
+        eyebrow: Punctul tău de plecare
+        title: Ce ai folosit până acum?
+        description: Alege instrumentele pe care le folosești pentru a gestiona finanțele gospodăriei.
+        select: Selectează instrumentele
+        other_placeholder: Alt instrument (opțional)
+        hint: Alege tot ce se aplică. Ne ajută să-ți sugerăm un punct de plecare, fără să presupunem compatibilitatea la import.
+        tools:
+          nothing_yet: Niciunul încă
+          other: Altul
+      ai:
+        eyebrow: Preferința ta pentru AI
+        title: Cum ai vrea să folosești %{product_name}?
+        description: Tu decizi. Alege ce ți se potrivește.
+        default: Implicit
+        modes:
+          none:
+            title: Fără AI
+            description: Gestionează-ți finanțele fără asistentul integrat.
+          builtin:
+            title: AI integrat
+            description: Activează asistentul integrat, cu furnizorul AI al acestei instanțe.
+          external:
+            title: Folosește propriul agent AI
+            description: Folosește propriul asistent, conectat cu permisiunea ta.
+        panels:
+          admin_on: Ca administrator, prin aceasta îți dai și consimțământul gospodăriei pentru funcțiile AI care rulează în fundal, cum ar fi categorizarea.
+          admin_off: Ca administrator, prin aceasta îți retragi și consimțământul pentru funcțiile AI care rulează în fundal, cum ar fi categorizarea. Ele rămân active doar dacă un alt administrator are AI-ul activat.
+          none:
+            title: Asistentul tău rămâne dezactivat.
+            body: Astfel dezactivezi asistentul integrat pentru contul tău.
+          builtin:
+            title: Asistentul tău se activează.
+            body: Astfel activezi asistentul integrat pentru contul tău. Ce furnizor AI folosește și dacă este disponibil depind în continuare de setările AI ale acestei instanțe.
+            not_configured: Nu există încă niciun furnizor AI configurat pe această instanță. Un administrator poate adăuga unul din Setări → Găzduire proprie.
+            unavailable: Setările AI actuale ale gospodăriei nu rulează asistentul integrat, așa că nu va răspunde până când un administrator nu le schimbă.
+          external:
+            title: Conectează-ți agentul când ești gata.
+            body: Astfel dezactivezi asistentul integrat pentru contul tău. Ca propriul asistent să lucreze cu %{product_name}, conectează-l din Setări → MCP. Această alegere nu creează, nu modifică și nu elimină nicio conexiune.
       submit: Următorul
     trial:
       title: Încearcă Sure timp de 45 de zile

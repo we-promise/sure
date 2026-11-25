@@ -41,6 +41,47 @@ tr:
       subtitle: Önce profilinizi tamamlayalım.
       title: Hesabınızı kuralım
     tools:
+      title: Kendinizi evinizde hissedin.
+      subtitle: '%{product_name} uygulamasını size göre ayarlamak için birkaç seçim.'
+      starting_point:
+        eyebrow: Başlangıç noktanız
+        title: Şimdiye kadar ne kullandınız?
+        description: Hane finanslarınızı yönetmek için kullandığınız araçları seçin.
+        select: Araçlarınızı seçin
+        other_placeholder: Başka bir araç (isteğe bağlı)
+        hint: Uygun olanların hepsini seçin. Bu, size bir başlangıç noktası önermemize yardımcı olur; içe aktarma uyumluluğu anlamına gelmez.
+        tools:
+          nothing_yet: Henüz hiçbiri
+          other: Diğer
+      ai:
+        eyebrow: Yapay zeka tercihiniz
+        title: '%{product_name} uygulamasını nasıl kullanmak istersiniz?'
+        description: Kontrol sizde. Size uygun olanı seçin.
+        default: Varsayılan
+        modes:
+          none:
+            title: Yapay zeka olmadan
+            description: Finanslarınızı uygulama içi asistan olmadan yönetin.
+          builtin:
+            title: Yerleşik yapay zeka
+            description: Bu sunucunun yapay zeka sağlayıcısını kullanan uygulama içi asistanı açın.
+          external:
+            title: Kendi yapay zeka ajanınızı kullanın
+            description: İzninizle bağlanan kendi asistanınızı kullanın.
+        panels:
+          admin_on: Yönetici olarak bu, aynı zamanda hanenizin kategorizasyon gibi arka planda çalışan yapay zeka özelliklerine verdiği onay anlamına gelir.
+          admin_off: Yönetici olarak bu, aynı zamanda kategorizasyon gibi arka planda çalışan yapay zeka özellikleri için verdiğiniz onayı geri çeker. Bu özellikler yalnızca başka bir yöneticide yapay zeka açıksa açık kalır.
+          none:
+            title: Asistanınız kapalı kalır.
+            body: Bu, hesabınız için uygulama içi asistanı kapatır.
+          builtin:
+            title: Asistanınız açılır.
+            body: Bu, hesabınız için uygulama içi asistanı açar. Hangi yapay zeka sağlayıcısını kullanacağı ve kullanılabilir olup olmadığı yine bu sunucunun yapay zeka ayarlarına bağlıdır.
+            not_configured: Bu sunucuda henüz bir yapay zeka sağlayıcısı ayarlanmamış. Bir yönetici Ayarlar → Kendi Sunucunda Barındırma bölümünden ekleyebilir.
+            unavailable: Hanenizin mevcut yapay zeka ayarları uygulama içi asistanı çalıştırmıyor; bir yönetici bu ayarları değiştirene kadar asistan yanıt vermez.
+          external:
+            title: Hazır olduğunuzda ajanınızı bağlayın.
+            body: Bu, hesabınız için uygulama içi asistanı kapatır. Kendi asistanınızın %{product_name} ile çalışması için onu Ayarlar → MCP bölümünden bağlayın. Bu seçim herhangi bir bağlantı oluşturmaz, değiştirmez veya kaldırmaz.
       submit: Sonraki
     trial:
       continue_trial: Denemeye devam et

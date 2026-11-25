@@ -39,6 +39,47 @@ vi:
       date_format: Định dạng ngày
       submit: Hoàn tất
     tools:
+      title: Cứ tự nhiên như ở nhà.
+      subtitle: Vài lựa chọn để %{product_name} trở thành của riêng bạn.
+      starting_point:
+        eyebrow: Điểm xuất phát của bạn
+        title: Bạn đã dùng công cụ nào?
+        description: Chọn các công cụ bạn dùng để quản lý tài chính hộ gia đình.
+        select: Chọn công cụ của bạn
+        other_placeholder: Công cụ khác (không bắt buộc)
+        hint: Chọn tất cả các mục phù hợp. Thông tin này giúp chúng tôi gợi ý điểm xuất phát, không có nghĩa là hỗ trợ nhập dữ liệu từ các công cụ đó.
+        tools:
+          nothing_yet: Chưa dùng công cụ nào
+          other: Khác
+      ai:
+        eyebrow: Tùy chọn AI của bạn
+        title: Bạn muốn dùng %{product_name} như thế nào?
+        description: Bạn toàn quyền quyết định. Hãy chọn điều phù hợp với bạn.
+        default: Mặc định
+        modes:
+          none:
+            title: Không dùng AI
+            description: Quản lý tài chính mà không dùng trợ lý trong ứng dụng.
+          builtin:
+            title: AI tích hợp sẵn
+            description: Bật trợ lý trong ứng dụng, dùng nhà cung cấp AI của phiên bản này.
+          external:
+            title: Dùng tác nhân AI của riêng bạn
+            description: Dùng trợ lý của riêng bạn, được kết nối khi bạn cho phép.
+        panels:
+          admin_on: Với tư cách quản trị viên, lựa chọn này cũng là sự đồng ý của hộ gia đình bạn cho các tính năng AI chạy ngầm, như phân loại.
+          admin_off: Với tư cách quản trị viên, lựa chọn này cũng rút lại sự đồng ý của bạn cho các tính năng AI chạy ngầm, như phân loại. Các tính năng này chỉ tiếp tục bật nếu một quản trị viên khác đã bật AI.
+          none:
+            title: Trợ lý của bạn vẫn tắt.
+            body: Thao tác này tắt trợ lý trong ứng dụng cho tài khoản của bạn.
+          builtin:
+            title: Trợ lý của bạn sẽ được bật.
+            body: Thao tác này bật trợ lý trong ứng dụng cho tài khoản của bạn. Trợ lý dùng nhà cung cấp AI nào, và có sẵn hay không, vẫn phụ thuộc vào cài đặt AI của phiên bản này.
+            not_configured: Phiên bản này chưa thiết lập nhà cung cấp AI nào. Quản trị viên có thể thêm trong Cài đặt → Tự lưu trữ.
+            unavailable: Cài đặt AI hiện tại của hộ gia đình bạn không chạy trợ lý trong ứng dụng, nên trợ lý sẽ không phản hồi cho đến khi quản trị viên thay đổi cài đặt.
+          external:
+            title: Kết nối tác nhân của bạn khi bạn sẵn sàng.
+            body: Thao tác này tắt trợ lý trong ứng dụng cho tài khoản của bạn. Để trợ lý của riêng bạn làm việc với %{product_name}, hãy kết nối trong Cài đặt → MCP. Lựa chọn này không tạo, thay đổi hay xóa kết nối nào.
       submit: Tiếp theo
     trial:
       title: Dùng thử Sure trong 45 ngày

@@ -39,6 +39,47 @@ it:
       date_format: Formato data
       submit: Completa
     tools:
+      title: Fai come se fossi a casa tua.
+      subtitle: Un paio di scelte per rendere %{product_name} tuo.
+      starting_point:
+        eyebrow: Il tuo punto di partenza
+        title: Cosa hai usato finora?
+        description: Scegli gli strumenti che usi per gestire le finanze del tuo nucleo familiare.
+        select: Seleziona i tuoi strumenti
+        other_placeholder: Altro strumento (facoltativo)
+        hint: Seleziona tutti quelli pertinenti. Ci aiuta a suggerirti un punto di partenza, non implica che i dati siano importabili.
+        tools:
+          nothing_yet: Ancora nessuno
+          other: Altro
+      ai:
+        eyebrow: La tua preferenza sull'IA
+        title: Come vorresti usare %{product_name}?
+        description: Decidi tu. Scegli quello che fa per te.
+        default: Predefinito
+        modes:
+          none:
+            title: Nessuna IA
+            description: Gestisci le tue finanze senza l'assistente dell'app.
+          builtin:
+            title: IA integrata
+            description: Attiva l'assistente dell'app, con il provider IA di questa istanza.
+          external:
+            title: Usa il tuo agente IA
+            description: Usa il tuo assistente, collegato con il tuo permesso.
+        panels:
+          admin_on: Come amministratore, questo vale anche come consenso del tuo nucleo familiare per le funzioni IA eseguite in background, come la categorizzazione.
+          admin_off: Come amministratore, questo revoca anche il tuo consenso per le funzioni IA eseguite in background, come la categorizzazione. Restano attive solo se un altro amministratore ha l'IA attivata.
+          none:
+            title: Il tuo assistente resta disattivato.
+            body: Questo disattiva l'assistente dell'app per il tuo account.
+          builtin:
+            title: Il tuo assistente si attiva.
+            body: Questo attiva l'assistente dell'app per il tuo account. Quale provider IA usa, e se è disponibile, dipende comunque dalle impostazioni IA di questa istanza.
+            not_configured: Su questa istanza non è ancora configurato alcun provider IA. Un amministratore può aggiungerne uno in Impostazioni → Self-Hosting.
+            unavailable: Le impostazioni IA attuali del tuo nucleo familiare non attivano l'assistente dell'app, quindi non risponderà finché un amministratore non le modifica.
+          external:
+            title: Collega il tuo agente quando vuoi.
+            body: Questo disattiva l'assistente dell'app per il tuo account. Per far lavorare il tuo assistente con %{product_name}, collegalo da Impostazioni → MCP. Questa scelta non crea, modifica né rimuove alcuna connessione.
       submit: Avanti
     trial:
       title: Prova Sure per 45 giorni
