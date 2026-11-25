@@ -14,6 +14,7 @@ class RetirementPlan::Stream < ApplicationRecord
   belongs_to :account, optional: true
 
   before_validation :default_currency, on: :create
+  before_validation :value_amount_this_year, if: -> { will_save_change_to_annual_amount? || will_save_change_to_indexed? }
 
   validates :name, presence: true
   validates :currency, presence: true
@@ -21,6 +22,7 @@ class RetirementPlan::Stream < ApplicationRecord
   validates :source, inclusion: { in: SOURCES }
   validates :annual_amount, numericality: { greater_than: 0 }
   validates :start_year, :end_year, numericality: { only_integer: true }, allow_nil: true
+  validates :base_year, numericality: { only_integer: true, greater_than_or_equal_to: 1900, less_than_or_equal_to: 2200 }
   validate :ends_no_earlier_than_it_starts
   # Only when the account changes: a form resubmits the account a stream
   # already holds, and a loan that has since stopped being shared must not
@@ -31,7 +33,8 @@ class RetirementPlan::Stream < ApplicationRecord
   # Money::ConversionError when there is no rate.
   def to_simulation_stream(currency:, date:)
     amount = Money.new(annual_amount, self.currency).exchange_to(currency, date: date).amount
-    RetirementPlan::Simulation::Stream.new(kind:, annual_amount: amount, start_year:, end_year:, indexed:)
+    RetirementPlan::Simulation::Stream.new(kind:, annual_amount: amount, start_year:, end_year:, indexed:,
+                                           base_year:, seeded: source != "manual")
   end
 
   private
@@ -39,6 +42,14 @@ class RetirementPlan::Stream < ApplicationRecord
     # Goal or Budget takes.
     def default_currency
       self.currency ||= retirement_plan&.user&.family&.currency
+    end
+
+    # An amount is entered in the money of the year it is entered or changed
+    # in, so a new or changed amount is valued in this year unless the caller
+    # names the year, as seeding does. So is one newly marked indexed: until
+    # then it was a fixed nominal figure. Any other edit keeps the year.
+    def value_amount_this_year
+      self.base_year = Date.current.year unless will_save_change_to_base_year?
     end
 
     def ends_no_earlier_than_it_starts

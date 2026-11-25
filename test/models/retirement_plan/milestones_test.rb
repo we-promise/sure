@@ -2,7 +2,8 @@ require "test_helper"
 
 # The milestones on the way to financial independence.
 class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
-  AS_OF = Date.new(2026, 3, 15)
+  # 1 January, so 2026 counts as a whole year in the figures below.
+  AS_OF = Date.new(2026, 1, 1)
 
   # FI number 300,000; 100,000 today; 10,000 a year saved at 5%; retiring in
   # 2046. Every figure below is hand-computed.
@@ -20,7 +21,7 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
       rows: simulation.rows, current_assets: inputs[:current_assets], fi_number: fi_number,
       expected_annual_return: inputs[:expected_annual_return], inflation_rate: inputs[:inflation_rate],
       retirement_year: retirement_year, path_retirement_year: simulation.retirement_year,
-      first_year: AS_OF.year, birth_year: inputs[:birth_year]
+      first_year: inputs[:as_of].year, first_year_fraction: simulation.first_year_fraction, birth_year: inputs[:birth_year]
     )
   end
 
@@ -65,6 +66,16 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
     assert_equal 2038, find(list, "coast").year
   end
 
+  # From 31 December, today's 115,000 has one day of 2026 and 2027 to 2045
+  # to grow, about 19 years, not 20: 300,000 / 1.05^19.003 is 118,705, so
+  # it has not coasted yet. Counting 2026 as a whole year would set the bar
+  # at 300,000 / 1.05^20 = 113,067 and call it reached.
+  test "Coast FI already reached counts only the part of this year left" do
+    m = find(milestones(as_of: Date.new(2026, 12, 31), current_assets: 115_000).all, "coast")
+
+    assert_not m.reached_already
+  end
+
   test "Coast FI counts only the saving years, so a portfolio that only grows past the target after retiring never coasted" do
     # Retiring in 2030, the saving years end at 164,651.88 against a target of
     # 300,000 for 2029; the portfolio passes 300,000 only in the 2040s.
@@ -75,11 +86,11 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
 
   # The path retires in 2027, the plan in 2046. 2026 is the only saving year
   # and ends at 115,000, short of 300,000 / 1.05^19 = 118,720.19. Retired, a
-  # 20,000 pension with no spending is reinvested, so 2027 ends at 140,750,
+  # 20,000 pension from 2027 with no spending is reinvested, so 2027 ends at 140,750,
   # past 300,000 / 1.05^18 = 124,656.20, but nobody coasts in a year they are
   # already retired in. The target still runs to the plan's 2046.
   test "Coast FI stops at the path's retirement when the path retires before the plan does" do
-    m = find(milestones(path_retirement_year: 2027, streams: [ RetirementPlan::Simulation::Stream.new(kind: "income", annual_amount: 20_000) ]).all, "coast")
+    m = find(milestones(path_retirement_year: 2027, streams: [ RetirementPlan::Simulation::Stream.new(kind: "income", annual_amount: 20_000, start_year: 2027) ]).all, "coast")
 
     assert_equal [ nil, false ], [ m.year, m.reached_already ]
   end

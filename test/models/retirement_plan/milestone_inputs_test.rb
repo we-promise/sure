@@ -41,7 +41,7 @@ class RetirementPlan::MilestoneInputsTest < ActiveSupport::TestCase
   test "the milestones follow the simulation the page draws when it hands one in" do
     # Spending in retirement makes the retirement year matter to the path;
     # without it both simulations would be the same and this would prove nothing.
-    @plan.streams.create!(kind: "expense", name: "Living costs", annual_amount: 20_000)
+    @plan.streams.create!(kind: "expense", name: "Living costs", annual_amount: 20_000, source: "seeded_living_costs")
     drawn = @plan.simulation(as_of: AS_OF, retirement_year: 2030)
     assert_not_equal drawn.rows, @plan.simulation(as_of: AS_OF).rows, "the drawn path must differ from the plan's own"
     RetirementPlan::Milestones.expects(:new).with(has_entry(rows: drawn.rows)).returns(stub(all: []))

@@ -1,7 +1,9 @@
 require "test_helper"
 
 class RetirementPlan::SimulationTest < ActiveSupport::TestCase
-  AS_OF = Date.new(2026, 3, 15)
+  # 1 January: the whole first year is still ahead, so the hand-computed
+  # tables below count it in full. The tests on a later reference date say so.
+  AS_OF = Date.new(2026, 1, 1)
   Stream = RetirementPlan::Simulation::Stream
 
   test "0% return and no inflation: each year adds the contribution and nothing compounds" do
@@ -36,8 +38,8 @@ class RetirementPlan::SimulationTest < ActiveSupport::TestCase
     assert_equal BigDecimal("63000"), sim.rows.first.end_value
   end
 
-  test "before retirement nothing is withdrawn for spending; from the retirement year it is" do
-    sim = simulation(retirement_year: AS_OF.year + 2, streams: [ Stream.new(kind: "expense", annual_amount: 1_000) ])
+  test "before retirement nothing is withdrawn for seeded spending; from the retirement year it is" do
+    sim = simulation(retirement_year: AS_OF.year + 2, streams: [ Stream.new(kind: "expense", annual_amount: 1_000, seeded: true) ])
 
     assert_equal [ 0, 0, 1_000, 1_000 ], sim.rows.first(4).map(&:withdrawal)
     assert_equal [ 10_000, 10_000, 0, 0 ], sim.rows.first(4).map(&:contribution)
@@ -158,6 +160,107 @@ class RetirementPlan::SimulationTest < ActiveSupport::TestCase
     end
 
     assert_equal runs.first, runs.last
+  end
+
+  # --- The first year -------------------------------------------------------
+
+  # From 2 July 2026, 183 of 2026's 365 days are left. At 0% the year adds
+  # 10,000 x 183/365 = 5,013.70 of contribution, not a whole 10,000.
+  test "the first year counts only the part of the year left from the reference date" do
+    sim = simulation(as_of: Date.new(2026, 7, 2), annual_contribution: 10_000)
+
+    assert_equal %w[105013.7 115013.7], sim.rows.first(2).map { |r| r.end_value.round(2).to_s("F") }
+  end
+
+  # 100,000 at 5% from 2 July: the first year grows by 1.05^(183/365).
+  test "the first year's growth compounds over the part of the year left" do
+    sim = simulation(as_of: Date.new(2026, 7, 2), annual_contribution: 0, expected_annual_return: BigDecimal("0.05"))
+
+    assert_equal "102476.36", sim.rows.first.end_value.round(2).to_s("F")
+    assert_equal "107600.17", sim.rows.second.end_value.round(2).to_s("F")
+  end
+
+  # Retired, spending 36,500 a year from 2 July: 18,300 of it falls in 2026.
+  # A one-off is a single payment, so it comes out whole.
+  test "spending in the first year is the part of the year left; a one-off is paid whole" do
+    sim = simulation(as_of: Date.new(2026, 7, 2), retirement_year: 2026, streams: [
+      Stream.new(kind: "expense", annual_amount: 36_500),
+      Stream.new(kind: "one_off", annual_amount: 5_000)
+    ])
+
+    assert_equal "23300.0", sim.rows.first.withdrawal.round(2).to_s("F")
+    assert_equal "36500.0", sim.rows.second.withdrawal.round(2).to_s("F")
+  end
+
+  # The reviewer's case: 100,000 with 10,000 a year at 7%. From 31 December
+  # 2026 only that day is left of 2026, so 2027 ends where it does from
+  # 1 January 2027, give or take a day's growth and contribution. Counting the
+  # whole of 2026 put it at 135,490 against 117,000.
+  test "a plan read on 31 December and on 1 January ends the next year within a day of each other" do
+    inputs = { annual_contribution: 10_000, expected_annual_return: BigDecimal("0.07"), retirement_year: 2040 }
+    dec31 = simulation(**inputs, as_of: Date.new(2026, 12, 31))
+    jan1 = simulation(**inputs, as_of: Date.new(2027, 1, 1))
+
+    assert_equal BigDecimal("117000"), jan1.rows.first.end_value
+    assert_in_delta 117_000, dec31.rows.find { _1.year == 2027 }.end_value, 60
+  end
+
+  # In today's money the first year deflates by the part of the year left,
+  # not a whole year: 100,000 at 0% with 3% inflation from 2 July.
+  test "the first year's value in today's money deflates by the part of the year left" do
+    sim = simulation(as_of: Date.new(2026, 7, 2), annual_contribution: 0, inflation_rate: BigDecimal("0.03"))
+
+    assert_equal "98528.94", sim.rows.first.end_value_real.round(2).to_s("F")
+  end
+
+  # --- Streams before retirement ---------------------------------------------
+
+  # An expense the user adds runs before retirement too: it comes out of
+  # the 10,000 contribution, and what the contribution cannot cover comes out
+  # of the portfolio. Income adds to the contribution.
+  test "a manual expense or income before retirement moves the contribution" do
+    sim = simulation(retirement_year: 2045, streams: [
+      Stream.new(kind: "expense", annual_amount: 20_000, start_year: 2030, end_year: 2033),
+      Stream.new(kind: "income", annual_amount: 12_000, start_year: 2028)
+    ])
+    by_year = sim.rows.index_by(&:year)
+
+    assert_equal [ 10_000, 0 ], [ by_year[2027].contribution, by_year[2027].withdrawal ]
+    assert_equal [ 22_000, 0 ], [ by_year[2028].contribution, by_year[2028].withdrawal ]
+    assert_equal [ 2_000, 0 ], [ by_year[2030].contribution, by_year[2030].withdrawal ]
+    assert_equal [ 22_000, 0 ], [ by_year[2034].contribution, by_year[2034].withdrawal ]
+  end
+
+  test "a manual expense larger than the contribution before retirement is drawn from the portfolio" do
+    sim = simulation(retirement_year: 2045, streams: [ Stream.new(kind: "expense", annual_amount: 25_000, start_year: 2027, end_year: 2027) ])
+    row = sim.rows.find { _1.year == 2027 }
+
+    assert_equal [ 0, 15_000 ], [ row.contribution, row.withdrawal ]
+  end
+
+  # Seeded streams are today's living costs and loan repayments, which the
+  # contribution is already what is left after paying.
+  test "a seeded stream does not move the contribution before retirement" do
+    sim = simulation(retirement_year: 2045, streams: [
+      Stream.new(kind: "expense", annual_amount: 30_000, seeded: true),
+      Stream.new(kind: "expense", annual_amount: 6_000, indexed: false, seeded: true)
+    ])
+
+    assert_equal [ 10_000, 10_000 ], sim.rows.first(2).map(&:contribution)
+    assert_equal [ 0, 0 ], sim.rows.first(2).map(&:withdrawal)
+  end
+
+  # --- A stream's base year --------------------------------------------------
+
+  # Entered as 10,000 in 2025's money and read in 2026 at 3% inflation, it is
+  # 10,300 in 2026: the year since it was entered is not lost.
+  test "an indexed stream grows from the year its amount is valued in" do
+    sim = simulation(retirement_year: 2026, inflation_rate: BigDecimal("0.03"), streams: [
+      Stream.new(kind: "expense", annual_amount: 10_000, base_year: 2025),
+      Stream.new(kind: "expense", annual_amount: 1_000, base_year: 2025, indexed: false)
+    ])
+
+    assert_equal [ BigDecimal("11300"), BigDecimal("11609") ], sim.rows.first(2).map(&:withdrawal)
   end
 
   private

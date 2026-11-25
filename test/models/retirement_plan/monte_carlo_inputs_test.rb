@@ -16,7 +16,7 @@ class RetirementPlan::MonteCarloInputsTest < ActiveSupport::TestCase
     Balance.create!(account: account, date: AS_OF, balance: 400_000, currency: "USD")
     @plan = RetirementPlan.create!(user: @member, birth_year: 1980, end_age: 85, retirement_date: Date.new(2040, 1, 1),
                                    expected_annual_return: BigDecimal("0.05"))
-    @plan.streams.create!(kind: "expense", name: "Living costs", annual_amount: 30_000)
+    @plan.streams.create!(kind: "expense", name: "Living costs", annual_amount: 30_000, source: "seeded_living_costs")
   end
 
   test "the run uses the plan's own volatility, a seed fixed by the plan, and the plan's retirement year" do
