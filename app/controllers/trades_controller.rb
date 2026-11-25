@@ -89,6 +89,12 @@ class TradesController < ApplicationController
     redirect_back_or_to account_path(@entry.account)
   end
 
+  def destroy
+    super
+  rescue ActiveRecord::RecordNotDestroyed => error
+    redirect_back_or_to account_path(@entry.account), alert: error.record.errors.full_messages.to_sentence
+  end
+
   private
     def set_entry_for_unlock
       trade = Current.family.trades

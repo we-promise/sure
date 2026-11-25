@@ -1048,10 +1048,19 @@ class Entry < ApplicationRecord
     trade? && account && date && account.provider_managed_security?(entryable.security_id, date: date)
   end
 
+  def manual_quantity_neutral_fee?(trade = entryable)
+    return false unless trade? && import_id.nil? && !statement_cleared?
+    return false unless trade.qty&.zero? && trade.investment_activity_label == "Fee"
+
+    new_record? || (trade.qty_in_database&.zero? && trade.investment_activity_label_in_database == "Fee")
+  end
+
   private
 
     def position_provider_owns_trade_entry
       return unless trade? && account && date && !entryable.provider_importing
+      return if manual_quantity_neutral_fee?
+
       wallet_metadata_changed = source.in?(%w[bitcoin_wallet bitcoin_wallet_reconciliation]) && (name_changed? || notes_changed?)
       return unless new_record? || date_changed? || amount_changed? || currency_changed? || excluded_changed? || wallet_metadata_changed
       return unless provider_managed_trade? ||
@@ -1062,6 +1071,7 @@ class Entry < ApplicationRecord
 
     def prevent_managed_trade_deletion
       return if destroyed_by_association&.active_record == Account || !trade? || entryable.provider_importing
+      return if manual_quantity_neutral_fee?
       return unless provider_managed_trade?
 
       errors.add(:base, I18n.t("bitcoin_wallet.managed_position"))
@@ -1102,15 +1112,19 @@ class Entry < ApplicationRecord
       entryable.superseded_at = nil
     end
 
-    # A cash-anchored account carries holdings of securities it has no
-    # quantity-changing trades for. Once a security's last such trade is gone,
-    # the rows calculated from it would be carried too, so they go from the
-    # trade's date on.
+    # Earlier trades may have been removed before the next sync. Clear the
+    # calculated series and rebuild from its first day to carry any observations.
     def remove_holdings_of_last_trade
       return unless account.accounting_start_date
+      # Serialize the last-trade check when two entries are deleted together.
+      Account.where(id: account_id).lock.pick(:id)
       return if account.trades.where.not(qty: 0).exists?(security_id: entryable.security_id)
 
-      account.holdings.where(security_id: entryable.security_id, account_provider_id: nil, materialized: true, date: date..).delete_all
+      calculated = account.holdings.where(security_id: entryable.security_id, account_provider_id: nil,
+        materialized: true, superseded: false)
+      @earliest_saved_date = [ @earliest_saved_date, calculated.minimum(:date) ].compact.min
+      # Keep stored basis overrides; the rebuild reactivates any genuine snapshot carry.
+      calculated.update_all(superseded: true)
     end
 
     # Remembers the earliest date this entry had before any save that changed

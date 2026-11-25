@@ -110,6 +110,10 @@ module Account::Anchorable
     window_start_date || accounting_start_date
   end
 
+  def typed_balance_only?
+    !holdings.exists? && !entries.where.not(entryable_type: "Valuation").exists?
+  end
+
   # Capture cash and its ledger baseline without reapplying earlier transactions.
   # Both come from the ledger as it is now, not the cached cash_balance, so a
   # movement not yet synced or dated after today is neither lost nor doubled.
@@ -117,19 +121,17 @@ module Account::Anchorable
   # The account lock keeps a concurrent caller from adding a second anchor for
   # the day, which nothing in the schema forbids: kind and date live in
   # different tables.
-  def typed_balance_only?
-    !holdings.exists? && !entries.where.not(entryable_type: "Valuation").exists?
-  end
-
   def create_cash_anchor!(cash: nil)
     with_lock do
-      cash ||= Balance::ForwardCalculator.new(self).calculate.select { |balance| balance.date <= Date.current }.last&.cash_balance || 0
-      entry = entries.valuations.find_by(date: Date.current, entryable_id: Valuation.cash_anchor.select(:id)) ||
-        entries.new(date: Date.current, entryable: Valuation.new(kind: :cash_anchor))
+      date = Date.current
+      calculator = Balance::ForwardCalculator.new(self)
+      cash ||= calculator.calculate(as_of: date).last.cash_balance
+      entry = entries.valuations.find_by(date: date, entryable_id: Valuation.cash_anchor.select(:id)) ||
+        entries.new(date: date, entryable: Valuation.new(kind: :cash_anchor))
       entry.assign_attributes(amount: cash, currency: currency, name: I18n.t("valuations.cash_anchor", locale: family.locale))
-      entry.entryable.cash_entry_total = Balance::SyncCache.new(self).cash_entry_total(Date.current)
+      entry.entryable.cash_entry_total = calculator.cash_entry_total(date)
       entry.save!
-      valuations.where.not(kind: "cash_anchor").joins(:entry).where(entries: { date: Date.current }).update_all(superseded_at: Time.current)
+      valuations.where.not(kind: "cash_anchor").joins(:entry).where(entries: { date: date }).update_all(superseded_at: Time.current)
       entry
     end
   end

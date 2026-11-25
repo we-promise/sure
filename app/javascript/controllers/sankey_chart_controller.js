@@ -715,6 +715,9 @@ export default class extends Controller {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
-    return this.currencySymbolValue + formatted;
+    // Symbols written with letters (Lei, kr, CHF, Bs.) need a space before the
+    // number; "$" and "€" stay attached.
+    const space = /[\p{L}.]$/u.test(this.currencySymbolValue) ? "\u00a0" : "";
+    return this.currencySymbolValue + space + formatted;
   }
 }

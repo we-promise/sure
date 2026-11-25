@@ -163,7 +163,7 @@ class CoinbaseAccount::Processor
       # Fallback: Sum holdings values for this account
       account = coinbase_account.current_account
       if account.present?
-        today_holdings = account.holdings.where(date: Date.current)
+        today_holdings = account.holdings.where(date: Date.current, superseded: false)
         if today_holdings.any?
           return today_holdings.sum(:amount)
         end

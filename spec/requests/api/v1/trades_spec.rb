@@ -70,19 +70,23 @@ RSpec.describe 'API V1 Trades', type: :request do
     )
   end
 
+  # A EUR trade in the USD account, with a fee and a stored rate, so the
+  # documented fee, exchange_rate and amount_currency fields are populated.
   let!(:trade) do
     trade_record = Trade.new(
       security: security,
       qty: 100,
       price: 250.50,
-      currency: 'USD',
+      fee: 1.25,
+      currency: 'EUR',
+      exchange_rate: 1.08,
       investment_activity_label: 'Buy'
     )
     entry = account.entries.create!(
       name: 'Buy 100 shares of VTI',
       date: Date.current,
-      amount: 25_050,
-      currency: 'USD',
+      amount: 25_051.25,
+      currency: 'EUR',
       entryable: trade_record
     )
     entry.entryable

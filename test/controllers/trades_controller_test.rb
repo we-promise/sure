@@ -1,8 +1,10 @@
 require "test_helper"
+require "support/bitcoin_wallet_test_helper"
 
 class TradesControllerTest < ActionDispatch::IntegrationTest
   include EntryableResourceInterfaceTest, EntriesTestHelper
   include GoalPledgeTestHelper
+  include BitcoinWalletTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -107,6 +109,22 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "USD", @entry.currency
 
     assert_redirected_to account_url(@entry.account)
+  end
+
+  test "a rejected deletion of a wallet trade redirects with a translated alert" do
+    wallet = build_bitcoin_wallet(status: :active)
+    wallet.create_account_provider!(account: wallet.account)
+    entry = Account::ProviderImportAdapter.new(wallet.account).import_trade(
+      security: wallet.security, quantity: 1, price: 20, amount: 20, currency: "USD",
+      date: Date.current, source: "test")
+
+    assert_no_enqueued_jobs only: SyncJob do
+      delete trade_url(entry)
+    end
+
+    assert_redirected_to account_path(wallet.account)
+    assert_equal I18n.t("bitcoin_wallet.managed_position"), flash[:alert]
+    assert Entry.exists?(entry.id)
   end
 
   test "creates deposit entry" do

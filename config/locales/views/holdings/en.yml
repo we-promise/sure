@@ -14,7 +14,6 @@ en:
     remap_security:
       success: Security updated successfully.
       security_not_found: Could not find the selected security.
-      managed_position: Disconnect the provider before changing this position.
     reset_security:
       success: Security reset to provider value.
     sync_prices:

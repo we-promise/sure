@@ -30,6 +30,68 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     assert_equal 1100, @account.balance
   end
 
+  test "the cash value and ledger baseline use the same entries" do
+    debit = cash_entry(amount: 10, date: Date.yesterday)
+    calculator = Balance::ForwardCalculator.new(@account)
+    calculate = calculator.method(:calculate)
+    calculator.define_singleton_method(:calculate) do |**options|
+      balances = calculate.call(**options)
+      debit.update!(amount: 20)
+      balances
+    end
+    Balance::ForwardCalculator.expects(:new).with(@account).returns(calculator)
+
+    anchor = @account.create_cash_anchor!
+
+    assert_equal 90, anchor.amount
+    assert_equal 1010, anchor.entryable.cash_entry_total
+  end
+
+  test "an entry moved to the anchor date is replayed before capturing cash" do
+    @account.holdings.delete_all
+    debit = cash_entry(amount: 10, date: Date.yesterday)
+    cache = Balance::SyncCache.new(@account)
+    converted_entries = cache.method(:converted_entries)
+    cache.define_singleton_method(:converted_entries) do
+      debit.update!(date: Date.current) unless debit.date == Date.current
+      converted_entries.call
+    end
+    Balance::SyncCache.stubs(:new).with(@account, start_date: nil).returns(cache)
+
+    anchor = @account.create_cash_anchor!
+
+    assert_equal Date.current, debit.reload.date
+    assert_equal 90, anchor.amount
+    assert_equal 1010, anchor.entryable.cash_entry_total
+  end
+
+  test "without an opening valuation the anchor uses only convertible movements" do
+    @account.entries.destroy_all
+    @account.holdings.delete_all
+    cash_entry(amount: -10, date: Date.yesterday)
+    cash_entry(amount: -500, currency: "JPY", date: Date.current)
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    anchor = @account.create_cash_anchor!
+
+    assert_equal 10, anchor.amount
+    assert_equal(-10, anchor.entryable.cash_entry_total)
+  end
+
+  test "a backdated credit card charge increases the anchored debt" do
+    card = accounts(:credit_card)
+    card.entries.destroy_all
+    card.balances.destroy_all
+    card.entries.create!(date: Date.yesterday, name: "Opening", amount: 100, currency: "USD",
+      entryable: Valuation.new(kind: :opening_anchor))
+    card.create_cash_anchor!
+
+    card.entries.create!(date: Date.yesterday, name: "Charge", amount: 10, currency: "USD", entryable: Transaction.new)
+    Balance::Materializer.new(card, strategy: :forward, window_start_date: Date.yesterday).materialize_balances
+
+    assert_equal 110, card.reload.cash_balance
+  end
+
   test "foreign cash movements use the standard dated exchange rate" do
     @account.create_cash_anchor!
     ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "USD", date: Date.current).update!(rate: "1.2")
@@ -188,6 +250,78 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     assert_equal 1100, @account.reload.balance
   end
 
+  test "journal replay preserves a manual observation on the trade date" do
+    @account.create_cash_anchor!
+    today = Date.current
+    snapshot = @account.holdings.create!(security: @other, date: today, qty: 3, price: 100, amount: 300, currency: "USD")
+    trade = @account.entries.create!(date: today, amount: 200, currency: "USD", name: "Buy MSFT",
+      entryable: Trade.new(security: @other, qty: 2, price: 100, currency: "USD", investment_activity_label: "Buy"))
+    materialize
+
+    assert_equal 3, snapshot.reload.qty
+    assert_equal 3, @account.current_holdings.find_by!(security: @other).qty
+
+    travel 1.day do
+      materialize
+      assert_equal 2, @account.current_holdings.find_by!(security: @other).qty
+      trade.destroy!
+      trade.sync_account_later
+      materialize
+      assert_equal 3, @account.current_holdings.find_by!(security: @other).qty
+    end
+  end
+
+  test "a provider holding does not delete an independent observation on the same day" do
+    @account.create_cash_anchor!
+    item = @account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider = AccountProvider.create!(account: @account, provider: item.coinstats_accounts.create!(name: "Wallet", currency: "USD"))
+    provider_snapshot = @account.holdings.create!(security: @other, date: Date.current, qty: 2, price: 100, amount: 200,
+      currency: "USD", account_provider_id: provider.id)
+    manual_snapshot = @account.holdings.create!(security: @other, date: Date.current, qty: 3, price: 100, amount: 300, currency: "EUR")
+    calculated = @account.holdings.create!(security: @other, date: Date.current, qty: 3, price: 100, amount: 300,
+      currency: "GBP", materialized: true, cost_basis: 45, cost_basis_source: "manual", cost_basis_locked: true)
+    materialize
+
+    assert Holding.exists?(manual_snapshot.id)
+    assert_equal provider_snapshot, @account.current_holdings.find_by!(security: @other)
+    assert calculated.reload.superseded?
+    assert_equal 45, calculated.cost_basis
+    assert calculated.cost_basis_locked?
+  end
+
+  test "a replay selects the newly carried currency while retaining the old locked basis" do
+    @account.create_cash_anchor!
+    @account.holdings.create!(security: @other, date: Date.current, qty: 2, price: 100, amount: 200, currency: "USD")
+
+    travel 2.days do
+      materialize
+      old_copy = @account.current_holdings.find_by!(security: @other)
+      old_copy.set_manual_cost_basis!(45)
+      observed_on = Date.current.prev_day
+      new_snapshot = @account.holdings.create!(security: @other, date: observed_on, qty: 3, price: 100, amount: 300, currency: "EUR")
+      [ observed_on, Date.current ].each do |date|
+        ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date, rate: 2)
+      end
+
+      2.times do
+        materialize(window_start_date: observed_on)
+        current = @account.current_holdings.find_by!(security: @other)
+        assert_equal "EUR", current.currency
+        assert_equal 3, current.qty
+        assert_equal 1700, @account.reload.balance
+      end
+      assert old_copy.reload.superseded?
+      assert_equal 45, old_copy.cost_basis
+      assert old_copy.cost_basis_locked?
+
+      new_snapshot.destroy!
+      materialize(window_start_date: observed_on)
+      assert_equal old_copy, @account.current_holdings.find_by!(security: @other)
+      refute old_copy.reload.superseded?
+      assert_equal 45, old_copy.cost_basis
+    end
+  end
+
   test "deleting the last trade preserves an independently imported holding" do
     @account.create_cash_anchor!
     trade = @account.entries.create!(date: Date.current, amount: 200, currency: "USD", name: "Buy MSFT",
@@ -206,6 +340,20 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
       materialize
       assert_equal snapshot.id, @account.current_holdings.find_by!(security: @other).id
     end
+  end
+
+  test "a future materialization window keeps only effective trades in the lot book" do
+    @account.create_cash_anchor!
+    today = Date.current
+    buy = @account.entries.create!(date: today, amount: 200, currency: "USD", name: "Buy MSFT",
+      entryable: Trade.new(security: @other, qty: 2, price: 100, currency: "USD", investment_activity_label: "Buy"))
+    @account.entries.create!(date: today.next_day, amount: 300, currency: "USD", name: "Scheduled MSFT buy",
+      entryable: Trade.new(security: @other, qty: 3, price: 100, currency: "USD", investment_activity_label: "Buy"))
+
+    materialize(window_start_date: today + 2.days)
+
+    lots = HoldingLot.where(account: @account, security: @other)
+    assert_equal [ [ buy.id, 2 ] ], lots.pluck(:source_entry_id, :qty)
   end
 
   test "a split before the window still scales the position" do
@@ -384,6 +532,54 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     end
   end
 
+  test "an explicit empty SimpleFIN snapshot replaces carried positions and preserves independent holdings" do
+    item = @account.family.simplefin_items.create!(name: "SimpleFIN", access_url: "https://example.com/access")
+    simplefin = item.simplefin_accounts.create!(name: "Brokerage", account_type: "investment", account_id: "brokerage",
+      currency: "USD", current_balance: 1130)
+    provider = AccountProvider.create!(account: @account, provider: simplefin)
+    second_security = Security.create!(ticker: "SECOND", name: "Another observed security")
+    manual_security = Security.create!(ticker: "MANUAL", name: "Independent security")
+    first_snapshot = @account.holdings.create!(security: @other, date: Date.current, qty: 2, price: 100, amount: 200,
+      currency: "USD", account_provider_id: provider.id)
+    @account.holdings.create!(security: manual_security, date: Date.current, qty: 1, price: 30, amount: 30, currency: "USD")
+    @account.create_cash_anchor!
+
+    travel 1.day do
+      @account.holdings.create!(security: second_security, date: Date.current, qty: 1, price: 50, amount: 50,
+        currency: "USD", account_provider_id: provider.id)
+      materialize
+      assert_equal 2, @account.current_holdings.find_by!(security: @other).qty
+      assert_equal 1380, @account.reload.balance
+    end
+
+    travel 2.days do
+      materialize
+      calculated = @account.current_holdings.find_by!(security: @other)
+      calculated.set_manual_cost_basis!(45)
+
+      simplefin.update!(raw_holdings_payload: [])
+      SimplefinHoldingsApplyJob.perform_now(simplefin.id)
+
+      closed = calculated.reload
+      assert_equal provider.id, closed.account_provider_id
+      assert_equal 0, closed.qty
+      assert_equal 45, closed.cost_basis
+      assert_predicate closed, :cost_basis_locked?
+      refute_predicate closed, :materialized?
+
+      materialize
+      assert_nil @account.current_holdings.find_by(security: @other)
+      assert_equal 1130, @account.reload.balance
+
+      Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+      report = Holding::CurrentForInvestmentAccounts.new([ @account.id ]).relation
+      assert_nil report.find_by(security: @other)
+      assert_nil report.find_by(security: second_security)
+      assert_equal 1, report.find_by!(security: manual_security).qty
+      assert_equal 2, first_snapshot.reload.qty
+    end
+  end
+
   test "deleting an untraded position removes its series and rebuilds from its first day" do
     @account.holdings.create!(security: @other, date: Date.current.prev_day, qty: 2, price: 100, amount: 200, currency: "USD")
     @account.create_cash_anchor!
@@ -437,6 +633,44 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     materialize(window_start_date: edit_date)
     assert_equal earlier, @account.balances.where(date: ...edit_date).order(:date).pluck(:id, :updated_at)
     assert_equal 94, @account.reload.cash_balance
+  end
+
+  test "an empty incremental window purges the stale tail and keeps imported history" do
+    @account.entries.trades.destroy_all
+    @account.holdings.delete_all
+    travel_to(2.days.ago) { @account.create_cash_anchor! }
+    cash_entry(amount: 1, date: Date.yesterday)
+    latest = cash_entry(amount: 1)
+    imported = @account.balances.create!(date: 10.days.ago.to_date, currency: "USD", balance: 10, cash_balance: 10)
+    materialize
+    assert @account.balances.exists?(id: imported.id)
+    assert @account.balances.exists?(date: latest.date)
+
+    latest.destroy!
+    materialize(window_start_date: latest.date)
+
+    assert @account.balances.exists?(id: imported.id)
+    assert_not @account.balances.exists?(date: latest.date)
+  end
+
+  test "a full replay purges the empty window without deleting imported history" do
+    @account.entries.trades.destroy_all
+    @account.holdings.delete_all
+    @account.balances.delete_all
+    @account.update!(currency: "EUR")
+    @account.entries.valuations.first.update!(currency: "EUR")
+    travel_to(2.days.ago) { @account.create_cash_anchor! }
+    cash_entry(amount: 1, date: Date.yesterday, currency: "EUR")
+    latest = cash_entry(amount: 1, currency: "EUR")
+    imported = @account.balances.create!(date: 10.days.ago.to_date, currency: "EUR", balance: 10, cash_balance: 10)
+    materialize
+    assert @account.balances.exists?(date: latest.date)
+
+    latest.destroy!
+    materialize(window_start_date: latest.date)
+
+    assert @account.balances.exists?(id: imported.id)
+    assert_not @account.balances.exists?(date: latest.date)
   end
 
   test "a pending account sync cannot be borrowed by a different parent" do

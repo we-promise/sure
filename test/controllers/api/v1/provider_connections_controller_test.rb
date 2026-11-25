@@ -76,8 +76,14 @@ class Api::V1::ProviderConnectionsControllerTest < ActionDispatch::IntegrationTe
     refute_includes response.body, RECEIVE
   end
 
-  test "on-chain status omits a wallet on a private account" do
+  test "on-chain status omits a private wallet from counts after sync" do
     wallet = build_bitcoin_wallet
+    wallet.create_account_provider!(account: wallet.account)
+    wallet.onchain_wallet_item.syncs.create!(
+      status: "completed",
+      completed_at: Time.current,
+      sync_stats: { total_accounts: 1, linked_accounts: 1, unlinked_accounts: 0 }
+    )
     member = users(:family_member)
     refute member.accessible_accounts.exists?(wallet.account_id)
     member_key = ApiKey.create!(user: member, name: "Member wallet status", scopes: [ "read" ],
@@ -88,6 +94,8 @@ class Api::V1::ProviderConnectionsControllerTest < ActionDispatch::IntegrationTe
     assert_response :success
     connection = JSON.parse(response.body)["data"].find { |row| row["id"] == wallet.onchain_wallet_item_id }
     assert_empty connection.fetch("bitcoin_wallets")
+    assert_equal 0, connection.dig("accounts", "total_count")
+    assert_equal "No accounts found", connection.dig("sync", "status_summary")
     refute_includes response.body, wallet.account_id
   end
 

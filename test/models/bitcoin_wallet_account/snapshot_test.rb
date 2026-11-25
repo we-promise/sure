@@ -103,13 +103,14 @@ class BitcoinWalletAccount::SnapshotTest < ActiveSupport::TestCase
   end
 
   test "incompatible RBF observations cannot be summed into a balance" do
-    first = bitcoin_transaction(id: "c" * 64, inputs: [ [ RECEIVE, 100_000 ] ], outputs: [ [ CHANGE, 99_000 ] ], confirmed: false)
-    second = bitcoin_transaction(id: "d" * 64, inputs: [ [ RECEIVE, 100_000 ] ], outputs: [ [ CHANGE, 98_000 ] ], confirmed: false)
+    first = bitcoin_transaction(id: "c" * 64, inputs: [ [ "external", 100_000 ] ], outputs: [ [ RECEIVE, 99_000 ] ], confirmed: false)
+    second = bitcoin_transaction(id: "d" * 64, inputs: [ [ "external", 100_000 ] ], outputs: [ [ CHANGE, 98_000 ] ], confirmed: false)
     [ first, second ].each { |tx| tx["vin"].first.merge!("txid" => "f" * 64, "vout" => 0) }
     @provider.transactions = { RECEIVE => [ first ], CHANGE => [ second ] }
-    assert_raises(BitcoinWalletAccount::Snapshot::IncompleteMempool) do
+    error = assert_raises(BitcoinWalletAccount::Snapshot::IncompleteMempool) do
       BitcoinWalletAccount::Snapshot.new(@wallet, provider: @provider).fetch
     end
+    assert_match(/Conflicting pending spends/, error.message)
   end
 
   test "a coinbase input adds nothing to the spent amount" do

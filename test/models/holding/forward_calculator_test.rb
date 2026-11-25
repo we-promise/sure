@@ -18,6 +18,37 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal [], calculated
   end
 
+  test "a scheduled trade takes over the position only from its own date" do
+    security = Security.create!(ticker: "SCHD", name: "Scheduled Trade")
+    today = Date.current
+    snapshot = @account.holdings.create!(security: security, date: today, qty: 3, price: 100, amount: 300, currency: "USD")
+    @account.create_cash_anchor!
+    trade = create_trade(security, qty: 2, date: today.next_day, price: 100, account: @account)
+
+    current = holding_on(security, today)
+    assert_equal 3, current.qty
+    assert_equal snapshot, current.snapshot
+
+    travel 1.day do
+      calculated = Holding::ForwardCalculator.new(@account).calculate.index_by(&:date)
+      assert_equal 3, calculated.fetch(today).qty
+      assert_equal 2, calculated.fetch(trade.date).qty
+      assert_nil calculated.fetch(trade.date).snapshot
+    end
+  end
+
+  test "an unconvertible quote falls back to the last snapshot in its own currency" do
+    security = Security.create!(ticker: "SNFX", name: "Snapshot FX")
+    @account.holdings.create!(security: security, date: Date.current.prev_day, qty: 3, price: 100, amount: 300, currency: "USD")
+    Security::Price.create!(security: security, date: Date.current, price: 80, currency: "EUR")
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    @account.create_cash_anchor!
+
+    holding = Holding::ForwardCalculator.new(@account, window_start_date: Date.current).calculate.sole
+    assert_equal 300, holding.amount
+    assert_equal "USD", holding.currency
+  end
+
   test "holding generation respects user timezone and last generated date is current user date" do
     # Simulate user in EST timezone
     Time.use_zone("America/New_York") do

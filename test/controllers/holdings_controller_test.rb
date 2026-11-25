@@ -1,8 +1,10 @@
 require "test_helper"
+require "support/bitcoin_wallet_test_helper"
 
 class HoldingsControllerTest < ActionDispatch::IntegrationTest
   include SqlQueryCapture
   include EntriesTestHelper
+  include BitcoinWalletTestHelper
 
   setup do
     sign_in users(:family_admin)
@@ -82,6 +84,43 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to account_path(@holding.account)
     assert_empty @holding.account.entries.where(entryable: @holding.account.trades.where(security: @holding.security))
+  end
+
+  test "a wallet position cannot be deleted, remapped, or reset from the holdings drawer" do
+    wallet = build_bitcoin_wallet(status: :active)
+    wallet.create_account_provider!(account: wallet.account)
+    holding = wallet.account.holdings.create!(security: wallet.security, provider_security: securities(:aapl),
+      date: Date.current, qty: 1, price: 10_000, amount: 10_000, currency: "USD")
+
+    get holding_path(holding)
+    assert_response :success
+    assert_select "form[action=?] input[name='_method'][value='delete']", holding_path(holding), count: 0
+    assert_select "form[action=?]", remap_security_holding_path(holding), count: 0
+    assert_select "form[action=?]", reset_security_holding_path(holding), count: 0
+
+    alert = I18n.t("bitcoin_wallet.managed_position")
+    delete holding_path(holding)
+    assert_equal alert, flash[:alert]
+
+    patch remap_security_holding_path(holding), params: { security_id: "MSFT|XNAS" }
+    assert_equal alert, flash[:alert]
+
+    post reset_security_holding_path(holding)
+    assert_equal alert, flash[:alert]
+    assert_equal wallet.security, holding.reload.security
+  end
+
+  test "a wallet link permits deletion of a different manual position" do
+    wallet = build_bitcoin_wallet(status: :active)
+    wallet.create_account_provider!(account: wallet.account)
+    holding = wallet.account.holdings.create!(security: securities(:aapl), date: Date.current,
+      qty: 1, price: 100, amount: 100, currency: "USD")
+
+    assert_difference "Holding.count", -1 do
+      delete holding_path(holding)
+    end
+
+    assert_equal I18n.t("holdings.destroy.success"), flash[:notice]
   end
 
   test "updates cost basis with total amount divided by qty" do
@@ -366,7 +405,11 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("holdings.sync_prices.unavailable"), flash[:alert]
   end
 
-  test "sync_prices syncs market data and redirects with notice" do
+  test "sync_prices uses forward accounting for a wallet position and redirects with notice" do
+    wallet = build_bitcoin_wallet(status: :active)
+    wallet.create_account_provider!(account: wallet.account)
+    holding = wallet.account.holdings.create!(security: wallet.security, date: Date.current,
+      qty: 1, price: 10_000, amount: 10_000, currency: "USD")
     Security.any_instance.expects(:import_provider_prices).with(
       start_date: 31.days.ago.to_date,
       end_date: Date.current,
@@ -376,14 +419,14 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     materializer = mock("materializer")
     materializer.expects(:materialize_balances).once
     Balance::Materializer.expects(:new).with(
-      @holding.account,
+      holding.account,
       strategy: :forward,
-      security_ids: [ @holding.security_id ]
+      security_ids: [ holding.security_id ]
     ).returns(materializer)
 
-    post sync_prices_holding_path(@holding)
+    post sync_prices_holding_path(holding)
 
-    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_redirected_to account_path(holding.account, tab: "holdings")
     assert_equal I18n.t("holdings.sync_prices.success"), flash[:notice]
   end
 

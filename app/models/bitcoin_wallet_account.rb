@@ -77,7 +77,7 @@ class BitcoinWalletAccount < ApplicationRecord
   end
 
   def record_reconciliation!
-    recorded = account.trades.where(security: security).joins(:entry).where("entries.date <= ?", Date.current).sum(:qty)
+    recorded = account.trades.quantity_as_of(security, Date.current)
     difference = quantity - recorded
     return if difference.zero?
 
@@ -100,6 +100,15 @@ class BitcoinWalletAccount < ApplicationRecord
     account_provider && !account_provider.holdings.exists?
   end
 
+  # The caller holds the wallet lock during sync publication and consumption.
+  # Keep the window until balances commit so a lost job cannot lose ledger history.
+  def materialize_balances!(window_start_date: nil)
+    window = [ account.materialization_window(window_start_date), pending_materialization_start_date ].compact.min
+    Balance::Materializer.new(account, strategy: account.balance_calculation_strategy,
+      window_start_date: window).materialize_balances
+    update!(pending_materialization_start_date: nil) if pending_materialization_start_date
+  end
+
   def pending_quantity
     bitcoin_wallet_transactions.where(present: true, confirmed: false).sum(:amount_sats).to_d / 100_000_000
   end
@@ -115,7 +124,7 @@ class BitcoinWalletAccount < ApplicationRecord
       skipped = full_scan ? 0 : [ source.gap_limit - ROUTINE_LOOKAHEAD, 0 ].max
       state = [ 0, 1 ].to_h do |branch|
         highest = bitcoin_wallet_addresses.where(bitcoin_wallet_source: source, branch: branch, used: true).maximum(:address_index)
-        [ branch.to_s, { "index" => full_scan || highest.nil? ? 0 : highest + 1, "gap" => skipped } ]
+        [ branch.to_s, { "index" => full_scan || highest.nil? ? 0 : highest + 1, "gap" => skipped, "gap_limit" => source.gap_limit } ]
       end
       state["full_scan_at"] = full_scan ? Time.current.iso8601 : source.discovery["full_scan_at"]
       source.update!(discovery: state)
@@ -155,6 +164,8 @@ class BitcoinWalletAccount < ApplicationRecord
     def eligible_account
       return if account.nil? || onchain_wallet_item.nil?
       errors.add(:account, :invalid) unless account.family_id == onchain_wallet_item.family_id && account.accountable_type == "Crypto"
+      # Serialize new wallet links with AccountProvider's exclusive-writer check.
+      Account.where(id: account_id).lock.pick(:id) if new_record? || will_save_change_to_account_id?
       other_links = account.account_providers.where.not(provider_type: self.class.name)
       errors.add(:account, :linked) if other_links.exists? || account.plaid_account_id || account.simplefin_account_id
       return if security.nil?

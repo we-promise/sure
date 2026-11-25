@@ -46,23 +46,24 @@ class BitcoinWalletAccount::Processor
       return
     end
 
-    window = account.with_lock do
-      establish_cash_baseline if wallet.initial_valuation_pending?
-      earliest_movement = materialize_movements
-      wallet.record_reconciliation!
-      Account::ProviderImportAdapter.new(account).import_holding(security: wallet.security,
-        quantity: wallet.quantity, price: price, amount: wallet.quantity * price,
-        currency: account.currency, date: Date.current, source: SOURCE,
-        external_id: "bitcoin_wallet_#{wallet.id}_#{Date.current.iso8601}", account_provider_id: wallet.account_provider.id)
-      account.holdings.reset
-      wallet.update!(last_error: nil) if wallet.last_error.present?
-      earliest_movement
+    wallet.with_lock do
+      return unless wallet.account_provider && wallet.baseline_at
+
+      account.with_lock do
+        establish_cash_baseline if wallet.initial_valuation_pending?
+        earliest_movement = materialize_movements
+        wallet.record_reconciliation!
+        Account::ProviderImportAdapter.new(account).import_holding(security: wallet.security,
+          quantity: wallet.quantity, price: price, amount: wallet.quantity * price,
+          currency: account.currency, date: Date.current, source: SOURCE,
+          external_id: "bitcoin_wallet_#{wallet.id}_#{Date.current.iso8601}", account_provider_id: wallet.account_provider.id)
+        account.holdings.reset
+        window = [ wallet.pending_materialization_start_date, earliest_movement ].compact.min
+        wallet.update!(last_error: nil, pending_materialization_start_date: window)
+        wallet.materialize_balances!(window_start_date: window) if materialize
+        window
+      end
     end
-    if materialize
-      Balance::Materializer.new(account, strategy: account.balance_calculation_strategy,
-        window_start_date: window).materialize_balances
-    end
-    window
   end
 
   private

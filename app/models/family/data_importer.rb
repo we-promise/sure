@@ -129,6 +129,7 @@ class Family::DataImporter
       import_balances(records["Balance"] || [])
       import_categories(records["Category"] || [])
       import_tags(records["Tag"] || [])
+      link_property_cost_tags(records["Account"] || [])
       import_merchants(records["Merchant"] || [])
       import_provider_merchants(records["ProviderMerchant"] || [])
       import_recurring_transactions(records["RecurringTransaction"] || [])
@@ -153,6 +154,14 @@ class Family::DataImporter
     recompute_rollover_chains
 
     { account_ids: @created_account_ids, entry_ids: @created_entry_ids, summary: compact_summary }
+  end
+
+  # A session imports each chunk through its own importer, so a property can
+  # land in an earlier chunk than its cost tag. The session calls this for
+  # every chunk after all of them are in, when every tag has its new id.
+  def link_property_cost_tags!
+    records = parse_ndjson
+    Import.transaction { link_property_cost_tags(records["Account"] || []) }
   end
 
   private
@@ -547,6 +556,27 @@ class Family::DataImporter
         tag.save!
         map_source!(:tags, old_id, tag)
         increment_summary("Tag", created ? :created : :updated)
+      end
+    end
+
+    # A property's cost tag is imported after the accounts, so the link is
+    # restored once both have their new ids. A record that carries the key
+    # sets the link: no tag, a tag the import does not carry, or a session
+    # mapping to a tag since deleted leaves the property unlinked, clearing a
+    # link an earlier import made. A record without the key (an older export,
+    # or another app's) keeps the property's link.
+    def link_property_cost_tags(records)
+      records.each do |record|
+        data = record["data"] || {}
+        accountable = data["accountable"]
+        next unless data["accountable_type"] == "Property" && accountable.is_a?(Hash) && accountable.key?("cost_tag_id")
+
+        account = mapped_record(:accounts, data["id"], @family.accounts, record_type: "Account")
+        next unless account&.property?
+
+        tag_id = mapped_id(:tags, accountable["cost_tag_id"], record_type: "Account", required: false)
+        tag_id = nil unless tag_id && @family.tags.exists?(id: tag_id)
+        account.property.update!(cost_tag_id: tag_id) unless account.property.cost_tag_id == tag_id
       end
     end
 
@@ -1222,6 +1252,7 @@ class Family::DataImporter
           price: data["price"].to_d,
           currency: data["currency"] || account.currency
         )
+        trade.exchange_rate = data["exchange_rate"] if data.key?("exchange_rate")
 
         entry ||= Entry.new(entryable: trade)
         entry.assign_attributes(
@@ -1229,7 +1260,7 @@ class Family::DataImporter
           date: Date.parse(data["date"].to_s),
           amount: data["amount"].to_d,
           name: "#{data["qty"].to_d >= 0 ? 'Buy' : 'Sell'} #{ticker}",
-          currency: data["currency"] || account.currency
+          currency: data["amount_currency"].presence || data["currency"] || account.currency
         )
         if @import_session
           entry.external_id = session_entry_external_id("Trade", old_id)
@@ -1346,6 +1377,7 @@ class Family::DataImporter
 
         holding_date = Date.parse(data["date"].to_s)
         holding_currency = data["currency"] || account.currency
+        materialized = truthy?(data["materialized"]) || false
         holding_attributes = {
           qty: data["qty"].to_d,
           price: data["price"].to_d,
@@ -1353,7 +1385,9 @@ class Family::DataImporter
           currency: holding_currency,
           cost_basis: data["cost_basis"]&.to_d,
           cost_basis_source: importable_cost_basis_source(data["cost_basis_source"]),
-          materialized: false,
+          materialized: materialized,
+          superseded: materialized && (truthy?(data["superseded"]) || false),
+          cost_basis_inherited: materialized && (truthy?(data["cost_basis_inherited"]) || false),
           cost_basis_locked: truthy?(data["cost_basis_locked"]) || false,
           security_locked: truthy?(data["security_locked"]) || false
         }
@@ -1381,6 +1415,7 @@ class Family::DataImporter
         created = valuation.blank?
         valuation ||= Valuation.new
         valuation.kind = valuation_kind_for(data["kind"])
+        valuation.cash_entry_total = data["cash_entry_total"] if data.key?("cash_entry_total")
 
         entry ||= Entry.new(entryable: valuation)
         entry.assign_attributes(
@@ -1396,6 +1431,8 @@ class Family::DataImporter
         end
 
         entry.save!
+        # Entry monetary edits reactivate a valuation; restore its recorded precedence after saving.
+        valuation.update!(superseded_at: data["superseded_at"]) if data.key?("superseded_at")
         @created_entry_ids << entry.id if created
         increment_summary("Valuation", created ? :created : :updated)
       end
@@ -1933,15 +1970,18 @@ class Family::DataImporter
     end
 
     def upsert_imported_holding!(account, security, date, currency, attributes)
-      holding = account.holdings.find_or_initialize_by(security: security, date: date, currency: currency)
+      scope = account.holdings.where(security: security, date: date, currency: currency).lock
+      holding = scope.first_or_initialize
       created = holding.new_record?
+      return false if !created && attributes[:materialized] && !holding.materialized?
+
       holding.assign_attributes(attributes)
 
       begin
         Holding.transaction(requires_new: true) { holding.save! }
       rescue ActiveRecord::RecordNotUnique
-        existing = account.holdings.find_by!(security: security, date: date, currency: currency)
-        existing.update!(attributes)
+        existing = scope.first!
+        existing.update!(attributes) unless attributes[:materialized] && !existing.materialized?
         created = false
       end
 

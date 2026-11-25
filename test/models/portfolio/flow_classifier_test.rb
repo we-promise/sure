@@ -164,6 +164,92 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_outflow, @brokerage_scope.classify_ids([ outflow.id ])[outflow.id]
   end
 
+  test "a pending transfer suggestion links nothing until it is confirmed" do
+    outflow = create_labelled_transaction(account: @brokerage, label: "Withdrawal", amount: 40)
+    inflow = create_labelled_transaction(account: @ira, label: "Contribution", amount: -40)
+    transfer = Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
+    assert transfer.pending?
+
+    assert_equal :external_outflow, @family_scope.classify(outflow.reload)
+    assert_equal :external_inflow, @family_scope.classify(inflow.reload)
+    by_sql = @family_scope.classify_ids([ outflow.id, inflow.id ])
+    assert_equal :external_outflow, by_sql[outflow.id]
+    assert_equal :external_inflow, by_sql[inflow.id]
+
+    transfer.confirm!
+
+    assert_equal :internal, @family_scope.classify(outflow.reload)
+    assert_equal :internal, @family_scope.classify_ids([ outflow.id ])[outflow.id]
+  end
+
+  # Transfer checks the signs only when it is saved. A leg whose amount
+  # changes sign afterwards (a provider re-sync writes the amount again) can
+  # become another transfer's leg on the other side, and the transfers join
+  # would then match both. Each form takes the transfer on the side the
+  # leg's sign allows: the inflow while it is negative, the outflow while it
+  # is positive.
+  test "a transaction on two transfers is linked on the side its sign allows" do
+    first = create_linked_transfer(family: @family, from: @checking, to: @brokerage, amount: 100)
+    leg = first.inflow_transaction.entry
+    leg.update!(amount: 100)
+    ira_leg = create_labelled_transaction(account: @ira, label: nil, amount: -100, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: leg.entryable, inflow_transaction: ira_leg.entryable, status: "confirmed")
+
+    assert_equal [ first.id ], Transfer.where(inflow_transaction_id: leg.entryable_id).pluck(:id), "precondition: still the first transfer's inflow"
+    assert_equal :internal, @family_scope.classify(leg.reload)
+    assert_equal({ leg.id => :internal }, @family_scope.classify_ids([ leg.id ]))
+    assert_equal 1, Entry.where(id: leg.id).joins(@family_scope.sql_joins).count, "one row per entry"
+  end
+
+  # The sign only chooses between transfers. With no transfer on the side a
+  # flipped leg's sign allows, its own transfer still links it, in both forms.
+  test "a transfer leg whose sign changed keeps its link when it has no other transfer" do
+    transfer = create_linked_transfer(family: @family, from: @ira, to: @brokerage, amount: 200)
+    inflow = transfer.inflow_transaction.entry
+    outflow = transfer.outflow_transaction.entry
+    inflow.update!(amount: 200)
+
+    assert_equal :internal, @family_scope.classify(inflow.reload)
+    assert_equal({ inflow.id => :internal, outflow.id => :internal }, @family_scope.classify_ids([ inflow.id, outflow.id ]))
+
+    outflow.update!(amount: -200)
+
+    assert_equal :internal, @family_scope.classify(outflow.reload)
+    assert_equal({ inflow.id => :internal, outflow.id => :internal }, @family_scope.classify_ids([ inflow.id, outflow.id ]))
+    # Each leg's counterpart still decides: from the brokerage alone, the IRA is outside.
+    assert_equal :external_outflow, @brokerage_scope.classify(inflow.reload)
+    assert_equal({ inflow.id => :external_outflow }, @brokerage_scope.classify_ids([ inflow.id ]))
+  end
+
+  # Rows written around Transfer's validations can put one transaction on
+  # several transfers. The other side is read only when the sign's side has
+  # no transfer, so extra transfers there do not multiply the entry's row,
+  # and a pending transfer on a side never hides a confirmed one there.
+  test "extra transfers written around the validations do not change a transaction's link" do
+    first = create_linked_transfer(family: @family, from: @checking, to: @brokerage, amount: 100)
+    leg = first.inflow_transaction.entry
+    ira_leg = create_labelled_transaction(account: @ira, label: nil, amount: -100, kind: "funds_movement")
+    savings = @family.accounts.create!(name: "Savings", balance: 5000, currency: "USD", accountable: Depository.new)
+    savings_leg = create_labelled_transaction(account: savings, label: nil, amount: -100, kind: "funds_movement")
+    now = Time.current
+    Transfer.insert_all([ ira_leg, savings_leg ].map { |inflow| { inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: leg.entryable_id, status: "confirmed", created_at: now, updated_at: now } })
+
+    assert_equal 1, Entry.where(id: leg.id).joins(@family_scope.sql_joins).count, "one row per entry"
+    assert_equal :external_inflow, @family_scope.classify(leg.reload)
+    assert_equal({ leg.id => :external_inflow }, @family_scope.classify_ids([ leg.id ]))
+
+    # The sign's side now holds a pending transfer next to the confirmed one.
+    pending_leg = create_labelled_transaction(account: @ira, label: nil, amount: 100, kind: "funds_movement")
+    Transfer.insert_all([ { inflow_transaction_id: leg.entryable_id, outflow_transaction_id: pending_leg.entryable_id, status: "pending", created_at: now - 1.day, updated_at: now } ])
+    # Written again after the pending one, so an unordered lookup meets the pending one first.
+    first_attrs = first.attributes.slice("inflow_transaction_id", "outflow_transaction_id", "status", "amount", "created_at", "updated_at")
+    Transfer.where(id: first.id).delete_all
+    Transfer.insert_all([ first_attrs ])
+
+    assert_equal :external_inflow, @family_scope.classify(leg.reload)
+    assert_equal({ leg.id => :external_inflow }, @family_scope.classify_ids([ leg.id ]))
+  end
+
   test "an investment contribution from outside the scope is an external inflow" do
     transfer = create_linked_transfer(family: @family, from: @checking, to: @brokerage, amount: 1000)
     inflow = transfer.inflow_transaction.entry
@@ -222,6 +308,38 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
 
     assert_equal :external_outflow, @family_scope.classify(out_leg)
     assert_equal :external_outflow, @family_scope.classify_ids([ out_leg.id ])[out_leg.id]
+  end
+
+  # The opposite leg has to sit in another account. One in the same account
+  # is a second move of the same position, not where this one came from. Once
+  # a leg in another account joins, the in-leg has a counterpart in another
+  # account, that leg has the in-leg, and the same-account leg still has none.
+  #
+  # The SQL form compares the entry's account with the lowest and the
+  # highest account id among the opposite legs, so the scenario runs with
+  # fixed ids in both orders: the other account's id below the in-leg's, and
+  # above it.
+  test "a security transfer's opposite leg in its own account is not its counterpart" do
+    low = @family.accounts.create!(id: "00000000-0000-4000-8000-000000000001", name: "Low", balance: 1000, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    high = @family.accounts.create!(id: "ffffffff-ffff-4fff-bfff-fffffffffffe", name: "High", balance: 1000, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    scope = Portfolio::FlowClassifier.new(scope_account_ids: [ low.id, high.id ])
+
+    [ [ low, high ], [ high, low ] ].each do |own, other|
+      security = create_portfolio_security
+
+      in_leg = create_portfolio_trade(account: own, security: security, qty: 10, price: 50, label: "Transfer")
+      same_account_out = create_portfolio_trade(account: own, security: security, qty: -10, price: 50, label: "Transfer")
+
+      assert_equal :external_inflow, scope.classify(in_leg)
+      assert_equal :external_inflow, scope.classify_ids([ in_leg.id ])[in_leg.id]
+
+      other_out = create_portfolio_trade(account: other, security: security, qty: -10, price: 50, label: "Transfer")
+      ids = [ in_leg.id, same_account_out.id, other_out.id ]
+
+      expected = { in_leg.id => :internal, same_account_out.id => :external_outflow, other_out.id => :internal }
+      assert_equal expected, ids.index_with { |id| scope.classify(Entry.find(id)) }, "own account #{own.name}"
+      assert_equal expected, scope.classify_ids(ids), "own account #{own.name}"
+    end
   end
 
   test "an unlabelled or Other trade is internal" do

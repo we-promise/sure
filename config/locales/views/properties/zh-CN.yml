@@ -26,12 +26,17 @@ zh-CN:
       rentcast: RentCast
       realie: Realie
       chimnie: Chimnie
+      terrascoutx: TerraScoutX
     new:
       title: 手动输入房产
       next: 下一步
       avm_option: "通过 %{provider} 添加"
       avm_title: "通过 %{provider} 添加房产"
       avm_description: "输入房产名称及其地址。%{provider} 将为您查询房产详情并估算市值。"
+      avm_descriptions:
+        terrascoutx: "输入房产名称及其地址。%{provider} 将从最新税册中查询房产详情和县评估官评估价，而非当前市场估价。"
+      avm_roll_value_notes:
+        terrascoutx: "%{provider} 报告的是最新税册中的县评估官评估价，而非当前市场估价，因此可能与实际售价存在差异。"
       avm_us_only: "%{provider} 仅支持位于美国的房产。"
       avm_uk_only: "%{provider} 仅支持位于英国的住宅房产。"
       avm_uprn_label: "UPRN"
@@ -98,6 +103,8 @@ zh-CN:
         market_value: 市值
         purchase_price: 购入价格
         trend: 趋势
+        trend_in_currency: "以 %{currency} 计价的趋势"
+        rate_unavailable: 暂无可用汇率
         unknown: 未知
         year_built: 建造年份
         edit_account_details: 编辑账户详情

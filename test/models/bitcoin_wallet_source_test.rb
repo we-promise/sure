@@ -39,12 +39,16 @@ class BitcoinWalletSourceTest < ActiveSupport::TestCase
 
   test "removing a source releases the addresses it claimed" do
     wallet = build_bitcoin_wallet
-    manual = manual_bitcoin_source(wallet, "1BoatSLRHtKNngkdXEeobR76b53LETtpyT")
+    manual = manual_bitcoin_source(wallet)
     key = wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
     assert BitcoinWalletAccount::Discovery.new(wallet, provider: FakeProvider.new).perform
 
     key.destroy!
     assert_equal [ manual.receive_address ], wallet.bitcoin_wallet_addresses.reload.pluck(:address)
+    overlap = wallet.bitcoin_wallet_addresses.sole
+    assert_nil overlap.bitcoin_wallet_source_id
+    assert_nil overlap.branch
+    assert_nil overlap.address_index
     manual.destroy!
     assert_empty wallet.bitcoin_wallet_addresses.reload
   end

@@ -42,6 +42,21 @@ class Account::Syncer
 
     # Materialize every security using provider capabilities rather than wallet-specific math.
     def materialize_balances(window_start_date: nil)
+      if account.position_tracking?
+        return BitcoinWalletAccount.transaction do
+          wallet = BitcoinWalletAccount.lock.find_by(account_id: account.id)
+          if wallet
+            wallet.materialize_balances!(window_start_date: window_start_date)
+          else
+            materialize_account_balances(window_start_date)
+          end
+        end
+      end
+
+      materialize_account_balances(window_start_date)
+    end
+
+    def materialize_account_balances(window_start_date)
       strategy = account.balance_calculation_strategy
       Balance::Materializer.new(account, strategy: strategy, window_start_date: window_start_date).materialize_balances
     end

@@ -71,17 +71,17 @@ class BitcoinWalletAccount::Syncer
       discovery = BitcoinWalletAccount::Discovery.new(wallet, provider: provider, tip: tip)
       unless discovery.perform
         wallet.with_lock do
-          return unless source_signature == @source_signature
-
-          wallet.update!(status: :discovering)
-          queue_continuation(read_attempt: @sync ? read_attempt : 0)
+          unchanged = source_signature == @source_signature
+          wallet.update!(status: :discovering) if unchanged
+          queue_continuation(read_attempt: @sync && unchanged ? read_attempt : 0)
         end
         return
       end
 
       begin
         anchors = wallet.bitcoin_wallet_sources.where(kind: "bip84").filter_map { |source| source.discovery["tip_hash"] }
-        snapshot = BitcoinWalletAccount::Snapshot.new(wallet, provider: provider).fetch(before: tip, discovery_tips: anchors) do |observed, height|
+        snapshot = BitcoinWalletAccount::Snapshot.new(wallet, provider: provider).fetch(before: tip, discovery_tips: anchors,
+          lookahead_addresses: discovery.probed_addresses) do |observed, height|
           missing_statuses(observed, height)
         end
       rescue BitcoinWalletAccount::Snapshot::ChangedTip
@@ -94,7 +94,7 @@ class BitcoinWalletAccount::Syncer
       processor = BitcoinWalletAccount::Processor.new(wallet)
       processor.prepare_prices(include_account: wallet.account_provider.present?)
       invalid_claim = false
-      window = wallet.with_lock do
+      wallet.with_lock do
         if source_signature != @source_signature
           queue_continuation
           return
@@ -134,14 +134,20 @@ class BitcoinWalletAccount::Syncer
       if invalid_claim
         raise BitcoinWalletAccount::Discovery::AddressMismatch, "The receive address does not match this BIP84 account within the selected gap limit"
       end
-      queue_account_sync(window)
+      queue_account_sync
     end
 
-    def queue_account_sync(window)
-      return unless @sync && window && !@sync.cancel_requested?
+    def queue_account_sync
+      sync = @sync
+      return unless sync
 
-      wallet.account.sync_later(parent_sync: @sync,
-        window_start_date: [ window, @sync.window_start_date ].compact.min, window_end_date: @sync.window_end_date)
+      ActiveRecord.after_all_transactions_commit do
+        window = wallet.class.where(id: wallet.id).pick(:pending_materialization_start_date)
+        next unless window && !sync.cancel_requested?
+
+        wallet.account.sync_later(parent_sync: sync,
+          window_start_date: [ window, sync.window_start_date ].compact.min, window_end_date: sync.window_end_date)
+      end
     end
 
     # A reader that held the lock while this sync waited may already have

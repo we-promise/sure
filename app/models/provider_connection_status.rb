@@ -269,6 +269,9 @@ class ProviderConnectionStatus
     end
 
     def latest_completed_sync_stats
+      # Item-wide on-chain stats include wallets outside the viewer's account scope.
+      return {} if viewer && provider[:key] == "onchain_wallet"
+
       stats = latest_completed_sync&.sync_stats
       return stats.stringify_keys if stats.is_a?(Hash)
       return {} unless stats.is_a?(String)

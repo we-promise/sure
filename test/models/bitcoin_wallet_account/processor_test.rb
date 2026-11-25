@@ -94,6 +94,23 @@ class BitcoinWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.2"), present_quantity
   end
 
+  test "connecting reconciles the manual holding using units on its date" do
+    before_split = Date.current.prev_day
+    @wallet.security.splits.create!(ex_date: Date.current, numerator: 2, denominator: 1, source: "manual")
+    @wallet.security.splits.create!(ex_date: Date.current.next_day, numerator: 2, denominator: 1, source: "manual")
+    [ [ before_split, "0.05" ], [ Date.current, "0.1" ] ].each do |date, quantity|
+      @account.entries.create!(date: date, amount: 0, currency: "USD", name: "Manual transfer",
+        entryable: Trade.new(security: @wallet.security, qty: quantity, price: 10_000, currency: "USD",
+          investment_activity_label: Trade::TRANSFER_LABEL))
+    end
+    @account.holdings.find_by!(security: @wallet.security).update!(qty: "0.2", amount: 2000)
+
+    @wallet.connect!
+
+    refute @account.entries.exists?(source: %w[manual_position_reconciliation bitcoin_wallet_reconciliation])
+    assert_equal BigDecimal("0.2"), @account.current_holdings.find_by!(security: @wallet.security).qty
+  end
+
   test "idle historical processing does not add read queries per day" do
     @wallet.connect!
     @wallet.update!(baseline_at: 2.days.ago)

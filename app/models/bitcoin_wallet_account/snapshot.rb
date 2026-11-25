@@ -13,14 +13,15 @@ class BitcoinWalletAccount::Snapshot
   end
 
   # Reconcile a normal chain extension by rereading only addresses affected by
-  # its blocks. Include older HD checkpoints so a deposit during another job
-  # cannot be missed by the final read.
-  def fetch(before: provider.tip_hash, discovery_tips: [])
+  # its blocks. Reread the current discovery batch for pending activity that
+  # can arrive while the tip is unchanged.
+  def fetch(before: provider.tip_hash, discovery_tips: [], lookahead_addresses: Set.new)
     known = wallet.bitcoin_wallet_sources.pluck(:receive_address)
     tracked = wallet.bitcoin_wallet_addresses
     owned_addresses = tracked.pluck(:address).to_set
     read_addresses = tracked.where(used: true).or(tracked.where(bitcoin_wallet_source_id: nil))
       .or(tracked.where(address: known)).pluck(:address).to_set
+    read_addresses.merge(lookahead_addresses & owned_addresses)
     pending_addresses = read_addresses.dup
     chain = BitcoinWalletAccount::ChainWindow.new(provider, owned_addresses)
     height = chain.height(before)
@@ -153,7 +154,7 @@ class BitcoinWalletAccount::Snapshot
       stats = summary.fetch("chain_stats")
       confirmed_count = Integer(stats.fetch("tx_count"))
       mempool_count = Integer(summary.fetch("mempool_stats").fetch("tx_count"))
-      transactions = provider.get_wallet_transactions(address, since: wallet.baseline_at,
+      transactions = provider.get_wallet_transactions(address, baseline_block_height: wallet.baseline_block_height,
         include_history: wallet.baseline_at.present? && confirmed_count.positive?, include_mempool: mempool_count.positive?)
       if transactions.count { |tx| tx.dig("status", "confirmed") == false } != mempool_count
         raise IncompleteMempool, "The mempool changed or its address history was truncated; retry the wallet"
