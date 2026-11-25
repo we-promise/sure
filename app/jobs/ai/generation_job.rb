@@ -77,7 +77,7 @@ class Ai::GenerationJob < ApplicationJob
     give_up(error)
   end
 
-  # Queues a step. Returns whether it was queued: a queue that refuses or raises is reported here,
+  # Queues a step. Returns whether it was queued: a queue that refuses or raises is logged here,
   # and the step stays in its run's next_job for Ai::GenerationDeliveryJob.
   def self.enqueue_step(*arguments)
     return true if perform_later(*arguments)
@@ -86,6 +86,10 @@ class Ai::GenerationJob < ApplicationJob
     false
   rescue StandardError => error
     Rails.error.report(error, handled: true, context: { feature: arguments.first })
+    DebugLogEntry.capture(category: "ai", level: "error", message: "AI job couldn't be queued; left for delivery",
+                          source: name, family_id: arguments.second[:family_id],
+                          metadata: { feature: arguments.first, **arguments.second.slice(:run_id, :step),
+                                      error_class: error.class.name, error_message: error.message.truncate(200) })
     false
   end
 
