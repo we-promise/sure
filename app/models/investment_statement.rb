@@ -992,8 +992,11 @@ class InvestmentStatement
       account_ids_hash = Digest::MD5.hexdigest("#{account_ids.sort.join(",")}|#{settlement_account_ids.sort.join(",")}")
 
       Rails.cache.fetch([
-        "investment_statement", "totals_query/v3", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, family.currency,
+        "investment_statement", "totals_query/v4", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, family.currency,
         account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version,
+        # Totals leave out entries dated after today, so a period that reaches
+        # past today changes when a scheduled entry's date arrives.
+        [ date_range.end, Date.current ].min,
         # A rate stored later can complete totals that left an amount out.
         ExchangeRate.updated_at_version,
         transfers_version(account_ids)

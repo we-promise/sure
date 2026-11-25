@@ -59,14 +59,28 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(30, "USD"), totals.withdrawals
   end
 
-  test "a split contribution still counts through its parent" do
-    period = Period.custom(start_date: Date.current, end_date: Date.current)
-    parent = create_flow(label: "Contribution", amount: -100, date: Date.current)
+  test "period totals agree with the investment statement on excluded, future-dated and split flows" do
+    period = Period.custom(start_date: Date.current - 5.days, end_date: Date.current + 5.days)
+    account = @family.accounts.create!(
+      owner: @user, name: "Brokerage", balance: 0, currency: "USD", accountable: Investment.new
+    )
 
-    parent.split!([ { name: "Part 1", amount: -60 }, { name: "Part 2", amount: -40 } ])
+    create_flow(label: "Contribution", amount: -100, date: Date.current, account: account)
+    create_flow(label: "Contribution", amount: -40, date: Date.current, account: account).update!(excluded: true)
+    create_flow(label: "Contribution", amount: -70, date: Date.current + 2.days, account: account)
+    create_flow(label: "Contribution", amount: -200, date: Date.current, account: account)
+      .split!([ { name: "Part 1", amount: -120 }, { name: "Part 2", amount: -80 } ])
+    create_flow(label: "Withdrawal", amount: 30, date: Date.current, account: account)
+    create_flow(label: "Withdrawal", amount: 25, date: Date.current + 2.days, account: account)
 
-    assert parent.reload.excluded?
-    assert_equal Money.new(100, "USD"), InvestmentFlowStatement.new(@family).period_totals(period: period).contributions
+    flows = InvestmentFlowStatement.new(@family).period_totals(period: period)
+    totals = InvestmentStatement.new(@family, user: nil).totals(period: period)
+
+    assert_equal totals.contributions, flows.contributions
+    assert_equal totals.withdrawals, flows.withdrawals
+    # The split's parts carry no activity label, so it counts in neither.
+    assert_equal Money.new(100, "USD"), flows.contributions
+    assert_equal Money.new(30, "USD"), flows.withdrawals
   end
 
   test "a matched provider contribution still counts once after resync" do
@@ -167,8 +181,8 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
       inflow
     end
 
-    def create_flow(label:, amount:, date:)
-      @account.entries.create!(
+    def create_flow(label:, amount:, date:, account: @account)
+      account.entries.create!(
         name: label,
         amount: amount,
         date: date,

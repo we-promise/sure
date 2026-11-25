@@ -102,6 +102,10 @@ class InvestmentStatement::Totals
     # lookups were priced six times over, and the estimate crossed
     # jit_above_cost.
     #
+    # Entries dated after today are scheduled and have not happened yet, so
+    # they are left out until their date arrives, as in the income statement
+    # and InvestmentFlowStatement (Entry.excluding_scheduled).
+    #
     # account_ids is already scoped to the family's visible (draft/active)
     # investment accounts and the cash accounts that settle their trades
     # (InvestmentStatement#totals_account_ids), so the query trusts that input
@@ -196,6 +200,7 @@ class InvestmentStatement::Totals
         ) flow ON true
         WHERE entries.account_id IN (:account_ids)
           AND entries.date BETWEEN :start_date AND :end_date
+          AND entries.date <= :today
           AND entries.excluded = false
           AND (
             entries.entryable_type = 'Trade'
@@ -217,7 +222,8 @@ class InvestmentStatement::Totals
         target_currency: @family.currency,
         account_ids: @account_ids,
         start_date: @date_range.begin,
-        end_date: @date_range.end
+        end_date: @date_range.end,
+        today: Date.current
       }
     end
 end

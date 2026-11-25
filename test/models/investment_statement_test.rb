@@ -1312,6 +1312,37 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       "the investment_accounts lookup backing current_holdings should only run once, even for the empty case"
   end
 
+  test "totals leave out entries dated after today until their date arrives" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    today = Date.current
+    period = Period.custom(start_date: today - 5.days, end_date: today + 5.days)
+    account = create_investment_account(balance: 1000)
+
+    create_labelled_transaction(account: account, label: "Contribution", amount: -100, date: today)
+    create_labelled_transaction(account: account, label: "Contribution", amount: -70, date: today + 2.days)
+    create_labelled_transaction(account: account, label: "Withdrawal", amount: 25, date: today + 2.days)
+    create_portfolio_trade(account: account, qty: 1, price: 50, date: today + 2.days)
+    create_income_trade(account: account, label: "Dividend", amount: 9, date: today + 2.days)
+
+    totals = -> { InvestmentStatement.new(@family.reload, user: nil).totals(period: period) }
+
+    before = totals.call
+    assert_equal Money.new(100, "USD"), before.contributions
+    assert_equal Money.new(0, "USD"), before.withdrawals
+    assert_equal Money.new(0, "USD"), before.buys
+    assert_equal Money.new(0, "USD"), before.dividends
+    assert_equal 0, before.trades_count
+
+    travel_to(today + 2.days) do
+      after = totals.call
+      assert_equal Money.new(170, "USD"), after.contributions, "a cached total picks up the entry once its date arrives"
+      assert_equal Money.new(25, "USD"), after.withdrawals
+      assert_equal Money.new(50, "USD"), after.buys
+      assert_equal Money.new(9, "USD"), after.dividends
+      assert_equal 2, after.trades_count
+    end
+  end
+
   test "totals cache invalidates when family currency changes" do
     create_investment_account(balance: 500)
     period = Period.last_30_days
