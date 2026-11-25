@@ -100,7 +100,7 @@ de:
         down: "Deine Rate für %{account} ändert sich am %{effective_on} von %{previous_payment} auf %{new_payment}, %{change_pct} % weniger, laut Tilgungsplan und erfassten Zinssätzen des Kredits."
       bank_fees:
         recurring: "Auf %{account} sind in den letzten %{days} Tagen Gebühren von %{amount} angefallen."
-        new: "Auf %{account} sind in den letzten %{days} Tagen Gebühren von %{amount} angefallen, nach keinen in den %{days} Tagen davor."
+        new: "Auf %{account} sind in den letzten %{days} Tagen Gebühren von %{amount} angefallen; in den %{days} Tagen davor waren es keine."
       fixed_commitments_ratio: "Wiederkehrende Verpflichtungen von %{commitments} im Monat nehmen %{current_ratio} % deines üblichen Monatseinkommens von %{income} ein, nach %{previous_ratio} % vor sechs Monaten. %{explanation}"
     titles:
       budget_at_risk:
