@@ -8369,7 +8369,15 @@ paths:
                   description: Account ID to import into. Must be an account the API
                     user can write to
                 publish:
-                  type: boolean
+                  anyOf:
+                  - type: boolean
+                    nullable: true
+                  - type: integer
+                    enum:
+                    - 0
+                    - 1
+                  - type: string
+                    pattern: "^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\\s*$"
                   description: 'true to queue the import for processing if its configuration
                     is valid: true or false (also 1 or 0, any case); null is the same
                     as leaving it out. Any other value returns 422 and creates no
@@ -8485,7 +8493,15 @@ paths:
                   description: Account ID to import into. Must be an account the API
                     user can write to
                 publish:
-                  type: boolean
+                  anyOf:
+                  - type: boolean
+                    nullable: true
+                  - type: integer
+                    enum:
+                    - 0
+                    - 1
+                  - type: string
+                    pattern: "^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\\s*$"
                   description: 'true to queue the import for processing if its configuration
                     is valid: true or false (also 1 or 0, any case); null is the same
                     as leaving it out. Any other value returns 422 and creates no
@@ -11081,7 +11097,15 @@ paths:
                       description: Optional source namespace for external_id. Requires
                         external_id and defaults to api when external_id is provided
                     user_modified:
-                      type: boolean
+                      anyOf:
+                      - type: boolean
+                        nullable: true
+                      - type: integer
+                        enum:
+                        - 0
+                        - 1
+                      - type: string
+                        pattern: "^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\\s*$"
                       description: 'Whether provider syncs should preserve user-supplied
                         transaction changes: true or false (also 1 or 0, any case);
                         null is the same as leaving it out. Any other value returns
@@ -11210,7 +11234,15 @@ paths:
                       description: Array of tag IDs to assign. Omit to preserve existing
                         tags; use [] to clear all tags.
                     user_modified:
-                      type: boolean
+                      anyOf:
+                      - type: boolean
+                        nullable: true
+                      - type: integer
+                        enum:
+                        - 0
+                        - 1
+                      - type: string
+                        pattern: "^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\\s*$"
                       description: 'Whether provider syncs should preserve user-supplied
                         transaction changes: true or false (also 1 or 0, any case);
                         null is the same as leaving it out. Any other value returns
@@ -11574,7 +11606,15 @@ paths:
                       type: string
                       description: Additional notes
                     upsert:
-                      type: boolean
+                      anyOf:
+                      - type: boolean
+                        nullable: true
+                      - type: integer
+                        enum:
+                        - 0
+                        - 1
+                      - type: string
+                        pattern: "^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\\s*$"
                       description: Nested alternative to the top-level response-status
                         flag. Top-level upsert takes precedence when both are provided.
                         true or false (also 1 or 0, any case); null is the same as
@@ -11584,7 +11624,15 @@ paths:
                   - amount
                   - date
                 upsert:
-                  type: boolean
+                  anyOf:
+                  - type: boolean
+                    nullable: true
+                  - type: integer
+                    enum:
+                    - 0
+                    - 1
+                  - type: string
+                    pattern: "^\\s*([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[01])\\s*$"
                   description: Response-status signal only. When true and a same-account
                     same-date valuation exists before the request, the endpoint returns
                     200 OK instead of 201 Created. The underlying reconciliation write

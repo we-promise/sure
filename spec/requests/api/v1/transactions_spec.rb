@@ -3,6 +3,8 @@
 require 'swagger_helper'
 
 RSpec.describe 'API V1 Transactions', type: :request do
+  user_modified_schema = API_STRICT_FLAG_SCHEMA.merge(description: 'Whether provider syncs should preserve user-supplied transaction changes: true or false (also 1 or 0, any case); null is the same as leaving it out. Any other value returns 422 and writes nothing.')
+
   let(:family) do
     Family.create!(
       name: 'API Family',
@@ -260,7 +262,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Transaction nature (determines sign)' },
               external_id: { type: :string, description: 'Optional external idempotency key scoped to account and source' },
               source: { type: :string, description: 'Optional source namespace for external_id. Requires external_id and defaults to api when external_id is provided' },
-              user_modified: { type: :boolean, description: 'Whether provider syncs should preserve user-supplied transaction changes: true or false (also 1 or 0, any case); null is the same as leaving it out. Any other value returns 422 and writes nothing.' },
+              user_modified: user_modified_schema,
               tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Array of tag IDs' }
             },
             required: %w[account_id date amount name]
@@ -414,7 +416,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
                 items: { type: :string, format: :uuid },
                 description: 'Array of tag IDs to assign. Omit to preserve existing tags; use [] to clear all tags.'
               },
-              user_modified: { type: :boolean, description: 'Whether provider syncs should preserve user-supplied transaction changes: true or false (also 1 or 0, any case); null is the same as leaving it out. Any other value returns 422 and writes nothing.' }
+              user_modified: user_modified_schema
             }
           }
         }

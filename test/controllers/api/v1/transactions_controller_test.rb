@@ -898,7 +898,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a user_modified other than true/false/1/0 is a 422 on create and update and writes nothing" do
-    assert_no_difference("@account.entries.count") do
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
       post api_v1_transactions_url,
            params: { transaction: { account_id: @account.id, name: "Flagged", amount: 25, date: Date.current, nature: "expense", user_modified: "yes" } },
            headers: api_headers(@api_key)
@@ -906,7 +906,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_equal "user_modified must be true or false", JSON.parse(response.body)["message"]
 
-    assert_no_changes -> { @transaction.entry.reload.name } do
+    assert_no_changes -> { @transaction.entry.reload.slice(:name, :user_modified) } do
       put api_v1_transaction_url(@transaction),
           params: { transaction: { name: "Renamed", user_modified: "on" } },
           headers: api_headers(@api_key)

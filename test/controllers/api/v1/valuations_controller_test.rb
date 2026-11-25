@@ -289,8 +289,10 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     [ { upsert: "yes" }, { upsert: "" }, { valuation: { upsert: "on" } } ].each do |flag|
       body = flag.deep_merge(valuation: { account_id: existing_entry.account.id, amount: 31_337, date: existing_entry.date })
 
-      assert_no_changes -> { existing_entry.reload.amount } do
-        post api_v1_valuations_url, params: body, headers: api_headers(@api_key)
+      assert_no_difference [ "Entry.count", "Valuation.count" ] do
+        assert_no_changes -> { existing_entry.reload.amount } do
+          post api_v1_valuations_url, params: body, headers: api_headers(@api_key)
+        end
       end
 
       assert_response :unprocessable_entity, flag.inspect

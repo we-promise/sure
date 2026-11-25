@@ -155,10 +155,9 @@ RSpec.describe 'API V1 Imports', type: :request do
             format: :uuid,
             description: 'Account ID to import into. Must be an account the API user can write to'
           },
-          publish: {
-            type: :boolean,
+          publish: API_STRICT_FLAG_SCHEMA.merge(
             description: 'true to queue the import for processing if its configuration is valid: true or false (also 1 or 0, any case); null is the same as leaving it out. Any other value returns 422 and creates no import.'
-          },
+          ),
           date_col_label: {
             type: :string,
             description: 'CSV imports only. Header name for the date column'
