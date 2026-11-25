@@ -1,7 +1,7 @@
 require "test_helper"
 
 class SidekiqConfigTest < ActiveSupport::TestCase
-  test "chat has a one-thread capsule; the ai capsule runs the other AI queues in strict order, apart from the default capsule" do
+  test "chat has a capsule of its own; the ai capsule runs the other AI queues in strict order, apart from the default capsule" do
     with_env_overrides("RAILS_MAX_THREADS" => nil, "RAILS_AI_MAX_THREADS" => nil) do
       config = sidekiq_config
 
@@ -12,11 +12,11 @@ class SidekiqConfigTest < ActiveSupport::TestCase
     end
   end
 
-  test "RAILS_AI_MAX_THREADS sizes the ai capsule, and 0 leaves both AI capsules out" do
+  test "RAILS_AI_MAX_THREADS sizes both AI capsules, and 0 leaves both AI capsules out" do
     with_env_overrides("RAILS_MAX_THREADS" => "5", "RAILS_AI_MAX_THREADS" => "2") do
       assert_equal 3, sidekiq_config[:concurrency]
       assert_equal 2, sidekiq_config.dig(:capsules, :ai, :concurrency)
-      assert_equal 1, sidekiq_config.dig(:capsules, :ai_chat, :concurrency)
+      assert_equal 2, sidekiq_config.dig(:capsules, :ai_chat, :concurrency)
     end
 
     with_env_overrides("RAILS_MAX_THREADS" => "5", "RAILS_AI_MAX_THREADS" => "0") do
