@@ -193,7 +193,25 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
     assert_equal 0, day.net_market_flows
   end
 
-  test "forward: a flow is rounded to the holdings' scale so no market movement is left" do
+  test "forward: a transfer out of shares bought that day is valued at its own price when only a closed position's row precedes it" do
+    # The day before's row holds no shares, so its price says nothing of them.
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 },
+        { type: "trade", date: transfer_day, ticker: "AAPL", qty: 10, price: 100 }
+      ],
+      holdings: [ { date: 2.days.ago.to_date, ticker: "AAPL", qty: 0, price: 150, amount: 0 } ]
+    )
+    add_trade(account, qty: -10, price: 100)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 1000, day.non_cash_outflows
+    assert_equal 0, day.net_market_flows
+  end
+
+  test "forward: a flow is rounded to the holdings' scale, so none is left as market movement" do
     # 0.333333333333333333 shares at 100.1234 are 33.37446666... and the
     # holding stores them as 33.3745.
     account = create_account_with_ledger(

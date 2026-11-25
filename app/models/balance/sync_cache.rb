@@ -47,12 +47,12 @@ class Balance::SyncCache
   # The price the priced holdings value a unit of `security_id` at on `date`,
   # in the account's currency and converted as their value is. A day with no
   # priced row (a position that left whole, with nothing recorded after it)
-  # takes the day before's, in the shares of `date`: a split going ex that day
-  # leaves the position worth what it was. nil when they have no price for it,
-  # or no rate converts it.
+  # takes the day before's if that held shares, in the shares of `date`: a
+  # split going ex that day leaves the position worth what it was. nil when
+  # they have no price for it, or no rate converts it.
   def valued_holding_price(security_id, date)
     rows = valued_holdings(security_id)
-    held = rows[date] || rows[date.prev_day]
+    held = rows[date] || rows[date.prev_day]&.select { |h| h.qty.positive? }.presence
     return nil unless held
 
     row = held.first
