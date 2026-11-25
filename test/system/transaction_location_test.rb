@@ -111,6 +111,33 @@ class TransactionLocationTest < ApplicationSystemTestCase
     assert_equal 2.3522, entry.location_lng.to_f
   end
 
+  test "dragging to a spot with no reverse-geocode match saves the coordinates, not the old name" do
+    entry = create_transaction(account: accounts(:depository), name: "Travelodge Malaga", amount: 100)
+
+    Geocoding::NominatimClient.any_instance.stubs(:search).returns(
+      [ Geocoding::NominatimClient::Result.new(lat: 41.3851, lng: 2.1734, display_name: "Barcelona, Spain") ]
+    )
+    Geocoding::NominatimClient.any_instance.stubs(:reverse).returns(nil)
+
+    visit transaction_path(entry)
+    find("summary", text: /#{I18n.t("transactions.show.details")}/i).click
+
+    fill_in I18n.t("ds.location_picker.search_label"), with: "Barcelona"
+    find_field(I18n.t("ds.location_picker.search_label")).send_keys(:enter)
+    assert_text "Barcelona, Spain"
+    find("li", text: "Barcelona, Spain").click
+
+    wait_until { entry.reload.location_name == "Barcelona, Spain" }
+
+    drag_marker_to(48.8566, 2.3522)
+
+    wait_until { entry.reload.location_lat.to_f == 48.8566 }
+
+    assert_not_equal "Barcelona, Spain", entry.location_name
+    assert_equal 48.8566, entry.location_lat.to_f
+    assert_equal 2.3522, entry.location_lng.to_f
+  end
+
   private
 
     # Flags a node the update's turbo_stream response always replaces, so the

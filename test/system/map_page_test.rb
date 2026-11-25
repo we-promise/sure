@@ -52,4 +52,23 @@ class MapPageTest < ApplicationSystemTestCase
     page.find("body").hover
     assert_no_selector ".leaflet-overlay-pane path"
   end
+
+  test "keyboard focus on a list row highlights its location, same as hover" do
+    create_transaction(
+      account: accounts(:depository),
+      name: "Travelodge Malaga",
+      amount: 100
+    ).update!(location_lat: 36.72, location_lng: -4.42, location_name: "Malaga, Spain")
+
+    visit map_path
+
+    assert_no_selector ".leaflet-overlay-pane path"
+
+    link = find_link("Travelodge Malaga")
+    page.execute_script("arguments[0].focus()", link.native)
+    assert_selector ".leaflet-overlay-pane path"
+
+    page.execute_script("arguments[0].blur()", link.native)
+    assert_no_selector ".leaflet-overlay-pane path"
+  end
 end

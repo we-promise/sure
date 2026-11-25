@@ -5,7 +5,7 @@ class LocationSearchesController < ApplicationController
     results = Geocoding::NominatimClient.new.search(params[:q])
 
     render json: results.map { |r| { lat: r.lat, lng: r.lng, display_name: r.display_name } }
-  rescue Geocoding::NominatimClient::RequestFailed, Net::OpenTimeout, Net::ReadTimeout
+  rescue Geocoding::NominatimClient::RequestFailed
     render json: [], status: :service_unavailable
   end
 
@@ -13,7 +13,7 @@ class LocationSearchesController < ApplicationController
     result = Geocoding::NominatimClient.new.reverse(params[:lat], params[:lng])
 
     render json: result ? { lat: result.lat, lng: result.lng, display_name: result.display_name } : {}, status: result ? :ok : :not_found
-  rescue Geocoding::NominatimClient::RequestFailed, Net::OpenTimeout, Net::ReadTimeout
+  rescue Geocoding::NominatimClient::RequestFailed
     render json: {}, status: :service_unavailable
   end
 end

@@ -20,6 +20,7 @@ export default class extends Controller {
     noMatches: String,
     tileUrl: String,
     tileAttribution: String,
+    canAnnotate: Boolean,
   };
 
   connect() {
@@ -27,6 +28,13 @@ export default class extends Controller {
     this.confirmMapInstance = null;
     this.dragGeneration = 0;
     this.searchGeneration = 0;
+    // What the server actually has saved, so a failed or superseded submit
+    // can restore the picker instead of leaving an unsaved change on screen.
+    this.savedState = {
+      lat: this.latTarget.value,
+      lng: this.lngTarget.value,
+      name: this.nameTarget.value,
+    };
   }
 
   disconnect() {
@@ -71,12 +79,19 @@ export default class extends Controller {
   }
 
   async #fetchSuggestions(query, generation) {
-    const response = await fetch(
-      `/location_searches?q=${encodeURIComponent(query)}`,
-      {
-        headers: { Accept: "application/json" },
-      },
-    );
+    let response;
+    try {
+      response = await fetch(
+        `/location_searches?q=${encodeURIComponent(query)}`,
+        {
+          headers: { Accept: "application/json" },
+        },
+      );
+    } catch {
+      if (generation !== this.searchGeneration) return;
+      this.#renderMessage(this.searchUnavailableValue);
+      return;
+    }
 
     if (generation !== this.searchGeneration) return;
 
@@ -85,7 +100,14 @@ export default class extends Controller {
       return;
     }
 
-    const results = await response.json();
+    let results;
+    try {
+      results = await response.json();
+    } catch {
+      if (generation !== this.searchGeneration) return;
+      this.#renderMessage(this.searchUnavailableValue);
+      return;
+    }
 
     if (generation !== this.searchGeneration) return;
 
@@ -139,9 +161,9 @@ export default class extends Controller {
       attribution: this.tileAttributionValue,
     }).addTo(this.confirmMapInstance);
 
-    this.marker = L.marker([lat, lng], { draggable: true }).addTo(
-      this.confirmMapInstance,
-    );
+    this.marker = L.marker([lat, lng], {
+      draggable: this.canAnnotateValue,
+    }).addTo(this.confirmMapInstance);
     this.marker.on("dragend", () => this.#onDrag());
 
     this.#submitForm();
@@ -152,6 +174,12 @@ export default class extends Controller {
     const { lat, lng } = this.marker.getLatLng();
     this.latTarget.value = lat;
     this.lngTarget.value = lng;
+    // The old name belongs to the old coordinates. Fall back to the raw
+    // position immediately so a failed or no-match lookup can't submit the
+    // new coordinates under the previous place's name.
+    const fallbackName = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    this.nameTarget.value = fallbackName;
+    this.displayTextTarget.textContent = fallbackName;
 
     try {
       const response = await fetch(
@@ -171,18 +199,72 @@ export default class extends Controller {
       }
     } catch {
       // A dropped connection still means the dragged position is real and
-      // has to save -- just without a resolved place name for it.
+      // has to save -- just under the coordinate fallback name set above.
       if (generation !== this.dragGeneration) return;
     }
 
     this.#submitForm();
   }
 
+  // Picking a suggestion and then immediately dragging the pin (or any two
+  // rapid changes) could otherwise have two PATCHes in flight together, with
+  // no guarantee the server applies them in the order the user made the
+  // changes. Queuing so the next submit's request isn't even sent until the
+  // previous one's response has landed removes that race at its source:
+  // each queued attempt still gets its own save/restore in the order it was
+  // made, even if a later change is already queued behind it by the time
+  // its response arrives.
   #submitForm() {
     const form = this.element.closest("form");
     const controllers = (form?.dataset.controller || "").split(/\s+/);
-    if (form && controllers.includes("auto-submit-form")) {
+    if (!form || !controllers.includes("auto-submit-form")) return;
+
+    const attempted = {
+      lat: this.latTarget.value,
+      lng: this.lngTarget.value,
+      name: this.nameTarget.value,
+    };
+
+    this.submitQueue = (this.submitQueue ?? Promise.resolve()).then(() =>
+      this.#performSubmit(form, attempted),
+    );
+  }
+
+  #performSubmit(form, attempted) {
+    return new Promise((resolve) => {
+      const onSubmitEnd = (event) => {
+        form.removeEventListener("turbo:submit-end", onSubmitEnd);
+        // The controller can be gone by the time this fires (navigated
+        // away, frame torn down) -- nothing left here to save or restore.
+        if (this.element.isConnected) {
+          if (event.detail.success) {
+            this.savedState = attempted;
+          } else {
+            this.#restore(this.savedState);
+          }
+        }
+        resolve();
+      };
+      form.addEventListener("turbo:submit-end", onSubmitEnd);
       form.requestSubmit();
+    });
+  }
+
+  #restore(state) {
+    this.latTarget.value = state.lat;
+    this.lngTarget.value = state.lng;
+    this.nameTarget.value = state.name;
+
+    if (state.lat && state.lng) {
+      this.displayTextTarget.textContent = state.name;
+      this.displayTarget.classList.remove("hidden");
+      this.searchTarget.classList.add("hidden");
+    } else {
+      this.displayTarget.classList.add("hidden");
+      this.searchTarget.classList.remove("hidden");
     }
+    this.confirmMapTarget.classList.add("hidden");
+    this.confirmMapInstance?.remove();
+    this.confirmMapInstance = null;
   }
 }

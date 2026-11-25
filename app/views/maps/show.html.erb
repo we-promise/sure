@@ -47,7 +47,7 @@
           data-map-target="item"
           data-lat="<%= point[:lat] %>"
           data-lng="<%= point[:lng] %>"
-          data-action="mouseenter->map#highlight mouseleave->map#unhighlight"
+          data-action="mouseenter->map#highlight mouseleave->map#unhighlight focusin->map#highlight focusout->map#unhighlight"
           data-map-id-param="<%= point[:id] %>">
           <%= link_to point[:transaction_path], class: "flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-container-hover" do %>
             <div class="min-w-0">

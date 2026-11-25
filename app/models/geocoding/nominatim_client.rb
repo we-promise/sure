@@ -48,6 +48,10 @@ class Geocoding::NominatimClient
       "geocoding/nominatim/#{action}/#{Digest::SHA256.hexdigest(value.to_s)}"
     end
 
+    # Callers only need to rescue RequestFailed: every way this can fail --
+    # a bad HTTP status, a connection that never completes, or a response
+    # that isn't valid JSON -- collapses to the one error type here, so
+    # callers don't each need their own list of network exception classes.
     def get(path, params)
       uri = URI("#{BASE_URL}#{path}")
       uri.query = URI.encode_www_form(params)
@@ -67,5 +71,7 @@ class Geocoding::NominatimClient
       raise RequestFailed, "Nominatim returned #{response.code}" unless response.is_a?(Net::HTTPSuccess)
 
       JSON.parse(response.body)
+    rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED, JSON::ParserError => e
+      raise RequestFailed, "Nominatim request failed: #{e.class}: #{e.message}"
     end
 end

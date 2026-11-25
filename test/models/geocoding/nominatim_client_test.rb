@@ -74,4 +74,20 @@ class Geocoding::NominatimClientTest < ActiveSupport::TestCase
     end
     assert_match(/500/, error.message)
   end
+
+  test "search raises RequestFailed when the connection itself fails" do
+    stub_request(:get, /nominatim.openstreetmap.org\/search/).to_raise(SocketError)
+
+    assert_raises(Geocoding::NominatimClient::RequestFailed) do
+      @client.search("anywhere")
+    end
+  end
+
+  test "search raises RequestFailed on a non-JSON response body" do
+    stub_request(:get, /nominatim.openstreetmap.org\/search/).to_return(status: 200, body: "not json")
+
+    assert_raises(Geocoding::NominatimClient::RequestFailed) do
+      @client.search("anywhere")
+    end
+  end
 end
