@@ -575,7 +575,7 @@ pl:
         status:
           complete: Zakończono
           failed: Niepowodzenie
-          in_progress: W toku
+          not_imported: Nie zaimportowano
           revert_failed: Nie udało się cofnąć
           reverting: Cofanie
           uploading: Przetwarzanie wierszy

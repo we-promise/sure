@@ -444,7 +444,7 @@ id:
           document_import: "Dokumen"
           sure_import: "Sure"
         status:
-          in_progress: Sedang berlangsung
+          not_imported: Tidak diimpor
           uploading: Memproses baris
           reverting: Mengembalikan
           revert_failed: Pengembalian gagal

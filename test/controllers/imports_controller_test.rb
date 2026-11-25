@@ -18,6 +18,21 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # A pending import has not been published yet or was reverted. Nothing runs
+  # for it, so its status must not read as work in progress.
+  test "index labels a pending import as not imported" do
+    import = imports(:transaction)
+    assert import.pending?
+
+    get imports_url
+
+    assert_response :success
+    assert_select "#" + dom_id(import) do
+      assert_select "td", text: I18n.t("imports.table.row.status.not_imported")
+      assert_select "td", text: "In progress", count: 0
+    end
+  end
+
   test "gets new" do
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])

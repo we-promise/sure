@@ -286,7 +286,7 @@ hu:
           document_import: "Dokumentum"
           sure_import: "Sure"
         status:
-          in_progress: Folyamatban
+          not_imported: Nincs importálva
           uploading: Sorok feldolgozása
           reverting: Visszavonás folyamatban
           revert_failed: Visszavonás sikertelen

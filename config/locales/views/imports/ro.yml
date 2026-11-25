@@ -56,7 +56,7 @@ ro:
         actions: Acțiuni
       row:
         status:
-          in_progress: În curs
+          not_imported: Neimportat
           uploading: Se procesează rândurile
           reverting: Se anulează
           revert_failed: Anulare eșuată

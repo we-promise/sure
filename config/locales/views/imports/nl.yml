@@ -392,7 +392,7 @@ nl:
           document_import: "Document"
           sure_import: "Sure"
         status:
-          in_progress: "Bezig"
+          not_imported: "Niet geïmporteerd"
           uploading: "Rijen verwerken"
           reverting: "Terugdraaien"
           revert_failed: "Terugdraaien mislukt"

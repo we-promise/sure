@@ -521,7 +521,7 @@ tr:
         status:
           complete: Tamamlandı
           failed: Başarısız
-          in_progress: Devam ediyor
+          not_imported: İçe aktarılmadı
           revert_failed: Geri alma başarısız
           reverting: Geri alınıyor
           uploading: Satırlar işleniyor

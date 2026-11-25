@@ -74,7 +74,7 @@ pt-BR:
         actions: Ações
       row:
         status:
-          in_progress: Em andamento
+          not_imported: Não importado
           uploading: Processando linhas
           reverting: Revertendo
           revert_failed: Falha na reversão

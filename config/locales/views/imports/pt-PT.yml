@@ -398,7 +398,7 @@ pt-PT:
           document_import: "Documento"
           sure_import: "Sure"
         status:
-          in_progress: Em curso
+          not_imported: Não importado
           uploading: A processar linhas
           reverting: A reverter
           revert_failed: A reversão falhou

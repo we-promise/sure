@@ -469,7 +469,7 @@ en:
           document_import: "Document"
           sure_import: "Sure"
         status:
-          in_progress: In progress
+          not_imported: Not imported
           uploading: Processing rows
           reverting: Reverting
           revert_failed: Revert failed
