@@ -267,7 +267,9 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
         budgeted_spending: 50,
         currency: family.currency
       )
-      import = family.imports.create!(type: "TransactionImport", status: "pending")
+      account_statement = create_account_statement!(family: family, account: account, label: label)
+      # The import carries the statement, as the assistant's statement import does.
+      import = family.imports.create!(type: "TransactionImport", status: "pending", account_statement: account_statement)
       import_row = import.rows.create!(
         source_row_number: 1,
         date: Date.current.strftime(import.date_format),
@@ -278,7 +280,6 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
       import_mapping = Import::AccountMapping.create!(import: import, key: "#{label} Checking", mappable: account)
       family_export = family.family_exports.create!(status: "completed")
       family_export.export_file.attach(io: StringIO.new("zip"), filename: "#{safe_label}.zip", content_type: "application/zip")
-      account_statement = create_account_statement!(family: family, account: account, label: label)
       plaid_item = family.plaid_items.create!(
         name: "#{label} Plaid Item",
         plaid_id: "plaid_item_#{safe_label}_#{family.id.delete("-")}",
