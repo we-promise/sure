@@ -8,6 +8,7 @@ fr:
       subtitle: "%{address}"
       title: Quel réseau ?
     destroy:
+      disconnect_bitcoin_first: Déconnectez les portefeuilles Bitcoin ou annulez leur configuration depuis leurs comptes respectifs avant de supprimer cette connexion.
       success: Suppression de la connexion en autoconservation planifiée.
     disconnect_asset:
       success: Suivi de %{symbol} arrêté. Son compte et son historique ont été conservés.

@@ -8,6 +8,7 @@ tr:
       subtitle: '%{address}'
       title: Hangi ağ?
     destroy:
+      disconnect_bitcoin_first: Bu bağlantıyı silmeden önce Bitcoin cüzdanlarının bağlantısını ilgili hesaplardan kesin veya kurulumlarını iptal edin.
       success: Gözetimsiz cüzdan bağlantısı silinmek üzere zamanlandı.
     disconnect_asset:
       success: '%{symbol} takibi durduruldu. Hesabı ve geçmişi korundu.'

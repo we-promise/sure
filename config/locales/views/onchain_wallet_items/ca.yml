@@ -8,6 +8,7 @@ ca:
       subtitle: '%{address}'
       title: Quina xarxa?
     destroy:
+      disconnect_bitcoin_first: Desconnecta les carteres de Bitcoin o cancel·la’n la configuració des dels comptes corresponents abans de suprimir aquesta connexió.
       success: S'ha programat l'eliminació de la connexió de cartera autocustodiada.
     disconnect_asset:
       success: S'ha deixat de seguir %{symbol}. Se n'han conservat el compte i l'historial.

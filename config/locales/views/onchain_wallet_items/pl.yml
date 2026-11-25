@@ -9,6 +9,7 @@ pl:
       subtitle: "%{address}"
       title: Która sieć?
     destroy:
+      disconnect_bitcoin_first: Odłącz portfele Bitcoin lub anuluj ich konfigurację na poszczególnych kontach przed usunięciem tego połączenia.
       success: Zaplanowano usunięcie połączenia portfela własnego.
     disconnect_asset:
       success: Zatrzymano śledzenie %{symbol}. Konto i historia zostały zachowane.

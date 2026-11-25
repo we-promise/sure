@@ -8,6 +8,7 @@ de:
       subtitle: "%{address}"
       title: Welches Netzwerk?
     destroy:
+      disconnect_bitcoin_first: Trenne die Bitcoin-Wallets in den jeweiligen Konten oder brich dort die Einrichtung ab, bevor du diese Verbindung löschst.
       success: Die Verbindung zu selbstverwahrten Wallets wurde zum Löschen eingeplant.
     disconnect_asset:
       success: "%{symbol} wird nicht mehr verfolgt. Das Konto und der Verlauf bleiben erhalten."
