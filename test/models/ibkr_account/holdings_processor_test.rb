@@ -223,6 +223,16 @@ class IbkrAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal 30, holdings_by_ticker.fetch("AAPL").qty
   end
 
+  test "lot rows are kept when their summary row reports no position" do
+    process_report!(<<~XML)
+      #{open_position_xml("SUMMARY", position: "0", cost_basis_price: "100.00", mark_price: "150.00")}
+      #{open_position_xml("LOT", position: "10", cost_basis_price: "90.00", mark_price: "150.00")}
+      #{open_position_xml("LOT", position: "20", cost_basis_price: "105.00", mark_price: "150.00")}
+    XML
+
+    assert_equal 30, holdings_by_ticker.fetch("AAPL").qty
+  end
+
   test "rows without a level of detail are all counted, as before" do
     process_report!(<<~XML)
       #{open_position_xml(nil, position: "10", cost_basis_price: "90.00", mark_price: "150.00")}

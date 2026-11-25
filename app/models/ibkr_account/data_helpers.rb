@@ -149,8 +149,8 @@ module IbkrAccount::DataHelpers
     # For each bond with rows of this kind (:positions or :trades) whose price
     # was moved off the quoted one: its ticker, its unit and the factors the
     # prices were multiplied by. What a debug entry reports.
-    def bond_unit_disagreements(kind)
-      rows = kind == :positions ? without_covered_lots(raw_position_rows).select { |row| row[:side].to_s == "Long" } : raw_trade_rows
+    def bond_unit_disagreements(kind, &summary_stands)
+      rows = kind == :positions ? without_covered_lots(raw_position_rows, &summary_stands).select { |row| row[:side].to_s == "Long" && (summary_stands.nil? || summary_stands.call(row)) } : raw_trade_rows
       factors = bond_rows(rows).map { |row| [ bond_ticker(row), price_scale(row) ] }
       factors.group_by(&:first).filter_map do |ticker, pairs|
         moved = pairs.map(&:last).reject { |scale| (scale - 1).abs <= BOND_PRICE_TOLERANCE }

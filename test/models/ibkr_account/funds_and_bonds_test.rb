@@ -359,6 +359,23 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("100"), holding_for(BOND_TICKER).qty
   end
 
+  test "a bond's lot rows are reported when their summary row cannot be imported" do
+    summary = @statement[:open_positions].find { |row| row["asset_category"] == "BOND" }
+    per_unit_position!
+    lots = [ [ "4000", "3940.00" ], [ "6000", "5910.00" ] ].map do |position, value|
+      summary.merge("level_of_detail" => "LOT", "position" => position, "position_value" => value)
+    end
+    summary.merge!("level_of_detail" => "SUMMARY", "cost_basis_price" => "N/A")
+    @statement[:open_positions].concat(lots)
+
+    process!
+
+    bond = holding_for(BOND_TICKER)
+    assert_equal [ BigDecimal("100"), BigDecimal("9850") ], [ bond.qty, bond.amount ]
+    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions priced to their reported value")
+    assert_equal 2, entry.metadata["bonds"].sole["differing_rows"]
+  end
+
   test "a short bond position, which is not imported, is not reported" do
     short = @statement[:open_positions].find { |row| row["asset_category"] == "BOND" }
     @statement[:open_positions].delete(short)

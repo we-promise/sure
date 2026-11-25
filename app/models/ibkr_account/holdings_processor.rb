@@ -240,7 +240,7 @@ class IbkrAccount::HoldingsProcessor
     # unit, or principal-adjusted) has its price carried to the value, which
     # the holding's price shows.
     def capture_bond_unit_disagreements
-      disagreements = bond_unit_disagreements(:positions)
+      disagreements = bond_unit_disagreements(:positions) { |row| importable?(row) }
       return if disagreements.empty?
 
       DebugLogEntry.capture(
@@ -257,7 +257,8 @@ class IbkrAccount::HoldingsProcessor
 
     # A summary row stands for its lots only if it would be imported itself.
     def importable?(row)
-      supported_position?(row) && %i[position cost_basis_price mark_price].all? { |key| parse_decimal(row[key]) }
+      supported_position?(row) && %i[position cost_basis_price mark_price].all? { |key| parse_decimal(row[key]) } &&
+        !parse_decimal(row[:position]).zero?
     end
 
     def supported_position?(row)
