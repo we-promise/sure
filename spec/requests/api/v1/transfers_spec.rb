@@ -98,6 +98,10 @@ RSpec.describe 'API V1 Transfers', type: :request do
       response '200', 'transfers listed' do
         schema '$ref' => '#/components/schemas/TransferDecisionCollection'
 
+        # Without it rswag sends `status=` (the integration session's own
+        # #status is nil), which the API rejects as an empty filter.
+        let(:status) { 'confirmed' }
+
         run_test!
       end
 

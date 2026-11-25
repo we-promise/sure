@@ -157,6 +157,27 @@ class Api::V1::RulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "record_not_found", json_response["error"]
   end
 
+  test "should filter rules by inactive status" do
+    inactive_rule = @family.rules.build(name: "Inactive", resource_type: "transaction", active: false)
+    inactive_rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "ignore")
+    inactive_rule.actions.build(action_type: "set_transaction_name", value: "Ignore")
+    inactive_rule.save!
+
+    get api_v1_rules_url, params: { active: "FALSE", resource_type: "transaction" }, headers: api_headers(@api_key)
+    assert_response :success
+
+    rule_ids = JSON.parse(response.body)["data"].map { |rule| rule["id"] }
+    assert_includes rule_ids, inactive_rule.id
+    assert_not_includes rule_ids, @rule.id
+  end
+
+  test "should reject an empty resource type filter" do
+    get api_v1_rules_url, params: { resource_type: "" }, headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "resource_type must be one of: transaction", JSON.parse(response.body)["message"]
+  end
+
   private
 
     def api_key_without_read_scope
