@@ -199,9 +199,11 @@ class Transaction::Search
   # Filters the web list leaves at their defaults; the API sets them.
   attribute :exclude_split_parents, :boolean, default: true
   attribute :excluded, :boolean
-  # Exact ids: nil is no filter, an empty list matches nothing (unlike the web
-  # form's account_ids above, where an empty list is no filter). A single id
-  # and its list (account_id and account_ids...) both apply.
+  # Exact ids. In category_ids, merchant_ids and tag_ids nil is no filter and
+  # an empty list matches nothing. The API's account list goes into the web
+  # form's account_ids above, where an empty list is no filter too; the API's
+  # list reader never returns []. A single id and its list (account_id with
+  # account_ids, category_id with category_ids...) must both match.
   attribute :account_id, :string
   attribute :category_id, :string
   attribute :merchant_id, :string

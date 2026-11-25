@@ -1391,6 +1391,15 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     end
   end
 
+  # The API passes its account list into the web form's account_ids; the
+  # API's reader never hands over [], so only Ruby callers see the difference.
+  test "account_ids is the web form's list, where an empty list is no filter" do
+    mine = create_transaction(account: @checking_account)
+
+    assert_equal search_ids(account_ids: nil), search_ids(account_ids: [])
+    assert_includes search_ids(account_ids: []), mine.entryable_id
+  end
+
   test "account_id, category_id and merchant_id narrow their lists, so both must match" do
     other_account = accounts(:credit_card)
     mine = create_transaction(account: @checking_account, category: categories(:food_and_drink), merchant: merchants(:netflix))
