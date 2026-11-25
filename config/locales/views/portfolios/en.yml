@@ -51,6 +51,7 @@ en:
       max_drawdown: Max drawdown
       max_drawdown_hint: Largest peak-to-trough fall within the period.
       mwr: Money-weighted return (period)
+      mwr_ambiguous_hint: The money paid in and taken out changes direction more than once, so more than one rate can fit these flows. This is one of them.
       mwr_hint: Money-weighted, over the period. It reflects when money was invested, so money that arrived part-way through is expressed over the whole period — which is why this can differ from a broker's holding-period figure.
       rate_missing: An exchange rate was missing for part of this period, so affected figures are withheld rather than converted at parity.
       suppressed_days:

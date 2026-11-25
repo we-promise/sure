@@ -249,6 +249,33 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Flows that change sign more than once can fit more than one rate, and the
+  # figure is one of them. Both money-weighted cards say so when the solve
+  # flags it, and neither does otherwise.
+  test "both money-weighted cards say when the rate may be one of several" do
+    Portfolio::Performance.any_instance.stubs(:money_weighted_return).returns(BigDecimal("0.21"))
+    Portfolio::Performance.any_instance.stubs(:annualized_money_weighted_return).returns(BigDecimal("0.4"))
+    Portfolio::Performance.any_instance.stubs(:rate_missing?).returns(false)
+    Portfolio::Performance.any_instance.stubs(:suppressed_dates).returns([])
+    note = I18n.t("portfolios.performance.mwr_ambiguous_hint")
+    mwr_labels = [ I18n.t("portfolios.performance.mwr"), I18n.t("portfolios.performance.annualized_mwr") ]
+    noted_cards = lambda do
+      css_select("#portfolio-performance .grid > div").select { |card| card.text.include?(note) }.map { |card| card.at_css("span").text.strip }
+    end
+
+    Portfolio::Performance.any_instance.stubs(:money_weighted_return_ambiguous?).returns(false)
+    get portfolio_path
+    assert_empty noted_cards.call, "an unambiguous rate carries no note"
+
+    Portfolio::Performance.any_instance.stubs(:money_weighted_return_ambiguous?).returns(true)
+    get portfolio_path
+    assert_equal mwr_labels, noted_cards.call
+
+    %i[en de].each do |locale|
+      assert_match(/more than one|mehrere/i, I18n.t("portfolios.performance.mwr_ambiguous_hint", locale: locale), locale)
+    end
+  end
+
   # "Left out" is true of the chained TWR and of nothing else on this section. A
   # suppressed day keeps its place in the series: volatility counts it as an
   # observation of zero, and its flows stay in the money-weighted series. Three
