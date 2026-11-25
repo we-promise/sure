@@ -114,20 +114,4 @@ class Api::V1::FamilyExportsController < Api::V1::BaseController
     def unsupported_create_params?
       params.except(:controller, :action, :format).present?
     end
-
-    def safe_page_param
-      page = params[:page].to_i
-      page > 0 ? page : 1
-    end
-
-    def safe_per_page_param
-      per_page = params[:per_page].to_i
-
-      case per_page
-      when 1..100
-        per_page
-      else
-        25
-      end
-    end
 end

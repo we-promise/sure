@@ -23,7 +23,9 @@ The `GET /api/v1/imports` endpoint supports the following query parameters:
 | `page` | integer | Page number (default: 1) |
 | `per_page` | integer | Items per page (default: 25, max: 100) |
 | `status` | string | Filter by status: `pending`, `importing`, `complete`, `failed`, `reverting`, `revert_failed` |
-| `type` | string | Filter by import type: `TransactionImport`, `TradeImport`, etc. |
+| `type` | string | Filter by import type: `TransactionImport`, `TradeImport`, etc. The full list is in [`openapi.yaml`](openapi.yaml). |
+
+Values are exact and case-sensitive. An unknown or empty `status` or `type` returns `422` with `error: "validation_failed"`.
 
 ## Import object
 

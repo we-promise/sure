@@ -9,22 +9,11 @@ class Api::V1::ImportsController < Api::V1::BaseController
   before_action :reject_guest_family_config_import!, only: [ :create ]
   before_action :set_import_with_rows, only: [ :show ]
   before_action :set_import, only: [ :rows ]
+  before_action :set_search, only: [ :index ]
 
   def index
-    imports_query = import_scope.ordered
-
-    # Apply filters
-    if params[:status].present?
-      imports_query = imports_query.where(status: params[:status])
-    end
-
-    if params[:type].present?
-      imports_query = imports_query.where(type: params[:type])
-    end
-
-    # Pagination
     @pagy, @imports = pagy(
-      imports_query,
+      @search.imports_scope.ordered,
       page: safe_page_param,
       limit: safe_per_page_param
     )
@@ -211,6 +200,13 @@ class Api::V1::ImportsController < Api::V1::BaseController
       @import = import_scope.includes(:rows).find(params[:id])
     rescue ActiveRecord::RecordNotFound
       render_import_not_found
+    end
+
+    def set_search
+      @search = Import::Search.new(import_scope, filters: {
+        status: enum_filter_param(:status, Import.statuses.keys),
+        type: enum_filter_param(:type, Import::TYPES)
+      })
     end
 
     def import_scope
@@ -431,15 +427,5 @@ class Api::V1::ImportsController < Api::V1::BaseController
       end
 
       [ content, filename, content_type ]
-    end
-
-    def safe_page_param
-      page = params[:page].to_i
-      page > 0 ? page : 1
-    end
-
-    def safe_per_page_param
-      per_page = params[:per_page].to_i
-      (1..100).include?(per_page) ? per_page : 25
     end
 end

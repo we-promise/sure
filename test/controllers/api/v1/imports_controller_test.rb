@@ -104,6 +104,54 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @import.complete? || @import.failed? || @import.revert_failed?, import_data["status_detail"]["terminal"]
   end
 
+  test "filters imports by status and type" do
+    get api_v1_imports_url, params: { status: "complete", type: "PdfImport" }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal [ imports(:pdf_processed).id ], JSON.parse(response.body)["data"].map { |data| data["id"] }
+  end
+
+  test "rejects an unknown status or type" do
+    {
+      status: "done",
+      type: "transactionimport"
+    }.each do |key, value|
+      get api_v1_imports_url, params: { key => value }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity
+      body = JSON.parse(response.body)
+      assert_equal "validation_failed", body["error"]
+      assert_match(/\A#{key} must be one of: /, body["errors"].sole)
+    end
+  end
+
+  test "rejects an empty status filter" do
+    get api_v1_imports_url, params: { status: "" }, headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+  end
+
+  test "filters keep imports of statements the member cannot view hidden" do
+    member_key = read_only_key_for(users(:family_member))
+    private_import = pdf_import_with_row(account: accounts(:investment))
+    shared_import = pdf_import_with_row(account: accounts(:depository))
+
+    get api_v1_imports_url, params: { type: "PdfImport", per_page: 100 }, headers: api_headers(member_key)
+
+    assert_response :success
+    listed_ids = JSON.parse(response.body)["data"].map { |import| import["id"] }
+    assert_includes listed_ids, shared_import.id
+    assert_not_includes listed_ids, private_import.id
+  end
+
+  test "caps per_page at 100 on imports and their rows" do
+    get api_v1_imports_url, params: { per_page: 150 }, headers: api_headers(@api_key)
+    assert_equal 100, JSON.parse(response.body)["meta"]["per_page"]
+
+    get rows_api_v1_import_url(@diagnostic_import), params: { per_page: 150 }, headers: api_headers(@api_key)
+    assert_equal 100, JSON.parse(response.body)["meta"]["per_page"]
+  end
+
   test "should show import" do
     get api_v1_import_url(@import), headers: api_headers(@api_key)
     assert_response :success

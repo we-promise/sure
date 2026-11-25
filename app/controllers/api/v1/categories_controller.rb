@@ -7,15 +7,11 @@ class Api::V1::CategoriesController < Api::V1::BaseController
   before_action :ensure_write_scope, only: :create
   before_action :reject_guest_writes!, only: :create
   before_action :set_category, only: :show
+  before_action :set_search, only: :index
 
   def index
-    family = current_resource_owner.family
-    categories_query = family.categories.includes(:parent, :subcategories).alphabetically
+    categories_query = @search.categories_scope.includes(:parent, :subcategories).alphabetically
 
-    # Apply filters
-    categories_query = apply_filters(categories_query)
-
-    # Handle pagination with Pagy
     @pagy, @categories = pagy(
       categories_query,
       page: safe_page_param,
@@ -106,33 +102,10 @@ class Api::V1::CategoriesController < Api::V1::BaseController
       permitted
     end
 
-    def apply_filters(query)
-      # Filter for root categories only (no parent)
-      if params[:roots_only].present? && ActiveModel::Type::Boolean.new.cast(params[:roots_only])
-        query = query.roots
-      end
-
-      # Filter by parent_id
-      if params[:parent_id].present?
-        query = query.where(parent_id: params[:parent_id])
-      end
-
-      query
-    end
-
-    def safe_page_param
-      page = params[:page].to_i
-      page > 0 ? page : 1
-    end
-
-    def safe_per_page_param
-      per_page = params[:per_page].to_i
-
-      case per_page
-      when 1..100
-        per_page
-      else
-        25
-      end
+    def set_search
+      @search = Category::Search.new(current_resource_owner.family.categories, filters: {
+        roots_only: boolean_filter_param(:roots_only),
+        parent_id: uuid_filter_param(:parent_id)
+      })
     end
 end
