@@ -51,9 +51,9 @@ class Trading212Account::HoldingsProcessor
       amount = quantity * price
       date   = Date.current
 
-      external_id = "trading212_position_#{@trading212_account.trading212_account_id}_#{t212_ticker}_#{date}"
+      external_id = "#{position_external_id_prefix(t212_ticker)}#{date}"
 
-      import_adapter.import_holding(
+      holding = import_adapter.import_holding(
         security:           security,
         quantity:           quantity,
         amount:             amount,
@@ -66,6 +66,8 @@ class Trading212Account::HoldingsProcessor
         account_provider_id: @trading212_account.account_provider&.id,
         delete_future_holdings: false
       )
+
+      carry_locked_cost_basis(holding, t212_ticker)
     rescue => e
       DebugLogEntry.capture(
         category: "sync",
@@ -75,6 +77,27 @@ class Trading212Account::HoldingsProcessor
         family: @trading212_account.trading212_item.family,
         provider_key: "trading212",
         metadata: { ticker: t212_ticker, trading212_account_id: @trading212_account.id }
+      )
+    end
+
+    def position_external_id_prefix(t212_ticker)
+      "trading212_position_#{@trading212_account.trading212_account_id}_#{t212_ticker}_"
+    end
+
+    def carry_locked_cost_basis(holding, t212_ticker)
+      return if holding.nil? || holding.cost_basis_locked?
+
+      previous = account.holdings
+        .where("holdings.external_id LIKE ?", "#{Holding.sanitize_sql_like(position_external_id_prefix(t212_ticker))}%")
+        .where("holdings.date < ?", holding.date)
+        .order(date: :desc)
+        .first
+      return unless previous&.cost_basis_locked? && previous.security_id != holding.security_id
+
+      holding.update!(
+        cost_basis: previous.cost_basis,
+        cost_basis_source: previous.cost_basis_source,
+        cost_basis_locked: true
       )
     end
 end

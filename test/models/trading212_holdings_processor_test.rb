@@ -127,6 +127,39 @@ class Trading212HoldingsProcessorTest < ActiveSupport::TestCase
     assert_not_nil @account.holdings.find_by(security: security)
   end
 
+  test "processor keeps a locked cost basis when a position moves to its shortName" do
+    @trading212_account.update!(
+      raw_positions_payload: [
+        {
+          "instrument" => {
+            "ticker" => "GARENA_US_EQ",
+            "name" => "Sea",
+            "currency" => "USD"
+          },
+          "quantity" => "12",
+          "currentPrice" => "120.00",
+          "averagePricePaid" => "90.00"
+        }
+      ]
+    )
+    day_one = 2.days.ago
+    day_two = day_one + 1.day
+
+    travel_to(day_one) { Trading212Account::HoldingsProcessor.new(@trading212_account).process }
+    @account.holdings.find_by!(security: Security.find_by!(ticker: "GARENA")).set_manual_cost_basis!(85)
+
+    @trading212_item.update!(raw_instruments_payload: [
+      { "ticker" => "GARENA_US_EQ", "shortName" => "SE", "name" => "Sea", "currencyCode" => "USD" }
+    ])
+    @trading212_account.reload
+    travel_to(day_two) { Trading212Account::HoldingsProcessor.new(@trading212_account).process }
+
+    holding = @account.holdings.find_by!(date: day_two.to_date)
+    assert_equal "SE", holding.security.ticker
+    assert holding.cost_basis_locked?
+    assert_equal BigDecimal("85"), holding.cost_basis
+  end
+
   test "processor skips position with blank ticker" do
     @trading212_account.update!(
       raw_positions_payload: [
