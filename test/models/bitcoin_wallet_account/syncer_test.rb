@@ -97,17 +97,21 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
   end
 
   test "a failed account enqueue leaves the published journal and its window for a later refresh" do
-    @wallet.update!(status: :preview, last_synced_at: Time.current)
-    @wallet.connect!
-    movement_date = Date.current - 3.days
-    @wallet.update!(baseline_at: 1.week.ago)
+    travel_to 1.week.ago do
+      @wallet.security.prices.create!(date: Date.current, currency: "USD", price: 10_000)
+      @wallet.update!(status: :preview, last_synced_at: Time.current, baseline_block_height: 99)
+      @wallet.connect!
+    end
+    movement_at = 3.days.ago
+    movement_date = movement_at.to_date
     @wallet.security.prices.find_or_create_by!(date: movement_date, currency: "USD") { |price| price.price = 10_000 }
-    movement = bitcoin_transaction(confirmed: false, outputs: [ [ RECEIVE, 100 ] ])
-    @wallet.bitcoin_wallet_transactions.create!(txid: movement.fetch("txid"), amount_sats: 100,
-      occurred_at: 3.days.ago, confirmed: false, present: true)
-    @provider.transactions[RECEIVE] = [ movement ]
+    @provider.fund(RECEIVE, 100)
+    @provider.transactions[RECEIVE] = [ bitcoin_transaction(time: movement_at, outputs: [ [ RECEIVE, 100 ] ]) ]
     sync = @wallet.syncs.create!
-    SyncJob.queue_adapter.expects(:enqueue).raises(IOError, "queue unavailable")
+    SyncJob.queue_adapter.expects(:enqueue).with do |job|
+      child = job.arguments.first
+      job.is_a?(SyncJob) && child.parent_id == sync.id && child.syncable == @wallet.account
+    end.raises(IOError, "queue unavailable")
 
     assert_raises(IOError) { BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform_sync(sync) }
     SyncJob.queue_adapter.unstub(:enqueue)
@@ -118,6 +122,7 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     retry_sync = @wallet.syncs.create!
     BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform_sync(retry_sync)
     account_sync = retry_sync.children.sole
+    assert_enqueued_with(job: SyncJob, args: [ account_sync ])
     assert_equal movement_date, account_sync.window_start_date
     assert_equal entry.id, @wallet.account.entries.find_by!(source: "bitcoin_wallet").id
 

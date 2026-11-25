@@ -4,10 +4,11 @@ class Holding::ForwardCalculator
   attr_reader :account
 
   # Track journal basis before the requested window and carry dated untraded snapshots.
-  def initialize(account, security_ids: nil, window_start_date: nil)
+  def initialize(account, security_ids: nil, window_start_date: nil, position_start_dates: {})
     @account = account
     @security_ids = security_ids
     @window_start_date = window_start_date
+    @position_start_dates = position_start_dates
     @carry_holdings = account.accounting_start_date.present?
     # The lots of each security, which also give the weighted-average cost
     # basis, relieving sells so the figure stays correct after a position is
@@ -75,6 +76,10 @@ class Holding::ForwardCalculator
       return if index.zero?
 
       snapshot = snapshots[index - 1]
+      # Position-only providers can restate prior quantities through journal corrections.
+      starts_on = @position_start_dates[snapshot.account_provider_id]
+      return if starts_on && snapshot.date >= starts_on && snapshot.date < Date.current
+
       return snapshot if snapshot.date == date
 
       @first_trade_dates ||= portfolio_cache.get_trades.each_with_object({}) do |entry, dates|

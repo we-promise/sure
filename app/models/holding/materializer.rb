@@ -440,7 +440,8 @@ class Holding::Materializer
         portfolio_snapshot = Holding::PortfolioSnapshot.new(account)
         Holding::ReverseCalculator.new(account, portfolio_snapshot: portfolio_snapshot, security_ids: security_ids)
       else
-        Holding::ForwardCalculator.new(account, security_ids: security_ids, window_start_date: @window_start_date)
+        Holding::ForwardCalculator.new(account, security_ids: security_ids, window_start_date: @window_start_date,
+          position_start_dates: @position_start_dates)
       end
     end
 end
