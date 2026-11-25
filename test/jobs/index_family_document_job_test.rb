@@ -89,6 +89,18 @@ class IndexFamilyDocumentJobTest < ActiveJob::TestCase
     assert @document.file.attached?
   end
 
+  test "a busy local host retries with the upload still attached" do
+    @family.expects(:index_document).raises(Ai::Error::Busy, "the local model host is busy")
+    @document.file.expects(:purge).never
+
+    assert_enqueued_with(job: IndexFamilyDocumentJob, args: [ @document ]) do
+      IndexFamilyDocumentJob.perform_now(@document)
+    end
+
+    assert_equal "pending", @document.reload.status
+    assert @document.file.attached?
+  end
+
   test "sends nothing when embed is no longer available" do
     use_ai_routes(embed: [])
     @family.expects(:index_document).never

@@ -19,15 +19,17 @@ class IndexFamilyDocumentJob < ApplicationJob
       indexed = family.index_document(document, file_content: document.file.download)
       unless indexed
         record_failure(document, family, "vector store refused the upload")
-        purge_file(document)
+        document.purge_file
         return
       end
 
       # An asynchronous store keeps the upload until its poll reaches a terminal status.
-      purge_file(document) if terminal_status?(document)
+      document.purge_file if terminal_status?(document)
+    rescue Ai::Error::Busy
+      raise # ApplicationJob retries a busy local host with the upload left attached.
     rescue StandardError => e
       record_failure(document, family, "#{e.class}: #{e.message}")
-      purge_file(document)
+      document.purge_file
     end
 
     def record_failure(document, family, reason)
@@ -40,10 +42,6 @@ class IndexFamilyDocumentJob < ApplicationJob
         family: family,
         metadata: { family_document_id: document.id }
       )
-    end
-
-    def purge_file(document)
-      document.purge_file
     end
 
     def terminal_status?(document)

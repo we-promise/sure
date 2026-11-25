@@ -88,7 +88,7 @@ module Family::VectorSearchable
     content_type = file.content_type.presence || Marcel::MimeType.for(name: filename)
 
     document = family_documents.new(filename:, content_type:, status: "pending")
-    document.file_size = file.size if file.respond_to?(:size)
+    document.file_size = file.size
     document.file.attach(io: file, filename:, content_type:)
     document.save!
     IndexFamilyDocumentJob.perform_later(document)
