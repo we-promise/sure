@@ -5,6 +5,14 @@ en:
       redis_configured: "Redis is now configured properly! You can now setup your Sure application."
   shared:
     preview: Preview
+    exchange_rate_notes:
+      missing:
+        one: "No exchange rate from %{currencies} to %{currency} is stored yet, so some totals may leave out amounts in %{currencies}."
+        other: "No exchange rates from %{currencies} to %{currency} are stored yet, so some totals may leave out amounts in those currencies."
+      stale:
+        one: "The latest exchange rate to %{currency} is out of date: %{rates}. Today's totals use it."
+        other: "The latest exchange rates to %{currency} are out of date: %{rates}. Today's totals use them."
+      stale_rate: "%{from} from %{date}"
     dot_separator: "·"
     sync_toast:
       message: "New data available"

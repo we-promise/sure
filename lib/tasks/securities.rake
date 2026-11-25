@@ -39,6 +39,7 @@ namespace :securities do
               Holding.where(security_id: security.id).update_all(security_id: canonical.id)
               Trade.where(security_id: security.id).update_all(security_id: canonical.id)
               Security::Price.where(security_id: security.id).update_all(security_id: canonical.id)
+              security.move_taggings_to!(canonical)
 
               # Delete the duplicate
               security.destroy!
@@ -96,6 +97,7 @@ namespace :securities do
             Holding.where(security_id: duplicates).update_all(security_id: canonical.id)
             Trade.where(security_id: duplicates).update_all(security_id: canonical.id)
             Security::Price.where(security_id: duplicates).update_all(security_id: canonical.id)
+            duplicates.each { |duplicate| duplicate.move_taggings_to!(canonical) }
 
             # Delete the duplicates
             duplicates.each(&:destroy!)

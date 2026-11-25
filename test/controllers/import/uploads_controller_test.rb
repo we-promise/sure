@@ -11,6 +11,24 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "sample_csv sends a CSV template for CSV imports" do
+    get import_upload_sample_csv_url(@import)
+
+    assert_response :success
+    assert_equal "text/csv", response.media_type
+  end
+
+  [ PdfImport, QifImport, MonarchImport, SureImport ].each do |import_type|
+    test "sample_csv redirects for #{import_type} without a CSV template" do
+      import = import_type.create!(family: @user.family)
+
+      get import_upload_sample_csv_url(import)
+
+      assert_redirected_to import_upload_url(import)
+      assert_equal "A sample CSV is not available for this import type.", flash[:alert]
+    end
+  end
+
   test "uploads valid csv by copy and pasting" do
     patch import_upload_url(@import), params: {
       import: {
@@ -104,6 +122,19 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_equal I18n.t("imports.create.file_too_large", max_size: configured_limit / 1.megabyte), flash[:alert]
+  end
+
+  # handle_qif_upload runs inside the update action, so its lazy `t(".…")`
+  # lookups resolve under import.uploads.update.
+  test "a QIF file without an account asks for one" do
+    import = QifImport.create!(family: @user.family)
+
+    patch import_upload_url(import), params: {
+      import: { raw_file_str: "!Type:Bank\nD01/15/2024\nT-12.50\nPCoffee\n^\n" }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal "Please select an account for the QIF import", flash[:alert]
   end
 
   test "invalid csv cannot be uploaded" do

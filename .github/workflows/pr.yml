@@ -4,11 +4,24 @@ on:
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths-ignore:
-      - 'charts/**'
+    # Changes only to the Helm chart, the mobile app or the desktop app do
+    # not affect the Rails app; mobile-ci.yml covers the mobile app. The
+    # workflow tests read the two version files below, so they still count.
+    paths:
+      - '**'
+      - '!charts/**'
+      - '!mobile/**'
+      - '!desktop/**'
+      - 'charts/sure/Chart.yaml'
+      - 'mobile/pubspec.yaml'
 
 permissions:
   contents: read
+
+# A new push to a pull request makes the run for the previous head obsolete.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ci:

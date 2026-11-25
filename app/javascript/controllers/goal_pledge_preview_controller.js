@@ -1,5 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
-import evaluateAmountExpression from "utils/evaluate_amount_expression";
+import evaluateAmountExpression, {
+  precisionFromStep,
+} from "utils/evaluate_amount_expression";
 
 // Live impact preview for the record-pledge modal. Reads current balance +
 // target amount from values and updates a preview sentence each keystroke.
@@ -74,7 +76,9 @@ export default class extends Controller {
   // money_field_controller.js).
   #amountValue() {
     if (!this.hasAmountInputTarget) return 0;
-    const parsed = evaluateAmountExpression(this.amountInputTarget.value);
+    const parsed = evaluateAmountExpression(this.amountInputTarget.value, {
+      precision: precisionFromStep(this.amountInputTarget.step),
+    });
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }
 

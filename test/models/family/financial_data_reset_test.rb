@@ -24,11 +24,11 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
     assert User.exists?(@user.id)
   end
 
-  test "provider item associations are limited to explicit syncable family associations" do
+  test "provider item associations are the syncable family associations" do
     associations = Family::FinancialDataReset.provider_item_associations
 
     assert_not_empty associations
-    assert_equal associations, Family::FinancialDataReset::PROVIDER_ITEM_ASSOCIATIONS
+    assert_equal Family::Syncer.syncable_item_associations, associations
     assert associations.all? { |name| name.to_s.end_with?("_items") }
 
     associations.each do |name|
@@ -38,12 +38,6 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
       assert_equal :has_many, reflection.macro
       assert_includes reflection.klass.included_modules, Syncable
     end
-  end
-
-  test "provider item associations cover every syncable family association" do
-    missing = Family::Syncer.syncable_item_associations - Family::FinancialDataReset.provider_item_associations
-
-    assert_empty missing, "reset leaves provider connections behind: #{missing.join(', ')}"
   end
 
   test "sync counts use the family sync scope without double counting" do
@@ -273,7 +267,9 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
         budgeted_spending: 50,
         currency: family.currency
       )
-      import = family.imports.create!(type: "TransactionImport", status: "pending")
+      account_statement = create_account_statement!(family: family, account: account, label: label)
+      # The import carries the statement, as the assistant's statement import does.
+      import = family.imports.create!(type: "TransactionImport", status: "pending", account_statement: account_statement)
       import_row = import.rows.create!(
         source_row_number: 1,
         date: Date.current.strftime(import.date_format),
@@ -284,7 +280,6 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
       import_mapping = Import::AccountMapping.create!(import: import, key: "#{label} Checking", mappable: account)
       family_export = family.family_exports.create!(status: "completed")
       family_export.export_file.attach(io: StringIO.new("zip"), filename: "#{safe_label}.zip", content_type: "application/zip")
-      account_statement = create_account_statement!(family: family, account: account, label: label)
       plaid_item = family.plaid_items.create!(
         name: "#{label} Plaid Item",
         plaid_id: "plaid_item_#{safe_label}_#{family.id.delete("-")}",

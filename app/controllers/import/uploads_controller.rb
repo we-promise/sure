@@ -1,4 +1,5 @@
 class Import::UploadsController < ApplicationController
+  include ViewableImports
   include ImportGuestGuardable
 
   layout "imports"
@@ -10,7 +11,14 @@ class Import::UploadsController < ApplicationController
   end
 
   def sample_csv
-    send_data @import.csv_template.to_csv,
+    template = @import.csv_template if @import.respond_to?(:csv_template)
+
+    unless template
+      redirect_to import_upload_path(@import), alert: t("import.uploads.sample_csv.unavailable", default: "A sample CSV is not available for this import type.")
+      return
+    end
+
+    send_data template.to_csv,
       filename: "#{@import.type.underscore.split('_').first}_sample.csv",
       type: "text/csv",
       disposition: "attachment"
@@ -95,7 +103,7 @@ class Import::UploadsController < ApplicationController
     end
 
     def set_import
-      @import = Current.family.imports.find(params[:import_id])
+      @import = viewable_imports.find(params[:import_id])
     end
 
     def handle_qif_upload

@@ -1,0 +1,15 @@
+---
+zh-CN:
+  demo_family_refresh_mailer:
+    completed:
+      subject: 演示家庭数据刷新已完成
+      activity_heading: 本周期活动统计
+      sessions_label: 上一个演示家庭的独立登录会话数
+      families_label: 新创建的家庭账户数
+      period_heading: 统计周期（UTC）
+      from_label: 开始：
+      to_label: 结束：
+      time_format: "%Y年%-m月%-d日 %H:%M:%S UTC"
+      family_heading: 上一个演示家庭
+      family_not_found: 未找到
+      id_label: ID：

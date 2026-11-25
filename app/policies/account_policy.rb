@@ -9,15 +9,27 @@ class AccountPolicy < ApplicationPolicy
     user.member? || user.admin?
   end
 
+  # Full write tier: owner and full_control.
   def update?
-    permission = record.permission_for(user)
-    permission.in?([ :owner, :full_control ])
+    record.permission_for(user).in?([ :owner, :full_control ])
   end
 
-  # For read_write users: categorize, tag, add notes/receipts on transactions
+  # Annotate tier (categorize, tag, add notes/merchant): the owner plus every
+  # share tier in AccountShare::ANNOTATE_PERMISSIONS.
   def annotate?
     permission = record.permission_for(user)
-    permission.in?([ :owner, :full_control, :read_write ])
+    permission == :owner || permission.to_s.in?(AccountShare::ANNOTATE_PERMISSIONS)
+  end
+
+  # Maps the level names used by controllers (:write, :annotate, :owner) onto
+  # the predicates above, so controller concerns share one mapping.
+  def permits?(level)
+    case level
+    when :write    then update?
+    when :annotate then annotate?
+    when :owner    then record.owned_by?(user)
+    else false
+    end
   end
 
   # Only the owner can delete the account itself.

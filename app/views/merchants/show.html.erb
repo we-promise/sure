@@ -26,7 +26,9 @@
     <h2 class="text-base font-medium text-primary"><%= t(".summary") %></h2>
     <dl class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-10 gap-y-3">
       <%= render DS::DetailRow.new(label: t(".total_transactions"), value: totals.count.to_s, align: :center, value_class: "privacy-sensitive") %>
-      <%= render DS::DetailRow.new(label: t(".total_spending"), value: format_money(@expense_totals.expense_money), align: :center, value_class: "privacy-sensitive") %>
+      <% if @expense_totals %>
+        <%= render DS::DetailRow.new(label: t(".total_spending"), value: format_money(@expense_totals.expense_money), align: :center, value_class: "privacy-sensitive") %>
+      <% end %>
       <% if @average_expense_money %>
         <%= render DS::DetailRow.new(label: t(".average_transaction"), value: format_money(@average_expense_money), align: :center, value_class: "privacy-sensitive") %>
       <% end %>
@@ -36,6 +38,64 @@
       <% end %>
     </dl>
   <% end %>
+
+  <div>
+    <%= form_with url: merchant_path(@merchant),
+          id: "merchant-transactions-search",
+          scope: :q,
+          method: :get,
+          data: { controller: "auto-submit-form" } do |form| %>
+      <%= hidden_field_tag :per_page, params[:per_page] %>
+
+      <div class="flex gap-2">
+        <%= render DS::SearchInput.new(
+              name: "q[search]",
+              value: @q[:search],
+              placeholder: t("transactions.searches.form.search_placeholder"),
+              class: "grow",
+              data: { auto_submit_form_target: "auto" }
+            ) %>
+
+        <%= render DS::Popover.new(variant: "button", no_padding: true) do |popover| %>
+          <% popover.with_button(
+            id: "merchant-filters-button",
+            type: "button",
+            text: t("transactions.searches.form.filter"),
+            variant: "outline",
+            icon: "list-filter"
+          ) %>
+
+          <% popover.with_custom_content do %>
+            <%= render "transactions/searches/menu",
+                  form: form,
+                  exclude: [ "merchant_filter", "ai_filter", "attachment_filter" ],
+                  clear_filters_path: merchant_path(@merchant, per_page: params[:per_page]) %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% filter_badges = @q.except(:amount_operator) %>
+    <% if filter_badges.present? %>
+      <ul id="merchant-transaction-filters" class="flex items-center flex-wrap gap-2 mt-4">
+        <% filter_badges.each do |param_key, param_value| %>
+          <% if param_key == "amount" %>
+            <%= render "transactions/searches/filters/badge",
+                  param_key: "amount",
+                  param_value: "#{transaction_amount_operator_label(@q[:amount_operator])} #{param_value}",
+                  clear_filter_path: clear_filter_merchant_path(@merchant, param_key: "amount", param_value: param_value, **request.query_parameters) %>
+          <% else %>
+            <% Array(param_value).each do |value| %>
+              <%= render "transactions/searches/filters/badge",
+                    param_key: param_key,
+                    param_value: value,
+                    clear_filter_path: clear_filter_merchant_path(@merchant, param_key: param_key, param_value: value, **request.query_parameters) %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </ul>
+    <% end %>
+  </div>
 
   <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: @q, pagy: @pagy, toolbar: false %>
 </div>

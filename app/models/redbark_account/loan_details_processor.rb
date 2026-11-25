@@ -28,8 +28,10 @@ class RedbarkAccount::LoanDetailsProcessor
     return if details.blank?
     return unless details_fetched_this_sync?
 
-    apply_loan_terms
-    apply_rate
+    loan.with_schedule_lock do
+      apply_loan_terms
+      apply_rate
+    end
   end
 
   private

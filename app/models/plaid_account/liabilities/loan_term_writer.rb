@@ -35,11 +35,18 @@ module PlaidAccount::Liabilities::LoanTermWriter
       # loan is applied before its rate is judged, then the rate. Enrichable
       # runs them in one savepoint, so they land together or not at all, and
       # provenance never says Plaid supplied a value the loan rejected.
-      refusal = loan.enrich_attributes_unless_refused(
-        terms,
-        -> { rate_update(loan, rate) unless rate.nil? },
-        source: "plaid"
-      )
+      #
+      # Both run under the loan's schedule lock, which reloads the loan, so
+      # the rate is judged against the schedule a concurrent form or provider
+      # write left rather than the one this sync loaded.
+      refusal = nil
+      loan.with_schedule_lock do
+        refusal = loan.enrich_attributes_unless_refused(
+          terms,
+          -> { rate_update(loan, rate) unless rate.nil? },
+          source: "plaid"
+        )
+      end
       return if refusal.nil?
 
       # Logged after the rollback so the entry is not rolled back with it.

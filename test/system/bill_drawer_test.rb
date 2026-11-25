@@ -113,4 +113,61 @@ class BillDrawerTest < ApplicationSystemTestCase
     assert_no_selector "dialog[open]"
     assert_selector @row_link, focused: true
   end
+
+  # History is the bill drawer's only list of earlier cycles, and the payment
+  # drawer it opens is the only place a payment can be unlinked. The rows were
+  # static text, so a past payment had no route from here at all.
+  test "a settled cycle in history opens its payment drawer and can be unlinked" do
+    settled = settle_past_cycle(months_ago: 2, amount: "80")
+
+    visit bills_url
+    find(@row_link).click
+
+    within("dialog[open]") do
+      scroll_to find("turbo-frame[src*='display=history']")
+      assert_text(/#{I18n.t("bills.detail.history_title")}/i)
+      # The disclosure's title is uppercased by CSS, and Capybara reads the
+      # rendered text, so match the word rather than its stored casing.
+      find("summary", text: /#{Regexp.escape(I18n.t("bills.detail.history"))}/i).click
+      # The summary's own Manage payments action points at this same cycle, so
+      # name the history row by its date instead of the href alone.
+      find("a[href='#{recurring_occurrence_path(settled)}']",
+           text: I18n.l(settled.due_on, format: :long)).click
+
+      assert_link I18n.t("recurring_occurrences.show.unlink")
+      click_on I18n.t("recurring_occurrences.show.unlink")
+    end
+
+    assert_text I18n.t("recurring_allocations.destroy.success")
+    assert_empty settled.reload.allocations.confirmed
+    assert settled.scheduled?, "unlinking the last payment reopens the cycle"
+  end
+
+  # The drawer's verb is chosen for the cycle it is showing. With the next
+  # cycle open that is Find payment, so the bill's settled payments used to be
+  # unreachable from the drawer even though the Manage payments surface is one
+  # level below it.
+  test "an open cycle's drawer offers Manage payments for the last settled cycle" do
+    settled = settle_past_cycle(months_ago: 2, amount: "80")
+
+    visit bills_url(view: "all")
+    find("a[data-turbo-frame='drawer'][href='#{bill_path(@bill)}']", match: :first).click
+
+    within("dialog[open]") do
+      assert_link I18n.t("bills.manage_payments"), href: recurring_occurrence_path(settled)
+      click_on I18n.t("bills.manage_payments")
+      assert_link I18n.t("recurring_occurrences.show.unlink")
+    end
+  end
+
+  private
+    def settle_past_cycle(months_ago:, amount:)
+      due = months_ago.months.ago.to_date
+      occurrence = @bill.recurring_occurrences.create!(
+        family: @user.family, original_due_on: due, due_on: due, currency: "USD"
+      )
+      RecurringTransaction::Allocator.new(occurrence).allocate!(amount: amount)
+      assert occurrence.reload.paid?, "#{amount} must settle the cycle for this test"
+      occurrence
+    end
 end
