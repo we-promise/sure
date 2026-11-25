@@ -24,3 +24,9 @@ en:
   transfer:
     name: Transfer to %{to_account}
     payment_name: Payment to %{to_account}
+    contextual:
+      credit_card_payment: Credit card payment
+      loan_payment: Loan payment
+      investment_contribution: Investment contribution
+      payment: Payment
+      transfer: Transfer

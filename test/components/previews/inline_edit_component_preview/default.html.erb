@@ -1,0 +1,15 @@
+<%= form_with scope: :preview, url: "#", builder: StyledFormBuilder do |f| %>
+  <dl>
+    <%= render DS::DetailRow.new(label: "Transaction name", align: :center) do |row| %>
+      <% row.with_value do %>
+        <%= render DS::InlineEdit.new(
+              form: f,
+              method: :name,
+              value: "Sent to Nancy",
+              aria_label: "Transaction name",
+              data: { auto_submit_form_target: "auto" }
+            ) %>
+      <% end %>
+    <% end %>
+  </dl>
+<% end %>

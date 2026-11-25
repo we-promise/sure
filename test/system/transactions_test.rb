@@ -210,15 +210,15 @@ class TransactionsTest < ApplicationSystemTestCase
     find("##{dom_id(outflow.entryable, :transfer_match)} [data-testid='transfer-match-pill']", visible: true).click
 
     within "dialog[open]" do
-      [ outflow, inflow ].each do |entry|
-        row = find("dd", exact_text: entry.name).find(:xpath, "ancestor::div[contains(@class, 'space-y-3')][1]")
-        assert row.has_selector?("dd", exact_text: entry.name)
+      { "transfer[outflow_name]" => outflow, "transfer[inflow_name]" => inflow }.each do |field, entry|
+        input = find("input[name='#{field}'][value='#{entry.name}']")
+        row = input.find(:xpath, "ancestor::div[contains(@class, 'space-y-3')][1]")
         assert row.has_selector?("dd.privacy-sensitive", text: entry.amount_money.abs.format), "#{entry.name}'s amount is not beside it"
       end
     end
   end
 
-  test "a long transaction name wraps inside the transfer drawer instead of being cut off" do
+  test "a long transaction name keeps the transfer drawer on the page without losing the name" do
     @user.update!(show_ai_sidebar: false)
     page.current_window.resize_to(390, 900)
     long_reference = "SUNDAY*QUALITYWINESLONDONGBR-REF-0001234567890ABCDEF0123456789GHIJKLMNOPQRSTUVWXYZ-TXN-9876543210"
@@ -229,17 +229,21 @@ class TransactionsTest < ApplicationSystemTestCase
 
     find("##{dom_id(outflow.entryable, :transfer_match)} [data-testid='transfer-match-pill']", visible: true).click
 
-    name = find("dialog[open] dd", exact_text: long_reference)
+    # A writable viewer sees the name in the inline edit input: a single-line
+    # field, so a phone-length name scrolls inside the input rather than
+    # wrapping like the read-only text. What must hold is that the full name
+    # is preserved and the long value does not break the drawer or the page.
+    name = find("dialog[open] input[name='transfer[outflow_name]']")
+    assert_equal long_reference, name.value
     fit = name.evaluate_script(<<~JS)
       (() => {
         const drawer = this.closest("dialog").getBoundingClientRect();
         const box = this.getBoundingClientRect();
-        return { cut: this.scrollWidth > this.clientWidth + 1, inside: box.left >= drawer.left && box.right <= drawer.right + 0.5,
+        return { inside: box.left >= drawer.left && box.right <= drawer.right + 0.5,
                  pageScrolls: document.documentElement.scrollWidth > document.documentElement.clientWidth };
       })()
     JS
-    assert_not fit["cut"], "the name is cut off; on a phone there is no way to read the rest"
-    assert fit["inside"], "the name runs out of the drawer"
+    assert fit["inside"], "the name's field runs out of the drawer"
     assert_not fit["pageScrolls"], "the long name makes the page scroll sideways"
   end
 

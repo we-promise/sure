@@ -1,0 +1,4 @@
+<label for="<%= input_id %>" class="ml-auto flex w-fit max-w-full items-center justify-end gap-1.5 rounded-sm px-1.5 py-1 cursor-text hover:bg-container-inset focus-within:bg-container-inset focus-ring-within">
+  <%= form.text_field method, **input_options %>
+  <%= helpers.icon "pencil", size: "sm", color: "current", aria: { hidden: true } %>
+</label>
