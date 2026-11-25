@@ -143,9 +143,11 @@ class Trade < ApplicationRecord
   # it. A lot with no stored row (acquired since the last sync) is absent, as
   # is a held choice that no longer replays before the sale. So is every lot
   # while a transfer out replays at or after this sale, since it takes from
-  # lots without recording which.
+  # lots without recording which, or while the position's lots do not add up
+  # to its holding (HoldingLot.in_partition).
   def lot_shares(lots)
     return {} if lots.empty? || transfer_out_on_or_after_sale?
+    return {} unless HoldingLot.in_partition([ entry.account_id ], [ security_id ]).include?([ entry.account_id, security_id ])
 
     stored = HoldingLot.derived.where(account_id: entry.account_id, source_entry_id: lots.map(&:id))
       .pluck(:source_entry_id, :qty).to_h
@@ -156,8 +158,12 @@ class Trade < ApplicationRecord
     splits = Security::Split.where(security_id: security_id, ex_date: ..Date.current).to_a
     sale_order = [ entry.date, entry.created_at || Time.current ]
 
+    # The stored lot restated into the sale date's shares: back from the last
+    # sync, or forward to a sale dated after it.
+    stored_factor = synced_on < entry.date ? split_factor(splits, synced_on, entry.date) : 1 / split_factor(splits, entry.date, synced_on)
+
     lots.select { |lot| stored.key?(lot.id) && ([ lot.date, lot.created_at ] <=> sale_order) <= 0 }.to_h do |lot|
-      left = Security::Split.unscale(stored[lot.id], split_factor(splits, entry.date, synced_on)) +
+      left = Security::Split.scale(stored[lot.id], stored_factor) +
         taken.fetch(lot.id, []).sum(BigDecimal("0")) { |_, date, qty| Security::Split.unscale(qty, split_factor(splits, entry.date, date)) }
       size = Security::Split.scale(lot.trade.qty, split_factor(splits, lot.date, entry.date))
       # A reverse split stores a repeating decimal, so undoing it is off in the

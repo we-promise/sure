@@ -380,13 +380,14 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       lot = trade(security, 100, 12, 1)
       first_sale = trade(security, -60, 25, 5)
       second_sale = trade(security, -40, 25, 5)
+      later_lot = trade(security, 20, 12, 6)
       third_sale = trade(security, -10, 25, 7)
       entered_in_order(first_sale, second_sale)
       materialize(:forward)
 
       assert_equal [ 100, 100 ], shares_left(first_sale, lot)
       assert_equal [ 40, 100 ], shares_left(second_sale, lot)
-      assert_empty Trade.find(third_sale.entryable_id).lot_choices
+      assert_equal [ later_lot ], Trade.find(third_sale.entryable_id).lot_choices.to_a
     end
   end
 
@@ -500,6 +501,76 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     travel_to TODAY do
       assert_equal 40, HoldingLot.derived.find_by!(source_entry_id: lot.id).qty
       assert_equal [ 100, 100 ], shares_left(sale, lot)
+    end
+  end
+
+  # A sale dated after the last sync reads the stored lot forward into its
+  # own date's shares, through any split that went ex in between.
+  test "a sale after the last sync reads the stored lot through a split since then" do
+    setup_account(method: "fifo")
+    security = priced_security("NAMS", 30)
+    lot = nil
+    travel_to(TODAY - 5.days) do
+      lot = trade(security, 100, 12, 2)
+      materialize(:forward)
+    end
+    Security::Split.create!(security: security, ex_date: d(6), numerator: 2, denominator: 1, source: "manual")
+
+    travel_to TODAY do
+      sale = trade(security, -60, 7, 8)
+
+      assert_equal 100, HoldingLot.derived.find_by!(source_entry_id: lot.id).qty
+      assert_equal [ 200, 200 ], shares_left(sale, lot)
+    end
+  end
+
+  # A split ex on the sync date is already in the stored lot; one ex on the
+  # sale's date is not, and applies before the sale.
+  test "a sale after the last sync counts a split on the sale date, not one on the sync date" do
+    setup_account(method: "fifo")
+    security = priced_security("NAMT", 30)
+    lot = nil
+    travel_to(TODAY - 5.days) do
+      lot = trade(security, 100, 12, 2)
+      Security::Split.create!(security: security, ex_date: d(5), numerator: 2, denominator: 1, source: "manual")
+      materialize(:forward)
+    end
+    Security::Split.create!(security: security, ex_date: d(8), numerator: 3, denominator: 1, source: "manual")
+
+    travel_to TODAY do
+      sale = trade(security, -60, 2, 8)
+
+      assert_equal 200, HoldingLot.derived.find_by!(source_entry_id: lot.id).qty
+      assert_equal [ 600, 600 ], shares_left(sale, lot)
+    end
+  end
+
+  # Lots that no longer add up to the holding cannot say what is left in any
+  # of them, so the picker falls back to the purchase quantity.
+  test "a lot's shares left are unknown once the position's lots are out of partition" do
+    travel_to TODAY do
+      build_reverse_fixture(pre_history: 6)
+      materialize(:reverse)
+      assert_equal [ 10, 10 ], shares_left(@sale, @first), "in partition, the lot is read"
+
+      @account_provider.destroy!
+      materialize(:forward)
+      assert_equal 18, HoldingLot.where(security: @security).sum(:qty), "16 held"
+
+      assert_nil shares_left(@sale, @first)
+    end
+  end
+
+  test "a sold-out position's lots still read the shares left" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMU", 30)
+      lot = trade(security, 10, 20, 2)
+      sale = trade(security, -10, 25, 4)
+      materialize(:forward)
+
+      assert_equal 0, HoldingLot.derived.find_by!(source_entry_id: lot.id).qty
+      assert_equal [ 10, 10 ], shares_left(sale, lot)
     end
   end
 
