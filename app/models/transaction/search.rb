@@ -197,7 +197,6 @@ class Transaction::Search
   attribute :active_accounts_only, :boolean, default: true
 
   # Filters the web list leaves at their defaults; the API sets them.
-  attribute :exclude_split_parents, :boolean, default: true
   attribute :excluded, :boolean
   # Exact ids. In category_ids, merchant_ids and tag_ids nil is no filter and
   # an empty list matches nothing. The API's account list goes into the web
@@ -207,25 +206,31 @@ class Transaction::Search
   attribute :account_id, :string
   attribute :category_id, :string
   attribute :merchant_id, :string
-  attribute :category_ids, array: true
-  attribute :merchant_ids, array: true
-  attribute :tag_ids, array: true
+  attribute :category_ids # an Array; ActiveModel ignores `array: true`
+  attribute :merchant_ids # an Array
+  attribute :tag_ids # an Array
   # Signed and inclusive.
   attribute :min_amount, :decimal
   attribute :max_amount, :decimal
   # inflow (amount < 0) or outflow (amount > 0), transfers included, unlike `types`.
   attribute :nature, :string
-  attribute :search_merchant_names, :boolean, default: false
 
-  attr_reader :family, :accessible_account_ids, :budget
+  attr_reader :family, :accessible_account_ids, :budget, :include_split_parents, :search_merchant_names
 
+  # The keywords are the caller's options, kept out of `filters` because
+  # callers pass user input there.
   # `budget`, when given, keeps the rows its drill-down counts
   # (Budget#reportable_transactions): the caller has checked it is viewable and
   # set its current_user.
-  def initialize(family, filters: {}, accessible_account_ids: nil, budget: nil)
+  # `include_split_parents` lists split parents next to their children; the
+  # web list never does. `search_merchant_names` makes `search` match the
+  # merchant name too.
+  def initialize(family, filters: {}, accessible_account_ids: nil, budget: nil, include_split_parents: false, search_merchant_names: false)
     @family = family
     @accessible_account_ids = accessible_account_ids
     @budget = budget
+    @include_split_parents = include_split_parents
+    @search_merchant_names = search_merchant_names
     super(filters)
   end
 
@@ -234,7 +239,7 @@ class Transaction::Search
     @transactions_scope ||= begin
       # This already joins entries + accounts. To avoid expensive double-joins, don't join them again (causes full table scan)
       query = family.transactions
-      query = query.merge(Entry.excluding_split_parents) if exclude_split_parents
+      query = query.merge(Entry.excluding_split_parents) unless include_split_parents
 
       # Scope to accessible accounts when provided (including an empty array, which should yield no results)
       query = query.where(entries: { account_id: accessible_account_ids }) unless accessible_account_ids.nil?
@@ -347,6 +352,8 @@ class Transaction::Search
       Digest::SHA256.hexdigest(family.tax_advantaged_account_ids.sort.to_json), # stable across processes
       accessible_account_ids ? Digest::SHA256.hexdigest(accessible_account_ids.sort.to_json) : "all",
       budget&.id,
+      include_split_parents,
+      search_merchant_names,
       Date.current # totals exclude scheduled entries as of "today" -- must roll over daily
     ].join("/")
   end

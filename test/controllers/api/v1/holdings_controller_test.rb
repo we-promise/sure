@@ -111,9 +111,9 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert holdings.all? { |holding| holding["date"] == @holding.date.iso8601 }
   end
 
-  test "dates must be YYYY-MM-DD" do
-    { start_date: "Jan 5 2024", end_date: "2024/01/05", date: "20240105" }.each do |key, value|
-      get api_v1_holdings_url, params: { key => value }, headers: api_headers(@api_key)
+  test "reads the date filters with the date reader" do
+    %i[start_date end_date date].each do |key|
+      get api_v1_holdings_url, params: { key => "not-a-date" }, headers: api_headers(@api_key)
 
       assert_response :unprocessable_entity, key
       assert_equal [ "#{key} must be a date in YYYY-MM-DD format" ], JSON.parse(response.body)["errors"]

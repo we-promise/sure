@@ -576,6 +576,17 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "enum_filter_param with ignore_case reads any case as the allowed value" do
+    allowed = %w[income expense]
+    assert_equal "income", filter_reader(flag: "Income").send(:enum_filter_param, :flag, allowed, ignore_case: true)
+    assert_equal "expense", filter_reader(flag: " EXPENSE ").send(:enum_filter_param, :flag, allowed, ignore_case: true)
+    [ "", "transfer", [ "income" ] ].each do |raw|
+      assert_raises_filter("flag must be one of: income, expense") do
+        filter_reader(flag: raw).send(:enum_filter_param, :flag, allowed, ignore_case: true)
+      end
+    end
+  end
+
   test "string_filter_param reads a stripped string, blank as absent" do
     assert_equal "coffee shop", read_filter(:string_filter_param, "  coffee shop ")
     assert_nil read_filter(:string_filter_param, "   ")

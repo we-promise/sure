@@ -159,7 +159,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       parameter name: :max_amount, in: :query, type: :number, required: false,
                 description: 'Maximum signed amount, inclusive; at most 20 digits written out, or 422'
       parameter name: :type, in: :query, required: false,
-                description: 'income lists negative amounts and expense positive ones, transfers included',
+                description: 'income lists negative amounts and expense positive ones, transfers included; case is ignored',
                 schema: { type: :string, enum: %w[income expense] }
       parameter name: :search, in: :query, type: :string, required: false,
                 description: 'Search by name, notes, or merchant name; surrounding spaces are ignored'

@@ -93,12 +93,12 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "account_id must be a valid UUID", response_data["message"]
   end
 
-  # Strict since the move to typed filters: Date.iso8601 also took basic,
-  # ordinal and week dates and timestamps, and a blank value was ignored.
-  test "should reject index with a date or account filter that is not exactly ISO 8601 or a UUID" do
+  # Strict since the move to typed filters: a blank value was ignored.
+  # BaseControllerTest pins the date formats.
+  test "should reject index with a date or account filter that is not a date or a UUID" do
     {
-      start_date: [ "04/30/2026", "20260430", "2026-120", "2026-W18-4", "2026-04-30T00:00:00Z", "" ],
-      end_date: [ "20260430", "" ],
+      start_date: [ "not-a-date", "" ],
+      end_date: [ "not-a-date", "" ],
       account_id: [ "", [ @account.id ] ]
     }.each do |key, values|
       values.each do |value|
@@ -109,7 +109,7 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
       end
     end
 
-    get api_v1_valuations_url, params: { end_date: "20260430" }, headers: api_headers(@api_key)
+    get api_v1_valuations_url, params: { end_date: "not-a-date" }, headers: api_headers(@api_key)
     assert_equal "end_date must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
   end
 

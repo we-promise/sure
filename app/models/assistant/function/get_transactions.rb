@@ -171,6 +171,11 @@ class Assistant::Function::GetTransactions < Assistant::Function
   end
 
   def call(params = {})
+    # A provider outside strict mode may send keys the schema does not
+    # declare; Transaction::Search must only see the declared filters.
+    unknown = params.keys - params_schema[:properties].keys.map(&:to_s)
+    raise ArgumentError, "Unknown arguments: #{unknown.join(", ")}" if unknown.any?
+
     search_params = params.except("order", "page", "page_size", "sort_by")
     search_params["status"] = search_params.delete("statuses") if search_params.key?("statuses")
 

@@ -280,15 +280,15 @@ class Api::V1::TransactionsController < Api::V1::BaseController
           end_date: date_filter_param(:end_date),
           min_amount: decimal_filter_param(:min_amount),
           max_amount: decimal_filter_param(:max_amount),
-          nature: TYPE_FILTER_NATURES[enum_filter_param(:type, TYPE_FILTER_NATURES.keys)],
+          nature: TYPE_FILTER_NATURES[enum_filter_param(:type, TYPE_FILTER_NATURES.keys, ignore_case: true)],
           search: string_filter_param(:search),
           excluded: boolean_filter_param(:excluded),
-          exclude_split_parents: boolean_filter_param(:exclude_split_parents) == true,
-          search_merchant_names: true,
           active_accounts_only: false
         },
         accessible_account_ids:,
-        budget: requested_budget
+        budget: requested_budget,
+        include_split_parents: boolean_filter_param(:exclude_split_parents) != true,
+        search_merchant_names: true
       )
     end
 

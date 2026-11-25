@@ -466,6 +466,14 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes ids, other.transaction.id, "a bare % must not match every transaction"
   end
 
+  # A list used to search for nothing and return an empty page.
+  test "search refuses a list" do
+    get api_v1_transactions_url, params: { search: [ "coffee" ] }, headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "search must be a string", JSON.parse(response.body)["message"]
+  end
+
   test "should search disabled account transactions" do
     disabled_transaction = create_disabled_account_transaction(name: "Closed Account Coffee")
 
@@ -497,10 +505,10 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 100, JSON.parse(response.body)["pagination"]["per_page"]
   end
 
-  test "dates must be ISO 8601" do
-    %i[start_date end_date].product(%w[not-a-date 2024/01/05 05-01-2024 Jan\ 5\ 2024 20240105]).each do |key, value|
-      get api_v1_transactions_url, params: { key => value }, headers: api_headers(@api_key)
-      assert_response :unprocessable_entity, "expected #{key}=#{value.inspect} to be refused"
+  test "reads the date filters with the date reader" do
+    %i[start_date end_date].each do |key|
+      get api_v1_transactions_url, params: { key => "not-a-date" }, headers: api_headers(@api_key)
+      assert_response :unprocessable_entity, key
       assert_equal "#{key} must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
     end
   end
@@ -579,8 +587,23 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ expense, transfer ].map(&:entryable_id).sort, index_ids
   end
 
-  test "type accepts only income or expense, exactly" do
-    %w[INCOME transfer].each do |value|
+  # Case was ignored before the index moved to Transaction::Search.
+  test "type ignores case and surrounding spaces" do
+    date = report_filter_date
+    income = create_transaction(account: @account, amount: -20, date:)
+    expense = create_transaction(account: @account, amount: 10, date:)
+
+    get api_v1_transactions_url, params: report_filter_params(type: "Income"), headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal [ income.entryable_id ], index_ids
+
+    get api_v1_transactions_url, params: report_filter_params(type: " EXPENSE "), headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal [ expense.entryable_id ], index_ids
+  end
+
+  test "type accepts only income or expense" do
+    %w[transfer incomes].each do |value|
       get api_v1_transactions_url, params: { type: value }, headers: api_headers(@api_key)
       assert_response :unprocessable_entity, "expected #{value.inspect} to be refused"
       assert_equal "type must be one of: income, expense", JSON.parse(response.body)["message"]

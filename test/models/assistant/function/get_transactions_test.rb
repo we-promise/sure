@@ -113,6 +113,24 @@ class Assistant::Function::GetTransactionsTest < ActiveSupport::TestCase
     assert_equal amounts.sort.reverse, amounts
   end
 
+  # The schema sets additionalProperties: false; a non-strict provider can still
+  # send other keys, and Transaction::Search must not receive them.
+  test "refuses arguments its schema does not declare" do
+    parent = Entry.create!(account: accounts(:depository), name: "Split parent", date: Date.current, amount: 100,
+      currency: "USD", entryable: Transaction.new)
+    parent.split!([ { name: "Part one", amount: 60 }, { name: "Part two", amount: 40 } ])
+
+    [ { "include_split_parents" => true }, { "exclude_split_parents" => false }, { "min_amount" => "50" },
+      { "excluded" => true, "nature" => "outflow" } ].each do |args|
+      error = assert_raises(ArgumentError, args.inspect) { @function.call(args) }
+      assert_match(/Unknown arguments: #{args.keys.join(", ")}/, error.message)
+    end
+
+    names = @function.call("search" => "Part").fetch(:transactions).map { |t| t[:name] }
+    assert_includes names, "Part one"
+    assert_not_includes names, "Split parent"
+  end
+
   test "filters by type" do
     result = @function.call("types" => [ "income" ])
 

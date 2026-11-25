@@ -164,13 +164,12 @@ class Api::V1::BalancesControllerTest < ActionDispatch::IntegrationTest
     assert_includes JSON.parse(response.body)["balances"].map { |balance| balance["id"] }, @balance.id
   end
 
-  # Strict since the move to typed filters: Date.iso8601 also took basic,
-  # ordinal and week dates and timestamps, and a blank value or a list was
-  # ignored or matched nothing.
+  # Strict since the move to typed filters: a blank value or a list was
+  # ignored or matched nothing. BaseControllerTest pins the date formats.
   test "rejects filters that are not exactly what they say" do
     {
-      start_date: [ "01/15/2024", "20240115", "2024-015", "2024-W03-1", "2024-01-15T00:00:00Z", "" ],
-      end_date: [ "20240115", "" ],
+      start_date: [ "not-a-date", "" ],
+      end_date: [ "not-a-date", "" ],
       account_id: [ "not-a-uuid", "", [ @account.id ] ],
       currency: [ [ "USD" ] ]
     }.each do |key, values|
@@ -182,7 +181,7 @@ class Api::V1::BalancesControllerTest < ActionDispatch::IntegrationTest
       end
     end
 
-    get api_v1_balances_url, params: { start_date: "20240115" }, headers: api_headers(@api_key)
+    get api_v1_balances_url, params: { start_date: "not-a-date" }, headers: api_headers(@api_key)
     assert_equal "start_date must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
   end
 

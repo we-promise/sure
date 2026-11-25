@@ -128,6 +128,16 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
     assert_includes JSON.parse(response.body)["errors"], "carried_forward must be true or false"
   end
 
+  # It was a 422 before every reader read a bare key as absent.
+  test "a bare provisional key turns the filter off" do
+    get api_v1_security_prices_url, headers: api_headers(@api_key)
+    unfiltered = JSON.parse(response.body)["security_prices"].size
+
+    get "#{api_v1_security_prices_url}?provisional", headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal unfiltered, JSON.parse(response.body)["security_prices"].size
+  end
+
   test "rejects blank provisional filter" do
     get api_v1_security_prices_url,
         params: { provisional: "" },
@@ -190,11 +200,11 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
     assert_empty JSON.parse(response.body)["security_prices"]
   end
 
-  test "dates must be YYYY-MM-DD, without the other ISO 8601 forms" do
-    [ [ :start_date, "01/15/2024" ], [ :start_date, "20240115" ], [ :end_date, "2024-015" ], [ :start_date, "2024-W03-1" ] ].each do |key, value|
-      get api_v1_security_prices_url, params: { key => value }, headers: api_headers(@api_key)
+  test "reads the date filters with the date reader" do
+    %i[start_date end_date].each do |key|
+      get api_v1_security_prices_url, params: { key => "not-a-date" }, headers: api_headers(@api_key)
 
-      assert_response :unprocessable_entity, value
+      assert_response :unprocessable_entity, key
       assert_equal [ "#{key} must be a date in YYYY-MM-DD format" ], JSON.parse(response.body)["errors"]
     end
   end

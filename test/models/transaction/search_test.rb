@@ -1358,12 +1358,24 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal web_query.to_sql, Transaction::Search.new(@family, filters:).transactions_scope.to_sql
   end
 
-  test "exclude_split_parents false keeps split parents next to their children" do
+  test "include_split_parents keeps split parents next to their children" do
     parent = create_transaction(account: @checking_account, amount: 100)
     children = parent.split!([ { name: "One", amount: 60 }, { name: "Two", amount: 40 } ]).map(&:entryable_id)
 
     assert_equal children.sort, search_ids
-    assert_equal [ parent.entryable_id, *children ].sort, search_ids(exclude_split_parents: false)
+    search = Transaction::Search.new(@family, include_split_parents: true)
+    assert_equal [ parent.entryable_id, *children ].sort, search.transactions_scope.pluck(:id).sort
+    assert_not_equal Transaction::Search.new(@family).cache_key_base, search.cache_key_base
+  end
+
+  # Callers such as the assistant pass user input as filters, so the caller's
+  # options are not among them.
+  test "caller options are keywords, not filters" do
+    %i[include_split_parents exclude_split_parents search_merchant_names].each do |key|
+      assert_raises(ActiveModel::UnknownAttributeError, key.to_s) do
+        Transaction::Search.new(@family, filters: { key => false })
+      end
+    end
   end
 
   test "excluded keeps only rows with that excluded flag" do
@@ -1438,9 +1450,11 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     create_transaction(account: @checking_account, merchant: merchants(:amazon), name: "Order")
 
     assert_empty search_ids(search: merchants(:netflix).name)
-    assert_equal [ by_merchant.entryable_id ], search_ids(search: merchants(:netflix).name, search_merchant_names: true)
+    by_name = Transaction::Search.new(@family, filters: { search: merchants(:netflix).name }, search_merchant_names: true)
+    assert_equal [ by_merchant.entryable_id ], by_name.transactions_scope.pluck(:id)
+    assert_not_equal Transaction::Search.new(@family, filters: { search: merchants(:netflix).name }).cache_key_base, by_name.cache_key_base
 
-    search = Transaction::Search.new(@family, filters: { search: "plan", search_merchant_names: true, merchants: [ merchants(:netflix).name ] })
+    search = Transaction::Search.new(@family, filters: { search: "plan", merchants: [ merchants(:netflix).name ] }, search_merchant_names: true)
     assert_equal 1, search.transactions_scope.to_sql.scan("JOIN merchants").size
     assert_equal [ by_merchant.entryable_id ], search.transactions_scope.pluck(:id)
   end

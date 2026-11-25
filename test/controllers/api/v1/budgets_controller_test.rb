@@ -135,16 +135,13 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes JSON.parse(response.body)["budgets"].map { |budget| budget["id"] }, @other_budget.id
   end
 
-  # Only YYYY-MM-DD: Date.iso8601 also read the compact, ordinal and week
-  # forms, and an empty value was ignored.
-  [ "03/01/2024", "20240105", "2024-005", "2024-W01-1", "" ].each do |value|
-    test "rejects #{value.inspect} as a date filter" do
-      %i[start_date end_date].each do |key|
-        get api_v1_budgets_url, params: { key => value }, headers: api_headers(@api_key)
+  # The accepted formats are pinned in BaseControllerTest.
+  test "reads the date filters with the date reader" do
+    %i[start_date end_date].each do |key|
+      get api_v1_budgets_url, params: { key => "not-a-date" }, headers: api_headers(@api_key)
 
-        assert_response :unprocessable_entity
-        assert_equal "#{key} must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
-      end
+      assert_response :unprocessable_entity
+      assert_equal "#{key} must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
     end
   end
 

@@ -142,6 +142,16 @@ class Api::V1::SecuritiesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response_data["errors"], "offline must be true or false"
   end
 
+  # It was a 422 before every reader read a bare key as absent.
+  test "a bare offline key turns the filter off" do
+    get api_v1_securities_url, headers: api_headers(@api_key)
+    unfiltered = JSON.parse(response.body)["securities"].size
+
+    get "#{api_v1_securities_url}?offline", headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal unfiltered, JSON.parse(response.body)["securities"].size
+  end
+
   test "rejects blank offline filter" do
     get api_v1_securities_url, params: { offline: "" }, headers: api_headers(@api_key)
 

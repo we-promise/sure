@@ -409,8 +409,12 @@ class Api::V1::BaseController < ApplicationController
       raise InvalidFilterError, "#{key} must be a list of valid UUIDs"
     end
 
-    def enum_filter_param(key, allowed)
-      read_filter(key, "must be one of: #{allowed.join(', ')}") { |raw| raw if allowed.include?(raw) }
+    # ignore_case: true keeps an endpoint that read its enum in any case doing so.
+    def enum_filter_param(key, allowed, ignore_case: false)
+      read_filter(key, "must be one of: #{allowed.join(', ')}") do |raw|
+        raw = raw.downcase if ignore_case
+        raw if allowed.include?(raw)
+      end
     end
 
     def string_filter_param(key)

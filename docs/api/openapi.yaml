@@ -10900,7 +10900,7 @@ paths:
         in: query
         required: false
         description: income lists negative amounts and expense positive ones, transfers
-          included
+          included; case is ignored
         schema:
           type: string
           enum:

@@ -171,6 +171,20 @@ class Api::V1::RulesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes rule_ids, @rule.id
   end
 
+  # active= was ignored and " false " refused before the shared boolean reader.
+  test "reads active with the boolean reader" do
+    [ "", "yes" ].each do |value|
+      get api_v1_rules_url, params: { active: value }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, value.inspect
+      assert_equal "active must be true or false", JSON.parse(response.body)["message"]
+    end
+
+    get api_v1_rules_url, params: { active: " false " }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_not_includes JSON.parse(response.body)["data"].map { |rule| rule["id"] }, @rule.id
+  end
+
   test "should reject an empty resource type filter" do
     get api_v1_rules_url, params: { resource_type: "" }, headers: api_headers(@api_key)
 

@@ -671,9 +671,9 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "index dates must be YYYY-MM-DD" do
-    { start_date: "Jan 5 2024", end_date: "2024/01/05" }.each do |key, value|
-      get api_v1_trades_url, params: { key => value }, headers: api_headers(read_only_api_key)
+  test "index reads the date filters with the date reader" do
+    %i[start_date end_date].each do |key|
+      get api_v1_trades_url, params: { key => "not-a-date" }, headers: api_headers(read_only_api_key)
 
       assert_response :unprocessable_entity, key
       assert_equal [ "#{key} must be a date in YYYY-MM-DD format" ], JSON.parse(response.body)["errors"]
