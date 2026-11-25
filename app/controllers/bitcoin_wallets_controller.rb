@@ -130,12 +130,17 @@ class BitcoinWalletsController < ApplicationController
       @form_values = params.fetch(:source, {}).permit(:address_or_key, :receive_address, :gap_limit).to_h.symbolize_keys
       # A mistyped public input can be corrected in place. Do not echo private
       # keys or recovery phrases accidentally entered into a public field.
-      @form_values[:address_or_key] = nil unless @form_values[:address_or_key].to_s.strip.match?(/\A(?:[xz]pub|bc1|[13])[[:alnum:]-]*\z/i)
-      @form_values[:receive_address] = nil unless @form_values[:receive_address].to_s.strip.match?(/\A(?:bc1|[13])[[:alnum:]-]*\z/i)
+      @form_values[:address_or_key] = editable_public_input(@form_values[:address_or_key], /\A(?:[xz]pub|bc1|[13])[[:alnum:]-]*\z/i)
+      @form_values[:receive_address] = editable_public_input(@form_values[:receive_address], /\A(?:bc1|[13])[[:alnum:]-]*\z/i)
       @field_errors = error.record.errors if error.record.is_a?(BitcoinWalletSource)
       @error_message = error.record.errors
         .reject { |item| @field_errors && item.attribute.in?(SOURCE_FIELDS) }
         .map(&:full_message).to_sentence.presence
+    end
+
+    def editable_public_input(value, public_pattern)
+      input = value.to_s.strip
+      value if input.match?(public_pattern) && !input.match?(/\A[0-9a-f]{64}\z/i)
     end
 
     # Accept one pasted value and infer its kind: an account-level xpub/zpub is

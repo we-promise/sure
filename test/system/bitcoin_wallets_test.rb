@@ -54,15 +54,22 @@ class BitcoinWalletsTest < ApplicationSystemTestCase
     page.current_window.resize_to(1400, 900)
   end
 
-  test "status polling keeps text typed into the source form" do
+  test "status polling refreshes addresses and keeps the source field focused with its typed value" do
     wallet = build_bitcoin_wallet(status: :discovering)
     manual_bitcoin_source(wallet)
     visit account_bitcoin_wallet_path(@account)
     find("summary", text: /#{Regexp.escape(I18n.t("bitcoin_wallets.details"))}/i).click
+    assert_text I18n.t("bitcoin_wallets.address_count", count: 0)
     fill_in I18n.t("bitcoin_wallets.key_label"), with: CHANGE
+    wallet.bitcoin_wallet_addresses.create!(family: wallet.family, address: RECEIVE, used: true)
     wallet.update!(status: :preview, balance_sats: 20_000_000, last_synced_at: Time.current)
     assert_text I18n.t("bitcoin_wallets.start_tracking")
+    within "turbo-frame[id^='addresses_']" do
+      assert_text I18n.t("bitcoin_wallets.address_count", count: 1)
+      assert_selector "li", exact_text: RECEIVE
+    end
     assert_field I18n.t("bitcoin_wallets.key_label"), with: CHANGE
+    assert_selector "input[name='source[address_or_key]']:focus"
   end
 
   test "a connected wallet retains manual activity and can disconnect" do

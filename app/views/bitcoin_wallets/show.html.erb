@@ -4,9 +4,12 @@
     <div class="space-y-4">
       <%= render DS::Pill.new(label: t("bitcoin_wallets.preview")) %>
       <%= render DS::Alert.new(message: @error_message, variant: :error) if @error_message.present? %>
-      <%# Polling replaces only this frame, so the source form keeps its input. %>
+      <%# Poll the status and addresses together so the source form keeps its input. %>
       <%= turbo_frame_tag dom_id(@wallet, :status), class: "block space-y-4",
-            data: (@wallet.status_discovering? || @wallet_syncing ? { controller: "polling", polling_url_value: account_bitcoin_wallet_path(@account) } : {}) do %>
+            data: (@wallet.status_discovering? || @wallet_syncing ? {
+              controller: "polling", polling_url_value: account_bitcoin_wallet_path(@account),
+              polling_additional_frame_id_value: dom_id(@wallet, :addresses)
+            } : {}) do %>
         <div class="flex items-center gap-2 text-sm text-secondary">
           <% if @wallet.account_provider %>
             <%= render DS::Pill.new(label: t("bitcoin_wallets.status.tracking"), tone: :success, marker: false) %>
@@ -115,13 +118,15 @@
               </li>
             <% end %>
           </ul>
-          <p class="text-xs text-secondary"><%= t("bitcoin_wallets.address_count", count: @address_count) %></p>
-          <% if @addresses.any? %>
-            <ul class="space-y-1 text-xs text-secondary break-all font-mono">
-              <% @addresses.each do |address| %>
-                <li><%= address.address %></li>
-              <% end %>
-            </ul>
+          <%= turbo_frame_tag dom_id(@wallet, :addresses), class: "block space-y-4" do %>
+            <p class="text-xs text-secondary"><%= t("bitcoin_wallets.address_count", count: @address_count) %></p>
+            <% if @addresses.any? %>
+              <ul class="space-y-1 text-xs text-secondary break-all font-mono">
+                <% @addresses.each do |address| %>
+                  <li><%= address.address %></li>
+                <% end %>
+              </ul>
+            <% end %>
           <% end %>
           <div class="space-y-2">
             <p class="text-sm font-medium text-primary"><%= t("bitcoin_wallets.add_source") %></p>

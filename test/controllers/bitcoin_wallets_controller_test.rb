@@ -62,6 +62,28 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, private_input
   end
 
+  test "raw hex in either public input is rejected, omitted from HTML, and filtered from logs" do
+    raw_key = "1" + "0" * 63
+    raw_address = "3" + "0" * 63
+    assert_no_difference "BitcoinWalletAccount.count" do
+      post account_bitcoin_wallet_path(@account), params: { source: { address_or_key: " #{raw_key} " } }
+    end
+    assert_response :unprocessable_entity
+    refute_includes response.body, raw_key
+    assert_equal "[FILTERED]", request.filtered_parameters.dig("source", "address_or_key")
+
+    wallet = build_bitcoin_wallet
+    manual_bitcoin_source(wallet)
+    assert_no_difference "BitcoinWalletSource.count" do
+      post add_source_account_bitcoin_wallet_path(@account), params: { source: { address_or_key: ZPUB, receive_address: raw_address } }
+    end
+    assert_response :unprocessable_entity
+    refute_includes response.body, raw_address
+    assert_equal "[FILTERED]", request.filtered_parameters.dig("source", "receive_address")
+    assert_select "input[name='source[address_or_key]'][value='#{ZPUB}']"
+    assert_select "input[name='source[receive_address]'][aria-invalid='true']"
+  end
+
   test "an invalid key keeps the submitted source and shows the error on the field" do
     post account_bitcoin_wallet_path(@account), params: { source: { address_or_key: "zpub-not-a-public-key",
       receive_address: RECEIVE, gap_limit: 50 } }

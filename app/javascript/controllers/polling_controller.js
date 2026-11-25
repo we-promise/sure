@@ -7,6 +7,7 @@ export default class extends Controller {
     url: String,
     interval: { type: Number, default: 3000 },
     frameId: String,
+    additionalFrameId: String,
   };
 
   connect() {
@@ -55,11 +56,21 @@ export default class extends Controller {
         const newFrame = template.content.querySelector(
           `turbo-frame#${this.cssEscape(frame.id)}`,
         );
-        if (newFrame) {
+        if (newFrame && frame.isConnected) {
           if (frame === this.element) {
             this.syncPollingAttributes(newFrame);
           }
           frame.innerHTML = newFrame.innerHTML;
+          if (this.hasAdditionalFrameIdValue) {
+            const id = this.additionalFrameIdValue;
+            const additionalFrame = document.getElementById(id);
+            const updatedFrame = template.content.querySelector(
+              `turbo-frame#${this.cssEscape(id)}`,
+            );
+            if (additionalFrame && updatedFrame) {
+              additionalFrame.innerHTML = updatedFrame.innerHTML;
+            }
+          }
 
           // Check if we should stop polling (no more pending/processing exports)
           if (
