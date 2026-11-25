@@ -2,7 +2,8 @@ require "test_helper"
 
 # The milestones on the way to financial independence.
 class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
-  AS_OF = Date.new(2026, 3, 15)
+  # 1 January, so 2026 counts as a whole year in the figures below.
+  AS_OF = Date.new(2026, 1, 1)
 
   # FI number 300,000; 100,000 today; 10,000 a year saved at 5%; retiring in
   # 2046. Every figure below is hand-computed.
@@ -75,11 +76,11 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
 
   # The path retires in 2027, the plan in 2046. 2026 is the only saving year
   # and ends at 115,000, short of 300,000 / 1.05^19 = 118,720.19. Retired, a
-  # 20,000 pension with no spending is reinvested, so 2027 ends at 140,750,
+  # 20,000 pension from 2027 with no spending is reinvested, so 2027 ends at 140,750,
   # past 300,000 / 1.05^18 = 124,656.20, but nobody coasts in a year they are
   # already retired in. The target still runs to the plan's 2046.
   test "Coast FI stops at the path's retirement when the path retires before the plan does" do
-    m = find(milestones(path_retirement_year: 2027, streams: [ RetirementPlan::Simulation::Stream.new(kind: "income", annual_amount: 20_000) ]).all, "coast")
+    m = find(milestones(path_retirement_year: 2027, streams: [ RetirementPlan::Simulation::Stream.new(kind: "income", annual_amount: 20_000, start_year: 2027) ]).all, "coast")
 
     assert_equal [ nil, false ], [ m.year, m.reached_already ]
   end
