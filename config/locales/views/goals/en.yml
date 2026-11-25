@@ -45,6 +45,9 @@ en:
           paused:
             one: 1 paused
             other: "%{count} paused"
+          pace_unknown:
+            one: 1 with pace unknown
+            other: "%{count} with pace unknown"
         on_track_sub_all_good: All active goals on pace
         on_track_all_caught_up: All caught up
       goals_section:
@@ -161,6 +164,7 @@ en:
         behind_covered: "pending pledges close the gap"
         on_track: "reaches goal around %{date}"
         no_target_date: "set a target date to project a finish line"
+        pace_unknown: "can't measure a pace from these accounts yet; that needs a balance update in the last year and a year of balance history"
       pending_pledge:
         title:
           zero: "Pending: %{amount} into %{account} · expires today"
@@ -185,6 +189,12 @@ en:
         to_go: "%{amount} to go"
         of_target: of target
         market_value: "Market value %{amount}"
+        basis:
+          balance: Counts what the accounts are worth today
+          contributions: Counts only what you have put in
+        basis_at_completion:
+          balance: Counted what the accounts were worth when the goal was completed
+          contributions: Counted only what you had put in when the goal was completed
         aria_label: "Goal %{percent}% complete. %{amount} of %{target} saved."
         aria_label_with_used: "Goal %{percent}% complete. %{amount} of %{target}, including %{used} already used."
       projection:
@@ -196,6 +206,7 @@ en:
         reached: You've hit the target. No projection needed.
         no_target_date: No target date set. Set one to project a finish line.
         no_pace: No deposits yet. Add money to a linked account to start a projection.
+        pace_unknown: Not enough history on these accounts to measure a pace yet, so there is no projection.
         behind: Falling short at current pace.
         on_track_html: At your current pace, you'll reach this goal around <strong class="text-primary whitespace-nowrap">%{date}</strong>.
         aria_label: "Projection chart for %{name}"
@@ -261,6 +272,7 @@ en:
       reached: Reached
       completed: Completed
       no_target_date: Open
+      pace_unknown: Pace unknown
       paused: Paused
       archived: Archived
     empty_state:
@@ -288,6 +300,8 @@ en:
         other: "%{count} days left"
       pace_with_target: "%{avg}/mo · target %{target}/mo"
       pace_no_target: "%{avg}/mo avg"
+      pace_unknown_with_target: "Pace unknown · target %{target}/mo"
+      pace_unknown: Pace unknown
       footer_paused: Paused
       footer_archived: Archived
       footer_reserve_intact: Reserve intact
@@ -308,6 +322,14 @@ en:
       target_modes:
         fixed: A fixed amount
         months_of_expenses: A number of months of expenses
+      progress_basis_locked: This goal's progress was frozen when it was completed. Reopen or restore it to change what counts toward it.
+      progress_bases:
+        balance:
+          label: What the accounts are worth today
+          hint: Market value. Investment gains and losses count toward the goal.
+        contributions:
+          label: Only what I have put in
+          hint: Net contributions. Market gains and losses are left out.
       kinds:
         one_off:
           hint: Save toward something, then close it when you spend it.
@@ -344,6 +366,7 @@ en:
         notes: Notes (optional)
         notes_placeholder: A reminder for future you…
         funding_accounts: Funding accounts
+        progress_basis: What counts toward this goal
         funding_accounts_hint: This goal's balance is the balance (or earmarked portion) of these accounts.
         whole_balance: "Blank: whole balance"
         earmark_for: Earmark amount for %{account}

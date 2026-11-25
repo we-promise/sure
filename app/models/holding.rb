@@ -42,14 +42,20 @@ class Holding < ApplicationRecord
     return nil unless amount
     return 0 if amount.zero?
 
-    account.balance.zero? ? 1 : amount_in_account_currency / account.balance * 100
+    # Never divide by less than the holdings (this one included), so negative
+    # cash cannot push a weight past 100%. As InvestmentStatement#weight_denominator.
+    value = amount_in_account_currency
+    denominator = [ account.balance, account.current_holdings_total, value ].max
+    denominator.positive? ? value / denominator * 100 : 1
   end
 
   # The stored per-share cost when it is a real value:
   # - If locked (user-set), trust the value even if 0 (valid for airdrops)
+  # - If worked out from the trades and lots, trust 0 too: a lot the user
+  #   says cost nothing, or a buy at a price of 0
   # - Otherwise require positive since providers sometimes return 0 when unknown
   def known_cost_basis
-    cost_basis if cost_basis.present? && (cost_basis_locked? || cost_basis.positive?)
+    cost_basis if cost_basis.present? && (cost_basis_locked? || cost_basis.positive? || cost_basis_source == "calculated")
   end
 
   # Returns average cost per share, or nil if unknown.
@@ -94,6 +100,50 @@ class Holding < ApplicationRecord
     calculate_avg_cost(through: entry.date, before: entry)
   end
 
+  # The avg-cost fallback for holdings in accounts that sell by fifo, by
+  # holding id.
+  # What a fifo position holds is its open lots, not a share of every
+  # purchase, so the figure is their mean, as Holding::LotBook#average_cost
+  # gives it; the opening lot stays out, as it does there. The stored lots
+  # are the position as it stands, so they answer only for its latest row,
+  # and only while they add up to it (HoldingLot.in_partition). Any other
+  # row, or an open lot with no cost, is unknown: the trades' pooled average
+  # is the average method's figure, not this one.
+  def self.fifo_avg_costs(holdings)
+    open_lots = open_lots_for(holdings)
+
+    holdings.to_h do |holding|
+      open = open_lots[holding.id]&.reject(&:opening?)
+      value = if open&.any? && open.none? { |lot| lot.unit_cost.nil? }
+        Money.new(open.sum { |lot| lot.qty * lot.unit_cost } / open.sum(&:qty), holding.currency)
+      end
+      [ holding.id, value ]
+    end
+  end
+
+  # Each holding's open lots, by holding id, the opening lot first and then by
+  # acquisition: an array for the position's latest row while its stored lots
+  # add up to it (HoldingLot.in_partition), and nil for any other row, since
+  # the lots are the position as it stands. Four queries for any number of
+  # holdings.
+  def self.open_lots_for(holdings)
+    return {} if holdings.empty?
+
+    account_ids = holdings.map(&:account_id).uniq
+    security_ids = holdings.map(&:security_id).uniq
+    readable = HoldingLot.in_partition(account_ids, security_ids)
+    latest = Holding.where(account_id: account_ids, security_id: security_ids).group(:account_id, :security_id).maximum(:date)
+    lots = HoldingLot.where(account_id: account_ids, security_id: security_ids).where("holding_lots.qty > 0")
+      .left_joins(:source_entry).select("holding_lots.*, entries.entryable_id AS trade_id")
+      .order(Arel.sql("holding_lots.acquired_on ASC NULLS FIRST"), "holding_lots.created_at")
+      .group_by { |lot| [ lot.account_id, lot.security_id ] }
+
+    holdings.to_h do |holding|
+      key = [ holding.account_id, holding.security_id ]
+      [ holding.id, (lots.fetch(key, []) if readable.include?(key) && latest[key] == holding.date) ]
+    end
+  end
+
   # #calculate_avg_cost for every holding given: the same trades, read through
   # the same SQL (.avg_cost_row_sql), replayed by the same code
   # (.replay_avg_cost), so the batch cannot answer differently from the
@@ -127,6 +177,13 @@ class Holding < ApplicationRecord
 
     splits = Security::Split.where(security_id: pending.map(&:security_id).uniq, ex_date: ..pending.map(&:date).max)
       .order(:ex_date).to_a.group_by(&:security_id)
+
+    # The account decides fifo. A holding with no row (no buy dated on or
+    # before it, as with a provider row that predates its trade) still reads
+    # its lots, so its account is looked up; nothing extra runs otherwise.
+    unrowed = pending.reject { |holding| rows.key?(holding.id) }
+    fifo_account_ids = unrowed.any? ? Account.where(id: unrowed.map(&:account_id).uniq, cost_basis_method: "fifo").pluck(:id).to_set : Set.new
+    lot_costs = fifo_avg_costs(pending.select { |holding| rows.key?(holding.id) ? rows[holding.id][3] : fifo_account_ids.include?(holding.account_id) })
 
     pending.each do |holding|
       trade_rows = rows.fetch(holding.id, []).map { |(_, *row)| row + [ true ] }
@@ -244,6 +301,26 @@ class Holding < ApplicationRecord
     # Allow refreshes from the same source (e.g., new trades change calculated cost basis,
     # or providers send updated cost basis).
     new_priority >= cost_basis_source_priority
+  end
+
+  # The position's open lots, the opening lot first and then by acquisition.
+  # The stored lots are the position as it stands, so only its latest row
+  # shows them, and only while they add up to it (HoldingLot.in_partition).
+  def open_lots
+    return HoldingLot.none unless date == account.holdings.where(security_id: security_id).maximum(:date)
+    return HoldingLot.none unless HoldingLot.in_partition([ account_id ], [ security_id ]).include?([ account_id, security_id ])
+
+    HoldingLot.where(account_id: account_id, security_id: security_id).where("qty > 0")
+      .order(Arel.sql("acquired_on ASC NULLS FIRST"), :created_at)
+  end
+
+  # Whether the provider supplies the position's cost: its latest row, the one
+  # its lots describe, holds a provider's figure. Restatement leaves a
+  # provider's rows alone, so a lot cost set under it would change nothing the
+  # position shows.
+  def provider_cost_position?
+    latest = account.holdings.where(security_id: security_id).order(date: :desc, id: :asc).first
+    latest.present? && latest.cost_basis_source == "provider" && latest.known_cost_basis.present?
   end
 
   # Set cost_basis from user input (locks the value)
@@ -470,13 +547,14 @@ class Holding < ApplicationRecord
       remove_instance_variable(:@day_change) if defined?(@day_change)
     end
 
-    def amount_in_account_currency
+    def amount_in_account_currency(unconvertible: amount)
       return amount if currency == account.currency
 
       Money.new(amount, currency).exchange_to(account.currency, date: date).amount
     rescue Money::ConversionError
-      amount
+      unconvertible
     end
+    public :amount_in_account_currency
 
     def calculate_trend
       return nil unless amount_money

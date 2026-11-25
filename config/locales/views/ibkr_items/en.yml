@@ -34,7 +34,7 @@ en:
           item_1: Holdings with current prices and quantities
           item_2: Cost basis per position
           item_3: Trades, dividends, commissions, and cash deposits or withdrawals
-        warning: Historical activity is limited to the report window of the Flex Query
+        warning: Activity older than the Flex Query's period is imported over the next syncs, up to four years back
       status:
         fetching_accounts: Fetching accounts from Interactive Brokers...
         no_accounts_found_title: No accounts found.

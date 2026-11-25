@@ -1,6 +1,7 @@
 ---
 en:
   mfa:
+    demo_family_restricted: MFA enrollment is disabled for the shared demo family to keep demo access available to everyone.
     local_password_required: Two-factor authentication needs a local password.
       Yours is managed through your identity provider.
     backup_codes:
@@ -44,6 +45,7 @@ en:
       page_title: Verify Two-Factor Authentication
       title: Two-Factor Authentication
       verify_button: Verify
+      verifying: Verifying...
       webauthn_button: Use passkey or security key
       webauthn_unsupported: This browser does not support passkeys or security keys.
     verify_code:

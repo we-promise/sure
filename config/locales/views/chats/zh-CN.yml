@@ -1,6 +1,13 @@
 ---
 zh-CN:
   chats:
+    ai_busy: 正在完成一项后台任务，完成后我会立即回复您的消息。
+    reservation:
+      ready_html: 我已暂停部分后台任务，以便立即处理您的消息。它们将在 %{countdown} 秒后恢复，请继续输入！
+      busy: 正在完成一项后台任务，完成后我将全力为您服务。请继续输入！
+    worker_unhealthy_warning: AI 回复目前可能无法送达 — 后台任务处理进程似乎已停止或发生积压。请检查您的 Sidekiq worker 是否正在运行。
+    new:
+      default_title: 新对话 %{timestamp}
     demo_banner_title: 演示模式已启用
     demo_banner_message: "Vercel AI Gateway 免费提供 LLM token。由于我们经常更换模型权重进行测试，结果可能会有所不同。请查阅 Vercel 的文档，了解您的对话会被发送到哪里！🤖"
     thinking: 思考中……
@@ -34,7 +41,8 @@ zh-CN:
       available_description: AI 聊天可以基于您的数据回答财务问题并提供洞察。要使用此功能，您需要显式启用它。
       unavailable_description_html: 要使用 AI 助手，您需要设置 <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> 环境变量，或在您的实例的自托管设置中进行配置。
       enable_button: 启用 AI 聊天
-      disable_note: 可随时关闭。发送给我们的 LLM 提供商的所有数据都会被匿名化。
+      disable_note: "可随时关闭。开启后，聊天、账单和文档搜索将使用 AI，并将你的消息、交易和文档原样发送给此实例的 AI 提供商。"
+      family_note: "作为家庭管理员，这还会为你的家庭开启 AI 分类和商户识别，它们会发送交易名称、金额和商户名称。"
   assistant_messages:
     assistant_message:
       assistant_reasoning: 助手推理

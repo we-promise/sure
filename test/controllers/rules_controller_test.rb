@@ -633,16 +633,13 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     rule = rules(:one)
     rule.actions.create!(action_type: "auto_categorize")
     @user.family.update!(categorization_provider: "jev")
-    # The general stub catches the :openai lookup preferred_llm_provider makes;
-    # the specific one wins for :jev.
-    Provider::Registry.stubs(:get_provider).returns(nil)
-    Provider::Registry.stubs(:get_provider).with(:jev).returns(Provider::Jev.allocate)
-    Provider::Jev.stubs(:effective_model).returns("~typesafe/jev-latest")
+    # The family's plan starts at Jev, so the estimate names Jev's model, not the LLM after it.
+    use_ai_routes(categorize: %w[jev/jev-latest openai/gpt-4.1-mini])
 
     get confirm_rule_url(rule)
 
     assert_response :success
-    assert_match "~typesafe/jev-latest", response.body
+    assert_match "jev-latest", response.body
   end
 
   test "confirm says the active rules above run first" do
@@ -680,6 +677,14 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
   test "should get confirm_all" do
     get confirm_all_rules_url
     assert_response :success
+  end
+
+  test "update saves apply immediately" do
+    rule = create_category_rule("Groceries")
+
+    patch rule_url(rule), params: { rule: { apply_immediately: "1" } }
+
+    assert rule.reload.apply_immediately?
   end
 
   test "apply_all enqueues job and redirects" do
@@ -1029,6 +1034,14 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def create_category_rule(name)
+      @user.family.rules.create!(
+        name: name, resource_type: "transaction", active: true,
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: entries(:transaction).name) ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id) ]
+      )
+    end
+
     # A regex condition, so a stubbed timeout reaches the baseline query, and one
     # matching transaction, so a recorded baseline is visible as a delivery.
     # An active regex rule with one match and no email action yet.

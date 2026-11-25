@@ -3,9 +3,6 @@ tr:
   settings:
     llm_usages:
       show:
-        avg_cost_per_request: Ort. Maliyet/İstek
-        based_on_requests: Maliyet verisi bulunan %{total} istekten %{with_cost} tanesine
-          dayanmaktadır
         col_cost: Maliyet
         col_date: Tarih
         col_model: Model
@@ -29,5 +26,7 @@ tr:
         start_date: Başlangıç Tarihi
         subtitle: Yapay zeka kullanımınızı ve tahmini maliyetlerinizi takip edin
         total_cost: Toplam Maliyet
-        total_requests: Toplam İstek
+        total_calls: "Toplam Çağrı"
+        avg_cost_per_call: "Ort. Maliyet/Çağrı"
+        based_on_calls: "Maliyet verisi bulunan %{total} çağrıdan %{with_cost} tanesine dayanmaktadır"
         total_tokens: Toplam Token
