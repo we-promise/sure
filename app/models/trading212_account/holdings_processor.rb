@@ -85,10 +85,13 @@ class Trading212Account::HoldingsProcessor
     end
 
     def carry_locked_cost_basis(holding, t212_ticker)
+      prefix = position_external_id_prefix(t212_ticker)
       return if holding.nil? || holding.cost_basis_locked?
+      return unless holding.external_id.to_s.start_with?(prefix)
 
       previous = account.holdings
-        .where("holdings.external_id LIKE ?", "#{Holding.sanitize_sql_like(position_external_id_prefix(t212_ticker))}%")
+        .where(currency: holding.currency)
+        .where("holdings.external_id LIKE ?", "#{Holding.sanitize_sql_like(prefix)}%")
         .where("holdings.date < ?", holding.date)
         .order(date: :desc)
         .first
