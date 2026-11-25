@@ -400,6 +400,45 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_in_delta 9.95, @entry.trade.fee.to_f, 0.001
   end
 
+  # The drawer's price and fee share one auto-submitting form, so saving
+  # either sends back the price as displayed.
+  test "the drawer shows the stored price unrounded and a zero fee as empty" do
+    @entry.trade.update!(price: 3.224201, fee: 0)
+
+    get trade_url(@entry)
+
+    assert_select "input[name='entry[entryable_attributes][price]'][value='3.224201']"
+    fee = css_select("input[name='entry[entryable_attributes][fee]']").first
+    assert_nil fee["value"]
+    assert_equal "0", fee["placeholder"]
+  end
+
+  test "the drawer pads a whole price to the currency's decimals" do
+    @entry.trade.update!(price: 150, fee: 9.95)
+
+    get trade_url(@entry)
+
+    assert_select "input[name='entry[entryable_attributes][price]'][value='150.00']"
+    assert_select "input[name='entry[entryable_attributes][fee]'][value='9.95']"
+  end
+
+  test "a fee left empty in the drawer saves as zero" do
+    @entry.trade.update!(fee: 5)
+
+    patch trade_url(@entry), params: {
+      entry: {
+        currency: "USD",
+        nature: "outflow",
+        entryable_attributes: { id: @entry.entryable_id, qty: 10, price: "3.224201", fee: "" }
+      }
+    }
+
+    @entry.reload
+    assert_equal 0, @entry.trade.fee
+    assert_equal BigDecimal("3.224201"), @entry.trade.price
+    assert_equal BigDecimal("32.2420"), @entry.amount
+  end
+
   test "creates trade buy entry" do
     assert_difference [ "Entry.count", "Trade.count", "Security.count" ], 1 do
       post trades_url(account_id: @entry.account_id), params: {

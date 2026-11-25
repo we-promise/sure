@@ -129,6 +129,11 @@ class TradesController < ApplicationController
       fee = update_params[:entryable_attributes][:fee]
       nature = update_params[:nature]
 
+      # The drawer shows a zero fee as an empty field, so empty means no fee.
+      if update_params[:entryable_attributes].key?(:fee) && fee.blank?
+        fee = update_params[:entryable_attributes][:fee] = 0
+      end
+
       if qty.present? && price.present?
         is_sell = nature == "inflow"
         qty = is_sell ? -qty.to_d.abs : qty.to_d.abs
