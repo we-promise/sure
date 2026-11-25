@@ -105,6 +105,15 @@ class AiNestedCallTest < ActiveSupport::TestCase
     assert_equal [ nil, nil ], @llm.holders
   end
 
+  test "an external assistant on the local network has no gate: it calls its own models" do
+    agent = ai_endpoint(name: "agent", base_url: "http://agent.local:18789/v1", location: :local, agent: true, agent_settings: { allowed_emails: [] })
+    Ai::Config.override = AiTestHelper.build_ai_config([ ai_model(name: "openclaw/main", endpoint: agent) ], { chat: %w[agent/openclaw/main] })
+    @user.family.update!(assistant_type: "external")
+
+    assert_equal "agent", Ai.plan(:chat, family: @user.family, user: @user).route.endpoint.name
+    assert_nil Ai::Sequencer.chat_endpoint(@user)
+  end
+
   private
     def route_chat_and_embeddings_to(endpoint)
       chat = ai_model(name: "qwen3-8b", endpoint:, capabilities: AiTestHelper::LLM_CAPABILITIES)

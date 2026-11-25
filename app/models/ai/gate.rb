@@ -187,7 +187,7 @@ class Ai::Gate
     # Whether the typing hold keeps the request off the host. Read before the gate's lock is taken,
     # so a slow Redis never keeps other requests from it.
     def held?(holder)
-      !holder.interactive? && @host.present? && ChatReservation.held?(@host)
+      !holder.interactive? && @host && ChatReservation.held?(@host)
     rescue StandardError => e
       Rails.logger.warn("[Ai::Gate] typing hold of #{@host} not read: #{e.class}: #{e.message}")
       false

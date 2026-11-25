@@ -346,13 +346,14 @@ class ChatTest < ActiveSupport::TestCase
     assert pending.reload.pending?
   end
 
-  def late_reply(chat)
-    chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "qwen3-8b", status: :pending, created_at: 5.minutes.ago, updated_at: 5.minutes.ago)
-  end
+  private
+    def late_reply(chat)
+      chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "qwen3-8b", status: :pending, created_at: 5.minutes.ago, updated_at: 5.minutes.ago)
+    end
 
-  def publish_gate(holders: [], waiters: [])
-    Ai::Gate::State.write("gpu.local:8080", holders:, waiters:, interruptions: 0, put_off: false)
-  end
+    def publish_gate(holders: [], waiters: [])
+      Ai::Gate::State.write("gpu.local:8080", holders:, waiters:, interruptions: 0, put_off: false)
+    end
 
-  def interactive(job) = Ai::Gate::Holder.new(lane: :interactive, job:)
+    def interactive(job) = Ai::Gate::Holder.new(lane: :interactive, job:)
 end

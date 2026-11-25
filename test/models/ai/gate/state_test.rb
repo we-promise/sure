@@ -114,6 +114,7 @@ class Ai::Gate::StateTest < ActiveSupport::TestCase
     assert_equal 1, built(holders: [ batch ], waiters: [ chat ]).ahead_of("chat:1"), "the interrupted request is letting go"
     assert_equal 1, built(holders: [ other ], waiters: [ chat ]).ahead_of("chat:1")
     assert_equal 0, built(holders: [ chat ], waiters: [ other ]).ahead_of("chat:1"), "it's running"
+    assert_equal 0, built(waiters: [ chat ]).ahead_of("chat:1"), "the host is free: it's about to run"
   end
 
   private

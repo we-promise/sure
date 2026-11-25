@@ -43,6 +43,7 @@ class Ai::Gate::State
     return 0 if holders.any? { _1.job == job }
 
     others = (holders + waiters).count { _1.interactive? && _1.job != job }
-    waiters.any? { _1.job == job } ? [ others, 1 ].max : others
+    letting_go = holders.any? && waiters.any? { _1.job == job }
+    letting_go ? [ others, 1 ].max : others
   end
 end
