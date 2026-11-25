@@ -10,7 +10,8 @@
     <% else %>
       <p class="text-sm text-secondary"><%= t("portfolios.value_chart.no_data") %></p>
     <% end %>
-    <p class="text-xs text-secondary"><%= t("portfolios.value_chart.as_of", date: l(as_of, format: :long)) %></p>
+    <%# Dated by the point the figure above is read from: the end of a past period, not today. %>
+    <p class="text-xs text-secondary"><%= t("portfolios.value_chart.as_of", date: l(series&.values&.last&.date || as_of, format: :long)) %></p>
   </div>
 
   <% if series && series.values.size >= 2 %>
