@@ -159,6 +159,59 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
     assert_equal 0, day.net_market_flows
   end
 
+  test "forward: a whole position out is valued at the price of the day it leaves when the holdings record one" do
+    # The close of the day has a priced row with no shares, as a materialized sync writes it.
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      holdings: [
+        { date: 2.days.ago.to_date, ticker: "AAPL", qty: 10, price: 100, amount: 1000 },
+        { date: transfer_day, ticker: "AAPL", qty: 0, price: 120, amount: 0 }
+      ]
+    )
+    add_trade(account, qty: -10, price: 105)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 1200, day.non_cash_outflows
+    assert_equal 200, day.net_market_flows
+  end
+
+  test "forward: a whole position out on the day of a split is valued at the post-split price of the day before" do
+    # 10 shares at 100 become 20 at 50 on the transfer day, and all 20 leave.
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      holdings: [ { date: 2.days.ago.to_date, ticker: "AAPL", qty: 10, price: 100, amount: 1000 } ]
+    )
+    Security.find_by!(ticker: "AAPL").splits.create!(ex_date: transfer_day, numerator: 2, denominator: 1, source: "manual")
+    add_trade(account, qty: -20, price: 50)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 1000, day.non_cash_outflows
+    assert_equal 0, day.net_market_flows
+  end
+
+  test "forward: a flow is rounded to the holdings' scale so no market movement is left" do
+    # 0.333333333333333333 shares at 100.1234 are 33.37446666... and the
+    # holding stores them as 33.3745.
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      holdings: [
+        { date: transfer_day, ticker: "AAPL", qty: BigDecimal("0.333333333333333333"), price: BigDecimal("100.1234"), amount: BigDecimal("33.3745") },
+        { date: Date.current, ticker: "AAPL", qty: BigDecimal("0.333333333333333333"), price: BigDecimal("100.1234"), amount: BigDecimal("33.3745") }
+      ]
+    )
+    add_trade(account, qty: BigDecimal("0.333333333333333333"), price: 0)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal BigDecimal("33.3745"), day.non_cash_inflows
+    assert_equal 0, day.net_market_flows
+  end
+
   test "forward: a transfer out of part of a position is valued at the day's price" do
     # 20 shares at 98 become 10 at 100 on the transfer day, 10 of them leaving.
     account = create_account_with_ledger(
