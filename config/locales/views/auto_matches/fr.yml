@@ -23,6 +23,9 @@ fr:
       from: De
       to: Vers
       date: Date
+      days_apart:
+        one: "%{count} jour d'écart"
+        other: "%{count} jours d'écart"
       actions: Actions
       separator: "·"
     bulk_actions:
