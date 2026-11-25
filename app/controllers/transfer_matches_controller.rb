@@ -1,5 +1,6 @@
 class TransferMatchesController < ApplicationController
   before_action :set_entry
+  before_action :refuse_split_parent, only: %i[new create]
 
   def new
     # Preloaded for the logo selects, which call Account#logo_url per option.
@@ -49,6 +50,14 @@ class TransferMatchesController < ApplicationController
       @entry = Current.accessible_entries.find(params[:transaction_id])
     end
 
+    # A split parent's amount is already in its parts, so matching it would move
+    # the other account's balance on top of a matched part.
+    def refuse_split_parent
+      return unless @entry.split_parent? || matched_entry&.split_parent?
+
+      redirect_back_or_to transactions_path, alert: t("transfer_matches.split_parent")
+    end
+
     # Counterpart entries of the family-wide candidates, in candidate order and
     # limited to accounts the user can write to (create would reject the others
     # anyway).
@@ -73,8 +82,14 @@ class TransferMatchesController < ApplicationController
       if transfer_match_params[:method] == "new"
         accessible_accounts.find(transfer_match_params[:target_account_id])
       else
-        Current.accessible_entries.find(transfer_match_params[:matched_entry_id]).account
+        matched_entry.account
       end
+    end
+
+    def matched_entry
+      return if action_name != "create" || transfer_match_params[:method] == "new"
+
+      @matched_entry ||= Current.accessible_entries.find(transfer_match_params[:matched_entry_id])
     end
 
     def build_transfer
@@ -98,11 +113,9 @@ class TransferMatchesController < ApplicationController
         transfer.status = "confirmed"
         transfer
       else
-        target_transaction = Current.accessible_entries.find(transfer_match_params[:matched_entry_id])
-
         transfer = Transfer.find_or_initialize_by(
-          inflow_transaction: @entry.amount.negative? ? @entry.transaction : target_transaction.transaction,
-          outflow_transaction: @entry.amount.negative? ? target_transaction.transaction : @entry.transaction
+          inflow_transaction: @entry.amount.negative? ? @entry.transaction : matched_entry.transaction,
+          outflow_transaction: @entry.amount.negative? ? matched_entry.transaction : @entry.transaction
         )
         transfer.status = "confirmed"
         transfer

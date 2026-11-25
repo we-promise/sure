@@ -1,8 +1,9 @@
 require "test_helper"
 require "concurrent"
 
-# Unsplitting or deleting a split while a transfer on one of the parts is
-# confirmed or removed must end in a consistent state. The split action must
+# Splitting a transaction while its suggested transfer is confirmed, and
+# unsplitting or deleting a split while a transfer on one of the parts is
+# confirmed or removed, must end in a consistent state. The split action must
 # either succeed or be refused, and an unlink racing it must succeed, never
 # fail with a deadlock. A racing confirm fails with RecordNotFound when the
 # split action removed its transfer first, and then leaves the legs alone.
@@ -63,6 +64,33 @@ class EntryUnsplitConcurrencyTest < ActiveSupport::TestCase
         if Transfer.exists?(transfer.id)
           assert Transfer.find(transfer.id).confirmed?
           assert Entry.find(parent.id).split_parent?, "a split must not be removed while its transfer stays"
+        end
+      end
+    end
+  end
+
+  test "splitting while the whole amount's suggested transfer is confirmed does one or the other" do
+    5.times do
+      entry = Entry.create!(
+        account: @checking, name: "Mortgage payment", date: Date.current,
+        amount: 100, currency: "USD", entryable: Transaction.new)
+      loan_entry = Entry.create!(
+        account: @loan, name: "Payment", date: Date.current,
+        amount: -100, currency: "USD", entryable: Transaction.new)
+      transfer = Transfer.create!(inflow_transaction: loan_entry.transaction, outflow_transaction: entry.transaction, status: "pending")
+      entry, transfer = Entry.find(entry.id), Transfer.find(transfer.id)
+
+      race(
+        split_action: -> { entry.split_once!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]) },
+        other: -> { transfer.confirm! },
+        other_may_raise: ActiveRecord::RecordNotFound)
+
+      ActiveRecord::Base.uncached do
+        if Entry.find(entry.id).split_parent?
+          assert_not Transfer.exists?(transfer.id), "a split must not keep a transfer on the whole amount"
+          assert_equal "standard", Transaction.find(loan_entry.entryable_id).kind, "a confirm after the split must not change the loan leg"
+        else
+          assert Transfer.find(transfer.id).confirmed?, "a transaction that was not split must keep its confirmed transfer"
         end
       end
     end

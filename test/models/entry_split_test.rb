@@ -314,6 +314,49 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert_not @entry.reload.split_parent?
   end
 
+  test "split_once! removes a suggested transfer on the whole amount" do
+    inflow = create_transaction(amount: -100, account: accounts(:credit_card))
+    Transfer.create!(outflow_transaction: @entry.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    assert_difference -> { Transfer.count } => -1, -> { RejectedTransfer.count } => 0 do
+      assert @entry.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    end
+
+    assert_nil Transaction.find(inflow.entryable_id).transfer
+    assert_equal "standard", inflow.transaction.reload.kind
+    assert_equal 1, inflow.account.syncs.visible.count, "the other account's balance may have counted the suggestion"
+  end
+
+  test "split_once! keeps a suggested transfer that carries a fee" do
+    inflow = create_transaction(amount: -100, account: accounts(:credit_card))
+    transfer = Transfer.create!(outflow_transaction: @entry.transaction, inflow_transaction: inflow.transaction, status: "pending")
+    fee = create_transaction(amount: 2, account: accounts(:credit_card), name: "Transfer fee")
+    fee.transaction.update!(transfer_id: transfer.id)
+
+    assert_no_difference "Transfer.count" do
+      assert @entry.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    end
+    assert Entry.exists?(fee.id)
+  end
+
+  test "split_once! keeps a suggested transfer when the amounts do not add up" do
+    inflow = create_transaction(amount: -100, account: accounts(:credit_card))
+    transfer = Transfer.create!(outflow_transaction: @entry.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    assert_raises(ActiveRecord::RecordInvalid) { @entry.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 30 } ]) }
+    assert Transfer.exists?(transfer.id)
+    assert_empty inflow.account.syncs.visible
+  end
+
+  test "split_once! keeps a suggested transfer when it does not split" do
+    inflow = create_transaction(amount: -100, account: accounts(:credit_card))
+    transfer = Transfer.create!(outflow_transaction: @entry.transaction, inflow_transaction: inflow.transaction, status: "pending")
+    Entry.where(id: @entry.id).update_all(excluded: true)
+
+    assert_not @entry.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    assert Transfer.exists?(transfer.id)
+  end
+
   test "resplit! replaces the children of a split" do
     @entry.split!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
 

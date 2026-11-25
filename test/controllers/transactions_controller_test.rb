@@ -2553,6 +2553,25 @@ end
     assert_equal I18n.t("account.entries.destroy.part_transferred"), flash[:alert]
   end
 
+  test "the drawer offers the transfer matcher on a split part, not on its parent" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
+    part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+
+    get transaction_url(part)
+    assert_select "a[href=?]", new_transaction_transfer_match_path(part)
+
+    get transaction_url(parent)
+    assert_select "a[href=?]", new_transaction_transfer_match_path(parent), count: 0
+
+    link_split_part_to_loan(part)
+    get transaction_url(part)
+    assert_select "a[href=?]", new_transaction_transfer_match_path(part), count: 0
+
+    part.transaction.transfer.update!(status: "pending")
+    get transaction_url(part)
+    assert_select "a[href=?]", new_transaction_transfer_match_path(part), count: 0
+  end
+
   test "update keeps a split part's amount, currency and kind" do
     parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
     part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
