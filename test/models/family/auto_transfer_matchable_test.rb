@@ -1,8 +1,10 @@
 require "test_helper"
+require "support/bitcoin_wallet_test_helper"
 
 class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   include EntriesTestHelper
   include LedgerTestingHelper
+  include BitcoinWalletTestHelper
 
   setup do
     @family = families(:dylan_family)
@@ -194,6 +196,21 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     # Both sides now linked -- the same pair matches.
     assert_difference -> { Transfer.count } => 1 do
       @family.auto_match_transfers!
+    end
+  end
+
+  test "a Bitcoin position link does not qualify manual cash for automatic FX matching" do
+    load_exchange_prices
+    wallet = build_bitcoin_wallet(status: :active)
+    wallet.create_account_provider!(account: wallet.account)
+    link_account!(@credit_card)
+    outflow = create_transaction(date: 1.day.ago.to_date, account: wallet.account, amount: 1000)
+    inflow = create_transaction(account: @credit_card, amount: -1400, currency: "CAD")
+
+    assert_not_empty @family.transfer_match_candidates(inflow_transaction_id: inflow.entryable_id,
+      outflow_transaction_id: outflow.entryable_id)
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!(account: wallet.account)
     end
   end
 
@@ -578,9 +595,9 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
-  # linked_account_sql inlines the inverse of Account#manual?; this keeps the two
+  # linked_account_sql inlines the inverse of Account#manual_accounting?; this keeps the two
   # from drifting apart.
-  test "linked_account_sql agrees with Account#manual?" do
+  test "linked_account_sql agrees with Account#manual_accounting?" do
     plain = accounts(:depository)
     via_provider = accounts(:credit_card)
     link_account!(via_provider)
@@ -590,7 +607,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
       .pluck(:id)
 
     [ plain, via_provider ].each do |account|
-      assert_equal !account.reload.manual?, linked_ids.include?(account.id), account.name
+      assert_equal !account.reload.manual_accounting?, linked_ids.include?(account.id), account.name
     end
   end
 

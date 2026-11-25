@@ -7,6 +7,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   include BitcoinWalletTestHelper
   include EntriesTestHelper
   include TradeRepublicSessionTestHelper
+  include BitcoinWalletTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -2019,6 +2020,27 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     post sync_account_url(@account)
     assert_redirected_to account_url(@account)
+  end
+
+  test "refreshing a shared Bitcoin account queues only its wallet" do
+    member = users(:family_member)
+    wallet = build_bitcoin_wallet(status: :active)
+    private_account = Account.create!(family: wallet.family, owner: @user, name: "Private Wallet",
+      currency: "USD", balance: 0, accountable: Crypto.new)
+    other_wallet = build_bitcoin_wallet(account: private_account, status: :active)
+    [ wallet, other_wallet ].each { |record| record.create_account_provider!(account: record.account) }
+    wallet.account.account_shares.create!(user: member, permission: "read_only")
+    assert_equal wallet.onchain_wallet_item_id, other_wallet.onchain_wallet_item_id
+    refute member.accessible_accounts.exists?(private_account.id)
+    sign_in member
+
+    assert_difference -> { wallet.syncs.count }, 1 do
+      assert_no_difference [ -> { other_wallet.syncs.count }, -> { wallet.onchain_wallet_item.syncs.count } ] do
+        post sync_account_url(wallet.account)
+      end
+    end
+
+    assert_redirected_to account_url(wallet.account)
   end
 
   test "confirms unlink for linked account" do

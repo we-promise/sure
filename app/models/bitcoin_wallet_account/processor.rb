@@ -28,12 +28,22 @@ class BitcoinWalletAccount::Processor
 
   # Use shared quote precedence and stored FX without HTTP inside publication.
   def price_on(date)
+    # A single exact-date market quote outranks the journal and holdings.
+    quotes = wallet.security.prices.where(date: date).limit(2).pluck(:currency, :price)
+    if quotes.one?
+      currency, price = quotes.first
+      return price if currency == account.currency
+
+      rate = ExchangeRate.find_stored_rate(from: currency, to: account.currency, date: date)
+      return rate && price * rate.rate
+    end
+
     Holding::PortfolioCache.new(account, security_ids: [ wallet.security_id ],
       use_holdings: true, carry_forward_prices: true, stored_rates_only: true).get_price(wallet.security_id, date)&.price
   end
 
   # Publish only BTC. Shared materializers own cash, other assets and history.
-  def process(prepare_prices: true, materialize: true)
+  def process(prepare_prices: true, materialize: true, movements_changed: true)
     return unless wallet.account_provider && wallet.baseline_at
 
     self.prepare_prices if prepare_prices
@@ -50,13 +60,22 @@ class BitcoinWalletAccount::Processor
       return unless wallet.account_provider && wallet.baseline_at
 
       account.with_lock do
+        date = Date.current
+        external_id = "bitcoin_wallet_#{wallet.id}_#{date.iso8601}"
+        amount = wallet.quantity * price
+        if !movements_changed && !wallet.pending_materialization_start_date &&
+            wallet.account_provider.holdings.exists?(external_id: external_id, date: date, currency: account.currency,
+              qty: wallet.quantity, price: price, amount: amount)
+          return
+        end
+
         establish_cash_baseline if wallet.initial_valuation_pending?
         earliest_movement = materialize_movements
-        wallet.record_reconciliation!
+        wallet.record_reconciliation!(price: price)
         Account::ProviderImportAdapter.new(account).import_holding(security: wallet.security,
-          quantity: wallet.quantity, price: price, amount: wallet.quantity * price,
-          currency: account.currency, date: Date.current, source: SOURCE,
-          external_id: "bitcoin_wallet_#{wallet.id}_#{Date.current.iso8601}", account_provider_id: wallet.account_provider.id)
+          quantity: wallet.quantity, price: price, amount: amount,
+          currency: account.currency, date: date, source: SOURCE,
+          external_id: external_id, account_provider_id: wallet.account_provider.id)
         account.holdings.reset
         window = [ wallet.pending_materialization_start_date, earliest_movement ].compact.min
         wallet.update!(last_error: nil, pending_materialization_start_date: window)
@@ -105,15 +124,16 @@ class BitcoinWalletAccount::Processor
         price = prices_by_date.fetch(date) { prices_by_date[date] = prices.get_price(wallet.security_id, date)&.price }
         next unless price
         extra = { "bitcoin_wallet" => { "pending" => !row.confirmed?, "txid" => row.txid }, "balance_adjustment" => row.baseline? }
-        next if entry && entry.date == date && entry.entryable.qty == quantity && entry.entryable.price == price && entry.entryable.extra == extra
+        next if entry && entry.date == date && entry.entryable.qty == quantity && entry.entryable.price == price &&
+          entry.entryable.extra.slice(*extra.keys) == extra
 
         window = [ window, date, entry&.date ].compact.min
-        imported = Account::ProviderImportAdapter.new(account).import_trade(
+        Account::ProviderImportAdapter.new(account).import_trade(
           security: wallet.security, quantity: quantity, price: price, amount: 0,
           currency: account.currency, date: date, external_id: external_id, source: SOURCE,
           name: I18n.t("bitcoin_wallet.movements.#{quantity.positive? ? 'received' : 'sent'}",
-            locale: account.family.locale, quantity: quantity.abs.to_s("F")), activity_label: Trade::TRANSFER_LABEL)
-        imported.entryable.update!(extra: extra)
+            locale: account.family.locale, quantity: quantity.abs.to_s("F")), activity_label: Trade::TRANSFER_LABEL,
+          extra: extra)
       end
       window
     end

@@ -319,11 +319,11 @@ class Holding < ApplicationRecord
     difference = qty - recorded
     return if difference.zero?
 
-    entry = Account::ProviderImportAdapter.new(account).import_trade(security: security,
+    Account::ProviderImportAdapter.new(account).import_trade(security: security,
       quantity: difference, price: price, amount: 0, currency: currency, date: date,
       source: "manual_position_reconciliation", external_id: "position_#{id}_#{SecureRandom.uuid}",
-      name: I18n.t("bitcoin_wallet.quantity_reconciliation", locale: account.family.locale), activity_label: Trade::TRANSFER_LABEL)
-    entry.entryable.update!(extra: { "balance_adjustment" => true })
+      name: I18n.t("bitcoin_wallet.quantity_reconciliation", locale: account.family.locale),
+      activity_label: Trade::TRANSFER_LABEL, extra: { "balance_adjustment" => true })
   end
 
   def trades

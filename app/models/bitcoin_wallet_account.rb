@@ -53,18 +53,21 @@ class BitcoinWalletAccount < ApplicationRecord
       raise ArgumentError, "Connect Bitcoin only to a manual Crypto account" unless valid?
       create_account_provider!(account: account)
       account.reset_provider_adapters
-      bitcoin_wallet_transactions.update_all(baseline: true)
+      bitcoin_wallet_transactions.where(present: true).update_all(baseline: true)
       update!(baseline_at: Time.current, status: :active)
       processor.process(prepare_prices: false)
     end
   end
 
   def disconnect!
-    with_lock do
-      # The latest quantities remain available as manual holdings, and entries
-      # retain their provenance. Nothing owned by the user is deleted.
-      destroy!
-      account.reset_provider_adapters
+    Time.use_zone(Time.find_zone(family.timezone) || Time.zone) do
+      with_lock do
+        account.lock!
+        # Replay while the provider link can still distinguish snapshots from manual holdings.
+        materialize_balances! if pending_materialization_start_date
+        destroy!
+        account.reset_provider_adapters
+      end
     end
   end
 
@@ -76,23 +79,18 @@ class BitcoinWalletAccount < ApplicationRecord
     last_synced_at.nil? || last_synced_at < 2.hours.ago
   end
 
-  def record_reconciliation!
+  def record_reconciliation!(price:)
     recorded = account.trades.quantity_as_of(security, Date.current)
     difference = quantity - recorded
     return if difference.zero?
 
-    price = BitcoinWalletAccount::Processor.new(self).price_on(Date.current)
-    return unless price
-
-    entry = Account::ProviderImportAdapter.new(account).import_trade(
+    Account::ProviderImportAdapter.new(account).import_trade(
       security: security, quantity: difference, price: price, amount: 0, currency: account.currency,
       date: Date.current, source: "bitcoin_wallet_reconciliation",
       external_id: "bitcoin_wallet_#{id}_reconciliation_#{SecureRandom.uuid}",
       name: I18n.t("bitcoin_wallet.reconciliation", locale: account.family.locale),
-      activity_label: Trade::TRANSFER_LABEL
+      activity_label: Trade::TRANSFER_LABEL, extra: { "balance_adjustment" => true }
     )
-    entry.entryable.update!(extra: entry.entryable.extra.to_h.merge("balance_adjustment" => true))
-    entry
   end
 
   # Keep the previous valuation until the first BTC price is available.

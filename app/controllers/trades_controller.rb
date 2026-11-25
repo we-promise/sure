@@ -50,9 +50,11 @@ class TradesController < ApplicationController
     return unless require_account_permission!(@entry.account)
 
     if @entry.update(update_entry_params)
-      @entry.lock_saved_attributes!
-      @entry.mark_user_modified!
-      @entry.sync_account_later
+      if @entry.saved_changes.any? || @entry.entryable.saved_changes.any?
+        @entry.lock_saved_attributes!
+        @entry.mark_user_modified!
+        @entry.sync_account_later
+      end
 
       # Reload to ensure fresh state for turbo stream rendering
       @entry.reload

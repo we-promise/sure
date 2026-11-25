@@ -124,13 +124,13 @@ class GoalPledge < ApplicationRecord
     trade = entry.entryable
     return false unless trade.is_a?(Trade)
     return false unless entry.account&.accountable_type == "Crypto"
+    return false if trade.balance_adjustment? || trade.pending?
 
     trade.investment_activity_label == Trade::TRANSFER_LABEL && trade.qty.to_d.positive?
   end
 
-  # Trade-backed match: the trade is stamped like a transaction, since a
-  # wallet re-imports every movement on each sync and the same trade must not
-  # pay a second pledge. There is no transaction to link.
+  # A provider can update a previously matched trade, so stamp it to keep
+  # the same movement from paying another pledge.
   def resolve_with_trade!(trade)
     with_lock do
       raise NotOpenError, "Pledge no longer open" unless status_open?

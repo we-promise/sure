@@ -85,13 +85,23 @@ class BitcoinWalletAccount::ProcessorTest < ActiveSupport::TestCase
     refute @account.can_delete_holding?(@account.holdings.find_by!(security: @wallet.security, date: Date.current))
   end
 
-  test "future manual trades do not alter today's authoritative quantity" do
-    @account.entries.create!(date: Date.current.next_day, amount: 0, currency: "USD", name: "Future transfer",
+  test "scheduled manual trades leave published units unchanged between explorer reads" do
+    scheduled = @account.entries.create!(date: Date.current.next_day, amount: 0, currency: "USD", name: "Future transfer",
       entryable: Trade.new(security: @wallet.security, qty: "0.1", price: 10_000, currency: "USD", investment_activity_label: Trade::TRANSFER_LABEL))
     @wallet.connect!
     assert_equal BigDecimal("0.2"), @account.current_holdings.find_by!(security: @wallet.security).qty
-    present_quantity = @account.trades.where(security: @wallet.security).joins(:entry).where("entries.date <= ?", Date.current).sum(:qty)
-    assert_equal BigDecimal("0.2"), present_quantity
+
+    travel 1.day do
+      @wallet.security.prices.create!(date: Date.current, currency: "USD", price: 12_000)
+      BitcoinWalletAccount::Syncer.any_instance.expects(:perform_sync).never
+      Account::Syncer.new(@account.reload).perform_sync(@account.syncs.create!)
+
+      holding = @account.current_holdings.find_by!(security: @wallet.security)
+      assert_equal Date.current, holding.date
+      assert_equal BigDecimal("0.2"), holding.qty
+      assert_equal 2400, holding.amount
+      assert_equal BigDecimal("0.1"), scheduled.reload.entryable.qty
+    end
   end
 
   test "connecting reconciles the manual holding using units on its date" do

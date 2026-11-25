@@ -344,6 +344,13 @@ class BitcoinWalletAccount::IntegrationTest < ActiveSupport::TestCase
     Account::Syncer.new(@account.reload).perform_sync(@account.syncs.create!)
     assert_equal 1100, @account.reload.balance
 
+    travel 1.day do
+      cash_entry(amount: 25)
+      Account::Syncer.new(@account.reload).perform_sync(@account.syncs.create!)
+      assert_equal 1075, @account.reload.balance
+      assert_empty @wallet.account_provider.holdings
+    end
+
     @wallet.disconnect!
     Account::Syncer.new(@account.reload).perform_sync(@account.syncs.create!)
     assert_equal 1100, @account.reload.balance

@@ -108,14 +108,46 @@ class BitcoinWalletAccount::PublicationLifecycleTest < ActiveSupport::TestCase
       @provider.fund(RECEIVE, 20_000_000)
       @provider.transactions[RECEIVE] = [ bitcoin_transaction(id: "c" * 64, confirmed: false, outputs: [ [ RECEIVE, 1000 ] ]) ]
       BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
+      assert_equal BigDecimal("0.20001"), @wallet.account_provider.holdings.find_by!(date: Date.current).qty
     end
     travel 2.days do
       @provider.transactions[RECEIVE] = [ bitcoin_transaction(id: "d" * 64, confirmed: false, outputs: [ [ RECEIVE, 2000 ] ]) ]
       BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
       assert_equal BigDecimal("0.20002"), @wallet.reload.quantity
       assert_equal 0, @account.balances.find_by!(date: Date.current).net_market_flows
-      assert_equal 0, @account.balances.find_by!(date: Date.current.prev_day).net_market_flows
+      original_date = Date.current.prev_day
+      original_balance = @account.balances.find_by!(date: original_date)
+      assert_equal 0, original_balance.net_market_flows
+      assert_equal 2100, original_balance.end_balance
+      assert_equal BigDecimal("0.2"), @wallet.account_provider.holdings.find_by!(date: original_date).qty
       assert_equal 1, @account.entries.where(source: "bitcoin_wallet").count
+    end
+  end
+
+  test "disconnect replays unpublished balance changes before detaching holdings" do
+    @wallet.connect!
+    original_date = Date.current.next_day
+    travel 1.day do
+      @provider.fund(RECEIVE, 20_000_000)
+      @provider.transactions[RECEIVE] = [ bitcoin_transaction(confirmed: false, outputs: [ [ RECEIVE, 1000 ] ]) ]
+      BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
+      assert_equal BigDecimal("2100.1"), @account.balances.find_by!(date: original_date).end_balance
+    end
+
+    travel 2.days do
+      @provider.transactions[RECEIVE] = []
+      sync = @wallet.syncs.create!
+      SyncJob.queue_adapter.expects(:enqueue).with { |job| job.arguments.first.syncable == @account }
+        .raises(IOError, "queue unavailable")
+      assert_raises(IOError) { BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform_sync(sync) }
+      assert_equal original_date, @wallet.reload.pending_materialization_start_date
+
+      @wallet.disconnect!
+
+      holding = @account.holdings.find_by!(security: @wallet.security, date: original_date)
+      assert_nil holding.account_provider_id
+      assert_equal BigDecimal("0.2"), holding.qty
+      assert_equal 2100, @account.balances.find_by!(date: original_date).end_balance
     end
   end
 

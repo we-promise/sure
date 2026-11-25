@@ -120,7 +120,7 @@ module Family::AutoTransferMatchable
     return if auto_match_transfers_disabled?
 
     # Exclude already matched transfers. Cross-currency FX-tolerance matching is
-    # restricted to provider-linked accounts ONLY on this automatic path -- a
+    # restricted to accounts with cash providers on this automatic path -- a
     # coincidental amount/FX-rate match applied here has no human reviewing it
     # first. The manual "match as transfer" dialog goes through
     # Transaction#transfer_match_candidates, which calls transfer_match_candidates
@@ -541,16 +541,17 @@ module Family::AutoTransferMatchable
       SQL
     end
 
-    # The inverse of Account#manual? / the Account.manual scope, inlined as SQL so
-    # it can run against the inflow/outflow account aliases in the same query
-    # rather than round-tripping through AR. Keep in sync with Account#manual? if
-    # what counts as "linked" ever changes (e.g. a new provider type).
+    # Only providers that can import cash activity qualify for linked FX matching.
     def linked_account_sql(accounts_alias)
       <<~SQL.squish
         (
           #{accounts_alias}.plaid_account_id IS NOT NULL OR
           #{accounts_alias}.simplefin_account_id IS NOT NULL OR
-          EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = #{accounts_alias}.id)
+          EXISTS (
+            SELECT 1 FROM account_providers
+            WHERE account_providers.account_id = #{accounts_alias}.id
+              AND account_providers.provider_type <> 'BitcoinWalletAccount'
+          )
         )
       SQL
     end

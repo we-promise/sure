@@ -464,6 +464,8 @@ class Entry < ApplicationRecord
   end
 
   def lock_saved_attributes!
+    return if wallet_owned_trade?
+
     super
     entryable.lock_saved_attributes!
   end
@@ -612,12 +614,11 @@ class Entry < ApplicationRecord
     update!(reconciled_at: nil, reconciled_by_statement: nil)
   end
 
-  # Checks if entry should be protected from provider sync overwrites.
-  # This does NOT prevent user from editing - only protects from automated sync.
-  #
+  # Wallet-owned trades must follow explorer changes even if an older edit set
+  # a protection flag. Other entries honor manual and import protection.
   # @return [Boolean] true if entry should be skipped during provider sync
   def protected_from_sync?
-    excluded? || user_modified? || import_locked?
+    (excluded? || user_modified? || import_locked?) && !wallet_owned_trade?
   end
 
   # Bulk-marks the entries of the given transactions as user-modified so a
@@ -649,7 +650,7 @@ class Entry < ApplicationRecord
   #
   # @return [Boolean] true if successfully marked
   def mark_user_modified!
-    return true if user_modified?
+    return true if user_modified? || wallet_owned_trade?
     update!(user_modified: true)
   end
 
@@ -1056,6 +1057,13 @@ class Entry < ApplicationRecord
   end
 
   private
+
+    def wallet_owned_trade?
+      return false unless trade? && external_id && source.in?(%w[bitcoin_wallet bitcoin_wallet_reconciliation])
+
+      wallet = account&.provider_account_for("BitcoinWalletAccount")
+      wallet.present? && external_id.start_with?("bitcoin_wallet_#{wallet.id}_")
+    end
 
     def position_provider_owns_trade_entry
       return unless trade? && account && date && !entryable.provider_importing

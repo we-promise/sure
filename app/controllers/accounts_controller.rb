@@ -199,16 +199,18 @@ class AccountsController < ApplicationController
   def sync
     unless @account.syncing?
       if @account.linked?
-        # Sync all provider items for this account
-        # Each provider item will trigger an account sync when complete
         @account.account_providers.each do |account_provider|
-          item = account_provider.adapter&.item
-          next unless item && !item.syncing?
-
-          if item.is_a?(PlaidItem)
-            item.sync_later_with_provider_refresh
+          syncable = if account_provider.provider_type == "BitcoinWalletAccount"
+            account_provider.provider
           else
-            item.sync_later
+            account_provider.adapter&.item
+          end
+          next unless syncable && !syncable.syncing?
+
+          if syncable.is_a?(PlaidItem)
+            syncable.sync_later_with_provider_refresh
+          else
+            syncable.sync_later
           end
         end
       else
@@ -295,7 +297,7 @@ class AccountsController < ApplicationController
       return
     end
 
-    unless @account.manual?
+    unless @account.manual_accounting?
       redirect_to account_path(@account), alert: t("accounts.reconcile_all.not_manual_account")
       return
     end
@@ -344,10 +346,17 @@ class AccountsController < ApplicationController
   def unlink
     begin
       Account.transaction do
+        wallet = @account.provider_account_for("BitcoinWalletAccount")
+        if wallet
+          wallet.disconnect!
+          next
+        end
+
         @account.provider_account_for("FinancekitAccountLineage")&.disconnect!
 
         # Detach holdings from provider links before destroying them
-        provider_link_ids = @account.account_providers.pluck(:id)
+        provider_links = @account.account_providers.where.not(provider_type: "BitcoinWalletAccount")
+        provider_link_ids = provider_links.pluck(:id)
         if provider_link_ids.any?
           Holding.where(account_provider_id: provider_link_ids).update_all(account_provider_id: nil)
         end
@@ -360,7 +369,7 @@ class AccountsController < ApplicationController
         # This follows the Plaid pattern where the provider account survives as "unlinked".
         # SnapTrade has limited connection slots (5 free), so preserving the record avoids
         # wasting a slot on reconnect.
-        @account.account_providers.reload.destroy_all
+        provider_links.destroy_all
 
         # Remove legacy system links (foreign keys)
         @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
@@ -486,9 +495,7 @@ class AccountsController < ApplicationController
         :search, :start_date, :end_date, :amount, :amount_operator, :balance_updates,
         categories: [], tags: [], merchants: [], types: [], status: [], reconcile_status: []
       )
-      # Manual reconciliation only applies to accounts without a live sync.
-      # Ignore a stale or crafted filter on a synced account page.
-      q.delete(:reconcile_status) unless @account&.manual?
+      q.delete(:reconcile_status) unless @account&.manual_accounting?
       q.delete(:amount_operator) unless q[:amount].present?
       q
     end
