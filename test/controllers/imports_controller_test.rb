@@ -335,6 +335,28 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-turbo-confirm]"
   end
 
+  test "a processing pdf import offers Stop and shows the stopped copy afterwards" do
+    import = imports(:pdf)
+    import.pdf_file.attach(
+      io: StringIO.new(file_fixture("imports/sample_bank_statement.pdf").binread),
+      filename: "sample_bank_statement.pdf",
+      content_type: "application/pdf"
+    )
+    import.update!(status: :importing)
+
+    get import_url(import)
+
+    assert_response :success
+    assert_select "form[action=?]", pdf_import_ai_processing_path(import)
+    assert_select "button", text: I18n.t("imports.pdf_import.stop")
+
+    delete pdf_import_ai_processing_path(import)
+    follow_redirect!
+
+    assert_response :success
+    assert_includes response.body, I18n.t("pdf_imports.ai_processings.destroy.stopped")
+  end
+
   test "a stopped import has a stopped badge on the imports index" do
     import = imports(:pdf)
     import.update!(status: :cancelled)

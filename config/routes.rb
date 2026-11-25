@@ -588,6 +588,11 @@ Rails.application.routes.draw do
     resources :mappings, only: :update, module: :import
   end
 
+  # A PDF import's processing claim can be released without deleting the import.
+  resources :pdf_imports, only: [] do
+    resource :ai_processing, only: :destroy, module: :pdf_imports
+  end
+
   resources :holdings, only: %i[index new show update destroy] do
     member do
       post :unlock_cost_basis
