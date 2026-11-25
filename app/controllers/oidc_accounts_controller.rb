@@ -1,5 +1,6 @@
 class OidcAccountsController < ApplicationController
   skip_authentication only: [ :link, :create_link, :new_user, :create_user ]
+  before_action :set_pending_auth, only: [ :link, :create_link, :new_user, :create_user ]
   before_action :reject_removed_identity, only: [ :link, :create_link, :new_user, :create_user ]
   rescue_from SsoIdentityBlock::BlockedIdentity, with: :reject_removed_identity_after_lock
   rescue_from OidcIdentity::ProviderNotConfigured, OidcIdentity::IssuerMismatch, OidcIdentity::LegacyIdentityRebindRejected,
@@ -9,8 +10,6 @@ class OidcAccountsController < ApplicationController
   # Offer linking only while the pending identity remains trusted.
   def link
     # Check if there's pending OIDC auth in session
-    @pending_auth = session[:pending_oidc_auth]
-
     if @pending_auth.nil?
       redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
@@ -30,8 +29,6 @@ class OidcAccountsController < ApplicationController
 
   # Link to a password-verified account while enforcing current issuer continuity.
   def create_link
-    @pending_auth = session[:pending_oidc_auth]
-
     if @pending_auth.nil?
       redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
@@ -90,8 +87,6 @@ class OidcAccountsController < ApplicationController
   # Offer account creation only for a currently trusted pending identity.
   def new_user
     # Check if there's pending OIDC auth in session
-    @pending_auth = session[:pending_oidc_auth]
-
     if @pending_auth.nil?
       redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
@@ -112,8 +107,6 @@ class OidcAccountsController < ApplicationController
 
   # Create the account and OIDC identity using revalidated provider settings.
   def create_user
-    @pending_auth = session[:pending_oidc_auth]
-
     if @pending_auth.nil?
       redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
@@ -198,11 +191,14 @@ class OidcAccountsController < ApplicationController
 
         true
       end
-    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+    rescue ActiveRecord::RecordInvalid => e
       # Expected persistence failures (e.g. a duplicate identity) roll the whole
       # onboarding back and re-render the form. Unexpected errors propagate so
       # they surface instead of being hidden as a form validation message.
       @user.errors.add(:base, e.message)
+    rescue ActiveRecord::RecordNotUnique
+      # PostgreSQL's message names the index and echoes the conflicting values.
+      @user.errors.add(:base, t(".duplicate_account"))
     end
 
     if account_created
@@ -234,9 +230,13 @@ class OidcAccountsController < ApplicationController
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
     end
 
-    # Clear pending authentication when its linked identity is no longer available.
+    def set_pending_auth
+      # Cache-backed sessions preserve symbol keys from the OAuth callback.
+      @pending_auth = session[:pending_oidc_auth]&.with_indifferent_access
+    end
+
     def reject_removed_identity
-      pending_auth = session[:pending_oidc_auth]
+      pending_auth = @pending_auth
       return unless pending_auth.present?
 
       if SsoIdentityBlock.blocked?(provider: pending_auth["provider"], uid: pending_auth["uid"])

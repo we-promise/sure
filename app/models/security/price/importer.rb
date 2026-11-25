@@ -3,6 +3,11 @@ class Security::Price::Importer
   MissingStartPriceError    = Class.new(StandardError)
 
   PROVISIONAL_LOOKBACK_DAYS = 7
+  # How far back the carried-forward tail (see refetchable_dates) is asked for
+  # again. It bounds a security the provider has stopped quoting, whose tail
+  # grows every day. PROVISIONAL_LOOKBACK_DAYS would not do: every tail row
+  # that recent is already provisional.
+  CARRIED_FORWARD_REFETCH_DAYS = 30
 
   attr_reader :provider_error
 
@@ -91,12 +96,13 @@ class Security::Price::Importer
       # stored history before its first price is kept.
       replace_db_price = clear_cache && earliest_provider_price.present? && date >= earliest_provider_price.date
 
-      chosen_price, chosen_currency = if replace_db_price || is_provisional
-        # For provisional/cache clear: only use provider price, let gap-fill handle missing
+      chosen_price, chosen_currency = if replace_db_price || is_provisional || db_price&.carried_forward
+        # For provisional/carried-forward/cache clear: only use provider price, let gap-fill handle missing.
+        # A carried-forward row is recomputed, so it follows a corrected price before it.
         # This ensures stale DB values don't persist when provider has no weekend data
         [ provider_price_value, provider_currency ]
       elsif has_db_price
-        # For non-provisional with valid DB price: preserve existing value (user edits)
+        # For a real DB price: preserve existing value (user edits)
         [ db_price_value, db_price&.currency ]
       else
         # Fill gaps with provider data
@@ -126,7 +132,8 @@ class Security::Price::Importer
         date:        date,
         price:       chosen_price,
         currency:    chosen_currency || "USD",
-        provisional: provisional
+        provisional: provisional,
+        carried_forward: used_locf
       }
     end
 
@@ -229,7 +236,7 @@ class Security::Price::Importer
     end
 
     def all_prices_exist?
-      return false if has_refetchable_provisional_prices?
+      return false if refetchable_dates.any?
 
       # Count only prices in the clamped range so pre-listing / pre-IPO gaps
       # don't perpetually trip the "expected_count mismatch" re-sync. Query
@@ -242,10 +249,24 @@ class Security::Price::Importer
       persisted_count == expected_count
     end
 
-    def has_refetchable_provisional_prices?
-      Security::Price.where(security_id: security.id, date: start_date..end_date)
-                     .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
-                     .exists?
+    # The stored dates the provider is asked for again: provisional prices from
+    # the last PROVISIONAL_LOOKBACK_DAYS, and the carried-forward tail -- the
+    # carried prices after the security's last real quote, from the last
+    # CARRIED_FORWARD_REFETCH_DAYS. A carried price with a real quote after it
+    # is settled (a weekend, a holiday or a day without trades, whichever days
+    # the market keeps) and is not asked for again.
+    def refetchable_dates
+      @refetchable_dates ||= begin
+        last_quote_on = Security::Price.where(security_id: security.id, carried_forward: false).where("price > 0").maximum(:date)
+        tail_from = [ last_quote_on&.next_day, CARRIED_FORWARD_REFETCH_DAYS.days.ago.to_date ].compact.max
+
+        Security::Price
+          .where(security_id: security.id, date: start_date..end_date)
+          .where("(provisional AND date >= :lookback) OR (carried_forward AND date >= :tail_from)",
+                 lookback: PROVISIONAL_LOOKBACK_DAYS.days.ago.to_date, tail_from: tail_from)
+          .pluck(:date)
+          .to_set
+      end
     end
 
     def expected_count
@@ -265,7 +286,7 @@ class Security::Price::Importer
     end
 
     # Skip over ranges that already exist unless clearing cache
-    # Also includes dates with refetchable provisional prices.
+    # Also includes dates with refetchable provisional or carried-forward prices.
     #
     # Iterates from clamped_start_date (not start_date) so pre-listing /
     # pre-IPO gaps don't perpetually trip "first missing date = start_date"
@@ -274,11 +295,6 @@ class Security::Price::Importer
     # refresh can rediscover earlier provider history.
     def effective_start_date
       return start_date if clear_cache
-
-      refetchable_dates = Security::Price.where(security_id: security.id, date: clamped_start_date..end_date)
-                                         .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
-                                         .pluck(:date)
-                                         .to_set
 
       (clamped_start_date..end_date).detect do |d|
         !db_prices.key?(d) || refetchable_dates.include?(d)
@@ -296,38 +312,61 @@ class Security::Price::Importer
     def start_price_value
       # When processing full range (first sync), use original behavior
       if fill_start_date == start_date
-        provider_price_value = provider_prices.select { |date, _| date <= start_date }
-                                              .max_by { |date, _| date }
-                                              &.last&.price
+        provider_date, provider_price = provider_prices.select { |date, _| date <= start_date }
+                                                       .max_by { |date, _| date }
+        provider_price_value = provider_price&.price
         db_price_value = db_prices[start_date]&.price
 
-        return provider_price_value if provider_price_value.present? && provider_price_value.to_f > 0
+        if provider_price_value.present? && provider_price_value.to_f > 0
+          return stored_quote_anchor(start_date, provider_date) || provider_price_value
+        end
         return db_price_value if db_price_value.present? && db_price_value.to_f > 0
         return nil
       end
 
       # For partial range or clamped range, use the most recent data before fill_start_date
       cutoff_date = fill_start_date
+      currency = prev_price_currency || db_price_currency
 
       # First try provider prices (most recent before cutoff)
-      provider_price_value = provider_prices
+      provider_date, provider_price = provider_prices
         .select { |date, _| date < cutoff_date }
         .max_by { |date, _| date }
-        &.last&.price
+      provider_price_value = provider_price&.price
 
-      return provider_price_value if provider_price_value.present? && provider_price_value.to_f > 0
+      if provider_price_value.present? && provider_price_value.to_f > 0
+        return stored_quote_anchor(cutoff_date, provider_date) || provider_price_value
+      end
 
-      # Fall back to most recent DB price before cutoff
-      currency = prev_price_currency || db_price_currency
+      # Fall back to the most recent real DB price before cutoff, or the most
+      # recent carried-forward one when there is no real one. Without any, the
+      # caller would take the stored history for pre-listing and advance
+      # first_provider_price_on past it.
       Security::Price
         .where(security_id: security.id)
         .where("date < ?", cutoff_date)
         .where("price > 0")
-        .where(provisional: false)
         .then { |q| currency.present? ? q.where(currency: currency) : q }
-        .order(date: :desc)
+        .order(carried_forward: :asc, date: :desc)
         .limit(1)
         .pick(:price)
+    end
+
+    # A refetched carried row repeats the stored real quote before it, which
+    # the fill keeps over the provider's (user edits), so the tail anchors on
+    # that quote unless the provider has a later close. Every
+    # provisional row is carried forward.
+    def stored_quote_anchor(date, provider_date)
+      return unless db_prices[date]&.carried_forward
+
+      currency = prev_price_currency || db_price_currency
+      stored_quote = Security::Price
+        .where(security_id: security.id, carried_forward: false)
+        .where("date < ? AND price > 0", date)
+        .then { |q| currency.present? ? q.where(currency: currency) : q }
+        .order(date: :desc)
+        .first
+      stored_quote.price if stored_quote && stored_quote.date >= provider_date
     end
 
     def determine_provisional_status(date:, has_provider_price:, used_locf:, existing_provisional:)
