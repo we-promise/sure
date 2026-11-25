@@ -23,6 +23,9 @@ ca:
       from: Des de
       to: A
       date: Data
+      days_apart:
+        one: "%{count} dia de diferència"
+        other: "%{count} dies de diferència"
       actions: Accions
       separator: "·"
     bulk_actions:
