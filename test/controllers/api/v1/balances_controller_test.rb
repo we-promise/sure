@@ -183,7 +183,7 @@ class Api::V1::BalancesControllerTest < ActionDispatch::IntegrationTest
     end
 
     get api_v1_balances_url, params: { start_date: "20240115" }, headers: api_headers(@api_key)
-    assert_equal "start_date must be an ISO 8601 date", JSON.parse(response.body)["message"]
+    assert_equal "start_date must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
   end
 
   test "a member sees balances only on accounts they can access, filters included" do

@@ -676,7 +676,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
       get api_v1_trades_url, params: { key => value }, headers: api_headers(read_only_api_key)
 
       assert_response :unprocessable_entity, key
-      assert_equal [ "#{key} must be an ISO 8601 date" ], JSON.parse(response.body)["errors"]
+      assert_equal [ "#{key} must be a date in YYYY-MM-DD format" ], JSON.parse(response.body)["errors"]
     end
   end
 

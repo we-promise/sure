@@ -515,12 +515,14 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Other ISO 8601 forms are valid ISO 8601, so the message names the format.
   test "date_filter_param reads YYYY-MM-DD only" do
     assert_equal Date.new(2024, 1, 5), read_filter(:date_filter_param, "2024-01-05")
     assert_equal Date.new(2024, 1, 5), read_filter(:date_filter_param, " 2024-01-05 ")
     assert_nil read_filter(:date_filter_param, nil)
-    assert_invalid_filter "flag must be an ISO 8601 date", :date_filter_param,
-      "", "20240105", "2024-005", "2024-W01-1", "2024-02-30", "Jan 5 2024", "0000-01-05", [ "2024-01-05" ]
+    assert_invalid_filter "flag must be a date in YYYY-MM-DD format", :date_filter_param,
+      "", "20240105", "2024-005", "2024-W01-1", "2024-01", "--01-05", "2024-01-05T10:00:00Z",
+      "2024-02-30", "Jan 5 2024", "0000-01-05", [ "2024-01-05" ]
   end
 
   test "time_filter_param reads ISO 8601 timestamps" do
@@ -548,7 +550,7 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     assert_equal uuid, read_filter(:uuid_filter_param, uuid)
     assert_equal uuid, read_filter(:uuid_filter_param, " #{uuid} ")
     assert_nil read_filter(:uuid_filter_param, nil)
-    assert_invalid_filter "flag must be a valid UUID", :uuid_filter_param, "", "123", "#{uuid}x", [ uuid ]
+    assert_invalid_filter "flag must be a valid UUID", :uuid_filter_param, "", "123", "#{uuid}x", uuid.delete("-"), [ uuid ]
   end
 
   test "uuid_list_filter_param reads a UUID or a list of them" do
@@ -557,8 +559,9 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ first ], read_filter(:uuid_list_filter_param, first)
     assert_nil read_filter(:uuid_list_filter_param, nil)
     assert_nil filter_reader(flag: nil).send(:uuid_list_filter_param, :flag), "a JSON null is absent"
+    assert_nil read_filter(:uuid_list_filter_param, []), "a bare key[] (Rails reads it as []) is absent"
     assert_invalid_filter "flag must be a list of valid UUIDs", :uuid_list_filter_param,
-      "", [], [ "" ], [ first, "123" ], "123", { "0" => first }
+      "", [ "" ], [ first, "123" ], "123", { "0" => first }
   end
 
   test "enum_filter_param reads an exact member of the allowed values" do

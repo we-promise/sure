@@ -5,6 +5,17 @@ class Api::V1::BaseController < ApplicationController
 
   InvalidFilterError = Class.new(StandardError)
 
+  # A 422 with an endpoint's own documented error code (invalid_period...)
+  # in place of validation_failed.
+  class QueryError < StandardError
+    attr_reader :code
+
+    def initialize(code, message)
+      @code = code
+      super(message)
+    end
+  end
+
   # Spellings the strict boolean filters accept (?excluded=true).
   BOOLEAN_FILTER_VALUES = {
     "true" => true,
@@ -54,6 +65,7 @@ class Api::V1::BaseController < ApplicationController
   rescue_from Doorkeeper::Errors::DoorkeeperError, with: :handle_unauthorized
   rescue_from ActionController::ParameterMissing, with: :handle_bad_request
   rescue_from InvalidFilterError, with: :handle_invalid_filter
+  rescue_from QueryError, with: :handle_query_error
 
   private
 
@@ -318,6 +330,18 @@ class Api::V1::BaseController < ApplicationController
       render_validation_error(exception.message)
     end
 
+    def handle_query_error(exception)
+      render_json({ error: exception.code, message: exception.message }, status: :unprocessable_entity)
+    end
+
+    # Runs typed readers for an endpoint that documents its own error codes:
+    # an invalid value raises QueryError(code, message).
+    def reading_as(code, message)
+      yield
+    rescue InvalidFilterError
+      raise QueryError.new(code, message)
+    end
+
     # A strict YYYY-MM-DD date, or nil when the value is missing or invalid.
     def parse_date(value)
       return unless value.is_a?(String) && value.match?(/\A\d{4}-\d{2}-\d{2}\z/)
@@ -349,8 +373,10 @@ class Api::V1::BaseController < ApplicationController
       read_filter(key, "must be true or false", within:) { |raw| BOOLEAN_FILTER_VALUES[raw.downcase] }
     end
 
+    # The other ISO 8601 forms (20240105, 2024-W01-1, 2024-01, timestamps) are
+    # refused, so the message names the one format accepted.
     def date_filter_param(key)
-      read_filter(key, "must be an ISO 8601 date") { |raw| parse_date(raw) }
+      read_filter(key, "must be a date in YYYY-MM-DD format") { |raw| parse_date(raw) }
     end
 
     def time_filter_param(key)
@@ -372,9 +398,10 @@ class Api::V1::BaseController < ApplicationController
       read_filter(key, "must be a valid UUID") { |raw| raw if valid_uuid?(raw) }
     end
 
-    # key[]=a&key[]=b, or a single key=a.
+    # key[]=a&key[]=b, or a single key=a. A bare `?key[]` reaches params as []
+    # (Rails' deep_munge), so an empty list is absent like a bare `?key`.
     def uuid_list_filter_param(key)
-      return if params[key].nil?
+      return if params[key].nil? || params[key] == []
 
       values = Array.wrap(params[key]).map { |raw| scalar_filter_value(raw) }
       return values if values.any? && values.all? { |value| valid_uuid?(value) }

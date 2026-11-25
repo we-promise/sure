@@ -501,12 +501,12 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     %i[start_date end_date].product(%w[not-a-date 2024/01/05 05-01-2024 Jan\ 5\ 2024 20240105]).each do |key, value|
       get api_v1_transactions_url, params: { key => value }, headers: api_headers(@api_key)
       assert_response :unprocessable_entity, "expected #{key}=#{value.inspect} to be refused"
-      assert_equal "#{key} must be an ISO 8601 date", JSON.parse(response.body)["message"]
+      assert_equal "#{key} must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
     end
   end
 
   test "a present but empty filter is refused, except search" do
-    { start_date: "an ISO 8601 date", account_id: "a valid UUID", account_ids: "a list of valid UUIDs",
+    { start_date: "a date in YYYY-MM-DD format", account_id: "a valid UUID", account_ids: "a list of valid UUIDs",
       min_amount: "a number of at most 20 digits", type: "one of: income, expense", budget_id: "a valid UUID",
       exclude_split_parents: "true or false", excluded: "true or false" }.each do |key, expected|
       get "#{api_v1_transactions_url}?#{key}=", headers: api_headers(@api_key)
@@ -516,6 +516,23 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     get "#{api_v1_transactions_url}?search=", headers: api_headers(@api_key)
     assert_response :success
+  end
+
+  test "a bare key with no = turns its filter off, list keys included" do
+    get api_v1_transactions_url, headers: api_headers(@api_key)
+    unfiltered = JSON.parse(response.body)["pagination"]["total_count"]
+
+    %w[excluded account_ids[] category_ids[] merchant_ids[] tag_ids[]].each do |key|
+      get "#{api_v1_transactions_url}?#{key}", headers: api_headers(@api_key)
+      assert_response :success, "?#{key}"
+      assert_equal unfiltered, JSON.parse(response.body)["pagination"]["total_count"], "?#{key}"
+    end
+  end
+
+  test "ids must be hyphenated UUIDs" do
+    get api_v1_transactions_url, params: { account_id: @account.id.delete("-") }, headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_equal "account_id must be a valid UUID", JSON.parse(response.body)["message"]
   end
 
   test "id filters refuse values that are not UUIDs" do

@@ -62,7 +62,7 @@ The `GET /api/v1/transactions` endpoint supports the following query parameters 
 
 Filters combine, so `budget_id` can be narrowed further with `category_id`, `account_id`, a date range and so on. A single id and its list (`account_id` and `account_ids[]`, and likewise for categories and merchants) match the ids in both.
 
-A parameter that is present must be valid, or the request returns `422`: ids must be UUIDs, dates `YYYY-MM-DD`, amounts plain or scientific numbers of at most 20 digits written out (`1e19` is the largest power of ten), `type` exactly `income` or `expense`, and `exclude_split_parents` / `excluded` one of `true`, `false`, `1` or `0` (case and surrounding spaces aside). An empty value is invalid too, except for `search`, where it turns the search off. Leave a parameter out, or send it with no `=` (`?excluded`), to turn its filter off.
+A parameter that is present must be valid, or the request returns `422`: ids must be UUIDs written with hyphens, dates `YYYY-MM-DD`, amounts plain or scientific numbers of at most 20 digits written out (`1e19` is the largest power of ten), `type` exactly `income` or `expense`, and `exclude_split_parents` / `excluded` one of `true`, `false`, `1` or `0` (case and surrounding spaces aside). An empty value is invalid too, except for `search`, where it turns the search off. Leave a parameter out, or send it with no `=` (`?excluded`, `?tag_ids[]`), to turn its filter off.
 
 ### Budget and report lists
 

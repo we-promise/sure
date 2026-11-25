@@ -78,6 +78,18 @@ class Api::V1::CashFlowsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "reads dates and modes with the API's shared readers" do
+    get "/api/v1/cash_flow", params: { view: " sankey ", group_by: "account ", start_date: " 2024-01-01", end_date: "2024-01-31 " },
+      headers: api_headers(@auth)
+    assert_response :success
+    assert_equal "2024-01-01", response.parsed_body.dig("period", "start_date")
+    assert_equal "net_by_account", response.parsed_body.dig("sankey", "basis")
+
+    get "/api/v1/cash_flow", params: { month: " 2024-01-01 " }, headers: api_headers(@auth)
+    assert_response :success
+    assert_equal "2024-01-01", response.parsed_body["month"]
+  end
+
   test "the sankey view can be grouped by account" do
     get "/api/v1/cash_flow", params: { view: "sankey", group_by: "account" }, headers: api_headers(@auth)
     assert_response :success

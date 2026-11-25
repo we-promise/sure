@@ -73,4 +73,11 @@ class Api::V1::SpendingVsNormalControllerTest < ActionDispatch::IntegrationTest
       assert_equal "invalid_period", response.parsed_body["error"]
     end
   end
+
+  test "reads dates with the API's shared date rule" do
+    get "/api/v1/spending_vs_normal", params: { start_date: " 2024-02-01", end_date: "2024-02-29 " }, headers: api_headers(@auth)
+
+    assert_response :success
+    assert_equal({ "start_date" => "2024-02-01", "end_date" => "2024-02-29" }, response.parsed_body["period"])
+  end
 end

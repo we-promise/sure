@@ -1,47 +1,44 @@
 class Api::V1::CashFlowsController < Api::V1::BaseController
+  SANKEY = %w[sankey].freeze
+  INVALID_RANGE = "Date ranges require view=sankey, both ISO dates in order, and no month".freeze
+  INVALID_MONTH = "month must be a non-future ISO first day (YYYY-MM-01)".freeze
+
   before_action -> { authorize_scope!(:read) }
 
   def show
     response.headers["Cache-Control"] = "private, no-store"
     today = Date.current
     statement = IncomeStatement.new(current_resource_owner.family, user: current_resource_owner)
-    if params[:include] && params[:view]
-      return invalid_query("invalid_view", "include and view cannot be combined")
+    include_mode, view = reading_as("invalid_view", "include and view support only sankey") do
+      [ enum_filter_param(:include, SANKEY), enum_filter_param(:view, SANKEY) ]
     end
-    unless [ nil, "sankey" ].include?(params[:include]) && [ nil, "sankey" ].include?(params[:view])
-      return invalid_query("invalid_view", "include and view support only sankey")
+    raise QueryError.new("invalid_view", "include and view cannot be combined") if include_mode && view
+
+    group_by = reading_as("invalid_group_by", "group_by must be category or account") do
+      enum_filter_param(:group_by, IncomeStatement::CashFlowGraph::GROUPINGS.keys)
     end
-    if params[:group_by] && params[:view] != "sankey"
-      return invalid_query("invalid_group_by", "group_by requires view=sankey")
+    raise QueryError.new("invalid_group_by", "group_by requires view=sankey") if group_by && !view
+
+    start_date, end_date = reading_as("invalid_period", INVALID_RANGE) do
+      [ date_filter_param(:start_date), date_filter_param(:end_date) ]
     end
-    group_by = params[:group_by] || "category"
-    unless IncomeStatement::CashFlowGraph::GROUPINGS.key?(group_by)
-      return invalid_query("invalid_group_by", "group_by must be category or account")
-    end
-    if params[:start_date] || params[:end_date]
-      start_date, end_date = parse_date(params[:start_date]), parse_date(params[:end_date])
-      unless params[:view] == "sankey" && params[:month].nil? && start_date && end_date && start_date <= end_date
-        return invalid_query("invalid_period", "Date ranges require view=sankey, both ISO dates in order, and no month")
+    if start_date || end_date
+      unless view && params[:month].nil? && start_date && end_date && start_date <= end_date
+        raise QueryError.new("invalid_period", INVALID_RANGE)
       end
       period = Period.custom(start_date: start_date, end_date: end_date)
     else
-      month = params[:month].nil? ? today.beginning_of_month : parse_date(params[:month])
-      unless month && month.day == 1 && month <= today
-        return invalid_query("invalid_month", "month must be a non-future ISO first day (YYYY-MM-01)")
-      end
+      month = reading_as("invalid_month", INVALID_MONTH) { date_filter_param(:month) } || today.beginning_of_month
+      raise QueryError.new("invalid_month", INVALID_MONTH) unless month.day == 1 && month <= today
+
       period = Period.custom(start_date: month, end_date: [ month.end_of_month, today ].min)
     end
 
-    if params[:view] == "sankey"
+    if view
       # Arbitrary graph ranges must not allocate a daily comparison series.
-      render json: IncomeStatement::CashFlowGraph.new(statement, period: period, group_by: group_by, as_of: today)
+      render json: IncomeStatement::CashFlowGraph.new(statement, period: period, group_by: group_by || "category", as_of: today)
     else
-      render json: IncomeStatement::CashFlow.new(statement, month: month, as_of: today, include_sankey: params[:include] == "sankey")
+      render json: IncomeStatement::CashFlow.new(statement, month: month, as_of: today, include_sankey: include_mode.present?)
     end
   end
-
-  private
-    def invalid_query(error, message)
-      render json: { error: error, message: message }, status: :unprocessable_entity
-    end
 end

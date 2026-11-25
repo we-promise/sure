@@ -243,7 +243,7 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
         get api_v1_budget_categories_url, params: { key => value }, headers: api_headers(@api_key)
 
         assert_response :unprocessable_entity
-        assert_equal "#{key} must be an ISO 8601 date", JSON.parse(response.body)["message"]
+        assert_equal "#{key} must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
       end
     end
   end

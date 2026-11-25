@@ -185,7 +185,7 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
       get api_v1_transfers_url, params: { start_date: value }, headers: api_headers(@api_key)
 
       assert_response :unprocessable_entity, "start_date=#{value} should be rejected"
-      assert_equal "start_date must be an ISO 8601 date", JSON.parse(response.body)["message"]
+      assert_equal "start_date must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
     end
   end
 

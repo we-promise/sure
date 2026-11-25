@@ -195,7 +195,7 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
       get api_v1_security_prices_url, params: { key => value }, headers: api_headers(@api_key)
 
       assert_response :unprocessable_entity, value
-      assert_equal [ "#{key} must be an ISO 8601 date" ], JSON.parse(response.body)["errors"]
+      assert_equal [ "#{key} must be a date in YYYY-MM-DD format" ], JSON.parse(response.body)["errors"]
     end
   end
 

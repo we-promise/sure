@@ -225,10 +225,10 @@ class Api::V1::AccountStatementsControllerTest < ActionDispatch::IntegrationTest
       { review_status: "approved" } => "review_status must be one of: unmatched, linked, rejected",
       { review_status: "" } => "review_status must be one of: unmatched, linked, rejected",
       { content_sha256: [ "abc" ] } => "content_sha256 must be a string",
-      { start_date: "2024-13-01" } => "start_date must be an ISO 8601 date",
-      { start_date: "" } => "start_date must be an ISO 8601 date",
-      { end_date: "20240105" } => "end_date must be an ISO 8601 date",
-      { end_date: "2024-W01-1" } => "end_date must be an ISO 8601 date"
+      { start_date: "2024-13-01" } => "start_date must be a date in YYYY-MM-DD format",
+      { start_date: "" } => "start_date must be a date in YYYY-MM-DD format",
+      { end_date: "20240105" } => "end_date must be a date in YYYY-MM-DD format",
+      { end_date: "2024-W01-1" } => "end_date must be a date in YYYY-MM-DD format"
     }.each do |filter, message|
       get api_v1_account_statements_url, params: filter, headers: api_headers(@read_only_api_key)
       assert_response :unprocessable_entity, filter.inspect

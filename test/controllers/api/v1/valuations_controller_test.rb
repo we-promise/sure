@@ -110,7 +110,7 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     end
 
     get api_v1_valuations_url, params: { end_date: "20260430" }, headers: api_headers(@api_key)
-    assert_equal "end_date must be an ISO 8601 date", JSON.parse(response.body)["message"]
+    assert_equal "end_date must be a date in YYYY-MM-DD format", JSON.parse(response.body)["message"]
   end
 
   # It used to fall back to 25; the docs and every other endpoint cap at 100.
