@@ -43,7 +43,21 @@ class Holding::CurrentForInvestmentAccounts
     Holding
       .where(account_id: account_ids)
       .where.not(qty: 0)
-      .where(CURRENT_HOLDINGS_SQL, account_ids: account_ids)
+      .where(<<~SQL.squish, account_ids: account_ids)
+        EXISTS (
+          SELECT 1 FROM accounts
+          WHERE accounts.id = holdings.account_id
+            AND accounts.verified_investment_snapshot_date = holdings.date
+            AND accounts.currency = holdings.currency
+            AND #{Account::VerifiedInvestmentSnapshot::ROW_CONDITION}
+        ) OR (
+          holdings.account_id NOT IN (
+            SELECT accounts.id FROM accounts
+            WHERE accounts.id IN (:account_ids) AND accounts.verified_investment_snapshot_date IS NOT NULL
+          )
+          AND (#{CURRENT_HOLDINGS_SQL})
+        )
+      SQL
   end
 
   private

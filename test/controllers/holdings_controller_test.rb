@@ -15,6 +15,31 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "displays the verified date and prevents deleting a snapshot position and its trades" do
+    item = @account.family.simplefin_items.create!(name: "SimpleFIN", access_url: "https://example.com/access")
+    provider = item.simplefin_accounts.create!(
+      name: "Brokerage", currency: "USD", account_type: "investment", current_balance: 123
+    )
+    AccountProvider.create!(account: @account, provider: provider)
+    date = [ @account.holdings.maximum(:date), @account.balances.maximum(:date) ].compact.max.next_day
+    travel_to(date.noon) do
+      security = @holding.security
+      Account::VerifiedInvestmentSnapshot.new(@account).publish!(
+        date: date, total: 150, cash: 50,
+        positions: [ { security_id: security.id, qty: 2, price: 50, amount: 100 } ]
+      )
+      holding = @account.reload.current_holdings.sole
+      get holdings_url(account_id: @account.id)
+      assert_response :success
+      assert_includes response.body, I18n.t("verified_investment_snapshot.as_of", date: I18n.l(date))
+
+      assert_no_difference [ "Holding.count", "Entry.count" ] do
+        delete holding_path(holding)
+      end
+      assert_redirected_to account_path(@account, tab: "holdings"), status: :see_other
+    end
+  end
+
   # Each row shows its average cost, so the list loads them all together
   # rather than running the per-holding fallback once per row.
   test "the holdings list reads every row's average cost together" do

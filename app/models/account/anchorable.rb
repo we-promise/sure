@@ -83,15 +83,19 @@ module Account::Anchorable
   end
 
   def current_anchor_balance
+    return balance if verified_investment_snapshot_date?
+
     current_balance_manager.current_balance
   end
 
   def current_anchor_date
+    return verified_investment_snapshot_date if verified_investment_snapshot_date?
+
     current_balance_manager.current_date
   end
 
   def has_current_anchor?
-    current_balance_manager.has_current_anchor?
+    verified_investment_snapshot_date? || current_balance_manager.has_current_anchor?
   end
 
   private

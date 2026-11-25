@@ -186,11 +186,15 @@ class SimplefinAccount::Processor
         balance
       end
 
-      account.update!(
-        balance: balance,
-        cash_balance: cash_balance,
-        currency: simplefin_account.currency
-      )
+      account.with_lock do
+        unless account.verified_investment_snapshot_date?
+          account.update!(
+            balance: balance,
+            cash_balance: cash_balance,
+            currency: simplefin_account.currency
+          )
+        end
+      end
     end
 
     def process_transactions

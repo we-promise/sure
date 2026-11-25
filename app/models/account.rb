@@ -849,6 +849,11 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
+    if verified_investment_snapshot_date?
+      return holdings.where(date: verified_investment_snapshot_date, currency: currency)
+        .where(Account::VerifiedInvestmentSnapshot::ROW_CONDITION).where.not(qty: 0).order(amount: :desc)
+    end
+
     if holdings.where.not(account_provider_id: nil).exists?
       closed_provider_ids = account_providers.where(provider_type: "SimplefinAccount").includes(:provider).filter_map do |link|
         link.id if link.provider.raw_holdings_payload == []

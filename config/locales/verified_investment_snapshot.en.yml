@@ -1,0 +1,4 @@
+en:
+  verified_investment_snapshot:
+    as_of: "Verified brokerage snapshot as of %{date}. Holdings and cash update only when a new snapshot is published."
+    read_only: "Publish a new brokerage snapshot to change these holdings."
