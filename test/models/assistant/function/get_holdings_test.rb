@@ -183,16 +183,22 @@ class Assistant::Function::GetHoldingsTest < ActiveSupport::TestCase
     assert_equal drawer.format, row[:formatted_average_cost]
   end
 
-  # The account costs trades in USD; a holding reported in CHF gets its mean
-  # converted, so the assistant's figure and its currency agree with the drawer.
+  # The account costs trades in USD; a provider can report the holding in CHF,
+  # and its mean is converted, so the assistant's figure and its currency agree
+  # with the drawer. (A manual account's Holdings tab lists only rows in the
+  # account's currency, so only a linked account has such a row.)
   test "get_holdings gives a holding in another currency its converted average cost" do
+    account, account_provider = linked_account
     security = Security.create!(ticker: "CHFG", name: "CHFG")
     Security::Price.create!(security: security, date: Date.current, price: 30, currency: "CHF")
-    create_trade(security, account: @account, qty: 10, price: 20, date: Date.current)
-    @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 30, amount: 300, currency: "CHF")
+    create_trade(security, account: account, qty: 10, price: 20, date: Date.current)
+    account.holdings.create!(
+      security: security, date: Date.current, qty: 10, price: 30, amount: 300, currency: "CHF",
+      account_provider: account_provider
+    )
     ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: Date.current, rate: 0.9)
 
-    row = @fn.call("accounts" => [ @account.name ])[:holdings].find { |r| r[:ticker] == "CHFG" }
+    row = @fn.call("accounts" => [ account.name ])[:holdings].find { |r| r[:ticker] == "CHFG" }
 
     assert_equal 18.0, row[:average_cost], "20 USD at 0.9"
     assert_equal Money.new(18, "CHF").format, row[:formatted_average_cost]
@@ -202,15 +208,19 @@ class Assistant::Function::GetHoldingsTest < ActiveSupport::TestCase
   # which shares each conversion rate across the page, not from each holding
   # computing its own for each cost field.
   test "get_holdings costs the page in one batch" do
+    account, account_provider = linked_account
     ExchangeRate.create!(from_currency: "USD", to_currency: "CHF", date: Date.current, rate: 0.9)
     3.times do |i|
       security = Security.create!(ticker: "CHF#{i}", name: "CHF#{i}")
-      create_trade(security, account: @account, qty: 10, price: 20, date: Date.current)
-      @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 30, amount: 300, currency: "CHF")
+      create_trade(security, account: account, qty: 10, price: 20, date: Date.current)
+      account.holdings.create!(
+        security: security, date: Date.current, qty: 10, price: 30, amount: 300, currency: "CHF",
+        account_provider: account_provider
+      )
     end
     Holding.any_instance.expects(:calculate_avg_cost).never
 
-    rows = @fn.call("accounts" => [ @account.name ])[:holdings].select { |row| row[:ticker].start_with?("CHF") }
+    rows = @fn.call("accounts" => [ account.name ])[:holdings].select { |row| row[:ticker].start_with?("CHF") }
 
     assert_equal [ 18.0 ] * 3, rows.map { |row| row[:average_cost] }, "20 USD at 0.9"
   end
