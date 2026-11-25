@@ -112,6 +112,9 @@ class ExchangeRate::Importer
         provider_name: current_provider_name
       )
     end
+  ensure
+    # Rows already written stay written, so on every way out.
+    refresh_balances
   end
 
   private
@@ -123,16 +126,39 @@ class ExchangeRate::Importer
       total_upsert_count = 0
 
       rows.each_slice(batch_size) do |batch|
-        upserted_ids = ExchangeRate.upsert_all(
+        # xmax is 0 only on a row the upsert inserted rather than updated.
+        upserted = ExchangeRate.upsert_all(
           batch,
           unique_by: %i[from_currency to_currency date],
-          returning: [ "id" ]
+          returning: Arel.sql("from_currency, to_currency, date, created_at, (xmax = 0) AS inserted")
         )
 
-        total_upsert_count += upserted_ids.count
+        upserted.each do |row|
+          next unless ActiveModel::Type::Boolean.new.cast(row["inserted"])
+
+          inserted_rates << {
+            from: row["from_currency"], to: row["to_currency"], date: row["date"].to_date,
+            stored_at: ExchangeRate.type_for_attribute(:created_at).deserialize(row["created_at"])
+          }
+        end
+
+        total_upsert_count += upserted.count
       end
 
       total_upsert_count
+    end
+
+    def inserted_rates
+      @inserted_rates ||= []
+    end
+
+    # A rate stored where there was none is one a balance had to do without
+    # (ExchangeRate::BalanceRefresh). An updated row was already usable: the
+    # table refuses a rate that is not positive.
+    def refresh_balances
+      return if inserted_rates.empty?
+
+      ExchangeRate::BalanceRefresh.enqueue(inserted_rates, source: "ExchangeRate::Importer", provider: current_provider_name)
     end
 
     def start_rate_value
