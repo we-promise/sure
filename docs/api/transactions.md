@@ -42,25 +42,27 @@ The `GET /api/v1/transactions` endpoint supports the following query parameters 
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `page` | integer | Page number (default: 1) |
-| `per_page` | integer | Items per page (default: 25, max: 100) |
+| `per_page` | integer | Items per page (default: 25, max: 100; larger values are capped at 100) |
 | `account_id` | uuid | Filter by a single account ID |
 | `account_ids[]` | uuid[] | Filter by multiple account IDs |
-| `category_id` | uuid | Filter by a single category ID |
+| `category_id` | uuid | Filter by a single category ID (subcategories are not included) |
 | `category_ids[]` | uuid[] | Filter by multiple category IDs |
 | `merchant_id` | uuid | Filter by a single merchant ID |
 | `merchant_ids[]` | uuid[] | Filter by multiple merchant IDs |
-| `tag_ids[]` | uuid[] | Filter by tag IDs |
-| `start_date` | date | Filter transactions from this date (inclusive) |
-| `end_date` | date | Filter transactions until this date (inclusive) |
-| `min_amount` | number | Filter by minimum amount |
-| `max_amount` | number | Filter by maximum amount |
-| `type` | string | Filter by transaction type: `income` or `expense` |
-| `search` | string | Search by name, notes, or merchant name |
+| `tag_ids[]` | uuid[] | Transactions carrying any of these tags |
+| `start_date` | date | Filter transactions from this date (inclusive), `YYYY-MM-DD` |
+| `end_date` | date | Filter transactions until this date (inclusive), `YYYY-MM-DD` |
+| `min_amount` | number | Minimum signed amount, inclusive (inflows are negative) |
+| `max_amount` | number | Maximum signed amount, inclusive |
+| `type` | string | `income` (negative amounts) or `expense` (positive amounts), transfers included |
+| `search` | string | Search by name, notes, or merchant name; surrounding spaces are ignored |
 | `budget_id` | uuid | Only transactions the budget's category drill-down lists (see below) |
 | `exclude_split_parents` | boolean | `true` leaves out transactions that have been split; their split children are still listed |
 | `excluded` | boolean | Filters on the entry excluded flag only: `false` lists entries not flagged excluded, `true` only flagged ones (split parents included). It does not apply all budget or report eligibility rules, even with `budget_id`, so the results are not guaranteed to match totals. Omit to list both |
 
-Filters combine, so `budget_id` can be narrowed further with `category_id`, `account_id`, a date range and so on. A malformed or empty `budget_id`, or an `exclude_split_parents` / `excluded` value other than `true`, `false`, `1` or `0` (including an empty one), returns `422`. Leave a parameter out to turn its filter off.
+Filters combine, so `budget_id` can be narrowed further with `category_id`, `account_id`, a date range and so on. A single id and its list (`account_id` and `account_ids[]`, and likewise for categories and merchants) match the ids in both.
+
+A parameter that is present must be valid, or the request returns `422`: ids must be UUIDs, dates `YYYY-MM-DD`, amounts finite numbers, `type` exactly `income` or `expense`, and `exclude_split_parents` / `excluded` one of `true`, `false`, `1` or `0` (case and surrounding spaces aside). An empty value is invalid too, except for `search`, where it turns the search off. Leave a parameter out to turn its filter off.
 
 ### Budget and report lists
 

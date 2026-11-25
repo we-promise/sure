@@ -139,40 +139,43 @@ RSpec.describe 'API V1 Transactions', type: :request do
       parameter name: :page, in: :query, type: :integer, required: false,
                 description: 'Page number (default: 1)'
       parameter name: :per_page, in: :query, type: :integer, required: false,
-                description: 'Items per page (default: 25, max: 100)'
-      parameter name: :account_id, in: :query, type: :string, required: false,
-                description: 'Filter by account ID'
-      parameter name: :category_id, in: :query, type: :string, required: false,
-                description: 'Filter by category ID'
-      parameter name: :merchant_id, in: :query, type: :string, required: false,
-                description: 'Filter by merchant ID'
+                description: 'Items per page (default: 25, max: 100; larger values are capped at 100)'
+      parameter name: :account_id, in: :query, required: false,
+                description: 'Filter by account ID. With account_ids, only ids in both match.',
+                schema: { type: :string, format: :uuid }
+      parameter name: :category_id, in: :query, required: false,
+                description: 'Filter by category ID (subcategories are not included). With category_ids, only ids in both match.',
+                schema: { type: :string, format: :uuid }
+      parameter name: :merchant_id, in: :query, required: false,
+                description: 'Filter by merchant ID. With merchant_ids, only ids in both match.',
+                schema: { type: :string, format: :uuid }
       parameter name: :start_date, in: :query, required: false,
-                description: 'Filter transactions from this date',
+                description: 'Filter transactions from this date (inclusive)',
                 schema: { type: :string, format: :date }
       parameter name: :end_date, in: :query, required: false,
-                description: 'Filter transactions until this date',
+                description: 'Filter transactions until this date (inclusive)',
                 schema: { type: :string, format: :date }
       parameter name: :min_amount, in: :query, type: :number, required: false,
-                description: 'Filter by minimum amount'
+                description: 'Minimum signed amount, inclusive (inflows are negative)'
       parameter name: :max_amount, in: :query, type: :number, required: false,
-                description: 'Filter by maximum amount'
+                description: 'Maximum signed amount, inclusive'
       parameter name: :type, in: :query, required: false,
-                description: 'Filter by transaction type',
+                description: 'income lists negative amounts and expense positive ones, transfers included',
                 schema: { type: :string, enum: %w[income expense] }
       parameter name: :search, in: :query, type: :string, required: false,
-                description: 'Search by name, notes, or merchant name'
+                description: 'Search by name, notes, or merchant name; surrounding spaces are ignored'
       parameter name: :account_ids, in: :query, required: false,
                 description: 'Filter by multiple account IDs',
-                schema: { type: :array, items: { type: :string } }
+                schema: { type: :array, items: { type: :string, format: :uuid } }
       parameter name: :category_ids, in: :query, required: false,
                 description: 'Filter by multiple category IDs',
-                schema: { type: :array, items: { type: :string } }
+                schema: { type: :array, items: { type: :string, format: :uuid } }
       parameter name: :merchant_ids, in: :query, required: false,
                 description: 'Filter by multiple merchant IDs',
-                schema: { type: :array, items: { type: :string } }
+                schema: { type: :array, items: { type: :string, format: :uuid } }
       parameter name: :tag_ids, in: :query, required: false,
-                description: 'Filter by tag IDs',
-                schema: { type: :array, items: { type: :string } }
+                description: 'Transactions carrying any of these tags',
+                schema: { type: :array, items: { type: :string, format: :uuid } }
       parameter name: :budget_id, in: :query, required: false,
                 description: "Only rows the budget's category drill-down on the web lists: transactions in the budget period, " \
                              "on the accounts its spending is computed from (the owner's report accounts for a personal budget, " \
@@ -218,10 +221,18 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'invalid report filter' do
+      response '422', 'invalid filter: a present parameter that is empty or not of its documented type' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:excluded) { 'maybe' }
+
+        run_test!
+      end
+
+      response '422', 'invalid filter: a date that is not YYYY-MM-DD' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:start_date) { '2024/01/05' }
 
         run_test!
       end

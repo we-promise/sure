@@ -2,6 +2,11 @@ class Transaction::Search
   include ActiveModel::Model
   include ActiveModel::Attributes
 
+  # One string, so a merchant filter and a merchant-name search share one
+  # join: ActiveRecord drops a repeated identical join.
+  MERCHANTS_JOIN = "LEFT JOIN merchants ON merchants.id = transactions.merchant_id".freeze
+  NATURE_CONDITIONS = { "inflow" => "entries.amount < 0", "outflow" => "entries.amount > 0" }.freeze
+
   class << self
     # Filter by category, supporting the synthetic "Uncategorized" bucket and
     # its budget-tracking exclusions. Shared with EntrySearch (see
@@ -93,7 +98,7 @@ class Transaction::Search
       include_no_merchant = merchants.include?(Merchant::NO_MERCHANT_FILTER_VALUE)
       real_merchants = merchants - [ Merchant::NO_MERCHANT_FILTER_VALUE ]
 
-      query = query.joins("LEFT JOIN merchants ON merchants.id = transactions.merchant_id")
+      query = query.joins(MERCHANTS_JOIN)
 
       if include_no_merchant
         # entries.entryable_type guards this branch specifically: without it,
@@ -191,12 +196,29 @@ class Transaction::Search
   attribute :attachment_status, array: true
   attribute :active_accounts_only, :boolean, default: true
 
-  attr_reader :family, :accessible_account_ids
+  # Filters the web list leaves at their defaults; the API sets them.
+  attribute :exclude_split_parents, :boolean, default: true
+  attribute :excluded, :boolean
+  # Exact ids: nil is no filter, an empty list matches nothing.
+  attribute :category_ids, array: true
+  attribute :merchant_ids, array: true
+  attribute :tag_ids, array: true
+  # Signed and inclusive.
+  attribute :min_amount, :decimal
+  attribute :max_amount, :decimal
+  # inflow (amount < 0) or outflow (amount > 0), transfers included, unlike `types`.
+  attribute :nature, :string
+  attribute :search_merchant_names, :boolean, default: false
 
-  # Initialize a transaction search with optional filters and accessible accounts
-  def initialize(family, filters: {}, accessible_account_ids: nil)
+  attr_reader :family, :accessible_account_ids, :budget
+
+  # `budget`, when given, keeps the rows its drill-down counts
+  # (Budget#reportable_transactions): the caller has checked it is viewable and
+  # set its current_user.
+  def initialize(family, filters: {}, accessible_account_ids: nil, budget: nil)
     @family = family
     @accessible_account_ids = accessible_account_ids
+    @budget = budget
     super(filters)
   end
 
@@ -204,7 +226,8 @@ class Transaction::Search
   def transactions_scope
     @transactions_scope ||= begin
       # This already joins entries + accounts. To avoid expensive double-joins, don't join them again (causes full table scan)
-      query = family.transactions.merge(Entry.excluding_split_parents)
+      query = family.transactions
+      query = query.merge(Entry.excluding_split_parents) if exclude_split_parents
 
       # Scope to accessible accounts when provided (including an empty array, which should yield no results)
       query = query.where(entries: { account_id: accessible_account_ids }) unless accessible_account_ids.nil?
@@ -218,10 +241,15 @@ class Transaction::Search
       query = self.class.apply_tag_filter(query, tags)
       query = apply_ai_status_filter(query, ai_status)
       query = apply_attachment_status_filter(query, attachment_status)
-      query = EntrySearch.apply_search_filter(query, search)
+      query = apply_search_filter(query)
       query = EntrySearch.apply_date_filters(query, start_date, end_date)
       query = EntrySearch.apply_amount_filter(query, amount, amount_operator)
       query = EntrySearch.apply_accounts_filter(query, accounts, account_ids)
+      query = apply_id_filters(query)
+      query = apply_signed_amount_filters(query)
+      query = query.where(entries: { excluded: }) unless excluded.nil?
+      query = query.where(NATURE_CONDITIONS.fetch(nature)) if NATURE_CONDITIONS.key?(nature)
+      query = query.where(id: budget.reportable_transactions.select(:id)) if budget
 
       query
     end
@@ -311,6 +339,7 @@ class Transaction::Search
       ExchangeRate.updated_at_version, # a rate stored later can complete the totals
       Digest::SHA256.hexdigest(family.tax_advantaged_account_ids.sort.to_json), # stable across processes
       accessible_account_ids ? Digest::SHA256.hexdigest(accessible_account_ids.sort.to_json) : "all",
+      budget&.id,
       Date.current # totals exclude scheduled entries as of "today" -- must roll over daily
     ].join("/")
   end
@@ -324,6 +353,26 @@ class Transaction::Search
       start_date.present? && Date.parse(start_date.to_s) > Date.current
     rescue Date::Error
       false
+    end
+
+    def apply_search_filter(query)
+      return EntrySearch.apply_search_filter(query, search) unless search_merchant_names && search.present?
+
+      EntrySearch.apply_search_filter(query.joins(MERCHANTS_JOIN), search,
+        columns: [ *EntrySearch::SEARCH_COLUMNS, "merchants.name" ])
+    end
+
+    def apply_id_filters(query)
+      query = query.where(category_id: category_ids) unless category_ids.nil?
+      query = query.where(merchant_id: merchant_ids) unless merchant_ids.nil?
+      query = query.with_any_tag(tag_ids) unless tag_ids.nil?
+      query
+    end
+
+    def apply_signed_amount_filters(query)
+      query = query.where("entries.amount >= ?", min_amount) unless min_amount.nil?
+      query = query.where("entries.amount <= ?", max_amount) unless max_amount.nil?
+      query
     end
 
     # Filter query to include only active accounts if requested

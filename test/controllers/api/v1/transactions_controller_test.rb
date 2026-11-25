@@ -511,6 +511,136 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 5, response_data["pagination"]["per_page"]
   end
 
+  test "per_page above 100 is capped at 100, like every other endpoint" do
+    get api_v1_transactions_url, params: { per_page: 500 }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal 100, JSON.parse(response.body)["pagination"]["per_page"]
+  end
+
+  test "dates must be ISO 8601" do
+    %w[2024/01/05 05-01-2024 Jan\ 5\ 2024 20240105].each do |value|
+      get api_v1_transactions_url, params: { start_date: value }, headers: api_headers(@api_key)
+      assert_response :unprocessable_entity, "expected #{value.inspect} to be refused"
+      assert_equal "start_date must be an ISO 8601 date", JSON.parse(response.body)["message"]
+    end
+  end
+
+  test "a present but empty filter is refused, except search" do
+    { start_date: "an ISO 8601 date", account_id: "a valid UUID", account_ids: "a list of valid UUIDs",
+      min_amount: "a number", type: "one of: income, expense" }.each do |key, expected|
+      get "#{api_v1_transactions_url}?#{key}=", headers: api_headers(@api_key)
+      assert_response :unprocessable_entity
+      assert_equal "#{key} must be #{expected}", JSON.parse(response.body)["message"]
+    end
+
+    get "#{api_v1_transactions_url}?search=", headers: api_headers(@api_key)
+    assert_response :success
+  end
+
+  test "id filters refuse values that are not UUIDs" do
+    { account_id: "1", category_id: "abc", merchant_id: "abc" }.each do |key, value|
+      get api_v1_transactions_url, params: { key => value }, headers: api_headers(@api_key)
+      assert_response :unprocessable_entity
+      assert_equal "#{key} must be a valid UUID", JSON.parse(response.body)["message"]
+    end
+
+    %i[account_ids category_ids merchant_ids tag_ids].each do |key|
+      get api_v1_transactions_url, params: { key => [ SecureRandom.uuid, "abc" ] }, headers: api_headers(@api_key)
+      assert_response :unprocessable_entity
+      assert_equal "#{key} must be a list of valid UUIDs", JSON.parse(response.body)["message"]
+    end
+  end
+
+  test "min_amount and max_amount bound the signed amount and refuse anything but a number" do
+    date = report_filter_date
+    refund = create_transaction(account: @account, amount: -20, date:)
+    small = create_transaction(account: @account, amount: 10, date:)
+    create_transaction(account: @account, amount: 50, date:)
+
+    get api_v1_transactions_url, params: report_filter_params(min_amount: "-20", max_amount: "10.00"), headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal [ refund, small ].map(&:entryable_id).sort, index_ids
+
+    %w[abc 12abc Infinity].each do |value|
+      get api_v1_transactions_url, params: { min_amount: value }, headers: api_headers(@api_key)
+      assert_response :unprocessable_entity, "expected #{value.inspect} to be refused"
+      assert_equal "min_amount must be a number", JSON.parse(response.body)["message"]
+    end
+  end
+
+  test "type income and expense split rows by sign, transfers included" do
+    date = report_filter_date
+    income = create_transaction(account: @account, amount: -20, date:)
+    expense = create_transaction(account: @account, amount: 10, date:)
+    transfer = create_transaction(account: @account, amount: 30, date:, kind: "funds_movement")
+
+    get api_v1_transactions_url, params: report_filter_params(type: "income"), headers: api_headers(@api_key)
+    assert_equal [ income.entryable_id ], index_ids
+
+    get api_v1_transactions_url, params: report_filter_params(type: "expense"), headers: api_headers(@api_key)
+    assert_equal [ expense, transfer ].map(&:entryable_id).sort, index_ids
+  end
+
+  test "type accepts only income or expense, exactly" do
+    %w[INCOME transfer].each do |value|
+      get api_v1_transactions_url, params: { type: value }, headers: api_headers(@api_key)
+      assert_response :unprocessable_entity, "expected #{value.inspect} to be refused"
+      assert_equal "type must be one of: income, expense", JSON.parse(response.body)["message"]
+    end
+  end
+
+  test "a single id and its list together match their intersection" do
+    date = report_filter_date
+    other_account = create_owned_account(owner: @user)
+    category = @family.categories.create!(name: "Intersection #{SecureRandom.hex(3)}", color: "#000000")
+    mine = create_transaction(account: @account, amount: 10, date:, category:)
+    create_transaction(account: other_account, amount: 10, date:, category:)
+
+    get api_v1_transactions_url,
+        params: report_filter_params(account_id: @account.id, account_ids: [ @account.id, other_account.id ]),
+        headers: api_headers(@api_key)
+    assert_equal [ mine.entryable_id ], index_ids
+
+    get api_v1_transactions_url,
+        params: report_filter_params(account_id: @account.id.upcase, account_ids: [ @account.id ]),
+        headers: api_headers(@api_key)
+    assert_equal [ mine.entryable_id ], index_ids, "UUIDs match in any case"
+
+    get api_v1_transactions_url,
+        params: report_filter_params(account_id: @account.id, account_ids: [ other_account.id ]),
+        headers: api_headers(@api_key)
+    assert_response :success
+    assert_empty index_ids
+
+    get api_v1_transactions_url,
+        params: report_filter_params(category_id: category.id, category_ids: [ SecureRandom.uuid ]),
+        headers: api_headers(@api_key)
+    assert_empty index_ids
+  end
+
+  test "account filters never reach an account the caller cannot access" do
+    unshared = create_owned_account(owner: users(:family_member))
+    create_transaction(account: unshared, amount: 10, date: report_filter_date)
+
+    [ { account_id: unshared.id }, { account_ids: [ unshared.id ] } ].each do |params|
+      get api_v1_transactions_url, params: report_filter_params(params), headers: api_headers(@api_key)
+      assert_response :success
+      assert_empty index_ids
+    end
+  end
+
+  test "search also matches the merchant name, and ignores surrounding spaces" do
+    merchant = @family.merchants.create!(name: "Corner Bakery #{SecureRandom.hex(3)}")
+    by_merchant = create_transaction(account: @account, amount: 10, date: report_filter_date, name: "Morning", merchant:)
+    by_name = create_transaction(account: @account, amount: 10, date: report_filter_date, name: "Bakery run")
+
+    get api_v1_transactions_url, params: report_filter_params(search: merchant.name), headers: api_headers(@api_key)
+    assert_equal [ by_merchant.entryable_id ], index_ids
+
+    get api_v1_transactions_url, params: report_filter_params(search: "  Bakery"), headers: api_headers(@api_key)
+    assert_equal [ by_merchant, by_name ].map(&:entryable_id).sort, index_ids
+  end
+
   test "should reject index request without API key" do
     get api_v1_transactions_url
     assert_response :unauthorized
@@ -2344,6 +2474,10 @@ end
 
     def report_filter_date
       @report_filter_date ||= 9.months.ago.to_date
+    end
+
+    def index_ids
+      JSON.parse(response.body)["transactions"].map { |row| row["id"] }.sort
     end
 
     def report_filter_params(extra = {})

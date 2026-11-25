@@ -6,27 +6,19 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
   NATURES = %w[income expense inflow outflow].freeze
   INVALID_NATURE_MESSAGE = "nature must be one of: #{NATURES.join(", ")}".freeze
+  # The index `type` filter, as Transaction::Search natures.
+  TYPE_FILTER_NATURES = { "income" => "inflow", "expense" => "outflow" }.freeze
 
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
   # Outside index's catch-all rescue so a bad filter is a 404/422, not a 500.
-  before_action :set_report_filters, only: :index
+  before_action :set_search, only: :index
   before_action :ensure_write_permission, only: [ :update, :destroy ]
 
   def index
-    transactions_query = @budget ? budget_transactions : accessible_transactions
-
-    # Apply filters
-    transactions_query = apply_filters(transactions_query)
-    transactions_query = apply_report_filters(transactions_query)
-
-    # Apply search
-    transactions_query = apply_search(transactions_query) if params[:search].present?
-
-    # Include necessary associations for efficient queries
-    transactions_query = transactions_query.includes(
+    transactions_query = @search.transactions_scope.includes(
       { entry: :account },
       :category, :merchant, :tags,
       transfer_as_outflow: { inflow_transaction: { entry: :account } },
@@ -272,143 +264,62 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         .select(:id)
     end
 
-    def accessible_transactions
-      current_resource_owner.family.transactions
-        .joins(:entry).where(entries: { account_id: accessible_account_ids })
+    # Parses the index filters into Transaction::Search, the query the web
+    # list runs. The API keeps every account the caller can read, disabled ones
+    # included, and also searches merchant names.
+    def set_search
+      account_ids = intersected_ids_filter(:account_id, :account_ids)
+
+      @search = Transaction::Search.new(
+        current_resource_owner.family,
+        filters: {
+          account_ids:,
+          category_ids: intersected_ids_filter(:category_id, :category_ids),
+          merchant_ids: intersected_ids_filter(:merchant_id, :merchant_ids),
+          tag_ids: uuid_list_filter_param(:tag_ids),
+          start_date: date_filter_param(:start_date),
+          end_date: date_filter_param(:end_date),
+          min_amount: decimal_filter_param(:min_amount),
+          max_amount: decimal_filter_param(:max_amount),
+          nature: TYPE_FILTER_NATURES[enum_filter_param(:type, TYPE_FILTER_NATURES.keys)],
+          search: string_filter_param(:search),
+          excluded: boolean_filter_param(:excluded),
+          exclude_split_parents: boolean_filter_param(:exclude_split_parents) == true,
+          search_merchant_names: true,
+          active_accounts_only: false
+        },
+        # Transaction::Search reads an empty account_ids as no filter, as the
+        # web form sends it, so account_id and account_ids that share no
+        # account narrow the accessible ones to none instead.
+        accessible_account_ids: account_ids == [] ? [] : accessible_account_ids,
+        budget: requested_budget
+      )
     end
 
-    # The rows the web budget category drill-down lists for this budget
-    # (Budget#reportable_transactions), limited to accounts the caller can
-    # access. A budget share does not share the owner's accounts, so without
-    # that limit a viewer of a shared personal budget would get full details
-    # of transactions on accounts nobody shared with them.
-    def budget_transactions
-      @budget.current_user = current_resource_owner
-      @budget.reportable_transactions
-        .where(entries: { account_id: accessible_account_ids })
+    # A single id and its list (account_id and account_ids...) match their
+    # intersection. UUIDs compare in any case.
+    def intersected_ids_filter(single_key, list_key)
+      [ uuid_filter_param(single_key), uuid_list_filter_param(list_key) ]
+        .compact.map { |ids| Array(ids).map(&:downcase) }.reduce(:&)
     end
 
-    def set_report_filters
-      if params.key?(:budget_id)
-        raise InvalidFilterError, "budget_id must be a valid UUID" unless valid_uuid?(params[:budget_id].to_s)
+    # Same visibility as GET /api/v1/budgets/:id: the household budget, the
+    # caller's own, or one its owner shared with the caller. Its rows stay
+    # within the caller's accessible accounts: a budget share does not share
+    # the owner's accounts.
+    def requested_budget
+      budget_id = uuid_filter_param(:budget_id)
+      return if budget_id.nil?
 
-        # Same visibility as GET /api/v1/budgets/:id: the household budget,
-        # the caller's own, or one its owner shared with the caller.
-        @budget = current_resource_owner.family.budgets.find_by(id: params[:budget_id])
-        raise ActiveRecord::RecordNotFound, "Budget not found" unless @budget&.viewable_by?(current_resource_owner)
-      end
+      budget = current_resource_owner.family.budgets.find_by(id: budget_id)
+      raise ActiveRecord::RecordNotFound, "Budget not found" unless budget&.viewable_by?(current_resource_owner)
 
-      @exclude_split_parents = boolean_filter_param(:exclude_split_parents)
-      @excluded = boolean_filter_param(:excluded)
-      @start_date = date_filter_param(:start_date)
-      @end_date = date_filter_param(:end_date)
-    end
-
-    # Parsed before index runs so a malformed date is a 422, not a 500. This
-    # filter has always accepted any format Date.parse reads, so it does not
-    # use the strict ISO 8601 parse_date_param.
-    def date_filter_param(key)
-      return nil if params[key].blank?
-
-      Date.parse(params[key].to_s)
-    rescue Date::Error
-      raise InvalidFilterError, "#{key} must be a valid date"
-    end
-
-    def apply_report_filters(query)
-      # Same scope the web transactions list uses (Transaction::Search).
-      query = query.merge(Entry.excluding_split_parents) if @exclude_split_parents
-      query = query.where(entries: { excluded: @excluded }) unless @excluded.nil?
-      query
+      budget.current_user = current_resource_owner
+      budget
     end
 
     def ensure_write_scope
       authorize_scope!(:write)
-    end
-
-    def apply_filters(query)
-      # Account filtering
-      if params[:account_id].present?
-        query = query.where(entries: { account_id: params[:account_id] })
-      end
-
-      if params[:account_ids].present?
-        account_ids = Array(params[:account_ids])
-        query = query.where(entries: { account_id: account_ids })
-      end
-
-      # Category filtering
-      if params[:category_id].present?
-        query = query.where(category_id: params[:category_id])
-      end
-
-      if params[:category_ids].present?
-        category_ids = Array(params[:category_ids])
-        query = query.where(category_id: category_ids)
-      end
-
-      # Merchant filtering
-      if params[:merchant_id].present?
-        query = query.where(merchant_id: params[:merchant_id])
-      end
-
-      if params[:merchant_ids].present?
-        merchant_ids = Array(params[:merchant_ids])
-        query = query.where(merchant_id: merchant_ids)
-      end
-
-      # Date range filtering
-      if @start_date
-        query = query.where("entries.date >= ?", @start_date)
-      end
-
-      if @end_date
-        query = query.where("entries.date <= ?", @end_date)
-      end
-
-      # Amount filtering
-      if params[:min_amount].present?
-        min_amount = params[:min_amount].to_f
-        query = query.where("entries.amount >= ?", min_amount)
-      end
-
-      if params[:max_amount].present?
-        max_amount = params[:max_amount].to_f
-        query = query.where("entries.amount <= ?", max_amount)
-      end
-
-      # Tag filtering
-      if params[:tag_ids].present?
-        tag_ids = Array(params[:tag_ids])
-        query = query.where(
-          id: query.joins(:tags).where(tags: { id: tag_ids }).distinct.select(:id)
-        )
-      end
-
-      # Transaction type filtering (income/expense)
-      if params[:type].present?
-        case params[:type].downcase
-        when "income"
-          query = query.where("entries.amount < 0")
-        when "expense"
-          query = query.where("entries.amount > 0")
-        end
-      end
-
-      query
-    end
-
-    def apply_search(query)
-      # Escape the caller's term so "%" and "_" match literally instead of
-      # acting as ILIKE wildcards, where a bare "%" returns everything.
-      search_term = "%#{ActiveRecord::Base.sanitize_sql_like(params[:search].to_s)}%"
-
-      query
-        .left_joins(:merchant)
-        .where(
-          "entries.name ILIKE ? OR entries.notes ILIKE ? OR merchants.name ILIKE ?",
-          search_term, search_term, search_term
-        )
     end
 
     def transaction_params
@@ -616,21 +527,6 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         amount.abs   # Expense is positive
       else
         amount       # Use as provided
-      end
-    end
-
-    def safe_page_param
-      page = params[:page].to_i
-      page > 0 ? page : 1
-    end
-
-    def safe_per_page_param
-      per_page = params[:per_page].to_i
-      case per_page
-      when 1..100
-        per_page
-      else
-        25  # Default
       end
     end
 end
