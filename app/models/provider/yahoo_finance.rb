@@ -40,6 +40,22 @@ class Provider::YahooFinance < Provider
 
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 0.5
+  REQUEST_SLOT_CACHE_KEY = "yahoo_finance_request_slot"
+  # Longest a request queues for a shared request slot (in seconds)
+  MAX_REQUEST_WAIT = 30
+
+  # Runs a hook immediately before every HTTP attempt, including retries, so
+  # each one claims a shared request slot.
+  class BeforeEachAttempt < Faraday::Middleware
+    def initialize(app, hook)
+      super(app)
+      @hook = hook
+    end
+
+    def on_request(_env)
+      @hook.call
+    end
+  end
 
   # Pool of modern browser user-agents to rotate through
   # Based on https://github.com/ranaroussi/yfinance/pull/2277
@@ -143,7 +159,13 @@ class Provider::YahooFinance < Provider
             end_date: end_date
           )
 
-          raise Error, "Failed to fetch exchange rates: #{rates_response.error.message}" unless rates_response.success?
+          unless rates_response.success?
+            error = rates_response.error
+            # Kept as is, so callers can tell the provider failing from the pair missing.
+            raise error if error.is_a?(RateLimitError) || error.is_a?(AuthenticationError)
+
+            raise Error, "Failed to fetch exchange rates: #{error.message}"
+          end
 
           rates = rates_response.data
           if rates.length == 1
@@ -195,7 +217,10 @@ class Provider::YahooFinance < Provider
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
-      cache_key = "search_#{symbol}_#{country_code}_#{exchange_operating_mic}"
+      # The cached values are Security Data objects. Rails treats an entry that no
+      # longer fits the class (TypeError: struct size differs) as an error, not a
+      # miss, so bump the version here whenever Security's members change.
+      cache_key = "search_v2_#{symbol}_#{country_code}_#{exchange_operating_mic}"
       if cached_result = get_cached_result(cache_key)
         cached_result
       else
@@ -331,14 +356,11 @@ class Provider::YahooFinance < Provider
     with_provider_response do
       symbol = normalize_symbol(symbol, exchange_operating_mic)
       validate_date_params!(start_date, end_date)
-      # Convert dates to Unix timestamps using UTC to ensure consistent epoch boundaries across timezones
-      period1 = start_date.to_time.utc.to_i
-      period2 = end_date.end_of_day.to_time.utc.to_i
+      dates = start_date.to_date..end_date.to_date
 
       throttle_request
       data = fetch_authenticated_chart(symbol, {
-        "period1" => period1,
-        "period2" => period2,
+        **chart_period(dates),
         "interval" => "1d",
         "includeAdjustedClose" => true
       })
@@ -356,17 +378,21 @@ class Provider::YahooFinance < Provider
       raw_currency = chart_data.dig("meta", "currency")
       raw_currency ||= default_currency_for_exchange(meta_exchange) || "USD"
 
+      zone = exchange_zone(chart_data)
       prices = []
       timestamps.each_with_index do |timestamp, index|
         close_price = closes[index]
         next if close_price.nil? # Skip days with no data (weekends, holidays)
+
+        date = zone.at(timestamp).to_date
+        next unless dates.cover?(date)
 
         # Normalize currency and price to handle minor units
         normalized_currency, normalized_price = normalize_currency_and_price(raw_currency, close_price.to_f)
 
         prices << Price.new(
           symbol: symbol,
-          date: Time.at(timestamp).utc.to_date,
+          date: date,
           price: normalized_price,
           currency: normalized_currency,
           exchange_operating_mic: exchange_operating_mic
@@ -599,7 +625,13 @@ class Provider::YahooFinance < Provider
       "XCSE" => { yahoo_suffix: ".CO", default_currency: "DKK" },
       "XHEL" => { yahoo_suffix: ".HE", default_currency: "EUR" },
       "XOSL" => { yahoo_suffix: ".OL", default_currency: "NOK" },
-      "XWBO" => { yahoo_suffix: ".VI", default_currency: "EUR" }  # Vienna
+      "XWBO" => { yahoo_suffix: ".VI", default_currency: "EUR" }, # Vienna
+      # Canada. Yahoo writes share classes and units with a dash, not a dot:
+      # CSH.UN is CSH-UN.TO and CCL.B is CCL-B.TO.
+      "XTSE" => { yahoo_suffix: ".TO", default_currency: "CAD", share_class_separator: "-" }, # Toronto
+      "XTSX" => { yahoo_suffix: ".V",  default_currency: "CAD", share_class_separator: "-" }, # TSX Venture
+      "XCNQ" => { yahoo_suffix: ".CN", default_currency: "CAD", share_class_separator: "-" }, # CSE
+      "NEOE" => { yahoo_suffix: ".NE", default_currency: "CAD", share_class_separator: "-" }  # Cboe Canada (NEO)
     }.freeze
 
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
@@ -622,11 +654,17 @@ class Provider::YahooFinance < Provider
     end
 
     # Appends the Yahoo Finance symbol suffix for exchanges that require one
-    # (e.g. XNSE → ".NS", XBOM → ".BO").  Already-suffixed symbols pass through.
+    # (e.g. XNSE → ".NS", XBOM → ".BO").  Already-suffixed symbols keep a
+    # single suffix.  Where the exchange sets a share_class_separator, a dot
+    # in the ticker becomes that separator (XTSE: CSH.UN → CSH-UN.TO).
     def normalize_symbol(symbol, exchange_operating_mic)
-      suffix = EXCHANGE_CONFIG.dig(exchange_operating_mic, :yahoo_suffix)
-      return symbol if suffix.nil? || symbol.end_with?(suffix)
-      "#{symbol}#{suffix}"
+      config = EXCHANGE_CONFIG[exchange_operating_mic]
+      suffix = config&.dig(:yahoo_suffix)
+      return symbol if suffix.nil?
+
+      base = symbol.delete_suffix(suffix)
+      base = base.tr(".", config[:share_class_separator]) if config[:share_class_separator]
+      "#{base}#{suffix}"
     end
 
     # Returns the default currency for a Yahoo exchange name (e.g. "NSE" → "INR")
@@ -805,9 +843,9 @@ class Provider::YahooFinance < Provider
 
     def fetch_currency_pair_data(from, to, start_date, end_date)
       symbol = "#{from}#{to}=X"
-      fetch_chart_data(symbol, start_date, end_date, currency: to) do |timestamp, close_rate|
+      fetch_chart_data(symbol, start_date, end_date, currency: to) do |date, close_rate|
         Rate.new(
-          date: Time.at(timestamp).utc.to_date,
+          date: date,
           from: from,
           to: to,
           rate: close_rate.to_f
@@ -817,9 +855,9 @@ class Provider::YahooFinance < Provider
 
     def fetch_inverse_currency_pair_data(from, to, start_date, end_date)
       symbol = "#{to}#{from}=X"
-      rates = fetch_chart_data(symbol, start_date, end_date, currency: from) do |timestamp, close_rate|
+      rates = fetch_chart_data(symbol, start_date, end_date, currency: from) do |date, close_rate|
         Rate.new(
-          date: Time.at(timestamp).utc.to_date,
+          date: date,
           from: from,
           to: to,
           rate: (BigDecimal("1") / BigDecimal(close_rate.to_s)).round(12)
@@ -874,17 +912,29 @@ class Provider::YahooFinance < Provider
       data
     end
 
+    # Yahoo reads the bounds as instants and picks sessions by their date, so
+    # they are UTC midnights whatever the host's or the family's zone.
+    def chart_period(dates)
+      { "period1" => dates.begin.to_time(:utc).to_i, "period2" => dates.end.to_time(:utc).end_of_day.to_i }
+    end
+
+    # Yahoo stamps a daily bar with the time its session opens, which can fall
+    # on the previous day in UTC: the ASX opens at 10:00 in Sydney, and London
+    # FX sessions open at midnight local time, 23:00 UTC during summer time. A
+    # bar's date is its date on the exchange's clock.
+    def exchange_zone(chart_data)
+      ActiveSupport::TimeZone[chart_data.dig("meta", "exchangeTimezoneName").to_s] || ActiveSupport::TimeZone["UTC"]
+    end
+
     # `currency` is what the quote must be in. Yahoo leaves it blank on some
     # scaled crosses: RUBGEL=X is GEL per 100 RUB, a 100x error once inverted.
     def fetch_chart_data(symbol, start_date, end_date, currency:, &block)
-      period1 = start_date.to_time.utc.to_i
-      period2 = end_date.end_of_day.to_time.utc.to_i
+      dates = start_date.to_date..end_date.to_date
 
       begin
         throttle_request
         data = fetch_authenticated_chart(symbol, {
-          "period1" => period1,
-          "period2" => period2,
+          **chart_period(dates),
           "interval" => "1d",
           "includeAdjustedClose" => true
         })
@@ -914,12 +964,16 @@ class Provider::YahooFinance < Provider
         quotes = chart_data.dig("indicators", "quote", 0) || {}
         closes = quotes["close"] || []
 
+        zone = exchange_zone(chart_data)
         results = []
         timestamps.each_with_index do |timestamp, index|
           close_value = closes[index]
           next if close_value.nil? || close_value <= 0
 
-          results << block.call(timestamp, close_value)
+          date = zone.at(timestamp).to_date
+          next unless dates.cover?(date)
+
+          results << block.call(date, close_value)
         end
 
         results.sort_by(&:date)
@@ -933,6 +987,9 @@ class Provider::YahooFinance < Provider
           provider_key: "yahoo_finance",
           metadata: { symbol: symbol, exception_class: e.class.name, exception_message: e.message }
         )
+        # Not a missing pair: the inverse symbol would only be limited too.
+        raise RateLimitError.new("Yahoo Finance rate limit exceeded", details: e.response&.dig(:body)) if e.is_a?(Faraday::TooManyRequestsError)
+
         nil
       end
     end
@@ -948,6 +1005,8 @@ class Provider::YahooFinance < Provider
           exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError ]
         })
 
+        # After the retry middleware, so it runs for each attempt.
+        faraday.use BeforeEachAttempt, -> { wait_for_request_slot }
         faraday.request :json
         faraday.response :raise_error
 
@@ -979,6 +1038,49 @@ class Provider::YahooFinance < Provider
 
     def min_request_interval
       ENV.fetch("YAHOO_FINANCE_MIN_REQUEST_INTERVAL", MIN_REQUEST_INTERVAL).to_f
+    end
+
+    def max_request_wait
+      ENV.fetch("YAHOO_FINANCE_MAX_REQUEST_WAIT", MAX_REQUEST_WAIT).to_f
+    end
+
+    # Every HTTP attempt, retries included, claims one min_request_interval-wide
+    # time slot in the shared cache (Redis in production), so provider
+    # instances, Sidekiq workers and web processes share one request budget
+    # instead of each pacing itself. A request queues for at most
+    # max_request_wait seconds. When every slot in that window is taken, the
+    # request does not claim one: it waits out the window and then goes, so
+    # callers beyond the window can burst together. That bounds latency at the
+    # cost of a strict budget. A cache that refuses the claim (Redis down)
+    # leaves the request unpaced after that single attempt.
+    def wait_for_request_slot
+      interval = min_request_interval
+      return unless interval.positive?
+
+      now = Time.current.to_f
+      current = (now / interval).floor
+      horizon = current + [ (max_request_wait / interval).ceil, 1 ].max
+      next_slot_key = "#{REQUEST_SLOT_CACHE_KEY}:next"
+      first = [ current, Rails.cache.read(next_slot_key).to_i ].max
+      slot = nil
+
+      (first...horizon).each do |candidate|
+        key = "#{REQUEST_SLOT_CACHE_KEY}:#{candidate}"
+        if Rails.cache.write(key, true, unless_exist: true, expires_in: (candidate * interval - now + interval + 1).seconds)
+          slot = candidate
+          break
+        end
+        return unless Rails.cache.exist?(key)
+      end
+
+      if slot
+        Rails.cache.write(next_slot_key, slot + 1, expires_in: (max_request_wait + interval + 1).seconds)
+      else
+        slot = horizon
+      end
+
+      wait = slot * interval - now
+      sleep(wait) if wait.positive?
     end
 
     def throttle_request
@@ -1092,6 +1194,7 @@ class Provider::YahooFinance < Provider
     # Client for authentication requests (no error raising - fc.yahoo.com returns 404 but sets cookie)
     def auth_client
       @auth_client ||= Faraday.new(ssl: self.class.faraday_ssl_options) do |faraday|
+        faraday.use BeforeEachAttempt, -> { wait_for_request_slot }
         faraday.headers["User-Agent"] = random_user_agent
         faraday.headers["Accept"] = "*/*"
         faraday.headers["Accept-Language"] = "en-US,en;q=0.9"
@@ -1112,6 +1215,7 @@ class Provider::YahooFinance < Provider
           exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError ]
         })
 
+        faraday.use BeforeEachAttempt, -> { wait_for_request_slot }
         faraday.request :json
         faraday.response :raise_error
 
@@ -1218,10 +1322,16 @@ class Provider::YahooFinance < Provider
         "XNAS" # Yahoo default, assume NASDAQ
       when "TSE", "TOR"
         "XTSE" # Toronto Stock Exchange
-      when "CVE"
+      when "CVE", "VAN"
         "XTSX" # TSX Venture Exchange
+      when "CNQ"
+        "XCNQ" # Canadian Securities Exchange
+      when "NEO"
+        "NEOE" # Cboe Canada (NEO)
       when "LSE", "LON"
         "XLON" # London Stock Exchange
+      when "GER"
+        "XETR" # Xetra
       when "FRA"
         "XFRA" # Frankfurt Stock Exchange
       when "PAR"

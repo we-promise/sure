@@ -1,0 +1,8 @@
+---
+id:
+  admin:
+    invitations:
+      destroy:
+        success: "Undangan dihapus."
+      destroy_all:
+        success: "Semua undangan untuk keluarga ini telah dihapus."

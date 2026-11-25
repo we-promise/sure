@@ -1,20 +1,19 @@
 class OidcAccountsController < ApplicationController
   skip_authentication only: [ :link, :create_link, :new_user, :create_user ]
+  before_action :set_pending_auth, only: [ :link, :create_link, :new_user, :create_user ]
   before_action :reject_removed_identity, only: [ :link, :create_link, :new_user, :create_user ]
   rescue_from SsoIdentityBlock::BlockedIdentity, with: :reject_removed_identity_after_lock
   layout "auth"
 
   def link
     # Check if there's pending OIDC auth in session
-    @pending_auth = session[:pending_oidc_auth]
-
     if @pending_auth.nil?
       redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
     end
 
     @email = @pending_auth["email"]
-    @user_exists = User.exists?(email: @email) if @email.present?
+    @user_exists = User.find_by_email_with_legacy_fallback(@email).present? if @email.present?
 
     # Check for a pending invitation for this email
     @pending_invitation = Invitation.pending.find_by(email: @email) if @email.present?
@@ -25,15 +24,13 @@ class OidcAccountsController < ApplicationController
   end
 
   def create_link
-    @pending_auth = session[:pending_oidc_auth]
-
     if @pending_auth.nil?
       redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
     end
 
     # Verify user's password to confirm identity
-    user = User.authenticate_by(email: params[:email], password: params[:password])
+    user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
     if user&.active?
       linked = user.transaction do
@@ -49,7 +46,7 @@ class OidcAccountsController < ApplicationController
         )
 
         unless user.otp_required?
-          @session = create_session_for(user)
+          @session = create_session_for(user, password_fingerprint: user.password_fingerprint)
           raise ActiveRecord::Rollback unless @session
         end
 
@@ -65,14 +62,14 @@ class OidcAccountsController < ApplicationController
       session.delete(:pending_oidc_auth)
 
       if user.otp_required?
-        session[:mfa_user_id] = user.id
+        begin_mfa_handoff(user, password_fingerprint: user.password_fingerprint)
         redirect_to verify_mfa_path
       else
         redirect_to root_path, notice: t("sessions.openid_connect.account_linked", provider: @pending_auth["provider"])
       end
     else
       @email = params[:email]
-      @user_exists = User.exists?(email: @email) if @email.present?
+      @user_exists = User.find_by_email_with_legacy_fallback(@email).present? if @email.present?
       flash.now[:alert] = "Invalid email or password"
       render :link, status: :unprocessable_entity
     end
@@ -80,8 +77,6 @@ class OidcAccountsController < ApplicationController
 
   def new_user
     # Check if there's pending OIDC auth in session
-    @pending_auth = session[:pending_oidc_auth]
-
     if @pending_auth.nil?
       redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
@@ -96,8 +91,6 @@ class OidcAccountsController < ApplicationController
   end
 
   def create_user
-    @pending_auth = session[:pending_oidc_auth]
-
     if @pending_auth.nil?
       redirect_to new_session_path, alert: t(".no_pending_oidc")
       return
@@ -177,11 +170,14 @@ class OidcAccountsController < ApplicationController
 
         true
       end
-    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+    rescue ActiveRecord::RecordInvalid => e
       # Expected persistence failures (e.g. a duplicate identity) roll the whole
       # onboarding back and re-render the form. Unexpected errors propagate so
       # they surface instead of being hidden as a form validation message.
       @user.errors.add(:base, e.message)
+    rescue ActiveRecord::RecordNotUnique
+      # PostgreSQL's message names the index and echoes the conflicting values.
+      @user.errors.add(:base, t(".duplicate_account"))
     end
 
     if account_created
@@ -211,8 +207,13 @@ class OidcAccountsController < ApplicationController
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
     end
 
+    def set_pending_auth
+      # Cache-backed sessions preserve symbol keys from the OAuth callback.
+      @pending_auth = session[:pending_oidc_auth]&.with_indifferent_access
+    end
+
     def reject_removed_identity
-      pending_auth = session[:pending_oidc_auth]
+      pending_auth = @pending_auth
       return unless pending_auth.present?
       return unless SsoIdentityBlock.blocked?(provider: pending_auth["provider"], uid: pending_auth["uid"])
 

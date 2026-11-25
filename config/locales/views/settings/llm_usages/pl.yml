@@ -3,9 +3,6 @@ pl:
   settings:
     llm_usages:
       show:
-        avg_cost_per_request: Śr. koszt/zapytanie
-        based_on_requests: Na podstawie %{with_cost} z %{total} zapytań z danymi o
-          koszcie
         col_cost: Koszt
         col_date: Data
         col_model: Model
@@ -29,5 +26,7 @@ pl:
         start_date: Data początkowa
         subtitle: Śledź swoje użycie AI i szacowane koszty
         total_cost: Łączny koszt
-        total_requests: Łączna liczba zapytań
+        total_calls: "Łączna liczba wywołań"
+        avg_cost_per_call: "Śr. koszt/wywołanie"
+        based_on_calls: "Na podstawie %{with_cost} z %{total} wywołań z danymi o koszcie"
         total_tokens: Łączna liczba tokenów

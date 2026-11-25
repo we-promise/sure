@@ -1,9 +1,9 @@
 <%# locals: (message:, description:, close_label: nil) %>
 
 <div id="cta">
-  <%= tag.div class: "relative flex gap-3 rounded-lg bg-container p-4 group w-full md:max-w-80 shadow-border-xs", data: { controller: "element-removal" } do %>
+  <%= tag.div class: "relative flex flex-col gap-4 rounded-lg bg-container p-4 group w-full md:max-w-80 shadow-border-xs", data: { controller: "element-removal" } do %>
     <%# Pass close_label for a plain "close this notification" control. It sits outside the %>
-    <%# content's space-y stack so the stack's margins can't push it out of the corner. %>
+    <%# content stack so the stack's gaps can't push it out of the corner. %>
     <% if close_label %>
       <%= icon "x",
             as_button: true,
@@ -14,19 +14,20 @@
             data: { action: "element-removal#remove" } %>
     <% end %>
 
-    <div class="h-5 w-5 shrink-0 p-px text-primary">
-      <div class="flex h-full items-center justify-center rounded-full bg-success text-inverse">
-        <%= icon "check", size: "xs", color: "current" %>
+    <%= tag.div class: class_names("flex gap-3", "pr-6": close_label.present?) do %>
+      <div class="h-5 w-5 shrink-0 p-px text-primary">
+        <div class="flex h-full items-center justify-center rounded-full bg-success text-inverse">
+          <%= icon "check", size: "xs", color: "current" %>
+        </div>
       </div>
-    </div>
 
-    <%= tag.div class: class_names("space-y-4 min-w-0", "pr-6": close_label.present?) do %>
-      <div class="space-y-1">
+      <div class="space-y-1 min-w-0">
         <%= tag.p message, class: "text-primary text-sm font-medium" %>
         <%= tag.p description, class: "text-secondary text-sm" %>
       </div>
-
-      <%= yield %>
     <% end %>
+
+    <%# Actions span the full toast width, not just the text column, so longer labels stay on one row. %>
+    <%= yield %>
   <% end %>
 </div>

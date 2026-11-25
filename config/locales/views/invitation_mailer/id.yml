@@ -1,0 +1,8 @@
+---
+id:
+  invitation_mailer:
+    invite_email:
+      accept_button: Terima Undangan
+      body: "%{inviter} telah mengundang Anda untuk bergabung dengan %{moniker} %{family} di %{product_name}!"
+      expiry_notice: Undangan ini akan kedaluwarsa dalam %{days} hari
+      greeting: Selamat datang di %{product_name}!

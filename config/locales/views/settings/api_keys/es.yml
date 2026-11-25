@@ -13,6 +13,7 @@ es:
     api_keys:
       create:
         success: Tu clave API se ha creado correctamente
+        creation_failed: "No se pudo crear tu clave API. Inténtalo de nuevo."
       destroy:
         revoked_successfully: La clave API se ha revocado correctamente
         revoke_failed: No se pudo revocar la clave API
@@ -31,6 +32,8 @@ es:
         empty_description: Crea una clave API para acceder a tus datos de forma programática.
         revoke_key: Revocar
         revoke_confirmation: ¿Seguro que quieres revocar "%{name}"? Esto desactivará de inmediato cualquier aplicación que use esta clave.
+      key_reveal:
+        copied: "¡Copiado!"
       show:
         title: Gestión de Claves API
         newly_created:

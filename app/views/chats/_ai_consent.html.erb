@@ -23,4 +23,7 @@
   <% end %>
 
   <p class="text-xs text-secondary text-center mt-2"><%= t(".disable_note") %></p>
+  <% if Current.user.admin? %>
+    <p class="text-xs text-secondary text-center mt-2"><%= t(".family_note") %></p>
+  <% end %>
 </div>

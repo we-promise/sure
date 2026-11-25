@@ -2,7 +2,7 @@ class Security < ApplicationRecord
   include Provided, PlanRestrictionTracker
 
   # Transient attribute for search results -- not persisted
-  attr_accessor :search_currency
+  attr_accessor :search_currency, :search_isin
 
   # ISO 10383 MIC codes mapped to user-friendly exchange names
   # Source: https://www.iso20022.org/market-identifier-codes
@@ -12,7 +12,13 @@ class Security < ApplicationRecord
   # Legacy non-ISO values previously persisted as exchange_operating_mic
   # (e.g. raw EODHD exchange codes) mapped to their ISO MIC.
   MIC_ALIASES = {
-    "WAR" => "XWAR"
+    "WAR" => "XWAR",
+    "GER" => "XETR", # Yahoo search code for Xetra, stored before it was mapped
+    # Yahoo search codes for Canadian venues, stored before they were mapped
+    "VAN" => "XTSX", "CNQ" => "XCNQ", "NEO" => "NEOE",
+    # Raw EODHD codes that Provider::Eodhd still accepts for rows stored before it mapped them
+    "F" => "XFRA", "BR" => "XBRU", "LS" => "XLIS", "VI" => "XWBO", "IR" => "XDUB",
+    "BE" => "XBER", "DU" => "XDUS", "HM" => "XHAM", "HA" => "XHAN", "MU" => "XMUN", "STU" => "XSTU"
   }.freeze
 
   KINDS = %w[standard cash].freeze
@@ -89,6 +95,14 @@ class Security < ApplicationRecord
   has_many :trades, dependent: :nullify, class_name: "Trade"
   has_many :prices, dependent: :destroy
   has_many :splits, dependent: :destroy
+  # A security row is shared by every family that holds the instrument, but a
+  # Tag belongs to one family, so a tagging is reachable only through its
+  # owning family's tags. Read one family's with #tags_for and write them with
+  # #set_tags_for. There is deliberately no `has_many :tags, through:`: its
+  # generated `tags=`, `tag_ids=` and `tags <<` know nothing about families,
+  # and would delete other families' taggings or attach a tag the family does
+  # not own.
+  has_many :taggings, as: :taggable, dependent: :destroy
 
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
@@ -126,6 +140,68 @@ class Security < ApplicationRecord
     kind == "cash"
   end
 
+  # `family`'s tags on this security, and no other family's.
+  def tags_for(family)
+    family.tags.where(id: taggings.select(:tag_id))
+  end
+
+  # Moves this security's taggings onto `canonical` when the two are merged.
+  # A tag `canonical` already carries stays here and goes with this
+  # security's destroy!, as the unique index on taggings allows only one.
+  def move_taggings_to!(canonical)
+    transaction do
+      # The same row lock set_tags_for takes, on both securities in a stable
+      # order, so a concurrent tag edit on either waits for the move.
+      Security.where(id: [ id, canonical.id ]).order(:id).lock.load
+
+      taggings.where(<<~SQL, canonical.id).update_all(taggable_id: canonical.id)
+        NOT EXISTS (
+          SELECT 1 FROM taggings carried
+          WHERE carried.taggable_type = 'Security'
+            AND carried.taggable_id = ?
+            AND carried.tag_id = taggings.tag_id
+        )
+      SQL
+      taggings.reset
+    end
+  end
+
+  # Replaces only `family`'s tags on this security.
+  #
+  # A wholesale replace would delete other families' taggings on the same
+  # instrument, because the row is shared. Ids are resolved through
+  # `family.tags` rather than `Tag`, so a tag this family does not own is
+  # never attached: that would show its name to every family holding the
+  # security.
+  #
+  # Lock order is security (FOR UPDATE), then tags (FOR SHARE), then taggings.
+  # `Tag#replace_and_destroy!` takes taggings then the tag, so the two can
+  # deadlock on the same security and tag, and PostgreSQL then aborts one of
+  # them with a deadlock error. A new writer should take the locks in this
+  # order.
+  def set_tags_for(family, tag_ids)
+    # `with_lock` reloads the row, which an unsaved security does not have.
+    raise ArgumentError, "save the security before tagging it" unless persisted?
+
+    mine = family.tags.select(:id)
+
+    # A check-then-insert on a row every family shares. The unique index on
+    # taggings refuses a duplicate, so without the lock two concurrent saves
+    # of the same tag would fail one of them rather than both succeed. The
+    # lock also reloads the record, so no stale association survives.
+    with_lock do
+      # Read inside the lock and FOR SHARE: the security's row lock does not
+      # cover the tags, so without it a tag deleted between this read and the
+      # insert below would fail the insert. A concurrent delete of a wanted
+      # tag now waits for this write to commit.
+      wanted = family.tags.where(id: Array(tag_ids).reject(&:blank?)).lock("FOR SHARE").pluck(:id)
+
+      taggings.where(tag_id: mine).where.not(tag_id: wanted).destroy_all
+      already = taggings.where(tag_id: wanted).pluck(:tag_id)
+      (wanted - already).each { |id| taggings.create!(tag_id: id) }
+    end
+  end
+
   # True when this security represents a crypto asset. Today the only signal
   # is the Binance ISO MIC — when we add a second crypto provider, extend
   # this check rather than duplicating the test at every call site.
@@ -153,13 +229,15 @@ class Security < ApplicationRecord
   # - With no domain, a stored provider logo (e.g. T-Invest's CDN for MOEX
   #   instruments) is authoritative and beats the ticker-only Brandfetch
   #   lettermark placeholder.
+  # A stored Brandfetch logo_url is rewritten to the current size and client
+  # id, since holdings and the API render this value without transforming it.
   def display_logo_url
     if crypto?
-      self.class.brandfetch_crypto_url(crypto_base_asset).presence || logo_url.presence
+      self.class.brandfetch_crypto_url(crypto_base_asset).presence || stored_logo_url
     elsif website_url.present?
-      brandfetch_icon_url.presence || logo_url.presence
+      brandfetch_icon_url.presence || stored_logo_url
     else
-      logo_url.presence || brandfetch_icon_url.presence
+      stored_logo_url || brandfetch_icon_url.presence
     end
   end
 
@@ -255,6 +333,25 @@ class Security < ApplicationRecord
     Money.new(@current_price.price, @current_price.currency)
   end
 
+  # The current price in `currency`. A quote comes in the listing's currency,
+  # which need not be the one a trade or position is carried in. Converted at
+  # the quote's own date, as the holdings are. nil when there is no price or no
+  # rate to convert it at, rather than the unconverted figure read as if it
+  # were in `currency`. Memoised per currency, a miss included, because a page
+  # asks for the same figure more than once and a missing rate is a provider
+  # call each time.
+  #
+  # A page listing several securities passes one `rates` hash to all of them,
+  # so quotes in the same currency on the same day share one rate lookup
+  # instead of each making its own.
+  def current_price_in(currency, rates: {})
+    @current_price_in ||= {}
+    return @current_price_in[currency] if @current_price_in.key?(currency)
+
+    price = current_price
+    @current_price_in[currency] = price && convert_quote(price, currency, rates)
+  end
+
   # Stores user-supplied closes for a security no provider tracks. See Security::ManualPriceImport.
   def import_manual_prices!(rows, accounts:)
     Security::ManualPriceImport.new(security: self, rows: rows, accounts: accounts).import!
@@ -275,7 +372,8 @@ class Security < ApplicationRecord
       exchange_operating_mic: exchange_operating_mic,
       country_code: country_code,
       price_provider: price_provider,
-      currency: search_currency
+      currency: search_currency,
+      isin: search_isin
     )
   end
 
@@ -287,6 +385,24 @@ class Security < ApplicationRecord
   end
 
   private
+    def convert_quote(price, currency, rates)
+      to = Money::Currency.new(currency).iso_code
+      return price if price.currency.iso_code == to
+
+      date = @current_price&.date || Date.current
+      key = [ price.currency.iso_code, to, date ]
+      rate = rates.fetch(key) do
+        rates[key] = ExchangeRate.find_or_fetch_rate(from: key.first, to: to, date: date)&.rate
+      end
+      return nil unless rate&.positive?
+
+      price.exchange_to(to, date: date, custom_rate: rate)
+    end
+
+
+    def stored_logo_url
+      Setting.transform_brand_fetch_url(logo_url).presence
+    end
 
     def extract_domain(url)
       uri = URI.parse(url)
@@ -298,7 +414,12 @@ class Security < ApplicationRecord
 
     def upcase_symbols
       self.ticker = ticker.upcase
-      self.exchange_operating_mic = self.class.canonical_exchange_operating_mic(exchange_operating_mic) if exchange_operating_mic.present?
+      # Only canonicalize a MIC being written. A stored legacy alias is upgraded by
+      # find_by_ticker_and_exchange, which checks for a canonical twin first;
+      # rewriting it on an unrelated save would collide with that twin.
+      if exchange_operating_mic.present? && will_save_change_to_exchange_operating_mic?
+        self.exchange_operating_mic = self.class.canonical_exchange_operating_mic(exchange_operating_mic)
+      end
     end
 
     def should_generate_logo?

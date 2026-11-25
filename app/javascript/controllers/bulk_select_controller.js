@@ -9,6 +9,9 @@ export default class extends Controller {
     "selectionBarText",
     "bulkEditDrawerHeader",
     "duplicateLink",
+    "editLink",
+    "deleteButton",
+    "reconcileMenu",
   ];
   static values = {
     singularLabel: String,
@@ -43,7 +46,17 @@ export default class extends Controller {
       `${scope}[entry_ids][]`,
       this.selectedIdsValue,
     );
-    form.requestSubmit();
+    // Pass the clicked submit button so Turbo reads a data-turbo-frame on it.
+    // The Delete button is type="button", so it still submits without a
+    // submitter and uses the form's frame.
+    const submitter = e.target.closest(
+      'button[type="submit"], input[type="submit"]',
+    );
+    if (submitter) {
+      form.requestSubmit(submitter);
+    } else {
+      form.requestSubmit();
+    }
   }
 
   togglePageSelection(e) {
@@ -139,10 +152,58 @@ export default class extends Controller {
     this.selectionBarTarget.querySelector("input[type='checkbox']").checked =
       count > 0;
 
+    const selectedRows = this._selectedRows();
+    const hasTransfer = selectedRows.some(
+      (row) => row.dataset.transfer === "true",
+    );
+    const hasTransaction = selectedRows.some(
+      (row) => row.dataset.entryType === "Transaction",
+    );
+    const hasCategoryEditable = selectedRows.some(
+      (row) => row.dataset.categoryEditable === "true",
+    );
+    const hasNormalTransaction = selectedRows.some(
+      (row) =>
+        row.dataset.entryType === "Transaction" &&
+        row.dataset.transfer !== "true",
+    );
+
+    if (this.hasEditLinkTarget) {
+      const url = new URL(this.editLinkTarget.href, window.location.origin);
+      url.searchParams.set(
+        "has_transaction_entry",
+        hasTransaction ? "true" : "false",
+      );
+      url.searchParams.set(
+        "has_transfer_entry",
+        hasTransfer ? "true" : "false",
+      );
+      url.searchParams.set(
+        "has_category_editable_entry",
+        hasCategoryEditable ? "true" : "false",
+      );
+      url.searchParams.set(
+        "has_normal_transaction_entry",
+        hasNormalTransaction ? "true" : "false",
+      );
+      this.editLinkTarget.href = url.toString();
+    }
+
+    if (this.hasDeleteButtonTarget) {
+      this.deleteButtonTarget.classList.toggle("hidden", hasTransfer);
+    }
+
+    if (this.hasReconcileMenuTarget) {
+      this.reconcileMenuTarget.classList.toggle("hidden", !hasTransaction);
+      this._updateReconcileForms();
+    }
+
     if (this.hasDuplicateLinkTarget) {
       const selectedRow = this._selectedRow();
       const canDuplicate =
-        count === 1 && selectedRow?.dataset.entryType === "Transaction";
+        count === 1 &&
+        selectedRow?.dataset.entryType === "Transaction" &&
+        !hasTransfer;
 
       this.duplicateLinkTarget.classList.toggle("hidden", !canDuplicate);
 
@@ -171,6 +232,28 @@ export default class extends Controller {
     return this.rowTargets.find(
       (row) => row.dataset.id === this.selectedIdsValue[0],
     );
+  }
+
+  _selectedRows() {
+    return this.rowTargets.filter((row) =>
+      this.selectedIdsValue.includes(row.dataset.id),
+    );
+  }
+
+  // The Reconcile menu items are plain form submissions. Put the selected
+  // ids in each form action so the native submit carries them, without
+  // relying on a click handler to add hidden inputs to a button_to form.
+  _updateReconcileForms() {
+    this.reconcileMenuTarget.querySelectorAll("form").forEach((form) => {
+      const url = new URL(form.action, window.location.origin);
+      url.searchParams.delete("bulk_update[entry_ids][]");
+
+      this.selectedIdsValue.forEach((id) => {
+        url.searchParams.append("bulk_update[entry_ids][]", id);
+      });
+
+      form.action = url.toString();
+    });
   }
 
   _updateGroups() {

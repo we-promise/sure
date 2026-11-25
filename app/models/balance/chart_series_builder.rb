@@ -149,8 +149,12 @@ class Balance::ChartSeriesBuilder
       favorable_direction == "down" ? -1 : 1
     end
 
+    # 1 for an account already in the target currency, else the rate the
+    # lateral join below found. NULL when the currency has no usable rate, so
+    # the account drops out of the day's sum rather than counting at 1.
+    # Strict conversion raises on that same gap instead (see missing_currency).
     def balance_rate_sql
-      @strict_currency_conversion ? "CASE WHEN accounts.currency = :target_currency THEN 1 WHEN er.rate > 0 THEN er.rate END" : "COALESCE(er.rate, 1)"
+      "CASE WHEN accounts.currency = :target_currency THEN 1 WHEN er.rate > 0 THEN er.rate END"
     end
 
     def query
@@ -223,6 +227,7 @@ class Balance::ChartSeriesBuilder
              WHERE er.from_currency = accounts.currency
                AND er.to_currency = :target_currency
                AND er.date <= d.date
+               AND er.rate > 0
              ORDER BY er.date DESC
              LIMIT 1),
             (SELECT er.rate
@@ -230,6 +235,7 @@ class Balance::ChartSeriesBuilder
              WHERE er.from_currency = accounts.currency
                AND er.to_currency = :target_currency
                AND er.date > d.date
+               AND er.rate > 0
              ORDER BY er.date ASC
              LIMIT 1)
           ) AS rate
@@ -243,6 +249,17 @@ class Balance::ChartSeriesBuilder
     # holding snapshot per (account, security) on or before that date (LOCF), convert to
     # the target currency, and aggregate unrealized gains (amount - cost_basis * qty).
     # Holdings only exist on asset accounts, so no liability sign handling is needed.
+    #
+    # Which securities count on a date follows the Holdings tab (Account#current_holdings).
+    # Once an account has a provider holdings snapshot on or before the date, a security
+    # counts only if that snapshot holds it at a nonzero quantity: a security the provider
+    # moved to another record, stopped reporting without a closing row, or reports at
+    # zero, is no longer held, and a calculated row after the snapshot (the reverse
+    # calculator gap-fills to today, and stale calculated rows are not purged) does not
+    # bring it back, unless the account bought the security after the snapshot: the
+    # reverse calculator then rebuilds that position from its trades, so it counts from
+    # the trade until the next snapshot says otherwise. An account with no provider
+    # snapshot yet keeps every security's latest row, carried forward.
     def gains_query
       <<~SQL
         WITH dates AS (
@@ -268,22 +285,74 @@ class Balance::ChartSeriesBuilder
           FROM holdings h
           WHERE h.account_id = ANY(array[:account_ids]::uuid[])
         ),
+        -- Each account's provider snapshot dates, and the date the next one starts.
+        provider_dates AS MATERIALIZED (
+          SELECT
+            snapshot.account_id,
+            snapshot.date,
+            LEAD(snapshot.date) OVER (PARTITION BY snapshot.account_id ORDER BY snapshot.date) AS next_date
+          FROM (
+            SELECT DISTINCT h.account_id, h.date
+            FROM holdings h
+            WHERE h.account_id = ANY(array[:account_ids]::uuid[])
+              AND h.account_provider_id IS NOT NULL
+          ) snapshot
+        ),
+        -- The account's latest provider snapshot on or before each series date. Resolved
+        -- once per (date, account) here: as a lateral beside the security join, Postgres
+        -- re-scanned the account's holdings for every (date, security).
+        provider_snapshots AS MATERIALIZED (
+          SELECT d.date, pd.account_id, pd.date AS snapshot_date
+          FROM dates d
+          JOIN provider_dates pd
+            ON pd.date <= d.date
+           AND (pd.next_date IS NULL OR d.date < pd.next_date)
+        ),
         daily_gains AS (
           SELECT
             d.date,
             COALESCE(SUM(
               CASE
                 WHEN last_basis.cost_basis IS NOT NULL
-                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1)
+                  AND (
+                    provider_snapshot.snapshot_date IS NULL
+                    OR EXISTS (
+                      SELECT 1
+                      FROM holdings ph
+                      WHERE ph.account_id = accounts.id
+                        AND ph.security_id = sec.security_id
+                        AND ph.account_provider_id IS NOT NULL
+                        AND ph.date = provider_snapshot.snapshot_date
+                        AND ph.qty <> 0
+                    )
+                    -- Acquired since that snapshot: the reverse calculator rebuilds the
+                    -- position from its trades until the next snapshot reports it. A sale
+                    -- cannot open a position the snapshot lacks, so only a buy counts.
+                    OR EXISTS (
+                      SELECT 1
+                      FROM entries te
+                      JOIN trades t ON t.id = te.entryable_id
+                      WHERE te.entryable_type = 'Trade'
+                        AND te.account_id = accounts.id
+                        AND t.security_id = sec.security_id
+                        AND t.qty > 0
+                        AND te.date > provider_snapshot.snapshot_date
+                        AND te.date <= d.date
+                    )
+                  )
+                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * CASE WHEN last_h.currency = :target_currency THEN 1 ELSE er.rate END
                 ELSE 0
               END
             ), 0) AS gains
           FROM dates d
           LEFT JOIN selected_accounts accounts
             ON accounts.active_until_date IS NULL OR d.date <= accounts.active_until_date
+          LEFT JOIN provider_snapshots provider_snapshot
+            ON provider_snapshot.date = d.date
+           AND provider_snapshot.account_id = accounts.id
           LEFT JOIN account_securities sec ON sec.account_id = accounts.id
           LEFT JOIN LATERAL (
-            SELECT h.amount, h.qty, h.currency
+            SELECT h.date, h.amount, h.qty, h.currency
             FROM holdings h
             WHERE h.account_id = accounts.id
               AND h.security_id = sec.security_id
@@ -295,6 +364,10 @@ class Balance::ChartSeriesBuilder
           -- gap-filled holding rows (weekends, price-history gaps) are persisted without
           -- cost_basis even though the position and basis are unchanged, so the basis is
           -- carried forward from the last real snapshot instead of zeroing those points.
+          -- A calculated zero carries the same way, except past a later row the
+          -- materializer cleared as unknown (a transfer in): no cost, no source and not
+          -- a provider's row. A provider's row is never written by the materializer,
+          -- so a missing cost there does not stop the carry.
           LEFT JOIN LATERAL (
             SELECT h2.cost_basis
             FROM holdings h2
@@ -302,7 +375,24 @@ class Balance::ChartSeriesBuilder
               AND h2.security_id = sec.security_id
               AND h2.date <= d.date
               AND h2.cost_basis IS NOT NULL
-              AND (h2.cost_basis_locked OR h2.cost_basis > 0)
+              AND (
+                h2.cost_basis_locked
+                OR h2.cost_basis > 0
+                OR (
+                  h2.cost_basis_source = 'calculated'
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM holdings cleared
+                    WHERE cleared.account_id = h2.account_id
+                      AND cleared.security_id = h2.security_id
+                      AND cleared.date > h2.date
+                      AND cleared.date <= last_h.date
+                      AND cleared.cost_basis IS NULL
+                      AND cleared.cost_basis_source IS NULL
+                      AND cleared.account_provider_id IS NULL
+                  )
+                )
+              )
             ORDER BY h2.date DESC
             LIMIT 1
           ) last_basis ON TRUE
@@ -313,6 +403,7 @@ class Balance::ChartSeriesBuilder
                WHERE er.from_currency = last_h.currency
                  AND er.to_currency = :target_currency
                  AND er.date <= d.date
+                 AND er.rate > 0
                ORDER BY er.date DESC
                LIMIT 1),
               (SELECT er.rate
@@ -320,6 +411,7 @@ class Balance::ChartSeriesBuilder
                WHERE er.from_currency = last_h.currency
                  AND er.to_currency = :target_currency
                  AND er.date > d.date
+                 AND er.rate > 0
                ORDER BY er.date ASC
                LIMIT 1)
             ) AS rate

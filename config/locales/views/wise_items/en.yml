@@ -145,6 +145,7 @@ en:
       link_account: Link balance
       cancel: Cancel
     select_existing_account:
+      not_found: Account or Wise balance not found.
       title: "Link %{account_name} with Wise"
       description: Select the Wise currency balance to link with this account. Transactions will be synced automatically.
       no_accounts_found: No unlinked Wise balances found.

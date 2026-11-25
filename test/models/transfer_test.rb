@@ -2,6 +2,7 @@ require "test_helper"
 
 class TransferTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include ActiveJob::TestHelper
 
   setup do
     @outflow = transactions(:transfer_out)
@@ -179,6 +180,24 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "funds_movement", transfer.inflow_transaction.reload.kind
   end
 
+  test "confirm! schedules recurring detection so suggestions built from the legs are retired" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+
+    assert_enqueued_with(job: IdentifyRecurringTransactionsJob, args: ->(args) { args.first == transfer.to_account.family_id }) do
+      transfer.confirm!
+    end
+  end
+
+  test "confirm! schedules recurring detection only once the enclosing transaction commits" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    IdentifyRecurringTransactionsJob.expects(:schedule_for).never
+
+    Transfer.transaction do
+      transfer.confirm!
+      raise ActiveRecord::Rollback
+    end
+  end
+
   test "confirm! assigns the investment contributions category to an uncategorized outflow" do
     transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
 
@@ -237,6 +256,28 @@ class TransferTest < ActiveSupport::TestCase
     transfer.assign_investment_contribution_category!
 
     assert_nil transfer.outflow_transaction.reload.category_id
+  test "confirm! on a transfer removed in the meantime raises and leaves the legs alone" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:loan))
+    stale = Transfer.find(transfer.id)
+    transfer.destroy!
+
+    assert_raises(ActiveRecord::RecordNotFound) { stale.confirm! }
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+  end
+
+  test "destroy! on a copy loaded before a confirm resets the kinds the confirm set" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    # The unlink request loads both legs for its permission check.
+    stale = Transfer.find(transfer.id)
+    stale.from_account
+    stale.to_account
+    transfer.confirm!
+
+    stale.destroy!
+
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
   end
 
   test "reject! leaves the kind of a pending transfer's transactions alone" do

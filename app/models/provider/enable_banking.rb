@@ -171,15 +171,18 @@ class Provider::EnableBanking
   # @param continuation_key [String, nil] For pagination
   # @param transaction_status [String, nil] Filter: "BOOK", "PDNG", or nil for all
   # @param psu_headers [Hash] Optional PSU context headers required by some ASPSPs
+  # @param strategy [String, nil] "longest" asks Enable Banking for the longest period
+  #   the ASPSP allows (date_from is still applied as a lower bound, date_to is ignored)
   # @return [Hash] Transactions and continuation_key for pagination
   def get_account_transactions(account_id:, date_from: nil, date_to: nil,
-                               continuation_key: nil, transaction_status: nil, psu_headers: {}, retry_attempt: 0)
+                               continuation_key: nil, transaction_status: nil, psu_headers: {}, strategy: nil, retry_attempt: 0)
     encoded_id = CGI.escape(account_id.to_s)
     query_params = {}
     query_params[:transaction_status] = transaction_status if transaction_status.present?
     query_params[:date_from] = date_from.to_date.iso8601 if date_from
     query_params[:date_to] = date_to.to_date.iso8601 if date_to
     query_params[:continuation_key] = continuation_key if continuation_key
+    query_params[:strategy] = strategy if strategy.present?
 
     response = self.class.get(
       "#{BASE_URL}/accounts/#{encoded_id}/transactions",
@@ -199,6 +202,7 @@ class Provider::EnableBanking
         continuation_key: continuation_key,
         transaction_status: transaction_status,
         psu_headers: psu_headers,
+        strategy: strategy,
         retry_attempt: retry_attempt + 1
       )
     else
@@ -297,7 +301,7 @@ class Provider::EnableBanking
       OpenSSL::PKey::RSA.new(certificate_pem)
     rescue OpenSSL::PKey::RSAError => e
       Rails.logger.error "Enable Banking: Failed to parse private key: #{e.message}"
-      raise EnableBankingError.new("Invalid private key in certificate: #{e.message}", :invalid_certificate)
+      raise EnableBankingError.new("Invalid private key: #{e.message}", :invalid_certificate)
     end
 
     def generate_jwt

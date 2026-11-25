@@ -18,6 +18,7 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     @provider.stubs(:get_ledgers).returns({ "ledger" => {}, "count" => 0 })
     @provider.stubs(:get_ticker).returns(nil)
     @provider.stubs(:get_earn_allocations).returns({ "items" => [] })
+    @provider.stubs(:get_earn_strategies).returns({ "items" => [] })
   end
 
   test "creates a combined kraken account from BalanceEx" do
@@ -41,6 +42,89 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     btc = account.raw_payload["assets"].find { |asset| asset["symbol"] == "BTC" }
     assert_equal "0.75", btc["available"]
     assert_equal "0.25", btc["hold_trade"]
+  end
+
+  test "skips Earn allocations already in BalanceEx and keeps hybrid Earn" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata.merge("ETH.B" => { "altname" => "ETH.B" }))
+    @provider.stubs(:get_extended_balance).returns(
+      "ETH.B" => { "balance" => "8.4245", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" },
+      "XETH" => { "balance" => "0.0005", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        { "strategy_id" => "bonded", "native_asset" => "ETH", "amount_allocated" => { "total" => { "native" => "8.4245" } } },
+        { "strategy_id" => "flex", "native_asset" => "ETH", "amount_allocated" => { "total" => { "native" => "0.0005" } } },
+        { "strategy_id" => "vault", "native_asset" => "BTC", "amount_allocated" => { "total" => { "native" => "0.08" } } }
+      ]
+    )
+    @provider.stubs(:get_earn_strategies).returns("items" => [ { "id" => "bonded" }, { "id" => "flex" } ])
+    @provider.stubs(:get_ticker).with("ETHUSD").returns("XETHZUSD" => { "c" => [ "2000.00" ] })
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    earn = @item.kraken_accounts.first.raw_payload["assets"].select { |asset| asset["source"] == "earn" }
+    assert_equal [ [ "BTC", "0.08" ] ], earn.map { |asset| [ asset["symbol"], asset["balance"] ] }
+    assert_in_delta 20_850, @item.kraken_accounts.first.current_balance, 0.01
+  end
+
+  test "carries forward last known Earn assets when Earn/Strategies fails" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [ { "strategy_id" => "vault", "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } } ]
+    )
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [ { "strategy_id" => "vault", "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "3.0" } } } ]
+    )
+
+    @provider.stubs(:get_earn_strategies).raises(Provider::Kraken::ApiError, "EGeneral:Internal error")
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    assert result[:success]
+    earn_btc = @item.kraken_accounts.first.raw_payload["assets"].find { |asset| asset["source"] == "earn" }
+    assert_equal "2.0", earn_btc["balance"]
+  end
+
+  test "carries forward last known Earn assets when Earn/Strategies is incomplete" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [ { "strategy_id" => "vault", "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } } ]
+    )
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [ { "strategy_id" => "vault", "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "3.0" } } } ]
+    )
+
+    [
+      { "items" => [ { "name" => "no id" } ] },
+      { "items" => [ { "id" => "bonded" } ], "next_cursor" => "same" }
+    ].each do |response|
+      @provider.stubs(:get_earn_strategies).returns(response)
+      assert KrakenItem::Importer.new(@item, kraken_provider: @provider).import[:success]
+
+      earn_btc = @item.kraken_accounts.first.raw_payload["assets"].find { |asset| asset["source"] == "earn" }
+      assert_equal "2.0", earn_btc["balance"]
+    end
+  end
+
+  test "does not fetch Earn/Strategies when there are no allocations" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.expects(:get_earn_strategies).never
+
+    assert KrakenItem::Importer.new(@item, kraken_provider: @provider).import[:success]
+    assert_in_delta 50.0, @item.kraken_accounts.first.current_balance, 0.01
   end
 
   test "merges Earn allocated balances alongside spot assets" do

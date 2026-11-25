@@ -17,5 +17,6 @@ spec:
     - interval: {{ .Values.pipelock.serviceMonitor.interval }}
       scrapeTimeout: {{ .Values.pipelock.serviceMonitor.scrapeTimeout }}
       path: {{ .Values.pipelock.serviceMonitor.path }}
-      port: {{ .Values.pipelock.serviceMonitor.portName }}
+      # Pipelock 3.8+ serves /metrics only on its dedicated metrics listener.
+      port: metrics
 {{- end }}

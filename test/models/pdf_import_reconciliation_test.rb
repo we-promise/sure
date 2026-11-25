@@ -126,11 +126,12 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
     @import.assign_account!(other)
 
-    assert_not on_first.reload.reconciled?, "the old account's entry is no longer evidence-backed"
+    assert_not on_first.reload.statement_reconciled?, "the old account's entry is no longer evidence-backed"
     assert_equal 1, @import.reload.rows_count, "nothing on the new account matches, so it is offered"
   end
 
   test "extract_transactions stores string keys so rows can actually be generated" do
+    use_ai_routes
     provider = mock("llm_provider")
     Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
     provider.stubs(:extract_bank_statement).returns(
@@ -143,6 +144,337 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     # Without deep_stringify_keys this reads back empty and no rows are built.
     assert_equal 1, @import.extracted_transactions.size
     assert_equal "Coffee", @import.extracted_transactions.first["name"]
+  end
+
+  test "extract_transactions syncs period and balances to statement_backed import" do
+    use_ai_routes
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "2026-10-09", end_date: "2026-11-06" },
+          opening_balance: 325.0,
+          closing_balance: 3176.22,
+          bank_name: "American Express",
+          account_number: "2007",
+          transactions: [ { date: "2026-10-15", amount: "-10.0", name: "Lunch" } ]
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    @import.extract_transactions
+
+    @statement.reload
+    assert_equal Date.parse("2026-10-09"), @statement.period_start_on
+    assert_equal Date.parse("2026-11-06"), @statement.period_end_on
+    assert_equal 325.0, @statement.opening_balance
+    assert_equal 3176.22, @statement.closing_balance
+    assert_equal "American Express", @statement.institution_name_hint
+    assert_equal "2007", @statement.account_last4_hint
+  end
+
+  test "extract_transactions keeps the detected sign of a CR balance the AI repeats unsigned" do
+    detect_card_statement!(account: accounts(:credit_card))
+    stub_extracted_balances(opening: 1066.47, closing: 435.88)
+
+    @import.extract_transactions
+
+    assert_equal BigDecimal("-435.88"), @statement.reload.closing_balance
+    assert_equal BigDecimal("1066.47"), @statement.opening_balance
+  end
+
+  test "extract_transactions leaves an unlinked CR balance to be signed on linking" do
+    detect_card_statement!(account: nil)
+    stub_extracted_balances(opening: 1066.47, closing: -435.88)
+
+    @import.extract_transactions
+    @statement.reload.link_to_account!(@account)
+
+    assert_equal BigDecimal("435.88"), @statement.reload.closing_balance,
+                 "the AI's sign was kept over the CR marker on a depository account"
+  end
+
+  test "an AI sign correction still applies to a balance printed without a CR/DR marker" do
+    # "Closing balance ($435.88)": the text reads 435.88, with no marker.
+    detect_card_statement!(account: @account, closing_side: nil)
+    stub_extracted_balances(opening: 1066.47, closing: -435.88)
+
+    @import.extract_transactions
+
+    assert_equal BigDecimal("-435.88"), @statement.reload.closing_balance
+  end
+
+  test "an AI balance in a currency the text can't resolve is kept" do
+    detect_card_statement!(account: nil)
+    @statement.update_columns(currency: nil)
+    assert_equal "USD", @statement.reload.statement_currency
+    stub_extracted_balances(opening: 1066.47, closing: 435.88, currency: "EUR")
+
+    @import.extract_transactions
+
+    @statement.reload
+    assert_equal "EUR", @statement.currency
+    assert_equal BigDecimal("1066.47"), @statement.opening_balance
+    assert_equal BigDecimal("435.88"), @statement.closing_balance
+  end
+
+  test "an AI balance in another currency is kept when the same statement was saved earlier in the job" do
+    detect_card_statement!(account: nil)
+    @statement.update_columns(currency: nil)
+    stub_extracted_balances(opening: 1066.47, closing: 435.88, currency: "EUR")
+    period = { "statement_period_start" => @statement.period_start_on.to_s, "statement_period_end" => @statement.period_end_on.to_s }
+    PdfImport::AiProcessor.any_instance.stubs(:process).returns(OpenStruct.new(extracted_data: period))
+
+    # As ProcessPdfJob does: both calls save the import's one statement object,
+    # the first in the family's dollars, the second switching it to euros.
+    @import.process_with_ai
+    assert_equal BigDecimal("435.88"), @import.account_statement.closing_balance
+    @import.extract_transactions
+
+    @statement.reload
+    assert_equal "EUR", @statement.currency
+    assert_equal BigDecimal("1066.47"), @statement.opening_balance
+    assert_equal BigDecimal("435.88"), @statement.closing_balance
+  end
+
+  test "an AI balance keeps the hand edits already recorded on the statement" do
+    detect_card_statement!(account: accounts(:credit_card))
+    @statement.update!(opening_balance: 999)
+    stub_extracted_balances(opening: nil, closing: 400.0)
+
+    @import.extract_transactions
+
+    assert_equal %w[closing_balance opening_balance], @statement.reload.sanitized_parser_output.dig("pdf", "edited_balances").sort
+  end
+
+  test "extract_transactions writes an AI balance over a hand edit of the same size" do
+    detect_card_statement!(account: accounts(:credit_card))
+    @statement.update!(closing_balance: 400)
+    stub_extracted_balances(opening: 1066.47, closing: -400.0)
+
+    @import.extract_transactions
+
+    assert_equal BigDecimal("-400"), @statement.reload.closing_balance
+  end
+
+  test "extract_transactions keeps a different AI balance through relinking" do
+    detect_card_statement!(account: accounts(:credit_card), text: :summary_table)
+    stub_extracted_balances(opening: 1066.47, closing: 400.0)
+
+    @import.extract_transactions
+    @statement.reload.unlink!
+    @statement.link_to_account!(@account)
+
+    assert_equal BigDecimal("400"), @statement.reload.closing_balance
+    assert_nil @statement.opening_balance, "the detected half of the table was kept"
+  end
+
+  test "extract_transactions ignores inverted dates while syncing valid balances and hints" do
+    use_ai_routes
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "2026-11-06", end_date: "2026-10-09" },
+          opening_balance: 100.0,
+          closing_balance: 200.0,
+          bank_name: "Chase",
+          account_number: "1234",
+          transactions: []
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    initial_start = @statement.period_start_on
+    initial_end = @statement.period_end_on
+
+    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
+      @import.extract_transactions
+    end
+
+    @statement.reload
+    assert_equal initial_start, @statement.period_start_on
+    assert_equal initial_end, @statement.period_end_on
+    assert_equal 100.0, @statement.opening_balance
+    assert_equal 200.0, @statement.closing_balance
+    assert_equal "Chase", @statement.institution_name_hint
+    assert_equal "1234", @statement.account_last4_hint
+  end
+
+  test "extract_transactions handles unparseable date independently without dropping balances" do
+    use_ai_routes
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "2026-02-30", end_date: "2026-11-06" },
+          opening_balance: 50.0,
+          closing_balance: 150.0,
+          bank_name: "Wells Fargo",
+          account_number: "5678",
+          transactions: []
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
+      @import.extract_transactions
+    end
+
+    @statement.reload
+    assert_equal 50.0, @statement.opening_balance
+    assert_equal 150.0, @statement.closing_balance
+    assert_equal "Wells Fargo", @statement.institution_name_hint
+    assert_equal "5678", @statement.account_last4_hint
+  end
+
+  test "extract_transactions rejects dates outside Import.reasonable_date_range" do
+    use_ai_routes
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "1950-01-01", end_date: "2026-11-06" },
+          opening_balance: 50.0,
+          closing_balance: 150.0,
+          transactions: []
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
+      @import.extract_transactions
+    end
+  end
+
+  test "extract_transactions drops balances when extracted currency conflicts with statement currency" do
+    use_ai_routes
+    @statement.update!(currency: "USD", opening_balance: 10.0)
+
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "2026-10-01", end_date: "2026-10-31" },
+          opening_balance: 50.0,
+          closing_balance: 150.0,
+          currency: "EUR",
+          transactions: []
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
+      @import.extract_transactions
+    end
+
+    @statement.reload
+    assert_equal 10.0, @statement.opening_balance
+    assert_nil @statement.closing_balance
+  end
+
+  test "extract_transactions honors currency mismatch detected during earlier processing" do
+    use_ai_routes
+    @statement.update!(currency: "USD", opening_balance: 10.0, sanitized_parser_output: { "extracted_currency" => "EUR" })
+
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "2026-10-01", end_date: "2026-10-31" },
+          opening_balance: 50.0,
+          closing_balance: 150.0,
+          transactions: []
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
+      @import.extract_transactions
+    end
+
+    @statement.reload
+    assert_equal 10.0, @statement.opening_balance
+    assert_nil @statement.closing_balance
+  end
+
+  test "apply_statement_metadata_updates bounds institution_name_hint to 200 characters" do
+    long_name = "A" * 300
+    @import.send(
+      :apply_statement_metadata_updates,
+      start_date: "2026-10-01",
+      end_date: "2026-10-31",
+      opening_balance: 100,
+      closing_balance: 200,
+      institution_name: long_name,
+      account_last4: "1234"
+    )
+
+    @statement.reload
+    assert_equal ("A" * 200), @statement.institution_name_hint
+    assert_equal 200, @statement.institution_name_hint.length
+  end
+
+  test "apply_statement_metadata_updates preserves existing hints when already populated" do
+    use_ai_routes
+    @statement.update!(institution_name_hint: "Existing Bank", account_last4_hint: "9999")
+
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "2026-10-01", end_date: "2026-10-31" },
+          opening_balance: 10.0,
+          closing_balance: 20.0,
+          bank_name: "New Bank",
+          account_number: "1111",
+          transactions: []
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    @import.extract_transactions
+
+    @statement.reload
+    assert_equal "Existing Bank", @statement.institution_name_hint
+    assert_equal "9999", @statement.account_last4_hint
+  end
+
+  test "apply_statement_metadata_updates captures debug log entry when update fails validation" do
+    @statement.stubs(:save).returns(false)
+    @statement.errors.add(:base, "Simulated validation failure")
+
+    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
+      @import.send(
+        :apply_statement_metadata_updates,
+        start_date: "2026-10-01",
+        end_date: "2026-10-31",
+        opening_balance: 100,
+        closing_balance: 200,
+        institution_name: "Bank",
+        account_last4: "1234"
+      )
+    end
   end
 
   test "publishing does not re-match a row against an entry row generation already consumed" do
@@ -231,18 +563,18 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     on_first = create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
     @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
     @import.generate_rows_from_extracted_data
-    assert on_first.reload.reconciled?
+    assert on_first.reload.statement_reconciled?
 
     @import.assign_account!(other)
 
     # Both fields matter: reconciled_at is the state, reconciled_by_statement_id
     # is the evidence, and Entry#unmark_reconciled! clears the pair.
     on_first.reload
-    assert_not on_first.reconciled?, "the account being left is released"
+    assert_not on_first.statement_reconciled?, "the account being left is released"
     assert_nil on_first.reconciled_by_statement_id, "its statement evidence is cleared too"
 
     on_other.reload
-    assert on_other.reconciled?, "another account's evidence must survive"
+    assert on_other.statement_reconciled?, "another account's evidence must survive"
     assert_equal @statement.id, on_other.reconciled_by_statement_id
   end
 
@@ -285,7 +617,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     drifted = create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
     @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
     @import.generate_rows_from_extracted_data
-    assert drifted.reload.reconciled?
+    assert drifted.reload.statement_reconciled?
     @import.update!(status: :complete)
 
     # Corrected after the fact, so the statement line no longer describes it.
@@ -294,7 +626,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     @import.revert
 
     drifted.reload
-    assert_not drifted.reconciled?, "a statement that no longer matches must stop claiming the entry"
+    assert_not drifted.statement_reconciled?, "a statement that no longer matches must stop claiming the entry"
     assert_nil drifted.reconciled_by_statement_id
     assert_equal 1, @import.reload.rows_count
     assert @import.pending?, "expected pending, got #{@import.status}"
@@ -388,6 +720,34 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   private
+
+    # Readings as MetadataDetector stores them for "Closing balance $435.88 CR",
+    # then a link so the statement works its balances out for `account`.
+    def detect_card_statement!(account:, text: :labels, closing_side: "credit")
+      pair = {
+        "opening_balance" => { "amount" => "1066.47", "side" => nil, "currency" => "$" },
+        "closing_balance" => { "amount" => "435.88", "side" => closing_side, "currency" => "$" }
+      }
+      readings = text == :summary_table ? { "summary_table" => pair.merge("adds_up_as" => [ "liability" ]) } : { "labels" => pair }
+      @statement.update_columns(
+        account_id: nil, opening_balance: 1066.47, closing_balance: 435.88,
+        sanitized_parser_output: { "pdf" => { "balance_readings" => readings } }
+      )
+      @statement.link_to_account!(account) if account
+    end
+
+    def stub_extracted_balances(opening:, closing:, currency: nil)
+      use_ai_routes
+      provider = mock("llm_provider")
+      Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+      provider.stubs(:extract_bank_statement).returns(
+        OpenStruct.new(
+          success?: true,
+          data: { opening_balance: opening, closing_balance: closing, currency: currency, transactions: [] }
+        )
+      )
+      @import.stubs(:pdf_file_content).returns("fake-pdf")
+    end
 
     def create_statement
       AccountStatement.create_from_upload!(

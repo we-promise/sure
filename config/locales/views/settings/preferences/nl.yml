@@ -3,6 +3,8 @@ nl:
   settings:
     preferences:
       show:
+        show_balance_updates: Gesynchroniseerde saldo-updates
+        show_balance_updates_hint: Toon altijd de dagelijkse saldi die de bankkoppeling vastlegt in de activiteit van gekoppelde rekeningen
         country: "Land"
         currency: "Valuta"
         date_format: "Datumformaat"
@@ -16,6 +18,8 @@ nl:
         page_title: "Voorkeuren"
         timezone: "Tijdzone"
         translations_notice: "Let op: we werken nog aan vertalingen voor verschillende talen."
+        rule_suggestions: "Regelsuggesties"
+        rule_suggestions_hint: "Voorstellen een regel te maken nadat je een categorie wijzigt"
         budget_title: "Budget"
         budget_subtitle: "Stel in hoe uw budgetten werken"
         month_start_day: "Budgetmaand begint op"

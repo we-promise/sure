@@ -7,10 +7,9 @@ nl:
     category_rule_cta:
       close: "Sluiten"
       create_rule: "Regel aanmaken"
-      description: "U kunt een regel aanmaken om transacties zoals deze automatisch te categoriseren"
-      dont_show_again: "Niet meer tonen"
-      hide_for_today: "Vandaag verbergen"
-      hide_for_today_hint: "Met Vandaag verbergen worden deze suggesties 24 uur gepauzeerd."
+      description: "Dit soort transacties altijd categoriseren?"
+      not_today: "Niet vandaag"
+      turn_off_suggestions: "Regelsuggesties uitschakelen"
       message: "Bijgewerkt naar %{category_name}"
     classifier_rules:
       category_classifier: "Categorieclassificatie"

@@ -11,25 +11,41 @@ nb:
     create:
       code_already_used: Denne koden er allerede brukt. Skriv inn neste kode fra autentiseringsappen din.
       invalid_code: Ugyldig verifiseringskode. Prøv igjen.
+      setup_failed: Noe gikk galt under aktivering av to-faktor autentisering. Prøv igjen.
+      invalid_password: "Feil passord. Prøv igjen."
     disable:
-      success: To-faktor autentisering er deaktivert
+      failure: Noe gikk galt under deaktivering av to-faktor autentisering. Prøv igjen.
+      success: Tofaktorautentisering er deaktivert
+      invalid_password: "Feil passord. Prøv igjen."
     new:
       code_label: Verifiseringskode
       code_placeholder: Angi 6-sifret kode
-      description: Forbedre kontoens sikkerhet ved å sette opp to-faktor autentisering
-      page_title: Oppsett av to-faktor autentisering
+      description: Forbedre kontoens sikkerhet ved å sette opp tofaktorautentisering
+      page_title: Oppsett av tofaktorautentisering
       scan_description: Bruk en autentiseringsapp som Google Authenticator eller 1Password for å skanne denne QR-koden
       scan_title: 1. Skann QR-kode
       secret_description: Hvis du ikke kan skanne QR-koden, angi denne hemmelige nøkkelen manuelt i autentiseringsappen din
       secret_title: Manuell inntastingskode
-      title: Sett opp to-faktor autentisering
+      title: Sett opp tofaktorautentisering
       verify_button: Verifiser og aktiver 2FA
       verify_description: Angi den 6-sifrede koden fra autentiseringsappen din
       verify_title: 2. Angi verifiseringskode
+      password_label: "Bekreft med passordet ditt"
+      password_placeholder: "Skriv inn passordet ditt"
     verify:
       description: Angi koden fra autentiseringsappen din for å fortsette
-      page_title: Verifiser to-faktor autentisering
-      title: To-faktor autentisering
+      page_title: Verifiser tofaktorautentisering
+      title: Tofaktorautentisering
       verify_button: Verifiser
+      or: eller
+      webauthn_button: Bruk passnøkkel eller sikkerhetsnøkkel
+      webauthn_unsupported: Denne nettleseren støtter ikke passnøkler eller sikkerhetsnøkler.
+      verifying: "Bekrefter..."
     verify_code:
       invalid_code: Ugyldig autentiseringskode. Prøv igjen.
+    verify_webauthn:
+      invalid_credential: Kunne ikke bekrefte passnøkkelen eller sikkerhetsnøkkelen. Prøv igjen.
+    webauthn_options:
+      unavailable: Ingen passnøkler eller sikkerhetsnøkler er tilgjengelige for denne kontoen.
+    demo_family_restricted: "Tofaktorautentisering kan ikke aktiveres for den delte demohusholdningen, slik at demoen forblir tilgjengelig for alle."
+    local_password_required: "Tofaktorautentisering krever et lokalt passord. Passordet ditt administreres av identitetsleverandøren din."

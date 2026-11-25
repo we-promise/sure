@@ -1,4 +1,5 @@
-# SnapTrade API client using SnapTrade OAuth apps (pre-release feature).
+# SnapTrade API client: SnapTrade OAuth apps (pre-release feature) or a
+# SnapTrade Personal API key.
 #
 # Auth model:
 #   - Instance admin registers an OAuth app on dashboard.snaptrade.com and sets
@@ -13,6 +14,13 @@
 #     SnaptradeItem by #apply_oauth_tokens!.
 #   - Data calls send Authorization: Bearer <access_token>. The SnapTrade user
 #     is implicit in the token; there is no userId/userSecret.
+#
+# Personal API key mode (an item with client_id + consumer_key and no OAuth
+# token): a SnapTrade Personal key is its own user, so data calls are signed
+# with the consumer key instead (clientId + timestamp query params and a
+# Signature header) and still carry no userId/userSecret. See
+# https://docs.snaptrade.com/docs/authentication-methods and
+# https://docs.snaptrade.com/docs/request-signatures.
 class Provider::Snaptrade
   class Error < StandardError; end
   # `oauth_error` carries the machine-readable `error` code from an OAuth error
@@ -38,6 +46,7 @@ class Provider::Snaptrade
       @response_body = response_body
     end
   end
+  class RateLimitError < ApiError; end
 
   MAX_RETRIES = 3
   INITIAL_RETRY_DELAY = 2 # seconds
@@ -61,11 +70,17 @@ class Provider::Snaptrade
   TOKEN_EXPIRY_LEEWAY = 60 # seconds; refresh this long before actual expiry
 
   # Filtered out of get_positions so they never reach raw_holdings_payload:
-  # units are per-contract and symbols OCC-style, which neither
-  # SnaptradeAccount::HoldingsProcessor nor the units * price sum in
-  # SnaptradeAccount::Processor#calculate_holdings_value models. A denylist, so
-  # equity-like kinds added later still import rather than being dropped.
-  UNSUPPORTED_INSTRUMENT_KINDS = %w[option future cfd].freeze
+  # units are per-contract, which neither SnaptradeAccount::HoldingsProcessor
+  # nor the units * price sum in SnaptradeAccount::Processor#calculate_holdings_value
+  # models (options are, via contract_multiplier). A denylist, so equity-like
+  # kinds added later still import rather than being dropped.
+  UNSUPPORTED_INSTRUMENT_KINDS = %w[future future_option cfd].freeze
+
+  # GET /accounts/{id}/activities returns at most 1000 rows per request.
+  ACTIVITIES_PAGE_SIZE = 1000
+  # Safety cap on activity pages per account (100k rows), so a server that
+  # ignores offset can't loop forever.
+  MAX_ACTIVITY_PAGES = 100
 
   class << self
     # Some OAuth flow is available. The device flow needs nothing but the public
@@ -356,6 +371,13 @@ class Provider::Snaptrade
   def initialize(snaptrade_item)
     raise ConfigurationError, "snaptrade_item is required" if snaptrade_item.nil?
     @snaptrade_item = snaptrade_item
+    @rate_limit_errors = {}
+  end
+
+  # Set once a Personal key request hits the rate limit (10 requests a minute
+  # per account); later calls for that account raise it without a request.
+  def rate_limit_error
+    @rate_limit_errors.values.first
   end
 
   # --- Data methods. The SnapTrade user is implicit in the Bearer token. ---
@@ -388,12 +410,64 @@ class Provider::Snaptrade
     results.reject { |position| unsupported_instrument?(position) }
   end
 
-  # Returns raw JSON: paginated form is {"data" => [...]}, may also be a plain Array
+  # Returns raw JSON: paginated form is {"data" => [...]}, may also be a plain Array.
+  #
+  # The endpoint returns at most ACTIVITIES_PAGE_SIZE rows per request, so this
+  # walks offset/limit until every page is fetched and returns the first page's
+  # body with "data" holding all of them.
   def get_account_activities(account_id:, start_date: nil, end_date: nil)
-    params = {}
+    params = { limit: ACTIVITIES_PAGE_SIZE }
     params[:startDate] = start_date.to_date.to_s if start_date
     params[:endDate] = end_date.to_date.to_s if end_date
-    get_json("/api/v1/accounts/#{account_id}/activities", params)
+    path = "/api/v1/accounts/#{account_id}/activities"
+
+    first_response = nil
+    previous_first = nil
+    first_page_size = nil
+    known_total = nil
+    activities = []
+
+    MAX_ACTIVITY_PAGES.times do |page|
+      response = get_json(path, params.merge(offset: activities.size))
+      unless response.is_a?(Hash) && response["data"].is_a?(Array)
+        return response if first_response.nil?
+        # With rows still missing, a partial history would move the sync cursor past them.
+        raise incomplete_activities_error(account_id, "SnapTrade activities page at offset #{activities.size} was not a paged response") if known_total
+        break
+      end
+
+      first_response ||= response
+      rows = response["data"]
+      total = response.dig("pagination", "total")
+      known_total = total if total.is_a?(Integer)
+
+      # A server that ignores offset returns the same page again.
+      if previous_first && rows.first == previous_first
+        raise incomplete_activities_error(account_id, "SnapTrade activities repeated a page at offset #{activities.size}") if known_total && activities.size < known_total
+        break
+      end
+
+      previous_first = rows.first
+      activities.concat(rows)
+      first_page_size ||= rows.size
+
+      # Without a total, a page shorter than the first one is the last; the server may return fewer rows than asked.
+      more = known_total ? activities.size < known_total : rows.size >= first_page_size
+      raise incomplete_activities_error(account_id, "SnapTrade activities page at offset #{activities.size} was empty, total #{known_total}") if rows.empty? && more && page.positive?
+      return first_response.merge("data" => activities) if rows.empty? || !more
+
+      # Every page so far was full and distinct. With a total, rows are still missing; without one, they may be
+      # (exactly 100 full pages also lands here). Either way, raise rather than move the cursor past them.
+      if page == MAX_ACTIVITY_PAGES - 1
+        raise incomplete_activities_error(
+          account_id,
+          "SnapTrade activities for account #{account_id} hit the page cap " \
+          "(#{MAX_ACTIVITY_PAGES} pages, #{activities.size} rows, total #{known_total.inspect})"
+        )
+      end
+    end
+
+    first_response.merge("data" => activities)
   end
 
   # Cross-account activities endpoint. Returns Array<Hash>.
@@ -440,6 +514,8 @@ class Provider::Snaptrade
     end
 
     def request_json(method, path, params: {}, body: nil, retry_on_auth_failure: true)
+      return signed_request_json(method, path, params: params, body: body) if personal_key?
+
       ensure_fresh_token!
       operation = "#{method.to_s.upcase} #{path}"
       used_access_token = snaptrade_item.oauth_access_token
@@ -466,6 +542,54 @@ class Provider::Snaptrade
       end
 
       handle_response(response, operation)
+    end
+
+    # OAuth wins when both are present, so an authorized item never changes mode.
+    def personal_key?
+      snaptrade_item.oauth_access_token.blank? && snaptrade_item.personal_key_configured?
+    end
+
+    # Personal key request. The signature covers the path, the query string and
+    # the body exactly as sent, so both are built here rather than by Faraday:
+    # the query with Faraday's own (sorting) params encoder, so re-encoding the
+    # URL leaves it byte-for-byte unchanged, and the body as the same canonical
+    # JSON that is signed. Each attempt is signed afresh, since the timestamp is
+    # part of the signature. No refresh-and-retry: a 401/403 means the key itself
+    # was rejected, which handle_response turns into requires_update.
+    def signed_request_json(method, path, params:, body:)
+      bucket = path[%r{/accounts/([^/]+)}, 1]
+      raise @rate_limit_errors[bucket] if @rate_limit_errors[bucket]
+
+      operation = "#{method.to_s.upcase} #{path}"
+      content = body.presence && body.transform_keys(&:to_s).sort.to_h
+
+      retrier = method == :get ? method(:with_retries) : method(:without_retry)
+      response = retrier.call(operation) do
+        query = Faraday::Utils.default_params_encoder.encode(
+          params.to_h.merge(clientId: snaptrade_item.client_id, timestamp: Time.current.to_i)
+        )
+        signature = request_signature(path: path, query: query, content: content)
+        api_connection.public_send(method, "#{API_BASE_URL}#{path}?#{query}") do |request|
+          request.headers["Signature"] = signature
+          request.headers["Accept"] = "application/json"
+          if content
+            request.headers["Content-Type"] = "application/json"
+            request.body = JSON.generate(content)
+          end
+        end
+      end
+
+      handle_response(response, operation)
+    rescue RateLimitError => e
+      raise @rate_limit_errors[bucket] = e
+    end
+
+    # HMAC-SHA256 (keyed with the consumer key, Base64) of the JSON object
+    # {content, path, query} with keys sorted and no whitespace (the bodies we
+    # send are flat). content is null for a request without a body.
+    def request_signature(path:, query:, content:)
+      message = JSON.generate({ content: content, path: path, query: query })
+      Base64.strict_encode64(OpenSSL::HMAC.digest("SHA256", snaptrade_item.consumer_key.to_s, message))
     end
 
     def ensure_fresh_token!
@@ -522,6 +646,25 @@ class Provider::Snaptrade
       raise
     end
 
+    # Captured for support: the importer keeps the stored history and cursor
+    # when the fetch fails, but would otherwise only log why.
+    def incomplete_activities_error(account_id, message)
+      capture_activities_log(account_id, message, level: :error)
+      ApiError.new(message)
+    end
+
+    def capture_activities_log(account_id, message, level:)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: level,
+        message: message,
+        source: "Provider::Snaptrade",
+        provider_key: "snaptrade",
+        family: snaptrade_item.try(:family),
+        metadata: { snaptrade_item_id: snaptrade_item.try(:id), snaptrade_account_id: account_id }
+      )
+    end
+
     def mark_requires_update!
       snaptrade_item.update!(status: :requires_update)
     rescue StandardError => e
@@ -544,8 +687,8 @@ class Provider::Snaptrade
           mark_requires_update!
           raise AuthenticationError, "Authentication failed (#{operation}): HTTP #{response.status}"
         when 429
-          raise ApiError.new("Rate limit exceeded. Please try again later.",
-                             status_code: response.status, response_body: response.body)
+          raise RateLimitError.new("Rate limit exceeded. Please try again later.",
+                                   status_code: response.status, response_body: response.body)
         when 500..599
           raise ApiError.new("SnapTrade server error (#{response.status}). Please try again later.",
                              status_code: response.status, response_body: response.body)

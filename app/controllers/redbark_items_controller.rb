@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class RedbarkItemsController < ApplicationController
+  include SafeReturnPath
+
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   before_action :set_redbark_item, only: [ :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
@@ -114,7 +116,6 @@ class RedbarkItemsController < ApplicationController
     end
 
     redbark_account.ensure_account_provider!(account)
-    redbark_account.update!(ignored: false)
     redbark_item.sync_later unless redbark_item.syncing?
 
     redirect_to account_path(account), notice: t(".success", account_name: account.name)
@@ -163,9 +164,7 @@ class RedbarkItemsController < ApplicationController
       ActiveRecord::Base.transaction do
         account = create_account_from_redbark(redbark_account, accountable_type, config)
         redbark_account.ensure_account_provider!(account)
-        attributes = { ignored: false }
-        attributes[:sync_start_date] = config[:sync_start_date] if config[:sync_start_date].present?
-        redbark_account.update!(attributes)
+        redbark_account.update!(sync_start_date: config[:sync_start_date]) if config[:sync_start_date].present?
       end
       created_count += 1
     rescue => e
@@ -223,23 +222,6 @@ class RedbarkItemsController < ApplicationController
       t("redbark_items.setup_accounts.api_error", message: e.message)
     end
 
-    # Only allow internal relative paths in return_to
-    def safe_return_to_path
-      return nil if params[:return_to].blank?
-
-      return_to = params[:return_to].to_s
-
-      begin
-        uri = URI.parse(return_to)
-        return nil if uri.scheme.present?
-        return nil if uri.host.present?
-        return nil unless return_to.start_with?("/")
-        return_to
-      rescue URI::InvalidURIError
-        nil
-      end
-    end
-
     def redbark_item_params
       params.require(:redbark_item).permit(
         :name,
@@ -259,7 +241,6 @@ class RedbarkItemsController < ApplicationController
       )
 
       redbark_account.ensure_account_provider!(account)
-      redbark_account.update!(ignored: false)
       account
     end
 

@@ -2832,7 +2832,8 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
       raise_on: { get_balance_statements: statements_forbidden }
     )
 
-    result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    # Postgres refuses a NUL only in a plaintext payload; ciphertext stores it.
+    result = ActiveRecord::Encryption.without_encryption { WiseItem::Importer.new(@wise_item, wise_provider: provider).import }
 
     assert_not result[:success]
     assert_equal 1, result[:transactions_failed]
@@ -2865,7 +2866,8 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
         WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
       end
 
-      refused = import.call([ held.merge("title" => "<strong>Caf\u0000e</strong>") ])
+      # Postgres refuses a NUL only in a plaintext payload; ciphertext stores it.
+      refused = ActiveRecord::Encryption.without_encryption { import.call([ held.merge("title" => "<strong>Caf\u0000e</strong>") ]) }
       assert_equal 2, refused[:transactions_failed]
       assert_empty split_marks
 

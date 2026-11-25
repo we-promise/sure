@@ -99,6 +99,7 @@ de:
         continue: Weiter zu den API-Schlüssel-Einstellungen
       create:
         success: Dein API-Key wurde erstellt
+        creation_failed: "Dein API-Key konnte nicht erstellt werden. Bitte versuche es erneut."
       destroy:
         revoke_failed: API-Key ließ sich nicht widerrufen
         revoked_successfully: API-Key widerrufen
