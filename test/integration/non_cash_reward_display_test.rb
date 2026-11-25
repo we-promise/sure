@@ -55,13 +55,20 @@ class NonCashRewardDisplayTest < ActionDispatch::IntegrationTest
   end
 
   test "a small priced reward shows a fraction of the minor unit in the trade currency" do
+    ExchangeRate.stubs(:provider).returns(nil)
     @security.prices.create!(date: @date, currency: "USD", price: 0.1)
     entry = import_reward("staking")
     entry.trade.update!(currency: "EUR")
     get account_url(@account, tab: "activity")
     assert_reward_row entry, "< €0.01"
     assert_reward_header entry, "< €0.01 EUR"
+    assert_select "dd", text: "$4,000.00"
     assert_select "dt", text: "Unrealized gain/loss", count: 0
+
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.8)
+    assert_reward_header entry, "< €0.01 EUR"
+    assert_select "dd", text: "€3,200.00 ($4,000.00)"
+    assert_select "dt", text: "Unrealized gain/loss"
   end
 
   test "another provider can use both reward views with its own metadata" do

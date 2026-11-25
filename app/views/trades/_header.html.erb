@@ -60,8 +60,8 @@
             <%= render DS::DetailRow.new(label: t(".purchase_price_label"), value: format_money(trade.price_money), value_class: "privacy-sensitive") %>
           <% end %>
 
-          <% if trade.buy? && (current_price = trade.security.current_price) %>
-            <%= render DS::DetailRow.new(label: t(".current_market_price_label"), value: format_money(current_price), value_class: "privacy-sensitive") %>
+          <% if trade.buy? && (market_price = current_price_with_quote(trade.security, trade.currency)) %>
+            <%= render DS::DetailRow.new(label: t(".current_market_price_label"), value: market_price, value_class: "privacy-sensitive") %>
             <% if (gain_loss = trade.unrealized_gain_loss) %>
               <%= render DS::DetailRow.new(label: t(".total_return_label")) do |row| %>
                 <% row.with_value { render "shared/trend_change", trend: gain_loss } %>
