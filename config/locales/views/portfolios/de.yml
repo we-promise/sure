@@ -28,7 +28,7 @@ de:
       toggle_positions: Positionen in %{ticker} anzeigen
     index_chart:
       explainer: Zu Beginn des Zeitraums auf 100 normiert, ohne den Effekt von Ein- und Auszahlungen. Ein Stand von 121 bedeutet 21% Rendite.
-      explainer_value_return: Zu Beginn des Zeitraums auf 100 normiert. Einige Konten werden nur über Bewertungen geführt, daher sind Ein- und Auszahlungen auf diesen Konten nicht herausgerechnet und bewegen diese Linie. Ein Stand von 121 bedeutet, dass der Wert um 21% gestiegen ist.
+      explainer_value_return: Zu Beginn des Zeitraums auf 100 normiert. Für einige Konten sind Ein- und Auszahlungen nicht erfasst, daher sind sie nicht herausgerechnet und bewegen diese Linie. Ein Stand von 121 bedeutet, dass der Wert um 21% gestiegen ist.
     kpi_row:
       as_of: Stand %{date}
       day_change: Tagesveränderung
@@ -59,7 +59,7 @@ de:
       twr: Zeitgewichtete Rendite
       twr_hint: Was die Anlagen erwirtschaftet haben, ohne den Effekt deiner Einzahlungen. Täglich, nach Gebühren, wobei jede Einzahlung ab dem Beginn ihres Tages zählt.
       value_return: Wertänderung
-      value_return_hint: Die Wertänderung nach Gebühren. Einige Konten werden nur über Bewertungen geführt, daher sind Ein- und Auszahlungen auf diesen Konten nicht herausgerechnet und zählen als Rendite.
+      value_return_hint: Die Wertänderung nach Gebühren. Für einige Konten sind Ein- und Auszahlungen nicht erfasst, daher sind sie nicht herausgerechnet und zählen als Rendite.
       volatility: Volatilität
       volatility_hint: Annualisierte Standardabweichung der Tagesrenditen, bezogen auf Kalendertage statt Handelstage.
     sections:

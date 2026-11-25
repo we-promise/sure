@@ -18,7 +18,7 @@
 class Portfolio::Performance
   # Bumped whenever the meaning of a cached figure changes, so warm caches stop
   # serving the old interpretation under the same name.
-  CACHE_VERSION = "v15".freeze
+  CACHE_VERSION = "v16".freeze
 
   # The balance rows are calendar daily, so the series includes weekends and
   # holidays as structural zeros. Annualising that by the trading-day convention
@@ -153,11 +153,13 @@ class Portfolio::Performance
     end
   end
 
-  # True when no account in the scope is valuation tracked, so every external
-  # flow is on record and the chained figures remove them: a time-weighted
-  # return. False when any account's flows are unknown -- its deposits move
-  # its stated value and chain as return -- so the same figures are a change
-  # in value, and the UI must not call them time-weighted.
+  # True when every account holding a balance in the period is trade tracked,
+  # so every external flow is on record and the chained figures remove them: a
+  # time-weighted return. False when any account's flows are unknown -- a
+  # valuation-tracked account's deposits move its stated value and chain as
+  # return, and an account with one balance day still chains that day while
+  # one day cannot show its flows are on record -- so the same figures are a
+  # change in value, and the UI must not call them time-weighted.
   def flows_known?
     metrics[:flows_known]
   end
@@ -298,7 +300,8 @@ class Portfolio::Performance
         max_drawdown: withhold_time_weighted ? nil : drawdown(returns),
         index_series: withhold_time_weighted ? [] : rebased_index(returns),
         drivers: drivers.to_h,
-        flows_known: return_scopes.values.none?(&:valuation_tracked?),
+        # The rule #money_weighted_supported? applies to each account.
+        flows_known: return_scopes.values.all? { |scope| scope.balance_days.zero? || scope.supports_money_weighted_return? },
         rate_missing: rate_missing,
         suppressed_dates: rows.select(&:suppressed).map(&:date),
         day_count: rows.size

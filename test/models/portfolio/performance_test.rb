@@ -513,6 +513,21 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert performance(account_ids: [ @account.id, empty.id ]).flows_known?
   end
 
+  # An account with one balance day is not valuation tracked -- ReturnScope
+  # cannot classify it -- but it still feeds the chained figures (its arrival
+  # is a composition flow), and one day does not show whether its flows are
+  # on record. Its flows are not known, so the scope's are not either.
+  test "an account with one balance day beside a trade-tracked one makes the flows unknown" do
+    build_textbook_case
+    one_row = create_portfolio_account(family: @family)
+    lay_balance account: one_row, date: @day_two, opening: 500, closing: 550, market_flow: 50
+
+    assert performance.flows_known?, "the trade-tracked account alone records its flows"
+    mixed = performance(account_ids: [ @account.id, one_row.id ])
+    assert_not_nil mixed.twr, "the one-day account does not withhold the chained figure"
+    refute mixed.flows_known?, "so the chained figure is not labelled time-weighted"
+  end
+
   # The rule must not overreach: an account with no balances in the period
   # contributes nothing, so it cannot make the scope's flows unknown.
   test "an account with no balances in the period does not withhold mwr" do
@@ -948,6 +963,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     refute_equal "v11", Portfolio::Performance::CACHE_VERSION, "v11 entries converted a foreign journal in one step"
     refute_equal "v12", Portfolio::Performance::CACHE_VERSION, "v12 entries read a transfer leg with a pending counterpart as internal"
     refute_equal "v14", Portfolio::Performance::CACHE_VERSION, "v14 entries were cached without flows_known"
+    refute_equal "v15", Portfolio::Performance::CACHE_VERSION, "v15 entries counted a one-day account's flows as known"
   end
 
   test "the cached metrics carry whether the flows are known" do
