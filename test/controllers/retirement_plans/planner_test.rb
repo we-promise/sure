@@ -49,6 +49,15 @@ class RetirementPlans::PlannerTest < ActionDispatch::IntegrationTest
     assert_select "[data-planner-chart][data-controller='time-series-chart']"
   end
 
+  test "the planner chart has an id, which the chart's tooltip selects it by" do
+    RetirementPlan.create!(user: @user, birth_year: 1980, end_age: 90, retirement_date: Date.new(2045, 1, 1))
+
+    get retirement_plan_url
+
+    assert_select "[data-planner-chart]", count: 1
+    assert_select "#retirement-planner-chart[data-planner-chart]", count: 1
+  end
+
   test "the year the money runs out is the row that is flagged" do
     IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("0"))
     plan = RetirementPlan.create!(user: @user, birth_year: 1980, end_age: 90, retirement_date: Date.new(2045, 1, 1))
