@@ -156,6 +156,22 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "built-in AI warns about a missing provider only when the assistant can't run" do
+    with_self_hosting do
+      Provider::Openai.stubs(:configured?).returns(false)
+      Provider::Anthropic.stubs(:configured?).returns(false)
+      not_configured = Regexp.escape(I18n.t("onboardings.tools.ai.panels.builtin.not_configured"))
+
+      User.any_instance.stubs(:ai_available?).returns(true)
+      get tools_onboarding_url
+      assert_select "[data-ai-panel=builtin]", text: /#{not_configured}/, count: 0
+
+      User.any_instance.stubs(:ai_available?).returns(false)
+      get tools_onboarding_url
+      assert_select "[data-ai-panel=builtin]", text: /#{not_configured}/
+    end
+  end
+
   test "self-hosted onboarding finishes on the dashboard" do
     with_self_hosting do
       patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "none" } }
