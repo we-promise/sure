@@ -1025,10 +1025,10 @@ export default class extends Controller {
   }
 
   _getTrendIcon(datum) {
-    const isIncrease =
-      Number(datum.trend.previous.amount) < Number(datum.trend.current.amount);
-    const isDecrease =
-      Number(datum.trend.previous.amount) > Number(datum.trend.current.amount);
+    const previous = this._extractNumericValue(datum.trend.previous);
+    const current = this._extractNumericValue(datum.trend.current);
+    const isIncrease = previous < current;
+    const isDecrease = previous > current;
 
     if (isIncrease) {
       return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${datum.trend.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right-icon lucide-arrow-up-right"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>`;
