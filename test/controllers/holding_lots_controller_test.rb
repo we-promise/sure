@@ -131,6 +131,8 @@ class HoldingLotsControllerTest < ActionDispatch::IntegrationTest
     get holding_path(@holding)
     assert_select "li[data-lot-id='#{@lot.id}'] details", 1
     assert_select "form[action='#{holding_lot_path(@holding, @lot)}']", 1
+    assert_select "form[action='#{holding_lot_path(@holding, @lot)}'] button[type='submit'].w-full", 1,
+      "a single-action form ends with f.submit's full-width button"
     assert_select "p", text: /#{Regexp.escape(I18n.t("holdings.lots.provider_cost_hint"))}/, count: 0
 
     @holding.update_columns(cost_basis: 18, cost_basis_source: "provider")
