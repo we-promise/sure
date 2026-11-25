@@ -511,6 +511,26 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
                   text: I18n.t("portfolios.allocation.kinds.standard")
   end
 
+  # Each control changes its own params and keeps the other's, so sorting the
+  # holdings does not reset the grouping, nor the other way round.
+  test "the grouping picker and the holdings sort links keep each other's state" do
+    get portfolio_path(by: "kind", sort: "name", dir: "asc")
+    assert_response :success
+
+    assert_select "#portfolio-allocation a[href=?]", "#{portfolio_path}?by=currency&dir=asc&sort=name"
+    assert_select "#portfolio-holdings th a[href=?]", "#{portfolio_path}?by=kind&dir=desc&sort=value"
+  end
+
+  test "only whitelisted state carries between the grouping picker and the sort links" do
+    get portfolio_path(by: "drop table", sort: "drop table", dir: "sideways")
+    assert_response :success
+
+    assert_select "#portfolio-allocation a[href=?]", "#{portfolio_path}?by=currency"
+    assert_select "#portfolio-holdings th a[href=?]", "#{portfolio_path}?dir=asc&sort=value"
+    assert_select "#portfolio-allocation a[href*=?], #portfolio-holdings a[href*=?]", "drop", "drop", count: 0
+    assert_select "#portfolio-allocation a[href*=?], #portfolio-holdings a[href*=?]", "sideways", "sideways", count: 0
+  end
+
   # The picker offers what the statement can group by, and nothing else: no
   # tag and no look-through.
   test "the grouping picker lists exactly the statement's groupings" do

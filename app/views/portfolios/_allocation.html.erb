@@ -12,7 +12,7 @@
       <% sc.with_segment(
         t("portfolios.allocation.groupings.#{grouping}"),
         active: active_by == grouping,
-        href: portfolio_path(by: grouping)
+        href: allocation_grouping_link(grouping)
       ) %>
     <% end %>
   <% end %>

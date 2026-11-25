@@ -1,14 +1,24 @@
 module PortfoliosHelper
   # Where a holdings column header links: the same column flips direction,
   # another column opens on its natural direction (names ascending, figures
-  # descending).
+  # descending). The allocation grouping goes with it.
   def holdings_sort_link(key, active_sort:, active_dir:)
     next_dir = if active_sort == key
       active_dir == "asc" ? "desc" : "asc"
     else
       key == "name" ? "asc" : "desc"
     end
-    portfolio_path(sort: key, dir: next_dir)
+    portfolio_path(by: params[:by].presence_in(InvestmentStatement::ALLOCATION_GROUPINGS), sort: key, dir: next_dir)
+  end
+
+  # A grouping picker link, keeping the holdings sort as the sort links keep
+  # the grouping. Both read the whitelisted params only.
+  def allocation_grouping_link(grouping)
+    portfolio_path(
+      by: grouping,
+      sort: params[:sort].presence_in(InvestmentStatement::HOLDINGS_SORT_KEYS),
+      dir: params[:dir].presence_in(InvestmentStatement::HOLDINGS_SORT_DIRECTIONS)
+    )
   end
 
   # The aria-sort value for a column header, or nil when it is not the
@@ -44,7 +54,7 @@ module PortfoliosHelper
       {
         id: allocation_segment_key(segment, index),
         name: segment.name,
-        amount: segment.amount.amount.to_f.round(2),
+        amount: segment.amount.amount.to_f.round(Money::Currency.new(currency).default_precision),
         currency: currency,
         percentage: segment.weight.to_f.round(1),
         color: allocation_color(index)

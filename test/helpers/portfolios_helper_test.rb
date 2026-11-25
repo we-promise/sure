@@ -33,6 +33,16 @@ class PortfoliosHelperTest < ActionView::TestCase
     assert_equal [ { "id" => "0-usd", "name" => "USD", "amount" => 1234.57, "currency" => "USD", "percentage" => 61.2, "color" => Category::COLORS.first } ], json
   end
 
+  # The donut reads amounts in the family currency's own precision, so a
+  # bitcoin segment smaller than a cent keeps its arc.
+  test "allocation segment amounts keep the currency's precision" do
+    segment = InvestmentStatement.const_get(:AllocationSegment).new(id: "sats", name: "sats", amount: Money.new(BigDecimal("0.00012345"), "BTC"), weight: 1)
+
+    json = JSON.parse(allocation_segments_json([ segment ], currency: "BTC"))
+
+    assert_equal 0.00012345, json.first["amount"]
+  end
+
   test "a segment's label is translated in its grouping's vocabulary, by id for unclassified" do
     segment = ->(id, name = id) { InvestmentStatement.const_get(:AllocationSegment).new(id: id, name: name, amount: Money.new(1, "USD"), weight: 1) }
 
