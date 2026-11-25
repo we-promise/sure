@@ -234,9 +234,9 @@ class RetirementPlanTest < ActiveSupport::TestCase
   test "money moved into investments is saving, not spending" do
     @family.update!(investment_contributions_as_spending: true)
     mine = own_account(owner: @member, amount: 1_000)
-    create_transaction(account: mine, date: AS_OF, amount: 1_000)
-    create_transaction(account: mine, date: AS_OF, amount: 2_000, kind: "investment_contribution")
-    create_transaction(account: mine, date: AS_OF, amount: -6_000)
+    create_transaction(account: mine, date: AS_OF - 1.month, amount: 1_000)
+    create_transaction(account: mine, date: AS_OF - 1.month, amount: 2_000, kind: "investment_contribution")
+    create_transaction(account: mine, date: AS_OF - 1.month, amount: -6_000)
 
     projection = RetirementPlan.for(@member).projection(as_of: AS_OF)
 
@@ -249,9 +249,9 @@ class RetirementPlanTest < ActiveSupport::TestCase
   test "money moved into investments is saving whatever the family counts as spending" do
     @family.update!(investment_contributions_as_spending: false)
     mine = own_account(owner: @member, amount: 1_000)
-    create_transaction(account: mine, date: AS_OF, amount: 1_000)
-    create_transaction(account: mine, date: AS_OF, amount: 2_000, kind: "investment_contribution")
-    create_transaction(account: mine, date: AS_OF, amount: -6_000)
+    create_transaction(account: mine, date: AS_OF - 1.month, amount: 1_000)
+    create_transaction(account: mine, date: AS_OF - 1.month, amount: 2_000, kind: "investment_contribution")
+    create_transaction(account: mine, date: AS_OF - 1.month, amount: -6_000)
 
     projection = RetirementPlan.for(@member).projection(as_of: AS_OF)
 
@@ -259,9 +259,43 @@ class RetirementPlanTest < ActiveSupport::TestCase
     assert_equal BigDecimal("300000"), projection.fi_number
   end
 
+  # The FI number is what a retired portfolio has to fund every year. A loan
+  # payment stops when the loan is paid off, so it is left out; until then it
+  # is money the user has to find, so the savings rate still counts it.
+  test "the FI number leaves out loan payments, which the savings rate still counts" do
+    mine = own_account(owner: @member, amount: 1_000)
+    create_transaction(account: mine, date: AS_OF - 1.month, amount: 2_000)
+    create_transaction(account: mine, date: AS_OF - 1.month, amount: 1_500, kind: "loan_payment")
+    create_transaction(account: mine, date: AS_OF - 1.month, amount: -5_000)
+
+    projection = RetirementPlan.for(@member).projection(as_of: AS_OF)
+
+    assert_equal BigDecimal("600000"), projection.fi_number
+    assert_equal BigDecimal("42000"), projection.annual_expenses
+    assert_equal BigDecimal("0.3"), projection.effective_savings_rate
+  end
+
+  # AS_OF is 15 March 2026, so the window is 1 March 2025 to 28 February 2026.
+  test "the FI number reads the 12 whole months before the reference month" do
+    mine = own_account(owner: @member, amount: 1_000)
+    create_transaction(account: mine, date: Date.new(2025, 3, 1), amount: 1_000)
+    create_transaction(account: mine, date: Date.new(2026, 2, 28), amount: 3_000)
+    create_transaction(account: mine, date: Date.new(2025, 2, 28), amount: 9_000)
+    create_transaction(account: mine, date: Date.new(2026, 3, 1), amount: 9_000)
+
+    projection = RetirementPlan.for(@member).projection(as_of: AS_OF)
+
+    # The median of 1,000 and 3,000; either day outside would make it 3,000.
+    assert_equal BigDecimal("24000"), projection.annual_living_costs
+    assert_equal BigDecimal("600000"), projection.fi_number
+    # The savings rate's spending still runs over all history: months of
+    # 9,000, 1,000, 3,000 and 9,000.
+    assert_equal BigDecimal("72000"), projection.annual_expenses
+  end
+
   test "the projection runs on the plan's own settings" do
     mine = own_account(owner: @member, amount: 1_000)
-    create_transaction(account: mine, date: AS_OF, amount: 1_000)
+    create_transaction(account: mine, date: AS_OF - 1.month, amount: 1_000)
     plan = RetirementPlan.new(user: @member, safe_withdrawal_rate: BigDecimal("0.05"),
                               expected_annual_return: BigDecimal("0.07"), savings_rate: BigDecimal("0.3"),
                               retirement_date: AS_OF.advance(years: 10))

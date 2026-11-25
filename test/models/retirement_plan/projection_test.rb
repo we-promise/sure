@@ -3,6 +3,7 @@ require "test_helper"
 class RetirementPlan::ProjectionTest < ActiveSupport::TestCase
   def projection(**overrides)
     RetirementPlan::Projection.new(
+      annual_living_costs: 40_000,
       annual_expenses: 40_000,
       annual_income: 60_000,
       current_assets: 250_000,
@@ -11,7 +12,7 @@ class RetirementPlan::ProjectionTest < ActiveSupport::TestCase
     )
   end
 
-  test "the FI number for 40,000 of annual expenses at a 4% withdrawal rate is 1,000,000" do
+  test "the FI number for 40,000 of annual living costs at a 4% withdrawal rate is 1,000,000" do
     assert_equal BigDecimal("1000000"), projection.fi_number
   end
 
@@ -28,13 +29,20 @@ class RetirementPlan::ProjectionTest < ActiveSupport::TestCase
     assert_not projection(current_assets: 999_999).financially_independent?
   end
 
-  test "with no expenses there is no FI number to measure against" do
-    empty = projection(annual_expenses: 0)
+  test "with no living costs there is no FI number to measure against" do
+    empty = projection(annual_living_costs: 0)
 
     assert_nil empty.fi_number
     assert_nil empty.progress
     assert_nil empty.bar_progress
     assert_not empty.financially_independent?
+  end
+
+  test "the FI number reads living costs, and the derived savings rate all spending" do
+    plan = projection(annual_living_costs: 24_000, annual_expenses: 42_000, annual_income: 60_000)
+
+    assert_equal BigDecimal("600000"), plan.fi_number
+    assert_equal BigDecimal("0.3"), plan.effective_savings_rate
   end
 
   test "a saved savings rate is used as given" do

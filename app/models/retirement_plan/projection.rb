@@ -8,9 +8,14 @@ class RetirementPlan::Projection
   ZERO = BigDecimal("0")
   ONE = BigDecimal("1")
 
-  attr_reader :annual_expenses, :annual_income, :current_assets, :safe_withdrawal_rate, :savings_rate
+  # Two spending figures, on purpose. `annual_living_costs` is what a retired
+  # portfolio has to fund, so it drives the FI number. `annual_expenses` is
+  # everything the user spends now, loan payments included, so it drives the
+  # derived savings rate.
+  attr_reader :annual_living_costs, :annual_expenses, :annual_income, :current_assets, :safe_withdrawal_rate, :savings_rate
 
-  def initialize(annual_expenses:, annual_income:, current_assets:, safe_withdrawal_rate:, savings_rate: nil)
+  def initialize(annual_living_costs:, annual_expenses:, annual_income:, current_assets:, safe_withdrawal_rate:, savings_rate: nil)
+    @annual_living_costs = annual_living_costs.to_d
     @annual_expenses = annual_expenses.to_d
     @annual_income = annual_income.to_d
     @current_assets = current_assets.to_d
@@ -24,9 +29,9 @@ class RetirementPlan::Projection
   # not end at the cent); rounding is the view's job, so compare it with a
   # tolerance or after rounding, never with `==`.
   def fi_number
-    return nil unless annual_expenses.positive? && safe_withdrawal_rate.positive?
+    return nil unless annual_living_costs.positive? && safe_withdrawal_rate.positive?
 
-    annual_expenses / safe_withdrawal_rate
+    annual_living_costs / safe_withdrawal_rate
   end
 
   # The true ratio, which passes 1 once the user is independent. The bar uses

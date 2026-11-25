@@ -58,13 +58,20 @@ class RetirementPlan < ApplicationRecord
   # default), which can be right for a budget. For a FIRE plan it is always
   # saving: counted as spending, it would raise the FI number and lower the
   # derived savings rate at once. So the plan leaves it out whatever the
-  # family's setting. Loan payments stay in, because until a loan is paid off
-  # they are money the user has to find every month.
+  # family's setting. Loan payments stay in the spending behind the savings
+  # rate, because until a loan is paid off they are money the user has to
+  # find every month.
   SAVING_KINDS = %w[investment_contribution].freeze
 
-  # `as_of` dates the balances and the planning years. The spending and income
-  # medians are always today's: IncomeStatement takes them over the history up
-  # to now, so call this with today's date rather than a past one.
+  # Living costs, which the FI number is built from, leave out loan payments
+  # as well as contributions: a loan payment stops when the loan is paid off,
+  # so it is not spending a retired portfolio has to fund every year.
+  LIVING_COSTS_EXCLUDED_KINDS = %w[investment_contribution loan_payment].freeze
+
+  # `as_of` dates the balances and the living costs window. The spending and
+  # income medians behind the savings rate are always today's: IncomeStatement
+  # takes them over the history up to now, so call this with today's date
+  # rather than a past one.
   #
   # The assets come first: converting them can fetch and store a missing rate,
   # and the medians read stored rates only.
@@ -72,6 +79,7 @@ class RetirementPlan < ApplicationRecord
     current_assets = assets_as_of(as_of).total
 
     RetirementPlan::Projection.new(
+      annual_living_costs: annual_living_costs(as_of),
       annual_expenses: income_statement.median_expense(interval: "month", excluding_kinds: SAVING_KINDS).to_d * 12,
       annual_income: income_statement.median_income(interval: "month").to_d * 12,
       current_assets: current_assets,
@@ -96,6 +104,20 @@ class RetirementPlan < ApplicationRecord
     end
 
     AssetTotal = Data.define(:total, :unconverted_count)
+
+    # The 12 whole months before the reference date's month. The median is
+    # taken over the months in it with spending: a month with none is left
+    # out, not counted as zero.
+    def living_costs_period(as_of)
+      month_start = as_of.beginning_of_month
+      Period.custom(start_date: month_start - 12.months, end_date: month_start - 1.day)
+    end
+
+    def annual_living_costs(as_of)
+      income_statement.median_expense(
+        interval: "month", excluding_kinds: LIVING_COSTS_EXCLUDED_KINDS, period: living_costs_period(as_of)
+      ).to_d * 12
+    end
 
     # The same scope InvestmentStatement#investment_accounts uses:
     # what this user counts in their own finances. Family-wide would show a
