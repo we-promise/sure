@@ -412,6 +412,16 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     assert_equal 2028, stream.reload.base_year
   end
 
+  # An unindexed amount is a fixed nominal figure, not one valued in any
+  # year's money. Ticking it indexed says the amount is today's, so it is
+  # valued in this year rather than inflated from the year it was entered.
+  test "a stream turned indexed is valued in the year it is turned" do
+    stream = travel_to(Date.new(2026, 5, 1)) { @plan.streams.create!(kind: "expense", name: "Loan", annual_amount: 12_000, indexed: false) }
+
+    travel_to(Date.new(2030, 5, 1)) { stream.update!(indexed: true) }
+    assert_equal 2030, stream.reload.base_year
+  end
+
   # Entered at 10,000 in 2026 and read a year later at 3% inflation, the
   # stream is 10,300 in 2027, as it was when the plan was read in 2026.
   test "a plan read a year later keeps the inflation since a stream was entered" do

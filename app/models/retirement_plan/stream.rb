@@ -14,7 +14,7 @@ class RetirementPlan::Stream < ApplicationRecord
   belongs_to :account, optional: true
 
   before_validation :default_currency, on: :create
-  before_validation :value_amount_this_year, if: :will_save_change_to_annual_amount?
+  before_validation :value_amount_this_year, if: -> { will_save_change_to_annual_amount? || will_save_change_to_indexed? }
 
   validates :name, presence: true
   validates :currency, presence: true
@@ -46,8 +46,8 @@ class RetirementPlan::Stream < ApplicationRecord
 
     # An amount is entered in the money of the year it is entered or changed
     # in, so a new or changed amount is valued in this year unless the caller
-    # names the year, as seeding does. An edit that leaves the amount alone
-    # keeps the year it was valued in.
+    # names the year, as seeding does. So is one newly marked indexed: until
+    # then it was a fixed nominal figure. Any other edit keeps the year.
     def value_amount_this_year
       self.base_year = Date.current.year unless will_save_change_to_base_year?
     end
