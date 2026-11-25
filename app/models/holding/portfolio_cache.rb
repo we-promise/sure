@@ -362,13 +362,18 @@ class Holding::PortfolioCache
     # there is taken rather than passed over: a position the provider prices
     # at nothing is worthless, and a split booked as a trade at no price
     # leaves the prices beyond it in other shares, by a ratio nothing here
-    # knows. The day keeps a price, so the calculators still give it a holding
-    # with the moved quantity. A security with no price at all keeps the
-    # trade's zero.
+    # knows. A day whose price would be the zero of the trade booking a
+    # recorded split (see #recorded_split_zero?) is priced the same way: by a
+    # priced trade or provider snapshot that day, else by the nearest price,
+    # carried across the split by its recorded ratio. The day keeps a price,
+    # so the calculators still give it a holding with the moved quantity. A
+    # security with no price at all keeps the trade's zero.
     def price_unpriced_trade_days(security_id, trades, earlier: nil)
       cached = @security_cache[security_id]
       prices_by_date = cached[:prices_by_date]
-      unpriced_days = trades.group_by(&:date).reject { |date, _| prices_by_date.key?(date) }
+      unpriced_days = trades.group_by(&:date).reject do |date, _|
+        prices_by_date.key?(date) && !recorded_split_zero?(security_id, date, prices_by_date[date])
+      end
       return if unpriced_days.empty?
 
       # Observed prices only, zeros included: the unpriced trades' own and
@@ -387,7 +392,7 @@ class Holding::PortfolioCache
       candidates = prices_by_date.each_with_object({}) do |(date, entry), kept|
         next if entry.source == "holding" && cached[:calculated_holding_dates].include?(date)
 
-        if entry.source == "trade" && !entry.price.price.positive? && cached[:barrier_dates].include?(date) && split_recorded_on?(security_id, date)
+        if recorded_split_zero?(security_id, date, entry)
           provider = cached[:prices_by_date_and_source][[ date, "holding" ]]
           provider = nil if cached[:calculated_holding_dates].include?(date)
           replacement = cached[:priced_trade_on_barrier][date] || provider
@@ -435,6 +440,14 @@ class Holding::PortfolioCache
 
     def split_recorded_on?(security_id, date)
       all_splits.any? { |split| split.security_id == security_id && split.ex_date == date }
+    end
+
+    # Whether a day's price is the zero of a trade that might be a split, on a
+    # day a split is recorded. It is no price: the recorded ratio carries the
+    # prices on either side across it.
+    def recorded_split_zero?(security_id, date, entry)
+      entry.source == "trade" && !entry.price.price.positive? &&
+        @security_cache[security_id][:barrier_dates].include?(date) && split_recorded_on?(security_id, date)
     end
 
     # The latest stored price of each security before `date`.
