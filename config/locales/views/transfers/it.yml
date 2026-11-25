@@ -3,6 +3,9 @@ it:
   transfers:
     create:
       success: Bonifico creato
+      exchange_rate_unavailable: Tasso di cambio non disponibile per le valute e la data selezionate
+      date_invalid: non è valida
+      stale_form: Questo modulo è già stato inviato con dati diversi. Aggiorna la pagina e riprova.
     destroy:
       success: Bonifico rimosso
     form:
@@ -25,6 +28,7 @@ it:
     new:
       title: Nuovo bonifico
     show:
+      transaction: "Transazione"
       delete: Rimuovi bonifico
       delete_subtitle: Questo rimuove il bonifico. Non eliminerà le transazioni sottostanti.
       delete_title: Rimuovere il bonifico?
@@ -46,5 +50,7 @@ it:
       destination_fee: Commissione destinazione
       category: Categoria
       uncategorized: Non categorizzata
+      investment_contribution_subtitle: "Conteggia questo trasferimento come spesa nei budget e nei report. Disattiva questa opzione quando il conto di investimento o di criptovalute si limita a convertire il denaro in un'altra valuta."
+      investment_contribution_title: "Contributo all'investimento"
     update:
       success: Bonifico aggiornato

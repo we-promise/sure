@@ -1,0 +1,7 @@
+---
+it:
+  push_notifications:
+    budget_description: Avvisami anche quando una categoria di budget si avvicina al limite. Gli avvisi di superamento del budget vengono sempre inviati. Disattivato per impostazione predefinita.
+    budget_title: Avvisi di budget
+    description: Si applica a tutti i dispositivi abilitati, sia browser sia iOS.
+    title: Notifiche push

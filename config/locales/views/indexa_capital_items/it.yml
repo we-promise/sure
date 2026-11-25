@@ -150,6 +150,7 @@ it:
       no_api_key: "Credenziali IndexaCapital non trovate. Configurale nelle Impostazioni provider."
       success: "Collegato con successo %{account_name} con IndexaCapital"
     setup_accounts:
+      skip_notice: "I conti non selezionati vengono ignorati: Sure smette di recuperarne i dati finché non li associ a un conto."
       account_type_label: "Tipo di conto:"
       accounts_count:
         one: "%{count} conto disponibile"
@@ -187,7 +188,7 @@ it:
         depository:
           checking: "Conto Corrente"
           savings: "Risparmio"
-          hsa: "Health Savings Account"
+          hsa: "Conto di risparmio sanitario (HSA)"
           cd: "Certificato di Deposito"
           money_market: "Mercato Monetario"
         investment:
@@ -199,7 +200,7 @@ it:
           "403b": "403(b)"
           tsp: "Thrift Savings Plan"
           "529_plan": "Piano 529"
-          hsa: "Health Savings Account"
+          hsa: "Conto di risparmio sanitario (HSA)"
           mutual_fund: "Fondo comune"
           ira: "IRA Tradizionale"
           roth_ira: "Roth IRA"

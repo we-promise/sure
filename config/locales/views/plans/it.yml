@@ -34,3 +34,7 @@ it:
       pending_marker: in attesa
       runway: "%{months} mesi di autonomia · %{pace}/mese"
       all_goals: Tutti gli obiettivi
+
+      currency_warning:
+        one: "1 obiettivo esclude i saldi in %{currencies} (tasso di cambio non ancora disponibile)."
+        other: "%{count} obiettivi escludono i saldi in %{currencies} (tassi di cambio non ancora disponibili)."

@@ -37,6 +37,12 @@ it:
       enable_button: "Abilita chat IA"
       disable_note: "Disabilita in qualsiasi momento. Attiva l'IA per chat, bollette e ricerca nei documenti, che inviano i tuoi messaggi, transazioni e documenti così come sono al fornitore di IA di questa istanza."
       family_note: "Come amministratore della famiglia, attiva anche la categorizzazione con IA e il rilevamento degli esercenti per la tua famiglia, che inviano nomi, importi ed esercenti delle transazioni."
+    new:
+      default_title: Nuova chat %{timestamp}
+    ai_busy: "Sto terminando un'attività in background, poi mi occuperò subito del tuo messaggio."
+    reservation:
+      ready_html: "Ho rimandato alcune attività in background per occuparmi subito del tuo messaggio. Riprenderanno tra %{countdown} secondi, quindi continua a scrivere!"
+      busy: "Sto terminando un'attività in background, poi sarò a tua disposizione. Continua a scrivere!"
   assistant_messages:
     assistant_message:
       assistant_reasoning: "Ragionamento assistente"

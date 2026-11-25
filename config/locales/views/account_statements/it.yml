@@ -111,6 +111,7 @@ it:
       suggestion: Suggerimento
       unlink: Scollega
       view: Visualizza
+      edit: Modifica
     unlink:
       success: Estratto conto spostato nella posta in arrivo non abbinata.
     update:

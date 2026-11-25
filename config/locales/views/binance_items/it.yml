@@ -9,6 +9,7 @@ it:
     destroy:
       success: Connessione Binance pianificata per l'eliminazione.
     setup_accounts:
+      historical_import: "Importazione dello storico"
       title: Importa conto Binance
       subtitle: Seleziona quali portafogli tracciare
       instructions: Seleziona i portafogli Binance che vuoi importare. Vengono mostrati solo i portafogli con saldi.
@@ -26,6 +27,7 @@ it:
         other: "Importati %{count} conti"
       none_selected: Nessun conto selezionato
       no_accounts: Nessun conto da importare
+      invalid_sync_start_date: La data di inizio sincronizzazione deve essere una data valida nel passato.
     binance_item:
       provider_name: Binance
       syncing: Sincronizzazione in corso...
@@ -62,6 +64,10 @@ it:
       errors:
         only_manual: Solo i conti manuali possono essere collegati a Binance
         invalid_binance_account: Conto Binance non valido
+    select_accounts:
+      connection_unavailable: "Questa connessione Binance non è disponibile. Selezionane una nelle impostazioni dei provider."
+      no_credentials_configured: "Collega Binance nelle impostazioni dei provider prima di aggiungere i suoi conti."
+      select_connection: "Seleziona una connessione Binance nelle impostazioni dei provider."
   binance_item:
     syncer:
       checking_credentials: Verifica credenziali...

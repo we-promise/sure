@@ -475,7 +475,25 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # Italian translates part of yahoo_finance_settings but not the rate-limited
+  test "renders Italian Yahoo Finance health guidance" do
+    @provider.stubs(:health_status).returns(:rate_limited, :unavailable, :unknown)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url(locale: :it)
+        assert_includes response.body, "Yahoo Finance sta temporaneamente limitando le richieste."
+        assert_includes response.body, "Non è richiesta alcuna azione."
+
+        get settings_hosting_url(locale: :it)
+        assert_includes response.body, "Yahoo Finance non è al momento disponibile."
+
+        get settings_hosting_url(locale: :it)
+        assert_includes response.body, "Verifica dello stato di Yahoo Finance in corso."
+      end
+    end
+  end
+
+  # Hungarian translates part of yahoo_finance_settings but not the rate-limited
   # strings this path renders (status_rate_limited, rate_limited_title,
   # rate_limited_message), which is what makes it exercise the fallback. Move to
   # another such locale if it gains them, rather than dropping the coverage.
@@ -484,7 +502,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
     with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
       with_self_hosting do
-        get settings_hosting_url(locale: :it)
+        get settings_hosting_url(locale: :hu)
 
         assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
         assert_not_includes response.body, "translation missing"

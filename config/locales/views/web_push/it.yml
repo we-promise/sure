@@ -1,0 +1,37 @@
+---
+it:
+  web_push:
+    title: Notifiche del browser
+    description: Ricevi nuovi avvisi finanziari ad alta priorità su questo browser o sull'app installata. Le notifiche nascondono i dettagli finanziari nella schermata di blocco.
+    enable: Abilita questo dispositivo
+    disable: Disabilita questo dispositivo
+    test: Invia una notifica di prova
+    preview: Anteprima
+    session_notice: Le notifiche cessano quando esci dall'account o quando la sessione scade dopo 30 giorni di inattività. Apri Sure regolarmente per mantenere attiva la sessione.
+    ios_guidance: Su iPhone o iPad, apri Sure in Safari, seleziona Condividi → Aggiungi alla schermata Home, quindi abilita le notifiche dall'app installata. Richiede iOS o iPadOS 16.4 o successivi.
+    notification:
+      body: È disponibile un nuovo avviso finanziario. Apri Sure per consultarlo.
+      test_body: La notifica di prova è arrivata. Apri Sure per continuare.
+    status:
+      checking: Verifica del dispositivo in corso…
+      enabled: Le notifiche sono abilitate per questo dispositivo e questa sessione.
+      disabled: Le notifiche sono disabilitate per questo dispositivo.
+      denied: Le notifiche sono bloccate nelle impostazioni del browser. Consentile da quelle impostazioni, quindi abilita nuovamente il dispositivo.
+      unsupported: Questo browser non supporta le notifiche. Usa un browser compatibile o un'app installata tramite HTTPS.
+      unconfigured: Le notifiche del browser non sono state configurate su questo server.
+      queued: Notifica di prova in coda. In attesa di accettazione da parte del servizio push.
+      accepted: Notifica accettata dal servizio push. Controlla il dispositivo; l'accettazione non garantisce che la notifica sia stata visualizzata.
+      skipped: Prova saltata perché la sessione o l'accesso alle funzioni in anteprima sono cambiati, oppure la prova è scaduta. Abilita il dispositivo e riprova.
+      rejected: Il servizio push ha rifiutato la notifica di prova. Disabilita il dispositivo, quindi abilitalo nuovamente.
+      failed: Impossibile recapitare la notifica di prova. Riprova più tardi.
+      enqueue_failed: Impossibile accodare la notifica di prova. Riprova più tardi.
+      pending: Notifica di prova in coda o in fase di nuovo tentativo. La consegna potrebbe richiedere qualche istante.
+      expired: La notifica di prova è ancora in coda. Controlla i processi in background o riprova più tardi.
+    errors:
+      registration: Impossibile registrare questo dispositivo. Prova a disabilitarlo e abilitarlo nuovamente.
+      preview: Abilita le funzionalità in anteprima prima di utilizzare le notifiche del browser.
+      unconfigured: Le notifiche del browser non sono state configurate su questo server.
+      rate_limited: Troppe richieste di notifica. Attendi un minuto e riprova.
+      enqueue: Impossibile accodare la notifica di prova. Riprova più tardi.
+      request: Impossibile aggiornare le notifiche del browser. Controlla la connessione e riprova.
+      permission: Il permesso di inviare notifiche non è stato concesso.

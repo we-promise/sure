@@ -1,6 +1,7 @@
 ---
 it:
   breadcrumbs:
+    portfolio: "Portafoglio"
     account_sharings: Condivisione conto
     account_statements: Archivio estratti
     accounts: Conti
@@ -16,11 +17,13 @@ it:
     budgets: Budget
     categories: Categorie
     categorize: Categorizza
+    changelog: Novità
     chats: Chat
+    classifier: Classificatore
     coinbase_items: Coinbase
     coinstats_items: CoinStats
     credit_cards: Carte di credito
-    cryptos: Crypto
+    cryptos: "Criptovalute"
     dashboard: Dashboard
     debug: Debug
     debugs: Debug
@@ -29,6 +32,7 @@ it:
     exports: Esportazioni
     family_exports: Esportazioni
     family_merchants: Esercenti
+    feedback: Feedback
     guides: Guide
     holdings: Portafoglio
     home: Home
@@ -51,6 +55,7 @@ it:
     mercury_items: Mercury
     messages: Messaggi
     mfa: Autenticazione a due fattori
+    monobank_items: Monobank
     oidc_accounts: Account SSO
     onboardings: Configurazione iniziale
     other_assets: Altri asset
@@ -65,6 +70,7 @@ it:
     properties: Proprietà
     providers: Provider
     recurring_transactions: Ricorrenti
+    redbark_items: Redbark
     registrations: Registrazione
     reports: Rapporti
     rules: Regole
@@ -79,6 +85,7 @@ it:
     sso_identities: Connessioni SSO
     sso_providers: Provider SSO
     subscriptions: Abbonamento
+    system_health: Stato del sistema
     tags: Etichette
     trades: Operazioni
     transactions: Transazioni

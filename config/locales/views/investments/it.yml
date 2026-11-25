@@ -182,8 +182,17 @@ it:
       other:
         short: Altro
         long: Altro investimento
+      cash_management:
+        short: CMA
+        long: Conto di gestione della liquidità
+      epf:
+        short: "EPF"
+        long: "Fondo di previdenza dei lavoratori (EPF)"
     value_tooltip:
       cash: Liquidità
       holdings: Posizioni
       total: Saldo portafoglio
       total_value_tooltip: Il saldo totale del portafoglio è la somma della liquidità del broker (disponibile per il trading) e del valore di mercato attuale delle posizioni.
+
+      projected: "Saldo previsto"
+      scheduled: "Programmato"

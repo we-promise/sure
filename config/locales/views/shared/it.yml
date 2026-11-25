@@ -4,6 +4,14 @@ it:
     self_hostable:
       redis_configured: "Redis è ora configurato correttamente! Puoi procedere con la configurazione della tua applicazione."
   shared:
+    exchange_rate_notes:
+      stale_rate: "%{from} del %{date}"
+      stale:
+        other: "Gli ultimi tassi di cambio verso %{currency} non sono aggiornati: %{rates}. I totali di oggi li utilizzano comunque."
+        one: "L'ultimo tasso di cambio verso %{currency} non è aggiornato: %{rates}. I totali di oggi lo utilizzano comunque."
+      missing:
+        other: "Non sono ancora memorizzati i tassi di cambio da %{currencies} a %{currency}, pertanto alcuni totali potrebbero escludere gli importi in tali valute."
+        one: "Non è ancora memorizzato alcun tasso di cambio da %{currencies} a %{currency}, pertanto alcuni totali potrebbero escludere gli importi in %{currencies}."
     dot_separator: "·"
     preview: Anteprima
     sync_toast:
@@ -16,6 +24,13 @@ it:
       title: Sei sicuro?
     money_field:
       label: Importo
+      above_max: "Inserisci un importo non superiore a %{max}."
+      below_min: "Inserisci un importo non inferiore a %{min}."
+      invalid_amount: "Inserisci un importo o un'espressione validi."
+      operator_add: "Aggiungi"
+      operator_subtract: "Sottrai"
+      operator_multiply: "Moltiplica"
+      operator_divide: "Dividi"
     exchange_rate_tabs:
       calculate_rate_tab: Calcola tasso di cambio
       convert_tab: Converti con tasso di cambio
@@ -44,3 +59,17 @@ it:
       expense: Spesa
       income: Entrata
       transfer: Bonifico
+
+    require_connector_owner: Puoi gestire solo le connessioni che hai aggiunto tu
+    sidekiq_health_banner:
+      title: Alcuni dati potrebbero non essere aggiornati
+      body: I job in background non vengono elaborati, quindi saldi, patrimonio netto e sincronizzazioni dei conti potrebbero essere obsoleti o mancanti.
+      cta: Visualizza lo stato del sistema
+      reasons:
+        redis_unreachable: L'app non riesce a raggiungere Redis. Controlla REDIS_URL e verifica che Redis sia in esecuzione.
+        no_worker_processes: Nessun processo worker di Sidekiq è connesso. Avvia il container del worker o l'unità systemd.
+        stale_heartbeat: Il worker di Sidekiq non ha inviato un heartbeat di recente. Potrebbe essere bloccato o arrestato in modo anomalo.
+        queue_backed_up: Il job più vecchio in coda attende oltre il limite di latenza. Il worker è attivo ma sta accumulando ritardo.
+
+        ai_queues_not_polled: "Nessun worker sta elaborando le code IA (chat, rilevamento esercenti, categorizzazione). Controlla che il worker carichi config/sidekiq.yml."
+    require_non_guest: "Gli ospiti non possono eseguire questa operazione"

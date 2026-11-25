@@ -1,6 +1,7 @@
 ---
 it:
   mfa:
+    demo_family_restricted: "La configurazione dell'autenticazione multifattore è disabilitata per il nucleo familiare demo condiviso, per garantire a tutti l'accesso alla demo."
     backup_codes:
       backup_codes_description: Ogni codice può essere usato una sola volta. Tieni questi codici al sicuro.
       backup_codes_title: I tuoi codici di backup
@@ -11,10 +12,12 @@ it:
     create:
       code_already_used: Questo codice è già stato utilizzato. Inserisci il codice successivo dalla tua app di autenticazione.
       invalid_code: Codice di verifica non valido. Riprova.
+      invalid_password: "Password errata. Riprova."
       setup_failed: Si è verificato un errore durante l'attivazione dell'autenticazione a due fattori. Riprova.
     disable:
       failure: Si è verificato un errore durante la disattivazione dell'autenticazione a due fattori. Riprova.
       success: L'autenticazione a due fattori è stata disabilitata
+      invalid_password: "Password errata. Riprova."
     new:
       code_label: Codice di verifica
       code_placeholder: Inserisci il codice a 6 cifre
@@ -28,7 +31,10 @@ it:
       verify_button: Verifica e abilita 2FA
       verify_description: Inserisci il codice a 6 cifre dalla tua app di autenticazione
       verify_title: 2. Inserisci il codice di verifica
+      password_label: "Conferma con la tua password"
+      password_placeholder: "Inserisci la tua password"
     verify:
+      verifying: "Verifica in corso…"
       description: Inserisci il codice dalla tua app di autenticazione per continuare
       or: oppure
       page_title: Verifica autenticazione a due fattori
@@ -42,3 +48,5 @@ it:
       invalid_credential: Impossibile verificare la passkey o la chiave di sicurezza. Riprova.
     webauthn_options:
       unavailable: Nessuna passkey o chiave di sicurezza disponibile per questo account.
+
+    local_password_required: "Per l'autenticazione a due fattori è necessaria una password locale."

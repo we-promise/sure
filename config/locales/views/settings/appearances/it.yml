@@ -23,3 +23,6 @@ it:
         auto_generate_transaction_names_title: "Genera automaticamente i nomi delle transazioni"
         auto_generate_transaction_names_description: "Se il nome di una transazione inserita manualmente viene lasciato vuoto, viene compilato con la categoria e l'esercente selezionati (es. «Intrattenimento - Netflix»). Il nome resta obbligatorio se nessuno dei due è selezionato. Vale per tutto il nucleo familiare e solo per le nuove transazioni."
         split_grouped_description: Mostra le transazioni suddivise raggruppate sotto la voce principale nell'elenco transazioni. Se disattivato, le voci figlie appaiono come righe individuali.
+
+        dashboard_account_groups_title: "Espandi per impostazione predefinita"
+        dashboard_account_groups_description: "Queste sezioni dei conti saranno inizialmente espanse nella dashboard e nella barra laterale dei conti. Potrai comunque comprimerle manualmente in qualsiasi momento."

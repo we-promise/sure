@@ -7,3 +7,41 @@ it:
           min_actions: "deve avere almeno un'azione"
           duplicate_actions: "La regola non può avere azioni duplicate %{types}"
           nested_conditions: "Le condizioni composte non possono essere nidificate"
+
+          split_not_alone: "Una regola di suddivisione non può avere altre azioni"
+        rule/action:
+          attributes:
+            value:
+              invalid_config: "deve essere una configurazione di suddivisione valida"
+              invalid_split_count: "deve contenere da %{min} a %{max} suddivisioni"
+              split_name_required: "la suddivisione n. %{index} non ha un nome"
+              split_name_too_long: "il nome della suddivisione n. %{index} è troppo lungo (massimo 255 caratteri)"
+              split_name_invalid: "il nome della suddivisione n. %{index} contiene caratteri non validi"
+              split_type_invalid: "il tipo della suddivisione n. %{index} deve essere fisso o percentuale"
+              split_share_invalid: "la quota della suddivisione n. %{index} deve essere un numero positivo"
+              split_category_invalid: "la categoria della suddivisione n. %{index} non appartiene a questo nucleo familiare"
+              split_merchant_invalid: "l'esercente della suddivisione n. %{index} non appartiene a questo nucleo familiare"
+              split_tags_invalid: "la suddivisione n. %{index} contiene un'etichetta che non appartiene a questo nucleo familiare"
+              percentages_must_total_100: "le percentuali devono sommare al 100% (totale attuale: %{total})"
+              fixed_requires_exact_amount_condition: "le suddivisioni a importo fisso richiedono una condizione che corrisponda all'importo esatto della transazione (es. Importo = 42,00); in caso contrario, le quote potrebbero non sommare correttamente al totale di ogni transazione corrispondente"
+              fixed_shares_must_equal_condition_amount: "le quote delle suddivisioni devono sommare a %{amount}, l'importo esatto richiesto dalla condizione della regola"
+        rule/condition:
+          attributes:
+            value:
+              regex_invalid: "non è un'espressione regolare valida"
+              regex_too_complex: "è troppo complessa per essere eseguita in sicurezza"
+              regex_too_long: "è troppo lunga (massimo %{count} caratteri)"
+              regex_backreference: "non può usare riferimenti all'indietro (\\1 fino a \\9)"
+    attributes:
+      rule:
+        new_rule_group_name: "Nuovo gruppo"
+        rule_group: "Gruppo"
+  rule:
+    conditions:
+      unsupported_label: Non supportata (%{type})
+
+    actions:
+      set_transaction_merchant:
+        not_accessible: "Esercente associato a un conto a cui non hai accesso"
+        unassigned: "%{name} (non più assegnato)"
+        unavailable: "Esercente non più disponibile"

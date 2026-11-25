@@ -1,0 +1,158 @@
+---
+it:
+  settings:
+    classifiers:
+      account:
+        account_field: Considera il conto come un unico token
+        account_field_hint: "Il conto su cui è registrata una transazione è un indizio, ma non decide mai da solo: serve anche una parola o un esercente conosciuto."
+      amount:
+        amount_by_direction: Considera il verso del movimento, in entrata o in uscita
+        amount_by_direction_hint: Ogni categoria apprende il verso abituale dei movimenti, distinguendo gli acquisti dai rimborsi dello stesso negozio.
+        amount_field: Considera l'importo
+        amount_field_hint: Confronta l'importo con quelli abituali di ogni categoria nella stessa valuta, usando una scala logaritmica.
+      category_training:
+        apply: Applica
+        categories: Categorie
+        categories_all: Tutte le categorie
+        categories_hint: Le categorie deselezionate e le relative sottocategorie sono escluse dall'addestramento, quindi Bayes non le sceglierà.
+        categories_some: "%{count} categorie su %{total}"
+        exclude_transfers: Escludi i trasferimenti
+        exclude_transfers_hint: Trasferimenti e pagamenti tra i tuoi conti.
+        search_categories: Cerca categorie
+        skip_self_labels: Non apprendere dalle previsioni di Bayes finché non vengono confermate o non trascorrono questi giorni
+        skip_self_labels_hint: Confermato significa che hai modificato o bloccato il risultato. Una previsione sbagliata non viene riutilizzata e rafforzata; se resta invariata abbastanza a lungo viene considerata accettata.
+      add_rule:
+        success: "La regola %{name} è stata aggiunta in cima all'elenco delle regole."
+      classifier:
+        min_category_examples_hint: "Una categoria viene selezionata solo quando è associata ad almeno questo numero di tue transazioni (1–100). Altrimenti una categoria con pochissimi esempi potrebbe essere scelta per transazioni sconosciute con un punteggio elevato."
+        min_category_examples: "Numero minimo di esempi per categoria"
+        apply: Applica
+        lock_results: Blocca le categorie assegnate dal classificatore
+        lock_results_hint: Impedisce alle regole di modificare le scelte di Bayes, salvo quando premi Applica su una regola. L'IA non modifica mai le scelte di Bayes, anche se non sono bloccate.
+        rule: Categorizza con il classificatore
+        rule_hint: La regola Classificatore categorie si attiva o disattiva anche dalla sezione Regole. Dopo ogni sincronizzazione categorizza, nell'ordine delle regole, le transazioni senza categoria. Quelle incerte vengono lasciate alla regola di categorizzazione automatica.
+        threshold: Soglia
+        threshold_hint: Punteggio minimo necessario perché Bayes intervenga (0,05–0,99). Valori più bassi categorizzano più transazioni, ma aumentano gli errori.
+      clear_locks:
+        success: I blocchi di Bayes vengono rimossi. Potrebbero essere necessari alcuni istanti.
+      evaluation:
+        apply_best: Applica queste impostazioni
+        best: Migliore configurazione trovata
+        best_changes: "Migliore configurazione trovata, differenze rispetto alla tua:"
+        best_no_changes: Nessuna configurazione ha ottenuto un punteggio migliore della tua.
+        buttons_hint: "Testa le mie impostazioni valuta la configurazione attuale. Trova le impostazioni migliori cerca nei %{tuning} mesi precedenti a quelli mostrati, poi valuta i risultati su mesi non usati per l'addestramento. Usa ROC-AUC: misura quanto i punteggi distinguono le transazioni di ciascuna categoria dalle altre, a qualsiasi soglia. Una modifica viene mantenuta soltanto se migliora il risultato complessivo e quello di tutti i %{tuning} mesi, tranne al massimo uno. Prima prova le combinazioni degli input (token dell'esercente, importo e conto; punteggi separati per esercente e conto; nome dell'esercente e note come parole), quindi modifica una impostazione per volta e infine prova i criteri di punteggio. I valori predefiniti sono quelli del classificatore originale, con le categorie scelte da te. Ripristina predefiniti li riattiva e li verifica."
+        categories_heading: Classificatore delle categorie
+        change: "%{setting}: %{value}"
+        confusion: "%{actual} → %{predicted}"
+        confusions: "Errori più frequenti: %{column} alla soglia %{threshold}"
+        current: Le mie impostazioni
+        defaults: Predefinite
+        description: Ogni colonna è valutata sugli ultimi %{months} mesi, considerando le transazioni di ciascun mese come nuove e addestrando il modello sulla cronologia precedente. I risultati vengono confrontati con le tue categorie. Il test non modifica le categorie delle transazioni; le impostazioni del classificatore cambiano solo quando le applichi o le ripristini.
+        find_best: Trova le impostazioni migliori
+        matcher_confusions: "Errori più frequenti nel riconoscimento esercenti: %{column} con somiglianza %{similarity}"
+        matcher_description: "Esercenti riconosciuti negli stessi %{months} mesi: %{count} transazioni con un esercente, ciascuna confrontata con la cronologia precedente al suo mese, nascondendo l'esercente originale; quello corretto è indicato a destra. Si provano tutte le soglie e le quantità di esercenti. La configurazione migliore è quella che ottiene il punteggio più alto tenendo conto del costo degli errori; Applica la imposta. Il test non assegna esercenti alle transazioni."
+        merchants_heading: Riconoscimento esercenti
+        no_confusions: Nessun errore a questa soglia.
+        no_matcher_confusions: Nessun errore nel riconoscimento esercenti a questo livello di somiglianza.
+        no_uncategorized: Nessuna transazione senza categoria a questa soglia.
+        no_unfilled: Nessuna transazione senza esercente a questo livello di somiglianza.
+        none: Non ancora verificato.
+        "off": "disattivato"
+        "on": "attivato"
+        ran_at: "Valutato %{time} fa su %{count} transazioni (%{months})."
+        reset: Ripristina predefiniti
+        reset_confirm: Ripristinare tutte le impostazioni del classificatore ai valori predefiniti ed eseguire un test?
+        right_wrong: Ogni cella indica risultati corretti / errati.
+        run: Testa le mie impostazioni
+        running: Test in corso… questa sezione si aggiornerà al termine.
+        short_history: "Cronologia insufficiente per ottimizzare il classificatore delle categorie: servono circa %{months} mesi di transazioni categorizzate. Per ora Applica non ne modificherà le impostazioni."
+        similarity: Somiglianza
+        stale: Le impostazioni sono cambiate dopo questo test.
+        threshold: Soglia
+        trying: "Prova di %{changes}…"
+        uncategorized: "Transazioni senza categoria più frequenti: %{column} alla soglia %{threshold}"
+        unfilled: "Transazioni senza esercente più frequenti: %{column} con somiglianza %{similarity}"
+        weight: Costo di un errore
+        weight_hint: "Determina cosa viene applicato: le celle in grassetto, dove il numero di risposte corrette meno questo costo per ogni errore è massimo. Imposta la soglia migliore per le categorie e, per il riconoscimento esercenti, il limite, la somiglianza e il numero di esercenti."
+        weight_option:
+          one: 1 risposta corretta
+          other: "%{count} risposte corrette"
+      matcher:
+        lock_similar_merchants: Blocca gli esercenti assegnati dal riconoscimento automatico
+        lock_similar_merchants_hint: Impedisce a regole, IA e sincronizzazioni di modificarli, salvo quando premi Applica su una regola. I blocchi automatici non valgono come conferme per l'ottimizzazione del riconoscimento esercenti.
+        rule: Completa gli esercenti mancanti usando le transazioni simili
+        rule_hint: "La regola di riconoscimento esercenti si attiva o disattiva anche dalla sezione Regole. Nell'ordine definito, assegna alle transazioni senza esercente quello presente nelle transazioni con descrizioni simili, ad esempio «NETFLIX.COM 8812» e «Netflix com». I trasferimenti sono esclusi."
+        similar_threshold: Somiglianza
+        similar_threshold_hint: "Somiglianza minima tra le descrizioni, ignorando numeri e codici di riferimento (0,5–0,99). Una soglia più bassa completa più esercenti ma causa più errori. Anche Applica dell'ottimizzazione automatica imposta questa soglia."
+      matcher_tuning:
+        similar_common_share: Limite di frequenza
+        similar_common_share_hint: "Una parola o una sequenza di 3 lettere presente in una quota delle transazioni di origine superiore a questa soglia (0,01–1), e in almeno 50 di esse, è troppo comune per distinguerle, come «carta» o «pagamento», e viene ignorata. Aumentando la soglia ne vengono considerate di più. Anche Applica dell'ottimizzazione automatica imposta questo valore."
+        similar_min_neighbours: Esercenti concordanti
+        similar_min_neighbours_hint: Numero minimo di transazioni simili con lo stesso esercente e nessuna con un esercente diverso. Con 1 viene copiata una sola transazione, anche se sbagliata.
+        similar_min_neighbours_option:
+          one: 1 esercente
+          other: "%{count} esercenti"
+        similar_skip_self: Non copiare gli esercenti assegnati automaticamente finché non sono confermati o non trascorrono questi giorni
+        similar_skip_self_hint: Confermato significa che hai modificato o bloccato l'esercente. Un'associazione sbagliata non viene propagata; se resta invariata abbastanza a lungo viene considerata accettata.
+      merchant:
+        merchant_field: Considera l'esercente come un unico token, se presente
+        merchant_field_hint: Considera l'identità dell'esercente, così conserva la cronologia anche se viene rinominato.
+        merchant_name_words: Considera le parole del nome dell'esercente
+        merchant_name_words_hint: Analizza il nome come una descrizione, come fa il classificatore originale, così nomi simili condividono gli stessi indizi. Si sovrappone al token precedente.
+      run:
+        success: Bayes sta categorizzando le transazioni senza categoria. Potrebbero essere necessari alcuni istanti.
+      scoring:
+        complement: Usa il modello naive Bayes complementare
+        complement_hint: Valuta ogni categoria in base a quanto la transazione si discosta dalle altre, gestendo meglio categorie di dimensioni molto diverse. Se disattivato usa il modello multinomiale originale.
+        prior: Considera la frequenza di utilizzo di ogni categoria
+        prior_hint: Favorisce le categorie più utilizzate. Se disattivato considera tutte le categorie ugualmente probabili, come il modello originale.
+        separate_fields: Valuta esercente e conto separatamente dalle parole
+        separate_fields_hint: Ciascuno usa una propria distribuzione, così una descrizione lunga non ne annulla il peso. Richiede l'inclusione dell'esercente o del conto; l'importo viene sempre valutato separatamente.
+        smoothing: Livellamento
+        smoothing_hint: "Aggiunge un valore a ogni conteggio per non escludere una categoria in presenza di parole mai viste (0,001–10). Il valore originale è 1; valori inferiori danno maggiore peso ai dati osservati."
+      show:
+        add_rule_body: "La regola %{name} non è presente nell'elenco e quindi non può essere attivata. Aggiungerla in cima?"
+        add_rule_cancel: "No"
+        add_rule_confirm: Aggiungi regola
+        add_rule_title: "Aggiungere la regola %{name}?"
+        account: Ottimizzazione per conto
+        amount: Ottimizzazione per importo
+        auto_tune: Ottimizzazione automatica
+        category_training: Ottimizzazione del classificatore delle categorie
+        clear_locks: Rimuovi blocchi di Bayes
+        clear_locks_confirm_body: Sblocca le categorie bloccate da Bayes e gli esercenti bloccati dal riconoscimento automatico che mantengono ancora i valori assegnati. Regole e IA potranno modificarli di nuovo; categorie ed esercenti non vengono cancellati.
+        clear_locks_confirm_button: Rimuovi blocchi
+        clear_locks_confirm_title: Rimuovere i blocchi di Bayes?
+        description: Il classificatore Bayes apprende dalle transazioni già categorizzate e assegna una categoria alle nuove prima di qualsiasi provider IA. Le modifiche alle impostazioni si applicano dalla prossima categorizzazione; le transazioni già categorizzate conservano le loro categorie.
+        matcher: Riconoscimento esercenti
+        matcher_description: Completa gli esercenti mancanti usando transazioni con descrizioni simili, tramite la regola di riconoscimento esercenti (dopo ogni sincronizzazione) oppure con Esegui. Modifica gli esercenti salvati.
+        matcher_tuning: Ottimizzazione del riconoscimento esercenti
+        merchant: Ottimizzazione per esercente
+        run: Esegui
+        scoring: Punteggio
+        title: Classificatore
+        training: Addestramento
+        words: Ottimizzazione delle descrizioni
+      training:
+        max_training_transactions: Transazioni per l'addestramento
+        max_training_transactions_hint: "Numero massimo di transazioni recenti da usare (100–20.000): quelle categorizzate da cui apprende il classificatore e quelle con un esercente da cui il riconoscimento automatico prende i dati."
+      words:
+        bigrams: Considera le coppie di parole
+        bigrams_hint: "Anche le parole adiacenti vengono considerate insieme, come «pagamento carta»."
+        binary: Ignora le ripetizioni delle parole
+        binary_hint: Ogni parola viene conteggiata una sola volta per transazione.
+        drop_codes: Escludi i codici di riferimento
+        drop_codes_hint: Parole che mescolano lettere e almeno 2 cifre, come 2k4l19.
+        drop_numbers: Escludi i numeri
+        drop_numbers_hint: Numeri, date e importi presenti nella descrizione.
+        include_notes: Considera le note
+        include_notes_hint: Analizza le note oltre al nome.
+        keep_single_chars: Considera anche i caratteri singoli
+        keep_single_chars_hint: "Lettere e cifre singole dopo la suddivisione del testo, come la «s» di mcdonald's."
+        spread_filter: Escludi le parole usate in modo simile da tutte le categorie
+        spread_filter_hint: Non aiutano a distinguere la categoria. Il valore indica quanto l'utilizzo in una categoria deve superare una distribuzione uniforme.
+        word_split: Composizione delle parole
+        word_split_ascii: da a a z e da 0 a 9
+        word_split_hint: "Ogni altro carattere separa le parole. Le lettere di qualsiasi alfabeto mantengono unite parole come Geschäft o Кофейня; includendo simboli interni rimangono unite anche espressioni come mcdonald's, s/o e m&s (un simbolo all'inizio o alla fine, come in *netflix, viene comunque scartato)."
+        word_split_symbols: Lettere, numeri e simboli interni
+        word_split_unicode: Lettere e numeri di qualsiasi alfabeto

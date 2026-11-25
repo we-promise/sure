@@ -33,6 +33,9 @@ it:
       empty: Nessuna categoria trovata
       merge: Unisci categorie
       new: Nuova categoria
+      lock_categories: "Blocca la creazione di categorie"
+      locked_message: "La creazione di categorie è bloccata. Le importazioni e le sincronizzazioni bancarie possono comunque aggiungere categorie."
+      unlock_categories: "Sblocca la creazione di categorie"
     merge:
       title: Unisci categorie
       description: Seleziona una categoria di destinazione e le categorie da unire in essa. Le transazioni e le righe di budget corrispondenti si sposteranno nella destinazione.
@@ -57,6 +60,12 @@ it:
       transfer: Bonifico
       payment: Pagamento
       trade: Operazione
+    menu:
+      loading: Caricamento...
+    locked: "Le categorie sono bloccate. Sbloccale per aggiungere una nuova categoria."
+    toggle_lock:
+      locked: "Categorie bloccate"
+      unlocked: "Categorie sbloccate"
   category:
     dropdowns:
       show:

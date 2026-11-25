@@ -1,0 +1,36 @@
+---
+it:
+  portfolios:
+    empty_state:
+      add_account: Aggiungi un conto di investimento
+      description: Qui sono elencati, con i rispettivi saldi, i conti di intermediazione, previdenziali e in criptovalute inclusi nelle tue finanze e nei tuoi report.
+      title: Nessun conto di investimento da visualizzare
+    holdings:
+      columns:
+        account: Conto
+        accounts: Conti
+        avg_cost: Costo medio
+        cost_basis_per_share: Costo di carico per quota
+        day_change: Var. giornaliera
+        qty: Quantità
+        security: Titolo
+        unrealized: Plusvalenze/minusvalenze non realizzate
+        value: Valore
+        weight: Peso
+      day_change_partial: "%{covered} di %{total} posizioni"
+      label: Posizioni
+      missing_cost_basis: Costo di carico non disponibile
+      missing_cost_basis_hint: Almeno una posizione non ha un costo di carico noto. Il costo medio e il rendimento tengono conto soltanto delle posizioni per cui è disponibile.
+      no_cost_basis: costo di carico non disponibile
+      open_position: Apri
+      position_missing_cost_basis_hint: Questa posizione non ha un costo di carico noto. Non dispone quindi di un costo medio ed è esclusa dal calcolo del rendimento della riga.
+      positions_caption: Posizioni in %{ticker} per conto
+      toggle_positions: Mostra le posizioni in %{ticker}
+    sections:
+      accounts: Conti
+      holdings: Posizioni
+    show:
+      section_aria: "Sezione %{title}. Premi Invio o Spazio per selezionarla, quindi usa i tasti freccia per spostarla."
+      sections_aria: Sezioni del portafoglio
+      subtitle: Le posizioni detenute nei tuoi conti di investimento e il valore di ciascun conto.
+      title: Portafoglio

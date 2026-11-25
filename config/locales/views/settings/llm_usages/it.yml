@@ -2,7 +2,22 @@
 it:
   settings:
     llm_usages:
+      requests:
+        status:
+          cancelled: "Annullata"
+          failed: "Non riuscita"
+          succeeded: "Riuscita"
+        tokens: "%{prompt}/%{completion} token"
+        request: "Richiesta %{number}"
+        summary:
+          other: "%{count} richieste"
+          one: "%{count} richiesta"
       show:
+        cancelled: "Annullata"
+        recent_usage_scope: "Ogni chiamata mostra tutte le proprie richieste, anche quelle al di fuori delle date selezionate. Il suo totale può quindi differire dai totali sopra, che conteggiano solo le richieste nell'intervallo."
+        requests_in_calls:
+          other: "%{count} richieste, tentativi ripetuti inclusi"
+          one: "%{count} richiesta, tentativi ripetuti inclusi"
         page_title: "Utilizzo e costi LLM"
         subtitle: "Monitora l'utilizzo AI e i costi stimati"
         start_date: "Data inizio"

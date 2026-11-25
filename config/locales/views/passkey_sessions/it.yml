@@ -1,0 +1,4 @@
+---
+it:
+  passkey_sessions:
+    invalid_credential: "Impossibile accedere con questa passkey. Riprova oppure usa la password."

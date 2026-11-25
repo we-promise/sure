@@ -1,9 +1,34 @@
 ---
 it:
   loans:
+    subtypes:
+      student:
+        short: "Prestito studentesco"
+        long: "Prestito studentesco"
+      other:
+        short: "Altro finanziamento"
+        long: "Altro finanziamento"
+      mortgage:
+        short: "Mutuo"
+        long: "Mutuo"
+      line_of_credit:
+        short: "Linea di credito"
+        long: "Linea di credito"
+      home_equity:
+        short: "Garanzia immobiliare"
+        long: "Finanziamento garantito dal valore netto dell'immobile"
+      business:
+        short: "Finanziamento aziendale"
+        long: "Finanziamento aziendale"
+      auto:
+        short: "Finanziamento auto"
+        long: "Finanziamento auto"
     edit:
       edit: Modifica %{account}
+      stale_rate_schedule: "Questo modulo non è aggiornato. Ricarica il prestito e applica nuovamente le modifiche. Nessuna modifica è stata salvata."
     form:
+      principal_only_transfers_hint: "Attiva questa opzione se trasferisci solo la quota capitale e registri gli interessi separatamente. Lasciala disattivata se il trasferimento collegato corrisponde all'intera rata."
+      principal_only_transfers: "I trasferimenti collegati includono solo la quota capitale"
       interest_rate: Tasso di interesse
       interest_rate_placeholder: '5.25'
       initial_balance: Capitale originale del prestito
@@ -13,25 +38,115 @@ it:
       none: Nessuno
       subtype_prompt: Seleziona tipo di prestito
       subtype_none: Nessuno
+      rate_type_adjustable: Rivedibile
+      rate_type_fixed: Fisso
+      rate_type_variable: Variabile
+      rate_changes: Variazioni del tasso
+      rate_changes_hint: Ogni riga imposta il tasso applicato dalla sua data di decorrenza fino alla successiva. Reinserire una data sostituisce quella riga invece di aggiungerne una seconda.
+      rate_changes_empty: Nessuna variazione del tasso registrata. Il prestito segue il tasso di interesse indicato sopra.
+      rate_change_effective_date: Data di decorrenza
+      rate_change_rate: Tasso
+      rate_change_add: Aggiungi variazione del tasso
+      rate_change_remove: Rimuovi
+      start_date: Data di erogazione
+      start_date_hint: Quando il prestito è stato erogato. Lascia vuoto per usare la data di apertura del conto.
+      day_count_convention: "Base di calcolo degli interessi"
+      day_count_convention_actual_365: "Effettivo/365"
+      day_count_convention_actual_actual: "Effettivo/effettivo"
+      day_count_convention_hint: "Metodo utilizzato dal finanziatore per rapportare il periodo all'anno. Effettivo/365 calcola gli interessi in base alla durata effettiva del mese ed è comune nei mutui britannici e australiani. Il metodo 30/360 usa un dodicesimo fisso, come Sure ha sempre fatto."
+      day_count_convention_thirty_360: "30/360 (un dodicesimo fisso)"
+      down_payment: "Anticipo"
+      insurance_rate: "Tasso assicurativo"
+      insurance_rate_placeholder: "0.36"
+      insurance_rate_hint: "Tasso annuo addebitato mensilmente insieme alla rata. L'assicurazione a capitale costante si calcola sul capitale iniziale; quella a capitale decrescente sul debito residuo."
+      insurance_rate_type: "Tipo di assicurazione"
+      insurance_rate_type_decreasing_life: "A capitale decrescente"
+      insurance_rate_type_level_term: "A capitale costante"
     new:
       title: Inserisci i dettagli del prestito
     overview:
       interest_rate: Tasso di Interesse
       monthly_payment: Rata Mensile
-      not_applicable: N/A
+      not_applicable: "N/D"
       original_principal: Capitale Originale
       remaining_principal: Capitale Residuo
       term: Durata
       type: Tipo
       unknown: Sconosciuto
+      original_payoff_date: Data di estinzione originale
     tabs:
       overview:
         interest_rate: Tasso di Interesse
         monthly_payment: Rata Mensile
-        not_applicable: N/A
+        not_applicable: "N/D"
         original_principal: Capitale Originale
         remaining_principal: Capitale Residuo
         term: Durata
         type: Tipo
         unknown: Sconosciuto
         edit_loan_details: "Modifica dettagli prestito"
+
+        original_payoff_date: Data di estinzione originale
+        insurance_rate_only: "%{rate} all'anno"
+        leverage: "Leva finanziaria"
+        leverage_band_conservative: "Prudente"
+        leverage_band_high: "Elevata"
+        leverage_band_moderate: "Moderata"
+        leverage_multiple: "%{ratio}x"
+        total_cost: "Costo totale"
+        total_cost_with_insurance: "Costo totale inclusa assicurazione"
+        total_insurance: "Assicurazione"
+      schedule:
+        date: Data
+        description: Proiezione basata su capitale originale, tasso e durata, a partire dal %{start_date}. I pagamenti extra non sono considerati.
+        variable_rate_notice: Il tasso di questo prestito cambia nel tempo. Il piano viene riammortizzato a ogni variazione registrata, mantenendo la data di estinzione originale e ricalcolando la rata; una variazione non ancora registrata modificherà questi valori.
+        opening_payment: Rata iniziale
+        interest: Interessi
+        monthly_payment: Rata mensile
+        number: N.
+        payment: Rata
+        principal: Capitale
+        remaining_balance: Debito residuo
+        total_cost: Costo totale
+        total_interest: Interessi totali
+
+        forecasted_payoff_date: "Data prevista di estinzione"
+        forecasted_payoff_not_converged: "Non estinto con la rata attuale"
+        not_applicable: "N/D"
+      extra_repayments:
+        amount_label: "Rimborso aggiuntivo"
+        amount_placeholder: "0.00"
+        apply: "Applica"
+        baseline_not_cleared: "Con la rata attuale il prestito non verrebbe estinto entro la scadenza originale e resterebbero da pagare %{balloon}. Non è quindi possibile confrontare una data di estinzione anticipata o un risparmio di interessi. Con questo versamento aggiuntivo verrebbe estinto alla data indicata sopra."
+        clear: "Azzera"
+        comparison_basis: "Confronto con il pagamento della sola rata attuale, senza versamenti aggiuntivi, a partire dal saldo di oggi."
+        dated_note: "I versamenti aggiuntivi settimanali e quindicinali vengono conteggiati alla rata successiva al pagamento; il risparmio di interessi, se mai, risulta sottostimato."
+        extra_not_cleared: "Anche con questo versamento aggiuntivo il prestito non viene estinto entro la scadenza originale. Prova un importo maggiore."
+        frequencies:
+          fortnightly: "Ogni due settimane"
+          monthly: "Mensile"
+          weekly: "Settimanale"
+        frequency_label: "Frequenza"
+        interest_saved: "Interessi risparmiati"
+        intro: "Scopri quanto prima potresti estinguere il prestito e quanti interessi risparmiare versando un importo aggiuntivo ogni settimana, ogni due settimane o ogni mese, oltre alle rate ordinarie."
+        invalid_amount: "Inserisci un importo numerico maggiore o uguale a zero."
+        invalid_frequency: "Scegli una frequenza settimanale, quindicinale o mensile."
+        months_sooner:
+          zero: "Estinto nello stesso mese"
+          one: "Estinto %{count} mese prima"
+          other: "Estinto %{count} mesi prima"
+        no_scheduled_repayments: "Non sono previste altre rate, ma resta ancora un importo da pagare. Non è quindi possibile aggiungere un versamento a una rata futura."
+        not_applicable: "Non resta nulla da rimborsare per questo prestito: non ci sono versamenti aggiuntivi da simulare."
+        payoff_with_extra: "Estinzione con versamento aggiuntivo"
+        total_cost: "Costo totale da oggi"
+        total_cost_not_cleared: "Non estinto entro la scadenza originale"
+        total_cost_saved: "%{amount} in meno rispetto all'assenza del versamento aggiuntivo"
+        variable_rate_notice: "Il tasso di questo prestito cambia nel tempo. Questi calcoli considerano soltanto le variazioni già registrate; eventuali modifiche future influiranno sui risultati."
+      repayment_progress:
+        instalment: "Rata %{number} · %{date}"
+        insurance: "Assicurazione"
+        interest: "Interessi"
+        of_original: "di %{amount}"
+        principal: "Quota capitale"
+        repaid: "Rimborsato"
+        total: "Totale"

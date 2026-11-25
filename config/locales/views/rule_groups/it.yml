@@ -1,0 +1,23 @@
+---
+it:
+  rule_groups:
+    new:
+      title: Nuovo gruppo di regole
+    edit:
+      title: 'Rinomina il gruppo "%{name}"'
+    form:
+      name_label: Nome
+      name_placeholder: "es. Spesa alimentare"
+      hint: "I gruppi organizzano soltanto l'elenco delle regole. Le regole vengono comunque eseguite dall'alto verso il basso."
+    create:
+      success: Gruppo creato
+    update:
+      success: Gruppo rinominato
+    destroy:
+      success: "Gruppo eliminato. Le regole rimangono disponibili senza un gruppo."
+    activation:
+      activated: 'Tutte le regole di "%{name}" sono attive'
+      deactivated: 'Tutte le regole di "%{name}" sono disattivate'
+      partially_switched:
+        one: "Impossibile cambiare lo stato di 1 regola. Aprila per conoscere il motivo."
+        other: "Impossibile cambiare lo stato di %{count} regole. Aprile per conoscere il motivo."

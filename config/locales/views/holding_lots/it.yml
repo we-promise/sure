@@ -1,0 +1,9 @@
+---
+it:
+  holding_lots:
+    provider_cost: Il costo di questa posizione è fornito dal provider, pertanto non è possibile impostare il costo dei singoli lotti.
+    update:
+      success: Costo del lotto aggiornato.
+      error: Inserisci il costo complessivo del lotto, pari o superiore a zero.
+    unlock:
+      success: Costo impostato manualmente rimosso.

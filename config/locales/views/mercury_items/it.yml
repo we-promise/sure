@@ -161,7 +161,7 @@ it:
         depository:
           checking: Conto Corrente
           savings: Risparmio
-          hsa: Health Savings Account
+          hsa: Conto di risparmio sanitario (HSA)
           cd: Certificato di Deposito
           money_market: Mercato Monetario
         investment:
@@ -173,7 +173,7 @@ it:
           "403b": "403(b)"
           tsp: Thrift Savings Plan
           "529_plan": "Piano 529"
-          hsa: Health Savings Account
+          hsa: Conto di risparmio sanitario (HSA)
           mutual_fund: Fondo comune
           ira: IRA Tradizionale
           roth_ira: Roth IRA

@@ -2,6 +2,13 @@
 it:
   settings:
     hostings:
+      terrascoutx_settings:
+        usage: "%{used} di %{limit} richieste mensili utilizzate"
+        placeholder: "Inserisci qui la tua chiave API TerraScoutX"
+        label: "Chiave API"
+        env_configured_message: "Configurato correttamente tramite la variabile d'ambiente TERRASCOUTX_API_KEY."
+        description: "Inserisci la chiave API TerraScoutX per recuperare dati e valutazioni degli immobili negli Stati Uniti quando aggiungi un immobile. Il valore è quello attribuito dall'autorità fiscale della contea nell'ultimo registro fiscale disponibile presso TerraScoutX, non una stima automatizzata di mercato. Può quindi essere meno aggiornato e sensibilmente inferiore al valore di mercato negli Stati che limitano le valutazioni fiscali, come la California. La copertura varia in base alla contea. Le chiavi sono gratuite e limitate a 2.000 richieste API al mese, condivise tra la ricerca degli immobili e gli aggiornamenti giornalieri delle valutazioni. Se la tua chiave consente più richieste, aumenta il limite con la variabile d'ambiente TERRASCOUTX_MAX_REQUESTS_PER_MONTH."
+        title: "TerraScoutX"
       invite_code_settings:
         description: Controlla come le nuove persone si registrano alla tua istanza di %{product}.
         email_confirmation_description: Quando abilitato, gli utenti devono confermare il loro indirizzo email quando lo cambiano.
@@ -11,7 +18,7 @@ it:
         default_family_none: Nessuna (crea nuova famiglia)
         generate_tokens: Genera nuovo codice
         generated_tokens: Codici generati
-        title: Onboarding
+        title: "Registrazione iniziale"
         states:
           open: Aperto
           closed: Chiuso
@@ -31,6 +38,14 @@ it:
           title: Svuotare la cache dei dati?
           body: "Sei sicuro di voler svuotare la cache dei dati? I saldi e le posizioni dei conti della tua famiglia verranno ricalcolati e i tassi di cambio e i prezzi dei titoli che utilizzano verranno ricaricati. Vengono eliminati solo i saldi e le posizioni della tua famiglia; i tassi di cambio e i prezzi dei titoli sono condivisi con le altre famiglie di questa istanza e vengono aggiornati anche per loro. Questa azione non può essere annullata."
           body_without_provider: "Sei sicuro di voler svuotare la cache dei dati? I saldi e le posizioni dei conti della tua famiglia verranno ricalcolati. Non è configurato alcun fornitore di tassi di cambio o di prezzi dei titoli, quindi i tassi di cambio e i prezzi salvati vengono mantenuti. Questa azione non può essere annullata."
+        property_valuation_providers: Provider di valutazione immobiliare
+        demo_refresh: "Aggiornamento dei dati demo"
+        instance_settings_restricted: "Le credenziali dei provider, la connessione IA condivisa e le impostazioni di sincronizzazione si applicano a tutti i nuclei familiari di questa istanza, quindi solo un super amministratore può modificarle. L'assistente utilizzato dal tuo nucleo familiare viene comunque impostato separatamente. Chi ha accesso al server può promuovere un utente a super amministratore; il comando è descritto nelle note di aggiornamento della guida Docker per il self-hosting."
+        reset_market_data: "Reimposta i dati di mercato per tutti i nuclei familiari"
+        reset_market_data_warning: "Elimina i tassi di cambio e i prezzi dei titoli che i provider possono recuperare, li importa nuovamente e poi sincronizza tutti i conti. Gli importi in valuta estera potrebbero apparire senza conversione fino al termine dell'importazione."
+        confirm_reset_market_data:
+          title: "Reimpostare i dati di mercato per tutti i nuclei familiari?"
+          body: "Questa operazione elimina i tassi di cambio e i prezzi dei titoli recuperabili dai provider, per tutti i nuclei familiari dell'istanza, e li importa nuovamente. Finché l'importazione non sarà terminata, gli importi in valuta estera potrebbero essere mostrati senza conversione. L'operazione non può essere annullata."
       provider_selection:
         exchange_rate_title: Provider tasso di cambio
         exchange_rate_description: Seleziona un singolo provider per recuperare i tassi di cambio.
@@ -57,6 +72,9 @@ it:
           binance_public: Binance
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
+          mansa: Mansa
+        requires_api_key_mansa: richiede chiave API, piano gratuito da 100 chiamate/giorno -- solo NGX (Nigerian Exchange)
       assistant_settings:
         title: Assistente IA
         description: Scegli come risponde l'assistente chat. Integrato usa il tuo provider LLM configurato direttamente. Esterno delega a un agente IA remoto che può richiamare gli strumenti finanziari di Sure tramite MCP.
@@ -83,6 +101,20 @@ it:
         confirm_disconnect:
           title: Disconnettere l'assistente esterno?
           body: Questo rimuoverà l'URL, il token e l'ID agente salvati, e passerà all'assistente integrato. Puoi riconnetterti in seguito inserendo nuove credenziali.
+        type_mcp_only: "Nessuno nell'app (collega un agente personale tramite MCP)"
+        mcp_only_help: "L'assistente integrato nell'app è disattivato per tutti i membri del nucleo familiare. Anche le scorciatoie IA per le bollette e i testi generati dall'IA per gli approfondimenti vengono disattivati. MCP e la categorizzazione in background restano disponibili; collega agenti esterni in Impostazioni > MCP."
+        agent_discovery_configure_first: "Salva un URL endpoint valido e un token API per caricare gli agenti disponibili."
+        external_agent_required: "Seleziona un agente esterno prima di salvare."
+        external_agent_invalid: "Seleziona un agente restituito dall'endpoint configurato."
+        external_agent_reselect: "L'endpoint è cambiato e l'agente selezionato in precedenza non è disponibile. Seleziona un agente dal nuovo endpoint."
+        agent_discovery_error: "Impossibile caricare gli agenti: %{error}"
+        external_info:
+          title: "Configurazione IA esterna"
+          items:
+            - "Inserisci l'URL completo dell'endpoint compatibile con OpenAI, terminante in /v1/chat/completions."
+            - "Dopo aver salvato endpoint e token, Sure individua gli agenti disponibili tramite /v1/models."
+            - "Il servizio esterno sceglie il modello utilizzato da ciascun agente; Sure seleziona soltanto il percorso dell'agente."
+            - "Gli errori di autenticazione, endpoint o agente vengono restituiti dal servizio esterno. Controllane i log se una richiesta non riesce."
       brand_fetch_settings:
         description: Inserisci il Client ID fornito da Brandfetch
         env_configured_message: Hai configurato con successo il tuo Client ID di Brandfetch tramite la variabile d'ambiente BRAND_FETCH_CLIENT_ID.
@@ -143,6 +175,18 @@ it:
         max_response_tokens_label: Token risposta massimi (facoltativo)
         max_response_tokens_help: "Token riservati per la risposta del modello. Predefinito: 512. Diminuisci per liberare spazio per cronologie più lunghe."
         title: OpenAI
+        max_items_per_call_label: Elementi massimi per batch (facoltativo)
+        max_items_per_call_help: "Limite superiore per batch di auto-categorizzazione/rilevamento esercenti. Predefinito: 25. I batch più grandi vengono suddivisi automaticamente per adattarsi alla finestra di contesto."
+        model_function_calling_help: L'assistente AI legge i tuoi dati tramite chiamate di funzione, quindi scegli un modello che il tuo provider indica come compatibile con tools/function calling. I modelli senza questo supporto fanno fallire la chat con un errore del provider poco chiaro.
+        model_function_calling_link: Verifica il modello configurato
+        timeout_heading: Timeout
+        timeout_description: Controlla per quanto tempo possono durare le chiamate ai modelli compatibili con OpenAI prima che Sure rinunci. Aumenta questi valori se esegui un modello locale su hardware lento.
+        openai_request_timeout_label: Timeout richiesta in secondi (facoltativo)
+        openai_request_timeout_help: 'Predefinito: 60. Si applica a ogni richiesta HTTP compatibile con OpenAI, incluse auto-categorizzazione, rilevamento esercenti, chat, elaborazione PDF e chiamate al vector store. OPENAI_REQUEST_TIMEOUT sovrascrive questo campo.'
+        ai_response_timeout_label: Timeout risposta in secondi (facoltativo)
+        ai_response_timeout_help: 'Predefinito: 90. Si applica solo al watchdog dell''intero turno di chat, quindi dimensionalo come una somma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × timeout richiesta, più il tempo di esecuzione degli strumenti e di attesa in coda. AI_RESPONSE_TIMEOUT sovrascrive questo campo.'
+        ai_health_probe_timeout_label: "Timeout del controllo di stato in secondi (facoltativo)"
+        ai_health_probe_timeout_help: "Predefinito: 5. Si applica solo ai controlli IA in tempo reale in Impostazioni → Stato del sistema, mai alle chiamate IA effettive. Aumentalo se i controlli PDF scadono con un modello cloud. AI_HEALTH_PROBE_TIMEOUT ha la precedenza su questo campo."
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance fornisce accesso gratuito a prezzi azionari, tassi di cambio e dati finanziari senza richiedere una chiave API.
@@ -150,6 +194,14 @@ it:
         status_inactive: Connessione Yahoo Finance fallita
         connection_failed: Impossibile connettersi a Yahoo Finance
         troubleshooting: Controlla la connessione internet e le impostazioni del firewall. Yahoo Finance potrebbe essere temporaneamente non disponibile.
+        status_healthy: Yahoo Finance è attivo e funzionante.
+        status_rate_limited: Yahoo Finance sta temporaneamente limitando le richieste.
+        rate_limited_title: Limite di richieste di Yahoo Finance raggiunto.
+        rate_limited_message: Non è richiesta alcuna azione. Sure eviterà ulteriori controlli di stato per 30 minuti. Le operazioni su prezzi e tassi di cambio proseguono in modo indipendente.
+        status_unavailable: Yahoo Finance non è al momento disponibile.
+        unavailable_title: Impossibile verificare Yahoo Finance.
+        unavailable_message: Yahoo Finance non è raggiungibile o ha restituito una risposta imprevista. Controlla la connessione internet e riprova più tardi.
+        status_unknown: Verifica dello stato di Yahoo Finance in corso.
       tiingo_settings:
         title: Tiingo
         description: Inserisci il token API fornito da Tiingo. Il piano gratuito supporta 50 simboli unici all'ora con oltre 30 anni di dati storici.
@@ -170,6 +222,7 @@ it:
         step_1: Apri T-Bank investments, poi Impostazioni, poi Token API (richiede un conto di intermediazione T-Bank aperto).
         step_2: Crea un token con accesso in sola lettura.
         step_3: Copia il token e incollalo qui sotto.
+        moex_only_notice: 'Non abilitato per i prezzi sopra: T-Invest viene usato per recuperare i loghi dei brand di tutti i tuoi titoli ogni volta che è configurato un token, indipendentemente dalla casella di controllo sopra.'
       eodhd_settings:
         title: EODHD
         description: Inserisci il token API fornito da EODHD. Supporta ETF europei su LSE, XETRA e altre borse internazionali.
@@ -209,6 +262,9 @@ it:
         view_pricing: Visualizza prezzi Twelve Data
         title: Twelve Data
       update:
+        invalid_page_cache_cooldown_minutes: "I minuti tra le rigenerazioni devono essere un numero intero compreso tra %{minimum} e %{maximum}."
+        invalid_page_cache_max_mb: "La dimensione massima della cache deve essere un numero intero di megabyte compreso tra %{minimum} e %{maximum}."
+        invalid_page_cache_days: "I giorni di conservazione delle pagine in cache devono essere un numero intero compreso tra %{minimum} e %{maximum}."
         failure: Valore impostazione non valido
         success: Impostazioni aggiornate
         invalid_onboarding_state: Stato di onboarding non valido
@@ -217,6 +273,10 @@ it:
         invalid_anthropic_base_url: L'URL base di Anthropic deve essere un URL http(s).
         anthropic_model_required_for_base_url: Il modello Anthropic è obbligatorio quando si imposta un URL base personalizzato.
         scheduler_sync_failed: Impostazioni salvate, ma aggiornamento pianificazione sincronizzazione fallito. Riprova o controlla i log del server.
+        invalid_demo_family: "Il nucleo familiare selezionato deve essere associato all'email demo configurata."
+        select_demo_family: "Seleziona prima un nucleo familiare demo temporaneo."
+        invalid_jev_endpoint: "L'endpoint Jev deve essere un URL https. L'URL http è consentito solo per localhost."
+        invalid_categorization_rate: "%{field} deve essere un numero compreso tra 0 e 1."
       disconnect_external_assistant:
         external_assistant_disconnected: Assistente esterno disconnesso
       clear_cache:
@@ -229,6 +289,12 @@ it:
       sync_auto_sync_scheduler!:
         scheduler_sync_failed: Impostazioni salvate, ma aggiornamento pianificazione sincronizzazione fallito. Riprova o controlla i log del server.
       sync_settings:
+        page_cache_max_mb_description: "Spazio massimo complessivo occupabile dalle pagine in cache. Se una nuova pagina farebbe superare il limite, vengono rimosse per prime quelle aperte meno di recente; una pagina più grande dell'intero limite viene mostrata ma non conservata. Utilizzati %{used} di %{limit}. Valore predefinito: %{default_mb}. La variabile PAGE_CACHE_MAX_MB ha la precedenza su questo campo."
+        page_cache_max_mb_label: "Dimensione massima della cache (MB)"
+        page_cache_cooldown_minutes_description: "Quando cambiano i dati di una pagina in cache, continua a essere visualizzata la versione precedente mentre quella nuova viene generata in background, al massimo una volta ogni numero di minuti indicato. Il pulsante Aggiorna della pagina la rigenera immediatamente. Impostando 0, viene rigenerata dopo ogni modifica. Valore predefinito: %{default_minutes}. La variabile PAGE_CACHE_COOLDOWN_MINUTES ha la precedenza su questo campo."
+        page_cache_cooldown_minutes_label: "Rigenera le pagine in cache al massimo ogni (minuti)"
+        page_cache_days_description: "I report vengono generati in anticipo dopo ogni sincronizzazione e conservati per questo numero di giorni se nessuno li apre. Valore predefinito: %{default_days}. La variabile PAGE_CACHE_DAYS ha la precedenza su questo campo."
+        page_cache_days_label: "Conserva le pagine in cache per (giorni)"
         auto_sync_label: Abilita sincronizzazione automatica
         auto_sync_description: Quando abilitata, tutti i conti verranno sincronizzati automaticamente ogni giorno all'orario specificato.
         auto_sync_time_label: Orario sincronizzazione (HH:MM)
@@ -236,3 +302,88 @@ it:
         include_pending_label: Includi transazioni in sospeso
         include_pending_description: Quando abilitato, le transazioni in sospeso (non confermate) verranno importate e riconciliate automaticamente quando vengono registrate. Disabilita se la tua banca fornisce dati in sospeso inaffidabili.
         env_configured_message: Questa impostazione è disabilitata perché è impostata una variabile d'ambiente del provider (SIMPLEFIN_INCLUDE_PENDING o PLAID_INCLUDE_PENDING). Rimuovila per abilitare questa impostazione.
+
+        market_data_sync_label: "Abilita l'importazione giornaliera dei dati di mercato"
+        market_data_sync_description: "Quando questa opzione è attiva, i prezzi dei titoli vengono importati automaticamente una volta al giorno (dal lunedì al venerdì) all'orario specificato."
+        market_data_sync_time_label: "Orario di importazione dei dati di mercato (HH:MM)"
+        market_data_sync_time_description: "Specifica l'ora in cui deve essere eseguita l'importazione quotidiana dei prezzi dei titoli, ad esempio poco dopo la chiusura della borsa principale."
+      rentcast_settings:
+        title: RentCast
+        description: Inserisci la tua chiave API RentCast per cercare dettagli e stime di valore degli immobili negli USA quando aggiungi un immobile. Il piano gratuito è limitato a 50 richieste API al mese, condivise tra ricerche di immobili e aggiornamenti giornalieri delle valutazioni. Con un piano a pagamento, aumenta il limite con la variabile d'ambiente RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente RENTCAST_API_KEY.
+        label: Chiave API
+        placeholder: Inserisci qui la tua chiave API RentCast
+        usage: '%{used} di %{limit} richieste mensili utilizzate'
+      realie_settings:
+        title: Realie
+        description: Inserisci la tua chiave API Realie per cercare dettagli e stime di valore degli immobili negli USA quando aggiungi un immobile. Il piano gratuito è limitato a 25 richieste API al mese, condivise tra ricerche di immobili e aggiornamenti giornalieri delle valutazioni. Con un piano a pagamento, aumenta il limite con la variabile d'ambiente REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente REALIE_API_KEY.
+        label: Chiave API
+        placeholder: Inserisci qui la tua chiave API Realie
+        usage: '%{used} di %{limit} richieste mensili utilizzate'
+      mansa_settings:
+        title: Mansa
+        description: Inserisci la chiave API di Mansa API. Supporta NGX (Nigerian Exchange), non coperta da nessun altro provider qui. Mansa copre anche altre borse africane, ma solo NGX è verificata con questa integrazione.
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente MANSA_API_KEY.
+        label: Chiave API
+        placeholder: Inserisci qui la tua chiave API Mansa
+        show_details: (mostra dettagli)
+        step_1_html: Visita <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> e richiedi la tua chiave API gratuita -- nessuna carta richiesta.
+        step_2: Copia la tua chiave API e incollala qui sotto.
+        rate_limit_warning: Il piano gratuito di Mansa è limitato a 100 chiamate API al giorno e fornisce solo quotazioni correnti -- i prezzi storici richiedono un piano a pagamento. Solo NGX (Nigerian Exchange) è verificata con questa integrazione; le altre borse africane coperte da Mansa non sono ancora supportate qui.
+
+      demo_refresh_settings:
+        description: "Aggiorna automaticamente soltanto il nucleo familiare demo selezionato. Tutti i suoi dati e gli accessi verranno eliminati. Gli altri nuclei familiari non saranno modificati. È necessario un worker attivo con almeno 2 GiB di RAM. Prima crea un nucleo familiare demo temporaneo con il generatore di demo, poi selezionalo qui. Non selezionare il nucleo familiare di un utente reale."
+        none: "Nessun nucleo familiare demo selezionato"
+        family_label: "Nucleo familiare demo temporaneo"
+        save_family: "Salva nucleo familiare demo"
+        enabled_label: "Abilita l'aggiornamento giornaliero del nucleo familiare demo"
+      categorization_provider_selector:
+        title: "Categorizzazione delle transazioni"
+        preview_pill: "Anteprima"
+        description: "Scegli quale provider categorizza le transazioni. È distinto dal provider IA sopra, che gestisce la chat e l'elaborazione dei PDF."
+        env_notice: "Impostato su %{type} tramite variabili d'ambiente."
+        provider_label: "Provider di categorizzazione"
+        provider_llm: "Provider IA (OpenAI o Anthropic)"
+        provider_jev: "Jev (TypeSafe)"
+        provider_help: "Il provider IA legge un gruppo di transazioni e restituisce i nomi delle categorie. Jev sceglie tra le categorie disponibili e restituisce per ogni transazione un livello di confidenza calibrato."
+        jev_configured: "Chiave API Jev configurata."
+        jev_not_configured: "È stato selezionato Jev, ma la sua chiave API non è configurata. La categorizzazione continuerà a utilizzare il provider IA finché non aggiungi la chiave qui sotto."
+        data_retention_heading: "Condivisione dei dati"
+        data_retention_direct: "Descrizioni e importi delle transazioni, insieme ai nomi delle categorie, vengono inviati a TypeSafe per la categorizzazione. Controlla la politica di conservazione dei dati prima di attivare questa funzione sui dati reali."
+        data_retention_proxied: "Descrizioni e importi delle transazioni, insieme ai nomi delle categorie, vengono inviati a %{host}, che li inoltra a TypeSafe. Controlla le politiche di conservazione dei dati di entrambi i provider prima di attivare questa funzione sui dati reali."
+        confidence_threshold_label: "Confidenza minima (0–1)"
+        confidence_threshold_help: "Sotto questa soglia di confidenza, la categoria non viene applicata e la transazione rimane senza categoria, così sarà possibile riprovare in un'esecuzione successiva. Nessun dato viene scartato. Imposta 0 per applicare tutte le risposte."
+        confidence_threshold_env_notice: "Bloccato dalla variabile d'ambiente CATEGORIZATION_CONFIDENCE_THRESHOLD."
+        shadow_rate_label: "Frequenza del confronto parallelo (0–1)"
+        shadow_rate_help: "Esegue il provider NON selezionato insieme a quello scelto e registra le divergenze senza modificare le categorie. Questo raddoppia il costo delle API per ogni esecuzione di categorizzazione inclusa nel campione. Imposta 0 per disattivare il confronto."
+        shadow_rate_env_notice: "Bloccato dalla variabile d'ambiente CATEGORIZATION_SHADOW_RATE."
+      categorization_shadow_results:
+        shadow_results_heading: "Confronto parallelo"
+        shadow_results_empty: "Non è stato ancora registrato alcun confronto. Imposta una frequenza di confronto parallelo maggiore di 0 ed esegui la categorizzazione per raccogliere i dati."
+        shadow_results_summary: "Corrispondenza del %{agreement}%% su %{count} transazioni campionate."
+        shadow_disagreements_heading: "Divergenze più recenti"
+        shadow_disagreement_row: "%{applied_provider} ha scelto %{applied_category}; %{shadow_provider} ha scelto %{shadow_category}."
+        shadow_disagreement_confidence: "(confidenza %{confidence})"
+        shadow_no_disagreements: "I due provider hanno concordato sulla categoria di ogni transazione campionata."
+        shadow_no_category: "nessuna categoria"
+      jev_settings:
+        env_configured_message: "Configurato correttamente tramite variabili d'ambiente."
+        api_key_label: "Chiave API"
+        api_key_placeholder: "Inserisci la chiave API TypeSafe"
+        endpoint_label: "Endpoint (facoltativo)"
+        endpoint_placeholder: "https://api.typesafe.ai/v1/systemone (predefinito)"
+        model_label: "Modello (facoltativo)"
+        model_placeholder: "jev-latest (predefinito)"
+        model_help: "Per impostazione predefinita si collega direttamente a TypeSafe. Per utilizzare Jev tramite OpenRouter, imposta l'endpoint su https://openrouter.ai/api/alpha/decisions e il modello su ~typesafe/jev-latest."
+      chimnie_settings:
+        title: "Chimnie"
+        description: "Inserisci la chiave API Chimnie per stimare il valore degli immobili residenziali nel Regno Unito tramite UPRN. Crea una chiave gratuita su dashboard.chimnie.com (per registrarti serve un indirizzo email aziendale o con dominio personalizzato; Gmail, Outlook e indirizzi simili non sono accettati). Le valutazioni UPRN sono gratuite e vengono aggiornate ogni mese; Sure impone un massimo di 1.000 richieste mensili, modificabile con CHIMNIE_MAX_REQUESTS_PER_MONTH."
+        env_configured_message: "Configurato tramite la variabile d'ambiente CHIMNIE_API_KEY."
+        label: "Chiave API"
+        placeholder: "Inserisci qui la chiave API Chimnie"
+        usage: "%{used} richieste mensili utilizzate su %{limit}"
+      reset_market_data:
+        market_data_reset: "Reimpostazione dei dati di mercato accodata. Verranno importati nuovamente tassi e prezzi, quindi saranno sincronizzati tutti i conti."
+        market_data_reset_already_queued: "Una reimpostazione dei dati di mercato è già in coda o in esecuzione."
+        market_data_reset_failed: "Impossibile mettere in coda la reimpostazione dei dati di mercato. Non è stato eliminato nulla; riprova."

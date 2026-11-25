@@ -1,8 +1,12 @@
 ---
 it:
   properties:
+    update_balances:
+      invalid_purchase_date: "Inserisci una data di acquisto non futura e non anteriore a 30 anni fa."
+      invalid_currency: "Seleziona una valuta dall'elenco."
     edit:
       edit: Modifica %{account}
+      title: Inserisci la proprietà manualmente
     form:
       address_line1: Indirizzo
       address_line1_placeholder: Via Roma, 1
@@ -22,8 +26,37 @@ it:
       year_built: Anno di costruzione
       year_built_placeholder: '2000'
     new:
+      avm_roll_value_notes:
+        terrascoutx: "%{provider} riporta il valore attribuito dalla contea nell'ultimo registro fiscale. Non è una stima del valore di mercato attuale e può quindi differire dal prezzo di vendita dell'immobile."
+      avm_descriptions:
+        terrascoutx: "Inserisci un nome per l'immobile e il suo indirizzo. %{provider} cercherà i dati dell'immobile e il valore attribuito dalla contea nell'ultimo registro fiscale. Non si tratta di una stima del valore di mercato attuale."
       title: Inserisci la proprietà manualmente
       next: "Avanti"
+      avm_option: Aggiungi tramite %{provider}
+      avm_title: Aggiungi proprietà tramite %{provider}
+      avm_description: Inserisci un nome per la proprietà e il suo indirizzo. %{provider} cercherà per te i dettagli dell'immobile e il valore di mercato stimato.
+      avm_us_only: '%{provider} supporta solo immobili situati negli Stati Uniti.'
+      avm_submit: Cerca proprietà
+      avm_preview_title: Conferma i dettagli della proprietà
+      avm_preview_description: 'Ecco cosa ha trovato %{provider}. Controlla i dettagli prima di aggiungere la proprietà: non è stato ancora creato nulla.'
+      avm_preview_no_record: '%{provider} non ha trovato alcun registro immobiliare a questo indirizzo, quindi il valore mostrato è una stima basata sulla zona circostante. Verifica l''indirizzo prima di continuare.'
+      avm_preview_back: Indietro
+      avm_preview_confirm: Aggiungi proprietà
+      avm_uk_only: "%{provider} supporta solo immobili residenziali nel Regno Unito."
+      avm_uprn_label: "UPRN"
+      avm_uprn_placeholder: "100023336956"
+      avm_uprn_help: "Il numero univoco di riferimento dell'immobile (UPRN, fino a 12 cifre) identifica ogni indirizzo del Regno Unito. Puoi trovarlo su findmyaddress.co.uk di GeoPlace oppure richiederlo al comune. %{provider} lo usa per stimare gratuitamente il valore dell'immobile."
+      avm_county_label: "Contea (facoltativo)"
+      avm_town_label: "Città o località"
+      avm_postcode_label: "Codice postale"
+      avm_preview_uprn: "UPRN"
+      avm_preview_range: "Intervallo della stima"
+      avm_preview_confidence: "Attendibilità"
+      avm_confidence:
+        high: "Alta"
+        medium: "Media"
+        low: "Bassa"
+      avm_attribution_chimnie: "Dati di valutazione forniti da Chimnie. Contiene dati OS © Crown copyright e diritti sulle banche dati, dati Royal Mail © Royal Mail copyright e diritti sulle banche dati e dati HM Land Registry © Crown copyright e diritti sulle banche dati, concessi in licenza ai sensi della Open Government Licence v3.0."
     address:
       title: "Inserisci la proprietà manualmente"
       address_line1_label: "Indirizzo"
@@ -38,12 +71,18 @@ it:
       country_placeholder: "Italia"
       save: "Salva"
     balances:
+      purchase_date_label: "Data di acquisto"
       title: "Inserisci la proprietà manualmente"
       market_value_label: "Valore di mercato stimato"
       market_value_tooltip: "Il valore di mercato stimato della tua proprietà. Questo numero può spesso essere trovato su siti come Immobiliare.it o Idealista, e non è mai un numero esatto."
       save: "Salva"
       next: "Avanti"
     overview_fields:
+      cost_tag_hint: "Le transazioni con questo tag, come le spese notarili e le imposte, concorrono al costo complessivo di acquisto dell'immobile."
+      cost_tag_prompt: "Nessuno"
+      cost_tag_label: "Tag dei costi (facoltativo)"
+      notes_placeholder: "Numero di registro o identificativi catastali, estremi dell'atto, notaio, ecc."
+      notes_label: "Note"
       name_label: "Nome"
       name_placeholder: "Casa vacanze"
       subtype_prompt: "Seleziona tipo"
@@ -64,6 +103,17 @@ it:
       year_built: Anno di Costruzione
     tabs:
       overview:
+        gain_after_costs_in_currency: "Guadagno al netto dei costi in %{currency}"
+        gain_after_costs: "Guadagno al netto dei costi"
+        cost_basis_in_currency: "Costo complessivo di acquisto in %{currency}"
+        cost_basis: "Costo complessivo di acquisto"
+        cost_transactions:
+          other: "%{count} transazioni con tag %{tag}"
+          one: "1 transazione con tag %{tag}"
+        purchase_costs_in_currency: "Spese di acquisto in %{currency}"
+        purchase_costs: "Spese di acquisto"
+        rate_unavailable: "Tasso di cambio non disponibile"
+        trend_in_currency: "Andamento in %{currency}"
         living_area: Superficie
         market_value: Valore di Mercato
         purchase_price: Prezzo di Acquisto
@@ -71,6 +121,10 @@ it:
         unknown: Sconosciuto
         year_built: Anno di Costruzione
         edit_account_details: "Modifica dettagli conto"
+        refresh_valuation: "Aggiorna valutazione"
+        valuation_source: "Valutazione di %{provider}, aggiornata il %{date}"
+        link_valuation: "Aggiorna automaticamente il valore con %{provider}"
+        link_valuation_description: "Il valore di questo immobile viene aggiornato soltanto manualmente."
     subtypes:
       apartment:
         short: Appartamento
@@ -87,3 +141,23 @@ it:
       agri_land:
         short: Terreno Agric.
         long: Terreno Agricolo
+
+    avm_providers:
+      terrascoutx: "TerraScoutX"
+      rentcast: RentCast
+      realie: Realie
+      chimnie: "Chimnie"
+    form_tabs:
+      aria_label: "Dettagli dell'immobile"
+      address: Indirizzo
+      overview: Panoramica
+      value: Valore
+
+    refresh_valuation:
+      queued: "L'aggiornamento della valutazione è stato avviato. Il nuovo valore apparirà a breve."
+      not_linked: "Questo immobile non è collegato a un provider di valutazioni."
+      not_configured: "%{provider} non è configurato. Aggiungi la sua chiave API in Impostazioni → Self-hosting per aggiornare la valutazione."
+    link_valuation:
+      linked: "Collegato a %{provider}; il valore dell'immobile è stato aggiornato."
+      link_failed: "%{provider} non è riuscito a valutare questo immobile, quindi il collegamento non è stato creato. Controlla che l'indirizzo sia corretto e riprova."
+      not_linkable: "Questo immobile non può essere collegato al provider selezionato. Controlla che l'indirizzo sia completo, si trovi in un paese supportato e che la valuta del conto sia compatibile con il provider."

@@ -1,8 +1,30 @@
 ---
 it:
   transactions:
+    bulk_deletions:
+      create:
+        part_transferred:
+          one: "Una transazione divisa non è stata eliminata perché una sua parte è collegata a un trasferimento. Rimuovi prima il collegamento."
+          other: "%{count} transazioni divise non sono state eliminate perché una parte di ciascuna è collegata a un trasferimento. Rimuovi prima questi collegamenti."
+    reconcile:
+      badge:
+        reconciled_tooltip: "Periodo dell'estratto conto completamente riconciliato. Fai clic per ripristinare lo stato Non riconciliata."
+        cleared_tooltip: "Confermata sull'estratto conto, ma non ancora completamente riconciliata. Fai clic per contrassegnarla come riconciliata."
+        unreconciled_tooltip: "Non ancora verificata rispetto all'estratto conto. Fai clic per contrassegnarla come verificata."
+      statuses:
+        reconciled: "Riconciliata"
+        cleared: "Verificata"
+        unreconciled: "Non riconciliata"
+      not_manual_account: "Lo stato di riconciliazione si applica solo ai conti gestiti manualmente (senza sincronizzazione bancaria)"
+      unavailable: "La riconciliazione non è abilitata per questo nucleo familiare"
+      failure: "Impossibile aggiornare lo stato di riconciliazione"
+      success: "Stato impostato su %{status}"
     bulk_updates:
       new:
+        transfer_fields_hint: "Per i trasferimenti, data ed esercente rimangono invariati. La categoria si applica solo ai trasferimenti in uscita che la supportano."
+        reconciled_status_label: "Stato di riconciliazione"
+        reconciled_status_hint: "Si applica solo ai conti gestiti manualmente (senza sincronizzazione bancaria)."
+        no_change: "(nessuna modifica)"
         cancel: Annulla
         category_label: Categoria
         category_prompt: Seleziona una categoria
@@ -21,10 +43,12 @@ it:
         transactions_section: Transazioni
     unknown_name: Transazione sconosciuta
     selection_bar:
+      reconcile: "Riconcilia"
       duplicate: Duplica
       edit: Modifica
       selected: selezionate
     form:
+      tags_save_error: "Impossibile salvare i tag. Modificali nuovamente per riprovare oppure ricarica la pagina."
       details: Dettagli
       account: Conto
       account_prompt: Seleziona un conto
@@ -47,6 +71,16 @@ it:
       tag_search_placeholder: Cerca o crea etichetta
       tags_label: Etichette
       transfer: Bonifico
+      category_search_placeholder: Cerca categorie
+      create_category: Crea "%{name}"
+      create_category_error: Impossibile creare la categoria
+      create_merchant: Crea
+      create_merchant_error: Impossibile creare l'esercente
+      merchant_search_placeholder: Cerca o crea esercente
+      create_as_subcategory: "Aggiungi come sottocategoria…"
+      choose_parent: "Crea «%{name}» sotto:"
+      back_to_categories: "Indietro"
+      no_matching_categories: "Nessuna categoria corrispondente"
     create:
       created: Transazione creata
     update:
@@ -105,6 +139,31 @@ it:
       transfer_or_debt_payment: "Bonifico o pagamento debito?"
       open_matcher: "Apri corrispondenza"
       convert: "Converti"
+      create_bill: Crea una bolletta
+      applied_to_title: Bollette pagate con questa transazione
+      applied_to_detail: '%{amount} per la bolletta in scadenza il %{date}'
+      applied_to_unreviewed: Da verificare
+      category_set_on_hidden_outflow: "Questo è il movimento in entrata di un trasferimento. La categoria è associata al movimento in uscita su un conto a cui non hai accesso e può essere modificata soltanto da quel conto."
+      category_set_on_outflow: "Questo è il movimento in entrata di un trasferimento. La categoria appartiene al movimento in uscita e può essere modificata soltanto lì, così i budget lo conteggiano una sola volta."
+      original_description: "Descrizione originale"
+      payment_channel: "Canale di pagamento"
+      transaction_code: "Codice transazione"
+      plaid_payment_meta_label: "Metadati del pagamento · %{name}"
+      plaid_counterparty_label: "Controparte %{index}"
+      provider_extra_fields:
+        by_order_of: "Su ordine di"
+        confidence_level: "Livello di attendibilità"
+        entity_id: "ID entità"
+        logo_url: "URL del logo"
+        name: "Nome"
+        payee: "Beneficiario"
+        payer: "Ordinante"
+        phone_number: "Numero di telefono"
+        ppd_id: "ID PPD"
+        reason: "Causale"
+        reference_number: "Numero di riferimento"
+        type: "Tipo"
+        website: "Sito web"
     activity_labels:
       buy: Acquisto
       sell: Vendita
@@ -134,6 +193,8 @@ it:
       payment_confirmed: Pagamento confermato
       reject_match: Rifiuta abbinamento
       transfer_confirmed: Bonifico confermato
+      auto_matched_tooltip_html: "%{amount} sul conto %{account} il %{date}. Clicca per verificare."
+      auto_matched_tooltip_hidden: "Una transazione su un conto che non puoi visualizzare."
     transaction:
       pending: In attesa
       pending_tooltip: Transazione in attesa — potrebbe cambiare alla registrazione
@@ -146,6 +207,12 @@ it:
       split: Suddivisa
       split_tooltip: Questa transazione è stata suddivisa in più voci
       split_child_tooltip: Parte di una transazione suddivisa
+      scheduled: "Programmato"
+      scheduled_tooltip: "Con data futura: non inciderà sul saldo fino ad allora"
+      transfer_hint: "Trasferimento?"
+      transfer_hint_dismiss: "Non è un trasferimento"
+      transfer_hint_tooltip: "Una transazione corrispondente su un altro conto sembra rappresentare l'altro lato di un trasferimento. Clicca per associarle."
+      view_merchant: "Visualizza esercente"
     merge_duplicate:
       success: Transazioni unite con successo
       failure: Impossibile unire le transazioni
@@ -154,7 +221,7 @@ it:
       failure: Impossibile ignorare il suggerimento di duplicato
     pending_duplicate_merge:
       possible_duplicate: Duplicato?
-      possible_duplicate_short: Dup?
+      possible_duplicate_short: "Dupl.?"
       review_recommended: Da rivedere
       review_recommended_short: Rev
       confirm_title: "Unisci con la transazione registrata (%{posted_amount})"
@@ -165,6 +232,9 @@ it:
       expenses: Spese
       inflow: Entrate
       outflow: Uscite
+      scheduled_count:
+        one: "inclusa %{count} transazione programmata"
+        other: "incluse %{count} programmate"
     header:
       edit_categories: Modifica categorie
       edit_imports: Modifica importazioni
@@ -227,6 +297,9 @@ it:
     toggle_recurring_section: Mostra/nascondi transazioni ricorrenti in arrivo
     search:
       filters:
+        reconcile_status_hint: "Sono inclusi solo i conti manuali."
+        reconcile_status: "Riconciliazione"
+        balance_updates: "Saldi"
         account: Conto
         date: Data
         type: Tipo
@@ -235,6 +308,8 @@ it:
         category: Categoria
         tag: Etichetta
         merchant: Esercente
+        ai: "IA"
+        attachment: "Allegato"
     convert_to_trade:
       title: Converti in operazione su titolo
       description: Converti questa transazione in un'operazione con dettagli del titolo
@@ -279,6 +354,11 @@ it:
         unexpected_error: "Errore imprevisto durante la conversione: %{error}"
     searches:
       filters:
+        balance_updates_filter:
+          show: "Mostra aggiornamenti dei saldi sincronizzati"
+          preferences_link: "Preferenze"
+          hint: "Solo per questa vista. Per mostrarli sempre, attivali in"
+          always_shown: "Sempre visibili, come impostato in"
         account_filter:
           filter_accounts: Filtra conti
         category_filter:
@@ -296,6 +376,7 @@ it:
           less_than: Minore di
           placeholder: '0'
         badge:
+          balance_updates: "Saldi sincronizzati"
           expense: Spesa
           income: Entrata
           on_or_after: dal %{date}
@@ -303,6 +384,10 @@ it:
           transfer: Bonifico
           confirmed: Confermata
           pending: In attesa
+          ai_current: "IA"
+          ai_history: "Cronologia IA"
+          attachment_with: "Con allegato"
+          attachment_without: "Senza allegato"
         type_filter:
           expense: Spesa
           income: Entrata
@@ -310,7 +395,17 @@ it:
         status_filter:
           confirmed: Confermata
           pending: In attesa
+        attachment_filter:
+          with: "Con allegato"
+          without: "Senza allegato"
+        ai_filter:
+          current: "IA"
+          current_description: "La categoria è ancora quella assegnata automaticamente (dall'IA o da Bayes)."
+          history: "Cronologia IA"
+          history_description: "La transazione è stata categorizzata automaticamente, ma la categoria è stata modificata in seguito."
       menu:
+        reconcile_status_filter: "Riconciliazione"
+        loading: "Caricamento dei filtri…"
         account_filter: Conto
         amount_filter: Importo
         apply: Applica
@@ -344,7 +439,10 @@ it:
       no_attachments: "Nessun allegato ancora"
       select_up_to: "Seleziona fino a %{count} file (immagini o PDF, max %{size}MB ciascuno) • %{used} di %{count} utilizzati"
       files:
-        one: "File (1)"
+        one: "1 file"
         other: "File (%{count})"
       browse_to_add: "Sfoglia per aggiungere file"
       max_reached: "Limite massimo di file raggiunto (%{count}/%{max}). Elimina un file esistente per caricarne un altro."
+
+    transaction_category:
+      set_on_outflow: "La categoria appartiene al movimento in uscita di questo trasferimento e può essere modificata soltanto da lì"

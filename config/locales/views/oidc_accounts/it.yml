@@ -37,6 +37,7 @@ it:
       submit: Crea account
       cancel: Annulla
     create_user:
+      duplicate_account: "Esiste già un account o un'identità di accesso con questi dati"
       no_pending_oidc: Nessuna autenticazione OIDC in sospeso trovata
       account_creation_disabled: La creazione di account SSO è disabilitata. Contatta un amministratore.
       account_created: "Benvenuto! Il tuo account è stato creato."

@@ -10,3 +10,10 @@ it:
         no_categories: Nessuna categoria trovata
         recent: Recenti
         search_placeholder: Cerca
+
+        assign_error: "La categoria è stata creata, ma non è stato possibile assegnarla. Seleziona nuovamente Crea per riprovare."
+        back: "Indietro"
+        choose_parent: "Crea «%{name}» sotto:"
+        create: "Crea «%{name}»"
+        create_as_subcategory: "Aggiungi come sottocategoria…"
+        create_error: "Impossibile creare la categoria. Riprova."

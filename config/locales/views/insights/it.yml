@@ -1,6 +1,12 @@
 ---
 it:
   insights:
+    fixed_commitments_ratio:
+      income_fell: "Le tue entrate mensili abituali sono diminuite da %{previous_income} a %{current_income}."
+      contributor:
+        raised: "%{name} (%{amount} in più al mese)"
+        new: "%{name} (nuovo impegno, %{amount} al mese)"
+      contributors: "Principali variazioni: %{list}."
     index:
       title: Insight
       subtitle: Scopri cosa succede alle tue finanze, con aggiornamenti notturni.
@@ -19,12 +25,28 @@ it:
       new: Nuovo
       dismissed: Insight ignorato
       undo: Annulla
+      dig_in: "Approfondisci con l’IA"
+    dig_in:
+      prompt: |-
+        Aiutami ad approfondire questa analisi.
+
+        Analisi: %{title}
+        Risultato individuato da Sure: %{body}
+        Periodo: %{period}
+        Dati:
+        %{facts}
+
+        Quali sono le cause e c'è qualcosa che dovrei fare?
     feed:
       acknowledge_aria: "Ricevuto: %{title}"
       view_all: Vedi tutti gli insight
       header: Più recenti
       header_new: Nuovo
     types:
+      fixed_commitments_ratio: "Impegni fissi"
+      bank_fees: "Commissioni"
+      loan_payment_change: "Rata del finanziamento"
+      bill_not_covered: "Scadenze"
       spending_anomaly: Spese
       cash_flow_warning: Flusso di cassa
       net_worth_milestone: Patrimonio netto
@@ -33,6 +55,7 @@ it:
       idle_cash: Liquidità inutilizzata
       budget_at_risk: Budget
       budget_on_track: Budget
+      maintained_goal_depleted: Riserva
     meta:
       next_n_days:
         one: Giorno successivo
@@ -42,6 +65,11 @@ it:
         other: Ultimi %{count} giorni
       date_range: "%{from} - %{to}"
     figures:
+      fee_charges:
+        other: "%{count} addebiti"
+        one: "%{count} addebito"
+      short_on: "fondi insufficienti il %{date}"
+      of_income: "delle entrate"
       need_attention: richiedono attenzione
       vs_previous_three_months: rispetto ai tre mesi precedenti
       today: oggi
@@ -54,6 +82,10 @@ it:
         one: inattivo da %{count} giorno
         other: inattivo da %{count} giorni
     actions:
+      fixed_commitments_ratio: "Controlla le transazioni ricorrenti"
+      bank_fees: "Visualizza commissioni"
+      loan_payment_change: "Visualizza finanziamento"
+      bill_not_covered: "Vai al conto"
       spending_anomaly: Vedi le transazioni di %{category}
       cash_flow_warning: Controlla le transazioni ricorrenti
       net_worth_milestone: Vedi il report sul patrimonio netto
@@ -61,7 +93,16 @@ it:
       savings_rate_change: Vedi le transazioni di quei mesi
       idle_cash: Vai al conto
       budget: Vedi il budget
+      maintained_goal_depleted: Vedi riserva
     titles:
+      fixed_commitments_ratio:
+        over_half: "Gli impegni fissi assorbono ormai almeno la metà delle tue entrate"
+        up: "Gli impegni fissi assorbono una quota crescente delle tue entrate"
+      bank_fees: "Commissioni su %{account}"
+      loan_payment_change:
+        down: "La rata di %{account} diminuirà"
+        up: "La rata di %{account} aumenterà"
+      bill_not_covered: "Il conto %{account} potrebbe non coprire %{name}"
       spending_anomaly:
         above: Le spese per %{category} sono in aumento
         below: Le spese per %{category} sono in calo
@@ -78,7 +119,16 @@ it:
         one: Una categoria del tuo budget richiede attenzione
         other: "%{count} categorie del tuo budget richiedono attenzione"
       budget_on_track: Il tuo budget è in linea
+      maintained_goal_depleted: '%{goal} è sceso sotto il suo livello'
     templates:
+      fixed_commitments_ratio: "Gli impegni ricorrenti di %{commitments} al mese assorbono il %{current_ratio}% delle tue entrate mensili abituali, pari a %{income}, rispetto al %{previous_ratio}% di sei mesi fa. %{explanation}"
+      bank_fees:
+        new: "Sul conto %{account} sono state addebitate commissioni per %{amount} negli ultimi %{days} giorni, mentre nei %{days} giorni precedenti non ne erano state addebitate."
+        recurring: "Sul conto %{account} sono state addebitate commissioni per %{amount} negli ultimi %{days} giorni."
+      loan_payment_change:
+        down: "La rata di %{account} passerà da %{previous_payment} a %{new_payment} il %{effective_on}, con una riduzione del %{change_pct}%, in base al piano del finanziamento e ai tassi registrati."
+        up: "La rata di %{account} passerà da %{previous_payment} a %{new_payment} il %{effective_on}, con un aumento del %{change_pct}%, in base al piano del finanziamento e ai tassi registrati."
+      bill_not_covered: "La scadenza %{name}, pari a %{amount}, è prevista per il %{due_on} sul conto %{account}. Considerando le altre scadenze e le entrate previste sul conto fino a quella data, mancheranno circa %{shortfall}."
       spending_anomaly:
         above: "Questo mese sei in linea per spendere %{projected_spend} per %{category}, circa il %{deviation_pct}% in più della recente media mensile di %{baseline_spend}."
         below: "Questo mese sei in linea per spendere %{projected_spend} per %{category}, circa il %{deviation_pct}% in meno della recente media mensile di %{baseline_spend}."
@@ -96,3 +146,8 @@ it:
         over: "%{categories} hanno superato il budget questo mese. Finora hai usato il %{budget_spent_pct}% del budget totale."
         near: "%{categories} sono vicine ai rispettivi limiti questo mese. Finora hai usato il %{budget_spent_pct}% del budget totale."
       budget_on_track: "Hai speso %{spent} del budget di %{budgeted} (%{budget_spent_pct}%) e tutto rientra nei limiti."
+
+      maintained_goal_depleted: '%{goal} contiene %{saved} dei %{target} che dovrebbe mantenere. Mancano %{missing}.'
+    notification:
+      title: Nuovo insight finanziario
+      body: Apri Sure per consultare il tuo ultimo insight IA.

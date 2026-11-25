@@ -1,0 +1,35 @@
+---
+it:
+  providers:
+    terrascoutx:
+      errors:
+        insecure_url: "TERRASCOUTX_URL deve utilizzare https://."
+        location_mismatch: "TerraScoutX ha trovato un immobile con un numero civico o un CAP diverso. Verifica l'indirizzo."
+        no_valuation: "TerraScoutX non ha restituito una valutazione per questo immobile."
+        no_property: "TerraScoutX non ha trovato un immobile corrispondente a questo indirizzo."
+    truelayer:
+      description: "Collega la tua banca britannica tramite TrueLayer"
+    property_valuation:
+      not_configured: "Questo fornitore di dati immobiliari non è configurato."
+      missing_fields: "Inserisci un nome e un indirizzo statunitense completo (via, città, stato e CAP)."
+      missing_fields_gb: "Inserisci un nome, l'indirizzo, il codice postale e l'UPRN dell'immobile."
+      preview_expired: "L'anteprima dell'immobile è scaduta. Cerca di nuovo l'indirizzo."
+      entry_name: "Valutazione di %{provider}"
+    rentcast:
+      errors:
+        no_valuation: "RentCast non ha restituito una stima di valore per questo indirizzo."
+        not_found: "RentCast non ha trovato un immobile corrispondente a questo indirizzo."
+    realie:
+      errors:
+        no_property: "Realie non ha restituito un immobile per questo indirizzo."
+        no_valuation: "Realie non ha restituito una valutazione per questo immobile."
+        not_found: "Realie non ha trovato un immobile corrispondente a questo indirizzo."
+        location_mismatch: "Realie ha trovato un immobile in un'altra città o con un CAP diverso. Ricontrolla l'indirizzo."
+    chimnie:
+      errors:
+        invalid_uprn: "Un UPRN può contenere fino a 12 cifre. Controllalo e riprova."
+        no_estimate: "Chimnie non dispone di una stima del valore di questo immobile."
+        not_found: "Chimnie non ha trovato un immobile con questo UPRN."
+        unsupported_property: "Chimnie valuta solo immobili residenziali: questo UPRN appartiene a un immobile commerciale o a uso misto."
+        unauthorized: "Chimnie ha rifiutato la chiave API. Controllala in Impostazioni → Self-hosting."
+        insufficient_balance: "Il saldo del tuo account Chimnie è insufficiente per questa richiesta."

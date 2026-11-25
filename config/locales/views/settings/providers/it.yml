@@ -13,7 +13,7 @@ it:
         ok: Connesso
         warn: Azione richiesta
         err: Errore
-        off: Non configurato
+        "off": Non configurato
       maturity:
         beta: Beta
         alpha: Alpha
@@ -65,13 +65,26 @@ it:
         sophtron: Connetti banche e utility USA e canadesi.
         plaid: Connetti migliaia di istituti finanziari USA tramite Plaid.
         plaid_eu: Connetti istituti finanziari europei tramite Plaid (PSD2 / Open Banking).
+        financekit: "Sincronizza alcuni conti FinanceKit tramite l'app Sure per iOS."
+        redbark: "Sincronizza conti bancari australiani tramite l'open banking Redbark."
+        up: "Sincronizza i conti della banca australiana Up con un token di accesso personale."
+        monobank: "Sincronizza carte e salvadanai della banca ucraina Monobank con un token API personale."
+        fio: "Sincronizza un conto Fio banka usando un token API di sola lettura."
+        truelayer: "Sincronizza conti bancari e carte di credito britannici tramite l'open banking TrueLayer."
+        wise: "Sincronizza automaticamente saldi multivaluta e trasferimenti internazionali Wise."
+        coinspot: "Sincronizza saldi CoinSpot, valori in AUD, trasferimenti, depositi, prelievi e ordini precedenti con una chiave API di sola lettura."
+        onchain_wallet: "Monitora portafogli Bitcoin, EVM, Solana, Cosmos e Polkadot a custodia autonoma tramite gli indirizzi pubblici."
+        trading212: "Sincronizza il tuo portafoglio di investimenti Trading 212 con una chiave API di sola lettura."
+        sharesight: "Sincronizza i portafogli monitorati in Sharesight tramite la sua API."
+        trade_republic: "Sincronizza il conto investimenti Trade Republic con un accesso web sicuro in sola lettura."
+        questrade: "Sincronizza direttamente i tuoi conti di investimento Questrade tramite l'API Questrade."
       search_filters:
         aria_label: Cerca provider
         placeholder: Cerca provider
         chips:
           all: Tutti
           bank: Banche
-          crypto: Crypto
+          crypto: "Criptovalute"
           investment: Investimenti
       empty_filter: Nessun provider corrisponde al filtro.
       clear_filter: Rimuovi filtri
@@ -180,6 +193,8 @@ it:
         base_url_placeholder: "https://lunchflow.app/api/v1 (predefinito)"
         save_and_connect: "Salva e connetti"
         update_connection: "Aggiorna connessione"
+        sync_start_date_label: "Importa transazioni a partire dal"
+        sync_start_date_help: "Lascia vuoto per importare tutti i dati disponibili in Lunch Flow. Anticipando la data, il periodo mancante verrà importato alla prossima sincronizzazione. Posticipandola, le transazioni già importate non cambieranno."
       akahu_panel:
         step_1_html: "Vai su %{link} e crea un'app personale."
         step_2: "Copia il token dell'app e il token utente."
@@ -259,3 +274,171 @@ it:
         token_placeholder_existing: Lascia vuoto per mantenere il Token attuale
         update_configuration: Aggiorna configurazione
         not_configured: Non configurato.
+
+      drawer_trust_statement_encryption_unconfigured: "Accesso in sola lettura. Sure non può trasferire denaro. Configura chiavi di crittografia esplicite prima di salvare credenziali dei provider in produzione."
+      provider_setup_encryption_warning:
+        title: "Chiavi di crittografia mancanti"
+        message: "Questa installazione self-hosted non dispone di chiavi di crittografia Active Record esplicite. Configura primary_key, deterministic_key e key_derivation_salt prima di salvare credenziali dei provider in produzione."
+      financekit:
+        app_store: "App Store"
+        coming_soon: "Prossimamente!"
+        description: "Gestisci le connessioni Apple Wallet nell'app Sure per iOS. I dati del Wallet vengono sincronizzati mentre l'app è aperta; la sincronizzazione automatica in background non è ancora disponibile."
+        summary: "Sincronizzazione Wallet"
+        accounts: "Conti collegati"
+        linked_accounts:
+          one: "1 conto collegato"
+          other: "%{count} conti collegati"
+        status:
+          active: "Sincronizzazione attiva"
+          repair_required: "È necessario ripristinare la connessione — apri l'app Sure per iOS"
+        last_accepted_at: "Ultima acquisizione da Sure"
+        last_imported_at: "Ultima importazione nel gruppo familiare"
+        not_yet: "Non ancora"
+      coinspot_panel:
+        step1_html: "Vai alle <a href=\"https://www.coinspot.com.au/my/api\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">impostazioni API CoinSpot</a>"
+        step2: "Crea una chiave API con accesso in sola lettura a saldi e cronologia."
+        step3: "Incolla qui sotto la chiave API e il segreto."
+        read_only_title: "Solo sincronizzazione in sola lettura dell'exchange"
+        read_only_body: "Non concedere permessi per invio, prelievi, negoziazione o trasferimenti. Sure importa soltanto saldi, valori in AUD, trasferimenti, depositi, prelievi e cronologia degli ordini completati."
+        default_connection_name: "CoinSpot"
+        add_connection: "Aggiungi connessione CoinSpot"
+        update_connection: "Aggiorna connessione"
+        connection_name_label: "Nome della connessione"
+        connection_name_placeholder: "CoinSpot principale"
+        api_key_label: "Chiave API"
+        api_key_placeholder: "Incolla la chiave API CoinSpot"
+        keep_api_key_placeholder: "Lascia vuoto per mantenere la chiave API esistente"
+        api_secret_label: "Segreto API"
+        api_secret_placeholder: "Incolla il segreto API CoinSpot"
+        keep_api_secret_placeholder: "Lascia vuoto per mantenere il segreto API esistente"
+        setup_accounts: "Configura conto"
+        syncing: "Sincronizzazione in corso..."
+        sync: "Sincronizza"
+        disconnect: "Disconnetti"
+        disconnect_confirm: "Vuoi davvero disconnettere %{name}?"
+      onchain_wallet_panel:
+        add_wallet: "Aggiungi portafoglio"
+        advanced: "Avanzate"
+        disconnect_all: "Disconnetti tutti i portafogli"
+        disconnect_all_confirm: "Questa operazione rimuove tutti gli indirizzi monitorati e i relativi conti. Continuare?"
+        etherscan_api_key_label: "Chiave API Etherscan (facoltativa)"
+        etherscan_api_key_placeholder: "Incolla una chiave API Etherscan"
+        etherscan_hint: "I dati Ethereum sono accessibili senza una chiave. Una chiave Etherscan aumenta soltanto il limite di richieste per Ethereum."
+        keep_etherscan_api_key: "Lascia vuoto per mantenere la chiave esistente"
+        manage_wallets: "Gestisci portafogli"
+        keyless_body: "Sure legge esclusivamente dati pubblici della blockchain. Non servono chiavi private, frasi di recupero o firme e non è possibile spendere fondi."
+        keyless_title: "Sola lettura, senza chiavi"
+        save: "Salva"
+        sync_start_date_hint: "I trasferimenti precedenti a questa data vengono ignorati. Lascia vuoto per importare tutto ciò che l'explorer restituisce."
+        sync_start_date_label: "Ignora i trasferimenti precedenti al"
+      monobank_panel:
+        step_1_html: "Vai su %{link}, accedi tramite l'app Monobank e genera un token personale."
+        step_2: "Copia il token: viene mostrato una sola volta."
+        step_3: "Incolla qui sotto il token, salvalo e collega le carte e i salvadanai che desideri monitorare."
+      fio_panel:
+        step_1_html: "Accedi all'internet banking su %{link} e apri Impostazioni → API."
+        step_2: "Crea un token di sola lettura («Sledování účtu»). Richiede un'autorizzazione forte e dura al massimo 180 giorni."
+        step_3: "Incolla qui sotto il token e salva. Un token dà accesso a un solo conto: aggiungi una connessione per ogni conto Fio."
+      trade_republic_panel:
+        encryption_warning:
+          title: "La crittografia non è configurata"
+          message: "Le credenziali Trade Republic e i dati di sessione non possono essere conservati in modo sicuro finché non viene configurata la crittografia Active Record."
+        steps:
+          step_1: "Inserisci il numero di telefono e il PIN o la password che usi nell'app Trade Republic, quindi salva."
+          step_2: "Inserisci il codice dell'app di autenticazione quando richiesto."
+          step_3: "Approva l'accesso nell'app Trade Republic quando richiesto."
+        phone_number_label: "Numero di telefono"
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: "Lascia vuoto per mantenere il numero di telefono attuale"
+        pin_label: "PIN o password"
+        pin_placeholder_new: "Il PIN o la password di Trade Republic"
+        pin_placeholder_existing: "Lascia vuoto per mantenere il PIN o la password attuale"
+        currency_label: "Valuta del conto"
+        connect: "Accedi"
+        confirm_login: "Verifica accesso"
+        complete_login: "Continua"
+        authenticator_code_label: "Codice di autenticazione (se richiesto)"
+        authenticator_code_placeholder: "Codice a 6 cifre"
+        push_login_notice: "Approva ora l'accesso nell'app Trade Republic. Sure verifica automaticamente in background. Puoi anche controllare lo stato manualmente."
+        check_login_status: "Controlla ora lo stato"
+        authenticator_code_notice: "Inserisci il codice dell'app di autenticazione."
+        approval_pending: "Accesso avviato. Approva l'accesso nell'app Trade Republic; Sure sta verificando automaticamente."
+        awaiting_confirmation: "In attesa di approvazione nell'app Trade Republic."
+        awaiting_authenticator_code: "Codice di autenticazione richiesto."
+        login_expired: "La richiesta di approvazione è scaduta."
+        restart_login: "Avvia nuovamente l'accesso"
+        connection_success:
+          title: "Trade Republic collegato correttamente"
+          message: "La connessione a Trade Republic è pronta."
+          description: "Sure sta sincronizzando i dati Trade Republic in background."
+          close: "Fine"
+        qr_login: "Accedi con codice QR"
+        qr_cancel: "Annulla accesso con QR"
+        qr_back_to_credentials: "Torna a numero di telefono e PIN o password"
+        qr_loading: "Preparazione del codice QR…"
+        qr_instruction: "Scansiona il codice QR con la fotocamera del telefono, poi approva l'accesso nell'app Trade Republic."
+        qr_success: "Accesso approvato. Sure sta aggiornando la pagina del provider."
+        qr_error: "Impossibile avviare l'accesso con QR. Riprova."
+        requires_update: "Accedi nuovamente per riprendere la sincronizzazione."
+        session_expires_in: "L'accesso scade tra %{time} (%{at})."
+        add_account: "Aggiungi un'altra connessione"
+        save_configuration: "Salva e avvia accesso"
+        update_configuration: "Aggiorna configurazione"
+        sync: "Sincronizza"
+        syncing: "Sincronizzazione in corso..."
+        disconnect: "Disconnetti Trade Republic"
+        disconnect_confirm: "Disconnettere Trade Republic? I conti sincronizzati diventeranno conti manuali."
+        disconnect_confirm_with_identifier: "Disconnettere la connessione Trade Republic che termina con %{last4}? I conti sincronizzati diventeranno conti manuali."
+        identifier_phone: "Telefono"
+        identifier_account: "Conto"
+        status_configured_prefix: "Connesso. Apri la scheda"
+        accounts_tab: "Conti"
+        setup_accounts: "Configura conti"
+        accounts_discovered:
+          one: "Rilevato 1 conto Trade Republic."
+          other: "Rilevati %{count} conti Trade Republic."
+        status_configured_suffix: "per gestire i conti rilevati."
+        not_configured: "Non configurato."
+      sharesight_panel:
+        steps:
+          step_1: "Chiedi all'assistenza Sharesight di abilitare l'accesso API. È disponibile con i piani a pagamento."
+          step_2: "Nelle impostazioni del tuo account Sharesight, apri la pagina API e copia l'ID client e il segreto client."
+          step_3: "Incollali entrambi qui sotto e salva. Sure rileverà i tuoi portafogli per consentirti di collegarli."
+        client_id_label: "ID client"
+        client_id_placeholder_new: "Incolla l'ID client Sharesight"
+        client_id_placeholder_existing: "Lascia vuoto per mantenere l'ID client attuale"
+        client_secret_label: "Segreto client"
+        client_secret_placeholder_new: "Incolla il segreto client Sharesight"
+        client_secret_placeholder_existing: "Lascia vuoto per mantenere il segreto client attuale"
+        save_configuration: "Salva configurazione"
+        update_configuration: "Aggiorna configurazione"
+        status_configured_prefix: "Configurato. Apri la scheda"
+        accounts_tab: "Conti"
+        status_configured_suffix: "per collegare i portafogli."
+      trading212_panel:
+        steps:
+          step_1: "Vai su Trading 212 → Impostazioni → API (sito web o app)."
+          step_2: "Genera una nuova chiave API: Trading 212 mostrerà un ID API e una chiave segreta."
+          step_3: "Incollali entrambi qui sotto, seleziona l'ambiente e la valuta del conto, poi salva."
+        api_key_label: "ID API"
+        api_key_placeholder_new: "Incolla l'ID API Trading 212"
+        api_key_placeholder_existing: "Lascia vuoto per mantenere l'ID API attuale"
+        api_secret_label: "Chiave segreta"
+        api_secret_placeholder_new: "Incolla la chiave segreta Trading 212"
+        api_secret_placeholder_existing: "Lascia vuoto per mantenere la chiave segreta attuale"
+        environment_label: "Ambiente"
+        environment_live: "Conto reale"
+        environment_demo: "Conto demo"
+        currency_label: "Valuta del conto"
+        save_configuration: "Salva configurazione"
+        update_configuration: "Aggiorna configurazione"
+        sync: "Sincronizza"
+        syncing: "Sincronizzazione in corso..."
+        disconnect: "Disconnetti conto Trading 212"
+        disconnect_confirm: "Disconnettere Trading 212?"
+        default_account_name: "Conto Trading 212"
+        add_account: "Aggiungi un altro conto"
+        status_configured_prefix: "Configurato. Apri la scheda"
+        accounts_tab: "Conti"
+        status_configured_suffix: "per gestire i conti rilevati."
+        not_configured: "Non configurato."

@@ -70,14 +70,45 @@ it:
           holdings_value: Valore posizioni
           remaining_principal_balance: Saldo capitale residuo
           total_account_value: Valore totale del conto
+          total_gains: Guadagni totali
+          loan_remaining_balance: "Saldo residuo"
         views:
           cash: Liquidità
           holdings: Posizioni
           total_value: Valore totale
+          gains: Guadagni / ROI
         vs_available_history: vs. cronologia disponibile
+        loan:
+          actual: "Saldo registrato"
+          scheduled: "Piano di rimborso originale"
+          projected: "Proiezione da oggi"
+          today: "Oggi"
+          interactive_chart: "grafico interattivo"
+          no_payoff: "non viene estinto con il rimborso attuale"
+          aria_description: "Grafico del saldo del prestito. Saldo registrato %{current_balance}. Estinzione prevista dal piano originale: %{scheduled_payoff_date}. Estinzione stimata dal saldo attuale: %{projected_payoff_date}."
+          aria_extra_payoff: "Estinzione prevista con il rimborso aggiuntivo: %{date}."
+          extra: "Con rimborso aggiuntivo"
+          aria_actual_history_starts: "La cronologia del saldo registrato inizia il %{date}."
+          aria_interest_share: "Nei rimborsi del primo anno circa il %{first}% dell'importo pagato è costituito da interessi; nell'ultimo anno circa il %{last}%."
+          aria_interest_share_overall: "Considerando tutti i rimborsi, circa il %{share}% dell'importo pagato è costituito da interessi."
+          aria_composition: "Il suggerimento di ogni pagamento programmato distingue %{principal} e %{interest}."
+          interest_share: "Quota interessi"
+          principal_share: "Quota capitale"
+          projected_payoff: "Estinzione prevista"
+          months_saved:
+            one: "%{count} mese prima del previsto"
+            other: "%{count} mesi prima del previsto"
+          on_schedule: "In linea con il piano"
+          interest_saved: "Interessi risparmiati"
+          not_converged: "Con il rimborso attuale, questo saldo non verrà estinto entro la scadenza originale; rimarrebbero da pagare %{balloon}."
+          projection_basis: "Confronta il saldo registrato oggi con quello previsto dal piano per lo stesso giorno. Un pagamento contabilizzato prima della data programmata appare in anticipo fino a tale data; uno contabilizzato dopo appare in ritardo."
+          legend: "Serie del grafico"
+          since_start: "dall'inizio del prestito"
       activity_date:
         balance_tooltip: "Il saldo a fine giornata, dopo tutte le transazioni e rettifiche"
         no_balance_data: "Nessun dato di saldo disponibile per questa data"
+        projected: "Previsto"
+        projected_balance_tooltip: "Una stima: saldo attuale più movimenti programmati fino a questa data"
   ds:
     alert:
       variants:
@@ -97,6 +128,9 @@ it:
       trigger_label: Ulteriori informazioni
     link:
       opens_in_new_tab: (si apre in una nuova scheda)
+    icon_picker:
+      no_matching_icons: Nessuna icona corrispondente
+      search_placeholder: Cerca icone...
   provider_sync_summary:
     title: Riepilogo sincronizzazione
     last_sync: "Ultima sincronizzazione: %{time_ago} fa"

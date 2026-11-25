@@ -1,0 +1,12 @@
+---
+it:
+  activerecord:
+    attributes:
+      property:
+        cost_tag: Tag dei costi
+    errors:
+      models:
+        property:
+          attributes:
+            cost_tag:
+              other_family: deve essere uno dei tuoi tag

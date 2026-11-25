@@ -13,5 +13,69 @@ it:
       expiration_date: Data di scadenza
       minimum_payment: Pagamento minimo
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automatico
+      simplefin_balance_sign_credit: Credito (la banca ti deve denaro)
+      simplefin_balance_sign_debt: Debito (devi denaro alla banca)
+      simplefin_balance_sign_description: Usa una forzatura solo quando SimpleFIN riporta un segno ambiguo. Automatico continua a usare la cronologia delle transazioni e il saldo del provider.
+      simplefin_balance_sign_label: Significato del saldo SimpleFIN
+      treat_balance_as_available_credit_description: Attiva se la tua banca riporta il saldo di questa carta come credito disponibile residuo anziché come importo dovuto. Il debito viene quindi ricavato dal limite di credito riportato dalla banca, oppure dal campo Credito disponibile se la banca non lo fornisce.
+      treat_balance_as_available_credit_label: Il saldo è il credito disponibile
+      due_day: "Giorno di scadenza del pagamento"
+      statement_close_day: "Chiusura dell'estratto conto"
+      statement_cycle_description: "Il giorno del mese in cui si chiude l'estratto conto e quello in cui scade il pagamento. Una volta impostati, la scheda Panoramica mostra il totale dell'ultimo estratto conto e gli importi in accumulo per il successivo. Le carte collegate compilano automaticamente queste informazioni e conservano le modifiche manuali."
+      sophtron_balance_sign_auto: "Automatico"
+      sophtron_balance_sign_credit: "Credito (la banca ti deve denaro)"
+      sophtron_balance_sign_debt: "Debito (devi denaro alla banca)"
+      sophtron_balance_sign_description: "Modifica l'impostazione solo se Sophtron riporta un segno ambiguo. La modalità automatica continua a invertire il segno dei saldi delle carte di credito."
+      sophtron_balance_sign_label: "Significato del saldo Sophtron"
     new:
       title: Inserisci i dettagli della carta di credito
+
+    due:
+      in_days:
+        zero: "Scade oggi"
+        one: "Scade domani"
+        other: "Scade tra %{count} giorni"
+      overdue:
+        one: "Scaduta ieri"
+        other: "Scaduta da %{count} giorni"
+    tabs:
+      overview:
+        payments_applied: "Pagamenti contabilizzati"
+        due_on_days:
+          other: "Scadenza: %{date} (tra %{count} giorni)"
+          one: "Scadenza: %{date} (tra 1 giorno)"
+          zero: "Scadenza: %{date} (oggi)"
+        due_overdue_days:
+          other: "Scadenza: %{date} (%{count} giorni di ritardo)"
+          one: "Scadenza: %{date} (1 giorno di ritardo)"
+        closes_on_days:
+          other: "Chiusura estratto conto: %{date} (tra %{count} giorni)"
+          one: "Chiusura estratto conto: %{date} (tra 1 giorno)"
+          zero: "Chiusura estratto conto: %{date} (oggi)"
+        balance_updates: "Aggiornamenti del saldo"
+        above_minimum: "Il totale di questo estratto conto è %{balance}, superiore al pagamento minimo di %{minimum}."
+        annual_percentage_rate: "Tasso annuo effettivo"
+        apr: "TAEG"
+        balance_carried_label: "Saldo riportato"
+        charges: "Addebiti"
+        estimated_interest_label: "Interessi stimati"
+        monthly_rate_label: "Tasso mensile"
+        per_month: "%{amount}/mese"
+        closes_on: "Il prossimo estratto conto si chiude il %{date}"
+        credit_toward_next: "Credito per il prossimo estratto conto"
+        due_on: "Scadenza: %{date}"
+        edit_card_details: "Modifica dettagli della carta"
+        payments_credits: "Pagamenti/accrediti"
+        remaining_due: "Importo residuo da pagare: %{amount}"
+        scheduled_payment: "Pagamento programmato di %{amount} il %{date}"
+        since_last_statement: "Dall'ultimo estratto conto"
+        statement_balance: "Saldo dell'estratto conto"
+        status_paid: "Pagato"
+        status_partial: "Pagato parzialmente"
+        multi_currency_unavailable: "Questo estratto conto somma movimenti registrati in più valute, che non possono essere totalizzati senza un tasso di cambio per ciascuna. I saldi vengono lasciati vuoti anziché stimati."
+        no_cycle_description: "Imposta il giorno di chiusura dell'estratto conto e quello di scadenza del pagamento: questa scheda mostrerà il totale dell'ultimo estratto conto e quello in accumulo per il successivo. Di norma, una carta collegata compila automaticamente questi dati."
+        no_cycle_title: "Ciclo dell'estratto conto non impostato"
+        unknown: "Sconosciuto"
+    update:
+      sophtron_balance_sign_error: "Impossibile applicare il significato del saldo Sophtron."

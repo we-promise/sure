@@ -4,6 +4,8 @@ it:
     no_action: Nessuna azione
     no_condition: Nessuna condizione
     rule:
+      apply_immediately_hint: "Viene eseguita anche subito dopo la creazione o la modifica di una transazione, manualmente, in blocco, nella funzione Categorizza, tramite API o tramite l'assistente, insieme alle regole attive che la precedono."
+      apply_immediately: "Immediatamente"
       edit: Modifica
       re_apply_rule: Riapplica regola
       delete: Elimina
@@ -17,7 +19,11 @@ it:
       action_label_to: "%{label} a %{value}"
       all_past_and_future: Tutti i %{resource} passati e futuri
       on_or_after: "%{resource} dal %{date} in poi"
+      stop_processing: "Interrompi"
+      stop_processing_hint: "Le regole successive non modificano le transazioni corrispondenti a questa regola."
     form:
+      apply_immediately_description: "Viene eseguita subito dopo la creazione o la modifica di una transazione, manualmente, in blocco, nella funzione Categorizza, tramite API o tramite l'assistente, oltre alla normale esecuzione notturna."
+      apply_immediately_label: "Applica subito alle transazioni nuove e modificate"
       rule_name_label: Nome regola (opzionale)
       rule_name_placeholder: Inserisci un nome per questa regola
       add_condition: Aggiungi condizione
@@ -26,6 +32,14 @@ it:
       all_past_and_future: Tutti i %{resource} passati e futuri
       starting_from: A partire da
       then: ALLORA
+      stop_processing_label: "Interrompi l'elaborazione delle regole successive"
+      stop_processing_description: "Le regole più in basso nell'elenco non modificano le transazioni corrispondenti a questa regola."
+      group_label: "Gruppo (facoltativo)"
+      group_select_label: "Gruppo"
+      no_group: "Nessun gruppo"
+      new_group_label: "Oppure crea un gruppo"
+      new_group_placeholder: "Nome del nuovo gruppo"
+      group_hint: "I gruppi servono soltanto a organizzare l'elenco. Una regola appartenente a un gruppo viene eseguita nella posizione occupata dal gruppo nell'elenco."
     index:
       page_title: Regole
       delete_all_rules: Elimina tutte le regole
@@ -34,6 +48,18 @@ it:
       rules_heading: Regole
       no_rules_title: Nessuna regola ancora
       no_rules_description: Configura regole per eseguire azioni sulle tue transazioni e altri dati ad ogni sincronizzazione del conto.
+      sort_by: "Ordina per:"
+      sort_name: Nome
+      sort_updated_at: Data aggiornamento
+      toggle_sort_direction: Cambia direzione ordinamento
+      order_hint: "Le regole vengono eseguite dall'alto verso il basso, comprese quelle nei gruppi. Quando una regola imposta un campo di una transazione, le regole successive non modificano quel campo. Ogni regola corrispondente aggiunge le proprie etichette. Trascina regole e gruppi per cambiarne l'ordine."
+      new_group: "Nuovo gruppo"
+      reorder_group: "Sposta il gruppo %{name}. Premi Invio o Spazio per selezionarlo, quindi usa i tasti freccia per spostarlo."
+      filters:
+        no_matches: "Nessuna regola corrisponde alla ricerca o ai filtri."
+        drag_disabled: "Il riordino non è disponibile durante una ricerca o quando sono attivi dei filtri. Reimpostali per cambiare l'ordine."
+      fold_rule: "Espandi o comprimi la regola %{name}"
+      reorder_rule: "Sposta la regola %{name}. Premi Invio o Spazio per selezionarla, quindi usa i tasti freccia per spostarla."
     confirm:
       title: Conferma modifiche
       title_with_name: "Conferma modifiche a \"%{name}\""
@@ -46,8 +72,28 @@ it:
       cost_warning: Potrebbero verificarsi dei costi, consulta il provider del modello per i prezzi più aggiornati.
       view_usage_history: Vedi cronologia utilizzo
       confirm_changes: Conferma modifiche
+      rules_above_notice:
+        one: "La regola attiva precedente viene eseguita per prima, quindi il risultato è lo stesso dell'esecuzione completa."
+        other: "Le %{count} regole attive precedenti vengono eseguite per prime, quindi il risultato è lo stesso dell'esecuzione completa."
     actions:
       value_placeholder: Inserisci un valore
+      to_label: a
+      split:
+        type_fixed: "Importo fisso"
+        type_percentage: "Percentuale"
+        type_label: "Tipo di suddivisione"
+        add_split: "Aggiungi suddivisione"
+        name_placeholder: "Nome della suddivisione"
+        share_label: "Importo o percentuale della suddivisione"
+        category_label: "Categoria della suddivisione"
+        merchant_label: "Esercente della suddivisione"
+        tags_label: "Etichette della suddivisione"
+        remove_split: "Rimuovi suddivisione"
+        hint: "Le suddivisioni a importo fisso vengono sottratte per prime, come importi esatti. Quelle in percentuale ripartiscono l'importo rimanente. Se tutte le suddivisioni hanno importo fisso, aggiungi anche una condizione che corrisponda a un importo esatto della transazione (es. Importo = 42,00), perché ogni transazione corrispondente deve avere lo stesso totale. Una regola di suddivisione non può avere altre azioni."
+        fixed_summary_label: "fisso"
+        summary:
+          one: "%{count} suddivisione"
+          other: "%{count} suddivisioni"
     update:
       success: Regola aggiornata
     destroy:
@@ -82,6 +128,7 @@ it:
           modified: Modificate
           blocked: Bloccate
       execution_types:
+        immediate: "Immediata"
         manual: Manuale
         scheduled: Pianificata
       statuses:
@@ -95,11 +142,82 @@ it:
       confirm_button: Reimposta cache
       success: La cache AI è in fase di svuotamento. Potrebbe richiedere alcuni istanti.
     condition_filters:
+      transaction_additional_detail:
+        label: "Dettagli aggiuntivi (chiave=valore)"
       transaction_type:
         income: Entrata
         expense: Spesa
         transfer: Bonifico
         equal_to: Uguale a
+      operators:
+        contains: Contiene
+        does_not_contain: Non contiene
+        equal_to: Uguale a
+        is_equal_to: È uguale a
+        not_equal_to: Diverso da
+        is_empty: È vuoto
+        is_not_empty: Non è vuoto
+        greater_than: Maggiore di
+        greater_or_equal_to: Maggiore o uguale a
+        less_than: Minore di
+        less_than_or_equal_to: Minore o uguale a
+        starts_with: "Inizia con"
+        ends_with: "Termina con"
+        matches_regex: "Corrisponde all'espressione regolare"
+    notification_baseline_timed_out: "Questa regola è ancora disattivata. La verifica delle transazioni già corrispondenti ha richiesto troppo tempo e, senza questo controllo, verrebbe inviata un'email per ciascuna. Semplifica le condizioni e riattivala."
+    category_rule_cta:
+      turn_off_suggestions: "Disattiva i suggerimenti di regole"
+      not_today: "Non oggi"
+      close: "Chiudi"
+      create_rule: "Crea regola"
+      description: "Puoi creare una regola per categorizzare automaticamente transazioni come questa"
+      dont_show_again: "Non mostrare più"
+      hide_for_today: "Nascondi per oggi"
+      hide_for_today_hint: "Nascondendo per oggi, questi suggerimenti vengono sospesi per 24 ore."
+      message: "Aggiornata a %{category_name}"
+    classifier_rules:
+      category_classifier: "Classificatore di categorie"
+      merchant_matcher: "Rilevatore di esercenti"
+    filters:
+      search_label: "Cerca regole"
+      search_placeholder: "Cerca per nome, condizioni e azioni"
+      reset: "Reimposta"
+      button: "Filtra"
+      done: "Fine"
+      active_label: "Filtri attivi"
+      remove: "Rimuovi filtro %{filter}"
+      status:
+        label: "Stato"
+        all: "Tutti gli stati"
+        active: "Attive"
+        inactive: "Inattive"
+      action_type:
+        label: "Azione"
+        all: "Tutte le azioni"
+      condition_type:
+        label: "Condizione"
+        all: "Tutte le condizioni"
+      account:
+        label: "Conto"
+        all: "Tutti i conti"
+      group:
+        label: "Gruppo"
+        all: "Tutti i gruppi"
+        none: "Nessun gruppo"
+    group:
+      rules_count:
+        one: "1 regola"
+        other: "%{count} regole"
+      inactive_count:
+        one: "1 inattiva"
+        other: "%{count} inattive"
+      empty: "Non ci sono ancora regole in questo gruppo. Seleziona il gruppo nel modulo di una regola."
+      activate_all: "Attiva tutte le regole"
+      deactivate_all: "Disattiva tutte le regole"
+      rename: "Rinomina"
+      delete: "Elimina gruppo"
+      delete_confirm_title: "Eliminare il gruppo «%{name}»?"
+      delete_confirm_body: "Le regole rimarranno al loro posto, senza gruppo. Nessuna regola verrà eliminata."
   rule:
     conditions:
       condition_group:
@@ -109,3 +227,6 @@ it:
         any: almeno una
         of_the_following_conditions: delle seguenti condizioni
         add_condition: Aggiungi condizione
+
+      condition:
+        value_placeholder: Inserisci un valore
