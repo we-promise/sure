@@ -1,7 +1,8 @@
 require "test_helper"
 
 # A zero-amount Transfer trade moves a position in or out without cash. Its
-# value is a non-cash flow, not a market move, when its price says what it is.
+# value is a non-cash flow, not a market move: the value the holdings give the
+# position that day, so the day's market movement is what is left.
 class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
   include LedgerTestingHelper
 
@@ -34,28 +35,39 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
     calculated.find { |balance| balance.date == date }
   end
 
-  test "forward: a priced transfer in is a non-cash inflow at its quantity times its price" do
+  test "forward: a transfer in is a non-cash inflow at the holdings' price for the day, not the trade's" do
     account = forward_account
     add_trade(account, qty: 10, price: 95)
 
     day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
 
-    assert_equal 950, day.non_cash_inflows
+    assert_equal 1000, day.non_cash_inflows
     assert_equal 0, day.non_cash_outflows
     assert_equal 0, day.cash_outflows
-    assert_equal 50, day.net_market_flows
+    assert_equal 0, day.net_market_flows
     assert_equal 5000, day.cash_balance
     assert_equal 6000, day.balance
   end
 
-  test "forward: a transfer without a price keeps its value in market movement" do
+  test "forward: a transfer with no price of its own is valued at the holdings' price too" do
     account = forward_account
     add_trade(account, qty: 10, price: 0)
 
     day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
 
-    assert_equal 0, day.non_cash_inflows
-    assert_equal 1000, day.net_market_flows
+    assert_equal 1000, day.non_cash_inflows
+    assert_equal 0, day.net_market_flows
+  end
+
+  test "forward: transfers in at different prices, one of them none, are valued alike" do
+    account = forward_account
+    add_trade(account, qty: 6, price: 90)
+    add_trade(account, qty: 4, price: 0)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 1000, day.non_cash_inflows
+    assert_equal 0, day.net_market_flows
   end
 
   test "forward: a zero-amount trade with another label is unchanged" do
@@ -68,17 +80,51 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
     assert_equal 1000, day.net_market_flows
   end
 
-  test "forward: a transfer in another currency is valued at its own exchange rate" do
+  test "forward: a transfer in another currency is valued at the holdings' price, not at its own rate" do
     account = forward_account
     add_trade(account, qty: 10, price: 80, currency: "EUR", exchange_rate: 1.2)
 
     day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
 
-    assert_equal 960, day.non_cash_inflows
-    assert_equal 40, day.net_market_flows
+    assert_equal 1000, day.non_cash_inflows
+    assert_equal 0, day.net_market_flows
   end
 
-  test "reverse: a priced transfer in is a non-cash inflow" do
+  test "forward: holdings in another currency than the account's are converted as their value is" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      holdings: [
+        { date: transfer_day, ticker: "AAPL", qty: 10, price: 100, amount: 1000, currency: "EUR" },
+        { date: Date.current, ticker: "AAPL", qty: 10, price: 100, amount: 1000, currency: "EUR" }
+      ]
+    )
+    [ transfer_day, Date.current ].each { |date| ExchangeRate.create!(date: date, from_currency: "EUR", to_currency: "USD", rate: 1.2) }
+    add_trade(account, qty: 10, price: 80, currency: "EUR", exchange_rate: 1.1)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 1200, day.non_cash_inflows
+    assert_equal 0, day.net_market_flows
+  end
+
+  test "forward: a transfer is valued at its own price where no rate converts the holdings' currency" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      holdings: [
+        { date: transfer_day, ticker: "AAPL", qty: 10, price: 100, amount: 1000, currency: "GBP" },
+        { date: Date.current, ticker: "AAPL", qty: 10, price: 100, amount: 1000, currency: "GBP" }
+      ]
+    )
+    add_trade(account, qty: 10, price: 95)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 950, day.non_cash_inflows
+  end
+
+  test "reverse: a transfer in is a non-cash inflow at the holdings' price for the day" do
     # 5000 of cash and 10 AAPL worth 1000 today, which arrived by transfer on
     # the transfer day at 95.
     account = create_account_with_ledger(
@@ -93,12 +139,12 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
 
     day = flows_on(Balance::ReverseCalculator.new(account).calculate, transfer_day)
 
-    assert_equal 950, day.non_cash_inflows
-    assert_equal 50, day.net_market_flows
+    assert_equal 1000, day.non_cash_inflows
+    assert_equal 0, day.net_market_flows
     assert_equal 5000, day.cash_balance
   end
 
-  test "reverse: a priced transfer out is a non-cash outflow" do
+  test "reverse: a transfer out of a whole position is an outflow at the price the day before" do
     # 10 AAPL worth 1000 two days ago leave at 105 on the transfer day.
     account = create_account_with_ledger(
       account: { type: Investment, balance: 5000, cash_balance: 5000, currency: "USD" },
@@ -109,11 +155,49 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
 
     day = flows_on(Balance::ReverseCalculator.new(account).calculate, transfer_day)
 
-    assert_equal 1050, day.non_cash_outflows
-    assert_equal 50, day.net_market_flows
+    assert_equal 1000, day.non_cash_outflows
+    assert_equal 0, day.net_market_flows
   end
 
-  test "reverse: a transfer without a price keeps its value in market movement" do
+  test "forward: a transfer out of part of a position is valued at the day's price" do
+    # 20 shares at 98 become 10 at 100 on the transfer day, 10 of them leaving.
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      holdings: [
+        { date: 2.days.ago.to_date, ticker: "AAPL", qty: 20, price: 98, amount: 1960 },
+        { date: transfer_day, ticker: "AAPL", qty: 10, price: 100, amount: 1000 },
+        { date: Date.current, ticker: "AAPL", qty: 10, price: 100, amount: 1000 }
+      ]
+    )
+    add_trade(account, qty: -10, price: 95)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 1000, day.non_cash_outflows
+    assert_equal 40, day.net_market_flows
+  end
+
+  test "forward: the two legs of a move between your own accounts are valued alike" do
+    # One leaves at a price of its own, the other arrives with none.
+    from = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      holdings: [ { date: 2.days.ago.to_date, ticker: "AAPL", qty: 10, price: 100, amount: 1000 } ]
+    )
+    add_trade(from, qty: -10, price: 105)
+    to = forward_account
+    add_trade(to, qty: 10, price: 0)
+
+    out_day = flows_on(Balance::ForwardCalculator.new(from).calculate, transfer_day)
+    in_day = flows_on(Balance::ForwardCalculator.new(to).calculate, transfer_day)
+
+    assert_equal 1000, out_day.non_cash_outflows
+    assert_equal 1000, in_day.non_cash_inflows
+    assert_equal 0, out_day.net_market_flows + in_day.net_market_flows
+  end
+
+  test "reverse: a transfer with no price of its own is valued at the holdings' price too" do
     account = create_account_with_ledger(
       account: { type: Investment, balance: 6000, cash_balance: 5000, currency: "USD" },
       entries: [ { type: "current_anchor", date: Date.current, balance: 6000 } ],
@@ -126,8 +210,8 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
 
     day = flows_on(Balance::ReverseCalculator.new(account).calculate, transfer_day)
 
-    assert_equal 0, day.non_cash_inflows
-    assert_equal 1000, day.net_market_flows
+    assert_equal 1000, day.non_cash_inflows
+    assert_equal 0, day.net_market_flows
   end
   test "forward: a transfer of a position the holdings never valued is no flow" do
     # No price, so no holding: the move is not in the holdings value, and a
@@ -217,6 +301,55 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
 
     Balance::Materializer.new(account, strategy: :forward).materialize_balances
     account.balances.find_by!(date: transfer_day)
+  end
+
+  test "materialized: a transfer is valued at the stored price of the day, not the trade's" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      security_prices: [
+        { ticker: "AAPL", date: 2.days.ago.to_date, price: 98 },
+        { ticker: "AAPL", date: transfer_day, price: 100 },
+        { ticker: "AAPL", date: Date.current, price: 101 }
+      ]
+    )
+    add_trade(account, qty: 10, price: 95)
+
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    day = account.balances.find_by!(date: transfer_day)
+
+    assert_equal 1000, day.non_cash_inflows
+    assert_equal 0, day.net_market_flows
+  end
+
+  test "materialized: a transfer with no price is valued at the nearest quote the holdings use" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 40.days.ago.to_date, balance: 5000 } ],
+      security_prices: [ { ticker: "AAPL", date: 30.days.ago.to_date, price: 80 } ]
+    )
+    add_trade(account, qty: 10, price: 0)
+
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    day = account.balances.find_by!(date: transfer_day)
+
+    assert_equal 800, day.non_cash_inflows
+    assert_equal 0, day.net_market_flows
+  end
+
+  test "materialized: a transfer of a security with no price anywhere is no flow" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ]
+    )
+    Security.find_or_create_by!(ticker: "AAPL") { |security| security.name = "AAPL" }
+    add_trade(account, qty: 10, price: 0)
+
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    day = account.balances.find_by!(date: transfer_day)
+
+    assert_equal 0, day.non_cash_inflows
+    assert_equal 0, day.net_market_flows
   end
 
   test "materialized: a position transferred in and out on the day it first arrives is no flow" do
@@ -321,13 +454,13 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
 
     calculator = Balance::ForwardCalculator.new(account)
     calculator.calculate
-    assert_nil calculator.send(:sync_cache).instance_variable_get(:@valued_holding_qtys),
+    assert_nil calculator.send(:sync_cache).instance_variable_get(:@valued_holdings),
       "no priced transfer, so no index"
 
     add_trade(account, qty: 10, price: 95)
     calculator = Balance::ForwardCalculator.new(account)
     calculator.calculate
-    indexed = calculator.send(:sync_cache).instance_variable_get(:@valued_holding_qtys)
+    indexed = calculator.send(:sync_cache).instance_variable_get(:@valued_holdings)
     assert_equal [ Security.find_by!(ticker: "AAPL").id ], indexed.keys
   end
 
@@ -401,6 +534,17 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
 
   test "forward: a transfer in on the day of a split is a flow in post-split shares" do
     account = split_account(transfer_qty: 5, end_qty: 25)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 250, day.non_cash_inflows
+    assert_equal 0, day.net_market_flows
+  end
+
+  test "forward: a transfer in on the day of a split is valued at the post-split price, whatever price it was booked at" do
+    account = split_account(transfer_qty: 5, end_qty: 25)
+    account.entries.joins("INNER JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'")
+      .find_each { |entry| entry.entryable.update!(price: 96) }
 
     day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
 

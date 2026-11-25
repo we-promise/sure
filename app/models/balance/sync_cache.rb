@@ -41,7 +41,22 @@ class Balance::SyncCache
   # they hold none or have no price for it. Indexed per security on first
   # ask, so a sync that never asks builds no index.
   def valued_holding_qty(security_id, date)
-    valued_holding_qtys(security_id).fetch(date, 0)
+    valued_holdings(security_id).fetch(date, []).sum(&:qty)
+  end
+
+  # The price the priced holdings value a unit of `security_id` at on `date`,
+  # in the account's currency and converted as their value is: the day before's
+  # when none are held at the close of `date` (a position that left whole). nil
+  # when they have no price for it, or no rate converts it.
+  def valued_holding_price(security_id, date)
+    rows = valued_holdings(security_id)
+    held = rows[date] || rows[date.prev_day]
+    return nil unless held
+
+    row = held.find { |h| h.currency == account.currency } || held.first
+    Money.new(row.price, row.currency).exchange_to(account.currency, date: row.date).amount
+  rescue Money::ConversionError
+    nil
   end
 
   # The ratio of the split of `security_id` going ex on `date`, nil when there
@@ -106,11 +121,9 @@ class Balance::SyncCache
       end
     end
 
-    def valued_holding_qtys(security_id)
-      @valued_holding_qtys ||= {}
-      @valued_holding_qtys[security_id] ||= account.holdings.each_with_object(Hash.new(0)) do |h, acc|
-        acc[h.date] += h.qty if h.security_id == security_id && h.price.to_d.positive?
-      end
+    def valued_holdings(security_id)
+      @valued_holdings ||= {}
+      @valued_holdings[security_id] ||= account.holdings.select { |h| h.security_id == security_id && h.price.to_d.positive? }.group_by(&:date)
     end
 
     def converted_entries

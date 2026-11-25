@@ -175,13 +175,16 @@ class Balance::BaseCalculator
     end
 
     # A zero-amount Transfer trade moves a position without cash, so its amount
-    # says nothing of its value; see Trade#priced_transfer_value. It is a flow
-    # only where the holdings value show the day's trades of that security:
-    # its priced quantity changes from the day before by exactly what the
-    # day's trades add up to (a day without a price counting as none held).
-    # Otherwise (no price, a persisted provider row that does not show the
-    # move) the holdings value does not change with it, and a flow would only
-    # turn into market movement of its own size.
+    # says nothing of its value. The holdings do: they value the position at
+    # the price of the day it arrives, so that is its value here, and the
+    # day's market movement is what is left. The trade's own price counts only
+    # where no holding gives one, or none converts. It is a flow only where
+    # the holdings value show the day's trades of that security: its priced
+    # quantity changes from the day before by exactly what the day's trades add
+    # up to (a day without a price counting as none held). Otherwise (no price,
+    # a persisted provider row that does not show the move) the holdings value
+    # does not change with it, and a flow would only turn into market movement
+    # of its own size.
     #
     # Transfers in and out that cancel out on a day the account holds none
     # before or after are left out too: the holdings never show them, and
@@ -191,10 +194,12 @@ class Balance::BaseCalculator
       return nil unless entry.amount.zero?
 
       trade = entry.entryable
-      value = trade.priced_transfer_value(account.currency, date: entry.date)
-      return nil unless value && holdings_show_trades?(trade.security_id, entry.date)
+      return nil unless trade.cashless_transfer? && holdings_show_trades?(trade.security_id, entry.date)
 
-      value
+      unit_price = sync_cache.valued_holding_price(trade.security_id, entry.date)
+      return (trade.qty * unit_price).round(4) if unit_price
+
+      trade.priced_transfer_value(account.currency, date: entry.date)
     end
 
     def holdings_show_trades?(security_id, date)

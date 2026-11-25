@@ -74,15 +74,19 @@ class Trade < ApplicationRecord
     INTERNAL_MOVEMENT_LABELS.include?(investment_activity_label)
   end
 
-  # The value of a position moved in or out without cash (a zero-amount
-  # Transfer trade), at its quantity times its own price, the market value per
-  # share its provider gave, in `to_currency` and signed by the quantity. nil
-  # when it is not a transfer or has no price, so it says nothing of its value,
-  # or when no rate converts it. Kraken prices a transfer with no price for
-  # its day at today's spot price and flags it, so that price is not its value.
+  # A position moved in or out without cash: a Transfer trade with a quantity.
+  # Whether its amount is zero is the entry's to say. Kraken prices a transfer
+  # with no price for its day at today's spot price and flags it, so such a
+  # trade says nothing of what the position was worth that day.
+  def cashless_transfer?
+    investment_activity_label == TRANSFER_LABEL && qty.to_d.nonzero? && !extra&.dig("kraken", "price_missing")
+  end
+
+  # The value of such a position at its quantity times its own price, the
+  # market value per share its provider gave, in `to_currency` and signed by
+  # the quantity. nil when it has no price, or when no rate converts it.
   def priced_transfer_value(to_currency, date:)
-    return nil unless investment_activity_label == TRANSFER_LABEL && qty.to_d.nonzero? && price.to_d.positive?
-    return nil if extra&.dig("kraken", "price_missing")
+    return nil unless cashless_transfer? && price.to_d.positive?
 
     Money.new(qty * price, currency).exchange_to(to_currency, date: date, custom_rate: exchange_rate).amount
   rescue Money::ConversionError
