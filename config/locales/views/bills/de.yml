@@ -130,10 +130,17 @@ de:
       monthly_subscriptions: "Wie viel zahle ich monatlich für Abos?"
       safe_to_spend: "Wie viel kann ich in diesem Zeitraum sicher ausgeben?"
     smart_configurations:
+      create:
+        title: "KI-Vorschläge für %{name}"
+        waiting: "Der Zahlungsverlauf dieser Rechnung wird gelesen, um die Einstellungen zu prüfen."
+        worker_unhealthy: "Der Hintergrundworker für KI-Aufgaben ist möglicherweise ausgefallen oder überlastet."
+        failed: "Die Analyse konnte nicht gestartet werden. Die Einstellungen dieser Rechnung sind unverändert."
       show:
         trigger: "Von KI einrichten lassen"
         title: "KI-Vorschläge für %{name}"
         intro: "Hake die Änderungen an, die übernommen werden sollen. Nicht angehakte bleiben genau so, wie sie sind."
+        stopped: "Gestoppt. Das Modell kann diese Anfrage noch abschließen; hier ändert sich nichts."
+        back: "Zurück zur Rechnung"
         no_changes: "Diese Rechnung passt bereits zu ihrem Zahlungsverlauf. Es gibt nichts zu ändern."
         failed: "Diese Rechnung kann gerade nicht analysiert werden. Ihre Einstellungen bleiben unverändert."
         field_name: "Name"

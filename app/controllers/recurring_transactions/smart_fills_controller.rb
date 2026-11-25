@@ -1,106 +1,87 @@
-# Inherits RecurringTransactionsController so the re-rendered "new" template
-# resolves its relative partials ("form") against recurring_transactions/.
+# Renders the add-bill dialog with a waiting frame; the job's broadcast points
+# that frame at #show, which renders the stored answer in a normal request with
+# a fresh authenticity token. Inherits RecurringTransactionsController so the
+# dialog's partials resolve against recurring_transactions/.
 class RecurringTransactions::SmartFillsController < RecurringTransactionsController
   include AiFeatureGuard
   include RecurringFeatureGuardable
 
+  # The parent's destroy callback loads a bill by params[:id]; here that id names
+  # a suggestion, so Stop must not go through it.
+  skip_before_action :set_recurring_transaction, only: :destroy
+  skip_before_action :ensure_series_writable, only: :destroy
+
   before_action :ensure_recurring_enabled
   requires_ai :bill_setup
+  before_action :prepare_form, only: %i[show destroy]
 
-  # Smart-fill re-renders the add-bill dialog with AI-proposed values. It only
-  # exists on the entry-prefilled variant: the picked transaction anchors the
-  # evidence (its charge history), so the model infers rather than guesses --
-  # cadence from date gaps, the due day, autopay markers. Synchronous: one
-  # small LLM call, the same latency class as the identify action (slow local
-  # models may want a generous request timeout).
+  # One request per pending suggestion: a second click reuses the row instead
+  # of queueing another job for the same entry.
   def create
     income = params[:income].present?
-    @recurring_transaction = Current.family.recurring_transactions.new(
-      frequency_preset: income ? "biweekly" : "monthly",
-      first_due_on: Date.current
-    )
-    @recurring_transaction.is_income = income
-
     entry = Current.accessible_entries.find_by(id: params[:entry_id])
+    return render_missing_entry(income:) if entry.nil?
 
-    if entry.nil?
-      @smart_fill_error = t(".failed")
-      return render "recurring_transactions/new", layout: dialog_layout
-    end
+    @suggestion = Current.family.recurring_transaction_suggestions.find_or_create_by!(
+      user: Current.user, entry:, mode: :fill, status: :pending
+    ) { |suggestion| suggestion.income = income }
 
-    prefill_recurring_from_entry(entry)
-
-    begin
-      suggestion = RecurringTransaction::AiSetupSuggester
-                     .new(Current.family, user: Current.user)
-                     .suggest_from_entries(evidence_entries(entry, income: income))
-      apply_suggestion(suggestion)
-      @smart_fill = suggestion
-    rescue RecurringTransaction::AiSetupSuggester::Error => e
-      Rails.logger.warn("Smart fill failed for entry #{entry.id}: #{e.class}: #{e.message}")
-      @smart_fill_error = t(".failed")
-    end
-
+    enqueue_job if @suggestion.previously_new_record?
+    prepare_form(entry:, income:)
     render "recurring_transactions/new", layout: dialog_layout
   end
 
+  def show
+    render layout: dialog_layout
+  end
+
+  # Stop is cooperative: the row is marked, never a request interrupted. A
+  # finished suggestion has no Stop button, but a stale one just reloads show.
+  def destroy
+    if @suggestion.pending?
+      @suggestion.with_lock { @suggestion.update!(status: :cancelled) if @suggestion.pending? }
+      render :show, layout: dialog_layout
+    else
+      redirect_to @suggestion.location, status: :see_other
+    end
+  end
+
   private
-    # The picked entry's own history: same account, same sign, same name
-    # shape. Recency-ordered so drifting amounts weight toward the present.
-    # Skipped entirely for a generic name (e.g. the auto-generated "Unknown
-    # transaction" fallback) -- an ILIKE on that text would pull in every
-    # other unrelated transaction that happens to share the same generic
-    # label, corrupting the evidence fed to the AI suggester.
-    def evidence_entries(entry, income:)
-      return [ entry ] if entry.generic_name?
-
-      pattern = "%#{ActiveRecord::Base.sanitize_sql_like(entry.name.to_s)}%"
-
-      entry.account.entries
-           .where(entryable_type: "Transaction")
-           .where(income || entry.amount.negative? ? "entries.amount < 0" : "entries.amount > 0")
-           .where("entries.name ILIKE ?", pattern)
-           .order(date: :desc)
-           .limit(RecurringTransaction::AiSetupSuggester::MAX_CHARGES)
-           .to_a
-           .presence || [ entry ]
+    def suggestion
+      @suggestion ||= Current.family.recurring_transaction_suggestions
+                              .where(user: Current.user, mode: :fill).find(params[:id])
     end
 
-    # Only fields the add form actually carries; the kind has no field to land
-    # in here and is dropped. The suggested category is dropped too: the form
-    # keeps the transaction's own category from the prefill.
-    # The due date follows the cadence's own anchor: weekday for weekly-style
-    # presets, month for annual, day-of-month for the monthly-style rest. A
-    # one-off keeps the charge it was read from: the prefill's next monthly
-    # date is a guess that only a repeating bill needs.
-    def apply_suggestion(suggestion)
-      @recurring_transaction.name = suggestion.name if suggestion.name.present?
-      @recurring_transaction.amount = suggestion.amount if suggestion.amount.present?
-      @recurring_transaction.frequency_preset = suggestion.frequency if suggestion.frequency.present?
-      @recurring_transaction.autopay = suggestion.autopay unless suggestion.autopay.nil?
+    def prepare_form(entry: nil, income: nil)
+      @suggestion ||= suggestion
+      entry ||= @suggestion.entry
+      income = @suggestion.income if income.nil?
 
-      today = Date.current
-      if suggestion.frequency == RecurringTransaction::FrequencyPreset::ONCE
-        @recurring_transaction.first_due_on = @source_entry.date
-      elsif %w[weekly biweekly].include?(suggestion.frequency) && suggestion.weekday.present?
-        @recurring_transaction.first_due_on = today + ((suggestion.weekday - today.wday) % 7)
-      elsif suggestion.frequency == "annual" && suggestion.month_of_year.present?
-        @recurring_transaction.first_due_on = next_annual_occurrence(
-          today, suggestion.month_of_year,
-          suggestion.day_of_month || @recurring_transaction.first_due_on.day
-        )
-      elsif suggestion.day_of_month.present?
-        @recurring_transaction.first_due_on =
-          RecurringTransaction::Schedule.new(expected_day_of_month: suggestion.day_of_month).next_occurrence_from_today
-      end
+      @recurring_transaction = Current.family.recurring_transactions.new(
+        frequency_preset: income ? "biweekly" : "monthly",
+        first_due_on: Date.current,
+        currency: Current.family.currency
+      )
+      @recurring_transaction.is_income = income
+      prefill_recurring_from_entry(entry)
+      @suggestion.apply_to(@recurring_transaction)
     end
 
-    # The next date landing on (month, day), day clamped to the month's
-    # length, rolled a year forward once this year's is past.
-    def next_annual_occurrence(today, month, day)
-      candidate = Date.new(today.year, month, [ day, Date.new(today.year, month, -1).day ].min)
-      return candidate if candidate >= today
+    def render_missing_entry(income:)
+      @recurring_transaction = Current.family.recurring_transactions.new(
+        frequency_preset: income ? "biweekly" : "monthly",
+        first_due_on: Date.current,
+        currency: Current.family.currency
+      )
+      @recurring_transaction.is_income = income
+      @smart_fill_error = t(".failed")
+      render "recurring_transactions/new", layout: dialog_layout
+    end
 
-      Date.new(today.year + 1, month, [ day, Date.new(today.year + 1, month, -1).day ].min)
+    def enqueue_job
+      Ai::GenerationRun.enqueue(:bill_setup, family: Current.family, ids: [ @suggestion.id ], id: @suggestion.id)
+    rescue StandardError => error
+      Rails.error.report(error, handled: true, context: { feature: "bill_setup" })
+      @suggestion.update!(status: :failed, error: t(".failed"))
     end
 end

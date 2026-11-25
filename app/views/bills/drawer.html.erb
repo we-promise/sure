@@ -24,11 +24,12 @@
                data: { turbo_frame: :modal }) %>
           <% if ai_feature_available?(:bill_setup) %>
             <% menu.with_item(
-                 variant: "link",
+                 variant: "button",
                  text: t("bills.smart_configurations.show.trigger"),
                  icon: "sparkles",
-                 href: smart_configuration_bill_path(@series),
-                 data: { turbo_frame: :modal }) %>
+                 href: bill_smart_configurations_path(@series),
+                 method: :post,
+                 frame: :modal) %>
           <% end %>
           <% menu.with_item(
                variant: "button",

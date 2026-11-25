@@ -72,11 +72,12 @@ class RecurringTransaction::Suggestion < ApplicationRecord
 
   def ai_finished(_count) = nil
 
-  # The stored, normalized answer; nil until the job completes.
+  # The stored answer, re-normalized because JSON turns amounts back into
+  # strings; nil until the job completes.
   def proposal
     return if result.blank?
 
-    Proposal.new(**result.symbolize_keys)
+    normalize(result)
   end
 
   # Applies only the fields the add form carries, as the smart-fill controller
@@ -176,9 +177,10 @@ class RecurringTransaction::Suggestion < ApplicationRecord
       raw = raw.to_h.symbolize_keys
       category = resolve_category(raw[:category_name])
 
+      amount = BigDecimal(raw[:amount].to_s) if raw[:amount].present?
       Proposal.new(
         **raw.slice(:name, :frequency, :day_of_month, :weekday, :month_of_year, :bill_type, :autopay, :rationale),
-        amount: (BigDecimal(raw[:amount].to_s) if raw[:amount]&.positive?),
+        amount: (amount if amount&.positive?),
         category_id: category&.id,
         category_name: category&.name,
         confidence: raw[:confidence]&.to_f&.clamp(0.0, 1.0)
