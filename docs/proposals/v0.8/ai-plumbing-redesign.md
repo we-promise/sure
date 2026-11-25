@@ -670,6 +670,7 @@ migration (each variable's `Setting` field, where it has one, maps the same way)
 | `EXTERNAL_ASSISTANT_AGENT_ID`, `_SESSION_KEY`, `_ALLOWED_EMAILS` | `agent_settings` on that endpoint |
 | `ASSISTANT_TYPE` | Dropped: chat mode is a family setting (section 6) |
 | `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` | `Setting.ai_max_tool_rounds` |
+| The external assistant's 120 s read timeout (`Assistant::External::Client::TIMEOUT_READ`, hard-coded) | `timeout_seconds` on the agent endpoint |
 | `AI_RESPONSE_TIMEOUT` (`ai_response_timeout`) | `Setting.ai_response_timeout` |
 | `AI_HEALTH_PROBE_TIMEOUT` (`ai_health_probe_timeout`) | Dropped: probes use the endpoint's timeout |
 | `AI_HEALTH_PROBE_CACHE_TTL` | Dropped: today's default becomes a constant in `AiHealth::Probe` |
@@ -691,6 +692,13 @@ field :ai_max_tool_rounds,      type: :integer, default: 8    # was ASSISTANT_MA
 field :ai_response_timeout,     type: :integer, default: 90   # exists today; AI_RESPONSE_TIMEOUT no longer overrides it
 field :ai_shadow_rates,         type: :hash,    default: {}   # feature key => 0..1, e.g. { "categorize" => 0.1 }
 ```
+
+**The external assistant's timeout is a setting, and a turn isn't sent twice** (added 2026-11-25).
+Today its read timeout is hard-coded at 120 seconds, and after it Sure sends the whole turn again, up
+to three times in all. Measured with OpenClaw on a local model, where turns took up to 455 s: the
+agent starts over each time, and tools it already called in Sure, writes included, can run again. The
+timeout becomes the agent endpoint's `timeout_seconds` (section 4.5), and a request the agent may
+have begun is never sent again: only one that never connected is.
 
 `ai_max_tool_rounds` and `ai_response_timeout` bound a chat turn (section 5.5). The deprecated ENV path maps
 `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` and `AI_RESPONSE_TIMEOUT` onto them.
@@ -3159,7 +3167,9 @@ Sure's own `/mcp` (for the MCP lines), and RubyLLM's Rails persistence was compa
 chat tables (for the chat storage line).
 
 - Changing any feature's prompts or models (call by @josh-sanders during development of PR #4440): section 8.3 keeps every one of today's prompts
-  word for word.
+  word for word. That includes chat's, whose size is what a local model spends most of a cold chat
+  on: 14,593 tokens before the first word, 304 s cold and 2 s warm on one CPU server (2026-11-25).
+  Sending a chat fewer tools would shorten it, and is a prompt change of its own.
 - The Ruby ML engines' internals, and the classifier settings page.
 - Suggestions instead of AI locks, and rule ordering (phases or an enrichment pipeline).
 - Rules that run only after an AI rule. The rule runner can add this later as its own PR,

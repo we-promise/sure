@@ -37,12 +37,15 @@ PR 4 ships as three PRs: 4a (steps 0–2), 4b (steps 3–4) and 4c (steps 5–9)
 | 4b | the cancel check while waiting | once a place is free, before sending | no database check under the gate's lock |
 | 4b | the proxy setting is read before waiting (stack plan §3b) | not needed yet | `proxy_or_warn` never raises on the stack; it matters again with #5487 |
 | 4b | nothing | each streamed chunk checks the call's budget | a chunk resets the read timeout, so a slow stream could outlast the budget |
+| 4b | `ShadowJob` re-enqueued on `Busy` | skipped | a shadow run is never retried |
+| 4b | nothing | a background Jev batch that has begun on a local server finishes, in the prompt lane | one request per item: `Busy` midway lost every answer; found with Jev on Ollama |
 | 4b | nothing | `Busy` isn't logged as a failed call or traced | found in step 9: the debug log got an error each time a background job came back |
 | 4c | "ready" when the gate has waiters | also when the hold refused background work | background calls come back later instead of waiting |
-| 4c | "N tasks ahead" counts holders and waiters | only interactive requests, at the gate | chat interrupts the rest. Chats still in Sidekiq's queue aren't counted, so it can be too low |
-| 4c | the watchdog waits for a reply at the gate | also for one still queued behind an interactive request, and every reply's time counts from its job's start | call by @josh-sanders, 2026-11-25, for every model; with one chat thread a chat seldom waits long at the gate itself |
+| 4c | "waiting for the model; N tasks ahead" | "Waiting in line", shown when interactive requests are ahead at the gate | chat interrupts the rest, and the gate can't count chats still in Sidekiq's queue |
+| 4c | the watchdog waits for a reply at the gate | also for one whose job is still queued with a worker polling, and every reply's time counts from its job's start, less what its requests waited for a place | call by @josh-sanders, 2026-11-25, for every model and external assistants |
+| 4c | the gate knows a chat's request by its job | by its reply | one chat can have two replies at once, with several chat threads |
 | 4c | the busy bubble is broadcast when the message is sent | rendered with the pending reply, broadcast at the job's start, and "Thinking" as each request gets its place | the page load after sending replaced the broadcast; found in the browser |
-| 4c | the typing hold's key is per host (`ai/hold/<host>`) | per host and lane | a built-in chat holds prompt and background, an external one background only |
+| 4c | the typing hold's key is per host (`ai/hold/<host>`) | per host and lane, owned by the last person to type | a built-in chat holds prompt and background, an external one background only; a message ends only its own user's hold |
 | 4c | an external assistant holds nothing | typing to it, and its whole turn, hold new background requests off every local host | call by @josh-sanders, 2026-11-25; its own calls pass no gate, and may be on the same server |
 | 4c | state in each process | only a Sidekiq worker publishes, on changes and its heartbeat | a web process's gate would overwrite the worker's |
 
