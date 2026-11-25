@@ -75,7 +75,7 @@ class Account::HealthStatusTest < ActiveSupport::TestCase
   test "an open balance gap on a linked account links to the transactions since the last match" do
     account = accounts(:connected)
     add_valuation(account, 10.days.ago.to_date, 1000)
-    (2..5).reverse_each { |days_ago| add_valuation(account, days_ago.days.ago.to_date, 1050) }
+    (2..7).reverse_each { |days_ago| add_valuation(account, days_ago.days.ago.to_date, 1050) }
 
     issue = Account::HealthStatus.new(account).issues.sole
 

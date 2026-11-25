@@ -22,6 +22,8 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
       entries: [
         { type: "opening_anchor", date: 10.days.ago.to_date, balance: 1000 },
         # Bank silently adds 50 that never gets imported as a transaction.
+        { type: "reconciliation", date: 7.days.ago.to_date, balance: 1050 },
+        { type: "reconciliation", date: 6.days.ago.to_date, balance: 1050 },
         { type: "reconciliation", date: 5.days.ago.to_date, balance: 1050 },
         { type: "reconciliation", date: 4.days.ago.to_date, balance: 1050 },
         { type: "reconciliation", date: 3.days.ago.to_date, balance: 1050 },
@@ -33,12 +35,12 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     gap = checker.latest_flagged_gap
 
     assert gap
-    assert_equal 5.days.ago.to_date, gap.first_open_waypoint.date
+    assert_equal 7.days.ago.to_date, gap.first_open_waypoint.date
     assert_in_delta 50, gap.difference, 0.01
 
-    # Not yet flagged on the very first day the gap appears.
+    # Not yet flagged while the gap is MIN_DAYS_OPEN days old or younger.
     short_checker = Balance::IntegrityChecker.new(account)
-    first_gap_waypoint_date = 5.days.ago.to_date
+    first_gap_waypoint_date = 3.days.ago.to_date
     assert_not short_checker.flagged_gaps.any? { |g| g.latest_waypoint.date == first_gap_waypoint_date }
   end
 
@@ -118,6 +120,8 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
       entries: [
         { type: "opening_anchor", date: 10.days.ago.to_date, balance: 500 },
         # 100 of debt appears that was never imported as a transaction.
+        { type: "reconciliation", date: 7.days.ago.to_date, balance: 600 },
+        { type: "reconciliation", date: 6.days.ago.to_date, balance: 600 },
         { type: "reconciliation", date: 5.days.ago.to_date, balance: 600 },
         { type: "reconciliation", date: 4.days.ago.to_date, balance: 600 },
         { type: "reconciliation", date: 3.days.ago.to_date, balance: 600 },
@@ -183,6 +187,8 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
       account: { type: Depository, currency: "USD" },
       entries: [
         { type: "opening_anchor", date: 10.days.ago.to_date, balance: 1000 },
+        { type: "reconciliation", date: 8.days.ago.to_date, balance: 1050 },
+        { type: "reconciliation", date: 7.days.ago.to_date, balance: 1050 },
         { type: "reconciliation", date: 6.days.ago.to_date, balance: 1050 },
         { type: "reconciliation", date: 5.days.ago.to_date, balance: 1050 },
         { type: "reconciliation", date: 4.days.ago.to_date, balance: 1050 },
@@ -204,6 +210,8 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
       account: { type: Depository, currency: "USD" },
       entries: [
         { type: "opening_anchor", date: 10.days.ago.to_date, balance: 1000 },
+        { type: "reconciliation", date: 8.days.ago.to_date, balance: 1050 },
+        { type: "reconciliation", date: 7.days.ago.to_date, balance: 1050 },
         { type: "reconciliation", date: 6.days.ago.to_date, balance: 1050 },
         { type: "reconciliation", date: 5.days.ago.to_date, balance: 1050 },
         { type: "reconciliation", date: 4.days.ago.to_date, balance: 1050 },
@@ -304,8 +312,8 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     [
       { date: 2.years.ago.to_date, amount: 1000, kind: "opening_anchor" },
       { date: 10.days.ago.to_date, amount: 1000, kind: "reconciliation" },
-      { date: 5.days.ago.to_date, amount: 1050, kind: "reconciliation" },
-      { date: 4.days.ago.to_date, amount: 1050, kind: "reconciliation" },
+      { date: 8.days.ago.to_date, amount: 1050, kind: "reconciliation" },
+      { date: 7.days.ago.to_date, amount: 1050, kind: "reconciliation" },
       { date: 2.days.ago.to_date, amount: 1050, kind: "current_anchor" }
     ].each do |e|
       account.entries.create!(
@@ -385,7 +393,7 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     add_linked_entry(account, date: 8.days.ago.to_date, amount: 30)
     add_linked_entry(account, date: 6.days.ago.to_date, amount: 995, kind: "reconciliation")
     add_linked_entry(account, date: 5.days.ago.to_date, amount: 995, kind: "reconciliation")
-    add_linked_entry(account, date: 3.days.ago.to_date, amount: 995, kind: "current_anchor")
+    add_linked_entry(account, date: 1.day.ago.to_date, amount: 995, kind: "current_anchor")
 
     gap = Balance::IntegrityChecker.new(account).latest_flagged_gap
 
@@ -468,11 +476,11 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     account = accounts(:connected)
     account.entries.destroy_all
 
-    add_linked_entry(account, date: 8.days.ago.to_date, amount: 1000, kind: "reconciliation")
-    # A 50 deposit (day 7) was never imported, and every later sync day has a
+    add_linked_entry(account, date: 10.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    # A 50 deposit (day 9) was never imported, and every later sync day has a
     # purchase booked after the snapshot, so no exact snapshot follows.
     ledger = 1000
-    { 5 => 100, 4 => 10, 3 => 10, 2 => 10 }.each do |days_ago, purchase|
+    { 7 => 100, 5 => 10, 4 => 10, 2 => 10 }.each do |days_ago, purchase|
       add_linked_entry(account, date: days_ago.days.ago.to_date, amount: ledger + 50, kind: "reconciliation")
       add_linked_entry(account, date: days_ago.days.ago.to_date, amount: purchase)
       ledger -= purchase
@@ -481,11 +489,11 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     gap = Balance::IntegrityChecker.new(account).latest_flagged_gap
 
     assert gap
-    assert_equal 5.days.ago.to_date, gap.first_open_waypoint.date
-    assert_in_delta 50, gap.difference, 0.01, "the 100 purchase booked after day 5's sync is timing, not part of the gap"
+    assert_equal 7.days.ago.to_date, gap.first_open_waypoint.date
+    assert_in_delta 50, gap.difference, 0.01, "the 100 purchase booked after day 7's sync is timing, not part of the gap"
   end
 
-  # A purchase dated day 8 that the bank only booked on day 3: the snapshots
+  # A purchase dated day 10 that the bank only booked on day 3: the snapshots
   # in between are 30 higher than the ledger. From day 3 on the history
   # agrees again, but every later day has activity, so no exact snapshot
   # follows.
@@ -494,9 +502,9 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     account = accounts(:connected)
     account.entries.destroy_all
 
-    add_linked_entry(account, date: 10.days.ago.to_date, amount: 1000, kind: "reconciliation")
-    add_linked_entry(account, date: 8.days.ago.to_date, amount: 30)
-    (4..7).reverse_each do |days_ago|
+    add_linked_entry(account, date: 12.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    add_linked_entry(account, date: 10.days.ago.to_date, amount: 30)
+    (4..9).reverse_each do |days_ago|
       add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 1000, kind: "reconciliation")
     end
     assert Balance::IntegrityChecker.new(account).latest_flagged_gap, "the late booking opens a gap first"
@@ -629,11 +637,47 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     assert_nil Balance::IntegrityChecker.open_gap_for(account)
   end
 
+  # Some banks take weekend card payments off the reported balance at once
+  # but book them, dated, only on Tuesday. Until the bookings arrive the
+  # snapshots run ahead of the ledger from Saturday to Tuesday.
+  test "a weekend of card payments the bank books on Tuesday is not flagged" do
+    account = accounts(:connected)
+    account.entries.destroy_all
+    friday = 20.days.ago.to_date.prev_occurring(:friday)
+
+    add_linked_entry(account, date: friday, amount: 1000, kind: "reconciliation")
+    add_linked_entry(account, date: friday + 1, amount: 922.13, kind: "reconciliation")
+    add_linked_entry(account, date: friday + 2, amount: 909.13, kind: "reconciliation")
+    add_linked_entry(account, date: friday + 3, amount: 844.66, kind: "reconciliation")
+    add_linked_entry(account, date: friday + 4, amount: 844.66, kind: "current_anchor")
+
+    assert_nil Balance::IntegrityChecker.new(account).latest_flagged_gap
+  end
+
+  # The open gap equals the day's bookings, so "the snapshot misses exactly
+  # these bookings" would also fit; the ledger agreeing to the cent says it
+  # does not.
+  test "an open gap closes on the busy day its late bookings arrive and agree" do
+    account = accounts(:connected)
+    account.entries.destroy_all
+
+    add_linked_entry(account, date: 12.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    (5..10).reverse_each do |days_ago|
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 950, kind: "reconciliation")
+    end
+    assert Balance::IntegrityChecker.new(account).latest_flagged_gap, "the payment is in the balance before it is booked"
+
+    add_linked_entry(account, date: 4.days.ago.to_date, amount: 50)
+    add_linked_entry(account, date: 4.days.ago.to_date, amount: 950, kind: "current_anchor")
+
+    assert_nil Balance::IntegrityChecker.new(account).latest_flagged_gap
+  end
+
   private
-    # A 50 deposit (day 9) that was never imported, open for four days.
+    # A 50 deposit (day 9) that was never imported, open for six days.
     def add_gap_waypoints(account)
       add_linked_entry(account, date: 10.days.ago.to_date, amount: 1000, kind: "reconciliation")
-      (2..5).reverse_each do |days_ago|
+      (2..7).reverse_each do |days_ago|
         add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 1050, kind: "reconciliation")
       end
     end

@@ -14,7 +14,11 @@
 # positive.
 class Balance::IntegrityChecker
   TOLERANCE = 0.01.to_d
-  MIN_DAYS_OPEN = 2 # a gap must persist longer than this before it's surfaced
+  # A gap must persist longer than this before it's surfaced. Some banks take
+  # weekend card payments off the reported balance at once but book them,
+  # dated, only on Tuesday: Saturday to Tuesday, or Friday to Tuesday over a
+  # long weekend, is timing, not a missing transaction.
+  MIN_DAYS_OPEN = 4
   MAX_SUBSET_FLOWS = 10 # same-day amounts listed as subsets (2^10 sums at most)
 
   Waypoint = Data.define(:date, :value, :kind)
@@ -199,6 +203,11 @@ class Balance::IntegrityChecker
         closed = same_day_timing?(waypoint, residual) && gap_closed?(waypoint, residual, open_residual)
         return closed ? :closed : open_residual
       end
+
+      # Ledger and snapshot agreeing to the cent settle it, even when the
+      # open gap also equals some of the day's bookings: those are the late
+      # bookings that explain it.
+      return :closed if residual.abs <= tolerance
 
       candidates = sums.map { |sum| residual - sum }
       return open_residual if candidates.any? { |gap| (gap - open_residual).abs <= tolerance }
