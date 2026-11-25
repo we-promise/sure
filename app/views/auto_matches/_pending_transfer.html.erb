@@ -37,7 +37,10 @@
     <div class="text-xs text-secondary privacy-sensitive"><%= format_money(transfer.inflow_transaction.entry.amount_money.abs) %></div>
   </td>
   <td class="py-3 px-2 text-sm text-secondary">
-    <%= l(transfer.date, format: :short) %>
+    <div class="whitespace-nowrap"><%= auto_match_date(transfer.date) %></div>
+    <% if (days_apart = auto_match_days_apart(transfer)) %>
+      <div class="text-xs text-secondary whitespace-nowrap"><%= t("auto_matches.table.days_apart", count: days_apart) %></div>
+    <% end %>
   </td>
   <td class="py-3 px-2 text-sm text-right">
     <% if writable %>
