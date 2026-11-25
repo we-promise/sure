@@ -2,9 +2,11 @@ module IbkrAccount::DataHelpers
   extend ActiveSupport::Concern
 
   # IBKR quotes a bond as a percentage of its face value, and a bond's position
-  # or trade quantity is that face value; its multiplier (0.01) relates the two.
-  # Sure counts every bond in units of 100 face, the unit its price is quoted
-  # per, so the price reads as IBKR quotes it and quantity x price is its value.
+  # or trade quantity is that face value. The row's multiplier is never read: a
+  # sample Flex export shows 1 on a bond, and the field is absent unless the
+  # query selects it. Sure counts every bond in units of 100 face, the unit its
+  # price is quoted per, so the price reads as IBKR quotes it and quantity x
+  # price is its value.
   #
   # The unit is fixed rather than decided from the report. A sync imports only
   # its own window and never rescales a trade stored by an earlier one, so a
