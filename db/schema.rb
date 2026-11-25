@@ -2304,6 +2304,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
   create_table "retirement_plan_streams", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id"
     t.decimal "annual_amount", precision: 19, scale: 4, null: false
+    t.integer "base_year", null: false
     t.datetime "created_at", null: false
     t.string "currency", null: false
     t.integer "end_year"
@@ -2317,6 +2318,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.index ["account_id"], name: "index_retirement_plan_streams_on_account_id"
     t.index ["retirement_plan_id"], name: "index_retirement_plan_streams_on_retirement_plan_id"
     t.check_constraint "annual_amount > 0::numeric", name: "chk_retirement_plan_streams_amount"
+    t.check_constraint "base_year >= 1900 AND base_year <= 2200", name: "chk_retirement_plan_streams_base_year"
     t.check_constraint "end_year IS NULL OR start_year IS NULL OR end_year >= start_year", name: "chk_retirement_plan_streams_years"
     t.check_constraint "kind::text = ANY (ARRAY['expense'::character varying::text, 'income'::character varying::text, 'one_off'::character varying::text])", name: "chk_retirement_plan_streams_kind"
     t.check_constraint "source::text = ANY (ARRAY['seeded_living_costs'::character varying::text, 'seeded_loan'::character varying::text, 'manual'::character varying::text])", name: "chk_retirement_plan_streams_source"
