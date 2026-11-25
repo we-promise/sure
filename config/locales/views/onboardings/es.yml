@@ -47,7 +47,7 @@ es:
         description: Elige las herramientas que usas para gestionar las finanzas de tu hogar.
         select: Selecciona tus herramientas
         other_placeholder: Otra herramienta (opcional)
-        hint: Marca todas las que correspondan. Nos ayuda a sugerirte un punto de partida, no implica que podamos importar sus datos.
+        hint: Marca todas las que correspondan. Nos ayuda a sugerirte un punto de partida, no implica que podamos importar tus datos.
         tools:
           nothing_yet: Ninguna todavía
           other: Otra
