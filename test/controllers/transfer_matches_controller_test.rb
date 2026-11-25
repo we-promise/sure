@@ -94,6 +94,20 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select "dialog p", text: I18n.t("transfer_matches.matching_fields.no_matching_transactions"), count: 0
   end
 
+  test "new shows a pending match's amount the same from either leg" do
+    outflow = create_transaction(amount: 250, account: accounts(:depository), name: "Either leg outflow")
+    inflow = create_transaction(amount: -250, account: accounts(:investment), name: "Either leg inflow")
+    Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get new_transaction_transfer_match_path(outflow)
+    assert_select "dialog dd", text: "Either leg inflow"
+    assert_select "dialog dd.privacy-sensitive", text: "$250.00"
+
+    get new_transaction_transfer_match_path(inflow)
+    assert_select "dialog dd", text: "Either leg outflow"
+    assert_select "dialog dd.privacy-sensitive", text: "$250.00"
+  end
+
   test "new offers only rejecting a pending match whose other side the user cannot write to" do
     sign_in users(:family_member)
     # family_member has full control of depository and read-only access to credit_card.

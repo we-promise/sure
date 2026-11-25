@@ -24,7 +24,7 @@
           <% end %>
         <% end %>
       <% end %>
-      <%= render DS::DetailRow.new(label: t("transfer_matches.pending_match.amount"), value: format_money(-counterpart.amount_money), value_class: "font-medium privacy-sensitive") %>
+      <%= render DS::DetailRow.new(label: t("transfer_matches.pending_match.amount"), value: format_money(counterpart.amount_money.abs), value_class: "font-medium privacy-sensitive") %>
     </dl>
   <% else %>
     <p class="text-sm text-secondary"><%= t("transactions.transfer_match.auto_matched_tooltip_hidden") %></p>
