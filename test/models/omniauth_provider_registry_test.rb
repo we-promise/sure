@@ -153,6 +153,26 @@ class OmniauthProviderRegistryTest < ActiveSupport::TestCase
     ProviderLoader.clear_cache
   end
 
+  test "dynamic OIDC route matches a provider configured with only an id" do
+    FeatureFlags.stubs(:db_sso_providers?).returns(true)
+    ProviderLoader.stubs(:load_providers).returns([ custom_oidc_provider.except(:name) ])
+    OmniAuth.config.mock_auth[:authentik] = OmniAuth::AuthHash.new(provider: "authentik", uid: "uid-123")
+
+    response = Rack::MockRequest.new(dynamic_omniauth_app).get("/auth/authentik/callback")
+
+    assert_equal "authentik", response.body
+  end
+
+  test "dynamic OIDC route accepts a callback with a trailing slash" do
+    FeatureFlags.stubs(:db_sso_providers?).returns(true)
+    ProviderLoader.stubs(:load_providers).returns([ custom_oidc_provider ])
+    OmniAuth.config.mock_auth[:authentik] = OmniAuth::AuthHash.new(provider: "authentik", uid: "uid-123")
+
+    response = Rack::MockRequest.new(dynamic_omniauth_app).get("/auth/authentik/callback/")
+
+    assert_equal "authentik", response.body
+  end
+
   test "dynamic OIDC route supports YAML providers returned by the active provider loader" do
     FeatureFlags.stubs(:db_sso_providers?).returns(true)
     ProviderLoader.stubs(:load_providers).returns([ custom_oidc_provider.deep_stringify_keys ])

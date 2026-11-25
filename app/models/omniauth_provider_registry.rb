@@ -206,7 +206,7 @@ class OmniauthProviderRegistry
 
         ProviderLoader.load_providers.each do |raw_provider|
           provider = raw_provider.deep_symbolize_keys
-          next unless provider[:strategy].to_s == "openid_connect" && provider[:name].to_s == name
+          next unless provider[:strategy].to_s == "openid_connect" && provider_name(provider) == name
 
           return env["sure.omniauth.database_oidc_registration"] = openid_connect_registration(provider)
         end
@@ -216,14 +216,18 @@ class OmniauthProviderRegistry
 
       # Extract a provider name only from a supported OmniAuth login or callback path.
       def auth_path_provider_name(env)
-        path = env["PATH_INFO"].to_s
-        match = path.match(%r{\A/auth/([^/]+)(?:/callback)?\z})
+        match = auth_path(env).match(%r{\A/auth/([^/]+)(?:/callback)?\z})
         match&.[](1)
       end
 
       # Distinguish callback requests from authentication-start requests.
       def callback_request?(env)
-        env["PATH_INFO"].to_s.end_with?("/callback")
+        auth_path(env).end_with?("/callback")
+      end
+
+      # Drop one trailing slash, as OmniAuth does before matching its own routes.
+      def auth_path(env)
+        env["PATH_INFO"].to_s.delete_suffix("/")
       end
 
       # Build common OIDC discovery, PKCE, scope and client options.
