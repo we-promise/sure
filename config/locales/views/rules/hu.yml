@@ -102,6 +102,8 @@ hu:
         equal_to: Egyenlő
   rule:
     conditions:
+      amount_value:
+        label: Összeg
       condition_group:
         and_prefix: és
         match: egyezik

@@ -266,7 +266,7 @@ class MonarchImportTest < ActiveSupport::TestCase
     shown = @import.suggested_current_balance(mapping("Checking"))
 
     @import.apply_account_choices!(
-      { mapping("Checking").id => { type: "Depository", include: "1", target_id: loan.id, current_balance: shown } },
+      { mapping("Checking").id => { type: "Depository", include: "1", target_id: loan.id, current_balance: format("%.2f", shown) } },
       target_accounts: @family.accounts
     )
 

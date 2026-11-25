@@ -84,18 +84,22 @@
     <% end %>
 
     <% destination_input = capture do %>
-      <%= number_field_tag :destination_amount,
-        nil,
-        id: "transaction_form_destination_amount",
-        class: "form-field__input",
-        autocomplete: "off",
-        min: "0",
-        step: "0.00000001",
-        placeholder: "92",
-        data: {
-          transaction_form_target: "destinationAmount",
-          action: "input->transaction-form#onCalculateRateDestinationAmountChange"
-        } %>
+      <%# The destination amount is in the account's currency, which
+          transaction_form_controller keeps in this unnamed input. %>
+      <% destination_currency = (f.object.account || Current.user.default_account_for_transactions)&.currency || Current.family.currency %>
+      <%= tag.input type: "hidden", id: "transaction_destination_currency", value: destination_currency, data: { transaction_form_target: "destinationCurrency" } %>
+      <%= f.money_field :destination_amount,
+            name: nil,
+            label: t("shared.exchange_rate_tabs.destination_amount"),
+            min: 0,
+            placeholder: "92",
+            hide_currency: true,
+            currency_value_override: destination_currency,
+            currency_source: "#transaction_destination_currency",
+            amount_data: {
+              transaction_form_target: "destinationAmount",
+              action: "input->transaction-form#onCalculateRateDestinationAmountChange"
+            } %>
     <% end %>
 
     <%= render "shared/exchange_rate_tabs",

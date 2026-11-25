@@ -30,6 +30,8 @@ export default class extends Controller {
     this.fromNameTarget.textContent = params.fromName
     this.availableTarget.textContent = params.available
     this.amountTarget.value = ""
+    // The amount is a money field, which tracks its validity on "input".
+    this.amountTarget.dispatchEvent(new Event("input", { bubbles: true }))
 
     this.#refreshOptions(String(params.fromId), String(params.categoryId), String(params.parentId || ""))
     this.dialogTarget.showModal()

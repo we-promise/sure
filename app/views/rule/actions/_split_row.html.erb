@@ -17,15 +17,23 @@
             aria: { label: t("rules.actions.split.type_label") },
             data: { rule__split_action_target: "typeSelect", action: "change->rule--split-action#updateSummary" } %>
 
-      <%= row.number_field :share,
-            value: split["share"],
-            step: "0.01",
-            min: "0",
+      <%# A share is a fixed amount or a percentage, so the field reads typed
+          amounts like every money field but shows no currency symbol, and
+          keeps two decimals even for a whole-number currency (12.5 %). %>
+      <% share, share_precision = money_field_value(split["share"], min_precision: 2) %>
+      <%= row.money_field :share,
+            value: share,
+            label: t("rules.actions.split.share_label"),
+            label_class: "sr-only",
+            precision: share_precision,
+            min: 0,
             placeholder: "0.00",
+            hide_currency: true,
             autocomplete: "off",
-            container_class: "w-28 shrink-0",
-            aria: { label: t("rules.actions.split.share_label") },
-            data: { rule__split_action_target: "shareInput", action: "input->rule--split-action#updateSummary" } %>
+            hide_symbol: true,
+            currency_value_override: Current.family.currency,
+            container_class: "w-32 shrink-0",
+            amount_data: { rule__split_action_target: "shareInput", action: "input->rule--split-action#updateSummary" } %>
 
       <%= icon(
         "trash-2",

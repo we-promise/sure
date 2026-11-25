@@ -227,6 +227,28 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "edit keeps a saved split amount's decimals, capped at four" do
+    @entry.split!([
+      { name: "Part 1", amount: 60.125, category_id: nil },
+      { name: "Part 2", amount: 39.875, category_id: nil }
+    ])
+
+    get edit_transaction_split_path(@entry)
+
+    assert_select "input[name$='[amount]'][value='-60.125'][step='0.001']"
+    assert_select "input[name$='[amount]'][value='-39.875']"
+  end
+
+  test "new gives every row at least the total's decimals" do
+    jpy_entry = create_transaction(amount: 80.4, currency: "JPY", name: "Imported", account: accounts(:depository))
+
+    get new_transaction_split_path(jpy_entry)
+
+    # The first row and the template for added rows, so 40 + 40.4 can be typed.
+    assert_select "input[name$='[amount]'][step='0.1']", count: 2
+    assert_select "[data-split-transaction-total-value='-80.4']"
+  end
+
   test "edit lists split rows in the order they were entered" do
     @entry.split!([
       { name: "Part 1", amount: 60, category_id: nil },

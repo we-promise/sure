@@ -59,6 +59,8 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "#{parent_form_selector} .privacy-sensitive.privacy-sensitive-interactive input##{dom_id(@parent_budget_category, :budgeted_spending)}"
+    # A text money field would auto-submit on every blur; only an edit saves.
+    assert_select "input##{dom_id(@parent_budget_category, :budgeted_spending)}[data-autosubmit-trigger-event='change']"
     assert_select "#{parent_form_selector} p.text-secondary.privacy-sensitive", text: /\/m avg/
     assert_select "#{uncategorized_form_selector} .privacy-sensitive input[name='uncategorized']"
     assert_select "#{uncategorized_form_selector} p.text-secondary.privacy-sensitive", text: /\/m avg/

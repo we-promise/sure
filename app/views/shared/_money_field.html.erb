@@ -10,7 +10,9 @@
    # number_field enforced (the caller's, or these defaults) are handed to
    # money_field_controller, which checks the evaluated amount against them.
    amount_min = options[:min] || -99999999999999
-   amount_max = options[:max] || 99999999999999 %>
+   amount_max = options[:max] || 99999999999999
+   label_options = { class: class_names("form-field__label", options[:label_class]) }
+   label_options[:for] = options[:id] if options[:id] %>
 
 <div class="form-field group/money-field <%= options[:container_class] %>"
      data-controller="money-field"
@@ -27,7 +29,7 @@
      data-money-field-max-message-value="<%= t(".above_max", max: amount_max) %>">
   <% if options[:label_tooltip] %>
     <div class="form-field__header">
-      <%= form.label amount_method, class: class_names("form-field__label", options[:label_class]) do %>
+      <%= form.label amount_method, label_options do %>
         <%= options[:label] || t(".label") %>
         <% if options[:required] %>
           <span class="text-destructive ml-0.5">*</span>
@@ -46,7 +48,7 @@
 
   <div class="form-field__body">
     <% unless options[:label_tooltip] %>
-      <%= form.label amount_method, class: class_names("form-field__label", options[:label_class]) do %>
+      <%= form.label amount_method, label_options do %>
         <%= options[:label] || t(".label") %>
         <% if options[:required] %>
           <span class="text-destructive ml-0.5">*</span>
@@ -56,7 +58,8 @@
 
     <div class="flex items-center gap-1">
       <div class="flex items-center grow gap-1">
-        <span class="text-subdued text-sm" data-money-field-target="symbol">
+        <%# hide_symbol: a field that holds a percentage as well as an amount. %>
+        <span class="<%= class_names("text-subdued text-sm", hidden: options[:hide_symbol]) %>" data-money-field-target="symbol">
           <%= currency.symbol %>
         </span>
 
@@ -81,7 +84,7 @@
           }.compact),
           required: options[:required],
           aria: options[:aria],
-          **options.slice(:name) %>
+          **options.slice(:name, :title, :id, :autocomplete) %>
       </div>
 
       <% unless options[:hide_currency] %>

@@ -102,6 +102,8 @@ zh-TW:
         equal_to: 等於
   rule:
     conditions:
+      amount_value:
+        label: 金額
       condition_group:
         and_prefix: ' 與 '
         match: 符合

@@ -9,6 +9,7 @@ export default class extends Controller {
     "operatorSelect",
     "subConditionTemplate",
     "subConditionsList",
+    "amountValueTemplate",
   ];
 
   connect() {
@@ -95,18 +96,42 @@ export default class extends Controller {
       selectEl.appendChild(optionEl);
     }
 
-    this.valueInputEl.replaceWith(selectEl);
+    this.#replaceValueField(selectEl);
   }
 
+  // An amount filter gets the same money field as every amount in the app,
+  // rendered into the template by the server; the others a plain text input.
   #buildTextInputFor(conditionFilter) {
+    if (conditionFilter.type === "number" && this.hasAmountValueTemplateTarget) {
+      this.filterValueTarget.replaceChildren(this.amountValueTemplateTarget.content.cloneNode(true));
+      return;
+    }
+
     const textInput = this.#convertFormFieldTo("input", this.valueInputEl);
     textInput.placeholder = "Enter a value";
-    textInput.type = conditionFilter.type; // "text" || "number"
+    textInput.type = conditionFilter.type;
     if (conditionFilter.type === "number") {
       textInput.step = conditionFilter.number_step;
     }
 
-    this.valueInputEl.replaceWith(textInput);
+    this.#replaceValueField(textInput);
+  }
+
+  // A money field brings its own wrapper and controller, so leaving one
+  // replaces the whole field with the styled wrapper a plain field has.
+  #replaceValueField(field) {
+    if (!this.filterValueTarget.querySelector("[data-controller~='money-field']")) {
+      this.valueInputEl.replaceWith(field);
+      return;
+    }
+
+    const body = document.createElement("div");
+    body.classList.add("form-field__body");
+    body.appendChild(field);
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("form-field");
+    wrapper.appendChild(body);
+    this.filterValueTarget.replaceChildren(wrapper);
   }
 
   #convertFormFieldTo(type, el) {

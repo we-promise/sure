@@ -42,6 +42,11 @@ class Import::MonarchAccountMapping < Import::Mapping
     choices["name"].to_s.strip.presence || key
   end
 
+  # The balance typed in, or nil when it is blank or not a number.
+  def current_balance_amount
+    parsed_current_balance
+  end
+
   def to_converter_choice
     MonarchImport::Converter::Choice.new(
       name: key,

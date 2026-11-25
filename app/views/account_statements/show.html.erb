@@ -52,8 +52,16 @@
                               { label: t(".currency"), selected: @statement.statement_currency } %>
               <%= form.date_field :period_start_on, label: t(".period_start_on") %>
               <%= form.date_field :period_end_on, label: t(".period_end_on") %>
-              <%= form.number_field :opening_balance, label: t(".opening_balance"), step: "0.01" %>
-              <%= form.number_field :closing_balance, label: t(".closing_balance"), step: "0.01" %>
+              <%= form.money_field :opening_balance,
+                    label: t(".opening_balance"),
+                    hide_currency: true,
+                    currency_value_override: @statement.statement_currency,
+                    currency_source: "select[name='account_statement[currency]']" %>
+              <%= form.money_field :closing_balance,
+                    label: t(".closing_balance"),
+                    hide_currency: true,
+                    currency_value_override: @statement.statement_currency,
+                    currency_source: "select[name='account_statement[currency]']" %>
             </div>
 
             <%= form.submit t(".save") %>

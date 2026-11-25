@@ -118,6 +118,8 @@ uk:
         less_than_or_equal_to: Менше або дорівнює
   rule:
     conditions:
+      amount_value:
+        label: Сума
       condition_group:
         and_prefix: і
         match: відповідати

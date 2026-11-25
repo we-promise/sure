@@ -22,12 +22,7 @@
 
     <%= tabs.with_panel(tab_id: "calculateRate") do %>
       <div class="space-y-2 mb-3">
-        <div class="form-field">
-          <div class="form-field__body">
-            <label class="form-field__label" for="<%= "#{controller_key}_destination_amount" %>"><%= destination_amount_label %></label>
-            <%= destination_input %>
-          </div>
-        </div>
+        <%= destination_input %>
 
         <div class="flex items-center justify-between p-2 bg-container-inset rounded text-sm">
           <span class="text-secondary"><%= exchange_rate_label %></span>

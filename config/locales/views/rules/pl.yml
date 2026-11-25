@@ -2,6 +2,8 @@
 pl:
   rule:
     conditions:
+      amount_value:
+        label: Kwota
       condition:
         value_placeholder: Wpisz wartość
       condition_group:

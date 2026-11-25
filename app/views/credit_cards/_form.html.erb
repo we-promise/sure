@@ -6,10 +6,13 @@
   <div class="space-y-2">
     <%= form.fields_for :accountable do |credit_card_form| %>
       <div class="flex items-center gap-2">
-        <%= credit_card_form.number_field :available_credit,
+        <%= credit_card_form.money_field :available_credit,
                                         label: t("credit_cards.form.available_credit"),
                                         placeholder: t("credit_cards.form.available_credit_placeholder"),
-                                        min: 0 %>
+                                        min: 0,
+                                        hide_currency: true,
+                                        currency_value_override: account.currency.presence || Current.family.currency,
+                                        currency_source: "select[name='account[currency]']" %>
       </div>
 
       <div class="flex items-center gap-2">
@@ -28,10 +31,13 @@
       <div class="flex items-center gap-2">
         <%= credit_card_form.date_field :expiration_date,
                                       label: t("credit_cards.form.expiration_date") %>
-        <%= credit_card_form.number_field :annual_fee,
+        <%= credit_card_form.money_field :annual_fee,
                                         label: t("credit_cards.form.annual_fee"),
                                         placeholder: t("credit_cards.form.annual_fee_placeholder"),
-                                        min: 0 %>
+                                        min: 0,
+                                        hide_currency: true,
+                                        currency_value_override: account.currency.presence || Current.family.currency,
+                                        currency_source: "select[name='account[currency]']" %>
       </div>
 
       <%# The two days that make up the statement cycle. Only the close day is

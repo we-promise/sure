@@ -64,6 +64,13 @@ export default class extends Controller {
     this.updateValidity = this.updateValidity.bind(this);
     this.amountTarget.addEventListener("input", this.updateValidity);
     this.updateValidity();
+
+    // A currency source can change before this controller connects (a parent
+    // controller syncing it in its own connect), and that "change" is missed.
+    const source = this.#currencySourceElement();
+    if (source?.value && source.value !== this.separatorCurrencyValue) {
+      this.updateAmount(source.value);
+    }
   }
 
   disconnect() {
@@ -159,12 +166,19 @@ export default class extends Controller {
 
   updateAmount(currency) {
     const requestId = ++this.requestSequence;
+    this.textAtSwitch = this.amountTarget.value;
     new CurrenciesService().get(currency).then((currencyData) => {
       if (requestId !== this.requestSequence) return;
 
-      // The text was typed for the previous currency, so read it with that
-      // currency's precision before the step below switches it.
-      const typedPrecision = this.#fieldPrecision();
+      // Text already there was typed for the previous currency, so it is read
+      // with that currency's rules. Text edited while the lookup was pending
+      // was typed for the new currency and is read with the new rules, so
+      // "1.234" typed after switching JPY to USD is not taken as 1234.
+      const typedForNewCurrency = this.#editedSinceSwitch();
+      const previousPrecision = this.#fieldPrecision();
+      const typedDelimiter = typedForNewCurrency
+        ? (currencyData.delimiter ?? "")
+        : this.delimiterValue;
 
       this.amountTarget.step =
         this.hasStepValue &&
@@ -173,6 +187,9 @@ export default class extends Controller {
           ? this.stepValue
           : currencyData.step;
 
+      const typedPrecision = typedForNewCurrency
+        ? this.#fieldPrecision()
+        : previousPrecision;
       const rawValue = this.amountTarget.value.trim();
       if (rawValue !== "") {
         const wasUnread = this.#isUnreadAfterCurrencySwitch();
@@ -180,7 +197,7 @@ export default class extends Controller {
           ? null
           : evaluateAmountExpression(rawValue, {
               precision: typedPrecision,
-              delimiter: this.delimiterValue,
+              delimiter: typedDelimiter,
             });
         // Text a whole-number currency rejected but read as grouping stays
         // flagged until it is edited. Read with the new currency's rules it
@@ -213,6 +230,9 @@ export default class extends Controller {
       // The new currency's step can change the rounding the bounds are
       // checked against, and assigning .value above fires no "input".
       this.updateValidity();
+      // Assigning .value fires no "input" either, so controllers that derive
+      // numbers from this amount hear about the new text and step here.
+      this.dispatch("reformatted");
     }).catch(() => {
       // Catch prevents Unhandled Promise Rejection for network failures.
       // Silently ignored as they are unactionable by the user.
@@ -227,7 +247,12 @@ export default class extends Controller {
   // that read both ways, so "1,234" in a euro field is 1.234, not 1234.
   pasteAmount(event) {
     const text = (event.clipboardData || window.clipboardData)?.getData("text") ?? "";
-    const precision = this.#fieldPrecision();
+    const pending = this.#currencyPending();
+    const precision = pending ? null : this.#fieldPrecision();
+    // While a currency switch is loading, a paste that reads differently
+    // with a dot or a comma decimal ("1,234") is left as pasted text, so the
+    // lookup reads it with the new currency's separator when it lands.
+    if (pending && this.#pasteReadsBothWays(text)) return;
     const parsed = parseAmountPaste(text, {
       separator: this.#pasteSeparator(),
       precision,
@@ -259,13 +284,20 @@ export default class extends Controller {
     if (typeof raw !== "string" || raw.trim() === "") return;
 
     if (this.#isUnreadAfterCurrencySwitch()) return;
+    // The new currency's lookup reformats the text when it lands; rounding
+    // it now would use the previous currency's precision.
+    if (this.#currencyPending()) return;
 
     const precision = this.#fieldPrecision();
     const result = evaluateAmountExpression(raw, this.#readOptions());
     if (result === null) return;
 
-    this.amountTarget.value = formatAmountForDisplay(result, precision, raw);
+    const formatted = formatAmountForDisplay(result, precision, raw);
+    // Leaving a field without editing it is not a change: an auto-submitting
+    // field listening for "change" must not save on a plain blur.
+    if (formatted === raw) return;
 
+    this.amountTarget.value = formatted;
     this.amountTarget.dispatchEvent(new Event("input", { bubbles: true }));
     this.amountTarget.dispatchEvent(new Event("change", { bubbles: true }));
   }
@@ -308,19 +340,37 @@ export default class extends Controller {
   // here, without touching what's still on screen.
   canonicalizeForSubmit(event) {
     if (!this.hasAmountTarget || this.amountTarget.disabled) return;
+    // An unnamed field (a helper input such as the exchange-rate tab's
+    // destination amount) isn't part of the submitted data.
+    if (!this.amountTarget.name) return;
 
-    const raw = this.amountTarget.value;
-    if (typeof raw !== "string" || raw.trim() === "") return;
+    const canonical = this.#submittedText();
+    if (canonical === null) return;
 
-    if (this.#isUnreadAfterCurrencySwitch()) return;
-
-    const precision = this.#fieldPrecision();
-    const result = evaluateAmountExpression(raw, this.#readOptions());
-    if (result === null) return;
-
-    const canonical =
-      precision === null ? formatUnroundedAmount(result) : result.toFixed(precision);
     event.formData.set(this.amountTarget.name, canonical);
+  }
+
+  // The amount this field submits as a number, or null when the text is
+  // blank or not an amount. Controllers that derive numbers from the field
+  // (the exchange-rate tabs) read it here, so they match what is sent.
+  submittedAmount() {
+    const canonical = this.#submittedText();
+    return canonical === null ? null : Number(canonical);
+  }
+
+  #submittedText() {
+    const raw = this.amountTarget.value;
+    if (typeof raw !== "string" || raw.trim() === "") return null;
+
+    if (this.#isUnreadAfterCurrencySwitch()) return null;
+
+    // While a currency switch is still loading, the installed precision is
+    // the previous currency's; submit unrounded rather than round to it.
+    const precision = this.#currencyPending() ? null : this.#fieldPrecision();
+    const result = evaluateAmountExpression(raw, this.#readOptions());
+    if (result === null) return null;
+
+    return precision === null ? formatUnroundedAmount(result) : result.toFixed(precision);
   }
 
   // The separator belongs to the currency it was rendered or last fetched for.
@@ -328,21 +378,33 @@ export default class extends Controller {
   // is not the selected currency, so the paste falls back to the unhinted
   // heuristic instead of settling it with another currency's separator.
   #pasteSeparator() {
-    const picker = this.hasCurrencyTarget
-      ? this.currencyTarget
-      : this.#currencySourceElement();
-    if (picker && picker.value !== this.separatorCurrencyValue) {
-      return undefined;
-    }
+    if (this.#currencyPending()) return undefined;
 
     return this.separatorValue;
   }
 
   // How typed text is read: the field's precision and its currency's
   // thousands delimiter, which a decimal factor in a whole-number field
-  // cannot use (see evaluateAmountExpression).
+  // cannot use (see evaluateAmountExpression). Text edited while a currency
+  // switch is loading was typed for the new currency, whose rules are not
+  // known yet, so it is read as a plain decimal rather than by the previous
+  // currency's grouping rules ("1,234" after JPY to USD is not 1234).
   #readOptions() {
+    if (this.#currencyPending() && this.#editedSinceSwitch()) {
+      return { precision: null, delimiter: "" };
+    }
     return { precision: this.#fieldPrecision(), delimiter: this.delimiterValue };
+  }
+
+  #pasteReadsBothWays(text) {
+    const withDot = parseAmountPaste(text, { separator: ".", precision: null });
+    const withComma = parseAmountPaste(text, { separator: ",", precision: null });
+    return withDot !== withComma;
+  }
+
+  // True when the text changed after the last currency switch started.
+  #editedSinceSwitch() {
+    return this.textAtSwitch !== undefined && this.amountTarget.value !== this.textAtSwitch;
   }
 
   // The text a currency switch could not read (see updateAmount), kept on the
@@ -374,6 +436,15 @@ export default class extends Controller {
     if (!this.hasCurrencySourceValue) return null;
 
     return this.form?.querySelector(this.currencySourceValue) ?? null;
+  }
+
+  // True while the picked currency's lookup has not landed, so the step and
+  // separator still belong to the previous currency.
+  #currencyPending() {
+    const picker = this.hasCurrencyTarget
+      ? this.currencyTarget
+      : this.#currencySourceElement();
+    return Boolean(picker && picker.value !== this.separatorCurrencyValue);
   }
 
   // The amount input's step already carries the selected currency's precision,

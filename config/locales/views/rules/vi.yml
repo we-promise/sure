@@ -102,6 +102,8 @@ vi:
         equal_to: Bằng
   rule:
     conditions:
+      amount_value:
+        label: Số tiền
       condition_group:
         and_prefix: và
         match: khớp

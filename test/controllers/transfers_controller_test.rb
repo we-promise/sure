@@ -12,6 +12,18 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "new transfer form uses money fields for the amount and fees" do
+    get new_transfer_url
+
+    assert_response :success
+    %w[transfer[amount] transfer[source_fee_amount] transfer[destination_fee_amount]].each do |name|
+      assert_select "[data-controller='money-field'] input[type='text'][name='#{name}']"
+    end
+    assert_select "input[name='transfer[amount]'][value]", count: 0
+    # The exchange rate is a rate, not an amount, and stays a number field.
+    assert_select "input[type='number'][name^='transfer[']:not([name='transfer[exchange_rate]'])", count: 0
+  end
+
   test "excludes disabled accounts from the new transfer form" do
     disabled_account = accounts(:depository)
     disabled_account.update!(status: "disabled")

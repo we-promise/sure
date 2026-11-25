@@ -109,16 +109,22 @@
           </div>
 
           <div class="space-y-1">
-            <%= f.label :price, t(".price_label"), class: "font-medium text-sm text-primary block" %>
-            <%= f.number_field :price,
-                  step: "any",
-                  min: "0",
-                  placeholder: t(".price_placeholder"),
-                  class: "form-field__input border border-secondary rounded-lg px-3 py-2 w-full text-primary bg-container",
-                  data: {
-                    action: "input->convert-to-trade#validatePrice",
-                    convert_to_trade_target: "priceField"
-                  } %>
+            <%# Same price field as the trade form, so a comma decimal or an
+                expression reaches the server as a plain number. %>
+            <%= fields builder: StyledFormBuilder do |price_form| %>
+              <%= price_form.money_field :price,
+                    label: t(".price_label"),
+                    step: "any",
+                    precision: 10,
+                    min: 0,
+                    placeholder: t(".price_placeholder"),
+                    hide_currency: true,
+                    currency_value_override: @entry.currency,
+                    amount_data: {
+                      action: "input->convert-to-trade#validatePrice",
+                      convert_to_trade_target: "priceField"
+                    } %>
+            <% end %>
             <p class="text-xs text-secondary"><%= t(".price_hint", currency: @entry.currency) %></p>
           </div>
         </div>

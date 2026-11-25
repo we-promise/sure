@@ -53,6 +53,18 @@ class Import::MonarchImportFlowTest < ActionDispatch::IntegrationTest
     assert_equal [ target, false, "250", "Everyday" ], [ checking.target, checking.to_converter_choice.transactions, checking.current_balance, checking.account_name ]
   end
 
+  test "the accounts step shows suggested balances with a dot in a comma-decimal locale" do
+    @user.update!(locale: "de")
+    upload_exports
+
+    get import_configuration_url(@import)
+
+    assert_response :success
+    assert_select "input[name$='[current_balance]']" do |inputs|
+      inputs.each { |input| assert_no_match(/,/, input["value"].to_s) }
+    end
+  end
+
   test "an account the user can't access can't be a target" do
     upload_exports
     checking = @import.account_mappings.find_by!(key: "Checking")

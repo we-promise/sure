@@ -22,6 +22,13 @@
   <% account_ids << transfer.from_account_id if transfer.respond_to?(:from_account_id) && transfer.from_account_id.present? %>
   <% account_ids << transfer.to_account_id if transfer.respond_to?(:to_account_id) && transfer.to_account_id.present? %>
   <% selected_accounts = @accounts.select { |a| account_ids.include?(a.id) } %>
+  <% source_account_id = @from_account_id.presence if defined?(@from_account_id) %>
+  <% source_account_id ||= transfer.from_account_id if transfer.respond_to?(:from_account_id) %>
+  <% destination_account_id = transfer.to_account_id if transfer.respond_to?(:to_account_id) %>
+  <% source_account = @accounts.find { |a| a.id == source_account_id } %>
+  <% destination_account = @accounts.find { |a| a.id == destination_account_id } %>
+  <% source_currency = source_account&.currency || Current.family.currency %>
+  <% destination_currency = destination_account&.currency || source_currency %>
 
   <% if selected_accounts.any? { |a| a.investment? || a.crypto? } %>
     <% show_type_tabs = false %>
@@ -39,7 +46,20 @@
 
     <%= f.date_field :date, value: transfer.inflow_transaction&.entry&.date || Date.current, label: t(".date"), required: true, data: { transfer_form_target: "date", action: "change->transfer-form#checkCurrencyDifference" } %>
 
-    <%= f.number_field :amount, label: t(".source_amount"), required: true, min: 0, placeholder: "100", step: 0.00000001, data: { transfer_form_target: "amount", action: "input->transfer-form#onSourceAmountChange" } %>
+    <%# The amount and fees are in their account's currency, which the account
+        pickers decide; these unnamed inputs carry that currency for the money
+        fields to follow (see transfer_form_controller#syncCurrencySources). %>
+    <%= tag.input type: "hidden", id: "transfer_source_currency", value: source_currency, data: { transfer_form_target: "sourceCurrency" } %>
+    <%= tag.input type: "hidden", id: "transfer_destination_currency", value: destination_currency, data: { transfer_form_target: "destinationCurrency" } %>
+
+    <%= f.money_field :amount,
+          label: t(".source_amount"),
+          required: true,
+          min: 0,
+          hide_currency: true,
+          currency_value_override: source_currency,
+          currency_source: "#transfer_source_currency",
+          amount_data: { transfer_form_target: "amount", action: "input->transfer-form#onSourceAmountChange" } %>
 
     <%= render DS::TagSelect.new(
           form: f,
@@ -61,16 +81,18 @@
     <% end %>
 
     <% destination_input = capture do %>
-      <%= tag.input type: "number",
-        id: "transfer_form_destination_amount",
-        class: "form-field__input",
-        min: "0",
-        step: "0.00000001",
-        placeholder: "92",
-        data: {
-          transfer_form_target: "destinationAmount",
-          action: "input->transfer-form#onCalculateRateDestinationAmountChange"
-        } %>
+      <%= f.money_field :destination_amount,
+            name: nil,
+            label: t("shared.exchange_rate_tabs.destination_amount"),
+            min: 0,
+            placeholder: "92",
+            hide_currency: true,
+            currency_value_override: destination_currency,
+            currency_source: "#transfer_destination_currency",
+            amount_data: {
+              transfer_form_target: "destinationAmount",
+              action: "input->transfer-form#onCalculateRateDestinationAmountChange"
+            } %>
     <% end %>
 
     <%= render "shared/exchange_rate_tabs",
@@ -87,20 +109,26 @@
 
   <section>
     <%= render DS::Disclosure.new(title: t(".bank_charges"), open: false, variant: :inline) do %>
-      <div class="space-y-2 pt-2">
-        <%= f.number_field :source_fee_amount,
+      <%# Bottom room for the incoming fee's operator row, which otherwise
+          covers the submit button while that field has focus. %>
+      <div class="space-y-2 pt-2 pb-10">
+        <%= f.money_field :source_fee_amount,
               label: t(".outgoing_fee"),
               min: 0,
               placeholder: "0.00",
-              step: "any",
-              data: { transfer_form_target: "sourceFee" } %>
+              hide_currency: true,
+              currency_value_override: source_currency,
+              currency_source: "#transfer_source_currency",
+              amount_data: { transfer_form_target: "sourceFee" } %>
 
-        <%= f.number_field :destination_fee_amount,
+        <%= f.money_field :destination_fee_amount,
               label: t(".incoming_fee"),
               min: 0,
               placeholder: "0.00",
-              step: "any",
-              data: { transfer_form_target: "destinationFee" } %>
+              hide_currency: true,
+              currency_value_override: destination_currency,
+              currency_source: "#transfer_destination_currency",
+              amount_data: { transfer_form_target: "destinationFee" } %>
       </div>
     <% end %>
   </section>

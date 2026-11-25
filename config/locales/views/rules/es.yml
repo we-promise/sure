@@ -208,6 +208,8 @@ es:
         less_than_or_equal_to: Menor o igual que
   rule:
     conditions:
+      amount_value:
+        label: Importe
       condition_group:
         and_prefix: y
         match: cumplir

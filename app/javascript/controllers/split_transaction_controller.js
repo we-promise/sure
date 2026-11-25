@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import evaluateAmountExpression, { precisionFromStep } from "utils/evaluate_amount_expression"
 
 // Split rows are real, individually-named form fields rendered server-side (via the
 // "splits/row" partial) and cloned from a <template> for new rows — mirrors
@@ -40,15 +41,21 @@ export default class extends Controller {
 
   updateRemaining() {
     const total = this.totalValue
+    // A saved row can carry more decimals than the currency, so each row is
+    // read with its own precision and the balance uses the finest of them and
+    // of the total, which Entry#split! must match exactly.
+    let precision = Math.min((String(total).split(".")[1] || "").length, 4)
     const sum = this.amountInputTargets.reduce((acc, input) => {
-      return acc + (Number.parseFloat(input.value) || 0)
+      const rowPrecision = precisionFromStep(input.step) ?? 2
+      precision = Math.max(precision, rowPrecision)
+      // Money fields: the text may hold a comma decimal or an expression.
+      return acc + (evaluateAmountExpression(input.value, { precision: rowPrecision }) || 0)
     }, 0)
 
     const remaining = total - sum
-    const absRemaining = Math.abs(remaining)
-    const balanced = absRemaining < 0.005
+    const balanced = Math.abs(remaining) < 0.5 * 10 ** -precision
 
-    this.remainingTarget.textContent = balanced ? "0.00" : remaining.toFixed(2)
+    this.remainingTarget.textContent = (balanced ? 0 : remaining).toFixed(precision)
 
     // Visual feedback on remaining balance
     const container = this.remainingContainerTarget

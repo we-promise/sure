@@ -56,6 +56,16 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_equal 3, filtered.count
   end
 
+  test "an amount condition saved back with padded decimals keeps its stored text" do
+    condition = @transaction_rule.conditions.create!(condition_type: "transaction_amount", operator: "=", value: "100")
+
+    condition.update!(value: "100.00")
+    assert_equal "100", condition.reload.value
+
+    condition.update!(value: "100.50")
+    assert_equal "100.50", condition.reload.value
+  end
+
   test "applies transaction_amount not equal operator using absolute values" do
     create_transaction(date: Date.current, account: @account, amount: -100, name: "Rule test transaction negative 100")
     scope = @account.transactions

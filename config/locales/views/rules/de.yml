@@ -211,6 +211,8 @@ de:
       success: Regel aktualisiert
   rule:
     conditions:
+      amount_value:
+        label: Betrag
       condition:
         value_placeholder: Wert eingeben
       condition_group:

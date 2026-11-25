@@ -213,6 +213,8 @@ en:
         less_than_or_equal_to: Less than or equal to
   rule:
     conditions:
+      amount_value:
+        label: Amount
       condition_group:
         and_prefix: and
         match: match
