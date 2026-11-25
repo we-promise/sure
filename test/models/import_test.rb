@@ -3,6 +3,10 @@ require "test_helper"
 class ImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  test "cancelled is an import status without a migration" do
+    assert_includes Import.statuses.keys, "cancelled"
+  end
+
   test "publish_later releases the claim when enqueueing raises" do
     import = imports(:transaction)
     import.stubs(:publishable?).returns(true)
@@ -192,6 +196,20 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal "importing", stuck_pdf.reload.status
   end
 
+  test "clean leaves cancelled imports alone" do
+    cancelled = imports(:transaction)
+    cancelled.update_columns(status: "cancelled", updated_at: 7.hours.ago)
+    cancelled_pdf = imports(:pdf)
+    cancelled_pdf.update_columns(status: "cancelled", updated_at: 7.hours.ago)
+
+    Import.clean
+    PdfImport.clean
+
+    assert_equal "cancelled", cancelled.reload.status
+    assert_equal "cancelled", cancelled_pdf.reload.status
+    assert_not cancelled.presumed_lost?
+  end
+
   test "clean leaves session-owned chunks to ImportSession.clean" do
     family = families(:dylan_family)
     session = family.import_sessions.create!(status: "importing")
@@ -279,9 +297,13 @@ class ImportTest < ActiveSupport::TestCase
   test "force_fail! refuses terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete", updated_at: 2.hours.ago)
+    cancelled = imports(:pdf)
+    cancelled.update_columns(status: "cancelled", updated_at: 2.hours.ago)
 
     assert_not import.force_fail!
     assert_equal "complete", import.reload.status
+    assert_not cancelled.force_fail!
+    assert_equal "cancelled", cancelled.reload.status
   end
 
   test "force_fail! releases a lost PdfImport claim back to pending" do

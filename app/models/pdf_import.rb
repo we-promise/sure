@@ -117,6 +117,22 @@ class PdfImport < Import
     end
   end
 
+  # The cancellation callable passed through the reading and extraction calls. It reloads so a
+  # request already sent sees a Stop made while it was running.
+  def ai_cancelled? = reload.cancelled?
+
+  # Stop is a write under the same row lock as the job's status writes: a job finishing between
+  # the page render and the click either owns the claim and completes, or leaves it to be stopped.
+  def cancel_ai_processing!
+    with_lock do
+      return false unless importing?
+
+      update!(status: :cancelled, error: nil, reread_token: nil)
+    end
+
+    true
+  end
+
   # A PdfImport's importing status is a processing claim (AI extraction or
   # publish). Release a lost claim (release_lost_claim!) so the user can re-trigger
   # processing, mirroring ProcessPdfJob's own reclaim; lost reverts keep the

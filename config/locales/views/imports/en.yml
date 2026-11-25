@@ -473,6 +473,7 @@ en:
         status:
           in_progress: In progress
           uploading: Processing rows
+          cancelled: Stopped
           reverting: Reverting
           revert_failed: Revert failed
           complete: Complete

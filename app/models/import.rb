@@ -108,6 +108,7 @@ class Import < ApplicationRecord
     pending: "pending",
     complete: "complete",
     importing: "importing",
+    cancelled: "cancelled",
     reverting: "reverting",
     revert_failed: "revert_failed",
     failed: "failed"

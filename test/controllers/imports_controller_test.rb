@@ -335,6 +335,16 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-turbo-confirm]"
   end
 
+  test "a stopped import has a stopped badge on the imports index" do
+    import = imports(:pdf)
+    import.update!(status: :cancelled)
+
+    get imports_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("imports.table.row.status.cancelled")
+  end
+
   test "guest cannot create statement backed pdf import" do
     sign_in users(:intro_user)
 

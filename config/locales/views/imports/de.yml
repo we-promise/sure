@@ -324,6 +324,7 @@ de:
         status:
           in_progress: Wird ausgeführt
           uploading: Zeilen werden verarbeitet
+          cancelled: Gestoppt
           reverting: Wird rückgängig gemacht
           revert_failed: Rückgängig machen fehlgeschlagen
           complete: Abgeschlossen
