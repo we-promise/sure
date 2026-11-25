@@ -21,7 +21,7 @@ class Assistant::Function::GetHoldingsTest < ActiveSupport::TestCase
   test "excludes positions closed by a newer zero quantity holding" do
     msft = securities(:msft)
     @account.holdings.create!(security: msft, date: 1.day.ago.to_date, qty: 5, price: 400, amount: 2000, currency: "USD")
-    @account.holdings.create!(security: msft, date: Date.current, qty: 0, price: 410, amount: 0, currency: "USD")
+    @account.holdings.find_by!(security: msft, date: Date.current, currency: "USD").update!(qty: 0, price: 410, amount: 0)
 
     tickers = @fn.call("page" => 1)[:holdings].map { |h| h[:ticker] }
 
