@@ -1675,6 +1675,34 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 1000, series.values.first.value.amount
   end
 
+  # A period that ends before any account's history has nothing to chart. The
+  # builder still emits the balance rows' zeros for it, and charting those
+  # would show a portfolio worth $0.
+  test "every series is empty for a period that ends before any supported history" do
+    account = create_investment_account(balance: 1000)
+    first_synced = 4.days.ago.to_date
+    (0..20).each { |offset| create_balance(account, date: 20.days.ago.to_date + offset, amount: offset >= 16 ? 1000 : 0) }
+    account.entries.create!(date: first_synced, name: "Deposit", amount: -1000, currency: "USD", source: "plaid", entryable: Transaction.new)
+
+    before_history = Period.custom(start_date: 20.days.ago.to_date, end_date: 10.days.ago.to_date)
+    built = Balance::ChartSeriesBuilder.new(account_ids: [ account.id ], currency: "USD", period: before_history, favorable_direction: "up").balance_series
+    assert_predicate built.values, :any?, "the builder charts the period's zero balances"
+
+    [ :value_series, :holdings_value_series, :gains_series ].each do |kind|
+      series = InvestmentStatement.new(@family).public_send(kind, period: before_history)
+
+      assert_empty series.values, "#{kind} charts nothing before history"
+      assert_nil series.trend, kind
+    end
+
+    # The boundary: a period ending on the first day of history keeps that day.
+    to_start = Period.custom(start_date: 20.days.ago.to_date, end_date: first_synced)
+    assert_equal [ first_synced ], InvestmentStatement.new(@family).value_series(period: to_start).values.map(&:date)
+    # And a one-day period on that first day, which the trim leaves untouched.
+    first_day = Period.custom(start_date: first_synced, end_date: first_synced)
+    assert_equal [ first_synced ], InvestmentStatement.new(@family).value_series(period: first_day).values.map(&:date)
+  end
+
   # The family series start where the earliest broker's history starts, not
   # where the latest one's does: linking a new broker must not erase the
   # history of one the family already had, open or closed.
