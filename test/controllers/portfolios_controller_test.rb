@@ -475,7 +475,7 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "holdings" => true }, @user.preferences["portfolio_collapsed_sections"])
 
     get portfolio_path
-    assert_equal %w[accounts holdings kpis value_chart], css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_equal %w[accounts holdings kpis performance value_chart], css_select("[data-section-key]").map { |node| node["data-section-key"] }
     assert_select "[data-section-key=holdings][data-reports-section-collapsed-value=?]", "true"
   end
 
@@ -802,7 +802,8 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     # Measured: 42 queries for this page (layout included) with the holdings
     # and accounts sections, 10 accounts and 60 holdings, none of them per
     # holding; 68 with the KPI row and the value chart, which read the
-    # family-wide figures and series once each. The ceiling is that figure plus a little headroom, not a
+    # family-wide figures and series once each; 75 with the performance and
+    # index chart sections, which share one Portfolio::Performance. The ceiling is that figure plus a little headroom, not a
     # guess; the assertion below is the one that matters.
     assert_operator baseline.size, :<=, PORTFOLIO_QUERY_CEILING, "GET /portfolio issued #{baseline.size} queries"
 
@@ -813,7 +814,7 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal baseline.size, grown.size, "adding 20 holdings changed the query count:\n#{(grown - baseline).join("\n")}"
   end
 
-  PORTFOLIO_QUERY_CEILING = 72
+  PORTFOLIO_QUERY_CEILING = 78
 
   private
     def enable_preview(user)
