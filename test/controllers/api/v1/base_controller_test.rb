@@ -494,6 +494,18 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     assert_invalid_filter "flag must be true or false", :boolean_filter_param, "yes", "", "2", [ "true" ], { "a" => "true" }
   end
 
+  test "boolean_filter_param reads a key nested under within:" do
+    assert_equal true, filter_reader(item: { flag: "1" }).send(:boolean_filter_param, :flag, within: :item)
+    assert_equal false, filter_reader(item: { flag: false }).send(:boolean_filter_param, :flag, within: :item)
+    assert_nil filter_reader(item: { other: "1" }).send(:boolean_filter_param, :flag, within: :item)
+    assert_nil filter_reader({}).send(:boolean_filter_param, :flag, within: :item)
+    assert_nil filter_reader(item: "flat").send(:boolean_filter_param, :flag, within: :item)
+    assert_nil filter_reader(flag: "true").send(:boolean_filter_param, :flag, within: :item)
+    assert_raises_filter("flag must be true or false") do
+      filter_reader(item: { flag: "yes" }).send(:boolean_filter_param, :flag, within: :item)
+    end
+  end
+
   test "date_filter_param reads YYYY-MM-DD only" do
     assert_equal Date.new(2024, 1, 5), read_filter(:date_filter_param, "2024-01-05")
     assert_equal Date.new(2024, 1, 5), read_filter(:date_filter_param, " 2024-01-05 ")

@@ -1453,6 +1453,35 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "importing", json_response["data"]["status"]
   end
 
+  test "publish accepts a JSON boolean and 1 as true" do
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    [ true, "1", " TRUE " ].each do |publish|
+      assert_enqueued_with(job: ImportJob) do
+        post api_v1_imports_url,
+             params: { raw_file_content: csv_content, date_col_label: "date", amount_col_label: "amount",
+                       name_col_label: "name", account_id: @account.id, date_format: "%Y-%m-%d", publish: publish }.to_json,
+             headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+      end
+
+      assert_response :created, publish.inspect
+      assert_equal "importing", JSON.parse(response.body)["data"]["status"]
+    end
+  end
+
+  test "a publish flag other than true/false/1/0 is a 422 and creates no import" do
+    [ "yes", "" ].each do |publish|
+      assert_no_difference("Import.count") do
+        post api_v1_imports_url,
+             params: { raw_file_content: "date,amount,name\n2023-01-01,-10.00,Test", publish: publish },
+             headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity, publish.inspect
+      assert_equal "publish must be true or false", JSON.parse(response.body)["message"]
+    end
+  end
+
   test "should not create import for account in another family" do
     other_family = Family.create!(name: "Other Family", currency: "USD", locale: "en")
     other_depository = Depository.create!(subtype: "checking")

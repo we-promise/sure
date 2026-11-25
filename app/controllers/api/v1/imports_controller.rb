@@ -10,6 +10,9 @@ class Api::V1::ImportsController < Api::V1::BaseController
   before_action :set_import_with_rows, only: [ :show ]
   before_action :set_import, only: [ :rows ]
   before_action :set_search, only: [ :index ]
+  # Read before create's catch-all rescue, so a bad flag is a 422 and no
+  # import is created.
+  before_action :set_publish, only: [ :create ]
 
   def index
     @pagy, @imports = pagy(
@@ -130,7 +133,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
       # If the import is configured (has rows), we can try to auto-publish or just leave it as pending
       # For API simplicity, if enough info is provided, we might want to trigger processing
 
-      if @import.configured? && params[:publish] == "true"
+      if @import.configured? && @publish
         if current_resource_owner.guest? && @import.creates_categories_or_tags?
           return render_json({ error: "forbidden", message: "Guests cannot create categories or tags", import_id: @import.id }, status: :forbidden)
         end
@@ -209,6 +212,10 @@ class Api::V1::ImportsController < Api::V1::BaseController
       })
     end
 
+    def set_publish
+      @publish = boolean_filter_param(:publish)
+    end
+
     def import_scope
       current_resource_owner.family.imports.viewable_by(current_resource_owner)
     end
@@ -285,7 +292,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
       end
 
       begin
-        @import.publish_later if params[:publish] == "true"
+        @import.publish_later if @publish
       rescue Import::MaxRowCountExceededError
         render json: {
           error: "max_row_count_exceeded",

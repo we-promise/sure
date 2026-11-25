@@ -270,6 +270,32 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal BigDecimal("22222.22"), existing_entry.reload.amount
   end
 
+  test "upsert accepts true/false/1/0 in any case, top level first" do
+    existing_entry = @valuation.entry
+    { "TRUE" => :ok, " 1 " => :ok, "false" => :created, "0" => :created }.each do |raw, status|
+      post api_v1_valuations_url,
+           params: { upsert: raw, valuation: { account_id: existing_entry.account.id, amount: 1000, date: existing_entry.date, upsert: "true" } },
+           headers: api_headers(@api_key)
+
+      assert_response status, raw.inspect
+    end
+  end
+
+  test "an upsert flag other than true/false/1/0 is a 422 and writes nothing" do
+    existing_entry = @valuation.entry
+
+    [ { upsert: "yes" }, { upsert: "" }, { valuation: { upsert: "on" } } ].each do |flag|
+      body = flag.deep_merge(valuation: { account_id: existing_entry.account.id, amount: 31_337, date: existing_entry.date })
+
+      assert_no_changes -> { existing_entry.reload.amount } do
+        post api_v1_valuations_url, params: body, headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity, flag.inspect
+      assert_equal "upsert must be true or false", JSON.parse(response.body)["message"]
+    end
+  end
+
   test "should reject create with read-only API key" do
     valuation_params = {
       valuation: {

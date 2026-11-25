@@ -157,8 +157,8 @@ RSpec.describe 'API V1 Imports', type: :request do
             description: 'Account ID to import into. Must be an account the API user can write to'
           },
           publish: {
-            type: :string,
-            description: 'Set to "true" to automatically queue for processing if configuration is valid'
+            type: :boolean,
+            description: 'true to queue the import for processing if its configuration is valid: true or false (also 1 or 0, any case). Any other value returns 422 and creates no import.'
           },
           date_col_label: {
             type: :string,

@@ -851,6 +851,35 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal false, response_data["user_modified"]
   end
 
+  test "user_modified accepts 1 and any-case true" do
+    [ "1", "TRUE" ].each do |flag|
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Flagged", amount: 25, date: Date.current, nature: "expense", user_modified: flag } },
+           headers: api_headers(@api_key)
+
+      assert_response :created, flag
+      assert Transaction.find(JSON.parse(response.body)["id"]).entry.user_modified?, flag
+    end
+  end
+
+  test "a user_modified other than true/false/1/0 is a 422 on create and update and writes nothing" do
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Flagged", amount: 25, date: Date.current, nature: "expense", user_modified: "yes" } },
+           headers: api_headers(@api_key)
+    end
+    assert_response :unprocessable_entity
+    assert_equal "user_modified must be true or false", JSON.parse(response.body)["message"]
+
+    assert_no_changes -> { @transaction.entry.reload.name } do
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { name: "Renamed", user_modified: "on" } },
+          headers: api_headers(@api_key)
+    end
+    assert_response :unprocessable_entity
+    assert_equal "user_modified must be true or false", JSON.parse(response.body)["message"]
+  end
+
   test "should use default source when external_id provided without source" do
     transaction_params = {
       transaction: {

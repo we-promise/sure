@@ -338,8 +338,9 @@ class Api::V1::BaseController < ApplicationController
     # Actions with a catch-all `rescue` must call them from a before_action so
     # the 422 is not swallowed into a 500.
 
-    def boolean_filter_param(key)
-      read_filter(key, "must be true or false") { |raw| BOOLEAN_FILTER_VALUES[raw.downcase] }
+    # `within:` reads a key nested in a body object (transaction[user_modified]).
+    def boolean_filter_param(key, within: nil)
+      read_filter(key, "must be true or false", within:) { |raw| BOOLEAN_FILTER_VALUES[raw.downcase] }
     end
 
     def date_filter_param(key)
@@ -380,13 +381,14 @@ class Api::V1::BaseController < ApplicationController
       read_filter(key, "must be a string", &:itself).presence
     end
 
-    # Yields the stripped scalar value of a present key and returns what the
-    # block makes of it; raises "KEY <message>" when the value is not a scalar
-    # or the block returns nil.
-    def read_filter(key, message)
-      return unless params.key?(key)
+    # Yields the stripped scalar value of a present key (in params, or in the
+    # params[within] object) and returns what the block makes of it; raises
+    # "KEY <message>" when the value is not a scalar or the block returns nil.
+    def read_filter(key, message, within: nil)
+      source = within ? params[within] : params
+      return unless source.is_a?(ActionController::Parameters) && source.key?(key)
 
-      raw = scalar_filter_value(params[key])
+      raw = scalar_filter_value(source[key])
       value = yield raw unless raw.nil?
       raise InvalidFilterError, "#{key} #{message}" if value.nil?
 

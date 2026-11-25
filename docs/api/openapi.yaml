@@ -8360,9 +8360,10 @@ paths:
                   description: Account ID to import into. Must be an account the API
                     user can write to
                 publish:
-                  type: string
-                  description: Set to "true" to automatically queue for processing
-                    if configuration is valid
+                  type: boolean
+                  description: 'true to queue the import for processing if its configuration
+                    is valid: true or false (also 1 or 0, any case). Any other value
+                    returns 422 and creates no import.'
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -8474,9 +8475,10 @@ paths:
                   description: Account ID to import into. Must be an account the API
                     user can write to
                 publish:
-                  type: string
-                  description: Set to "true" to automatically queue for processing
-                    if configuration is valid
+                  type: boolean
+                  description: 'true to queue the import for processing if its configuration
+                    is valid: true or false (also 1 or 0, any case). Any other value
+                    returns 422 and creates no import.'
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -11058,8 +11060,9 @@ paths:
                         external_id and defaults to api when external_id is provided
                     user_modified:
                       type: boolean
-                      description: Whether provider syncs should preserve user-supplied
-                        transaction changes
+                      description: 'Whether provider syncs should preserve user-supplied
+                        transaction changes: true or false (also 1 or 0, any case).
+                        Any other value returns 422 and writes nothing.'
                     tag_ids:
                       type: array
                       items:
@@ -11185,8 +11188,9 @@ paths:
                         tags; use [] to clear all tags.
                     user_modified:
                       type: boolean
-                      description: Whether provider syncs should preserve user-supplied
-                        transaction changes
+                      description: 'Whether provider syncs should preserve user-supplied
+                        transaction changes: true or false (also 1 or 0, any case).
+                        Any other value returns 422 and writes nothing.'
         required: true
     delete:
       summary: Delete a transaction
@@ -11547,6 +11551,8 @@ paths:
                       type: boolean
                       description: Nested alternative to the top-level response-status
                         flag. Top-level upsert takes precedence when both are provided.
+                        true or false (also 1 or 0, any case); any other value returns
+                        422.
                   required:
                   - account_id
                   - amount
@@ -11558,7 +11564,8 @@ paths:
                     200 OK instead of 201 Created. The underlying reconciliation write
                     path is unchanged; this flag does not add duplicate-prevention
                     or safe-retry guarantees beyond existing same-date reconciliation
-                    behavior.
+                    behavior. true or false (also 1 or 0, any case); any other value
+                    returns 422 and writes nothing.
               required:
               - valuation
         required: true

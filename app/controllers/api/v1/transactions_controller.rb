@@ -16,6 +16,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   # Outside index's catch-all rescue so a bad filter is a 404/422, not a 500.
   before_action :set_search, only: :index
   before_action :ensure_write_permission, only: [ :update, :destroy ]
+  # Outside the write actions' catch-all rescues for the same reason.
+  before_action :set_user_modified, only: [ :create, :update ]
 
   def index
     transactions_query = @search.transactions_scope.includes(
@@ -103,7 +105,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     if @entry.save
       @entry.lock_saved_attributes!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.mark_user_modified! if user_modified_requested?
+      @entry.mark_user_modified! if @user_modified
       @entry.sync_account_later
       @entry.apply_immediate_rules_later
 
@@ -172,7 +174,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
         @entry.sync_account_later if sync_needed
         @entry.lock_saved_attributes!
-        @entry.mark_user_modified! if user_modified_requested?
+        @entry.mark_user_modified! if @user_modified
 
         @transaction = @entry.transaction
         updated = true
@@ -331,8 +333,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # linked to a bank-sync provider (Plaid/SimpleFin/etc.), so the next
     # sync only links its external_id to the entry instead of overwriting
     # the category/name the client already set.
-    def user_modified_requested?
-      ActiveModel::Type::Boolean.new.cast(transaction_params[:user_modified])
+    def set_user_modified
+      @user_modified = boolean_filter_param(:user_modified, within: :transaction)
     end
 
     def account_id_param
