@@ -46,7 +46,7 @@ class Holding::LotBook
   # divide evenly; anything wider is a real difference.
   OPENING_RESIDUAL_BOUND = BigDecimal("1e-12")
 
-  attr_reader :lots
+  attr_reader :lots, :shortfall
 
   def initialize(method: "average")
     @fifo = method.to_s == "fifo"
