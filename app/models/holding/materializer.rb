@@ -158,10 +158,6 @@ class Holding::Materializer
         # (e.g., Coinbase, SimpleFIN) and should not be overwritten by calculated holdings
         starts_on = @position_start_dates[existing&.account_provider_id]
         derived_position = starts_on && holding.date >= starts_on
-        if derived_position && holding.date == Date.current
-          holding.qty = existing.qty
-          holding.amount = existing.qty * holding.price
-        end
         if existing&.account_provider_id.present? && !derived_position
           Rails.logger.debug(
             "Holding::Materializer - Skipping provider-sourced holding id=#{existing.id} " \

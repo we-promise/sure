@@ -127,6 +127,28 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert Entry.exists?(entry.id)
   end
 
+  test "saving a wallet movement unchanged leaves a dropped movement removable" do
+    wallet = build_bitcoin_wallet(status: :active, baseline_at: Time.current)
+    wallet.create_account_provider!(account: wallet.account)
+    row = wallet.bitcoin_wallet_transactions.create!(txid: "b" * 64, amount_sats: 1000, occurred_at: Time.current)
+    processor = BitcoinWalletAccount::Processor.new(wallet)
+    processor.process(prepare_prices: false, materialize: false)
+    entry = wallet.account.entries.find_by!(source: "bitcoin_wallet")
+
+    assert_no_enqueued_jobs only: SyncJob do
+      patch trade_url(entry), params: { entry: { name: entry.name } }
+    end
+    assert_redirected_to account_path(wallet.account)
+    refute entry.reload.user_modified?
+
+    # A flag saved before the no-op guard must not freeze the old movement.
+    entry.update_column(:user_modified, true)
+    row.update!(present: false, removed_at: Time.current)
+    processor.process(prepare_prices: false, materialize: false)
+
+    refute Entry.exists?(entry.id)
+  end
+
   test "creates deposit entry" do
     from_account = accounts(:depository) # Account the deposit is coming from
 

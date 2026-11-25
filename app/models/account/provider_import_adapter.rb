@@ -724,8 +724,9 @@ class Account::ProviderImportAdapter
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
   # @param exchange_rate [BigDecimal, Numeric, nil] Optional provider-supplied FX rate into the account currency
   # @param fee [BigDecimal, Numeric, nil] Optional provider-reported transaction fee, already included in `amount`
+  # @param extra [Hash, nil] Optional provider-owned metadata to merge onto the trade
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil, fee: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil, fee: nil, extra: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -757,6 +758,9 @@ class Account::ProviderImportAdapter
         raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
       end
 
+      # Serialize the metadata merge with the pledge reconciler's trade stamp.
+      entry.entryable.lock! if extra && entry.persisted?
+
       # Always update Trade attributes (works for both new and existing records)
       trade_attributes = {
         security: security,
@@ -769,6 +773,7 @@ class Account::ProviderImportAdapter
       trade_attributes[:fee] = fee unless fee.nil?
 
       entry.entryable.assign_attributes(trade_attributes)
+      entry.entryable.extra = entry.entryable.extra.merge(extra) if extra
 
       entry.assign_attributes(
         date: date,

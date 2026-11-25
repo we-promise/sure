@@ -1,8 +1,10 @@
 require "test_helper"
+require "support/bitcoin_wallet_test_helper"
 
 class TransactionsControllerTest < ActionDispatch::IntegrationTest
   include EntryableResourceInterfaceTest, EntriesTestHelper
   include ActionView::RecordIdentifier
+  include BitcoinWalletTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -1984,6 +1986,21 @@ end
 
     patch reconcile_transaction_path(entry.transaction)
     assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile keeps manual cash controls on an account tracking Bitcoin" do
+    @user.family.update!(manual_reconciliation: true)
+    wallet = build_bitcoin_wallet(status: :active)
+    wallet.create_account_provider!(account: wallet.account)
+    entry = create_transaction(account: wallet.account, amount: 50)
+
+    patch reconcile_transaction_path(entry.transaction)
+    assert_redirected_to transactions_path
+    assert_equal "cleared", entry.reload.reconciled_status
+
+    patch reconcile_all_account_path(wallet.account), params: { reconciled_status: "reconciled" }
+    assert_redirected_to account_path(wallet.account)
+    assert_equal "reconciled", entry.reload.reconciled_status
   end
 
   test "reconcile records a debug log entry when the status update fails" do

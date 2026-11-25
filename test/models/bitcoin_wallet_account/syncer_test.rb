@@ -1,9 +1,11 @@
 require "test_helper"
 require "support/bitcoin_wallet_test_helper"
+require "support/goal_pledge_test_helper"
 
 class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
   include BitcoinWalletTestHelper
+  include GoalPledgeTestHelper
 
   setup do
     @wallet = build_bitcoin_wallet
@@ -129,6 +131,12 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     account_sync.perform
     assert account_sync.reload.completed?
     assert_nil @wallet.reload.pending_materialization_start_date
+
+    unchanged_sync = @wallet.syncs.create!
+    assert_no_enqueued_jobs(only: SyncJob) do
+      BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform_sync(unchanged_sync)
+    end
+    assert_empty unchanged_sync.children
   end
 
   test "a preview retains newly observed change when its pending transaction confirms" do
@@ -192,6 +200,63 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
     assert_equal 0, @wallet.reload.balance_sats
     refute @wallet.bitcoin_wallet_transactions.find_by!(txid: "e" * 64).present?
+  end
+
+  test "editing sources does not reverse a pending deposit that already disappeared" do
+    @wallet.update!(status: :preview, last_synced_at: Time.current, baseline_block_height: 99)
+    @wallet.connect!
+    tx = bitcoin_transaction(confirmed: false, outputs: [ [ RECEIVE, 100 ] ])
+    syncer = BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider)
+
+    @provider.transactions[RECEIVE] = [ tx ]
+    syncer.perform
+    assert @wallet.account.entries.exists?(source: "bitcoin_wallet")
+
+    travel 1.day do
+      @provider.transactions[RECEIVE] = []
+      syncer.perform
+      assert_empty @wallet.account.entries.where(source: "bitcoin_wallet")
+    end
+
+    travel 2.days do
+      manual_bitcoin_source(@wallet, CHANGE)
+      @wallet.sources_changed!
+      syncer.perform
+
+      refute @wallet.bitcoin_wallet_transactions.find_by!(txid: tx.fetch("txid")).baseline?
+      assert_empty @wallet.account.entries.where(source: "bitcoin_wallet")
+    end
+  end
+
+  test "only a confirmed deposit fulfills a pledge and refreshing preserves its claim" do
+    account = @wallet.account
+    pledge = open_transfer_pledge(account, amount: 200)
+    @wallet.update!(status: :preview, balance_sats: 2_000_000, last_synced_at: Time.current, baseline_block_height: 99)
+    @wallet.connect!
+    assert account.entries.find_by!(source: "bitcoin_wallet_reconciliation").trade.balance_adjustment?
+    assert pledge.reload.status_open?
+
+    tx = bitcoin_transaction(confirmed: false, outputs: [ [ RECEIVE, 2_000_000 ] ])
+    @provider.fund(RECEIVE, 2_000_000)
+    @provider.transactions[RECEIVE] = [ tx ]
+    syncer = BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider)
+    syncer.perform
+    assert account.entries.find_by!(source: "bitcoin_wallet").trade.pending?
+    assert pledge.reload.status_open?
+
+    @provider.fund(RECEIVE, 4_000_000)
+    tx["status"] = { "confirmed" => true, "block_height" => 100, "block_time" => Time.current.to_i }
+    syncer.perform
+    assert pledge.reload.status_matched?
+
+    second = open_transfer_pledge(account, amount: 201)
+    @wallet.security.prices.find_by!(date: Date.current).update!(price: 10_050)
+    syncer.perform
+
+    trade = account.entries.find_by!(source: "bitcoin_wallet").trade
+    assert_equal 10_050, trade.price
+    assert_equal pledge.id, trade.extra.dig("goal", "pledge_id")
+    assert second.reload.status_open?
   end
 
   test "a reorg marks a confirmed transaction as gone" do

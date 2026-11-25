@@ -114,7 +114,8 @@ class BitcoinWalletAccount::Syncer
           next
         end
 
-        remember_transactions(snapshot, snapshot.missing_statuses)
+        movements_changed = remember_transactions(snapshot, snapshot.missing_statuses)
+        movements_changed ||= wallet.needs_reconciliation? || wallet.last_error == "MissingPrice"
         attributes = { balance_sats: snapshot.balance_sats,
           history_truncated: snapshot.history_truncated, last_synced_at: Time.current, last_error: nil,
           status: wallet.account_provider ? :active : :preview }
@@ -126,10 +127,10 @@ class BitcoinWalletAccount::Syncer
         next unless wallet.account_provider
 
         if wallet.needs_reconciliation?
-          wallet.bitcoin_wallet_transactions.update_all(baseline: true)
+          wallet.bitcoin_wallet_transactions.where(present: true, baseline: false).update_all(baseline: true)
           wallet.update!(baseline_at: Time.current, needs_reconciliation: false)
         end
-        processor.process(prepare_prices: false, materialize: @sync.nil?)
+        processor.process(prepare_prices: false, materialize: @sync.nil?, movements_changed: movements_changed)
       end
       if invalid_claim
         raise BitcoinWalletAccount::Discovery::AddressMismatch, "The receive address does not match this BIP84 account within the selected gap limit"
@@ -206,6 +207,7 @@ class BitcoinWalletAccount::Syncer
     # Upsert owned net movements once per TXID, distinguish baseline history by
     # block height, and mark transactions that disappeared as no longer present.
     def remember_transactions(snapshot, statuses)
+      movements_changed = false
       addresses = wallet.bitcoin_wallet_addresses.pluck(:address).to_set
       snapshot.transactions.each do |transaction|
         txid = transaction.fetch("txid")
@@ -221,7 +223,10 @@ class BitcoinWalletAccount::Syncer
           present: true, removed_at: nil, block_height: status["block_height"],
           occurred_at: occurred_at)
         row.baseline = true if old || wallet.baseline_at.nil?
-        row.save! if row.changed?
+        if row.changed?
+          movements_changed ||= row.changed.intersect?(%w[amount_sats confirmed present baseline occurred_at removed_at])
+          row.save!
+        end
       end
 
       statuses.each do |txid, status|
@@ -229,11 +234,14 @@ class BitcoinWalletAccount::Syncer
         next unless row
 
         if status && status["confirmed"]
-          row.update!(confirmed: true, block_height: status["block_height"])
+          row.assign_attributes(confirmed: true, block_height: status["block_height"])
         else
-          row.update!(present: false, removed_at: Time.current)
+          row.assign_attributes(present: false, removed_at: Time.current)
         end
+        movements_changed ||= row.changed.intersect?(%w[confirmed present removed_at])
+        row.save! if row.changed?
       end
+      movements_changed
     end
 
     # Mark only a still-existing wallet with the same sources as failed and log

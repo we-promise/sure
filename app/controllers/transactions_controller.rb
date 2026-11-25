@@ -452,9 +452,7 @@ class TransactionsController < ApplicationController
   end
 
   # Advances the manual reconciled_status through unreconciled -> cleared ->
-  # reconciled -> unreconciled. Scoped to manual (unsynced) accounts — synced
-  # accounts already get duplicate-matching (Account::ProviderImportAdapter)
-  # and statement-level reconciliation (AccountStatement).
+  # reconciled -> unreconciled for accounts with manual cash accounting.
   def reconcile
     return head :not_found unless Current.family.manual_reconciliation?
 
@@ -463,7 +461,7 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(entry.account)
 
-    unless entry.account.manual?
+    unless entry.account.manual_accounting?
       flash[:alert] = t("transactions.reconcile.not_manual_account")
       redirect_back_or_to transactions_path
       return

@@ -72,13 +72,25 @@ class Holding::ForwardCalculator
       snapshots = portfolio_cache.get_holdings(security_id)
       return unless snapshots
 
+      # Carry the last complete read into quote-only days, even when a previously
+      # scheduled manual trade has come due. Earlier days replay the journal.
+      if @position_start_dates.any?
+        @published_snapshots ||= {}
+        published = @published_snapshots.fetch(security_id) do
+          @published_snapshots[security_id] = snapshots.reverse_each.find do |holding|
+            starts_on = @position_start_dates[holding.account_provider_id]
+            starts_on && holding.date.between?(starts_on, Date.current)
+          end
+        end
+        return published if published && date >= published.date
+      end
+
       index = snapshots.bsearch_index { |holding| holding.date > date } || snapshots.length
       return if index.zero?
 
       snapshot = snapshots[index - 1]
       # Position-only providers can restate prior quantities through journal corrections.
-      starts_on = @position_start_dates[snapshot.account_provider_id]
-      return if starts_on && snapshot.date >= starts_on && snapshot.date < Date.current
+      return if published && date >= @position_start_dates[published.account_provider_id]
 
       return snapshot if snapshot.date == date
 
@@ -98,7 +110,7 @@ class Holding::ForwardCalculator
       split_factor = portfolio_cache.split_factor_between(security_id, snapshot.date, date)
       price = portfolio_cache.get_price(security_id, date, currency: snapshot.currency)&.price ||
         Security::Split.unscale(snapshot.price, split_factor)
-      qty = Security::Split.scale(snapshot.qty, split_factor)
+      qty = @position_start_dates[snapshot.account_provider_id] ? snapshot.qty : Security::Split.scale(snapshot.qty, split_factor)
       basis = Security::Split.unscale(snapshot.cost_basis, split_factor) if snapshot.cost_basis
       Holding::HoldingData.new(account_id: account.id, security_id: security_id, date: date,
         qty: qty, price: price, currency: snapshot.currency, amount: qty * price, cost_basis: basis, snapshot: snapshot)
