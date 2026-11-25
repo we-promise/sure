@@ -810,6 +810,26 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "a stale form keeps a fixed-until date saved since it opened" do
+    draw_down_loan_two_years_ago
+    day = (Date.current - 1.year).iso8601
+    fixed_until = Date.current + 1.year
+    @account.loan.update!(term_change_rows: [ { effective_date: day, extra_repayment: "1000" } ])
+    snapshot = rendered_term_changes_snapshot
+    Loan.find(@account.loan.id).update!(term_change_rows: [
+      { effective_date: day, extra_repayment: "1000", term_end_date: fixed_until.iso8601 }
+    ])
+
+    [ [ { effective_date: day, extra_repayment: "1000", balance: "", payment: "", term_end_date: "" } ], [] ].each do |rows|
+      patch loan_path(@account), params: {
+        account: { accountable_attributes: { id: @account.loan.id, term_changes_snapshot: snapshot, term_change_rows: [ "", *rows ] } }
+      }
+
+      assert_redirected_to account_path(@account)
+      assert_equal [ fixed_until ], @account.loan.reload.term_changes.map(&:term_end_date), rows.inspect
+    end
+  end
+
   test "a row edited in a stale form overwrites the value saved since" do
     draw_down_loan_two_years_ago
     day = (Date.current - 1.year).iso8601
