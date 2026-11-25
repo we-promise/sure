@@ -143,7 +143,23 @@ class RecurringTransaction
         dates = incomes.map(&:due_on).uniq.first(periods_limit + 1)
         boundaries = ([ Date.current ] + dates).uniq
 
+        # A period runs from one boundary to the next, so the last payday only
+        # ends the window before it. A one-off with no payday after it would
+        # never be credited, so it opens a window of its own. That window stops
+        # at the horizon obligations are materialized through, so it never
+        # counts bills nothing has stored yet. The payday itself always stays
+        # inside it.
+        if dates.size <= periods_limit && one_off_payday?(incomes, dates.last)
+          materialized_through = Date.current + RecurringTransaction::OccurrenceGenerator::HORIZON_DAYS
+          boundaries << [ materialized_through, dates.last + 1 ].max
+        end
+
         boundaries.first(periods_limit + 2)
+      end
+
+      def one_off_payday?(incomes, date)
+        incomes.select { |occurrence| occurrence.due_on == date }
+               .all? { |occurrence| occurrence.recurring_transaction.one_off? }
       end
 
       def build_periods(boundaries, incomes)

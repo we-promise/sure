@@ -414,6 +414,23 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_in_delta 1 / 1.12, usd_eur.data.first.rate.to_f, 1e-9
   end
 
+  # Yahoo stamps a daily bar with the time its session opens. London's FX
+  # sessions open at midnight local time, which during summer time is 23:00 UTC
+  # the day before.
+  test "fetch_exchange_rates dates each bar on the exchange's calendar" do
+    @provider.stubs(:throttle_request)
+    chart = { "chart" => { "result" => [ {
+      "meta" => { "currency" => "USD", "exchangeTimezoneName" => "Europe/London" },
+      "timestamp" => [ Time.utc(2026, 6, 23, 23), Time.utc(2026, 6, 24, 23), Time.utc(2026, 6, 25, 23) ].map(&:to_i),
+      "indicators" => { "quote" => [ { "close" => [ 1.11, 1.12, 1.13 ] } ] }
+    } ] } }
+    @provider.stubs(:fetch_authenticated_chart).with("EURUSD=X", anything).returns(chart)
+
+    response = @provider.fetch_exchange_rates(from: "EUR", to: "USD", start_date: Date.new(2026, 6, 24), end_date: Date.new(2026, 6, 25))
+
+    assert_equal [ [ Date.new(2026, 6, 24), 1.11 ], [ Date.new(2026, 6, 25), 1.12 ] ], response.data.map { |rate| [ rate.date, rate.rate.to_f ] }
+  end
+
   test "fetch_exchange_rates matches the quote currency regardless of case" do
     @provider.stubs(:throttle_request)
     date = Date.new(2026, 10, 22)
@@ -753,6 +770,21 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_instance_of Provider::YahooFinance::Error, response.error
   end
 
+  # The ASX opens at 10:00 in Sydney, 23:00 UTC the day before, and Yahoo
+  # stamps each daily bar with that opening time.
+  test "fetch_security_prices dates each bar on the exchange's calendar" do
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:fetch_authenticated_chart).with("CBA.AX", anything).returns("chart" => { "result" => [ {
+      "meta" => { "currency" => "AUD", "exchangeName" => "ASX", "exchangeTimezoneName" => "Australia/Sydney" },
+      "timestamp" => [ Time.utc(2026, 11, 11, 23).to_i ],
+      "indicators" => { "quote" => [ { "close" => [ 172.5 ] } ] }
+    } ] })
+
+    response = @provider.fetch_security_prices(symbol: "CBA.AX", start_date: Date.new(2026, 11, 12), end_date: Date.new(2026, 11, 12))
+
+    assert_equal [ Date.new(2026, 11, 12) ], response.data.map(&:date)
+  end
+
   test "fetch_security_prices uses the Colombian Yahoo suffix once and COP fallback" do
     date = Date.new(2024, 1, 15)
     chart_response = mock
@@ -964,6 +996,69 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     second_elapsed = Time.current - start_time
     min_interval = @provider.send(:min_request_interval)
     assert second_elapsed >= (min_interval - 0.05), "Second request should wait at least #{min_interval - 0.05}s"
+  end
+
+  test "wait_for_request_slot shares the request budget across provider instances" do
+    other = Provider::YahooFinance.new
+    [ @provider, other ].each { |provider| provider.stubs(:min_request_interval).returns(0.5) }
+
+    travel_to Time.zone.at(1_800_000_000) do
+      @provider.expects(:sleep).never
+      @provider.send(:wait_for_request_slot)
+
+      other.expects(:sleep).with { |seconds| (seconds - 0.5).abs < 0.001 }
+      other.send(:wait_for_request_slot)
+    end
+  end
+
+  test "wait_for_request_slot queues behind a full horizon instead of bypassing the budget" do
+    @provider.stubs(:min_request_interval).returns(0.5)
+    @provider.stubs(:max_request_wait).returns(1.0)
+    @provider.expects(:sleep).with { |seconds| (seconds - 0.5).abs < 0.001 }.once
+    @provider.expects(:sleep).with { |seconds| (seconds - 1.0).abs < 0.001 }.once
+
+    travel_to Time.zone.at(1_800_000_000) do
+      3.times { @provider.send(:wait_for_request_slot) }
+    end
+  end
+
+  test "wait_for_request_slot tries the cache once and does not wait when it refuses claims" do
+    refusing_cache = ActiveSupport::Cache::MemoryStore.new
+    refusing_cache.expects(:write).once.returns(false)
+    Rails.stubs(:cache).returns(refusing_cache)
+    @provider.stubs(:min_request_interval).returns(0.5)
+
+    travel_to Time.zone.at(1_800_000_000) do
+      @provider.expects(:sleep).never
+      @provider.send(:wait_for_request_slot)
+    end
+  end
+
+  test "every Yahoo client claims a request slot after its retry middleware" do
+    [ @provider.send(:client), @provider.send(:authenticated_client, "cookie") ].each do |connection|
+      handlers = connection.builder.handlers.map(&:klass)
+
+      assert_operator handlers.index(Provider::YahooFinance::BeforeEachAttempt), :>, handlers.index(Faraday::Retry::Middleware)
+    end
+    assert_includes @provider.send(:auth_client).builder.handlers.map(&:klass), Provider::YahooFinance::BeforeEachAttempt
+  end
+
+  test "BeforeEachAttempt runs again for each retried attempt" do
+    claims = 0
+    attempts = 0
+    connection = Faraday.new do |faraday|
+      faraday.request :retry, max: 2, interval: 0, retry_statuses: [ 429 ]
+      faraday.use Provider::YahooFinance::BeforeEachAttempt, -> { claims += 1 }
+      faraday.adapter :test do |stub|
+        stub.get("/quote") do
+          attempts += 1
+          attempts == 1 ? [ 429, {}, "" ] : [ 200, {}, "ok" ]
+        end
+      end
+    end
+
+    assert_equal 200, connection.get("/quote").status
+    assert_equal 2, claims
   end
 
   # ================================
@@ -1315,7 +1410,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     def fx_chart(date, currency, close)
       { "chart" => { "result" => [ {
         "meta" => { "currency" => currency },
-        "timestamp" => [ date.to_time.utc.to_i ],
+        "timestamp" => [ date.to_time(:utc).to_i ],
         "indicators" => { "quote" => [ { "close" => [ close ] } ] }
       } ] } }
     end

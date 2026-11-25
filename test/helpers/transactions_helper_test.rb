@@ -2,6 +2,9 @@ require "test_helper"
 require "ostruct"
 
 class TransactionsHelperTest < ActionView::TestCase
+  include ApplicationHelper
+  include EntriesTestHelper
+
   # build_transaction_extra_details reads `extra` off a Transaction (or anything
   # that responds to :transaction), so a struct is enough to drive it.
   def transaction_with(extra)
@@ -43,6 +46,74 @@ class TransactionsHelperTest < ActionView::TestCase
 
     assert_not can_reconcile_account?(accounts(:credit_card)),
       "read_write is annotate access, and #reconcile requires write"
+  end
+
+  test "reconcile filter is hidden when the user has no accessible manual account" do
+    Current.session = Session.create!(user: users(:empty))
+    Current.family.update!(manual_reconciliation: true)
+
+    assert_not_includes transaction_search_filters.map { |filter| filter[:key] }, "reconcile_status_filter"
+  end
+
+  test "bulk_reconcilable_transfer? is false while the setting is off" do
+    Current.session = Session.create!(user: users(:family_admin))
+
+    assert_not bulk_reconcilable_transfer?(entries(:transfer_out))
+  end
+
+  test "bulk_reconcilable_transfer? is true for a writable manual transfer" do
+    Current.session = Session.create!(user: users(:family_admin))
+    Current.family.update!(manual_reconciliation: true)
+
+    assert bulk_reconcilable_transfer?(entries(:transfer_out))
+  end
+
+  test "bulk_reconcilable_transfer? is false for a read_write share" do
+    share = account_shares(:credit_card_shared_with_member)
+    share.update!(permission: "read_write")
+    Current.session = Session.create!(user: users(:family_member))
+    Current.family.update!(manual_reconciliation: true)
+
+    assert_not bulk_reconcilable_transfer?(entries(:transfer_in))
+  end
+
+  test "bulk_reconcilable_transfer? is false for a synced account" do
+    Current.session = Session.create!(user: users(:family_admin))
+    Current.family.update!(manual_reconciliation: true)
+    transfer = create_transfer(
+      from_account: accounts(:connected),
+      to_account: accounts(:depository),
+      amount: 100
+    )
+
+    assert_not bulk_reconcilable_transfer?(transfer.outflow_transaction.entry)
+  end
+
+  test "bulk_reconcilable_transfer? is false for an unmatched transfer-kind transaction" do
+    Current.session = Session.create!(user: users(:family_admin))
+    Current.family.update!(manual_reconciliation: true)
+    entry = create_transaction(account: accounts(:depository), kind: "funds_movement")
+
+    assert_not bulk_reconcilable_transfer?(entry)
+  end
+
+  test "bulk_reconcilable_transfer? is false for a transfer fee" do
+    Current.session = Session.create!(user: users(:family_admin))
+    Current.family.update!(manual_reconciliation: true)
+    transfer = create_transfer(
+      from_account: accounts(:depository),
+      to_account: accounts(:credit_card),
+      amount: 100
+    )
+    fee_entry = accounts(:depository).entries.create!(
+      name: "Transfer fee",
+      date: Date.current,
+      amount: 10,
+      currency: "USD",
+      entryable: Transaction.new(kind: "standard", transfer: transfer)
+    )
+
+    assert_not bulk_reconcilable_transfer?(fee_entry)
   end
 
   test "extracts the named Plaid fields into their own section" do
@@ -231,6 +302,40 @@ class TransactionsHelperTest < ActionView::TestCase
     assert_includes values, "•••0021"
     assert_includes values, "6789"
     assert_not values.any? { |value| value.to_s.include?("123456789") || value.to_s.include?("021000021") }
+  end
+
+  test "the convert-to-trade picker looks a shared rate up once for all its securities" do
+    securities = [ securities(:aapl), securities(:msft) ]
+    securities.each do |security|
+      security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 200, currency: "USD", date: Date.current))
+    end
+    ExchangeRate.expects(:find_or_fetch_rate).once.returns(ExchangeRate.new(rate: 0.9))
+
+    options = convert_to_trade_security_options(securities, "EUR")
+
+    assert_equal [ "18000", "18000" ], options.map { |option| option.last["data-price-cents"].to_s }
+  end
+
+  # Regression: a quote worth less than a cent after conversion (1 JPY is about
+  # 0.0066 USD) was truncated to 0 cents, so the price check divided by zero
+  # and warned about a mismatch even when the entered price matched the quote.
+  test "the convert-to-trade picker keeps fractional cents of a converted quote" do
+    security = securities(:aapl)
+    security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 1, currency: "JPY", date: Date.current))
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(ExchangeRate.new(rate: 0.0066))
+
+    options = convert_to_trade_security_options([ security ], "USD")
+
+    assert_in_delta 0.66, options.first.last["data-price-cents"], 0.0001
+  end
+
+  test "the convert-to-trade picker omits the price check for a zero quote" do
+    security = securities(:aapl)
+    security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 0, currency: "USD", date: Date.current))
+
+    options = convert_to_trade_security_options([ security ], "USD")
+
+    assert_nil options.first.last["data-price-cents"]
   end
 
   test "investment_activity_label_name translates the stored label" do

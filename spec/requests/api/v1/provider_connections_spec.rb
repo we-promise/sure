@@ -20,6 +20,7 @@ RSpec.describe "Api::V1::ProviderConnections", type: :request do
       user: user,
       name: "API Docs Write Key",
       key: key,
+      display_key: key,
       scopes: %w[write],
       source: "web"
     ).tap { |api_key| api_key.save!(validate: false) }

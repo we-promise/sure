@@ -58,6 +58,16 @@ class Account::ProviderImportAdapter
       # the protection check (pending→booked bypass) and the auto-claim path below.
       incoming_pending = extra.is_a?(Hash) && Transaction.pending_extra?(extra.with_indifferent_access)
 
+      # An automatically excluded stale pending (see Entry.auto_exclude_stale_pending)
+      # that the provider now delivers as booked under the same id becomes a normal
+      # entry again. Entries the user excluded are never touched. An import_locked
+      # entry that is not user_modified keeps its pending flag below, so it stays
+      # excluded rather than being re-excluded on every sync.
+      if entry.persisted? && !incoming_pending && entry.auto_excluded_pending? &&
+          (entry.user_modified? || !entry.import_locked?)
+        entry.update!(excluded: false) # also drops the mark (Entry callback)
+      end
+
       # === PROTECTION CHECK: Skip entries that should not be overwritten ===
       # Check persisted Transaction entries for protection flags before making changes.
       # This prevents sync from overwriting user edits, CSV imports, or excluded entries.
@@ -285,7 +295,9 @@ class Account::ProviderImportAdapter
           entry.transaction.assign_attributes(kind: transfer ? transfer.kind_for_leg(entry.transaction) : auto_kind)
         end
 
-        if auto_category.present? && entry.transaction.category_id.blank?
+        # Only while the leg is a contribution: a matched transfer can make it
+        # a plain transfer above, which carries no category.
+        if auto_category.present? && entry.transaction.category_id.blank? && entry.transaction.kind == "investment_contribution"
           entry.transaction.assign_attributes(category: auto_category)
         end
       end
@@ -468,13 +480,26 @@ class Account::ProviderImportAdapter
           # Security::Resolver returns a different security instance for the same ticker)
           # Scope by account_provider_id to avoid cross-provider overwrites
           # Skip if ticker is blank to avoid matching NULL tickers
+          # External ids are unique per account, so a same-day row with an id of
+          # its own is another of the provider's positions, not this one under
+          # another security: only a row stored without an id (nil, or blank as
+          # the branch below stores a blank one) can match.
+          # The same ticker on another exchange can be a different company, so a
+          # known exchange has to agree with this one's, the same listing coming
+          # before one stored without an exchange. A row matches only when no
+          # other candidate is as good a match: two rows on the same exchange,
+          # or two without one, leave the holding unmatched.
           unless holding || security.ticker.blank?
             scope = account.holdings
               .joins("INNER JOIN securities AS ps ON ps.id = holdings.provider_security_id")
-              .where(date: date, currency: currency)
+              .where(date: date, currency: currency, external_id: [ nil, "" ])
               .where("ps.ticker = ?", security.ticker)
+            venues = Security.exchange_operating_mic_lookup_values(security.exchange_operating_mic)
+            scope = scope.where("COALESCE(ps.exchange_operating_mic, '') = '' OR UPPER(ps.exchange_operating_mic) IN (?)", venues) if venues.any?
             scope = scope.where(account_provider_id: account_provider_id) if account_provider_id.present?
-            holding = scope.first
+            first, second = scope.select("holdings.*, COALESCE(ps.exchange_operating_mic, '') AS provider_mic")
+                                 .order(Arel.sql("COALESCE(ps.exchange_operating_mic, '') = ''"), :id).limit(2).to_a
+            holding = first if first && (second.nil? || (venues.any? && first.provider_mic.present? && second.provider_mic.blank?))
           end
 
           # Fallback path 2: match by (security, date, currency) — and when provided,
@@ -495,7 +520,11 @@ class Account::ProviderImportAdapter
           end
         end
 
-        holding ||= account.holdings.new(
+        # Built outside account.holdings, as below: a record built there joins
+        # the account's holdings unsaved, and an import that fails after that
+        # (a collision, a validation) would leave the account unable to save.
+        holding ||= Holding.new(
+          account: account,
           security: security,
           date: date,
           currency: currency,
@@ -510,11 +539,8 @@ class Account::ProviderImportAdapter
         remapped_attrs[:account_provider_id] = account_provider_id if account_provider_id.present?
         holding = account.holdings.find_by(remapped_attrs)
 
-        holding ||= account.holdings.find_or_initialize_by(
-          security: security,
-          date: date,
-          currency: currency
-        )
+        holding ||= account.holdings.find_by(security: security, date: date, currency: currency) ||
+          Holding.new(account: account, security: security, date: date, currency: currency)
       end
 
       # Early cross-provider composite-key conflict guard: avoid attempting a write
@@ -876,7 +902,7 @@ class Account::ProviderImportAdapter
   # @param currency [String] Currency code
   # @param source [String] Provider name (e.g., "simplefin")
   # @param date_window [Integer] Days to search around the posted date (default: 8)
-  # @return [Entry, nil] The pending entry or nil if not found
+  # @return [Entry, nil] The pending entry, or nil when none or several match
   def find_pending_transaction(date:, amount:, currency:, source:, date_window: 8)
     date = Date.parse(date.to_s) unless date.is_a?(Date)
 
@@ -896,9 +922,15 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
       .where(Transaction.pending_sql("transactions"))
-      .order(date: :desc) # Prefer most recent pending transaction
+      .where(excluded: false)
+      .limit(2)
+      .to_a
 
-    candidates.first
+    # Amount, currency and date alone cannot tell two same-amount pendings apart,
+    # so only claim when the match is unambiguous (#2013). Otherwise the posted
+    # transaction is imported as a new entry and the pendings stay for the
+    # stale-pending cleanup.
+    candidates.size == 1 ? candidates.first : nil
   end
 
   # Finds a pending transaction using fuzzy amount matching for tip adjustments

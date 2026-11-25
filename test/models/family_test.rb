@@ -8,6 +8,25 @@ class FamilyTest < ActiveSupport::TestCase
     @syncable = families(:dylan_family)
   end
 
+  test "missing_data_provider? is false under the keyless securities fallback" do
+    family = Family.create!(name: "Fallback", currency: "USD")
+    account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    trade = Trade.new(security: securities(:aapl), qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy AAPL", date: 1.day.ago.to_date, amount: 100, currency: "USD", entryable: trade)
+
+    yahoo = mock("yahoo_finance")
+    yahoo.stubs(:class).returns(Provider::YahooFinance)
+    Provider::Registry.stubs(:yahoo_finance).returns(yahoo)
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+
+    with_env_overrides("TWELVE_DATA_API_KEY" => nil) do
+      assert family.requires_securities_data_provider?
+      assert_not family.requires_exchange_rates_data_provider?
+      assert_not family.missing_data_provider?
+    end
+  end
+
   test "local_date is the date in the family's zone" do
     family = families(:dylan_family)
     evening_utc = Time.utc(2026, 1, 15, 19, 0, 0)
@@ -254,6 +273,16 @@ class FamilyTest < ActiveSupport::TestCase
     assert_tags_version_changes(family) { tag.destroy! }
   end
 
+  test "holdings_version changes when a holding is edited or removed, and only then" do
+    family = families(:dylan_family)
+    holding = holdings(:one)
+
+    assert_equal family.holdings_version, family.holdings_version, "stable while nothing changes"
+    assert_holdings_version_changes(family) { holding.set_manual_cost_basis!(80) }
+    assert_holdings_version_changes(family) { holding.unlock_cost_basis! }
+    assert_holdings_version_changes(family) { holdings(:two).destroy! }
+  end
+
   test "entries_cache_version changes when an older entry is destroyed" do
     family = families(:dylan_family)
     newer_entry = entries(:transaction)
@@ -434,7 +463,7 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal Money::Currency.as_options.map(&:iso_code), family.reload.enabled_currency_codes
   end
 
-  test "upload_document stores provided metadata on family document" do
+  test "upload_document stores provided metadata and statement on family document" do
     family = families(:dylan_family)
     family.update!(vector_store_id: nil)
 
@@ -452,14 +481,21 @@ class FamilyTest < ActiveSupport::TestCase
 
     VectorStore::Registry.stubs(:adapter).returns(adapter)
 
+    statement = AccountStatement.create_from_upload!(
+      family: family, account: accounts(:connected),
+      file: uploaded_file(filename: "statement.pdf", content_type: "application/pdf", content: "%PDF-1.4 statement")
+    )
+
     document = family.upload_document(
       file_content: "hello",
       filename: "notes.txt",
-      metadata: { "type" => "financial_document" }
+      metadata: { "type" => "financial_document" },
+      account_statement: statement
     )
 
     assert_not_nil document
     assert_equal({ "type" => "financial_document" }, document.metadata)
+    assert_equal statement, document.reload.account_statement
     assert_equal "vs_test123", family.reload.vector_store_id
   end
 
@@ -940,6 +976,12 @@ class FamilyTest < ActiveSupport::TestCase
       before = family.tags_version
       yield
       assert_not_equal before, family.reload.tags_version
+    end
+
+    def assert_holdings_version_changes(family)
+      before = family.holdings_version
+      yield
+      assert_not_equal before, family.holdings_version
     end
 
     def set_preview_features(user, enabled)
