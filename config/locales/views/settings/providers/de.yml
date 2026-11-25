@@ -138,10 +138,10 @@ de:
           net_asset_value_fields: 'Felder: Currency, Report Date, Total'
           net_asset_value_options: 'Optionen: keine'
           open_positions: 'Open Positions:'
-          open_positions_fields: 'Felder: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol'
-          open_positions_options: 'Optionen: Summary'
+          open_positions_fields: 'Felder: Asset Class, Conid, Cost Basis Money, Cost Basis Price, Currency, Description, FX Rate To Base, Level of Detail, Mark Price, Position Value, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol'
+          open_positions_options: 'Optionen: Summary (Lot nicht ankreuzen)'
           trades: 'Trades:'
-          trades_fields: 'Felder: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID'
+          trades_fields: 'Felder: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Proceeds, Quantity, Symbol, Trade Date, Trade ID, Trade Money, TradePrice, Transaction ID'
           trades_options: 'Optionen: Execution'
         steps:
           step_1: Öffne im IBKR Client Portal „Performance & Reports“ > „Flex Queries“.

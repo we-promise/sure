@@ -796,6 +796,42 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Query ID/i, response.body)
   end
 
+  # A bond is valued from positionValue, proceeds and tradeMoney, and costed
+  # from costBasisMoney, and a position's lot rows are told from its summary row
+  # by levelOfDetail. A query without these fields imports, but at a worse price.
+  test "GET connect_form lists the Flex Query fields the import reads" do
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    open_positions = I18n.t("settings.providers.ibkr_panel.sections.open_positions_fields")
+    trades = I18n.t("settings.providers.ibkr_panel.sections.trades_fields")
+
+    [ "Position Value", "Cost Basis Money", "Mark Price", "Level of Detail" ].each do |field|
+      assert_includes open_positions, field
+      assert_includes response.body, field
+    end
+    [ "Proceeds", "Trade Money", "TradePrice", "Quantity" ].each do |field|
+      assert_includes trades, field
+      assert_includes response.body, field
+    end
+    assert_includes I18n.t("settings.providers.ibkr_panel.sections.open_positions_options"), "Summary only"
+  end
+
+  test "every locale's Flex Query checklist lists the fields the import reads" do
+    Dir[Rails.root.join("config/locales/views/settings/providers/*.yml")].sort.each do |path|
+      locale = File.basename(path, ".yml")
+      sections = YAML.load_file(path, aliases: true).dig(locale, "settings", "providers", "ibkr_panel", "sections")
+      next unless sections&.key?("open_positions_fields")
+
+      [ "Position Value", "Cost Basis Money", "Level of Detail" ].each do |field|
+        assert_includes sections["open_positions_fields"], field, "#{locale} open positions"
+      end
+      [ "Proceeds", "Trade Money" ].each do |field|
+        assert_includes sections["trades_fields"], field, "#{locale} trades"
+      end
+    end
+  end
+
   test "GET connect_form lists every Interactive Brokers connection" do
     families(:dylan_family).ibkr_items.create!(name: "IBKR Ireland", query_id: "Q1", token: "T1")
     families(:dylan_family).ibkr_items.create!(name: "IBKR US", query_id: "Q2", token: "T2")

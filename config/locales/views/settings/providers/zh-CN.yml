@@ -412,11 +412,11 @@ zh-CN:
           net_asset_value_options: 选项：无
           net_asset_value_fields: 字段：Currency、Report Date、Total
           open_positions: 未平仓位：
-          open_positions_options: 选项：Summary
-          open_positions_fields: 字段：Asset Class、Conid、Cost Basis Price、Currency、FX Rate To Base、Mark Price、Quantity、Report Date、Security ID、Security ID Type、Side、Symbol
+          open_positions_options: 选项：Summary（不要勾选 Lot）
+          open_positions_fields: 字段：Asset Class、Conid、Cost Basis Money、Cost Basis Price、Currency、Description、FX Rate To Base、Level of Detail、Mark Price、Position Value、Quantity、Report Date、Security ID、Security ID Type、Side、Symbol
           trades: 交易：
           trades_options: 选项：Execution
-          trades_fields: 字段：Asset Class、Buy/Sell、Conid、Currency、FX Rate To Base、IB Commission、IB Commission Currency、Quantity、Symbol、Trade Date、Trade ID、TradePrice、Transaction ID
+          trades_fields: 字段：Asset Class、Buy/Sell、Conid、Currency、FX Rate To Base、IB Commission、IB Commission Currency、Proceeds、Quantity、Symbol、Trade Date、Trade ID、Trade Money、TradePrice、Transaction ID
         configuration:
           models: Models：可选
           format: Format：XML
