@@ -10,7 +10,10 @@
 #   1 + r_t = (1 + r) * exp(sigma * z_t),  z_t ~ N(0, 1)
 #
 # so with sigma = 0 every path is the deterministic projection, and a return
-# can never fall below -100%. A path whose withdrawal the portfolio cannot
+# can never fall below -100%. The first year is only the part of it left
+# from the reference date, as in the Simulation, so its draw covers that
+# fraction f of a year: (1 + r)^f * exp(sigma * sqrt(f) * z), the log-normal
+# over f years. A path whose withdrawal the portfolio cannot
 # meet has run out and counts as a failure.
 #
 # The year's contribution and withdrawal do not depend on returns, so they
@@ -67,7 +70,8 @@ class RetirementPlan::MonteCarlo
   def percentiles
     @percentiles ||= begin
       values = run(simulation, keep_values: true)[:values]
-      deflators = (1..year_count).map { |n| (1 + base_simulation.inflation_rate.to_f)**n }
+      fraction = base_simulation.first_year_fraction.to_f
+      deflators = (0...year_count).map { |t| (1 + base_simulation.inflation_rate.to_f)**(fraction + t) }
 
       PERCENTILES.to_h do |p|
         [ p, (0...year_count).map { |t| self.class.percentile(values.map { |path| path[t] }, p) / deflators[t] } ]
@@ -147,19 +151,27 @@ class RetirementPlan::MonteCarlo
       base = [ 1 + sim.return_rate.to_f, 0.0 ].max
       # Retired before the reference year, every modelled year is retired.
       split = (sim.retirement_year - first_year).clamp(0, year_count)
+      fraction = sim.first_year_fraction.to_f
       survived = 0
       values = [] if keep_values
 
       draws.each do |z|
-        growth = z.map { |zt| base * Math.exp(@sigma * zt) }
-        lasted, path_values = replay(sim.current_assets.to_f, flows, growth, keep_values:)
-        lasted &&= replay(sim.current_assets.to_f, flows, growth[0...split] + growth[split..].sort).first if worst_first
+        lasted, path_values = replay(sim.current_assets.to_f, flows, growth_factors(z, base, fraction), keep_values:)
+        # Sorting the draws, not the factors, keeps the first year's factor
+        # a fraction of a year's wherever the worst draw lands.
+        lasted &&= replay(sim.current_assets.to_f, flows, growth_factors(z[0...split] + z[split..].sort, base, fraction)).first if worst_first
 
         survived += 1 if lasted
         values << path_values if keep_values
       end
 
       { success_rate: survived.fdiv(@paths), values: values }
+    end
+
+    def growth_factors(z, base, fraction)
+      z.each_with_index.map do |zt, t|
+        t.zero? ? base**fraction * Math.exp(@sigma * Math.sqrt(fraction) * zt) : base * Math.exp(@sigma * zt)
+      end
     end
 
     # Whether one path lasts, and, when kept, its value at the end of each
