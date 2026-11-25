@@ -1469,6 +1469,18 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a JSON null publish flag is absent: the import is created and not published" do
+    assert_no_enqueued_jobs(only: ImportJob) do
+      post api_v1_imports_url,
+           params: { raw_file_content: "date,amount,name\n2023-01-01,-10.00,Test", date_col_label: "date", amount_col_label: "amount",
+                     name_col_label: "name", account_id: @account.id, date_format: "%Y-%m-%d", publish: nil }.to_json,
+           headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+    end
+
+    assert_response :created
+    assert_not_equal "importing", JSON.parse(response.body)["data"]["status"]
+  end
+
   test "a publish flag other than true/false/1/0 is a 422 and creates no import" do
     [ "yes", "" ].each do |publish|
       assert_no_difference("Import.count") do

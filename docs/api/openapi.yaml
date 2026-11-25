@@ -8362,8 +8362,9 @@ paths:
                 publish:
                   type: boolean
                   description: 'true to queue the import for processing if its configuration
-                    is valid: true or false (also 1 or 0, any case). Any other value
-                    returns 422 and creates no import.'
+                    is valid: true or false (also 1 or 0, any case); null is the same
+                    as leaving it out. Any other value returns 422 and creates no
+                    import.'
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -8477,8 +8478,9 @@ paths:
                 publish:
                   type: boolean
                   description: 'true to queue the import for processing if its configuration
-                    is valid: true or false (also 1 or 0, any case). Any other value
-                    returns 422 and creates no import.'
+                    is valid: true or false (also 1 or 0, any case); null is the same
+                    as leaving it out. Any other value returns 422 and creates no
+                    import.'
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -10865,13 +10867,15 @@ paths:
       - name: min_amount
         in: query
         required: false
-        description: Minimum signed amount, inclusive (inflows are negative)
+        description: Minimum signed amount, inclusive (inflows are negative); at most
+          20 digits written out, or 422
         schema:
           type: number
       - name: max_amount
         in: query
         required: false
-        description: Maximum signed amount, inclusive
+        description: Maximum signed amount, inclusive; at most 20 digits written out,
+          or 422
         schema:
           type: number
       - name: type
@@ -11061,8 +11065,9 @@ paths:
                     user_modified:
                       type: boolean
                       description: 'Whether provider syncs should preserve user-supplied
-                        transaction changes: true or false (also 1 or 0, any case).
-                        Any other value returns 422 and writes nothing.'
+                        transaction changes: true or false (also 1 or 0, any case);
+                        null is the same as leaving it out. Any other value returns
+                        422 and writes nothing.'
                     tag_ids:
                       type: array
                       items:
@@ -11189,8 +11194,9 @@ paths:
                     user_modified:
                       type: boolean
                       description: 'Whether provider syncs should preserve user-supplied
-                        transaction changes: true or false (also 1 or 0, any case).
-                        Any other value returns 422 and writes nothing.'
+                        transaction changes: true or false (also 1 or 0, any case);
+                        null is the same as leaving it out. Any other value returns
+                        422 and writes nothing.'
         required: true
     delete:
       summary: Delete a transaction
@@ -11551,8 +11557,8 @@ paths:
                       type: boolean
                       description: Nested alternative to the top-level response-status
                         flag. Top-level upsert takes precedence when both are provided.
-                        true or false (also 1 or 0, any case); any other value returns
-                        422.
+                        true or false (also 1 or 0, any case); null is the same as
+                        leaving it out; any other value returns 422.
                   required:
                   - account_id
                   - amount
@@ -11564,8 +11570,8 @@ paths:
                     200 OK instead of 201 Created. The underlying reconciliation write
                     path is unchanged; this flag does not add duplicate-prevention
                     or safe-retry guarantees beyond existing same-date reconciliation
-                    behavior. true or false (also 1 or 0, any case); any other value
-                    returns 422 and writes nothing.
+                    behavior. true or false (also 1 or 0, any case); null is the same
+                    as leaving it out; any other value returns 422 and writes nothing.
               required:
               - valuation
         required: true

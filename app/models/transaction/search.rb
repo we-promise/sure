@@ -199,7 +199,12 @@ class Transaction::Search
   # Filters the web list leaves at their defaults; the API sets them.
   attribute :exclude_split_parents, :boolean, default: true
   attribute :excluded, :boolean
-  # Exact ids: nil is no filter, an empty list matches nothing.
+  # Exact ids: nil is no filter, an empty list matches nothing (unlike the web
+  # form's account_ids above, where an empty list is no filter). A single id
+  # and its list (account_id and account_ids...) both apply.
+  attribute :account_id, :string
+  attribute :category_id, :string
+  attribute :merchant_id, :string
   attribute :category_ids, array: true
   attribute :merchant_ids, array: true
   attribute :tag_ids, array: true
@@ -363,6 +368,9 @@ class Transaction::Search
     end
 
     def apply_id_filters(query)
+      query = query.where(entries: { account_id: }) unless account_id.nil?
+      query = query.where(category_id:) unless category_id.nil?
+      query = query.where(merchant_id:) unless merchant_id.nil?
       query = query.where(category_id: category_ids) unless category_ids.nil?
       query = query.where(merchant_id: merchant_ids) unless merchant_ids.nil?
       query = query.with_any_tag(tag_ids) unless tag_ids.nil?

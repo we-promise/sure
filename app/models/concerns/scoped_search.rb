@@ -1,5 +1,7 @@
-# Base for a resource's query object (Account::Search, Holding::Search...),
-# the convention Transaction::Search set:
+# Base for a resource's query object (Account::Search, Holding::Search...).
+# Transaction::Search, older and shared with the web list, does not include
+# it: it takes the family rather than a relation, and its web filters (dates
+# included) arrive as the form's strings, so it reads those itself.
 #
 # - The caller passes the already-authorised relation (the one it also uses
 #   for show), so authorisation stays with the caller and a search can only

@@ -271,6 +271,18 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a JSON null upsert flag is absent" do
+    existing_entry = @valuation.entry
+
+    [ { upsert: nil }, { valuation: { upsert: nil } } ].each do |flag|
+      body = flag.deep_merge(valuation: { account_id: existing_entry.account.id, amount: 1000, date: existing_entry.date })
+
+      post api_v1_valuations_url, params: body.to_json, headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+
+      assert_response :created, flag.inspect
+    end
+  end
+
   test "an upsert flag other than true/false/1/0 is a 422 and writes nothing" do
     existing_entry = @valuation.entry
 

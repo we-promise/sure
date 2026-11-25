@@ -74,7 +74,7 @@ When creating an import, you must provide the file content and the column mappin
 | `date_col_label` | string | The header name for the date column. |
 | `amount_col_label` | string | The header name for the amount column. |
 | `name_col_label` | string | The header name for the transaction name column. |
-| `publish` | boolean | If `true`, the import will be automatically queued for processing if configuration is valid. Accepts `true`, `false`, `1` or `0` (any case, or a JSON boolean); any other value returns `422` and creates no import. |
+| `publish` | boolean | If `true`, the import will be automatically queued for processing if configuration is valid. Accepts `true`, `false`, `1` or `0` (any case, or a JSON boolean); `null` is the same as leaving it out; any other value returns `422` and creates no import. |
 
 Example request body:
 

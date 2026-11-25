@@ -483,7 +483,14 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "flag" => false }, response.parsed_body)
   end
 
-  # Every reader: absent is nil; a valid value comes back typed; anything else,
+  test "a key with no value is absent" do
+    get "/api/v1/test_filters?flag", headers: { "X-Api-Key" => @plain_api_key }
+
+    assert_response :success
+    assert_equal({ "flag" => nil }, response.parsed_body)
+  end
+
+  # Every reader: absent or null is nil; a valid value comes back typed; anything else,
   # including an empty value or an array/hash where a scalar belongs, is a 422.
 
   test "boolean_filter_param reads true/false/1/0 ignoring case and spaces" do
@@ -491,6 +498,7 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
       assert_equal expected, read_filter(:boolean_filter_param, raw), raw.inspect
     end
     assert_nil read_filter(:boolean_filter_param, nil)
+    assert_nil filter_reader(flag: nil).send(:boolean_filter_param, :flag), "a JSON null is absent"
     assert_invalid_filter "flag must be true or false", :boolean_filter_param, "yes", "", "2", [ "true" ], { "a" => "true" }
   end
 
@@ -500,6 +508,7 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     assert_nil filter_reader(item: { other: "1" }).send(:boolean_filter_param, :flag, within: :item)
     assert_nil filter_reader({}).send(:boolean_filter_param, :flag, within: :item)
     assert_nil filter_reader(item: "flat").send(:boolean_filter_param, :flag, within: :item)
+    assert_nil filter_reader(item: { flag: nil }).send(:boolean_filter_param, :flag, within: :item)
     assert_nil filter_reader(flag: "true").send(:boolean_filter_param, :flag, within: :item)
     assert_raises_filter("flag must be true or false") do
       filter_reader(item: { flag: "yes" }).send(:boolean_filter_param, :flag, within: :item)
@@ -521,12 +530,17 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     assert_invalid_filter "flag must be an ISO 8601 timestamp", :time_filter_param, "", "2024-01-05", "yesterday", [ "2024-01-05T10:30:00Z" ]
   end
 
-  test "decimal_filter_param reads finite numbers" do
+  # Written out in full, 1e100000000 is a 100 MB string, and ActiveRecord
+  # writes it out to build the SQL.
+  test "decimal_filter_param reads numbers of up to 20 digits written out" do
     assert_equal BigDecimal("12.5"), read_filter(:decimal_filter_param, "12.5")
     assert_equal BigDecimal("-3"), read_filter(:decimal_filter_param, " -3 ")
+    assert_equal BigDecimal("1e19"), read_filter(:decimal_filter_param, "1e19")
+    assert_equal BigDecimal("-0.00000000000000000001"), read_filter(:decimal_filter_param, "-1e-20")
     assert_kind_of BigDecimal, read_filter(:decimal_filter_param, "7")
     assert_nil read_filter(:decimal_filter_param, nil)
-    assert_invalid_filter "flag must be a number", :decimal_filter_param, "", "abc", "12abc", "Infinity", "NaN", "1\u00002", [ "1" ]
+    assert_invalid_filter "flag must be a number of at most 20 digits", :decimal_filter_param,
+      "", "abc", "12abc", "Infinity", "NaN", "1\u00002", [ "1" ], "1e20", "1e-21", "1e100000000", "-1e-100000000"
   end
 
   test "uuid_filter_param reads one UUID" do
@@ -542,6 +556,7 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ first, second ], read_filter(:uuid_list_filter_param, [ first, second ])
     assert_equal [ first ], read_filter(:uuid_list_filter_param, first)
     assert_nil read_filter(:uuid_list_filter_param, nil)
+    assert_nil filter_reader(flag: nil).send(:uuid_list_filter_param, :flag), "a JSON null is absent"
     assert_invalid_filter "flag must be a list of valid UUIDs", :uuid_list_filter_param,
       "", [], [ "" ], [ first, "123" ], "123", { "0" => first }
   end

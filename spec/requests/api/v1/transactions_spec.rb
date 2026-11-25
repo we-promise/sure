@@ -156,9 +156,9 @@ RSpec.describe 'API V1 Transactions', type: :request do
                 description: 'Filter transactions until this date (inclusive)',
                 schema: { type: :string, format: :date }
       parameter name: :min_amount, in: :query, type: :number, required: false,
-                description: 'Minimum signed amount, inclusive (inflows are negative)'
+                description: 'Minimum signed amount, inclusive (inflows are negative); at most 20 digits written out, or 422'
       parameter name: :max_amount, in: :query, type: :number, required: false,
-                description: 'Maximum signed amount, inclusive'
+                description: 'Maximum signed amount, inclusive; at most 20 digits written out, or 422'
       parameter name: :type, in: :query, required: false,
                 description: 'income lists negative amounts and expense positive ones, transfers included',
                 schema: { type: :string, enum: %w[income expense] }
@@ -261,7 +261,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Transaction nature (determines sign)' },
               external_id: { type: :string, description: 'Optional external idempotency key scoped to account and source' },
               source: { type: :string, description: 'Optional source namespace for external_id. Requires external_id and defaults to api when external_id is provided' },
-              user_modified: { type: :boolean, description: 'Whether provider syncs should preserve user-supplied transaction changes: true or false (also 1 or 0, any case). Any other value returns 422 and writes nothing.' },
+              user_modified: { type: :boolean, description: 'Whether provider syncs should preserve user-supplied transaction changes: true or false (also 1 or 0, any case); null is the same as leaving it out. Any other value returns 422 and writes nothing.' },
               tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Array of tag IDs' }
             },
             required: %w[account_id date amount name]
@@ -415,7 +415,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
                 items: { type: :string, format: :uuid },
                 description: 'Array of tag IDs to assign. Omit to preserve existing tags; use [] to clear all tags.'
               },
-              user_modified: { type: :boolean, description: 'Whether provider syncs should preserve user-supplied transaction changes: true or false (also 1 or 0, any case). Any other value returns 422 and writes nothing.' }
+              user_modified: { type: :boolean, description: 'Whether provider syncs should preserve user-supplied transaction changes: true or false (also 1 or 0, any case); null is the same as leaving it out. Any other value returns 422 and writes nothing.' }
             }
           }
         }

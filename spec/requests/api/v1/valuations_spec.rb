@@ -149,14 +149,14 @@ RSpec.describe 'API V1 Valuations', type: :request do
               notes: { type: :string, description: 'Additional notes' },
               upsert: {
                 type: :boolean,
-                description: 'Nested alternative to the top-level response-status flag. Top-level upsert takes precedence when both are provided. true or false (also 1 or 0, any case); any other value returns 422.'
+                description: 'Nested alternative to the top-level response-status flag. Top-level upsert takes precedence when both are provided. true or false (also 1 or 0, any case); null is the same as leaving it out; any other value returns 422.'
               }
             },
             required: %w[account_id amount date]
           },
           upsert: {
             type: :boolean,
-            description: 'Response-status signal only. When true and a same-account same-date valuation exists before the request, the endpoint returns 200 OK instead of 201 Created. The underlying reconciliation write path is unchanged; this flag does not add duplicate-prevention or safe-retry guarantees beyond existing same-date reconciliation behavior. true or false (also 1 or 0, any case); any other value returns 422 and writes nothing.'
+            description: 'Response-status signal only. When true and a same-account same-date valuation exists before the request, the endpoint returns 200 OK instead of 201 Created. The underlying reconciliation write path is unchanged; this flag does not add duplicate-prevention or safe-retry guarantees beyond existing same-date reconciliation behavior. true or false (also 1 or 0, any case); null is the same as leaving it out; any other value returns 422 and writes nothing.'
           }
         },
         required: %w[valuation]

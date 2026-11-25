@@ -158,7 +158,7 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           publish: {
             type: :boolean,
-            description: 'true to queue the import for processing if its configuration is valid: true or false (also 1 or 0, any case). Any other value returns 422 and creates no import.'
+            description: 'true to queue the import for processing if its configuration is valid: true or false (also 1 or 0, any case); null is the same as leaving it out. Any other value returns 422 and creates no import.'
           },
           date_col_label: {
             type: :string,

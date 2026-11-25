@@ -13,6 +13,11 @@ class Api::V1::BaseController < ApplicationController
     "0" => false
   }.freeze
 
+  # Digits a decimal filter may have once written out in full (1e19 has 20),
+  # as ActiveRecord writes it to build the SQL: 1e100000000 would be a 100 MB
+  # string. entries.amount holds 19.
+  DECIMAL_FILTER_MAX_DIGITS = 20
+
   class << self
     def valid_uuid?(value)
       UuidFormat.valid?(value)
@@ -331,10 +336,11 @@ class Api::V1::BaseController < ApplicationController
       nil
     end
 
-    # Typed filter readers. Each returns nil when the key is absent and the
-    # typed value when it is valid; anything else raises InvalidFilterError,
-    # which renders a 422. A key that is present must be valid, so `key=` is a
-    # 422 too (string_filter_param alone reads a blank value as absent).
+    # Typed filter readers. Each returns nil when the key is absent or null (a
+    # JSON null, or a bare `?key`) and the typed value when it is valid;
+    # anything else raises InvalidFilterError, which renders a 422. A key that
+    # has a value must be valid, so `key=` is a 422 too (string_filter_param
+    # alone reads a blank value as absent).
     # Actions with a catch-all `rescue` must call them from a before_action so
     # the 422 is not swallowed into a 500.
 
@@ -356,7 +362,10 @@ class Api::V1::BaseController < ApplicationController
     end
 
     def decimal_filter_param(key)
-      read_filter(key, "must be a number") { |raw| parse_decimal(raw) }
+      read_filter(key, "must be a number of at most #{DECIMAL_FILTER_MAX_DIGITS} digits") do |raw|
+        value = parse_decimal(raw)
+        value if value && value.precision <= DECIMAL_FILTER_MAX_DIGITS
+      end
     end
 
     def uuid_filter_param(key)
@@ -365,7 +374,7 @@ class Api::V1::BaseController < ApplicationController
 
     # key[]=a&key[]=b, or a single key=a.
     def uuid_list_filter_param(key)
-      return unless params.key?(key)
+      return if params[key].nil?
 
       values = Array.wrap(params[key]).map { |raw| scalar_filter_value(raw) }
       return values if values.any? && values.all? { |value| valid_uuid?(value) }
@@ -381,12 +390,12 @@ class Api::V1::BaseController < ApplicationController
       read_filter(key, "must be a string", &:itself).presence
     end
 
-    # Yields the stripped scalar value of a present key (in params, or in the
+    # Yields the stripped scalar value of a non-null key (in params, or in the
     # params[within] object) and returns what the block makes of it; raises
     # "KEY <message>" when the value is not a scalar or the block returns nil.
     def read_filter(key, message, within: nil)
       source = within ? params[within] : params
-      return unless source.is_a?(ActionController::Parameters) && source.key?(key)
+      return unless source.is_a?(ActionController::Parameters) && !source[key].nil?
 
       raw = scalar_filter_value(source[key])
       value = yield raw unless raw.nil?
@@ -395,8 +404,8 @@ class Api::V1::BaseController < ApplicationController
       value
     end
 
-    # A query-string or JSON scalar as a stripped string; nil for arrays,
-    # hashes and nulls.
+    # A query-string or JSON scalar as a stripped string; nil for arrays and
+    # hashes.
     def scalar_filter_value(raw)
       case raw
       when String, Numeric, true, false then raw.to_s.strip

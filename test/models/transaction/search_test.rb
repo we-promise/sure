@@ -1391,6 +1391,19 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     end
   end
 
+  test "account_id, category_id and merchant_id narrow their lists, so both must match" do
+    other_account = accounts(:credit_card)
+    mine = create_transaction(account: @checking_account, category: categories(:food_and_drink), merchant: merchants(:netflix))
+    create_transaction(account: other_account, category: categories(:food_and_drink), merchant: merchants(:netflix))
+
+    assert_equal [ mine.entryable_id ], search_ids(account_id: @checking_account.id, account_ids: [ @checking_account.id, other_account.id ])
+    assert_empty search_ids(account_id: @checking_account.id, account_ids: [ other_account.id ])
+    assert_equal [ mine.entryable_id ], search_ids(account_id: @checking_account.id.upcase), "UUIDs match in any case"
+    assert_empty search_ids(category_id: categories(:food_and_drink).id, category_ids: [ SecureRandom.uuid ])
+    assert_empty search_ids(merchant_id: merchants(:netflix).id, merchant_ids: [ SecureRandom.uuid ])
+    assert_includes search_ids(merchant_id: merchants(:netflix).id, merchant_ids: [ merchants(:netflix).id ]), mine.entryable_id
+  end
+
   test "min_amount and max_amount bound the signed amount, inclusively" do
     refund = create_transaction(account: @checking_account, amount: -50)
     small = create_transaction(account: @checking_account, amount: 10)

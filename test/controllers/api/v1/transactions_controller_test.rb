@@ -507,7 +507,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
 
   test "a present but empty filter is refused, except search" do
     { start_date: "an ISO 8601 date", account_id: "a valid UUID", account_ids: "a list of valid UUIDs",
-      min_amount: "a number", type: "one of: income, expense", budget_id: "a valid UUID",
+      min_amount: "a number of at most 20 digits", type: "one of: income, expense", budget_id: "a valid UUID",
       exclude_split_parents: "true or false", excluded: "true or false" }.each do |key, expected|
       get "#{api_v1_transactions_url}?#{key}=", headers: api_headers(@api_key)
       assert_response :unprocessable_entity
@@ -542,10 +542,10 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal [ refund, small ].map(&:entryable_id).sort, index_ids
 
-    %w[abc 12abc Infinity].each do |value|
+    %w[abc 12abc Infinity 1e1000000 1e-1000000].each do |value|
       get api_v1_transactions_url, params: { min_amount: value }, headers: api_headers(@api_key)
       assert_response :unprocessable_entity, "expected #{value.inspect} to be refused"
-      assert_equal "min_amount must be a number", JSON.parse(response.body)["message"]
+      assert_equal "min_amount must be a number of at most 20 digits", JSON.parse(response.body)["message"]
     end
   end
 
@@ -841,6 +841,20 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       assert_response :created, flag
       assert Transaction.find(JSON.parse(response.body)["id"]).entry.user_modified?, flag
     end
+  end
+
+  test "a JSON null user_modified is absent on create and update" do
+    post api_v1_transactions_url,
+         params: { transaction: { account_id: @account.id, name: "Null flag", amount: 5, date: Date.current, nature: "expense", user_modified: nil } }.to_json,
+         headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+    assert_response :created
+    assert_not Transaction.find(JSON.parse(response.body)["id"]).entry.user_modified?
+
+    patch api_v1_transaction_url(@transaction),
+          params: { transaction: { notes: "n", user_modified: nil } }.to_json,
+          headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+    assert_response :success
+    assert_not @transaction.entry.reload.user_modified?
   end
 
   test "a user_modified other than true/false/1/0 is a 422 on create and update and writes nothing" do

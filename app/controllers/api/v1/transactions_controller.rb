@@ -266,14 +266,15 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # list runs. The API keeps every account the caller can read, disabled ones
     # included, and also searches merchant names.
     def set_search
-      account_ids = intersected_ids_filter(:account_id, :account_ids)
-
       @search = Transaction::Search.new(
         current_resource_owner.family,
         filters: {
-          account_ids:,
-          category_ids: intersected_ids_filter(:category_id, :category_ids),
-          merchant_ids: intersected_ids_filter(:merchant_id, :merchant_ids),
+          account_id: uuid_filter_param(:account_id),
+          account_ids: uuid_list_filter_param(:account_ids),
+          category_id: uuid_filter_param(:category_id),
+          category_ids: uuid_list_filter_param(:category_ids),
+          merchant_id: uuid_filter_param(:merchant_id),
+          merchant_ids: uuid_list_filter_param(:merchant_ids),
           tag_ids: uuid_list_filter_param(:tag_ids),
           start_date: date_filter_param(:start_date),
           end_date: date_filter_param(:end_date),
@@ -286,19 +287,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
           search_merchant_names: true,
           active_accounts_only: false
         },
-        # Transaction::Search reads an empty account_ids as no filter, as the
-        # web form sends it, so account_id and account_ids that share no
-        # account narrow the accessible ones to none instead.
-        accessible_account_ids: account_ids == [] ? [] : accessible_account_ids,
+        accessible_account_ids:,
         budget: requested_budget
       )
-    end
-
-    # A single id and its list (account_id and account_ids...) match their
-    # intersection. UUIDs compare in any case.
-    def intersected_ids_filter(single_key, list_key)
-      [ uuid_filter_param(single_key), uuid_list_filter_param(list_key) ]
-        .compact.map { |ids| Array(ids).map(&:downcase) }.reduce(:&)
     end
 
     # Same visibility as GET /api/v1/budgets/:id: the household budget, the
