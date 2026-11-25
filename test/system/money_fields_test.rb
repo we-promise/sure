@@ -148,6 +148,46 @@ class MoneyFieldsTest < ApplicationSystemTestCase
     assert_equal true, page.evaluate_script(validity)
   end
 
+  test "a paste kept for a currency lookup that fails stays invalid until edited" do
+    eur_account = @user.family.accounts.create!(name: "EUR Savings", balance: 1_000, currency: "EUR", accountable: Depository.new)
+
+    visit new_transfer_url
+    amount_field = find_field("transfer[amount]").ancestor("[data-controller='money-field']")
+    select_ds("From", eur_account)
+    within(amount_field) { assert_selector "[data-money-field-target='symbol']", text: "€" }
+
+    page.execute_script(<<~JS)
+      const originalFetch = window.fetch;
+      window.heldCurrencyLookups = [];
+      window.fetch = (url, ...rest) => {
+        if (!String(url).includes("/currencies/")) return originalFetch(url, ...rest);
+        return new Promise((_resolve, reject) => window.heldCurrencyLookups.push(() => {
+          reject(new TypeError("offline"));
+          // After the rejection's handlers have run.
+          setTimeout(() => { window.lookupsFailed = true; }, 0);
+        }));
+      };
+    JS
+
+    select_ds("From", accounts(:depository))
+    page.execute_script(<<~JS, find_field("transfer[amount]"))
+      const [input] = arguments
+      const data = new DataTransfer()
+      data.setData("text/plain", "1,234")
+      input.focus()
+      input.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }))
+    JS
+
+    validity = 'document.querySelector("input[name=\'transfer[amount]\']").validity.valid'
+    page.execute_script("window.heldCurrencyLookups.forEach((fail) => fail())")
+    Timeout.timeout(Capybara.default_max_wait_time) { sleep 0.05 until page.evaluate_script("window.lookupsFailed") }
+    # The lookup failed, so "1,234" still has no reading.
+    assert_equal false, page.evaluate_script(validity)
+
+    fill_in "transfer[amount]", with: "1234"
+    assert_equal true, page.evaluate_script(validity)
+  end
+
   test "split rows add up typed comma amounts" do
     entry = create_transaction(amount: 100, name: "Split me", account: accounts(:depository))
 

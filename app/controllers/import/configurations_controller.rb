@@ -17,6 +17,10 @@ class Import::ConfigurationsController < ApplicationController
 
     @target_accounts = monarch_target_accounts.to_a
     @target_account_currencies = @target_accounts.to_h { |account| [ account.id, account.currency ] }
+    # The balance field follows its Destination picker, so it keeps the most
+    # decimals any offered currency has.
+    @balance_min_precision = (@target_account_currencies.values + [ @import.family.currency ])
+      .uniq.map { |code| Money::Currency.new(code).default_precision }.max
     render :monarch
   end
 

@@ -258,9 +258,7 @@ export default class extends Controller {
       // Silently ignored as they are unactionable by the user.
       if (requestId !== this.requestSequence) return;
       this.switchUnsettled = false;
-      // Without the currency the paste is read like typed text.
-      this.pastedDuringSwitch = undefined;
-      this.updateValidity();
+      // A kept paste still has no reading, so it stays invalid until edited.
     });
   }
 

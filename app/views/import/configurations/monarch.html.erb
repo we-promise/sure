@@ -113,7 +113,7 @@
               value: balance,
               label: t(".balance_label", name: mapping.key),
               label_class: "sr-only",
-              precision: saved_amount_precision(balance, currency: balance_currency),
+              precision: money_field_value(balance, currency: balance_currency, min_precision: @balance_min_precision).last,
               container_class: "w-36 ml-auto",
               input_class: "text-right tabular-nums",
               hide_currency: true,
