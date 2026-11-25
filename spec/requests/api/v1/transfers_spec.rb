@@ -127,6 +127,88 @@ RSpec.describe 'API V1 Transfers', type: :request do
     end
   end
 
+  path '/api/v1/transfers' do
+    post 'Create a transfer' do
+      tags 'Transfers'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      description 'Moves money between two accounts the API key\'s user can write to, booking both legs ' \
+                  'as the web form does. Requires the read_write scope. Repeating a request with the same ' \
+                  '`idempotency_key` returns the transfer it already created (200) instead of a duplicate.'
+      parameter name: :body, in: :body, required: true, schema: {
+        type: :object,
+        properties: {
+          transfer: {
+            type: :object,
+            properties: {
+              from_account_id: { type: :string, format: :uuid, description: 'Source account (required)' },
+              to_account_id: { type: :string, format: :uuid, description: 'Destination account (required)' },
+              amount: { type: :number, description: 'Positive amount, in the source account\'s currency (required)' },
+              date: { type: :string, format: :date, description: 'Defaults to today' },
+              exchange_rate: { type: :number, description: 'Source-to-destination rate when the currencies differ' },
+              source_fee_amount: { type: :number },
+              destination_fee_amount: { type: :number },
+              tag_ids: { type: :array, items: { type: :string, format: :uuid } },
+              idempotency_key: { type: :string, format: :uuid, description: 'Makes retries safe' }
+            },
+            required: %w[from_account_id to_account_id amount]
+          }
+        },
+        required: %w[transfer]
+      }
+
+      let(:body) do
+        {
+          transfer: {
+            from_account_id: checking.id,
+            to_account_id: savings.id,
+            amount: 125.00,
+            date: Date.current.to_s
+          }
+        }
+      end
+
+      response '201', 'transfer created' do
+        schema '$ref' => '#/components/schemas/TransferDecision'
+
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { nil }
+
+        run_test!
+      end
+
+      response '403', 'insufficient scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
+
+        run_test!
+      end
+
+      response '404', 'account not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { transfer: { from_account_id: checking.id, to_account_id: SecureRandom.uuid, amount: 10 } } }
+
+        run_test!
+      end
+
+      response '422', 'validation error' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { transfer: { from_account_id: checking.id, to_account_id: savings.id, amount: 0 } } }
+
+        run_test!
+      end
+    end
+  end
+
   path '/api/v1/transfers/{id}' do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Transfer ID'
 

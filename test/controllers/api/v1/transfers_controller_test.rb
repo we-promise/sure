@@ -188,6 +188,144 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     api_key_without_read&.destroy
   end
 
+  # CREATE action tests
+  test "create requires authentication" do
+    post api_v1_transfers_url, params: { transfer: create_params }
+    assert_response :unauthorized
+  end
+
+  test "create is forbidden for a read-only key" do
+    assert_no_difference "Transfer.count" do
+      post api_v1_transfers_url, params: { transfer: create_params }, headers: api_headers(@api_key)
+    end
+
+    assert_response :forbidden
+    assert_equal "insufficient_scope", JSON.parse(response.body)["error"]
+  end
+
+  test "create books both legs of a transfer" do
+    assert_difference "Transfer.count", 1 do
+      post api_v1_transfers_url,
+           params: { transfer: create_params(amount: "25.50", date: "2024-02-01") },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "confirmed", body["status"]
+    assert_equal 2550, body["amount_cents"]
+    assert_equal "2024-02-01", body["date"]
+
+    transfer = Transfer.find(body["id"])
+    assert_equal @account, transfer.from_account
+    assert_equal @destination_account, transfer.to_account
+    assert_equal 25.5, transfer.outflow_transaction.entry.amount
+    assert_equal(-25.5, transfer.inflow_transaction.entry.amount)
+  end
+
+  test "create into a loan is a loan payment" do
+    loan = @family.accounts.create!(name: "Transfer Loan", accountable: Loan.new, balance: 5000, currency: "USD")
+
+    post api_v1_transfers_url,
+         params: { transfer: create_params(to_account_id: loan.id, amount: "200") },
+         headers: api_headers(write_api_key)
+
+    assert_response :created
+    assert_equal "loan_payment", JSON.parse(response.body)["transfer_type"]
+  end
+
+  test "create defaults the date to today" do
+    post api_v1_transfers_url,
+         params: { transfer: create_params.except(:date) },
+         headers: api_headers(write_api_key)
+
+    assert_response :created
+    assert_equal Date.current.iso8601, JSON.parse(response.body)["date"]
+  end
+
+  test "create replays an idempotent request instead of duplicating" do
+    key = SecureRandom.uuid
+    params = { transfer: create_params(idempotency_key: key) }
+
+    assert_difference "Transfer.count", 1 do
+      post api_v1_transfers_url, params: params, headers: api_headers(write_api_key)
+      assert_response :created
+      @first_id = JSON.parse(response.body)["id"]
+
+      post api_v1_transfers_url, params: params, headers: api_headers(write_api_key)
+      assert_response :ok
+    end
+
+    assert_equal @first_id, JSON.parse(response.body)["id"]
+  end
+
+  test "create rejects a reused idempotency key for a different request" do
+    key = SecureRandom.uuid
+    post api_v1_transfers_url, params: { transfer: create_params(idempotency_key: key) }, headers: api_headers(write_api_key)
+    assert_response :created
+
+    assert_no_difference "Transfer.count" do
+      post api_v1_transfers_url,
+           params: { transfer: create_params(idempotency_key: key, amount: "99") },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "create requires both accounts" do
+    post api_v1_transfers_url,
+         params: { transfer: create_params.except(:to_account_id) },
+         headers: api_headers(write_api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "create requires a positive amount" do
+    [ nil, "0", "-5", "abc" ].each do |amount|
+      assert_no_difference "Transfer.count" do
+        post api_v1_transfers_url,
+             params: { transfer: create_params(amount: amount) },
+             headers: api_headers(write_api_key)
+      end
+
+      assert_response :unprocessable_entity, "amount #{amount.inspect} should be rejected"
+    end
+  end
+
+  test "create rejects an invalid date" do
+    assert_no_difference "Transfer.count" do
+      post api_v1_transfers_url,
+           params: { transfer: create_params(date: "not-a-date") },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "create rejects the same account on both sides" do
+    assert_no_difference "Transfer.count" do
+      post api_v1_transfers_url,
+           params: { transfer: create_params(to_account_id: @account.id) },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "create cannot touch another family's account" do
+    other_account = families(:empty).accounts.create!(name: "Foreign", accountable: Depository.new, balance: 0, currency: "USD")
+
+    assert_no_difference "Transfer.count" do
+      post api_v1_transfers_url,
+           params: { transfer: create_params(to_account_id: other_account.id) },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :not_found
+  end
+
   private
 
     def create_transaction(account, amount:, date:, name:)
@@ -199,6 +337,25 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new(kind: "funds_movement")
       )
       entry.entryable
+    end
+
+    def create_params(overrides = {})
+      {
+        from_account_id: @account.id,
+        to_account_id: @destination_account.id,
+        amount: "10",
+        date: "2024-01-20"
+      }.merge(overrides)
+    end
+
+    def write_api_key
+      @write_api_key ||= ApiKey.create!(
+        user: @user,
+        name: "Test Write Key",
+        scopes: [ "read_write" ],
+        source: "mobile",
+        display_key: "test_write_#{SecureRandom.hex(8)}"
+      )
     end
 
     def api_headers(api_key)

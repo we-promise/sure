@@ -11206,6 +11206,97 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create a transfer
+      tags:
+      - Transfers
+      security:
+      - apiKeyAuth: []
+      description: Moves money between two accounts the API key's user can write to,
+        booking both legs as the web form does. Requires the read_write scope. Repeating
+        a request with the same `idempotency_key` returns the transfer it already
+        created (200) instead of a duplicate.
+      parameters: []
+      responses:
+        '201':
+          description: transfer created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TransferDecision"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transfer:
+                  type: object
+                  properties:
+                    from_account_id:
+                      type: string
+                      format: uuid
+                      description: Source account (required)
+                    to_account_id:
+                      type: string
+                      format: uuid
+                      description: Destination account (required)
+                    amount:
+                      type: number
+                      description: Positive amount, in the source account's currency
+                        (required)
+                    date:
+                      type: string
+                      format: date
+                      description: Defaults to today
+                    exchange_rate:
+                      type: number
+                      description: Source-to-destination rate when the currencies
+                        differ
+                    source_fee_amount:
+                      type: number
+                    destination_fee_amount:
+                      type: number
+                    tag_ids:
+                      type: array
+                      items:
+                        type: string
+                        format: uuid
+                    idempotency_key:
+                      type: string
+                      format: uuid
+                      description: Makes retries safe
+                  required:
+                  - from_account_id
+                  - to_account_id
+                  - amount
+              required:
+              - transfer
+        required: true
   "/api/v1/transfers/{id}":
     parameters:
     - name: id
