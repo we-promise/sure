@@ -116,6 +116,45 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", response_data["error"]
   end
 
+  test "date filters bound budgets.start_date from below and budgets.end_date from above" do
+    later = @family.budgets.create!(
+      start_date: 2.months.ago.beginning_of_month.to_date,
+      end_date: 2.months.ago.end_of_month.to_date,
+      currency: "USD"
+    )
+
+    get api_v1_budgets_url, params: { start_date: later.start_date.to_s }, headers: api_headers(@api_key)
+    ids = JSON.parse(response.body)["budgets"].map { |budget| budget["id"] }
+    assert_includes ids, later.id
+    assert_not_includes ids, @budget.id
+
+    get api_v1_budgets_url, params: { end_date: @budget.end_date.to_s }, headers: api_headers(@api_key)
+    ids = JSON.parse(response.body)["budgets"].map { |budget| budget["id"] }
+    assert_includes ids, @budget.id
+    assert_not_includes ids, later.id
+  end
+
+  test "date filters never reach another family's budgets" do
+    get api_v1_budgets_url,
+        params: { start_date: @other_budget.start_date.to_s, end_date: @other_budget.end_date.to_s },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_not_includes JSON.parse(response.body)["budgets"].map { |budget| budget["id"] }, @other_budget.id
+  end
+
+  # Date.iso8601 used to read these too; the API documents YYYY-MM-DD.
+  [ "20240105", "2024-005", "2024-W01-1", "" ].each do |value|
+    test "rejects #{value.inspect} as a date filter" do
+      %i[start_date end_date].each do |key|
+        get api_v1_budgets_url, params: { key => value }, headers: api_headers(@api_key)
+
+        assert_response :unprocessable_entity
+        assert_equal "#{key} must be an ISO 8601 date", JSON.parse(response.body)["message"]
+      end
+    end
+  end
+
   test "excludes another family member's personal budget" do
     @family.update!(personal_budgets: true)
 
