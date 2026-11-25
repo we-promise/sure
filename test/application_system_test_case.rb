@@ -1,5 +1,6 @@
 require "test_helper"
 require "socket"
+require_relative "support/capybara_chrome_reset"
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   DEFAULT_VIEWPORT_WIDTH = 1400
