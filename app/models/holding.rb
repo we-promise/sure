@@ -187,7 +187,9 @@ class Holding < ApplicationRecord
              SQL
       .group_by(&:first)
 
-    splits = Security::Split.where(security_id: pending.map(&:security_id).uniq, ex_date: ..pending.map(&:date).max)
+    # A holding with no trades has nothing to replay, so its splits are not read.
+    traded = pending.select { |holding| rows.key?(holding.id) }
+    splits = traded.empty? ? {} : Security::Split.where(security_id: traded.map(&:security_id).uniq, ex_date: ..traded.map(&:date).max)
       .order(:ex_date).to_a.group_by(&:security_id)
 
     # The account decides fifo. A holding with no row (no buy dated on or
