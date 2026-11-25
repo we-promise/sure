@@ -38,7 +38,11 @@ class JobsQueuedBeforeTheUpgradeTest < ActiveJob::TestCase
     end
 
     test "#{job_class.name} from main fails its rule run once when the #{feature} run can't be queued" do
-      [ -> { false }, -> { raise Errno::ECONNREFUSED } ].each do |refusal|
+      {
+        "couldn't be queued" => -> { false },
+        Errno::ECONNREFUSED.new.message => -> { raise Errno::ECONNREFUSED },
+        "a bug" => -> { raise ArgumentError, "a bug" }
+      }.each do |reason, refusal|
         @rule_run.update!(status: "pending", pending_jobs_count: 2, error_message: nil)
         tries = 0
         stub_enqueue = ->(*) { tries += 1; refusal.call }
@@ -53,9 +57,23 @@ class JobsQueuedBeforeTheUpgradeTest < ActiveJob::TestCase
         @rule_run.reload
         assert_equal "failed", @rule_run.status
         assert_equal 1, @rule_run.pending_jobs_count, "the run's other job is still out"
-        assert_includes @rule_run.error_message, "couldn't be queued"
+        assert_includes @rule_run.error_message, reason
         assert_empty Ai::GenerationRun.where(family: @family)
       end
+    end
+
+    test "#{job_class.name} from main reports its error, though no rule run waits on it" do
+      with_generation_enqueue(->(*) { raise ArgumentError, "a bug" }) do
+        assert_error_reported(ArgumentError) { job_class.perform_now(@family, transaction_ids: [ @transaction.id ]) }
+      end
+    end
+
+    test "#{job_class.name} from main is dropped, not retried, when its family is gone" do
+      job = job_class.new(@family, transaction_ids: [ @transaction.id ])
+      data = job.serialize
+      data["arguments"][0]["_aj_globalid"] = "gid://sure/Family/#{SecureRandom.uuid}"
+
+      assert_no_enqueued_jobs { ActiveJob::Base.execute(data) }
     end
   end
 
