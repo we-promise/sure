@@ -4,6 +4,7 @@ nl:
     entries:
       destroy:
         success: "Item verwijderd."
+        part_transferred: "Een deel van deze splitsing is gekoppeld als overboeking. Verwijder die overboeking voordat u de transactie verwijdert."
   accounts:
     not_authorized: "U heeft geen toestemming om dit account te beheren"
     account:
