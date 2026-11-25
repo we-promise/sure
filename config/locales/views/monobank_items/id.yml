@@ -1,0 +1,134 @@
+---
+id:
+  providers:
+    monobank:
+      name: Monobank
+      description: Hubungkan kartu dan jar Monobank Ukraina dengan token API pribadi
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Koneksi Monobank
+  monobank_account:
+    jar_fallback: Jar Monobank
+    card_types:
+      black: Kartu Black
+      white: Kartu White
+      platinum: Kartu Platinum
+      iron: Kartu Iron
+      yellow: Kartu Yellow
+      eaid: Kartu eAid
+      fop: Rekening bisnis
+      jar: Jar
+      unknown: Kartu Monobank
+  monobank_item:
+    errors:
+      account_processing_failed: Tidak dapat menyinkronkan rekening Monobank
+      account_sync_schedule_failed: Tidak dapat menjadwalkan sinkronisasi rekening Monobank
+      transactions_failed: Tidak dapat mengambil laporan Monobank
+      sync_failed: Tidak dapat menyinkronkan koneksi Monobank
+    sync:
+      status:
+        importing: Mengimpor rekening dari Monobank...
+        checking_setup: Memeriksa konfigurasi rekening...
+        needs_setup:
+          one: 1 rekening perlu pengaturan...
+          other: "%{count} rekening perlu pengaturan..."
+        processing: Memproses transaksi...
+        calculating: Menghitung saldo...
+    sync_status:
+      no_accounts: Tidak ada rekening ditemukan
+      all_synced:
+        one: 1 rekening disinkronkan
+        other: "%{count} rekening disinkronkan"
+      partial: "%{linked} disinkronkan, %{unlinked} perlu pengaturan"
+    institution_summary:
+      none: Tidak ada institusi terhubung
+      one: 1 institusi
+      count:
+        one: 1 institusi
+        other: "%{count} institusi"
+  monobank_items:
+    provider_panel:
+      default_connection_name: Koneksi Monobank
+      add_connection: Tambah koneksi Monobank
+      update_connection: Perbarui koneksi
+      connection_name_label: Nama koneksi
+      connection_name_placeholder: Monobank Saya
+      access_token_label: Token API pribadi
+      access_token_placeholder: Tempel token pribadi Monobank Anda
+      keep_access_token_placeholder: Kosongkan untuk mempertahankan token yang ada
+      setup_accounts: Atur rekening
+      syncing: Menyinkronkan...
+      sync: Sinkronkan
+      disconnect: Putuskan koneksi
+      disconnect_confirm: "Apakah Anda yakin ingin memutuskan koneksi %{name}?"
+      rate_limit_notice: Monobank mengizinkan satu permintaan per menit, sehingga sinkronisasi mengambil beberapa rekening sekaligus dan riwayat lama masuk secara bertahap dalam beberapa kali sinkronisasi.
+    create:
+      success: Koneksi Monobank disimpan.
+    update:
+      success: Koneksi Monobank diperbarui.
+    destroy:
+      success: Koneksi Monobank dijadwalkan untuk dihapus.
+      unlink_failed: Tidak dapat memutuskan koneksi Monobank
+    select_accounts:
+      title: Tautkan rekening Monobank
+      description: Pilih kartu atau jar Monobank untuk ditambahkan.
+      no_accounts_found: Tidak ada rekening Monobank yang belum tertaut ditemukan.
+      no_credentials_configured: Konfigurasikan Monobank di pengaturan penyedia terlebih dahulu.
+      cancel: Batal
+      link_accounts: Tautkan rekening
+    link_accounts:
+      success:
+        one: Menautkan 1 rekening Monobank.
+        other: "Menautkan %{count} rekening Monobank."
+      no_accounts_selected: Pilih setidaknya satu rekening.
+      no_credentials_configured: Konfigurasikan Monobank di pengaturan penyedia terlebih dahulu.
+      unsupported_account_type: Monobank tidak mendukung jenis rekening tersebut.
+      link_failed: Tidak ada rekening yang ditautkan.
+    select_existing_account:
+      title: "Tautkan rekening Monobank ke %{account_name}"
+      description: Pilih rekening Monobank yang belum tertaut untuk dihubungkan ke rekening ini.
+      no_accounts_found: Tidak ada rekening Monobank yang belum tertaut ditemukan.
+      no_credentials_configured: Konfigurasikan Monobank di pengaturan penyedia terlebih dahulu.
+      account_already_linked: Rekening ini sudah ditautkan ke penyedia lain.
+      cancel: Batal
+      link_account: Tautkan rekening
+    link_existing_account:
+      success: "Menautkan rekening Monobank ke %{account_name}."
+      account_already_linked: Rekening ini sudah ditautkan ke penyedia lain.
+      monobank_account_already_linked: Rekening Monobank ini sudah tertaut.
+      no_account_selected: Pilih rekening Monobank untuk ditautkan.
+    setup_accounts:
+      title: Tautkan Rekening Monobank
+      subtitle: Pilih bagaimana setiap kartu atau jar Monobank harus tampil di Sure.
+      no_credentials: Konfigurasikan kredensial Monobank terlebih dahulu.
+      api_error: Tidak dapat menyegarkan rekening dari Monobank, sehingga rekening yang disimpan pada sinkronisasi terakhir yang ditampilkan.
+      no_accounts_to_setup: Tidak ada rekening untuk diatur
+      all_accounts_linked: Semua rekening Monobank sudah tertaut.
+      choose_account_type: Pilih jenis rekening
+      choose_account_type_description: Lewati rekening yang tidak ingin Anda lacak.
+      account_type_label: Jenis rekening
+      account_types:
+        skip: Lewati
+        depository: Kas
+      create_accounts: Buat rekening
+      cancel: Batal
+    complete_account_setup:
+      success:
+        one: Membuat 1 rekening Monobank.
+        other: "Membuat %{count} rekening Monobank."
+      all_skipped: Tidak ada rekening Monobank yang dibuat.
+      no_accounts: Tidak ada rekening Monobank yang dipilih.
+      creation_failed: Tidak dapat membuat rekening Monobank.
+    monobank_item:
+      deletion_in_progress: Penghapusan sedang berlangsung
+      syncing: Menyinkronkan
+      error: Kesalahan
+      status_with_summary: "Disinkronkan %{timestamp} lalu · %{summary}"
+      status_never: Belum pernah disinkronkan
+      delete: Hapus
+      setup_needed: Pengaturan rekening diperlukan
+      setup_description: "%{linked} dari %{total} rekening tertaut."
+      setup_action: Atur rekening
+      no_accounts_title: Belum ada rekening diimpor
+      no_accounts_description: Ambil rekening Monobank lalu pilih mana yang ingin ditautkan.
