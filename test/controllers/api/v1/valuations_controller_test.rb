@@ -103,6 +103,58 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "account_id must be a valid UUID", response_data["message"]
   end
 
+  # Strict since the move to typed filters: Date.iso8601 also took basic,
+  # ordinal and week dates and timestamps, and a blank value was ignored.
+  test "should reject index with a date or account filter that is not exactly ISO 8601 or a UUID" do
+    {
+      start_date: [ "20260430", "2026-120", "2026-W18-4", "2026-04-30T00:00:00Z", "" ],
+      end_date: [ "20260430", "" ],
+      account_id: [ "", [ @account.id ] ]
+    }.each do |key, values|
+      values.each do |value|
+        get api_v1_valuations_url, params: { key => value }, headers: api_headers(@api_key)
+
+        assert_response :unprocessable_entity, "#{key}=#{value.inspect}"
+        assert_equal "validation_failed", JSON.parse(response.body)["error"]
+      end
+    end
+
+    get api_v1_valuations_url, params: { end_date: "20260430" }, headers: api_headers(@api_key)
+    assert_equal "end_date must be an ISO 8601 date", JSON.parse(response.body)["message"]
+  end
+
+  # It used to fall back to 25; the docs and every other endpoint cap at 100.
+  test "should cap index per_page at 100" do
+    get api_v1_valuations_url, params: { per_page: 500 }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal 100, JSON.parse(response.body)["pagination"]["per_page"]
+  end
+
+  test "a member lists valuations only on accounts they can access, filters included" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    key = ApiKey.create!(user: member, name: "Member Read", scopes: [ "read" ], source: "web",
+                         display_key: "member_read_#{SecureRandom.hex(8)}")
+    private_account = @family.accounts.create!(name: "Admin Private Savings", owner: @user, balance: 0,
+                                               currency: "USD", accountable: Depository.new)
+    hidden = private_account.entries.create!(name: "Balance", date: 1.day.ago.to_date, amount: 100,
+                                             currency: "USD", entryable: Valuation.new(kind: "reconciliation"))
+
+    get api_v1_valuations_url, params: { account_id: private_account.id }, headers: api_headers(key)
+    assert_response :success
+    assert_empty JSON.parse(response.body)["valuations"]
+
+    get api_v1_valuations_url, params: { per_page: 100 }, headers: api_headers(key)
+    ids = JSON.parse(response.body)["valuations"].map { |valuation| valuation["id"] }
+    assert_not_includes ids, hidden.id
+
+    private_account.account_shares.create!(user: member, permission: "read_only", include_in_finances: true)
+
+    get api_v1_valuations_url, params: { account_id: private_account.id }, headers: api_headers(key)
+    assert_equal [ hidden.id ], JSON.parse(response.body)["valuations"].map { |valuation| valuation["id"] }
+  end
+
   test "should not expose internal index errors" do
     Api::V1::ValuationsController.any_instance.stubs(:safe_page_param).raises(StandardError, "database password leaked")
 

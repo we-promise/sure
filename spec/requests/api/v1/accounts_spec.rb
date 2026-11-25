@@ -90,7 +90,7 @@ RSpec.describe 'API V1 Accounts', type: :request do
       parameter name: :per_page, in: :query, type: :integer, required: false,
                 description: 'Items per page (default: 25, max: 100)'
       parameter name: :include_disabled, in: :query, type: :boolean, required: false,
-                description: 'Include disabled accounts in the response. Defaults to false.'
+                description: 'Include disabled accounts in the response: true or false (also 1 or 0, any case). Defaults to false; any other value returns 422.'
 
       response '200', 'accounts listed' do
         schema '$ref' => '#/components/schemas/AccountCollection'
@@ -106,6 +106,14 @@ RSpec.describe 'API V1 Accounts', type: :request do
 
         run_test!
       end
+
+      response '422', 'invalid include_disabled' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:include_disabled) { 'yes' }
+
+        run_test!
+      end
     end
   end
 
@@ -118,7 +126,7 @@ RSpec.describe 'API V1 Accounts', type: :request do
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
       parameter name: :include_disabled, in: :query, type: :boolean, required: false,
-                description: 'Allow retrieving a disabled account. Defaults to false.'
+                description: 'Allow retrieving a disabled account: true or false (also 1 or 0, any case). Defaults to false; any other value returns 422.'
 
       let(:id) { checking_account.id }
 
@@ -150,6 +158,14 @@ RSpec.describe 'API V1 Accounts', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+
+      response '422', 'invalid include_disabled' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:include_disabled) { 'yes' }
 
         run_test!
       end

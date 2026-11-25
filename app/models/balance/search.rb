@@ -1,0 +1,16 @@
+class Balance::Search
+  include ScopedSearch
+
+  attribute :account_id, :string
+  attribute :currency, :string
+  attribute :start_date, :date
+  attribute :end_date, :date
+
+  def balances_scope
+    relation = scope
+    relation = relation.where(account_id:) unless account_id.nil?
+    relation = relation.where(currency: currency.upcase) unless currency.nil?
+    relation = relation.where(date: start_date..end_date) if start_date || end_date
+    relation
+  end
+end

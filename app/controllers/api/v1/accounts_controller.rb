@@ -5,6 +5,9 @@ class Api::V1::AccountsController < Api::V1::BaseController
 
   # Ensure proper scope authorization for read access
   before_action :ensure_read_scope
+  # The typed readers raise a 422 that the catch-all rescues below would turn
+  # into a 500, so they run here.
+  before_action :set_search
 
   def index
     @per_page = safe_per_page_param
@@ -55,18 +58,14 @@ class Api::V1::AccountsController < Api::V1::BaseController
 
   private
 
-    def ensure_read_scope
-      authorize_scope!(:read)
+    def set_search
+      @search = Account::Search.new(
+        current_resource_owner.family.accounts.accessible_by(current_resource_owner),
+        filters: { include_disabled: boolean_filter_param(:include_disabled) }
+      )
     end
 
     def accounts_scope
-      scope = current_resource_owner.family.accounts
-                                    .accessible_by(current_resource_owner)
-                                    .includes(:accountable, account_providers: :provider)
-      include_disabled_accounts? ? scope : scope.visible
-    end
-
-    def include_disabled_accounts?
-      ActiveModel::Type::Boolean.new.cast(params[:include_disabled])
+      @search.accounts_scope.includes(:accountable, account_providers: :provider)
     end
 end
