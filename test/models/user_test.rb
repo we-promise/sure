@@ -56,6 +56,21 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "none", user.onboarding_ai_mode
   end
 
+  test "a saved AI answer gives way when the switch changed since" do
+    user = users(:family_admin)
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "builtin")
+
+    user.update!(ai_enabled: false)
+    assert_equal "none", user.onboarding_ai_mode
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external")
+    user.update!(ai_enabled: true)
+    assert_equal "builtin", user.onboarding_ai_mode
+
+    user.update!(ai_enabled: false)
+    assert_equal "external", user.onboarding_ai_mode
+  end
+
   test "guests keep AI on and aren't asked about it" do
     guest = users(:intro_user)
 

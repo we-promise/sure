@@ -90,6 +90,7 @@ en:
             title: Your assistant turns on.
             body: This turns on the in-app assistant for your account. Which AI provider it uses, and whether it's available, still depends on this instance's AI settings.
             not_configured: No AI provider is set up on this instance yet. An admin can add one in Settings → Self-Hosting.
+            unavailable: Your household's current AI settings don't run the in-app assistant, so it won't answer until an admin changes them.
           external:
             title: Connect your agent when you're ready.
             body: This turns off the in-app assistant for your account. To let your own assistant work with %{product_name}, connect it later from Settings → MCP. Nothing is connected or shared now.

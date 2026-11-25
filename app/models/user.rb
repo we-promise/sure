@@ -724,12 +724,14 @@ class User < ApplicationRecord
     preferences&.dig("onboarding_other_tool").presence
   end
 
-  # Without a saved answer, reflect the current switch so revisiting the step can't turn AI off.
+  # The saved answer, unless the AI switch has changed since: then the switch wins, so
+  # resubmitting the step without touching it never turns AI (or household consent) on or off.
   def onboarding_ai_mode
     mode = preferences&.dig("onboarding_ai_mode")
-    return mode if ONBOARDING_AI_MODES.include?(mode)
+    current = ai_enabled ? "builtin" : "none"
+    return current unless ONBOARDING_AI_MODES.include?(mode)
 
-    ai_enabled ? "builtin" : "none"
+    (mode == "builtin") == ai_enabled ? mode : current
   end
 
   # "Nothing yet" excludes every other tool and unknown values are dropped.

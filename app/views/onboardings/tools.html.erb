@@ -93,6 +93,8 @@
           <% end %>
           <% if self_hosted? && !@user.openai_configured? && !@user.anthropic_configured? %>
             <p class="mt-2"><%= t(".ai.panels.builtin.not_configured") %></p>
+          <% elsif !@user.ai_available? %>
+            <p class="mt-2"><%= t(".ai.panels.builtin.unavailable") %></p>
           <% end %>
         <% end %>
       </div>

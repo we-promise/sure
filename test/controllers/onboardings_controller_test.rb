@@ -109,6 +109,16 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-ai-panel=builtin]", text: /#{Regexp.escape(I18n.t("onboardings.tools.ai.panels.admin_on"))}/, count: 0
   end
 
+  test "resubmitting after turning AI off in settings keeps it off" do
+    patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "builtin" } }
+    @user.reload.update!(ai_enabled: false)
+
+    get tools_onboarding_url
+    assert_select "input[type=radio][value=none][checked]"
+    patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "none" } }
+    assert_not @user.reload.ai_enabled
+  end
+
   test "revisiting the step keeps an enabled assistant selected" do
     @user.update!(ai_enabled: true)
     get tools_onboarding_url
