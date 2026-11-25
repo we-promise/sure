@@ -513,16 +513,38 @@ class InvestmentStatement
     # are zeros, and charting them shows a portfolio that appears from nothing
     # on the day the connection was made. The earliest start, not the common
     # one, so linking a new broker does not erase the history of an older
-    # one, open or closed.
+    # one, open or closed. A period that ends before that start has nothing
+    # to chart, and its series is empty.
     def fetch_series(kind, period)
       @series_cache ||= {}
       @series_cache[[ kind, period.start_date, period.end_date ]] ||= Rails.cache.fetch(series_cache_key(kind, period)) do
-        Balance::LinkedInvestmentSeriesNormalizer.trim_to_supported_history(
-          yield(series_builder(period)),
+        series = yield(series_builder(period))
+        trimmed = Balance::LinkedInvestmentSeriesNormalizer.trim_to_supported_history(
+          series,
           account_ids: historical_scope.account_ids,
           history_start: series_history_start
         )
+        trimmed.equal?(series) && before_supported_history?(series) ? empty_series(series) : trimmed
       end
+    end
+
+    # The trim hands a series back untrimmed when none of its points reach the
+    # supported start, as well as when it starts on or after it.
+    def before_supported_history?(series)
+      return false if series.values.empty?
+
+      start_date = Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_for(historical_scope.account_ids, series_history_start)
+      start_date.present? && series.values.last.date < start_date
+    end
+
+    def empty_series(series)
+      Series.new(
+        start_date: series.start_date,
+        end_date: series.end_date,
+        interval: series.interval,
+        values: [],
+        favorable_direction: series.favorable_direction
+      )
     end
 
     # The trim fetch_series applies, read by its cache key too, so a series
@@ -569,8 +591,10 @@ class InvestmentStatement
         "investment_statement_#{kind}_series",
         # "own-history" marks the trim that keeps the history of an account
         # with no provider history (manual, or valuations only), so a series
-        # cached under a trim that cut it is not served again.
-        "start-#{series_history_start}-own-history",
+        # cached under a trim that cut it is not served again. "empty-before"
+        # marks the empty series for a period before any history, which was
+        # cached as zeros.
+        "start-#{series_history_start}-own-history-empty-before",
         user&.id,
         ExchangeRate::CONVERSION_CACHE_VERSION,
         ExchangeRate.updated_at_version,
