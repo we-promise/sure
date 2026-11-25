@@ -55,7 +55,7 @@ class AccountProvider < ApplicationRecord
             account.simplefin_account_id.nil? && !self.class.where(account_id: account_id).where.not(id: id).exists?
           errors.add(:account, :bitcoin_wallet)
         end
-      elsif BitcoinWalletAccount.exists?(account_id: account_id) || account.accounting_start_date
+      elsif BitcoinWalletAccount.exists?(account_id: account_id)
         errors.add(:account, :bitcoin_wallet)
       end
     end
