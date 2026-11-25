@@ -198,6 +198,83 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", response_data["error"]
   end
 
+  test "date filters bound the budget's start_date from below and end_date from above" do
+    later_budget = @family.budgets.create!(
+      start_date: 2.months.ago.beginning_of_month.to_date,
+      end_date: 2.months.ago.end_of_month.to_date,
+      currency: "USD"
+    )
+    later = later_budget.budget_categories.create!(category: @category, budgeted_spending: 100, currency: "USD")
+
+    get api_v1_budget_categories_url, params: { start_date: later_budget.start_date.to_s }, headers: api_headers(@api_key)
+    ids = JSON.parse(response.body)["budget_categories"].map { |budget_category| budget_category["id"] }
+    assert_includes ids, later.id
+    assert_not_includes ids, @budget_category.id
+
+    get api_v1_budget_categories_url, params: { end_date: @budget.end_date.to_s }, headers: api_headers(@api_key)
+    ids = JSON.parse(response.body)["budget_categories"].map { |budget_category| budget_category["id"] }
+    assert_includes ids, @budget_category.id
+    assert_not_includes ids, later.id
+  end
+
+  test "budget_id and category_id filters never reach another family's budget categories" do
+    get api_v1_budget_categories_url,
+        params: { budget_id: @other_budget_category.budget_id, category_id: @other_budget_category.category_id },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_empty JSON.parse(response.body)["budget_categories"]
+  end
+
+  test "rejects a malformed category_id filter" do
+    get api_v1_budget_categories_url, params: { category_id: "not-a-uuid" }, headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "category_id must be a valid UUID", JSON.parse(response.body)["message"]
+  end
+
+  # An empty id used to be ignored; a present filter must now be valid.
+  %i[budget_id category_id].each do |key|
+    test "rejects an empty #{key} filter" do
+      get api_v1_budget_categories_url, params: { key => "" }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity
+      assert_equal "#{key} must be a valid UUID", JSON.parse(response.body)["message"]
+    end
+  end
+
+  # Date.iso8601 used to read these too; the API documents YYYY-MM-DD.
+  [ "20240105", "2024-005", "2024-W01-1", "" ].each do |value|
+    test "rejects #{value.inspect} as a date filter" do
+      %i[start_date end_date].each do |key|
+        get api_v1_budget_categories_url, params: { key => value }, headers: api_headers(@api_key)
+
+        assert_response :unprocessable_entity
+        assert_equal "#{key} must be an ISO 8601 date", JSON.parse(response.body)["message"]
+      end
+    end
+  end
+
+  test "includes a budget category from a personal budget shared with the caller" do
+    @family.update!(personal_budgets: true)
+    member = users(:family_member)
+    shared_budget = @family.budgets.create!(
+      user: member,
+      start_date: 7.months.ago.beginning_of_month.to_date,
+      end_date: 7.months.ago.end_of_month.to_date,
+      currency: "USD"
+    )
+    shared_budget_category = shared_budget.budget_categories.create!(category: @category, budgeted_spending: 200, currency: "USD")
+    BudgetShare.create!(owner: member, viewer: @user, permission: "read_only")
+
+    get api_v1_budget_categories_url, params: { budget_id: shared_budget.id }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal [ shared_budget_category.id ], JSON.parse(response.body)["budget_categories"].map { |budget_category| budget_category["id"] }
+
+    get api_v1_budget_category_url(shared_budget_category), headers: api_headers(@api_key)
+    assert_response :success
+  end
+
   test "excludes another family member's personal budget category" do
     @family.update!(personal_budgets: true)
 

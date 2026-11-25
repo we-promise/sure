@@ -4,14 +4,14 @@ class Api::V1::BudgetsController < Api::V1::BaseController
   include Pagy::Backend
 
   before_action :ensure_read_scope
+  before_action :set_search, only: :index
   before_action :set_budget, only: :show
 
   def index
-    budgets_query = apply_filters(budgets_scope).order(start_date: :desc)
     @per_page = safe_per_page_param
 
     @pagy, @budgets = pagy(
-      budgets_query,
+      @search.budgets_scope.order(start_date: :desc),
       page: safe_page_param,
       limit: @per_page
     )
@@ -25,6 +25,13 @@ class Api::V1::BudgetsController < Api::V1::BaseController
 
   private
 
+    def set_search
+      @search = Budget::Search.new(
+        budgets_scope,
+        filters: { start_date: date_filter_param(:start_date), end_date: date_filter_param(:end_date) }
+      )
+    end
+
     def set_budget
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
 
@@ -35,23 +42,10 @@ class Api::V1::BudgetsController < Api::V1::BaseController
       authorize_scope!(:read)
     end
 
-    def apply_filters(query)
-      query = query.where("budgets.start_date >= ?", parse_date_param(:start_date)) if params[:start_date].present?
-      query = query.where("budgets.end_date <= ?", parse_date_param(:end_date)) if params[:end_date].present?
-      query
-    end
-
+    # This API is read-only, so read-write and read-only shares count alike.
     def budgets_scope
       current_resource_owner.family.budgets
-        .where(user_id: visible_owner_ids)
+        .where(user_id: Budget.visible_owner_ids(current_resource_owner))
         .includes(:user, budget_categories: :category)
-    end
-
-    # nil (the shared household budget) + the caller's own personal budget +
-    # any owner who granted the caller a BudgetShare (read-only or
-    # read-write — this API is read-only either way).
-    def visible_owner_ids
-      shared_with_me = BudgetShare.where(viewer_id: current_resource_owner.id).pluck(:owner_id)
-      [ nil, current_resource_owner.id, *shared_with_me ]
     end
 end
