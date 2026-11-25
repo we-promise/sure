@@ -23,6 +23,9 @@ pt-PT:
       from: De
       to: Para
       date: Data
+      days_apart:
+        one: "%{count} dia de diferença"
+        other: "%{count} dias de diferença"
       actions: Ações
       separator: "·"
     bulk_actions:
