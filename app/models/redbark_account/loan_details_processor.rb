@@ -28,8 +28,10 @@ class RedbarkAccount::LoanDetailsProcessor
     return if details.blank?
     return unless details_fetched_this_sync?
 
-    apply_loan_terms
-    apply_rate
+    loan.with_schedule_lock do
+      apply_loan_terms
+      apply_rate
+    end
   end
 
   private
@@ -244,14 +246,7 @@ class RedbarkAccount::LoanDetailsProcessor
     def write(attrs)
       return if attrs.blank?
 
-      # Enrichable rolls back its own savepoint when the save is refused, so no
-      # DataEnrichment row says Redbark supplied a value the loan rejected.
-      # That savepoint is the guarantee. This block can join a caller's
-      # transaction, and a Rollback raised in a joined block undoes nothing.
-      ActiveRecord::Base.transaction do
-        loan.enrich_attributes(attrs, source: SOURCE)
-        raise ActiveRecord::Rollback if loan.errors.any?
-      end
+      loan.enrich_attributes(attrs, source: SOURCE)
       return if loan.errors.empty?
 
       capture(
