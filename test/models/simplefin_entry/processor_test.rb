@@ -354,37 +354,22 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "rollover_check", entry.transaction.extra.dig("simplefin", "amount_normalization")
   end
 
-  test "normalizes Fidelity core-account purchases to positive Sure outflows" do
-    tx = {
-      id: "tx_core_purchase_1",
-      amount: "216.21",
-      currency: "USD",
-      description: "PURCHASE INTO CORE ACCOUNT FIDELITY GOVERNMENT MONEY MARKET (SPAXX) (CASH)",
-      posted: Date.current.to_s
-    }
-
-    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
-
-    entry = @account.entries.find_by!(external_id: "simplefin_tx_core_purchase_1", source: "simplefin")
-    assert_equal BigDecimal("216.21"), entry.amount
-    assert_equal "core_purchase", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  test "retains upstream sign conversion for internal core moves and reinvestment" do
+    # Synthetic direction controls, not observed provider payload evidence.
+    descriptions = [ "PURCHASE INTO CORE ACCOUNT", "REDEMPTION FROM CORE ACCOUNT", "REINVESTMENT EXAMPLE SECURITY" ]
+    descriptions.each_with_index do |description, index|
+      [ "1.00", "-1.00" ].each_with_index do |raw_amount, sign_index|
+        tx = { id: "synthetic_internal_#{index}_#{sign_index}", amount: raw_amount,
+               currency: "USD", description: description, posted: Date.current.to_s }
+        SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+        entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
+        assert_equal(-BigDecimal(raw_amount), entry.amount)
+        assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+      end
+    end
   end
 
-  test "marks Fidelity core-account redemptions as negative Sure inflows" do
-    tx = {
-      id: "tx_core_redemption_1",
-      amount: "3533.18",
-      currency: "USD",
-      description: "REDEMPTION FROM CORE ACCOUNT FIDELITY GOVERNMENT MONEY MARKET (SPAXX) MORNING TRADE (CASH)",
-      posted: Date.current.to_s
-    }
 
-    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
-
-    entry = @account.entries.find_by!(external_id: "simplefin_tx_core_redemption_1", source: "simplefin")
-    assert_equal BigDecimal("-3533.18"), entry.amount
-    assert_equal "core_redemption", entry.transaction.extra.dig("simplefin", "amount_normalization")
-  end
 
   test "normalizes Fidelity card payments to negative Sure inflows" do
     [ "2303.00", "-2303.00" ].each_with_index do |raw_amount, index|
@@ -436,31 +421,25 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "dividend", entry.transaction.extra.dig("simplefin", "amount_normalization")
   end
 
-  test "normalizes the observed Fidelity cash-action matrix" do
+  test "normalizes a synthetic Fidelity cash-action matrix" do
+    # Deliberately artificial amounts and descriptors; not evidence of feed signs.
     cases = [
-      [ "check_paid", "CHECK PAID # 1234 (CASH)", "44.63", BigDecimal("44.63") ],
-      [ "wire_out", "WIRE TRANSFER TO BANK (CASH)", "500.00", BigDecimal("500.00") ],
-      [ "cash_advance", "CASH ADVANCE ATM (CASH)", "202.95", BigDecimal("202.95") ],
-      [ "fee", "ADJUST FEE CHARGED ATM SURCHARGE (CASH)", "-2.95", BigDecimal("2.95") ],
-      [ "interest", "INTEREST FULLY PAID (CASH)", "-18.16", BigDecimal("-18.16") ],
-      [ "reinvestment", "REINVESTMENT PROSHARES BITCOIN ETF (BITO) (MARGIN)", "4.30", BigDecimal("4.30") ],
-      [ "cash_in_lieu", "IN LIEU OF FRX SHARE LEU PAYOUT SECURITY (CASH)", "-3.11", BigDecimal("-3.11") ]
+      [ "check_paid", "CHECK PAID", :expense ],
+      [ "wire_out", "WIRE TRANSFER TO BANK", :expense ],
+      [ "cash_advance", "CASH ADVANCE", :expense ],
+      [ "fee", "ADJUST FEE CHARGED ATM SURCHARGE", :expense ],
+      [ "interest", "INTEREST FULLY PAID", :income ],
+      [ "cash_in_lieu", "IN LIEU OF FRX SHARE LEU PAYOUT EXAMPLE SECURITY", :income ]
     ]
-
-    cases.each_with_index do |(normalization, description, raw_amount, expected_amount), index|
-      tx = {
-        id: "tx_fidelity_cash_action_#{index}",
-        amount: raw_amount,
-        currency: "USD",
-        description: description,
-        posted: Date.current.to_s
-      }
-
-      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
-
-      entry = @account.entries.find_by!(external_id: "simplefin_tx_fidelity_cash_action_#{index}", source: "simplefin")
-      assert_equal expected_amount, entry.amount
-      assert_equal normalization, entry.transaction.extra.dig("simplefin", "amount_normalization")
+    cases.each_with_index do |(normalization, description, direction), index|
+      [ "1.00", "-1.00" ].each_with_index do |raw_amount, sign_index|
+        tx = { id: "synthetic_cash_#{index}_#{sign_index}", amount: raw_amount,
+               currency: "USD", description: description, posted: Date.current.to_s }
+        SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+        entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
+        assert_equal(direction == :income ? BigDecimal("-1") : BigDecimal("1"), entry.amount)
+        assert_equal normalization, entry.transaction.extra.dig("simplefin", "amount_normalization")
+      end
     end
   end
 
@@ -498,6 +477,31 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       entry = @account.entries.find_by!(external_id: "simplefin_tx_fidelity_merchant_#{index}", source: "simplefin")
       assert_equal BigDecimal("100.00"), entry.amount
       assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "matches the exact Fidelity domain before the fallback name" do
+    # Synthetic organization and amount inputs; no account/provider observations.
+    cases = [
+      [ { domain: " FIDELITY.COM ", name: "Renamed institution" }, true ],
+      [ { "domain" => "fidelity.com" }, true ],
+      [ { domain: nil, name: " Fidelity Investments " }, true ],
+      [ { "domain" => " ", "name" => "Fidelity Investments" }, true ],
+      [ { domain: "example.com", name: "Fidelity Investments" }, false ],
+      [ { domain: "fidelity.com.example", name: "Fidelity Investments" }, false ],
+      [ { domain: "https://fidelity.com", name: "Fidelity Investments" }, false ],
+      [ { domain: [], name: "Fidelity Investments" }, false ],
+      [ { domain: false, name: "Fidelity Investments" }, false ],
+      [ { name: "Fidelity Investments Example" }, false ]
+    ]
+    cases.each_with_index do |(org, fidelity), index|
+      @simplefin_account.update!(org_data: org)
+      tx = { id: "synthetic_domain_#{index}", amount: "1.00", currency: "USD",
+             description: "DIRECT DEBIT", posted: Date.current.to_s }
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
+      assert_equal(fidelity ? BigDecimal("1") : BigDecimal("-1"), entry.amount)
+      assert_equal(fidelity ? "direct_debit" : nil, entry.transaction.extra.dig("simplefin", "amount_normalization"))
     end
   end
 

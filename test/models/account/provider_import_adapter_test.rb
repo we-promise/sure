@@ -2146,66 +2146,61 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   # entry is found by find_or_initialize_by (persisted), bypassing auto-claim.
   # =========================================================================
 
-  test "combines provider namespace replacement with targeted metadata removal" do
+  test "replaces the complete SimpleFIN snapshot without changing unrelated metadata" do
     entry = @adapter.import_transaction(
-      external_id: "simplefin_metadata_composition",
-      amount: 10.0,
-      currency: "USD",
-      date: Date.today,
-      name: "DIRECT DEBIT",
-      source: "simplefin",
-      extra: {
-        "simplefin" => { "pending" => false, "amount_normalization" => "direct_debit" },
-        "provider_snapshot" => { "obsolete" => true },
-        "exchange_rate" => "1.1"
-      }
+      external_id: "synthetic_simplefin_snapshot", amount: 1, currency: "USD",
+      date: Date.current, name: "Synthetic snapshot", source: "simplefin",
+      extra: { "simplefin" => { "pending" => false, "amount_normalization" => "direct_debit", "fx_from" => "EUR", "fx_date" => "2000-01-01" },
+               "unrelated_provider" => { "keep" => true }, "exchange_rate" => "1.1" }
     )
-
-    entry = @adapter.import_transaction(
-      external_id: "simplefin_metadata_composition",
-      amount: -10.0,
-      currency: "USD",
-      date: Date.today,
-      name: "DIRECT DEBIT",
-      source: "simplefin",
-      extra: { "provider_snapshot" => { "current" => true } },
-      replace_extra_namespaces: [ "provider_snapshot" ],
-      extra_keys_to_remove: [ %w[simplefin amount_normalization] ]
+    @adapter.import_transaction(
+      external_id: entry.external_id, amount: -1, currency: "USD",
+      date: Date.current, name: "Synthetic snapshot", source: "simplefin",
+      extra: { "simplefin" => { "pending" => false } }, replace_extra_namespaces: [ "simplefin" ]
     )
-
     entry.reload
-    assert_equal({ "current" => true }, entry.transaction.extra.fetch("provider_snapshot"))
-    assert_equal false, entry.transaction.extra.fetch("simplefin").fetch("pending")
-    assert_not entry.transaction.extra.fetch("simplefin").key?("amount_normalization")
+    assert_equal({ "pending" => false }, entry.transaction.extra.fetch("simplefin"))
+    assert_equal({ "keep" => true }, entry.transaction.extra.fetch("unrelated_provider"))
     assert_equal "1.1", entry.transaction.extra.fetch("exchange_rate")
-    assert_equal(-10, entry.amount)
+    assert_equal(-1, entry.amount)
   end
 
-  test "removes only explicitly requested extra metadata keys" do
+  test "nil incoming metadata leaves the existing provider snapshot alone" do
+    snapshot = { "simplefin" => { "pending" => false, "amount_normalization" => "direct_debit" } }
     entry = @adapter.import_transaction(
-      external_id: "simplefin_metadata_cleanup",
-      amount: 10.0,
-      currency: "USD",
-      date: Date.today,
-      name: "DIRECT DEBIT",
-      source: "simplefin",
-      extra: { "simplefin" => { "pending" => false, "amount_normalization" => "direct_debit" } }
+      external_id: "synthetic_nil_snapshot", amount: 1, currency: "USD",
+      date: Date.current, name: "Synthetic snapshot", source: "simplefin", extra: snapshot
     )
-
-    entry = @adapter.import_transaction(
-      external_id: "simplefin_metadata_cleanup",
-      amount: -10.0,
-      currency: "USD",
-      date: Date.today,
-      name: "DIRECT DEBIT",
-      source: "simplefin",
-      extra: nil,
-      extra_keys_to_remove: [ %w[simplefin amount_normalization] ]
+    @adapter.import_transaction(
+      external_id: entry.external_id, amount: -1, currency: "USD",
+      date: Date.current, name: "Synthetic snapshot", source: "simplefin",
+      extra: nil, replace_extra_namespaces: [ "simplefin" ]
     )
+    assert_equal snapshot, entry.reload.transaction.extra
+  end
 
-    sf = entry.transaction.extra.fetch("simplefin")
-    assert_equal false, sf.fetch("pending")
-    assert_not sf.key?("amount_normalization")
+  test "snapshot replacement preserves the existing protected-entry contract" do
+    [ :user_modified, :import_locked, :excluded ].each do |flag|
+      old_snapshot = { "pending" => false, "amount_normalization" => "direct_debit", "fx_from" => "EUR" }
+      entry = @adapter.import_transaction(
+        external_id: "synthetic_protected_#{flag}", amount: 1, currency: "USD",
+        date: Date.current, name: "Protected synthetic entry", source: "simplefin",
+        extra: { "simplefin" => old_snapshot, "unrelated_provider" => { "keep" => true }, "exchange_rate" => "1.1" }
+      )
+      entry.update!(flag => true)
+      @adapter.import_transaction(
+        external_id: entry.external_id, amount: -1, currency: "USD",
+        date: Date.current, name: "Incoming synthetic entry", source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }, replace_extra_namespaces: [ "simplefin" ]
+      )
+      entry.reload
+      assert_equal 1, entry.amount
+      assert_equal "Protected synthetic entry", entry.name
+      expected_snapshot = flag == :user_modified ? { "pending" => false } : old_snapshot
+      assert_equal expected_snapshot, entry.transaction.extra.fetch("simplefin")
+      assert_equal({ "keep" => true }, entry.transaction.extra.fetch("unrelated_provider"))
+      assert_equal "1.1", entry.transaction.extra.fetch("exchange_rate")
+    end
   end
 
   test "clears pending flag when same external_id is reused for booked version (not user-modified)" do
