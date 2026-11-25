@@ -320,19 +320,6 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       query
     end
 
-    # nil only when the key is absent, so a filter can be left off entirely.
-    # A present but empty value (`?excluded=`) is invalid, not "off".
-    # The spellings are the shared strict ones (BaseController), the same
-    # the security filters accept.
-    def boolean_filter_param(key)
-      return nil unless params.key?(key)
-
-      value = strict_boolean_filter_value(params[key])
-      raise InvalidFilterError, "#{key} must be true or false" if value.nil?
-
-      value
-    end
-
     def ensure_write_scope
       authorize_scope!(:write)
     end

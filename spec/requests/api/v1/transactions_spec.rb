@@ -176,7 +176,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       parameter name: :budget_id, in: :query, required: false,
                 description: "Only rows the budget's category drill-down on the web lists: transactions in the budget period, " \
                              "on the accounts its spending is computed from (the owner's report accounts for a personal budget, " \
-                             "the caller's for the household budget), excluding the funds_movement, cc_payment and one_time kinds (and investment_contribution when the family does not count investing as spending), " \
+                             "the caller's for the household budget), using the totals' rules for posted, non-future, non-excluded transactions, tax-advantaged accounts and internal investment movements, " \
                              'and limited to accounts the caller can access. Must be a budget the caller can see; returns 404 otherwise.',
                 schema: { type: :string, format: :uuid }
       parameter name: :exclude_split_parents, in: :query, required: false,
@@ -184,8 +184,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
                 schema: { type: :boolean }
       parameter name: :excluded, in: :query, required: false,
                 description: 'Filters on the entry excluded flag only. false lists entries not flagged excluded; true lists only flagged ones, ' \
-                             'split parents included. It does not apply all budget or report eligibility rules, even with budget_id, ' \
-                             'so the results are not guaranteed to match totals. Omit to list both.',
+                             'split parents included. Without budget_id, omit to list both. With budget_id, reporting rules already exclude flagged entries.',
                 schema: { type: :boolean }
 
       response '200', 'transactions listed' do

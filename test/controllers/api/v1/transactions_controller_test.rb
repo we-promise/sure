@@ -196,6 +196,44 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
 
   # Report scope filters
 
+  test "budget category rows reconcile with actual spending across reporting exclusions" do
+    budget = create_past_budget
+    category = @family.categories.create!(name: "Budget reconciliation", color: "#123456")
+    budget.budget_categories.create!(category:, budgeted_spending: 100, currency: budget.currency)
+    date = budget.start_date + 3.days
+    create_transaction(account: @account, category:, amount: 40, date:)
+    pending = create_transaction(account: @account, category:, amount: 11, date:)
+    pending.transaction.update!(extra: { plaid: { pending: true } })
+    hsa = create_owned_account(owner: @user)
+    hsa.accountable.update!(subtype: "hsa")
+    create_transaction(account: hsa, category:, amount: 22, date:)
+    transfer = create_transaction(account: @account, category:, amount: 33, date:)
+    transfer.transaction.update!(investment_activity_label: "Transfer")
+    shared = create_owned_account(owner: users(:family_member))
+    shared.account_shares.create!(user: @user, permission: "read_write", include_in_finances: false)
+    create_transaction(account: shared, category:, amount: 44, date:)
+    create_transaction(account: @account, category:, amount: 55, date:, excluded: true)
+
+    budget.current_user = @user
+    get api_v1_transactions_url, params: { budget_id: budget.id, category_id: category.id, excluded: false }, headers: api_headers(@api_key)
+    assert_response :success
+    amounts = JSON.parse(response.body)["transactions"].sum { |row| BigDecimal(row["amount_decimal"]) }
+    assert_equal BigDecimal("40"), amounts
+    assert_equal budget.budget_categories.find_by!(category:).actual_spending_money.amount, amounts
+  end
+
+  test "current budget drill-down excludes future-dated transactions" do
+    travel_to Time.zone.local(2031, 11, 10) do
+      budget = @family.budgets.create!(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month,
+        budgeted_spending: 100, currency: "USD")
+      posted = create_transaction(account: @account, amount: 40, date: Date.current)
+      create_transaction(account: @account, amount: 90, date: Date.current + 1.day)
+      get api_v1_transactions_url, params: { budget_id: budget.id }, headers: api_headers(@api_key)
+      assert_response :success
+      assert_equal [ posted.entryable_id ], JSON.parse(response.body)["transactions"].map { |row| row["id"] }
+    end
+  end
+
   test "budget_id lists what the budget drill-down counts" do
     budget = create_past_budget
     in_period = budget.start_date + 3.days

@@ -26,10 +26,7 @@ module Api::V1::SecurityResourceFiltering
     end
 
     def parse_boolean_filter_param(key)
-      value = strict_boolean_filter_value(params[key])
-      invalid_filter!("#{key} must be true or false") if value.nil?
-
-      value
+      boolean_filter_param(key, required: true)
     end
 
     def parse_date_param(key)

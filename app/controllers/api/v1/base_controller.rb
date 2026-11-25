@@ -339,11 +339,13 @@ class Api::V1::BaseController < ApplicationController
       raise InvalidFilterError, "#{key} must be an ISO 8601 date"
     end
 
-    # true or false for an accepted spelling (case and surrounding spaces
-    # ignored), nil for anything else, blank included, so each caller raises
-    # its own filter error.
-    def strict_boolean_filter_value(value)
-      BOOLEAN_FILTER_VALUES[value.to_s.strip.downcase]
+    def boolean_filter_param(key, required: false)
+      return nil unless required || params.key?(key)
+
+      value = BOOLEAN_FILTER_VALUES[params[key].to_s.strip.downcase]
+      raise InvalidFilterError, "#{key} must be true or false" if value.nil?
+
+      value
     end
 
     # Log API access for monitoring and debugging
