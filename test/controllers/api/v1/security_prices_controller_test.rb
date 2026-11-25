@@ -176,14 +176,6 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", response_data["error"]
   end
 
-  test "rejects invalid date filters" do
-    get api_v1_security_prices_url, params: { start_date: "01/15/2024" }, headers: api_headers(@api_key)
-
-    assert_response :unprocessable_entity
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
-  end
-
   test "does not list prices of a security held only in a member's account the caller cannot access" do
     private_account = @family.accounts.create!(
       name: "Member Brokerage", accountable: Investment.new, balance: 0, currency: "USD", owner: users(:family_member)
@@ -199,7 +191,7 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dates must be YYYY-MM-DD, without the other ISO 8601 forms" do
-    [ [ :start_date, "20240115" ], [ :end_date, "2024-015" ], [ :start_date, "2024-W03-1" ] ].each do |key, value|
+    [ [ :start_date, "01/15/2024" ], [ :start_date, "20240115" ], [ :end_date, "2024-015" ], [ :start_date, "2024-W03-1" ] ].each do |key, value|
       get api_v1_security_prices_url, params: { key => value }, headers: api_headers(@api_key)
 
       assert_response :unprocessable_entity, value

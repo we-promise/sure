@@ -82,16 +82,6 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "should reject index with invalid date filter" do
-    get api_v1_valuations_url,
-        params: { start_date: "04/30/2026" },
-        headers: api_headers(@api_key)
-    assert_response :unprocessable_entity
-
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
-  end
-
   test "should reject index with malformed account_id filter" do
     get api_v1_valuations_url,
         params: { account_id: "not-a-uuid" },
@@ -107,7 +97,7 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
   # ordinal and week dates and timestamps, and a blank value was ignored.
   test "should reject index with a date or account filter that is not exactly ISO 8601 or a UUID" do
     {
-      start_date: [ "20260430", "2026-120", "2026-W18-4", "2026-04-30T00:00:00Z", "" ],
+      start_date: [ "04/30/2026", "20260430", "2026-120", "2026-W18-4", "2026-04-30T00:00:00Z", "" ],
       end_date: [ "20260430", "" ],
       account_id: [ "", [ @account.id ] ]
     }.each do |key, values|

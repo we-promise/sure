@@ -129,14 +129,6 @@ class Api::V1::RuleRunsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ immediate_run.id ], JSON.parse(response.body)["data"].map { |rule_run| rule_run["id"] }
   end
 
-  test "rejects invalid filters" do
-    get api_v1_rule_runs_url, params: { status: "unknown" }, headers: api_headers(@api_key)
-
-    assert_response :unprocessable_entity
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
-  end
-
   test "clamps oversized per_page values to the documented maximum" do
     get api_v1_rule_runs_url, params: { per_page: 500 }, headers: api_headers(@api_key)
 
@@ -147,14 +139,6 @@ class Api::V1::RuleRunsControllerTest < ActionDispatch::IntegrationTest
 
   test "rejects malformed rule_id filter" do
     get api_v1_rule_runs_url, params: { rule_id: "not-a-uuid" }, headers: api_headers(@api_key)
-
-    assert_response :unprocessable_entity
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
-  end
-
-  test "rejects invalid timestamp filters" do
-    get api_v1_rule_runs_url, params: { start_executed_at: "not-a-date" }, headers: api_headers(@api_key)
 
     assert_response :unprocessable_entity
     response_data = JSON.parse(response.body)
@@ -220,6 +204,7 @@ class Api::V1::RuleRunsControllerTest < ActionDispatch::IntegrationTest
       rule_id: [ "nope", "rule_id must be a valid UUID" ],
       status: [ "unknown", "status must be one of: pending, success, failed" ],
       execution_type: [ "cron", "execution_type must be one of: manual, scheduled, immediate" ],
+      start_executed_at: [ "not-a-date", "start_executed_at must be an ISO 8601 timestamp" ],
       end_executed_at: [ "2024-01-16", "end_executed_at must be an ISO 8601 timestamp" ]
     }.each do |key, (value, message)|
       get api_v1_rule_runs_url, params: { key => value }, headers: api_headers(@api_key)

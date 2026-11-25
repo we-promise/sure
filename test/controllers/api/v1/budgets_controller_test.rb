@@ -108,14 +108,6 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response_data["budgets"].map { |budget| budget["id"] }, @budget.id
   end
 
-  test "rejects invalid date filters" do
-    get api_v1_budgets_url, params: { start_date: "03/01/2024" }, headers: api_headers(@api_key)
-
-    assert_response :unprocessable_entity
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
-  end
-
   test "date filters bound budgets.start_date from below and budgets.end_date from above" do
     later = @family.budgets.create!(
       start_date: 2.months.ago.beginning_of_month.to_date,
@@ -143,8 +135,9 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes JSON.parse(response.body)["budgets"].map { |budget| budget["id"] }, @other_budget.id
   end
 
-  # Date.iso8601 used to read these too; the API documents YYYY-MM-DD.
-  [ "20240105", "2024-005", "2024-W01-1", "" ].each do |value|
+  # Only YYYY-MM-DD: Date.iso8601 also read the compact, ordinal and week
+  # forms, and an empty value was ignored.
+  [ "03/01/2024", "20240105", "2024-005", "2024-W01-1", "" ].each do |value|
     test "rejects #{value.inspect} as a date filter" do
       %i[start_date end_date].each do |key|
         get api_v1_budgets_url, params: { key => value }, headers: api_headers(@api_key)

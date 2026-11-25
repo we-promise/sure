@@ -111,14 +111,6 @@ class Api::V1::RejectedTransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", response_data["error"]
   end
 
-  test "rejects invalid date filter" do
-    get api_v1_rejected_transfers_url, params: { start_date: "01/15/2024" }, headers: api_headers(@api_key)
-
-    assert_response :unprocessable_entity
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
-  end
-
   test "filters rejected transfers when either transaction side date matches" do
     matched_outflow = create_transaction(@account, amount: 35, date: Date.parse("2024-02-10"), name: "Rejected dated outflow")
     matched_inflow = create_transaction(@destination_account, amount: -35, date: Date.parse("2024-02-10"), name: "Rejected dated inflow")
@@ -163,8 +155,8 @@ class Api::V1::RejectedTransfersControllerTest < ActionDispatch::IntegrationTest
     api_key_without_read&.destroy
   end
 
-  test "rejects compact and week ISO 8601 date forms" do
-    %w[20240115 2024-015 2024-W03-1].each do |value|
+  test "rejects dates other than YYYY-MM-DD, compact and week ISO 8601 forms included" do
+    %w[01/15/2024 20240115 2024-015 2024-W03-1].each do |value|
       get api_v1_rejected_transfers_url, params: { start_date: value }, headers: api_headers(@api_key)
 
       assert_response :unprocessable_entity, "start_date=#{value} should be rejected"

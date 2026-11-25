@@ -150,22 +150,6 @@ class Api::V1::BalancesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response_data["balances"].map { |balance| balance["id"] }, @balance.id
   end
 
-  test "rejects malformed account_id filter" do
-    get api_v1_balances_url, params: { account_id: "not-a-uuid" }, headers: api_headers(@api_key)
-
-    assert_response :unprocessable_entity
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
-  end
-
-  test "rejects invalid date filters" do
-    get api_v1_balances_url, params: { start_date: "01/15/2024" }, headers: api_headers(@api_key)
-
-    assert_response :unprocessable_entity
-    response_data = JSON.parse(response.body)
-    assert_equal "validation_failed", response_data["error"]
-  end
-
   test "filters balances by a currency with surrounding spaces" do
     get api_v1_balances_url, params: { currency: " usd " }, headers: api_headers(@api_key)
 
@@ -185,9 +169,9 @@ class Api::V1::BalancesControllerTest < ActionDispatch::IntegrationTest
   # ignored or matched nothing.
   test "rejects filters that are not exactly what they say" do
     {
-      start_date: [ "20240115", "2024-015", "2024-W03-1", "2024-01-15T00:00:00Z", "" ],
+      start_date: [ "01/15/2024", "20240115", "2024-015", "2024-W03-1", "2024-01-15T00:00:00Z", "" ],
       end_date: [ "20240115", "" ],
-      account_id: [ "", [ @account.id ] ],
+      account_id: [ "not-a-uuid", "", [ @account.id ] ],
       currency: [ [ "USD" ] ]
     }.each do |key, values|
       values.each do |value|

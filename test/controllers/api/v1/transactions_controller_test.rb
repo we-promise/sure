@@ -366,14 +366,6 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", JSON.parse(response.body)["error"]
   end
 
-  test "malformed start_date or end_date is a 422, not a 500" do
-    %i[start_date end_date].each do |key|
-      get api_v1_transactions_url, params: { key => "not-a-date" }, headers: api_headers(@api_key)
-      assert_response :unprocessable_entity
-      assert_equal "validation_failed", JSON.parse(response.body)["error"]
-    end
-  end
-
   test "budget_id still requires authentication" do
     get api_v1_transactions_url, params: { budget_id: create_past_budget.id }
     assert_response :unauthorized
@@ -428,18 +420,6 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       names = JSON.parse(response.body)["transactions"].map { |row| row["name"] }
       assert_equal [ "Excluded child", "Excluded plain", "Report split parent" ].sort, names.sort
     end
-  end
-
-  test "report filters reject a present but empty value" do
-    %i[exclude_split_parents excluded].each do |key|
-      get "#{api_v1_transactions_url}?#{key}=", headers: api_headers(@api_key)
-      assert_response :unprocessable_entity
-      assert_equal "#{key} must be true or false", JSON.parse(response.body)["message"]
-    end
-
-    get "#{api_v1_transactions_url}?budget_id=", headers: api_headers(@api_key)
-    assert_response :unprocessable_entity
-    assert_equal "budget_id must be a valid UUID", JSON.parse(response.body)["message"]
   end
 
   test "should search transactions" do
@@ -518,16 +498,17 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dates must be ISO 8601" do
-    %w[2024/01/05 05-01-2024 Jan\ 5\ 2024 20240105].each do |value|
-      get api_v1_transactions_url, params: { start_date: value }, headers: api_headers(@api_key)
-      assert_response :unprocessable_entity, "expected #{value.inspect} to be refused"
-      assert_equal "start_date must be an ISO 8601 date", JSON.parse(response.body)["message"]
+    %i[start_date end_date].product(%w[not-a-date 2024/01/05 05-01-2024 Jan\ 5\ 2024 20240105]).each do |key, value|
+      get api_v1_transactions_url, params: { key => value }, headers: api_headers(@api_key)
+      assert_response :unprocessable_entity, "expected #{key}=#{value.inspect} to be refused"
+      assert_equal "#{key} must be an ISO 8601 date", JSON.parse(response.body)["message"]
     end
   end
 
   test "a present but empty filter is refused, except search" do
     { start_date: "an ISO 8601 date", account_id: "a valid UUID", account_ids: "a list of valid UUIDs",
-      min_amount: "a number", type: "one of: income, expense" }.each do |key, expected|
+      min_amount: "a number", type: "one of: income, expense", budget_id: "a valid UUID",
+      exclude_split_parents: "true or false", excluded: "true or false" }.each do |key, expected|
       get "#{api_v1_transactions_url}?#{key}=", headers: api_headers(@api_key)
       assert_response :unprocessable_entity
       assert_equal "#{key} must be #{expected}", JSON.parse(response.body)["message"]
