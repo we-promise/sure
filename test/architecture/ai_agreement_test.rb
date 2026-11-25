@@ -57,6 +57,33 @@ class AiAgreementTest < ActionDispatch::IntegrationTest
                  "chat's disagreements changed; update CHAT_ALLOWLIST (it may only shrink)\n#{format_report(report)}"
   end
 
+  # The gate chat takes and the typing hold use the route's host; chat itself still calls a provider.
+  test "chat's route is on the host of the provider chat calls, in every setup" do
+    with_host = []
+
+    SETUPS.each_key do |id|
+      in_ai_setup(id, family: @family) do
+        route = Ai.plan(:chat, family: @family, user: @user)&.route
+        next if route.nil? || route.agent?   # no chat, or an external assistant, which calls its own models
+
+        provider = Assistant::Builtin.new(@user.chats.new).get_model_provider(Chat.default_model)
+        url = provider.is_a?(Provider::Anthropic) ? provider.instance_variable_get(:@base_url) : provider.instance_variable_get(:@uri_base)
+        expected = url.presence && URI.parse(url).then { "#{_1.host}:#{_1.port}" }
+        actual = route.endpoint.base_url && Ai::Sequencer.host_key(route.endpoint)
+
+        if expected
+          with_host << id
+          assert_equal expected, actual, "#{id} (#{SETUPS[id].first})"
+          assert_equal expected.start_with?("ollama"), Ai::Sequencer.chat_endpoint(@user).present?, "#{id}: only a local host has a gate"
+        else
+          assert_nil actual, "#{id} (#{SETUPS[id].first})"
+        end
+      end
+    end
+
+    assert_equal %w[C5 M3], with_host, "the setups with a URL of their own"
+  end
+
   private
     # entry point => [feature, whether it's shown or offered]
     def answers(id)

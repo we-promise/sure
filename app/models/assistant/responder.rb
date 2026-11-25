@@ -120,21 +120,23 @@ class Assistant::Responder
 
     def get_llm_response(streamer:, function_results: [], previous_response_id: nil, tool_choice: nil)
       Usage.capture("ai_assistant_served_daily")
-      response = llm.chat_response(
-        message.content,
-        model: message.ai_model,
-        instructions: instructions,
-        functions: function_tool_caller.function_definitions,
-        function_results: function_results,
-        tool_choice: tool_choice,
-        messages: openai_messages_payload,
-        conversation_history: chat_message_records,
-        streamer: streamer,
-        previous_response_id: previous_response_id,
-        session_id: chat_session_id,
-        user_identifier: chat_user_identifier,
-        family: message.chat&.user&.family
-      )
+      response = Ai::Sequencer.hold_for_chat(chat_endpoint) do
+        llm.chat_response(
+          message.content,
+          model: message.ai_model,
+          instructions: instructions,
+          functions: function_tool_caller.function_definitions,
+          function_results: function_results,
+          tool_choice: tool_choice,
+          messages: openai_messages_payload,
+          conversation_history: chat_message_records,
+          streamer: streamer,
+          previous_response_id: previous_response_id,
+          session_id: chat_session_id,
+          user_identifier: chat_user_identifier,
+          family: message.chat&.user&.family
+        )
+      end
 
       unless response.success?
         raise response.error
@@ -163,6 +165,12 @@ class Assistant::Responder
 
     def chat
       @chat ||= message.chat
+    end
+
+    def chat_endpoint
+      return @chat_endpoint if defined?(@chat_endpoint)
+
+      @chat_endpoint = Ai::Sequencer.chat_endpoint(chat&.user)
     end
 
     # Memoized fetch — both `chat_message_records` and `openai_messages_payload`

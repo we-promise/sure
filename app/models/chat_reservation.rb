@@ -30,8 +30,11 @@ module ChatReservation
 
     def held?(host) = Ai::SharedState.read(key(host)).present?
 
+    # Never fails the message: a hold left standing lapses by itself.
     def release(endpoint)
       Ai::SharedState.delete(key(Ai::Sequencer.host_key(endpoint)))
+    rescue StandardError => e
+      Rails.logger.warn("ChatReservation not released: #{e.class}: #{e.message}")
     end
 
     # Nothing while a chat request runs or waits: its own bubble covers that. Otherwise busy while
