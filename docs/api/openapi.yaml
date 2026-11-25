@@ -7819,6 +7819,8 @@ paths:
   "/api/v1/holdings":
     get:
       summary: List holdings
+      description: Holdings are ordered by date, then by holding ID for rows on the
+        same date.
       tags:
       - Holdings
       security:
