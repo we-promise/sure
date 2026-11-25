@@ -41,6 +41,20 @@ class Security::ManualPriceImportTest < ActiveSupport::TestCase
     assert_not existing.reload.carried_forward
   end
 
+  test "a close over a carried-forward price is not replaced by a later provider quote" do
+    date = 3.days.ago.to_date
+    @security.prices.create!(date: date, price: 20, currency: "AUD", carried_forward: true)
+    import([ row(date, "23") ])
+    provider = mock
+    provider.stubs(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: date, price: 99, currency: "AUD")
+    ]))
+
+    Security::Price::Importer.new(security: @security, security_provider: provider, start_date: date, end_date: date).import_provider_prices
+
+    assert_equal BigDecimal("23"), @security.prices.find_by!(date: date, currency: "AUD").price
+  end
+
   test "one bad row leaves every row in the batch unwritten" do
     @security.prices.create!(date: 5.days.ago.to_date, price: 19, currency: "AUD")
 
