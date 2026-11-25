@@ -14,13 +14,15 @@ class InvestmentStatement
 
   # Get totals for a specific period
   def totals(period: Period.current_month)
-    account_ids = investment_account_ids
+    account_ids = totals_account_ids
 
     result = totals_query(account_ids: account_ids, date_range: period.date_range)
 
     PeriodTotals.new(
       contributions: Money.new(result[:contributions], family.currency),
       withdrawals: Money.new(result[:withdrawals], family.currency),
+      buys: Money.new(result[:buys], family.currency),
+      sells: Money.new(result[:sells], family.currency),
       dividends: Money.new(result[:dividends], family.currency),
       interest: Money.new(result[:interest], family.currency),
       trades_count: result[:trades_count],
@@ -112,18 +114,23 @@ class InvestmentStatement
       end
   end
 
-  # Portfolio allocation by security (rolled up across accounts). Shares the
-  # weight denominator with top_holdings so the same security never reports two
-  # different percentages. Weights therefore sum to the invested share of the
-  # portfolio, not to 100 — cash is the residual.
+  # Portfolio allocation by security (rolled up across accounts), plus one
+  # cash row for the part of each account's balance no holding accounts for,
+  # so the weights sum to 100 and every security carries the same weight here
+  # as in #top_holdings.
+  #
+  # The cash row is the account cash every grouping files
+  # (`account_cash_total`): per account, balance less holdings, positive
+  # only. Not Account#cash_balance, which can be stale or default to the whole
+  # balance; and not one residual across the portfolio, which would let one
+  # account's margin net against another account's cash.
   def allocation
     rolled_up = holdings_rolled_up_by_security
     holdings_total = rolled_up.sum { |_, value, _| value }
-    return [] if holdings_total.zero?
-
     total = weight_denominator(holdings_total)
+    return [] if total.zero?
 
-    rolled_up.map do |security, value, holdings|
+    rows = rolled_up.map do |security, value, holdings|
       HoldingAllocation.new(
         security: security,
         amount: Money.new(value, family.currency),
@@ -131,10 +138,23 @@ class InvestmentStatement
         trend: combined_holding_trend(holdings)
       )
     end
+
+    cash = account_cash_total
+    if cash.positive?
+      rows << HoldingAllocation.new(
+        security: nil,
+        amount: Money.new(cash, family.currency),
+        weight: (cash / total * 100).round(2),
+        trend: nil
+      )
+    end
+
+    rows
   end
 
   # Allocation of the portfolio grouped by a classification column of the
-  # security, or by :account, :currency or :kind (cash, crypto, standard).
+  # security, by :account, :currency or :kind (cash, crypto, standard), or by
+  # :security (the #allocation roll-up).
   # Every grouping measures the same portfolio: the holdings plus each
   # account's cash -- its balance less its holdings, positive only
   # (`positive_account_cash`) -- placed where the grouping says cash belongs.
@@ -142,7 +162,7 @@ class InvestmentStatement
   # total, and weights sum to 100 within rounding. Segments are sorted largest
   # first. Amounts convert to the family currency at the latest rate; a
   # currency with no rate counts 1:1 (`convert_to_family_currency`).
-  ALLOCATION_GROUPINGS = %w[asset_class asset_sub_class sector region account currency kind].freeze
+  ALLOCATION_GROUPINGS = %w[security asset_class asset_sub_class sector region account currency kind].freeze
 
   # The bucket a holding falls into when the column it is grouped by is empty.
   # It is a real segment, not a gap, so a portfolio of unclassified securities
@@ -156,8 +176,8 @@ class InvestmentStatement
   CASH_SUB_CLASS = "cash".freeze
 
   # One level down from a classification segment: asset class -> sub-class ->
-  # positions. Sector, region, account, currency and kind do not nest, so they
-  # return [].
+  # positions. Security, sector, region, account, currency and kind do not
+  # nest, so they return [].
   #
   # `parent` is the asset class the sub-class was reached through. A sub-class
   # name such as `unclassified` repeats across asset classes, so without it the
@@ -170,8 +190,9 @@ class InvestmentStatement
     end
   end
 
-  # A grouping outside ALLOCATION_GROUPINGS returns no segments, so a grouping
-  # name taken from a query string cannot raise.
+  # Anything that is not another grouping, a missing one included, is the
+  # security roll-up, so a grouping name taken from a query string cannot raise
+  # and a request without one shows the default.
   def allocation_by(by)
     case by.to_s
     when "account" then allocation_by_account
@@ -181,7 +202,7 @@ class InvestmentStatement
     when "asset_sub_class" then allocation_by_classification(:asset_sub_class, cash_bucket: CASH_SUB_CLASS)
     when "sector" then allocation_by_classification(:sector)
     when "region" then allocation_by_classification(:region)
-    else []
+    else allocation_by_security
     end
   end
 
@@ -201,6 +222,15 @@ class InvestmentStatement
   HOLDINGS_SORT_KEYS = %w[value weight return day_change name].freeze
   HOLDINGS_SORT_DIRECTIONS = %w[asc desc].freeze
 
+  # The [sort, dir] #holdings_table_rows actually applies, so a caller can
+  # show the table's headers the order its rows are in.
+  def self.holdings_sort(sort, dir)
+    [
+      HOLDINGS_SORT_KEYS.include?(sort.to_s) ? sort.to_s : "value",
+      HOLDINGS_SORT_DIRECTIONS.include?(dir.to_s) ? dir.to_s : "desc"
+    ]
+  end
+
   def holdings_table_rows(sort: "value", dir: "desc")
     rolled_up = holdings_rolled_up_by_security
     return [] if rolled_up.empty?
@@ -212,6 +242,65 @@ class InvestmentStatement
     end
 
     sort_holdings_table_rows(rows, sort: sort, dir: dir)
+  end
+
+  STALE_PRICE_AFTER_DAYS = 5
+  DATA_QUALITY_KINDS = %i[missing_cost_basis stale_price provider negative_position].freeze
+  DataQualityIssue = Data.define(:kind, :holding, :security, :detail, :account)
+
+  # Holdings the user should look at before trusting the figures: no cost
+  # basis anywhere (Holding#avg_cost is nil: nothing stored and nothing the
+  # trades can compute, by the same rules the holdings tab applies), a
+  # provider that is not healthy, or, where the provider is healthy, a last
+  # quote dated more than STALE_PRICE_AFTER_DAYS before as_of or none on or
+  # before it. A quote is a non-zero price row, or the price a provider
+  # wrote on a holding it synced. Cash securities are never flagged. Issues
+  # sort by kind, ticker, security and account, so ties keep their order
+  # between requests. The cost bases come from the batched preload and the
+  # quote dates from two queries, so the list is bounded regardless of the
+  # number of holdings. A position that went below zero on any day
+  # (Account#negative_positions, the account page's warning) is flagged even
+  # once it recovered, so it reads a few queries per investment account.
+  # `as_of` is the price cut-off only; the holdings are today's.
+  def data_quality_issues(as_of: Date.current)
+    as_of = as_of.to_date
+    holdings = holdings_with_avg_costs
+
+    issues = []
+
+    investment_accounts.each do |account|
+      account.negative_positions.each do |position|
+        issues << DataQualityIssue.new(kind: :negative_position, holding: nil, security: position.security, detail: position, account: account)
+      end
+    end
+
+    holdings.each do |holding|
+      next if holding.security.cash?
+
+      if holding.avg_cost.nil?
+        issues << DataQualityIssue.new(kind: :missing_cost_basis, holding: holding, security: holding.security, detail: nil, account: holding.account)
+      end
+    end
+
+    holdings.map(&:security).uniq.each do |security|
+      next if security.cash?
+
+      status = security.provider_status
+      if status != :ok
+        issues << DataQualityIssue.new(kind: :provider, holding: nil, security: security, detail: status, account: nil)
+        next
+      end
+
+      latest = latest_quote_dates(as_of)[security.id]
+      if latest.nil? || latest < as_of - STALE_PRICE_AFTER_DAYS
+        issues << DataQualityIssue.new(kind: :stale_price, holding: nil, security: security, detail: latest, account: nil)
+      end
+    end
+
+    issues.sort_by do |issue|
+      [ DATA_QUALITY_KINDS.index(issue.kind), issue.security.ticker.to_s, issue.security.id.to_s, issue.account&.id.to_s,
+        issue.holding&.id.to_s ]
+    end
   end
 
   # Unrealized gains across all holdings, summed in family currency
@@ -387,11 +476,7 @@ class InvestmentStatement
 
   # Investment accounts
   def investment_accounts
-    @investment_accounts ||= begin
-      scope = family.accounts.visible.included_in_reports.where(accountable_type: %w[Investment Crypto])
-      scope = scope.included_in_finances_for(user) if user
-      scope
-    end
+    @investment_accounts ||= report_accounts.where(accountable_type: %w[Investment Crypto])
   end
 
   private
@@ -430,7 +515,7 @@ class InvestmentStatement
       @all_time_totals ||= totals(period: Period.all_time)
     end
 
-    PeriodTotals = Data.define(:contributions, :withdrawals, :dividends, :interest, :trades_count, :currency) do
+    PeriodTotals = Data.define(:contributions, :withdrawals, :buys, :sells, :dividends, :interest, :trades_count, :currency) do
       def net_flow
         contributions - withdrawals
       end
@@ -440,11 +525,15 @@ class InvestmentStatement
       end
     end
 
+    # `security` is nil only for the cash row #allocation appends.
     HoldingAllocation = Data.define(:security, :amount, :weight, :trend) do
-      def ticker = security.ticker
-      def name = security.name.presence || ticker
+      def cash? = security.nil?
+      def ticker = cash? ? CASH_TICKER : security.ticker
+      def name = cash? ? I18n.t("models.investment_statement.cash") : (security.name.presence || ticker)
       def amount_money = amount
     end
+
+    CASH_TICKER = "CASH".freeze
 
     AllocationSegment = Data.define(:id, :name, :amount, :weight)
 
@@ -452,6 +541,18 @@ class InvestmentStatement
     # files cash by. Not Account#balance: an account below its holdings (margin,
     # or a stale zero balance) would otherwise show less than it holds, or drop
     # out of the grouping altogether.
+    # The #allocation rows as segments, without the per-security trend a
+    # segment does not carry. build_segments' total is the holdings plus
+    # account_cash_total, which is weight_denominator, so each weight matches
+    # #allocation's.
+    def allocation_by_security
+      segments = holdings_rolled_up_by_security.map do |security, value, _holdings|
+        [ security.id, security.name.presence || security.ticker, value ]
+      end
+      segments << [ "cash", I18n.t("models.investment_statement.cash"), account_cash_total ]
+      build_segments(segments)
+    end
+
     def allocation_by_account
       cash = positive_account_cash.to_h { |account, value| [ account.id, value ] }
       segments = investment_accounts.map do |account|
@@ -644,9 +745,12 @@ class InvestmentStatement
     # accounts that hold it, in family currency.
     HoldingsTableRow = Data.define(
       :security, :positions, :accounts_count, :qty, :avg_cost, :amount, :weight,
-      :unrealized, :day_change, :missing_cost_basis
+      :unrealized, :day_change, :day_change_positions, :missing_cost_basis
     ) do
       def ticker = security.ticker
+      # The Day change sums only the positions with a previous snapshot, while
+      # the row's value sums them all.
+      def day_change_partial? = day_change.present? && day_change_positions < positions.size
       def name = security.name.presence || ticker
       def amount_money = amount
     end
@@ -698,13 +802,13 @@ class InvestmentStatement
         weight: total.zero? ? 0 : (value / total * 100).round(2),
         unrealized: unrealized,
         day_change: day_change,
+        day_change_positions: day_changes.size,
         missing_cost_basis: missing_cost_basis
       )
     end
 
     def sort_holdings_table_rows(rows, sort:, dir:)
-      sort = HOLDINGS_SORT_KEYS.include?(sort.to_s) ? sort.to_s : "value"
-      dir = HOLDINGS_SORT_DIRECTIONS.include?(dir.to_s) ? dir.to_s : "desc"
+      sort, dir = self.class.holdings_sort(sort, dir)
 
       # Rows without the sorted figure go last whichever direction is asked.
       # Ties break by name, then security id, in both directions, so rows with
@@ -747,13 +851,15 @@ class InvestmentStatement
     # Shared by top_holdings and allocation so one security cannot report two
     # different percentages.
     #
-    # max(portfolio_value, holdings_total) rather than portfolio_value alone:
-    # portfolio_value includes cash, which goes negative on margin or an
-    # unsettled buy and would push a weight past 100%. The holdings total acts
-    # as a floor. It also covers a stale-zero portfolio_value, where the cached
-    # Account#balance lags behind the Holding rows.
+    # The denominator is the holdings total plus the account cash every
+    # grouping files -- the total each allocation grouping sums to -- rather
+    # than portfolio_value: Account#balance can lag the holdings (a stale zero)
+    # or fall below them (margin, an unsettled buy) and push a weight past
+    # 100%. Account cash is positive only, so the denominator is never below
+    # the holdings. It equals portfolio_value unless an account's balance is
+    # below its holdings.
     def weight_denominator(holdings_total)
-      [ portfolio_value, holdings_total ].max
+      holdings_total + account_cash_total
     end
 
     # Memoized: top_holdings, allocation and holdings_table_rows all start
@@ -780,6 +886,37 @@ class InvestmentStatement
         .sort_by { |_, value, _| -value }
     end
 
+    # Latest price date per held security on or before as_of, so a price
+    # recorded after as_of cannot make a past check look fresh.
+    # The last quote on or before `as_of` per held security: a real price row
+    # (not a carried-forward or provisional row, nor a zero placeholder, which
+    # the price importer skips too), or the date of a holding a provider
+    # synced with its own price, whichever is later.
+    def latest_quote_dates(as_of)
+      @latest_quote_dates ||= {}
+      @latest_quote_dates[as_of] ||= read_latest_quote_dates(as_of)
+    end
+
+    def read_latest_quote_dates(as_of)
+      security_ids = current_holdings.map(&:security_id).uniq
+      priced = Security::Price
+        .where(security_id: security_ids)
+        .where(date: ..as_of, carried_forward: false, provisional: false)
+        .where("price > 0")
+        .group(:security_id)
+        .maximum(:date)
+      return priced if current_holdings.none?(&:account_provider_id)
+
+      synced = Holding
+        .where(security_id: security_ids, account_id: current_holdings.map(&:account_id).uniq)
+        .where.not(account_provider_id: nil)
+        .where(date: ..as_of)
+        .where("price > 0")
+        .group(:security_id)
+        .maximum(:date)
+      priced.merge(synced) { |_id, price_date, holding_date| [ price_date, holding_date ].max }
+    end
+
     def combined_holding_trend(holdings)
       currents = []
       previouses = []
@@ -804,19 +941,77 @@ class InvestmentStatement
       @investment_account_ids ||= investment_accounts.pluck(:id)
     end
 
+    def report_accounts
+      scope = family.accounts.visible.included_in_reports
+      user ? scope.included_in_finances_for(user) : scope
+    end
+
+    # The accounts #totals reads: the investment accounts, plus the cash
+    # account a broker settles their trades on when it keeps the cash in an
+    # account of its own. Trade Republic does: its Cash account is a
+    # depository account, and each trade's settlement there is linked to the
+    # Portfolio or Crypto account as a confirmed transfer
+    # (TradeRepublicAccount.settlement_account_ids_for). Taken as one scope,
+    # those settlements are internal, like a buy paid from an investment
+    # account's own cash, and money is counted where it enters or leaves the
+    # broker: a transfer between the Cash account and the user's bank. As on
+    # every account the totals read, a cash row counts only when it records
+    # a flow (Totals#recorded_flow_sql), so card payments and other unlinked
+    # rows on the Cash account are neither. Nor is a credit card or loan
+    # payment made from it: Totals is told which accounts settle trades, and
+    # leaves those payments out there (see Totals#recorded_flow_sql). Income
+    # the broker books there (dividends, interest) is read with it. The Cash
+    # account passes the same report and visibility filters as the investment
+    # accounts. A user who does not have it in their finances therefore gets
+    # the investment accounts alone, on which each settlement counts as a
+    # contribution or a withdrawal again.
+    #
+    # Only a provider that books trade settlements this way is followed, not
+    # every account of the same connection: a bank connection with a checking
+    # and a brokerage account would otherwise make every deposit from that
+    # checking account internal, and it would never be counted.
+    def totals_account_ids
+      @totals_account_ids ||= (investment_account_ids + settlement_account_ids).uniq
+    end
+
+    def settlement_account_ids
+      @settlement_account_ids ||= if investment_account_ids.empty?
+        []
+      else
+        report_accounts.where(id: TradeRepublicAccount.settlement_account_ids_for(investment_account_ids)).pluck(:id)
+      end
+    end
+
     def totals_query(account_ids:, date_range:)
       if account_ids.empty?
         return Totals.new(family, account_ids: account_ids, date_range: date_range).call
       end
 
-      account_ids_hash = Digest::MD5.hexdigest(account_ids.sort.join(","))
+      # Which of those accounts settle trades changes what Totals counts
+      # (see Totals#recorded_flow_sql), so it is part of the key too.
+      account_ids_hash = Digest::MD5.hexdigest("#{account_ids.sort.join(",")}|#{settlement_account_ids.sort.join(",")}")
 
       Rails.cache.fetch([
-        "investment_statement", "totals_query/v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, family.currency,
+        "investment_statement", "totals_query/v3", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, family.currency,
         account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version,
         # A rate stored later can complete totals that left an amount out.
-        ExchangeRate.maximum(:updated_at)&.to_i
-      ]) { Totals.new(family, account_ids: account_ids, date_range: date_range).call }
+        ExchangeRate.updated_at_version,
+        transfers_version(account_ids)
+      ]) { Totals.new(family, account_ids: account_ids, settlement_account_ids: settlement_account_ids, date_range: date_range).call }
+    end
+
+    # Contributions and withdrawals depend on which transactions a confirmed
+    # Transfer links (Portfolio::FlowClassifier), and linking, confirming or
+    # removing a transfer between two existing transactions need not write
+    # to either entry, so entries_cache_version alone would miss it. The
+    # count catches a removal; the timestamp catches a confirmation.
+    def transfers_version(account_ids)
+      leg_ids = Entry.where(account_id: account_ids, entryable_type: "Transaction").select(:entryable_id)
+      count, max_at = Transfer
+        .where(inflow_transaction_id: leg_ids)
+        .or(Transfer.where(outflow_transaction_id: leg_ids))
+        .pick(Arel.sql("count(*)"), Arel.sql("max(transfers.updated_at)"))
+      "#{count}-#{max_at&.to_f}"
     end
 
     def monetizable_currency

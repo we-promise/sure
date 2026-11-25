@@ -36,6 +36,8 @@ class SnaptradeItem::Importer
     end
 
     snaptrade_item.upsert_snaptrade_snapshot!(stats)
+    # A Personal key hit its rate limit: fail this sync, the next one resumes.
+    raise snaptrade_provider.rate_limit_error if snaptrade_provider.rate_limit_error
   rescue Provider::Snaptrade::AuthenticationError => e
     snaptrade_item.update!(status: :requires_update)
     raise
@@ -215,7 +217,7 @@ class SnaptradeItem::Importer
           # cleared here. Active Job raises some enqueue failures and reports
           # an adapter's EnqueueError by returning false.
           begin
-            queued = SnaptradeActivitiesFetchJob.set(wait: 10.seconds).perform_later(
+            queued = SnaptradeActivitiesFetchJob.set(wait: SnaptradeActivitiesFetchJob::RETRY_DELAY).perform_later(
               snaptrade_account,
               start_date: start_date
             )

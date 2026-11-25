@@ -213,59 +213,14 @@ class PdfImport < Import
     end
   end
 
+  # Reads the PDF with the first model in extract_pdf's route and records its summary and type.
   def process_with_ai
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # process_pdf (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
-    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
-    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_no_pdf_support") unless provider.supports_pdf_processing?
-
-    response = provider.process_pdf(
-      pdf_content: pdf_file_content,
-      family: family
-    )
-
-    unless response.success?
-      error_message = response.error&.message || "Unknown PDF processing error"
-      raise Provider::Error, error_message
-    end
-
-    result = response.data
-    update!(
-      ai_summary: result.summary,
-      document_type: result.document_type
-    )
-    sync_statement_metadata_from_process_result(result)
-
-    result
+    ai_processor.process.tap { sync_statement_metadata_from_process_result(_1) }
   end
 
+  # Extracts a statement's transactions into extracted_data. Nil for other document types.
   def extract_transactions
-    return unless statement_with_transactions?
-
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # extract_bank_statement (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
-    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
-
-    response = provider.extract_bank_statement(
-      pdf_content: pdf_file_content,
-      family: family
-    )
-
-    unless response.success?
-      error_message = response.error&.message || "Unknown extraction error"
-      raise Provider::Error, error_message
-    end
-
-    # BankStatementExtractor returns symbol keys, but every reader here (and in
-    # generate_rows_from_extracted_data) digs with strings. jsonb keeps the hash
-    # exactly as assigned until the record is reloaded, so without this the
-    # in-memory read comes back empty and the import produces no rows at all.
-    data = response.data.deep_stringify_keys
-    update!(extracted_data: data)
-    sync_statement_metadata_from_extracted_data(data)
-    data
+    ai_processor.extract_transactions&.tap { sync_statement_metadata_from_extracted_data(_1) }
   end
 
   def bank_statement?
@@ -456,6 +411,7 @@ class PdfImport < Import
   end
 
   private
+    def ai_processor = PdfImport::AiProcessor.new(self)
 
     # A statement's posting date routinely differs by a day or two from the date
     # a provider recorded for the same transaction, so matching allows a small
@@ -656,13 +612,14 @@ class PdfImport < Import
       end
 
       # Only sync balances when currency is compatible with the statement's currency,
-      # matching AccountStatement::MetadataDetector#detect_from_pdf behavior.
+      # as AccountStatement does for the balances it reads from the statement text.
       target_currency = updates[:currency] || account_statement.statement_currency
       currency_compatible = currency.blank? || target_currency.blank? || currency.to_s.casecmp?(target_currency)
 
       if currency_compatible
-        updates[:opening_balance] = opening_balance if opening_balance.present?
-        updates[:closing_balance] = closing_balance if closing_balance.present?
+        # The statement text's own figure keeps its account-derived sign.
+        updates[:opening_balance] = opening_balance if opening_balance.present? && !account_statement.detected_balance?(:opening_balance, opening_balance, currency: target_currency)
+        updates[:closing_balance] = closing_balance if closing_balance.present? && !account_statement.detected_balance?(:closing_balance, closing_balance, currency: target_currency)
       else
         DebugLogEntry.capture(
           category: "import",
@@ -714,7 +671,13 @@ class PdfImport < Import
 
       return if updates.empty?
 
-      unless account_statement.update(updates)
+      # An AI balance the statement text doesn't give in the target currency
+      # is the AI's from then on, even when it equals the stored balance, so
+      # the statement keeps it rather than reading it again in a new currency.
+      account_statement.assign_attributes(updates)
+      account_statement.mark_balances_edited(updates.slice(:opening_balance, :closing_balance).keys)
+
+      unless account_statement.save
         DebugLogEntry.capture(
           category: "import",
           level: "warn",

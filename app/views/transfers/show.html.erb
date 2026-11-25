@@ -33,6 +33,15 @@
             <dt class="text-secondary"><%= t(".date") %></dt>
             <dd class="font-medium"><%= l(@transfer.outflow_transaction.entry.date, format: :long) %></dd>
           </dl>
+          <%# Each side's own name, beside its amount: what tells a suggested match
+              (the transaction list's "Match?" pill opens this) apart from another.
+              DS::DetailRow wraps it rather than truncating, so it can be read in
+              full on a phone too. %>
+          <% if @readable_account_ids.include?(@transfer.from_account&.id) %>
+            <dl>
+              <%= render DS::DetailRow.new(label: t(".transaction"), value: @transfer.outflow_transaction.entry.name, value_class: "font-medium") %>
+            </dl>
+          <% end %>
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary"><%= t(".transfer_amount") %></dt>
             <dd class="font-medium text-destructive privacy-sensitive"><%= format_money @transfer.outflow_transaction.entry.amount_money * -1 %></dd>
@@ -63,6 +72,11 @@
             <dt class="text-secondary"><%= t(".date") %></dt>
             <dd class="font-medium"><%= l(@transfer.inflow_transaction.entry.date, format: :long) %></dd>
           </dl>
+          <% if @readable_account_ids.include?(@transfer.to_account&.id) %>
+            <dl>
+              <%= render DS::DetailRow.new(label: t(".transaction"), value: @transfer.inflow_transaction.entry.name, value_class: "font-medium") %>
+            </dl>
+          <% end %>
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary"><%= t(".transfer_amount") %></dt>
             <dd class="font-medium text-success privacy-sensitive">+<%= format_money @transfer.inflow_transaction.entry.amount_money * -1 %></dd>

@@ -13,9 +13,10 @@ class SnaptradeAccount::Processor
 
     Rails.logger.info "SnaptradeAccount::Processor - Processing account #{snaptrade_account.id} -> Sure account #{account.id}"
 
-    # Update account balance FIRST (before processing holdings/activities)
-    # This creates the current_anchor valuation needed for reverse sync
-    update_account_balance(account)
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
+    anchor_balance = update_account_balance(account)
 
     # Process holdings
     holdings_count = snaptrade_account.raw_holdings_payload&.size || 0
@@ -29,11 +30,21 @@ class SnaptradeAccount::Processor
     activities_count = snaptrade_account.raw_activities_payload&.size || 0
     Rails.logger.info "SnaptradeAccount::Processor - Activities payload has #{activities_count} items"
 
+    activities_ok = true
     if snaptrade_account.raw_activities_payload.present?
       Rails.logger.info "SnaptradeAccount::Processor - Processing activities..."
-      SnaptradeAccount::ActivitiesProcessor.new(snaptrade_account).process
+      activities = SnaptradeAccount::ActivitiesProcessor.new(snaptrade_account).process
+      activities_ok = activities[:failed].zero?
     else
       Rails.logger.warn "SnaptradeAccount::Processor - No activities payload to process"
+    end
+
+    if anchor_balance
+      account.set_current_balance(
+        anchor_balance,
+        date: date,
+        reuse_explained_anchor: activities_ok
+      )
     end
 
     # Trigger immediate UI refresh so entries appear in the activity feed
@@ -62,9 +73,7 @@ class SnaptradeAccount::Processor
       )
       account.save!
 
-      # Create or update the current balance anchor valuation for linked accounts
-      # This is critical for reverse sync to work correctly
-      account.set_current_balance(total_balance)
+      total_balance
     end
 
     def calculate_total_balance
@@ -80,8 +89,11 @@ class SnaptradeAccount::Processor
 
       calculated_total = holdings_value + cash_value
 
-      # Use calculated total if we have holdings, otherwise trust API value
-      if holdings_value > 0
+      # Use calculated total if we have holdings, otherwise trust API value.
+      # Net short positions (a short option on its own) make it negative; then
+      # only when nothing is missing from it: a long without units or a price
+      # counts as 0 and would leave just the short.
+      if holdings_value.positive? || (holdings_value.negative? && net_short_total_complete?)
         Rails.logger.debug "SnaptradeAccount::Processor - Using calculated total: holdings=#{holdings_value} + cash=#{cash_value} = #{calculated_total}"
         calculated_total
       elsif snaptrade_account.current_balance.present?
@@ -151,8 +163,20 @@ class SnaptradeAccount::Processor
         data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
         units = parse_decimal(data[:units]) || 0
         price = parse_decimal(data[:price]) || 0
-        units * price
+        units * price * contract_multiplier(extract_symbol_data(data))
       end
+    end
+
+    # Every position has units and a price, and there is no cash in another
+    # currency: that cash is imported as a holding, so it is in the API total
+    # but not in holdings plus cash.
+    def net_short_total_complete?
+      positions_complete = Array(snaptrade_account.raw_holdings_payload).all? do |holding|
+        data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
+        parse_decimal(data[:units]).present? && parse_decimal(data[:price]).present?
+      end
+
+      positions_complete && snaptrade_account.non_primary_cash_entries.none? { |entry| parse_decimal(entry[:amount])&.nonzero? }
     end
 
     def use_api_total_balance?

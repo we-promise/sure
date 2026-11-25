@@ -64,17 +64,17 @@ RSpec.describe 'API V1 Merchants', type: :request do
                   }
                 }
 
+      let(:file) do
+        Rack::Test::UploadedFile.new(
+          StringIO.new("name,color,website_url\nCoffee Shop,#e99537,https://coffeeshop.com"),
+          'text/csv',
+          true,
+          original_filename: 'merchants.csv'
+        )
+      end
+
       response '201', 'merchants imported' do
         schema '$ref' => '#/components/schemas/MerchantImportResult'
-
-        let(:file) do
-          Rack::Test::UploadedFile.new(
-            StringIO.new("name,color,website_url\nCoffee Shop,#e99537,https://coffeeshop.com"),
-            'text/csv',
-            true,
-            original_filename: 'merchants.csv'
-          )
-        end
 
         run_test!
       end
@@ -95,9 +95,6 @@ RSpec.describe 'API V1 Merchants', type: :request do
             password_confirmation: 'password123',
             role: 'guest'
           )
-        end
-        let(:file) do
-          Rack::Test::UploadedFile.new(StringIO.new("name\nCoffee Shop"), 'text/csv', true, original_filename: 'merchants.csv')
         end
 
         run_test!

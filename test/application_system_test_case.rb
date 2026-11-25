@@ -1,5 +1,6 @@
 require "test_helper"
 require "socket"
+require_relative "support/capybara_chrome_reset"
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   DEFAULT_VIEWPORT_WIDTH = 1400
@@ -27,6 +28,13 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
       options.add_argument("--window-size=1400,1400")
       # Headless Chrome can report no pointer; desktop tests use a mouse.
       options.add_argument("--blink-settings=primaryPointerType=4,availablePointerTypes=4")
+      # Every session on the Selenium node shares one X display. A headed
+      # window there also receives the display's real pointer: when another
+      # session's window opens, resizes or closes over it, Chrome reports the
+      # pointer leaving whatever a test is hovering, and its tooltip closes.
+      # Headless sessions only receive WebDriver input. E2E_BROWSER=chrome
+      # shows the browser on the node's VNC, for watching a serial run.
+      options.add_argument("--headless=new") unless ENV["E2E_BROWSER"] == "chrome"
 
       Capybara::Selenium::Driver.new(
         app,
@@ -82,6 +90,13 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   end
 
   private
+
+    # Capybara retries its own matchers; a value read through evaluate_script
+    # or from the database gets no such patience, so give it the same budget.
+    def wait_until(timeout: Capybara.default_max_wait_time)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+      sleep 0.05 until yield || Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+    end
 
     def reset_viewport
       page.current_window.resize_to(DEFAULT_VIEWPORT_WIDTH, DEFAULT_VIEWPORT_HEIGHT) if page&.current_window
