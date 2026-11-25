@@ -1,0 +1,10 @@
+---
+nb:
+  activerecord:
+    models:
+      rule_group:
+        one: "Gruppe"
+        other: "Grupper"
+    attributes:
+      rule_group:
+        name: "Navn"
