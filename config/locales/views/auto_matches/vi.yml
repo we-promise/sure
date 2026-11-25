@@ -23,6 +23,9 @@ vi:
       from: Từ
       to: Đến
       date: Ngày
+      days_apart:
+        one: "Cách nhau %{count} ngày"
+        other: "Cách nhau %{count} ngày"
       actions: Hành động
       separator: "·"
     bulk_actions:
