@@ -151,6 +151,44 @@ class Api::V1::SecuritiesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response_data["errors"], "offline must be true or false"
   end
 
+  test "does not list a security held only in a member's account the caller cannot access" do
+    private_account = @family.accounts.create!(
+      name: "Member Brokerage", accountable: Investment.new, balance: 0, currency: "USD", owner: users(:family_member)
+    )
+    private_security = Security.create!(ticker: "PRIV#{SecureRandom.hex(4).upcase}", name: "Private Holding", country_code: "US")
+    private_account.holdings.create!(security: private_security, date: Date.current, qty: 1, price: 1, amount: 1, currency: "USD")
+
+    get api_v1_securities_url, params: { ticker: private_security.ticker }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_empty JSON.parse(response.body)["securities"]
+  end
+
+  test "filters securities by kind and offline status" do
+    @trade_security.update!(offline: true)
+
+    get api_v1_securities_url, params: { kind: "standard", offline: "TRUE " }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal [ @trade_security.id ], JSON.parse(response.body)["securities"].map { |security| security["id"] }
+  end
+
+  test "a blank ticker or MIC is no filter" do
+    get api_v1_securities_url, params: { ticker: " ", exchange_operating_mic: "" }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_includes JSON.parse(response.body)["securities"].map { |security| security["id"] }, @holding_security.id
+  end
+
+  test "an empty kind, or a list where one value belongs, is a 422" do
+    [ { kind: "" }, { ticker: [ @holding_ticker ] }, { exchange_operating_mic: { a: "XNAS" } } ].each do |filters|
+      get api_v1_securities_url, params: filters, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, filters.inspect
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    end
+  end
+
   test "requires authentication" do
     get api_v1_securities_url
 

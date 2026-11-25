@@ -184,6 +184,45 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", response_data["error"]
   end
 
+  test "does not list prices of a security held only in a member's account the caller cannot access" do
+    private_account = @family.accounts.create!(
+      name: "Member Brokerage", accountable: Investment.new, balance: 0, currency: "USD", owner: users(:family_member)
+    )
+    private_security = Security.create!(ticker: "PRIV#{SecureRandom.hex(4).upcase}", name: "Private Holding", country_code: "US")
+    private_account.holdings.create!(security: private_security, date: Date.current, qty: 1, price: 1, amount: 1, currency: "USD")
+    Security::Price.create!(security: private_security, date: Date.current, price: 1, currency: "USD")
+
+    get api_v1_security_prices_url, params: { security_id: private_security.id }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_empty JSON.parse(response.body)["security_prices"]
+  end
+
+  test "dates must be YYYY-MM-DD, without the other ISO 8601 forms" do
+    [ [ :start_date, "20240115" ], [ :end_date, "2024-015" ], [ :start_date, "2024-W03-1" ] ].each do |key, value|
+      get api_v1_security_prices_url, params: { key => value }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, value
+      assert_equal [ "#{key} must be an ISO 8601 date" ], JSON.parse(response.body)["errors"]
+    end
+  end
+
+  test "an empty security_id or date, or a list for the currency, is a 422" do
+    [ { security_id: "" }, { start_date: "" }, { currency: [ "USD" ] } ].each do |filters|
+      get api_v1_security_prices_url, params: filters, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, filters.inspect
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "a blank currency is no filter" do
+    get api_v1_security_prices_url, params: { currency: " " }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_includes JSON.parse(response.body)["security_prices"].map { |price| price["id"] }, @eur_price.id
+  end
+
   test "requires authentication" do
     get api_v1_security_prices_url
 
