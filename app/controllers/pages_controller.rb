@@ -359,7 +359,7 @@ class PagesController < ApplicationController
     end
 
     def build_dashboard_sections
-      hidden_keys = Current.user.dashboard_hidden_sections
+      hidden_keys = Current.user.dashboard_hidden_sections_including_opt_in
       builders = dashboard_section_builders
       sections = ordered_dashboard_section_keys.filter_map do |key|
         hidden_keys.include?(key) ? hidden_dashboard_section(key) : builders.fetch(key).call

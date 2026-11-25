@@ -816,17 +816,33 @@ class User < ApplicationRecord
     preferences&.[]("section_order") || default_dashboard_section_order
   end
 
+  # Widgets that start hidden, so they don't change anyone's dashboard until
+  # the user adds them from the hidden list. Adding one is saved under
+  # "shown_sections": for these, hidden is the default rather than a choice.
+  OPT_IN_DASHBOARD_SECTIONS = %w[account_balances].freeze
+
   def dashboard_hidden_sections
     preferences&.[]("hidden_sections") || []
+  end
+
+  # The saved hidden sections plus the opt-in ones not added yet.
+  def dashboard_hidden_sections_including_opt_in
+    dashboard_hidden_sections | (OPT_IN_DASHBOARD_SECTIONS - (preferences&.[]("shown_sections") || []))
   end
 
   # Adds or removes one key rather than taking the whole list, so a stale tab
   # hiding one widget can't bring back another hidden elsewhere.
   def update_dashboard_section_hidden(section_key, hidden)
     with_locked_preferences do |prefs|
-      keys = dashboard_hidden_sections - [ section_key ]
-      keys << section_key if hidden
-      prefs["hidden_sections"] = keys
+      if OPT_IN_DASHBOARD_SECTIONS.include?(section_key)
+        shown = (prefs["shown_sections"] || []) - [ section_key ]
+        shown << section_key unless hidden
+        prefs["shown_sections"] = shown
+      else
+        keys = dashboard_hidden_sections - [ section_key ]
+        keys << section_key if hidden
+        prefs["hidden_sections"] = keys
+      end
     end
   end
 

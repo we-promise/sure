@@ -5,6 +5,7 @@ class DashboardAccountBalancesTest < ApplicationSystemTestCase
 
   setup do
     @user = users(:family_admin)
+    @user.update_dashboard_section_hidden("account_balances", false)
   end
 
   test "stacks a layer per account, lists them by type and narrows the chart from the list" do

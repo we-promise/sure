@@ -63,7 +63,16 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "account", @user.reload.cashflow_sankey_group_by
   end
 
+  test "the account balances widget starts hidden and is offered in the hidden list" do
+    get root_path, params: { customize: true }
+    assert_response :ok
+
+    assert_select "section[data-section-key='account_balances']", 0
+    assert_select "form[action='#{dashboard_section_hidden_path("account_balances")}']", 1
+  end
+
   test "dashboard renders the account balances widget with its full-screen dialog" do
+    @user.update_dashboard_section_hidden("account_balances", false)
     get root_path
     assert_response :ok
 
@@ -105,12 +114,14 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 6, @user.reload.account_balances_settings["horizon"], "a non-numeric length is dropped, not read as 0 (Off)"
   end
 
-  test "the account balances widget can be hidden and shown like the others" do
-    patch dashboard_section_hidden_path("account_balances"), params: { hidden: true }
-    assert_includes @user.reload.dashboard_hidden_sections, "account_balances"
+  test "the account balances widget can be added and hidden again like the others" do
+    assert_includes @user.dashboard_hidden_sections_including_opt_in, "account_balances"
 
     patch dashboard_section_hidden_path("account_balances"), params: { hidden: false }
-    assert_not_includes @user.reload.dashboard_hidden_sections, "account_balances"
+    assert_not_includes @user.reload.dashboard_hidden_sections_including_opt_in, "account_balances"
+
+    patch dashboard_section_hidden_path("account_balances"), params: { hidden: true }
+    assert_includes @user.reload.dashboard_hidden_sections_including_opt_in, "account_balances"
   end
 
   test "update_preferences persists dashboard section width" do
