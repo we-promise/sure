@@ -148,7 +148,7 @@ module IbkrAccount::DataHelpers
     # was moved off the quoted one: its ticker, its unit and the factors the
     # prices were multiplied by. What a debug entry reports.
     def bond_unit_disagreements(kind)
-      rows = kind == :positions ? raw_position_rows.select { |row| row[:side].to_s == "Long" } : raw_trade_rows
+      rows = kind == :positions ? without_covered_lots(raw_position_rows).select { |row| row[:side].to_s == "Long" } : raw_trade_rows
       factors = bond_rows(rows).map { |row| [ bond_ticker(row), price_scale(row) ] }
       factors.group_by(&:first).filter_map do |ticker, pairs|
         moved = pairs.map(&:last).reject { |scale| (scale - 1).abs <= BOND_PRICE_TOLERANCE }
@@ -158,6 +158,27 @@ module IbkrAccount::DataHelpers
 
     def raw_position_rows
       Array(@ibkr_account.raw_holdings_payload).map(&:with_indifferent_access)
+    end
+
+    # With Lot ticked as well as Summary, the Open Positions section reports a
+    # row per lot (levelOfDetail LOT) besides the SUMMARY row that already holds
+    # the whole position, so adding them up would count it twice. The lots of a
+    # position that has no summary row are all it has, and a report that does
+    # not carry levelOfDetail has no lot rows to tell apart. The block says
+    # whether a summary row can stand for its lots, and a lot is kept when its
+    # summary row cannot.
+    def without_covered_lots(rows)
+      summarized = rows.select { |row| level_of_detail(row) == "SUMMARY" && (!block_given? || yield(row)) }
+        .map { |row| lot_owner(row) }.to_set
+      rows.reject { |row| level_of_detail(row) == "LOT" && summarized.include?(lot_owner(row)) }
+    end
+
+    def level_of_detail(row)
+      row[:level_of_detail].to_s.strip.upcase
+    end
+
+    def lot_owner(row)
+      [ row[:conid].to_s, row[:currency].to_s.upcase, row[:report_date].to_s, row[:side].to_s ]
     end
 
     def raw_trade_rows

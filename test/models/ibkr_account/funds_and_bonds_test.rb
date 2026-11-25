@@ -345,6 +345,20 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_equal "0.01", entry.metadata["bonds"].sole["unit_factor"]
   end
 
+  test "a bond's lot rows are not reported beside its summary row" do
+    summary = @statement[:open_positions].find { |row| row["asset_category"] == "BOND" }
+    summary["level_of_detail"] = "SUMMARY"
+    per_unit_position!
+    @statement[:open_positions] << summary.merge("level_of_detail" => "LOT", "position" => "4000", "position_value" => "3940.00")
+    @statement[:open_positions] << summary.merge("level_of_detail" => "LOT", "position" => "6000", "position_value" => "5910.00")
+
+    process!
+
+    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions priced to their reported value")
+    assert_equal 1, entry.metadata["bonds"].sole["differing_rows"]
+    assert_equal BigDecimal("100"), holding_for(BOND_TICKER).qty
+  end
+
   test "a short bond position, which is not imported, is not reported" do
     short = @statement[:open_positions].find { |row| row["asset_category"] == "BOND" }
     @statement[:open_positions].delete(short)

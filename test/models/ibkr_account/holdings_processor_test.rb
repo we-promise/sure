@@ -150,7 +150,118 @@ class IbkrAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_empty @account.holdings
   end
 
+  # The Open Positions section can report a row per lot besides the summary
+  # row, when its level of detail has Lot ticked as well as Summary. The
+  # summary row already holds the whole position.
+  test "lot rows are not added to the summary row of the same position" do
+    process_report!(<<~XML)
+      #{open_position_xml("SUMMARY", position: "30", cost_basis_price: "100.00", mark_price: "150.00")}
+      #{open_position_xml("LOT", position: "10", cost_basis_price: "90.00", mark_price: "150.00")}
+      #{open_position_xml("LOT", position: "20", cost_basis_price: "105.00", mark_price: "150.00")}
+    XML
+
+    holding = holdings_by_ticker.fetch("AAPL")
+    assert_equal 30, holding.qty
+    assert_equal 4_500, holding.amount
+    assert_equal 100, holding.cost_basis
+  end
+
+  test "a bond's lot rows are not added to its summary row" do
+    process_report!(<<~XML)
+      #{bond_position_xml("SUMMARY", position: "10000", position_value: "9850.00", cost_basis_money: "9725.00")}
+      #{bond_position_xml("LOT", position: "4000", position_value: "3940.00", cost_basis_money: "3880.00")}
+      #{bond_position_xml("LOT", position: "6000", position_value: "5910.00", cost_basis_money: "5845.00")}
+    XML
+
+    holding = holdings_by_ticker.fetch("BOND:SURCO 3 1/2 06/15/30:900003")
+    assert_equal 100, holding.qty
+    assert_equal 9_850, holding.amount
+    assert_equal 9_725, holding.qty * holding.cost_basis
+  end
+
+  test "the summary row wins wherever it sits among the lot rows" do
+    process_report!(<<~XML)
+      #{open_position_xml("LOT", position: "10", cost_basis_price: "90.00", mark_price: "150.00")}
+      #{open_position_xml("SUMMARY", position: "30", cost_basis_price: "100.00", mark_price: "150.00")}
+      #{open_position_xml("LOT", position: "20", cost_basis_price: "105.00", mark_price: "150.00")}
+    XML
+
+    assert_equal 30, holdings_by_ticker.fetch("AAPL").qty
+  end
+
+  # Lot is a choice IBKR offers on its own, and the lots then are the position.
+  test "lot rows with no summary row are the position" do
+    process_report!(<<~XML)
+      #{open_position_xml("LOT", position: "10", cost_basis_price: "90.00", mark_price: "150.00")}
+      #{open_position_xml("LOT", position: "20", cost_basis_price: "105.00", mark_price: "150.00")}
+    XML
+
+    holding = holdings_by_ticker.fetch("AAPL")
+    assert_equal 30, holding.qty
+    assert_equal 4_500, holding.amount
+  end
+
+  test "a lot row is kept for a position that has no summary row of its own" do
+    process_report!(<<~XML)
+      #{open_position_xml("SUMMARY", position: "30", cost_basis_price: "100.00", mark_price: "150.00")}
+      #{open_position_xml("LOT", position: "10", cost_basis_price: "90.00", mark_price: "150.00")}
+      #{open_position_xml("LOT", position: "7", cost_basis_price: "50.00", mark_price: "20.00", conid: "272093", symbol: "MSFT", security_id: "US5949181045")}
+    XML
+
+    assert_equal 30, holdings_by_ticker.fetch("AAPL").qty
+    assert_equal 7, holdings_by_ticker.fetch("MSFT").qty
+  end
+
+  # A summary row that would not be imported cannot stand for the position.
+  test "lot rows are kept when their summary row cannot be imported" do
+    process_report!(<<~XML)
+      #{open_position_xml("SUMMARY", position: "30", cost_basis_price: "N/A", mark_price: "150.00")}
+      #{open_position_xml("LOT", position: "10", cost_basis_price: "90.00", mark_price: "150.00")}
+      #{open_position_xml("LOT", position: "20", cost_basis_price: "105.00", mark_price: "150.00")}
+    XML
+
+    assert_equal 30, holdings_by_ticker.fetch("AAPL").qty
+  end
+
+  test "rows without a level of detail are all counted, as before" do
+    process_report!(<<~XML)
+      #{open_position_xml(nil, position: "10", cost_basis_price: "90.00", mark_price: "150.00")}
+      #{open_position_xml(nil, position: "20", cost_basis_price: "105.00", mark_price: "150.00")}
+    XML
+
+    assert_equal 30, holdings_by_ticker.fetch("AAPL").qty
+  end
+
   private
+
+    # A report parsed and processed the way a sync does it.
+    def process_report!(open_positions)
+      xml = <<~XML
+        <FlexQueryResponse queryName="Sure Test" type="AF">
+          <FlexStatements count="1">
+            <FlexStatement accountId="U1234567" fromDate="2025-05-08" toDate="2026-05-08" whenGenerated="2026-05-08;12:00:00">
+              <AccountInformation accountId="U1234567" currency="USD" />
+              <OpenPositions>
+                #{open_positions}
+              </OpenPositions>
+            </FlexStatement>
+          </FlexStatements>
+        </FlexQueryResponse>
+      XML
+
+      statement = IbkrItem::ReportParser.new(xml).parse[:accounts].first
+      @ibkr_account.upsert_from_ibkr_statement!(statement)
+      IbkrAccount::HoldingsProcessor.new(@ibkr_account).process
+    end
+
+    def open_position_xml(level, position:, cost_basis_price:, mark_price:, conid: "265598", symbol: "AAPL", security_id: "US0378331005")
+      level_attribute = %( levelOfDetail="#{level}") if level
+      %(<OpenPosition assetCategory="STK" conid="#{conid}" securityID="#{security_id}" securityIDType="ISIN" symbol="#{symbol}" position="#{position}" markPrice="#{mark_price}" costBasisPrice="#{cost_basis_price}" currency="USD" fxRateToBase="1" reportDate="2026-05-08" side="Long"#{level_attribute} />)
+    end
+
+    def bond_position_xml(level, position:, position_value:, cost_basis_money:)
+      %(<OpenPosition assetCategory="BOND" conid="900003" securityID="XX0000000037" securityIDType="ISIN" symbol="SURCO 3 1/2 06/15/30" description="SURCO 3 1/2 06/15/30" position="#{position}" multiplier="1" markPrice="98.50" positionValue="#{position_value}" costBasisPrice="97.25" costBasisMoney="#{cost_basis_money}" currency="USD" fxRateToBase="1" reportDate="2026-05-08" side="Long" levelOfDetail="#{level}" />)
+    end
 
     def process_and_find(ticker)
       IbkrAccount::HoldingsProcessor.new(@ibkr_account).process
