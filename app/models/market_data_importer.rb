@@ -35,6 +35,11 @@ class MarketDataImporter
         end_date: window.end_date,
         clear_cache: clear_cache
       )
+      security.import_provider_splits(
+        start_date: snapshot? ? [ window.start_date, default_start_date ].max : window.start_date,
+        end_date: window.end_date,
+        clear_cache: clear_cache
+      )
     end
 
     # Details are metadata rather than prices, and import_provider_details skips
