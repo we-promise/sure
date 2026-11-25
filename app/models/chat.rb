@@ -137,20 +137,21 @@ class Chat < ApplicationRecord
     end
 
     if assistant_message
+      broadcast_pending_status(assistant_message)
       assistant_message.started!
-      broadcast_pending_status(assistant_message, I18n.t("chats.thinking"))
     end
     assistant.respond_to(message, assistant_message: assistant_message)
   end
 
   # What a pending bubble says: how many requests the reply waits for at its local model host, or
-  # "Thinking". It's rendered again once the job starts.
+  # "Thinking". Broadcast when its job starts, and as each of its requests does.
   def pending_status(assistant_message)
-    ahead = requests_ahead(assistant_message)
+    gate = model_gate
+    ahead = gate ? (assistant_message.started? ? gate.ahead_of(correlation_id) : gate.ahead) : 0
     ahead.positive? ? I18n.t("chats.waiting_for_model", count: ahead) : I18n.t("chats.thinking")
   end
 
-  def broadcast_pending_status(assistant_message, status)
+  def broadcast_pending_status(assistant_message, status = pending_status(assistant_message))
     broadcast_update target: ActionView::RecordIdentifier.dom_id(assistant_message, :status), html: status
   end
 
@@ -214,8 +215,8 @@ class Chat < ApplicationRecord
   def handle_undelivered_response!(assistant_message)
     return false unless assistant_message.is_a?(AssistantMessage)
 
-    if assistant_message.pending? && requests_ahead(assistant_message).positive?
-      broadcast_pending_status(assistant_message, pending_status(assistant_message))
+    if assistant_message.pending? && waiting_for_model?(assistant_message)
+      broadcast_pending_status(assistant_message)
       return false
     end
 
@@ -242,11 +243,14 @@ class Chat < ApplicationRecord
 
   private
 
-    def requests_ahead(assistant_message)
-      gate = BackgroundJobHealth.model_gate(Ai::Sequencer.chat_endpoint(user))
-      return 0 unless gate
+    def model_gate = BackgroundJobHealth.model_gate(Ai::Sequencer.chat_endpoint(user))
 
-      assistant_message.started? ? gate.ahead_of(correlation_id) : gate.ahead
+    # Queued behind other interactive requests, or waiting for its place at the gate.
+    def waiting_for_model?(assistant_message)
+      gate = model_gate
+      return false unless gate
+
+      assistant_message.started? ? gate.waiting?(correlation_id) : gate.ahead.positive?
     end
 
     def undelivered_error_payload(assistant_message)

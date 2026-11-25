@@ -34,6 +34,10 @@ class Assistant::Builtin < Assistant::Base
 
     latest_response_id = chat.latest_assistant_response_id
 
+    responder.on(:request) do
+      chat.broadcast_pending_status(assistant_message, I18n.t("chats.thinking")) if assistant_message.pending?
+    end
+
     responder.on(:output_text) do |text|
       if assistant_message.content.blank?
         Chat.transaction do

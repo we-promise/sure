@@ -67,6 +67,16 @@ class AiNestedCallTest < ActiveSupport::TestCase
     assert_empty Ai::Sequencer.gate_for(@endpoint).holders
   end
 
+  test "a reply's bubble says Thinking as each of its requests gets its place" do
+    stub_request(:post, "http://gpu.local:8080/v1/embeddings").to_return(status: 500)
+    held = []
+    Chat.any_instance.stubs(:broadcast_update).with { |opts| held << [ opts[:html], Ai::Gate.holder.present? ] if opts[:html].is_a?(String) }
+
+    AssistantResponseJob.perform_now(@message, @reply)
+
+    assert_equal [ [ "Thinking ...", false ], [ "Thinking ...", true ], [ "Thinking ...", true ] ], held, "the job's start, then each request"
+  end
+
   test "a chat request ends the typing hold on its host" do
     ChatReservation.hold!(@endpoint)
     stub_request(:post, "http://gpu.local:8080/v1/embeddings").to_return(status: 500)

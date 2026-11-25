@@ -53,7 +53,7 @@ class ChatTest < ActiveSupport::TestCase
     assert_not Message.exists?(pending.id)
   end
 
-  test "a pending bubble says how many requests its reply waits for, then Thinking when the job starts" do
+  test "a pending bubble says how many requests its reply waits for" do
     use_ai_routes(chat: %w[gpu/qwen3-8b])
     chat = chats(:one)
     pending = AssistantMessage.create!(chat:, content: "", ai_model: "qwen3-8b", status: :pending)
@@ -64,10 +64,10 @@ class ChatTest < ActiveSupport::TestCase
     assert_equal "Waiting for the model; 2 tasks ahead ...", chat.pending_status(pending)
     assert_includes ApplicationController.render(partial: "assistant_messages/assistant_message", locals: { assistant_message: pending }), "2 tasks ahead"
 
-    Chat.any_instance.expects(:broadcast_update).with(target: ActionView::RecordIdentifier.dom_id(pending, :status), html: I18n.t("chats.thinking"))
+    Chat.any_instance.expects(:broadcast_update).with(target: ActionView::RecordIdentifier.dom_id(pending, :status), html: "Waiting for the model; 2 tasks ahead ...")
     Assistant.stubs(:for_chat).returns(stub(respond_to: nil))
     chat.ask_assistant(chat.messages.where(type: "UserMessage").first, assistant_message: pending)
-    assert_equal I18n.t("chats.thinking"), chat.pending_status(pending), "its job runs"
+    assert_equal I18n.t("chats.thinking"), chat.pending_status(pending), "its tools run, so no request of its own waits"
   end
 
   test "a second message in a chat waits for the first one's reply" do
@@ -90,6 +90,9 @@ class ChatTest < ActiveSupport::TestCase
 
     publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ])
     assert_equal I18n.t("chats.thinking"), chat.pending_status(pending)
+
+    publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ], waiters: [ interactive(chat.correlation_id) ])
+    assert_equal I18n.t("chats.thinking"), chat.pending_status(late_reply(chat, started: 4.minutes.ago)), "it's being interrupted"
 
     publish_gate(holders: [ interactive("chat:other") ])
     use_ai_routes(chat: %w[openai/gpt-4.1-mini])
@@ -265,7 +268,6 @@ class ChatTest < ActiveSupport::TestCase
     pending = late_reply(chat, started: 4.minutes.ago)
     publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ], waiters: [ interactive(chat.correlation_id) ])
 
-    Chat.any_instance.expects(:broadcast_update).with { |opts| opts[:html] == "Waiting for the model; 1 task ahead ..." }
     assert_not chat.handle_undelivered_response!(pending)
   end
 
