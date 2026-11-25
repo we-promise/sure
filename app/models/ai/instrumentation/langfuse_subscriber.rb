@@ -1,7 +1,7 @@
 # The `content` tracing mode: each `.ai` event becomes a Langfuse trace with one
 # generation holding the request, the output, usage and the error. The correlation id is the
-# Langfuse session, so a job's calls group together. Health probes aren't traced: they carry
-# no family data.
+# Langfuse session, so a job's calls group together. Health probes and busy model hosts aren't
+# traced (Ai::Instrumentation.unreported?).
 class Ai::Instrumentation::LangfuseSubscriber
   CREDENTIAL_FIELD = /\A(?:api[_-]?key|access[_-]?token|secret|password|authorization)\z/i
 
@@ -11,7 +11,7 @@ class Ai::Instrumentation::LangfuseSubscriber
   end
 
   def call(event)
-    return if @client.nil? || event.name == "probe.ai"
+    return if @client.nil? || Ai::Instrumentation.unreported?(event)
 
     payload = event.payload
     scrub = payload[:scrub] || Ai::Instrumentation::Redactor.method(:scrub)
