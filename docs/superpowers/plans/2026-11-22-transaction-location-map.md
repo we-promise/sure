@@ -1289,21 +1289,9 @@ In `app/views/transactions/show.html.erb`, immediately after line 181 (`<%= rend
 <%= render "transactions/location", entry: @entry, can_annotate: can_annotate_entry? %>
 ```
 
-- [ ] **Step 3: Make the update action refresh the location frame**
+- [x] **Step 3 (superseded): do not add a turbo_stream.replace for the location frame**
 
-`TransactionsController#update`'s `format.turbo_stream` response (`app/controllers/transactions_controller.rb`, inside the `def update` block) is a fixed array of `turbo_stream.replace` calls, one per editable fragment — it already has a conditional one for `:notes` (`if params[:entry]&.key?(:notes) && notes_changed`). Submitting the new location form reaches this same action, but nothing in that array targets `dom_id(@entry, :location)`, so the frame our `_location.html.erb` partial lives in would never actually update after a save — the "display" state the system test waits for in Step 4 would never appear.
-
-Add a sibling entry, conditioned on any of the three location params being present in the request (mirroring how `:notes` checks `params[:entry]&.key?(:notes)`):
-
-```ruby
-            (turbo_stream.replace(
-              dom_id(@entry, :location),
-              partial: "transactions/location",
-              locals: { entry: @entry, can_annotate: can_annotate_entry? }
-            ) if params[:entry]&.key?(:location_lat)),
-```
-
-Insert this immediately after the existing `:notes` conditional replace entry in that array (before the `:mark_recurring` entry).
+The original version of this step called for a `turbo_stream.replace(dom_id(@entry, :location), ...)` entry mirroring the `:notes` one. That was implemented, then removed during the final holistic review: `DS::LocationPicker`'s own Stimulus controller already repaints every state (search, confirm-map, display) client-side on both the set and clear paths, so the server round trip only needs to persist the change, not re-render the frame. Replacing the frame server-side was actively harmful — it disconnected the live, still-open confirm map and its draggable marker roughly 200ms after the user picked a suggestion, making drag-to-adjust unreachable dead code in practice. See the regression test added for this in `test/system/transaction_location_test.rb` ("dragging the confirm-map marker reverse-geocodes the new position").
 
 - [ ] **Step 4: Write a system test for the end-to-end flow**
 
