@@ -8,6 +8,9 @@ class SharesightAccount::HoldingsProcessor
   def process
     return unless account.present?
 
+    # What current holdings showed before this run.
+    @last_snapshot_date = account.latest_provider_holdings_snapshot_date
+
     Array(@sharesight_account.raw_holdings_payload).each do |holding|
       process_holding(holding)
     end
@@ -42,14 +45,11 @@ class SharesightAccount::HoldingsProcessor
       currency, price = holding_price(holding, quantity)
       return unless price
 
-      # A fully sold position still needs a row for today: without one, the
-      # previous day's row stays the latest snapshot and the sold position
-      # keeps showing in current holdings, and it updates the morning row
-      # when the sale lands the same day, since the external id includes the
-      # date. But only while the account still shows it held on the latest
-      # snapshot — otherwise every sync writes another zero row for a holding
-      # sold long ago.
-      return if quantity.zero? && !still_held?(security, currency)
+      # A sold position current holdings still shows gets a zero row for today,
+      # so it drops out (one from earlier today is updated, since the external
+      # id has the date in it). Anything sold before that is skipped, or every
+      # sync would add a row for positions sold long ago.
+      return if quantity.zero? && !still_held?(security)
 
       import_adapter.import_holding(
         security: security,
@@ -91,15 +91,15 @@ class SharesightAccount::HoldingsProcessor
       [ portfolio_currency, price ]
     end
 
-    # Whether the account still shows this security held on its latest
-    # Sharesight snapshot: a zero row is only worth writing while there is a
-    # live position to close out.
-    def still_held?(security, currency)
-      account.holdings
-        .where(security: security, currency: currency, account_provider_id: @sharesight_account.account_provider&.id)
-        .order(date: :desc)
-        .first
-        &.qty
-        &.nonzero?
+    # Whether it has units on the last snapshot, in any currency, since the
+    # open row may have been priced in another one. A row the user remapped to
+    # another security still counts through its provider security.
+    def still_held?(security)
+      return false unless @last_snapshot_date
+
+      held = account.holdings
+        .where(date: @last_snapshot_date, account_provider_id: @sharesight_account.account_provider&.id)
+        .where.not(qty: 0)
+      held.where(security: security).or(held.where(provider_security: security)).exists?
     end
 end

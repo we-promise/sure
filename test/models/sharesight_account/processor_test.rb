@@ -150,6 +150,50 @@ class SharesightAccount::ProcessorTest < ActiveSupport::TestCase
     assert_not_includes @account.reload.current_holdings.map { |holding| holding.security.ticker }, "OLD"
   end
 
+  test "a sold holding is closed even if it was held in another currency" do
+    # With no instrument price, a held USD position is priced from its value in AUD.
+    aapl = HOLDINGS.find { |holding| holding.dig("instrument", "code") == "AAPL" }.merge("instrument_price" => nil)
+    travel_to(1.day.ago) do
+      @sharesight_account.update!(raw_holdings_payload: [ aapl.merge("quantity" => 10.0, "value" => 4500.0) ])
+      process
+    end
+    assert_equal [ "AUD" ], @account.holdings.pluck(:currency)
+
+    @sharesight_account.update!(raw_holdings_payload: [ aapl.merge("quantity" => 0.0, "value" => 0.0) ])
+    process
+
+    assert_empty @account.reload.current_holdings
+  end
+
+  test "a remapped holding is closed when it's sold" do
+    sold = HOLDINGS.find { |holding| holding.dig("instrument", "code") == "OLD" }
+    travel_to(1.day.ago) do
+      @sharesight_account.update!(raw_holdings_payload: [ sold.merge("quantity" => 10.0, "value" => 400.0) ])
+      process
+    end
+    held = @account.holdings.find_by!(security: Security.find_by!(ticker: "OLD"))
+    held.remap_security!(Security.create!(ticker: "OLDX", exchange_operating_mic: "XASX"))
+
+    @sharesight_account.update!(raw_holdings_payload: [ sold ])
+    process
+
+    assert_empty @account.reload.current_holdings
+  end
+
+  test "a holding missing from the last snapshot gets no zero row" do
+    # OLD's last row is older than the last snapshot, so current holdings already leaves it out.
+    seed_holding("OLD", qty: 50, price: 40, date: Date.current - 30)
+    seed_holding("VAS", qty: 100, price: 105, date: Date.current - 1)
+    sold = HOLDINGS.find { |holding| holding.dig("instrument", "code") == "OLD" }
+    vas = HOLDINGS.find { |holding| holding.dig("instrument", "code") == "VAS" }
+    @sharesight_account.update!(raw_holdings_payload: [ sold, vas.merge("limited" => true) ])
+
+    process
+
+    assert_nil @account.holdings.find_by(date: Date.current)
+    assert_equal [ "VAS" ], @account.reload.current_holdings.map { |holding| holding.security.ticker }
+  end
+
   test "books buys, sells and opening balances, skipping splits" do
     result = process
 
