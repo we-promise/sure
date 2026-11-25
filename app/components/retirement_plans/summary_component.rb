@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # The simple FIRE figures on the Plan page: the FI number, progress towards
-# it, and the projected total at retirement.
+# it, and the savings rate.
 #
 # Formatting only: every figure comes from the RetirementPlan::Projection the
 # caller builds with its own `as_of`.

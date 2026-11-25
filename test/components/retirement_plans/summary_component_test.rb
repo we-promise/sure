@@ -3,8 +3,8 @@ require "test_helper"
 class RetirementPlans::SummaryComponentTest < ViewComponent::TestCase
   def projection(**overrides)
     RetirementPlan::Projection.new(
-      as_of: Date.new(2026, 1, 1), annual_expenses: 40_000, annual_income: 100_000, current_assets: 250_000,
-      safe_withdrawal_rate: BigDecimal("0.04"), expected_annual_return: BigDecimal("0.05"), **overrides
+      annual_living_costs: 40_000, annual_expenses: 40_000, annual_income: 100_000, current_assets: 250_000,
+      safe_withdrawal_rate: BigDecimal("0.04"), **overrides
     )
   end
 
@@ -16,7 +16,7 @@ class RetirementPlans::SummaryComponentTest < ViewComponent::TestCase
     assert_selector "[data-fi-bar][style*='inline-size: 25.0%']"
     assert_text "60%"
     assert_text I18n.t("retirement_plans.summary.derived")
-    assert_text I18n.t("retirement_plans.summary.no_retirement_date")
+    assert_no_text "Projected at retirement"
     assert_no_text I18n.t("retirement_plans.summary.unconverted", count: 0)
   end
 
@@ -58,17 +58,26 @@ class RetirementPlans::SummaryComponentTest < ViewComponent::TestCase
     render_inline(RetirementPlans::SummaryComponent.new(projection: projection, currency: "USD"))
 
     assert_selector ".privacy-sensitive[data-fi-number]", text: "$1,000,000"
-    assert_selector "p.privacy-sensitive", text: "$40,000 a year of spending"
+    assert_selector "p.privacy-sensitive", text: "$40,000 a year of living costs"
   end
 
-  test "a saved savings rate is not called derived, and a retirement date gives a projected total" do
+  # The FI number comes from living costs, which leave out loan payments; the
+  # hint names that figure, not the spending behind the savings rate.
+  test "the hint names the living costs the FI number comes from" do
     render_inline(RetirementPlans::SummaryComponent.new(
-      projection: projection(savings_rate: BigDecimal("0.1"), retirement_date: Date.new(2029, 1, 1)), currency: "USD"
+      projection: projection(annual_living_costs: 24_000, annual_expenses: 42_000), currency: "USD"
     ))
 
+    assert_selector "[data-fi-number]", text: "$600,000"
+    assert_selector "p.privacy-sensitive", text: "$24,000 a year of living costs"
+    assert_no_text "$42,000"
+  end
+
+  test "a saved savings rate is not called derived" do
+    render_inline(RetirementPlans::SummaryComponent.new(projection: projection(savings_rate: BigDecimal("0.1")), currency: "USD"))
+
     assert_no_text I18n.t("retirement_plans.summary.derived")
-    # 250,000 grown three years at 5% with 10,000 a year added.
-    assert_text "$320,931"
+    assert_text "10%"
   end
 
   test "says how many accounts were left out for want of a rate" do

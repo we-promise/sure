@@ -28,6 +28,8 @@ class RetirementPlans::PlannerComponentTest < ViewComponent::TestCase
 
     assert_selector "[data-milestone='fi_100']", text: I18n.t("retirement_plans.planner.milestones.not_reached")
     assert_selector "[data-fire-before-fi-number]", text: /25 times a year of spending, the 4% rule\. Retiring in 2036 .* last to 90/
+    # The FI number leaves loan payments out, so a loan ending is not why.
+    assert_selector "[data-fire-before-fi-number]", text: /counting income such as a pension, so it can come before/
   end
 
   test "no explanation when the FI number is reached within the plan" do
