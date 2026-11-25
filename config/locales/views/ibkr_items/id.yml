@@ -34,7 +34,7 @@ id:
           item_1: Kepemilikan dengan harga dan jumlah saat ini
           item_2: Dasar biaya per posisi
           item_3: Perdagangan, dividen, komisi, dan setoran atau penarikan kas
-        warning: Aktivitas yang lebih lama dari periode Flex Query akan diimpor pada sinkronisasi berikutnya, hingga empat tahun ke belakang
+        warning: Aktivitas yang lebih lama dari periode Flex Query akan diimpor secara bertahap dalam beberapa sinkronisasi berikutnya, hingga empat tahun ke belakang
       status:
         fetching_accounts: Mengambil rekening dari Interactive Brokers...
         no_accounts_found_title: Tidak ada rekening ditemukan.
