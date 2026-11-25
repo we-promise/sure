@@ -3,34 +3,26 @@
 class Api::V1::ValuationsController < Api::V1::BaseController
   include Pagy::Backend
 
-  InvalidFilterError = Class.new(StandardError)
   BOOLEAN_PARAM = ActiveModel::Type::Boolean.new
 
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update ]
   before_action :set_valuation, only: [ :show, :update ]
   before_action :ensure_write_permission, only: [ :update ]
+  # The typed readers raise a 422 that index's catch-all rescue would turn
+  # into a 500, so they run here.
+  before_action :set_search, only: :index
 
   def index
-    valuations_query = accessible_valuation_entries
-      .includes(:account, :entryable)
-
-    valuations_query = apply_filters(valuations_query).reverse_chronological
     @per_page = safe_per_page_param
 
     @pagy, @entries = pagy(
-      valuations_query,
+      @search.valuations_scope.includes(:account, :entryable).reverse_chronological,
       page: safe_page_param,
       limit: @per_page
     )
 
     render :index
-  rescue InvalidFilterError => e
-    render json: {
-      error: "validation_failed",
-      message: e.message,
-      errors: [ e.message ]
-    }, status: :unprocessable_entity
   rescue => e
     Rails.logger.error "ValuationsController#index error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -256,45 +248,16 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       require_api_account_permission!(@entry.account, resource: "valuation")
     end
 
-    def ensure_read_scope
-      authorize_scope!(:read)
-    end
-
     def ensure_write_scope
       authorize_scope!(:write)
     end
 
-    def apply_filters(query)
-      if params[:account_id].present?
-        raise InvalidFilterError, "account_id must be a valid UUID" unless valid_uuid?(params[:account_id])
-
-        query = query.where(account_id: params[:account_id])
-      end
-      query = query.where("entries.date >= ?", parse_date_param(:start_date)) if params[:start_date].present?
-      query = query.where("entries.date <= ?", parse_date_param(:end_date)) if params[:end_date].present?
-      query
-    end
-
-    def parse_date_param(key)
-      Date.iso8601(params[key].to_s)
-    rescue ArgumentError
-      raise InvalidFilterError, "#{key} must be an ISO 8601 date"
-    end
-
-    def safe_page_param
-      page = params[:page].to_i
-      page > 0 ? page : 1
-    end
-
-    def safe_per_page_param
-      per_page = params[:per_page].to_i
-
-      case per_page
-      when 1..100
-        per_page
-      else
-        25
-      end
+    def set_search
+      @search = Valuation::Search.new(accessible_valuation_entries, filters: {
+        account_id: uuid_filter_param(:account_id),
+        start_date: date_filter_param(:start_date),
+        end_date: date_filter_param(:end_date)
+      })
     end
 
     def valuation_account_id

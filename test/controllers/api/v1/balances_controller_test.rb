@@ -166,6 +166,59 @@ class Api::V1::BalancesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", response_data["error"]
   end
 
+  test "filters balances by a currency with surrounding spaces" do
+    get api_v1_balances_url, params: { currency: " usd " }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_includes JSON.parse(response.body)["balances"].map { |balance| balance["id"] }, @balance.id
+  end
+
+  test "ignores a blank currency filter" do
+    get api_v1_balances_url, params: { currency: "" }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_includes JSON.parse(response.body)["balances"].map { |balance| balance["id"] }, @balance.id
+  end
+
+  # Strict since the move to typed filters: Date.iso8601 also took basic,
+  # ordinal and week dates and timestamps, and a blank value or a list was
+  # ignored or matched nothing.
+  test "rejects filters that are not exactly what they say" do
+    {
+      start_date: [ "20240115", "2024-015", "2024-W03-1", "2024-01-15T00:00:00Z", "" ],
+      end_date: [ "20240115", "" ],
+      account_id: [ "", [ @account.id ] ],
+      currency: [ [ "USD" ] ]
+    }.each do |key, values|
+      values.each do |value|
+        get api_v1_balances_url, params: { key => value }, headers: api_headers(@api_key)
+
+        assert_response :unprocessable_entity, "#{key}=#{value.inspect}"
+        assert_equal "validation_failed", JSON.parse(response.body)["error"]
+      end
+    end
+
+    get api_v1_balances_url, params: { start_date: "20240115" }, headers: api_headers(@api_key)
+    assert_equal "start_date must be an ISO 8601 date", JSON.parse(response.body)["message"]
+  end
+
+  test "a member sees balances only on accounts they can access, filters included" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    key = ApiKey.create!(user: member, name: "Member Read", scopes: [ "read" ], source: "web",
+                         display_key: "member_read_#{SecureRandom.hex(8)}")
+
+    get api_v1_balances_url, params: { account_id: @account.id }, headers: api_headers(key)
+    assert_response :success
+    assert_empty JSON.parse(response.body)["balances"], "the admin's unshared account must stay hidden"
+
+    @account.account_shares.create!(user: member, permission: "read_only", include_in_finances: true)
+
+    get api_v1_balances_url, params: { account_id: @account.id }, headers: api_headers(key)
+    assert_response :success
+    assert_includes JSON.parse(response.body)["balances"].map { |balance| balance["id"] }, @balance.id
+  end
+
   test "requires authentication" do
     get api_v1_balances_url
 

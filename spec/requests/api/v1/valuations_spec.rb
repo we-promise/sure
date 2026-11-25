@@ -92,13 +92,13 @@ RSpec.describe 'API V1 Valuations', type: :request do
                 description: 'Page number (default: 1)'
       parameter name: :per_page, in: :query, type: :integer, required: false,
                 description: 'Items per page (default: 25, max: 100)'
-      parameter name: :account_id, in: :query, required: false, description: 'Filter by account ID',
+      parameter name: :account_id, in: :query, required: false, description: 'Filter by account ID. Must be a UUID; anything else returns 422.',
                 schema: { type: :string, format: :uuid }
       parameter name: :start_date, in: :query, required: false,
-                description: 'Filter valuations from this date',
+                description: 'Filter valuations on or after this date (YYYY-MM-DD; anything else returns 422)',
                 schema: { type: :string, format: :date }
       parameter name: :end_date, in: :query, required: false,
-                description: 'Filter valuations until this date',
+                description: 'Filter valuations on or before this date (YYYY-MM-DD; anything else returns 422)',
                 schema: { type: :string, format: :date }
 
       response '200', 'valuations listed' do
