@@ -145,6 +145,17 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
+  # The Auto Matches date cell adds "N days apart" under the date. Fallbacks
+  # would show it in English inside an otherwise translated table.
+  def test_auto_matches_days_apart_exists_for_each_auto_matches_locale
+    locales = Dir[File.expand_path("../config/locales/views/auto_matches/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    missing = locales.sort.reject do |locale|
+      I18n.t("auto_matches.table.days_apart", locale: locale, count: 3, fallback: false, default: nil)
+    end
+
+    assert_empty missing, "auto_matches.table.days_apart is missing for: #{missing.join(", ")}"
+  end
+
   # The account status speaks wherever the holdings tab is translated.
   def test_account_health_status_keys_exist_wherever_the_holdings_tab_is_translated
     {

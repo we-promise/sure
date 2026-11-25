@@ -2412,6 +2412,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_050000) do
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.boolean "carried_forward", default: false, null: false
     t.datetime "created_at", null: false
     t.string "currency", default: "USD", null: false
     t.date "date", null: false
