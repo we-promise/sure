@@ -79,7 +79,7 @@ class Import::MonarchImportFlowTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller='money-field']:has(#{field}) [data-money-field-target='symbol']", text: "¥"
   end
 
-  test "a balance saved for a whole-number target keeps the decimals another destination needs" do
+  test "a balance saved for a whole-number target keeps its decimals as a minimum" do
     upload_exports
     checking = @import.account_mappings.find_by!(key: "Checking")
     target = @user.family.accounts.create!(name: "Yen", balance: 0, currency: "JPY", accountable: Depository.new)
@@ -87,9 +87,23 @@ class Import::MonarchImportFlowTest < ActionDispatch::IntegrationTest
 
     get import_configuration_url(@import)
 
-    # Switching Destination to a USD account must still take cents.
+    # The saved decimal is a minimum, not a fixed precision, so a switch to a
+    # USD account still takes cents.
     field = "input[name='accounts[#{checking.id}][current_balance]']"
-    assert_select "[data-controller='money-field'][data-money-field-precision-value='2']:has(#{field})"
+    assert_select "#{field}[value='123.4']"
+    assert_select "[data-controller='money-field'][data-money-field-min-precision-value='1']:has(#{field})"
+    assert_select "[data-controller='money-field'][data-money-field-precision-value]:has(#{field})", 0
+  end
+
+  test "a whole balance for a whole-number target follows that currency" do
+    upload_exports
+    checking = @import.account_mappings.find_by!(key: "Checking")
+    target = @user.family.accounts.create!(name: "Yen", balance: 0, currency: "JPY", accountable: Depository.new)
+    checking.update!(mappable: target, choices: { current_balance: "1500" })
+
+    get import_configuration_url(@import)
+
+    assert_select "input[name='accounts[#{checking.id}][current_balance]'][value='1500']"
   end
 
   test "an account the user can't access can't be a target" do

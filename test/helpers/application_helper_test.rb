@@ -253,6 +253,15 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal [ nil, 2 ], money_field_value("1e-150", currency: "USD")
   end
 
+  test "#amount_decimals counts a saved amount's decimals" do
+    assert_equal 4, amount_decimals(BigDecimal("70.1234"))
+    assert_equal 0, amount_decimals(BigDecimal("1500"))
+    assert_equal 1, amount_decimals("123.40")
+    assert_equal 10, amount_decimals("1e-15")
+    assert_equal 0, amount_decimals("1e-1000000000")
+    assert_equal 0, amount_decimals(nil)
+  end
+
   test "#saved_amount_precision asks for more decimals only when a saved amount has them" do
     assert_equal 2, saved_amount_precision(BigDecimal("100.25"), currency: "JPY")
     assert_equal 3, saved_amount_precision(BigDecimal("123.456"), currency: "USD")

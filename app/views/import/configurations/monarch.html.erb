@@ -106,14 +106,15 @@
       <% table.with_column(t(".balance_column"), numeric: true) do |mapping| %>
         <% balance = mapping.current_balance_amount || @import.suggested_current_balance(mapping) %>
         <%# An existing target keeps its own currency (the import does not convert),
-            and the field follows the Destination picker through this unnamed input. %>
+            and the field follows the Destination picker through this unnamed input,
+            keeping the saved balance's decimals on top of each currency's own. %>
         <% balance_currency = @target_account_currencies[mapping.mappable_id] || @import.family.currency %>
         <%= tag.input type: "hidden", id: dom_id(mapping, :balance_currency), value: balance_currency %>
         <%= form.money_field "accounts[#{mapping.id}][current_balance]",
               value: balance,
               label: t(".balance_label", name: mapping.key),
               label_class: "sr-only",
-              precision: money_field_value(balance, currency: balance_currency, min_precision: @balance_min_precision).last,
+              min_precision: amount_decimals(balance),
               container_class: "w-36 ml-auto",
               input_class: "text-right tabular-nums",
               hide_currency: true,

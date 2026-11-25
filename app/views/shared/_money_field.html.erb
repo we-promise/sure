@@ -9,6 +9,8 @@
    # A text input has no native min/max constraint, so the bounds the old
    # number_field enforced (the caller's, or these defaults) are handed to
    # money_field_controller, which checks the evaluated amount against them.
+   # min_precision: decimals kept whatever currency the field follows.
+   display_precision = options[:precision].presence || [ currency.default_precision, options[:min_precision].to_i ].max
    amount_min = options[:min] || -99999999999999
    amount_max = options[:max] || 99999999999999
    label_options = { class: class_names("form-field__label", options[:label_class]) }
@@ -20,6 +22,7 @@
      data-money-field-delimiter-value="<%= currency.delimiter %>"
      data-money-field-separator-currency-value="<%= currency.iso_code %>"
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
+     <% if options[:min_precision].present? %> data-money-field-min-precision-value="<%= options[:min_precision] %>"<% end %>
      <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>
      <% if options[:currency_source].present? %> data-money-field-currency-source-value="<%= options[:currency_source] %>" data-action="change@document->money-field#followCurrencySource"<% end %>
      data-money-field-min-value="<%= amount_min %>"
@@ -69,10 +72,10 @@
           placeholder: options[:placeholder] || "100",
           inputmode: "decimal",
           value: if options[:value]
-            sprintf("%.#{options[:precision].presence || currency.default_precision}f", options[:value])
+            sprintf("%.#{display_precision}f", options[:value])
           elsif form.object && form.object.respond_to?(amount_method)
             val = form.object.public_send(amount_method)
-            sprintf("%.#{options[:precision].presence || currency.default_precision}f", val) if val.present?
+            sprintf("%.#{display_precision}f", val) if val.present?
           end,
           step: options[:step] || currency.step,
           disabled: options[:disabled],
