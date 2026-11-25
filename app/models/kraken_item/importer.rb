@@ -93,11 +93,9 @@ class KrakenItem::Importer
     # forward the last known-good values instead of saving an undercount.
     EarnAllocationsUnavailable = Class.new(StandardError)
 
-    # Earn's allocated principal (staking/bonding) lives in a sub-ledger
-    # BalanceEx never reports -- see Provider::Kraken#get_earn_allocations.
-    # Without this, only Earn's reward payouts (ordinary Ledgers entries,
-    # handled in KrakenAccount::LedgerProcessor) were ever visible; the
-    # locked balance itself was invisible to holdings.
+    # Only allocations outside Earn/Strategies (hybrid Earn, e.g. the Bitcoin
+    # vault) are missing from BalanceEx; the rest are already counted there
+    # as ETH.B, auto-earn spot, etc. -- see Provider::Kraken#get_earn_allocations.
     #
     # On any failure -- the fetch itself (permission denied, a transient API
     # error on any page) or one malformed item among otherwise-good ones --
@@ -109,7 +107,10 @@ class KrakenItem::Importer
     # gone. Same pattern as BinanceItem::Importer#carried_over_assets.
     def fetch_and_parse_earn_assets(asset_metadata)
       items = fetch_earn_allocations
-      parse_earn_assets(items, asset_metadata)
+      return [] if items.empty?
+
+      listed = fetch_earn_strategy_ids
+      parse_earn_assets(items.reject { |item| listed.include?(item["strategy_id"]) }, asset_metadata)
     rescue Provider::Kraken::Error, EarnAllocationsUnavailable, Timeout::Error, SocketError,
            OpenSSL::SSL::SSLError, SystemCallError => e
       # Provider::Kraken::Error covers every classified Kraken error
@@ -183,6 +184,32 @@ class KrakenItem::Importer
       # instead routes it through #fetch_and_parse_earn_assets' carry-forward,
       # same as a fetch failure.
       raise EarnAllocationsUnavailable, "could not parse Earn allocation: #{e.message}"
+    end
+
+    def fetch_earn_strategy_ids
+      cursor = nil
+      ids = Set.new
+      seen_cursors = Set.new
+
+      MAX_EARN_PAGES.times do
+        result = kraken_provider.get_earn_strategies(cursor: cursor)
+        items = result.is_a?(Hash) ? result["items"] : nil
+        raise EarnAllocationsUnavailable, "Earn strategy items must be an array" unless items.is_a?(Array)
+
+        items.each do |item|
+          id = item["id"] if item.is_a?(Hash)
+          raise EarnAllocationsUnavailable, "Earn strategy missing id: #{item.inspect}" if id.blank?
+
+          ids << id
+        end
+        cursor = result["next_cursor"].presence
+        break if cursor.blank?
+        raise EarnAllocationsUnavailable, "Earn strategy cursor repeated" unless seen_cursors.add?(cursor)
+      end
+
+      raise EarnAllocationsUnavailable, "Earn strategy pagination incomplete" if cursor.present?
+
+      ids
     end
 
     def fetch_earn_allocations

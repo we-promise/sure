@@ -9,7 +9,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     @user = users(:family_admin)
     @family = @user.family
     @account = @family.accounts.first
-    @transaction = @family.transactions.first
+    @transaction = transactions(:one)
 
     # Destroy existing active API keys to avoid validation errors
     @user.api_keys.active.destroy_all
@@ -214,6 +214,30 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil found_transaction, "Should find the coffee transaction"
   end
 
+  # The search term is interpolated into an ILIKE pattern, so "%" and "_" from
+  # the caller act as wildcards instead of literals. Unescaped, a search for
+  # "%" matches every transaction in the family rather than the ones that
+  # actually contain a percent sign.
+  test "search treats LIKE wildcards in the term as literal characters" do
+    literal = @account.entries.create!(
+      name: "100% cotton",
+      amount: 5.50, currency: "USD", date: Date.current, entryable: Transaction.new
+    )
+    other = @account.entries.create!(
+      name: "Plain coffee",
+      amount: 5.50, currency: "USD", date: Date.current, entryable: Transaction.new
+    )
+
+    get api_v1_transactions_url,
+        params: { search: "%" },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    ids = JSON.parse(response.body)["transactions"].map { |t| t["id"] }
+    assert_includes ids, literal.transaction.id, "the transaction containing a literal % must match"
+    assert_not_includes ids, other.transaction.id, "a bare % must not match every transaction"
+  end
+
   test "should search disabled account transactions" do
     disabled_transaction = create_disabled_account_transaction(name: "Closed Account Coffee")
 
@@ -326,6 +350,51 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     response_data = JSON.parse(response.body)
     assert_equal "Test Transaction", response_data["name"]
     assert_equal @account.id, response_data["account"]["id"]
+  end
+
+  test "creating and updating via the API runs rules set to apply immediately" do
+    @family.rules.create!(
+      resource_type: "transaction", active: true, apply_immediately: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "API") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @family.categories.first.id) ]
+    )
+
+    post api_v1_transactions_url,
+         params: { transaction: { account_id: @account.id, name: "API purchase", amount: 5, date: Date.current, currency: "USD", nature: "expense" } },
+         headers: api_headers(@api_key)
+    assert_response :created
+    created_id = JSON.parse(response.body)["id"]
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ created_id ] } ])
+
+    put api_v1_transaction_url(@transaction), params: { transaction: { name: "API rename" } }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ @transaction.id ] } ])
+  end
+
+  test "an API update that changes nothing runs no immediate rules" do
+    @family.rules.create!(
+      resource_type: "transaction", active: true, apply_immediately: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "API") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @family.categories.first.id) ]
+    )
+
+    put api_v1_transaction_url(@transaction), params: { transaction: { name: @transaction.entry.name } }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
+  test "a rejected API update runs no immediate rules" do
+    @family.rules.create!(
+      resource_type: "transaction", active: true, apply_immediately: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "API") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @family.categories.first.id) ]
+    )
+
+    put api_v1_transaction_url(@transaction), params: { transaction: { name: "" } }, headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
   end
 
   test "should create transaction with external idempotency key" do
@@ -665,6 +734,62 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     response_data = JSON.parse(response.body)
     assert_equal "Updated Transaction Name", response_data["name"]
+  end
+
+  test "update with only a nature applies it to the stored amount" do
+    entry = create_transaction(account: @account, amount: 40, name: "Nature only")
+
+    [ [ "income", -40 ], [ "inflow", -40 ], [ "expense", 40 ], [ "outflow", 40 ] ].each do |nature, expected|
+      put api_v1_transaction_url(entry.transaction), params: { transaction: { nature: nature } }, headers: api_headers(@api_key)
+
+      assert_response :success, nature
+      assert_equal expected, entry.reload.amount, nature
+    end
+  end
+
+  test "update with only a nature syncs the account when the sign flips" do
+    entry = create_transaction(account: @account, amount: 40, name: "Nature flip")
+
+    assert_enqueued_with(job: SyncJob) do
+      put api_v1_transaction_url(entry.transaction), params: { transaction: { nature: "income" } }, headers: api_headers(@api_key)
+    end
+    assert_response :success
+  end
+
+  test "update refuses a nature or amount that would break a transfer's legs" do
+    transfer = create_transfer_between_accounts
+    outflow = transfer.outflow_transaction.entry
+    inflow = transfer.inflow_transaction.entry
+
+    [ { nature: "income" }, { amount: 120 }, { amount: 100, nature: "inflow" } ].each do |change|
+      put api_v1_transaction_url(transfer.outflow_transaction), params: { transaction: change }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, change.inspect
+      assert_equal 100, outflow.reload.amount, change.inspect
+      assert_equal(-100, inflow.reload.amount, change.inspect)
+    end
+
+    put api_v1_transaction_url(transfer.outflow_transaction), params: { transaction: { nature: "outflow", notes: "Rent" } }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal "Rent", outflow.reload.notes
+  end
+
+  test "create and update refuse a nature outside the documented values" do
+    entry = create_transaction(account: @account, amount: 40, name: "Bad nature")
+
+    [ "inlfow", 1, true ].each do |nature|
+      put api_v1_transaction_url(entry.transaction), params: { transaction: { nature: nature } }, headers: api_headers(@api_key), as: :json
+
+      assert_response :unprocessable_entity, nature.inspect
+      assert_equal 40, entry.reload.amount, nature.inspect
+
+      assert_no_difference("@account.entries.count", nature.inspect) do
+        post api_v1_transactions_url,
+             params: { transaction: { account_id: @account.id, name: "Bad", amount: 5, date: Date.current, nature: nature } },
+             headers: api_headers(@api_key), as: :json
+      end
+      assert_response :unprocessable_entity, nature.inspect
+    end
   end
 
   test "should not sync the account when only notes change" do
@@ -1182,6 +1307,124 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "should store a repeated tag id once in update" do
+    tag = @family.tags.first
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ tag.id, tag.id ] } },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal [ tag.id ], @transaction.reload.taggings.pluck(:tag_id)
+  end
+
+  test "update with a malformed tag id leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ "not-a-uuid" ] } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  test "create with a malformed tag id is refused and creates nothing" do
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Tagged", amount: 25.00, date: Date.current,
+                                    currency: "USD", nature: "expense", tag_ids: [ "not-a-uuid" ] } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  # Strong parameters drop a scalar where a list is permitted, so a check made
+  # after `permit` saw no tags, and the update cleared every tag it held.
+  test "update with a scalar tag id leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: "not-a-uuid" } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  test "update with a tag id that is not a string leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ { id: @family.tags.first.id } ] } }.to_json,
+        headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  # `compact_blank` would drop an empty object or `false` before the check,
+  # and then `permit` drops the whole list, or the id writer drops `false`:
+  # either way the tags were cleared.
+  test "update with a blank non-string tag id leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    [ [ @family.tags.first.id, {} ], [ false ] ].each do |tag_ids|
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { tag_ids: tag_ids } }.to_json,
+          headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+
+      assert_response :unprocessable_entity, "tag_ids: #{tag_ids.inspect}"
+      assert_equal "validation_failed", JSON.parse(response.body)["error"], "tag_ids: #{tag_ids.inspect}"
+      assert_equal before_ids, @transaction.reload.tag_ids.sort, "tag_ids: #{tag_ids.inspect}"
+    end
+  end
+
+  test "update with an object for its tag ids leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: {} } }.to_json,
+        headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  test "create with a scalar tag id is refused and creates nothing" do
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Tagged", amount: 25.00, date: Date.current,
+                                    currency: "USD", nature: "expense", tag_ids: "not-a-uuid" } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "update with a blank tag id list still clears the tags" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ "" ] } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_empty @transaction.reload.tag_ids
+  end
+
   test "should clear tags when empty tag_ids explicitly provided in update" do
     # Set up transaction with existing tags
     @transaction.tags = [ Tag.first, Tag.second ]
@@ -1260,6 +1503,100 @@ end
   test "should reject destroy without API key" do
     delete api_v1_transaction_url(@transaction)
     assert_response :unauthorized
+  end
+
+  # Shared-account permission tests
+  test "a member with read-only access can read but not change or delete a shared transaction" do
+    key, entry = shared_member_key_and_entry("read_only")
+
+    get api_v1_transaction_url(entry.transaction), headers: api_headers(key)
+    assert_response :success
+
+    patch api_v1_transaction_url(entry.transaction), params: { transaction: { notes: "hi" } }, headers: api_headers(key)
+    assert_response :forbidden
+    assert_nil entry.reload.notes
+
+    assert_no_difference "Entry.count" do
+      delete api_v1_transaction_url(entry.transaction), headers: api_headers(key)
+    end
+    assert_response :forbidden
+    assert_equal "You do not have permission to delete this transaction", JSON.parse(response.body)["message"]
+  end
+
+  test "a read_write member can annotate but not change financial fields or delete" do
+    key, entry = shared_member_key_and_entry("read_write")
+
+    patch api_v1_transaction_url(entry.transaction), params: { transaction: { notes: "annotated" } }, headers: api_headers(key)
+    assert_response :success
+    assert_equal "annotated", entry.reload.notes
+
+    [ { amount: 999 }, { name: "Renamed" }, { date: 3.days.ago.to_date }, { notes: "x", amount: 999 } ].each do |attrs|
+      patch api_v1_transaction_url(entry.transaction), params: { transaction: attrs }, headers: api_headers(key)
+      assert_response :forbidden, "expected #{attrs.keys} to be refused"
+    end
+    assert_equal "annotated", entry.reload.notes
+    assert_equal 42, entry.amount
+
+    assert_no_difference "Entry.count" do
+      delete api_v1_transaction_url(entry.transaction), headers: api_headers(key)
+    end
+    assert_response :forbidden
+  end
+
+  test "a read_write member can change category, merchant and tags" do
+    key, entry = shared_member_key_and_entry("read_write")
+    category = @user.family.categories.first
+    merchant = @user.family.merchants.first || FamilyMerchant.create!(family: @user.family, name: "Shared Cafe")
+    tag = @user.family.tags.first || @user.family.tags.create!(name: "shared-tag")
+
+    patch api_v1_transaction_url(entry.transaction),
+          params: { transaction: { category_id: category.id, merchant_id: merchant.id, tag_ids: [ tag.id ] } },
+          headers: api_headers(key)
+
+    assert_response :success
+    transaction = entry.transaction.reload
+    assert_equal category.id, transaction.category_id
+    assert_equal merchant.id, transaction.merchant_id
+    assert_equal [ tag.id ], transaction.tag_ids
+  end
+
+  test "a read_write member cannot change description or user_modified" do
+    key, entry = shared_member_key_and_entry("read_write")
+
+    [ { description: "Renamed" }, { user_modified: true } ].each do |attrs|
+      patch api_v1_transaction_url(entry.transaction), params: { transaction: attrs }, headers: api_headers(key)
+      assert_response :forbidden, "expected #{attrs.keys} to be refused"
+      assert_equal "forbidden", JSON.parse(response.body)["error"]
+      assert_equal "You do not have permission to change this transaction", JSON.parse(response.body)["message"]
+    end
+    assert_equal "Shared txn", entry.reload.name
+  end
+
+  test "unpermitted keys are ignored for a read_write member, account_id included" do
+    key, entry = shared_member_key_and_entry("read_write")
+    other = @user.family.accounts.create!(name: "Other", owner: @user, balance: 0, currency: "USD", accountable: Depository.new)
+
+    patch api_v1_transaction_url(entry.transaction),
+          params: { transaction: { notes: "kept", account_id: other.id } },
+          headers: api_headers(key)
+
+    assert_response :success
+    entry.reload
+    assert_equal "kept", entry.notes
+    assert_not_equal other.id, entry.account_id
+  end
+
+  test "a full_control member can change and delete a shared transaction" do
+    key, entry = shared_member_key_and_entry("full_control")
+
+    patch api_v1_transaction_url(entry.transaction), params: { transaction: { name: "Renamed" } }, headers: api_headers(key)
+    assert_response :success
+    assert_equal "Renamed", entry.reload.name
+
+    assert_difference "Entry.count", -1 do
+      delete api_v1_transaction_url(entry.transaction), headers: api_headers(key)
+    end
+    assert_response :success
   end
 
   # JSON structure tests
@@ -1451,6 +1788,146 @@ end
     assert_equal false, row["excluded"]
   end
 
+  test "show exposes the activity label and the safe provider fields, not the raw extra" do
+    security = Security.create!(ticker: "WHT#{SecureRandom.hex(2).upcase}", name: "Withholding Security", country_code: "US")
+    entry = create_transaction(
+      account: @account,
+      amount: 1.5,
+      name: "Withholding Tax for WHT",
+      currency: "EUR",
+      source: "ibkr",
+      external_id: "ibkr_cash_#{SecureRandom.hex(4)}",
+      entryable: Transaction.new(
+        investment_activity_label: "Dividend",
+        extra: {
+          "exchange_rate" => 0.9215,
+          "security_id" => security.id,
+          "ibkr" => { "type" => "Withholding Tax", "conid" => "CONID-SECRET-1", "account_id" => "U7654321" }
+        }
+      )
+    )
+
+    get api_v1_transaction_url(entry.entryable), headers: api_headers(@read_only_api_key)
+    assert_response :success
+
+    body = JSON.parse(response.body)
+    assert_equal "Dividend", body["investment_activity_label"]
+    assert_equal "Withholding Tax", body["provider_type"]
+    assert_equal security.id, body["security_id"]
+    assert_equal 0.9215, body["exchange_rate"]
+    assert_equal "EUR", body["amount_currency"]
+    assert_not body.key?("extra")
+    assert_not_includes response.body, "CONID-SECRET-1"
+    assert_not_includes response.body, "U7654321"
+  end
+
+  test "index returns null tax fields for a plain transaction and ignores a provider payload that is not a hash" do
+    entry = create_transaction(
+      account: @account,
+      name: "Plain row",
+      source: "plaid",
+      entryable: Transaction.new
+    )
+    # Written past validation, as a provider writing extra directly might.
+    entry.entryable.update_column(:extra, { "plaid" => "raw-string-payload", "security" => "raw-string-security", "exchange_rate" => "not-a-number" })
+
+    get api_v1_transactions_url, params: { account_id: @account.id, per_page: 100 }, headers: api_headers(@read_only_api_key)
+    assert_response :success
+
+    txn_json = JSON.parse(response.body)["transactions"].find { |txn| txn["id"] == entry.entryable.id }
+    assert txn_json
+    %w[investment_activity_label provider_type security_id exchange_rate].each do |field|
+      assert txn_json.key?(field), "expected #{field} in the response"
+      assert_nil txn_json[field], "expected #{field} to be null"
+    end
+    assert_not_includes response.body, "raw-string-payload"
+    assert_not_includes response.body, "raw-string-security"
+  end
+
+  test "show and index return null tax fields instead of failing when extra is not a hash" do
+    entry = create_transaction(account: @account, name: "Malformed extra row", source: "ibkr", currency: "EUR", entryable: Transaction.new)
+    transaction = entry.entryable
+
+    [ [ 1, 2 ], "raw-string-extra" ].each do |malformed|
+      # Written past the model, as a provider or a migration writing SQL might.
+      transaction.update_column(:extra, malformed)
+
+      get api_v1_transaction_url(transaction), headers: api_headers(@read_only_api_key)
+      assert_response :success, "show failed for extra = #{malformed.inspect}"
+      body = JSON.parse(response.body)
+
+      get api_v1_transactions_url, params: { account_id: @account.id, per_page: 100 }, headers: api_headers(@read_only_api_key)
+      assert_response :success, "index failed for extra = #{malformed.inspect}"
+      txn_json = JSON.parse(response.body)["transactions"].find { |row| row["id"] == transaction.id }
+      assert txn_json
+
+      [ body, txn_json ].each do |json|
+        %w[provider_type security_id exchange_rate].each do |field|
+          assert json.key?(field), "expected #{field} in the response"
+          assert_nil json[field], "expected #{field} to be null for extra = #{malformed.inspect}"
+        end
+      end
+    end
+  end
+
+  test "security_id is only a uuid string, never other data stored under the key" do
+    entry = create_transaction(account: @account, name: "Odd security id", currency: "EUR", entryable: Transaction.new)
+    transaction = entry.entryable
+
+    [ { "account_number" => "U9999999" }, 12345, "not-a-uuid", [ "U9999999" ] ].each do |stored|
+      transaction.update_column(:extra, { "security_id" => stored })
+
+      get api_v1_transaction_url(transaction), headers: api_headers(@read_only_api_key)
+      assert_response :success
+      assert_nil JSON.parse(response.body)["security_id"], "expected null for security_id = #{stored.inspect}"
+      assert_not_includes response.body, "U9999999"
+    end
+  end
+
+  # A stored decimal can be positive and finite yet become 0.0 or Infinity
+  # as a Float, which is what the response carries.
+  test "exchange rate is null when the stored value does not fit a Float" do
+    entry = create_transaction(account: @account, name: "Float range row", currency: "EUR", entryable: Transaction.new)
+    transaction = entry.entryable
+
+    [ "1e-400", "1e400" ].each do |stored|
+      transaction.update_column(:extra, { "exchange_rate" => stored })
+      get api_v1_transaction_url(transaction), headers: api_headers(@read_only_api_key)
+      assert_response :success
+      assert_nil JSON.parse(response.body)["exchange_rate"], stored
+      assert_nil transaction.reload.numeric_exchange_rate, stored
+    end
+  end
+
+  test "exchange rate compares currency codes regardless of case" do
+    entry = create_transaction(account: @account, name: "Lower case row", currency: "EUR", entryable: Transaction.new)
+    entry.update_column(:currency, @account.currency.downcase)
+    entry.entryable.update_column(:extra, { "exchange_rate" => 1.1 })
+
+    get api_v1_transaction_url(entry.entryable), headers: api_headers(@read_only_api_key)
+    assert_response :success
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+  end
+
+  test "exchange rate is read the way the app converts it and only where it applies" do
+    entry = create_transaction(account: @account, name: "Rate row", currency: "EUR", entryable: Transaction.new)
+    transaction = entry.entryable
+
+    # Float() would read "0x10" as 16; the app's to_d reads it as 0 and
+    # refuses to convert with it.
+    transaction.update_column(:extra, { "exchange_rate" => "0x10" })
+    get api_v1_transaction_url(transaction), headers: api_headers(@read_only_api_key)
+    assert_response :success
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+
+    # A row in the account's own currency is never converted, so a stored rate
+    # on it is not exposed.
+    entry.update_column(:currency, @account.currency)
+    transaction.update_column(:extra, { "exchange_rate" => 1.085 })
+    get api_v1_transaction_url(transaction), headers: api_headers(@read_only_api_key)
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+  end
+
   private
 
     def foreign_category
@@ -1466,14 +1943,31 @@ end
         currency: "USD", nature: "expense" }.merge(references)
     end
 
+    def shared_member_key_and_entry(permission)
+      member = users(:family_member)
+      member.api_keys.active.destroy_all
+      key = ApiKey.create!(user: member, name: "Member RW", key: ApiKey.generate_secure_key, scopes: %w[read_write], source: "web")
+      Redis.new.del("api_rate_limit:#{key.id}")
+
+      account = member.family.accounts.create!(name: "Admin Shared Checking", owner: @user, balance: 1_000,
+                                               currency: "USD", accountable: Depository.new)
+      account.account_shares.create!(user: member, permission: permission, include_in_finances: true)
+      entry = account.entries.create!(name: "Shared txn", amount: 42, currency: "USD", date: Date.current, entryable: Transaction.new)
+      [ key, entry ]
+    end
+
     def api_headers(api_key)
       { "X-Api-Key" => api_key.display_key }
     end
 
+    # Counts every statement, including the ones the query cache answers. The
+    # cache hides a preload whose IN list happens to match an earlier one in the
+    # same order, and that order follows the rows' physical order, so skipping
+    # cached statements made the count change from run to run. It would also
+    # hide a repeated per-row query.
     def count_db_queries(&block)
       queries = 0
       callback = lambda do |_name, _started, _finished, _unique_id, payload|
-        return if payload[:cached]
         return if payload[:name].in?(%w[SCHEMA TRANSACTION])
 
         queries += 1

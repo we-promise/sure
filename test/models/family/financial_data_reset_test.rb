@@ -24,11 +24,11 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
     assert User.exists?(@user.id)
   end
 
-  test "provider item associations are limited to explicit syncable family associations" do
+  test "provider item associations are the syncable family associations" do
     associations = Family::FinancialDataReset.provider_item_associations
 
     assert_not_empty associations
-    assert_equal associations, Family::FinancialDataReset::PROVIDER_ITEM_ASSOCIATIONS
+    assert_equal Family::Syncer.syncable_item_associations, associations
     assert associations.all? { |name| name.to_s.end_with?("_items") }
 
     associations.each do |name|
@@ -38,12 +38,6 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
       assert_equal :has_many, reflection.macro
       assert_includes reflection.klass.included_modules, Syncable
     end
-  end
-
-  test "provider item associations cover every syncable family association" do
-    missing = Family::Syncer.syncable_item_associations - Family::FinancialDataReset.provider_item_associations
-
-    assert_empty missing, "reset leaves provider connections behind: #{missing.join(', ')}"
   end
 
   test "sync counts use the family sync scope without double counting" do

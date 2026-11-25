@@ -115,7 +115,7 @@ class CoinspotAccount::Processor
       date = parse_date!(order["solddate"] || order["created"], "order")
       type = order_type
       signed_quantity = type == "sell" ? -quantity.abs : quantity.abs
-      amount_aud = type == "sell" ? total_aud.abs : -total_aud.abs
+      amount_aud = type == "sell" ? -total_aud.abs : total_aud.abs
 
       amount, = convert_from_aud(amount_aud, date: date)
       price = trade_price(amount: amount, quantity: quantity, fallback_rate: rate, date: date)

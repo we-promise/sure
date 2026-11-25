@@ -17,6 +17,22 @@
 module Provider::RateLimitable
   extend ActiveSupport::Concern
 
+  # Runs a hook immediately before every HTTP attempt, including retries, so
+  # each one can be throttled and counted against a request budget. Register it
+  # after the :retry middleware: the retry middleware re-invokes the downstream
+  # stack on each attempt, so a hook downstream of it sees every attempt, while
+  # a call made once before client.get only sees the initial request.
+  class BeforeEachAttempt < Faraday::Middleware
+    def initialize(app, hook)
+      super(app)
+      @hook = hook
+    end
+
+    def on_request(env)
+      @hook.call(env)
+    end
+  end
+
   private
     # Enforces a minimum interval between consecutive requests on this instance.
     # Subclasses that need additional rate-limit layers (daily counters, hourly

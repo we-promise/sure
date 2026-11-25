@@ -55,6 +55,27 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     }.to_json
   end
 
+  # Each GET to the activities endpoint yields its own request and returns the
+  # next page body. Returns the yielded requests so tests can inspect params.
+  def stub_activity_pages(provider, pages)
+    requests = []
+    connection = mock("faraday")
+    pages.each do |page|
+      request = OpenStruct.new(headers: {}, params: {})
+      requests << request
+      connection.expects(:get)
+        .with("#{Provider::Snaptrade::API_BASE_URL}/api/v1/accounts/acct-1/activities")
+        .yields(request).returns(faraday_response(status: 200, body: page.to_json))
+        .in_sequence(activity_sequence)
+    end
+    provider.stubs(:api_connection).returns(connection)
+    requests
+  end
+
+  def activity_sequence
+    @activity_sequence ||= sequence("activity pages")
+  end
+
   def faraday_response(status:, body:)
     OpenStruct.new(status: status, body: body, success?: (200..299).cover?(status))
   end
@@ -205,6 +226,184 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     assert_match "no results array", error.message
   end
 
+  test "get_account_activities follows offset pagination until every page is fetched" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    first_page = Array.new(1000) { |i| { "id" => "a#{i}" } }
+    second_page = [ { "id" => "a1000" }, { "id" => "a1001" } ]
+    requests = stub_activity_pages(provider, [
+      { data: first_page, pagination: { offset: 0, limit: 1000, total: 1002 } },
+      { data: second_page, pagination: { offset: 1000, limit: 1000, total: 1002 } }
+    ])
+
+    response = provider.get_account_activities(account_id: "acct-1", start_date: Date.new(2024, 1, 1))
+
+    assert_equal 1002, response["data"].size
+    assert_equal %w[a0 a1001], [ response["data"].first["id"], response["data"].last["id"] ]
+    assert_equal [ 0, 1000 ], requests.map { |r| r.params[:offset] }
+    assert requests.all? { |r| r.params[:limit] == 1000 && r.params[:startDate] == "2024-01-01" }
+  end
+
+  test "get_account_activities makes a single request when one page holds everything" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    requests = stub_activity_pages(provider, [
+      { data: [ { "id" => "a0" }, { "id" => "a1" } ], pagination: { offset: 0, limit: 1000, total: 2 } }
+    ])
+
+    response = provider.get_account_activities(account_id: "acct-1")
+
+    assert_equal %w[a0 a1], response["data"].map { |a| a["id"] }
+    assert_equal 1, requests.size
+  end
+
+  test "get_account_activities raises when a later page is not a paged body" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    stub_activity_pages(provider, [
+      { data: Array.new(1000) { |i| { "id" => "a#{i}" } }, pagination: { offset: 0, limit: 1000, total: 1500 } },
+      [ { "id" => "b0" } ]
+    ])
+
+    assert_raises(Provider::Snaptrade::ApiError) { provider.get_account_activities(account_id: "acct-1") }
+  end
+
+  test "get_account_activities stops when the server repeats a page" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    page = { data: Array.new(1000) { |i| { "id" => "a#{i}" } } }
+    requests = stub_activity_pages(provider, [ page, page ])
+
+    assert_equal 1000, provider.get_account_activities(account_id: "acct-1")["data"].size
+    assert_equal 2, requests.size
+  end
+
+  test "get_account_activities without a total pages until an empty page" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    requests = stub_activity_pages(provider, [
+      { data: Array.new(500) { |i| { "id" => "a#{i}" } } },
+      { data: Array.new(500) { |i| { "id" => "b#{i}" } } },
+      { data: [] }
+    ])
+
+    assert_equal 1000, provider.get_account_activities(account_id: "acct-1")["data"].size
+    assert_equal [ 0, 500, 1000 ], requests.map { |r| r.params[:offset] }
+  end
+
+  test "get_account_activities without a total stops at a short page or an empty reply" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    requests = stub_activity_pages(provider, [
+      { data: Array.new(1000) { |i| { "id" => "a#{i}" } } },
+      { data: Array.new(300) { |i| { "id" => "b#{i}" } } }
+    ])
+    assert_equal 1300, provider.get_account_activities(account_id: "acct-1")["data"].size
+    assert_equal 2, requests.size
+
+    provider = Provider::Snaptrade.new(fake_item)
+    stub_activity_pages(provider, [ { data: Array.new(1000) { |i| { "id" => "c#{i}" } } }, {} ])
+    assert_equal 1000, provider.get_account_activities(account_id: "acct-1")["data"].size
+  end
+
+  test "get_account_activities raises when a repeated page leaves rows the total reports" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    page = { data: Array.new(1000) { |i| { "id" => "a#{i}" } }, pagination: { offset: 0, limit: 1000, total: 1500 } }
+    stub_activity_pages(provider, [ page, page ])
+
+    assert_raises(Provider::Snaptrade::ApiError) { provider.get_account_activities(account_id: "acct-1") }
+  end
+
+  test "get_account_activities raises when an empty page leaves rows the total reports" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    stub_activity_pages(provider, [
+      { data: Array.new(1000) { |i| { "id" => "a#{i}" } }, pagination: { offset: 0, limit: 1000, total: 1500 } },
+      { data: [], pagination: { offset: 1000, limit: 1000, total: 1500 } }
+    ])
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "snaptrade").count }, 1 do
+      assert_raises(Provider::Snaptrade::ApiError) { provider.get_account_activities(account_id: "acct-1") }
+    end
+  end
+
+  test "get_account_activities returns an empty account whose total is zero" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    stub_activity_pages(provider, [ { data: [], pagination: { offset: 0, limit: 1000, total: 0 } } ])
+
+    assert_equal [], provider.get_account_activities(account_id: "acct-1")["data"]
+  end
+
+  test "get_account_activities raises at the page cap while the total reports more rows" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    pages = Array.new(3) do |page|
+      { data: Array.new(2) { |i| { "id" => "p#{page}-#{i}" } }, pagination: { offset: page * 2, limit: 2, total: 100 } }
+    end
+    requests = stub_activity_pages(provider, pages)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "snaptrade").count }, 1 do
+      assert_raises(Provider::Snaptrade::ApiError) do
+        stub_const(Provider::Snaptrade, :ACTIVITIES_PAGE_SIZE, 2) do
+          stub_const(Provider::Snaptrade, :MAX_ACTIVITY_PAGES, 3) do
+            provider.get_account_activities(account_id: "acct-1")
+          end
+        end
+      end
+    end
+    assert_equal 3, requests.size
+  end
+
+  # Reaching the cap needs every page to be full and distinct, so rows are
+  # almost certainly still missing; returning them would move the importer's
+  # sync cursor past the rest.
+  test "get_account_activities raises at the page cap without a total" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    pages = Array.new(3) do |page|
+      { data: Array.new(2) { |i| { "id" => "p#{page}-#{i}" } } }
+    end
+    requests = stub_activity_pages(provider, pages)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "snaptrade", level: "error").count }, 1 do
+      assert_raises(Provider::Snaptrade::ApiError) do
+        stub_const(Provider::Snaptrade, :ACTIVITIES_PAGE_SIZE, 2) do
+          stub_const(Provider::Snaptrade, :MAX_ACTIVITY_PAGES, 3) do
+            provider.get_account_activities(account_id: "acct-1")
+          end
+        end
+      end
+    end
+    assert_equal 3, requests.size
+  end
+
+  # An empty first page is how a new connection looks while SnapTrade is still
+  # importing it. Raising would end SnaptradeActivitiesFetchJob's polling.
+  test "get_account_activities returns an empty first page even when the total is positive" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    requests = stub_activity_pages(provider, [ { data: [], pagination: { offset: 0, limit: 1000, total: 50 } } ])
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert_equal [], provider.get_account_activities(account_id: "acct-1")["data"]
+    end
+    assert_equal 1, requests.size
+  end
+
   test "get_positions filters out instrument kinds the holdings pipeline cannot model" do
     configure_oauth!
     provider = Provider::Snaptrade.new(fake_item)
@@ -212,8 +411,10 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     body = {
       results: [
         { instrument: { kind: "stock", symbol: "AAPL" }, units: "10", price: "1.5" },
-        { instrument: { kind: "option", symbol: "AAPL 240119C00150000" }, units: "2", price: "5.1" },
+        # Kept past expiry (in any zone) until the broker's book settles it
+        { instrument: { kind: "option", symbol: "OPT", expiration_date: Date.yesterday.iso8601 }, units: "2", price: "5.1" },
         { instrument: { kind: "future", symbol: "ESZ4" }, units: "1", price: "10" },
+        { instrument: { kind: "future_option", symbol: "./ESZ4 EW4X4 241115C5800" }, units: "1", price: "10" },
         { instrument: { kind: "cfd", symbol: "CFD1" }, units: "1", price: "10" },
         { instrument: { kind: "somethingnew", symbol: "NEW" }, units: "3", price: "2" }
       ]
@@ -226,7 +427,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
     positions = provider.get_positions(account_id: "acct-1")
 
-    assert_equal %w[AAPL NEW], positions.map { |p| p.dig("instrument", "symbol") }
+    assert_equal %w[AAPL OPT NEW], positions.map { |p| p.dig("instrument", "symbol") }
   end
 
   test "expired token is refreshed before the data call and rotation persisted" do

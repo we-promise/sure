@@ -82,6 +82,11 @@ flutter run -d "iPhone 17 Pro"
 flutter run -d chrome
 ```
 
+The web build is a browser client, so the server must grant its origin through
+CORS. A local `bin/dev` server accepts any `localhost` origin. Any other server
+needs the dev server's origin, including its port, in `ALLOWED_ORIGINS`; pass
+`--web-port` to keep that port fixed.
+
 ## Project Structure
 
 ```
@@ -153,7 +158,7 @@ The app includes automated CI/CD via GitHub Actions (`.github/workflows/flutter-
 - **Quality Checks**: Code analysis and tests run before building
 - **TestFlight**: `mobile-release` (mobile tags) triggers `.github/workflows/ios-testflight.yml` for signed App Store Connect uploads as part of one release flow
 
-See [mobile/docs/iOS_TESTFLIGHT.md](mobile/docs/iOS_TESTFLIGHT.md) for required secrets and setup.
+See [docs/iOS_TESTFLIGHT.md](docs/iOS_TESTFLIGHT.md) for required secrets and setup.
 
 ### Downloading Build Artifacts
 

@@ -14,6 +14,7 @@ pl:
       success: Rachunek ponownie otwarty
     show:
       add_heading: Dodaj kolejną płatność
+      amount_left: "Pozostało %{amount}"
       cant_find: Nie możesz znaleźć transakcji?
       due_on: 'Termin: %{date}'
       find_heading: Znajdź płatność
@@ -46,6 +47,8 @@ pl:
       skipped: Pominięto
       snooze_week: Odłóż o tydzień
       unlink: Odłącz
+      used_up: Już wykorzystana
+      used_up_hint: Inne rachunki wykorzystują już pełną kwotę tej transakcji.
       view_bill: Zobacz rachunek
     skip:
       success: Rachunek pominięty

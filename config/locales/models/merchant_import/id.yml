@@ -1,0 +1,8 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        merchant_import:
+          missing_columns: "Kolom wajib tidak ditemukan: %{columns}"
+          duplicate_columns: "Nama kolom duplikat setelah normalisasi: %{columns}"

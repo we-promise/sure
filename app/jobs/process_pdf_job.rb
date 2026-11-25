@@ -65,13 +65,18 @@ class ProcessPdfJob < ApplicationJob
       end
     end
 
+    # Only statement PDFs: who finds a document follows its statement
+    # (FamilyDocument.searchable_by), and an import from before statements
+    # existed has none.
     def upload_to_vector_store(pdf_import, document_type:)
-      file_content = pdf_import.pdf_file_content
+      return unless pdf_import.statement_backed?
+      return unless Ai.available?(:embed, family: pdf_import.family)
 
       family_document = pdf_import.family.upload_document(
-        file_content: file_content,
+        file_content: pdf_import.pdf_file_content,
         filename: pdf_import.pdf_filename,
-        metadata: { "type" => document_type }
+        metadata: { "type" => document_type },
+        account_statement: pdf_import.account_statement
       )
 
       return if family_document
