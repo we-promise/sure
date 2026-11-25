@@ -138,6 +138,36 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select "dialog form[action=?]", transfer_path(transfer, transfer: { status: "confirmed" }), count: 0
   end
 
+  test "new answers not found for a pending match's leg in an account the user cannot see" do
+    sign_in users(:family_member)
+    # family_member cannot see investment.
+    outflow = create_transaction(amount: 90, account: accounts(:depository))
+    inflow = create_transaction(amount: -90, account: accounts(:investment))
+    Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get new_transaction_transfer_match_path(inflow)
+
+    assert_response :not_found
+  end
+
+  test "the pending match's confirm and reject buttons settle the match" do
+    outflow = create_transaction(amount: 250, account: accounts(:depository))
+    inflow = create_transaction(amount: -250, account: accounts(:investment))
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get new_transaction_transfer_match_path(outflow)
+    confirm_action = css_select("dialog form[action]").map { |form| form["action"] }.find { |action| action.include?("confirmed") }
+    patch confirm_action
+    assert transfer.reload.confirmed?
+
+    transfer.update!(status: "pending")
+    get new_transaction_transfer_match_path(outflow)
+    reject_action = css_select("dialog form[action]").map { |form| form["action"] }.find { |action| action.include?("rejected") }
+    patch reject_action
+    assert_raises(ActiveRecord::RecordNotFound) { transfer.reload }
+    assert RejectedTransfer.exists?(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction)
+  end
+
   test "new does not name a pending match's other side in an account the user cannot see" do
     sign_in users(:family_member)
     # family_member cannot see investment.

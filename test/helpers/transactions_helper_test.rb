@@ -269,4 +269,52 @@ class TransactionsHelperTest < ActionView::TestCase
   test "investment_activity_label_name falls back to the stored label when it has no translation" do
     assert_equal "Legacy Label", investment_activity_label_name("Legacy Label")
   end
+
+  # The actions don't depend on what the viewer can see, so visibility is left out.
+  def pending_match_of(entry)
+    Transfer::PendingMatch.new(entry.transaction, visible_account_ids: [])
+  end
+
+  test "pending_transfer_match_actions offers confirming only with write access to both legs' accounts" do
+    outflow = create_transaction(account: accounts(:depository), amount: 90)
+    read_only_inflow = create_transaction(account: accounts(:credit_card), amount: -90)
+    hidden_inflow = create_transaction(account: accounts(:investment), amount: -90)
+    read_only_match = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: read_only_inflow.transaction, status: "pending")
+
+    Current.session = Session.create!(user: users(:family_admin))
+    assert_equal({ confirm: true, reject: true }, pending_transfer_match_actions(pending_match_of(outflow)))
+
+    # family_member has full control of depository, read-only access to
+    # credit_card and no access to investment.
+    Current.session = Session.create!(user: users(:family_member))
+    assert_equal({ confirm: false, reject: true }, pending_transfer_match_actions(pending_match_of(outflow)))
+
+    read_only_match.destroy!
+    Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: hidden_inflow.transaction, status: "pending")
+    assert_equal({ confirm: false, reject: true }, pending_transfer_match_actions(pending_match_of(outflow.reload)))
+  end
+
+  test "pending_transfer_match_actions offers nothing to a user who can write to neither leg's account" do
+    outflow = create_transaction(account: accounts(:credit_card), amount: 90)
+    inflow = create_transaction(account: accounts(:investment), amount: -90)
+    Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    Current.session = Session.create!(user: users(:family_member))
+
+    assert_equal({ confirm: false, reject: false }, pending_transfer_match_actions(pending_match_of(outflow)))
+  end
+
+  test "pending_transfer_match_actions offers rejecting only with write access to every account holding a fee" do
+    outflow = create_transaction(account: accounts(:depository), amount: 90)
+    inflow = create_transaction(account: accounts(:investment), amount: -90)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+    fee = create_transaction(account: accounts(:credit_card), amount: 2).transaction
+    fee.update!(transfer: transfer)
+
+    Current.session = Session.create!(user: users(:family_member))
+    assert_equal({ confirm: false, reject: false }, pending_transfer_match_actions(pending_match_of(outflow)))
+
+    fee.entry.update!(account: accounts(:depository))
+    assert_equal({ confirm: false, reject: true }, pending_transfer_match_actions(pending_match_of(outflow)))
+  end
 end
