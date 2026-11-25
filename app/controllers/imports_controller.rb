@@ -326,10 +326,7 @@ class ImportsController < ApplicationController
         return
       end
 
-      family_document = Current.family.upload_document(
-        file_content: file.read,
-        filename: filename
-      )
+      family_document = Current.family.upload_document_later(file)
 
       if family_document
         redirect_to new_import_path, notice: t("imports.create.document_uploaded")
