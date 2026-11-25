@@ -85,7 +85,7 @@ en:
         in_year: "%{year}, at %{age}"
         not_reached: Not within the plan
         coast_hint: "Coast FI is when your savings alone, with nothing more added, would grow to your FI number by %{year}."
-        fire_before_fi_number: "Your FI number is %{multiple} times a year of spending, the %{rate} rule. Retiring in %{year} only needs the money to last to %{end_age}, counting income such as a pension and spending that ends, such as a mortgage, so it can come before you reach that number."
+        fire_before_fi_number: "Your FI number is %{multiple} times a year of spending, the %{rate} rule. Retiring in %{year} only needs the money to last to %{end_age}, counting income such as a pension, so it can come before you reach that number."
     streams:
       seeded:
         living_costs: Living costs
