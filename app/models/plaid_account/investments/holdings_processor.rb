@@ -14,8 +14,9 @@ class PlaidAccount::Investments::HoldingsProcessor
       security = resolved_security_result.security
 
       # Parse quantity and price into BigDecimal for proper arithmetic
+      currency = plaid_holding["iso_currency_code"] || @currency || account.currency
       quantity_bd = parse_decimal(plaid_holding["quantity"])
-      price_bd = parse_decimal(plaid_holding["institution_price"])
+      price_bd = parse_decimal(plaid_account.holding_price(plaid_holding, currency: currency))
 
       # Skip if essential values are missing
       next if quantity_bd.nil? || price_bd.nil?
@@ -30,7 +31,7 @@ class PlaidAccount::Investments::HoldingsProcessor
         security: security,
         quantity: quantity_bd,
         amount: amount_bd,
-        currency: plaid_holding["iso_currency_code"] || @currency || account.currency,
+        currency: currency,
         date: holding_date,
         price: price_bd,
         account_provider_id: plaid_account.account_provider&.id,

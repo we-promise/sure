@@ -68,7 +68,29 @@ class PlaidAccount < ApplicationRecord
     save!
   end
 
+  # Price of a holding from the stored holdings snapshot. Plaid can report an
+  # institution_price of 0 for a holding whose security has a close price.
+  # Valued at 0, the position looks worthless and its value is counted as
+  # brokerage cash, so the security's close_price is used when it is positive
+  # and quoted in `currency`, the currency the holding is recorded in. Callers
+  # do not convert currencies, so a close price in another one is not used.
+  def holding_price(holding, currency: holding["iso_currency_code"] || self.currency)
+    price = holding["institution_price"]
+    return price unless price.present? && price.to_d.zero?
+
+    close_price = holding_close_price(holding["security_id"], currency)
+    close_price.present? && close_price.to_d.positive? ? close_price : price
+  end
+
   private
+    def holding_close_price(security_id, currency)
+      securities = raw_holdings_payload&.dig("securities") || []
+      security = securities.find { |candidate| candidate["security_id"] == security_id }
+      return if security.nil? || security["iso_currency_code"].blank? || security["iso_currency_code"] != currency
+
+      security["close_price"]
+    end
+
     # Plaid guarantees at least one of these.  This validation is a sanity check for that guarantee.
     def has_balance
       return if current_balance.present? || available_balance.present?
