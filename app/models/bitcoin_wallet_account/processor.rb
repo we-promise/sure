@@ -2,6 +2,7 @@
 
 class BitcoinWalletAccount::Processor
   SOURCE = "bitcoin_wallet"
+  CASH_ANCHOR_SOURCE = "bitcoin_wallet_cash_anchor"
 
   # Bind a publisher to its wallet and existing account without a separate portfolio.
   def initialize(wallet)
@@ -95,7 +96,7 @@ class BitcoinWalletAccount::Processor
 
     def establish_cash_baseline
       account.holdings.where(security: wallet.security, date: ..Date.current).order(date: :desc).first&.reconcile_trade_quantity!
-      account.create_cash_anchor!(cash: (0 if account.typed_balance_only?)).update!(source: SOURCE)
+      account.create_cash_anchor!(cash: (0 if account.typed_balance_only?)).update!(source: CASH_ANCHOR_SOURCE)
     end
 
     # Reconcile source-scoped transfers and reversals, returning the earliest changed date.

@@ -56,7 +56,7 @@ class AccountProvider < ApplicationRecord
           errors.add(:account, :bitcoin_wallet)
         end
       elsif BitcoinWalletAccount.exists?(account_id: account_id) ||
-          account.valuations.cash_anchor.exists?(entries: { source: BitcoinWalletAccount::Processor::SOURCE })
+          account.valuations.cash_anchor.exists?(entries: { source: BitcoinWalletAccount::Processor::CASH_ANCHOR_SOURCE })
         errors.add(:account, :bitcoin_wallet)
       end
     end
