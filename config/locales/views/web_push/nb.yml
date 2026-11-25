@@ -1,0 +1,37 @@
+---
+nb:
+  web_push:
+    title: "Nettleservarsler"
+    description: "Få nye innsikter med høy prioritet i denne nettleseren eller den installerte appen. Varslene skjuler økonomiske detaljer på låseskjermen."
+    enable: "Aktiver denne enheten"
+    disable: "Deaktiver denne enheten"
+    test: "Test denne enheten"
+    preview: "Forhåndsversjon"
+    session_notice: "Varslene stopper når du logger ut, eller når økten din utløper etter 30 dager uten aktivitet. Åpne Sure jevnlig for å holde økten aktiv."
+    ios_guidance: "På iPhone eller iPad åpner du Sure i Safari, velger Del → Legg til på Hjem-skjerm og aktiverer deretter varsler i den installerte appen. Krever iOS eller iPadOS 16.4 eller nyere."
+    notification:
+      body: "Et nytt økonomisk varsel er klart. Åpne Sure for å se det."
+      test_body: "Testvarselet ditt har kommet frem. Åpne Sure for å fortsette."
+    status:
+      checking: "Sjekker denne enheten …"
+      enabled: "Varsler er aktivert for denne enheten og økten."
+      disabled: "Varsler er deaktivert for denne enheten."
+      denied: "Varsler er blokkert i nettleserinnstillingene. Tillat dem der, og aktiver denne enheten på nytt."
+      unsupported: "Denne nettleseren støtter ikke varsler. Bruk en kompatibel nettleser eller en installert app over HTTPS."
+      unconfigured: "Nettleservarsler er ikke konfigurert på denne serveren."
+      queued: "Testen er lagt i kø. Venter på at push-tjenesten skal godta den."
+      accepted: "Godtatt av push-tjenesten. Sjekk om varselet har kommet på denne enheten. At det er godtatt, betyr ikke at det er vist."
+      skipped: "Testen ble hoppet over fordi denne økten eller tilgangen til forhåndsversjonen er endret, eller fordi testen er utløpt. Aktiver denne enheten og prøv igjen."
+      rejected: "Push-tjenesten avviste denne testen. Deaktiver denne enheten, og aktiver den deretter på nytt."
+      failed: "Testen kunne ikke leveres. Prøv igjen senere."
+      enqueue_failed: "Testen kunne ikke legges i kø. Prøv igjen senere."
+      pending: "Testen ligger i kø eller prøves på nytt. Leveringen kan ta litt tid."
+      expired: "Testen ligger fortsatt i kø. Sjekk bakgrunnsprosessene (workers), eller prøv en ny test senere."
+    errors:
+      registration: "Kunne ikke registrere denne enheten. Prøv å deaktivere den og deretter aktivere den igjen."
+      preview: "Aktiver forhåndsversjonsfunksjoner før du bruker nettleservarsler."
+      unconfigured: "Nettleservarsler er ikke konfigurert på denne serveren."
+      rate_limited: "For mange varselforespørsler. Vent et minutt og prøv igjen."
+      enqueue: "Kunne ikke legge testvarselet i kø. Prøv igjen senere."
+      request: "Kunne ikke oppdatere nettleservarsler. Sjekk tilkoblingen og prøv igjen."
+      permission: "Tillatelse til varsler ble ikke gitt."

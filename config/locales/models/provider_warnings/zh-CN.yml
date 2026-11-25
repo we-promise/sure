@@ -27,3 +27,6 @@ zh-CN:
     truelayer_scheduling_failed:
       one: "TrueLayer 导入：无法为 %{count} 个账户计划余额更新"
       other: "TrueLayer 导入：无法为 %{count} 个账户计划余额更新"
+    enable_banking_history_truncated:
+      one: "Enable Banking：无法获取 %{count} 个账户的完整交易历史，因此较早的交易可能缺失"
+      other: "Enable Banking：无法获取 %{count} 个账户的完整交易历史，因此较早的交易可能缺失"

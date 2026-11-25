@@ -1,0 +1,35 @@
+---
+nb:
+  providers:
+    property_valuation:
+      not_configured: Denne leverandøren av eiendomsdata er ikke konfigurert.
+      missing_fields: Oppgi et navn og en fullstendig amerikansk adresse (gate, by, delstat og ZIP-kode).
+      preview_expired: Forhåndsvisningen av denne eiendommen har utløpt – slå opp adressen på nytt.
+      missing_fields_gb: "Oppgi et navn, gateadresse og postnummer, og eiendommens UPRN."
+      entry_name: "Verdivurdering fra %{provider}"
+    rentcast:
+      errors:
+        no_valuation: RentCast returnerte ikke et verdiestimat for denne adressen.
+        not_found: RentCast fant ingen eiendom som samsvarer med denne adressen.
+    realie:
+      errors:
+        no_property: Realie returnerte ingen eiendom for denne adressen.
+        no_valuation: Realie returnerte ingen verdivurdering for denne eiendommen.
+        not_found: Realie fant ingen eiendom som samsvarer med denne adressen.
+        location_mismatch: Realie fant en eiendom i en annen by eller med en annen ZIP-kode. Dobbeltsjekk adressen.
+    truelayer:
+      description: "Koble til den britiske banken din via TrueLayer"
+    chimnie:
+      errors:
+        invalid_uprn: "En UPRN er et tall på opptil 12 sifre. Sjekk UPRN-en og prøv igjen."
+        no_estimate: "Chimnie har ikke et verdiestimat for denne eiendommen."
+        not_found: "Chimnie fant ingen eiendom med denne UPRN-en."
+        unsupported_property: "Chimnie verdivurderer bare boligeiendommer. Denne UPRN-en tilhører en nærings- eller kombinert eiendom."
+        unauthorized: "Chimnie avviste API-nøkkelen. Sjekk nøkkelen under Innstillinger → Selvhosting."
+        insufficient_balance: "Saldoen på Chimnie-kontoen din er for lav for denne forespørselen."
+    terrascoutx:
+      errors:
+        no_property: "TerraScoutX fant ingen eiendom som samsvarer med denne adressen."
+        no_valuation: "TerraScoutX returnerte ingen verdi for denne eiendommen."
+        location_mismatch: "TerraScoutX fant en eiendom med et annet husnummer eller postnummer. Dobbeltsjekk adressen."
+        insecure_url: "TERRASCOUTX_URL må bruke https://."
