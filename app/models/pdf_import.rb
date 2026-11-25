@@ -133,6 +133,10 @@ class PdfImport < Import
     true
   end
 
+  def stoppable_by?(user)
+    importing? && (account_statement.blank? || account_statement.manageable_by?(user))
+  end
+
   # A PdfImport's importing status is a processing claim (AI extraction or
   # publish). Release a lost claim (release_lost_claim!) so the user can re-trigger
   # processing, mirroring ProcessPdfJob's own reclaim; lost reverts keep the
