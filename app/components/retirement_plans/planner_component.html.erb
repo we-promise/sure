@@ -51,7 +51,7 @@
     <% if rows.size >= 2 %>
       <div>
         <p class="text-xs text-secondary mb-2"><%= t("retirement_plans.planner.chart") %></p>
-        <div class="w-full h-64 privacy-sensitive" data-planner-chart
+        <div id="retirement-planner-chart" class="w-full h-64 privacy-sensitive" data-planner-chart
              data-controller="time-series-chart"
              data-time-series-chart-data-value="<%= chart_series.to_json %>"></div>
       </div>
