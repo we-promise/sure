@@ -36,6 +36,23 @@ class ImportJobTest < ActiveJob::TestCase
     assert share.include_in_finances
   end
 
+  [ false, true ].each do |remove_publisher|
+    test "queued transaction import completes when publisher removal is #{remove_publisher}" do
+      import = imports(:transaction)
+      user = users(:family_member)
+      Current.stubs(:user).returns(user)
+      import.stubs(:publishable?).returns(true)
+      TransactionImport.any_instance.stubs(:import!)
+
+      import.publish_later
+      user.purge if remove_publisher
+      Current.stubs(:user).returns(nil)
+      perform_enqueued_jobs(only: ImportJob)
+
+      assert_predicate import.reload, :complete?, import.error
+    end
+  end
+
   test "YNAB accounts stay private when the family default is private" do
     user = users(:family_member)
     user.family.update!(default_account_sharing: "private")
