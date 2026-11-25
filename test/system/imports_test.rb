@@ -321,6 +321,33 @@ class ImportsTest < ApplicationSystemTestCase
     within(balance) { assert_selector "[data-money-field-target='symbol']", text: "$" }
   end
 
+  test "monarch balance saved for a yen target takes cents after switching to a dollar account" do
+    yen = @user.family.accounts.create!(name: "Yen Wallet", balance: 0, currency: "JPY", accountable: Depository.new)
+
+    visit new_import_path
+    click_on "Financial Tools"
+    click_on "Import from Monarch"
+    attach_file "import[balances_file]", file_fixture("imports/monarch_balances.csv")
+    attach_file "import[transactions_file]", file_fixture("imports/monarch_transactions.csv")
+    click_on "Upload exports"
+    assert_selector "h1", text: "Check each Monarch account"
+
+    import = MonarchImport.where(family: @user.family).sole
+    checking = import.account_mappings.find_by!(key: "Checking")
+    checking.update!(mappable: yen, choices: { current_balance: "123.4" })
+    visit import_configuration_path(import)
+    assert_equal "123.4", find_field("Balance today for Checking").value
+
+    find("select[aria-label='Where to import Checking']").select(accounts(:depository).name)
+    balance = find_field("Balance today for Checking").ancestor("[data-controller='money-field']")
+    within(balance) { assert_selector "[data-money-field-target='symbol']", text: "$" }
+    fill_in "Balance today for Checking", with: "12.34"
+    click_on "Review import"
+
+    assert_current_path import_path(import)
+    assert_equal "12.34", checking.reload.current_balance
+  end
+
   private
     # DS::Toggle hides its checkbox; people click the switch, its label.
     def click_toggle(aria_label)
