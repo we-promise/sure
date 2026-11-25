@@ -68,6 +68,15 @@ class BackgroundJobHealth
       false
     end
 
+    # The gate of an AI endpoint's local model host, as its worker last published it
+    # (Ai::Gate::State), or nil: a cloud endpoint, or a host no worker's gate is in use for.
+    def model_gate(endpoint)
+      Ai::Gate::State.read(Ai::Sequencer.host_key(endpoint)) if endpoint&.local?
+    rescue => e
+      Rails.logger.warn("BackgroundJobHealth model gate check failed: #{e.class}: #{e.message}")
+      nil
+    end
+
     def summary
       h = current
       "workers=#{h[:workers].inspect} polls_#{CRITICAL_QUEUE}=#{h[:polls_critical_queue].inspect} polls_#{CHAT_QUEUE}=#{h[:polls_chat_queue].inspect} latency=#{h[:latency].inspect}s"

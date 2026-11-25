@@ -63,7 +63,7 @@ module Ai::Sequencer
     key = host_key(endpoint)
     # Asked outside the map's lock, which compute_if_absent would hold for every host meanwhile.
     sized = GATES[key] || begin
-      fresh = Sized.new(Ai::Gate.new(slots(endpoint)), now)
+      fresh = Sized.new(Ai::Gate.new(slots(endpoint), host: key), now)
       GATES.put_if_absent(key, fresh) || fresh
     end
     if now - sized.at > RESIZE_AFTER
@@ -95,6 +95,9 @@ module Ai::Sequencer
   rescue URI::InvalidURIError
     endpoint.name
   end
+
+  # Refreshes the published state of each gate in use before it expires (Ai::Gate::State::TTL).
+  def publish_gates = GATES.each_value { |sized| sized.gate.publish if sized.gate.in_use? }
 
   # Tests start each case without the gates an earlier one sized.
   def forget_gates = GATES.clear

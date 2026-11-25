@@ -10,7 +10,8 @@
 #   and its job comes back later.
 #
 # With two or more places, one is kept for interactive requests. A gate lives in one worker's
-# memory (Ai::Sequencer.gate_for), so a worker that dies takes its places with it.
+# memory (Ai::Sequencer.gate_for), so a worker that dies takes its places with it. The worker
+# publishes it for the web to read (Ai::Gate::State).
 class Ai::Gate
   RANKS = { interactive: 0, prompt: 1, background: 2 }.freeze
 
@@ -23,13 +24,15 @@ class Ai::Gate
   # socket, never RubyLLM's Faraday connection, which every thread shares. `shutdown` wakes a
   # read blocked in another thread, and the sending thread closes the socket as it unwinds.
   class Holder
-    attr_reader :lane, :feature, :arrival, :since
+    attr_reader :lane, :feature, :job, :arrival, :since
 
-    def initialize(lane:, feature: nil, arrival: 0)
+    # job: the correlation id of the job sending the request (Ai::CallContext.job).
+    def initialize(lane:, feature: nil, job: nil, arrival: 0)
       raise ArgumentError, "unknown lane: #{lane.inspect}" unless RANKS.key?(lane)
 
       @lane = lane
       @feature = feature
+      @job = job
       @arrival = arrival
       @lock = Mutex.new
       @preempted = false
@@ -100,13 +103,17 @@ class Ai::Gate
 
   attr_reader :size
 
-  def initialize(size)
+  # host: the key it's published under (Ai::Sequencer.host_key); a gate without one isn't.
+  def initialize(size, host: nil)
     @size = Integer(size)
+    @host = host
     @monitor = Monitor.new
+    @publishing = Mutex.new
     @changed = @monitor.new_cond
     @holders = []
     @waiters = []
     @arrivals = 0
+    @interruptions = 0
   end
 
   def size=(size)
@@ -121,6 +128,18 @@ class Ai::Gate
 
   def holders = @monitor.synchronize { @holders.dup }
   def waiters = @monitor.synchronize { @waiters.dup }
+  def in_use? = @monitor.synchronize { @holders.any? || @waiters.any? }
+
+  # Writes the gate's state for the web, never under the gate's lock and never failing the request.
+  # Only a worker's, which its heartbeat keeps current: a web process's would overwrite it.
+  def publish
+    return unless @host && Sidekiq.server?
+
+    # The state is taken in turn, so the last one written is the latest.
+    @publishing.synchronize { State.write(@host, **@monitor.synchronize { state }) }
+  rescue StandardError => e
+    Rails.logger.warn("[Ai::Gate] state of #{@host} not published: #{e.class}: #{e.message}")
+  end
 
   # Runs the block holding a place and yields the seconds it waited for one. Raises
   # Ai::Error::Busy for a background request that would wait, and Ai::Error::Cancelled when
@@ -139,24 +158,48 @@ class Ai::Gate
 
   private
     def enter(lane, feature)
-      @monitor.synchronize do
-        holder = Holder.new(lane:, feature:, arrival: @arrivals += 1)
-        raise Ai::Error::Busy, "the local model host is busy" if holder.lane == :background && !(@waiters.empty? && room_for?(holder))
+      holder = join(lane, feature)
+      begin
+        publish
+        nil until admitted?(holder)
+      ensure
+        left_the_line(holder)
+        publish
+      end
+      holder
+    end
 
+    def join(lane, feature)
+      @monitor.synchronize do
+        holder = Holder.new(lane:, feature:, job: Ai::CallContext.correlation_id, arrival: @arrivals += 1)
         @waiters << holder
         @waiters.sort_by! { [ _1.rank, _1.arrival ] }
-        begin
-          until @waiters.first.equal?(holder) && room_for?(holder)
-            interrupt_for_interactive
-            @changed.wait
-          end
+        holder
+      end
+    end
+
+    # Gives the request its place if it's next and there's room. Otherwise it waits for the gate to
+    # change before it answers; a background request raises Busy instead.
+    def admitted?(holder)
+      @monitor.synchronize do
+        if @waiters.first.equal?(holder) && room_for?(holder)
+          @waiters.delete(holder)
           @holders << holder
           holder.admitted!
-        ensure
-          @waiters.delete(holder)
-          @changed.broadcast
+          next true
         end
-        holder
+        raise Ai::Error::Busy, "the local model host is busy" if holder.lane == :background
+
+        interrupt_for_interactive
+        @changed.wait
+        false
+      end
+    end
+
+    def left_the_line(holder)
+      @monitor.synchronize do
+        @waiters.delete(holder)
+        @changed.broadcast
       end
     end
 
@@ -165,7 +208,10 @@ class Ai::Gate
         @holders.delete(holder)
         @changed.broadcast
       end
+      publish
     end
+
+    def state = { holders: @holders.dup, waiters: @waiters.dup, interruptions: @interruptions }
 
     def room_for?(holder)
       return false if @holders.size >= size
@@ -182,6 +228,9 @@ class Ai::Gate
       @holders.reject { _1.interactive? || _1.preempted? }
               .sort_by { [ -_1.rank, -_1.since ] }
               .first(wanted)
-              .each(&:interrupt)
+              .each do |holder|
+                @interruptions += 1
+                holder.interrupt
+              end
     end
 end

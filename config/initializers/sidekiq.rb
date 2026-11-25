@@ -73,6 +73,9 @@ Sidekiq.configure_server do |config|
     config[:labels] << BackgroundJobHealth::ONE_AI_THREAD_LABEL if BackgroundJobHealth.one_ai_thread_worker?(config)
   end
 
+  # The web reads this worker's gates (Ai::Gate::State): each heartbeat, every 10 s, refreshes them.
+  config.on(:beat) { Ai::Sequencer.publish_gates }
+
   # Initialize auto-sync scheduler when Sidekiq server starts
   config.on(:startup) do
     AutoSyncScheduler.sync!
