@@ -3,7 +3,7 @@ require "test_helper"
 # Ties each background feature's `sends:` in Ai::Routes to what its payload builder
 # hands the provider. A field the builder starts sending fails here until it is
 # mapped to a declared item, and a declared item nothing sends fails too.
-class AiPayloadManifestTest < ActiveSupport::TestCase # pipelock:ignore ("AiPa…" reads as an AWS key id)
+class AiProviderPayloadManifestTest < ActiveSupport::TestCase
   include EntriesTestHelper, ProviderTestHelper
 
   # What each field of each provider argument discloses. Record ids are opaque
