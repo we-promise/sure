@@ -149,19 +149,24 @@ class Loan::AmortizationSchedule
     # degenerate run, so a loan with nothing to amortise is answered here.
     def simulation
       @simulation ||= if schedulable?
-        Loan::Simulator.new(
-          starting_balance: principal,
-          accrual_start_date: start_date,
-          payment_schedule: payment_schedule,
-          accrual_rate_for: @rate_resolver ? @rate_resolver.method(:accrual_rate_for) : ->(_date) { annual_rate },
-          re_amortisation_events: @rate_resolver&.method(:re_amortisation_events),
-          currency_precision: currency_precision,
-          day_count_convention: @day_count_convention,
-          **contracted_terms
-        ).run
+        Loan::Simulator.new(**simulator_options, **contracted_terms).run
       else
         Loan::SimulationResult.new(payments: [], currency_precision: currency_precision)
       end
+    end
+
+    # Everything a run needs except the contracted terms, factored out so the
+    # balloon sizing probes below run the same simulator the schedule does.
+    def simulator_options
+      {
+        starting_balance: principal,
+        accrual_start_date: start_date,
+        payment_schedule: payment_schedule,
+        accrual_rate_for: @rate_resolver ? @rate_resolver.method(:accrual_rate_for) : ->(_date) { annual_rate },
+        re_amortisation_events: @rate_resolver&.method(:re_amortisation_events),
+        currency_precision: currency_precision,
+        day_count_convention: @day_count_convention
+      }
     end
 
     # The simulator arguments a lender's own figures imply. With neither a
@@ -170,7 +175,8 @@ class Loan::AmortizationSchedule
     # With either, the instalment is held: the recorded one, or the level
     # payment sized so the last instalment lands on the balloon. A balloon
     # also replaces the final row with the quoted figure rather than the
-    # settlement the run would compute.
+    # settlement the run would compute -- but only when it covers that row's
+    # balance plus interest, so the instalment must be sized to guarantee it.
     def contracted_terms
       return {} if @contracted_payment.nil? && @balloon_payment.nil?
 
@@ -181,14 +187,60 @@ class Loan::AmortizationSchedule
       }
     end
 
+    # The instalment of a balloon-only loan, sized so the last row's real
+    # cost -- balance plus the period's accrued interest -- is not above the
+    # balloon. The closed formula only seeds the figure: it assumes a flat
+    # twelfth and exact arithmetic, so per-period rounding and a day-count
+    # convention can leave the last date's settlement cents or hundreds above
+    # the balloon, and a balloon that short is ignored. The correction is
+    # therefore measured against the schedule itself.
     def balloon_level_payment
-      Loan::AmortizationMath.balloon_level_payment(
+      seed = Loan::AmortizationMath.balloon_level_payment(
         balance: principal,
         monthly_rate: Loan::AmortizationMath.monthly_rate(annual_rate),
         payments: term_months,
         balloon: @balloon_payment,
         currency_precision: currency_precision
       )
+      return nil if seed.nil?
+
+      rows0, needed0 = settlement_needed(seed)
+      rows1, needed1 = settlement_needed(seed + 1)
+      slope = needed0 - needed1
+
+      # `needed` decreases (near-)linearly in the instalment. A run that
+      # cleared early has no settlement on the last date to measure, and a
+      # slope that is not positive leaves nothing to extrapolate with -- in
+      # either case the seed stands on its own.
+      return seed if rows0 < term_months || rows1 < term_months || slope <= 0
+
+      instalment = [ (seed + (needed0 - @balloon_payment) / slope).ceil(currency_precision), BigDecimal("0") ].max
+
+      # The linear estimate can still land a minor unit short when `needed`
+      # is not quite linear; walk up until the balloon provably covers.
+      minor_unit = BigDecimal(10)**-currency_precision
+      5.times do
+        _rows, needed = settlement_needed(instalment)
+        break if needed <= @balloon_payment
+        instalment += minor_unit
+      end
+
+      instalment
+    end
+
+    # What the last scheduled instalment must cover at a given held
+    # instalment: with settle_at_schedule_end the final row's payment_amount
+    # is the balance plus the period's accrued interest. Probing runs the
+    # same simulator as the schedule itself, minus the contracted terms, so
+    # the two cannot drift.
+    def settlement_needed(instalment)
+      rows = Loan::Simulator.new(
+        **simulator_options,
+        payment_strategy: :hold,
+        payment_amount: instalment
+      ).run.payments
+
+      [ rows.length, rows.last[:payment_amount] ]
     end
 
     def schedulable?

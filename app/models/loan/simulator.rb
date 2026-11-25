@@ -97,8 +97,8 @@ class Loan
       @settle_at_schedule_end = settle_at_schedule_end
       @day_count_convention = (day_count_convention || DEFAULT_DAY_COUNT_CONVENTION).to_sym
       # The total of the last scheduled instalment when the loan ends on a
-      # lump sum, replacing the settlement the run would otherwise compute --
-      # see #balloon_step.
+      # lump sum, replacing the settlement the run would otherwise compute
+      # when it covers that row's balance plus interest -- see #balloon_step.
       @final_payment = final_payment.nil? ? nil : BigDecimal(final_payment.to_s)
 
       raise ArgumentError, "payment schedule must not be empty" if @payment_schedule.empty?
@@ -198,7 +198,13 @@ class Loan
         end
         previous_sizing_rate = sizing_rate
 
-        step = if @final_payment && index == @payment_schedule.length - 1
+        # A balloon replaces the last row only when it covers what that row
+        # owes -- the balance plus the period's interest. A short balloon
+        # falls through to the ordinary branch, which settles the loan: an
+        # interest plug below the period's accrual would leave principal
+        # behind and quietly charge the borrower less than the period ran.
+        step = if @final_payment && index == @payment_schedule.length - 1 &&
+                  @final_payment >= balance + interest
           balloon_step(balance)
         else
           final = (@settle_at_schedule_end && index == @payment_schedule.length - 1) ||
@@ -242,22 +248,21 @@ class Loan
 
     private
       # The last scheduled instalment of a balloon loan: the figure the lender
-      # quotes, split as far as the balance in front of it allows. The
+      # quotes, with principal taking the whole balance in front of it. The
       # interest column is what is left after principal -- a plug, not this
       # period's accrual, which is exactly how a lender's table reads when the
-      # final instalment is a round number. A balloon that does not cover the
-      # balance leaves the rest outstanding: the run is then not converged
-      # and the remainder lands in SimulationResult's balloon_amount.
+      # final instalment is a round number. Reached only when the balloon
+      # covers balance + interest, so the plug is never below the accrual.
       def balloon_step(balance)
         payment = @final_payment.round(@currency_precision)
-        principal = [ balance, @final_payment ].min.round(@currency_precision)
+        principal = balance.round(@currency_precision)
 
         {
           payment_amount: payment,
           principal_payment: principal,
           interest_payment: (payment - principal).round(@currency_precision),
           beginning_balance: balance.round(@currency_precision),
-          ending_balance: (balance - principal).round(@currency_precision)
+          ending_balance: BigDecimal("0")
         }
       end
 

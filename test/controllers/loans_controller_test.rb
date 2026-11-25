@@ -831,6 +831,27 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal "variable", @account.loan.rate_type
   end
 
+  # Contracted and balloon payments are fixed-rate concepts -- the model
+  # rejects them on a variable loan. The fields render inside one
+  # fixed-only block, hidden server-side on a variable loan so a save
+  # without JavaScript behaves the same as the Stimulus toggle.
+  test "the edit form hides the contracted and balloon fields on a variable loan" do
+    @account.loan.update!(rate_type: "variable")
+
+    get edit_loan_path(@account)
+
+    assert_response :success
+    assert_select "[data-loan-rate-changes-target='fixedOnly'][hidden]", count: 1
+  end
+
+  test "the edit form shows the contracted and balloon fields on a fixed loan" do
+    get edit_loan_path(@account)
+
+    assert_response :success
+    assert_select "[data-loan-rate-changes-target='fixedOnly']", count: 1
+    assert_select "[data-loan-rate-changes-target='fixedOnly'][hidden]", count: 0
+  end
+
   # `disabled` used to be applied only by Stimulus, so without JavaScript the
   # sentinel submitted and the writer read it as "remove them all".
   test "the edit form of a fixed loan disables the whole rate-change section server-side" do

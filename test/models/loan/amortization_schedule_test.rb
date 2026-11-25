@@ -211,17 +211,83 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     assert_equal BigDecimal("244507.32"), schedule.total_interest.amount
   end
 
-  test "a balloon that does not cover the balance leaves the rest outstanding" do
+  # A balloon replaces the last row only when it covers what that row owes.
+  # A short one is ignored rather than split as far as it reaches: its
+  # interest plug would sit below the period's accrual and leave balance
+  # behind, so the row settles the loan normally instead.
+  test "a balloon that does not cover the balance is ignored and the last row settles" do
     schedule = build_schedule(
       principal: 3_800_000, annual_rate: 11.25, term_months: 36,
       start_date: Date.new(2023, 1, 16), contracted_payment: 69_282, balloon_payment: 2_000_000
     )
 
     last = schedule.payments.last
-    assert_equal BigDecimal("2000000"), last.payment.amount
-    assert_equal BigDecimal("2000000"), last.principal.amount
-    assert_equal BigDecimal("0"), last.interest.amount
-    assert_equal BigDecimal("413360.48"), last.ending_balance.amount
+    assert_equal BigDecimal("2435985.73"), last.payment.amount
+    assert_equal BigDecimal("2413360.48"), last.principal.amount
+    assert_equal BigDecimal("22625.25"), last.interest.amount
+    assert_equal BigDecimal("0"), last.ending_balance.amount
+  end
+
+  # The bar is balance + interest, not the balance alone: 2,435,985 covers
+  # the 2,413,360.48 outstanding but is 0.73 short of the period's accrual,
+  # so it is ignored and the last row settles at the same 2,435,985.73.
+  test "a balloon that covers the balance but not the accrued interest settles too" do
+    schedule = build_schedule(
+      principal: 3_800_000, annual_rate: 11.25, term_months: 36,
+      start_date: Date.new(2023, 1, 16), contracted_payment: 69_282, balloon_payment: 2_435_985
+    )
+
+    last = schedule.payments.last
+    assert_equal BigDecimal("2435985.73"), last.payment.amount
+    assert_equal BigDecimal("2413360.48"), last.principal.amount
+    assert_equal BigDecimal("22625.25"), last.interest.amount
+    assert_equal BigDecimal("0"), last.ending_balance.amount
+  end
+
+  # The balloon-only instalment is sized against the schedule, not just the
+  # closed formula, which assumes a flat twelfth: under actual/365 its
+  # 69,281.66 leaves the last date's balance plus accrual 538.42 above the
+  # balloon, and a balloon that short would be ignored.
+  test "a balloon alone under actual/365 sizes the instalments so the last one equals it" do
+    schedule = build_schedule(
+      principal: 3_800_000, annual_rate: 11.25, term_months: 36,
+      start_date: Date.new(2023, 1, 16), balloon_payment: 2_436_000,
+      day_count_convention: :actual_365
+    )
+
+    last = schedule.payments.last
+    assert_equal BigDecimal("2436000"), last.payment.amount
+    assert_equal BigDecimal("0"), last.ending_balance.amount
+
+    accrued = (schedule.payments[34].ending_balance.amount *
+      Loan::AmortizationMath.accrual_factor(
+        annual_percentage: 11.25,
+        period_start: schedule.payments[34].date,
+        period_end: last.date,
+        day_count_convention: :actual_365
+      )).round(2)
+    assert last.interest.amount >= accrued,
+      "the interest plug must never sit below the period's accrual (#{accrued})"
+    assert last.interest.amount - accrued < 1,
+      "and stay within a unit of it, not absorb more than the balloon allows"
+  end
+
+  # Same sizing fix under the default convention: the closed formula's
+  # instalment leaves the last date's settlement 0.27 above the balloon.
+  test "a balloon alone corrects an instalment the formula leaves cents short" do
+    schedule = build_schedule(
+      principal: 500_000, annual_rate: 6.5, term_months: 60,
+      balloon_payment: 200_000
+    )
+
+    last = schedule.payments.last
+    assert_equal BigDecimal("200000"), last.payment.amount
+    assert_equal BigDecimal("0"), last.ending_balance.amount
+
+    accrued = (schedule.payments[58].ending_balance.amount *
+      Loan::AmortizationMath.monthly_rate(6.5)).round(2)
+    assert last.interest.amount >= accrued,
+      "the interest plug must never sit below the period's accrual (#{accrued})"
   end
 
   # With nothing recorded the run is the one it always was: the fixture loan
@@ -252,7 +318,8 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
   private
     def build_schedule(principal: 500_000, annual_rate: 3.5, term_months: 360,
                        start_date: Date.new(2026, 1, 1), currency: "USD",
-                       contracted_payment: nil, balloon_payment: nil)
+                       contracted_payment: nil, balloon_payment: nil,
+                       day_count_convention: Loan::Simulator::DEFAULT_DAY_COUNT_CONVENTION)
       Loan::AmortizationSchedule.new(
         principal: principal,
         annual_rate: annual_rate,
@@ -260,7 +327,8 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
         start_date: start_date,
         currency: currency,
         contracted_payment: contracted_payment,
-        balloon_payment: balloon_payment
+        balloon_payment: balloon_payment,
+        day_count_convention: day_count_convention
       )
     end
 
