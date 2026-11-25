@@ -588,8 +588,10 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_select "[data-portfolio-issue-kind='negative_position'] li .privacy-sensitive", text: /-3/
-    assert_select "[data-portfolio-issue-kind='missing_cost_basis'] li", text: /MSFT.*#{I18n.t("portfolios.data_quality.read_only")}/m
     assert_select "[data-portfolio-issue-kind='missing_cost_basis'] a[href=?]", holding_path(holding), count: 0
+    # The account is the user's own, so the row must not call it read-only.
+    assert_select "[data-portfolio-issue-kind='missing_cost_basis'] li", text: /MSFT/
+    assert_select "[data-portfolio-issue-kind='missing_cost_basis'] li", text: /#{I18n.t("portfolios.data_quality.read_only")}/, count: 0
   end
 
   # The section renders every kind the statement can return, so each needs

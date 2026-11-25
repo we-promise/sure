@@ -29,10 +29,10 @@
                       read-only shared account or a short position the row
                       still names the problem; it just does not offer an
                       action that would be refused. %>
-                  <% if writable_account_ids.include?(issue.holding.account_id) && issue.holding.qty.positive? %>
-                    <%= render DS::Link.new(text: t("portfolios.data_quality.set_cost_basis"), href: holding_path(issue.holding), variant: :default, frame: :drawer) %>
-                  <% else %>
+                  <% if !writable_account_ids.include?(issue.holding.account_id) %>
                     <span class="text-subdued"><%= t("portfolios.data_quality.read_only") %></span>
+                  <% elsif issue.holding.qty.positive? %>
+                    <%= render DS::Link.new(text: t("portfolios.data_quality.set_cost_basis"), href: holding_path(issue.holding), variant: :default, frame: :drawer) %>
                   <% end %>
                 <% end %>
               <% when :stale_price %>
