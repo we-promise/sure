@@ -21,7 +21,7 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
       rows: simulation.rows, current_assets: inputs[:current_assets], fi_number: fi_number,
       expected_annual_return: inputs[:expected_annual_return], inflation_rate: inputs[:inflation_rate],
       retirement_year: retirement_year, path_retirement_year: simulation.retirement_year,
-      first_year: AS_OF.year, birth_year: inputs[:birth_year]
+      first_year: inputs[:as_of].year, first_year_fraction: simulation.first_year_fraction, birth_year: inputs[:birth_year]
     )
   end
 
@@ -64,6 +64,16 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
     # 270,421.19 against 300,000 x (1.03 / 1.05)^7 = 262,214.52; 2037's
     # 255,746.50 falls short of 257,219.96. At the nominal rate it would be 2028.
     assert_equal 2038, find(list, "coast").year
+  end
+
+  # From 31 December, today's 115,000 has one day of 2026 and 2027 to 2045
+  # to grow, about 19 years, not 20: 300,000 / 1.05^19.003 is 118,705, so
+  # it has not coasted yet. Counting 2026 as a whole year would set the bar
+  # at 300,000 / 1.05^20 = 113,067 and call it reached.
+  test "Coast FI already reached counts only the part of this year left" do
+    m = find(milestones(as_of: Date.new(2026, 12, 31), current_assets: 115_000).all, "coast")
+
+    assert_not m.reached_already
   end
 
   test "Coast FI counts only the saving years, so a portfolio that only grows past the target after retiring never coasted" do
