@@ -269,10 +269,7 @@ class RetirementPlanTest < ActiveSupport::TestCase
     projection = plan.projection(as_of: AS_OF)
 
     assert_equal BigDecimal("240000"), projection.fi_number
-    assert_equal BigDecimal("0.07"), projection.expected_annual_return
     assert_equal BigDecimal("0.3"), projection.effective_savings_rate
-    assert_equal 10, projection.years_to_retirement
-    assert_equal AS_OF, projection.as_of
   end
 
   test "the plan's figures come from its own user, never the current request" do

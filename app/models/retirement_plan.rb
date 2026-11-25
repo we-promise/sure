@@ -72,14 +72,11 @@ class RetirementPlan < ApplicationRecord
     current_assets = assets_as_of(as_of).total
 
     RetirementPlan::Projection.new(
-      as_of: as_of,
       annual_expenses: income_statement.median_expense(interval: "month", excluding_kinds: SAVING_KINDS).to_d * 12,
       annual_income: income_statement.median_income(interval: "month").to_d * 12,
       current_assets: current_assets,
       safe_withdrawal_rate: safe_withdrawal_rate,
-      expected_annual_return: expected_annual_return,
-      savings_rate: savings_rate,
-      retirement_date: retirement_date
+      savings_rate: savings_rate
     )
   end
 
