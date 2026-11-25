@@ -1,7 +1,9 @@
 require "test_helper"
 
 class RetirementPlan::MonteCarloTest < ActiveSupport::TestCase
-  AS_OF = Date.new(2026, 3, 15)
+  # 1 January, so the first year is whole; the tests on the first year's
+  # fraction set their own date.
+  AS_OF = Date.new(2026, 1, 1)
   Stream = RetirementPlan::Simulation::Stream
 
   # Born 1980, end age 70 (2050). 400,000 at 5%, 20,000 a year saved until
@@ -10,7 +12,7 @@ class RetirementPlan::MonteCarloTest < ActiveSupport::TestCase
     {
       as_of: AS_OF, current_assets: 400_000, annual_contribution: 20_000,
       expected_annual_return: BigDecimal("0.05"), inflation_rate: BigDecimal("0.02"),
-      streams: [ Stream.new(kind: "expense", annual_amount: 30_000) ],
+      streams: [ Stream.new(kind: "expense", annual_amount: 30_000, seeded: true) ],
       birth_year: 1980, end_age: 70
     }.merge(overrides)
   end
@@ -36,15 +38,28 @@ class RetirementPlan::MonteCarloTest < ActiveSupport::TestCase
       monte_carlo(volatility: 0, retirement_year: 2100, **overrides) ]
   end
 
+  # From 2 July only part of 2026 is left, and the Simulation counts only
+  # that part; with no volatility every path must too.
   test "with no volatility every path is the deterministic projection, to the cent" do
-    deterministic = RetirementPlan::Simulation.new(**inputs, retirement_year: 2036)
-    mc = monte_carlo(volatility: 0)
+    [ AS_OF, Date.new(2026, 7, 2) ].each do |as_of|
+      deterministic = RetirementPlan::Simulation.new(**inputs(as_of:), retirement_year: 2036)
+      mc = monte_carlo(volatility: 0, as_of:)
 
-    expected = deterministic.rows.map { |row| row.end_value_real.round(2) }
-    RetirementPlan::MonteCarlo::PERCENTILES.each do |p|
-      assert_equal expected, mc.percentiles.fetch(p).map { |v| v.to_d.round(2) }, "p#{p}"
+      expected = deterministic.rows.map { |row| row.end_value_real.round(2) }
+      RetirementPlan::MonteCarlo::PERCENTILES.each do |p|
+        assert_equal expected, mc.percentiles.fetch(p).map { |v| v.to_d.round(2) }, "p#{p} from #{as_of}"
+      end
+      assert_equal (deterministic.survives? ? 1.0 : 0.0), mc.success_rate
     end
-    assert_equal (deterministic.survives? ? 1.0 : 0.0), mc.success_rate
+  end
+
+  # From 31 December one day of 2026 is left, so its returns spread by
+  # sigma x sqrt(1/365), about 0.6%, not a whole year's 12%.
+  test "the first year's returns vary over only the part of the year left" do
+    mc = monte_carlo(as_of: Date.new(2026, 12, 31), annual_contribution: 0)
+    first_year = mc.percentiles.values_at(10, 90).map(&:first)
+
+    assert_operator first_year.last / first_year.first, :<, 1.02
   end
 
   # Float replay of cent amounts: 30,000.30 less 10,000.10 is
@@ -86,8 +101,8 @@ class RetirementPlan::MonteCarloTest < ActiveSupport::TestCase
   # meet (it lasts up to 61,473), so about half the paths fall short once
   # returns vary.
   test "the success rate is the share of paths that last, so a plan that only just lasts on expected returns is a coin flip" do
-    tight = monte_carlo(streams: [ Stream.new(kind: "expense", annual_amount: 61_000) ])
-    deterministic = RetirementPlan::Simulation.new(**inputs(streams: [ Stream.new(kind: "expense", annual_amount: 61_000) ]), retirement_year: 2036)
+    tight = monte_carlo(streams: [ Stream.new(kind: "expense", annual_amount: 61_000, seeded: true) ])
+    deterministic = RetirementPlan::Simulation.new(**inputs(streams: [ Stream.new(kind: "expense", annual_amount: 61_000, seeded: true) ]), retirement_year: 2036)
 
     assert deterministic.survives?, "the fixture must just last on expected returns"
     assert_operator tight.success_rate, :>, 0.3
@@ -125,7 +140,7 @@ class RetirementPlan::MonteCarloTest < ActiveSupport::TestCase
   end
 
   test "the worst-first ordering of the same returns never succeeds more often" do
-    mc = monte_carlo(streams: [ Stream.new(kind: "expense", annual_amount: 61_000) ])
+    mc = monte_carlo(streams: [ Stream.new(kind: "expense", annual_amount: 61_000, seeded: true) ])
 
     assert_operator mc.stress_success_rate, :<, mc.success_rate
   end
@@ -153,7 +168,7 @@ class RetirementPlan::MonteCarloTest < ActiveSupport::TestCase
   end
 
   test "the heatmap never lowers success for a higher return or savings rate, and its centre is the plain success rate" do
-    mc = monte_carlo(streams: [ Stream.new(kind: "expense", annual_amount: 61_000) ])
+    mc = monte_carlo(streams: [ Stream.new(kind: "expense", annual_amount: 61_000, seeded: true) ])
     grid = mc.heatmap
 
     assert_equal 5, grid.size
