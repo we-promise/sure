@@ -385,6 +385,17 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.exchange_rate_provider = nil
   end
 
+  test "the exchange-rate select shows a padded, capitalised ENV provider" do
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => " Frankfurter ") do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "select#setting_exchange_rate_provider[disabled] option[selected][value=frankfurter]"
+      end
+    end
+  end
+
   test "the exchange-rate select shows the saved setting when ENV is unset" do
     Setting.exchange_rate_provider = "frankfurter"
 

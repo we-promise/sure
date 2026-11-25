@@ -45,6 +45,20 @@ class ExchangeRateTest < ActiveSupport::TestCase
     Setting.exchange_rate_provider = nil
   end
 
+  test "a padded or capitalised ENV provider resolves to its registry name" do
+    ExchangeRate.unstub(:provider)
+    Setting.exchange_rate_provider = "twelve_data"
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => " Frankfurter ") do
+      assert_equal "frankfurter", ExchangeRate.configured_provider_name
+      assert_equal "frankfurter", ExchangeRate.provider_name
+      assert_not ExchangeRate.fallback_provider?
+      assert_instance_of Provider::Frankfurter, ExchangeRate.configured_provider
+    end
+  ensure
+    Setting.exchange_rate_provider = nil
+  end
+
   test "keyless fallback on a signed-in request tries Frankfurter once, then skips it for a minute" do
     keyless_fallback(signed_in: true) do
       stub_request(:get, %r{/rate/SEK/JPY}).to_timeout

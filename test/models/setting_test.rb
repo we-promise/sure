@@ -361,6 +361,19 @@ class SettingTest < ActiveSupport::TestCase
     end
   end
 
+  test "the exchange-rate default ignores padding and case in ENV" do
+    Setting.where(var: "exchange_rate_provider").delete_all
+    Setting.clear_cache
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => " Frankfurter ") do
+      assert_equal "frankfurter", Setting.exchange_rate_provider
+    end
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "  ") do
+      assert_equal "twelve_data", Setting.exchange_rate_provider
+    end
+  end
+
   test "a saved exchange-rate provider wins over the ENV default" do
     Setting.exchange_rate_provider = "frankfurter"
 
