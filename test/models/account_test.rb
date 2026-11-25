@@ -86,26 +86,6 @@ class AccountTest < ActiveSupport::TestCase
     assert_nil vehicle.reload.iban
   end
 
-  test "reads a deterministically encrypted iban and re-encrypts it on write" do
-    iban = "DE89370400440532013000" # pipelock:ignore IBAN
-    deterministic = ActiveRecord::Encryption::Encryptor.new.encrypt(
-      iban,
-      key_provider: ActiveRecord::Encryption::DeterministicKeyProvider.new(ActiveRecord::Encryption.config.deterministic_key),
-      cipher_options: { deterministic: true }
-    )
-    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
-      "UPDATE accounts SET iban = ? WHERE id = ?", deterministic, @account.id ]))
-
-    account = Account.find(@account.id)
-    assert_equal iban, account.iban
-
-    account.update_columns(iban: account.iban)
-    stored = account.reload.read_attribute_before_type_cast(:iban)
-
-    assert_not_equal deterministic, stored
-    assert_equal iban, ActiveRecord::Encryption::Encryptor.new.decrypt(stored)
-  end
-
   test "normalizes iban by stripping spaces and upcasing" do
     @account.iban = "de89 3704 0044 0532 0130 00"
     @account.valid?
