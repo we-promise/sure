@@ -1,0 +1,9 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        sophtron_item:
+          attributes:
+            base_url:
+              official_hosts_only: "må være tom eller https://api.sophtron.com/api"

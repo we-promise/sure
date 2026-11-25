@@ -8,7 +8,8 @@
 # when it doesn't know the brand, and a failed image removes itself to reveal
 # the fallback.
 class ProviderLogo < ApplicationComponent
-  REMOVE_ON_ERROR = "this.remove()".freeze
+  # An inline onerror handler would be blocked by the Content-Security-Policy.
+  REMOVE_ON_ERROR = { controller: "image-fallback", action: "error->image-fallback#remove" }.freeze
 
   def initialize(provider_key:, class_name: "w-8 h-8 rounded-full")
     @provider_key = provider_key
