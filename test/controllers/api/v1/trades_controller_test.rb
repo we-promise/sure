@@ -1256,6 +1256,215 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert trade_data.key?("notes")
   end
 
+  test "show exposes the fee and the exchange rate stored on the trade" do
+    security = Security.create!(ticker: "TAXF", name: "Tax Fields Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 1001.25,
+      name: "Buy TAXF",
+      currency: "EUR",
+      entryable: Trade.new(
+        security: security,
+        qty: 10,
+        price: 100,
+        fee: 1.2534,
+        currency: "EUR",
+        investment_activity_label: "Buy",
+        extra: { "exchange_rate" => 0.9123, "provider_raw" => { "account_number" => "U1234567" } }
+      )
+    )
+
+    get api_v1_trade_url(entry.entryable), headers: api_headers(read_only_api_key)
+    assert_response :success
+
+    body = JSON.parse(response.body)
+    assert_equal "1.2534", body["fee_decimal"]
+    assert_equal Money.new(BigDecimal("1.2534"), "EUR").format, body["fee"]
+    assert_equal 0.9123, body["exchange_rate"]
+    assert_not body.key?("extra")
+    assert_not_includes response.body, "U1234567"
+  end
+
+  test "index returns a zero fee and a null exchange rate when the trade has none" do
+    security = Security.create!(ticker: "TAXN", name: "No Rate Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 500,
+      name: "Buy TAXN",
+      currency: "USD",
+      entryable: Trade.new(security: security, qty: 5, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+
+    get api_v1_trades_url, params: { account_id: @investment_account.id, per_page: 100 }, headers: api_headers(read_only_api_key)
+    assert_response :success
+
+    trade_json = JSON.parse(response.body)["trades"].find { |trade| trade["id"] == entry.entryable.id }
+    assert trade_json
+    assert_equal "0.0", trade_json["fee_decimal"]
+    assert trade_json.key?("exchange_rate")
+    assert_nil trade_json["exchange_rate"]
+  end
+
+  test "show and index return a null exchange rate instead of failing when extra is not a hash" do
+    security = Security.create!(ticker: "TAXX", name: "Malformed Extra Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 500,
+      name: "Buy TAXX",
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 5, price: 100, currency: "EUR", investment_activity_label: "Buy")
+    )
+    trade = entry.entryable
+
+    [ [ 1, 2 ], "raw-string-extra" ].each do |malformed|
+      # Written past the model, as a provider or a migration writing SQL might.
+      trade.update_column(:extra, malformed)
+
+      get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+      assert_response :success, "show failed for extra = #{malformed.inspect}"
+      assert_nil JSON.parse(response.body)["exchange_rate"]
+
+      get api_v1_trades_url, params: { account_id: @investment_account.id, per_page: 100 }, headers: api_headers(read_only_api_key)
+      assert_response :success, "index failed for extra = #{malformed.inspect}"
+      trade_json = JSON.parse(response.body)["trades"].find { |row| row["id"] == trade.id }
+      assert trade_json
+      assert_nil trade_json["exchange_rate"]
+    end
+  end
+
+  test "exchange rate is read the way the app converts it and only where it applies" do
+    security = Security.create!(ticker: "TAXR", name: "Rate Parsing Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 500,
+      name: "Buy TAXR",
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 5, price: 100, currency: "EUR", investment_activity_label: "Buy")
+    )
+    trade = entry.entryable
+
+    # Float() would read "0x10" as 16; the app's to_d reads it as 0 and
+    # refuses to convert with it.
+    trade.update_column(:extra, { "exchange_rate" => "0x10" })
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_response :success
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+
+    trade.update_column(:extra, { "exchange_rate" => "1.0850" })
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_equal 1.085, JSON.parse(response.body)["exchange_rate"]
+
+    # A trade in the account's own currency is never converted, so a stored
+    # rate on it is not exposed.
+    entry.update_columns(currency: @investment_account.currency)
+    trade.update_columns(currency: @investment_account.currency, extra: { "exchange_rate" => 1.085 })
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+  end
+
+  # The cost basis converts price and fee from trade.currency with the stored
+  # rate (Holding::TradeCalculatorHelpers), and the web form and
+  # PATCH /api/v1/trades/:id change entry.currency without touching
+  # trade.currency, so the rate stays tied to the trade's currency there. The
+  # cash balance (Balance::SyncCache) converts the amount from the entry's
+  # currency with the same rate.
+  test "exchange rate stays tied to the trade's currency when the entry's currency changes" do
+    security = Security.create!(ticker: "TAXC", name: "Currency Mismatch Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 100,
+      name: "Buy TAXC",
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "EUR", investment_activity_label: "Buy",
+        extra: { "exchange_rate" => 1.1 })
+    )
+    trade = entry.entryable
+
+    patch api_v1_trade_url(trade), params: { trade: { currency: "GBP" } }, headers: api_headers(read_write_api_key)
+    assert_response :success
+    assert_equal "GBP", entry.reload.currency
+    assert_equal "EUR", trade.reload.currency
+    assert_equal 110, Money.new(trade.price, trade.currency).exchange_to("USD", custom_rate: trade.exchange_rate).amount,
+      "the cost basis converts from the trade's currency with the stored rate"
+
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal 1.1, body["exchange_rate"]
+    assert_equal "EUR", body["currency"]
+    assert_equal "GBP", body["amount_currency"]
+
+    get api_v1_trades_url, params: { account_id: @investment_account.id, per_page: 100 }, headers: api_headers(read_only_api_key)
+    assert_response :success
+    trade_json = JSON.parse(response.body)["trades"].find { |row| row["id"] == trade.id }
+    assert_equal 1.1, trade_json["exchange_rate"]
+    assert_equal "GBP", trade_json["amount_currency"]
+
+    # Moving the entry into the account's currency leaves the rate the cost
+    # basis still applies.
+    patch api_v1_trade_url(trade), params: { trade: { currency: @investment_account.currency } }, headers: api_headers(read_write_api_key)
+    assert_response :success
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_equal 1.1, JSON.parse(response.body)["exchange_rate"]
+
+    # The other way round, the cost basis never applies the rate but the cash
+    # balance converts the amount from the entry's currency with it.
+    entry.update_columns(currency: "EUR")
+    trade.update_columns(currency: @investment_account.currency)
+    assert_equal 110, entry.reload.amount_money.exchange_to("USD", custom_rate: trade.reload.exchange_rate).amount,
+      "the cash balance converts from the entry's currency with the stored rate"
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    body = JSON.parse(response.body)
+    assert_equal 1.1, body["exchange_rate"]
+    assert_equal "USD", body["currency"]
+    assert_equal "EUR", body["amount_currency"]
+
+    # With both in the account's currency, neither path applies it.
+    entry.update_columns(currency: @investment_account.currency)
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+  end
+
+  test "exchange rate compares currency codes regardless of case" do
+    security = Security.create!(ticker: "TAXL", name: "Lower Case Currency Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 100,
+      name: "Buy TAXL",
+      currency: "usd",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "usd", investment_activity_label: "Buy",
+        extra: { "exchange_rate" => 1.1 })
+    )
+    assert_equal 100, entry.amount_money.exchange_to("USD", custom_rate: entry.entryable.exchange_rate).amount,
+      "Money treats usd as the account's currency"
+
+    get api_v1_trade_url(entry.entryable), headers: api_headers(read_only_api_key)
+    assert_response :success
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+  end
+
+  # A stored decimal can be positive and finite yet become 0.0 or Infinity
+  # as a Float, which is what the response carries.
+  test "exchange rate is null when the stored value does not fit a Float" do
+    security = Security.create!(ticker: "TAXF", name: "Float Range Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 100,
+      name: "Buy TAXF",
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "EUR", investment_activity_label: "Buy")
+    )
+    trade = entry.entryable
+
+    [ "1e-400", "1e400" ].each do |stored|
+      trade.update_column(:extra, { "exchange_rate" => stored })
+      get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+      assert_response :success
+      assert_nil JSON.parse(response.body)["exchange_rate"], stored
+      assert_nil trade.reload.numeric_exchange_rate, stored
+    end
+  end
+
   test "a member cannot list, read, change or add trades on accounts they cannot reach" do
     member = users(:family_member)
     member.api_keys.active.destroy_all

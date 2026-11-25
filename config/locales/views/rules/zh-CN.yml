@@ -70,6 +70,8 @@ zh-CN:
       on_or_after: "%{resource} 在 %{date} 当日或之后"
       stop_processing: 停止
       stop_processing_hint: 列表靠后的规则不会更改此规则匹配的交易。
+      apply_immediately: 立即
+      apply_immediately_hint: 在手动创建或编辑交易、批量编辑、分类页面、通过 API 或由助手操作后，连同其上方处于激活状态的规则一起立即运行。
     form:
       rule_name_label: 规则名称（可选）
       rule_name_placeholder: 为此规则输入名称
@@ -81,6 +83,8 @@ zh-CN:
       then: 然后
       stop_processing_label: 停止处理后续规则
       stop_processing_description: 列表中靠后的规则不会更改此规则匹配的交易。
+      apply_immediately_label: 立即应用于新增和更改的交易
+      apply_immediately_description: 在手动创建或编辑交易、批量编辑、分类页面、通过 API 或由助手操作后立即运行，并仍会在夜间运行。
       group_label: 分组（可选）
       group_select_label: 分组
       no_group: 无分组
@@ -173,6 +177,7 @@ zh-CN:
       execution_types:
         manual: 手动
         scheduled: 定时
+        immediate: 立即
       statuses:
         pending: 待处理
         success: 成功
@@ -184,6 +189,8 @@ zh-CN:
       confirm_button: 重置缓存
       success: AI 缓存正在清除，这可能需要一点时间。
     condition_filters:
+      transaction_additional_detail:
+        label: 其他详情（键=值）
       transaction_type:
         income: 收入
         expense: 支出

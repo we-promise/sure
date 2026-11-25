@@ -852,6 +852,23 @@ class QifImportTest < ActiveSupport::TestCase
     assert supplies.import_locked?
   end
 
+  test "revert removes split transactions imported into an existing account" do
+    @import.update!(raw_file_str: QIF_WITH_SPLITS)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_difference "Entry.count", 4 do
+      @import.import!
+    end
+
+    assert_difference "Entry.count", -4 do
+      @import.revert
+    end
+
+    assert @import.reload.pending?, @import.error
+    assert_empty @import.entries
+  end
+
   test "import! creates split children from QIF split lines with detected non-default date format" do
     qif = <<~QIF
       !Type:Bank

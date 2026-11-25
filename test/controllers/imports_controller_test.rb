@@ -29,7 +29,10 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_select "turbo-frame#modal"
-    assert_select "form[data-turbo-frame=_top] input[type=file][onchange='this.form.requestSubmit()']", count: 2
+    # The file inputs submit through the auto-submit-form controller rather
+    # than an inline onchange handler, which the Content Security Policy blocks.
+    assert_select "form[data-turbo-frame=_top][data-controller~=auto-submit-form] input[type=file][data-auto-submit-form-target=auto]", count: 2
+    assert_select "input[type=file][onchange]", count: 0
   end
 
   # DS::Button with an href renders button_to, which POSTs unless given a
@@ -473,6 +476,17 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_import_url
     assert_equal Ai::Availability.unavailable(:embed, :not_configured).message_for(@user), flash[:alert]
+  end
+
+  test "a document upload by a user with AI off sends nothing to the vector store" do
+    use_ai_routes
+    @user.update!(ai_enabled: false)
+    Family.any_instance.expects(:upload_document).never
+
+    post imports_url, params: { import: { type: "DocumentImport", import_file: file_fixture_upload("imports/valid.csv", "text/csv") } }
+
+    assert_redirected_to new_import_url
+    assert_equal Ai::Availability.unavailable(:embed, :user_disabled).message_for(@user), flash[:alert]
   end
 
   test "a document upload says no store is configured when the embed route is set but the store can't be built" do
