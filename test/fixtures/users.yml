@@ -116,7 +116,7 @@ josh:
   first_name: Josh
   last_name: Tester
   email: josh@example.com
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  password_digest: $2a$04$YSnEVJ2Qcx1scJFvJWGz3e7oNnG7GGIPfh9AcuLrCDjH.yh4f25lu
   onboarded_at: <%= 2.days.ago %>
   role: member
   ai_enabled: true
@@ -128,7 +128,7 @@ ann:
   first_name: Ann
   last_name: Tester
   email: ann@example.com
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  password_digest: $2a$04$YSnEVJ2Qcx1scJFvJWGz3e7oNnG7GGIPfh9AcuLrCDjH.yh4f25lu
   onboarded_at: <%= 2.days.ago %>
   role: member
   ai_enabled: true

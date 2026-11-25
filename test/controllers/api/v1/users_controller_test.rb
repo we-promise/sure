@@ -163,8 +163,8 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     solo_family = Family.create!(name: "Solo Family", currency: "USD", locale: "en", date_format: "%m-%d-%Y")
     solo_user = solo_family.users.create!(
       email: "solo@example.com",
-      password: "password123",
-      password_confirmation: "password123",
+      password: "Password123!",
+      password_confirmation: "Password123!",
       role: :admin
     )
     solo_api_key = ApiKey.create!(
