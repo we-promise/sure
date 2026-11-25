@@ -9,8 +9,6 @@ class RecurringTransaction::SuggestionTest < ActiveSupport::TestCase
     @family.recurring_transactions.destroy_all
     @entry = create_entry(name: "GYM MEMBERSHIP", amount: 40, date: Date.current)
     use_ai_routes
-    # The broadcast's frame src is added with the routes in the next step.
-    RecurringTransaction::Suggestion.any_instance.stubs(:broadcast_result)
   end
 
   test "the job rechecks consent and fails with the router's reason" do
@@ -32,6 +30,57 @@ class RecurringTransaction::SuggestionTest < ActiveSupport::TestCase
 
     assert suggestion.failed?
     assert_includes suggestion.error, "no JSON"
+  end
+
+  test "a late answer or failure cannot overwrite a stopped suggestion" do
+    stub_ai(:bill_setup, returns: raw(name: "Too late"))
+    suggestion = fill_suggestion
+    answer = suggestion.ai_generation.call
+    suggestion.update!(status: :cancelled)
+
+    assert_equal 0, suggestion.apply_ai(answer)
+    suggestion.ai_failed(StandardError.new("late failure"))
+    suggestion.ai_failed(Ai::Error::Cancelled.new("cancelled"))
+
+    assert suggestion.reload.cancelled?
+    assert_nil suggestion.result
+    assert_nil suggestion.error
+  end
+
+  test "a cancellation error does not fail a pending suggestion" do
+    suggestion = fill_suggestion
+
+    suggestion.ai_failed(Ai::Error::Cancelled.new("cancelled"))
+
+    assert suggestion.reload.pending?
+    assert_nil suggestion.error
+  end
+
+  test "a failed suggestion is not overwritten by a late answer" do
+    stub_provider(raw(name: "Too late"))
+    suggestion = fill_suggestion
+    answer = suggestion.ai_generation.call
+    suggestion.update!(status: :failed, error: "already failed")
+
+    assert_equal 0, suggestion.apply_ai(answer)
+    assert_equal "already failed", suggestion.reload.error
+    assert_nil suggestion.result
+  end
+
+  test "the answer is broadcast as a frame pointing at the stored result" do
+    stub_provider(raw(name: "Gym"))
+    suggestion = fill_suggestion
+    answer = suggestion.ai_generation.call
+    html = nil
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).with do |*args|
+      options = args.last
+      html = options[:html]
+      args.first == suggestion && options[:target] == ActionView::RecordIdentifier.dom_id(suggestion)
+    end
+
+    suggestion.apply_ai(answer)
+
+    assert_includes html, "src=\"/recurring_transactions/smart_fills/#{suggestion.id}\""
   end
 
   test "sends the charges and the family's categories through the bill_setup prompt" do

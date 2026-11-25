@@ -138,6 +138,18 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_select "input[name=_method][value=delete]", count: 0
   end
 
+  test "a job that finishes after Stop leaves the cancelled suggestion alone" do
+    stub_provider(raw(name: "Too late"))
+    suggestion = start_pending_suggestion
+
+    delete recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
+    perform_enqueued_jobs(only: Ai::GenerationJob)
+
+    assert suggestion.reload.cancelled?
+    assert_nil suggestion.result
+    assert_nil suggestion.error
+  end
+
   test "Stop on a finished suggestion changes nothing and reloads show" do
     stub_provider(raw(name: "Gym Membership"))
     suggestion = start_suggestion

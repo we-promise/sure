@@ -53,17 +53,33 @@ class RecurringTransaction::Suggestion < ApplicationRecord
     )
   end
 
+  # Under the row lock, so a Stop that lands while the answer is in flight wins:
+  # a cancelled suggestion keeps its status and never broadcasts an answer.
   def apply_ai(result)
     normalized = normalize(result.value)
-    update!(result: normalized.to_h, status: :complete, error: nil)
-    broadcast_result
-    1
+    applied = false
+    with_lock do
+      next unless pending?
+
+      update!(result: normalized.to_h, status: :complete, error: nil)
+      applied = true
+    end
+    broadcast_result if applied
+    applied ? 1 : 0
   end
 
   def ai_failed(error)
+    return if error.is_a?(Ai::Error::Cancelled)
+
     message = error.respond_to?(:reason) ? error.reason.to_s : error.message
-    update!(status: :failed, error: message)
-    broadcast_result
+    failed = false
+    with_lock do
+      next unless pending?
+
+      update!(status: :failed, error: message)
+      failed = true
+    end
+    broadcast_result if failed
   end
 
   def ai_cancelled? = reload.cancelled?
