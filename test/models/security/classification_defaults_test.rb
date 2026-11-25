@@ -273,6 +273,19 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
     assert_nil security.development_status
   end
 
+  # Neither exchange confirmed the hint, so the region on the row did not come
+  # from it and the move has nothing to take back.
+  test "a hint moved between exchanges that never confirmed it keeps its region" do
+    Security.expects(:search_provider).returns([])
+    security = Security::Resolver.new("REG-UNCONFIRMED-MOVE", exchange_operating_mic: "XNAS", country_code: "GB").resolve
+    security.update!(offline: false, region: "europe")
+
+    security.update!(exchange_operating_mic: "XNYS")
+
+    assert security.country_hint?
+    assert_equal "europe", security.reload.region
+  end
+
   # Rows stored before an alias was mapped keep it until a remap, and the
   # exchange is the same venue either way.
   test "a legacy MIC alias confirms a hint as its canonical exchange does" do

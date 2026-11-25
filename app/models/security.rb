@@ -533,9 +533,11 @@ class Security < ApplicationRecord
       # classify. The hint stays on the row once it comes online (a health
       # check or a remap prices it), so `country_source` marks it too. A hint
       # its new exchange no longer confirms takes back the region it gave,
-      # unless the same save sets the region.
+      # unless the same save sets the region. A hint the old exchange did not
+      # confirm gave no region, so there is nothing to take back.
       if country_hint?
-        self.region = nil if exchange_operating_mic_changed? && !region_changed? && region == REGIONS.dig(country_code.to_s.upcase, "region")
+        confirmed_before = EXCHANGES.dig(self.class.canonical_exchange_operating_mic(exchange_operating_mic_was), "country") == country_code.to_s.upcase
+        self.region = nil if exchange_operating_mic_changed? && confirmed_before && !region_changed? && region == REGIONS.dig(country_code.to_s.upcase, "region")
         return
       end
       return if offline?
