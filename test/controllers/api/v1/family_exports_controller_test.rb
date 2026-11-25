@@ -57,6 +57,18 @@ class Api::V1::FamilyExportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @family.family_exports.count, json_response["meta"]["total_count"]
   end
 
+  test "paginates family exports and caps per_page at 100" do
+    get api_v1_family_exports_url, params: { per_page: 150 }, headers: api_headers(@read_only_api_key)
+    assert_response :success
+    assert_equal 100, JSON.parse(response.body)["meta"]["per_page"]
+
+    get api_v1_family_exports_url, params: { per_page: "abc", page: 0 }, headers: api_headers(@read_only_api_key)
+    assert_response :success
+    meta = JSON.parse(response.body)["meta"]
+    assert_equal 25, meta["per_page"]
+    assert_equal 1, meta["page"]
+  end
+
   test "shows a family export" do
     export = @family.family_exports.create!(status: "completed")
     export.export_file.attach(

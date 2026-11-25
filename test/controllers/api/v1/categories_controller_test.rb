@@ -120,6 +120,61 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "roots_only reads true and false strictly" do
+    get "/api/v1/categories", params: { roots_only: " TRUE " }, headers: api_headers(read_only_api_key)
+    assert_response :success
+    names = JSON.parse(response.body)["categories"].map { |c| c["name"] }
+    assert_includes names, @category.name
+    assert_not_includes names, @subcategory.name
+
+    get "/api/v1/categories", params: { roots_only: "0", per_page: 100 }, headers: api_headers(read_only_api_key)
+    assert_response :success
+    assert_includes JSON.parse(response.body)["categories"].map { |c| c["name"] }, @subcategory.name
+  end
+
+  test "rejects a roots_only that is not a boolean" do
+    [ "yes", "on", "" ].each do |value|
+      get "/api/v1/categories", params: { roots_only: value }, headers: api_headers(read_only_api_key)
+
+      assert_response :unprocessable_entity
+      body = JSON.parse(response.body)
+      assert_equal "validation_failed", body["error"]
+      assert_equal [ "roots_only must be true or false" ], body["errors"]
+    end
+  end
+
+  test "should filter by parent" do
+    get "/api/v1/categories", params: { parent_id: @category.id }, headers: api_headers(read_only_api_key)
+
+    assert_response :success
+    assert_equal [ @subcategory.id ], JSON.parse(response.body)["categories"].map { |c| c["id"] }
+  end
+
+  test "rejects a parent_id that is not a UUID" do
+    get "/api/v1/categories", params: { parent_id: "not-a-uuid" }, headers: api_headers(read_only_api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal [ "parent_id must be a valid UUID" ], JSON.parse(response.body)["errors"]
+  end
+
+  test "parent filter does not reach another family's subcategories" do
+    other_family = families(:empty)
+    other_parent = other_family.categories.create!(name: "Other Parent", color: "#22c55e", lucide_icon: "shapes")
+    other_family.categories.create!(name: "Other Child", color: "#22c55e", lucide_icon: "shapes", parent: other_parent)
+
+    get "/api/v1/categories", params: { parent_id: other_parent.id }, headers: api_headers(read_only_api_key)
+
+    assert_response :success
+    assert_empty JSON.parse(response.body)["categories"]
+  end
+
+  test "caps per_page at 100" do
+    get "/api/v1/categories", params: { per_page: 150 }, headers: api_headers(read_only_api_key)
+
+    assert_response :success
+    assert_equal 100, JSON.parse(response.body)["pagination"]["per_page"]
+  end
+
   test "should sort categories alphabetically" do
     get "/api/v1/categories", params: {}, headers: api_headers(read_only_api_key)
 

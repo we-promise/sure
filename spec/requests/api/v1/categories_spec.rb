@@ -68,7 +68,7 @@ RSpec.describe 'API V1 Categories', type: :request do
       parameter name: :per_page, in: :query, type: :integer, required: false,
                 description: 'Items per page (default: 25, max: 100)'
       parameter name: :roots_only, in: :query, required: false,
-                description: 'Return only root categories (no parent)',
+                description: 'Return only root categories (no parent). Accepts true, false, 1 or 0',
                 schema: { type: :boolean }
       parameter name: :parent_id, in: :query, required: false,
                 description: 'Filter by parent category ID',
@@ -92,6 +92,14 @@ RSpec.describe 'API V1 Categories', type: :request do
         schema '$ref' => '#/components/schemas/CategoryCollection'
 
         let(:parent_id) { parent_category.id }
+
+        run_test!
+      end
+
+      response '422', 'invalid filter' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:parent_id) { 'not-a-uuid' }
 
         run_test!
       end
