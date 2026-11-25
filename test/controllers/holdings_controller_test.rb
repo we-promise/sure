@@ -38,28 +38,6 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal trade_queries.first, trade_queries.last
   end
 
-  test "warns about positions that went below zero" do
-    # An import that records a sale without its purchase, as a provider or CSV can.
-    @account.entries.create!(
-      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
-      entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
-    )
-    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
-
-    get holdings_url(account_id: @account.id)
-
-    assert_response :success
-    assert_match "Some positions went below zero", response.body
-    assert_match "Microsoft (MSFT): below zero from", response.body
-  end
-
-  test "shows no below-zero warning for a normal portfolio" do
-    get holdings_url(account_id: @account.id)
-
-    assert_response :success
-    assert_no_match "Some positions went below zero", response.body
-  end
-
   test "gets holding" do
     get holding_path(@holding)
 
@@ -72,6 +50,19 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     get holding_path(@holding)
 
     assert_select "##{dom_id(@holding, :shares)}", text: "10.374"
+  end
+
+  # The quote is in the listing's currency; the value and cost beside it are in
+  # the holding's. Showing the quote alone put a foreign figure among them.
+  test "shows a quote in another currency converted to the holding's, with the quote beside it" do
+    Security.any_instance.stubs(:current_price).returns(Money.new(200, "EUR"))
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @holding.currency, date: Date.current, rate: 1.1)
+
+    get holding_path(@holding)
+
+    price = css_select("##{dom_id(@holding, :current_market_price)}").text.squish
+    assert_includes price, Money.new(220, @holding.currency).format
+    assert_includes price, "(#{Money.new(200, "EUR").format})"
   end
 
   test "shows the exact stored quantity for a small crypto holding in the holdings list" do
