@@ -48,6 +48,10 @@ class Api::V1::TestController < Api::V1::BaseController
     })
   end
 
+  def filters
+    render_json({ flag: boolean_filter_param(:flag) })
+  end
+
   private
     def capture_request_date
       @request_date = Date.current

@@ -910,6 +910,7 @@ Rails.application.routes.draw do
         get "test_family_access", to: "test#family_access"
         get "test_scope_required", to: "test#scope_required"
         get "test_multiple_scopes_required", to: "test#multiple_scopes_required"
+        get "test_filters", to: "test#filters"
       end
     end
   end

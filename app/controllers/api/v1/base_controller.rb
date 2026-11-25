@@ -339,13 +339,74 @@ class Api::V1::BaseController < ApplicationController
       raise InvalidFilterError, "#{key} must be an ISO 8601 date"
     end
 
-    def boolean_filter_param(key, required: false)
-      return nil unless required || params.key?(key)
+    # Typed filter readers. Each returns nil when the key is absent and the
+    # typed value when it is valid; anything else raises InvalidFilterError,
+    # which renders a 422. A key that is present must be valid, so `key=` is a
+    # 422 too (string_filter_param alone reads a blank value as absent).
+    # Actions with a catch-all `rescue` must call them from a before_action so
+    # the 422 is not swallowed into a 500.
 
-      value = BOOLEAN_FILTER_VALUES[params[key].to_s.strip.downcase]
-      raise InvalidFilterError, "#{key} must be true or false" if value.nil?
+    def boolean_filter_param(key, required: false)
+      read_filter(key, "must be true or false", required:) { |raw| BOOLEAN_FILTER_VALUES[raw.downcase] }
+    end
+
+    def date_filter_param(key)
+      read_filter(key, "must be an ISO 8601 date") { |raw| parse_date(raw) }
+    end
+
+    def time_filter_param(key)
+      read_filter(key, "must be an ISO 8601 timestamp") do |raw|
+        Time.iso8601(raw)
+      rescue ArgumentError
+        nil
+      end
+    end
+
+    def decimal_filter_param(key)
+      read_filter(key, "must be a number") { |raw| parse_decimal(raw) }
+    end
+
+    def uuid_filter_param(key)
+      read_filter(key, "must be a valid UUID") { |raw| raw if valid_uuid?(raw) }
+    end
+
+    # key[]=a&key[]=b, or a single key=a.
+    def uuid_list_filter_param(key)
+      return unless params.key?(key)
+
+      values = Array.wrap(params[key]).map { |raw| scalar_filter_value(raw) }
+      return values if values.any? && values.all? { |value| valid_uuid?(value) }
+
+      raise InvalidFilterError, "#{key} must be a list of valid UUIDs"
+    end
+
+    def enum_filter_param(key, allowed)
+      read_filter(key, "must be one of: #{allowed.join(', ')}") { |raw| raw if allowed.include?(raw) }
+    end
+
+    def string_filter_param(key)
+      read_filter(key, "must be a string", &:itself).presence
+    end
+
+    # Yields the stripped scalar value of a present key and returns what the
+    # block makes of it; raises "KEY <message>" when the value is not a scalar
+    # or the block returns nil. `required:` makes an absent key invalid too.
+    def read_filter(key, message, required: false)
+      return unless required || params.key?(key)
+
+      raw = scalar_filter_value(params[key])
+      value = yield raw unless raw.nil?
+      raise InvalidFilterError, "#{key} #{message}" if value.nil?
 
       value
+    end
+
+    # A query-string or JSON scalar as a stripped string; nil for arrays,
+    # hashes and nulls.
+    def scalar_filter_value(raw)
+      case raw
+      when String, Numeric, true, false then raw.to_s.strip
+      end
     end
 
     # Log API access for monitoring and debugging
