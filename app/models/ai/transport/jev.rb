@@ -30,9 +30,7 @@ class Ai::Transport::Jev < Ai::Transport::Base
   private
     def run_judge(request)
       refuse_callables!(request.questions)
-      results = in_parallel(request.states.to_a) do |id, state|
-        [ id, *judge_one(request, state) ]
-      end
+      results = judge_all(request)
 
       answers = results.to_h { |id, answer, _usage| [ id, answer ] }
       usage = results.map(&:last).compact.reduce { _1 + _2 }
@@ -41,6 +39,17 @@ class Ai::Transport::Jev < Ai::Transport::Base
       end
 
       JudgeResponse.new(answers:, usage:)
+    end
+
+    # A batch is many requests. Once a local server has answered one for a background batch, the rest
+    # wait for their places in the prompt lane: Busy, from a chat that came meanwhile, would lose the
+    # answers it already has.
+    def judge_all(request)
+      states = request.states.to_a
+      judge = ->((id, state)) { [ id, *judge_one(request, state) ] }
+      return in_parallel(states, &judge) unless endpoint.local? && Ai::Sequencer.lane == :background
+
+      in_parallel(states.first(1), &judge) + Ai::Sequencer.with_lane(:prompt) { in_parallel(states.drop(1), &judge) }
     end
 
     # One state's answers and usage. A malformed answer (an option not asked for, a choice with no

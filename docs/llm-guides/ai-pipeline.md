@@ -231,7 +231,8 @@ flowchart LR
   each process (`Ai::Sequencer.gate_for`), sized by llama.cpp's `total_slots` (`GET /props`),
   else `parallel_requests`, else 1. Interactive requests wait first and interrupt the lowest
   running lane by shutting its socket (`ProxyNetHttp` reports each request's connection); prompt
-  requests wait; background requests raise `Ai::Error::Busy`, and `ApplicationJob` runs the job
+  requests wait; background requests raise `Ai::Error::Busy` (a local Jev batch only before its
+  first answer, then it waits), and `ApplicationJob` runs the job
   again in 5 to 15 seconds (`retry_on`, uncapped; a generation step stays in `next_job`). The
   interrupted request raises `Ai::Gate::Interrupted` (its usage row is `cancelled`) and the
   transport's `attempt` sends it again as `Ai::Error::Preempted`: not a try, a down mark or a
