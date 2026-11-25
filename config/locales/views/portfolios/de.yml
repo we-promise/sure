@@ -1,6 +1,30 @@
 ---
 de:
   portfolios:
+    data_quality:
+      below_zero: Ab %{date} unter null, niedrigster Stand %{qty}
+      kinds:
+        missing_cost_basis:
+          description: Für diese Positionen ist keine Kostenbasis gespeichert oder berechenbar, daher kann keine Rendite angezeigt werden. Lege sie in der Position fest.
+          title: Fehlende Kostenbasis
+        negative_position:
+          description: Diese Positionen waren an einem Tag unter null. Vermutlich fehlt ein Kauf oder ein Übertrag. Lege ihn an oder korrigiere die Trades, die den Bestand unter null gebracht haben.
+          title: Bestände unter null
+        provider:
+          description: Der Kursanbieter dieser Wertpapiere ist nicht erreichbar, daher werden ihre Werte möglicherweise nicht aktualisiert.
+          title: Probleme mit dem Kursanbieter
+        stale_price:
+          description: Der letzte Kurs ist älter als %{days} Tage oder es gibt gar keinen Kurs, daher kann der Wert veraltet sein.
+          title: Veraltete Kurse
+      last_priced: Zuletzt bewertet am %{date}
+      never_priced: Nie bewertet
+      provider_statuses:
+        no_provider: Kein Kursanbieter konfiguriert
+        offline: Offline-Wertpapier
+        provider_unavailable: Zugewiesener Anbieter nicht verfügbar
+        stale: Letzte Abrufe fehlgeschlagen
+      read_only: Schreibgeschützt
+      set_cost_basis: Kostenbasis festlegen
     empty_state:
       add_account: Anlagekonto hinzufügen
       description: Depot-, Vorsorge- und Krypto-Konten, die du in deine Finanzen und Berichte einbeziehst, erscheinen hier mit ihrem Saldo.
@@ -28,6 +52,7 @@ de:
       toggle_positions: Positionen in %{ticker} anzeigen
     sections:
       accounts: Konten
+      data_quality: Datenqualität
       holdings: Bestände
     show:
       section_aria: "Abschnitt %{title}. Drücke Enter oder Leertaste, um ihn zum Umsortieren zu greifen, dann bewege ihn mit den Pfeiltasten."

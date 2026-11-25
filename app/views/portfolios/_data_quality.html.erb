@@ -1,0 +1,51 @@
+<%# locals: (statement:, period:, as_of:, issues:, writable_account_ids:) %>
+
+<%# The support runbook for "why is my return missing": each row names the
+    holding and the reason, and links to where the user can fix it.
+    `writable_account_ids` comes from the registry, one query for the whole
+    list, so this partial reads nothing about the current user itself. %>
+<div id="portfolio-data-quality" class="space-y-4">
+  <% issues.group_by(&:kind).each do |kind, kind_issues| %>
+    <div class="space-y-2" data-portfolio-issue-kind="<%= kind %>">
+      <%= render DS::Alert.new(
+            variant: :warning,
+            title: t("portfolios.data_quality.kinds.#{kind}.title"),
+            message: t("portfolios.data_quality.kinds.#{kind}.description", days: InvestmentStatement::STALE_PRICE_AFTER_DAYS)
+          ) %>
+      <ul class="bg-container-inset rounded-lg divide-y divide-subdued">
+        <% kind_issues.each do |issue| %>
+          <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 text-sm">
+            <div class="min-w-0">
+              <p class="text-primary font-medium"><%= issue.security.ticker %></p>
+              <p class="text-xs text-secondary truncate"><%= issue.security.name.presence || issue.security.ticker %></p>
+            </div>
+            <div class="text-right text-xs text-secondary min-w-0">
+              <% case kind %>
+              <% when :missing_cost_basis %>
+                <% if issue.holding %>
+                  <span class="mr-2"><%= issue.holding.account.name %></span>
+                  <%# Setting a basis is a PATCH the drawer submits, and that
+                      needs write permission. On a read-only shared account the
+                      row still names the problem; it just does not offer an
+                      action that would be refused. %>
+                  <% if writable_account_ids.include?(issue.holding.account_id) %>
+                    <%= render DS::Link.new(text: t("portfolios.data_quality.set_cost_basis"), href: holding_path(issue.holding), variant: :default, frame: :drawer) %>
+                  <% else %>
+                    <span class="text-subdued"><%= t("portfolios.data_quality.read_only") %></span>
+                  <% end %>
+                <% end %>
+              <% when :stale_price %>
+                <%= issue.detail ? t("portfolios.data_quality.last_priced", date: l(issue.detail, format: :long)) : t("portfolios.data_quality.never_priced") %>
+              <% when :provider %>
+                <%= t("portfolios.data_quality.provider_statuses.#{issue.detail}", default: issue.detail.to_s) %>
+              <% when :negative_position %>
+                <span class="mr-2"><%= issue.account.name %></span>
+                <%= t("portfolios.data_quality.below_zero", date: format_date(issue.detail.first_date), qty: format_quantity(issue.detail.lowest_qty, exact: true)) %>
+              <% end %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+</div>
