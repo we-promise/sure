@@ -40,6 +40,19 @@ json.classification transaction.entry.classification
 # Transaction::BUDGET_EXCLUDED_KINDS are left out entirely.
 json.kind transaction.kind
 
+# Investment activity on a brokerage cash row (Dividend, Interest, Fee, ...),
+# plus a few fields importers keep in extra. Only these specific values are
+# exposed, never the provider payload itself: the provider's own type for the
+# row (e.g. "Withholding Tax"), the Sure security the row relates to, and the
+# rate from the row's currency to the account's currency stored on it.
+# amount_currency is the currency of the amount, which that rate converts
+# from, the same as `currency` here.
+json.investment_activity_label transaction.investment_activity_label
+json.provider_type transaction.provider_type
+json.security_id transaction.serializable_security_id
+json.exchange_rate transaction.numeric_exchange_rate
+json.amount_currency transaction.entry.currency
+
 # Excluded entries are left out of budget and report totals, and splitting
 # marks the parent excluded. A split parent's amount is carried by its
 # children, so a client summing a list should skip the parent. entries.excluded

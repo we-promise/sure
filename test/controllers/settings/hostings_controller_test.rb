@@ -34,7 +34,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
     %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key terrascoutx_api_key demo_family_refresh_enabled demo_family_refresh_family_id
-       market_data_sync_enabled market_data_sync_time market_data_sync_timezone].each do |key|
+       market_data_sync_enabled market_data_sync_time market_data_sync_timezone page_cache_days page_cache_max_mb page_cache_cooldown_minutes].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -1383,6 +1383,86 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.openai_request_timeout = nil
     Setting.ai_response_timeout = nil
     Setting.ai_health_probe_timeout = nil
+  end
+
+  test "saves how long cached pages are kept, and a blank goes back to the default" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { page_cache_days: "30" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal 30, Setting.page_cache_days
+      assert_equal 30.days, Setting.page_cache_ttl
+
+      patch settings_hosting_url, params: { setting: { page_cache_days: "" } }
+
+      assert_nil Setting.page_cache_days
+      assert_equal Setting::PAGE_CACHE_DAYS_DEFAULT.days, Setting.page_cache_ttl
+    end
+  end
+
+  test "saves the page cache's size limit and rebuild cooldown" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { page_cache_max_mb: "250", page_cache_cooldown_minutes: "0" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal 250.megabytes, PageCache.max_bytes
+      assert_equal 0.minutes, Setting.page_cache_cooldown
+
+      patch settings_hosting_url, params: { setting: { page_cache_max_mb: "", page_cache_cooldown_minutes: "" } }
+
+      assert_equal Setting::PAGE_CACHE_MAX_MB_DEFAULT.megabytes, PageCache.max_bytes
+      assert_equal Setting::PAGE_CACHE_COOLDOWN_MINUTES_DEFAULT.minutes, Setting.page_cache_cooldown
+    end
+  end
+
+  test "an environment value the cache ignores doesn't lock its setting" do
+    with_self_hosting do
+      with_env_overrides("PAGE_CACHE_MAX_MB" => "0") do
+        get settings_hosting_url
+        assert_select "input[name='setting[page_cache_max_mb]'][disabled]", count: 0
+
+        patch settings_hosting_url, params: { setting: { page_cache_max_mb: "250" } }
+        assert_equal 250, Setting.page_cache_max_mb
+      end
+    end
+  end
+
+  test "a valid environment value locks its setting" do
+    with_self_hosting do
+      with_env_overrides("PAGE_CACHE_MAX_MB" => "300") do
+        get settings_hosting_url
+        assert_select "input[name='setting[page_cache_max_mb]'][disabled]"
+
+        patch settings_hosting_url, params: { setting: { page_cache_max_mb: "250" } }
+        assert_not_equal 250, Setting.page_cache_max_mb
+        assert_equal 300.megabytes, PageCache.max_bytes
+      end
+    end
+  end
+
+  test "rejects a cache size or cooldown out of range" do
+    with_self_hosting do
+      { page_cache_max_mb: %w[0 100001], page_cache_cooldown_minutes: %w[-1 10081] }.each do |key, values|
+        values.each do |value|
+          patch settings_hosting_url, params: { setting: { key => value } }
+
+          assert_response :unprocessable_entity
+          assert_nil Setting.public_send(key)
+        end
+      end
+    end
+  end
+
+  test "rejects a cache length outside 1 to 365 days" do
+    with_self_hosting do
+      %w[0 366 soon].each do |value|
+        patch settings_hosting_url, params: { setting: { page_cache_days: value } }
+
+        assert_response :unprocessable_entity
+        assert_equal I18n.t("settings.hostings.update.invalid_page_cache_days", minimum: 1, maximum: 365), flash[:alert]
+        assert_nil Setting.page_cache_days
+      end
+    end
   end
 
   test "rejects llm budget below field minimum" do

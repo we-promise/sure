@@ -13,6 +13,7 @@ en:
         loan:
           duplicate_term_change_date: Two term change rows have the same date. Combine them into one row; a row can carry an extra repayment and a new payment together.
           invalid_rate_change: Rate change rows need both an effective date and a rate.
+          invalid_rate_schedule_snapshot: The rate changes could not be compared with the saved schedule. Reload the loan and reapply your changes.
           invalid_term_change: Term change rows need an effective date, amounts that are numbers and, if given, a valid fixed-until date.
           rate_change_before_origination: A rate change cannot take effect before the loan originated.
           term_change_after_last_payment: A term change cannot be dated after the last payment on the schedule. Date it on or before that payment.
