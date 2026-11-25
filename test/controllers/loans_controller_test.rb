@@ -772,6 +772,104 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_empty @account.loan.reload.term_changes
   end
 
+  test "a stale form keeps term changes saved since it opened" do
+    draw_down_loan_two_years_ago
+    removed, untouched, corrected, added, other = [ 12, 10, 8, 6, 4 ].map { |months| Date.current - months.months }
+    stored = [
+      { effective_date: removed.iso8601, extra_repayment: "20000" },
+      { effective_date: untouched.iso8601, extra_repayment: "1000" },
+      { effective_date: corrected.iso8601, extra_repayment: "2000" }
+    ]
+    @account.loan.update!(term_change_rows: stored)
+    snapshot = rendered_term_changes_snapshot
+
+    # Another form adds a row and corrects two of the rows this form shows.
+    Loan.find(@account.loan.id).update!(term_change_rows: [
+      stored[0],
+      { effective_date: untouched.iso8601, extra_repayment: "1500" },
+      { effective_date: corrected.iso8601, extra_repayment: "2500" },
+      { effective_date: other.iso8601, extra_repayment: "9000" }
+    ])
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: {
+        id: @account.loan.id,
+        term_change_rows: [
+          "",
+          { effective_date: untouched.iso8601, extra_repayment: "1000", balance: "", payment: "" },
+          { effective_date: added.iso8601, extra_repayment: "3000", balance: "", payment: "" }
+        ],
+        term_changes_snapshot: snapshot
+      } }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert_equal(
+      { untouched => 1500, corrected => 2500, added => 3000, other => 9000 },
+      @account.loan.reload.active_term_changes.to_h { |change| [ change.effective_date, change.extra_repayment ] },
+      "only the row this form removed and nobody changed is gone"
+    )
+  end
+
+  test "a row edited in a stale form overwrites the value saved since" do
+    draw_down_loan_two_years_ago
+    day = (Date.current - 1.year).iso8601
+    @account.loan.update!(term_change_rows: [ { effective_date: day, extra_repayment: "1000" } ])
+    snapshot = rendered_term_changes_snapshot
+    Loan.find(@account.loan.id).update!(term_change_rows: [ { effective_date: day, extra_repayment: "1500" } ])
+
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: {
+        id: @account.loan.id, term_changes_snapshot: snapshot,
+        term_change_rows: [ "", { effective_date: day, extra_repayment: "2000", balance: "", payment: "" } ]
+      } }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert_equal [ 2000 ], @account.loan.reload.term_changes.map(&:extra_repayment)
+  end
+
+  test "a rejected stale form shows the row saved since and can remove it" do
+    draw_down_loan_two_years_ago
+    other = (Date.current - 1.year).iso8601
+    snapshot = rendered_term_changes_snapshot
+    Loan.find(@account.loan.id).update!(term_change_rows: [ { effective_date: other, extra_repayment: "9000" } ])
+    row = { effective_date: (Date.current - 6.months).iso8601, extra_repayment: "3000", balance: "", payment: "" }
+
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: {
+        id: @account.loan.id, term_changes_snapshot: snapshot,
+        term_change_rows: [ "", row, { effective_date: "", extra_repayment: "750", balance: "", payment: "" } ]
+      } }
+    }
+
+    assert_response :unprocessable_entity
+    values = css_select("[data-loan-term-changes-target='rows'] input[name$='[extra_repayment]']").map { |input| input["value"] }
+    assert_equal %w[9000 3000 750], values
+    snapshot = css_select("input[name='account[accountable_attributes][term_changes_snapshot]']").first["value"]
+    assert_equal [ other ], JSON.parse(snapshot).map { |stored| stored["effective_date"] }
+
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: { id: @account.loan.id, term_changes_snapshot: snapshot, term_change_rows: [ "", row ] } }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert_equal [ 3000 ], @account.loan.reload.term_changes.map(&:extra_repayment)
+  end
+
+  test "an unreadable term change snapshot removes no row" do
+    draw_down_loan_two_years_ago
+    @account.loan.update!(term_change_rows: [ { effective_date: (Date.current - 1.year).iso8601, payment: "2500" } ])
+
+    [ "", "{", "{}", "[1]", "null" ].each do |snapshot|
+      patch loan_path(@account), params: {
+        account: { accountable_attributes: { id: @account.loan.id, term_changes_snapshot: snapshot, term_change_rows: [ "" ] } }
+      }
+
+      assert_redirected_to account_path(@account), snapshot.inspect
+      assert_equal 1, @account.loan.reload.term_changes.count, snapshot.inspect
+    end
+  end
+
   test "a form without the term change section leaves stored term changes alone" do
     draw_down_loan_two_years_ago
     @account.loan.update!(term_change_rows: [ { effective_date: (Date.current - 1.year).iso8601, payment: "2500" } ])
@@ -1956,6 +2054,11 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     # The payment cells of the Schedule tab's table, the only table on the page.
     def schedule_table_cells
       css_select("table tbody td").map { |cell| cell.text.strip }
+    end
+
+    def rendered_term_changes_snapshot
+      get edit_loan_path(@account)
+      css_select("input[name='account[accountable_attributes][term_changes_snapshot]']").first["value"]
     end
 
     # The fixture loan starts today with no opening valuation. Drawn down two

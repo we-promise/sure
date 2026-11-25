@@ -429,7 +429,8 @@ class Loan < ApplicationRecord
       @term_changes_assigned == true
   end
 
-  after_save { @term_changes_assigned = false }
+  after_save :clear_term_change_submission
+  after_commit { @term_changes_baseline = nil }
 
   # Form rows, in a shape the form can render without parsing anything.
   #
@@ -476,9 +477,31 @@ class Loan < ApplicationRecord
   # date is updated and the others are removed on save. Two rows with one
   # date in the same submit are refused.
   #
+  # With a #term_changes_snapshot= the rows are the edits made to the rows in
+  # that snapshot, and a row somebody else saved since is kept.
+  #
   # The form sends a bare `term_change_rows[]` sentinel, so removing every row
   # still calls this with an empty array and clears them.
   def term_change_rows=(rows)
+    @submitted_term_changes, @invalid_term_changes, @duplicate_term_changes = read_term_change_rows(rows)
+    apply_submitted_term_changes
+  end
+
+  # The stored rows the form renders, sent back with the submission. After a
+  # rejected submission these are the rows it was applied to, because the form
+  # then shows the result.
+  def term_changes_snapshot
+    (@term_changes_baseline || term_change_form_rows(term_changes.select(&:persisted?))).to_json
+  end
+
+  def term_changes_snapshot=(snapshot)
+    @term_changes_snapshot = snapshot
+    apply_submitted_term_changes if @submitted_term_changes
+  end
+
+  # The submitted rows by date, the rows that could not be read, and the rows
+  # with a date an earlier one already has.
+  private def read_term_change_rows(rows)
     invalid = []
     duplicates = []
 
@@ -502,18 +525,33 @@ class Loan < ApplicationRecord
       end
     end
 
+    [ parsed, invalid, duplicates ]
+  end
+
+  # A row equal to the one in the snapshot is not an edit and leaves the
+  # stored row as it is now. A snapshot row left out of the submission is
+  # removed only while it still holds the values the form showed. Any other
+  # submitted row wins. Without a snapshot the stored rows are the baseline,
+  # so the submission replaces them all.
+  private def apply_submitted_term_changes
     # Assigned twice before a save, the second call starts from the stored
     # rows again rather than from the first call's removals.
     association(:term_changes).reset if @term_changes_assigned
     @term_changes_assigned = true
-    @invalid_term_changes = invalid
-    @duplicate_term_changes = duplicates
 
     stored = term_changes.index_by(&:effective_date)
-    parsed.each do |date, amounts|
-      (stored.delete(date) || term_changes.build(effective_date: date)).assign_attributes(amounts)
+    @term_changes_baseline = term_change_form_rows(stored.values)
+    current, * = read_term_change_rows(@term_changes_baseline)
+    baseline = @term_changes_snapshot.nil? ? current : read_term_changes_snapshot
+
+    @submitted_term_changes.each do |date, amounts|
+      next if amounts == baseline[date]
+
+      (stored[date] || term_changes.build(effective_date: date)).assign_attributes(amounts)
     end
-    stored.each_value(&:mark_for_destruction)
+    (baseline.keys - @submitted_term_changes.keys).each do |date|
+      stored[date].mark_for_destruction if stored[date] && current[date] == baseline[date]
+    end
 
     @term_changes_dirty = term_changes.any? do |change|
       change.new_record? || change.changed? || change.marked_for_destruction?
@@ -522,15 +560,34 @@ class Loan < ApplicationRecord
     @insurance = nil
   end
 
+  private def clear_term_change_submission
+    @term_changes_assigned = false
+    @submitted_term_changes = nil
+    @term_changes_snapshot = nil
+  end
+
+  # A snapshot that cannot be read shows no rows, so it removes none.
+  private def read_term_changes_snapshot
+    rows = JSON.parse(@term_changes_snapshot)
+    read_term_change_rows(rows.is_a?(Array) ? rows : []).first
+  rescue JSON::ParserError, TypeError
+    {}
+  end
+
   # Form rows for the term changes, invalid ones included, so a rejected save
-  # redisplays what was typed. A whole amount is shown without its ".0".
+  # redisplays what was typed.
   def term_change_rows
-    active_term_changes.map do |change|
+    term_change_form_rows(active_term_changes) + Array(duplicate_term_changes) + Array(invalid_term_changes)
+  end
+
+  # A whole amount is shown without its ".0".
+  private def term_change_form_rows(changes)
+    changes.map do |change|
       {
         effective_date: change.effective_date.iso8601,
         **TermChange::AMOUNTS.index_with { |amount| change[amount]&.to_s("F")&.delete_suffix(".0") }
       }
-    end + Array(duplicate_term_changes) + Array(invalid_term_changes)
+    end
   end
 
   TERM_CHANGE_ROW_FIELDS = ([ :effective_date ] + TermChange::AMOUNTS).freeze
@@ -740,7 +797,8 @@ class Loan < ApplicationRecord
     @amortization_schedule = nil
     @insurance = nil
     clear_rate_submission
-    @term_changes_assigned = false
+    clear_term_change_submission
+    @term_changes_baseline = nil
     @term_changes_dirty = false
     @term_change_refused = false
     @invalid_term_changes = nil

@@ -490,6 +490,46 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal [ today - 1, today ], loan.reload.active_term_changes.map(&:effective_date)
   end
 
+  test "the term change snapshot and the rows can be assigned in either order" do
+    today = Date.current
+    added = { effective_date: today.iso8601, payment: "950" }
+
+    [ %i[term_changes_snapshot term_change_rows], %i[term_change_rows term_changes_snapshot] ].each do |order|
+      loan = build_running_loan_account.loan
+      loan.update!(term_change_rows: [ { effective_date: (today - 1).iso8601, payment: "900" } ])
+      values = { term_changes_snapshot: "[]", term_change_rows: [ added ] }
+
+      loan.update!(order.index_with { |name| values[name] })
+
+      assert_equal [ today - 1, today ], loan.reload.active_term_changes.map(&:effective_date), order.inspect
+    end
+  end
+
+  test "a term change snapshot applies to one save" do
+    loan = build_running_loan_account.loan
+    loan.update!(term_changes_snapshot: "[]", term_change_rows: [ { effective_date: Date.current.iso8601, payment: "900" } ])
+
+    loan.update!(term_change_rows: [])
+
+    assert_empty loan.reload.term_changes
+  end
+
+  # The form comes back with the rows that did not save, so the snapshot must
+  # not show them as stored.
+  test "the term change snapshot of a save that rolled back holds the stored rows" do
+    loan = build_running_loan_account.loan
+    stored = [ { effective_date: (Date.current - 1).iso8601, payment: "900" } ]
+    loan.update!(term_change_rows: stored)
+
+    Loan.transaction(requires_new: true) do
+      loan.update!(term_change_rows: [ { effective_date: (Date.current - 1).iso8601, payment: "950" } ])
+      raise ActiveRecord::Rollback
+    end
+
+    assert_equal [ "900" ], JSON.parse(loan.term_changes_snapshot).map { |row| row["payment"] }
+    assert_equal [ "950" ], loan.term_change_rows.map { |row| row[:payment] }
+  end
+
   test "an unreadable term change row is kept for the form and blocks the save" do
     loan = build_running_loan_account.loan
     loan.update!(term_change_rows: [ { effective_date: Date.current.iso8601, payment: "900" } ])
