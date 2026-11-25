@@ -34,7 +34,7 @@ class SharesightAccount::Processor
     update_account_balance!
 
     account.broadcast_sync_complete
-    result.merge(notices: router.notices + drift_notices, settlement_accounts: router.touched_accounts.to_a)
+    result.merge(notices: router.notices + drift_notices, settlement_accounts: @touched_accounts)
   end
 
   private
