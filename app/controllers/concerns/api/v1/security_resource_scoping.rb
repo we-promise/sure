@@ -3,7 +3,7 @@
 # The securities an API caller may see: those held or traded in an account
 # they can access. Filtering lives in Security::Search and
 # Security::Price::Search.
-module Api::V1::SecurityResourceFiltering
+module Api::V1::SecurityResourceScoping
   private
 
     def scoped_security_ids

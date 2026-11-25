@@ -2,7 +2,7 @@
 
 class Api::V1::SecurityPricesController < Api::V1::BaseController
   include Pagy::Backend
-  include Api::V1::SecurityResourceFiltering
+  include Api::V1::SecurityResourceScoping
 
   before_action :ensure_read_scope, only: %i[index show]
   before_action :ensure_write_scope, only: :create
