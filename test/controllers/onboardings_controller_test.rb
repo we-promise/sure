@@ -89,10 +89,68 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "should get goals" do
-    get goals_onboarding_url
+  test "should get tools, with no AI selected for a user without AI" do
+    @user.update!(ai_enabled: false)
+    get tools_onboarding_url
     assert_response :success
-    assert_select "h1", text: /What brings you here/i
+    assert_select "h1", text: I18n.t("onboardings.tools.title")
+    assert_select "input[type=radio][name='user[onboarding_ai_mode]'][value=none][checked]"
+  end
+
+  test "admins are told their AI choice is also the household's consent" do
+    get tools_onboarding_url
+    assert_select "[data-ai-panel=builtin]", text: /#{Regexp.escape(I18n.t("onboardings.tools.ai.panels.admin_on"))}/
+  end
+
+  test "members don't see the household consent note" do
+    sign_in users(:family_member)
+    get tools_onboarding_url
+    assert_select "[data-ai-panel=builtin]"
+    assert_select "[data-ai-panel=builtin]", text: /#{Regexp.escape(I18n.t("onboardings.tools.ai.panels.admin_on"))}/, count: 0
+  end
+
+  test "revisiting the step keeps an enabled assistant selected" do
+    @user.update!(ai_enabled: true)
+    get tools_onboarding_url
+    assert_select "input[type=radio][value=builtin][checked]"
+  end
+
+  test "the old goals step redirects to tools" do
+    get "/onboarding/goals"
+    assert_redirected_to "/onboarding/tools"
+  end
+
+  test "saving tools and built-in AI turns the assistant on and goes to the trial" do
+    @user.update!(ai_enabled: false)
+
+    patch tools_onboarding_url, params: { user: {
+      onboarding_tools: %w[ynab other], onboarding_other_tool: "Spreadsheet", onboarding_ai_mode: "builtin"
+    } }
+
+    assert_redirected_to trial_onboarding_url
+    @user.reload
+    assert_equal %w[ynab other], @user.onboarding_tools
+    assert_equal "Spreadsheet", @user.onboarding_other_tool
+    assert_equal "builtin", @user.onboarding_ai_mode
+    assert @user.ai_enabled
+    assert_not_nil @user.set_onboarding_goals_at
+    assert_not_nil @user.onboarded_at
+  end
+
+  test "no AI and an external agent turn the assistant off" do
+    %w[none external].each do |mode|
+      @user.update!(ai_enabled: true)
+      patch tools_onboarding_url, params: { user: { onboarding_ai_mode: mode } }
+      assert_not @user.reload.ai_enabled, mode
+      assert_equal mode, @user.onboarding_ai_mode
+    end
+  end
+
+  test "self-hosted onboarding finishes on the dashboard" do
+    with_self_hosting do
+      patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "none" } }
+      assert_redirected_to root_url
+    end
   end
 
   test "should get trial" do
@@ -184,7 +242,7 @@ end
     get preferences_onboarding_url
     assert_response :success
 
-    get goals_onboarding_url
+    get tools_onboarding_url
     assert_response :success
 
     get trial_onboarding_url
@@ -200,7 +258,7 @@ end
   get preferences_onboarding_url
   assert_redirected_to new_session_url
 
-  get goals_onboarding_url
+  get tools_onboarding_url
   assert_redirected_to new_session_url
 
   get trial_onboarding_url
