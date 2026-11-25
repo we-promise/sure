@@ -46,10 +46,11 @@ module Trading212Account::DataHelpers
       [ conversion[:currency], *amounts.map { |amount| amount && amount * conversion[:multiplier] } ]
     end
 
-    # T212 tickers look like "AAPL_US_EQ". Derive a standard ticker by taking
-    # the first segment, which is the instrument symbol on its primary exchange.
+    # T212 tickers look like "AAPL_US_EQ". Prefer the instrument's shortName,
+    # which is its symbol, and fall back to the ticker's first segment.
     def standard_ticker(t212_ticker)
-      t212_ticker.to_s.split("_").first&.upcase || ""
+      short = instruments_map[t212_ticker]&.dig("shortName").presence
+      (short || t212_ticker.to_s.split("_").first).to_s.upcase
     end
 
     def resolve_security_for_ticker(t212_ticker)
@@ -68,7 +69,7 @@ module Trading212Account::DataHelpers
 
     def resolve_security_from_instrument(instrument, t212_ticker)
       ticker = standard_ticker(t212_ticker)
-      name = instrument["shortName"].presence || ticker
+      name = instrument["name"].presence || ticker
 
       Security.find_by(ticker: ticker) ||
         Security.create!(ticker: ticker, name: name)

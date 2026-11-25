@@ -123,19 +123,57 @@ class Trading212DataHelpersTest < ActiveSupport::TestCase
     assert_equal "", @helper.test_standard_ticker("")
   end
 
+  test "standard_ticker handles nil" do
+    assert_equal "", @helper.test_standard_ticker(nil)
+  end
+
+  test "standard_ticker uses the instrument shortName" do
+    helper = TestHelper.new(
+      instruments_map: {
+        "VWCEd_EQ" => { "ticker" => "VWCEd_EQ", "shortName" => "VWCE", "name" => "Vanguard FTSE All-World (Acc)" },
+        "ADYENa_EQ" => { "ticker" => "ADYENa_EQ", "shortName" => "ADYEN", "name" => "Adyen" },
+        "GARENA_US_EQ" => { "ticker" => "GARENA_US_EQ", "shortName" => "SE", "name" => "Sea" }
+      }
+    )
+
+    assert_equal "VWCE", helper.test_standard_ticker("VWCEd_EQ")
+    assert_equal "ADYEN", helper.test_standard_ticker("ADYENa_EQ")
+    assert_equal "SE", helper.test_standard_ticker("GARENA_US_EQ")
+  end
+
+  test "standard_ticker falls back to first segment for unknown instrument" do
+    helper = TestHelper.new(
+      instruments_map: { "GARENA_US_EQ" => { "ticker" => "GARENA_US_EQ", "shortName" => "SE", "name" => "Sea" } }
+    )
+
+    assert_equal "MSFT", helper.test_standard_ticker("MSFT_US_EQ")
+  end
+
   # === resolve_security_for_ticker ===
 
   test "resolve_security_for_ticker finds via instruments_map" do
     Security.create!(ticker: "TSLA", name: "Tesla Inc.")
     helper = TestHelper.new(
       instruments_map: {
-        "TSLA_US_EQ" => { "shortName" => "Tesla Inc.", "currencyCode" => "USD" }
+        "TSLA_US_EQ" => { "shortName" => "TSLA", "name" => "Tesla Inc.", "currencyCode" => "USD" }
       }
     )
 
     security = helper.test_resolve_security_for_ticker("TSLA_US_EQ")
     assert_equal "TSLA", security.ticker
     assert_equal "Tesla Inc.", security.name
+  end
+
+  test "resolve_security_for_ticker creates security from instrument shortName and name" do
+    helper = TestHelper.new(
+      instruments_map: {
+        "VWCEd_EQ" => { "ticker" => "VWCEd_EQ", "shortName" => "VWCE", "name" => "Vanguard FTSE All-World (Acc)", "currencyCode" => "EUR" }
+      }
+    )
+
+    security = helper.test_resolve_security_for_ticker("VWCEd_EQ")
+    assert_equal "VWCE", security.ticker
+    assert_equal "Vanguard FTSE All-World (Acc)", security.name
   end
 
   test "resolve_security_for_ticker creates security if not found" do

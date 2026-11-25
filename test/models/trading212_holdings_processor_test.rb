@@ -99,6 +99,34 @@ class Trading212HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("50"), holding.cost_basis
   end
 
+  test "processor stores a known instrument under its shortName" do
+    @trading212_item.update!(raw_instruments_payload: [
+      { "ticker" => "GARENA_US_EQ", "shortName" => "SE", "name" => "Sea", "currencyCode" => "USD" }
+    ])
+    @trading212_account.reload
+    @trading212_account.update!(
+      raw_positions_payload: [
+        {
+          "instrument" => {
+            "ticker" => "GARENA_US_EQ",
+            "isin" => "US81141R1005",
+            "name" => "Sea",
+            "currency" => "USD"
+          },
+          "quantity" => "12",
+          "currentPrice" => "120.00"
+        }
+      ]
+    )
+
+    Trading212Account::HoldingsProcessor.new(@trading212_account).process
+
+    security = Security.find_by(ticker: "SE")
+    assert_not_nil security
+    assert_nil Security.find_by(ticker: "GARENA")
+    assert_not_nil @account.holdings.find_by(security: security)
+  end
+
   test "processor skips position with blank ticker" do
     @trading212_account.update!(
       raw_positions_payload: [
