@@ -371,6 +371,26 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     refute_includes account.read_attribute_before_type_cast(:iban).to_s, "CZ-PLAINTEXT-IBAN"
   end
 
+  test "backfill re-encrypts a deterministically encrypted Account IBAN" do
+    account = accounts(:depository)
+    iban = "DE89370400440532013000" # pipelock:ignore IBAN
+    deterministic = ActiveRecord::Encryption::Encryptor.new.encrypt(
+      iban,
+      key_provider: ActiveRecord::Encryption::DeterministicKeyProvider.new(ActiveRecord::Encryption.config.deterministic_key),
+      cipher_options: { deterministic: true }
+    )
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE accounts SET iban = ? WHERE id = ?", deterministic, account.id ]))
+
+    out, _err, exit_status = invoke_backfill("500", "false")
+
+    assert_nil exit_status, out
+    assert_equal true, JSON.parse(out.lines.last)["ok"]
+    stored = account.reload.read_attribute_before_type_cast(:iban)
+    assert_not_equal deterministic, stored
+    assert_equal iban, ActiveRecord::Encryption::Encryptor.new.decrypt(stored)
+  end
+
   # Pins the manifest's content to CURRENT_BACKFILL_VERSION: a manifest change
   # without a version bump would leave installs that completed the previous
   # backfill marked "complete", turning off the plaintext fallback for fields

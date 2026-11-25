@@ -3,9 +3,11 @@ class Account < ApplicationRecord
 
   # Not deterministic: an IBAN is never looked up by value in SQL. Code that
   # matches IBANs loads the family's few accounts and compares in Ruby, so
-  # equal IBANs need not share a ciphertext.
+  # equal IBANs need not share a ciphertext. Deterministic ciphertext still
+  # decrypts through the previous scheme; any write, including
+  # security:backfill_encryption, re-encrypts it non-deterministically.
   if encryption_ready?
-    encrypts :iban
+    encrypts :iban, previous: { deterministic: true }
   end
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
