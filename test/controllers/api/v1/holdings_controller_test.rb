@@ -49,6 +49,28 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes holding_ids, @private_holding.id
   end
 
+  test "paginates same-date holdings in ascending ID order" do
+    ids = %w[00000000-0000-4000-8000-000000000002 00000000-0000-4000-8000-000000000001]
+    date = Date.current + 5.days
+    ids.zip([ securities(:msft), @holding.security ]).each do |id, security|
+      @account.holdings.create!(
+        id: id, security: security, date: date, qty: 1, price: 100,
+        amount: 100, currency: "USD"
+      )
+    end
+
+    actual_ids = [ 1, 2 ].flat_map do |page|
+      get api_v1_holdings_url,
+          params: { account_id: @account.id, date: date.iso8601, per_page: 1, page: page },
+          headers: api_headers(@api_key)
+
+      assert_response :success
+      JSON.parse(response.body).fetch("holdings").map { |holding| holding.fetch("id") }
+    end
+
+    assert_equal ids.sort, actual_ids
+  end
+
   test "account_ids filter cannot reach inaccessible accounts" do
     get api_v1_holdings_url,
         params: { account_ids: [ @private_account.id ] },
