@@ -28,6 +28,14 @@ class McpAiToolsTest < ActiveSupport::TestCase
     end
   end
 
+  test "every AI tool has a timeout and a busy message for the web thread" do
+    Assistant.function_classes.select(&:ai_feature).each do |fn_class|
+      assert Ai::ToolJob::TIMEOUTS.key?(fn_class.name), "#{fn_class.name} has no timeout"
+      assert Ai::ToolJob::BUSY_MESSAGES.key?(fn_class.name), "#{fn_class.name} has no busy message"
+      assert Ai::Routes.features.include?(fn_class.ai_feature), "#{fn_class.name} has an unrouted feature"
+    end
+  end
+
   test "search stays listed when its AI feature is unavailable" do
     use_no_ai
 

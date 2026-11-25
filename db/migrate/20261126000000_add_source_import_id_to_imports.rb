@@ -1,5 +1,7 @@
 # One derived import per source import: an AI tool that finishes after its
 # request gave up must not create a second import when the client retries.
+# `source_pdf_import_id` already marks tool drafts but has no index, and older
+# rows can contain duplicates, so the durable link gets its own indexed column.
 class AddSourceImportIdToImports < ActiveRecord::Migration[8.1]
   def change
     add_reference :imports, :source_import, type: :uuid, foreign_key: { to_table: :imports }, index: false
