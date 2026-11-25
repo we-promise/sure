@@ -16,6 +16,7 @@ class Family < ApplicationRecord
   include RedbarkConnectable
   include OnchainWalletConnectable
   include SharesightConnectable
+  include TinkoffInvestConnectable
   include AiPromptable
   include AiSettings
 

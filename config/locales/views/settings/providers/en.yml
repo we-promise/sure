@@ -89,6 +89,7 @@ en:
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
         sharesight: Sync the portfolios you track in Sharesight using its API.
+        tinkoff_invest: Sync your T-Invest (T-Bank) brokerage accounts, holdings, and operations with a read-only token.
         trade_republic: Sync your Trade Republic investment account via secure read-only web login.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         questrade: Sync your Questrade investment accounts directly via the Questrade API.
@@ -440,3 +441,29 @@ en:
         accounts_tab: Accounts
         status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
+      tinkoff_invest_panel:
+        steps:
+          step_1: Open T-Invest (tbank.ru) → Settings → Tokens for T-Invest API.
+          step_2: Issue a read-only token (without trading permissions).
+          step_3: Paste the token below, choose the environment (Live or Sandbox), and save.
+        api_key_label: API Token (read-only)
+        api_key_placeholder_new: Paste your T-Invest read-only token
+        api_key_placeholder_existing: Leave blank to keep the current token
+        environment_label: Environment
+        environment_live: Production (Live)
+        environment_sandbox: Sandbox
+        base_url_label: Custom Base URL (optional)
+        base_url_placeholder: Leave blank for the default T-Invest endpoint
+        requires_update_title: Token needs attention
+        requires_update_message: T-Invest rejected the stored token (HTTP 401/403). Paste a new read-only token and save to resume syncing.
+        requires_update_meta: Token expired or invalid
+        status_connected: Connected
+        status_requires_update: Reconnect required
+        sync: Sync
+        disconnect: Disconnect T-Invest
+        disconnect_confirm: Disconnect T-Invest? Your synced accounts will remain as manual accounts.
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        status_configured_prefix: "Configured. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to link your brokerage accounts.

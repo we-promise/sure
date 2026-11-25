@@ -26,6 +26,7 @@ class DataEnrichment < ApplicationRecord
     snaptrade: "snaptrade",
     sophtron: "sophtron",
     synth: "synth",
+    tinkoff_invest: "tinkoff_invest",
     trade_republic: "trade_republic",
     truelayer: "truelayer",
     up: "up",
