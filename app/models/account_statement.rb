@@ -34,7 +34,11 @@ class AccountStatement < ApplicationRecord
   belongs_to :account, optional: true
   belongs_to :suggested_account, class_name: "Account", optional: true
 
-  has_many :pdf_imports, -> { where(type: "PdfImport").ordered }, class_name: "PdfImport", dependent: :restrict_with_error
+  # An import is as private as its statement, so a statement stays while any
+  # import carries it. The foreign key refuses the DELETE too, for an import
+  # committed after this check.
+  has_many :imports, dependent: :restrict_with_error
+  has_many :pdf_imports, -> { where(type: "PdfImport").ordered }, class_name: "PdfImport"
   has_one_attached :original_file, dependent: :purge_later
 
   enum :source, { manual_upload: "manual_upload" }, validate: true, default: "manual_upload"

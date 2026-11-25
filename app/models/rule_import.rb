@@ -125,7 +125,7 @@ class RuleImport < Import
     # headers cannot tell a blank header cell from the nil CSV pads in for a
     # row with more fields than the header.
     def header_row_size
-      header = CSV.parse_line((raw_file_str || "").strip, col_sep: col_sep, liberal_parsing: true)
+      header = CSV.parse_line(Import.normalize_line_endings(raw_file_str).strip, col_sep: col_sep, liberal_parsing: true)
       header ? header.size : 0
     end
 

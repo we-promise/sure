@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class CoinspotItemsController < ApplicationController
+  include SafeReturnPath
+
   before_action :set_coinspot_item, only: %i[update destroy sync setup_accounts complete_account_setup]
   before_action :require_admin!, only: %i[
     create select_accounts link_accounts select_existing_account link_existing_account
@@ -187,7 +189,7 @@ class CoinspotItemsController < ApplicationController
   # instead of left half-set-up.
   def complete_account_setup
     selected_accounts = Array(params[:selected_accounts]).reject(&:blank?)
-    return_to = safe_return_to_path(params[:return_to])
+    return_to = safe_return_to_path
     created_accounts = []
     failed_accounts = 0
 
@@ -301,33 +303,5 @@ class CoinspotItemsController < ApplicationController
       else
         redirect_to fallback_path, alert: message
       end
-    end
-
-    # Validates params[:return_to] is a same-origin relative path before
-    # using it as a redirect target, rejecting anything with a scheme, host,
-    # backslashes, control characters, or encoded separators (open-redirect protection).
-    def safe_return_to_path(value = nil)
-      return_value = value || params[:return_to]
-      return nil if return_value.blank?
-
-      return_to = return_value.to_s.strip
-      return nil unless return_to.start_with?("/")
-      return nil if return_to[1] == "/" || return_to[1] == "\\"
-      return nil if return_to.include?("\\") || return_to.match?(/[[:cntrl:]]/)
-      return nil if encoded_path_separator?(return_to)
-
-      uri = URI.parse(return_to)
-      return nil unless uri.relative?
-
-      Rails.application.routes.recognize_path(uri.path, method: :get)
-
-      return_to
-    rescue URI::InvalidURIError, ActionController::RoutingError
-      nil
-    end
-
-    def encoded_path_separator?(return_to)
-      encoded_second_character = return_to[1, 3]
-      %w[%2F %5C].include?(encoded_second_character)
     end
 end
