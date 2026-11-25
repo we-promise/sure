@@ -92,7 +92,7 @@ class RetirementPlan < ApplicationRecord
   # The assets come first: converting them can fetch and store a missing rate,
   # and the medians read stored rates only.
   def projection(as_of:)
-    current_assets = assets_as_of(as_of).total
+    current_assets = funding_total(as_of)
 
     RetirementPlan::Projection.new(
       annual_living_costs: annual_living_costs(as_of),
@@ -198,7 +198,7 @@ class RetirementPlan < ApplicationRecord
   # Accounts left out of the asset total for want of an exchange rate on the
   # reference date. The card says so rather than showing a quietly low figure.
   def unconverted_account_count(as_of:)
-    assets_as_of(as_of).unconverted_count
+    funding_assets(as_of).unconverted_count
   end
 
   # Streams left out of the simulation for want of an exchange rate into the
@@ -274,18 +274,25 @@ class RetirementPlan < ApplicationRecord
     # hidden, excluded from reports or no longer shared keeps its link but
     # leaves the eligible set, and falls back the same way rather than
     # funding the plan with nothing.
+    #
+    # Progress, the simulation and the milestones all measure this one total.
     def funding_total(as_of)
-      linked = eligible_funding_accounts.where(id: funding_links.select(:account_id))
-      return assets_as_of(as_of).total unless linked.exists?
+      funding_assets(as_of).total
+    end
 
-      asset_total(as_of, linked).total
+    def funding_assets(as_of)
+      @funding_assets ||= {}
+      @funding_assets[as_of] ||= begin
+        linked = eligible_funding_accounts.where(id: funding_links.select(:account_id))
+        linked.exists? ? asset_total(as_of, linked) : assets_as_of(as_of)
+      end
     end
 
     def seed_living_costs(as_of)
       annual = annual_living_costs(as_of)
       return unless annual.positive?
 
-      streams.create!(kind: "expense", source: "seeded_living_costs", indexed: true,
+      streams.create!(kind: "expense", source: "seeded_living_costs", indexed: true, base_year: as_of.year,
                       name: I18n.t("retirement_plans.streams.seeded.living_costs"), annual_amount: annual)
     end
 
@@ -309,7 +316,7 @@ class RetirementPlan < ApplicationRecord
 
         end_date = projection.payoff_date || schedule.payoff_date
         # Twelve: AmortizationSchedule#payment_schedule is monthly.
-        streams.create!(kind: "expense", source: "seeded_loan", indexed: false, account: account, name: account.name,
+        streams.create!(kind: "expense", source: "seeded_loan", indexed: false, base_year: as_of.year, account: account, name: account.name,
                         annual_amount: payment.amount * 12, currency: payment.currency.iso_code, end_year: end_date.year)
       end
     end

@@ -41,8 +41,12 @@ class AddPlannerToRetirementPlans < ActiveRecord::Migration[8.1]
       # runs to the plan's end age.
       t.integer :start_year
       t.integer :end_year
-      # Grows with the plan's inflation rate from today when true.
+      # Grows with the plan's inflation rate from base_year when true.
       t.boolean :indexed, null: false, default: true
+      # The calendar year whose money the amount is in: the year it was
+      # entered or last changed. Without it a plan reopened a year later
+      # would read last year's amount as this year's, a year of inflation lost.
+      t.integer :base_year, null: false
       t.string :source, null: false, default: "manual"
       # The loan a seeded repayment stream came from. Nullified, not
       # cascaded, when the account goes: the user may have edited the stream.
@@ -57,6 +61,8 @@ class AddPlannerToRetirementPlans < ActiveRecord::Migration[8.1]
       name: "chk_retirement_plan_streams_amount"
     add_check_constraint :retirement_plan_streams, "source IN ('seeded_living_costs', 'seeded_loan', 'manual')",
       name: "chk_retirement_plan_streams_source"
+    add_check_constraint :retirement_plan_streams, "base_year >= 1900 AND base_year <= 2200",
+      name: "chk_retirement_plan_streams_base_year"
     add_check_constraint :retirement_plan_streams, "end_year IS NULL OR start_year IS NULL OR end_year >= start_year",
       name: "chk_retirement_plan_streams_years"
 
