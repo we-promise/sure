@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
-import evaluateAmountExpression, { precisionFromStep } from "utils/evaluate_amount_expression"
+import { precisionFromStep } from "utils/evaluate_amount_expression"
+import submittedAmount from "utils/submitted_amount"
 
 // Split rows are real, individually-named form fields rendered server-side (via the
 // "splits/row" partial) and cloned from a <template> for new rows — mirrors
@@ -48,8 +49,9 @@ export default class extends Controller {
     const sum = this.amountInputTargets.reduce((acc, input) => {
       const rowPrecision = precisionFromStep(input.step) ?? 2
       precision = Math.max(precision, rowPrecision)
-      // Money fields: the text may hold a comma decimal or an expression.
-      return acc + (evaluateAmountExpression(input.value, { precision: rowPrecision }) || 0)
+      // Each row as its money field submits it (rounded to its precision), so
+      // "100/3" in three rows shows the 0.01 that Entry#split! will reject.
+      return acc + (submittedAmount(this.application, input, rowPrecision) || 0)
     }, 0)
 
     const remaining = total - sum

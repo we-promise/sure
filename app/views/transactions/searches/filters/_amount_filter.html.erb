@@ -9,7 +9,8 @@
     ], @q[:amount_operator] || "equal"), {}, class: "form-field__input" %>
   </div>
 
-  <% amount, precision = money_field_value(@q[:amount]) %>
+  <%# Compared with amounts in every account currency, so decimals stay allowed. %>
+  <% amount, precision = money_field_value(@q[:amount], min_precision: 2) %>
   <%= fields :q, builder: StyledFormBuilder do |amount_form| %>
     <%= amount_form.money_field :amount,
           value: amount,

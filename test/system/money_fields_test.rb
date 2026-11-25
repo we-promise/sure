@@ -82,6 +82,67 @@ class MoneyFieldsTest < ApplicationSystemTestCase
     assert_equal "1.23", page.evaluate_script(submitted)
   end
 
+  test "text typed between two pending currency switches keeps the new reading" do
+    jpy_account = @user.family.accounts.create!(name: "JPY Savings", balance: 100_000, currency: "JPY", accountable: Depository.new)
+    eur_account = @user.family.accounts.create!(name: "EUR Savings", balance: 1_000, currency: "EUR", accountable: Depository.new)
+
+    visit new_transfer_url
+    amount_field = find_field("transfer[amount]").ancestor("[data-controller='money-field']")
+    select_ds("From", jpy_account)
+    within(amount_field) { assert_selector "[data-money-field-target='symbol']", text: "¥" }
+
+    page.execute_script(<<~JS)
+      const originalFetch = window.fetch;
+      window.heldCurrencyLookups = [];
+      window.fetch = (url, ...rest) => {
+        if (!String(url).includes("/currencies/")) return originalFetch(url, ...rest);
+        return new Promise((resolve) => window.heldCurrencyLookups.push(() => resolve(originalFetch(url, ...rest))));
+      };
+    JS
+
+    select_ds("From", eur_account)
+    fill_in "transfer[amount]", with: "1.234"
+    # A second switch before the first lookup lands.
+    select_ds("From", accounts(:depository))
+
+    page.execute_script("window.heldCurrencyLookups.forEach((release) => release())")
+    within(amount_field) { assert_selector "[data-money-field-target='symbol']", text: "$" }
+    # Read as USD's 1.234, not JPY's grouping (1234).
+    assert_equal "1.23", find_field("transfer[amount]").value
+  end
+
+  test "a paste made while a currency switch loads is read with the new separator" do
+    eur_account = @user.family.accounts.create!(name: "EUR Savings", balance: 1_000, currency: "EUR", accountable: Depository.new)
+
+    visit new_transfer_url
+    amount_field = find_field("transfer[amount]").ancestor("[data-controller='money-field']")
+    select_ds("From", eur_account)
+    within(amount_field) { assert_selector "[data-money-field-target='symbol']", text: "€" }
+
+    page.execute_script(<<~JS)
+      const originalFetch = window.fetch;
+      window.heldCurrencyLookups = [];
+      window.fetch = (url, ...rest) => {
+        if (!String(url).includes("/currencies/")) return originalFetch(url, ...rest);
+        return new Promise((resolve) => window.heldCurrencyLookups.push(() => resolve(originalFetch(url, ...rest))));
+      };
+    JS
+
+    select_ds("From", accounts(:depository))
+    page.execute_script(<<~JS, find_field("transfer[amount]"))
+      const [input] = arguments
+      const data = new DataTransfer()
+      data.setData("text/plain", "1,234")
+      input.focus()
+      input.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }))
+    JS
+
+    page.execute_script("window.heldCurrencyLookups.forEach((release) => release())")
+    within(amount_field) { assert_selector "[data-money-field-target='symbol']", text: "$" }
+    # A USD statement's "1,234" is a thousands amount, not 1.234.
+    assert_equal "1234.00", find_field("transfer[amount]").value
+  end
+
   test "split rows add up typed comma amounts" do
     entry = create_transaction(amount: 100, name: "Split me", account: accounts(:depository))
 
@@ -97,6 +158,28 @@ class MoneyFieldsTest < ApplicationSystemTestCase
       end
 
       assert_selector "[data-split-transaction-target='remaining']", exact_text: "0.00"
+    end
+  end
+
+  test "split rows are summed as they are submitted, rounded to the row" do
+    entry = create_transaction(amount: 100, name: "Split three ways", account: accounts(:depository))
+
+    visit new_transaction_split_path(entry)
+
+    within "dialog" do
+      find("[data-split-transaction-target='amountInput']").fill_in(with: "-100/3")
+      2.times { click_on I18n.t("splits.new.add_row") }
+      rows = all("[data-split-transaction-target='row']", count: 3)
+      rows.drop(1).each_with_index do |row, index|
+        within(row) do
+          find("[data-split-transaction-target='nameInput']").fill_in(with: "Part #{index + 2}")
+          find("[data-split-transaction-target='amountInput']").fill_in(with: "-100/3")
+        end
+      end
+
+      # Each row submits -33.33, which leaves 0.01 that Entry#split! rejects.
+      assert_selector "[data-split-transaction-target='remaining']", exact_text: "-0.01"
+      assert_selector "[data-split-transaction-target='submitButton']:disabled"
     end
   end
 

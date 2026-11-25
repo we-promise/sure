@@ -65,6 +65,20 @@ class Import::MonarchImportFlowTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the accounts step shows a balance in its target's currency with its decimals" do
+    upload_exports
+    checking = @import.account_mappings.find_by!(key: "Checking")
+    target = @user.family.accounts.create!(name: "Yen", balance: 0, currency: "JPY", accountable: Depository.new)
+    checking.update!(mappable: target, choices: { current_balance: "123.456" })
+
+    get import_configuration_url(@import)
+
+    assert_response :success
+    field = "input[name='accounts[#{checking.id}][current_balance]']"
+    assert_select "#{field}[value='123.456']"
+    assert_select "[data-controller='money-field']:has(#{field}) [data-money-field-target='symbol']", text: "¥"
+  end
+
   test "an account the user can't access can't be a target" do
     upload_exports
     checking = @import.account_mappings.find_by!(key: "Checking")

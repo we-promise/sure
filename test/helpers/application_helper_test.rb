@@ -244,7 +244,21 @@ class ApplicationHelperTest < ActionView::TestCase
   test "#money_field_value treats min_precision as a floor and caps long decimals" do
     assert_equal 2, money_field_value("5", currency: "JPY", min_precision: 2).last
     assert_equal 3, money_field_value("1.234", currency: "KWD", min_precision: 2).last
-    assert_equal 10, money_field_value("1e-150", currency: "USD").last
+    assert_equal 10, money_field_value("1e-15", currency: "USD").last
+  end
+
+  test "#money_field_value rejects an exponent no amount has" do
+    assert_equal [ nil, 2 ], money_field_value("1e-1000000000", currency: "USD")
+    assert_equal [ nil, 2 ], money_field_value("1e1000000000", currency: "USD")
+    assert_equal [ nil, 2 ], money_field_value("1e-150", currency: "USD")
+  end
+
+  test "#saved_amount_precision asks for more decimals only when a saved amount has them" do
+    assert_equal 2, saved_amount_precision(BigDecimal("100.25"), currency: "JPY")
+    assert_equal 3, saved_amount_precision(BigDecimal("123.456"), currency: "USD")
+    assert_nil saved_amount_precision(BigDecimal("100.25"), currency: "USD")
+    assert_nil saved_amount_precision(BigDecimal("1500"), currency: "JPY")
+    assert_nil saved_amount_precision(nil, currency: "USD")
   end
 
   test "#money_field_value is nil for blank or non-numeric text" do

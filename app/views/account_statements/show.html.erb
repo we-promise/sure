@@ -54,11 +54,13 @@
               <%= form.date_field :period_end_on, label: t(".period_end_on") %>
               <%= form.money_field :opening_balance,
                     label: t(".opening_balance"),
+                    precision: saved_amount_precision(@statement.opening_balance, currency: @statement.statement_currency),
                     hide_currency: true,
                     currency_value_override: @statement.statement_currency,
                     currency_source: "select[name='account_statement[currency]']" %>
               <%= form.money_field :closing_balance,
                     label: t(".closing_balance"),
+                    precision: saved_amount_precision(@statement.closing_balance, currency: @statement.statement_currency),
                     hide_currency: true,
                     currency_value_override: @statement.statement_currency,
                     currency_source: "select[name='account_statement[currency]']" %>

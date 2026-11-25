@@ -101,15 +101,19 @@
       <% end %>
 
       <% table.with_column(t(".balance_column"), numeric: true) do |mapping| %>
+        <% balance = mapping.current_balance_amount || @import.suggested_current_balance(mapping) %>
+        <%# An existing target keeps its own currency (the import does not convert);
+            at least two decimals, as the Destination picker can still change it. %>
+        <% balance_currency = mapping.target&.currency || @import.family.currency %>
         <%= form.money_field "accounts[#{mapping.id}][current_balance]",
-              value: mapping.current_balance_amount || @import.suggested_current_balance(mapping),
+              value: balance,
               label: t(".balance_label", name: mapping.key),
               label_class: "sr-only",
-              precision: 2,
+              precision: money_field_value(balance, currency: balance_currency, min_precision: 2).last,
               container_class: "w-36 ml-auto",
               input_class: "text-right tabular-nums",
               hide_currency: true,
-              currency_value_override: @import.family.currency %>
+              currency_value_override: balance_currency %>
       <% end %>
     <% end %>
 

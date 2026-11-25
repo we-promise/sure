@@ -166,9 +166,13 @@ export default class extends Controller {
 
   updateAmount(currency) {
     const requestId = ++this.requestSequence;
-    this.textAtSwitch = this.amountTarget.value;
+    // A second switch before the first lookup lands keeps the first snapshot:
+    // text typed since then was typed for a new currency all the same.
+    if (!this.switchUnsettled) this.textAtSwitch = this.amountTarget.value;
+    this.switchUnsettled = true;
     new CurrenciesService().get(currency).then((currencyData) => {
       if (requestId !== this.requestSequence) return;
+      this.switchUnsettled = false;
 
       // Text already there was typed for the previous currency, so it is read
       // with that currency's rules. Text edited while the lookup was pending
@@ -193,12 +197,20 @@ export default class extends Controller {
       const rawValue = this.amountTarget.value.trim();
       if (rawValue !== "") {
         const wasUnread = this.#isUnreadAfterCurrencySwitch();
-        const parsedAmount = wasUnread
-          ? null
-          : evaluateAmountExpression(rawValue, {
-              precision: typedPrecision,
-              delimiter: typedDelimiter,
-            });
+        const pasted = this.pastedDuringSwitch === this.amountTarget.value;
+        this.pastedDuringSwitch = undefined;
+        let parsedAmount = null;
+        if (pasted) {
+          parsedAmount = parseAmountPaste(rawValue, {
+            separator: currencyData.separator,
+            precision: null,
+          });
+        } else if (!wasUnread) {
+          parsedAmount = evaluateAmountExpression(rawValue, {
+            precision: typedPrecision,
+            delimiter: typedDelimiter,
+          });
+        }
         // Text a whole-number currency rejected but read as grouping stays
         // flagged until it is edited. Read with the new currency's rules it
         // would become valid with another meaning: "150.000*12" is rejected
@@ -215,10 +227,12 @@ export default class extends Controller {
             this.hasPrecisionValue && Number.isInteger(this.precisionValue)
               ? this.precisionValue
               : currencyData.default_precision;
+          // A paste is written as a plain number, as pasteAmount does; typed
+          // text keeps its comma or dot.
           this.amountTarget.value = formatAmountForDisplay(
             parsedAmount,
             precision,
-            rawValue,
+            pasted ? undefined : rawValue,
           );
         }
       }
@@ -236,6 +250,7 @@ export default class extends Controller {
     }).catch(() => {
       // Catch prevents Unhandled Promise Rejection for network failures.
       // Silently ignored as they are unactionable by the user.
+      if (requestId === this.requestSequence) this.switchUnsettled = false;
     });
   }
 
@@ -250,9 +265,16 @@ export default class extends Controller {
     const pending = this.#currencyPending();
     const precision = pending ? null : this.#fieldPrecision();
     // While a currency switch is loading, a paste that reads differently
-    // with a dot or a comma decimal ("1,234") is left as pasted text, so the
-    // lookup reads it with the new currency's separator when it lands.
-    if (pending && this.#pasteReadsBothWays(text)) return;
+    // with a dot or a comma decimal ("1,234") is kept as pasted text, so the
+    // lookup reads it as a paste with the new currency's separator when it
+    // lands (see updateAmount).
+    if (pending && this.#pasteReadsBothWays(text)) {
+      event.preventDefault();
+      this.amountTarget.value = text.trim();
+      this.pastedDuringSwitch = this.amountTarget.value;
+      this.amountTarget.dispatchEvent(new Event("input", { bubbles: true }));
+      return;
+    }
     const parsed = parseAmountPaste(text, {
       separator: this.#pasteSeparator(),
       precision,

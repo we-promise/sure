@@ -1,4 +1,6 @@
 module ApplicationHelper
+  MONEY_FIELD_MAX_EXPONENT = 20
+
   include Pagy::Frontend
 
   # Whether an AI feature (a key in Ai::Routes::MATRIX) can run for the current family and user,
@@ -227,13 +229,25 @@ module ApplicationHelper
   def money_field_value(raw, currency: Current.family.currency, min_precision: nil)
     min_precision = [ Money::Currency.new(currency).default_precision, min_precision.to_i ].max
     amount = BigDecimal(raw.to_s)
-    return [ nil, min_precision ] unless amount.finite?
+    # An exponent far outside any amount ("1e-1000000000") is not one, and
+    # writing it out in plain notation would take a string of that length.
+    return [ nil, min_precision ] unless amount.finite? && amount.exponent.abs <= MONEY_FIELD_MAX_EXPONENT
 
-    # Capped, so a stray "1e-150" cannot ask the field for 150 decimals.
-    decimals = [ amount.to_s("F").split(".").last.sub(/0+\z/, "").length, 10 ].min
+    # Counted from the significant digits and the exponent, capped, so a
+    # stray "1e-150" cannot ask the field for 150 decimals.
+    _sign, digits, _base, exponent = amount.split
+    decimals = (digits.sub(/0+\z/, "").length - exponent).clamp(0, 10)
     [ amount, [ decimals, min_precision ].max ]
   rescue ArgumentError, TypeError
     [ nil, min_precision ]
+  end
+
+  # The decimals a money field needs to show a saved amount unchanged, or nil
+  # when the currency's own are enough, so the field keeps following the
+  # currency picker for ordinary amounts.
+  def saved_amount_precision(value, currency:)
+    _amount, precision = money_field_value(value, currency: currency)
+    precision if precision > Money::Currency.new(currency).default_precision
   end
 
   def currency_picker_options_for_family(family = Current.family, extra: [])

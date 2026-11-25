@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus";
-import evaluateAmountExpression, { precisionFromStep } from "utils/evaluate_amount_expression";
+import { precisionFromStep } from "utils/evaluate_amount_expression";
+import submittedAmount from "utils/submitted_amount";
 
 // Connects to data-controller="rule--split-action"
 // Split rows use real, individually-named form fields (rendered server-side), so this
@@ -174,7 +175,8 @@ export default class extends Controller {
   }
 
   // Shares and the amount condition are money fields, so their text can hold
-  // a comma decimal or an expression.
+  // a comma decimal or an expression; they are read as submitted (rounded to
+  // the field's precision), which is what Rule::Action checks the total with.
   #readAmount(input) {
     if (!input) return null;
 
@@ -183,7 +185,7 @@ export default class extends Controller {
       10,
     );
     const precision = Number.isInteger(declared) ? declared : precisionFromStep(input.step);
-    return evaluateAmountExpression(input.value, { precision });
+    return submittedAmount(this.application, input, precision);
   }
 
   #isWithinAndOnlyAncestry(row) {

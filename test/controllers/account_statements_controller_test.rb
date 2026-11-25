@@ -311,6 +311,21 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_select "button", text: I18n.t("account_statements.show.unlink"), count: 0
   end
 
+  test "statement balances keep their decimals in a whole-number currency" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "jpy_statement.csv", content_type: "text/csv")
+    )
+    statement.update_columns(currency: "JPY", opening_balance: BigDecimal("100.25"), closing_balance: BigDecimal("1500"))
+
+    get account_statement_url(statement)
+
+    assert_response :success
+    assert_select "input[name='account_statement[opening_balance]'][value='100.25']"
+    assert_select "input[name='account_statement[closing_balance]'][value='1500']"
+  end
+
   test "metadata form does not expose account select for managers" do
     statement = AccountStatement.create_from_upload!(
       family: @account.family,
