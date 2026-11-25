@@ -27,6 +27,11 @@ uk:
       from: Звідки
       to: Куди
       date: Дата
+      days_apart:
+        one: "%{count} день різниці"
+        few: "%{count} дні різниці"
+        many: "%{count} днів різниці"
+        other: "%{count} дня різниці"
       actions: Дії
       separator: "·"
     bulk_actions:
