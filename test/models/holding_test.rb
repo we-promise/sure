@@ -363,6 +363,24 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(BigDecimal("150")), holding.avg_cost
   end
 
+  # Holding 10 where the trades net to 0 leaves ten opening shares. Selling
+  # five of them relieves units the book holds, as the calculators book the
+  # opening position as a lot, so the rebuy joins the average rather than
+  # covering a shortfall and leaving nothing priced: 200, not unknown.
+  test "a sale from opening shares leaves no shortfall for the next buy" do
+    security = create_security("OPNS", prices: [ { date: Date.current, price: 210 } ])
+    create_trade(security, account: @account, qty: -5, price: 150, date: 5.days.ago.to_date)
+    create_trade(security, account: @account, qty: 5, price: 200, date: 2.days.ago.to_date)
+    holding = @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 210,
+                                        amount: 2100, currency: "USD", cost_basis: nil)
+
+    batch = [ Holding.find(holding.id) ]
+    Holding.preload_avg_costs(batch)
+
+    assert_equal Money.new(BigDecimal("200")), holding.avg_cost
+    assert_equal Money.new(BigDecimal("200")), batch.first.avg_cost
+  end
+
   # The walk back to the opening position has to undo the split as well as the
   # trades: 10 bought and 5 moved in become 30 on a 2-for-1 split, and selling
   # all 30 closes the position. Subtracting the trades from the 8 held without
@@ -575,22 +593,6 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal own, batched, "the batch disagrees with #avg_cost"
   end
 
-  # The replay runs on Holding::LotBook, the calculators' own engine, not on
-  # the Holding::CostBasisTracker name kept only for the lot book's parity
-  # suite, so both paths keep working once that name goes.
-  test "the fallback and the batch replay on the lot book" do
-    security = create_security("LOTB", prices: [ { date: Date.current, price: 120 } ])
-    create_trade(security, account: @account, qty: 10, price: 100, date: 3.days.ago.to_date)
-    holding = create_holding(security, Date.current, 10)
-    Holding::CostBasisTracker.expects(:new).never
-
-    assert_equal BigDecimal("100"), Holding.find(holding.id).avg_cost.amount
-
-    batch = [ Holding.find(holding.id) ]
-    Holding.preload_avg_costs(batch)
-    assert_equal BigDecimal("100"), batch.first.avg_cost.amount
-  end
-
   # Like the per-holding fallback, a foreign trade's own rate is used only up
   # to 20 integer digits; past that the batch must not overflow the query.
   test "the batch ignores a numeric rate too large to convert" do
@@ -667,6 +669,48 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal own, batched, "the batch disagrees with #avg_cost"
   end
 
+  # A lot's cost is in the account's currency; a holding in another currency
+  # carries its cost in its own, converted at the rate on the day the lot was
+  # acquired, not today's: a basis is what was paid then. 400 USD for 5 units
+  # at 0.9 is 72 EUR a unit; today's 0.5 would say 40, and no conversion 80.
+  test "a costed lot in a holding of another currency converts at its acquisition-date rate" do
+    day = 2.days.ago.to_date
+    security = create_security("LOTF", prices: [ { date: Date.current, price: 100 } ])
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: day, rate: 0.9)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+    buy = create_trade(security, account: @account, qty: 5, price: 100, date: day)
+    HoldingLot.create!(account: @account, security: security, source_entry: buy, qty: 5,
+                       currency: "USD", acquired_on: day, manual_total_cost: 400)
+    holding = @account.holdings.create!(security: security, date: Date.current, qty: 5, price: 100,
+                                        amount: 500, currency: "EUR", cost_basis: nil)
+
+    batch = [ Holding.find(holding.id) ]
+    Holding.preload_avg_costs(batch)
+
+    assert_equal Money.new(BigDecimal("72"), "EUR"), Holding.find(holding.id).avg_cost
+    assert_equal Money.new(BigDecimal("72"), "EUR"), batch.first.avg_cost
+  end
+
+  # With no rate for the lot's day, its cost in the holding's currency is
+  # unknown, so the position's is too, as for a foreign buy with no rate.
+  test "a costed lot in a holding of another currency with no rate for its day is unknown" do
+    day = 2.days.ago.to_date
+    security = create_security("LOTN", prices: [ { date: Date.current, price: 100 } ])
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+    moved_in = create_trade(security, account: @account, qty: 5, price: 100, date: day)
+    moved_in.entryable.update!(investment_activity_label: "Sweep In")
+    HoldingLot.create!(account: @account, security: security, source_entry: moved_in, qty: 5,
+                       currency: "USD", acquired_on: day, manual_total_cost: 400)
+    holding = @account.holdings.create!(security: security, date: Date.current, qty: 5, price: 100,
+                                        amount: 500, currency: "EUR", cost_basis: nil)
+
+    batch = [ Holding.find(holding.id) ]
+    Holding.preload_avg_costs(batch)
+
+    assert_nil Holding.find(holding.id).avg_cost
+    assert_nil batch.first.avg_cost
+  end
+
   # A fifo position holds its open lots, so with no stored cost its fallback
   # is their mean, as #calculate_avg_cost gives it: 20 here, where the
   # average method would say 15. The batch reads every fifo holding's lots together, so a page of them
@@ -714,6 +758,23 @@ class HoldingTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("20"), Holding.find(holding.id).avg_cost&.amount, "#avg_cost"
     assert_equal BigDecimal("20"), batch.first.avg_cost&.amount, "the batch's figure"
+  end
+
+  # The open lots are the position as it stands, so under fifo they say
+  # nothing about the cost just before an earlier sale, and the trades'
+  # pooled average (15 here) is the average method's figure.
+  test "a fifo holding gives no cost just before a sale" do
+    @account.update!(cost_basis_method: "fifo")
+    security = create_security("FIFOB", prices: [ { date: Date.current, price: 30 } ])
+    create_trade(security, account: @account, qty: 10, price: 10, date: 3.days.ago.to_date)
+    create_trade(security, account: @account, qty: 10, price: 20, date: 2.days.ago.to_date)
+    sale = create_trade(security, account: @account, qty: -10, price: 30, date: 1.day.ago.to_date)
+    Holding::Materializer.new(@account.reload, strategy: :forward).materialize_holdings
+    holding = @account.holdings.where(security: security).order(:date).last
+    holding.update!(cost_basis: nil)
+
+    assert_equal BigDecimal("20"), holding.avg_cost&.amount, "the open lots answer for the position as it stands"
+    assert_nil holding.avg_cost_before(sale)
   end
 
   test "the batch leaves a stored cost basis alone and does not query for it" do
