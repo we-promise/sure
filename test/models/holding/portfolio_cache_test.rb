@@ -541,6 +541,20 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     end
   end
 
+  test "carries the price of an unpriced trade forward at the new day's exchange rate" do
+    security = Security.create!(name: "Unquoted Fund", ticker: "UQF")
+    yesterday = Date.current.prev_day
+    create_movement(security, qty: 1, date: yesterday)
+    create_trade(security, account: @account, qty: 1, date: Date.current.next_day, price: 100, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: yesterday, rate: 1.1)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
+
+    cache = Holding::PortfolioCache.new(@account, carry_forward_prices: true)
+
+    assert_equal 110, cache.get_price(security.id, yesterday).price
+    assert_equal 120, cache.get_price(security.id, Date.current).price
+  end
+
   test "a future price is scaled back across a split before it, even one not yet in effect" do
     security = Security.create!(name: "Future Split", ticker: "FSPL", exchange_operating_mic: "TEST")
     create_movement(security, qty: 1, date: Date.current)

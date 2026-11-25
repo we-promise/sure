@@ -5,6 +5,8 @@ class BitcoinWalletAccount::Discovery
   class Conflict < StandardError; end
   class AddressMismatch < StandardError; end
 
+  attr_reader :probed_addresses
+
   # Allocate a per-run HD address budget and use the supplied explorer client.
   # Address derivation remains local to the wallet's public keys.
   def initialize(wallet, provider:, tip: nil)
@@ -12,12 +14,13 @@ class BitcoinWalletAccount::Discovery
     @provider = provider
     @remaining = MAX_ADDRESSES
     @tip = tip
+    @probed_addresses = Set.new
   end
 
   # Remember manual sources and resume HD scans from saved checkpoints.
   # Return whether every source has completed both branch gaps.
   def perform
-    wallet.bitcoin_wallet_sources.each do |source|
+    wallet.bitcoin_wallet_sources.reload.each do |source|
       if source.kind == "address"
         publish(source, nil, [ [ source.receive_address, {} ] ])
       else
@@ -61,19 +64,21 @@ class BitcoinWalletAccount::Discovery
     # A completed scan must contain this source's independently supplied address.
     def scan(source)
       original = source.discovery
+      gap_limit = source.gap_limit
+      cursors = original.values_at("0", "1").compact
+      stale_gap = cursors.any? { |cursor| cursor["gap_limit"] != gap_limit }
       # Older in-progress cursors have no proof of which blocks they covered.
-      unanchored_progress = @tip && !original.key?("tip_hash") &&
-        original.values_at("0", "1").compact.any? { |cursor| cursor.key?("complete") }
-      state = unanchored_progress ? {} : original.deep_dup
+      unanchored_progress = @tip && !original.key?("tip_hash") && cursors.any? { |cursor| cursor.key?("complete") }
+      state = stale_gap || unanchored_progress ? {} : original.deep_dup
       state["tip_hash"] ||= @tip if @tip
       # A scan from nothing covers the full gap, so the daily rescan counts from it.
       state["full_scan_at"] ||= Time.current.iso8601 if state.values_at("0", "1").none?
       found = []
       [ 0, 1 ].each do |branch|
-        cursor = state.fetch(branch.to_s, { "index" => 0, "gap" => 0 })
+        cursor = state.fetch(branch.to_s, { "index" => 0, "gap" => 0, "gap_limit" => gap_limit })
         next if cursor["complete"]
 
-        while @remaining.positive? && cursor["gap"] < source.gap_limit
+        while @remaining.positive? && cursor["gap"] < gap_limit
           index = cursor["index"]
           cached = wallet.bitcoin_wallet_addresses.find_by(bitcoin_wallet_source: source, branch: branch, address_index: index)
           address = cached&.address || source.public_key.address(branch, index)
@@ -84,12 +89,17 @@ class BitcoinWalletAccount::Discovery
           cursor["index"] += 1
           @remaining -= 1
         end
-        cursor["complete"] = cursor["gap"] >= source.gap_limit
+        cursor["complete"] = cursor["gap"] >= gap_limit
         state[branch.to_s] = cursor
       end
-      return unless publish(source, original, found) { source.update!(discovery: state) }
+      invalid_claim = false
+      published = publish(source, original, found, gap_limit: gap_limit) do
+        source.update!(discovery: state)
+        invalid_claim = !@tip && source.discovery_complete? && !valid_claim?(source)
+      end
+      probed_addresses.merge(found.map(&:first)) if published
 
-      if !@tip && source.discovery_complete? && !valid_claim?(source)
+      if invalid_claim
         raise AddressMismatch, "The receive address does not match this BIP84 account within the selected gap limit"
       end
     end
@@ -99,16 +109,16 @@ class BitcoinWalletAccount::Discovery
       return true if claims.exists?(address: source.receive_address)
 
       # Earlier runs already committed this key's addresses; a wrong key must not keep them.
-      claims.delete_all
+      source.release_addresses
       false
     end
 
     # Write a scan's addresses and checkpoint only while its source still exists
-    # unchanged, so a source removed, reset or rekeyed during provider reads stays so.
-    def publish(source, original, found)
+    # unchanged, so an edit during provider reads cannot restore stale progress.
+    def publish(source, original, found, gap_limit: source.gap_limit)
       wallet.with_lock do
-        current, fingerprint = BitcoinWalletSource.where(id: source.id).pick(:discovery, :fingerprint)
-        return false if current.nil? || (original && current != original) || fingerprint != source.fingerprint
+        current, fingerprint, current_gap_limit = BitcoinWalletSource.where(id: source.id).pick(:discovery, :fingerprint, :gap_limit)
+        return false if current.nil? || (original && current != original) || fingerprint != source.fingerprint || current_gap_limit != gap_limit
 
         found.each { |address, attributes| remember(address, **attributes) }
         yield if block_given?

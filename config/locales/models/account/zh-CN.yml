@@ -10,6 +10,12 @@ zh-CN:
         logo: "图标"
         name: "名称"
         subtype: "子类型"
+      depository:
+        subtype: "账户类型"
+      investment:
+        subtype: "投资类型"
+      loan:
+        subtype: "贷款类型"
     errors:
       models:
         account:

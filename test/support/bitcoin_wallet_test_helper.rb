@@ -47,7 +47,7 @@ module BitcoinWalletTestHelper
 
     # Respect history/mempool inclusion flags when serving fixture transactions;
     # fixture history is already bounded and does not require network pagination.
-    def get_wallet_transactions(address, since: nil, include_history: true, include_mempool: true)
+    def get_wallet_transactions(address, baseline_block_height: nil, include_history: true, include_mempool: true)
       transactions.fetch(address, []).select do |tx|
         tx.dig("status", "confirmed") ? include_history : include_mempool
       end

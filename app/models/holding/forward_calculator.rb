@@ -41,16 +41,16 @@ class Holding::ForwardCalculator
       holdings = []
 
       first_date = @window_start_date || account.start_date
-      # Replay the days before the window the same way, splits included, without emitting holdings.
-      account.start_date.upto(first_date - 1) do |date|
+      today = Date.current
+      # Seed lots through the day before the window without applying scheduled trades early.
+      account.start_date.upto([ first_date - 1, today ].min) do |date|
         current_portfolio = apply_trades(apply_splits(current_portfolio, date), portfolio_cache.get_trades(date: date))
       end
 
-      first_date.upto(Date.current).each do |date|
+      first_date.upto(today).each do |date|
         trades = portfolio_cache.get_trades(date: date)
         next_portfolio = apply_trades(apply_splits(current_portfolio, date), trades)
         holdings.concat(build_holdings(next_portfolio, date))
-        holdings.concat(untraded_holdings(date)) if @carry_holdings
         current_portfolio = next_portfolio
       end
 
@@ -65,31 +65,38 @@ class Holding::ForwardCalculator
         use_holdings: @carry_holdings, carry_forward_prices: @carry_holdings)
     end
 
-    # Carry only snapshots already established on this date, preserving their
-    # basis metadata while repricing.
-    def untraded_holdings(date)
-      @untraded_snapshots ||= begin
-        # An income trade (qty 0) moves no shares, so it leaves a snapshot carried.
-        traded_ids = account.trades.where.not(qty: 0).distinct.pluck(:security_id)
-        scope = account.holdings.where(materialized: false).where.not(security_id: traded_ids).order(:date)
-        scope = scope.where(security_id: @security_ids) if @security_ids
-        scope.to_a.group_by(&:security_id)
+    # An observation supplies its own day's position. Between observations,
+    # carry their quantities only until the journal first moves shares.
+    def snapshot_for(security_id, date)
+      snapshots = portfolio_cache.get_holdings(security_id)
+      return unless snapshots
+
+      index = snapshots.bsearch_index { |holding| holding.date > date } || snapshots.length
+      return if index.zero?
+
+      snapshot = snapshots[index - 1]
+      return snapshot if snapshot.date == date
+
+      @first_trade_dates ||= portfolio_cache.get_trades.each_with_object({}) do |entry, dates|
+        next if entry.entryable.qty.zero?
+
+        dates[entry.entryable.security_id] ||= entry.date
       end
+      first_trade_date = @first_trade_dates[security_id]
+      return if first_trade_date && first_trade_date <= date
 
-      @untraded_snapshots.filter_map do |security_id, snapshots|
-        index = snapshots.bsearch_index { |holding| holding.date > date }
-        snapshot = index ? (snapshots[index - 1] if index.positive?) : snapshots.last
-        next unless snapshot
+      snapshot
+    end
 
-        price = portfolio_cache.get_price(security_id, date, currency: snapshot.currency)
-        next unless price
-
-        split_factor = portfolio_cache.split_factor_between(security_id, snapshot.date, date)
-        qty = Security::Split.scale(snapshot.qty, split_factor)
-        basis = Security::Split.unscale(snapshot.cost_basis, split_factor) if snapshot.cost_basis
-        Holding::HoldingData.new(account_id: account.id, security_id: security_id, date: date,
-          qty: qty, price: price.price, currency: price.currency, amount: qty * price.price, cost_basis: basis, snapshot: snapshot)
-      end
+    def build_snapshot_holding(snapshot, date)
+      security_id = snapshot.security_id
+      split_factor = portfolio_cache.split_factor_between(security_id, snapshot.date, date)
+      price = portfolio_cache.get_price(security_id, date, currency: snapshot.currency)&.price ||
+        Security::Split.unscale(snapshot.price, split_factor)
+      qty = Security::Split.scale(snapshot.qty, split_factor)
+      basis = Security::Split.unscale(snapshot.cost_basis, split_factor) if snapshot.cost_basis
+      Holding::HoldingData.new(account_id: account.id, security_id: security_id, date: date,
+        qty: qty, price: price, currency: snapshot.currency, amount: qty * price, cost_basis: basis, snapshot: snapshot)
     end
 
     def empty_portfolio
@@ -103,14 +110,14 @@ class Holding::ForwardCalculator
 
 
     def build_holdings(portfolio, date, price_source: nil)
-      portfolio.map do |security_id, qty|
+      portfolio.filter_map do |security_id, qty|
         next if @security_ids && !@security_ids.include?(security_id)
 
-        price = portfolio_cache.get_price(security_id, date, source: price_source)
+        snapshot = snapshot_for(security_id, date) if @carry_holdings
+        next build_snapshot_holding(snapshot, date) if snapshot
 
-        if price.nil?
-          next
-        end
+        price = portfolio_cache.get_price(security_id, date, source: price_source)
+        next unless price
 
         Holding::HoldingData.new(
           account_id: account.id,
@@ -123,7 +130,7 @@ class Holding::ForwardCalculator
           cost_basis: cost_basis_for(security_id, price.currency),
           cost_basis_unknown: cost_unknown?(security_id)
         )
-      end.compact
+      end
     end
 
     # A split takes effect at the open of its ex-date, before that day's trades,

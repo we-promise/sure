@@ -15,7 +15,8 @@ class BitcoinWalletSource < ApplicationRecord
   validates :fingerprint, uniqueness: { scope: :bitcoin_wallet_account_id }
   validate :valid_source
   before_validation :normalize_source, on: :create
-  before_destroy :release_addresses
+  before_update :lock_wallet, if: :will_save_change_to_gap_limit?
+  before_destroy :lock_wallet, :release_addresses
 
   # Parse the encrypted-at-rest public key locally and cache its derivation
   # object until the key changes. Invalid key material raises InvalidKey.
@@ -30,17 +31,28 @@ class BitcoinWalletSource < ApplicationRecord
   # Manual addresses need no HD scan; extended-key sources require completed
   # unused gaps on both receive and change branches.
   def discovery_complete?
-    kind == "address" || [ 0, 1 ].all? { |branch| discovery.dig(branch.to_s, "complete") == true }
+    kind == "address" || %w[0 1].all? do |branch|
+      discovery.dig(branch, "complete") == true && discovery.dig(branch, "gap_limit") == gap_limit
+    end
+  end
+
+  # The caller holds the wallet lock. Keep one row per address even when a
+  # manual source and an HD source both claim it.
+  def release_addresses
+    rows = bitcoin_wallet_account.bitcoin_wallet_addresses
+    if kind == "address"
+      rows.where(bitcoin_wallet_source_id: nil, address: receive_address).delete_all
+    else
+      claims = rows.where(bitcoin_wallet_source_id: id)
+      manual_addresses = bitcoin_wallet_account.bitcoin_wallet_sources.where(kind: "address").select(:receive_address)
+      claims.where(address: manual_addresses).update_all(bitcoin_wallet_source_id: nil, branch: nil, address_index: nil)
+      claims.delete_all
+    end
   end
 
   private
-    # The schema only nullifies derived rows, and a manual address row has no
-    # source, so a removed source's addresses would keep counting otherwise.
-    # Rows another source still claims are recreated by the next discovery.
-    def release_addresses
-      rows = bitcoin_wallet_account.bitcoin_wallet_addresses
-      rows = kind == "address" ? rows.where(bitcoin_wallet_source_id: nil, address: receive_address) : rows.where(bitcoin_wallet_source_id: id)
-      rows.delete_all
+    def lock_wallet
+      BitcoinWalletAccount.where(id: bitcoin_wallet_account_id).lock.pick(:id)
     end
 
     # Canonicalize address/key whitespace and derive a duplicate-source identity

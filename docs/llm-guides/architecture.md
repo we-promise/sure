@@ -59,7 +59,13 @@ For a depository account this is cash; for an investment account it includes cas
 and holdings value. A holding records an account's quantity and price of a
 [Security](../../app/models/security.rb) on a date. [Balance::Materializer](../../app/models/balance/materializer.rb)
 materializes holdings through [Holding::Materializer](../../app/models/holding/materializer.rb)
-before calculating balance history.
+before calculating balance history. For a cash-anchored account, one position
+per security and date feeds both balances and portfolio reports. If currencies
+overlap, prefer the provider snapshot, then another observation, then a
+calculated row. Within the same source rank prefer the account currency, then
+sort by currency code. A zero in the chosen row closes the position. When a
+rebuild changes the currency of a calculated position, its previous row is
+superseded so its stored cost override can be restored if that currency returns.
 
 Entry delegates to one of the three [Entryable types](../../app/models/entryable.rb),
 with a date, amount and currency:

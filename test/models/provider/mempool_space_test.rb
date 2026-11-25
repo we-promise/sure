@@ -23,11 +23,24 @@ class Provider::MempoolSpaceTest < ActiveSupport::TestCase
 
   test "wallet history stops paging at the baseline" do
     stub_json("/address/#{ADDRESS}/txs/mempool", [])
-    stub_json("/address/#{ADDRESS}/txs/chain", full_page(time: 2.days.ago))
+    stub_json("/address/#{ADDRESS}/txs/chain", full_page(height: 100))
 
-    @provider.get_wallet_transactions(ADDRESS, since: 1.day.ago)
+    @provider.get_wallet_transactions(ADDRESS, baseline_block_height: 100)
 
     assert_not_requested :get, %r{/txs/chain/}
+    refute @provider.truncated
+  end
+
+  test "an earlier block timestamp does not stop paging above the baseline height" do
+    page = full_page(height: 102, time: 2.days.ago)
+    payment = tx("payment", height: 101)
+    stub_json("/address/#{ADDRESS}/txs/mempool", [])
+    stub_json("/address/#{ADDRESS}/txs/chain", page)
+    stub_json("/address/#{ADDRESS}/txs/chain/#{page.last.fetch("txid")}", [ payment ])
+
+    result = @provider.get_wallet_transactions(ADDRESS, baseline_block_height: 100)
+
+    assert_equal payment, result.last
     refute @provider.truncated
   end
 
@@ -36,7 +49,7 @@ class Provider::MempoolSpaceTest < ActiveSupport::TestCase
     stub_json("/address/#{ADDRESS}/txs/chain", full_page(time: Time.current))
     stub_request(:get, %r{/address/#{ADDRESS}/txs/chain/}).to_return(json(full_page(time: Time.current, prefix: "n")))
 
-    @provider.get_wallet_transactions(ADDRESS, since: 1.day.ago)
+    @provider.get_wallet_transactions(ADDRESS, baseline_block_height: 100)
 
     assert_requested :get, %r{/txs/chain/}, times: 1
     assert @provider.truncated
@@ -74,13 +87,13 @@ class Provider::MempoolSpaceTest < ActiveSupport::TestCase
   end
 
   private
-    def tx(id, confirmed: true, time: Time.current)
+    def tx(id, confirmed: true, height: 101, time: Time.current)
       { "txid" => id, "vin" => [], "vout" => [],
-        "status" => { "confirmed" => confirmed, "block_time" => (time.to_i if confirmed) } }
+        "status" => { "confirmed" => confirmed, "block_height" => (height if confirmed), "block_time" => (time.to_i if confirmed) } }
     end
 
-    def full_page(time:, prefix: "t")
-      Array.new(Provider::MempoolSpace::PAGE_SIZE) { |i| tx("#{prefix}#{i}", time: time) }
+    def full_page(height: 101, time: Time.current, prefix: "t")
+      Array.new(Provider::MempoolSpace::PAGE_SIZE) { |i| tx("#{prefix}#{i}", height: height, time: time) }
     end
 
     def stub_json(path, body)

@@ -31,17 +31,18 @@ class Holding::CurrentForInvestmentAccounts
         GROUP BY provider_holdings.account_id
       )
     ) OR holdings.id IN (
-      SELECT DISTINCT ON (latest_holdings.account_id, latest_holdings.security_id) latest_holdings.id
-      FROM holdings latest_holdings
-      INNER JOIN accounts ON accounts.id = latest_holdings.account_id
-      WHERE latest_holdings.account_id IN (:account_ids)
+      SELECT DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id
+      FROM holdings
+      INNER JOIN accounts ON accounts.id = holdings.account_id
+      WHERE holdings.account_id IN (:account_ids)
         AND accounts.id IN (:account_ids)
-        AND latest_holdings.date <= :today
+        AND holdings.date <= :today
+        AND NOT holdings.superseded
         AND (
-          latest_holdings.account_id IN (#{ANCHORED_ACCOUNT_IDS_SQL})
+          holdings.account_id IN (#{ANCHORED_ACCOUNT_IDS_SQL})
           OR (
-            latest_holdings.currency = accounts.currency
-            AND latest_holdings.account_id NOT IN (
+            holdings.currency = accounts.currency
+            AND holdings.account_id NOT IN (
               SELECT provider_holdings.account_id
               FROM holdings provider_holdings
               WHERE provider_holdings.account_id IN (:account_ids)
@@ -49,7 +50,8 @@ class Holding::CurrentForInvestmentAccounts
             )
           )
         )
-      ORDER BY latest_holdings.account_id, latest_holdings.security_id, latest_holdings.date DESC
+      ORDER BY holdings.account_id, holdings.security_id, holdings.date DESC,
+        #{Holding::POSITION_ORDER}
     )
   SQL
 

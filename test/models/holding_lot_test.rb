@@ -147,6 +147,23 @@ class HoldingLotTest < ActiveSupport::TestCase
     assert_equal 83, holding_qty(@split, d(10)), "the split and a sale are crossed"
   end
 
+  test "lot quantities use the preferred holding only for cash-anchored accounts" do
+    setup_account
+    @account.create_cash_anchor!
+    unanchored = @family.accounts.create!(name: "Unanchored", balance: 0, currency: "USD", accountable: Investment.new)
+    security = securities(:msft)
+
+    [ @account, unanchored ].each do |account|
+      account.holdings.create!(security: security, date: Date.current, qty: 2, price: 10, amount: 20, currency: "EUR")
+      account.holdings.create!(security: security, date: Date.current, qty: 5, price: 10, amount: 50, currency: "USD", materialized: true)
+    end
+    HoldingLot.create!(account: @account, security: security, currency: "USD", qty: 2)
+    HoldingLot.create!(account: unanchored, security: security, currency: "USD", qty: 7)
+
+    assert_equal Set[[ @account.id, security.id ], [ unanchored.id, security.id ]],
+      HoldingLot.in_partition([ @account.id, unanchored.id ], [ security.id ])
+  end
+
   # 10 / 1.5 rounds to 18 places and back to 10.000000000000000001; the
   # opening lot takes that rounding, so the lots add up to the holding.
   test "a split that does not divide evenly leaves the lots adding up to the provider's quantity" do

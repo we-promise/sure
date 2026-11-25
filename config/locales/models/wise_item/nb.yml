@@ -1,0 +1,12 @@
+---
+nb:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: Privat SCA-nøkkel
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: kan ikke lagres fordi Active Record-kryptering ikke er konfigurert på denne installasjonen
