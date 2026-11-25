@@ -8,10 +8,10 @@ nb:
   trade_republic_items:
     duplicate_connection: Denne Trade Republic-kontoen er allerede koblet til. Den nye tilkoblingen ble fjernet.
     portfolio_categories:
-      brokerage: Meglerkonto
-      private_markets: Private markeder
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
       interest_products: Renteprodukter
-      crypto_wallet: Kryptolommebok
+      crypto_wallet: "Crypto Wallet"
     trade_republic_item:
       syncing: Synkroniserer
       requires_update: Ny autentisering kreves
@@ -114,8 +114,6 @@ nb:
       wait_for_sync: Vent til synkroniseringen som oppdager kontoen, er ferdig.
       balance: Saldo
     initiate_login:
-      verification_required: Pålogging startet. Bekreft via %{method}, og trykk deretter på Bekreft pålogging.
-      not_configured: Trade Republic er ikke konfigurert.
       pin_required: "Skriv inn PIN-koden eller passordet ditt for Trade Republic for å starte en ny pålogging."
     complete_login:
       approval_pending: Ikke bekreftet ennå. Godkjenn påloggingen i Trade Republic-appen og prøv igjen.
@@ -159,8 +157,6 @@ nb:
         one: "%{count} konto koblet til"
         other: "%{count} kontoer koblet til"
       partial: "%{linked} koblet til, %{unlinked} må konfigureres"
-    create:
-      success: Trade Republic er lagret. Bekreft påloggingen i Trade Republic-appen for å fullføre tilkoblingen.
     update:
       success: Trade Republic-konfigurasjonen ble oppdatert.
       pin_required: "Skriv inn PIN-koden eller passordet ditt for Trade Republic for å autentisere på nytt."

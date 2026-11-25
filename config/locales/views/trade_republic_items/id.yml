@@ -7,10 +7,10 @@ id:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: Pialang
-      private_markets: Pasar Privat
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
       interest_products: Produk Bunga
-      crypto_wallet: Dompet Kripto
+      crypto_wallet: "Crypto Wallet"
     duplicate_connection: "Rekening Trade Republic ini sudah terhubung. Koneksi baru telah dihapus."
     defaults:
       name: Trade Republic
@@ -121,8 +121,6 @@ id:
       balance: Saldo
       link: Tautkan
       cancel: Batal
-    create:
-      success: Trade Republic disimpan. Konfirmasi login di aplikasi Trade Republic untuk menyelesaikan koneksi.
     update:
       success: Konfigurasi Trade Republic berhasil diperbarui.
       pin_required: Masukkan PIN atau kata sandi Trade Republic Anda untuk autentikasi ulang.
@@ -132,9 +130,7 @@ id:
     select_accounts:
       not_configured: Trade Republic belum dikonfigurasi.
     initiate_login:
-      not_configured: Trade Republic belum dikonfigurasi.
       pin_required: Masukkan PIN atau kata sandi Trade Republic Anda untuk memulai login baru.
-      verification_required: "Login dimulai. Konfirmasi melalui %{method}, lalu tekan Konfirmasi login."
     initiate_qr_login:
       not_configured: Trade Republic belum dikonfigurasi.
     poll_login:
