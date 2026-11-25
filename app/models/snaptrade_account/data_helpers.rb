@@ -289,21 +289,24 @@ module SnaptradeAccount::DataHelpers
       end
     end
 
+    def option_symbol?(data)
+      return false unless data.is_a?(Hash)
+
+      data = data.with_indifferent_access
+      data[:kind].to_s.casecmp?("option") ||
+        data[:option_type].present? ||
+        !data[:is_mini_option].nil?
+    end
+
     # SnapTrade reports option `units` in contracts while quoting `price` per
     # underlying share. Standard options represent 100 underlying shares per
     # contract; mini options (`is_mini_option: true`) represent 10. Positions
     # carry the contract's own `multiplier`.
     def contract_multiplier(symbol_data, option_data = nil)
       data = option_data.presence || symbol_data
-      return 1 unless data.is_a?(Hash)
+      return 1 unless data.is_a?(Hash) && (option_data.present? || option_symbol?(data))
 
       data = data.with_indifferent_access
-      is_option = option_data.present? ||
-                  data[:kind].to_s.casecmp?("option") ||
-                  data[:option_type].present? ||
-                  !data[:is_mini_option].nil?
-      return 1 unless is_option
-
       multiplier = parse_decimal(data[:multiplier])
       return multiplier if multiplier&.positive?
 
