@@ -1432,7 +1432,7 @@ RSpec.configure do |config|
             properties: {
               id: { type: :string, format: :uuid },
               type: { type: :string, enum: Import::TYPES },
-              status: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] },
+              status: { type: :string, enum: %w[pending complete importing cancelled reverting revert_failed failed] },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' },
               account_id: { type: :string, format: :uuid, nullable: true },
@@ -1447,7 +1447,7 @@ RSpec.configure do |config|
             properties: {
               id: { type: :string, format: :uuid },
               type: { type: :string, enum: Import::TYPES },
-              status: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] },
+              status: { type: :string, enum: %w[pending complete importing cancelled reverting revert_failed failed] },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' },
               account_id: { type: :string, format: :uuid, nullable: true },

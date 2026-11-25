@@ -2600,6 +2600,7 @@ components:
           - pending
           - complete
           - importing
+          - cancelled
           - reverting
           - revert_failed
           - failed
@@ -2658,6 +2659,7 @@ components:
           - pending
           - complete
           - importing
+          - cancelled
           - reverting
           - revert_failed
           - failed
@@ -8258,6 +8260,7 @@ paths:
           - pending
           - complete
           - importing
+          - cancelled
           - reverting
           - revert_failed
           - failed

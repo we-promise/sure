@@ -104,6 +104,22 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @import.complete? || @import.failed? || @import.revert_failed?, import_data["status_detail"]["terminal"]
   end
 
+  test "lists a cancelled import by status and reports it as terminal" do
+    cancelled = @family.imports.create!(
+      type: "TransactionImport",
+      status: "cancelled",
+      raw_file_str: "date,amount,name\n01/01/2024,10.00,Cancelled"
+    )
+
+    get api_v1_imports_url(status: "cancelled"), headers: api_headers(@api_key)
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    assert_equal [ cancelled.id ], json["data"].map { _1["id"] }
+    assert_equal "cancelled", json["data"].first["status"]
+    assert json["data"].first["status_detail"]["terminal"]
+  end
+
   test "should show import" do
     get api_v1_import_url(@import), headers: api_headers(@api_key)
     assert_response :success
