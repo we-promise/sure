@@ -104,6 +104,12 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       }
     end
 
+    # A completed job whose response was lost still owns one import. Its retry gets
+    # that draft, not a second extraction, even after a worker or Redis restart.
+    if (existing = existing_import_result(pdf_import, account))
+      return existing
+    end
+
     availability = Ai.availability(:extract_pdf, family:, user:)
     return ai_unavailable(availability) unless availability.available?
 
@@ -133,27 +139,42 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     # A row-generation failure must roll the draft back too, or a retry meets an empty
     # draft and can only report draft_already_exists. The draft is checked again under the source
     # import's lock: another call may have created one while this one extracted.
-    import = pdf_import.with_lock do
-      if (draft = live_draft(pdf_import, account))
-        return draft_exists(draft)
+    import = begin
+      pdf_import.with_lock do
+        pdf_import.reload
+        # Another call may have finished while this one extracted.
+        if (existing = existing_import_result(pdf_import, account))
+          return existing
+        end
+
+        if (draft = live_draft(pdf_import, account))
+          return draft_exists(draft)
+        end
+
+        created = family.imports.create!(
+          type: "TransactionImport",
+          account: account,
+          raw_file_str: csv_content,
+          source_pdf_import_id: pdf_import.id,
+          source_import: pdf_import,
+          date_col_label: "date",
+          amount_col_label: "amount",
+          name_col_label: "name",
+          category_col_label: "category",
+          notes_col_label: "notes",
+          date_format: "%Y-%m-%d",
+          signage_convention: "inflows_positive"
+        )
+
+        created.generate_rows_from_csv
+        created
       end
-
-      created = family.imports.create!(
-        type: "TransactionImport",
-        account: account,
-        raw_file_str: csv_content,
-        source_pdf_import_id: pdf_import.id,
-        date_col_label: "date",
-        amount_col_label: "amount",
-        name_col_label: "name",
-        category_col_label: "category",
-        notes_col_label: "notes",
-        date_format: "%Y-%m-%d",
-        signage_convention: "inflows_positive"
-      )
-
-      created.generate_rows_from_csv
-      created
+    rescue ActiveRecord::RecordNotUnique
+      # Two extractions passed the check together; the index makes one the winner.
+      pdf_import.reload
+      existing = existing_import_result(pdf_import, account)
+      return existing if existing
+      raise
     end
 
     {
@@ -223,6 +244,37 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
             .where("status IN (?) OR EXISTS (SELECT 1 FROM entries WHERE entries.import_id = imports.id)",
                    %w[pending importing complete reverting revert_failed])
             .first
+    end
+
+    # The durable answer to a retry whose request ended before the job did. A
+    # different account with the same statement is a caller mistake, not a
+    # request for the first account's draft.
+    def existing_import_result(pdf_import, account)
+      derived = pdf_import.derived_import
+      return if derived.nil?
+
+      if derived.account_id != account.id
+        return {
+          success: false,
+          error: "account_mismatch",
+          import_id: derived.id,
+          message: "This statement was already imported for a different account (import #{derived.id}). " \
+                   "Call this tool again with that account to get its result."
+        }
+      end
+
+      # A published, reverting or failed draft still needs the user's attention;
+      # only a plain waiting draft is something a retry can simply return.
+      return draft_exists(derived) unless derived.pending? && derived.entries.none?
+
+      {
+        success: true,
+        already_imported: true,
+        import_id: derived.id,
+        transaction_count: derived.rows_count,
+        message: "This statement was already imported (import #{derived.id}); returning the existing draft. " \
+                 "Review and publish it when ready."
+      }
     end
 
     # What clears the guard: deleting the draft, after reverting it if it published anything.

@@ -11,6 +11,8 @@ class AiLaneTest < ActiveSupport::TestCase
     jobs = {
       AssistantResponseJob.new => :chat,
       ProcessPdfJob.new => :extract_pdf,
+      Ai::ToolJob.new(Assistant::Function::ImportBankStatement.name, users(:family_admin), {}) => :extract_pdf,
+      Ai::ToolJob.new(Assistant::Function::SearchFamilyFiles.name, users(:family_admin), {}) => :search_documents,
       IndexAccountStatementJob.new => :embed,
       VectorStore::IndexStatusJob.new => :embed,
       VectorStore::RequeueIndexPollsJob.new => :embed,

@@ -582,6 +582,43 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   # -- tools/call --
 
+  test "tools/call runs an available AI tool through Ai::ToolJob" do
+    use_ai_routes
+    SidekiqHealth.stubs(:current).returns(stub(reason: nil))
+    arguments = { query: "tax return" }
+    Assistant::Function::SearchFamilyFiles.any_instance.expects(:call).with(arguments.stringify_keys)
+                                           .returns(success: true, results: [])
+
+    with_mcp_env do
+      perform_enqueued_jobs(only: Ai::ToolJob) do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "search_family_files", arguments: }).to_json,
+             headers: mcp_headers(@token)
+      end
+    end
+
+    assert_response :ok
+    result = JSON.parse(response.body)["result"]
+    assert_not result["isError"]
+    assert_equal({ "success" => true, "results" => [] }, JSON.parse(result["content"][0]["text"]))
+  end
+
+  test "tools/call returns a busy tool error in the MCP envelope" do
+    use_ai_routes
+    SidekiqHealth.stubs(:current).returns(stub(reason: :ai_queues_not_polled))
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "search_family_files", arguments: { query: "tax" } }).to_json,
+           headers: mcp_headers(@token)
+    end
+
+    assert_response :ok
+    result = JSON.parse(response.body)["result"]
+    assert result["isError"]
+    answer = JSON.parse(result["content"][0]["text"])
+    assert_equal "busy", answer["error"]
+    assert_match(/try again/i, answer["message"])
+  end
+
   test "tools/call rejects a preview tool for a user without preview features" do
     Usage.expects(:capture).with("mcp_call_served_daily").never
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
@@ -886,20 +923,25 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   test "tools/call import_bank_statement offers and accepts only accounts the user can write to" do
     use_ai_routes
+    SidekiqHealth.stubs(:current).returns(stub(reason: nil))
     @user = users(:family_member)
     pdf_import = PdfImport.create!(family: @user.family, document_type: "bank_statement")
     Provider::Registry.expects(:preferred_llm_provider).never
 
     with_mcp_env do
-      post "/mcp", params: jsonrpc_request("tools/call", { name: "import_bank_statement", arguments: { pdf_import_id: pdf_import.id } }).to_json,
-           headers: mcp_headers(@token)
+      perform_enqueued_jobs(only: Ai::ToolJob) do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "import_bank_statement", arguments: { pdf_import_id: pdf_import.id } }).to_json,
+             headers: mcp_headers(@token)
+      end
       listed = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
       assert_equal "account_required", listed["error"]
       assert_not_includes listed["available_accounts"].map { |a| a["id"] }, accounts(:connected).id
 
       assert_no_difference "Import.count" do
-        post "/mcp", params: jsonrpc_request("tools/call", { name: "import_bank_statement", arguments: { pdf_import_id: pdf_import.id, account_id: accounts(:connected).id } }).to_json,
-             headers: mcp_headers(@token)
+        perform_enqueued_jobs(only: Ai::ToolJob) do
+          post "/mcp", params: jsonrpc_request("tools/call", { name: "import_bank_statement", arguments: { pdf_import_id: pdf_import.id, account_id: accounts(:connected).id } }).to_json,
+               headers: mcp_headers(@token)
+        end
       end
       refused = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
       assert_equal "account_not_found", refused["error"]

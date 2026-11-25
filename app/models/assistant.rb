@@ -52,6 +52,12 @@ module Assistant
     Function::PreviewRule
   ].freeze
 
+  # These declare an AI feature but must stay visible so callers get the
+  # function's own fallback or refusal instead of an unknown tool.
+  ALWAYS_LISTED_FUNCTION_CLASSES = [
+    Function::SearchFamilyFiles
+  ].freeze
+
   class << self
     # The first LLM provider chat can use, or nil: what "Dig in with AI" and the bills
     # AI review check before offering a chat. Every other feature asks the router.
@@ -121,10 +127,14 @@ module Assistant
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
       classes -= FAMILY_CONFIG_FUNCTION_CLASSES if user&.guest?
-      classes.select { |fn_class| ai_feature_available?(fn_class, user) }
+      classes.select { |fn_class| always_listed?(fn_class) || ai_feature_available?(fn_class, user) }
     end
 
     private
+      def always_listed?(fn_class)
+        ALWAYS_LISTED_FUNCTION_CLASSES.include?(fn_class)
+      end
+
       def ai_feature_available?(fn_class, user)
         feature = fn_class.ai_feature
         feature.nil? || user.nil? || Ai.available?(feature, family: user.family, user:)
