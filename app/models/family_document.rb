@@ -82,6 +82,14 @@ class FamilyDocument < ApplicationRecord
     update!(status: "error", metadata: (metadata || {}).merge("error" => error_message))
   end
 
+  # Called after the status write commits, so a retry before that write still has the bytes.
+  def purge_file
+    return false unless file.attached?
+
+    file.purge
+    true
+  end
+
   def supported_extension?
     ext = File.extname(filename).downcase
     SUPPORTED_EXTENSIONS.include?(ext)

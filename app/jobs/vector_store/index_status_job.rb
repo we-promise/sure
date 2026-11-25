@@ -32,8 +32,11 @@ class VectorStore::IndexStatusJob < ApplicationJob
       return mark_timeout_if_processing(document) if polls >= MAX_POLLS
 
       enqueue_next_poll(document, polls)
-    when "error" then mark_error_if_processing(document, response.data[:error])
-    else document.update!(status:)
+    when "error"
+      mark_error_if_processing(document, response.data[:error])
+    else
+      document.update!(status:)
+      document.purge_file
     end
   end
 
@@ -44,19 +47,22 @@ class VectorStore::IndexStatusJob < ApplicationJob
       document.with_lock do
         document.mark_error!(message) if document.status == "processing"
       end
+      document.purge_file if document.status.in?(%w[ready unreadable error])
     end
 
     # A provider that is still processing after the poll cap is not a bad document. Keep the
     # timeout recoverable: a later reread calls FamilyDocument#poll_index_later, which resumes
     # polling once the provider has had time to finish.
     def mark_timeout_if_processing(document)
-      document.with_lock do
-        next unless document.status == "processing"
+      timed_out = document.with_lock do
+        next false unless document.status == "processing"
 
         document.update!(status: "error", metadata: document.metadata.to_h.merge(
           "error" => "indexing didn't finish", "indexing_timeout" => true
         ))
+        true
       end
+      document.purge_file if timed_out
     end
 
     # A rejected requeue leaves the row processing; poll_index_later can recover it.

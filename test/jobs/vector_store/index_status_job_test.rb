@@ -19,6 +19,28 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
     assert_equal "unreadable", @document.reload.status
   end
 
+  test "a settled document purges its upload after the status write commits" do
+    @document.file.attach(io: StringIO.new("a note"), filename: "notes.txt", content_type: "text/plain")
+    expect_status("ready")
+    @document.file.expects(:purge).with do
+      assert_equal "ready", @document.reload.status
+      true
+    end
+
+    VectorStore::IndexStatusJob.perform_now(@document)
+  end
+
+  test "a terminal indexing error purges its upload after the error write commits" do
+    @document.file.attach(io: StringIO.new("a note"), filename: "notes.txt", content_type: "text/plain")
+    expect_status("error", error: "bad file")
+    @document.file.expects(:purge).with do
+      assert_equal "error", @document.reload.status
+      true
+    end
+
+    VectorStore::IndexStatusJob.perform_now(@document)
+  end
+
   test "a poll-cap timeout is resumable while a provider error stays terminal" do
     expect_status("processing")
     VectorStore::IndexStatusJob.perform_now(@document, VectorStore::IndexStatusJob::MAX_POLLS)

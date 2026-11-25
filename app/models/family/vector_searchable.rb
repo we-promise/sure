@@ -81,7 +81,35 @@ module Family::VectorSearchable
     max_results ? allowed.first(max_results) : allowed
   end
 
+  # Keeps an uploaded file on a pending row until IndexFamilyDocumentJob has sent it to the store.
+  # A job argument can't carry the bytes, so the browser hands the whole file to the model here.
+  def upload_document_later(file)
+    filename = file.original_filename.to_s
+    content_type = file.content_type.presence || Marcel::MimeType.for(name: filename)
+
+    document = family_documents.new(filename:, content_type:, status: "pending")
+    document.file_size = file.size if file.respond_to?(:size)
+    document.file.attach(io: file, filename:, content_type:)
+    document.save!
+    IndexFamilyDocumentJob.perform_later(document)
+    document
+  end
+
   def upload_document(file_content:, filename:, metadata: {})
+    document = family_documents.new(
+      filename: filename,
+      content_type: Marcel::MimeType.for(name: filename),
+      file_size: file_content.bytesize,
+      account_id: accounts.where(id: metadata.to_h["account_id"]).pick(:id),
+      metadata: (metadata || {}).dup
+    )
+
+    index_document(document, file_content:)
+  end
+
+  # Sends bytes to the store and writes the outcome on the row, whether the caller just built that
+  # row or a job is indexing one it already holds.
+  def index_document(document, file_content:)
     adapter = vector_store_adapter
     return nil unless adapter
 
@@ -91,11 +119,11 @@ module Family::VectorSearchable
     response = adapter.upload_file(
       store_id: store_id,
       file_content: file_content,
-      filename: filename,
+      filename: document.filename,
       family: self
     )
 
-    metadata = (metadata || {}).merge("vector_store" => VectorStore.backend_name(adapter))
+    metadata = document.metadata.to_h.merge("vector_store" => VectorStore.backend_name(adapter))
 
     # A failed compensating deletion leaves an uploaded file with no store attachment. Keep its
     # id in an error row so a later remove_file, or deleting the family, can still delete it. The
@@ -104,30 +132,20 @@ module Family::VectorSearchable
       error = response.error
       return nil unless error.is_a?(VectorStore::UploadCleanupError)
 
-      create_document_row!(adapter, store_id, error.file_id,
-        filename: filename,
-        content_type: Marcel::MimeType.for(name: filename),
-        file_size: file_content.bytesize,
+      write_index_result(document, adapter, store_id, error.file_id,
         provider_file_id: error.file_id,
         status: "error",
-        account_id: accounts.where(id: metadata["account_id"]).pick(:id),
         metadata: metadata.merge("upload_error" => "attachment and cleanup failed",
-                                 "cleanup_error" => error.cleanup_error.class.name)
-      )
+                                 "cleanup_error" => error.cleanup_error.class.name))
       return nil
     end
 
     # An OpenAI store indexes in the background: the document is `processing` until
     # VectorStore::IndexStatusJob records the outcome, not `ready` before it can be found.
-    create_document_row!(adapter, store_id, response.data[:file_id],
-      filename: filename,
-      content_type: Marcel::MimeType.for(name: filename),
-      file_size: file_content.bytesize,
+    write_index_result(document, adapter, store_id, response.data[:file_id],
       provider_file_id: response.data[:file_id],
       status: response.data[:status] || "ready",
-      account_id: accounts.where(id: metadata["account_id"]).pick(:id),
-      metadata: metadata
-    )
+      metadata:)
   end
 
   # Only a persistence failure removes the uploaded file: the poll enqueue happens after commit
@@ -186,6 +204,23 @@ module Family::VectorSearchable
   end
 
   private
+
+    def write_index_result(document, adapter, store_id, file_id, **attributes)
+      if document.new_record?
+        create_document_row!(adapter, store_id, file_id,
+          filename: document.filename,
+          content_type: document.content_type,
+          file_size: document.file_size,
+          account_id: document.account_id,
+          **attributes)
+      else
+        document.update!(**attributes)
+        # Only a row created `processing` gets the after-create poll; a pending row updated here
+        # needs its poll queued after the status write commits.
+        document.poll_index_later if document.status == "processing"
+        document
+      end
+    end
 
     def remember_vector_store_cleanup
       @vector_store_backend = vector_store_backend
