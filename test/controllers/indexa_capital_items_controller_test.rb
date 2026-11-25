@@ -112,6 +112,58 @@ class IndexaCapitalItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "new@example.com", @item.username
   end
 
+  test "update with a new password but no username or document keeps the API token" do
+    [
+      { username: "", document: "" },
+      { username: "new@example.com", document: "" }
+    ].each do |partial|
+      patch indexa_capital_item_url(@item),
+            params: { indexa_capital_item: { api_token: "", password: "ix-new-password" }.merge(partial) },
+            as: :turbo_stream
+
+      assert_response :success
+      @item.reload
+      assert_equal "test_api_token_123", @item.api_token, "token cleared for #{partial.inspect}"
+      assert @item.credentials_configured?
+    end
+  end
+
+  test "update with a new password keeps the API token when the stored username is cleared" do
+    @item.update!(username: "stored@example.com", document: "12345678A")
+
+    patch indexa_capital_item_url(@item),
+          params: { indexa_capital_item: { api_token: "", username: "", document: "12345678A", password: "ix-new-password" } },
+          as: :turbo_stream
+
+    @item.reload
+    assert_equal "test_api_token_123", @item.api_token
+    assert_equal "", @item.username
+  end
+
+  test "update without a new password keeps the API token even with full stored credentials" do
+    @item.update!(username: "stored@example.com", document: "12345678A", password: "ix-stored-password-7a2d")
+
+    patch indexa_capital_item_url(@item),
+          params: { indexa_capital_item: { name: "Renamed" } },
+          as: :turbo_stream
+
+    @item.reload
+    assert_equal "Renamed", @item.name
+    assert_equal "test_api_token_123", @item.api_token
+  end
+
+  test "update with a new password switches to the stored username and document" do
+    @item.update!(username: "stored@example.com", document: "12345678A")
+
+    patch indexa_capital_item_url(@item),
+          params: { indexa_capital_item: { api_token: "", password: "ix-new-password" } },
+          as: :turbo_stream
+
+    @item.reload
+    assert_nil @item.api_token
+    assert @item.credentials_configured?
+  end
+
   test "invalid create from the page shows the error in the panel" do
     post indexa_capital_items_url,
          params: { indexa_capital_item: { name: "New Connection" } },
