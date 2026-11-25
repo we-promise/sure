@@ -233,6 +233,28 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{merchant_path(merchant)}'][data-turbo-frame=_top][title=?]", I18n.t("transactions.transaction.view_merchant")
   end
 
+  test "index shows a located transaction's place to a user with preview access" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    create_transaction(account: accounts(:depository), name: "Trattoria", date: Date.current)
+      .update!(location_lat: 43.77, location_lng: 11.26, location_name: "Florence, Italy")
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "span", text: "Florence, Italy"
+  end
+
+  test "index hides a located transaction's place without preview access" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+    create_transaction(account: accounts(:depository), name: "Trattoria", date: Date.current)
+      .update!(location_lat: 43.77, location_lng: 11.26, location_name: "Florence, Italy")
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "span", text: "Florence, Italy", count: 0
+  end
+
   test "the investment activity badge shows translated labels" do
     @user.update!(locale: "ru")
     accounts(:investment).entries.create!(
@@ -650,6 +672,64 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated name", flash[:cta][:merchant_name]
     assert_redirected_to account_url(@entry.account)
     assert_enqueued_with(job: SyncJob)
+  end
+
+  test "update sets a location on the entry" do
+    entry = entries(:transaction)
+
+    patch transaction_url(entry), params: {
+      entry: {
+        entryable_type: "Transaction",
+        location_lat: "41.3851",
+        location_lng: "2.1734",
+        location_name: "Barcelona, Spain"
+      }
+    }
+
+    entry.reload
+    assert_equal 41.3851, entry.location_lat.to_f
+    assert_equal 2.1734, entry.location_lng.to_f
+    assert_equal "Barcelona, Spain", entry.location_name
+  end
+
+  test "update can clear a location" do
+    entry = entries(:transaction)
+    entry.update!(location_lat: 41.3851, location_lng: 2.1734, location_name: "Barcelona, Spain")
+
+    patch transaction_url(entry), params: {
+      entry: {
+        entryable_type: "Transaction",
+        location_lat: "",
+        location_lng: "",
+        location_name: ""
+      }
+    }
+
+    entry.reload
+    assert_nil entry.location_lat
+    assert_nil entry.location_lng
+    assert_nil entry.location_name
+  end
+
+  test "update does not wipe an existing location when the submitted form omits it" do
+    entry = entries(:transaction)
+    entry.update!(location_lat: 41.3851, location_lng: 2.1734, location_name: "Barcelona, Spain")
+
+    # The notes form (and every other per-field form on the show page) only
+    # submits its own field, so location_lat/lng/name are absent here -- not
+    # blank, absent entirely.
+    patch transaction_url(entry), params: {
+      entry: {
+        entryable_type: "Transaction",
+        notes: "Some notes"
+      }
+    }
+
+    entry.reload
+    assert_equal "Some notes", entry.notes
+    assert_equal 41.3851, entry.location_lat.to_f
+    assert_equal 2.1734, entry.location_lng.to_f
+    assert_equal "Barcelona, Spain", entry.location_name
   end
 
   test "re-renders show with mark-recurring state when update fails validation" do

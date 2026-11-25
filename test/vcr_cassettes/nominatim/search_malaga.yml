@@ -1,0 +1,60 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://nominatim.openstreetmap.org/search?format=json&limit=5&q=Malaga,%20Spain
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Sure (self-hosted personal finance app; https://github.com/we-promise/sure)
+      Host:
+      - nominatim.openstreetmap.org
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '896'
+      Content-Type:
+      - application/json; charset=utf-8
+      Server:
+      - gunicorn/asgi
+      X-Nominatim-Server:
+      - poldi.openstreetmap.org
+      Accept-Ranges:
+      - bytes
+      Age:
+      - '0'
+      Date:
+      - Sun, 22 Nov 2026 20:22:07 GMT
+      Via:
+      - 1.1 varnish
+      X-Served-By:
+      - cache-bgy-lime1210028-BGY
+      X-Cache:
+      - MISS
+      X-Cache-Hits:
+      - '0'
+      X-Timer:
+      - S1795378927.672546,VS0,VE682
+      Vary:
+      - accept-language, Accept-Encoding
+      Strict-Transport-Security:
+      - max-age=300
+      Alt-Svc:
+      - h3=":443";ma=86400,h3-29=":443";ma=86400,h3-27=":443";ma=86400
+    body:
+      encoding: ASCII-8BIT
+      string: !binary |-
+        W3sicGxhY2VfaWQiOjI5NTE2MDQ0MiwibGljZW5jZSI6IkRhdGEgwqkgT3BlblN0cmVldE1hcCBjb250cmlidXRvcnMsIE9EYkwgMS4wLiBodHRwOi8vb3NtLm9yZy9jb3B5cmlnaHQiLCJvc21fdHlwZSI6InJlbGF0aW9uIiwib3NtX2lkIjozNDA3NDYsImxhdCI6IjM2Ljc2NDc5MTMiLCJsb24iOiItNC40NDIyMDA1IiwiY2xhc3MiOiJib3VuZGFyeSIsInR5cGUiOiJhZG1pbmlzdHJhdGl2ZSIsInBsYWNlX3JhbmsiOjE2LCJpbXBvcnRhbmNlIjowLjY3NzYwNjU2OTQyNDUxMjUsImFkZHJlc3N0eXBlIjoibXVuaWNpcGFsaXR5IiwibmFtZSI6Ik3DoWxhZ2EiLCJkaXNwbGF5X25hbWUiOiJNw6FsYWdhLCBNw6FsYWdhLUNvc3RhIGRlbCBTb2wsIE3DoWxhZ2EsIEFuZGFsdWPDrWEsIEVzcGHDsWEiLCJib3VuZGluZ2JveCI6WyIzNi42MzU2NjE5IiwiMzYuODk0MDQxMiIsIi00LjU4Nzg4ODciLCItNC4yNjA0ODk3Il19LHsicGxhY2VfaWQiOjI5NTIxNTQzMSwibGljZW5jZSI6IkRhdGEgwqkgT3BlblN0cmVldE1hcCBjb250cmlidXRvcnMsIE9EYkwgMS4wLiBodHRwOi8vb3NtLm9yZy9jb3B5cmlnaHQiLCJvc21fdHlwZSI6InJlbGF0aW9uIiwib3NtX2lkIjo1Mjc1ODQ4LCJsYXQiOiIzNi43OTYwMDg3IiwibG9uIjoiLTQuNTQ3Mzc4NCIsImNsYXNzIjoiYm91bmRhcnkiLCJ0eXBlIjoiYWRtaW5pc3RyYXRpdmUiLCJwbGFjZV9yYW5rIjoxMCwiaW1wb3J0YW5jZSI6MC41OTc0NjU0ODc2MDg0MDU2LCJhZGRyZXNzdHlwZSI6InByb3ZpbmNlIiwibmFtZSI6Ik3DoWxhZ2EiLCJkaXNwbGF5X25hbWUiOiJNw6FsYWdhLCBBbmRhbHVjw61hLCBFc3Bhw7FhIiwiYm91bmRpbmdib3giOlsiMzYuMzEwMzUxNyIsIjM3LjI4MjQ0NDciLCItNS42MTE3NzY3IiwiLTMuNzY1OTY3MSJdfV0=
+  recorded_at: Sun, 22 Nov 2026 20:22:07 GMT
+recorded_with: VCR 6.3.1

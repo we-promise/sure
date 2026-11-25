@@ -680,6 +680,7 @@ class TransactionsController < ApplicationController
     def entry_params
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
+        :location_lat, :location_lng, :location_name,
         entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
       )
 
@@ -687,6 +688,14 @@ class TransactionsController < ApplicationController
 
       entry_params.delete(:amount) if entry_params[:amount].blank?
       entry_params.delete(:date) if entry_params[:date].blank?
+      # Every other per-field form on the page (notes, category, tags, ...)
+      # submits only its own field, so location_lat/lng/name are absent, not
+      # blank, on those requests. Only the location form itself submits these
+      # keys, and a blank value there means "clear it" -- key?  distinguishes
+      # that from "this request doesn't touch location at all".
+      entry_params[:location_lat] = nil if entry_params.key?(:location_lat) && entry_params[:location_lat].blank?
+      entry_params[:location_lng] = nil if entry_params.key?(:location_lng) && entry_params[:location_lng].blank?
+      entry_params[:location_name] = nil if entry_params.key?(:location_name) && entry_params[:location_name].blank?
 
       if nature.present? && entry_params[:amount].present?
         signed_amount = nature == "inflow" ? -entry_params[:amount].to_d : entry_params[:amount].to_d
@@ -809,14 +818,14 @@ class TransactionsController < ApplicationController
     end
 
     # Filters entry_params based on the user's permission on the account.
-    # read_write users can only annotate (category, tags, notes, merchant).
+    # read_write users can only annotate (category, tags, notes, merchant, location).
     # read_only users cannot update anything.
     def permitted_entry_params
       permitted = case entry_permission
       when :owner, :full_control
         entry_params
       when :read_write
-        # Annotate only: category, tags, merchant, notes
+        # Annotate only: category, tags, merchant, notes, location
         ep = entry_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES)
         if entry_params[:entryable_attributes].present?
           ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES)

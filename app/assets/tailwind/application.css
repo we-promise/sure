@@ -9,6 +9,8 @@
 @plugin "@tailwindcss/forms";
 
 @import "./simonweb_pickr.css";
+@import "./leaflet.css";
+@import "./leaflet.markercluster.css";
 
 @import "./date-picker-dark-mode.css";
 @import "./print-report.css";

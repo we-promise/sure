@@ -169,6 +169,8 @@ module TransactionsHelper
       split_parent,
       # The "Transfer?" hint is drawn inside the cached row.
       @transfer_hint_transaction_ids&.include?(transaction.id) || false,
+      # The located-place line only renders for preview users.
+      preview_features_enabled?,
       can_annotate_account?(entry.account),
       Current.family&.manual_reconciliation?,
       can_reconcile_account?(entry.account),

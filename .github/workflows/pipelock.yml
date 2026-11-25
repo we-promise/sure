@@ -54,6 +54,8 @@ jobs:
             config/locales/views/reports/vi.yml
             config/locales/views/reports/zh-CN.yml
             config/locales/views/reports/zh-TW.yml
+            vendor/javascript/leaflet.js
+            vendor/javascript/leaflet.markercluster.js
 
       - name: Validate Pipelock deployment contracts
         shell: bash

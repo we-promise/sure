@@ -142,6 +142,18 @@ class Transactions::TransactionRowCacheTest < ActionView::TestCase
     assert_not_includes render_row, dom_id(@transaction, :transfer_hint)
   end
 
+  test "a row cached without preview access shows a location once the viewer gains it, and hides it again once lost" do
+    Current.user.update!(preferences: (Current.user.preferences || {}).merge("preview_features_enabled" => false))
+    @entry.update!(location_lat: 41.3851, location_lng: 2.1734, location_name: "Barcelona, Spain")
+    assert_not_includes render_row, "Barcelona, Spain"
+
+    Current.user.update!(preferences: (Current.user.preferences || {}).merge("preview_features_enabled" => true))
+    assert_includes render_row, "Barcelona, Spain"
+
+    Current.user.update!(preferences: (Current.user.preferences || {}).merge("preview_features_enabled" => false))
+    assert_not_includes render_row, "Barcelona, Spain"
+  end
+
   test "the key changes with the BUILD_COMMIT_SHA of the deployed image" do
     base = row_key
 

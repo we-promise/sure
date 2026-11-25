@@ -657,6 +657,68 @@ class EntryTest < ActiveSupport::TestCase
       account.entries.excluding_balance_updates.pluck(:id).sort
   end
 
+  test "location lat/lng must be set as a pair" do
+    entry = entries(:transaction).dup
+    entry.location_lat = 41.3851
+    entry.location_lng = nil
+
+    assert entry.invalid?
+    assert_includes entry.errors[:location_lng], "can't be blank if location_lat is present"
+  end
+
+  test "location lat must be within -90..90" do
+    entry = entries(:transaction).dup
+    entry.location_lat = 91
+    entry.location_lng = 2.1734
+
+    assert entry.invalid?
+    assert_includes entry.errors[:location_lat], "must be less than or equal to 90"
+  end
+
+  test "location lng must be within -180..180" do
+    entry = entries(:transaction).dup
+    entry.location_lat = 41.3851
+    entry.location_lng = 181
+
+    assert entry.invalid?
+    assert_includes entry.errors[:location_lng], "must be less than or equal to 180"
+  end
+
+  test "a valid location pair saves" do
+    entry = entries(:transaction).dup
+    entry.location_lat = 41.3851
+    entry.location_lng = 2.1734
+    entry.location_name = "Barcelona, Spain"
+
+    assert entry.valid?
+  end
+
+  test "located? reflects whether a location is set" do
+    entry = entries(:transaction).dup
+    assert_not entry.located?
+
+    entry.location_lat = 41.3851
+    entry.location_lng = 2.1734
+    assert entry.located?
+  end
+
+  test "located scope returns only entries with a location" do
+    located = entries(:transaction).dup
+    located.location_lat = 41.3851
+    located.location_lng = 2.1734
+    located.save!(validate: false)
+
+    assert_includes Entry.located, located
+    assert_not_includes Entry.located, entries(:valuation)
+  end
+
+  test "setting only location attributes does not require an account sync" do
+    entry = entries(:transaction)
+    entry.update!(location_lat: 41.3851, location_lng: 2.1734, location_name: "Barcelona")
+
+    assert_not entry.saved_changes_affect_balances?
+  end
+
   private
     def create_pending(account, date:, amount:)
       create_transaction(

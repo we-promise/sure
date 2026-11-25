@@ -15,6 +15,16 @@ module ApplicationHelper
     Rails.configuration.x.brand_name
   end
 
+  # Both the Map page and DS::LocationPicker build a Leaflet tile layer, so the
+  # tile server is configured in one place rather than hardcoded in each.
+  def map_tile_url
+    Rails.configuration.x.map_tile_url
+  end
+
+  def map_tile_attribution
+    Rails.configuration.x.map_tile_attribution
+  end
+
   # The instance's own privacy policy or terms URL, or nil when unset. The
   # /privacy and /terms routes redirect to the same variables.
   def legal_page_url(page)
@@ -172,6 +182,20 @@ module ApplicationHelper
         icon_custom: false,
         active: page_active?(portfolio_path),
         desktop_only: true
+      }
+    )
+  end
+
+  # The family-wide locations map. Preview-gated like Portfolio: hidden
+  # entirely without the flag, violet-dotted with it.
+  def map_nav_item
+    preview_gated_nav_item(
+      {
+        name: t("layouts.application.nav.map"),
+        path: map_path,
+        icon: "map-pin",
+        icon_custom: false,
+        active: page_active?(map_path)
       }
     )
   end
