@@ -70,6 +70,12 @@ hu:
         title: Hogyan szeretnéd hozzáadni?
       title: Mit szeretnél hozzáadni?
     health_status:
+      balance_gap:
+        detail_higher: "%{since} óta a bank által jelentett egyenleg %{difference} összeggel magasabb, mint a tranzakcióid összege."
+        detail_lower: "%{since} óta a bank által jelentett egyenleg %{difference} összeggel alacsonyabb, mint a tranzakcióid összege."
+        hint: "Általában hiányzik egy tranzakció a Sure-ból, vagy kétszer lett importálva."
+        link: "Tranzakciók ellenőrzése az utolsó egyezés óta"
+        message: "Az egyenleg nem egyezik a bankéval"
       negative_positions:
         detail: "%{name} (%{ticker}): %{date} óta nulla alatt, legalacsonyabb %{qty}"
         hint: "Valószínűleg hiányzik egy vétel vagy átvezetés. Vedd fel, vagy javítsd azokat a tranzakciókat, amelyek nulla alá vitték a pozíciót."

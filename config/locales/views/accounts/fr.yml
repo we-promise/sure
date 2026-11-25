@@ -100,6 +100,12 @@ fr:
     set_default:
       depository_only: Seuls les comptes de liquidités et de carte de crédit peuvent être définis par défaut.
     health_status:
+      balance_gap:
+        detail_higher: "Depuis le %{since}, le solde indiqué par votre banque est supérieur de %{difference} à la somme de vos transactions."
+        detail_lower: "Depuis le %{since}, le solde indiqué par votre banque est inférieur de %{difference} à la somme de vos transactions."
+        hint: "En général, une transaction manque dans Sure ou a été importée deux fois."
+        link: "Vérifier les transactions depuis la dernière concordance"
+        message: "Le solde ne correspond pas à celui de la banque"
       negative_positions:
         detail: "%{name} (%{ticker}) : sous zéro depuis le %{date}, au plus bas %{qty}"
         hint: "Il manque probablement un achat ou un transfert. Ajoutez-le ou corrigez les opérations qui ont fait passer la position sous zéro."

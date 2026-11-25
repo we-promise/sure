@@ -1,7 +1,8 @@
 # Data-quality problems on one account, shown next to its sync state on the
 # account page. Each check returns an Issue or nil; a new one is a private
-# `*_issue` method added to `issues`. Details stay data (negative positions);
-# UI::Account::HealthStatus formats them for the viewer's family.
+# `*_issue` method added to `issues`. Details stay data (negative positions,
+# the open balance gap); UI::Account::HealthStatus formats them for the
+# viewer's family.
 #
 # Computed for the account the viewer opened, so it is only ever shown to
 # someone who can see that account.

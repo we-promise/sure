@@ -70,6 +70,12 @@ vi:
         title: Bạn muốn thêm bằng cách nào?
       title: Bạn muốn thêm gì?
     health_status:
+      balance_gap:
+        detail_higher: "Từ %{since}, số dư ngân hàng báo cao hơn %{difference} so với tổng các giao dịch của bạn."
+        detail_lower: "Từ %{since}, số dư ngân hàng báo thấp hơn %{difference} so với tổng các giao dịch của bạn."
+        hint: "Thường là Sure đang thiếu một giao dịch hoặc một giao dịch bị nhập hai lần."
+        link: "Xem lại giao dịch kể từ lần khớp gần nhất"
+        message: "Số dư không khớp với ngân hàng"
       negative_positions:
         detail: "%{name} (%{ticker}): dưới 0 từ %{date}, thấp nhất %{qty}"
         hint: "Có thể thiếu một giao dịch mua hoặc chuyển khoản. Hãy thêm vào hoặc sửa các giao dịch đã đưa vị thế xuống dưới 0."

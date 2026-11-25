@@ -97,6 +97,12 @@ tr:
     set_default:
       depository_only: Yalnızca nakit ve kredi kartı hesapları varsayılan olarak ayarlanabilir.
     health_status:
+      balance_gap:
+        detail_higher: "%{since} tarihinden beri bankanızın bildirdiği bakiye, işlemlerinizin toplamından %{difference} daha yüksek."
+        detail_lower: "%{since} tarihinden beri bankanızın bildirdiği bakiye, işlemlerinizin toplamından %{difference} daha düşük."
+        hint: "Genellikle Sure'da bir işlem eksiktir veya iki kez içe aktarılmıştır."
+        link: "Son eşleşmeden bu yana işlemleri incele"
+        message: "Bakiye bankayla eşleşmiyor"
       negative_positions:
         detail: "%{name} (%{ticker}): %{date} tarihinden beri sıfırın altında, en düşük %{qty}"
         hint: "Muhtemelen bir alım veya transfer eksik. Ekleyin ya da pozisyonu sıfırın altına düşüren işlemleri düzeltin."

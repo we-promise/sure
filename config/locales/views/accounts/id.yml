@@ -82,6 +82,12 @@ id:
         title: Bagaimana Anda ingin menambahkannya?
       title: Apa yang ingin Anda tambahkan?
     health_status:
+      balance_gap:
+        detail_higher: "Sejak %{since}, saldo yang dilaporkan bank Anda %{difference} lebih tinggi daripada jumlah transaksi Anda."
+        detail_lower: "Sejak %{since}, saldo yang dilaporkan bank Anda %{difference} lebih rendah daripada jumlah transaksi Anda."
+        hint: "Biasanya ada transaksi yang belum tercatat di Sure atau terimpor dua kali."
+        link: "Periksa transaksi sejak kecocokan terakhir"
+        message: "Saldo tidak cocok dengan bank"
       negative_positions:
         detail: "%{name} (%{ticker}): di bawah nol sejak %{date}, terendah %{qty}"
         hint: Kemungkinan ada pembelian atau transfer yang belum dicatat. Tambahkan, atau perbaiki transaksi yang membuat posisi di bawah nol.

@@ -77,6 +77,12 @@ zh-TW:
         title: 您想如何新增？
       title: 您想新增什麼內容？
     health_status:
+      balance_gap:
+        detail_higher: "自 %{since} 起，銀行回報的餘額比你的交易合計高出 %{difference}。"
+        detail_lower: "自 %{since} 起，銀行回報的餘額比你的交易合計低 %{difference}。"
+        hint: "通常是 Sure 中缺少一筆交易，或某筆交易被重複匯入。"
+        link: "查看自上次一致以來的交易"
+        message: "餘額與銀行不一致"
       negative_positions:
         detail: "%{name} (%{ticker})：自 %{date} 起低於零，最低 %{qty}"
         hint: "可能缺少一筆買入或轉入。請補上，或更正使持倉低於零的交易。"

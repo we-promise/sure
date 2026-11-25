@@ -33,6 +33,12 @@ nb:
         title: Hvordan vil du legge den til?
       title: Hva vil du legge til?
     health_status:
+      balance_gap:
+        detail_higher: "Siden %{since} har saldoen banken rapporterer vært %{difference} høyere enn summen av transaksjonene dine."
+        detail_lower: "Siden %{since} har saldoen banken rapporterer vært %{difference} lavere enn summen av transaksjonene dine."
+        hint: "Vanligvis mangler en transaksjon i Sure, eller den er importert to ganger."
+        link: "Se gjennom transaksjoner siden siste samsvar"
+        message: "Saldoen stemmer ikke med banken"
       negative_positions:
         detail: "%{name} (%{ticker}): under null fra %{date}, lavest %{qty}"
         hint: "Sannsynligvis mangler et kjøp eller en overføring. Legg det til, eller rett transaksjonene som tok beholdningen under null."

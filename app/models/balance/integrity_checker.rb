@@ -146,8 +146,8 @@ class Balance::IntegrityChecker
     # through Entry instead, joined to valuations only for the kind filter.
     #
     # Memoized: both flagged_gaps and latest_flagged_gap read this, and this
-    # object is instantiated fresh per account per nightly run, so there's no
-    # staleness concern within its lifetime.
+    # object is instantiated fresh per account for each page render, so
+    # there's no staleness concern within its lifetime.
     def waypoints
       @waypoints ||= account.entries
         .where(entryable_type: "Valuation")
