@@ -46,6 +46,7 @@ class Family::DataImporter
   LOAN_DETAIL_ATTRIBUTES = %w[
     interest_rate rate_type term_months start_date down_payment initial_balance
     insurance_rate insurance_rate_type day_count_convention principal_only_transfers
+    contracted_payment balloon_payment
   ].freeze
   CREDIT_CARD_DETAIL_ATTRIBUTES = %w[apr annual_fee minimum_payment available_credit due_day statement_close_day expiration_date].freeze
 

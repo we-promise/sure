@@ -25,6 +25,10 @@ fr:
       subtype_prompt: Sélectionner le type de prêt
       term_months: Durée (mois)
       term_months_placeholder: '360'
+      contracted_payment: Paiement mensuel (facultatif)
+      contracted_payment_hint: Laissez vide pour le calculer à partir du solde, du taux et de la durée. Renseignez-le lorsque l'échéance de votre prêteur diffère, par exemple parce qu'elle est arrondie.
+      balloon_payment: Paiement ballon (facultatif)
+      balloon_payment_hint: Le total de la dernière échéance lorsque le prêt se termine par un versement forfaitaire. Sans mensualité saisie, l'échéance est calculée pour que la dernière soit égale à ce montant.
       day_count_convention: Base de calcul des intérêts
       day_count_convention_actual_365: Exact/365
       day_count_convention_actual_actual: Exact/exact

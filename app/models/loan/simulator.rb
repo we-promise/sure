@@ -74,7 +74,8 @@ class Loan
       payment_strategy: :reamortize,
       payment_amount: nil,
       settle_at_schedule_end: true,
-      day_count_convention: DEFAULT_DAY_COUNT_CONVENTION
+      day_count_convention: DEFAULT_DAY_COUNT_CONVENTION,
+      final_payment: nil
     )
       @starting_balance = BigDecimal(starting_balance.to_s)
       @accrual_start_date = accrual_start_date
@@ -95,6 +96,10 @@ class Loan
         end
       @settle_at_schedule_end = settle_at_schedule_end
       @day_count_convention = (day_count_convention || DEFAULT_DAY_COUNT_CONVENTION).to_sym
+      # The total of the last scheduled instalment when the loan ends on a
+      # lump sum, replacing the settlement the run would otherwise compute --
+      # see #balloon_step.
+      @final_payment = final_payment.nil? ? nil : BigDecimal(final_payment.to_s)
 
       raise ArgumentError, "payment schedule must not be empty" if @payment_schedule.empty?
       if @payment_schedule.length > MAX_PERIODS
@@ -193,17 +198,21 @@ class Loan
         end
         previous_sizing_rate = sizing_rate
 
-        final = (@settle_at_schedule_end && index == @payment_schedule.length - 1) ||
-          payment >= balance + interest
+        step = if @final_payment && index == @payment_schedule.length - 1
+          balloon_step(balance)
+        else
+          final = (@settle_at_schedule_end && index == @payment_schedule.length - 1) ||
+            payment >= balance + interest
 
-        step = AmortizationMath.step(
-          balance: balance,
-          payment: payment,
-          monthly_rate: accrual_rate,
-          currency_precision: @currency_precision,
-          final: final,
-          interest: interest
-        )
+          AmortizationMath.step(
+            balance: balance,
+            payment: payment,
+            monthly_rate: accrual_rate,
+            currency_precision: @currency_precision,
+            final: final,
+            interest: interest
+          )
+        end
 
         # Two rates on the row, named for what each did: `interest_rate` is
         # the one the interest column was computed with, so a reader who
@@ -232,6 +241,26 @@ class Loan
     end
 
     private
+      # The last scheduled instalment of a balloon loan: the figure the lender
+      # quotes, split as far as the balance in front of it allows. The
+      # interest column is what is left after principal -- a plug, not this
+      # period's accrual, which is exactly how a lender's table reads when the
+      # final instalment is a round number. A balloon that does not cover the
+      # balance leaves the rest outstanding: the run is then not converged
+      # and the remainder lands in SimulationResult's balloon_amount.
+      def balloon_step(balance)
+        payment = @final_payment.round(@currency_precision)
+        principal = [ balance, @final_payment ].min.round(@currency_precision)
+
+        {
+          payment_amount: payment,
+          principal_payment: principal,
+          interest_payment: (payment - principal).round(@currency_precision),
+          beginning_balance: balance.round(@currency_precision),
+          ending_balance: (balance - principal).round(@currency_precision)
+        }
+      end
+
       # The contracted rate on a given payment date: a re-amortisation event
       # effective that day, otherwise whatever the rate curve says.
       def rate_on(date)

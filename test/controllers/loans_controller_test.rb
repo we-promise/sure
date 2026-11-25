@@ -411,6 +411,27 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
                  "the controller filtered out the convention the user chose"
   end
 
+  # Same end-to-end path as the day-count convention above: the form renders
+  # money fields for both figures, and without them in
+  # `permitted_accountable_attributes` a save would silently drop what the
+  # user typed.
+  test "the contracted and balloon payments entered on the form are saved" do
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          contracted_payment: "2300.50", balloon_payment: "450000"
+        }
+      }
+    }
+
+    loan = @account.loan.reload
+    assert_equal BigDecimal("2300.50"), loan.contracted_payment,
+                 "the controller filtered out the contracted payment"
+    assert_equal BigDecimal("450000"), loan.balloon_payment,
+                 "the controller filtered out the balloon payment"
+  end
+
   test "saving principal_only_transfers queues a balance sync" do
     patch loan_path(@account), params: {
       account: {

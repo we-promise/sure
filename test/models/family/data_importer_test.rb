@@ -72,6 +72,32 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal [ [ Date.new(2026, 1, 1), BigDecimal("6.5") ] ], loan.variable_rates
   end
 
+  # The contracted figures are fixed-rate only, so they ride in their own
+  # account rather than on the variable loan above.
+  test "round trips a fixed loan's contracted and balloon payments through full export" do
+    source_family = Family.create!(name: "Source Balloon Family", currency: "EUR", locale: "en", date_format: "%Y-%m-%d")
+    source_family.accounts.create!(
+      name: "Balloon Loan",
+      balance: 18_000,
+      currency: "USD",
+      accountable: Loan.new(
+        subtype: "other",
+        interest_rate: 7.25,
+        rate_type: "fixed",
+        term_months: 120,
+        initial_balance: 20_000,
+        contracted_payment: 250.50,
+        balloon_payment: 10_000
+      )
+    )
+
+    Family::DataImporter.new(@family, full_export_ndjson(source_family)).import!
+
+    loan = @family.accounts.find_by!(name: "Balloon Loan").accountable
+    assert_equal BigDecimal("250.5"), loan.contracted_payment
+    assert_equal BigDecimal("10000"), loan.balloon_payment
+  end
+
   test "round trips credit card details through full export" do
     source_family = Family.create!(name: "Source Card Family", currency: "EUR", locale: "en", date_format: "%Y-%m-%d")
     source_family.accounts.create!(

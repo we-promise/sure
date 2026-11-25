@@ -67,6 +67,26 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <%# The instalment the lender actually charges, when it differs from
+            the computed one -- a rounded EMI is the common case. Held for the
+            whole term; the final instalment settles whatever is left. %>
+        <%= loan_form.money_field :contracted_payment,
+                                 label: t("loans.form.contracted_payment"),
+                                 default_currency: Current.family.currency %>
+      </div>
+      <p class="text-xs text-secondary"><%= t("loans.form.contracted_payment_hint") %></p>
+
+      <div class="flex items-center gap-2">
+        <%# The total of the final instalment when the loan ends on a lump
+            sum. With no contracted payment entered, the instalment is sized
+            so the last one equals this figure. %>
+        <%= loan_form.money_field :balloon_payment,
+                                 label: t("loans.form.balloon_payment"),
+                                 default_currency: Current.family.currency %>
+      </div>
+      <p class="text-xs text-secondary"><%= t("loans.form.balloon_payment_hint") %></p>
+
+      <div class="flex items-center gap-2">
         <%# How the lender measures a period against a year. The default charges
             a flat twelfth, which is what every existing loan was built on, so
             leaving this alone changes nothing about the schedule. %>

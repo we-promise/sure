@@ -388,6 +388,54 @@ class LoanTest < ActiveSupport::TestCase
     assert_not sync.reload.full_resync_requested?
   end
 
+  test "rejects a non-positive contracted or balloon payment" do
+    loan = Loan.new(contracted_payment: 0, balloon_payment: -1)
+
+    assert_not loan.valid?
+    assert_includes loan.errors[:contracted_payment], "must be greater than 0"
+    assert_includes loan.errors[:balloon_payment], "must be greater than 0"
+  end
+
+  # A contracted instalment and a balloon are fixed-rate notions: a payment
+  # contracted to move with the rate is neither. Blank rate types say nothing
+  # either way, so only a variable type is refused.
+  test "contracted and balloon payments can only be set on a fixed-rate loan" do
+    loan = Loan.new(rate_type: "variable", contracted_payment: 1_000)
+    assert_not loan.valid?
+    assert loan.errors.of_kind?(:base, :fixed_rate_only_payments)
+    assert_includes loan.errors.full_messages,
+      "A monthly payment or balloon payment can only be set on a fixed-rate loan."
+
+    loan = Loan.new(rate_type: "arm", balloon_payment: 10_000)
+    assert_not loan.valid?
+    assert loan.errors.of_kind?(:base, :fixed_rate_only_payments)
+
+    [ "fixed", nil, "" ].each do |rate_type|
+      loan = Loan.new(rate_type: rate_type, contracted_payment: 1_000, balloon_payment: 10_000)
+      assert loan.valid?, "#{rate_type.inspect} must not refuse the figures"
+    end
+  end
+
+  # The schedule is memoised on the loan; assigning a column it is built from
+  # must drop it, or a later read answers with the old terms.
+  test "assigning a contracted or balloon payment rebuilds the memoised schedule" do
+    loan = build_loan_account(balance: 80_000, down_payment: 20_000).loan
+
+    opening_payment = loan.amortization_schedule.periodic_payment.amount
+
+    loan.contracted_payment = 1_000
+    assert_equal BigDecimal("1000"), loan.amortization_schedule.periodic_payment.amount,
+      "contracted_payment= must drop the memoised schedule"
+    assert_not_equal opening_payment, loan.amortization_schedule.periodic_payment.amount
+
+    # Back to the sized instalment, which pays the loan off only on the last
+    # scheduled date -- a balloon the run actually reaches.
+    loan.contracted_payment = nil
+    loan.balloon_payment = 75_000
+    assert_equal BigDecimal("75000"), loan.amortization_schedule.payments.last.payment.amount,
+      "balloon_payment= must drop the memoised schedule"
+  end
+
   private
     # A loan imported part way through its life: the principal it was written
     # for is recorded, and the only valuation the account carries is the

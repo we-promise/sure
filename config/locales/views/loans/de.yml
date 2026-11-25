@@ -18,6 +18,10 @@ de:
       rate_type: Zinssatztyp
       term_months: Laufzeit (Monate)
       term_months_placeholder: '360'
+      contracted_payment: Monatliche Rate (optional)
+      contracted_payment_hint: Leer lassen, um sie aus Saldo, Zinssatz und Laufzeit zu berechnen. Eintragen, wenn die Rate deines Kreditgebers abweicht, etwa weil sie gerundet ist.
+      balloon_payment: Schlussrate (optional)
+      balloon_payment_hint: Die Summe der letzten Rate, wenn der Kredit mit einem Pauschalbetrag endet. Ohne eingegebene monatliche Rate wird die Rate so bemessen, dass die letzte diesem Betrag entspricht.
       rate_type_adjustable: Anpassbar
       rate_type_fixed: Fest
       rate_type_variable: Variabel

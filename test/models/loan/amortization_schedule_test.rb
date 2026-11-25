@@ -131,15 +131,136 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     assert_nil Loan::AmortizationSchedule.for(loan)
   end
 
+  # A lender's own figures, when they differ from the computed ones:
+  # `contracted_payment` holds the instalment, `balloon_payment` replaces the
+  # last instalment's total. The schedules below reproduce a real table --
+  # 3,800,000 at 11.25% over 36 months, where the lender charges 69,282
+  # rather than the 69,281.66 the formula would size.
+  test "a contracted payment is held for the whole term and the last row settles" do
+    schedule = build_schedule(
+      principal: 3_800_000, annual_rate: 11.25, term_months: 36,
+      start_date: Date.new(2023, 1, 16), contracted_payment: 69_282
+    )
+
+    assert_equal 36, schedule.payments.count
+    assert_equal BigDecimal("69282"), schedule.periodic_payment.amount
+    assert schedule.payments.first(35).all? { |payment| payment.payment.amount == BigDecimal("69282") }
+
+    first = schedule.payments.first
+    assert_equal BigDecimal("33657.00"), first.principal.amount
+    assert_equal BigDecimal("35625.00"), first.interest.amount
+
+    assert_equal BigDecimal("2413360.48"), schedule.payments[34].ending_balance.amount
+
+    last = schedule.payments.last
+    assert_equal BigDecimal("2435985.73"), last.payment.amount
+    assert_equal BigDecimal("2413360.48"), last.principal.amount
+    assert_equal BigDecimal("22625.25"), last.interest.amount
+    assert_equal BigDecimal("0"), last.ending_balance.amount
+
+    assert_equal BigDecimal("1060855.73"), schedule.total_interest.amount
+  end
+
+  test "a balloon replaces the final instalment's total and interest absorbs the difference" do
+    schedule = build_schedule(
+      principal: 3_800_000, annual_rate: 11.25, term_months: 36,
+      start_date: Date.new(2023, 1, 16), contracted_payment: 69_282, balloon_payment: 2_436_000
+    )
+
+    last = schedule.payments.last
+    assert_equal BigDecimal("2436000"), last.payment.amount
+    assert_equal BigDecimal("2413360.48"), last.principal.amount
+    # A plug, not the accrued 22625.25: the lender quotes the round total and
+    # interest takes what is left.
+    assert_equal BigDecimal("22639.52"), last.interest.amount
+    assert_equal BigDecimal("0"), last.ending_balance.amount
+
+    assert_equal BigDecimal("1060870.00"), schedule.total_interest.amount
+  end
+
+  test "a balloon alone sizes the instalments so the last one equals it" do
+    schedule = build_schedule(
+      principal: 3_800_000, annual_rate: 11.25, term_months: 36,
+      start_date: Date.new(2023, 1, 16), balloon_payment: 2_436_000
+    )
+
+    assert_equal 36, schedule.payments.count
+    assert schedule.payments.first(35).all? { |payment| payment.payment.amount == BigDecimal("69281.66") }
+    assert_equal BigDecimal("2413374.46"), schedule.payments[34].ending_balance.amount
+
+    last = schedule.payments.last
+    assert_equal BigDecimal("2436000"), last.payment.amount
+    assert_equal BigDecimal("2413374.46"), last.principal.amount
+    assert_equal BigDecimal("22625.54"), last.interest.amount
+    assert_equal BigDecimal("0"), last.ending_balance.amount
+  end
+
+  test "a contracted payment on another loan still settles exactly at the term" do
+    schedule = build_schedule(
+      principal: 995_970, annual_rate: 9, term_months: 60, contracted_payment: 20_675
+    )
+
+    assert_equal 60, schedule.payments.count
+    assert_equal BigDecimal("20498.58"), schedule.payments[58].ending_balance.amount
+
+    last = schedule.payments.last
+    assert_equal BigDecimal("20652.32"), last.payment.amount
+    assert_equal BigDecimal("153.74"), last.interest.amount
+    assert_equal BigDecimal("0"), last.ending_balance.amount
+
+    assert_equal BigDecimal("244507.32"), schedule.total_interest.amount
+  end
+
+  test "a balloon that does not cover the balance leaves the rest outstanding" do
+    schedule = build_schedule(
+      principal: 3_800_000, annual_rate: 11.25, term_months: 36,
+      start_date: Date.new(2023, 1, 16), contracted_payment: 69_282, balloon_payment: 2_000_000
+    )
+
+    last = schedule.payments.last
+    assert_equal BigDecimal("2000000"), last.payment.amount
+    assert_equal BigDecimal("2000000"), last.principal.amount
+    assert_equal BigDecimal("0"), last.interest.amount
+    assert_equal BigDecimal("413360.48"), last.ending_balance.amount
+  end
+
+  # With nothing recorded the run is the one it always was: the fixture loan
+  # carries neither column and gets the payment the formula sizes.
+  test "a loan without contracted figures builds the schedule it always did" do
+    loan = loans(:one)
+    assert_nil loan.contracted_payment
+    assert_nil loan.balloon_payment
+
+    assert_equal BigDecimal("2245.22"), Loan::AmortizationSchedule.for(loan).periodic_payment.amount
+  end
+
+  # The figures reach the simulator through `for`: the column on the loan,
+  # not a number handed in by the caller.
+  test "builds from a loan record's contracted payment" do
+    loan = loan_account(interest_rate: 3.5, term_months: 360, rate_type: "fixed",
+                        contracted_payment: 2_300).loan
+
+    assert_equal BigDecimal("2300"), Loan::AmortizationSchedule.for(loan).periodic_payment.amount
+  end
+
+  test "balloon_level_payment spreads what the balloon does not cover at a zero rate" do
+    assert_equal BigDecimal("5000.00"), Loan::AmortizationMath.balloon_level_payment(
+      balance: 120_000, monthly_rate: 0, payments: 13, balloon: 60_000, currency_precision: 2
+    )
+  end
+
   private
     def build_schedule(principal: 500_000, annual_rate: 3.5, term_months: 360,
-                       start_date: Date.new(2026, 1, 1), currency: "USD")
+                       start_date: Date.new(2026, 1, 1), currency: "USD",
+                       contracted_payment: nil, balloon_payment: nil)
       Loan::AmortizationSchedule.new(
         principal: principal,
         annual_rate: annual_rate,
         term_months: term_months,
         start_date: start_date,
-        currency: currency
+        currency: currency,
+        contracted_payment: contracted_payment,
+        balloon_payment: balloon_payment
       )
     end
 

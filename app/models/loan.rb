@@ -39,6 +39,16 @@ class Loan < ApplicationRecord
   # same loan against 5,000.
   validates :down_payment, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
+  # The instalment the lender actually charges, when it differs from the one
+  # the schedule computes (a rounded EMI is the common case), and the total
+  # of the final instalment when the loan ends on a lump sum. Both override
+  # the schedule's own figures; both are fixed-rate notions -- a payment that
+  # is contracted to move with the rate is neither -- which the validation
+  # below enforces.
+  validates :contracted_payment, numericality: { greater_than: 0 }, allow_nil: true
+  validates :balloon_payment, numericality: { greater_than: 0 }, allow_nil: true
+  validate :contracted_amounts_require_fixed_rate
+
   validates :insurance_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   # The form's "None" option submits an empty string, which means no type
   # recorded (read as decreasing). Stored as NULL: the column's check
@@ -92,6 +102,13 @@ class Loan < ApplicationRecord
       term_months.to_i.positive? &&
       term_months.to_i <= Loan::Simulator::MAX_PERIODS &&
       original_balance.amount.positive?
+  end
+
+  private def contracted_amounts_require_fixed_rate
+    return unless variable_rate_type?
+    return if contracted_payment.nil? && balloon_payment.nil?
+
+    errors.add(:base, :fixed_rate_only_payments)
   end
 
   private def rate_changes_must_be_parseable
@@ -415,7 +432,7 @@ class Loan < ApplicationRecord
   # The columns AmortizationSchedule.for reads from the loan itself. Assigning
   # any of them drops the memoised schedule, as reload does, so a read after the
   # change answers with the new terms rather than the ones it was built from.
-  SCHEDULE_INPUTS = %i[interest_rate term_months rate_type start_date variable_rate_schedule day_count_convention].freeze
+  SCHEDULE_INPUTS = %i[interest_rate term_months rate_type start_date variable_rate_schedule day_count_convention contracted_payment balloon_payment].freeze
 
   validates :day_count_convention, inclusion: { in: DAY_COUNT_CONVENTIONS }
 

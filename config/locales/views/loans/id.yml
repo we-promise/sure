@@ -18,6 +18,10 @@ id:
       rate_type: Jenis suku bunga
       term_months: Jangka waktu (bulan)
       term_months_placeholder: '360'
+      contracted_payment: Pembayaran bulanan (opsional)
+      contracted_payment_hint: Biarkan kosong untuk menghitungnya dari saldo, suku bunga, dan jangka waktu. Isi jika cicilan pemberi pinjaman Anda berbeda, misalnya karena dibulatkan.
+      balloon_payment: Pembayaran balon (opsional)
+      balloon_payment_hint: Total cicilan terakhir ketika pinjaman berakhir dengan pembayaran sekaligus. Tanpa pembayaran bulanan yang dimasukkan, cicilan dihitung agar cicilan terakhir sama dengan jumlah ini.
       none: Tidak ada
       subtype_prompt: Pilih jenis pinjaman
       subtype_none: Tidak ada

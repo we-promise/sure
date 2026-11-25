@@ -121,6 +121,35 @@ class Loan
       ((balance * monthly_rate * growth) / (growth - 1)).round(currency_precision)
     end
 
+    # The level payment that leaves exactly enough balance after
+    # `payments - 1` instalments for the last one to equal `balloon` -- how a
+    # lender sizes the instalments of a loan that ends on a lump sum. It is
+    # the annuity formula with the balloon's discounted value taken out of
+    # the balance first: with v = 1/(1+r) the balloon costs F*v^n of present
+    # value, and the rest amortises over the n-1 regular instalments.
+    #
+    # A zero rate is an interest-free loan: what the balloon does not cover,
+    # spread evenly over the instalments. A negative answer -- a balloon that
+    # alone exceeds the principal -- clamps to 0 rather than quoting an
+    # instalment nobody pays. `payments <= 1` has no regular instalment to
+    # size, so nil.
+    def balloon_level_payment(balance:, monthly_rate:, payments:, balloon:, currency_precision:)
+      return nil if payments <= 1
+
+      balance = BigDecimal(balance.to_s)
+      balloon = BigDecimal(balloon.to_s)
+
+      payment = if monthly_rate.zero?
+        (balance - balloon) / (payments - 1)
+      else
+        discount = 1 / (1 + monthly_rate)
+        annuity = (1 - discount**(payments - 1)) / monthly_rate
+        (balance - balloon * discount**payments) / annuity
+      end
+
+      [ payment.round(currency_precision), BigDecimal("0") ].max
+    end
+
     # One period's interest/principal split for a fixed payment against a given
     # balance.
     #

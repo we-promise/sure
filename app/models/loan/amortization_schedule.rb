@@ -23,6 +23,11 @@ class Loan::AmortizationSchedule
     def for(loan)
       return nil unless loan.amortizable?
 
+      # A contracted payment or a balloon is a fixed-rate concept -- the
+      # model refuses them on a variable loan, and here they are not even
+      # read off one.
+      fixed_rate = loan.rate_type == Loan::FIXED_RATE_TYPE
+
       new(
         principal: loan.original_balance.amount,
         annual_rate: loan.interest_rate,
@@ -30,7 +35,9 @@ class Loan::AmortizationSchedule
         start_date: loan.origination_date,
         currency: loan.account.currency,
         rate_resolver: (Loan::RateResolver.for(loan) if loan.variable_rate_type?),
-        day_count_convention: loan.day_count_convention
+        day_count_convention: loan.day_count_convention,
+        contracted_payment: (loan.contracted_payment if fixed_rate),
+        balloon_payment: (loan.balloon_payment if fixed_rate)
       )
     end
   end
@@ -39,7 +46,8 @@ class Loan::AmortizationSchedule
   # simulator. Omitted, the schedule runs at one rate for its whole life, which
   # is what a fixed loan does.
   def initialize(principal:, annual_rate:, term_months:, start_date:, currency:, rate_resolver: nil,
-                 day_count_convention: Loan::Simulator::DEFAULT_DAY_COUNT_CONVENTION)
+                 day_count_convention: Loan::Simulator::DEFAULT_DAY_COUNT_CONVENTION,
+                 contracted_payment: nil, balloon_payment: nil)
     @currency = currency
     # Rounded to the currency at the door. A balance carrying more fractional
     # units than the currency has -- `first_valuation_amount` is decimal(19,4)
@@ -53,6 +61,8 @@ class Loan::AmortizationSchedule
     @start_date = start_date
     @rate_resolver = rate_resolver
     @day_count_convention = day_count_convention
+    @contracted_payment = contracted_payment && BigDecimal(contracted_payment.to_s)
+    @balloon_payment = balloon_payment && BigDecimal(balloon_payment.to_s)
   end
 
   # True when this schedule re-amortises part-way through, i.e. the repayment
@@ -146,11 +156,39 @@ class Loan::AmortizationSchedule
           accrual_rate_for: @rate_resolver ? @rate_resolver.method(:accrual_rate_for) : ->(_date) { annual_rate },
           re_amortisation_events: @rate_resolver&.method(:re_amortisation_events),
           currency_precision: currency_precision,
-          day_count_convention: @day_count_convention
+          day_count_convention: @day_count_convention,
+          **contracted_terms
         ).run
       else
         Loan::SimulationResult.new(payments: [], currency_precision: currency_precision)
       end
+    end
+
+    # The simulator arguments a lender's own figures imply. With neither a
+    # contracted payment nor a balloon there is nothing to hold or replace,
+    # so this is empty and the call above stays exactly the default run.
+    # With either, the instalment is held: the recorded one, or the level
+    # payment sized so the last instalment lands on the balloon. A balloon
+    # also replaces the final row with the quoted figure rather than the
+    # settlement the run would compute.
+    def contracted_terms
+      return {} if @contracted_payment.nil? && @balloon_payment.nil?
+
+      {
+        payment_strategy: :hold,
+        payment_amount: @contracted_payment || balloon_level_payment,
+        final_payment: @balloon_payment
+      }
+    end
+
+    def balloon_level_payment
+      Loan::AmortizationMath.balloon_level_payment(
+        balance: principal,
+        monthly_rate: Loan::AmortizationMath.monthly_rate(annual_rate),
+        payments: term_months,
+        balloon: @balloon_payment,
+        currency_precision: currency_precision
+      )
     end
 
     def schedulable?
