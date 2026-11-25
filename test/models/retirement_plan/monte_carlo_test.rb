@@ -209,6 +209,24 @@ class RetirementPlan::MonteCarloTest < ActiveSupport::TestCase
     assert_operator mc.stress_success_rate, :<, 0.1
   end
 
+  # Retired, from 31 December: 2026 is one day long. In its own order the
+  # path grows 1,100 a little in 2026, holds in 2027 and meets 2028's 900.
+  # Sorted worst first, the -3 draw must land in 2027, a whole year, and
+  # leave far less than 900; spent on 2026's single day it would only take
+  # 1,100 to about 940, and the path would pass.
+  test "the stress run puts the worst draw in a whole year, not the part-year it starts in" do
+    mc = monte_carlo(
+      as_of: Date.new(2026, 12, 31), volatility: 1, paths: 1, retirement_year: 2026,
+      current_assets: 1_100, annual_contribution: 0, expected_annual_return: 0, inflation_rate: 0,
+      birth_year: 1956, end_age: 72,
+      streams: [ Stream.new(kind: "expense", annual_amount: 900, start_year: 2028, end_year: 2028, indexed: false) ]
+    )
+    mc.stubs(:draws).returns([ [ 1.0, 0.0, -3.0 ] ])
+
+    assert_equal 1.0, mc.success_rate
+    assert_equal 0.0, mc.stress_success_rate
+  end
+
   # Nothing ever comes out, so a path can only fail if its value goes below
   # zero. The heatmap's two lower return rows take -99.5% to -101.5% and
   # -100.5%: past -100% the portfolio is emptied, not turned negative.

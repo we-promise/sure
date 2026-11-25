@@ -184,16 +184,29 @@ class RetirementPlan::Simulation
     end
 
     def growth_factor(n)
-      n.zero? ? power(1 + @return_rate, first_year_fraction) : 1 + @return_rate
+      n.zero? ? first_year_growth : 1 + @return_rate
     end
 
+    # Whole years exactly; a fraction of a year (only ever f + n) through the
+    # first year's inflation, computed once, as BigDecimal#power is costly and
+    # the solver runs a simulation per candidate year.
     def inflation_factor(years)
-      power(1 + @inflation_rate, years)
+      whole = years.floor
+      factor = (1 + @inflation_rate)**whole
+      years == whole ? factor : factor * first_year_inflation
     end
 
-    # BigDecimal#** takes only whole exponents exactly; a fraction of a year
-    # needs #power with a precision.
-    def power(base, exponent)
-      exponent == exponent.to_i ? base**exponent.to_i : base.power(BigDecimal(exponent), 20)
+    def first_year_growth
+      @first_year_growth ||= fractional_power(1 + @return_rate)
+    end
+
+    def first_year_inflation
+      @first_year_inflation ||= fractional_power(1 + @inflation_rate)
+    end
+
+    # BigDecimal#** takes only whole exponents exactly; the first year's
+    # fraction needs #power with a precision.
+    def fractional_power(base)
+      first_year_fraction == 1 ? base : base.power(first_year_fraction, 20)
     end
 end
