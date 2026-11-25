@@ -29,7 +29,7 @@ module Ai::Routes
                          sends: %i[merchant_names] }
   }.freeze
 
-  # Each lane's queue. Interactive work runs in the worker's one-thread `ai_chat` capsule, the
+  # Each lane's queue. Interactive work runs in the worker's `ai_chat` capsule, the
   # other two in order in the `ai` capsule (config/sidekiq.yml).
   QUEUES = { interactive: "ai_interactive", prompt: "ai_prompt", background: "ai_background" }.freeze
 

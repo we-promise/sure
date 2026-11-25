@@ -1,6 +1,6 @@
 <% ai_threads = ENV.fetch("RAILS_AI_MAX_THREADS") { 1 }.to_i %>
 # RAILS_MAX_THREADS is the DB pool, split between the default and ai capsules.
-# ai_chat's one thread comes on top: it holds a connection only per query or
+# ai_chat's threads come on top: each holds a connection only per query or
 # transaction, so it rarely waits for one.
 concurrency: <%= ENV.fetch("RAILS_MAX_THREADS") { 3 }.to_i - ai_threads %>
 queues:
@@ -11,8 +11,8 @@ queues:
   - [default, 1]
 
 # AI jobs can hold a thread for minutes on slow models, so they get their own
-# capsules and can't starve syncs. Chat and other interactive AI work has a
-# thread of its own, so it never waits for a background job's thread. The ai
+# capsules and can't starve syncs. Chat and other interactive AI work has as
+# many threads as the rest, so it never waits for a background job's. The ai
 # capsule runs prompt work before background work, in strict order, and drains
 # the queues from before lanes (ai_high_priority, ai_low_priority) for one
 # release. RAILS_AI_MAX_THREADS=0 leaves both out, for every worker but one
@@ -20,7 +20,7 @@ queues:
 <% if ai_threads.positive? %>
 capsules:
   ai_chat:
-    concurrency: 1
+    concurrency: <%= ai_threads %>
     queues: [ai_interactive]
   ai:
     concurrency: <%= ai_threads %>
