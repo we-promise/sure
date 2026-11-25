@@ -78,15 +78,16 @@ class Balance::LinkedInvestmentSeriesNormalizer
       new(account: account, series: nil).supported_history_start_date
     end
 
-    private
-      def supported_history_start_for(account_ids, history_start)
-        case history_start
-        when :common then common_supported_history_start_date(account_ids)
-        when :earliest then earliest_history_start_date(account_ids)
-        else raise ArgumentError, "unknown history_start: #{history_start.inspect}"
-        end
+    # The date #trim_to_supported_history trims to, or nil when it trims nothing.
+    def supported_history_start_for(account_ids, history_start)
+      case history_start
+      when :common then common_supported_history_start_date(account_ids)
+      when :earliest then earliest_history_start_date(account_ids)
+      else raise ArgumentError, "unknown history_start: #{history_start.inspect}"
       end
+    end
 
+    private
       def common_supported_history_start_date(account_ids)
         supported_history_start_by_account(account_ids).values.max
       end

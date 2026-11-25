@@ -185,6 +185,24 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal series.values.size, data["values"].size
   end
 
+  # The value shown is the series' last point, so the caption dates that
+  # point: the end of a past period, not today.
+  test "the value chart is dated by its last point, not by today" do
+    account = accounts(:investment)
+    (0..45).each do |days_ago|
+      account.balances.create!(date: days_ago.days.ago.to_date, balance: 10_000 + days_ago, cash_balance: 5_000, currency: "USD")
+    end
+    period_end = 20.days.ago.to_date
+    series = InvestmentStatement.new(@family, user: @user).value_series(period: Period.custom(start_date: 40.days.ago.to_date, end_date: period_end))
+    assert_equal period_end, series.values.last&.date, "fixture setup should chart up to the period's end"
+
+    get portfolio_path(start_date: 40.days.ago.to_date.iso8601, end_date: period_end.iso8601)
+
+    assert_response :success
+    assert_select "#portfolio-value-chart p", text: I18n.t("portfolios.value_chart.as_of", date: I18n.l(period_end, format: :long))
+    assert_select "#portfolio-value-chart p", text: I18n.t("portfolios.value_chart.as_of", date: I18n.l(Date.current, format: :long)), count: 0
+  end
+
   # The chart reads the picked period, not the default one.
   test "the value chart follows the picked period" do
     seed_investment_balances
