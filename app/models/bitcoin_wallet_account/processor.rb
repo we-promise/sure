@@ -95,7 +95,7 @@ class BitcoinWalletAccount::Processor
 
     def establish_cash_baseline
       account.holdings.where(security: wallet.security, date: ..Date.current).order(date: :desc).first&.reconcile_trade_quantity!
-      account.create_cash_anchor!(cash: (0 if account.typed_balance_only?))
+      account.create_cash_anchor!(cash: (0 if account.typed_balance_only?)).update!(source: SOURCE)
     end
 
     # Reconcile source-scoped transfers and reversals, returning the earliest changed date.
