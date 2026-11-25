@@ -106,7 +106,7 @@
         <%= render DS::Note.new(title: t(".ai.panels.external.title")) do %>
           <p><%= t(".ai.panels.external.body", product_name: product_name) %></p>
           <% if @user.admin? %>
-            <p class="mt-2"><%= t(".ai.panels.admin_off") %></p>
+            <p class="mt-2"><%= t(".ai.panels.admin_on") %></p>
           <% end %>
         <% end %>
       </div>

@@ -147,13 +147,27 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil @user.onboarded_at
   end
 
-  test "no AI and an external agent turn the assistant off" do
-    %w[none external].each do |mode|
-      @user.update!(ai_enabled: true)
-      patch tools_onboarding_url, params: { user: { onboarding_ai_mode: mode } }
-      assert_not @user.reload.ai_enabled, mode
-      assert_equal mode, @user.onboarding_ai_mode
-    end
+  test "no AI turns the assistant off" do
+    @user.update!(ai_enabled: true)
+    patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "none", rendered_ai_mode: "builtin" } }
+    assert_not @user.reload.ai_enabled
+    assert_equal "none", @user.onboarding_ai_mode
+  end
+
+  test "external AI stays enabled and selected when revisiting onboarding" do
+    @user.update!(ai_enabled: false)
+    patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "external", rendered_ai_mode: "none" } }
+    assert @user.reload.ai_enabled
+    assert_equal "external", @user.onboarding_ai_mode
+
+    get tools_onboarding_url
+    assert_select "input[type=radio][value=external][checked]"
+    assert_select "[data-ai-panel=external]", text: /#{Regexp.escape(I18n.t("onboardings.tools.ai.panels.admin_on"))}/
+    assert_select "[data-ai-panel=external]", text: /#{Regexp.escape(I18n.t("onboardings.tools.ai.panels.admin_off"))}/, count: 0
+
+    patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "external", rendered_ai_mode: "external" } }
+    assert @user.reload.ai_enabled
+    assert_equal "external", @user.onboarding_ai_mode
   end
 
   test "built-in AI warns about a missing provider only when the assistant can't run" do

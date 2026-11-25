@@ -191,6 +191,25 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert @user.ai_enabled
   end
 
+  test "external AI keeps the assistant enabled and remains selected on revisit" do
+    @user.update!(set_onboarding_preferences_at: Time.current, ai_enabled: false)
+    visit tools_onboarding_path
+
+    choose I18n.t("onboardings.tools.ai.modes.external.title")
+    assert_text I18n.t("onboardings.tools.ai.panels.external.title")
+    assert_no_text I18n.t("onboardings.tools.ai.panels.none.title")
+    click_button I18n.t("onboardings.tools.submit")
+    assert_current_path trial_onboarding_path
+    assert @user.reload.ai_enabled
+
+    visit tools_onboarding_path
+    assert_checked_field I18n.t("onboardings.tools.ai.modes.external.title")
+    click_button I18n.t("onboardings.tools.submit")
+    assert_current_path trial_onboarding_path
+    assert @user.reload.ai_enabled
+    assert_equal "external", @user.onboarding_ai_mode
+  end
+
   test "trial page renders correctly" do
     visit trial_onboarding_path
 

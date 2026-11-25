@@ -731,11 +731,12 @@ class User < ApplicationRecord
     current = ai_enabled ? "builtin" : "none"
     return current unless ONBOARDING_AI_MODES.include?(mode)
 
-    (mode == "builtin") == ai_enabled ? mode : current
+    (mode != "none") == ai_enabled ? mode : current
   end
 
   # "Nothing yet" excludes every other tool and unknown values are dropped.
-  # Built-in AI turns this user's assistant on; no AI and an external agent turn it off.
+  # Built-in and external AI enable this user's AI features; only no AI turns them off.
+  # The household's assistant settings still select the conversation backend.
   # For an admin that switch is also the household's AI consent (Family#ai_consented?).
   # Guests always have AI on, so they aren't asked.
   # rendered_ai_mode is the choice the page showed: when the user left it as it was,
@@ -753,7 +754,7 @@ class User < ApplicationRecord
         other ? prefs["onboarding_other_tool"] = other : prefs.delete("onboarding_other_tool")
       end
       attributes = { set_onboarding_goals_at: Time.current, onboarded_at: Time.current }
-      attributes[:ai_enabled] = mode == "builtin" unless guest? || mode == rendered_ai_mode.to_s
+      attributes[:ai_enabled] = mode != "none" unless guest? || mode == rendered_ai_mode.to_s
       update!(attributes)
     end
   end

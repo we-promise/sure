@@ -64,11 +64,11 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "none", user.onboarding_ai_mode
 
     user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external")
-    user.update!(ai_enabled: true)
-    assert_equal "builtin", user.onboarding_ai_mode
+    assert user.reload.ai_enabled
+    assert_equal "external", user.onboarding_ai_mode
 
     user.update!(ai_enabled: false)
-    assert_equal "external", user.onboarding_ai_mode
+    assert_equal "none", user.onboarding_ai_mode
   end
 
   test "an untouched AI choice leaves a switch changed after the page rendered" do
@@ -80,6 +80,34 @@ class UserTest < ActiveSupport::TestCase
 
     user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "builtin", rendered_ai_mode: "none")
     assert user.reload.ai_enabled
+  end
+
+  test "external onboarding enables admin consent without changing the household backend" do
+    user = users(:family_admin)
+    user.family.users.where(role: %w[admin super_admin]).update_all(ai_enabled: false)
+    user.reload
+    original_type = user.family.assistant_type
+    assert_not user.family.ai_consented?
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external", rendered_ai_mode: "none")
+
+    assert user.reload.ai_enabled
+    assert_equal "external", user.onboarding_ai_mode
+    assert user.family.ai_consented?
+    assert_equal original_type, user.family.reload.assistant_type
+  end
+
+  test "untouched external onboarding preserves a later opt out and explicit selection enables AI" do
+    user = users(:family_admin)
+    user.update!(ai_enabled: false)
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external", rendered_ai_mode: "external")
+    assert_not user.reload.ai_enabled
+    assert_equal "none", user.onboarding_ai_mode
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external", rendered_ai_mode: "none")
+    assert user.reload.ai_enabled
+    assert_equal "external", user.onboarding_ai_mode
   end
 
   test "guests keep AI on and aren't asked about it" do
