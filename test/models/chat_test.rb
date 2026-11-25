@@ -42,7 +42,7 @@ class ChatTest < ActiveSupport::TestCase
 
   test "a response queued before the assistant was turned off never reaches a provider" do
     chat = @user.chats.start!("Test prompt", model: "gpt-4.1")
-    user_message = chat.messages.find_by!(type: "UserMessage")
+    user_message = UserMessage.find(chat.messages.find_by!(type: "UserMessage").id)   # with no family loaded, as the job gets it
     pending = chat.messages.find_by!(type: "AssistantMessage", status: "pending")
 
     @user.family.update!(assistant_type: "mcp_only")
@@ -53,39 +53,37 @@ class ChatTest < ActiveSupport::TestCase
     assert_not Message.exists?(pending.id)
   end
 
-  test "the pending bubble says busy while the AI lane is busy, then Thinking when the job starts" do
+  test "a pending bubble says how many requests its reply waits for, then Thinking when the job starts" do
+    use_ai_routes(chat: %w[gpu/qwen3-8b])
     chat = chats(:one)
-    user_message = chat.messages.where(type: "UserMessage").first
-    BackgroundJobHealth.stubs(:ai_busy?).returns(true)
-    Chat.any_instance.expects(:broadcast_update).with { |opts| opts[:html] == I18n.t("chats.ai_busy") }
+    publish_gate(holders: [ interactive("chat:other") ])
+    assert_equal "Waiting for the model; 1 task ahead ...", chat.pending_status
 
-    chat.ask_assistant_later(user_message)
+    publish_gate(holders: [ interactive("chat:other") ], waiters: [ interactive("bill:1") ])
+    assert_equal "Waiting for the model; 2 tasks ahead ...", chat.pending_status
 
-    pending = chat.messages.find_by!(type: "AssistantMessage", status: "pending")
-    Chat.any_instance.expects(:broadcast_update).with { |opts| opts[:target] == ActionView::RecordIdentifier.dom_id(pending, :status) && opts[:html] == I18n.t("chats.thinking") }
+    pending = AssistantMessage.create!(chat:, content: "", ai_model: "qwen3-8b", status: :pending)
+    assert_includes ApplicationController.render(partial: "assistant_messages/assistant_message", locals: { assistant_message: pending }), "2 tasks ahead"
+
+    Chat.any_instance.expects(:broadcast_update).with(target: ActionView::RecordIdentifier.dom_id(pending, :status), html: I18n.t("chats.thinking"))
     Assistant.stubs(:for_chat).returns(stub(respond_to: nil))
-
-    chat.ask_assistant(user_message, assistant_message: pending)
+    chat.ask_assistant(chat.messages.where(type: "UserMessage").first, assistant_message: pending)
   end
 
-  test "a finished reply holds the reservation and refreshes the bubble" do
+  test "a pending bubble says Thinking when its request would interrupt, when it runs, or when the model isn't local" do
+    use_ai_routes(chat: %w[gpu/qwen3-8b])
     chat = chats(:one)
-    user_message = chat.messages.where(type: "UserMessage").first
-    UserMessage.any_instance.expects(:request_response).with(assistant_message: nil)
-    ChatReservation.expects(:hold!).returns(60)
-    ChatReservation.expects(:bubble).with(60).returns(seconds: 60, busy: false)
-    Turbo::StreamsChannel.expects(:broadcast_update_to).with(chat, targets: ChatReservation::TARGETS, partial: "chats/reservation", locals: { bubble: { seconds: 60, busy: false } })
+    assert_equal I18n.t("chats.thinking"), chat.pending_status, "no gate is in use"
 
-    AssistantResponseJob.perform_now(user_message)
-  end
+    publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ])
+    assert_equal I18n.t("chats.thinking"), chat.pending_status
 
-  test "a failed hold doesn't fail a finished reply" do
-    user_message = chats(:one).messages.where(type: "UserMessage").first
-    UserMessage.any_instance.expects(:request_response).with(assistant_message: nil)
-    ChatReservation.stubs(:while_chat_runs).yields
-    ChatReservation.expects(:hold!).raises(RedisClient::ConnectionError)
+    publish_gate(holders: [ interactive(chat.correlation_id) ])
+    assert_equal I18n.t("chats.thinking"), chat.pending_status
 
-    assert_nothing_raised { AssistantResponseJob.perform_now(user_message) }
+    publish_gate(holders: [ interactive("chat:other") ])
+    use_ai_routes(chat: %w[openai/gpt-4.1-mini])
+    assert_equal I18n.t("chats.thinking"), chat.pending_status
   end
 
   test "creates with default model when model is nil" do
@@ -305,4 +303,10 @@ class ChatTest < ActiveSupport::TestCase
 
     assert pending.reload.pending?
   end
+
+  def publish_gate(holders: [], waiters: [])
+    Ai::Gate::State.write("gpu.local:8080", holders:, waiters:, interruptions: 0, put_off: false)
+  end
+
+  def interactive(job) = Ai::Gate::Holder.new(lane: :interactive, job:)
 end

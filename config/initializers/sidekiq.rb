@@ -67,12 +67,6 @@ Sidekiq.configure_server do |config|
     chain.add JobUsageTracking
   end
 
-  # At startup: app classes aren't loadable yet when this file runs.
-  config.on(:startup) do
-    config[:fetch_class] = ChatReservation::Fetch
-    config[:labels] << BackgroundJobHealth::ONE_AI_THREAD_LABEL if BackgroundJobHealth.one_ai_thread_worker?(config)
-  end
-
   # The web reads this worker's gates (Ai::Gate::State): each heartbeat, every 10 s, refreshes them.
   config.on(:beat) { Ai::Sequencer.publish_gates }
 

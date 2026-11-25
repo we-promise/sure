@@ -9,11 +9,16 @@
 # - background: never waits. With no place free, or anyone waiting, it raises Ai::Error::Busy,
 #   and its job comes back later.
 #
+# While someone types in the chat box (ChatReservation), no new prompt or background request
+# starts on chat's host: the prompt request waits, and the background one raises Busy.
+#
 # With two or more places, one is kept for interactive requests. A gate lives in one worker's
 # memory (Ai::Sequencer.gate_for), so a worker that dies takes its places with it. The worker
 # publishes it for the web to read (Ai::Gate::State).
 class Ai::Gate
   RANKS = { interactive: 0, prompt: 1, background: 2 }.freeze
+  # Seconds between a waiting prompt request's checks whether the typing hold is over.
+  HOLD_CHECK = 1
 
   # Raised in the interrupted request's adapter (Ai::Transport::Http::ProxyNetHttp). A
   # RubyLLM::CancelledError, so RubyLLM records that request's usage as cancelled, not failed;
@@ -114,6 +119,7 @@ class Ai::Gate
     @waiters = []
     @arrivals = 0
     @interruptions = 0
+    @put_off = false
   end
 
   def size=(size)
@@ -161,7 +167,7 @@ class Ai::Gate
       holder = join(lane, feature)
       begin
         publish
-        nil until admitted?(holder)
+        publish until admitted?(holder, held: held?(holder))
       ensure
         left_the_line(holder)
         publish
@@ -178,20 +184,31 @@ class Ai::Gate
       end
     end
 
-    # Gives the request its place if it's next and there's room. Otherwise it waits for the gate to
-    # change before it answers; a background request raises Busy instead.
-    def admitted?(holder)
+    # Whether the typing hold keeps the request off the host. Read before the gate's lock is taken,
+    # so a slow Redis never keeps other requests from it.
+    def held?(holder)
+      !holder.interactive? && @host.present? && ChatReservation.held?(@host)
+    rescue StandardError => e
+      Rails.logger.warn("[Ai::Gate] typing hold of #{@host} not read: #{e.class}: #{e.message}")
+      false
+    end
+
+    # Gives the request its place if it's next, there's room and no hold keeps it off. Otherwise it
+    # waits for the gate to change before it answers; a background request raises Busy instead.
+    def admitted?(holder, held:)
       @monitor.synchronize do
-        if @waiters.first.equal?(holder) && room_for?(holder)
+        if !held && @waiters.first.equal?(holder) && room_for?(holder)
           @waiters.delete(holder)
           @holders << holder
+          @put_off = false unless holder.interactive?
           holder.admitted!
           next true
         end
+        @put_off = true if held
         raise Ai::Error::Busy, "the local model host is busy" if holder.lane == :background
 
         interrupt_for_interactive
-        @changed.wait
+        @changed.wait(held ? HOLD_CHECK : nil)
         false
       end
     end
@@ -211,7 +228,7 @@ class Ai::Gate
       publish
     end
 
-    def state = { holders: @holders.dup, waiters: @waiters.dup, interruptions: @interruptions }
+    def state = { holders: @holders.dup, waiters: @waiters.dup, interruptions: @interruptions, put_off: @put_off }
 
     def room_for?(holder)
       return false if @holders.size >= size

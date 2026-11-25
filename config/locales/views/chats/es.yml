@@ -4,7 +4,6 @@ es:
     demo_banner_title: Modo de demostración activo
     demo_banner_message: "Tokens gratuitos para LLM por cortesía de Vercel AI Gateway. Los resultados pueden variar porque cambiamos con frecuencia los pesos de los modelos para realizar pruebas. ¡Consulta la documentación de Vercel para saber adónde van tus conversaciones! 🤖"
     thinking: Procesando ...
-    ai_busy: Estoy terminando una tarea en segundo plano y enseguida me pongo con tu mensaje.
     reservation:
       ready_html: He aplazado algunas tareas en segundo plano para ponerme ya con tu mensaje. Volverán dentro de %{countdown} s, ¡así que sigue escribiendo!
       busy: Estoy terminando una tarea en segundo plano y enseguida soy todo tuyo. ¡Sigue escribiendo!

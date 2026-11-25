@@ -1,6 +1,7 @@
 # A worker's gate as it last published it (Ai::Gate#publish), in Ai::SharedState: the requests
-# holding a place and waiting for one, and how many it has interrupted. It's what the web knows
-# of a local model host (BackgroundJobHealth.model_gate). Expires, so a dead worker's lapses.
+# holding a place and waiting for one, how many it has interrupted, and whether a typing hold put
+# any off that haven't started since. It's what the web knows of a local model host
+# (BackgroundJobHealth.model_gate). Expires, so a dead worker's lapses.
 class Ai::Gate::State
   # Three heartbeats of the worker that refreshes it.
   TTL = 30.seconds
@@ -29,8 +30,10 @@ class Ai::Gate::State
 
   def initialize(attributes)
     @holders, @waiters = attributes.values_at(:holders, :waiters).map { |list| list.map { Request.new(**_1) } }
-    @interruptions = attributes[:interruptions]
+    @interruptions, @put_off = attributes.values_at(:interruptions, :put_off)
   end
+
+  def put_off? = @put_off
 
   def interactive? = (holders + waiters).any?(&:interactive?)
 

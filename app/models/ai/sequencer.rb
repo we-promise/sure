@@ -96,6 +96,13 @@ module Ai::Sequencer
     endpoint.name
   end
 
+  # The local endpoint a user's chat route uses, whose gate chat takes and whose host the typing
+  # hold keeps free. Nil for a cloud model, an external assistant (it calls its own models) or no chat.
+  def chat_endpoint(user)
+    endpoint = user && Ai.plan(:chat, family: user.family, user:)&.route&.endpoint
+    endpoint if endpoint&.local? && !endpoint.agent?
+  end
+
   # Refreshes the published state of each gate in use before it expires (Ai::Gate::State::TTL).
   def publish_gates = GATES.each_value { |sized| sized.gate.publish if sized.gate.in_use? }
 

@@ -35,83 +35,11 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
     assert_not BackgroundJobHealth.healthy?
   end
 
-  test "with one AI thread, a running background job is busy" do
-    stub_running("ai_background")
-
-    assert BackgroundJobHealth.ai_busy?
-  end
-
-  test "with one AI thread, a running chat is busy for the next one" do
-    stub_running("ai_interactive")
-
-    assert BackgroundJobHealth.ai_busy?
-  end
-
-  test "other running jobs aren't busy" do
-    stub_running("default")
-
-    assert_not BackgroundJobHealth.ai_busy?
-  end
-
-  test "the running-job check can be limited to some AI queues" do
-    stub_running("ai_interactive")
-
-    assert BackgroundJobHealth.ai_job_running?
-    assert_not BackgroundJobHealth.ai_job_running?(queues: ChatReservation::HELD_QUEUES)
-  end
-
-  test "with several AI threads, a running background job isn't busy" do
-    stub_running("ai_background", one_ai_thread: false)
-
-    assert_not BackgroundJobHealth.ai_busy?
-  end
-
-  test "one AI thread when the only worker process polling AI queues carries the label" do
-    stub_processes(ai_process(labelled: true), stub(queues: %w[default], labels: []))
-    assert BackgroundJobHealth.one_ai_thread?
-
-    stub_processes(ai_process(labelled: false))
-    assert_not BackgroundJobHealth.one_ai_thread?
-  end
-
-  test "several worker processes polling AI queues aren't one AI thread" do
-    stub_processes(ai_process(labelled: true), ai_process(labelled: true))
-
-    assert_not BackgroundJobHealth.one_ai_thread?
-  end
-
-  test "a worker gets the label only for a one-thread capsule polling the prompt and background queues" do
-    config = Sidekiq::Config.new
-    config.capsule("ai_chat") { |capsule| capsule.queues = %w[ai_interactive]; capsule.concurrency = 1 }
-    ai = config.capsule("ai") { |capsule| capsule.queues = %w[ai_high_priority ai_prompt ai_background ai_low_priority] }
-
-    ai.concurrency = 1
-    assert BackgroundJobHealth.one_ai_thread_worker?(config), "the chat capsule's thread doesn't count"
-
-    ai.concurrency = 2
-    assert_not BackgroundJobHealth.one_ai_thread_worker?(config)
-
-    background_only = Sidekiq::Config.new
-    background_only.capsule("ai") { |capsule| capsule.queues = %w[ai_background]; capsule.concurrency = 1 }
-    assert_not BackgroundJobHealth.one_ai_thread_worker?(background_only)
-  end
-
-  test "no label when another capsule in the worker also polls a prompt or background queue" do
-    config = Sidekiq::Config.new
-    config.capsule("ai") { |capsule| capsule.queues = %w[ai_prompt ai_background]; capsule.concurrency = 1 }
-    config.default_capsule { |capsule| capsule.queues = %w[default ai_background]; capsule.concurrency = 2 }
-
-    assert_not BackgroundJobHealth.one_ai_thread_worker?(config)
-  end
-
   test "fails open when Sidekiq/Redis is unreachable" do
     Sidekiq::ProcessSet.stubs(:new).raises(StandardError.new("no redis"))
-    Sidekiq::WorkSet.stubs(:new).raises(StandardError.new("no redis"))
 
     assert BackgroundJobHealth.healthy?
     assert BackgroundJobHealth.snapshot[:error]
-    assert_not BackgroundJobHealth.one_ai_thread?
-    assert_not BackgroundJobHealth.ai_job_running?
   end
 
   private
@@ -122,18 +50,5 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
       Sidekiq::ProcessSet.stubs(:new).returns(process_set)
 
       Sidekiq::Queue.stubs(:new).with("high_priority").returns(stub(latency: latency))
-    end
-
-    def stub_processes(*processes)
-      Sidekiq::ProcessSet.stubs(:new).with(false).returns(processes)
-    end
-
-    def ai_process(labelled:)
-      stub(queues: %w[default ai_interactive ai_prompt ai_background], labels: labelled ? [ BackgroundJobHealth::ONE_AI_THREAD_LABEL ] : [])
-    end
-
-    def stub_running(queue, one_ai_thread: true)
-      BackgroundJobHealth.stubs(:one_ai_thread?).returns(one_ai_thread)
-      Sidekiq::WorkSet.stubs(:new).returns([ [ "worker:1", "tid", stub(queue: queue) ] ])
     end
 end

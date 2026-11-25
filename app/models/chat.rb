@@ -125,7 +125,6 @@ class Chat < ApplicationRecord
   def ask_assistant_later(message)
     clear_error
     pending = messages.create!(type: "AssistantMessage", content: "", ai_model: message.ai_model, status: :pending)
-    broadcast_pending_status(pending, busy: true) if BackgroundJobHealth.ai_busy?
     AssistantResponseJob.perform_later(message, pending)
   end
 
@@ -137,24 +136,23 @@ class Chat < ApplicationRecord
       return
     end
 
-    broadcast_pending_status(assistant_message) if assistant_message
+    broadcast_pending_status(assistant_message, I18n.t("chats.thinking")) if assistant_message
     assistant.respond_to(message, assistant_message: assistant_message)
   end
 
-  # Not broadcast_update: it adds `chat` to the locals and drops a nil bubble.
-  def hold_reservation
-    Turbo::StreamsChannel.broadcast_update_to self, targets: ChatReservation::TARGETS, partial: "chats/reservation",
-                                              locals: { bubble: ChatReservation.bubble(ChatReservation.hold!) }
-  rescue => e
-    Rails.logger.warn("ChatReservation hold failed: #{e.class}: #{e.message}")
+  # What a pending bubble says: how many requests the reply waits for at its local model host, or
+  # "Thinking". It's rendered again once the job starts.
+  def pending_status
+    ahead = requests_ahead
+    ahead.positive? ? I18n.t("chats.waiting_for_model", count: ahead) : I18n.t("chats.thinking")
   end
 
-  # The pending bubble says "busy" while the response waits behind another AI
-  # job, and "Thinking" once its job starts.
-  def broadcast_pending_status(assistant_message, busy: false)
-    broadcast_update target: ActionView::RecordIdentifier.dom_id(assistant_message, :status),
-                     html: I18n.t(busy ? "chats.ai_busy" : "chats.thinking")
+  def broadcast_pending_status(assistant_message, status)
+    broadcast_update target: ActionView::RecordIdentifier.dom_id(assistant_message, :status), html: status
   end
+
+  # The id its AI requests carry, the model host's gate's included (Ai::CallContext.job).
+  def correlation_id = "chat:#{id}"
 
   # How long a pending "Thinking…" bubble may wait before the browser watchdog
   # reports it as undelivered. Configurable because a local model on slow
@@ -233,6 +231,10 @@ class Chat < ApplicationRecord
   end
 
   private
+
+    def requests_ahead
+      BackgroundJobHealth.model_gate(Ai::Sequencer.chat_endpoint(user))&.ahead_of(correlation_id) || 0
+    end
 
     def undelivered_error_payload(assistant_message)
       {

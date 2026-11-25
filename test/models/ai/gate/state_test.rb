@@ -40,6 +40,37 @@ class Ai::Gate::StateTest < ActiveSupport::TestCase
     end
   end
 
+  test "work the typing hold put off is published until some starts" do
+    ChatReservation.hold!(@endpoint)
+    assert_raises(Ai::Error::Busy) { @gate.hold(:background) { } }
+    assert_predicate state, :put_off?
+
+    @gate.hold(:interactive) { }
+    assert_predicate state, :put_off?, "the message doesn't start it"
+
+    ChatReservation.release(@endpoint)
+    @gate.hold(:background) { }
+    assert_not_predicate state, :put_off?
+  end
+
+  test "a prompt request the typing hold keeps waiting is published as put off" do
+    ChatReservation.hold!(@endpoint)
+    prompt = Thread.new { @gate.hold(:prompt) { } }
+    Timeout.timeout(5) { sleep 0.05 until state&.put_off? }
+
+    assert_equal 1, state.waiters.size
+  ensure
+    ChatReservation.release(@endpoint)
+    prompt.join(3)
+  end
+
+  test "a background request that finds the host full isn't put off" do
+    @gate.hold(:prompt) do
+      Thread.new { assert_raises(Ai::Error::Busy) { @gate.hold(:background) { } } }.join
+      assert_not_predicate state, :put_off?
+    end
+  end
+
   test "a heartbeat refreshes a gate in use before its state expires; an idle gate's lapses" do
     @gate.hold(:prompt) do
       3.times do
@@ -90,5 +121,5 @@ class Ai::Gate::StateTest < ActiveSupport::TestCase
 
     def request(lane, job) = { lane:, feature: nil, job: }
 
-    def built(holders: [], waiters: []) = Ai::Gate::State.new({ holders:, waiters:, interruptions: 0 })
+    def built(holders: [], waiters: []) = Ai::Gate::State.new({ holders:, waiters:, interruptions: 0, put_off: false })
 end

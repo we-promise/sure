@@ -4,7 +4,6 @@ nl:
     demo_banner_title: "Demo Modus Actief"
     demo_banner_message: "Gratis LLM-tokens dankzij Vercel AI Gateway. Resultaten kunnen variëren omdat we de modelgewichten vaak wijzigen voor testdoeleinden. Raadpleeg de documentatie van Vercel om te zien waar uw gesprekken naartoe gaan! 🤖"
     thinking: "Bezig ..."
-    ai_busy: "Ik rond nog even een achtergrondtaak af, daarna ga ik direct met uw bericht aan de slag."
     reservation:
       ready_html: "Ik heb wat achtergrondtaken uitgesteld, zodat ik direct met uw bericht aan de slag kan. Over %{countdown} s gaan ze weer verder, dus typ gerust door!"
       busy: "Ik rond nog even een achtergrondtaak af, daarna ben ik helemaal voor u beschikbaar. Typ gerust door!"

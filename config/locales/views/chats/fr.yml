@@ -8,7 +8,6 @@ fr:
       function: 'Fonction :'
       tool_calls: Appels d'outils
   chats:
-    ai_busy: Je termine une tâche en arrière-plan, puis je m'occupe tout de suite de votre message.
     ai_consent:
       available_description: Le chat IA peut répondre aux questions financières et fournir des informations basées sur vos données. Pour utiliser cette fonctionnalité, vous devrez l'activer explicitement.
       disable_note: "Désactivez à tout moment. Cela active l'IA pour le chat, les factures et la recherche de documents, qui envoient vos messages, transactions et documents tels quels au fournisseur d'IA de cette instance."
