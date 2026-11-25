@@ -103,6 +103,10 @@ RSpec.describe 'API V1 Rule Runs', type: :request do
       response '200', 'rule runs listed' do
         schema '$ref' => '#/components/schemas/RuleRunCollection'
 
+        # Without it rswag sends `status=` (the integration session's own
+        # #status is nil), which the API rejects as an empty filter.
+        let(:status) { 'success' }
+
         run_test!
       end
 

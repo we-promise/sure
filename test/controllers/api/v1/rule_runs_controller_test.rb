@@ -190,6 +190,45 @@ class Api::V1::RuleRunsControllerTest < ActionDispatch::IntegrationTest
     api_key_without_read&.destroy
   end
 
+  test "does not list another family's rule runs when filtering by their rule" do
+    other_rule_run = create_other_family_rule_run
+
+    get api_v1_rule_runs_url, params: { rule_id: other_rule_run.rule_id }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_empty JSON.parse(response.body)["data"]
+  end
+
+  test "accepts filter values with surrounding whitespace" do
+    get api_v1_rule_runs_url, params: { status: " failed " }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal [ @failed_rule_run.id ], JSON.parse(response.body)["data"].map { |rule_run| rule_run["id"] }
+  end
+
+  test "rejects empty filter values" do
+    %i[rule_id status execution_type start_executed_at end_executed_at].each do |key|
+      get api_v1_rule_runs_url, params: { key => "" }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, "#{key}= should be rejected"
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "names the invalid filter in the error message" do
+    {
+      rule_id: [ "nope", "rule_id must be a valid UUID" ],
+      status: [ "unknown", "status must be one of: pending, success, failed" ],
+      execution_type: [ "cron", "execution_type must be one of: manual, scheduled, immediate" ],
+      end_executed_at: [ "2024-01-16", "end_executed_at must be an ISO 8601 timestamp" ]
+    }.each do |key, (value, message)|
+      get api_v1_rule_runs_url, params: { key => value }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity
+      assert_equal message, JSON.parse(response.body)["message"]
+    end
+  end
+
   teardown do
     @redis&.close
   end
