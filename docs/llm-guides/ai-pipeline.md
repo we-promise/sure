@@ -217,7 +217,7 @@ flowchart LR
 - **Each lane has a queue, named only in `Ai::Routes`.** `Ai::Routes::QUEUES` maps interactive,
   prompt and background to `ai_interactive`, `ai_prompt` and `ai_background`; a job picks its
   queue with `queue_as { Ai::Routes.queue_for(:feature) }`, never a name (`ai_lane_test`).
-  Interactive work runs in the worker's one-thread `ai_chat` capsule, the rest in order in `ai`,
+  Interactive work runs in the worker's `ai_chat` capsule, the rest in order in `ai`,
   which drains the old `ai_high_priority` and `ai_low_priority` (`Ai::Routes::LEGACY_QUEUES`) for
   one release. `ApplicationJob` runs each job in its queue's lane (`Ai::Sequencer.lane`, fiber
   storage, so Jev's threads share it); evals and the console choose one with
