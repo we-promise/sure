@@ -393,13 +393,13 @@ class PdfImport < Import
 
   # Runs a write only while this attempt still owns the import. A long OCR read can outlive the
   # claim's recovery window; once another reread takes over, the stale job must leave the new
-  # attempt's data and token alone. Stop clears the token, so it is the importing check that keeps
-  # a late model result from overwriting a cancelled import.
+  # attempt's data and token alone. Stop clears the token as well as the status, so cancellation
+  # needs its own check: a late model result must not overwrite a stopped import.
   def with_claim(token)
     with_lock do
-      next false unless importing?
+      next false if cancelled?
       next false if token.blank? && reread_token.present?
-      next false if token.present? && reread_token != token
+      next false if token.present? && !(importing? && reread_token == token)
 
       yield
     end

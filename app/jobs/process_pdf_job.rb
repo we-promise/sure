@@ -179,9 +179,9 @@ class ProcessPdfJob < ApplicationJob
     # the claim changes. Checked under the same row lock used to write each terminal status.
     def owns_claim?(pdf_import, reread_token)
       pdf_import.with_lock do
-        next false unless pdf_import.importing?
+        next false if pdf_import.cancelled?
         next false if reread_token.blank? && pdf_import.reread_token.present?
-        next false if reread_token.present? && pdf_import.reread_token != reread_token
+        next false if reread_token.present? && !(pdf_import.importing? && pdf_import.reread_token == reread_token)
 
         true
       end
