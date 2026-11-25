@@ -5,7 +5,7 @@ deployment behavior, privacy boundaries, and the first implementation's event
 catalog and counting rules.
 
 Use `feedback_config(:feature_name)` from `FeedbackHelper` to select a survey.
-Project routing belongs in this helper and `config/initializers/posthog.rb`;
+Project routing belongs in this helper and `config/initializers/00_posthog.rb`;
 question wording, response mapping, UI, and events belong to the feature.
 
 ## Configuration
@@ -33,6 +33,12 @@ and `survey_id` for the shared `[app] self-hosted` project. The token is public
 client configuration; operators need no account or key setup. It must never be a
 PostHog personal or project secret key. An operator's own analytics configuration
 must not change this destination.
+
+The browser loads the survey script from this host's `-assets` counterpart and
+sends responses to the host itself, so `config/initializers/content_security_policy.rb`
+allowlists both in `script-src` and `connect-src` under the same gates. If the
+destination host changes, the policy follows it automatically; a new destination
+outside `self_hosted_feedback_project` must be added there too.
 
 Unknown features, blank survey IDs, or a missing ID for the selected destination
 return `{}`. There is no fallback to another feature's survey or another project.
