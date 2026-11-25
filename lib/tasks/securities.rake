@@ -39,6 +39,9 @@ namespace :securities do
               Holding.where(security_id: security.id).update_all(security_id: canonical.id)
               Trade.where(security_id: security.id).update_all(security_id: canonical.id)
               Security::Price.where(security_id: security.id).update_all(security_id: canonical.id)
+              # Splits would otherwise go with the duplicate (dependent: :destroy)
+              split_counts = Security::Split.move!(from: security, to: canonical)
+              puts "    - #{split_counts[:moved]} splits moved, #{split_counts[:dropped]} dropped (canonical already had that ex-date)"
               security.move_taggings_to!(canonical)
 
               # Delete the duplicate
@@ -97,6 +100,9 @@ namespace :securities do
             Holding.where(security_id: duplicates).update_all(security_id: canonical.id)
             Trade.where(security_id: duplicates).update_all(security_id: canonical.id)
             Security::Price.where(security_id: duplicates).update_all(security_id: canonical.id)
+            # Splits would otherwise go with the duplicates (dependent: :destroy)
+            split_counts = Security::Split.move!(from: duplicates, to: canonical)
+            puts "    - #{split_counts[:moved]} splits moved, #{split_counts[:dropped]} dropped (canonical already had that ex-date)"
             duplicates.each { |duplicate| duplicate.move_taggings_to!(canonical) }
 
             # Delete the duplicates
