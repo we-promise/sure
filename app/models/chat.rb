@@ -136,7 +136,11 @@ class Chat < ApplicationRecord
       return
     end
 
-    broadcast_pending_status(assistant_message, I18n.t("chats.thinking")) if assistant_message
+    if assistant_message
+      # The watchdog's time counts from here, not from while the reply was queued.
+      assistant_message.update_columns(updated_at: Time.current)
+      broadcast_pending_status(assistant_message, I18n.t("chats.thinking"))
+    end
     assistant.respond_to(message, assistant_message: assistant_message)
   end
 
@@ -205,13 +209,20 @@ class Chat < ApplicationRecord
   # Driven by an untrusted client watchdog, so the state change is gated behind a
   # row lock + a server-side age check: we re-read the row under lock and only act
   # if it is *still* pending and has genuinely waited past the timeout, so we never
-  # race a worker that is finishing a legitimate (slow) response.
+  # race a worker that is finishing a legitimate (slow) response. A reply waiting
+  # for its local model host isn't undelivered: its bubble says what it waits for,
+  # and the watchdog asks again.
   def handle_undelivered_response!(assistant_message)
     return false unless assistant_message.is_a?(AssistantMessage)
 
+    if assistant_message.pending? && requests_ahead.positive?
+      broadcast_pending_status(assistant_message, pending_status)
+      return false
+    end
+
     resolved = assistant_message.with_lock do
       next false unless assistant_message.pending?
-      next false if assistant_message.created_at > self.class.undelivered_response_timeout.ago
+      next false if assistant_message.updated_at > self.class.undelivered_response_timeout.ago
 
       if assistant_message.content.blank?
         assistant_message.destroy!

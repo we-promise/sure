@@ -202,7 +202,7 @@ class ChatTest < ActiveSupport::TestCase
     BackgroundJobHealth.stubs(:summary).returns("workers=0")
 
     chat = chats(:two)
-    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago, updated_at: 5.minutes.ago)
 
     assert_difference -> { DebugLogEntry.count } => 1, -> { Message.count } => -1 do
       assert chat.handle_undelivered_response!(pending)
@@ -217,7 +217,7 @@ class ChatTest < ActiveSupport::TestCase
     BackgroundJobHealth.stubs(:summary).returns("")
 
     chat = chats(:two)
-    pending = chat.messages.create!(type: "AssistantMessage", content: "partial answer", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "partial answer", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago, updated_at: 5.minutes.ago)
 
     assert_no_difference -> { Message.count } do
       assert chat.handle_undelivered_response!(pending)
@@ -235,6 +235,48 @@ class ChatTest < ActiveSupport::TestCase
     end
 
     assert fresh.reload.pending?
+  end
+
+  test "handle_undelivered_response! never gives up on a reply waiting for its model host" do
+    use_ai_routes(chat: %w[gpu/qwen3-8b])
+    chat = chats(:two)
+    pending = late_reply(chat)
+
+    { "queued behind another chat" => { holders: [ interactive("chat:other") ] },
+      "waiting at the gate" => { holders: [ Ai::Gate::Holder.new(lane: :background) ], waiters: [ interactive(chat.correlation_id) ] } }.each do |situation, gate|
+      publish_gate(**gate)
+      Chat.any_instance.expects(:broadcast_update).with { |opts| opts[:html] == "Waiting for the model; 1 task ahead ..." }
+      assert_no_difference [ "DebugLogEntry.count", "Message.count" ], situation do
+        assert_not chat.handle_undelivered_response!(pending), situation
+      end
+    end
+  end
+
+  test "handle_undelivered_response! gives up on a late reply when its host has only work it would interrupt, its own request, or no worker" do
+    use_ai_routes(chat: %w[gpu/qwen3-8b])
+    chat = chats(:two)
+
+    publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ])
+    assert chat.handle_undelivered_response!(late_reply(chat))
+
+    publish_gate(holders: [ interactive(chat.correlation_id) ])
+    assert chat.handle_undelivered_response!(late_reply(chat))
+
+    publish_gate(holders: [ interactive("chat:other") ])
+    travel Ai::Gate::State::TTL + 1.second
+    assert chat.handle_undelivered_response!(late_reply(chat)), "the dead worker's gate has lapsed"
+  end
+
+  test "a reply's time starts again when its job starts" do
+    chat = chats(:two)
+    pending = late_reply(chat)
+    Assistant.stubs(:for_chat).returns(stub(respond_to: nil))
+
+    chat.ask_assistant(chat.messages.where(type: "UserMessage").first, assistant_message: pending)
+    assert_not chat.handle_undelivered_response!(pending.reload)
+
+    travel Chat.response_timeout
+    assert chat.handle_undelivered_response!(pending.reload)
   end
 
   test "handle_undelivered_response! is a no-op for non-pending messages" do
@@ -293,7 +335,7 @@ class ChatTest < ActiveSupport::TestCase
 
   test "handle_undelivered_response! respects a raised timeout" do
     chat = chats(:two)
-    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago, updated_at: 5.minutes.ago)
 
     with_setting_timeout(600) do
       assert_no_difference [ "DebugLogEntry.count", "Message.count" ] do
@@ -302,6 +344,10 @@ class ChatTest < ActiveSupport::TestCase
     end
 
     assert pending.reload.pending?
+  end
+
+  def late_reply(chat)
+    chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "qwen3-8b", status: :pending, created_at: 5.minutes.ago, updated_at: 5.minutes.ago)
   end
 
   def publish_gate(holders: [], waiters: [])
