@@ -186,7 +186,24 @@ de:
         step_1_html: Geh zu %{link} und leg einen API-Key an.
         step_2: Füg deinen Key unten ein und verbinde.
         step_3: Geh danach zu den Konten, um deine synchronisierten Konten zu verknüpfen.
+        sync_start_date_label: Transaktionen importieren ab
+        sync_start_date_help: Leer lassen, um alles zu importieren, was Lunch Flow hat. Ein früheres Datum importiert den fehlenden Zeitraum bei der nächsten Synchronisierung. Ein späteres Datum ändert bereits importierte Transaktionen nicht.
         update_connection: Verbindung aktualisieren
+      financekit:
+        summary: Wallet-Synchronisierung
+        description: Verwalte Apple-Wallet-Verbindungen in der Sure-App für iOS. Wallet-Daten werden synchronisiert, solange die App geöffnet ist; eine Synchronisierung im Hintergrund gibt es noch nicht.
+        status:
+          active: Synchronisierung aktiv
+          repair_required: Reparatur nötig – öffne die Sure-App für iOS
+        last_accepted_at: Zuletzt von Sure angenommen
+        last_imported_at: Zuletzt in deine Familie importiert
+        not_yet: Noch nicht
+        accounts: Verknüpfte Konten
+        linked_accounts:
+          one: 1 verknüpftes Konto
+          other: "%{count} verknüpfte Konten"
+        app_store: App Store
+        coming_soon: Demnächst verfügbar!
       maturity:
         alpha: Alpha
         beta: Beta
@@ -245,22 +262,29 @@ de:
         binance: Synchronisiert deine Spot-Guthaben bei Binance über einen API-Key mit Lesezugriff.
         brex: Synchronisiert Guthaben und Firmenkartenumsätze bei Brex mit reinem Lesezugriff.
         coinbase: Importiert deine Krypto-Bestände von Coinbase und verfolgt ihre Entwicklung.
+        coinspot: Synchronisiert Guthaben, AUD-Werte, Überweisungen, Ein- und Auszahlungen sowie die Orderhistorie bei CoinSpot über einen API-Key mit Lesezugriff.
         coinstats: Verfolgt dein gesamtes Krypto-Portfolio über Wallets und Börsen hinweg.
         enable_banking: Synchronisiert europäische Bankkonten über PSD2-Open-Banking.
+        financekit: Synchronisiert (einige) FinanceKit-Konten über die Sure-App für iOS.
+        fio: Synchronisiert ein Konto bei der Fio banka über einen API-Token mit Lesezugriff.
         ibkr: Synchronisiert Depots bei Interactive Brokers über Flex-Query-Importe.
         indexa_capital: Verfolgt dein automatisiertes Portfolio bei Indexa Capital.
         kraken: Synchronisiert Guthaben und ausgeführte Spot-Trades bei Kraken über einen API-Key mit Lesezugriff.
         lunchflow: Verbindet über 20.000 Banken aus mehr als 40 Ländern (Großbritannien, EU, USA und weitere).
         mercury: Synchronisiert deine Geschäftskonten bei Mercury automatisch.
+        monobank: Synchronisiert ukrainische Monobank-Karten und -Spardosen über einen persönlichen API-Token.
         plaid: Verbindet Tausende US-Finanzinstitute über Plaid.
         plaid_eu: Verbindet europäische Finanzinstitute über Plaid (PSD2 / Open Banking).
         questrade: Synchronisiert deine Questrade-Depots direkt über die Questrade-API.
         redbark: Synchronisiert australische Bankkonten über Redbark Open Banking.
+        sharesight: Synchronisiert die Portfolios, die du in Sharesight verfolgst, über dessen API.
         simplefin: Verbindet US-Bankkonten über das offene SimpleFIN-Protokoll.
         snaptrade: Verbindet Depots über das Aggregationsnetz von SnapTrade.
         sophtron: Verbindet Banken und Versorger in den USA & Kanada.
         trading212: Synchronisiert dein Trading-212-Depot über einen API-Key mit Lesezugriff.
         trade_republic: Synchronisiert dein Trade-Republic-Konto über einen sicheren Web-Login mit Lesezugriff.
+        truelayer: Synchronisiert britische Bankkonten und Kreditkarten über TrueLayer-Open-Banking.
+        up: Synchronisiert australische Bankkonten bei Up über einen persönlichen Zugriffstoken.
         wise: Synchronisiert deine Wise-Guthaben in mehreren Währungen und internationale Überweisungen automatisch.
       trading212_panel:
         accounts_tab: Konten

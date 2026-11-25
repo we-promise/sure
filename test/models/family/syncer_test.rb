@@ -56,7 +56,7 @@ class Family::SyncerTest < ActiveSupport::TestCase
   test "applies rules in one ordered run per family after sync" do
     syncer = Family::Syncer.new(@family)
 
-    assert_enqueued_with(job: ApplyRulesJob, args: [ @family ]) do
+    assert_enqueued_with(job: ApplyRulesJob, args: [ @family, { warm_reports: true } ]) do
       syncer.perform_post_sync
     end
     assert_no_enqueued_jobs(only: RuleJob)
@@ -73,7 +73,7 @@ class Family::SyncerTest < ActiveSupport::TestCase
   test "a logo backfill failure does not stop rules from being applied" do
     ProviderMerchant.stubs(:backfill_logos).raises(StandardError, "boom")
 
-    assert_enqueued_with(job: ApplyRulesJob, args: [ @family ]) do
+    assert_enqueued_with(job: ApplyRulesJob, args: [ @family, { warm_reports: true } ]) do
       Family::Syncer.new(@family).perform_post_sync
     end
   end

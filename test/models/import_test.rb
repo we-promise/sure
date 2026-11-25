@@ -3,6 +3,26 @@ require "test_helper"
 class ImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  test "parse_csv_str handles a quoted multi-line header followed by CRLF rows" do
+    csv = Import.parse_csv_str("\"Date\nPosted\",Amount\r\n2024-01-01,5\r\n2024-01-02,6\r\n")
+
+    assert_equal [ "Date\nPosted", "Amount" ], csv.headers
+    assert_equal [ "5", "6" ], csv.map { |row| row["Amount"] }
+  end
+
+  test "parse_csv_str handles mixed LF and CRLF line endings" do
+    csv = Import.parse_csv_str("date,amount\n2024-01-01,5\r\n2024-01-02,6\r\n")
+
+    assert_equal [ "date", "amount" ], csv.headers
+    assert_equal [ "5", "6" ], csv.map { |row| row["amount"] }
+  end
+
+  test "parse_csv_str handles CR-only line endings" do
+    csv = Import.parse_csv_str("date,amount\r2024-01-01,5\r")
+
+    assert_equal [ "5" ], csv.map { |row| row["amount"] }
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")
@@ -244,5 +264,21 @@ class ImportTest < ActiveSupport::TestCase
     csv = Import.parse_csv_str("name\n'+44 Taxis\n+44 Taxis\n")
 
     assert_equal [ "'+44 Taxis", "+44 Taxis" ], csv["name"]
+  end
+
+  test "an import is viewable by the family unless its statement is private" do
+    member = users(:family_member)
+    assert TransactionImport.create!(family: member.family).viewable_by?(member)
+
+    statement = AccountStatement.create_from_upload!(
+      family: member.family,
+      account: accounts(:investment),
+      file: uploaded_file(filename: "statement.pdf", content_type: "application/pdf",
+                          content: file_fixture("imports/sample_bank_statement.pdf").binread)
+    )
+    pdf_import = PdfImport.create_from_statement!(statement: statement)
+
+    assert pdf_import.viewable_by?(users(:family_admin))
+    assert_not pdf_import.viewable_by?(member)
   end
 end
