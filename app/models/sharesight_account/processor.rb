@@ -54,7 +54,7 @@ class SharesightAccount::Processor
         currency: sharesight_account.currency
       )
       account.save!
-      account.set_current_balance(total_balance, schedule_sync: false)
+      account.set_current_balance(total_balance)
     end
 
     # Zero once the cash lives somewhere else. While the broker has it, either
