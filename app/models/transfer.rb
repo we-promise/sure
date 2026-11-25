@@ -20,6 +20,10 @@ class Transfer < ApplicationRecord
   # (or its entry) is deleted, so the surviving leg never keeps a transfer kind
   # without a transfer.
   before_destroy :release_transactions
+  # Destroying locks this row before the fee transactions and the legs, the
+  # order confirm! and Entry#unsplit! take them in, so an unlink and a confirm
+  # or unsplit do not deadlock each other.
+  before_destroy :lock_row, prepend: true
 
   class << self
     # The outflow leg's kind for a transfer into this account. Transfer::Creator,
@@ -189,6 +193,10 @@ class Transfer < ApplicationRecord
   # once the user confirms the match.
   def confirm!
     Transfer.transaction do
+      # Raises RecordNotFound when the transfer was removed in the meantime,
+      # for example with an unsplit part, instead of giving its surviving leg a
+      # transfer kind.
+      Transfer.lock.find(id)
       update!(status: "confirmed")
 
       # The kind is determined by the DESTINATION account (inflow), matching Transfer::Creator logic
@@ -232,6 +240,18 @@ class Transfer < ApplicationRecord
   end
 
   private
+    # Reads the status under the lock. When a confirm committed after the
+    # caller loaded this transfer, the legs it loaded are stale too, so they are
+    # read again: release_transactions resets the kinds the confirm set.
+    def lock_row
+      current_status = Transfer.where(id: id).lock.pick(:status)
+      return if current_status.nil? || current_status == status
+
+      self.status = current_status
+      inflow_transaction&.reload
+      outflow_transaction&.reload
+    end
+
     def contribution_by_default?
       to_account.present? && Transfer.kind_for_account(to_account, from_account: from_account) == "investment_contribution"
     end

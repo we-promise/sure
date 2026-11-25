@@ -814,6 +814,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
     t.date "first_provider_rate_on"
     t.string "from_currency", null: false
     t.string "provider_name"
+    t.boolean "quoted_directly", default: false, null: false
     t.string "to_currency", null: false
     t.datetime "updated_at", null: false
     t.index ["from_currency", "to_currency"], name: "index_exchange_rate_pairs_on_pair_unique", unique: true
@@ -2412,6 +2413,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.boolean "carried_forward", default: false, null: false
     t.datetime "created_at", null: false
     t.string "currency", default: "USD", null: false
     t.date "date", null: false

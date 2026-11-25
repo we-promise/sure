@@ -3519,6 +3519,7 @@ components:
       - price_amount
       - currency
       - provisional
+      - carried_forward
       - security
       - created_at
       - updated_at
@@ -3539,6 +3540,11 @@ components:
           type: string
         provisional:
           type: boolean
+        carried_forward:
+          type: boolean
+          description: 'The price repeats an earlier one: no quote was available for
+            this date. A non-provisional price stored before this field was added
+            reads false even when it repeats an earlier one'
         security:
           type: object
           required:
@@ -7813,6 +7819,8 @@ paths:
   "/api/v1/holdings":
     get:
       summary: List holdings
+      description: Holdings are ordered by date, then by holding ID for rows on the
+        same date.
       tags:
       - Holdings
       security:
@@ -9925,6 +9933,13 @@ paths:
           or false.
         schema:
           type: boolean
+      - name: carried_forward
+        in: query
+        required: false
+        description: Filter by whether the price repeats an earlier one rather than
+          being a quote for its date. When supplied, must be true or false.
+        schema:
+          type: boolean
       responses:
         '200':
           description: security prices listed
@@ -10152,6 +10167,9 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Split"
+        '422':
+          description: a part of the split is linked as a transfer; remove that transfer
+            first
       requestBody:
         content:
           application/json:
@@ -10167,6 +10185,9 @@ paths:
       responses:
         '204':
           description: split removed
+        '422':
+          description: a part of the split is linked as a transfer; remove that transfer
+            first
         '404':
           description: transaction is not split
   "/api/v1/syncs":
@@ -11102,6 +11123,13 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: the transaction is split and a part is linked as a transfer;
+            remove that transfer first
           content:
             application/json:
               schema:
