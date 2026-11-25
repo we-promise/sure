@@ -68,7 +68,42 @@ class PlaidAccount < ApplicationRecord
     save!
   end
 
+  # The one date every holding of a holdings sync is written on, and the date
+  # the balance anchor for that sync goes on.
+  #
+  # Plaid dates each holding by its own institution price date, so a fund
+  # priced at the previous close sits a day or more behind the rest. The
+  # quantities all describe the same moment, though, and "current holdings"
+  # are read as the provider rows on one date, so a lagging row would drop out.
+  # The snapshot is dated by the newest price date it carries. A date ahead of
+  # today is discounted on its own, so one bad feed does not pull the snapshot
+  # off the date the rest agree on; a snapshot with no usable date is today's.
+  def holdings_snapshot_date
+    holdings = raw_holdings_payload&.dig("holdings") || []
+    dates = holdings.filter_map { |holding| parse_holding_date(holding["institution_price_as_of"]) }
+    dates.reject { |date| date > Date.current }.max || Date.current
+  end
+
+  # Price dates in the holdings payload that are present but cannot be read,
+  # which holdings_snapshot_date leaves out.
+  def unparseable_holding_price_dates
+    holdings = raw_holdings_payload&.dig("holdings") || []
+    holdings.filter_map do |holding|
+      value = holding["institution_price_as_of"]
+      value if value.present? && parse_holding_date(value).nil?
+    end
+  end
+
   private
+    def parse_holding_date(value)
+      return nil if value.blank?
+      return value.to_date if value.respond_to?(:to_date) && !value.is_a?(String)
+
+      Date.parse(value.to_s)
+    rescue ArgumentError, TypeError
+      nil
+    end
+
     # Plaid guarantees at least one of these.  This validation is a sanity check for that guarantee.
     def has_balance
       return if current_balance.present? || available_balance.present?
