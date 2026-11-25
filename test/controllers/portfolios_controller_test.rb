@@ -571,6 +571,27 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-portfolio-issue-kind='negative_position'] li", text: /MSFT.*#{Regexp.escape(account.name)}/m
   end
 
+  # A short position's quantity is a holding figure like any other, and its
+  # basis cannot be set: HoldingsController#update refuses a quantity that is
+  # not positive, so the row does not offer the drawer.
+  test "a position below zero masks its quantity and offers no cost basis drawer" do
+    account = accounts(:investment)
+    account.entries.create!(
+      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
+      entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
+    )
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    holding = account.holdings.find_by!(security: securities(:msft), date: Date.current)
+    assert_equal(-3, holding.qty)
+
+    get portfolio_path
+    assert_response :success
+
+    assert_select "[data-portfolio-issue-kind='negative_position'] li .privacy-sensitive", text: /-3/
+    assert_select "[data-portfolio-issue-kind='missing_cost_basis'] li", text: /MSFT.*#{I18n.t("portfolios.data_quality.read_only")}/m
+    assert_select "[data-portfolio-issue-kind='missing_cost_basis'] a[href=?]", holding_path(holding), count: 0
+  end
+
   # The section renders every kind the statement can return, so each needs
   # its copy: a kind without it would show "translation missing".
   test "every data quality kind has a title and a description" do

@@ -25,10 +25,11 @@
                 <% if issue.holding %>
                   <span class="mr-2"><%= issue.holding.account.name %></span>
                   <%# Setting a basis is a PATCH the drawer submits, and that
-                      needs write permission. On a read-only shared account the
-                      row still names the problem; it just does not offer an
+                      needs write permission and a positive quantity. On a
+                      read-only shared account or a short position the row
+                      still names the problem; it just does not offer an
                       action that would be refused. %>
-                  <% if writable_account_ids.include?(issue.holding.account_id) %>
+                  <% if writable_account_ids.include?(issue.holding.account_id) && issue.holding.qty.positive? %>
                     <%= render DS::Link.new(text: t("portfolios.data_quality.set_cost_basis"), href: holding_path(issue.holding), variant: :default, frame: :drawer) %>
                   <% else %>
                     <span class="text-subdued"><%= t("portfolios.data_quality.read_only") %></span>
@@ -40,7 +41,7 @@
                 <%= t("portfolios.data_quality.provider_statuses.#{issue.detail}", default: issue.detail.to_s) %>
               <% when :negative_position %>
                 <span class="mr-2"><%= issue.account.name %></span>
-                <%= t("portfolios.data_quality.below_zero", date: format_date(issue.detail.first_date), qty: format_quantity(issue.detail.lowest_qty, exact: true)) %>
+                <span class="privacy-sensitive"><%= t("portfolios.data_quality.below_zero", date: format_date(issue.detail.first_date), qty: format_quantity(issue.detail.lowest_qty, exact: true)) %></span>
               <% end %>
             </div>
           </li>
