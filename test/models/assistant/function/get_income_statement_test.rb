@@ -69,9 +69,33 @@ class Assistant::Function::GetIncomeStatementTest < ActiveSupport::TestCase
 
     january, february = result[:monthly_series]
 
-    assert_equal [ { name: "Food & Drink", total: "$40.00" } ], january[:expenses_by_category]
-    # A subcategory rolls up into its parent, like the period-wide by_category
-    assert_equal [ { name: "Food & Drink", total: "$25.00" } ], february[:expenses_by_category]
+    assert_equal [ { name: "Food & Drink", total: "$40.00", subcategory_totals: [] } ], january[:expenses_by_category]
+    # A subcategory rolls up into its parent and is also listed under it, like the period-wide by_category
+    assert_equal [
+      { name: "Food & Drink", total: "$25.00", subcategory_totals: [ { name: "Restaurants", total: "$25.00" } ] }
+    ], february[:expenses_by_category]
+  end
+
+  test "group_by month keeps categories whose parent is missing as top-level" do
+    orphan = @family.categories.create!(name: "Orphaned Category")
+    orphan.update_column(:parent_id, SecureRandom.uuid)
+    accounts(:depository).entries.create!(
+      name: "Orphan spend", date: Date.parse("2019-01-20"), amount: 30, currency: "USD",
+      entryable: Transaction.new(category: orphan.reload)
+    )
+
+    result = @fn.call(@params.merge(
+      "start_date" => "2019-01-01",
+      "end_date" => "2019-01-31",
+      "group_by" => "month"
+    ))
+
+    assert_equal [ { name: "Orphaned Category", total: "$30.00", subcategory_totals: [] } ],
+      result[:monthly_series].first[:expenses_by_category]
+  end
+
+  test "description says each month lists subcategory totals" do
+    assert_includes Assistant::Function::GetIncomeStatement.description, "subcategory_totals"
   end
 
   test "group_by month leaves zero-spend categories out of a bucket" do

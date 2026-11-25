@@ -18,8 +18,10 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
         Spending trends and comparisons:
         - Month over month: pass group_by: "month" for a monthly_series
           (calendar months, unlike get_budget which honors a custom month start).
-          Each month has income, expenses, net and expenses_by_category, so
-          one call answers "how much on <category> in each of the last months"
+          Each month has income, expenses, net and expenses_by_category
+          (top-level categories, each with its subcategory_totals), so one
+          call answers "how much on <category or subcategory> in each of the
+          last months"
         - Versus the prior period: pass compare_previous_period: true
         - Per account: pass account_ids from get_accounts (totals only; the
           category breakdown is family-wide and is omitted with this filter)
@@ -104,7 +106,7 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
         group_by: {
           type: "string",
           enum: [ "none", "month" ],
-          description: "Pass \"month\" to add a monthly_series of income/expenses/net and expenses_by_category per calendar month"
+          description: "Pass \"month\" to add a monthly_series of income/expenses/net and expenses_by_category (with subcategory_totals) per calendar month"
         },
         compare_previous_period: {
           type: "boolean",
@@ -202,12 +204,22 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
       result
     end
 
-    # Top-level categories only: a parent's total already includes its subcategories.
+    # A parent's total already includes its subcategories, which are listed under it.
+    # Roots use subcategory? so a category whose parent is missing stays a root, as
+    # IncomeStatement counts it, and the list adds up to the bucket's expenses.
     def bucket_expense_categories(bucket)
-      income_statement.expense_totals(period: bucket).category_totals
-        .select { |ct| ct.category.parent_id.nil? && !ct.total.zero? }
-        .sort_by { |ct| -ct.total }
-        .map { |ct| { name: ct.category.name, total: format_money(ct.total) } }
+      spent = income_statement.expense_totals(period: bucket).category_totals.reject { |ct| ct.total.zero? }
+      roots, children = spent.partition { |ct| !ct.category.subcategory? }
+      children_by_parent = children.group_by { |ct| ct.category.parent_id }
+
+      roots.sort_by { |ct| -ct.total }.map do |ct|
+        {
+          name: ct.category.name,
+          total: format_money(ct.total),
+          subcategory_totals: (children_by_parent[ct.category.id] || []).sort_by { |st| -st.total }
+            .map { |st| { name: st.category.name, total: format_money(st.total) } }
+        }
+      end
     end
 
     def previous_period_comparison(period, account_ids)
