@@ -122,8 +122,7 @@ class Assistant::Responder
 
     def get_llm_response(streamer:, function_results: [], previous_response_id: nil, tool_choice: nil)
       Usage.capture("ai_assistant_served_daily")
-      response = Ai::Sequencer.hold_for_chat(chat_endpoint, user: chat&.user, reply:) do |waited|
-        emit(:request, waited)
+      response = Ai::Sequencer.hold_for_chat(chat_endpoint, user: chat&.user, reply:, on_place: ->(waited) { emit(:request, waited) }) do
         llm.chat_response(
           message.content,
           model: message.ai_model,

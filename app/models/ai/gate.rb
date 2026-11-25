@@ -33,7 +33,8 @@ class Ai::Gate
     attr_reader :lane, :feature, :job, :arrival, :since
 
     # job: what the request is for: the correlation id of its job (Ai::CallContext.job), or a chat reply.
-    def initialize(lane:, feature: nil, job: nil, arrival: 0)
+    # starting: published as waiting until it has started (Ai::Gate#hold's on_place).
+    def initialize(lane:, feature: nil, job: nil, arrival: 0, starting: false)
       raise ArgumentError, "unknown lane: #{lane.inspect}" unless RANKS.key?(lane)
 
       @lane = lane
@@ -42,11 +43,14 @@ class Ai::Gate
       @arrival = arrival
       @lock = Mutex.new
       @preempted = false
+      @starting = starting
     end
 
     def interactive? = lane == :interactive
     def rank = RANKS.fetch(lane)
     def preempted? = @preempted
+    def starting? = @starting
+    def started! = @starting = false
 
     def admitted!
       @since = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -154,22 +158,30 @@ class Ai::Gate
 
   # Runs the block holding a place and yields the seconds it waited for one. Raises
   # Ai::Error::Busy for a background request that would wait, and Ai::Error::Cancelled when
-  # `cancelled` answers true once a place is free, before the request is sent.
-  def hold(lane, feature: nil, job: Ai::CallContext.correlation_id, cancelled: nil)
+  # `cancelled` answers true once a place is free, before the request is sent. `on_place`, if given,
+  # is called with those seconds first, and the request is published as waiting until it returns.
+  def hold(lane, feature: nil, job: Ai::CallContext.correlation_id, cancelled: nil, on_place: nil)
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    holder = enter(lane, feature, job)
+    holder = enter(lane, feature, job, starting: on_place.present?)
     begin
       raise Ai::Error::Cancelled, "cancelled while waiting for the model host" if cancelled&.call
 
-      self.class.holding(holder) { yield Process.clock_gettime(Process::CLOCK_MONOTONIC) - started }
+      self.class.holding(holder) do
+        waited = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+        if on_place
+          on_place.call(waited)
+          start(holder)
+        end
+        yield waited
+      end
     ensure
       leave(holder)
     end
   end
 
   private
-    def enter(lane, feature, job)
-      holder = join(lane, feature, job)
+    def enter(lane, feature, job, starting:)
+      holder = join(lane, feature, job, starting)
       begin
         publish
         publish until admitted?(holder, held: held?(holder))
@@ -180,9 +192,9 @@ class Ai::Gate
       holder
     end
 
-    def join(lane, feature, job)
+    def join(lane, feature, job, starting)
       @monitor.synchronize do
-        holder = Holder.new(lane:, feature:, job:, arrival: @arrivals += 1)
+        holder = Holder.new(lane:, feature:, job:, arrival: @arrivals += 1, starting:)
         @waiters << holder
         @waiters.sort_by! { [ _1.rank, _1.arrival ] }
         holder
@@ -226,6 +238,11 @@ class Ai::Gate
       end
     end
 
+    def start(holder)
+      @monitor.synchronize { holder.started! }
+      publish
+    end
+
     def leave(holder)
       @monitor.synchronize do
         @holders.delete(holder)
@@ -234,7 +251,10 @@ class Ai::Gate
       publish
     end
 
-    def state = { holders: @holders.dup, waiters: @waiters.dup, interruptions: @interruptions, put_off: @put_off }
+    def state
+      starting, running = @holders.partition(&:starting?)
+      { holders: running, waiters: starting + @waiters, interruptions: @interruptions, put_off: @put_off }
+    end
 
     def room_for?(holder)
       return false if @holders.size >= size

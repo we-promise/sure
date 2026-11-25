@@ -98,6 +98,21 @@ class AiNestedCallTest < ActiveSupport::TestCase
     [ other, reply ].compact.each { _1.join(2) }
   end
 
+  test "the watchdog doesn't give up on a reply between its place and its time moving" do
+    Sidekiq.stubs(:server?).returns(true)
+    stub_request(:post, "http://gpu.local:8080/v1/embeddings").to_return(status: 500)
+    given_up = []
+    AssistantMessage.any_instance.stubs(:waited!).with do |_seconds|
+      AssistantMessage.where(id: @reply.id).update_all(created_at: 10.minutes.ago, updated_at: 5.minutes.ago)
+      given_up << @chat.handle_undelivered_response!(AssistantMessage.find(@reply.id))
+    end
+
+    AssistantResponseJob.perform_now(@message, @reply)
+
+    assert_equal [ false, false ], given_up, "in either of its requests"
+    assert_equal "Found it.", @reply.reload.content
+  end
+
   test "a chat request ends its own user's typing hold, and no one else's" do
     ChatReservation.new([ @endpoint ], lanes: %i[prompt background], user: users(:family_member)).hold!
     stub_request(:post, "http://gpu.local:8080/v1/embeddings").to_return(status: 500)

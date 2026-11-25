@@ -125,13 +125,16 @@ module Ai::Sequencer
   # Temporary, until chat's requests pass Ai::Transport::Instrumenter like every other one's: runs a
   # chat request holding a place at its model host's gate. The message has been sent, so it ends
   # the typing hold. Around one request, never a turn, so a tool's own AI call can have the place.
-  # Yields the seconds the request waited for it.
-  def hold_for_chat(endpoint, user:, reply:)
-    return yield(0) unless endpoint
+  # `on_place` gets the seconds the request waited for it; the reply counts as waiting until it returns.
+  def hold_for_chat(endpoint, user:, reply:, on_place:)
+    if endpoint.nil?
+      on_place.call(0)
+      return yield
+    end
 
-    gate_for(endpoint).hold(:interactive, feature: "chat", job: reply) do |waited|
+    gate_for(endpoint).hold(:interactive, feature: "chat", job: reply, on_place:) do
       ChatReservation.release([ endpoint ], user:)
-      yield waited
+      yield
     end
   end
 

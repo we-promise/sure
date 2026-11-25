@@ -34,6 +34,29 @@ class Ai::Gate::StateTest < ActiveSupport::TestCase
     [ running, prompt ].compact.each { _1.kill.join(2) }
   end
 
+  test "a request is published as waiting until its on_place returns, heartbeats included" do
+    during = nil
+    on_place = ->(_waited) do
+      Ai::Sequencer.publish_gates
+      during = state
+    end
+
+    @gate.hold(:interactive, job: "reply:1", on_place:) do
+      assert_equal [ "reply:1" ], state.holders.map(&:job)
+      assert_empty state.waiters
+    end
+
+    assert during.waiting?("reply:1")
+    assert_empty during.holders
+  end
+
+  test "a request whose on_place fails leaves its place" do
+    assert_raises(RuntimeError) { @gate.hold(:interactive, on_place: ->(_) { raise "lost" }) { flunk "it shouldn't run" } }
+
+    assert_not_predicate @gate, :in_use?
+    assert_empty state.holders + state.waiters
+  end
+
   test "a refused background request leaves the line" do
     @gate.hold(:prompt) do
       Thread.new { assert_raises(Ai::Error::Busy) { @gate.hold(:background) { } } }.join
