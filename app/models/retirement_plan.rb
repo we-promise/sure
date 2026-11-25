@@ -72,13 +72,22 @@ class RetirementPlan < ApplicationRecord
   # default), which can be right for a budget. For a FIRE plan it is always
   # saving: counted as spending, it would raise the FI number and lower the
   # derived savings rate at once. So the plan leaves it out whatever the
-  # family's setting. Loan payments stay in, because until a loan is paid off
-  # they are money the user has to find every month.
+  # family's setting. Loan payments stay in the spending behind the savings
+  # rate, because until a loan is paid off they are money the user has to
+  # find every month.
   SAVING_KINDS = %w[investment_contribution].freeze
 
-  # `as_of` dates the balances and the planning years. The spending and income
-  # medians are always today's: IncomeStatement takes them over the history up
-  # to now, so call this with today's date rather than a past one.
+  # Living costs, which the FI number is built from, leave out loan payments
+  # as well as contributions: a loan payment stops when the loan is paid off,
+  # so it is not spending a retired portfolio has to fund every year. The
+  # planner seeds its living-costs stream from the same figure, and each loan
+  # gets its own stream, so counting its payment here too would count it twice.
+  LIVING_COSTS_EXCLUDED_KINDS = %w[investment_contribution loan_payment].freeze
+
+  # `as_of` dates the balances and the living costs window. The spending and
+  # income medians behind the savings rate are always today's: IncomeStatement
+  # takes them over the history up to now, so call this with today's date
+  # rather than a past one.
   #
   # The assets come first: converting them can fetch and store a missing rate,
   # and the medians read stored rates only.
@@ -86,23 +95,16 @@ class RetirementPlan < ApplicationRecord
     current_assets = assets_as_of(as_of).total
 
     RetirementPlan::Projection.new(
-      as_of: as_of,
+      annual_living_costs: annual_living_costs(as_of),
       annual_expenses: income_statement.median_expense(interval: "month", excluding_kinds: SAVING_KINDS).to_d * 12,
       annual_income: income_statement.median_income(interval: "month").to_d * 12,
       current_assets: current_assets,
       safe_withdrawal_rate: safe_withdrawal_rate,
-      expected_annual_return: expected_annual_return,
-      savings_rate: savings_rate,
-      retirement_date: retirement_date
+      savings_rate: savings_rate
     )
   end
 
   # --- The year-by-year planner ---------------------------------------------
-
-  # Spending a FIRE plan draws down once retired leaves out loan payments as
-  # well as contributions: each loan gets its own stream that stops when the
-  # loan is paid off, so counting its payment here too would count it twice.
-  LIVING_COSTS_EXCLUDED_KINDS = %w[investment_contribution loan_payment].freeze
 
   # The year-by-year projection for a traditional plan, retiring in the year of
   # the plan's date (or `retirement_year`, when given). Nil until the plan has
@@ -252,12 +254,11 @@ class RetirementPlan < ApplicationRecord
       solve(as_of: as_of).retirement_year || (birth_year + end_age)
     end
 
-    # Two spending windows, on purpose. The contribution before retirement is
+    # Two spending figures, on purpose. The contribution before retirement is
     # #projection's: income less the median month over all history, without
-    # contributions. Living costs after it are the seeded stream: the median
-    # of the months with spending in the last 12 whole months, without
-    # contributions or loan payments (each loan seeds its own stream). Not a
-    # mismatch to reconcile.
+    # contributions, loan payments in. Living costs after it are the seeded
+    # stream, from #annual_living_costs, the figure the FI number is built
+    # from (each loan seeds its own stream). Not a mismatch to reconcile.
     def simulation_inputs(as_of:)
       {
         as_of: as_of,
@@ -300,22 +301,12 @@ class RetirementPlan < ApplicationRecord
       asset_total(as_of, linked).total
     end
 
-    # The 12 whole months before the reference date's month. The median is
-    # taken over the months in it with spending: a month with none is left
-    # out, not counted as zero.
-    def living_costs_period(as_of)
-      month_start = as_of.beginning_of_month
-      Period.custom(start_date: month_start - 12.months, end_date: month_start - 1.day)
-    end
-
     def seed_living_costs(as_of)
-      monthly = income_statement.median_expense(
-        interval: "month", excluding_kinds: LIVING_COSTS_EXCLUDED_KINDS, period: living_costs_period(as_of)
-      ).to_d
-      return unless monthly.positive?
+      annual = annual_living_costs(as_of)
+      return unless annual.positive?
 
       streams.create!(kind: "expense", source: "seeded_living_costs", indexed: true,
-                      name: I18n.t("retirement_plans.streams.seeded.living_costs"), annual_amount: monthly * 12)
+                      name: I18n.t("retirement_plans.streams.seeded.living_costs"), annual_amount: annual)
     end
 
     # Each loan's repayment, at the payment in force on the reference date,
@@ -341,6 +332,20 @@ class RetirementPlan < ApplicationRecord
         streams.create!(kind: "expense", source: "seeded_loan", indexed: false, account: account, name: account.name,
                         annual_amount: payment.amount * 12, currency: payment.currency.iso_code, end_year: end_date.year)
       end
+    end
+
+    # The 12 whole months before the reference date's month. The median is
+    # taken over the months in it with spending: a month with none is left
+    # out, not counted as zero.
+    def living_costs_period(as_of)
+      month_start = as_of.beginning_of_month
+      Period.custom(start_date: month_start - 12.months, end_date: month_start - 1.day)
+    end
+
+    def annual_living_costs(as_of)
+      income_statement.median_expense(
+        interval: "month", excluding_kinds: LIVING_COSTS_EXCLUDED_KINDS, period: living_costs_period(as_of)
+      ).to_d * 12
     end
 
     # The same scope InvestmentStatement#investment_accounts uses:
