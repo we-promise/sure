@@ -63,6 +63,7 @@ nl:
         loan:
           actual: "Geregistreerd saldo"
           scheduled: "Oorspronkelijk schema"
+          scheduled_with_term_changes: "Huidig schema"
           projected: "Prognose vanaf vandaag"
           today: "Vandaag"
           term_end: "Einde vaste periode"
@@ -70,6 +71,7 @@ nl:
           interactive_chart: "interactieve grafiek"
           no_payoff: "niet bij de huidige aflossing"
           aria_description: "Grafiek van het leningsaldo. Geregistreerd saldo %{current_balance}. Oorspronkelijk geplande afbetaling %{scheduled_payoff_date}. Verwachte afbetaling vanaf het saldo van vandaag %{projected_payoff_date}."
+          aria_description_with_term_changes: "Grafiek van het leningsaldo. Geregistreerd saldo %{current_balance}. Geplande afbetaling %{scheduled_payoff_date}. Verwachte afbetaling vanaf het saldo van vandaag %{projected_payoff_date}."
           aria_extra_payoff: "Verwachte afbetaling met de extra aflossing %{date}."
           extra: "Met extra aflossing"
           aria_actual_history_starts: "Geschiedenis van het geregistreerde saldo begint op %{date}."

@@ -4,7 +4,8 @@ class Loan
   #
   #   actual     the recorded balances, origination -> today (or the period's
   #              end, whichever is earlier). Solid: this is fact.
-  #   scheduled  the original contract, origination -> maturity. Dashed.
+  #   scheduled  the contract, with the term changes recorded on it,
+  #              origination -> maturity. Dashed.
   #   projected  where today's recorded balance is heading on the contract's
   #              repayment. Dashed. Extra payments the borrower has already
   #              made are in here without being named: they are why today's
@@ -266,6 +267,7 @@ class Loan
             today: I18n.t("UI.account.chart.loan.today"),
             interactive_chart: I18n.t("UI.account.chart.loan.interactive_chart")
           )
+          .merge(loan.term_changes? ? { scheduled: I18n.t("UI.account.chart.loan.scheduled_with_term_changes") } : {})
           .merge(term_end ? { term_end: I18n.t("UI.account.chart.loan.term_end") } : {})
       end
 
@@ -276,7 +278,7 @@ class Loan
       def aria_description(series)
         actual, scheduled = series.values_at(:actual, :scheduled)
         description = I18n.t(
-          "UI.account.chart.loan.aria_description",
+          "UI.account.chart.loan.aria_description#{"_with_term_changes" if loan.term_changes?}",
           current_balance: projection.current_balance.format,
           scheduled_payoff_date: long_date(schedule.payoff_date, I18n.t("loans.tabs.overview.unknown")),
           projected_payoff_date: long_date(projection.payoff_date, I18n.t("UI.account.chart.loan.no_payoff"))
