@@ -91,12 +91,14 @@ class Security::Price::Importer
       # stored history before its first price is kept.
       replace_db_price = clear_cache && earliest_provider_price.present? && date >= earliest_provider_price.date
 
+      kept_db_price = false
       chosen_price, chosen_currency = if replace_db_price || is_provisional
         # For provisional/cache clear: only use provider price, let gap-fill handle missing
         # This ensures stale DB values don't persist when provider has no weekend data
         [ provider_price_value, provider_currency ]
       elsif has_db_price
         # For non-provisional with valid DB price: preserve existing value (user edits)
+        kept_db_price = true
         [ db_price_value, db_price&.currency ]
       else
         # Fill gaps with provider data
@@ -126,7 +128,10 @@ class Security::Price::Importer
         date:        date,
         price:       chosen_price,
         currency:    chosen_currency || "USD",
-        provisional: provisional
+        provisional: provisional,
+        # A kept row keeps its own mark; any other row is carried forward
+        # exactly when it repeats an earlier price.
+        carried_forward: kept_db_price ? db_price.carried_forward : used_locf
       }
     end
 
@@ -317,15 +322,17 @@ class Security::Price::Importer
 
       return provider_price_value if provider_price_value.present? && provider_price_value.to_f > 0
 
-      # Fall back to most recent DB price before cutoff
+      # Fall back to the most recent real DB price before cutoff, or the most
+      # recent carried-forward one when there is no real one. Without any, the
+      # caller would take the stored history for pre-listing and advance
+      # first_provider_price_on past it.
       currency = prev_price_currency || db_price_currency
       Security::Price
         .where(security_id: security.id)
         .where("date < ?", cutoff_date)
         .where("price > 0")
-        .where(provisional: false)
         .then { |q| currency.present? ? q.where(currency: currency) : q }
-        .order(date: :desc)
+        .order(carried_forward: :asc, date: :desc)
         .limit(1)
         .pick(:price)
     end

@@ -618,6 +618,150 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_not old_price.provisional, "Old gap-filled price should not be provisional"
   end
 
+  test "an old gap-filled price is carried forward, the quote it repeats is not" do
+    Security::Price.delete_all
+
+    start_date = 20.days.ago.to_date
+    end_date = start_date + 2.days
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: start_date, price: 150, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: end_date
+    ).import_provider_prices
+
+    rows = Security::Price.where(security: @security).order(:date)
+    assert_equal [ [ start_date, false, false ], [ start_date + 1.day, true, false ], [ end_date, true, false ] ],
+      rows.map { |p| [ p.date, p.carried_forward, p.provisional ] },
+      "the filled days are carried forward though too old to be provisional"
+  end
+
+  test "a stored price the provider has no quote for is not marked carried forward" do
+    Security::Price.delete_all
+
+    start_date = 20.days.ago.to_date
+    user_date = start_date + 1.day
+    end_date = start_date + 2.days
+    Security::Price.create!(security: @security, date: user_date, price: 120, currency: "USD")
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: start_date, price: 150, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: end_date
+    ).import_provider_prices
+
+    kept = Security::Price.find_by!(security: @security, date: user_date)
+    filled = Security::Price.find_by!(security: @security, date: end_date)
+    assert_equal [ 120, false ], [ kept.price, kept.carried_forward ], "the stored price is kept as a real one"
+    assert_equal [ 120, true ], [ filled.price, filled.carried_forward ], "the day after repeats it"
+  end
+
+  test "a carried-forward price the provider later quotes is no longer carried forward" do
+    Security::Price.delete_all
+
+    test_date = Date.current
+    test_date += 1.day while test_date.saturday? || test_date.sunday?
+
+    travel_to test_date do
+      Security::Price.create!(security: @security, date: Date.current, price: 100, currency: "USD", provisional: true, carried_forward: true)
+
+      @provider.expects(:fetch_security_prices).returns(provider_success_response([
+        OpenStruct.new(security: @security, date: Date.current, price: 165, currency: "USD")
+      ]))
+
+      Security::Price::Importer.new(
+        security: @security,
+        security_provider: @provider,
+        start_date: Date.current,
+        end_date: Date.current
+      ).import_provider_prices
+
+      price = Security::Price.find_by!(security: @security, date: Date.current)
+      assert_equal [ 165, false, false ], [ price.price, price.provisional, price.carried_forward ]
+    end
+  end
+
+  test "a carried-forward price kept by a later import stays carried forward" do
+    Security::Price.delete_all
+
+    start_date = 20.days.ago.to_date
+    carried_date = start_date + 1.day
+    Security::Price.create!(security: @security, date: carried_date, price: 100, currency: "USD", carried_forward: true)
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: start_date, price: 100, currency: "USD"),
+      OpenStruct.new(security: @security, date: carried_date, price: 105, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: start_date,
+      end_date: carried_date
+    ).import_provider_prices
+
+    kept = Security::Price.find_by!(security: @security, date: carried_date)
+    assert_equal [ 100, true ], [ kept.price, kept.carried_forward ]
+  end
+
+  # The quote's day was re-closed at 110 after 100 had been carried past it.
+  test "a fill anchors on the last real quote, not a carried-forward one" do
+    Security::Price.delete_all
+
+    quote_date = 20.days.ago.to_date
+    Security::Price.create!(security: @security, date: quote_date, price: 110, currency: "USD")
+    Security::Price.create!(security: @security, date: quote_date + 1.day, price: 100, currency: "USD", carried_forward: true)
+    end_date = quote_date + 4.days
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: end_date, price: 130, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: quote_date,
+      end_date: end_date
+    ).import_provider_prices
+
+    filled = Security::Price.where(security: @security, date: (quote_date + 2.days)..end_date).order(:date)
+    assert_equal [ 110, 110, 130 ], filled.map(&:price)
+  end
+
+  test "a fill with only carried-forward prices before it anchors on the latest one" do
+    Security::Price.delete_all
+
+    first_date = 40.days.ago.to_date
+    Security::Price.create!(security: @security, date: first_date, price: 100, currency: "USD", carried_forward: true)
+    Security::Price.create!(security: @security, date: first_date + 1.day, price: 105, currency: "USD", carried_forward: true)
+    end_date = first_date + 4.days
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(security: @security, date: end_date, price: 130, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: first_date,
+      end_date: end_date
+    ).import_provider_prices
+
+    filled = Security::Price.where(security: @security, date: (first_date + 2.days)..end_date).order(:date)
+    assert_equal [ 105, 105, 130 ], filled.map(&:price)
+    assert_nil @security.reload.first_provider_price_on, "the stored history is not treated as pre-listing"
+  end
+
   test "provisional weekend prices get fixed via cascade from Friday" do
     Security::Price.delete_all
 

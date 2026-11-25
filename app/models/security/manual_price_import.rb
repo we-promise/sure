@@ -173,9 +173,9 @@ class Security::ManualPriceImport
       # xmax is 0 only on a row this statement inserted, so the counts hold
       # even when another request writes the same dates concurrently.
       inserted = Security::Price.upsert_all(
-        parsed.map { |row| { security_id: security.id, date: row.date, price: row.price, currency: currency, provisional: false } },
+        parsed.map { |row| { security_id: security.id, date: row.date, price: row.price, currency: currency, provisional: false, carried_forward: false } },
         unique_by: %i[security_id date currency],
-        update_only: %i[price provisional],
+        update_only: %i[price provisional carried_forward],
         returning: Arel.sql("(xmax = 0) AS inserted")
       ).rows.flatten
       created = inserted.count(true)
