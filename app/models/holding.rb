@@ -174,8 +174,8 @@ class Holding < ApplicationRecord
           exchange_rates.from_currency = trades.currency AND
           exchange_rates.to_currency = cur.currency
         )
-        #{lot_joins}
       SQL
+      .joins(lot_joins)
       .where("cur.id IN (?)", pending.map(&:id))
       .reorder(Arel.sql("cur.id, #{AVG_COST_REPLAY_ORDER}"))
       .pluck(Arel.sql("cur.id"), Arel.sql("entries.date"), Arel.sql("trades.qty"), Arel.sql(unit_cost), Arel.sql(internal_movement),
