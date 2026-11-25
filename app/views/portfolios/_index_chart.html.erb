@@ -1,16 +1,18 @@
-<%# locals: (statement:, period:, as_of:, series:) %>
+<%# locals: (statement:, period:, as_of:, series:, flows_known:) %>
 
 <%# The portfolio's return as a line, with the effect of deposits removed.
     Rebased on 100 at the start of the period, so the shape is comparable
     against a benchmark rather than being dominated by money
     going in: a deposit lifts the value chart above and leaves this one flat.
+    Only a deposit on record: when any account is valuation tracked its
+    deposits are unknown and move this line too, and the caption says so.
 
     The numbers are index LEVELS, not money. 121.34 means the portfolio
     returned 21.34% over the period. That is why this sits beside the value
     chart rather than replacing it -- the two answer different questions. %>
 <div id="portfolio-index-chart">
   <div class="space-y-2 px-4">
-    <p class="text-sm text-secondary"><%= t("portfolios.index_chart.explainer") %></p>
+    <p class="text-sm text-secondary"><%= flows_known ? t("portfolios.index_chart.explainer") : t("portfolios.index_chart.explainer_value_return") %></p>
   </div>
 
   <div

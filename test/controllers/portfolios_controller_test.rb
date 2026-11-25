@@ -318,6 +318,57 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal expected.transform_keys { |key| I18n.t("portfolios.performance.#{key}") }, cards
   end
 
+  # A time-weighted return removes external flows by definition. With any
+  # valuation-tracked account in the scope its deposits are unknown and chain
+  # as return, so the cards and the chart caption must not claim they were
+  # removed. Asserted both ways from the same page, so a label that never
+  # changes fails one side.
+  test "the return cards and index caption say time-weighted only when every account's flows are known" do
+    Portfolio::Performance.any_instance.stubs(:rate_missing?).returns(false)
+    Portfolio::Performance.any_instance.stubs(:suppressed_dates).returns([])
+    Portfolio::Performance.any_instance.stubs(:index_series).returns([
+      [ 1.day.ago.to_date, BigDecimal("100") ], [ Date.current, BigDecimal("150") ]
+    ])
+    removed = /effect of (your contributions|money you paid in or took out) removed/
+
+    Portfolio::Performance.any_instance.stubs(:flows_known?).returns(true)
+    get portfolio_path
+    assert_response :success
+    labels = css_select("#portfolio-performance .grid > div span").map { |span| span.text.strip }
+    assert_includes labels, I18n.t("portfolios.performance.twr")
+    assert_includes labels, I18n.t("portfolios.performance.annualized_twr")
+    assert_select "#portfolio-index-chart p", text: I18n.t("portfolios.index_chart.explainer")
+    assert_match removed, response.body
+
+    Portfolio::Performance.any_instance.stubs(:flows_known?).returns(false)
+    get portfolio_path
+    assert_response :success
+    labels = css_select("#portfolio-performance .grid > div span").map { |span| span.text.strip }
+    assert_includes labels, I18n.t("portfolios.performance.value_return")
+    assert_includes labels, I18n.t("portfolios.performance.annualized_value_return")
+    assert_not_includes labels, I18n.t("portfolios.performance.twr")
+    assert_not_includes labels, I18n.t("portfolios.performance.annualized_twr")
+    assert_select "#portfolio-index-chart p", text: I18n.t("portfolios.index_chart.explainer_value_return")
+    assert_no_match removed, response.body, "nothing on the page may say deposits were removed"
+    assert_match(/not removed/, response.body)
+  end
+
+  # The same claim, in both locales: the value-return copy says the flows are
+  # NOT removed, and never that they were.
+  test "the value-return copy says deposits are not removed, in every locale" do
+    %i[en de].each do |locale|
+      [
+        I18n.t("portfolios.performance.value_return_hint", locale: locale),
+        I18n.t("portfolios.index_chart.explainer_value_return", locale: locale)
+      ].each do |copy|
+        assert_match(/not removed|nicht herausgerechnet/i, copy, "#{locale}: #{copy}")
+        assert_no_match(/time-weighted|zeitgewichtet/i, copy, "#{locale}: #{copy}")
+      end
+      assert_no_match(/time-weighted|zeitgewichtet/i, I18n.t("portfolios.performance.value_return", locale: locale))
+      assert_no_match(/time-weighted|zeitgewichtet/i, I18n.t("portfolios.performance.annualized_value_return", locale: locale))
+    end
+  end
+
   # The index chart is mounted with the levels the registry built, and only
   # when there is a line to draw.
   test "the index chart is mounted with the rebased levels" do

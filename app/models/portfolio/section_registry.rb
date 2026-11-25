@@ -102,7 +102,7 @@ class Portfolio::SectionRegistry
           key: "index_chart",
           title: "portfolios.sections.index_chart",
           partial: "portfolios/index_chart",
-          locals: shared_locals.merge(series: index_chart_series),
+          locals: shared_locals.merge(series: index_chart_series, flows_known: performance.flows_known?),
           visible: index_chart_series.present?,
           collapsible: true
         },

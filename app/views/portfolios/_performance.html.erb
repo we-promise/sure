@@ -38,17 +38,21 @@
     <%# The method matters as much as the number. Users compare these against a
         broker, and brokers do not agree on a convention -- this engine uses a
         start-of-day flow convention, so a tool defaulting to another method
-        gives a different figure for the same account. The hint says which. %>
+        gives a different figure for the same account. The hint says which.
+
+        Time-weighted only when every account's flows are known. A
+        valuation-tracked account's deposits chain as return, so with one in
+        scope the same figure is a change in value and is labelled as one. %>
     <%= render "portfolios/kpi_card",
           icon: "trending-up",
-          label: t("portfolios.performance.twr"),
+          label: performance.flows_known? ? t("portfolios.performance.twr") : t("portfolios.performance.value_return"),
           money: nil,
           rate: returns[:twr],
-          hint: t("portfolios.performance.twr_hint") %>
+          hint: performance.flows_known? ? t("portfolios.performance.twr_hint") : t("portfolios.performance.value_return_hint") %>
 
     <%= render "portfolios/kpi_card",
           icon: "calendar",
-          label: t("portfolios.performance.annualized_twr"),
+          label: performance.flows_known? ? t("portfolios.performance.annualized_twr") : t("portfolios.performance.annualized_value_return"),
           money: nil,
           rate: returns[:annualized_twr],
           hint: t("portfolios.performance.annualized_hint") %>

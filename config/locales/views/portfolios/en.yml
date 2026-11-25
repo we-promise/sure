@@ -28,6 +28,7 @@ en:
       toggle_positions: Show positions in %{ticker}
     index_chart:
       explainer: Rebased to 100 at the start of the period, with the effect of money you paid in or took out removed. A level of 121 means a 21% return.
+      explainer_value_return: Rebased to 100 at the start of the period. Some accounts are tracked by valuations only, so money paid into or taken out of them is not removed and moves this line. A level of 121 means the value rose 21%.
     kpi_row:
       as_of: As of %{date}
       day_change: Day change
@@ -45,6 +46,7 @@ en:
       annualized_hint: Extrapolated to a full year, over calendar days; not shown for periods under a year.
       annualized_mwr: Annualised money-weighted
       annualized_twr: Annualised time-weighted
+      annualized_value_return: Annualised value return
       incomplete_title: Some figures could not be computed
       max_drawdown: Max drawdown
       max_drawdown_hint: Largest peak-to-trough fall within the period.
@@ -56,6 +58,8 @@ en:
         other: "%{count} days were counted as a zero return because they could not be measured."
       twr: Time-weighted return
       twr_hint: What the investments did, with the effect of your contributions removed. Daily, net of fees, with each contribution counted from the start of its day.
+      value_return: Value return
+      value_return_hint: The change in value, net of fees. Some accounts are tracked by valuations only, so money paid into or taken out of them is not removed and counts as return.
       volatility: Volatility
       volatility_hint: Annualised standard deviation of daily returns, over calendar days rather than trading days.
     sections:
