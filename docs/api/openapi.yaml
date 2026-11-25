@@ -5279,6 +5279,104 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/AccountCollection"
+    post:
+      summary: Create an account
+      tags:
+      - Accounts
+      security:
+      - apiKeyAuth: []
+      description: Creates an account owned by the API key's user and records its
+        opening balance. Requires the read_write scope. For a loan, send `accountable_attributes.initial_balance`
+        (original principal) and `start_date` to anchor the opening balance on the
+        day it was drawn; `balance` is the current amount owed.
+      parameters: []
+      responses:
+        '201':
+          description: account created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountDetail"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Account name (required)
+                    accountable_type:
+                      type: string
+                      enum:
+                      - depository
+                      - investment
+                      - crypto
+                      - property
+                      - vehicle
+                      - other_asset
+                      - credit_card
+                      - loan
+                      - other_liability
+                      description: Account type (required). CamelCase names such as
+                        CreditCard are also accepted.
+                    balance:
+                      type: number
+                      description: Current balance (required). For liabilities, the
+                        amount owed.
+                    currency:
+                      type: string
+                      description: ISO 4217 code. Defaults to the family currency.
+                    subtype:
+                      type: string
+                      description: Account subtype, valid values depend on accountable_type
+                    opening_balance_date:
+                      type: string
+                      format: date
+                      description: Date of the opening balance. Defaults to two years
+                        ago; a loan's start_date takes precedence.
+                    institution_name:
+                      type: string
+                    institution_domain:
+                      type: string
+                    notes:
+                      type: string
+                    exclude_from_reports:
+                      type: boolean
+                    accountable_attributes:
+                      type: object
+                      description: 'Type-specific attributes, the same ones the web
+                        form accepts (for a loan: initial_balance, start_date, interest_rate,
+                        rate_type, term_months, ...).'
+                      additionalProperties: true
+                  required:
+                  - name
+                  - accountable_type
+                  - balance
+              required:
+              - account
+        required: true
   "/api/v1/accounts/{id}":
     parameters:
     - name: id

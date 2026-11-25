@@ -321,7 +321,138 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal account_names.sort, account_names
   end
 
+  # CREATE action tests
+  test "create requires authentication" do
+    post "/api/v1/accounts", params: { account: { name: "X", accountable_type: "Depository", balance: 1 } }
+    assert_response :unauthorized
+  end
+
+  test "create is forbidden for a read-only key" do
+    assert_no_difference "Account.count" do
+      post "/api/v1/accounts",
+           params: { account: { name: "X", accountable_type: "Depository", balance: 1 } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :forbidden
+    assert_equal "insufficient_scope", JSON.parse(response.body)["error"]
+  end
+
+  test "create makes a depository account owned by the key's user" do
+    assert_difference -> { @user.family.accounts.count }, 1 do
+      post "/api/v1/accounts",
+           params: { account: { name: "API Chequing", accountable_type: "depository", balance: "1250.50", currency: "CAD" } },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "API Chequing", body["name"]
+    assert_equal "depository", body["account_type"]
+    assert_equal "CAD", body["currency"]
+    assert_equal 125_050, body["balance_cents"]
+
+    account = @user.family.accounts.find(body["id"])
+    assert_equal @user, account.owner
+  end
+
+  test "create defaults the currency to the family currency" do
+    post "/api/v1/accounts",
+         params: { account: { name: "Default Currency", accountable_type: "CreditCard", balance: 100 } },
+         headers: api_headers(write_api_key)
+
+    assert_response :created
+    assert_equal @user.family.currency, JSON.parse(response.body)["currency"]
+    assert_equal "credit_card", JSON.parse(response.body)["account_type"]
+  end
+
+  test "create makes a loan with its terms and current balance" do
+    post "/api/v1/accounts",
+         params: {
+           account: {
+             name: "Car Lease",
+             accountable_type: "Loan",
+             balance: "48000.00",
+             accountable_attributes: {
+               initial_balance: "51000.00",
+               start_date: "2026-06-03",
+               interest_rate: "6.5",
+               rate_type: "fixed",
+               term_months: 36
+             }
+           }
+         },
+         headers: api_headers(write_api_key)
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "loan", body["account_type"]
+    assert_equal "liability", body["classification"]
+    assert_equal 4_800_000, body["balance_cents"]
+
+    loan = @user.family.accounts.find(body["id"]).accountable
+    assert_equal Date.new(2026, 6, 3), loan.start_date
+    assert_equal 36, loan.term_months
+    assert_in_delta 6.5, loan.interest_rate.to_f, 0.001
+  end
+
+  test "create rejects an unknown accountable type" do
+    assert_no_difference "Account.count" do
+      post "/api/v1/accounts",
+           params: { account: { name: "Bad", accountable_type: "Spaceship", balance: 1 } },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "create requires a name and a balance" do
+    post "/api/v1/accounts",
+         params: { account: { accountable_type: "Depository", balance: 1 } },
+         headers: api_headers(write_api_key)
+    assert_response :unprocessable_entity
+
+    post "/api/v1/accounts",
+         params: { account: { name: "No balance", accountable_type: "Depository" } },
+         headers: api_headers(write_api_key)
+    assert_response :unprocessable_entity
+  end
+
+  test "create rejects an invalid opening_balance_date" do
+    assert_no_difference "Account.count" do
+      post "/api/v1/accounts",
+           params: { account: { name: "Bad date", accountable_type: "Depository", balance: 1, opening_balance_date: "not-a-date" } },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "create reports model validation errors as 422" do
+    assert_no_difference "Account.count" do
+      post "/api/v1/accounts",
+           params: { account: { name: "Future loan", accountable_type: "Loan", balance: 10, accountable_attributes: { start_date: 1.year.from_now.to_date.iso8601 } } },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   private
+
+    def write_api_key
+      @write_api_key ||= begin
+        key = ApiKey.create!(
+          user: @user,
+          name: "Test Write Key",
+          scopes: [ "read_write" ],
+          source: "mobile",
+          display_key: "test_write_#{SecureRandom.hex(8)}"
+        )
+        key
+      end
+    end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }
