@@ -56,8 +56,9 @@ class Security::ManualPriceImport
     # Offline with no reason and no assigned provider means no provider ever
     # matched the ticker. Any other offline security is a listed one that is
     # down for now ("health_check_failed", "provider_disabled",
-    # "resolution_pending"). The importer keeps non-provisional rows, so closes
-    # written there would outlast the provider's own once it came back.
+    # "resolution_pending"). The importer keeps real (not carried-forward)
+    # rows, so closes written there would outlast the provider's own once it
+    # came back.
     def untracked?
       security.offline? && security.offline_reason.blank? && security.price_provider.blank?
     end
@@ -173,9 +174,9 @@ class Security::ManualPriceImport
       # xmax is 0 only on a row this statement inserted, so the counts hold
       # even when another request writes the same dates concurrently.
       inserted = Security::Price.upsert_all(
-        parsed.map { |row| { security_id: security.id, date: row.date, price: row.price, currency: currency, provisional: false } },
+        parsed.map { |row| { security_id: security.id, date: row.date, price: row.price, currency: currency, provisional: false, carried_forward: false } },
         unique_by: %i[security_id date currency],
-        update_only: %i[price provisional],
+        update_only: %i[price provisional carried_forward],
         returning: Arel.sql("(xmax = 0) AS inserted")
       ).rows.flatten
       created = inserted.count(true)
