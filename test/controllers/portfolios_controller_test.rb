@@ -384,7 +384,7 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     chart = css_select("#portfolioIndexChart").first
     assert chart, "the index chart should be mounted"
     values = JSON.parse(chart["data-time-series-chart-data-value"])["values"]
-    assert_equal [ "100.0", "104.5", "102.25" ], values.map { |v| v["value"].to_s }
+    assert_equal [ "100.0", "100.0", "104.5", "102.25" ], values.map { |v| v["value"].to_s }, "the base of 100, then the levels"
   end
 
   test "the index chart section is absent when there is no line to draw" do

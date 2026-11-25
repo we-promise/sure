@@ -75,7 +75,7 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
 
     assert section[:visible]
     values = section[:locals][:series].values
-    assert_equal 3, values.size
+    assert_equal 4, values.size, "the three levels after the base of 100"
     assert_equal BigDecimal("121.34"), values.last.value
     assert_not values.any? { |v| v.value.is_a?(Money) }, "an index level is not money"
 
@@ -103,24 +103,26 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
                     "a level reaches the tooltip with two decimals, not thirty")
   end
 
-  # The first point has nothing before it to have moved from. The tooltip
-  # reads each point's trend, so a first trend measured against zero shows a
-  # flat index of 100 as a gain of 100 on its first day.
-  test "the index chart's first point shows no change" do
+  # Performance#index_series starts at the level after the first day's return,
+  # 100 * (1 + r1). The chart starts from the base itself, on the day before,
+  # so the first day's move is drawn and the tooltip measures it from 100.
+  test "the index chart starts from a base of 100 the day before its first return" do
     perf = Portfolio::Performance.new(family: @family, account_ids: [], period: @period)
     perf.stubs(:index_series).returns([
-      [ Date.new(2026, 3, 1), BigDecimal("100") ],
-      [ Date.new(2026, 3, 2), BigDecimal("100") ],
-      [ Date.new(2026, 3, 3), BigDecimal("104.5") ]
+      [ Date.new(2026, 3, 2), BigDecimal("104.5") ],
+      [ Date.new(2026, 3, 3), BigDecimal("102.25") ]
     ])
     @statement.stubs(:performance).returns(perf)
 
     series = registry.sections.find { |s| s[:key] == "index_chart" }[:locals][:series]
-    trends = series.as_json[:values].map { |v| v[:trend].as_json }
 
-    assert_equal [ 0, 0, BigDecimal("4.5") ], trends.map { |t| t[:value] },
-                 "the first day is no change, and each later day still moves from the one before"
-    assert_equal "flat", series.values.first.trend.direction
+    assert_equal [ Date.new(2026, 3, 1), Date.new(2026, 3, 2), Date.new(2026, 3, 3) ], series.values.map(&:date)
+    assert_equal [ 100, BigDecimal("104.5"), BigDecimal("102.25") ], series.values.map(&:value)
+    base, first_day = series.values.first(2)
+    assert_equal "flat", base.trend.direction, "nothing precedes the base"
+    assert_equal 100, base.trend.current, "the tooltip reads the base's level from its trend"
+    assert_equal 100, first_day.trend.previous
+    assert_in_delta 4.5, first_day.trend.percent, 0.001, "the first day's return is measured from the base"
   end
 
   # from_raw_values demands two points, and a period with one day or none has
