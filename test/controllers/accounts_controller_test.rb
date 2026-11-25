@@ -46,7 +46,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   test "show warns when a linked account's balance drifts from its transactions" do
     account = accounts(:connected)
     add_valuation(account, 10.days.ago.to_date, 1000)
-    (2..5).reverse_each { |days_ago| add_valuation(account, days_ago.days.ago.to_date, 1050) }
+    (2..7).reverse_each { |days_ago| add_valuation(account, days_ago.days.ago.to_date, 1050) }
 
     get account_url(account)
 
@@ -73,7 +73,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     account = accounts(:connected)
     account.account_shares.destroy_all
     add_valuation(account, 10.days.ago.to_date, 1000)
-    (2..5).reverse_each { |days_ago| add_valuation(account, days_ago.days.ago.to_date, 1050) }
+    (2..7).reverse_each { |days_ago| add_valuation(account, days_ago.days.ago.to_date, 1050) }
 
     get account_url(account)
 
