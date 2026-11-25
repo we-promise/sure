@@ -152,14 +152,18 @@ class RetirementPlan::MonteCarlo
       # Retired before the reference year, every modelled year is retired.
       split = (sim.retirement_year - first_year).clamp(0, year_count)
       fraction = sim.first_year_fraction.to_f
+      # A part-year first year draws a fraction of a year's shock, so the
+      # worst-first order starts at the first whole year: placed in the part
+      # year, the worst draw would barely move the path.
+      sorted_from = fraction < 1 ? [ split, 1 ].max.clamp(0, year_count) : split
       survived = 0
       values = [] if keep_values
 
       draws.each do |z|
         lasted, path_values = replay(sim.current_assets.to_f, flows, growth_factors(z, base, fraction), keep_values:)
         # Sorting the draws, not the factors, keeps the first year's factor
-        # a fraction of a year's wherever the worst draw lands.
-        lasted &&= replay(sim.current_assets.to_f, flows, growth_factors(z[0...split] + z[split..].sort, base, fraction)).first if worst_first
+        # a fraction of a year's.
+        lasted &&= replay(sim.current_assets.to_f, flows, growth_factors(z[0...sorted_from] + z[sorted_from..].sort, base, fraction)).first if worst_first
 
         survived += 1 if lasted
         values << path_values if keep_values
