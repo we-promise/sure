@@ -120,7 +120,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     process_result = Struct.new(:document_type).new("bank_statement")
 
     import.expects(:process_with_ai).once.returns(process_result)
-    import.define_singleton_method(:extract_transactions) do |reread_token: nil|
+    import.define_singleton_method(:extract_transactions) do |reread_token: nil, cancelled: nil|
       { "transactions" => [] }
     end
     import.expects(:sync_mappings).once
@@ -233,6 +233,72 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal "failed", @import.reload.status
   end
 
+  test "skips an import the user stopped before the job started" do
+    attach_pdf!(@import)
+    @import.update!(status: :cancelled)
+    @import.expects(:process_with_ai).never
+
+    ProcessPdfJob.perform_now(@import)
+
+    assert @import.reload.cancelled?
+  end
+
+  test "stop during the read leaves the import cancelled, not failed" do
+    attach_pdf!(@import)
+    @import.define_singleton_method(:process_with_ai) do |reread_token: nil, cancelled: nil|
+      cancel_ai_processing!
+      raise Ai::Error::Cancelled, "cancelled"
+    end
+    @import.expects(:extract_transactions).never
+    @import.expects(:send_next_steps_email).never
+
+    assert_nothing_raised { ProcessPdfJob.perform_now(@import) }
+
+    @import.reload
+    assert @import.cancelled?
+    assert_nil @import.error
+    assert_nil @import.document_type
+  end
+
+  test "stop after the read skips embedding, extraction and the email" do
+    attach_pdf!(@import)
+    result = Struct.new(:document_type).new("bank_statement")
+    @import.define_singleton_method(:process_with_ai) do |reread_token: nil, cancelled: nil|
+      cancel_ai_processing!
+      result
+    end
+    @family.expects(:upload_document).never
+    @import.expects(:extract_transactions).never
+    @import.expects(:send_next_steps_email).never
+
+    ProcessPdfJob.perform_now(@import)
+
+    assert @import.reload.cancelled?
+    assert_equal 0, @import.rows_count
+  end
+
+  test "a late model result keeps its usage row and writes nothing to a cancelled import" do
+    attach_pdf!(@import)
+    call_id = SecureRandom.uuid
+    usage = @family.llm_usages.create!(
+      provider: "openai", model: "gpt-4.1-mini", operation: "extract_pdf",
+      prompt_tokens: 12, completion_tokens: 3, total_tokens: 15, call_id: call_id
+    )
+    @import.define_singleton_method(:process_with_ai) do |reread_token: nil, cancelled: nil|
+      cancel_ai_processing!   # the model answered after Stop arrived
+      Struct.new(:document_type).new("bank_statement")
+    end
+
+    ProcessPdfJob.perform_now(@import)
+
+    @import.reload
+    assert @import.cancelled?
+    assert_nil @import.document_type
+    assert_nil @import.ai_summary
+    assert_equal 0, @import.rows_count
+    assert_equal [ usage.id ], @family.llm_usages.where(call_id: call_id).pluck(:id)
+  end
+
   test "a reread clears the previous reading only while its attempt still holds the claim" do
     import = imports(:pdf_with_rows)
     ProcessPdfJob.any_instance.stubs(:process)
@@ -273,7 +339,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     attach_pdf!(import)
     replacement_data = { "transactions" => [ { "date" => "2024-01-01", "amount" => "10.00", "name" => "Replacement" } ] }
     import.update!(status: :importing, reread_token: "stale", extracted_data: replacement_data, rows_count: 1)
-    import.define_singleton_method(:process_with_ai) do |reread_token:|
+    import.define_singleton_method(:process_with_ai) do |reread_token: nil, cancelled: nil|
       # Another reread takes over while this long read is still running.
       update!(reread_token: "replacement", extracted_data: replacement_data)
       update_column(:rows_count, 1)

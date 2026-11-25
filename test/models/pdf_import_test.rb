@@ -436,6 +436,31 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_not @import.cancel_ai_processing!, "stopping twice is a no-op"
   end
 
+  test "with_claim refuses a late result after stopping" do
+    @import.update!(status: :importing)
+    @import.cancel_ai_processing!
+
+    written = @import.with_claim(nil) { @import.update!(document_type: "bank_statement"); true }
+
+    assert_not written
+    assert_nil @import.reload.document_type
+  end
+
+  test "a reading that answered after stopping applies nothing" do
+    @import.update!(status: :importing, reread_token: "attempt")
+    @import.cancel_ai_processing!
+    outcome = Struct.new(:value).new({ summary: "late", document_type: "bank_statement", extracted_data: nil })
+    @import.stubs(:pdf_reading).returns(stub(read: outcome))
+
+    result = @import.process_with_ai(reread_token: "attempt")
+
+    assert_nil result
+    @import.reload
+    assert @import.cancelled?
+    assert_nil @import.document_type
+    assert_nil @import.ai_summary
+  end
+
   private
 
     def create_pdf_statement(account: accounts(:depository))

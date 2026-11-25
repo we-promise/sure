@@ -300,8 +300,8 @@ class PdfImport < Import
   end
 
   # What the document is (Ai::Generations::ReadPdf), read the way the upload asked for.
-  def process_with_ai(reread_token: nil)
-    outcome = pdf_reading.read(read_as: requested_way)
+  def process_with_ai(reread_token: nil, cancelled: nil)
+    outcome = pdf_reading.read(read_as: requested_way, cancelled:)
     analysis = Analysis.new(summary: outcome.value[:summary], document_type: outcome.value[:document_type] || "other",
                             extracted_data: outcome.value[:extracted_data])
     return unless with_claim(reread_token) { update!(ai_summary: analysis.summary, document_type: analysis.document_type) }
@@ -313,11 +313,11 @@ class PdfImport < Import
   # The statement's rows (Ai::Generations::ExtractBankStatement), read the way the upload asked
   # for, or by Auto starting from the way that last passed for this account and model. A failing
   # extraction is kept and flagged for review, never dropped.
-  def extract_transactions(reread_token: nil)
+  def extract_transactions(reread_token: nil, cancelled: nil)
     return unless statement_with_transactions?
 
     reading = pdf_reading
-    outcome = reading.extract(read_as: requested_way, start: self.class.last_passing_way(account:, model: reading.model&.name))
+    outcome = reading.extract(read_as: requested_way, start: self.class.last_passing_way(account:, model: reading.model&.name), cancelled:)
     # String keys: every reader here digs with strings, and jsonb keeps the hash as assigned
     # until the record is reloaded.
     data = Ai::Generations::ExtractBankStatement.statement(outcome.value).deep_stringify_keys
@@ -389,11 +389,13 @@ class PdfImport < Import
 
   # Runs a write only while this attempt still owns the import. A long OCR read can outlive the
   # claim's recovery window; once another reread takes over, the stale job must leave the new
-  # attempt's data and token alone. A blank token is a direct read/publish on an unclaimed import.
+  # attempt's data and token alone. Stop clears the token, so it is the importing check that keeps
+  # a late model result from overwriting a cancelled import.
   def with_claim(token)
     with_lock do
+      next false unless importing?
       next false if token.blank? && reread_token.present?
-      next false if token.present? && !(importing? && reread_token == token)
+      next false if token.present? && reread_token != token
 
       yield
     end
