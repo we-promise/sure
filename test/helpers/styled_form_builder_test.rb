@@ -31,4 +31,25 @@ class StyledFormBuilderTest < ActionView::TestCase
     assert_nil fragment.at(".form-field")
     assert_includes fragment.at("input[type=file]")["class"].split, "hidden"
   end
+
+  # Without a max, Chrome lets the year segment take six digits, so typing
+  # "20261125" leaves the year at 202611.
+  test "a date field caps its year at four digits by default" do
+    field = Nokogiri::HTML.fragment(@builder.date_field(:period_start_on, label: "Start"))
+
+    assert_equal "9999-12-31", field.at("input[type=date]")["max"]
+    assert field.at(".form-field"), "expected the date input to stay styled"
+  end
+
+  test "a date field keeps the max its caller sets" do
+    field = Nokogiri::HTML.fragment(@builder.date_field(:period_start_on, max: Date.new(2026, 11, 25)))
+
+    assert_equal "2026-11-25", field.at("input[type=date]")["max"]
+  end
+
+  test "a date field given a nil max renders without one" do
+    field = Nokogiri::HTML.fragment(@builder.date_field(:period_start_on, max: nil))
+
+    assert_nil field.at("input[type=date]")["max"]
+  end
 end

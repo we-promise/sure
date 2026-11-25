@@ -10,11 +10,11 @@
     <%= form_with url: settings_llm_usage_path, method: :get, class: "flex gap-4 items-end flex-wrap" do |f| %>
       <div class="w-full md:w-auto">
         <%= f.label :start_date, t(".start_date"), class: "block text-sm font-medium text-primary mb-1" %>
-        <%= f.date_field :start_date, value: @start_date, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+        <%= f.date_field :start_date, value: @start_date, max: StyledFormBuilder::DATE_FIELD_MAX, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
       </div>
       <div class="w-full md:w-auto">
         <%= f.label :end_date, t(".end_date"), class: "block text-sm font-medium text-primary mb-1" %>
-        <%= f.date_field :end_date, value: @end_date, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+        <%= f.date_field :end_date, value: @end_date, max: StyledFormBuilder::DATE_FIELD_MAX, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
       </div>
       <%= render DS::Button.new(variant: :primary, size: :md, type: "submit", text: t(".filter"), class: "md:w-auto w-full justify-center") %>
     <% end %>

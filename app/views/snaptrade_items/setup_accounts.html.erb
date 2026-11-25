@@ -151,6 +151,7 @@
                       <%= t("snaptrade_items.setup_accounts.sync_start_date_label", default: "Import transactions from:") %>
                     </label>
                     <input type="date"
+                           max="<%= StyledFormBuilder::DATE_FIELD_MAX %>"
                            id="sync_start_<%= snaptrade_account.id %>"
                            name="sync_start_dates[<%= snaptrade_account.id %>]"
                            value="<%= snaptrade_account.sync_start_date %>"

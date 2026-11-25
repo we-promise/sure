@@ -55,6 +55,18 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
     build_field(method, form_options, html_options) { |merged_options| super(method, merged_options) }
   end
 
+  # Without a max, Chrome lets a date input's year take six digits, so typing
+  # "20261125" fills the year with 202611. A four-digit max year caps it; a
+  # caller's own `max` wins, and `max: nil` leaves the input without one.
+  DATE_FIELD_MAX = "9999-12-31".freeze
+
+  alias_method :styled_date_field, :date_field
+  private :styled_date_field
+
+  def date_field(method, options = {})
+    styled_date_field(method, { max: DATE_FIELD_MAX }.merge(options))
+  end
+
   def select(method, choices, options = {}, html_options = {})
     field_options = normalize_options(options, html_options)
 
