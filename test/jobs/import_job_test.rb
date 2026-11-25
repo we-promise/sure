@@ -14,7 +14,7 @@ class ImportJobTest < ActiveJob::TestCase
     Current.stubs(:user).returns(user)
     import.stubs(:publishable?).returns(true)
 
-    assert_enqueued_with job: ImportJob, args: [ import, { initiating_user: user } ] do
+    assert_enqueued_with job: ImportJob, args: [ import, { initiating_user_id: user.id } ] do
       import.publish_later
     end
   end

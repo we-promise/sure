@@ -253,7 +253,7 @@ class Import < ApplicationRecord
     update! status: :importing
 
     if Current.user
-      ImportJob.perform_later(self, initiating_user: Current.user)
+      ImportJob.perform_later(self, initiating_user_id: Current.user.id)
     else
       ImportJob.perform_later(self)
     end
