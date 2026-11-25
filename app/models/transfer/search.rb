@@ -26,8 +26,12 @@ class Transfer::Search
       Entry.where(entryable_type: "Transaction")
     end
 
+    # Correlated to each row's own two legs, so it reads through the entryable
+    # index only the legs of the transfers in scope; a free-standing
+    # `entries` subquery read every family's legs in the date range.
     def with_either_leg_in(relation, entries)
-      transaction_ids = entries.select(:entryable_id)
-      relation.where(inflow_transaction_id: transaction_ids).or(relation.where(outflow_transaction_id: transaction_ids))
+      table = relation.klass.quoted_table_name
+      legs = entries.where(%("entries"."entryable_id" IN (#{table}."inflow_transaction_id", #{table}."outflow_transaction_id")))
+      relation.where(legs.arel.exists)
     end
 end

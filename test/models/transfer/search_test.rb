@@ -63,6 +63,15 @@ class Transfer::SearchTest < ActiveSupport::TestCase
     assert_empty Transfer::Search.new(narrowed, filters: { start_date: Date.new(2024, 2, 1) }).transfers_scope
   end
 
+  # A free-standing entries subquery read every family's legs in the range.
+  test "looks up only the legs of the transfers in its scope" do
+    sql = Transfer::Search.new(@scope, filters: { account_id: @checking.id, start_date: Date.new(2024, 1, 1) }).transfers_scope.to_sql
+
+    assert_equal 2, sql.scan(/EXISTS \(SELECT/).size, sql
+    assert_equal 2, sql.scan(/"entries"\."entryable_id" IN \("transfers"\."inflow_transaction_id", "transfers"\."outflow_transaction_id"\)/).size, sql
+    assert_no_match(/"inflow_transaction_id" IN \(SELECT/, sql)
+  end
+
   private
 
     def search(filters)
