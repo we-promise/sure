@@ -5,7 +5,8 @@
       <% if @suggestion.pending? %>
         <%= render "shared/ai_suggestion_waiting", suggestion: @suggestion,
               waiting_key: "recurring_transactions.smart_fills.create.waiting",
-              worker_key: "recurring_transactions.smart_fills.create.worker_unhealthy" %>
+              worker_key: "recurring_transactions.smart_fills.create.worker_unhealthy",
+              stop_key: "recurring_transactions.smart_fills.stop" %>
       <% else %>
         <%= render "recurring_transactions/smart_fills/result",
               suggestion: @suggestion, recurring_transaction: @recurring_transaction,

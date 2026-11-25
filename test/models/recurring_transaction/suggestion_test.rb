@@ -22,14 +22,17 @@ class RecurringTransaction::SuggestionTest < ActiveSupport::TestCase
     assert_equal "not_configured", suggestion.error
   end
 
-  test "a provider failure leaves the suggestion failed with the error" do
-    stub_ai(:bill_setup, raises: Ai::Error::InvalidOutput.new("no JSON"))
+  test "a provider failure leaves a safe code and logs the detail" do
+    stub_ai(:bill_setup, raises: Ai::Error::InvalidOutput.new("IBAN DE89 3704 0044 0532 0130 00"))
     suggestion = fill_suggestion
 
     run_job(suggestion)
 
     assert suggestion.failed?
-    assert_includes suggestion.error, "no JSON"
+    assert_equal "generation_failed", suggestion.error
+    entry = DebugLogEntry.where(category: "bill_setup").last
+    assert_includes entry.metadata["error_message"], "IBAN"
+    assert_equal suggestion.id, entry.metadata["suggestion_id"]
   end
 
   test "a late answer or failure cannot overwrite a stopped suggestion" do

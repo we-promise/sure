@@ -53,6 +53,6 @@ class Bills::SmartConfigurationsController < ApplicationController
       Ai::GenerationRun.enqueue(:bill_setup, family: Current.family, ids: [ @suggestion.id ], id: @suggestion.id)
     rescue StandardError => error
       Rails.error.report(error, handled: true, context: { feature: "bill_setup" })
-      @suggestion.update!(status: :failed, error: t(".failed"))
+      @suggestion.update!(status: :failed, error: "generation_failed")
     end
 end

@@ -23,8 +23,8 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
     return render_missing_entry(income:) if entry.nil?
 
     @suggestion = Current.family.recurring_transaction_suggestions.find_or_create_by!(
-      user: Current.user, entry:, mode: :fill, status: :pending
-    ) { |suggestion| suggestion.income = income }
+      user: Current.user, entry:, income:, mode: :fill, status: :pending
+    )
 
     enqueue_job if @suggestion.previously_new_record?
     prepare_form(entry:, income:)
@@ -82,6 +82,6 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
       Ai::GenerationRun.enqueue(:bill_setup, family: Current.family, ids: [ @suggestion.id ], id: @suggestion.id)
     rescue StandardError => error
       Rails.error.report(error, handled: true, context: { feature: "bill_setup" })
-      @suggestion.update!(status: :failed, error: t(".failed"))
+      @suggestion.update!(status: :failed, error: "generation_failed")
     end
 end

@@ -1,4 +1,4 @@
-<%# locals: (suggestion:, waiting_key:, worker_key:) %>
+<%# locals: (suggestion:, waiting_key:, worker_key:, stop_key:) %>
 <%# The job's broadcast replaces this frame with one whose src is #show, so
     the browser fetches the result in a request with a valid token. The
     Stimulus controller reloads once as the cable subscribes, in case the
@@ -9,7 +9,7 @@
     <div class="rounded-lg bg-container-inset px-3 py-3 text-sm space-y-2">
       <p class="text-primary"><%= t(waiting_key) %></p>
       <%= render "shared/ai_worker_health_warning", message: t(worker_key) %>
-      <%= render DS::Button.new(text: t("recurring_transactions.smart_fills.stop"),
+      <%= render DS::Button.new(text: t(stop_key),
                                 href: suggestion.location, method: :delete,
                                 variant: :ghost, size: :sm) %>
     </div>

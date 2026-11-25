@@ -71,12 +71,20 @@ class RecurringTransaction::Suggestion < ApplicationRecord
   def ai_failed(error)
     return if error.is_a?(Ai::Error::Cancelled)
 
-    message = error.respond_to?(:reason) ? error.reason.to_s : error.message
+    # Only a router reason is safe to show. Provider text can quote a statement
+    # or an account number, so it goes to support logs under a correlation id.
+    code = error.is_a?(Ai::Error::Unavailable) ? error.reason.to_s : "generation_failed"
+    DebugLogEntry.capture(
+      category: "bill_setup", level: "error", message: "Bill suggestion failed",
+      source: self.class.name, family:, user:,
+      metadata: { error_class: error.class.name, error_message: error.message.truncate(500), suggestion_id: id }
+    )
+
     failed = false
     with_lock do
       next unless pending?
 
-      update!(status: :failed, error: message)
+      update!(status: :failed, error: code)
       failed = true
     end
     broadcast_result if failed

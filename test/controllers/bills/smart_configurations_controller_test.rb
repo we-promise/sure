@@ -114,7 +114,7 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
 
     suggestion = RecurringTransaction::Suggestion.last
     assert suggestion.failed?
-    assert_equal I18n.t("bills.smart_configurations.create.failed"), suggestion.error
+    assert_equal "generation_failed", suggestion.error
     assert_match I18n.t("bills.smart_configurations.show.failed"), response.body
   end
 

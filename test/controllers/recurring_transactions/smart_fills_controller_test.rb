@@ -169,7 +169,7 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
 
     suggestion = RecurringTransaction::Suggestion.last
     assert suggestion.failed?
-    assert_equal I18n.t("recurring_transactions.smart_fills.create.failed"), suggestion.error
+    assert_equal "generation_failed", suggestion.error
     assert_match "Could not analyze this charge", response.body
   end
 

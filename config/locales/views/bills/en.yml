@@ -23,6 +23,7 @@ en:
         worker_unhealthy: The background worker that runs AI work may be down or backed up.
         failed: Could not start the analysis. This bill's configuration is untouched.
       show:
+        stop: Stop
         trigger: Let AI configure
         title: "AI suggestions for %{name}"
         intro: Check the changes to apply. Unchecked ones are left exactly as they are.

@@ -7,14 +7,13 @@ module ApplicationHelper
     Ai.available?(feature, family: Current.family, user: Current.user)
   end
 
-  # A stored failure is either a router reason (a bare code) or the provider's
-  # own message. A reason gets the same sentence the guard would have shown;
-  # anything else is already worded for a person.
+  # A stored failure is a router reason or a fixed code, never provider text.
+  # The reason gets the same sentence the guard would have shown.
   def ai_failure_message(suggestion)
     reason = suggestion.error.to_s
-    return suggestion.error unless %w[not_configured capability_missing user_disabled no_family_consent].include?(reason)
+    return Ai::Availability.unavailable(:bill_setup, reason).message_for(Current.user) if reason.in?(%w[not_configured capability_missing user_disabled no_family_consent])
 
-    Ai::Availability.unavailable(:bill_setup, reason).message_for(Current.user)
+    t("shared.ai_suggestion_failure.generation_failed")
   end
 
   def product_name
