@@ -28,17 +28,14 @@ en:
       success: Financial independence settings saved
     summary:
       fi_number: Financial independence number
-      fi_number_explainer: "%{expenses} a year of spending at a %{rate} withdrawal rate"
+      fi_number_explainer: "%{expenses} a year of living costs at a %{rate} withdrawal rate"
       assets: "%{amount} in cash and investments"
       progress: "%{percent}% of the way"
       independent: "Financially independent · %{percent}%"
       progress_aria: Progress towards your financial independence number
-      projected_total: Projected at retirement
-      at_retirement: on %{date}
-      no_retirement_date: Set a retirement date to see this
       savings_rate: Savings rate
       derived: from your income and spending
-      no_expenses: Add some spending to see your financial independence number. It is worked out from your median monthly spending.
+      no_expenses: Add some spending to see your financial independence number. It is worked out from your median monthly spending over the last 12 whole months, leaving out loan payments and money you invest.
       unconverted:
         one: 1 account is not counted because it has no exchange rate for today.
         other: "%{count} accounts are not counted because they have no exchange rate for today."
@@ -110,7 +107,7 @@ en:
         in_year: "%{year}, at %{age}"
         not_reached: Not within the plan
         coast_hint: "Coast FI is when your savings alone, with nothing more added, would grow to your FI number by %{year}."
-        fire_before_fi_number: "Your FI number is %{multiple} times a year of spending, the %{rate} rule. Retiring in %{year} only needs the money to last to %{end_age}, counting income such as a pension and spending that ends, such as a mortgage, so it can come before you reach that number."
+        fire_before_fi_number: "Your FI number is %{multiple} times a year of spending, the %{rate} rule. Retiring in %{year} only needs the money to last to %{end_age}, counting income such as a pension, so it can come before you reach that number."
     streams:
       seeded:
         living_costs: Living costs

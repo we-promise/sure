@@ -1,21 +1,18 @@
 require "test_helper"
 
 class RetirementPlan::ProjectionTest < ActiveSupport::TestCase
-  AS_OF = Date.new(2026, 1, 15)
-
   def projection(**overrides)
     RetirementPlan::Projection.new(
-      as_of: AS_OF,
+      annual_living_costs: 40_000,
       annual_expenses: 40_000,
       annual_income: 60_000,
       current_assets: 250_000,
       safe_withdrawal_rate: BigDecimal("0.04"),
-      expected_annual_return: BigDecimal("0.05"),
       **overrides
     )
   end
 
-  test "the FI number for 40,000 of annual expenses at a 4% withdrawal rate is 1,000,000" do
+  test "the FI number for 40,000 of annual living costs at a 4% withdrawal rate is 1,000,000" do
     assert_equal BigDecimal("1000000"), projection.fi_number
   end
 
@@ -32,8 +29,8 @@ class RetirementPlan::ProjectionTest < ActiveSupport::TestCase
     assert_not projection(current_assets: 999_999).financially_independent?
   end
 
-  test "with no expenses there is no FI number to measure against" do
-    empty = projection(annual_expenses: 0)
+  test "with no living costs there is no FI number to measure against" do
+    empty = projection(annual_living_costs: 0)
 
     assert_nil empty.fi_number
     assert_nil empty.progress
@@ -41,48 +38,11 @@ class RetirementPlan::ProjectionTest < ActiveSupport::TestCase
     assert_not empty.financially_independent?
   end
 
-  # V(n+1) = V(n) * (1 + r) + C: annual compounding, the contribution at the
-  # end of each year. Named because "to the cent" means nothing until the
-  # recurrence is fixed.
-  test "a 5% return matches a hand-computed table to the cent for three years" do
-    plan = projection(current_assets: 100_000, annual_income: 100_000, savings_rate: BigDecimal("0.10"),
-                      retirement_date: AS_OF.advance(years: 3))
+  test "the FI number reads living costs, and the derived savings rate all spending" do
+    plan = projection(annual_living_costs: 24_000, annual_expenses: 42_000, annual_income: 60_000)
 
-    assert_equal [ "100000.00", "115000.00", "130750.00", "147287.50" ],
-                 plan.yearly_series.map { |point| format("%.2f", point[:value]) }
-    assert_equal BigDecimal("147287.50"), plan.projected_total
-  end
-
-  test "at a 0% return the projected total is the start plus a straight sum of contributions" do
-    plan = projection(current_assets: 100_000, annual_income: 100_000, savings_rate: BigDecimal("0.10"),
-                      expected_annual_return: 0, retirement_date: AS_OF.advance(years: 4))
-
-    assert_equal BigDecimal("140000"), plan.projected_total
-  end
-
-  test "each point is dated a whole year on from the reference date" do
-    plan = projection(retirement_date: AS_OF.advance(years: 2))
-
-    assert_equal [ AS_OF, Date.new(2027, 1, 15), Date.new(2028, 1, 15) ], plan.yearly_series.map { |point| point[:date] }
-  end
-
-  test "a retirement date short of a full year counts only completed years" do
-    assert_equal 2, projection(retirement_date: Date.new(2029, 1, 14)).years_to_retirement
-    assert_equal 3, projection(retirement_date: Date.new(2029, 1, 15)).years_to_retirement
-  end
-
-  test "a retirement date already passed projects nothing forward" do
-    plan = projection(retirement_date: AS_OF - 1)
-
-    assert_equal 0, plan.years_to_retirement
-    assert_equal BigDecimal("250000"), plan.projected_total
-  end
-
-  test "without a retirement date there is no projected total, but the chart still runs a default horizon" do
-    plan = projection
-
-    assert_nil plan.projected_total
-    assert_equal RetirementPlan::Projection::DEFAULT_HORIZON_YEARS + 1, plan.yearly_series.size
+    assert_equal BigDecimal("600000"), plan.fi_number
+    assert_equal BigDecimal("0.3"), plan.effective_savings_rate
   end
 
   test "a saved savings rate is used as given" do
@@ -125,8 +85,8 @@ class RetirementPlan::ProjectionTest < ActiveSupport::TestCase
     assert_kind_of BigDecimal, below_zero.bar_progress
   end
 
-  # The reference date is an argument: two runs on different days, with no
-  # query and no request, must give the same figures.
+  # Two runs on different days, with no query and no request, must give the
+  # same figures.
   test "the projection reads neither the clock, the database nor the current request" do
     Current.expects(:user).never
     Current.expects(:family).never
@@ -135,9 +95,9 @@ class RetirementPlan::ProjectionTest < ActiveSupport::TestCase
       travel_to(today) do
         figures = nil
         assert_queries_count(0) do
-          figures = [ projection(retirement_date: Date.new(2040, 6, 1)), projection ].map do |p|
+          figures = [ projection, projection(annual_income: 0) ].map do |p|
             [ p.fi_number, p.progress, p.bar_progress, p.financially_independent?, p.effective_savings_rate,
-              p.annual_contribution, p.years_to_retirement, p.yearly_series, p.projected_total ]
+              p.annual_contribution ]
           end
         end
         figures
