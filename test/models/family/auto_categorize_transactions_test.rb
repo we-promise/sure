@@ -7,6 +7,9 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
     # Fresh family: fixture families carry categorized transactions that
     # would pollute the Bayes training set.
     @family = Family.create!(name: "Bayes Entry Family")
+    # An admin who turned AI on: categorizing needs the family's consent (#5709).
+    @family.users.create!(email: "bayes-admin@example.com", password: "password123!A", first_name: "Bayes", last_name: "Admin",
+                          role: "admin", ai_enabled: true)
     @account = @family.accounts.create!(name: "Entry test", balance: 100, currency: "USD", accountable: Depository.new)
     @coffee = @family.categories.create!(name: "Coffee")
     @groceries = @family.categories.create!(name: "Groceries")
@@ -89,10 +92,14 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
   test "the LLM is not asked about excluded transactions" do
     use_ai_routes
     excluded = create_transaction(account: @account, name: "House deposit", excluded: true).transaction
-    Ai::Generations::CategorizeTransactions.expects(:new).never
+    included = create_transaction(account: @account, name: "Starbucks Coffee").transaction
+    requests = stub_ai(:categorize, returns: { categorizations: [ { transaction_id: included.id, category_name: @coffee.name } ] })
 
-    perform_enqueued_jobs { @family.auto_categorize_transactions_later(@family.transactions.where(id: excluded.id)) }
+    perform_enqueued_jobs { @family.auto_categorize_transactions_later(@family.transactions.where(id: [ excluded.id, included.id ])) }
+
+    assert_not_includes requests.sole.input, "House deposit"
     assert_nil excluded.reload.category
+    assert_equal @coffee, included.reload.category
   end
 
   test "clearing Bayes locks unlocks only what Bayes locked and still has its pick" do

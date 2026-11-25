@@ -29,6 +29,36 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     assert_equal "gpt-4.1-mini", outcome.model
   end
 
+  test "each document route takes the PDF only within its own limits" do
+    skip_without_pdftoppm
+    limited = Ai::Config::Model.new(endpoint: Ai::Config::Endpoint.new(name: :limited, protocol: :compatible, preset: :openai,
+                                                                        base_url: "https://api.openai.com/v1"),
+                                    name: "gpt-4.1-mini", capabilities: %i[structured_output documents])
+    unlimited = Ai::Config::Model.new(endpoint: Ai::Config::Endpoint.new(name: :unlimited, protocol: :compatible,
+                                                                          base_url: "http://docs.local:8080/v1", location: :local),
+                                      name: "doc-reader", capabilities: %i[structured_output documents])
+
+    with_reading_routes(limited, unlimited) do
+      reader = reading(blank_pdf(pages: 101))   # over the OpenAI preset's 100 pages
+
+      assert_nil reader.ways[:pdf], "the second route can take it"
+      assert_equal [ unlimited ], reader.send(:plan_for, :pdf).routes.map(&:model)
+    end
+  end
+
+  test "a scan too large for the PDF limits, read as PDF, says it's too large" do
+    skip_without_pdftoppm
+    limited = Ai::Config::Model.new(endpoint: Ai::Config::Endpoint.new(name: :limited, protocol: :compatible, preset: :openai,
+                                                                        base_url: "https://api.openai.com/v1"),
+                                    name: "gpt-4.1-mini", capabilities: %i[structured_output documents])
+
+    with_reading_routes(limited) do
+      error = assert_raises(Ai::Error::Unavailable) { reading(blank_pdf(pages: 101)).extract(read_as: :pdf) }
+
+      assert_equal :too_large, error.reason
+    end
+  end
+
   test "a text model reads the text layer, page by page, and every check runs on it" do
     requests = stub_ai(:extract_pdf, returns: statement(BAC_ROWS))
 
@@ -54,6 +84,17 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
       assert_equal :text, reading(@bac).extract(read_as: :text).way
     end
     assert_match "Cardpayment-HighStPetrolStation", requests.sole.input
+  end
+
+  test "long text pages are chunked at line boundaries unless a line itself is too long" do
+    reader = reading("page one")
+    reader.stubs(:chunk_chars).returns(12)
+    text = "one two\nthree four\n#{"x" * 20}\nlast line"
+
+    units, = reader.send(:text_units, [ text ])
+
+    assert_equal [ "one two\n", "three four\n", "x" * 12, "x" * 8 + "\n", "last line" ], units.map(&:text)
+    assert_equal [ 1, 1, 1, 1, 1 ], units.map(&:first_page)
   end
 
   test "a scan with no vision model and no OCR is unavailable: an empty text layer is never sent" do
@@ -277,6 +318,22 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     end
   end
 
+  test "a later page that can't be rendered keeps the earlier batches, incomplete" do
+    Pdf::PageImages.stubs(:page_count).returns(2)
+    Pdf::PageImages.stubs(:render).with(anything, pages: [ 1 ]).returns([ "png" ])
+    Pdf::PageImages.stubs(:render).with(anything, pages: [ 2 ]).raises(Pdf::PageImages::Error.new("page 2 would be 400 million pixels", code: :too_large))
+    stub_ai(:extract_pdf, returns: statement(BAC_ROWS))
+    one_page = vision_model.with(batch_size: 1)
+
+    with_reading_routes(one_page) do
+      outcome = reading(@bac).extract(read_as: :images)
+
+      assert_equal :images, outcome.way
+      assert_equal BAC_ROWS.size, outcome.value[:transactions].size
+      assert_equal false, outcome.checks.complete
+    end
+  end
+
   test "a page no route can fit is skipped and logged, and the extraction is incomplete" do
     units = [ Ai::PdfReading::Unit.text("PAGE ONE 24.50", page: 1), Ai::PdfReading::Unit.text("PAGE TWO #{"x" * 50}", page: 2) ]
     stub_ai(:extract_pdf) do |request|
@@ -318,6 +375,44 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
 
     with_reading_routes(text_model.with(batch_size: 1)) do
       assert_equal "other", reader.read.value[:document_type]
+    end
+  end
+
+  test "a page-local render failure leaves that page untranscribed and keeps the others" do
+    reader = reading(@scan)
+    Pdf::PageImages.stubs(:page_count).returns(3)
+    Pdf::PageImages.stubs(:render).with(@scan, pages: [ 1 ]).returns([ "page-1" ])
+    Pdf::PageImages.stubs(:render).with(@scan, pages: [ 2 ])
+                                  .raises(Pdf::PageImages::Error.new("page too large", code: :too_large))
+    Pdf::PageImages.stubs(:render).with(@scan, pages: [ 3 ]).returns([ "page-3" ])
+    stub_ai(:extract_pdf) do |request|
+      "text from #{request.pages.first.filename}"
+    end
+
+    with_reading_routes(text_model, ocr_model) do
+      transcription = reader.send(:transcribe)
+
+      assert_equal [ "text from page-1.png", "", "text from page-3.png" ], transcription.pages
+      assert_equal [ 2 ], transcription.untranscribed_pages
+    end
+  end
+
+  test "a page-count failure keeps the unreadable reason for Images but not for Text on a scan" do
+    stub_ai(:extract_pdf)
+    Pdf::PageImages.stubs(:page_count).raises(Pdf::PageImages::Error.new("PDF does not contain EOF marker", code: :unreadable))
+
+    with_reading_routes(vision_model, text_model) do
+      error = assert_raises(Ai::Error::Unavailable) { reading(@scan).read(read_as: :images) }
+
+      assert_equal :unreadable, error.reason
+      assert_equal :unreadable, error.code
+    end
+
+    Pdf::PageImages.unstub(:page_count)
+    with_reading_routes(text_model) do
+      error = assert_raises(Ai::Error::Unavailable) { reading(@scan).read(read_as: :text) }
+
+      assert_equal :no_text_layer, error.reason
     end
   end
 

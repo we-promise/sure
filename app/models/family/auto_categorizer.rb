@@ -135,7 +135,7 @@ class Family::AutoCategorizer
       DebugLogEntry.capture(
         category: "auto_categorization", level: "error", message: "Jev is misconfigured; falling back to the LLM provider",
         source: self.class.name, family:, provider: "jev",
-        metadata: { endpoint: Ai::LegacyEnvConfig::Jev.redacted_endpoint(endpoint), reason:,
+        metadata: { endpoint: Ai::LegacyEnvConfig::Jev.endpoint_origin(endpoint), reason:,
                     detail: Ai::LegacyEnvConfig::Jev::UNSUPPORTED.fetch(reason) }
       )
     end
@@ -211,10 +211,18 @@ class Family::AutoCategorizer
 
     # Excluded transactions are out of every report on purpose; a guessed
     # category on them is noise, so the LLM is never asked about them.
+    # Plain transfers (funds_movement, cc_payment) carry no category
+    # (Transaction::UNCATEGORIZED_EXCLUDED_KINDS), so they are left out too, as
+    # Family#bayes_categorize_uncategorized leaves them out. Otherwise the AI
+    # could put back a category Transaction.drop_stale_contribution_categories!
+    # removed.
+    # `preload`, not `includes`: the entries condition would turn `includes` into
+    # outer joins, and Postgres refuses the apply step's FOR UPDATE on those.
     def scope
       family.transactions.with_entry
                          .where(id: transaction_ids, category_id: nil, entries: { excluded: false })
+                         .where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS)
                          .enrichable(:category_id)
-                         .includes(:category, :merchant, :entry)
+                         .preload(:category, :merchant, :entry)
     end
 end

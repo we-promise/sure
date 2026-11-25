@@ -110,7 +110,7 @@ class AiPromptsTest < ActiveSupport::TestCase
       [ base, "#{base}_anthropic", *("#{base}_simple" if Ai::LegacyEnvConfig::SIMPLE_PROMPTS.include?(feature)) ]
     end
     used += Ai::Config::Model::OCR_PROMPTS.map { "ocr_#{_1}" }
-    # Document and receipt generations use their own provider-independent prompt folders.
+    # extract_pdf's two generations each run their own folder; a route entry's prompt doesn't name them.
     used += [ Ai::Generations::ReadPdf, Ai::Generations::ExtractBankStatement, Ai::Generations::ExtractReceipt ].map(&:prompt_key)
     folders = Ai::Prompt::ROOT.children.select(&:directory?).map { _1.basename.to_s } - %w[shared]
 

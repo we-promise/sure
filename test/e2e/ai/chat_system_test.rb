@@ -23,6 +23,8 @@ class AiE2eChatSystemTest < ApplicationSystemTestCase
       end
       assert_text "How many accounts do I have?"
 
+      # The question is broadcast before its commit hook enqueues the answer, so wait for the job.
+      Timeout.timeout(Capybara.default_max_wait_time) { sleep 0.1 until enqueued_jobs.any? { _1[:job] == AssistantResponseJob } }
       perform_enqueued_jobs(only: AssistantResponseJob)
       chat = Chat.where(user: @user).sole
       answer = chat.messages.where(type: "AssistantMessage").where.not(content: [ nil, "" ]).last

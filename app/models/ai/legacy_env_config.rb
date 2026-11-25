@@ -7,7 +7,7 @@
 # Ai::LegacyEnvConfig::Jev), this calls it, so the router and the calls not yet on the router
 # can't disagree. test/architecture/ai_config_test checks that over every documented setup. The
 # one deliberate difference: embeddings fall back to the OpenAI values saved in Settings, as every
-# other AI setting does.
+# other AI setting does (the saved key only for the OpenAI URL).
 #
 # It's built in every process. The release that stops reading the old variables deletes this file.
 class Ai::LegacyEnvConfig
@@ -18,7 +18,7 @@ class Ai::LegacyEnvConfig
   # OpenAI's vector store embeds files on its own side, so the `embed` route names this stand-in
   # model on the OpenAI endpoint.
   VECTOR_STORE_MODEL = "vector_store".freeze
-  LLM_FEATURES = %i[bill_setup extract_pdf extract_receipt detect_merchants enhance_merchants].freeze
+  LLM_FEATURES = %i[bill_setup extract_receipt extract_pdf detect_merchants enhance_merchants].freeze
   # Each generation feature's prompt folder: OpenAI's detailed prompt on native OpenAI, the
   # simplified one on custom servers, and Anthropic's own.
   PROMPTS = {
@@ -205,15 +205,15 @@ class Ai::LegacyEnvConfig
       if (reason = Jev.unreachable_reason(url))
         key = "#{Jev.redacted_endpoint(url)}|#{reason}"
         unless (self.class.unreachably_warned ||= Set.new).include?(key)
-          self.class.unreachably_warned << key
-          DebugLogEntry.capture(
+          recorded = DebugLogEntry.capture(
             category: "ai_configuration", level: "error",
             message: "Jev endpoint is not supported and was ignored; categorize falls back to the LLM provider",
             source: "Ai::LegacyEnvConfig", provider_key: "jev",
-            metadata: { endpoint: Jev.redacted_endpoint(url), reason:, detail: Jev::UNSUPPORTED.fetch(reason) }
+            metadata: { endpoint: Jev.endpoint_origin(url), reason:, detail: Jev::UNSUPPORTED.fetch(reason) }
           )
+          self.class.unreachably_warned << key if recorded   # a failed write is tried again on the next build
         end
-        Rails.logger.warn("[Ai::LegacyEnvConfig] Jev left out: #{Jev.redacted_endpoint(url)}: #{Jev::UNSUPPORTED.fetch(reason)}")
+        Rails.logger.warn("[Ai::LegacyEnvConfig] Jev left out: #{Jev.endpoint_origin(url)}: #{Jev::UNSUPPORTED.fetch(reason)}")
         return
       end
 
@@ -261,10 +261,10 @@ class Ai::LegacyEnvConfig
     end
 
     # The default embedding server is OpenAI's, which needs a key: an Anthropic-only install
-    # has none, so it gets no `embed` route until EMBEDDING_URI_BASE names a server. Compared as
-    # the transport sends them, so a trailing slash doesn't make it another server.
+    # has none, so it gets no `embed` route until EMBEDDING_URI_BASE names a server. URL
+    # equivalents (case, port, trailing slash) still name OpenAI, so use the hosted predicate.
     def usable_embedding_server?(model)
-      model.endpoint.base_url.to_s.chomp("/") != VectorStore::DEFAULT_EMBEDDING_URI_BASE.chomp("/") || model.endpoint.api_key.present?
+      !Provider::Openai.hosted_endpoint?(model.endpoint.base_url) || model.endpoint.api_key.present?
     end
 
     # Anthropic's own API, written out or not: it keeps the preset, and with it the PDF limits.
@@ -275,9 +275,9 @@ class Ai::LegacyEnvConfig
     end
 
     # The URL and key fall back to the OpenAI values saved in Settings too. The URL is used as
-    # written, as VectorStore::Embeddable uses EMBEDDING_URI_BASE. The key saved in Settings goes
-    # only to the OpenAI URL it was saved with, never to a separate embedding server;
-    # OPENAI_ACCESS_TOKEN falls back as it always has.
+    # written, without `/v1`: EMBEDDING_URI_BASE has always been the base `embeddings` is posted to.
+    # The key saved in Settings goes only to the OpenAI URL it was saved with, never to a separate
+    # embedding server; OPENAI_ACCESS_TOKEN falls back as it always has.
     def embedding_model
       own_url = env("EMBEDDING_URI_BASE")
       base_url = own_url || openai_uri_base || VectorStore::DEFAULT_EMBEDDING_URI_BASE

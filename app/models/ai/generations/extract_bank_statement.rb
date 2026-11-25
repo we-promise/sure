@@ -15,7 +15,8 @@
 #   0.2. A heuristic tuned on two statements, not a rule; nil without text;
 # - complete: false when pages were skipped (no route could read them) or are still pending
 #   after an outage, since rows missing from both sides can still reconcile; nil when not known.
-# Rows with a zero amount ("Balance brought forward") are ignored. A period check was dropped:
+# Rows with a zero amount ("Balance brought forward") are ignored; a row with no date or amount is
+# kept and fails the checks (dates_anchored, reconciles). A period check was dropped:
 # models write the period to fit their dates.
 class Ai::Generations::ExtractBankStatement < Ai::Generation
   include Ai::PdfReading::Pages
@@ -36,7 +37,7 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
       month_names.each_with_index do |name, month|
         next if month.zero? || name.blank?
 
-        (names[month] ||= []) << name.downcase
+        (names[month] ||= []) << name.downcase.gsub(/\s+/, "")   # as the source text is normalized
       end
     end
   end.transform_values(&:uniq).freeze
@@ -73,7 +74,6 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
     additionalProperties: false
   }.freeze)
 
-  required :date, :amount
   aliases transactions: %w[rows entries], description: %w[name merchant]
 
   Checks = Data.define(:reconciles, :amounts_in_source, :dates_anchored, :complete) do
@@ -110,6 +110,10 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
   # the cut row), the first batch's opening figures and the last batch's closing ones. Equal rows
   # anywhere else are two purchases, and both are kept.
   def merge_values(values)
+    # A run with every slice skipped is not an empty statement: no model answered. Fail the way
+    # so Auto can try another, and keep an explicit empty transactions list from a real answer.
+    raise Ai::Error::InvalidOutput, "no extraction answered" if values.empty?
+
     batches = values.map { Array(_1[:transactions]) }
     kept = batches.each_with_index.flat_map do |rows, i|
       previous = i.positive? ? batches[i - 1].last : nil
@@ -133,13 +137,15 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
   # source: the text the model read, or nil for images and the PDF. balances: the opening and
   # closing balances read from the text layer (AccountStatement::TextMetadataParser), when found.
   def self.checks(value, source: nil, balances: {})
-    rows = Array(value[:transactions]).reject { _1[:amount].to_f.zero? }
+    rows = transactions(value)
     period = value[:statement_period]
     dated = rows.map { _1.merge(date: normal_date(_1[:date], period:)) }
     invalid_date = dated.any? { _1[:date].nil? }
     opening = balances[:opening_balance] || value[:opening_balance]
     closing = balances[:closing_balance] || value[:closing_balance]
-    reconciles = unless opening.nil? || closing.nil?
+    reconciles = if rows.any? { _1[:amount].nil? }
+      false
+    elsif !(opening.nil? || closing.nil?)
       rows.any? && (opening.to_d + rows.sum { _1[:amount].to_d }).round(2) == closing.to_d.round(2)
     end
     # Whitespace goes, so "1 February" reads as "1february", except between two digits, where it
@@ -148,7 +154,8 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
     return Checks.new(reconciles:, amounts_in_source: nil, dates_anchored: invalid_date ? 0.0 : nil) if text.blank? || rows.empty?
 
     dates = dated.flat_map { |row| printed_dates(row[:date]).map { [ _1, row[:date] ] } }.uniq
-    Checks.new(reconciles:, amounts_in_source: dated.all? { |row| text.match?(amount_pattern(row[:amount])) },
+                 .map { |form, date| [ form_pattern(form), form.length, date ] }
+    Checks.new(reconciles:, amounts_in_source: dated.all? { |row| row[:amount] && text.match?(amount_pattern(row[:amount])) },
                dates_anchored: invalid_date ? 0.0 : (dated.count { date_anchored?(_1, dates, text) } / dated.size.to_f).round(2))
   end
 
@@ -156,7 +163,7 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
   def self.statement(value)
     period = value[:statement_period]
     {
-      transactions: Array(value[:transactions]).map do |row|
+      transactions: transactions(value).map do |row|
         { date: normal_date(row[:date], period:), amount: row[:amount]&.to_f, name: row[:description], category: row[:category], notes: row[:reference] }
       end,
       period: { start_date: normal_date(value.dig(:statement_period, :start_date)), end_date: normal_date(value.dig(:statement_period, :end_date)) },
@@ -164,6 +171,10 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
       currency: value[:currency], opening_balance: value[:opening_balance], closing_balance: value[:closing_balance]
     }
   end
+
+  # The rows, without zero-amount lines ("Balance brought forward"), which aren't transactions.
+  # A row with no amount stays, so the checks see it.
+  def self.transactions(value) = Array(value[:transactions]).reject { _1[:amount]&.zero? }
 
   class << self
     private
@@ -197,20 +208,36 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
 
       # Some occurrence of the row's amount has, as the last date printed in the DATE_WINDOW
       # characters before it, the row's own date. `dates`: every row's printed forms, as
-      # [form, the row's date].
+      # [form_pattern, the form's length, the row's date]. Where two forms end at the same place,
+      # the longer one is the printed date.
       def date_anchored?(row, dates, text)
         positions(text, amount_pattern(row[:amount])).any? do |at|
           before = text[[ at - DATE_WINDOW, 0 ].max...at]
-          dates.filter_map { |form, date| (index = before.rindex(form)) && [ index, date ] }.max_by(&:first)&.last == row[:date]
+          dates.filter_map { |pattern, length, date| (index = before.rindex(pattern)) && [ index, length, date ] }
+               .max_by { |index, length, _| [ index, length ] }&.last == row[:date]
         end
+      end
+
+      # Date forms must not be part of a longer number ("1february" isn't the
+      # "11february" printed on the row), but a letter-form may sit beside other
+      # letters.
+      def form_pattern(form)
+        pattern = Regexp.escape(form)
+        pattern = "(?<!\\d)#{pattern}" if form.match?(/\A\d/)
+        pattern = "#{pattern}(?!\\d)" if form.match?(/\d\z/)
+        Regexp.new(pattern)
       end
 
       def positions(text, pattern) = text.enum_for(:scan, pattern).map { Regexp.last_match.begin(0) }
 
       # The amount as a whole number in the text, not part of a longer one: "20.00" isn't in
-      # "120.00", "1,020.00" or "20.005"; after a word or a comma ("Ford, 50.00") it is.
+      # "120.00", "1,020.00" or "20.005"; after a word or a comma ("Ford, 50.00") it is. Whole
+      # groups of three digits after a space may be the tail of a space-grouped number: "234,56"
+      # isn't in "1 234,56", but is in "120.00 234,56", after a whole amount.
       def amount_pattern(amount)
-        /(?<!\d)(?<!\d[.,])(?:#{printed_amounts(amount).map { Regexp.escape(_1) }.join("|")})(?!\d)/
+        whole = format("%.2f", amount.to_f.abs).split(".").first
+        group_tail = "(?:(?<!\\d\\|)|(?<=[.,]\\d\\d\\|))" if whole.length % 3 == 0
+        /(?<!\d)(?<!\d[.,])#{group_tail}(?:#{printed_amounts(amount).map { Regexp.escape(_1) }.join("|")})(?!\d)/
       end
 
       # 2575.0 as "2575.00", "2,575.00" or "1.234,56", with spaces between digits normalized to

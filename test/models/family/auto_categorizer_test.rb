@@ -42,6 +42,34 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal 1, @account.transactions.reload.enrichable(:category_id).count
   end
 
+  test "leaves plain transfer legs uncategorized" do
+    transfer_leg = create_transaction(account: @account, name: "To brokerage").transaction
+    transfer_leg.update!(kind: "funds_movement")
+    @family.categories.create!(name: "Investments")
+    stub_ai(:categorize) { flunk "the model shouldn't be asked" }
+
+    categorize([ transfer_leg.id ])
+
+    assert_nil transfer_leg.reload.category
+  end
+
+  # A sync or confirmation makes the leg a plain transfer after the
+  # categorizer selected it: the AI's category must not land on it.
+  test "leaves a leg that became a plain transfer after it was selected uncategorized" do
+    leg = create_transaction(account: @account, name: "To brokerage").transaction
+    category = @family.categories.create!(name: "Investments")
+    categorizer = Family::AutoCategorizer.new(@family, transaction_ids: [ leg.id ])
+    categorizer.ai_generation
+    Transaction.where(id: leg.id).update_all(kind: "funds_movement")
+
+    assert_equal 0, categorizer.apply_ai(Ai::Result.new(value: { categorizations: [
+      { transaction_id: leg.id, category_name: category.name }
+    ] }))
+    leg.reload
+    assert_nil leg.category
+    assert_not leg.locked?(:category_id)
+  end
+
   test "a category deleted while the AI answers is skipped, and the rest of the batch still applies" do
     gone = @family.categories.create!(name: "Coffee")
     kept = @family.categories.create!(name: "Groceries")
@@ -350,7 +378,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal "error", entry.level
     assert_equal "jev", entry.provider_key
     assert_equal @family, entry.family
-    assert_equal "https://gw.example.com/v1", entry.metadata["endpoint"]
+    assert_equal "https://gw.example.com", entry.metadata["endpoint"]
     assert_equal "path", entry.metadata["reason"]
     serialized = entry.metadata.to_json
     assert_not_includes serialized, "s3cret"
@@ -480,6 +508,21 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal category, other.reload.category
   end
 
+  # #5709: without a family admin's AI switch nothing is sent, and the rule run says why.
+  test "sends nothing while no family admin has turned AI on, and the rule run fails" do
+    @family.users.update_all(ai_enabled: false)
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 1, executed_at: Time.current)
+    rule_run.await_ai!(1)
+    requests = stub_ai(:categorize) { flunk "sent without consent" }
+
+    Ai::GenerationJob.perform_now(:categorize, { ids: [ txn.id ], family_id: @family.id, rule_run_id: rule_run.id })
+
+    assert_empty requests
+    assert_equal [ "failed", 0, 0 ], rule_run.reload.values_at(:status, :transactions_modified, :pending_jobs_count)
+    assert_includes rule_run.error_message.to_s, "no_family_consent"
+  end
 
   private
     def categorize(transaction_ids)

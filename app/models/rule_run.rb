@@ -51,6 +51,9 @@ class RuleRun < ApplicationRecord
       self.transactions_modified += modified
       self.transactions_awaiting_ai = [ transactions_awaiting_ai - handled, 0 ].max
     end
+
+    # The last AI answer can be the last outstanding part of an immediate run.
+    offer_job_results if transactions_awaiting_ai.zero?
   end
 
   # Offers the result of an immediate run through the sync toast, like
@@ -127,8 +130,9 @@ class RuleRun < ApplicationRecord
 
     # The jobs of an immediate run with AI actions offer what they changed once
     # the last one is done; ApplyImmediateRulesJob offers the run's other changes.
+    # Awaited AI answers are part of that, so the toast waits for the run to finish.
     def offer_job_results
-      return unless execution_type == "immediate" && transactions_modified.positive?
+      return unless finished? && execution_type == "immediate" && transactions_modified.positive?
 
       self.class.offer_immediate_result(rule.family)
     end

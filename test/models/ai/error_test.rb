@@ -41,6 +41,24 @@ class Ai::ErrorTest < ActiveSupport::TestCase
 
     assert_equal Ai::Error::Upstream, Ai::Error.for_status(503, "the server responded with status 503", body:)
     assert_equal Ai::Error::Upstream, Ai::Error.for_status(503, "the server responded with status 503", body: body.to_json)
+    quoted = "Service unavailable; previous request: image input is not supported"
+    assert_equal Ai::Error::Upstream, Ai::Error.for_status(503, nil, body: { error: { message: quoted } })
+  end
+
+  test "a direct image refusal on 400 and 413 is UnsupportedInput; diagnostics elsewhere are ignored" do
+    message = "image input is not supported - hint: if this is unexpected, you may need to provide the mmproj"
+
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(400, message)
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(413, nil, body: { error: { message: "image input is not supported by this model" } })
+    assert_equal Ai::Error::Refused, Ai::Error.for_status(400, "gateway said: image input is not supported earlier")
+    assert_equal Ai::Error::Refused, Ai::Error.for_status(400, nil, body: { error: { message: "bad request" }, detail: message })
+  end
+
+  test "a direct image refusal is not a credit error because another field mentions credits" do
+    body = { error: { message: "image input is not supported" }, previous_error: "insufficient credits" }
+
+    assert_equal Ai::Error::UnsupportedInput, Ai::Error.for_status(400, nil, body:)
+    assert_equal Ai::Error::NoCredit, Ai::Error.for_status(400, nil, body: { error: { message: "insufficient credits" } })
   end
 
   test "a spent balance is NoCredit, however the provider says it" do

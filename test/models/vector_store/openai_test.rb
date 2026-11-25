@@ -13,6 +13,45 @@ class VectorStore::OpenaiTest < ActiveSupport::TestCase
     @adapter = VectorStore::Openai.new(endpoint: @endpoint)
   end
 
+  test "a store is reached on the server that created it, whichever route embeds now" do
+    other = ai_endpoint(name: "embed", base_url: "https://embed.example.test/v1", api_key: "k2", vector_store: true)
+    Ai::Config.stubs(:current).returns(Ai::Config.new(endpoints: [ other, @endpoint ]))
+
+    assert_equal BASE, VectorStore::Openai.for_store("#{BASE}/").endpoint_url
+    assert_nil VectorStore::Openai.for_store("https://gone.example.test/v1"), "never another server"
+  end
+
+  test "an endpoint without a URL records OpenAI's default, and is found by it" do
+    hosted = ai_endpoint(name: "openai", base_url: nil, api_key: "sk-test-key", vector_store: true)
+    Ai::Config.stubs(:current).returns(Ai::Config.new(endpoints: [ hosted ]))
+
+    recorded = VectorStore::Openai.new(endpoint: hosted).endpoint_url
+
+    assert_equal "https://api.openai.com/v1", recorded
+    assert VectorStore::Openai.for_store(recorded)
+  end
+
+  test "an Anthropic endpoint is never taken for a store's OpenAI server" do
+    anthropic = ai_endpoint(name: "anthropic", protocol: :anthropic, preset: :anthropic, base_url: nil, api_key: "sk-ant-key")
+    Ai::Config.stubs(:current).returns(Ai::Config.new(endpoints: [ anthropic ]))
+
+    assert_nil VectorStore::Openai.for_store("https://api.openai.com/v1")
+  end
+
+  test "a gateway path keeps its case when a store's server is matched" do
+    upper = ai_endpoint(name: "team_a", base_url: "https://gw.example.test/TeamA/v1", api_key: "a", vector_store: true)
+    lower = ai_endpoint(name: "team_b", base_url: "https://gw.example.test/teama/v1", api_key: "b", vector_store: true)
+    Ai::Config.stubs(:current).returns(Ai::Config.new(endpoints: [ lower, upper ]))
+
+    assert_equal "https://gw.example.test/TeamA/v1", VectorStore::Openai.for_store("https://GW.example.test/TeamA/v1/").endpoint_url
+  end
+
+  test "a store created before its server was recorded falls back to the OpenAI endpoint" do
+    Ai::Config.stubs(:current).returns(Ai::Config.new(endpoints: [ @endpoint ]))
+
+    assert_equal BASE, VectorStore::Openai.for_store(nil).endpoint_url
+  end
+
   test "create_store goes through Ai::Transport::Http's client, with the endpoint's key and headers" do
     stub_json(:post, "/vector_stores", { id: "vs_abc123" })
 
@@ -42,6 +81,20 @@ class VectorStore::OpenaiTest < ActiveSupport::TestCase
 
     assert_not @adapter.upload_file(store_id: "vs_abc123", file_content: "x", filename: "a.txt").success?
     assert_requested delete
+  end
+
+  test "a file whose compensating deletion also fails keeps its id for the caller" do
+    stub_json(:post, "/files", { id: "file-xyz" })
+    stub_request(:post, "#{BASE}/vector_stores/vs_abc123/files").to_return(status: 500, body: "boom")
+    stub_request(:delete, "#{BASE}/files/file-xyz").to_return(status: 500, body: "boom")
+
+    response = @adapter.upload_file(store_id: "vs_abc123", file_content: "x", filename: "a.txt")
+
+    assert_not response.success?
+    assert_kind_of VectorStore::UploadCleanupError, response.error
+    assert_equal "file-xyz", response.error.file_id
+    assert_kind_of StandardError, response.error.attachment_error
+    assert_kind_of StandardError, response.error.cleanup_error
   end
 
   test "file_status: ready, unreadable for an empty index, processing, or error" do

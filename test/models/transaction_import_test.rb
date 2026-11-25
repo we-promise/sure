@@ -19,6 +19,15 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal "1,234.56", @import.number_format
   end
 
+  test "syncing one import's mappings leaves every other import's mappings alone" do
+    other = imports(:trade)
+    kept = other.mappings.create!(key: "Elsewhere", create_when_empty: true, type: "Import::CategoryMapping")
+
+    @import.sync_mappings
+
+    assert Import::Mapping.exists?(kept.id)
+  end
+
   test "does not treat the transaction import template as a Sure export" do
     @import.raw_file_str = @import.csv_template.to_csv
 
@@ -367,6 +376,38 @@ class TransactionImportTest < ActiveSupport::TestCase
 
     assert Entry.exists?(existing_entry.id), "revert must not destroy an entry the import did not create"
     assert_not account.entries.exists?(name: "Bakery")
+  end
+
+  test "revert removes an imported transaction that was split afterwards" do
+    account = accounts(:depository)
+
+    @import.update!(
+      account: account,
+      raw_file_str: "date,name,amount\n01/01/2024,Supermarket,100\n01/02/2024,Bakery,20\n",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+    @import.reload
+    @import.publish
+    assert @import.reload.complete?
+
+    supermarket = account.entries.find_by!(name: "Supermarket")
+    supermarket.split!([
+      { name: "Groceries", amount: supermarket.amount - 30 },
+      { name: "Household", amount: 30 }
+    ])
+
+    assert_difference -> { Entry.count } => -4 do
+      @import.revert
+    end
+
+    assert @import.reload.pending?, @import.error
+    assert_not account.entries.exists?(name: %w[Supermarket Groceries Household Bakery])
   end
 
   test "creates new transaction when name differs even if date and amount match" do

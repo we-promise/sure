@@ -5,7 +5,8 @@ class SidekiqConfigTest < ActiveSupport::TestCase
     AssistantResponseJob => "ai_high_priority",
     ProcessPdfJob => "ai_low_priority",
     IndexAccountStatementJob => "ai_low_priority",
-    VectorStore::IndexStatusJob => "ai_low_priority"
+    VectorStore::IndexStatusJob => "ai_low_priority",
+    VectorStore::RequeueIndexPollsJob => "ai_low_priority"
   }.freeze
 
   test "the ai capsule serves the AI queues in strict order, apart from the default capsule" do

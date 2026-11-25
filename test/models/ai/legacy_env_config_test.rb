@@ -365,7 +365,7 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     Ai::LegacyEnvConfig.unreachably_warned = nil
 
     assert_difference -> { DebugLogEntry.count }, 1 do
-      2.times { build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://gw.example.test/v1/jev") }
+      2.times { build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://gw.example.test/key-s3cret/v1/jev") }
     end
 
     entry = DebugLogEntry.order(:created_at).last
@@ -373,7 +373,15 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "error", entry.level
     assert_equal "jev", entry.provider_key
     assert_equal "path", entry.metadata["reason"]
-    assert_includes entry.metadata["endpoint"], "gw.example.test"
+    assert_equal "https://gw.example.test", entry.metadata["endpoint"], "a gateway path can carry a key"
+  end
+
+  test "a Jev diagnostic that couldn't be written is tried again on the next build" do
+    Ai::LegacyEnvConfig.unreachably_warned = nil
+    env = { "OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://gw.example.test/v1/jev" }
+
+    DebugLogEntry.expects(:capture).twice.returns(nil).then.returns(DebugLogEntry.new)
+    3.times { build(env) }
   end
 
   test "an OpenRouter decisions URL routes categorize through the openrouter preset" do
@@ -452,10 +460,20 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
 
   test "the default embedding URL with a trailing slash or without is still the server that needs a key" do
     VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns(nil)   # a host's OPENAI_ACCESS_TOKEN at boot would leak in
     without_slash = VectorStore::DEFAULT_EMBEDDING_URI_BASE.chomp("/")
 
     config = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => without_slash)
 
     assert_empty config.routes_for(:embed)
+  end
+
+  test "equivalent hosted OpenAI embedding URLs still need a key" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    Setting.stubs(:openai_access_token).returns(nil)   # a host's OPENAI_ACCESS_TOKEN at boot would leak in
+    config = build("VECTOR_STORE_PROVIDER" => "pgvector",
+                   "EMBEDDING_URI_BASE" => "https://API.OPENAI.COM:443/v1/")
+
+    assert_empty config.routes_for(:embed), "a differently spelled api.openai.com is still OpenAI"
   end
 end

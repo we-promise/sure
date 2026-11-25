@@ -44,7 +44,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal "complete", processed_import.reload.status
   end
 
-  test "skips already processed importing import and releases processing claim" do
+  test "a redelivered job for a classified import whose worker stopped fails it, so it can be read again" do
     processed_import = imports(:pdf_processed)
     attach_pdf!(processed_import)
     processed_import.update!(document_type: "financial_document")
@@ -53,7 +53,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
 
     ProcessPdfJob.perform_now(processed_import)
 
-    assert_equal "pending", processed_import.reload.status
+    assert_equal "failed", processed_import.reload.status
   end
 
   test "skips already processed importing import without releasing fresh processing claim" do
@@ -67,28 +67,31 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal "importing", processed_import.reload.status
   end
 
-  test "uploads non-bank PDF to vector store with classified type metadata" do
-    pdf_content = attach_pdf!(@import)
+  test "uploads non-bank PDF to vector store with classified type metadata and its statement" do
+    import = statement_backed_import
+    statement = import.account_statement
     process_result = Struct.new(:document_type).new("financial_document")
 
-    @import.expects(:process_with_ai).once.returns(process_result)
-    @import.stubs(:send_next_steps_email)
-    @import.expects(:extract_transactions).never
+    import.expects(:process_with_ai).once.returns(process_result)
+    import.stubs(:send_next_steps_email)
+    import.expects(:extract_transactions).never
 
-    @family.expects(:upload_document).with do |file_content:, filename:, metadata:|
-      assert_equal pdf_content, file_content
+    import.family.expects(:upload_document).with do |file_content:, filename:, metadata:|
+      assert_equal statement.original_file.download, file_content
       assert_equal "sample_bank_statement.pdf", filename
-      assert_equal({ "type" => "financial_document", "pdf_import_id" => @import.id }, metadata)
+      assert_equal({ "type" => "financial_document", "pdf_import_id" => import.id,
+                     "account_statement_id" => statement.id, "account_id" => statement.account_id }, metadata)
       true
     end.returns(family_documents(:tax_return))
 
-    ProcessPdfJob.perform_now(@import)
+    ProcessPdfJob.perform_now(import)
 
-    assert_equal "complete", @import.reload.status
+    assert_equal "complete", import.reload.status
   end
 
-  test "skips the vector store when embed is unavailable" do
-    use_ai_routes(embed: [])
+  # Who finds a search copy follows its statement (FamilyDocument.readable_by). An import from
+  # before statements existed has none to follow.
+  test "keeps a PDF without a statement out of the vector store" do
     attach_pdf!(@import)
     @import.expects(:process_with_ai).once.returns(Struct.new(:document_type).new("financial_document"))
     @import.stubs(:send_next_steps_email)
@@ -99,37 +102,41 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal "complete", @import.reload.status
   end
 
+  test "skips the vector store when embed is unavailable" do
+    use_ai_routes(embed: [])
+    import = statement_backed_import
+    import.expects(:process_with_ai).once.returns(Struct.new(:document_type).new("financial_document"))
+    import.stubs(:send_next_steps_email)
+    import.family.expects(:upload_document).never
+
+    ProcessPdfJob.perform_now(import)
+
+    assert_equal "complete", import.reload.status
+  end
+
   test "uploads bank statement PDF to vector store with classified type metadata" do
-    pdf_content = attach_pdf!(@import)
+    import = statement_backed_import
+    statement = import.account_statement
     process_result = Struct.new(:document_type).new("bank_statement")
 
-    @import.expects(:process_with_ai).once.returns(process_result)
-    @import.expects(:extract_transactions).once do
-      @import.update!(
-        extracted_data: {
-          "transactions" => [
-            {
-              "date" => "2024-01-01",
-              "amount" => "10.00",
-              "name" => "Coffee Shop"
-            }
-          ]
-        }
-      )
+    import.expects(:process_with_ai).once.returns(process_result)
+    import.define_singleton_method(:extract_transactions) do |reread_token: nil|
+      { "transactions" => [] }
     end
-    @import.expects(:sync_mappings).once
-    @import.stubs(:send_next_steps_email)
+    import.expects(:sync_mappings).once
+    import.stubs(:send_next_steps_email)
 
-    @family.expects(:upload_document).with do |file_content:, filename:, metadata:|
-      assert_equal pdf_content, file_content
+    import.family.expects(:upload_document).with do |file_content:, filename:, metadata:|
+      assert_equal statement.original_file.download, file_content
       assert_equal "sample_bank_statement.pdf", filename
-      assert_equal({ "type" => "bank_statement", "pdf_import_id" => @import.id }, metadata)
+      assert_equal({ "type" => "bank_statement", "pdf_import_id" => import.id,
+                     "account_statement_id" => statement.id, "account_id" => statement.account_id }, metadata)
       true
     end.returns(family_documents(:tax_return))
 
-    ProcessPdfJob.perform_now(@import)
+    ProcessPdfJob.perform_now(import)
 
-    assert_equal "complete", @import.reload.status
+    assert_equal "complete", import.reload.status
   end
 
   test "discards permanently and marks failed with the reason when no model can read the PDF" do
@@ -149,17 +156,33 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     error = assert_raises(StandardError) do
       ProcessPdfJob.new.send(:record_failed_status, @import, Ai::Error::NoCredit.new("No credit", status: 400))
     end
-    assert_equal "database down", error.message, "a generic error isn't swallowed by discard_on(Ai::Error::Base)"
+    assert_equal "database down", error.message, "a failed write is retried, not swallowed with the AI error"
   end
 
-  test "a provider's error shows its own message, as Provider::Error did, not the class name" do
+  test "an account error shows fixed text rather than the provider's message" do
     attach_pdf!(@import)
     @import.expects(:process_with_ai).once.raises(Ai::Error::NoCredit.new("Your credit balance is too low to access the Anthropic API.", status: 400))
 
     assert_nothing_raised { ProcessPdfJob.perform_now(@import) }
 
     assert_equal "failed", @import.reload.status
-    assert_equal "Your credit balance is too low to access the Anthropic API.", @import.error
+    assert_equal I18n.t("imports.pdf_import.account_errors.no_credit"), @import.error
+  end
+
+  test "an AI failure is recorded and logged by class only, never with the provider's message" do
+    attach_pdf!(@import)
+    @import.expects(:process_with_ai).once.raises(Ai::Error::RateLimited.new("quota for account 12345678 exceeded", status: 429))
+    log = StringIO.new
+    original = [ Rails.logger, ActiveJob::Base.logger ]
+    Rails.logger = ActiveJob::Base.logger = ActiveSupport::Logger.new(log)
+
+    ProcessPdfJob.perform_now(@import)
+
+    assert_equal "failed", @import.reload.status
+    assert_match "Ai::Error::RateLimited", log.string
+    assert_no_match "12345678", log.string
+  ensure
+    Rails.logger, ActiveJob::Base.logger = original
   end
 
   test "a rendering failure keeps its concrete reason (#3275)" do
@@ -244,6 +267,33 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal 0, import.rows_count
   end
 
+  test "a stale reread cannot overwrite a replacement claim or its data" do
+    import = imports(:pdf_with_rows)
+    family = import.family
+    attach_pdf!(import)
+    replacement_data = { "transactions" => [ { "date" => "2024-01-01", "amount" => "10.00", "name" => "Replacement" } ] }
+    import.update!(status: :importing, reread_token: "stale", extracted_data: replacement_data, rows_count: 1)
+    import.define_singleton_method(:process_with_ai) do |reread_token:|
+      # Another reread takes over while this long read is still running.
+      update!(reread_token: "replacement", extracted_data: replacement_data)
+      update_column(:rows_count, 1)
+      Struct.new(:document_type).new("bank_statement")
+    end
+
+    family.expects(:upload_document).never
+    import.expects(:extract_transactions).never
+    import.expects(:send_next_steps_email).never
+
+    ProcessPdfJob.perform_now(import, reread: true, reread_token: "stale")
+
+    import.reload
+    assert_equal "importing", import.status
+    assert_equal "replacement", import.reread_token
+    assert_equal replacement_data, import.extracted_data, "the stale job must not clear newer data"
+    assert_equal 1, import.rows_count
+    assert_nil import.error
+  end
+
   test "a reread's failure is recorded before the job is discarded" do
     import = imports(:pdf_with_rows)
     attach_pdf!(import)
@@ -254,7 +304,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
 
     import.reload
     assert import.failed?
-    assert_equal "No credit", import.error
+    assert_equal I18n.t("imports.pdf_import.account_errors.no_credit"), import.error
   end
 
   test "a provider's own error message never reaches the import's error or the log" do
@@ -267,6 +317,19 @@ class ProcessPdfJobTest < ActiveJob::TestCase
   end
 
   private
+    def statement_backed_import
+      statement = AccountStatement.create_from_upload!(
+        family: @family,
+        account: accounts(:depository),
+        file: uploaded_file(
+          filename: "sample_bank_statement.pdf",
+          content_type: "application/pdf",
+          content: file_fixture("imports/sample_bank_statement.pdf").binread
+        )
+      )
+      PdfImport.create_from_statement!(statement: statement)
+    end
+
 
     def attach_pdf!(import)
       pdf_content = file_fixture("imports/sample_bank_statement.pdf").binread

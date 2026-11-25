@@ -26,6 +26,7 @@ class AiE2ePdfImportTest < ActiveSupport::TestCase
     assert_operator import.rows_count, :>, 0
     # A failing extraction is kept and flagged, never dropped: either way the checks are recorded.
     assert_includes [ true, false ], import.extraction_checks["passed"]
-    assert_ai_usage(@family, :extract_pdf)
+    # A timed-out request that a retry recovered leaves a failed row beside the successful one.
+    assert @family.llm_usages.where(operation: "extract_pdf", status: "succeeded").exists?, "no successful extract_pdf call"
   end
 end

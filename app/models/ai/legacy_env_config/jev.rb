@@ -113,9 +113,19 @@ module Ai::LegacyEnvConfig::Jev
 
   def effective_proxied? = effective_host != VENDOR_HOST
 
-  # The endpoint without its credential-bearing parts, for logs, messages and the settings field.
-  # A gateway URL can carry a key in userinfo or the query, and DebugLogEntry rows are exported
-  # for support. The password is cleared before the user, or the assignment raises.
+  # The endpoint's scheme, host and port, for logs and DebugLogEntry rows, which are exported for
+  # support: a gateway can carry a key anywhere in the URL, its path included.
+  def endpoint_origin(url)
+    uri = URI.parse(url.to_s)
+    raise URI::InvalidURIError unless uri.host
+
+    "#{uri.scheme}://#{uri.host}#{":#{uri.port}" unless uri.port == uri.default_port}"
+  rescue URI::Error
+    "[unparseable endpoint]"
+  end
+
+  # The endpoint without its userinfo, query or fragment, for the settings field, which shows the
+  # admin their own URL. The password is cleared before the user, or the assignment raises.
   def redacted_endpoint(url)
     uri = URI.parse(url.to_s)
     uri.password = nil if uri.respond_to?(:password) && uri.password

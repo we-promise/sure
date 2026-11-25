@@ -217,6 +217,13 @@ class Ai::Generation
 
           log_unanswered(slice)
           [ [], [] ]
+        rescue Pdf::PageImages::Error
+          # A later page that can't be rendered (too large, blank) is skipped, so the extraction
+          # is incomplete rather than lost. Before any answer, the caller tries another way.
+          raise if values.empty? && !answered_before
+
+          log_unanswered(slice)
+          [ [], [] ]
         rescue *Ai::DownMarks::PASSING
           # An outage on a later batch doesn't throw away what the earlier batches answered; the
           # failed slice waits for the later job, like a failover part-way through a slice.
@@ -312,7 +319,7 @@ class Ai::Generation
       # route that couldn't fit the batch doesn't change that.
       if unusable_on && pending && pending.size > 1 && @down_marks.state(route = unusable_on) == :up
         begin
-          done, pending = bisect(route, pending, 1, pending_offset)
+          done, pending = bisect_pending_runs(route, pending, pending_positions, pending_offset)
           answers.concat(remap.call(done, pending_offset).map { |at, value| [ at, route, value ] })
           refresh_positions.call
           pending_offset = position_of(pending.first, slice) if pending.any?
@@ -366,6 +373,22 @@ class Ai::Generation
     def split_pending_runs(route, pending, positions, offset)
       return split_on(route, nil, offset) if pending.nil?
 
+      runs, starts = contiguous_runs(pending, positions, offset)
+      values, unfit = answer_pieces(route, runs, offset, offsets: starts)
+      raise Interrupted.new(values, unfit.flatten(1), Ai::Error::ContextTooLong.new("a pending run doesn't fit #{route.model.name}")) if unfit.any?
+
+      [ values, [] ]
+    end
+
+    # The same for the bisection retry: each run is halved on its own, so a half never joins
+    # items that weren't adjacent in the slice.
+    def bisect_pending_runs(route, pending, positions, offset)
+      runs, starts = contiguous_runs(pending, positions, offset)
+      each_piece(runs, offset, offsets: starts) { |run, at| bisect(route, run, 1, at) }
+    end
+
+    # [runs of `pending` adjacent in the slice, each run's offset in `pending`].
+    def contiguous_runs(pending, positions, offset)
       runs, starts, index = [], [], 0
       while index < pending.size
         finish = index + 1
@@ -374,7 +397,7 @@ class Ai::Generation
         starts << offset + index
         index = finish
       end
-      each_piece(runs, offsets: starts) { |run, at| split_on(route, run, at) }
+      [ runs, starts ]
     end
 
     # Answers `slice` on one route: in pieces of the route's batch_size when it holds more (a
@@ -397,8 +420,8 @@ class Ai::Generation
       answer_pieces(route, Ai::Batch.halves(slice), offset)
     end
 
-    def answer_pieces(route, pieces, offset = 0)
-      values, unfit = each_piece(pieces, offset) do |piece, at|
+    def answer_pieces(route, pieces, offset = 0, offsets: nil)
+      values, unfit = each_piece(pieces, offset, offsets:) do |piece, at|
         split_on(route, piece, at)
       rescue Ai::Error::ContextTooLong
         [ [], piece ]   # a single item that can't fit here
@@ -414,7 +437,7 @@ class Ai::Generation
     def bisect(route, items, depth = 1, offset = 0)
       each_piece(Ai::Batch.halves(items), offset) do |half, at|
         split_on(route, half, at)
-      rescue Ai::Error::InvalidOutput
+      rescue Ai::Error::InvalidOutput, Ai::Error::UnsupportedInput
         depth < BISECT_DEPTH && half.size > 1 ? bisect(route, half, depth + 1, at) : [ [], half ]
       rescue Ai::Error::ContextTooLong
         [ [], half ]

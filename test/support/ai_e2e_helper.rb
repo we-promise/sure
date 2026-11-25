@@ -42,6 +42,9 @@ module AiE2eHelper
   # same scoped overrides; ClimateControl puts the caller's environment back afterwards.
   def with_live_ai(jev: false, **extra, &block)
     env = { AI_LIVE: "1" }.merge(kilo_env).merge(jev ? jev_env : {}).merge(extra)
+    # Jev also reads the Setting whose default came from the host's boot-time JEV_API_KEY.
+    # A Kilo run must not configure that client; a Jev run still uses the setting.
+    jev ? Setting.unstub(:jev_api_key) : Setting.stubs(:jev_api_key).returns(nil)
     with_env_overrides(env) { with_ai_live(&block) }
   end
 

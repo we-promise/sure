@@ -87,6 +87,13 @@ class AccountStatement < ApplicationRecord
     )
   }
   scope :with_account, -> { where.not(account_id: nil) }
+  # viewable_by? in SQL, so lists filter before they paginate: a linked
+  # statement follows its account, an unlinked one is for statement managers.
+  scope :viewable_by, ->(user) {
+    family_statements = where(family_id: user.family_id)
+    linked = family_statements.where(account_id: user.accessible_accounts.select(:id))
+    statement_manager?(user) ? linked.or(family_statements.where(account_id: nil)) : linked
+  }
   scope :unmatched, -> { where(account_id: nil).where(review_status: "unmatched") }
   # Rejecting a suggestion leaves the statement accountless, so it stays in the inbox where it can be found and deleted.
   scope :inbox, -> { where(account_id: nil).where(review_status: %w[unmatched rejected]) }
@@ -377,7 +384,7 @@ class AccountStatement < ApplicationRecord
   # Found by the statement id in the document's metadata, so a re-run, or PDF import having
   # indexed the file already, can't make a second copy.
   def vector_store_document
-    family.family_documents.where("metadata->>'account_statement_id' = ?", id).first
+    family.family_documents.search_copies.where("metadata->>'account_statement_id' = ?", id).first
   end
 
   def indexed_in_vector_store?

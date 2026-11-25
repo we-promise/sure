@@ -66,4 +66,19 @@ class FamilyDocumentTest < ActiveSupport::TestCase
     pending_doc.update!(status: "unreadable")
     assert_not_includes @family.family_documents.readable_by(user), pending_doc
   end
+
+  # A PDF processed before documents recorded their statement (main's #5701) could come from any
+  # account, so nobody reads it until a migration links it.
+  test "readable_by hides a processed PDF whose statement is unknown, from an admin too" do
+    legacy = @family.family_documents.create!(filename: "old.pdf", status: "ready", metadata: { "type" => "bank_statement" })
+    linked = @family.family_documents.create!(filename: "new.pdf", status: "ready",
+                                              metadata: { "type" => "bank_statement", "pdf_import_id" => SecureRandom.uuid })
+    upload = @family.family_documents.create!(filename: "notes.txt", status: "ready", metadata: {})
+
+    readable = @family.family_documents.readable_by(users(:family_admin))
+
+    assert_not_includes readable, legacy
+    assert_includes readable, linked
+    assert_includes readable, upload
+  end
 end

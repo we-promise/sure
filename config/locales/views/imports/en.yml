@@ -604,6 +604,7 @@ en:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"
       interrupted: "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again."
       presumed_lost: "Marked as failed after the background job was presumed lost. The imported data was rolled back — you can safely try again."
+      blank_dates: "Enter a date for every row before publishing."
     document_types:
       bank_statement: Bank Statement
       credit_card_statement: Credit Card Statement
@@ -632,6 +633,11 @@ en:
       unknown_state_description: This import is in an unexpected state. Please return to imports.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Processing failed: %{error}"
+      account_errors:
+        no_credit: The AI provider account has no credit remaining.
+        unauthorized: The AI provider rejected its API key.
+        rate_limited: The AI provider is rate limiting its account.
+        model_missing: The AI provider does not have the configured model.
       errors:
         unavailable:
           default: No model set up on this instance can read this PDF.

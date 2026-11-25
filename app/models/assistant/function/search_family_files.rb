@@ -77,6 +77,8 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
     # The same candidate retrieval as Family#search_documents: a restricted hit must not spend the
     # caller's limit. Keep this tool's explicit provider-error response rather than the family's [].
     results, response = family.search_document_hits(query, max_results: max_results, user: user)
+    # nil: the server that holds the family's store is no longer configured.
+    return statement_fallback(query, max_results, reason: "not_configured") if response.nil?
 
     unless response.success?
       error_msg = response.error&.message

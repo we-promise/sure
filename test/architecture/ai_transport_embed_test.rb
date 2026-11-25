@@ -98,7 +98,7 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     endpoint = ai_endpoint(name: "anthropic", protocol: :anthropic, base_url: "https://anthropic.example.test")
     request = Ai::Transport::Base::EmbedRequest.new(feature: :embed, model: ai_model(endpoint:), texts: [ "x" ])
 
-    assert_raises(NotImplementedError) { Ai::Transport.for(endpoint).embed(request) }
+    assert_raises(Ai::Error::Refused) { Ai::Transport.for(endpoint).embed(request) }
   end
 
   test "Ai::Embeddings indexes in batches of 50 on the embed route and queries under search_documents" do
@@ -106,7 +106,7 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     requests = stub_ai
 
     vectors = Ai::Embeddings.index(Array.new(51) { "chunk #{_1}" }, family: @family)
-    query = Ai::Embeddings.query("rent", family: @family)
+    query = Ai::Embeddings.query("rent", family: @family, user: users(:family_admin))   # a search is someone's
 
     assert_equal 51, vectors.size
     assert_equal 768, query.size

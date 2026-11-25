@@ -389,6 +389,7 @@ AI_DEBUG_MODE=true
 - The `OPENAI_ACCESS_TOKEN` can be any non-empty value (Ollama ignores it)
 - If you don't set a model, chats will fail with a validation error
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
+- Ollama caps each model's context at **4096 tokens by default** and truncates longer requests silently. Sure sends the assistant's tool definitions with every request, so a small context can cut off tool results mid-turn and the assistant then answers that it has no financial data even though `get_accounts` runs fine. Set the context to at least `LLM_CONTEXT_WINDOW` plus headroom for tool definitions, tool results, and the reply. Sure talks to Ollama's OpenAI-compatible endpoint, which cannot set `num_ctx` per request — bake the limit into the model with a Modelfile (`PARAMETER num_ctx 16384`, then `ollama create` a model from it and point `OPENAI_MODEL` at that model) or set the server-wide default by starting `ollama serve` with `OLLAMA_CONTEXT_LENGTH=16384` — and raise the two together if long chats or large batches come back truncated
 - If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits. You can also set this in **Settings → Self-Hosting → OpenAI → Request Timeout** when the environment variable is not configured.
 - Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. `AI_RESPONSE_TIMEOUT` has to cover the whole turn, so size it as `(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT` plus tool execution and queue wait — a sum, not simply a larger number than the per-call limit
 - AI jobs run one at a time by default (`RAILS_AI_MAX_THREADS=1`), which suits a local model with one slot; see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes) before raising it
@@ -412,6 +413,8 @@ services:
     image: ollama/ollama:latest
     ports:
       - "11434:11434"
+    environment:
+      - OLLAMA_CONTEXT_LENGTH=${OLLAMA_CONTEXT_LENGTH:-16384} # must cover LLM_CONTEXT_WINDOW plus tool definitions and the reply
     volumes:
       - ollama_data:/root/.ollama
     # Uncomment if you have an NVIDIA GPU
@@ -1657,7 +1660,7 @@ Sure reads an uploaded PDF in one of four ways, then checks what the model retur
 
 | Way | When | Sent to the provider |
 |---|---|---|
-| **PDF** | The model reads PDFs natively (Anthropic, OpenAI's own API) and the file is within the provider's inline limit (32 MB or 100 pages) | The PDF file itself |
+| **PDF** | The model reads PDFs natively (Anthropic, OpenAI's own API) and the file is within the provider's inline limit: at most 100 pages, and 32 MiB on OpenAI or 23.25 MiB (24,379,392 bytes) on Anthropic, whose 32 MB request limit must also hold the file's base64 encoding | The PDF file itself |
 | **Text** | The PDF has a text layer | The text layer, a batch of pages at a time |
 | **Images** | The model reads images (OpenAI's vision models, Anthropic, and any custom OpenAI-compatible server) | Each page as a 150 dpi image at high detail |
 | **OCR** | An OCR model is set up (from the next config release; see below) | Each page as an image to the OCR model, then its transcription to the text model |
@@ -1719,6 +1722,10 @@ one page image per request) has been tested live; Mistral's hasn't. A llama.cpp 
   (`expected 1024 dimensions, got 3072` in the debug log) and nothing is stored. Resolving a
   model whose size doesn't match the database comes in a later release; until then, see
   [Troubleshooting pgvector and embeddings](#troubleshooting-pgvector-and-embeddings) below.
+- **A custom OpenAI-compatible server (`OPENAI_URI_BASE` with a token) no longer gets OpenAI's
+  vector store by default.** If your proxy serves OpenAI's Files and Vector Stores APIs and you use
+  document search through it, set `VECTOR_STORE_PROVIDER=openai` when you upgrade. Without it,
+  uploads aren't indexed, searches find nothing, and deleting a family can't delete its store.
 - **OpenAI vector store:** documents show *processing* until OpenAI has indexed them, and
   *unreadable* when the index is empty (a scan: OpenAI's file search reads text layers only).
   Removing a document deletes its file from OpenAI's Files API; if that fails, the local row and
@@ -1756,7 +1763,7 @@ Sure's AI assistant can search documents that have been uploaded to a family's v
 
 ##### OpenAI (Default)
 
-No extra configuration is needed. If you already have `OPENAI_ACCESS_TOKEN` set for the AI assistant, document search works automatically. OpenAI manages chunking, embedding, and retrieval.
+No extra configuration is needed. If you already have `OPENAI_ACCESS_TOKEN` set for the AI assistant, document search works automatically. OpenAI manages chunking, embedding, and retrieval. With a custom `OPENAI_URI_BASE`, set `VECTOR_STORE_PROVIDER=openai` too, and only if that server serves OpenAI's Files and Vector Stores APIs.
 
 ```bash
 # Already set for AI chat - document search uses the same token

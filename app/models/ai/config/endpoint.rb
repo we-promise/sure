@@ -47,9 +47,10 @@ class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :
   end
 
   # What a provider takes inline as a PDF, by preset. A bigger file is read through its text
-  # layer or page images instead.
+  # layer or page images instead. Anthropic's 32 MB is the whole request, and the PDF goes
+  # base64-encoded (a third larger), so its raw bytes leave room for the encoding and the JSON.
   PDF_LIMITS = {
-    anthropic: { bytes: 32.megabytes, pages: 100 },
+    anthropic: { bytes: 24_379_392, pages: 100 },
     openai: { bytes: 32.megabytes, pages: 100 }
   }.freeze
 

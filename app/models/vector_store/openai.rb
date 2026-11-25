@@ -8,15 +8,28 @@
 # - Removing a file, or the store, deletes it from the Files API too, where it would otherwise
 #   stay after the document or the family is gone.
 class VectorStore::Openai < VectorStore::Base
-  # The backend that accepted a document can differ from the one configured now. Callers that
-  # must reach the original store (an indexing poll, deleting a family's store) use this instead
-  # of the global adapter.
-  def self.from_config
-    endpoint = Ai::Config.current.routes_for(:embed).map(&:endpoint).find(&:vector_store?)
-    new(endpoint:) if endpoint&.api_key
+  # The client for a store created on `endpoint_url` (Family#vector_store_endpoint), found among
+  # every configured OpenAI-compatible endpoint, so a switch to pgvector or a new embed route still reaches it. A
+  # store whose server is no longer configured gets nil: its id means nothing to another server.
+  # A store created before the URL was recorded uses the embed route's endpoint, or failing that
+  # the OpenAI one.
+  def self.for_store(endpoint_url)
+    endpoints = Ai::Config.current.endpoints.select { _1.protocol == :compatible && _1.api_key }
+    endpoint = if endpoint_url.present?
+      endpoints.find { Ai::Transport::Http.same_url?(Ai::Transport::Http.openai_base(_1), endpoint_url) }
+    else
+      Ai::Config.current.routes_for(:embed).map(&:endpoint).find { _1.vector_store? && _1.api_key } ||
+        endpoints.find { _1.name.in?(%w[openai openai_compatible]) }
+    end
+    new(endpoint:) if endpoint
   end
 
+  # The URL the client calls, default included, so an endpoint configured without one is still
+  # found by for_store.
+  attr_reader :endpoint_url
+
   def initialize(endpoint:)
+    @endpoint_url = Ai::Transport::Http.openai_base(endpoint)
     @client = Ai::Transport::Http.openai_client(endpoint)
   end
 
@@ -60,8 +73,12 @@ class VectorStore::Openai < VectorStore::Base
       begin
         client.vector_store_files.create(vector_store_id: store_id, parameters: { file_id: file_id })
       rescue => e
-        delete_file(file_id) rescue nil
-        raise e
+        begin
+          delete_file(file_id)
+        rescue => cleanup_error
+          raise VectorStore::UploadCleanupError.new(file_id:, attachment_error: e, cleanup_error:), cause: e
+        end
+        raise
       end
 
       { file_id: file_id, status: "processing" }

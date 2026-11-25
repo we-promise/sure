@@ -155,6 +155,9 @@ zh-CN:
         anthropic_model_required_for_base_url: 设置 Anthropic Base URL 时必须填写模型。
         invalid_jev_endpoint: Jev 端点必须是 http 或 https URL。仅对您自己网络中的服务器使用 http。
         invalid_categorization_rate: "%{field} 必须是 0 到 1 之间的数字。"
+        invalid_page_cache_days: 缓存页面保留天数必须是 %{minimum} 到 %{maximum} 之间的整数。
+        invalid_page_cache_max_mb: 最大缓存大小必须是 %{minimum} 到 %{maximum} 之间的整兆字节数。
+        invalid_page_cache_cooldown_minutes: 重建间隔分钟数必须是 %{minimum} 到 %{maximum} 之间的整数。
         scheduler_sync_failed: 设置已保存，但同步计划更新失败。请重试或检查服务器日志。
         unsupported_jev_endpoint: Jev 端点必须是 http 或 https URL，且以 /v1/systemone（TypeSafe 或兼容其协议的服务器）或 /alpha/decisions（通过 OpenRouter 使用 Jev）结尾。
       yahoo_finance_settings:
@@ -302,6 +305,13 @@ zh-CN:
         label: API 密钥
         placeholder: 在此输入您的 Chimnie API 密钥
         usage: "本月已使用 %{used} / %{limit} 次请求"
+      terrascoutx_settings:
+        title: TerraScoutX
+        description: 输入您的 TerraScoutX API 密钥，以便在添加房产时查询美国房产详情和估值。该估值为 TerraScoutX 所持最新税册中的县评估官评估价，而非自动市场估价，因此会滞后于市场行情，且在加州等对评估价设限的州可能明显低于市价。覆盖范围因县而异。密钥免费且每月限 2,000 次 API 请求，由房产查询和每日估值刷新共享。如果您的密钥额度更高，可通过 TERRASCOUTX_MAX_REQUESTS_PER_MONTH 环境变量提高上限。
+        env_configured_message: 已通过 TERRASCOUTX_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 TerraScoutX API 密钥
+        usage: "本月已使用 %{used} / %{limit} 次请求"
       tinkoff_invest_settings:
         title: T-Invest (T-Bank)
         description: 输入只读 T-Invest API 令牌。用于获取证券的品牌 Logo（包括基金和债券，即使它们由 MOEX 定价），并在上方启用时获取俄罗斯金融产品的价格。
@@ -365,3 +375,9 @@ zh-CN:
         market_data_sync_description: 启用后，将在指定时间每天（周一至周五）自动导入证券价格一次。
         market_data_sync_time_label: 市场数据导入时间（HH:MM）
         market_data_sync_time_description: 指定每日运行证券价格导入的时间 — 例如在您的主要交易所收盘后不久。
+        page_cache_days_label: 缓存页面保留时长（天）
+        page_cache_days_description: "每次同步后都会提前生成报表，若无人打开则保留此天数。默认值：%{default_days}。PAGE_CACHE_DAYS 会覆盖此字段。"
+        page_cache_cooldown_minutes_label: 缓存页面最短重建间隔（分钟）
+        page_cache_cooldown_minutes_description: "当缓存页面背后的数据发生变化时，后台最多每隔此分钟数重建一次新页面，期间仍会显示原有页面。点击页面上的“刷新”可立即重建。设为 0 则每次变化后都立即重建。默认值：%{default_minutes}。PAGE_CACHE_COOLDOWN_MINUTES 会覆盖此字段。"
+        page_cache_max_mb_label: 最大缓存大小（MB）
+        page_cache_max_mb_description: "缓存页面合计可占用的最大空间。当新页面会超出限制时，将优先移除最久未打开的页面；大于总上限的单个页面仍会显示，但不会保留缓存。已使用 %{used} / %{limit}。默认值：%{default_mb}。PAGE_CACHE_MAX_MB 会覆盖此字段。"

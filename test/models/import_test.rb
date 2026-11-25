@@ -98,6 +98,87 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal "reverting", import.reload.status
   end
 
+  test "publish_later enqueues the publish with its claim token" do
+    import = imports(:pdf_with_rows)
+    import.update!(status: :pending, reread_token: "old-attempt")
+    import.stubs(:publishable?).returns(true)
+
+    assert_enqueued_with(job: ImportJob) { import.publish_later }
+
+    token = import.reload.reread_token
+    assert_equal token, enqueued_jobs.last[:args].last.with_indifferent_access[:publish_token]
+  end
+
+  test "publish with a stale token leaves a newer reread claim intact" do
+    import = imports(:pdf_with_rows)
+    import.update_columns(status: "importing", reread_token: "current")
+    import.expects(:import!).never
+
+    import.publish(publish_token: "stale")
+
+    import.reload
+    assert import.importing?
+    assert_equal "current", import.reread_token
+  end
+
+  test "publish that can't check its claim raises, so the job is retried" do
+    import = imports(:transaction)
+    import.update_columns(status: "importing", reread_token: "current")
+    import.stubs(:with_lock).raises(ActiveRecord::ConnectionFailed, "connection lost")
+    import.expects(:import!).never
+
+    assert_raises(ActiveRecord::ConnectionFailed) { import.publish(publish_token: "current") }
+    assert import.reload.importing?
+  end
+
+  test "publish with the current token consumes the claim before importing" do
+    import = imports(:transaction)
+    import.update_columns(status: "importing", reread_token: "current")
+    import.stubs(:import!)
+
+    import.publish(publish_token: "current")
+
+    assert import.reload.complete?
+    assert_nil import.reread_token
+  end
+
+  test "publish_later refuses blank row dates with a correction message" do
+    import = imports(:transaction)
+    import.update_columns(status: "pending", reread_token: nil)
+    import.rows.first.update_columns(date: "")
+    import.stubs(:publishable?).returns(true)
+
+    assert_no_enqueued_jobs do
+      error = assert_raises(Import::InvalidRowDataError) { import.publish_later }
+      assert_equal I18n.t("imports.errors.blank_dates"), error.message
+    end
+
+    assert import.reload.pending?
+    assert_nil import.reread_token
+  end
+
+  test "publish refuses blank row dates before importing" do
+    import = imports(:transaction)
+    import.update_columns(status: "pending", reread_token: nil)
+    import.rows.first.update_columns(date: "")
+    import.expects(:import!).never
+
+    import.publish
+
+    assert import.reload.failed?
+    assert_equal I18n.t("imports.errors.blank_dates"), import.error
+  end
+
+  test "a blank row date is reported as a row data error" do
+    import = imports(:transaction)
+    row = import.rows.first
+    row.update_columns(date: "")
+
+    error = assert_raises(Import::InvalidRowDataError) { row.date_iso }
+
+    assert_equal I18n.t("imports.errors.blank_dates"), error.message
+  end
+
   test "clean fails stuck imports but leaves PdfImports to their own reclaim" do
     stuck_csv = imports(:transaction)
     stuck_csv.update_columns(status: "importing", updated_at: 7.hours.ago)
@@ -211,6 +292,16 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal "pending", pdf.reload.status
   end
 
+  test "force_fail! completes a lost PdfImport publish whose ledger transaction committed" do
+    pdf = imports(:pdf_with_rows)
+    pdf.update_columns(status: "importing", updated_at: 2.hours.ago)
+    pdf.stubs(:data_committed?).returns(true)
+    Family.any_instance.expects(:sync_later)
+
+    assert pdf.force_fail!
+    assert pdf.reload.complete?
+  end
+
   # Category/Merchant/Rule imports attach nothing to the import (their records
   # hang off the family), so reap_stuck! leans on the type-specific
   # data_committed? override to tell a committed run from a rolled-back one.
@@ -300,5 +391,21 @@ class ImportTest < ActiveSupport::TestCase
     csv = Import.parse_csv_str("name\n'+44 Taxis\n+44 Taxis\n")
 
     assert_equal [ "'+44 Taxis", "+44 Taxis" ], csv["name"]
+  end
+
+  test "an import is viewable by the family unless its statement is private" do
+    member = users(:family_member)
+    assert TransactionImport.create!(family: member.family).viewable_by?(member)
+
+    statement = AccountStatement.create_from_upload!(
+      family: member.family,
+      account: accounts(:investment),
+      file: uploaded_file(filename: "statement.pdf", content_type: "application/pdf",
+                          content: file_fixture("imports/sample_bank_statement.pdf").binread)
+    )
+    pdf_import = PdfImport.create_from_statement!(statement: statement)
+
+    assert pdf_import.viewable_by?(users(:family_admin))
+    assert_not pdf_import.viewable_by?(member)
   end
 end

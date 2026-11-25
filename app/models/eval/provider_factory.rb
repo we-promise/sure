@@ -89,7 +89,7 @@ class Eval::ProviderFactory
       raise Error, "Jev API key not configured" unless api_key.present?
 
       if (reason = jev.unreachable_reason(url))
-        raise Error, "Jev endpoint not supported: #{jev.redacted_endpoint(url)}: #{jev::UNSUPPORTED.fetch(reason)}"
+        raise Error, "Jev endpoint not supported: #{jev.endpoint_origin(url)}: #{jev::UNSUPPORTED.fetch(reason)}"
       end
 
       endpoint = jev.endpoint(url, api_key:, timeout_seconds: 30, parallel_requests: config[:concurrency])

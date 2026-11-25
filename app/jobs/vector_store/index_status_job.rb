@@ -18,7 +18,7 @@ class VectorStore::IndexStatusJob < ApplicationJob
 
     # Another store can't speak for this one's file (pgvector would call any id ready).
     accepted_by = document.metadata.to_h["vector_store"]
-    adapter = adapter_for(accepted_by)
+    adapter = family.document_adapter(document)
     if adapter.nil?
       message = accepted_by.present? ? "the vector store changed from #{accepted_by} while it indexes" : "vector store no longer configured"
       return mark_error_if_processing(document, message)
@@ -29,7 +29,7 @@ class VectorStore::IndexStatusJob < ApplicationJob
 
     case status
     when "processing"
-      return mark_error_if_processing(document, "indexing didn't finish") if polls >= MAX_POLLS
+      return mark_timeout_if_processing(document) if polls >= MAX_POLLS
 
       enqueue_next_poll(document, polls)
     when "error" then mark_error_if_processing(document, response.data[:error])
@@ -38,23 +38,24 @@ class VectorStore::IndexStatusJob < ApplicationJob
   end
 
   private
-    # Poll the backend that accepted the file, not whichever one is configured now. Only OpenAI
-    # indexes asynchronously, but a document predating the recorded backend still uses the
-    # configured adapter.
-    def adapter_for(backend)
-      return VectorStore.adapter if backend.blank?
-      return VectorStore::Openai.from_config if backend == "openai"
-      return VectorStore::Pgvector.new if backend == "pgvector" && VectorStore::Pgvector.available?
-
-      configured = VectorStore.adapter
-      configured if configured && VectorStore.backend_name(configured) == backend
-    end
-
     # Polls overlap: an old one must not turn a `ready` row back into `error`. `with_lock` reloads
     # the row under the lock, so the decision is made against its current state.
     def mark_error_if_processing(document, message)
       document.with_lock do
         document.mark_error!(message) if document.status == "processing"
+      end
+    end
+
+    # A provider that is still processing after the poll cap is not a bad document. Keep the
+    # timeout recoverable: a later reread calls FamilyDocument#poll_index_later, which resumes
+    # polling once the provider has had time to finish.
+    def mark_timeout_if_processing(document)
+      document.with_lock do
+        next unless document.status == "processing"
+
+        document.update!(status: "error", metadata: document.metadata.to_h.merge(
+          "error" => "indexing didn't finish", "indexing_timeout" => true
+        ))
       end
     end
 

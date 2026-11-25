@@ -32,9 +32,9 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         If account_id is not provided, you should ask the user which account to import to.
 
         read_as is optional: leave it out (Auto) unless the user asks for a way. If an earlier
-        extraction came out badly, ask the user to delete its draft import first; publishing or
-        reviewing that draft does not allow a second extraction, and read_as alone won't create one
-        while the draft exists.
+        extraction came out badly, a second one needs its import gone first: the tool's
+        draft_already_exists answer says what the user must do (delete it, or revert a published one
+        and then delete it).
       INSTRUCTIONS
     end
   end
@@ -65,7 +65,7 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   def call(params = {})
-    pdf_import = family.imports.find_by(id: params["pdf_import_id"], type: "PdfImport")
+    pdf_import = find_pdf_import(params["pdf_import_id"])
 
     unless pdf_import
       return {
@@ -90,17 +90,17 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         success: false,
         error: "account_required",
         message: "Please specify which account to import transactions into",
-        available_accounts: family.accounts.visible.depository.map { |a| { id: a.id, name: a.name } }
+        available_accounts: account_choices
       }
     end
 
-    account = family.accounts.find_by(id: params["account_id"])
+    account = writable_accounts.find_by(id: params["account_id"]) if valid_uuid?(params["account_id"])
     unless account
       return {
         success: false,
         error: "account_not_found",
-        message: "Account not found",
-        available_accounts: family.accounts.visible.depository.map { |a| { id: a.id, name: a.name } }
+        message: "No writable account matched that account_id",
+        available_accounts: account_choices
       }
     end
 
@@ -110,20 +110,8 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     # Two live drafts from one statement could both publish overlapping rows as
     # new transactions. Reuse the waiting draft instead of leaving another one
     # to publish on top of it.
-    live_draft = family.imports.find_by(
-      type: "TransactionImport", source_pdf_import_id: pdf_import.id, account_id: account.id,
-      status: %w[pending importing complete]
-    )
-    if live_draft
-      return {
-        success: false,
-        error: "draft_already_exists",
-        import_id: live_draft.id,
-        message: "This statement already has a draft for that account (import #{live_draft.id}). " \
-                 "Delete that draft first; reviewing or publishing it does not allow a second extraction, " \
-                 "and read_as alone cannot create another draft while it exists.",
-        available_actions: [ "Ask the user to delete draft import #{live_draft.id}, then call this tool again" ]
-      }
+    if (draft = live_draft(pdf_import, account))
+      return draft_exists(draft)
     end
 
     read_as = params["read_as"].presence_in(PdfImport::READ_AS) || "auto"   # omitted is Auto, as the tool says
@@ -143,8 +131,13 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     csv_content = generate_csv(result[:transactions])
 
     # A row-generation failure must roll the draft back too, or a retry meets an empty
-    # draft and can only report draft_already_exists.
-    import = family.imports.transaction do
+    # draft and can only report draft_already_exists. The draft is checked again under the source
+    # import's lock: another call may have created one while this one extracted.
+    import = pdf_import.with_lock do
+      if (draft = live_draft(pdf_import, account))
+        return draft_exists(draft)
+      end
+
       created = family.imports.create!(
         type: "TransactionImport",
         account: account,
@@ -179,17 +172,36 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   rescue Ai::Error::Unavailable => e
     # Model-facing and not localized: the assistant words it for the user.
     { success: false, error: "unavailable", reason: e.reason.to_s, message: "No way to read this PDF is available (#{e.reason})." }
+  # Provider messages can quote the statement (an account number, for example), so neither the
+  # log nor the model-facing answer carries raw exception text. The correlation id ties the
+  # failure to the traced request instead.
   rescue Ai::Error::Base, Pdf::PageImages::Error, Timeout::Error, RuntimeError => e
-    Rails.logger.error("ImportBankStatement error: #{e.class.name} - #{e.message}")
+    Rails.logger.error("ImportBankStatement error: #{e.class.name} (correlation: #{Ai::CallContext.correlation_id})")
     Rails.logger.error(e.backtrace.first(10).join("\n"))
     {
       success: false,
       error: "extraction_failed",
-      message: "Failed to extract transactions: #{e.message.truncate(200)}"
+      message: "The statement could not be extracted. Try again or choose another way to read it."
     }
   end
 
   private
+    # Same visibility as the web's import page: another member's private
+    # statement is not found, so it is neither sent to the model nor echoed back.
+    def find_pdf_import(id)
+      pdf_import = family.imports.find_by(id: id, type: "PdfImport")
+      pdf_import if pdf_import&.viewable_by?(user)
+    end
+
+    # The import writes transactions into the account, so the user needs write
+    # access to it, as the web requires to publish and the API to create.
+    def writable_accounts
+      family.accounts.writable_by(user)
+    end
+
+    def account_choices
+      writable_accounts.visible.depositories.map { |a| { id: a.id, name: a.name } }
+    end
 
     # The refusal every AI gate on this path returns: the router's reason and its message.
     def ai_unavailable(availability)
@@ -203,6 +215,33 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         "The statement's balances weren't found, so the rows couldn't be checked; ask the user to review them. "
       else "The extraction failed its checks, so some rows may be wrong or missing; tell the user. "
       end
+    end
+
+    # A draft that still waits, runs or published rows from this statement for this account.
+    def live_draft(pdf_import, account)
+      family.imports.where(type: "TransactionImport", source_pdf_import_id: pdf_import.id, account_id: account.id)
+            .where("status IN (?) OR EXISTS (SELECT 1 FROM entries WHERE entries.import_id = imports.id)",
+                   %w[pending importing complete reverting revert_failed])
+            .first
+    end
+
+    # What clears the guard: deleting the draft, after reverting it if it published anything.
+    # Both need write access to the account.
+    def draft_exists(draft)
+      step = if draft.complete? || draft.entries.exists?
+        "revert import #{draft.id} on the imports page, which removes the transactions it published, then delete it"
+      else
+        "delete draft import #{draft.id}"
+      end
+      {
+        success: false,
+        error: "draft_already_exists",
+        import_id: draft.id,
+        message: "This statement already has an import for that account (import #{draft.id}). To extract it again, " \
+                 "the user must #{step}; that needs write access to the account. Reviewing or publishing it does " \
+                 "not allow a second extraction, and read_as alone cannot create another while it exists.",
+        available_actions: [ "Ask the user to #{step}, then call this tool again" ]
+      }
     end
 
     def generate_csv(transactions)

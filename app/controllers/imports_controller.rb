@@ -56,6 +56,8 @@ class ImportsController < ApplicationController
     redirect_to import_path(@import), alert: t(".already_claimed")
   rescue Import::MaxRowCountExceededError
     redirect_back_or_to import_path(@import), alert: t(".max_rows_exceeded", max: @import.max_row_count)
+  rescue Import::InvalidRowDataError => error
+    redirect_to import_clean_path(@import, view: "errors"), alert: error.message
   end
 
   # Statement imports only: what became of each extracted transaction. Without it
@@ -214,7 +216,7 @@ class ImportsController < ApplicationController
   private
     def set_import
       @import = Current.family.imports.includes(:account, :account_statement).find(params[:id])
-      raise ActiveRecord::RecordNotFound if @import.account_statement.present? && !@import.account_statement.viewable_by?(Current.user)
+      raise ActiveRecord::RecordNotFound unless @import.viewable_by?(Current.user)
     end
 
     def import_params

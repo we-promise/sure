@@ -16,6 +16,13 @@ es:
       show:
         page_title: Indicaciones de IA
         disable_ai: Desactivar Asistente de IA
+        save: Guardar instrucciones
+        save_confirm:
+          title: "¿Guardar instrucciones de IA personalizadas?"
+          body: Las instrucciones personalizadas sustituyen a las instrucciones de sistema integradas y a las salvaguardas de seguridad (como las restricciones sobre asesoramiento financiero) para tu familia.
+          dont_show_again: No volver a mostrar este aviso
+          cancel: Cancelar
+          confirm: Confirmar
         main_system_prompt:
           title: Indicaciones del Sistema Principal
           subtitle: Instrucciones principales que definen cómo se comporta el asistente de IA en todas las conversaciones de chat

@@ -290,7 +290,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     use_ai_routes
     import = imports(:pdf_with_rows)
     PdfImport.any_instance.stubs(:pdf_uploaded?).returns(true)
-    PdfImport.any_instance.stubs(:pdf_reading).returns(stub(ways: { text: nil }))
+    PdfImport.any_instance.stubs(:pdf_reading).returns(stub(usable?: true))
 
     assert_enqueued_with(job: ProcessPdfJob) do
       post reread_import_url(import), params: { import: { read_as: "text" } }
@@ -547,6 +547,17 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal Ai::Availability.unavailable(:embed, :not_configured).message_for(@user), flash[:alert]
   end
 
+  test "a document upload by a user with AI off sends nothing to the vector store" do
+    use_ai_routes
+    @user.update!(ai_enabled: false)
+    Family.any_instance.expects(:upload_document).never
+
+    post imports_url, params: { import: { type: "DocumentImport", import_file: file_fixture_upload("imports/valid.csv", "text/csv") } }
+
+    assert_redirected_to new_import_url
+    assert_equal Ai::Availability.unavailable(:embed, :user_disabled).message_for(@user), flash[:alert]
+  end
+
   test "a document upload says no store is configured when the embed route is set but the store can't be built" do
     VectorStore::Registry.stubs(:adapter).returns(nil)
     use_ai_routes
@@ -617,6 +628,17 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to import_path(import)
     assert_equal I18n.t("imports.publish.enqueue_failed"), flash[:alert]
+  end
+
+  test "a blank row date sends the user back to the clean step with a correction" do
+    import = imports(:transaction)
+    message = I18n.t("imports.errors.blank_dates")
+    TransactionImport.any_instance.stubs(:publish_later).raises(Import::InvalidRowDataError, message)
+
+    post publish_import_url(import)
+
+    assert_redirected_to import_clean_path(import, view: "errors")
+    assert_equal message, flash[:alert]
   end
 
   test "member cannot publish import targeting a read only shared account" do

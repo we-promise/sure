@@ -54,6 +54,23 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
 
     expect_status("processing")
     VectorStore::IndexStatusJob.perform_now(@document, VectorStore::IndexStatusJob::MAX_POLLS)
+    @document.reload
+    assert_equal "error", @document.status
+    assert_equal true, @document.metadata["indexing_timeout"]
+  end
+
+  test "a poll-cap timeout is resumable while a provider error stays terminal" do
+    expect_status("processing")
+    VectorStore::IndexStatusJob.perform_now(@document, VectorStore::IndexStatusJob::MAX_POLLS)
+    assert_equal true, @document.reload.metadata["indexing_timeout"]
+
+    assert_enqueued_with(job: VectorStore::IndexStatusJob) { assert @document.poll_index_later }
+    @document.reload
+    assert_equal "processing", @document.status
+    assert_nil @document.metadata["indexing_timeout"]
+
+    @document.mark_error!("bad file")
+    assert_not @document.poll_index_later
     assert_equal "error", @document.reload.status
   end
 
@@ -76,7 +93,7 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
   test "an unavailable backend that accepted the document errors instead of calling it ready" do
     @document.update_column(:metadata, { "vector_store" => "openai" })
     @adapter.expects(:file_status).never
-    VectorStore::Openai.stubs(:from_config).returns(nil)
+    VectorStore::Openai.stubs(:for_store).returns(nil)
 
     VectorStore::IndexStatusJob.perform_now(@document)
 
@@ -89,7 +106,7 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
     openai = mock("openai_adapter")
     openai.expects(:file_status).with(store_id: "vs_abc123", file_id: "file-xyz")
           .returns(VectorStore::Response.new(success?: true, data: { status: "ready" }, error: nil))
-    VectorStore::Openai.stubs(:from_config).returns(openai)
+    VectorStore::Openai.stubs(:for_store).returns(openai)
     @adapter.expects(:file_status).never
 
     VectorStore::IndexStatusJob.perform_now(@document)
@@ -124,7 +141,7 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
     assert_equal "processing", @document.reload.status
 
     VectorStore::IndexStatusJob.unstub(:set)
-    assert_enqueued_with(job: VectorStore::IndexStatusJob) { @document.poll_index_later }
+    assert_enqueued_with(job: VectorStore::IndexStatusJob) { VectorStore::RequeueIndexPollsJob.perform_now }
   end
 
   private

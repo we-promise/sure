@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -631,6 +631,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.string "account_id"
     t.string "account_status"
     t.string "account_type"
+    t.decimal "anchor_pending_total", precision: 19, scale: 4
     t.boolean "balance_evidence_verified", default: false, null: false
     t.boolean "balance_verified", default: false, null: false
     t.datetime "created_at", null: false
@@ -644,6 +645,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
     t.string "name"
+    t.decimal "pending_total", precision: 19, scale: 4
     t.string "product"
     t.string "provider"
     t.jsonb "raw_payload"
@@ -868,6 +870,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.string "stripe_customer_id"
     t.string "timezone"
     t.datetime "updated_at", null: false
+    t.string "vector_store_endpoint"
     t.string "vector_store_id"
     t.index ["bills_feed_token"], name: "index_families_on_bills_feed_token", unique: true
     t.check_constraint "categorization_confidence_threshold >= 0::numeric AND categorization_confidence_threshold <= 1::numeric", name: "chk_families_categorization_confidence_threshold"
@@ -2002,12 +2005,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.string "avm_external_id"
     t.date "avm_last_synced_on"
     t.string "avm_provider"
+    t.uuid "cost_tag_id"
     t.datetime "created_at", null: false
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
+    t.index ["cost_tag_id"], name: "index_properties_on_cost_tag_id"
     t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text, 'chimnie'::character varying::text, 'terrascoutx'::character varying::text]))", name: "properties_avm_provider_check"
   end
 
@@ -2104,20 +2109,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.index ["status"], name: "index_questrade_items_on_status"
   end
 
-  create_table "receipt_itemizations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "transaction_id", null: false
-    t.uuid "user_id", null: false
-    t.uuid "attachment_id", null: false
-    t.string "status", default: "pending", null: false
-    t.jsonb "proposal", default: {}, null: false
-    t.string "error_code"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["attachment_id"], name: "index_receipt_itemizations_on_attachment_id"
-    t.index ["transaction_id"], name: "index_receipt_itemizations_on_transaction_id"
-    t.index ["user_id"], name: "index_receipt_itemizations_on_user_id"
-  end
-
   create_table "recurrence_rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "day_of_month"
@@ -2138,6 +2129,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
     t.check_constraint "weekday IS NULL OR weekday >= 0 AND weekday <= 6", name: "chk_recurrence_rules_weekday_range"
     t.check_constraint "weekday_ordinal IS NULL OR weekday IS NOT NULL", name: "chk_recurrence_rules_ordinal_requires_weekday"
     t.check_constraint "weekday_ordinal IS NULL OR weekday_ordinal >= '-1'::integer AND weekday_ordinal <= 5 AND weekday_ordinal <> 0", name: "chk_recurrence_rules_weekday_ordinal_range"
+  end
+
+  create_table "receipt_itemizations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "transaction_id", null: false
+    t.uuid "user_id", null: false
+    t.uuid "attachment_id", null: false
+    t.string "status", default: "pending", null: false
+    t.jsonb "proposal", default: {}, null: false
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["attachment_id"], name: "index_receipt_itemizations_on_attachment_id"
+    t.index ["transaction_id"], name: "index_receipt_itemizations_on_transaction_id"
+    t.index ["user_id"], name: "index_receipt_itemizations_on_user_id"
   end
 
   create_table "recurring_allocations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3319,13 +3324,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "plaid_items", "users", column: "owner_id", on_delete: :nullify
+  add_foreign_key "properties", "tags", column: "cost_tag_id", on_delete: :nullify
   add_foreign_key "push_deliveries", "insights"
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"
-  add_foreign_key "receipt_itemizations", "active_storage_attachments", column: "attachment_id", on_delete: :cascade
-  add_foreign_key "receipt_itemizations", "transactions", on_delete: :cascade
-  add_foreign_key "receipt_itemizations", "users", on_delete: :cascade
   add_foreign_key "recurrence_rules", "recurring_transactions", on_delete: :cascade
   add_foreign_key "recurring_allocations", "entries", on_delete: :nullify
   add_foreign_key "recurring_allocations", "recurring_occurrences", column: ["recurring_occurrence_id", "currency"], primary_key: ["id", "currency"], name: "fk_recurring_allocations_currency_matches_occurrence", on_delete: :cascade
@@ -3400,4 +3403,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_110000) do
   add_foreign_key "weekly_cleanup_runs", "users", on_delete: :cascade
   add_foreign_key "wise_accounts", "wise_items", on_delete: :cascade
   add_foreign_key "wise_items", "families"
+  add_foreign_key "receipt_itemizations", "active_storage_attachments", column: "attachment_id", on_delete: :cascade
+  add_foreign_key "receipt_itemizations", "transactions", on_delete: :cascade
+  add_foreign_key "receipt_itemizations", "users", on_delete: :cascade
+
 end

@@ -37,6 +37,14 @@ class PdfImportReadingTest < ActiveSupport::TestCase
     assert_equal "images", PdfImport.last_passing_way(account: @account, model: "gpt-4.1-mini")
   end
 
+  test "Auto's way is keyed by the model it started from, even when a fallback answered" do
+    imports(:pdf).update!(account: @account, read_with: "images", read_model: "fallback-model",
+                          extraction_checks: { "passed" => true, "tuned_model" => "gpt-4.1-mini" })
+
+    assert_equal "images", PdfImport.last_passing_way(account: @account, model: "gpt-4.1-mini")
+    assert_nil PdfImport.last_passing_way(account: @account, model: "fallback-model")
+  end
+
   test "a job's ReadPdf and extraction share one reader, so the PDF is downloaded once" do
     @import.expects(:pdf_file_content).once.returns("%PDF-1.4")
 
@@ -60,7 +68,7 @@ class PdfImportReadingTest < ActiveSupport::TestCase
   test "reading again another way queues the job, which clears the unpublished rows when it starts" do
     @import.update!(read_with: "text", extraction_checks: { "passed" => false }, extracted_data: { "transactions" => [] })
     @import.stubs(:pdf_uploaded?).returns(true)
-    @import.stubs(:pdf_reading).returns(stub(ways: { images: nil }))
+    @import.stubs(:pdf_reading).returns(stub(usable?: true))
     row = @import.rows.create!(source_row_number: 1, date: "01/15/2024", amount: "-50.00", name: "Coffee Shop", currency: "USD")
 
     assert_enqueued_with(job: ProcessPdfJob) { assert @import.reread!("images") }
@@ -81,7 +89,7 @@ class PdfImportReadingTest < ActiveSupport::TestCase
 
   test "clearing a reread keeps its token so a redelivered job can resume" do
     @import.stubs(:pdf_uploaded?).returns(true)
-    @import.stubs(:pdf_reading).returns(stub(ways: { images: nil }))
+    @import.stubs(:pdf_reading).returns(stub(usable?: true))
     @import.rows.create!(source_row_number: 1, date: "01/15/2024", amount: "-50.00", name: "Coffee Shop", currency: "USD")
     assert @import.reread!("images")
     token = @import.reload.reread_token
@@ -95,7 +103,7 @@ class PdfImportReadingTest < ActiveSupport::TestCase
 
   test "a delayed reread cannot clear a newer claim or a publish" do
     @import.stubs(:pdf_uploaded?).returns(true)
-    @import.stubs(:pdf_reading).returns(stub(ways: { images: nil }))
+    @import.stubs(:pdf_reading).returns(stub(usable?: true))
     row = @import.rows.create!(source_row_number: 1, date: "01/15/2024", amount: "-50.00", name: "Coffee Shop", currency: "USD")
     assert @import.reread!("images")
     old_token = @import.reload.reread_token
@@ -116,7 +124,7 @@ class PdfImportReadingTest < ActiveSupport::TestCase
     reading = { "transactions" => [ { "date" => "2024-01-15", "amount" => "-50.00", "name" => "Coffee Shop" } ] }
     @import.update!(read_as: "auto", extracted_data: reading)
     @import.stubs(:pdf_uploaded?).returns(true)
-    @import.stubs(:pdf_reading).returns(stub(ways: { images: nil }))
+    @import.stubs(:pdf_reading).returns(stub(usable?: true))
     ProcessPdfJob.stubs(:perform_later).raises(StandardError, "queue down")
 
     assert_equal :enqueue_failed, @import.reread!("images")

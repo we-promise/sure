@@ -16,15 +16,27 @@ class FamilyDocument < ApplicationRecord
   # readable_by trusts the account, so it has to be the document's family's.
   validate :account_belongs_to_family
 
+  # A PDF ProcessPdfJob processed before documents recorded their statement or import.
+  UNKNOWN_STATEMENT = <<~SQL.squish.freeze
+    jsonb_exists(COALESCE(family_documents.metadata, '{}'::jsonb), 'type')
+    AND NOT jsonb_exists_any(COALESCE(family_documents.metadata, '{}'::jsonb), array['account_statement_id', 'pdf_import_id'])
+  SQL
+
   scope :ready, -> { where(status: "ready") }
+  # Rows that only keep an uploaded file's id for cleanup: its attachment and its compensating
+  # deletion both failed (Family#upload_document). They are not search copies.
+  scope :unattached, -> { where.not("metadata->>'cleanup_error' IS NULL") }
+  scope :search_copies, -> { where("metadata->>'cleanup_error' IS NULL") }
 
   # The documents a user may read, among those whose indexing succeeded (an error or unreadable
   # one has nothing usable): those on an account they can reach, and those with no account. The
   # store is family-wide, so this is the only filter between members. A statement not yet
   # matched to an account follows AccountStatement#viewable_by?: statement managers only. Other
-  # documents without an account (a tax return) are the whole family's.
+  # documents without an account (a tax return) are the whole family's, except a PDF processed
+  # before documents recorded their statement: it carries only its document type and could come
+  # from any account, so nobody reads it.
   scope :readable_by, ->(user) {
-    unlinked = where(account_id: nil)
+    unlinked = where(account_id: nil).where.not(UNKNOWN_STATEMENT)
     unlinked = unlinked.where("metadata->>'account_statement_id' IS NULL") unless AccountStatement.statement_manager?(user)
 
     unlinked.or(where(account_id: Account.accessible_by(user).select(:id)))
@@ -41,6 +53,11 @@ class FamilyDocument < ApplicationRecord
   def self.requeue_index_polls = where(status: "processing").find_each(&:poll_index_later)
 
   def poll_index_later
+    # A reread of the same document resumes a copy whose poll cap was reached while the provider
+    # was still indexing. Other errors stay terminal: they need a new upload/copy, not another poll.
+    if status == "error" && metadata.to_h["indexing_timeout"]
+      update!(status: "processing", metadata: metadata.to_h.except("indexing_timeout"))
+    end
     return false unless status == "processing"
 
     VectorStore::IndexStatusJob.perform_later(self)

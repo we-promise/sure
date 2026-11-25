@@ -84,6 +84,7 @@ class Ai::Transport::HttpTest < ActiveSupport::TestCase
       "http://ollama:11434/v1/" => "http://ollama:11434/v1",
       "https://generativelanguage.googleapis.com/v1beta/openai/" => "https://generativelanguage.googleapis.com/v1beta/openai",
       "https://api.cloudflare.com/client/v4/accounts/a/ai/v1" => "https://api.cloudflare.com/client/v4/accounts/a/ai/v1",
+      "https://api.cloudflare.com/client/v4/accounts/a/ai" => "https://api.cloudflare.com/client/v4/accounts/a/ai/v1",
       "http://agent:18789/v1/chat/completions" => "http://agent:18789/v1",
       "http://v1-proxy.lan:8080" => "http://v1-proxy.lan:8080/v1",
       "https://envoy.example.com/v13" => "https://envoy.example.com/v13"

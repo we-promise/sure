@@ -34,6 +34,13 @@ module Pdf::PageImages
 
   def page_count(content) = readable { reader(content).page_count }
 
+  # The renderer's absolute path (the child runs in a temporary directory), or nil when it isn't
+  # installed.
+  def executable(binary = "pdftoppm")
+    path = binary.include?("/") ? binary : ENV.fetch("PATH", "").split(":").map { File.join(_1, binary) }.find { File.executable?(_1) }
+    File.expand_path(path) if path
+  end
+
   # PNGs of `pages` (a 1-based Range or a list of page numbers; every page by default), in
   # order. Consecutive pages share one child; a gap is never rendered.
   def render(content, pages: nil, dpi: DPI, binary: "pdftoppm", **limits)
@@ -42,7 +49,7 @@ module Pdf::PageImages
     wanted = pages_for(readable { pdf.page_count }, pages)
     check_size!(pdf, numbers: wanted, dpi:)
 
-    executable = binary.include?("/") ? binary : ENV.fetch("PATH", "").split(":").map { File.join(_1, binary) }.find { File.executable?(_1) }
+    executable = executable(binary)
     raise Error.new("pdftoppm is not installed (poppler-utils)", code: :missing_binary) unless executable
 
     Dir.mktmpdir do |dir|

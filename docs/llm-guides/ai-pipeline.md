@@ -74,7 +74,7 @@ flowchart LR
   R --> C["Ai::Config.current<br/>endpoints, models, routes"]
   C --> L["Ai::LegacyEnvConfig<br/>deprecated ENV + Setting"]
   R --> M["Ai::Routes::MATRIX<br/>lane, needs, consent, sends"]
-  R --> K["Ai::Consent<br/>the user's AI switch"]
+  R --> K["Ai::Consent<br/>the user's or the family's"]
   R -->|"Ai::Plan or Ai::Availability(reason)"| Caller
 ```
 
@@ -102,9 +102,12 @@ flowchart LR
 - **A new feature is a row in `Ai::Routes::MATRIX`**, with `sends:` keys described in
   `config/locales/models/ai/en.yml`, and its key is permanent once released. Regenerate the table
   below with `bin/rails ai:routes_doc`; `ai_routing_matrix_test` fails when it's stale.
-- **Consent:** check each feature's Consent row in `Ai::Routes::MATRIX` above: chat, bills, PDF
-  import, embedding and document search are user-level, while the category and merchant features
-  are family-level. `Ai::Consent` currently enforces the user switch only for chat and bills.
+- **Consent** is the level the matrix declares. A `user` feature needs the person's own AI switch
+  (`users.ai_enabled`); a `family` feature needs `Family#ai_consented?`, which until families
+  record consent means a family admin turned that switch on. Uploading a PDF for import is itself
+  the request, so `extract_pdf`, and `embed` asked with no user (the upload's search copy), need
+  no switch. A background run without the family's consent fails with `no_family_consent` (the
+  generation raises `Ai::Error::Unavailable`), so a rule run says why it changed nothing.
 - **An AI tool declares its feature** (`ai_feature :extract_pdf` on an `Assistant::Function`), so
   chat and MCP list it only while the feature is available.
 - **`Ai::Config` is built in each process from its own ENV**, so give the web and the worker
@@ -319,10 +322,11 @@ flowchart LR
 
 **Rules**
 
-- **Decide what to send from capabilities, before sending.** A transport refuses an image to a
-  model without `vision` and a PDF to one without `documents`, and a generation skips such a route
-  (`Ai::Generation#needs`). RubyLLM sends a PDF as a file part to every compatible server, and most
-  refuse it; llama.cpp answers an image it can't read with a 500.
+- **Decide what to send from capabilities, before sending.** In `generate`, a transport refuses an
+  image to a model without `vision` and a PDF to one without `documents`, and a generation skips
+  such a route (`Ai::Generation#needs`). RubyLLM sends a PDF as a file part to every compatible
+  server, and most refuse it; llama.cpp answers an image it can't read with a 500. `ocr` is gated by
+  the `ocr` capability alone and takes page images: OCR-only models have no `vision`.
 - **Files go inline for extraction.** `auto_upload_large_files` stays off, so reading a statement
   never leaves it in a provider's Files API; the preset's inline limit
   (`Ai::Config::Endpoint::PDF_LIMITS`) sends a bigger PDF another way. Indexing is separate: with
