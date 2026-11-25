@@ -11,6 +11,52 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     @family.recurring_transactions.destroy_all
   end
 
+  test "bank_reference lives in matcher_hints, squished, and blank removes it" do
+    series = @family.recurring_transactions.create!(
+      name: "Water", account: @account, amount: 80, currency: "USD", expected_day_of_month: 5,
+      last_occurrence_date: Date.current, next_expected_date: 1.month.from_now.to_date,
+      status: "active", manual: true, matcher_hints: { "name_aliases" => [ "WATER CO" ] }
+    )
+
+    series.update!(bank_reference: "  VN   4711 ")
+    assert_equal "VN 4711", series.reload.bank_reference
+    assert_equal [ "WATER CO" ], series.matcher_hints["name_aliases"], "other learned hints survive"
+
+    series.update!(bank_reference: "  ")
+    assert_nil series.reload.bank_reference
+    assert_not series.matcher_hints.key?("bank_reference")
+  end
+
+  test "reference_only is stored in matcher_hints and only effective with a reference" do
+    series = @family.recurring_transactions.create!(
+      name: "Water", account: @account, amount: 80, currency: "USD", expected_day_of_month: 5,
+      last_occurrence_date: Date.current, next_expected_date: 1.month.from_now.to_date,
+      status: "active", manual: true
+    )
+
+    series.update!(reference_only: "1")
+    assert_not series.reference_only?, "no reference, no effect"
+
+    series.update!(bank_reference: "VN 4711")
+    assert series.reference_only?
+
+    series.update!(reference_only: "0")
+    assert_not series.reference_only?
+    assert_not series.matcher_hints.key?("reference_only")
+  end
+
+  test "a bank_reference too short to be distinctive is invalid" do
+    series = @family.recurring_transactions.new(
+      name: "Water", account: @account, amount: 80, currency: "USD", expected_day_of_month: 5,
+      last_occurrence_date: Date.current, next_expected_date: 1.month.from_now.to_date,
+      status: "active", manual: true, bank_reference: "ab"
+    )
+
+    assert_not series.valid?
+    assert series.errors.key?(:bank_reference)
+  end
+
+
   test "payable ignores a debt destination that belongs to another family" do
     foreign_card = families(:empty).accounts.create!(
       name: "Foreign Card", balance: 0, currency: "USD", accountable: CreditCard.new
@@ -1431,6 +1477,169 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal "active", rt.status
   end
 
+  test "create_from_transfer keeps same-amount series between the same accounts apart by day" do
+    source = @account
+    destination = accounts(:credit_card)
+
+    first = build_transfer_between(source, destination, Date.new(2026, 1, 1))
+    second = build_transfer_between(source, destination, Date.new(2026, 1, 28))
+    repeat = build_transfer_between(source, destination, Date.new(2026, 2, 28))
+
+    RecurringTransaction.create_from_transfer(first)
+    day28 = RecurringTransaction.create_from_transfer(second)
+
+    assert_equal [ 1, 28 ], @family.recurring_transactions.where(destination_account: destination).order(:expected_day_of_month).pluck(:expected_day_of_month)
+    assert_equal day28, RecurringTransaction.transfer_series_for(repeat)
+    assert_raises(ActiveRecord::RecordNotUnique) { RecurringTransaction.create_from_transfer(repeat) }
+  end
+
+  test "transfer_series_for finds a series edited to a non-monthly cadence" do
+    source = @account
+    destination = accounts(:credit_card)
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 5)))
+    RecurringTransaction::FrequencyPreset.apply(series, preset: "weekly", weekday: Date.new(2026, 1, 5).wday)
+    series.save!
+
+    later_week = build_transfer_between(source, destination, Date.new(2026, 1, 19))
+
+    assert_equal series, RecurringTransaction.transfer_series_for(later_week)
+  end
+
+  test "editing the day of a recurring transfer keeps its dedup_scope in step" do
+    source = @account
+    destination = accounts(:credit_card)
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 1)))
+
+    series.update!(expected_day_of_month: 28)
+
+    assert_equal "day-28", series.reload.dedup_scope
+    assert_nothing_raised do
+      RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 2, 1)))
+    end
+  end
+
+  test "editing a recurring transfer onto the day of another series is invalid" do
+    source = @account
+    destination = accounts(:credit_card)
+    RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 28)))
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 1)))
+
+    assert_not series.update(expected_day_of_month: 28)
+    assert series.errors[:expected_day_of_month].present?
+    assert_equal 1, series.reload.expected_day_of_month
+    assert_equal "day-1", series.dedup_scope
+  end
+
+  test "transfer_series_for finds a day-31 series for the last day of a short month" do
+    source = @account
+    destination = accounts(:credit_card)
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 31)))
+
+    assert_equal series, RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 2, 28)))
+    assert_nil RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 2, 25)))
+  end
+
+  test "transfer_series_for keeps a day-28 transfer apart from a day-31 series when a day-28 series exists" do
+    source = @account
+    destination = accounts(:credit_card)
+    RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 31)))
+    day28 = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 28)))
+
+    assert_equal day28, RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 2, 28)))
+  end
+
+  test "transfer_series_for finds a series for a transfer posted within the posting tolerance" do
+    source = @account
+    destination = accounts(:credit_card)
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 7, 1)))
+
+    # August 1 is a Saturday, so the payment lands on Monday the 3rd.
+    assert_equal series, RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 8, 3)))
+    assert_nil RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 8, 4)))
+  end
+
+  test "transfer_series_for prefers the series whose day the transfer is on" do
+    source = @account
+    destination = accounts(:credit_card)
+    RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 7, 1)))
+    day3 = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 7, 3)))
+
+    assert_equal day3, RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 8, 3)))
+  end
+
+  test "Cleaner does not let a transfer allocated to another series keep a stale series alive" do
+    source = @account
+    destination = accounts(:credit_card)
+    stale = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 1)))
+    live = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 2)))
+    stale.update!(last_occurrence_date: 7.months.ago.to_date)
+    live.update!(last_occurrence_date: Date.current)
+
+    # The stopped series' tolerance window still covers the live series' day.
+    recent = 1.month.ago.to_date.beginning_of_month + 1.day
+    entry = build_transfer_between(source, destination, recent).outflow_transaction.entry
+    occurrence = live.recurring_occurrences.create!(
+      family: @family, original_due_on: recent, due_on: recent, expected_amount: live.amount, currency: "USD", status: "scheduled"
+    )
+    occurrence.allocations.create!(
+      entry: entry, allocated_amount: live.amount, currency: "USD", state: "confirmed", source: "auto_matched"
+    )
+
+    assert_includes stale.matching_transactions.map(&:id), entry.id
+
+    RecurringTransaction.cleanup_stale_for(@family)
+
+    assert_equal "inactive", stale.reload.status
+    assert_equal "active", live.reload.status
+  end
+
+  test "Cleaner keeps a series alive on a transfer nothing else has claimed" do
+    source = @account
+    destination = accounts(:credit_card)
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 1)))
+    series.update!(last_occurrence_date: 7.months.ago.to_date)
+    build_transfer_between(source, destination, 1.month.ago.to_date.beginning_of_month)
+
+    RecurringTransaction.cleanup_stale_for(@family)
+
+    assert_equal "active", series.reload.status
+  end
+
+  test "transfer_series_for ignores a monthly series whose schedule skips the date" do
+    source = @account
+    destination = accounts(:credit_card)
+    series = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 31)))
+    series.update!(weekend_adjust: "skip")
+    saturday = Date.new(2026, 2, 28)
+
+    assert_not series.schedule.matches_day?(saturday)
+    assert_nil RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, saturday))
+  end
+
+  test "an exact day beats a clamped day when both are equally close" do
+    source = @account
+    destination = accounts(:credit_card)
+    day31 = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 31)))
+    day28 = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 28)))
+    # Ids decide ties otherwise: give the day-28 series the losing one.
+    [ day31, day28 ].each { |series| series.recurring_occurrences.delete_all }
+    day31.update_column(:id, "00000000-0000-4000-8000-000000000031")
+    day28.update_column(:id, "ffffffff-ffff-4fff-8fff-ffffffffff28")
+    day28 = RecurringTransaction.find(day28.id)
+
+    assert_equal day28, RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 2, 28)))
+  end
+
+  test "transfer_series_for measures the day across the month boundary" do
+    source = @account
+    destination = accounts(:credit_card)
+    day31 = RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 31)))
+    RecurringTransaction.create_from_transfer(build_transfer_between(source, destination, Date.new(2026, 1, 3)))
+
+    # May 1 is one day from the day-31 series' April 30 occurrence, two from day 3.
+    assert_equal day31, RecurringTransaction.transfer_series_for(build_transfer_between(source, destination, Date.new(2026, 5, 1)))
+  end
+
   test "projected_entry exposes source and destination on a recurring transfer" do
     destination = accounts(:credit_card)
     rt = @family.recurring_transactions.create!(
@@ -1603,6 +1812,134 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     RecurringTransaction.cleanup_stale_for(@family)
     assert_equal "inactive", rt.reload.status
+  end
+
+  test "Cleaner removes a suggestion once every transaction it matches is a confirmed transfer leg" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      transfers = 3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }
+
+      cleaner = RecurringTransaction::Cleaner.new(@family)
+      assert_equal 0, cleaner.retire_transfer_suggestions,
+        "a pending auto-match leaves the legs as ordinary transactions"
+      assert suggestion.reload.suggested?
+
+      transfers.each(&:confirm!)
+
+      assert_equal 1, cleaner.retire_transfer_suggestions
+      assert_not RecurringTransaction.exists?(suggestion.id),
+        "deleted, not tombstoned: no dismissal by the user stands behind it"
+    end
+  end
+
+  test "Cleaner keeps a suggestion that turned manual between its scan and the row lock" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }.each(&:confirm!)
+      cleaner = RecurringTransaction::Cleaner.new(@family)
+      # The scan loaded the row while it was still detected; an import replay
+      # then marked it manual. Only the reload under the lock can see that.
+      scanned = RecurringTransaction.find(suggestion.id)
+      scan = stub
+      scan.stubs(:find_each).yields(scanned)
+      cleaner.stubs(:retirement_candidates).returns(scan)
+      RecurringTransaction.where(id: suggestion.id).update_all(manual: true)
+      assert_not scanned.manual?
+
+      assert_equal 0, cleaner.retire_transfer_suggestions
+      assert RecurringTransaction.exists?(suggestion.id)
+    end
+  end
+
+  test "Cleaner's retirement leaves the bill detectable again once the transfers are unlinked" do
+    travel_to Date.new(2026, 8, 10) do
+      transfer_shaped_suggestion
+      transfers = 3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }
+      transfers.each(&:confirm!)
+      RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+
+      transfers.each(&:reject!)
+      # A fresh family, as the next detection job loads: this one has the
+      # retired row cached in its association.
+      RecurringTransaction.identify_patterns_for!(Family.find(@family.id))
+
+      revived = RecurringTransaction.find_by(family: @family, name: "Move to savings")
+      assert revived&.suggested?, "the legs are standard again, so detection offers the bill again"
+    end
+  end
+
+  test "Cleaner keeps a suggestion detection attributes to this run's charges" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      3.times { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i).confirm! }
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions(claimed_ids: [ suggestion.id ])
+      assert suggestion.reload.suggested?
+    end
+  end
+
+  test "Cleaner keeps a suggestion whose transfer was unlinked before it took the lock" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      transfers = 3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }
+      transfers.each(&:confirm!)
+      # The unlink commits after the unlocked check and before the row lock.
+      RecurringTransaction.any_instance.stubs(:lock!).with do
+        transfers.each { |transfer| transfer.reload.destroy! if Transfer.exists?(transfer.id) }
+      end.returns(suggestion)
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+      assert suggestion.reload.suggested?
+    end
+  end
+
+  test "Cleaner keeps a suggestion while it still matches an ordinary transaction" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      2.times { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i).confirm! }
+      @account.entries.create!(date: Date.new(2026, 6, 5), amount: 500, currency: "USD",
+                               name: "Move to savings", entryable: Transaction.new)
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+      assert suggestion.reload.suggested?
+    end
+  end
+
+  test "Cleaner leaves a suggestion the user confirmed while it was checking" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      # The confirmation lands between loading the batch and ending the row.
+      RecurringTransaction.any_instance.stubs(:matches_only_transfer_legs?).with do
+        RecurringTransaction.where(id: suggestion.id).update_all(status: "active")
+      end.returns(true)
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+      assert suggestion.reload.active?
+    end
+  end
+
+  test "Cleaner keeps a suggestion that matches nothing" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+      assert suggestion.reload.suggested?
+    end
+  end
+
+  test "Cleaner never retires confirmed, manual or transfer series whose matches are transfer legs" do
+    travel_to Date.new(2026, 8, 10) do
+      active = transfer_shaped_suggestion(status: "active")
+      manual = transfer_shaped_suggestion(manual: true, dedup_scope: "manual")
+      transfer_series = transfer_shaped_suggestion(destination_account: accounts(:connected))
+      3.times { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i).confirm! }
+      assert_not_empty transfer_series.matching_transactions, "guard sanity: the transfer series sees the pairs"
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+      assert active.reload.active?
+      assert manual.reload.suggested?
+      assert transfer_series.reload.suggested?
+    end
   end
 
   test "matching_transactions finds the transfer pair regardless of occurrence name" do
@@ -1860,7 +2197,243 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal "LEGACY CO", bill.reload.matcher_name
   end
 
+  test "amount_on reads the price in force on a date from the price history" do
+    series = @family.recurring_transactions.create!(
+      name: "Rent", account: @account, amount: 1_400, currency: "USD",
+      expected_day_of_month: 1, last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date, status: "active", manual: true
+    )
+    series.recurring_price_changes.create!(effective_on: 6.months.ago.to_date, previous_amount: 1_100,
+                                           new_amount: 1_200, currency: "USD", source: "user")
+    series.recurring_price_changes.create!(effective_on: 2.months.ago.to_date, previous_amount: 1_200,
+                                           new_amount: 1_400, currency: "USD", source: "user")
+
+    assert_equal 1_100, series.amount_on(1.year.ago.to_date)
+    assert_equal 1_200, series.amount_on(3.months.ago.to_date)
+    assert_equal 1_400, series.amount_on(2.months.ago.to_date)
+    assert_equal 1_400, series.amount_on(Date.current)
+    assert_equal Money.new(1_200, "USD"), series.monthly_equivalent_amount(on: 3.months.ago.to_date)
+  end
+
+  test "editing the amount records the change from today, so the old price stays in history" do
+    rent = create_rent(1_200)
+
+    rent.update!(amount: 1_400)
+
+    change = rent.recurring_price_changes.sole
+    assert_equal [ Date.current, 1_200, 1_400, "USD" ], [ change.effective_on, change.previous_amount, change.new_amount, change.currency ]
+    assert change.recorded_by_user?
+    assert_equal 1_200, rent.amount_on(Date.yesterday)
+    assert_equal 1_400, rent.amount_on(Date.current)
+  end
+
+  test "a second edit on the same day moves that day's change, and undoing it removes the change" do
+    rent = create_rent(1_200)
+
+    rent.update!(amount: 1_300)
+    rent.update!(amount: 1_400)
+    assert_equal [ 1_200, 1_400 ], [ rent.recurring_price_changes.sole.previous_amount, rent.recurring_price_changes.sole.new_amount ]
+
+    rent.update!(amount: 1_200)
+    assert_empty rent.recurring_price_changes.reload
+  end
+
+  test "an edit on the day of a detected change takes that change over" do
+    rent = create_rent(1_200)
+    rent.recurring_price_changes.create!(effective_on: Date.current, previous_amount: 1_200, new_amount: 1_300,
+                                         currency: "USD", source: "detected")
+    rent.update!(amount: 1_300)
+    rent.update!(amount: 1_400)
+
+    travel_to(Date.tomorrow) { rent.update!(amount: 1_300) }
+
+    today = rent.recurring_price_changes.find_by!(effective_on: Date.current)
+    assert_equal [ 1_200, 1_400 ], [ today.previous_amount, today.new_amount ]
+    assert today.recorded_by_user?
+    assert_equal 1_400, rent.reload.amount_on(Date.current)
+    assert_equal 1_300, rent.amount_on(Date.tomorrow)
+  end
+
+  test "an amount the price history already reached records nothing more" do
+    rent = create_rent(1_200)
+    rent.recurring_price_changes.create!(effective_on: 1.week.ago.to_date, previous_amount: 1_200, new_amount: 1_400,
+                                         currency: "USD", source: "detected")
+
+    rent.update!(amount: 1_400)
+
+    assert_equal 1, rent.recurring_price_changes.count
+  end
+
+  test "a change of currency, sign or a suggestion's amount is not a price change" do
+    rent = create_rent(1_200)
+    rent.update!(amount: 1_000, currency: "EUR")
+    suggestion = create_rent(50, name: "Gym", status: "suggested")
+    suggestion.update!(amount: 60)
+    income = create_rent(-2_000, name: "Salary", bill_type: "income")
+    income.update!(amount: -2_200)
+
+    assert_empty RecurringPriceChange.where(recurring_transaction: [ rent, suggestion, income ])
+  end
+
+  test "obligations keeps expenses and payments into the given debt types, whatever the status" do
+    expense = build_recurring(name: "Rent", status: "paused").tap(&:save!)
+    into_loan = create_transfer_series("Mortgage", accounts(:loan))
+    into_card = create_transfer_series("Card payment", accounts(:credit_card))
+
+    results = @family.recurring_transactions.obligations(%w[Loan])
+
+    assert_includes results, expense
+    assert_includes results, into_loan
+    assert_not_includes results, into_card
+    assert_includes @family.recurring_transactions.obligations(%w[CreditCard Loan]), into_card
+  end
+
+  test "within_accounts keeps series whose every endpoint is in the given accounts" do
+    shared = accounts(:depository)
+    private_account = accounts(:connected)
+    on_shared = @family.recurring_transactions.create!(
+      name: "Shared bill", account: shared, amount: 10, currency: "USD", expected_day_of_month: 1,
+      last_occurrence_date: Date.current, next_expected_date: 1.month.from_now.to_date, status: "active", manual: true
+    )
+    on_private = on_shared.dup.tap { |series| series.update!(name: "Private bill", account: private_account) }
+    without_account = on_shared.dup.tap { |series| series.update!(name: "Legacy bill", account: nil) }
+
+    results = @family.recurring_transactions.within_accounts(Account.where(id: shared.id))
+
+    assert_includes results, on_shared
+    assert_includes results, without_account
+    assert_not_includes results, on_private
+  end
+
+  test "a bank reference needs an account and an expense bill" do
+    series = @family.recurring_transactions.new(
+      name: "Water", amount: 80, currency: "USD", expected_day_of_month: 5, last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date, status: "active", manual: true, bank_reference: "VN 4711"
+    )
+    assert_not series.valid?
+    assert series.errors.added?(:bank_reference, :needs_account_and_expense)
+
+    series.account = @account
+    assert series.valid?
+
+    series.bill_type = "income"
+    series.amount = -80
+    assert_not series.valid?
+  end
+
+  test "reference-only reads false where a reference cannot match" do
+    series = @family.recurring_transactions.create!(
+      name: "Water", account: @account, amount: 80, currency: "USD", expected_day_of_month: 5, last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date, status: "active", manual: true, bank_reference: "VN 4711", reference_only: true
+    )
+    assert series.reference_only?
+
+    series.update_columns(account_id: nil)
+
+    assert_not series.reload.reference_only?
+  end
+
+  test "covering ignores a reference-only bill's name and finds it by the reference in the note" do
+    setup_covering_family
+    declared = covering_series(name: "Netflix", amount: 50)
+    declared.update!(bank_reference: "NFX 123", reference_only: true)
+    bare = create_transaction(account: @account, amount: 50, name: "Netflix")
+    referenced = create_transaction(account: @account, amount: 50, name: "something else")
+    referenced.update!(notes: "NFX 123 monthly")
+
+    assert_nil @family.recurring_transactions.covering(bare)
+    assert_equal declared, @family.recurring_transactions.covering(referenced)
+  end
+
+  test "Identifier leaves a reference-only manual bill's variance to the matcher" do
+    setup_covering_family
+    declared = covering_series(name: "Netflix", amount: 50)
+    declared.update!(bank_reference: "NFX 123", reference_only: true, occurrence_count: 9)
+    create_transaction(account: @account, amount: 50, name: "Netflix", date: Date.current)
+
+    RecurringTransaction.identify_patterns_for!(@family)
+
+    assert_equal 9, declared.reload.occurrence_count
+  end
+
+  test "covering finds a reference-only bill by its note whatever the payment's amount" do
+    setup_covering_family
+    declared = covering_series(name: "Netflix", amount: 80)
+    declared.update!(bank_reference: "NFX 123", reference_only: true)
+    entry = create_transaction(account: @account, amount: 240, name: "something else")
+    entry.update!(notes: "NFX 123 quarterly")
+
+    assert_equal declared, @family.recurring_transactions.covering(entry)
+  end
+
+  test "covering never matches a refund of the opposite sign to a reference-only bill" do
+    setup_covering_family
+    declared = covering_series(name: "Netflix", amount: 80)
+    declared.update!(bank_reference: "NFX 123", reference_only: true)
+    refund = create_transaction(account: @account, amount: -240, name: "refund")
+    refund.update!(notes: "NFX 123 refund")
+
+    assert_nil @family.recurring_transactions.covering(refund)
+  end
+
+  test "covering finds a referenced bill by the note whatever the amount, unless another merchant is bound" do
+    setup_covering_family
+    declared = covering_series(name: "Netflix", amount: 80)
+    declared.update!(bank_reference: "NFX 123")
+    entry = create_transaction(account: @account, amount: 240, name: "something else")
+    entry.update!(notes: "NFX 123 quarterly")
+
+    assert_equal declared, @family.recurring_transactions.covering(entry)
+
+    bound = covering_series(name: "Other", amount: 80, merchant: @merchant, dedup_scope: "bound")
+    bound.update!(bank_reference: "BND 555")
+    foreign = create_transaction(account: @account, amount: 240, name: "x", merchant: @family.merchants.create!(name: "Else"))
+    foreign.update!(notes: "BND 555")
+
+    assert_nil @family.recurring_transactions.covering(foreign)
+  end
+
   private
+    # A detected bill on the outflow side of what later turns out to be a
+    # monthly move between two of the family's own accounts.
+    def transfer_shaped_suggestion(status: "suggested", manual: false, destination_account: nil, dedup_scope: "")
+      @family.recurring_transactions.create!(
+        account: @account, destination_account: destination_account, name: "Move to savings",
+        amount: 500, currency: "USD", expected_day_of_month: 5, dedup_scope: dedup_scope,
+        last_occurrence_date: Date.new(2026, 8, 5), next_expected_date: Date.new(2026, 9, 5),
+        status: status, manual: manual, occurrence_count: 3
+      )
+    end
+
+    # Two ordinary transactions linked by an auto-match the user has yet to
+    # confirm, the state they are in when detection first sees them.
+    def pending_transfer_leg_pair(date)
+      outflow = @account.entries.create!(date: date, amount: 500, currency: "USD",
+                                         name: "Move to savings", entryable: Transaction.new)
+      inflow = accounts(:connected).entries.create!(date: date, amount: -500, currency: "USD",
+                                                    name: "Move from checking", entryable: Transaction.new)
+      Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "pending")
+    end
+
+    def create_rent(amount, name: "Rent", **attributes)
+      @family.recurring_transactions.create!(
+        name: name, account: @account, amount: amount, currency: "USD",
+        expected_day_of_month: 1, last_occurrence_date: Date.current,
+        next_expected_date: 1.month.from_now.to_date, status: "active", manual: true, **attributes
+      )
+    end
+
+    def build_transfer_between(source, destination, date, amount: 2000)
+      outflow = source.entries.create!(
+        date: date, amount: amount, currency: "USD", name: "raw",
+        entryable: Transaction.new(kind: "standard")
+      )
+      inflow = destination.entries.create!(
+        date: date, amount: -amount, currency: "USD", name: "raw",
+        entryable: Transaction.new(kind: "standard")
+      )
+      Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
+    end
 
     def create_transfer_series(name, destination)
       @family.recurring_transactions.create!(

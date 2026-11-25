@@ -3,6 +3,8 @@ nb:
   defaults:
     brand_name: "%{brand_name}"
     product_name: "%{product_name}"
+    common:
+      close: Lukk
   activerecord:
     errors:
       messages:
@@ -20,7 +22,7 @@ nb:
     - fre
     - lør
     abbr_month_names:
-    -
+    - 
     - jan
     - feb
     - mar
@@ -46,8 +48,10 @@ nb:
       long: "%e. %B %Y"
       short: "%e. %b"
       short_with_year: "%-d. %b %Y"
+      month_year: "%B %Y"
+      short_month_year: "%b %Y"
     month_names:
-    -
+    - 
     - Januar
     - Februar
     - Mars
@@ -143,6 +147,7 @@ nb:
       wrong_length:
         one: har feil lengde (må være %{count} tegn)
         other: har feil lengde (må være %{count} tegn)
+      in: må være i %{count}
     template:
       body: 'Det oppstod problemer med følgende felt:'
       header:
@@ -151,8 +156,10 @@ nb:
   helpers:
     select:
       prompt: Vennligst velg
+      search_placeholder: Søk
+      default_label: Velg ...
     submit:
-      create: Lag %{model}
+      create: Opprett %{model}
       submit: Lagre %{model}
       update: Oppdater %{model}
   number:
@@ -171,6 +178,7 @@ nb:
       separator: ","
       significant: false
       strip_insignificant_zeros: true
+      round_mode: default
     human:
       decimal_units:
         format: "%n %u"
@@ -204,6 +212,8 @@ nb:
           kb: kB
           mb: MB
           tb: TB
+          eb: EB
+          pb: PB
     percentage:
       format:
         delimiter: ''
@@ -223,3 +233,14 @@ nb:
       long: "%A, %e. %B %Y, %H:%M"
       short: "%e. %B, %H:%M"
     pm: pm
+  global:
+    expand: Utvid
+  mcp:
+    errors:
+      invalid_session_id: Ugyldig MCP-økt-ID
+      unsupported_protocol_version: 'MCP-protokollversjonen støttes ikke: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris må bruke https, loopback-http eller et URI-skjema for en innebygd app
+      invalid_client_name: "client_name kan ikke inneholde toveis kontrolltegn"
+      reserved_client_name: "client_name er reservert for førstepartsapper"

@@ -393,10 +393,11 @@ class RecurringTransactionsController < ApplicationController
     # raw permit.
     def recurring_transaction_params
       params.require(:recurring_transaction).permit(
-        :payment_url, :autopay, :notes, :bill_type, :category_id,
+        :payment_url, :autopay, :notes, :bank_reference, :reference_only, :bill_type, :category_id,
         :renews_on, :trial_ends_on, :cancelled_on, :end_after_count,
         :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
-        :frequency_weekday, :frequency_month_of_year, :frequency_interval, :frequency_interval_unit
+        :frequency_weekday, :frequency_month_of_year, :frequency_interval, :frequency_interval_unit,
+        :frequency_once_on
       )
     end
 
@@ -404,7 +405,7 @@ class RecurringTransactionsController < ApplicationController
       params.require(:recurring_transaction).permit(
         :name, :amount, :currency, :account_id, :first_due_on, :frequency_preset,
         :frequency_interval, :frequency_interval_unit,
-        :payment_url, :autopay, :notes, :is_income, :category_id
+        :payment_url, :autopay, :notes, :bank_reference, :reference_only, :is_income, :category_id
       )
     end
 
@@ -432,6 +433,9 @@ class RecurringTransactionsController < ApplicationController
       @recurring_transaction.frequency_month_of_year = detection.month_of_year
       @recurring_transaction.frequency_interval = detection.interval
       @recurring_transaction.frequency_interval_unit = detection.interval_unit
+      # Switching to Once starts from the date the bill is next due, not its
+      # first due date, which is long past for an older bill.
+      @recurring_transaction.frequency_once_on = detection.once_on || @recurring_transaction.next_due_date
     end
 
     # A bill outliving its own price is the normal case, and the only way to
@@ -491,7 +495,8 @@ class RecurringTransactionsController < ApplicationController
         weekday: @recurring_transaction.frequency_weekday,
         month_of_year: @recurring_transaction.frequency_month_of_year,
         interval: @recurring_transaction.frequency_interval,
-        interval_unit: @recurring_transaction.frequency_interval_unit
+        interval_unit: @recurring_transaction.frequency_interval_unit,
+        once_on: @recurring_transaction.frequency_once_on
       )
 
       # A hand-set cadence is intent, not a guess for detection to correct.

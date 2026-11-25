@@ -74,8 +74,7 @@ class Provider::AlphaVantage < Provider
 
   def usage
     with_provider_response do
-      day_key = "alpha_vantage:daily:#{Date.current}"
-      used = Rails.cache.read(day_key, raw: true).to_i
+      used = Rails.cache.read(daily_cache_key, raw: true).to_i
 
       UsageData.new(
         used: used,
@@ -92,7 +91,6 @@ class Provider::AlphaVantage < Provider
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
-      throttle_request
       response = client.get("#{base_url}/query") do |req|
         req.params["function"] = "SYMBOL_SEARCH"
         req.params["keywords"] = symbol
@@ -134,7 +132,6 @@ class Provider::AlphaVantage < Provider
     with_provider_response do
       av_symbol = to_av_symbol(symbol, exchange_operating_mic)
 
-      throttle_request
       response = client.get("#{base_url}/query") do |req|
         req.params["function"] = "OVERVIEW"
         req.params["symbol"] = av_symbol
@@ -175,7 +172,6 @@ class Provider::AlphaVantage < Provider
     with_provider_response do
       av_symbol = to_av_symbol(symbol, exchange_operating_mic)
 
-      throttle_request
       response = client.get("#{base_url}/query") do |req|
         req.params["function"] = "TIME_SERIES_DAILY"
         req.params["symbol"] = av_symbol
@@ -223,6 +219,9 @@ class Provider::AlphaVantage < Provider
 
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
+        faraday.options.open_timeout = 5
+        faraday.options.timeout      = 20
+
         faraday.request(:retry, {
           max: 3,
           interval: 1.0,
@@ -230,6 +229,9 @@ class Provider::AlphaVantage < Provider
           backoff_factor: 2,
           exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed ]
         })
+        # After the retry middleware, so every attempt — not only the first —
+        # is throttled and counted against the daily request limit.
+        faraday.use RateLimitable::BeforeEachAttempt, ->(_env) { throttle_request }
 
         faraday.request :json
         faraday.response :raise_error
@@ -237,19 +239,25 @@ class Provider::AlphaVantage < Provider
       end
     end
 
-    # Adds daily request counter on top of the interval throttle from RateLimitable.
+    # Adds the daily request counter on top of the interval throttle from
+    # RateLimitable. Runs through BeforeEachAttempt on every HTTP attempt, so a
+    # retried request is throttled and counted again, not only the initial one.
     def throttle_request
       super
 
       # Global per-day request counter via cache (Redis).
       # Atomic increment-then-check avoids the TOCTOU of read-check-increment.
-      day_key = "alpha_vantage:daily:#{Date.current}"
+      day_key = daily_cache_key
       new_count = Rails.cache.increment(day_key, 1, expires_in: 24.hours).to_i
 
       if new_count > max_requests_per_day
         Rails.logger.warn("AlphaVantage: daily request limit reached (#{new_count}/#{max_requests_per_day})")
         raise RateLimitError, "Alpha Vantage daily request limit reached (#{max_requests_per_day} per day)"
       end
+    end
+
+    def daily_cache_key
+      "alpha_vantage:daily:#{Date.current}"
     end
 
     def max_requests_per_day

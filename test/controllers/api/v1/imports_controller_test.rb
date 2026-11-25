@@ -248,6 +248,70 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "not_found", json_response["error"]
   end
 
+  test "should not list an import of a statement the member cannot view" do
+    member_key = read_only_key_for(users(:family_member))
+    private_import = pdf_import_with_row(account: accounts(:investment))
+    shared_import = pdf_import_with_row(account: accounts(:depository))
+
+    get api_v1_imports_url, params: { per_page: 100 }, headers: api_headers(member_key)
+
+    assert_response :success
+    json_response = JSON.parse(response.body)
+    listed_ids = json_response["data"].map { |import| import["id"] }
+    assert_not_includes listed_ids, private_import.id
+    assert_includes listed_ids, shared_import.id
+    assert_includes listed_ids, @diagnostic_import.id
+    assert_equal listed_ids.size, json_response["meta"]["total_count"]
+  end
+
+  test "should not show an import of a statement the member cannot view" do
+    member_key = read_only_key_for(users(:family_member))
+    private_import = pdf_import_with_row(account: accounts(:investment))
+
+    get api_v1_import_url(private_import), headers: api_headers(member_key)
+
+    assert_response :not_found
+    assert_equal "not_found", JSON.parse(response.body)["error"]
+
+    get api_v1_import_url(private_import), headers: api_headers(@read_only_api_key)
+    assert_response :success
+  end
+
+  test "should not list rows of an import of a statement the member cannot view" do
+    member_key = read_only_key_for(users(:family_member))
+    private_import = pdf_import_with_row(account: accounts(:investment))
+    shared_import = pdf_import_with_row(account: accounts(:depository))
+
+    get rows_api_v1_import_url(private_import), headers: api_headers(member_key)
+
+    assert_response :not_found
+    assert_equal "not_found", JSON.parse(response.body)["error"]
+
+    get rows_api_v1_import_url(shared_import), headers: api_headers(member_key)
+    assert_response :success
+    assert_equal [ "Statement line" ], JSON.parse(response.body)["data"].map { |row| row.dig("fields", "name") }
+
+    get rows_api_v1_import_url(private_import), headers: api_headers(@read_only_api_key)
+    assert_response :success
+    assert_equal 1, JSON.parse(response.body)["data"].size
+  end
+
+  test "should hide an unlinked statement import from a guest" do
+    guest = @family.users.create!(
+      first_name: "Guest", last_name: "Viewer", email: "guest-#{SecureRandom.hex(4)}@example.com",
+      password: "password", role: "guest", onboarded_at: Time.current
+    )
+    guest_key = read_only_key_for(guest)
+    unlinked_import = pdf_import_with_row(account: nil)
+
+    get api_v1_imports_url, params: { per_page: 100 }, headers: api_headers(guest_key)
+    assert_response :success
+    assert_not_includes JSON.parse(response.body)["data"].map { |import| import["id"] }, unlinked_import.id
+
+    get rows_api_v1_import_url(unlinked_import), headers: api_headers(guest_key)
+    assert_response :not_found
+  end
+
   test "should require authentication for import row diagnostics" do
     get rows_api_v1_import_url(@diagnostic_import)
 
@@ -721,6 +785,43 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[date amount name], data["headers"]
     assert_empty data["missing_required_headers"]
     assert_empty data["errors"]
+  end
+
+  test "should not preflight against an account the user cannot write" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(
+      user: member,
+      name: "Member Read-Write Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "test_member_rw_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{member_key.id}")
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+    preflight = ->(account) do
+      post preflight_api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: account.id
+           },
+           headers: api_headers(member_key)
+    end
+
+    # Not shared with the member: answered like an unknown id.
+    preflight.call(accounts(:investment))
+    assert_response :not_found
+
+    # Shared read only: visible, but not writable.
+    preflight.call(accounts(:credit_card))
+    assert_response :forbidden
+    assert_equal "forbidden", JSON.parse(response.body)["error"]
+
+    preflight.call(accounts(:depository))
+    assert_response :success
   end
 
   test "should report missing required CSV headers during preflight" do
@@ -1320,7 +1421,22 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     json_response = JSON.parse(response.body)
-    assert_includes json_response["errors"], "Account must belong to your family"
+    assert_equal [ "Account not found" ], json_response["errors"]
+  end
+
+  test "should not create import for unknown or malformed account id" do
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    [ SecureRandom.uuid, "not-a-uuid" ].each do |account_id|
+      assert_no_difference("Import.count") do
+        post api_v1_imports_url,
+             params: { raw_file_content: csv_content, account_id: account_id },
+             headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity
+      assert_equal [ "Account not found" ], JSON.parse(response.body)["errors"]
+    end
   end
 
   test "should reject file upload exceeding max size" do
@@ -1400,6 +1516,45 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
   end
 
+  test "should not create import for account the user cannot write" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(
+      user: member,
+      name: "Member Read-Write Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "test_member_rw_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{member_key.id}")
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    create_import = ->(account) do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: account.id
+           },
+           headers: api_headers(member_key)
+    end
+
+    # Not shared with the member: answered like an unknown id.
+    assert_no_difference("Import.count") { create_import.call(accounts(:investment)) }
+    assert_response :unprocessable_entity
+    assert_equal [ "Account not found" ], JSON.parse(response.body)["errors"]
+
+    # Shared read only: visible, but not writable.
+    assert_no_difference("Import.count") { create_import.call(accounts(:credit_card)) }
+    assert_response :forbidden
+    assert_equal "forbidden", JSON.parse(response.body)["error"]
+
+    assert_difference("Import.count", 1) { create_import.call(accounts(:depository)) }
+    assert_response :created
+  end
+
   private
 
     def build_ndjson(records)
@@ -1408,5 +1563,30 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }
+    end
+
+    def read_only_key_for(user)
+      ApiKey.create!(
+        user: user,
+        name: "Read-Only Key",
+        scopes: [ "read" ],
+        source: "web",
+        display_key: "test_ro_#{SecureRandom.hex(8)}"
+      ).tap { |key| Redis.new.del("api_rate_limit:#{key.id}") }
+    end
+
+    def pdf_import_with_row(account:)
+      statement = AccountStatement.create_from_upload!(
+        family: @family,
+        account: account,
+        file: uploaded_file(
+          filename: "statement-#{SecureRandom.hex(4)}.pdf",
+          content_type: "application/pdf",
+          content: file_fixture("imports/sample_bank_statement.pdf").binread + SecureRandom.hex(8)
+        )
+      )
+      PdfImport.create_from_statement!(statement: statement).tap do |import|
+        import.rows.create!(source_row_number: 1, date: "01-15-2024", amount: "-42.00", currency: "USD", name: "Statement line")
+      end
     end
 end

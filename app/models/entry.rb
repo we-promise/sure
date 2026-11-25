@@ -14,6 +14,12 @@ class Entry < ApplicationRecord
   # Key in transactions.extra marking a stale pending the sync excluded on its own.
   AUTO_EXCLUDED_PENDING_KEY = "auto_excluded_stale_pending".freeze
 
+  # Raised when a split would be replaced or removed while one of its parts is
+  # a leg of a confirmed transfer. Destroying that part destroys the transfer
+  # and leaves the other leg behind as a standalone entry, so the transfer has
+  # to be unlinked first.
+  class SplitPartTransferredError < StandardError; end
+
   attr_accessor :unsplitting
 
   monetize :amount
@@ -458,6 +464,39 @@ class Entry < ApplicationRecord
     entryable.lock_saved_attributes!
   end
 
+  # Columns no rule condition or action reads: how an entry was edited, and
+  # import and reconciliation bookkeeping. Any other column counts, so a
+  # column rules start reading later can't be missed.
+  RULE_INPUT_IGNORED_COLUMNS = %w[
+    updated_at locked_attributes user_modified
+    import_locked reconciled_at reconciled_by_statement_id
+  ].freeze
+
+  # What rules can read from this transaction. Taken before an edit and passed
+  # to apply_immediate_rules_later, so an edit that changed nothing (same
+  # values, or only fields the person may not change) runs no rules. Tags are
+  # read from the database, since toggle_tag! bypasses the loaded association,
+  # unless the caller already has them.
+  def rule_input_snapshot(tag_ids: nil)
+    return unless transaction?
+
+    [
+      attributes.except(*RULE_INPUT_IGNORED_COLUMNS),
+      entryable.attributes.except(*RULE_INPUT_IGNORED_COLUMNS),
+      (tag_ids || Tagging.where(taggable: entryable).pluck(:tag_id)).map(&:to_s).sort
+    ]
+  end
+
+  # Rules set to "apply immediately" run for this transaction after a person
+  # created or changed it. With changed_from (a rule_input_snapshot from before
+  # the edit) they only run when the edit changed something.
+  def apply_immediate_rules_later(changed_from: nil)
+    return unless transaction?
+    return if changed_from && changed_from == rule_input_snapshot
+
+    Rule.apply_immediately_later(account.family, entryable_id)
+  end
+
   # Enqueues an account sync whose window starts at the earliest date this
   # entry has occupied since it was loaded, so balances are recomputed from
   # wherever the entry used to sit.
@@ -672,7 +711,8 @@ class Entry < ApplicationRecord
 
   # Replaces the children of a split under the same lock, so a concurrent unsplit can't be undone
   # and two edits can't both insert children. Returns false when the entry is no longer a split
-  # parent. Editing an existing split doesn't re-check pending/transfer: it creates no new split.
+  # parent. Editing an existing split doesn't re-check whether the parent is pending or a transfer:
+  # it creates no new split. Raises SplitPartTransferredError while a part is a leg of a confirmed transfer.
   def resplit!(splits)
     with_split_lock do
       next false unless split_parent?
@@ -683,13 +723,27 @@ class Entry < ApplicationRecord
     end
   end
 
-  # Unsplits under the same lock. Returns false when another caller already did.
+  # Unsplits under the same lock. Returns false when another caller already did. Raises
+  # SplitPartTransferredError while a part is a leg of a confirmed transfer.
   def unsplit_once!
     with_split_lock do
       next false unless split_parent?
 
       unsplit!
       true
+    end
+  end
+
+  # Deletes this entry for a user. A split is refused like unsplit! while a part
+  # is a leg of a confirmed transfer: deleting the parent takes the part and its
+  # transfer with it and leaves the other leg behind as a standalone entry.
+  # Syncs and imports that remove entries call destroy! directly.
+  def destroy_unless_split_part_transferred!
+    return destroy! unless split_parent?
+
+    with_split_lock do
+      refuse_while_split_part_transferred! if split_parent?
+      destroy!
     end
   end
 
@@ -760,9 +814,20 @@ class Entry < ApplicationRecord
     update!(reconciled_status: next_status)
   end
 
+  # True when a part of this split is a leg of a confirmed transfer.
+  def split_part_transferred?
+    part_ids = split_part_transaction_ids
+
+    Transfer.confirmed.where(outflow_transaction_id: part_ids)
+      .or(Transfer.confirmed.where(inflow_transaction_id: part_ids))
+      .exists?
+  end
+
   # Removes split children and restores parent entry.
   def unsplit!
     self.class.transaction do
+      refuse_while_split_part_transferred!
+
       child_entries.each do |child|
         child.unsplitting = true
         child.destroy!
@@ -841,6 +906,9 @@ class Entry < ApplicationRecord
     # To avoid accidentally clearing tags when only updating other fields,
     # tags are only modified when explicitly requested via update_tags: true.
     #
+    # With a block, yields each transaction entry whose values actually changed
+    # (see Entry#rule_input_snapshot), e.g. to run immediate rules on them.
+    #
     # @param bulk_update_params [Hash] The parameters to update
     # @param update_tags [Boolean] Whether to update tags (default: false)
     def bulk_update!(bulk_update_params, update_tags: false)
@@ -895,8 +963,19 @@ class Entry < ApplicationRecord
             Set.new
           end
 
+        # Tags before the edit for all entries in one query, not one per entry.
+        tag_ids_before = if block_given?
+          Tagging.where(taggable_type: "Transaction", taggable_id: locked_entries.map(&:entryable_id))
+                 .pluck(:taggable_id, :tag_id)
+                 .group_by(&:first).transform_values { |pairs| pairs.map(&:last) }
+        end
+
         locked_entries.each do |entry|
           changed = false
+          if block_given?
+            tags_before = tag_ids_before.fetch(entry.entryable_id, [])
+            before = entry.rule_input_snapshot(tag_ids: tags_before)
+          end
           # Whether this row's changes should lock saved attributes / mark
           # user-modified. Reconciling is a verification action, not an
           # edit — the single-row Entry#advance_reconciled_status! (used by
@@ -966,6 +1045,10 @@ class Entry < ApplicationRecord
               entry.lock_saved_attributes!
               entry.mark_user_modified!
             end
+            if block_given?
+              tags_after = update_tags && entry.transaction? ? entry.transaction.tag_ids : tags_before
+              yield entry if before != entry.rule_input_snapshot(tag_ids: tags_after)
+            end
             updated_count += 1
           end
         end
@@ -1007,6 +1090,20 @@ class Entry < ApplicationRecord
         lock!
         yield txn
       end
+    end
+
+    # Locks the parts' transfers and then the parts, the order Transfer#confirm!
+    # and Transfer#destroy! take them in, so a transfer created, confirmed or
+    # removed on a part at the same time waits and the check sees it.
+    def refuse_while_split_part_transferred!
+      part_ids = split_part_transaction_ids.pluck(:entryable_id)
+      Transfer.where(outflow_transaction_id: part_ids).or(Transfer.where(inflow_transaction_id: part_ids)).order(:id).lock.pluck(:id)
+      Transaction.where(id: part_ids).order(:id).lock.pluck(:id)
+      raise SplitPartTransferredError, "Remove the transfer on a split part before changing the split" if split_part_transferred?
+    end
+
+    def split_part_transaction_ids
+      child_entries.where(entryable_type: "Transaction").select(:entryable_id)
     end
 
     # Remembers the earliest date this entry had before any save that changed
