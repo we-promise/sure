@@ -29,7 +29,7 @@ class RetirementPlan::Milestones
   # `coast` as "not applicable", never as reached.
   Milestone = Data.define(:key, :year, :age, :reached_already)
 
-  def initialize(rows:, current_assets:, fi_number:, expected_annual_return:, inflation_rate:, retirement_year:, first_year:, birth_year:, path_retirement_year: nil)
+  def initialize(rows:, current_assets:, fi_number:, expected_annual_return:, inflation_rate:, retirement_year:, first_year:, first_year_fraction:, birth_year:, path_retirement_year: nil)
     @rows = rows
     @current_assets = current_assets.to_d
     @fi_number = fi_number&.to_d
@@ -39,6 +39,9 @@ class RetirementPlan::Milestones
     # be before the plan's date. The Coast target still runs to the plan's.
     @saving_until = [ retirement_year, path_retirement_year ].compact.min
     @first_year = first_year
+    # Today's assets have only the part of this year left to grow before the
+    # whole years after it, as the Simulation's first row does.
+    @first_year_fraction = first_year_fraction.to_d
     # Required: every milestone reached in a year carries the age it is
     # reached at. RetirementPlan#milestones only calls this for a plannable
     # plan, which has one.
@@ -66,16 +69,24 @@ class RetirementPlan::Milestones
     # already past leaves none at all.
     def coast
       return nil if @retirement_year.nil? || @retirement_year < @first_year
-      return milestone("coast", nil, reached_already: true) if @current_assets >= coast_target(@first_year - 1)
+      return milestone("coast", nil, reached_already: true) if @current_assets >= today_coast_target
 
       row = @rows.detect { |r| r.year < @saving_until && r.end_value_real >= coast_target(r.year) }
       milestone("coast", row&.year, reached_already: false)
     end
 
     # The value at the end of `year` that grows to the FI number by the start
-    # of the retirement year. Today's assets are the end of the year before.
+    # of the retirement year.
     def coast_target(year)
       @fi_number / (@real_growth**[ @retirement_year - year - 1, 0 ].max)
+    end
+
+    # Today's assets have the rest of this year to grow as well as the whole
+    # years before retirement.
+    def today_coast_target
+      growth = @real_growth**[ @retirement_year - @first_year - 1, 0 ].max
+      growth *= @real_growth.power(@first_year_fraction, 20) if @first_year_fraction < 1 && @retirement_year > @first_year
+      @fi_number / growth
     end
 
     def milestone(key, year, reached_already:)

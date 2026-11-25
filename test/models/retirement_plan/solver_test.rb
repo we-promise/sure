@@ -1,7 +1,8 @@
 require "test_helper"
 
 class RetirementPlan::SolverTest < ActiveSupport::TestCase
-  AS_OF = Date.new(2026, 3, 15)
+  # 1 January, so 2026 counts as a whole year in the arithmetic below.
+  AS_OF = Date.new(2026, 1, 1)
   Stream = RetirementPlan::Simulation::Stream
 
   # 0% return and no inflation, so every figure below is plain arithmetic.
@@ -41,16 +42,16 @@ class RetirementPlan::SolverTest < ActiveSupport::TestCase
   end
 
   # Income of 50,000 in 2028 and 2029 only counts once retired, when its
-  # surplus over spending is reinvested; before that the contribution is
-  # fixed. Retiring in 2027 catches it: 10,000 saved, 10,000 spent, then
+  # surplus over spending is reinvested; marked seeded, it leaves the
+  # contribution fixed before that. Retiring in 2027 catches it: 10,000 saved, 10,000 spent, then
   # 80,000 reinvested against seven later years of 10,000. Retiring in 2030
   # or 2031 misses it (40,000 vs 70,000; 50,000 vs 60,000), and 2032 lasts
   # again (60,000 vs 50,000). Lasting is not monotonic in the year, so a
   # bisection over 2026..2036 would land on 2032; the earliest is 2027.
   test "the earliest lasting year is found when a later year runs out again" do
     streams = [
-      Stream.new(kind: "expense", annual_amount: 10_000),
-      Stream.new(kind: "income", annual_amount: 50_000, start_year: 2028, end_year: 2029)
+      Stream.new(kind: "expense", annual_amount: 10_000, seeded: true),
+      Stream.new(kind: "income", annual_amount: 50_000, start_year: 2028, end_year: 2029, seeded: true)
     ]
 
     assert_equal [ false, true, true, false, false, true ],
@@ -58,11 +59,25 @@ class RetirementPlan::SolverTest < ActiveSupport::TestCase
     assert_equal 2027, solve(streams:).retirement_year
   end
 
+  # The reviewer's case: read on 31 December, the solver counted a whole
+  # 2026 of saving and growth, and answered a year earlier than it did the
+  # next morning. With only that day of 2026 counted, both give one answer.
+  test "the solved year does not move overnight from 31 December to 1 January" do
+    inputs = { current_assets: 100_000, annual_contribution: 10_000, expected_annual_return: BigDecimal("0.07"),
+               inflation_rate: BigDecimal("0.03"), streams: [ Stream.new(kind: "expense", annual_amount: 30_000, seeded: true) ],
+               birth_year: 1980, end_age: 90 }
+
+    dec31 = RetirementPlan::Solver.new(**inputs, as_of: Date.new(2026, 12, 31)).call.retirement_year
+    jan1 = RetirementPlan::Solver.new(**inputs, as_of: Date.new(2027, 1, 1)).call.retirement_year
+
+    assert_equal jan1, dec31
+  end
+
   private
     def base
       {
         as_of: AS_OF, current_assets: 0, annual_contribution: 10_000, expected_annual_return: 0, inflation_rate: 0,
-        streams: [ Stream.new(kind: "expense", annual_amount: 10_000) ], birth_year: 1976, end_age: 60
+        streams: [ Stream.new(kind: "expense", annual_amount: 10_000, seeded: true) ], birth_year: 1976, end_age: 60
       }
     end
 
