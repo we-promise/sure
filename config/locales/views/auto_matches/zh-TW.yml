@@ -19,6 +19,9 @@ zh-TW:
       from: 從
       to: 到
       date: 日期
+      days_apart:
+        one: "相隔 %{count} 天"
+        other: "相隔 %{count} 天"
       actions: 操作
       separator: "·"
     bulk_actions:
