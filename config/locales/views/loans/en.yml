@@ -3,6 +3,7 @@ en:
   loans:
     edit:
       edit: Edit %{account}
+      stale_rate_schedule: This form is out of date. Reload the loan and reapply your changes. Nothing has been saved.
     form:
       financed_account: Finances
       financed_account_hint: The property or vehicle this loan paid for.

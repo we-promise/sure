@@ -109,6 +109,25 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ @security_price.id ], response_data["security_prices"].map { |price| price["id"] }
   end
 
+  test "lists whether a price is carried forward and filters on it" do
+    carried = Security::Price.create!(security: @security, date: @security_price.date + 1.day, price: @security_price.price, currency: @security_price.currency, carried_forward: true)
+
+    get api_v1_security_prices_url, params: { security_id: @security.id, carried_forward: true }, headers: api_headers(@api_key)
+    assert_response :success
+    rows = JSON.parse(response.body)["security_prices"]
+    assert_equal [ [ carried.id, true ] ], rows.map { |price| [ price["id"], price["carried_forward"] ] }
+
+    get api_v1_security_prices_url, params: { security_id: @security.id, carried_forward: false }, headers: api_headers(@api_key)
+    assert_not_includes JSON.parse(response.body)["security_prices"].map { |price| price["id"] }, carried.id
+  end
+
+  test "rejects malformed carried_forward filter" do
+    get api_v1_security_prices_url, params: { carried_forward: "maybe" }, headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_includes JSON.parse(response.body)["errors"], "carried_forward must be true or false"
+  end
+
   test "rejects blank provisional filter" do
     get api_v1_security_prices_url,
         params: { provisional: "" },
