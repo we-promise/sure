@@ -102,6 +102,7 @@ class Ai::LegacyEnvConfig
     routes[:extract_pdf] = route_list(:extract_pdf, preferred.select { _1.capable?(:vision) }.map { pdf_model(_1) })
     # Receipts are sent as images, PDFs as their pages, so only a model with `vision` reads them.
     routes[:extract_receipt] = route_list(:extract_receipt, preferred.select { _1.capable?(:vision) })
+    # Order emails are read from their text by any model; only one with `vision` gets their files.
     routes[:chat] = route_list(:chat, reached + [ agent_model ].compact)
     # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM; the shadow
     # route runs the other one.

@@ -1,76 +1,79 @@
 # Turns a forwarded order email into a purchase: reads it with the routed AI model, records the
 # order and its items, rejects emails that aren't orders or repeat one already recorded, looks for
-# the payment, and tells the user what happened. The AI call runs with no database transaction
-# open; results are written under the purchase's lock. Failures end the purchase as failed rather
-# than retrying a paid AI call.
+# the payment, and tells the user what happened.
+#
+# The requester of :extract_purchase. The mailbox and Purchase#reprocess! start a one-purchase
+# Ai::GenerationRun; Ai::GenerationJob reads the email (ai_generation) with no database
+# transaction open and applies the answer (apply_ai) under the purchase's lock. A failure that
+# passes (an outage, a busy local model) is retried by the job; one that doesn't ends the
+# purchase as failed (ai_failed).
 class Purchase::EmailProcessor
+  include Ai::Requester
+  ai_feature :extract_purchase
+
+  def self.from_ai_job(window:, family_id:)
+    ids = window.take_matching { |ids| Purchase.where(id: ids, family_id:).pluck(:id) }
+    new(Purchase.find_by(id: ids.first, family_id:))
+  end
+
+  # purchase: nil when it was deleted while the job waited.
   def initialize(purchase)
     @purchase = purchase
   end
 
-  def process!
-    purchase.reload
-    return unless purchase.processing?
-
-    unless Ai.availability(:extract_purchase, family:, user: purchase.user).available? && provider
-      return record_failure(StandardError.new("AI is not available for order emails"))
-    end
+  # The generation for a purchase still being read. Attachments go only to a model that reads
+  # images; without one the email is read from its text.
+  def ai_generation
+    return unless purchase&.reload&.processing?
 
     mail = Mail.new(purchase.original_email.download)
     @email_text = Purchase::EmailText.new(mail).call
     @subject = mail.subject
+    @files = email_text.files
+    if files.any? && !self.class.reads_files?(family:, user: purchase.user)
+      @files_rejected = true
+      @files = []
+    end
 
-    response = extract(email_text.files)
-    response = retry_without_files(response.error) if !response.success? && email_text.files.any?
-    return record_failure(response.error) unless response.success?
+    Ai::Generations::ExtractPurchase.new(
+      text: email_text.text, category_names: family.categories.pluck(:name), family:, user: purchase.user,
+      files: files.map { Ai::Attachment.new(filename: _1[:filename], content_type: _1[:content_type], data: _1[:data]) }
+    )
+  end
 
-    @extraction = response.data
+  def apply_ai(result)
+    return 0 unless purchase
+
+    @extraction = Purchase::Extraction.from_ai(result.value, files: files.size)
+    @route = result.route
     outcome = purchase.with_lock do
       next unless purchase.processing?
 
       apply_extraction
     end
-    return unless outcome
+    return 0 unless outcome
 
     match if outcome == :processed
-    notify(outcome)
-  rescue StandardError => e
-    record_failure(e)
+    ActiveRecord.after_all_transactions_commit { notify(outcome) }
+    1
+  end
+
+  def ai_failed(error)
+    record_failure(error) if purchase
+  end
+
+  def ai_correlation_id = purchase && "purchase:#{purchase.id}"
+
+  # Whether a model the member may use for order emails reads images.
+  def self.reads_files?(family:, user:)
+    plan = Ai.plan(:extract_purchase, family:, user:)
+    plan.present? && plan.routes.any? { _1.model.capable?(:structured_output, :vision) }
   end
 
   private
-    attr_reader :purchase, :extraction, :email_text, :subject, :files_rejected
+    attr_reader :purchase, :extraction, :email_text, :subject, :files, :files_rejected
 
     def family = purchase.family
-
-    # The preferred LLM provider, as other AI features use, when it can read order emails; never
-    # another configured provider, so emails go only where the instance sends its AI work.
-    def provider
-      return @provider if defined?(@provider)
-
-      preferred = Provider::Registry.preferred_llm_provider
-      @provider = preferred if preferred&.supports_purchase_extraction?
-    end
-
-    def extract(files)
-      provider.extract_purchase(text: email_text.text, files:, category_names: family.categories.pluck(:name), family:)
-    end
-
-    # An attachment the model can't take (too many pages, a format it refuses) shouldn't cost the
-    # order: read it again from the text alone.
-    def retry_without_files(error)
-      @files_rejected = true
-      DebugLogEntry.capture(
-        category: "ai",
-        level: "warn",
-        message: "Order email attachments were rejected, reading the text only: #{error&.message}",
-        source: self.class.name,
-        family:,
-        user: purchase.user,
-        metadata: { purchase_id: purchase.id, files: email_text.files.size }
-      )
-      extract([])
-    end
 
     # @return [Symbol] the email to send
     def apply_extraction
@@ -100,10 +103,13 @@ class Purchase::EmailProcessor
       :processed
     end
 
-    # Runs after what was read is saved, so a failure here (e.g. two jobs linking the same entry
-    # at once) only costs this attempt: the purchase waits and Purchase::MatchPendingJob retries.
+    # In a savepoint after what was read is saved, so a failure here (e.g. two jobs linking the
+    # same entry at once) only costs this attempt: the purchase waits and Purchase::MatchPendingJob
+    # retries.
     def match
-      purchase.with_lock { purchase.apply_match! if purchase.awaiting_payment? }
+      Purchase.transaction(requires_new: true) do
+        purchase.with_lock { purchase.apply_match! if purchase.awaiting_payment? }
+      end
     rescue StandardError => e
       purchase.reload
       DebugLogEntry.capture(
@@ -148,7 +154,7 @@ class Purchase::EmailProcessor
     def keep_receipt_files
       purchase.receipt_files.purge
       receipt_file_numbers.each do |number|
-        file = email_text.files[number - 1]
+        file = files[number - 1]
         purchase.receipt_files.attach(io: StringIO.new(file[:data]), filename: file[:filename], content_type: file[:content_type])
       end
     end
@@ -173,9 +179,9 @@ class Purchase::EmailProcessor
 
     def ai_metadata(problems)
       {
-        "provider" => provider.class.name.demodulize.underscore,
-        "model" => provider.try(:default_model),
-        "prompt_version" => Provider::Anthropic::PurchaseExtractor::PROMPT_VERSION,
+        "endpoint" => @route&.model&.endpoint&.name,
+        "model" => @route&.model&.name,
+        "prompt" => @route&.prompt.presence || Ai::Generations::ExtractPurchase.prompt_key,
         "extracted_at" => Time.current.iso8601,
         "subject" => subject,
         "raw_output" => extraction.to_h.as_json,
@@ -183,7 +189,7 @@ class Purchase::EmailProcessor
         "input_chars" => email_text.input_chars,
         "truncated" => email_text.truncated,
         "files_rejected" => files_rejected.present?,
-        "files" => email_text.files.each_with_index.map do |file, index|
+        "files" => files.each_with_index.map do |file, index|
           { "filename" => file[:filename], "content_type" => file[:content_type], "bytes" => file[:data].bytesize,
             "receipt" => receipt_file_numbers.include?(index + 1) }
         end
@@ -224,7 +230,7 @@ class Purchase::EmailProcessor
         user: purchase.user,
         metadata: { purchase_id: purchase.id, error_class: error&.class&.name }
       )
-      PurchaseMailer.with(purchase:).failed.deliver_later
+      ActiveRecord.after_all_transactions_commit { PurchaseMailer.with(purchase:).failed.deliver_later }
     end
 
     def decimal(value)

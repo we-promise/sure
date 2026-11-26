@@ -48,7 +48,7 @@ module AiTestHelper
       ]
       routes = {
         chat: %w[openai/gpt-4.1-mini agent/openclaw/main], bill_setup: %w[openai/gpt-4.1-mini],
-        extract_pdf: %w[openai/gpt-4.1-mini], extract_receipt: %w[openai/gpt-4.1-mini], embed: %w[embed/nomic-embed-text], categorize: %w[openai/gpt-4.1-mini],
+        extract_pdf: %w[openai/gpt-4.1-mini], extract_receipt: %w[openai/gpt-4.1-mini], extract_purchase: %w[openai/gpt-4.1-mini], embed: %w[embed/nomic-embed-text], categorize: %w[openai/gpt-4.1-mini],
         shadow_categorize: %w[jev/jev-latest], detect_merchants: %w[openai/gpt-4.1-mini],
         enhance_merchants: %w[openai/gpt-4.1-mini]
       }

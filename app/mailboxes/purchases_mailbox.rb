@@ -90,10 +90,11 @@ class PurchasesMailbox < ApplicationMailbox
       blob&.purge_later
     end
 
-    # A purchase whose job can't be queued is failed rather than left processing, so the user
+    # The run's job is queued once the run commits, and delivered again if the queue loses it. A
+    # purchase whose run can't even be saved is failed rather than left processing, so the user
     # can read it again from its page.
     def start_reading(purchase)
-      Purchase::EmailProcessJob.perform_later(purchase)
+      Ai::GenerationRun.enqueue(:extract_purchase, family: purchase.family, ids: [ purchase.id ])
     rescue StandardError => e
       purchase.update!(status: :failed, error: "The email couldn't be queued for reading: #{e.message}")
       DebugLogEntry.capture(

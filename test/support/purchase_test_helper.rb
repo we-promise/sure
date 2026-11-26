@@ -2,7 +2,7 @@
 # USD (the currency of the fixture accounts) unless overridden.
 module PurchaseTestHelper
   def build_purchase_extraction(**overrides)
-    Provider::LlmConcept::PurchaseExtraction.new(**{
+    Purchase::Extraction.new(**{
       is_order: true,
       not_order_reason: nil,
       merchant: "Amazon.com",
@@ -17,10 +17,19 @@ module PurchaseTestHelper
         { "name" => "HEPA filter", "quantity" => "2", "unit_price" => "39.99", "amount" => "79.98", "category_name" => "Food & Drink", "seller" => "HomeParts LLC" },
         { "name" => "Travel mug", "quantity" => "1", "unit_price" => "150.01", "amount" => "150.01", "category_name" => nil, "seller" => "Amazon.com" }
       ],
-      confidence: {},
-      notes: nil,
       receipt_files: []
     }.merge(overrides))
+  end
+
+  # An extraction as the model answers it.
+  def purchase_ai_answer(extraction = build_purchase_extraction)
+    extraction.to_h.transform_values do |value|
+      case value
+      when BigDecimal then value.to_f
+      when Date then value.iso8601
+      else value
+      end
+    end.merge(receipt_files: extraction.receipt_files.map { { number: _1 } })
   end
 
   def create_email_purchase(user: users(:family_admin), fixture: "amazon_manual_forward.eml")
@@ -29,12 +38,10 @@ module PurchaseTestHelper
     purchase
   end
 
-  def stub_purchase_provider(extraction = build_purchase_extraction, success: true, error: nil)
-    provider = stub(supports_purchase_extraction?: true, default_model: "claude-test")
-    response = Provider::Response.new(success?: success, data: success ? extraction : nil, error:)
-    provider.stubs(:extract_purchase).returns(response)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    provider
+  # Answers the order email's reading with the extraction, or fails it with the error; returns
+  # the requests sent.
+  def stub_purchase_extraction(extraction = build_purchase_extraction, error: nil)
+    error ? stub_ai(:extract_purchase, raises: error) : stub_ai(:extract_purchase, returns: purchase_ai_answer(extraction))
   end
 
   # A valid PDF with the given number of blank pages, padded with an unused stream so it passes

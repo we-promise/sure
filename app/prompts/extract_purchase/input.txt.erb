@@ -1,0 +1,7 @@
+<email>
+<%= text %>
+</email>
+<% if files.any? %>
+Attached files, numbered: <%= files.each_with_index.map { |name, index| "#{index + 1}. #{name}" }.join("; ") %>. The images are named after the file they come from (file-2-page-1.png is page 1 of file 2): <%= images.join(", ") %>.
+<% end %>
+Read the purchase in the email above<%= " and its attached files" if files.any? %>. Assign each item to one of these categories, or null when none fits: <%= category_names.any? ? category_names.join(", ") : "(no categories)" %>.

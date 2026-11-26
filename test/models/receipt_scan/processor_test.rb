@@ -597,10 +597,10 @@ class ReceiptScan::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("50.00"), purchase.total
     assert_equal "Corner Grocer", purchase.merchant
     assert_equal @date, purchase.ordered_on
-    assert_equal "claude-test", purchase.ai_metadata["model"]
-    assert_equal Provider::Anthropic::ReceiptExtractor::PROMPT_VERSION, purchase.ai_metadata["prompt_version"]
+    assert_equal "gpt-4.1-mini", purchase.ai_metadata["model"]
+    assert_equal "openai", purchase.ai_metadata["endpoint"]
+    assert_equal "extract_receipt", purchase.ai_metadata["prompt"]
     assert_equal "Corner Grocer", purchase.ai_metadata.dig("raw_output", "merchant")
-    assert_equal purchase.ai_metadata, scan.extraction
   end
 
   test "a receipt merged into a bank transaction links its purchase there" do

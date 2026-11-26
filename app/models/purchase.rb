@@ -139,22 +139,15 @@ class Purchase < ApplicationRecord
     result.kind
   end
 
-  # Starts reading a failed order email again.
+  # Starts reading a failed order email again. Under the purchase's lock, so two clicks start
+  # one run. Returns whether it started one.
   def reprocess!
-    return unless failed? && email?
+    with_lock do
+      next false unless failed? && email?
 
-    previous_error = error
-    update!(status: :processing, error: nil)
-    enqueued = begin
-      Purchase::EmailProcessJob.perform_later(self)
-    rescue StandardError
-      # Left processing with no job, it could never be retried.
-      update!(status: :failed, error: previous_error)
-      raise
+      update!(status: :processing, error: nil)
+      Ai::GenerationRun.enqueue(:extract_purchase, family:, ids: [ id ])
     end
-    # Match false exactly, as DestroyableLater does: a rejected enqueue returns false.
-    update!(status: :failed, error: previous_error) if enqueued == false
-    enqueued
   end
 
   # Re-checks the stored AI read against the current total rules, without calling the AI again.

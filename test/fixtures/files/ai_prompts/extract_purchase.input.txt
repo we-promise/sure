@@ -1,0 +1,5 @@
+<email>
+Order #1
+</email>
+
+Read the purchase in the email above. Assign each item to one of these categories, or null when none fits: Groceries.

@@ -4,17 +4,7 @@ class Purchase::Validator
   TOLERANCE = BigDecimal("0.01")
 
   # Rebuilds an extraction from the raw output stored in a purchase's ai_metadata.
-  def self.extraction_from(raw)
-    decimal = ->(value) { value.present? ? BigDecimal(value.to_s) : nil }
-    Provider::LlmConcept::PurchaseExtraction.new(
-      is_order: raw["is_order"], not_order_reason: raw["not_order_reason"], merchant: raw["merchant"],
-      order_number: raw["order_number"], order_date: (Date.iso8601(raw["order_date"].to_s) rescue nil),
-      currency: raw["currency"], total: (decimal.(raw["total"]) rescue nil),
-      shipping_cost: (decimal.(raw["shipping_cost"]) rescue nil), discount_total: (decimal.(raw["discount_total"]) rescue nil),
-      payment_method: raw["payment_method"], items: Array(raw["items"]), confidence: raw["confidence"] || {}, notes: raw["notes"],
-      receipt_files: Array(raw["receipt_files"])
-    )
-  end
+  def self.extraction_from(raw) = Purchase::Extraction.from_ai(raw)
 
   def initialize(extraction, family:)
     @extraction = extraction

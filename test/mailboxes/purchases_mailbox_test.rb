@@ -15,7 +15,7 @@ class PurchasesMailboxTest < ActionMailbox::TestCase
 
   test "a routed, authenticated email creates a processing purchase and starts reading it" do
     purchase = nil
-    assert_enqueued_with(job: Purchase::EmailProcessJob) do
+    assert_enqueued_with(job: Ai::GenerationJob) do
       inbound = receive_inbound_email_from_source(fixture("amazon_manual_forward.eml"))
       assert inbound.delivered?
       purchase = Purchase.order(:created_at).last
@@ -72,7 +72,7 @@ class PurchasesMailboxTest < ActionMailbox::TestCase
     assert_match "storage down", purchase.error
 
     ActiveStorage::Attached::Changes::CreateOne.any_instance.unstub(:upload)
-    assert_enqueued_with(job: Purchase::EmailProcessJob) do
+    assert_enqueued_with(job: Ai::GenerationJob) do
       inbound.reload.pending!
       inbound.route
     end
@@ -89,15 +89,25 @@ class PurchasesMailboxTest < ActionMailbox::TestCase
     purchase.update!(status: :awaiting_payment)
     PurchasesMailbox.any_instance.stubs(:previous_purchase).returns(stale)
 
-    assert_no_enqueued_jobs(only: Purchase::EmailProcessJob) do
+    assert_no_enqueued_jobs(only: Ai::GenerationJob) do
       inbound.reload.pending!
       inbound.route
     end
     assert purchase.reload.awaiting_payment?
   end
 
-  test "a purchase whose reading can't be queued is failed, so it can be read again" do
-    Purchase::EmailProcessJob.stubs(:perform_later).raises(RedisClient::CannotConnectError)
+  test "a purchase whose reading can't be queued waits in its run for delivery" do
+    Ai::GenerationJob.stubs(:perform_later).raises(RedisClient::CannotConnectError)
+
+    receive_inbound_email_from_source(fixture("amazon_manual_forward.eml"))
+
+    purchase = Purchase.order(:created_at).last
+    assert purchase.processing?
+    assert Ai::GenerationRun.find_by!(family: purchase.family, feature: "extract_purchase").next_job.present?
+  end
+
+  test "a purchase whose run can't be saved is failed, so it can be read again" do
+    Ai::GenerationRun.stubs(:enqueue).raises(ActiveRecord::StatementInvalid, "db down")
 
     receive_inbound_email_from_source(fixture("amazon_manual_forward.eml"))
 

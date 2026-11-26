@@ -15,6 +15,8 @@ class Purchase::EmailText
   MIN_IMAGE_BYTES = 20.kilobytes
   MAX_FILE_BYTES = 10.megabytes
   MAX_FILES = 5
+  # All of an email's files together, kept well inside a request's size once encoded.
+  MAX_FILES_BYTES = 20.megabytes
   # Receipts and invoices run to a page or two; longer PDFs are terms, catalogues or manuals,
   # and the model accepts at most 100 PDF pages per request.
   MAX_PDF_PAGES = 5
@@ -90,7 +92,7 @@ class Purchase::EmailText
 
         file = receipt_file(part)
         next unless file
-        next if files.sum { _1[:data].bytesize } + file[:data].bytesize > Provider::Anthropic::PurchaseExtractor::MAX_FILES_BYTES
+        next if files.sum { _1[:data].bytesize } + file[:data].bytesize > MAX_FILES_BYTES
 
         files << file
       end

@@ -11,7 +11,8 @@ class AiSchemasTest < ActiveSupport::TestCase
     Ai::Generations::SuggestBillSetup => -> { new(charges: [], categories: [], family: nil) },
     Ai::Generations::ReadPdf => -> { new(units: [], content: "", family: nil) },
     Ai::Generations::ExtractBankStatement => -> { new(units: [], content: "", family: nil) },
-    Ai::Generations::ExtractReceipt => -> { new(files: [], category_names: %w[Groceries], family: nil) }
+    Ai::Generations::ExtractReceipt => -> { new(files: [], category_names: %w[Groceries], family: nil) },
+    Ai::Generations::ExtractPurchase => -> { new(text: "", files: [], category_names: %w[Groceries], family: nil) }
   }.freeze
 
   test "every generation has a sample here" do
