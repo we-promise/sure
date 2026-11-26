@@ -100,6 +100,8 @@ class Ai::LegacyEnvConfig
     # PDF import uses only a model with `vision`, so OPENAI_SUPPORTS_PDF_PROCESSING=false, which
     # takes `vision` away, keeps it off.
     routes[:extract_pdf] = route_list(:extract_pdf, preferred.select { _1.capable?(:vision) }.map { pdf_model(_1) })
+    # Receipts are sent as images, PDFs as their pages, so only a model with `vision` reads them.
+    routes[:extract_receipt] = route_list(:extract_receipt, preferred.select { _1.capable?(:vision) })
     routes[:chat] = route_list(:chat, reached + [ agent_model ].compact)
     # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM; the shadow
     # route runs the other one.

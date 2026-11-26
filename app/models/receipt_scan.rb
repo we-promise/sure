@@ -28,87 +28,71 @@ class ReceiptScan < ApplicationRecord
   InvalidUpload = Class.new(StandardError)
 
   class << self
-    # Whether receipts can be read for this family and user: the AI route allows it, its model
-    # can read images, and the preferred provider reads receipts (only Anthropic so far). A
-    # custom endpoint declares what its model can do in the AI configuration.
+    # Whether receipts can be read for this family and user: the uploader allows AI, and a route
+    # for receipts has a model that reads images.
     def extraction_available?(family:, user:)
-      model = Ai.plan(:extract_receipt, family:, user:)&.model
-      model.present? && model.capable?(:vision) && extraction_provider.present?
+      plan = Ai.plan(:extract_receipt, family:, user:)
+      plan.present? && plan.routes.any? { _1.model.capable?(:structured_output, :vision) }
     end
 
-    # The preferred LLM provider, as other AI features use, when it can read receipts. Never
-    # another configured provider: receipts go only where the instance sends its AI work.
-    def extraction_provider
-      provider = Provider::Registry.preferred_llm_provider
-      provider if provider&.supports_receipt_extraction?
+    def known_currency?(code)
+      code.present? && Money::Currency.new(code).present?
+    rescue Money::Currency::UnknownCurrencyError
+      false
     end
 
     # Stores the normalized files and gives the user a "Processing receipt…" transaction on the
-    # account right away; ReceiptScan::ProcessJob fills it in. The caller authorizes the account.
+    # account right away, with the run that reads it (ReceiptScan::Processor) queued once it
+    # commits. The files are uploaded first, so the run never reads a scan without its files. The
+    # caller authorizes the account.
     def create_from_upload!(family:, user:, account:, uploads:)
-      normalized = normalize_uploads!(Array(uploads).compact)
+      blobs = normalize_uploads!(Array(uploads).compact).map { ActiveStorage::Blob.create_and_upload!(**_1) }
 
-      scan = nil
-      begin
-        transaction do
-          # Reloads the account's family under the lock, so a transfer that just committed fails
-          # the family check instead of leaving the scan in the old family. The uploader is
-          # locked first, in the order User#transfer_to_family! takes them.
-          user.lock!
-          account.lock!
-          # Access is checked again under the locks: a member removed from the account since the
-          # caller checked can't add to it.
-          raise InvalidUpload, I18n.t("receipt_scans.errors.account_not_writable") unless Account.writable_by(user).exists?(account.id)
-          scan = create!(family:, user:, account:)
-          normalized.each { |file| scan.files.attach(**file) }
+      transaction do
+        # Reloads the account's family under the lock, so a transfer that just committed fails
+        # the family check instead of leaving the scan in the old family. The uploader is
+        # locked first, in the order User#transfer_to_family! takes them.
+        user.lock!
+        account.lock!
+        # Access is checked again under the locks: a member removed from the account since the
+        # caller checked can't add to it.
+        raise InvalidUpload, I18n.t("receipt_scans.errors.account_not_writable") unless Account.writable_by(user).exists?(account.id)
 
-          entry = account.entries.create!(
-            name: I18n.t("receipt_scans.placeholder_name"),
-            date: Date.current,
-            amount: 0,
-            currency: account.currency,
-            entryable: Transaction.new(extra: { "receipt" => { "scan_id" => scan.id, "status" => "processing" } })
-          )
-          entry.entryable.attachments.attach(scan.files.blobs)
-          scan.update!(linked_transaction: entry.entryable)
-        end
-      rescue StandardError => e
-        # Active Storage uploads the files after the commit; when that fails the scan exists
-        # without readable files, so it ends as failed rather than being read.
-        raise unless scan&.persisted? && exists?(scan.id)
-
-        ReceiptScan::Processor.new(scan.reload).fail!(e)
-        return scan
+        scan = create!(family:, user:, account:)
+        scan.files.attach(blobs)
+        entry = account.entries.create!(
+          name: I18n.t("receipt_scans.placeholder_name"),
+          date: Date.current,
+          amount: 0,
+          currency: account.currency,
+          entryable: Transaction.new(extra: { "receipt" => { "scan_id" => scan.id, "status" => "processing" } })
+        )
+        entry.entryable.attachments.attach(blobs)
+        scan.update!(linked_transaction: entry.entryable)
+        Ai::GenerationRun.enqueue(:extract_receipt, family:, ids: [ scan.id ])
+        scan
       end
-
-      enqueue_processing(scan)
-      scan
+    rescue StandardError
+      blobs&.each { _1.purge_later unless _1.attachments.exists? }
+      raise
     end
 
     private
-      # A scan nothing will read would stay "processing" forever: end it as failed, so the user
-      # sees it and can try again.
-      def enqueue_processing(scan)
-        error = nil
-        enqueued = begin
-          ReceiptScan::ProcessJob.perform_later(scan)
-        rescue StandardError => e
-          error = e
-          false
-        end
-        ReceiptScan::Processor.new(scan).fail!(error || StandardError.new("The receipt couldn't be queued for reading")) unless enqueued
-      end
-
       def normalize_uploads!(uploads)
         raise InvalidUpload, I18n.t("receipt_scans.errors.no_files") if uploads.empty?
         raise InvalidUpload, I18n.t("receipt_scans.errors.too_many_files", count: MAX_FILES) if uploads.size > MAX_FILES
 
         files = uploads.map do |upload|
+          raise InvalidUpload, I18n.t("receipt_scans.errors.not_a_file") unless upload.respond_to?(:original_filename) && upload.respond_to?(:read)
+
           if upload.size > MAX_FILE_SIZE
             raise InvalidUpload, I18n.t("receipt_scans.errors.too_large", size: MAX_FILE_SIZE / 1.megabyte)
           end
 
           ReceiptScan::ImageNormalizer.call(io: upload, content_type: upload.content_type, filename: upload.original_filename)
+        rescue ReceiptScan::ImageNormalizer::TooManyPages
+          raise InvalidUpload, I18n.t("receipt_scans.errors.too_many_pages", filename: upload.original_filename,
+                                                                            count: Ai::Generations::ExtractReceipt::MAX_PDF_PAGES)
         rescue ReceiptScan::ImageNormalizer::UnsupportedFile
           raise InvalidUpload, I18n.t("receipt_scans.errors.unsupported_file", filename: upload.original_filename)
         end

@@ -11,17 +11,18 @@ class ReceiptScan::Evaluation
 
   ExpectedAccount = Struct.new(:currency)
 
-  def initialize(dir:, family:, provider: Provider::Registry.preferred_llm_provider, clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) })
+  # user: the member whose AI switch the receipts are read under, as an upload would be.
+  def initialize(dir:, family:, user:, clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) })
     @dir = Pathname(dir)
     @family = family
-    @provider = provider
+    @user = user
     @clock = clock
   end
 
   REPORT = "report".freeze
 
   def run
-    raise ArgumentError, "No receipt-capable AI provider is configured" unless provider&.supports_receipt_extraction?
+    raise ArgumentError, "No AI model that reads images is routed for receipts" unless ReceiptScan.extraction_available?(family:, user:)
     # The report is written to report.json, which would overwrite that receipt's expected values.
     raise ArgumentError, "Rename the receipt called #{REPORT}: the report is written to #{REPORT}.json" if receipts.any? { _1.first == REPORT }
 
@@ -38,7 +39,7 @@ class ReceiptScan::Evaluation
   end
 
   private
-    attr_reader :dir, :family, :provider, :clock
+    attr_reader :dir, :family, :user, :clock
 
     def receipts
       dir.children.sort.filter_map do |path|
@@ -53,23 +54,28 @@ class ReceiptScan::Evaluation
 
     def evaluate(name, path, expected)
       started = clock.call
-      file = File.open(path, "rb") do |io|
-        ReceiptScan::ImageNormalizer.call(io:, content_type: CONTENT_TYPES.fetch(path.extname.downcase), filename: path.basename.to_s)
+      result = begin
+        file = File.open(path, "rb") do |io|
+          ReceiptScan::ImageNormalizer.call(io:, content_type: CONTENT_TYPES.fetch(path.extname.downcase), filename: path.basename.to_s)
+        end
+        files = [ Ai::Attachment.new(filename: file[:filename], content_type: file[:content_type], data: file[:io].read) ]
+        # The lane an upload's job reads in.
+        Ai::Sequencer.with_lane(:prompt) do
+          Ai::Generations::ExtractReceipt.new(files:, category_names: family.categories.pluck(:name), family:, user:).call
+        end
+      rescue ReceiptScan::ImageNormalizer::UnsupportedFile => error
+        Ai::Result.failure(error)
       end
-      response = provider.extract_receipt(
-        files: [ { data: file[:io].read, content_type: file[:content_type] } ],
-        category_names: family.categories.pluck(:name),
-        family:
-      )
       latency = (clock.call - started).round(2)
 
-      unless response.success?
+      unless result.success?
         # Wrong on every field it was expected to read.
         scores = FIELDS.select { expected[_1].present? }.index_with(false)
-        return { "name" => name, "error" => response.error&.message, "scores" => scores, "flags" => [], "latency_seconds" => latency }
+        message = result.error&.message || result.availability&.reason.to_s
+        return { "name" => name, "error" => message, "scores" => scores, "flags" => [], "latency_seconds" => latency }
       end
 
-      extraction = response.data
+      extraction = ReceiptScan::Extraction.from_ai(result.value)
       flags = ReceiptScan::Validator.new(extraction, account: ExpectedAccount.new(expected["currency"])).problems.map { _1["reason"] }
       { "name" => name, "scores" => scores(extraction, expected), "flags" => flags, "latency_seconds" => latency }
     end
@@ -86,7 +92,7 @@ class ReceiptScan::Evaluation
       case field
       when "merchant" then extraction.merchant.to_s.downcase.include?(expected.to_s.downcase)
       when "date" then extraction.date&.iso8601 == expected.to_s
-      when "total" then extraction.total.present? && extraction.total == BigDecimal(expected.to_s)
+      when "total" then extraction.total.present? && extraction.total == ReceiptScan::Extraction.decimal(expected)
       when "currency" then extraction.currency == expected.to_s.upcase
       when "nip" then extraction.nip.to_s == expected.to_s.gsub(/\D/, "")
       end

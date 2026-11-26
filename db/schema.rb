@@ -2133,7 +2133,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
     t.uuid "user_id"
     t.uuid "transaction_id"
     t.string "status", default: "processing", null: false
-    t.jsonb "extraction", default: {}, null: false
     t.jsonb "review_reasons", default: [], null: false
     t.text "error"
     t.datetime "created_at", null: false

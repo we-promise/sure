@@ -6,7 +6,6 @@ class CreateReceiptScans < ActiveRecord::Migration[8.1]
       t.references :user, foreign_key: { on_delete: :nullify }, type: :uuid
       t.references :transaction, foreign_key: { on_delete: :nullify }, type: :uuid
       t.string :status, null: false, default: "processing"
-      t.jsonb :extraction, null: false, default: {}
       t.jsonb :review_reasons, null: false, default: []
       t.text :error
 

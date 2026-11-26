@@ -1,38 +1,26 @@
 require "test_helper"
 
 class ReceiptScanTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
   setup do
     @family = families(:dylan_family)
     @user = users(:family_admin)
     @account = accounts(:depository)
   end
 
-  test "reads receipts with the preferred provider when it can" do
-    anthropic = stub(supports_receipt_extraction?: true)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(anthropic)
-    use_ai_routes
-
-    assert_same anthropic, ReceiptScan.extraction_provider
-    assert ReceiptScan.extraction_available?(family: @family, user: @user)
-  end
-
-  test "doesn't send receipts to another provider when the preferred one can't read them" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(stub(supports_receipt_extraction?: false))
-    Provider::Registry.stubs(:get_provider).returns(stub(supports_receipt_extraction?: true))
-    use_ai_routes
-
-    assert_nil ReceiptScan.extraction_provider
-    assert_not ReceiptScan.extraction_available?(family: @family, user: @user)
-  end
-
-  test "a model that can't read images doesn't read receipts" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(stub(supports_receipt_extraction?: true))
-
+  test "receipts are read only by a routed model that reads images" do
     use_ai_routes(extract_receipt: %w[gpu/qwen3-8b])
     assert_not ReceiptScan.extraction_available?(family: @family, user: @user)
 
     use_ai_routes(extract_receipt: %w[openai/gpt-4.1-mini])
     assert ReceiptScan.extraction_available?(family: @family, user: @user)
+  end
+
+  test "receipts aren't read for a member who turned AI off" do
+    use_ai_routes
+    @user.update!(ai_enabled: false)
+
+    assert_not ReceiptScan.extraction_available?(family: @family, user: @user)
   end
 
   test "account must belong to the family" do
@@ -84,4 +72,11 @@ class ReceiptScanTest < ActiveSupport::TestCase
 
     assert transaction.from_receipt?
   end
+
+  private
+    def upload
+      use_ai_routes
+      ReceiptScan.create_from_upload!(family: @family, user: @user, account: @account,
+                                       uploads: [ Rack::Test::UploadedFile.new(file_fixture("receipts/rotated.jpg"), "image/jpeg") ])
+    end
 end

@@ -3,6 +3,8 @@
 # and EXIF carries the location the photo was taken. PDFs pass through untouched.
 class ReceiptScan::ImageNormalizer
   UnsupportedFile = Class.new(StandardError)
+  # A PDF longer than a receipt or an invoice: only its first pages would be read.
+  TooManyPages = Class.new(UnsupportedFile)
 
   # libvips picks a loader by sniffing the bytes, whatever the client declared, and some of its
   # loaders (SVG, PDF, Matlab, ...) are not ones we want running on uploads. Only these may.
@@ -35,6 +37,7 @@ class ReceiptScan::ImageNormalizer
     if content_type == "application/pdf"
       bytes = io.read.b
       raise UnsupportedFile, "Receipt file is not a PDF" unless bytes.start_with?("%PDF-")
+      raise TooManyPages, "The PDF has more pages than a receipt" if page_count(bytes) > Ai::Generations::ExtractReceipt::MAX_PDF_PAGES
 
       return { io: StringIO.new(bytes), content_type: "application/pdf", filename: }
     end
@@ -47,6 +50,12 @@ class ReceiptScan::ImageNormalizer
 
   private
     attr_reader :io, :content_type, :filename
+
+    def page_count(bytes)
+      Pdf::PageImages.page_count(bytes)
+    rescue Pdf::PageImages::Error
+      raise UnsupportedFile, "The PDF can't be read"
+    end
 
     # The libvips loader check below still decides whether the bytes are acceptable.
     def resolve_content_type(declared)

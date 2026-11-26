@@ -1,79 +1,117 @@
 # Turns a processing ReceiptScan into a finished transaction: reads the receipt with the routed
 # AI model, checks the result, attaches it to the bank's version of the payment when that is
 # already here, otherwise fills in the placeholder, and splits the spend by category.
+#
+# The requester of :extract_receipt. ReceiptScan.create_from_upload! starts a one-scan
+# Ai::GenerationRun; Ai::GenerationJob reads the receipt (ai_generation) with no database
+# transaction open and applies the answer (apply_ai) under the scan's locks. A failure that
+# passes (an outage, a busy local model) is retried by the job; one that doesn't ends the scan
+# (ai_failed).
 class ReceiptScan::Processor
+  include Ai::Requester
+  ai_feature :extract_receipt
+
   # Problems that make the extracted payment unreliable enough not to merge into a bank entry.
   BLOCKING_PROBLEMS = %w[missing_total non_positive_total missing_date currency_mismatch unknown_currency].freeze
 
+  def self.from_ai_job(window:, family_id:)
+    ids = window.take_matching { |ids| ReceiptScan.where(id: ids, family_id:).pluck(:id) }
+    new(ReceiptScan.find_by(id: ids.first, family_id:))
+  end
+
+  # scan: nil when it was deleted while the job waited.
   def initialize(scan)
     @scan = scan
   end
 
-  # Safe to run more than once: only a scan still processing is worked on. The AI call runs with
-  # no database transaction open; the results are written under the scan's lock afterwards.
-  # Any unexpected error ends the scan as failed rather than retrying a paid AI call.
-  def process!
-    scan.reload
-    return unless scan.processing?
+  # The generation for a scan still processing, or nil when there is nothing to read.
+  def ai_generation
+    return unless scan&.reload&.processing?
 
-    @placeholder = scan.linked_transaction
-    return record_failure(StandardError.new("The receipt's transaction was deleted")) unless placeholder
-
-    unless ReceiptScan.extraction_available?(family:, user: scan.user)
-      return scan.with_lock do
-        next unless scan.processing?
-
-        scan.flag!(:ai_unavailable)
-        write_receipt_extra(placeholder)
-      end
+    unless (@placeholder = scan.linked_transaction)
+      record_failure(StandardError.new("The receipt's transaction was deleted"))
+      return
     end
 
-    @extraction = extract
-    return unless extraction
+    files = scan.files.map do |file|
+      Ai::Attachment.new(filename: file.filename.to_s, content_type: file.content_type, data: file.download)
+    end
+    Ai::Generations::ExtractReceipt.new(files:, category_names: family.categories.pluck(:name), family:, user: scan.user)
+  end
 
+  def apply_ai(result)
+    return 0 unless scan
+
+    @extraction = ReceiptScan::Extraction.from_ai(result.value)
     # Amounts are kept to the currency's decimals, so the split parts can add up to the total.
     @extraction = extraction.with(total: extraction.total.round(precision)) if extraction.total
 
     outcome = with_completion_locks do
-      next unless scan.processing? && placeholder_still_there?
+      next unless scan.processing?
+      next :gone unless placeholder
       next :no_access unless uploader_can_write?
 
       apply_extraction
+      :applied
     end
-    record_failure(StandardError.new("The uploader can no longer change this account")) if outcome == :no_access
-  rescue StandardError => e
-    record_failure(e)
+    case outcome
+    when :gone then record_failure(StandardError.new("The receipt's transaction was deleted"))
+    when :no_access then record_failure(StandardError.new("The uploader can no longer change this account"))
+    end
+    outcome == :applied ? 1 : 0
   end
 
-  # Ends a scan that won't be read as failed (e.g. its job couldn't be queued).
-  def fail!(error)
+  # No model the uploader may use can read images: the scan waits for review, with the
+  # placeholder left for the user. Anything else ends it as failed.
+  def ai_failed(error)
+    return unless scan
+
     @placeholder = scan.linked_transaction
-    record_failure(error)
+    return record_failure(error) unless error.is_a?(Ai::Error::Unavailable)
+
+    scan.with_lock do
+      next unless scan.processing?
+
+      scan.flag!(:ai_unavailable)
+      write_receipt_extra(locked_placeholder) if locked_placeholder
+    end
   end
+
+  def ai_correlation_id = scan && "receipt_scan:#{scan.id}"
 
   private
-    attr_reader :scan, :extraction, :problems, :placeholder
+    attr_reader :scan, :extraction, :problems
 
     def family = scan.family
 
     # The uploader, then the account, then the scan: the order User#transfer_to_family! takes
-    # them in, so a transfer and a scan finishing at the same time don't wait on each other.
+    # them in, so a transfer and a scan finishing at the same time don't wait on each other. The
+    # placeholder is locked and read again last: the user may have edited it while the receipt
+    # was read.
     def with_completion_locks
       ReceiptScan.transaction do
         scan.user&.lock!
         scan.account.lock!
         scan.lock!
+        @placeholder = locked_placeholder
         yield
       end
+    end
+
+    attr_reader :placeholder
+
+    # The scan's transaction and its entry, locked and read again; nil when it was deleted.
+    def locked_placeholder
+      transaction = Transaction.lock.find_by(id: scan.transaction_id)
+      return unless transaction&.entry
+
+      transaction.entry.lock!
+      transaction
     end
 
     # The upload's own rule, checked again: access can be lost while the receipt is read.
     def uploader_can_write?
       scan.user.present? && Account.writable_by(scan.user).exists?(scan.account_id)
-    end
-
-    def placeholder_still_there?
-      Transaction.exists?(placeholder.id) or raise StandardError, "The receipt's transaction was deleted"
     end
 
     def apply_extraction
@@ -88,29 +126,18 @@ class ReceiptScan::Processor
       write_receipt_extra(transaction)
     end
 
-    def provider
-      @provider ||= ReceiptScan.extraction_provider
-    end
-
-    def extract
-      response = provider.extract_receipt(
-        files: scan.files.map { |file| { data: file.download, content_type: file.content_type } },
-        category_names: family.categories.pluck(:name),
-        family:
-      )
-      return response.data if response.success?
-
-      record_failure(response.error)
-      nil
-    end
-
-    # Only a scan still processing fails: another run may have finished it meanwhile.
+    # Only a scan still processing fails: another run may have finished it meanwhile. The
+    # placeholder keeps what the user gave it, and its name says the receipt wasn't read.
     def record_failure(error)
       failed = scan.with_lock do
         next false unless scan.processing?
 
         scan.update!(status: :failed, error: error&.message)
-        write_receipt_extra(placeholder) if placeholder && Transaction.exists?(placeholder.id)
+        if (transaction = locked_placeholder)
+          entry = transaction.entry
+          entry.update!(name: I18n.t("receipt_scans.failed_name")) unless entry.locked?(:name)
+          write_receipt_extra(transaction)
+        end
         true
       end
       return unless failed
@@ -148,7 +175,9 @@ class ReceiptScan::Processor
     end
 
     # Holds the bank entry's lock until the scan's work commits, so two scans that both picked it
-    # don't both merge: the second sees the first one's receipt and keeps its placeholder.
+    # don't both merge: the second sees the first one's receipt and keeps its placeholder. What
+    # the user added to the placeholder while the receipt was read (tags, notes, other files)
+    # moves to the bank's transaction with the receipt.
     def merge_into(bank_transaction)
       bank_entry = bank_transaction.entry
       bank_entry.lock!
@@ -161,42 +190,43 @@ class ReceiptScan::Processor
       end
 
       if bank_transaction.extra["receipt"].present?
-        scan.flag!(:duplicate_receipt, entry_id: bank_transaction.entry.id)
+        scan.flag!(:duplicate_receipt, entry_id: bank_entry.id)
         return placeholder
       end
 
-      if bank_transaction.attachments.count + scan.files.count > Transaction::MAX_ATTACHMENTS_PER_TRANSACTION
-        scan.flag!(:too_many_attachments, entry_id: bank_transaction.entry.id)
+      blobs = placeholder.attachments.blobs.to_a
+      if bank_transaction.attachments.count + blobs.size > Transaction::MAX_ATTACHMENTS_PER_TRANSACTION
+        scan.flag!(:too_many_attachments, entry_id: bank_entry.id)
         return placeholder
       end
 
-      bank_transaction.attachments.attach(scan.files.blobs)
+      bank_transaction.attachments.attach(blobs)
+      bank_transaction.update!(tag_ids: (bank_transaction.tag_ids + placeholder.tag_ids).uniq)
+      notes = [ bank_entry.notes, placeholder.entry.notes ].compact_blank.uniq.join("\n\n")
+      bank_entry.update!(notes:) if notes != bank_entry.notes.to_s
       scan.update!(linked_transaction: bank_transaction)
       placeholder.attachments.detach
       placeholder.entry.destroy!
       bank_transaction
     end
 
+    # Fills in what the user hasn't set themselves while the receipt was read.
     def fill(transaction)
       entry = transaction.entry
-      entry.update!(
+      read = {
         name: extraction.merchant.presence || I18n.t("receipt_scans.fallback_name"),
-        date: extraction.date || entry.date,
-        amount: extraction.total || entry.amount,
-        currency: known_currency?(extraction.currency) ? extraction.currency : entry.currency
-      )
+        date: extraction.date,
+        amount: extraction.total,
+        currency: (extraction.currency if ReceiptScan.known_currency?(extraction.currency))
+      }.compact.reject { |attribute, _| entry.locked?(attribute) }
+      entry.update!(read)
       entry.lock_saved_attributes!
       entry.sync_account_later
     end
 
     def precision
-      Money::Currency.new(known_currency?(extraction.currency) ? extraction.currency : scan.account.currency).default_precision
-    end
-
-    def known_currency?(code)
-      code.present? && Money::Currency.new(code).present?
-    rescue Money::Currency::UnknownCurrencyError
-      false
+      code = ReceiptScan.known_currency?(extraction.currency) ? extraction.currency : scan.account.currency
+      Money::Currency.new(code).default_precision
     end
 
     def categorize(entry)
@@ -210,21 +240,23 @@ class ReceiptScan::Processor
         # A pending transaction can't be split; the user splits it once the bank books it.
         scan.flag!(:split_after_booking)
       elsif groups.many?
-        entry.split_once!(groups.map { |group| split_for(group) }, lock_attributes: true)
+        tag_ids = entry.entryable.tag_ids
+        entry.split_once!(groups.map { |group| split_for(group, tag_ids:) }, lock_attributes: true)
       end
     end
 
-    def split_for(group)
+    def split_for(group, tag_ids:)
       label = group[:category]&.name || I18n.t("receipt_scans.uncategorized_split_name")
-      { name: [ extraction.merchant, label ].compact.join(" — "), amount: group[:amount], category_id: group[:category]&.id }
+      { name: [ extraction.merchant, label ].compact.join(" — "), amount: group[:amount], category_id: group[:category]&.id, tag_ids: }
     end
 
+    # Merged into the transaction's extra as it is now: the caller holds its lock.
     def write_receipt_extra(transaction)
       return unless transaction
 
       receipt = (transaction.extra["receipt"] || {}).merge(
         "scan_id" => scan.id,
-        "status" => scan.completed? ? "completed" : (scan.processing? ? "processing" : "needs_review"),
+        "status" => scan.status,
         "review_reasons" => scan.review_reasons
       )
       receipt.merge!(extraction.to_h.as_json) if extraction

@@ -13,11 +13,10 @@ class Api::V1::ReceiptsControllerTest < ActionDispatch::IntegrationTest
     @api_key = create_api_key(@admin, "read_write")
     @read_only_api_key = create_api_key(@admin, "read")
     use_ai_routes
-    Provider::Registry.stubs(:preferred_llm_provider).returns(stub(supports_receipt_extraction?: true))
   end
 
   test "403 when receipt scanning is unavailable" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(stub(supports_receipt_extraction?: false))
+    use_ai_routes(extract_receipt: %w[gpu/qwen3-8b])   # can't read images
 
     assert_no_difference "ReceiptScan.count" do
       post api_v1_receipts_url,
