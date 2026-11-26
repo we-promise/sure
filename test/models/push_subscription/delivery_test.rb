@@ -24,29 +24,24 @@ class PushSubscription::DeliveryTest < ActiveSupport::TestCase
     refute_includes DebugLogEntry.last.metadata.to_json, @subscription.token
   end
 
-  test "invalidates an unchanged unregistered token" do
-    assert_difference "PushSubscription.count", -1 do
-      assert_equal :unregistered, deliver("410", { "timestamp" => Time.current.to_i * 1000 })
+  test "an unregistered token is reported gone and its removal left to the caller" do
+    assert_no_difference "PushSubscription.count" do
+      assert_equal :gone, deliver("410", { "timestamp" => Time.current.to_i * 1000 })
     end
   end
 
-  test "a response predating registration cannot invalidate the token" do
-    assert_no_difference "PushSubscription.count" do
-      deliver("410", { "timestamp" => 2.minutes.ago.to_i * 1000 })
-    end
-  end
-
-  test "renewal while APNs is responding is preserved" do
-    original = @subscription
-    PushSubscription.find(original.id).update!(last_registered_at: Time.current)
-    assert_no_difference "PushSubscription.count" do
-      deliver("410", { "timestamp" => Time.current.to_i * 1000 })
-    end
+  test "a response predating registration is a rejection, not an invalidation" do
+    assert_equal :rejected, deliver("410", { "timestamp" => 2.minutes.ago.to_i * 1000 })
   end
 
   test "malformed invalidation timestamp cannot remove a token" do
+    assert_equal :rejected, deliver("410", { "timestamp" => "invalid" })
+  end
+
+  test "renewal while APNs is responding is preserved" do
+    PushSubscription.find(@subscription.id).update!(last_registered_at: Time.current)
     assert_no_difference "PushSubscription.count" do
-      deliver("410", { "timestamp" => "invalid" })
+      @subscription.invalidate_if_unchanged!
     end
   end
 
