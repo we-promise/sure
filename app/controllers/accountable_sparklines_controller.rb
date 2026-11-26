@@ -1,4 +1,8 @@
 class AccountableSparklinesController < ApplicationController
+  # Sparkline frames load lazily from the sidebar on every page and render no
+  # layout: skip layout-only setup and never start an auto-sync from them.
+  skip_before_action :sync_family, :set_default_chat, :restore_active_tabs, :detect_os
+
   def show
     @accountable = Accountable.from_type(params[:accountable_type]&.classify)
     sparkline = AccountableSparkline.new(@accountable)

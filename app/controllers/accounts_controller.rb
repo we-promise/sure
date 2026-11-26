@@ -2,6 +2,9 @@ class AccountsController < ApplicationController
   include StreamExtensions
   include FilterClearable
 
+  # Sparkline frames load lazily from the sidebar on every page and render no
+  # layout: skip layout-only setup and never start an auto-sync from them.
+  skip_before_action :sync_family, :set_default_chat, :restore_active_tabs, :detect_os, only: :sparkline
   before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
   before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports reconcile_all destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]

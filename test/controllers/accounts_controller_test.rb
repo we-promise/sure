@@ -1907,6 +1907,15 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.font-mono", count: 0
   end
 
+  test "sparkline does not trigger auto-sync" do
+    Sync.destroy_all
+    Family.any_instance.expects(:sync_later).never
+
+    get sparkline_account_url(@account)
+
+    assert_response :success
+  end
+
   test "destroys account" do
     delete account_url(@account)
     assert_redirected_to accounts_path

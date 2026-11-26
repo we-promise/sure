@@ -209,6 +209,32 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
     end
   end
 
+  # A request that fails outright never answers, so there is nothing to wait
+  # for. The shipped window applies here: the badge must not need it.
+  test "a request that fails outright raises the badge at once and is not carried" do
+    visit root_path
+
+    with_stalled_sparkline_responses do
+      expand_first_group
+      assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[busy]", minimum: 1, visible: :all
+
+      # What Turbo dispatches on a network error or a dropped connection.
+      page.execute_script(<<~JS)
+        document.querySelectorAll("#{ACCOUNT_SPARKLINE_FRAME}[busy]").forEach((frame) => {
+          frame.dispatchEvent(new CustomEvent("turbo:fetch-request-error", { bubbles: true, detail: { error: new TypeError("Failed to fetch") } }))
+        })
+      JS
+
+      assert_selector "#{ACCOUNT_SPARKLINE_FRAME} p", text: BADGE_TEXT, minimum: 1, wait: 2
+      failed = page.evaluate_script(<<~JS)
+        Array.from(document.querySelectorAll("#{ACCOUNT_SPARKLINE_FRAME}"))
+          .filter((frame) => frame.textContent.includes("#{BADGE_TEXT}"))
+          .filter((frame) => frame.closest("[data-turbo-permanent]")).length
+      JS
+      assert_equal 0, failed, "a wrapper around a failed sparkline is still permanent"
+    end
+  end
+
   # A Turbo visit replaces the page body, sidebar included. The sparklines sit
   # in permanent wrappers so the next page takes over the charts already drawn
   # rather than starting every frame from its placeholder and fetching it again.

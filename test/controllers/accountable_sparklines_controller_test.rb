@@ -10,6 +10,15 @@ class AccountableSparklinesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show does not trigger auto-sync" do
+    Sync.destroy_all
+    Family.any_instance.expects(:sync_later).never
+
+    get accountable_sparkline_url("depository")
+
+    assert_response :success
+  end
+
   test "show renders an empty series without a trend" do
     empty_series = Series.new(
       start_date: 1.day.ago.to_date,

@@ -7,14 +7,17 @@ import { Controller } from "@hotwired/stimulus"
 // controller connects, or never, so the frame declares when to start:
 //
 //   data-action="turbo:before-fetch-request->turbo-frame-timeout#startTimeout
-//                turbo:before-frame-render->turbo-frame-timeout#clearTimeout"
+//                turbo:before-frame-render->turbo-frame-timeout#clearTimeout
+//                turbo:fetch-request-error->turbo-frame-timeout#handleError"
 //
 // It stops when Turbo is about to render a matching frame, not on
 // turbo:frame-load: Turbo inserts the new content several repaints before
 // frame-load fires, and a countdown expiring in that gap would overwrite the
 // rendered frame with the badge. Responses that bring no matching frame (an
 // error, or a sign-in page after a redirect) never render, so they keep
-// counting and still end in the badge.
+// counting and still end in the badge. A request that fails outright (a
+// network error or a dropped connection) will never answer at all, so it shows
+// the badge at once instead of waiting out the countdown.
 export default class extends Controller {
   static values = { timeout: { type: Number, default: 10000 } }
 
@@ -47,6 +50,16 @@ export default class extends Controller {
   }
 
   handleTimeout() {
+    this.timeoutId = null
+    this.showBadge()
+  }
+
+  handleError() {
+    this.clearTimeout()
+    this.showBadge()
+  }
+
+  showBadge() {
     // A sidebar sparkline sits in a wrapper Turbo carries across visits; the
     // badge must not be carried with it, so the next page fetches it again.
     this.element.closest("[data-turbo-permanent]")?.removeAttribute("data-turbo-permanent")

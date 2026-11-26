@@ -24,7 +24,8 @@ module AccountsHelper
     {
       controller: "turbo-frame-timeout",
       action: "turbo:before-fetch-request->turbo-frame-timeout#startTimeout " \
-              "turbo:before-frame-render->turbo-frame-timeout#clearTimeout",
+              "turbo:before-frame-render->turbo-frame-timeout#clearTimeout " \
+              "turbo:fetch-request-error->turbo-frame-timeout#handleError",
       turbo_frame_timeout_timeout_value: SPARKLINE_FRAME_TIMEOUT_MS
     }
   end
@@ -64,15 +65,6 @@ module AccountsHelper
     { turbo_permanent: true, controller: "kept-element", action: "turbo:before-render@document->kept-element#dropIfGone" }
   end
 
-  # Cache key for `accounts/_account_sidebar_tabs.html.erb`.
-  # Kept here (not in the ERB) so the partial stays render-only.
-  #
-  # `shares_version` includes both row count and `max(updated_at)` because
-  # deleting a non-most-recent share would not move `max(updated_at)` and
-  # could otherwise serve stale fragments to a user who lost access.
-  # Both are pulled in a single SQL round-trip via `pick`. Note: Rails
-  # returns the values as Strings for raw SQL fragments — that's fine
-  # since they only feed into a cache key (concat-stable, never coerced).
   # Versions for the sidebar's sparkline URLs, keyed by account id and by group
   # accountable, computed together rather than per account.
   def sidebar_sparkline_versions(family)
@@ -83,23 +75,20 @@ module AccountsHelper
     end
   end
 
+  # Cache key for `accounts/_account_sidebar_tabs.html.erb`.
+  # Kept here (not in the ERB) so the partial stays render-only.
+  #
+  # The user's account access comes from `Current.account_share_version`, the
+  # same source the other share-scoped caches use.
   def account_sidebar_tabs_cache_key(family:, active_tab:, mobile:)
-    shares_version =
-      if Current.user
-        count, max_at = AccountShare
-          .where(user_id: Current.user.id)
-          .pick(Arel.sql("count(*)"), Arel.sql("max(updated_at)"))
-        "#{count}-#{max_at}"
-      end
-
     # Linking or unlinking a provider doesn't touch the account, but changes its sparkline versions.
     providers_version = AccountProvider.where(account_id: family.accounts.select(:id))
       .pick(Arel.sql("count(*)"), Arel.sql("max(account_providers.updated_at)"))
 
     [
-      family.build_cache_key("account_sidebar_tabs_v12", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v13", invalidate_on_data_updates: true),
       Current.user&.id,
-      shares_version,
+      Current.account_share_version,
       providers_version,
       active_tab,
       mobile,
