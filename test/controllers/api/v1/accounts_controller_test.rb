@@ -733,6 +733,38 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
   end
 
+  test "create locks the fields the client sent on the account and the loan, and only those" do
+    loan = plain_account("Loan")
+    loan.merge!(name: "My loan", notes: nil)
+    loan[:accountable_attributes].merge!(rate_type: "variable", rate_changes: [ { "effective_date" => "2025-06-01", "rate" => "6" } ])
+
+    post_account(loan, as: :json)
+
+    assert_response :created
+    account = @user.family.accounts.find(JSON.parse(response.body)["id"])
+    assert account.locked?(:name)
+    assert_not account.locked?(:notes)
+    assert_not account.locked?(:institution_name)
+    assert_not account.locked?(:balance), "the balance is managed by the app"
+    assert_not account.locked?(:currency), "a defaulted currency was not sent"
+    assert account.accountable.locked?(:variable_rate_schedule)
+    assert account.accountable.locked?(:term_months)
+    assert_not account.accountable.locked?(:insurance_rate)
+  end
+
+  test "create leaves the rate schedule unlocked when no rates were sent" do
+    [ nil, [], "" ].each do |rate_changes|
+      loan = plain_account("Loan")
+      loan[:accountable_attributes].merge!(rate_type: "variable", rate_changes: rate_changes)
+
+      post_account(loan, as: :json)
+
+      assert_response :created
+      account = @user.family.accounts.find(JSON.parse(response.body)["id"])
+      assert_not account.accountable.locked?(:variable_rate_schedule), "rate_changes #{rate_changes.inspect}"
+    end
+  end
+
   test "create locks a subtype that was sent on the account as well as one inside accountable_attributes" do
     post_account({ name: "Condo", accountable_type: "Property", balance: 1, subtype: "condominium" })
 

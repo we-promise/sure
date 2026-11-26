@@ -32,6 +32,11 @@ class Api::V1::AccountsController < Api::V1::BaseController
   }.freeze
   private_constant :ALLOWED_VALUES
 
+  # The account fields a provider or enrichment could overwrite. The balance,
+  # currency and the rest are managed by the app and never locked.
+  LOCKED_ACCOUNT_FIELDS = %w[name institution_name institution_domain notes].freeze
+  private_constant :LOCKED_ACCOUNT_FIELDS
+
   BOOLEAN_VALUES = {
     true => true, "true" => true, "t" => true, "1" => true, 1 => true,
     false => false, "false" => false, "f" => false, "0" => false, 0 => false
@@ -121,11 +126,11 @@ class Api::V1::AccountsController < Api::V1::BaseController
 
     family = current_resource_owner.family
     opening_balance_date = opening_balance_date_for(attributes.delete(:opening_balance_date))
+    lock_supplied_attributes!(accountable_class, attributes) # before the currency is defaulted
     attributes[:currency] = supported_currency(attributes[:currency], family)
     reject_unknown_subtype!(accountable_class, attributes)
     reject_overwritten_loan_balance!(attributes, opening_balance_date)
     reject_unused_rate_changes!(attributes)
-    lock_supplied_attributes!(accountable_class, attributes)
 
     @account = family.accounts.create_and_sync(
       attributes.merge(accountable_type: accountable_class.name, owner: current_resource_owner),
@@ -330,17 +335,23 @@ class Api::V1::AccountsController < Api::V1::BaseController
 
     # create_and_sync saves the records again after creating them, so there
     # are no saved changes left for lock_saved_attributes! to lock. The fields
-    # the client sent are locked as the accountable is inserted instead, so a
-    # later provider refresh (an AVM re-reading a property's area, say) keeps
-    # them.
+    # the client sent are locked as the records are inserted instead, so a
+    # later provider refresh or enrichment (an AVM re-reading a property's
+    # area, a name lookup) keeps them. Fields that were left out stay unlocked.
     def lock_supplied_attributes!(accountable_class, attributes)
-      supplied = attributes[:accountable_attributes].to_h.keys.map(&:to_s)
-      supplied << "subtype" if attributes[:subtype] # Account#subtype= stores it on the accountable
-      names = supplied.uniq & accountable_class.column_names
-      return if names.empty?
+      details = attributes[:accountable_attributes].to_h
+      accountable_names = details.keys.map(&:to_s)
+      accountable_names << "subtype" if attributes[:subtype] # Account#subtype= stores it on the accountable
+      accountable_names << "variable_rate_schedule" if details[:rate_changes].present? # where the rows are stored
 
-      attributes[:accountable_attributes] ||= {}
-      attributes[:accountable_attributes][:locked_attributes] = names.index_with { Time.current }
+      lock_columns!(attributes, Account, LOCKED_ACCOUNT_FIELDS & attributes.keys.map(&:to_s))
+      lock_columns!(attributes[:accountable_attributes] ||= {}, accountable_class, accountable_names.uniq)
+      attributes.delete(:accountable_attributes) if attributes[:accountable_attributes].empty?
+    end
+
+    def lock_columns!(target, model, names)
+      names &= model.column_names
+      target[:locked_attributes] = names.index_with { Time.current } if names.any?
     end
 
     # Account.create_and_sync anchors an opening balance on the loan's
