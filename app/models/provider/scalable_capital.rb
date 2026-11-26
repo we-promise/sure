@@ -81,6 +81,22 @@ class Provider::ScalableCapital
     read("broker", "transaction", "details", "--portfolio-id", portfolio_id, "--transaction-id=#{id}")
   end
 
+  def search_securities(portfolio_id, query)
+    unless query.is_a?(String) && query.present? && query.bytesize <= 120 && !query.start_with?("-") && !query.match?(/[[:cntrl:]]/)
+      raise InvalidResponse, "Invalid Scalable security search"
+    end
+
+    read("broker", "search", "--portfolio-id", portfolio_id, query)
+  end
+
+  def security_quote(portfolio_id, isin)
+    read("broker", "quote", "--portfolio-id", portfolio_id, "--isin=#{isin}")
+  end
+
+  def security_candlesticks(isin, timeframe)
+    read("broker", "candlesticks", "--isin=#{isin}", "--timeframe=#{timeframe}")
+  end
+
   def overnight(savings_id)
     if savings_id
       read("overnight", "--savings-account-id", savings_id)

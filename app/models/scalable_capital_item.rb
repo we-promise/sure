@@ -61,6 +61,10 @@ class ScalableCapitalItem < ApplicationRecord
     true
   end
 
+  def market_data_portfolio_id
+    portfolio_id.presence || selected_sources.find { |source| source["kind"] == "brokerage" }&.fetch("id")
+  end
+
   def broker_history_start
     return broker_synced_through if broker_history_version >= BROKER_HISTORY_VERSION || broker_synced_through.nil?
 

@@ -31,3 +31,7 @@ A household administrator can then enable **Preview features**, open **Settings 
 The connection follows Sure’s regular sync schedule. Use the Bank Sync refresh button for an immediate sync. Scalable requires interactive sign-in after 24 hours without an authenticated request or at most seven days from the last sign-in. Run `sc login --local-read-only` again in the worker's CLI environment, then resync the existing connection. Sure verifies the Scalable account ID on each sync.
 
 Disconnecting leaves the imported Sure accounts as manual accounts and removes the link. Reconnecting creates fresh linked accounts. Review any existing Scalable accounts for overlapping balances before connecting.
+
+## Securities prices
+
+After connecting a brokerage, open **Settings → Self-hosting → Financial Data Providers** and enable **Scalable Capital** under **Securities Providers**. The same read-only CLI session supplies security search, consolidated quotes, and available daily prices for supported ISINs. The CLI identifies securities by ISIN. For new Scalable holdings, Sure still prefers a verified ticker from other enabled providers and uses the ISIN when Scalable supplies the price feed. Exchange rates use the separately selected exchange rate provider.

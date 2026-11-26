@@ -1568,6 +1568,39 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.securities_providers = ""
   end
 
+  test "offers Scalable Capital under securities providers for the configured household" do
+    ScalableCapitalItem.stubs(:configured_family_id).returns(users(:family_admin).family_id)
+    key = Provider::ScalableCapitalMarketData::KEY
+
+    with_self_hosting do
+      get settings_hosting_url
+      assert_response :success
+      assert_select "input[name='setting[securities_providers][]'][value=?]", key
+      assert_select "select[name='setting[exchange_rate_provider]'] option[value=?]", key, count: 0
+
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "yahoo_finance", key ] } }
+
+      assert_redirected_to settings_hosting_url
+      assert_includes Setting.enabled_securities_providers, key
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "does not allow enabling Scalable securities through settings for another household" do
+    ScalableCapitalItem.stubs(:configured_family_id).returns(families(:empty).id)
+    key = Provider::ScalableCapitalMarketData::KEY
+
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "yahoo_finance", key ] } }
+
+      assert_redirected_to settings_hosting_url
+      refute_includes Setting.enabled_securities_providers, key
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
   test "filters out invalid provider names" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data", "fake_provider", "hacked" ] } }

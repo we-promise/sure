@@ -74,6 +74,20 @@ class Provider::ScalableCapitalTest < ActiveSupport::TestCase
     assert_equal [ %w[whoami], %w[broker portfolios] ], client.requests
   end
 
+  test "reads only market data commands for security search, quotes and candlesticks" do
+    client = TestClient.new(Array.new(3) { success({}) })
+    client.search_securities("portfolio", "Example ETF")
+    client.security_quote("portfolio", "IE00B4L5Y983")
+    client.security_candlesticks("IE00B4L5Y983", "one_month")
+
+    assert_raises(Provider::ScalableCapital::InvalidResponse) { client.search_securities("portfolio", "--confirm") }
+    assert_equal [
+      [ "broker", "search", "--portfolio-id", "portfolio", "Example ETF" ],
+      %w[broker quote --portfolio-id portfolio --isin=IE00B4L5Y983],
+      %w[broker candlesticks --isin=IE00B4L5Y983 --timeframe=one_month]
+    ], client.requests
+  end
+
   test "rejects a session without the local read-only mode" do
     client = TestClient.new([ success("session" => { "local_read_only" => false }) ])
 

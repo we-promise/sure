@@ -59,6 +59,7 @@ de:
           eodhd: EODHD
           frankfurter: Frankfurter
           mansa: Mansa
+          scalable_capital_market_data: Scalable Capital
           mfapi: MFAPI.in
           moex_public: MOEX
           tiingo: Tiingo
@@ -75,6 +76,7 @@ de:
         securities_title: Anbieter für Wertpapierkurse
         tinkoff_invest_hint: braucht Token mit Lesezugriff – Kurse russischer Aktien, Fonds und Anleihen samt Logos
         requires_api_key_mansa: braucht API-Key, kostenlos 100 Abrufe/Tag – afrikanische Börsen (NGX, JSE, NSE, GSE, BRVM und weitere)
+        scalable_capital_market_data_hint: benötigt ein verbundenes Scalable-Depot und eine schreibgeschützte Sitzung, Kurse über ISIN
         twelve_data_hint: braucht API-Key, 800 Credits/Tag
         yahoo_finance_hint: kostenlos, ohne API-Key
       brand_fetch_settings:

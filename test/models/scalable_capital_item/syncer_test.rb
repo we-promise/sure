@@ -83,6 +83,22 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_nil cash.entries.find_by(external_id: "cancelled")
   end
 
+  test "using Scalable securities prices keeps a snapshot ISIN queryable when no verified ticker is available" do
+    provider_key = Provider::ScalableCapitalMarketData::KEY
+    Setting.stubs(:enabled_securities_providers).returns([ provider_key ])
+    Security.expects(:search_provider).with("IE00B4L5Y983", country_code: "DE", technical_failure: kind_of(Proc),
+                                           exclude_providers: [ provider_key ]).once.returns([])
+
+    stub_snapshot
+    run_sync
+
+    account = @item.scalable_capital_accounts.brokerage.sole.account
+    security = account.holdings.where.not(account_provider_id: nil).sole.security
+    assert_equal "IE00B4L5Y983", security.ticker
+    assert_equal provider_key, security.price_provider
+    refute_predicate security, :offline?
+  end
+
   test "imports the CLI's filled SINGLE trades and only books a final IPO allocation" do
     stub_snapshot
     buy = cash_event("buy", "SECURITY_TRANSACTION").merge("security_transaction_type" => "SINGLE", "side" => "BUY")

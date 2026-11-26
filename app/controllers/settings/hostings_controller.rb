@@ -30,6 +30,7 @@ class Settings::HostingsController < ApplicationController
     # Determine which providers are currently selected
     exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
     enabled_securities = Setting.enabled_securities_providers
+    @scalable_market_data_configured = scalable_market_data_configured?
 
     # Show provider settings if used for FX or enabled for securities
     @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || enabled_securities.include?("twelve_data")
@@ -125,6 +126,11 @@ class Settings::HostingsController < ApplicationController
     if hosting_params.key?(:securities_providers)
       new_providers = Array(hosting_params[:securities_providers]).reject(&:blank?) & Security.valid_price_providers
       old_providers = Setting.enabled_securities_providers
+      unless scalable_market_data_configured?
+        scalable_key = Provider::ScalableCapitalMarketData::KEY
+        new_providers.delete(scalable_key)
+        new_providers << scalable_key if old_providers.include?(scalable_key)
+      end
 
       Setting.securities_providers = new_providers.join(",")
 
@@ -377,6 +383,11 @@ class Settings::HostingsController < ApplicationController
   end
 
   private
+
+    def scalable_market_data_configured?
+      family_id = ScalableCapitalItem.configured_family_id
+      family_id.present? && family_id == Current.family&.id
+    end
     # Strong parameters for the self-hosting settings form.
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)

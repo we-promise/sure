@@ -57,10 +57,10 @@ module Security::Provided
     # "no such security" — can pass a callback here instead of us changing
     # the return type for all callers (e.g. SecuritiesController just wants
     # the plain result array).
-    def search_provider(symbol, country_code: nil, exchange_operating_mic: nil, technical_failure: nil)
+    def search_provider(symbol, country_code: nil, exchange_operating_mic: nil, technical_failure: nil, exclude_providers: [])
       return [] if symbol.blank?
 
-      active_providers = providers.compact
+      active_providers = providers.compact.reject { |provider| exclude_providers.include?(provider_key_for(provider)) }
       return [] if active_providers.empty?
 
       params = {
@@ -242,7 +242,10 @@ module Security::Provided
       return assigned if assigned.present?
       return nil # assigned provider is unavailable — don't silently fall back
     end
-    self.class.providers.first
+    self.class.providers.find do |provider|
+      !provider.is_a?(Provider::ScalableCapitalMarketData) ||
+        (exchange_operating_mic.blank? && Provider::ScalableCapitalMarketData.supports_symbol?(ticker))
+    end
   end
 
   # Returns the health status of this security's provider link.

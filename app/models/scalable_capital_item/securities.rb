@@ -1,11 +1,13 @@
 class ScalableCapitalItem::Securities
   PENDING_RESOLUTION = "resolution_pending"
+  SCALABLE_MARKET_DATA = Provider::ScalableCapitalMarketData::KEY
 
   def initialize(item, snapshots)
     @mapping = item.security_ids.dup
     @securities = Security.where(id: @mapping.values).index_by(&:id)
     @pending = @mapping.keys.select { |isin| pending_resolution?(@securities[@mapping[isin]]) }
     @failed_lookups = Set.new
+    @scalable_market_data = Setting.enabled_securities_providers.include?(SCALABLE_MARKET_DATA) && item.market_data_portfolio_id.present?
 
     imported_isins = snapshots.flat_map do |snapshot|
       [ *snapshot.fetch(:positions), *snapshot.fetch(:entries) ].filter_map { |entry| entry[:isin] }
@@ -63,8 +65,13 @@ class ScalableCapitalItem::Securities
 
     def resolve_offline(isin, name, cached)
       security = cached || Security.find_or_create_by!(ticker: isin, exchange_operating_mic: nil) do |record|
-        record.offline = true
         record.name = name
+        record.offline = !scalable_price_available?(isin)
+        record.price_provider = SCALABLE_MARKET_DATA unless record.offline?
+      end
+      if pending_resolution?(security) && scalable_price_available?(isin)
+        security.update!(price_provider: SCALABLE_MARKET_DATA, offline: false, offline_reason: nil, failed_fetch_count: 0, failed_fetch_at: nil)
+        return security
       end
       if @failed_lookups.include?(isin)
         security.update!(offline_reason: PENDING_RESOLUTION) if security.offline? && security.offline_reason.blank?
@@ -79,11 +86,17 @@ class ScalableCapitalItem::Securities
     end
 
     def best_listing(isin)
-      Security.search_provider(isin, country_code: "DE", technical_failure: ->(_provider) { @failed_lookups.add(isin) })
+      # The sync holds the CLI lock and already has the exact Scalable ISIN.
+      options = @scalable_market_data ? { exclude_providers: [ SCALABLE_MARKET_DATA ] } : {}
+      Security.search_provider(isin, country_code: "DE", technical_failure: ->(_provider) { @failed_lookups.add(isin) }, **options)
         .select { |listing| listing.search_isin&.casecmp?(isin) && listing.ticker.present? && listing.exchange_operating_mic.present? }
         .min_by do |listing|
           [ listing.search_currency == "EUR" ? 0 : 1, listing.country_code == "DE" ? 0 : 1,
             listing.exchange_operating_mic == "XETR" ? 0 : 1 ]
         end
+    end
+
+    def scalable_price_available?(isin)
+      @scalable_market_data && Provider::ScalableCapitalMarketData.supports_symbol?(isin)
     end
 end

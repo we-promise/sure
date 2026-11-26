@@ -124,6 +124,11 @@ class Provider::Registry
         Provider::YahooFinance.new
       end
 
+      def scalable_capital_market_data
+        item = Provider::ScalableCapitalMarketData.connection
+        Provider::ScalableCapitalMarketData.new(item) if item
+      end
+
       def tiingo
         api_key = ENV["TIINGO_API_KEY"].presence || Setting.tiingo_api_key # pipelock:ignore
 
@@ -243,7 +248,7 @@ class Provider::Registry
       when :exchange_rates
         %i[twelve_data yahoo_finance moex_public frankfurter]
       when :securities
-        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest mansa]
+        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest mansa scalable_capital_market_data]
       when :llm
         %i[openai anthropic]
       when :classification
