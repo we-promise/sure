@@ -53,29 +53,39 @@ Issue https://github.com/we-promise/sure/issues/5077 tracks follow-up work defer
 
 ---
 
-### Waiting on Milestone 1
+### Waiting on #5769
 
----
 
 - https://github.com/we-promise/sure/pull/4425 Propose a transaction split from an attached receipt.
 - https://github.com/we-promise/sure/pull/4844 Run Anthropic AI features on a Claude subscription
 
----
-
-[Plan](https://github.com/josh-sanders/sure/blob/proposal/v0.8-ai-workflow-reviews/docs/proposals/v0.8/stack-sequencer-off-the-web-thread.md): one stack, then one PR per feature, each under 2,000 lines.
-
-- https://github.com/we-promise/sure/stack/5748 stack, on #5608
+- https://github.com/we-promise/sure/stack/5748 stack, on #5608 [Plan](https://github.com/josh-sanders/sure/blob/proposal/v0.8-ai-workflow-reviews/docs/proposals/v0.8/stack-sequencer-off-the-web-thread.md): one stack, then one PR per feature, each under 2,000 lines.
   - https://github.com/we-promise/sure/pull/5744 Count a mixed rule's ordinary changes as modified.
   - https://github.com/we-promise/sure/pull/5745 Outbox: record each AI job and deliver it again when lost.
   - https://github.com/we-promise/sure/pull/5756 4a. Lanes: a queue per AI lane, and chat threads of its own.
   - https://github.com/we-promise/sure/pull/5758 4b. Gate: one per local model host, with lanes and interrupts.
   - https://github.com/we-promise/sure/pull/5784 4c. Typing hold and visible waiting: chat at the gate, and what it waits for.
-- One PR each, on 4c, landing in any order:
-  - Bill suggestions and Stop.
-  - Stopping a PDF import.
-  - Documents in a job.
-  - MCP tools in a job.
-- Capsule-only check (enforcement), once the four have landed.
+ 
+---
+
+### Waiting on #5784
+
+- Bill suggestions and Stop.
+- Stopping a PDF import.
+- Documents in a job.
+- MCP tools in a job.
+
+- Receipt scanning: https://github.com/we-promise/sure/pull/5703
+- Receipt scanning, web UI: https://github.com/we-promise/sure/pull/5794
+- Receipt scanning, mobile app: https://github.com/we-promise/sure/pull/5795
+- Purchases from forwarded order emails: https://github.com/we-promise/sure/pull/5704
+- Purchases, web UI: https://github.com/we-promise/sure/pull/5796
+
+---
+
+### Waiting on #5824, #5826, #5827
+
+- https://github.com/we-promise/sure/pull/5857 Capsule-only check (enforcement), once the four have landed.
 
 ---
 
