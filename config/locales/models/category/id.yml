@@ -2,6 +2,7 @@
 id:
   models:
     category:
+      own_share: "%{category} (tanpa subkategori)"
       uncategorized: Tanpa Kategori
       other_investments: Investasi Lainnya
       investment_contributions: Kontribusi Investasi

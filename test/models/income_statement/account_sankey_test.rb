@@ -31,6 +31,7 @@ class IncomeStatement::AccountSankeyTest < ActiveSupport::TestCase
     assert_equal "500.0", node(result, "expense_#{@shopping.id}")[:value], "one category node across accounts"
     assert_link result, "expense_#{@shopping.id}", "expense_sub_#{@groceries.id}", "200.0"
     assert_equal @groceries.filter_value, node(result, "expense_sub_#{@groceries.id}")[:filter_value]
+    assert_link result, "expense_#{@shopping.id}", "expense_sub_#{@shopping.id}_own", "300.0"
     assert_balanced result
   end
 
@@ -187,7 +188,7 @@ class IncomeStatement::AccountSankeyTest < ActiveSupport::TestCase
         end
         assert_operator node[:value].to_d, :>, 0
         assert_operator node[:percentage].to_d, :<=, 100
-        assert_equal incoming, outgoing, "#{node[:id]} must balance" if node[:kind] == "account"
+        assert_equal incoming, outgoing, "#{node[:id]} must balance" if node[:kind] == "account" || (incoming.positive? && outgoing.positive?)
         assert_equal node[:value].to_d, [ incoming, outgoing ].max, "#{node[:id]} must match its links' capacity"
       end
     end

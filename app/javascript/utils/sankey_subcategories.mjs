@@ -1,10 +1,12 @@
 import { sankeyLinkIndex } from "utils/sankey_zoom";
 
-// Node ids carry the hierarchy the server built (PagesController
-// #build_cashflow_sankey_data): "<side>_<category id>" for a category and
-// "<side>_sub_<category id>" for a subcategory under it. A subcategory whose
-// net direction runs against its parent is linked straight to Cash Flow
-// instead; it is a column of its own and is kept.
+// Node ids carry the hierarchy the server built (IncomeStatement::DashboardSankey):
+// "<side>_<category id>" for a category, "<side>_sub_<category id>" for a
+// subcategory under it, and "<side>_sub_<parent id>_own" for the parent's own
+// share beside its subcategories. Whatever runs against a category's net
+// direction is linked straight to Cash Flow on the other side instead: a
+// subcategory keeps its "<side>_sub_" id and a refund on the parent itself is
+// "<side>_<parent id>". Those are a column of their own and are kept.
 const CASH_FLOW_NODE_ID = "cash_flow_node";
 
 // The chart without its subcategory column. A category's value already

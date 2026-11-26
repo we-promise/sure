@@ -46,6 +46,30 @@ class IncomeStatement::SankeyTest < ActiveSupport::TestCase
     assert_balanced(result)
   end
 
+  test "a parent's own share flows to its own node beside its subcategories" do
+    transaction(1000, @parent)
+    transaction(200, @child)
+    result = graph
+    own = node(result, "expense_sub_#{@parent.id}_own")
+    assert_equal "1000.0", own[:value]
+    assert_equal I18n.t("models.category.own_share", category: @parent.name), own[:name]
+    assert_equal @parent.id, own[:category_id]
+    assert_equal @parent.filter_value, own[:filter_value]
+    assert_equal "1200.0", node(result, "expense_#{@parent.id}")[:value]
+    assert_equal "200.0", node(result, "expense_sub_#{@child.id}")[:value]
+    assert_balanced(result)
+  end
+
+  test "a refund on a parent is drawn on the income side, not netted into its subcategories" do
+    transaction(-100, @parent)
+    transaction(400, @child)
+    result = graph
+    assert_equal "400.0", node(result, "expense_#{@parent.id}")[:value]
+    assert_equal "100.0", node(result, "income_#{@parent.id}")[:value]
+    assert_nil node(result, "expense_sub_#{@parent.id}_own")
+    assert_balanced(result)
+  end
+
   test "decimal netting retains sub-cent precision beyond floating point accuracy" do
     transaction("900719925474.1234".to_d, @parent)
     transaction("-900719925474.1233".to_d, @parent)
@@ -141,11 +165,12 @@ class IncomeStatement::SankeyTest < ActiveSupport::TestCase
       outgoing = graph[:links].select { |link| link[:source] == center }.sum { |link| link[:value].to_d }
       assert_equal incoming, outgoing
       graph[:nodes].each_with_index do |node, index|
-        allocations = %i[source target].map do |end_point|
+        incoming, outgoing = %i[target source].map do |end_point|
           graph[:links].select { |link| link[end_point] == index }.sum { |link| link[:value].to_d }
         end
         assert_operator node[:value].to_d, :>, 0
-        assert_equal node[:value].to_d, allocations.max, "#{node[:id]} must match its links' capacity"
+        assert_equal incoming, outgoing, "#{node[:id]} must pass on what flows into it" if incoming.positive? && outgoing.positive?
+        assert_equal node[:value].to_d, [ incoming, outgoing ].max, "#{node[:id]} must match its links' capacity"
       end
     end
 end

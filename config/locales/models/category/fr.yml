@@ -2,6 +2,7 @@
 fr:
   models:
     category:
+      own_share: "%{category} (sans sous-catégorie)"
       defaults:
         entertainment: Divertissement
         fees: Frais

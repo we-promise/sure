@@ -54,6 +54,23 @@ class Api::V1::CashFlowsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "12.0", response.parsed_body.dig("spending_comparison", "current_total")
   end
 
+  test "the sankey view gives a parent's own transactions a node beside its subcategories" do
+    month = Date.new(2024, 2, 1)
+    parent = @user.family.categories.create!(name: "Housing", color: "#123456")
+    child = @user.family.categories.create!(name: "HOA", parent: parent)
+    create_transaction(account: accounts(:depository), amount: 1000, date: month, category: parent)
+    create_transaction(account: accounts(:depository), amount: 200, date: month, category: child)
+
+    get "/api/v1/cash_flow", params: { view: "sankey", start_date: "2024-02-01", end_date: "2024-02-29" }, headers: api_headers(@auth)
+
+    assert_response :success
+    nodes = response.parsed_body.dig("sankey", "nodes").index_by { |node| node["id"] }
+    own = nodes.fetch("expense_sub_#{parent.id}_own")
+    assert_equal "1000.0", own["value"]
+    assert_equal parent.id, own["category_id"]
+    assert_equal "1200.0", nodes.fetch("expense_#{parent.id}")["value"]
+  end
+
   test "graph is opt-in and date ranges do not calculate daily series" do
     get "/api/v1/cash_flow", headers: api_headers(@auth)
     assert_not response.parsed_body.key?("sankey")
