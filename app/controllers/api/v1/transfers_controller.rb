@@ -4,8 +4,9 @@ class Api::V1::TransfersController < Api::V1::BaseController
   include Pagy::Backend
   include Api::V1::TransferDecisionFiltering
 
-  UUID_FORMAT = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
-  private_constant :UUID_FORMAT
+  # entries.amount is numeric(19, 4): at most 15 digits before the point.
+  MAX_AMOUNT = BigDecimal("999999999999999.9999")
+  private_constant :MAX_AMOUNT
 
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: :create
@@ -39,10 +40,22 @@ class Api::V1::TransfersController < Api::V1::BaseController
       return
     end
 
-    amount = parse_amount
+    amount = parse_decimal_param(:amount, required: true, greater_than: 0)
     return if performed?
 
-    date = parse_date
+    source_fee_amount = parse_decimal_param(:source_fee_amount, minimum: 0)
+    return if performed?
+
+    destination_fee_amount = parse_decimal_param(:destination_fee_amount, minimum: 0)
+    return if performed?
+
+    exchange_rate = parse_decimal_param(:exchange_rate, greater_than: 0)
+    return if performed?
+
+    date = parse_transfer_date
+    return if performed?
+
+    key = parse_idempotency_key
     return if performed?
 
     writable_accounts = current_resource_owner.family.accounts.writable_by(current_resource_owner)
@@ -55,16 +68,19 @@ class Api::V1::TransfersController < Api::V1::BaseController
       destination_account_id: destination_account.id,
       date: date,
       amount: amount,
-      exchange_rate: transfer_params[:exchange_rate].presence,
-      source_fee_amount: transfer_params[:source_fee_amount],
-      destination_fee_amount: transfer_params[:destination_fee_amount],
+      exchange_rate: exchange_rate,
+      source_fee_amount: source_fee_amount,
+      destination_fee_amount: destination_fee_amount,
       tag_ids: transfer_params[:tag_ids],
-      idempotency_key: idempotency_key
+      idempotency_key: key
     ).create
 
     render :show, status: @transfer.previously_new_record? ? :created : :ok
   rescue ActiveRecord::RecordInvalid => e
     render_validation_error(e.record.errors.full_messages.to_sentence.presence || e.message)
+  rescue ActiveRecord::RangeError
+    # amount * exchange_rate can overflow numeric(19, 4) even when each input fits.
+    render_validation_error("amount (after applying exchange_rate) is out of range")
   rescue ArgumentError, Money::ConversionError, Transfer::Creator::StaleIdempotencyKeyError => e
     render_validation_error(e.message)
   end
@@ -82,29 +98,51 @@ class Api::V1::TransfersController < Api::V1::BaseController
       )
     end
 
-    def parse_amount
-      amount = BigDecimal(transfer_params[:amount].to_s)
-      return amount if amount.positive?
+    # A finite decimal within the stored range, nil when the param is absent
+    # (unless required), or a 422 render. String#to_d would read "abc" as 0.
+    def parse_decimal_param(key, required: false, greater_than: nil, minimum: nil)
+      raw = transfer_params[key]
 
-      render_validation_error("amount must be greater than 0")
-      nil
-    rescue ArgumentError
-      render_validation_error("amount is required and must be a positive number")
+      if raw.blank?
+        render_validation_error("#{key} is required") if required
+        return nil
+      end
+
+      value = parse_decimal(raw)
+      if value.nil? || value.abs > MAX_AMOUNT
+        render_validation_error("#{key} must be a number no larger than #{MAX_AMOUNT.to_s('F')}")
+      elsif greater_than && value <= greater_than
+        render_validation_error("#{key} must be greater than #{greater_than}")
+      elsif minimum && value < minimum
+        render_validation_error("#{key} must be at least #{minimum}")
+      else
+        return value
+      end
+
       nil
     end
 
-    def parse_date
+    def parse_transfer_date
       return Date.current if transfer_params[:date].blank?
 
-      Date.iso8601(transfer_params[:date].to_s)
-    rescue Date::Error
+      date = parse_date(transfer_params[:date])
+      return date if date
+
       render_validation_error("date must be an ISO 8601 date (YYYY-MM-DD)")
       nil
     end
 
-    def idempotency_key
-      key = transfer_params[:idempotency_key]
-      key if key.is_a?(String) && key.match?(UUID_FORMAT)
+    # Absent means "no retry protection requested". A key that is present but
+    # not a UUID string is rejected rather than dropped: the caller believes
+    # retries are safe, and silently ignoring it would let one duplicate the
+    # transfer. Read from raw params because permit filters out non-scalars.
+    def parse_idempotency_key
+      key = params.require(:transfer)[:idempotency_key]
+      return nil if key.nil?
+      return key if key.is_a?(String) && valid_uuid?(key)
+
+      render_validation_error("idempotency_key must be a UUID")
+      nil
     end
 
     def set_transfer

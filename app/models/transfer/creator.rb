@@ -130,10 +130,11 @@ class Transfer::Creator
       outflow_entry.account_id == source_account.id &&
         inflow_entry.account_id == destination_account.id &&
         outflow_entry.date == date &&
-        outflow_entry.amount == amount &&
-        inflow_entry.amount == inflow_converted_amount * -1 &&
-        transfer.derived_source_fee_amount == source_fee_amount &&
-        transfer.derived_destination_fee_amount == destination_fee_amount
+        outflow_entry.amount == stored(amount) &&
+        inflow_entry.amount == stored(inflow_converted_amount) * -1 &&
+        transfer.derived_source_fee_amount == stored(source_fee_amount) &&
+        transfer.derived_destination_fee_amount == stored(destination_fee_amount) &&
+        transfer.outflow_transaction.tag_ids.sort == requested_tag_ids.sort
     rescue Money::ConversionError
       false
     end
@@ -155,8 +156,20 @@ class Transfer::Creator
       { idempotency_key: key }
     end
 
+    # entries.amount is numeric(19, 4), so what's persisted is the request's
+    # value rounded to 4 places. Comparing the raw request value (e.g. a
+    # converted amount of 0.333333) against it would make an identical replay
+    # look like a different request.
+    def stored(value)
+      value.round(4)
+    end
+
+    def requested_tag_ids
+      family.tags.where(id: tag_ids).pluck(:id)
+    end
+
     def apply_tags!(transfer)
-      resolved_ids = family.tags.where(id: tag_ids).pluck(:id)
+      resolved_ids = requested_tag_ids
       return if resolved_ids.empty?
 
       [ transfer.outflow_transaction, transfer.inflow_transaction ].each do |transaction|

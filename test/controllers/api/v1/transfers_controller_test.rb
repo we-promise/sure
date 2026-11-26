@@ -273,6 +273,105 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "create rejects a malformed idempotency key instead of dropping it" do
+    [ "not-a-uuid", "", [ SecureRandom.uuid ], { "a" => "b" } ].each do |key|
+      assert_no_difference "Transfer.count" do
+        post api_v1_transfers_url,
+             params: { transfer: create_params(idempotency_key: key) },
+             headers: api_headers(write_api_key)
+      end
+
+      assert_response :unprocessable_entity, "idempotency_key #{key.inspect} should be rejected"
+    end
+  end
+
+  test "create rejects a reused idempotency key when the tags differ" do
+    key = SecureRandom.uuid
+    tag_a = tags(:one)
+    tag_b = tags(:two)
+
+    post api_v1_transfers_url,
+         params: { transfer: create_params(idempotency_key: key, tag_ids: [ tag_a.id ]) },
+         headers: api_headers(write_api_key)
+    assert_response :created
+
+    assert_no_difference "Transfer.count" do
+      post api_v1_transfers_url,
+           params: { transfer: create_params(idempotency_key: key, tag_ids: [ tag_b.id ]) },
+           headers: api_headers(write_api_key)
+    end
+    assert_response :unprocessable_entity
+
+    post api_v1_transfers_url,
+         params: { transfer: create_params(idempotency_key: key, tag_ids: [ tag_a.id ]) },
+         headers: api_headers(write_api_key)
+    assert_response :ok
+  end
+
+  test "create replays a cross-currency request whose converted amount has more than 4 decimals" do
+    euro_account = @family.accounts.create!(name: "Transfer Euro", accountable: Depository.new, balance: 0, currency: "EUR")
+    params = {
+      transfer: create_params(
+        to_account_id: euro_account.id,
+        amount: "1",
+        exchange_rate: "0.333333",
+        source_fee_amount: "0.00001",
+        idempotency_key: SecureRandom.uuid
+      )
+    }
+
+    assert_difference "Transfer.count", 1 do
+      post api_v1_transfers_url, params: params, headers: api_headers(write_api_key)
+      assert_response :created
+
+      post api_v1_transfers_url, params: params, headers: api_headers(write_api_key)
+      assert_response :ok
+    end
+  end
+
+  test "create rejects amounts, fees and rates that are not finite or fit the stored range" do
+    {
+      amount: [ "1000000000000000", "1e400", "Infinity", "NaN", "1,250.50", "12abc" ],
+      source_fee_amount: [ "abc", "-1", "1000000000000000" ],
+      destination_fee_amount: [ "abc", "Infinity" ],
+      exchange_rate: [ "abc", "0", "-2", "Infinity" ]
+    }.each do |field, values|
+      values.each do |value|
+        assert_no_difference "Transfer.count" do
+          post api_v1_transfers_url,
+               params: { transfer: create_params(field => value) },
+               headers: api_headers(write_api_key)
+        end
+
+        assert_response :unprocessable_entity, "#{field}=#{value.inspect} should be rejected with 422"
+      end
+    end
+  end
+
+  test "create rejects a converted amount that overflows the stored range" do
+    euro_account = @family.accounts.create!(name: "Transfer Euro", accountable: Depository.new, balance: 0, currency: "EUR")
+
+    assert_no_difference "Transfer.count" do
+      post api_v1_transfers_url,
+           params: { transfer: create_params(to_account_id: euro_account.id, amount: "999999999999999", exchange_rate: "1000") },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "create rejects a reduced-precision date" do
+    %w[2024-01 2024 20240120].each do |date|
+      assert_no_difference "Transfer.count" do
+        post api_v1_transfers_url,
+             params: { transfer: create_params(date: date) },
+             headers: api_headers(write_api_key)
+      end
+
+      assert_response :unprocessable_entity, "date #{date.inspect} should be rejected"
+    end
+  end
+
   test "create requires both accounts" do
     post api_v1_transfers_url,
          params: { transfer: create_params.except(:to_account_id) },

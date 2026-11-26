@@ -11224,6 +11224,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TransferDecision"
+        '200':
+          description: 'idempotent replay: the transfer already created for this idempotency_key'
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TransferDecision"
         '401':
           description: unauthorized
           content:

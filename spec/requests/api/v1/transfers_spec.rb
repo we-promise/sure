@@ -175,6 +175,36 @@ RSpec.describe 'API V1 Transfers', type: :request do
         run_test!
       end
 
+      response '200', 'idempotent replay: the transfer already created for this idempotency_key' do
+        schema '$ref' => '#/components/schemas/TransferDecision'
+
+        let(:idempotency_key) { SecureRandom.uuid }
+        let(:body) do
+          {
+            transfer: {
+              from_account_id: checking.id,
+              to_account_id: savings.id,
+              amount: 125.00,
+              date: Date.current.to_s,
+              idempotency_key: idempotency_key
+            }
+          }
+        end
+
+        before do
+          Transfer::Creator.new(
+            family: family,
+            source_account_id: checking.id,
+            destination_account_id: savings.id,
+            date: Date.current,
+            amount: 125,
+            idempotency_key: idempotency_key
+          ).create
+        end
+
+        run_test!
+      end
+
       response '401', 'unauthorized' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
