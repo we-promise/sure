@@ -4,6 +4,7 @@ require "test_helper"
 # RubyLLM's `typesafe` provider, its fan-out, error mapping, malformed answers and usage rows.
 # Stubbed through WebMock; the live recording is test/models/ai/live/judge_live_test.rb.
 class AiTransportJudgeTest < ActiveSupport::TestCase
+  ai_capsule!
   URL = "https://api.typesafe.ai/v1/systemone".freeze
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
   OPTIONS = { "Coffee Shops" => "Subcategory of Food", "Salary" => nil, "__uncategorized__" => "No listed category is a reasonable fit" }.freeze

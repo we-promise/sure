@@ -6,6 +6,7 @@ require "test_helper"
 # frees a llama.cpp slot. Faraday's adapter and Net::HTTP's private `connect`/`@socket` are the
 # seams it pins (Ai::Gate::Watched).
 class Ai::GateInterruptTest < ActiveSupport::TestCase
+  ai_capsule!
   # One HTTP/1.1 server connection per request. `silent` never answers; `streaming` sends
   # server-sent events until the client goes away. Each connection reports :request once the
   # request arrived and :closed once the client closed it.

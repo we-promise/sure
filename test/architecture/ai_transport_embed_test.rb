@@ -4,6 +4,7 @@ require "test_helper"
 # sends, the vector checks on top of RubyLLM's own, error mapping, the `embed.ai` event and
 # usage rows; and Ai::Embeddings on the `embed` route. Stubbed through WebMock.
 class AiTransportEmbedTest < ActiveSupport::TestCase
+  ai_capsule!
   URL = "http://embed.local:8081/v1/embeddings".freeze
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
 

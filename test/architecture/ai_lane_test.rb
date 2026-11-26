@@ -3,6 +3,7 @@ require "test_helper"
 # Every AI job runs on its lane's queue (Ai::Routes::QUEUES) and in that lane (Ai::Sequencer),
 # and the queue names live only in Ai::Routes.
 class AiLaneTest < ActiveSupport::TestCase
+  ai_capsule!
   class LaneJob < ApplicationJob
     def perform = Fiber[:ai_lane]
   end

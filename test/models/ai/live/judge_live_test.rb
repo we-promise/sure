@@ -5,6 +5,7 @@ require "test_helper"
 # Replayed from test/vcr_cassettes/ai/jev/, recorded with RECORD_CASSETTES=1 and JEV_LIVE_API_KEY
 # set, or run live with AI_LIVE=1 (the `ai-live` label). With neither, it's skipped, saying so.
 class AiJudgeLiveTest < ActiveSupport::TestCase
+  ai_capsule!
   KEY = "JEV_LIVE_API_KEY".freeze
   BASE_URL = ENV.fetch("JEV_LIVE_BASE_URL", "https://opencode.ai/zen")
   MODEL = ENV.fetch("JEV_LIVE_MODEL", "jev-1.13-free")

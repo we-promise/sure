@@ -5,6 +5,7 @@ require "test_helper"
 # asking user may read; and search_family_files is always listed, falling back to the vault's
 # metadata with the router's reason.
 class AiDocumentsTest < ActiveSupport::TestCase
+  ai_capsule!
   include ActiveJob::TestHelper
 
   setup do

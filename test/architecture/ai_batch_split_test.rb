@@ -3,6 +3,7 @@ require "test_helper"
 # A batch that overflows is halved on the same route until every item is answered;
 # only an item that can't fit on its own escalates to the next route.
 class AiBatchSplitTest < ActiveSupport::TestCase
+  ai_capsule!
   setup do
     @family = families(:dylan_family)
     use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])

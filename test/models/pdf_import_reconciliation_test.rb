@@ -3,6 +3,7 @@ require "test_helper"
 # The behaviour issue #1379 actually asked for: a statement should only offer
 # transactions that are not already recorded, and should mark the rest reconciled.
 class PdfImportReconciliationTest < ActiveSupport::TestCase
+  ai_capsule!
   include EntriesTestHelper
 
   setup do

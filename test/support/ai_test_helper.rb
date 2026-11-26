@@ -65,8 +65,16 @@ module AiTestHelper
     Ai::Config.new(endpoints: models.map(&:endpoint).uniq, models:, routes: built, vector_store_backend:)
   end
 
+  module ClassMethods
+    # For tests that call the plumbing directly: enter the capsule for the whole test instead of
+    # wrapping each call. `AiTestHelper`'s teardown restores the previous state.
+    def ai_capsule! = setup { Ai::Capsule.enter }
+  end
+
   def self.included(base)
     return unless base.respond_to?(:teardown)
+
+    base.extend(ClassMethods)
 
     # Parallel test processes share one Redis, so each test gets its own empty shared state.
     base.setup { Ai::SharedState.store = ActiveSupport::Cache::MemoryStore.new }
@@ -74,6 +82,7 @@ module AiTestHelper
       Ai::Config.override = nil
       AiTestHelper.transport_stub = nil
       Ai::SharedState.store = nil
+      Ai::Capsule.leave
     end
   end
 

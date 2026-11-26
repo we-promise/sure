@@ -6,6 +6,7 @@ require "test_helper"
 # output. Stubbed through WebMock; the live cassettes are in
 # test/models/ai/live/.
 class AiTransportGenerateTest < ActiveSupport::TestCase
+  ai_capsule!
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
   CHAT_URL = "https://llm.example.test/v1/chat/completions".freeze
   RESPONSES_URL = "https://api.openai.example.test/v1/responses".freeze

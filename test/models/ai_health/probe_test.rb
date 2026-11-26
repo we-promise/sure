@@ -1,6 +1,7 @@
 require "test_helper"
 
 class AiHealth::ProbeTest < ActiveSupport::TestCase
+  ai_capsule!
   setup do
     @probe = AiHealth::Probe.new(run: true)
   end

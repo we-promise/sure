@@ -1,6 +1,7 @@
 require "test_helper"
 
 class Ai::GenerationTest < ActiveSupport::TestCase
+  ai_capsule!
   setup do
     @family = families(:dylan_family)
     use_ai_routes(detect_merchants: %w[gpu/qwen3-8b])
