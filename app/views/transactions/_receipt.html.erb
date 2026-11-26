@@ -6,7 +6,7 @@
   <div class="flex items-center gap-2">
     <%= render DS::Pill.new(
           label: t("transactions.receipt.status.#{status}"),
-          tone: { "completed" => :success, "needs_review" => :warning }.fetch(status, :neutral),
+          tone: { "completed" => :success, "needs_review" => :warning, "failed" => :error }.fetch(status, :neutral),
           marker: false
         ) %>
   </div>
