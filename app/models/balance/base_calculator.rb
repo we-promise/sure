@@ -176,7 +176,8 @@ class Balance::BaseCalculator
 
     # A zero-amount Transfer trade moves a position without cash, so its amount
     # says nothing of its value. The holdings do: they value the position at
-    # the price of the day it arrives, so that is its value here, and the
+    # the price of the day it arrives (the row's amount per unit, see
+    # `SyncCache#valued_holding_price`), so that is its value here, and the
     # day's market movement is what is left. The trade's own price counts only
     # where no holding gives one, or none converts. It is a flow only where
     # the holdings value show the day's trades of that security: its priced
@@ -196,7 +197,7 @@ class Balance::BaseCalculator
       trade = entry.entryable
       return nil unless trade.cashless_transfer? && holdings_show_trades?(trade.security_id, entry.date)
 
-      unit_price = sync_cache.valued_holding_price(trade.security_id, entry.date)
+      unit_price = sync_cache.valued_holding_price(trade.security_id, entry.date, qty: trade.qty)
       return (trade.qty * unit_price).round(4) if unit_price
 
       trade.priced_transfer_value(account.currency, date: entry.date)

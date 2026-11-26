@@ -1,4 +1,7 @@
 class Balance::SyncCache
+  # Significant digits of a unit price taken from a holding's amount and quantity.
+  UNIT_PRICE_DIGITS = 30
+
   # start_date skips entries before it; only safe when the caller seeds balances from a persisted prior day.
   def initialize(account, start_date: nil)
     @account = account
@@ -45,19 +48,27 @@ class Balance::SyncCache
   end
 
   # The price the priced holdings value a unit of `security_id` at on `date`,
-  # in the account's currency and converted as their value is. A day with no
+  # in the account's currency and converted as their value is, for moving
+  # `qty` units of it. The amount is what the balance books, and the stored
+  # price may be rounded short of it, so a row that holds all of `qty` gives
+  # its amount over its quantity: the amount's rounding, over a row at least as
+  # big as `qty`, costs the flow no more than its own. A row that holds less
+  # (the amount of what is left says little of the price of what went) gives
+  # its price. A day with no
   # priced row (a position that left whole, with nothing recorded after it)
   # takes the day before's if that held shares, in the shares of `date`: a
   # split going ex that day leaves the position worth what it was. nil when
   # they have no price for it, or no rate converts it.
-  def valued_holding_price(security_id, date)
+  def valued_holding_price(security_id, date, qty:)
     rows = valued_holdings(security_id)
     held = rows[date] || rows[date.prev_day]&.select { |h| h.qty.positive? }.presence
     return nil unless held
 
     row = held.first
-    price = Money.new(row.price, row.currency).exchange_to(account.currency, date: row.date).amount
     ratio = split_ratio(security_id, date) if row.date != date
+    row_qty = ratio ? Security::Split.scale(row.qty, ratio) : row.qty
+    unit_price = row_qty >= qty.abs ? row.amount.div(row.qty, UNIT_PRICE_DIGITS) : row.price
+    price = Money.new(unit_price, row.currency).exchange_to(account.currency, date: row.date).amount
     ratio ? Security::Split.unscale(price, ratio) : price
   rescue Money::ConversionError
     nil

@@ -230,6 +230,101 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
     assert_equal 0, day.net_market_flows
   end
 
+  test "forward: a flow follows the holding's amount when its price is rounded and the amount is not" do
+    # 1,000,000 units at 100.123444 are 100,123,444. The holding stores the
+    # price at four places (100.1234) and keeps the amount whole, so quantity
+    # times its price is 44 short of what the balance books for the holding.
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      holdings: [
+        { date: transfer_day, ticker: "AAPL", qty: 1_000_000, price: BigDecimal("100.1234"), amount: BigDecimal("100123444") },
+        { date: Date.current, ticker: "AAPL", qty: 1_000_000, price: BigDecimal("100.1234"), amount: BigDecimal("100123444") }
+      ]
+    )
+    add_trade(account, qty: 1_000_000, price: 0)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 100_123_444, day.non_cash_inflows
+    assert_equal 0, day.net_market_flows
+  end
+
+  test "forward: part of a position out is valued at the holding's amount per unit when its price is rounded" do
+    # 1,000,000 units at 100.123444 become 700,000 on the transfer day, and
+    # 300,000 leave.
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      holdings: [
+        { date: 2.days.ago.to_date, ticker: "AAPL", qty: 1_000_000, price: BigDecimal("100.1234"), amount: BigDecimal("100123444") },
+        { date: transfer_day, ticker: "AAPL", qty: 700_000, price: BigDecimal("100.1234"), amount: BigDecimal("70086410.8") },
+        { date: Date.current, ticker: "AAPL", qty: 700_000, price: BigDecimal("100.1234"), amount: BigDecimal("70086410.8") }
+      ]
+    )
+    add_trade(account, qty: -300_000, price: 0)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal BigDecimal("30037033.2"), day.non_cash_outflows
+    assert_equal 0, day.net_market_flows
+  end
+
+  test "forward: a transfer of more than the row holds is valued at its price, not at the amount of what is left" do
+    # 1,000,001.123457 units at 10.37 become 1.123457, and 1,000,000 leave. The
+    # amounts are rounded to four places: the 1.123457 left is 11.6502, whose
+    # per-unit rounding, over 1,000,000 units, is worth 44.
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      holdings: [
+        { date: 2.days.ago.to_date, ticker: "AAPL", qty: BigDecimal("1000001.123457"), price: BigDecimal("10.37"), amount: BigDecimal("10370011.6502") },
+        { date: transfer_day, ticker: "AAPL", qty: BigDecimal("1.123457"), price: BigDecimal("10.37"), amount: BigDecimal("11.6502") },
+        { date: Date.current, ticker: "AAPL", qty: BigDecimal("1.123457"), price: BigDecimal("10.37"), amount: BigDecimal("11.6502") }
+      ]
+    )
+    add_trade(account, qty: -1_000_000, price: 0)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 10_370_000, day.non_cash_outflows
+    assert_equal 0, day.net_market_flows
+  end
+
+  test "reverse: a whole position out is valued at the day before's amount when its price is rounded" do
+    account = create_account_with_ledger(
+      account: { type: Investment, balance: 5000, cash_balance: 5000, currency: "USD" },
+      entries: [ { type: "current_anchor", date: Date.current, balance: 5000 } ],
+      holdings: [ { date: 2.days.ago.to_date, ticker: "AAPL", qty: 1_000_000, price: BigDecimal("100.1234"), amount: BigDecimal("100123444") } ]
+    )
+    add_trade(account, qty: -1_000_000, price: 0)
+
+    day = flows_on(Balance::ReverseCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 100_123_444, day.non_cash_outflows
+    assert_equal 0, day.net_market_flows
+  end
+
+  test "forward: a transfer out of most of a position is valued at the price when the amount left rounds to nothing" do
+    # The amount of the 0.000001 left rounds to 0, so it says nothing of the
+    # price of the 1,000,000 that went.
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 } ],
+      holdings: [
+        { date: 2.days.ago.to_date, ticker: "AAPL", qty: BigDecimal("1000000.000001"), price: BigDecimal("10.5"), amount: BigDecimal("10500000.0000105").round(4) },
+        { date: transfer_day, ticker: "AAPL", qty: BigDecimal("0.000001"), price: BigDecimal("10.5"), amount: 0 },
+        { date: Date.current, ticker: "AAPL", qty: BigDecimal("0.000001"), price: BigDecimal("10.5"), amount: 0 }
+      ]
+    )
+    add_trade(account, qty: -1_000_000, price: 0)
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 10_500_000, day.non_cash_outflows
+    assert_equal 0, day.net_market_flows
+  end
+
   test "forward: a transfer out of part of a position is valued at the day's price" do
     # 20 shares at 98 become 10 at 100 on the transfer day, 10 of them leaving.
     account = create_account_with_ledger(
