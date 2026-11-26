@@ -90,7 +90,7 @@ class Chat < ApplicationRecord
       if last_message&.role == "user"
         last_message
       elsif last_message&.failed?
-        last_message.prompt_message
+        last_message.prompt_message || prompt_before(last_message)
       end
 
     ask_assistant_later(prompt) if prompt
@@ -239,6 +239,11 @@ class Chat < ApplicationRecord
   end
 
   private
+
+    # For replies written before messages.prompt_message_id existed.
+    def prompt_before(reply)
+      conversation_messages.where(type: "UserMessage", created_at: ..reply.created_at).ordered.last
+    end
 
     def undelivered_error_payload(assistant_message)
       {

@@ -310,6 +310,17 @@ class ChatTest < ActiveSupport::TestCase
     end
   end
 
+  test "retry_last_message! asks again for the prompt before a failed reply that has no link to it" do
+    chat = chats(:two)
+    chat.messages.destroy_all
+    prompt = chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "gpt-4.1")
+    chat.messages.where(type: "AssistantMessage").sole.update_columns(status: "failed", prompt_message_id: nil)
+
+    assert_enqueued_with(job: AssistantResponseJob, args: ->(args) { args.first == prompt }) do
+      chat.retry_last_message!
+    end
+  end
+
   test "retry_last_message! leaves a finished reply alone" do
     chat = chats(:two)
     chat.messages.destroy_all
