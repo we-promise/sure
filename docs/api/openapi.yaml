@@ -5285,10 +5285,16 @@ paths:
       - Accounts
       security:
       - apiKeyAuth: []
-      description: Creates an account owned by the API key's user and records its
+      description: 'Creates an account owned by the API key''s user and records its
         opening balance. Requires the read_write scope. For a loan, send `accountable_attributes.initial_balance`
         (original principal) and `start_date` to anchor the opening balance on the
-        day it was drawn; `balance` is the current amount owed.
+        day it was drawn; `balance` is the current amount owed. Send each value as
+        the type its field has: text as a string, numbers as numbers or numeric strings,
+        dates as `YYYY-MM-DD` and flags as true or false. A value of the wrong type,
+        or a number with more decimal places than the field keeps, is rejected with
+        a 422 instead of being converted or rounded; null or an empty string means
+        the field was not sent. A number with more than 15 digits has to be sent as
+        a string, because a JSON number cannot carry it exactly.'
       parameters: []
       responses:
         '201':
@@ -5384,7 +5390,8 @@ paths:
                       type: object
                       description: 'Type-specific attributes, the same ones the web
                         form accepts (for a loan: initial_balance, start_date, interest_rate,
-                        rate_type, term_months, ...).'
+                        rate_type, term_months, ...). Must be an object. A `subtype`
+                        here must match the one on the account, if both are sent.'
                       additionalProperties: true
                   required:
                   - name

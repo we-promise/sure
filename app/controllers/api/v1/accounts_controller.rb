@@ -6,8 +6,44 @@ class Api::V1::AccountsController < Api::V1::BaseController
   InvalidParam = Class.new(StandardError)
   private_constant :InvalidParam
 
-  NUMERIC_COLUMN_TYPES = %i[integer decimal float].freeze
-  private_constant :NUMERIC_COLUMN_TYPES
+  # The account's own fields; the rest of a request goes in accountable_attributes.
+  ACCOUNT_FIELDS = %i[
+    name balance currency subtype opening_balance_date
+    institution_name institution_domain notes exclude_from_reports
+  ].freeze
+
+  # Fields of the web forms that mean nothing when an account is created. An
+  # id is ignored; the others are refused, so they are not accepted and then
+  # dropped.
+  UPDATE_ONLY_FIELDS = %i[id rate_schedule_snapshot purchase_date initial_balance_shown].freeze
+
+  # Types of fields that are not attributes of the model.
+  FIELD_TYPES = {
+    opening_balance_date: ActiveModel::Type::Date.new,
+    effective_date: ActiveModel::Type::Date.new, # a row of rate_changes
+    rate: ActiveModel::Type::Decimal.new
+  }.freeze
+
+  # Free text columns that the models only understand a few values of.
+  ALLOWED_VALUES = {
+    rate_type: [ Loan::FIXED_RATE_TYPE, *Loan::VARIABLE_RATE_TYPES ].freeze,
+    area_unit: %w[sqft sqm].freeze,
+    mileage_unit: %w[mi km].freeze
+  }.freeze
+  private_constant :ALLOWED_VALUES
+
+  BOOLEAN_VALUES = {
+    true => true, "true" => true, "t" => true, "1" => true, 1 => true,
+    false => false, "false" => false, "f" => false, "0" => false, 0 => false
+  }.freeze
+  private_constant :BOOLEAN_VALUES
+
+  # Ruby also reads "1_000" as 1000, so the shape is checked before converting.
+  NUMBER_FORMAT = /\A[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\z/
+  private_constant :NUMBER_FORMAT
+
+  MAX_INTEGER = 2**31 # integer columns are 4 bytes
+  private_constant :MAX_INTEGER
 
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: :create
@@ -61,26 +97,27 @@ class Api::V1::AccountsController < Api::V1::BaseController
   end
 
   def create
-    raise InvalidParam, "account must be an object" unless params.require(:account).is_a?(ActionController::Parameters)
+    account = params.require(:account)
+    raise InvalidParam, "account must be an object" unless account.is_a?(ActionController::Parameters)
 
-    accountable_class = requested_accountable_class
+    accountable_class = requested_accountable_class(account)
     raise InvalidParam, "accountable_type must be one of: #{Accountable::TYPES.map(&:underscore).join(', ')}" unless accountable_class
 
-    attributes = account_create_params(accountable_class)
-    raise InvalidParam, "name and balance are required" unless attributes[:name].present? && attributes[:balance].present?
+    attributes = account_create_params(account, accountable_class)
+    raise InvalidParam, "name and balance are required" unless attributes[:name] && attributes[:balance]
 
     family = current_resource_owner.family
-    opening_balance_date = parse_opening_balance_date(attributes.delete(:opening_balance_date))
-    cast_create_attributes!(accountable_class, attributes, family)
+    opening_balance_date = opening_balance_date_for(attributes.delete(:opening_balance_date))
+    attributes[:currency] = supported_currency(attributes[:currency], family)
+    reject_unknown_subtype!(accountable_class, attributes)
     reject_overwritten_loan_balance!(attributes, opening_balance_date)
+    reject_unused_rate_changes!(attributes)
+    lock_supplied_attributes!(accountable_class, attributes)
 
-    Account.transaction do
-      @account = family.accounts.create_and_sync(
-        attributes.merge(accountable_type: accountable_class.name, owner: current_resource_owner),
-        opening_balance_date: opening_balance_date
-      )
-      @account.lock_saved_attributes!
-    end
+    @account = family.accounts.create_and_sync(
+      attributes.merge(accountable_type: accountable_class.name, owner: current_resource_owner),
+      opening_balance_date: opening_balance_date
+    )
 
     render :show, status: :created
   rescue ActionController::ParameterMissing, ActiveRecord::RecordNotFound
@@ -112,72 +149,154 @@ class Api::V1::AccountsController < Api::V1::BaseController
     end
 
     # Accepts "Loan" or "loan" / "credit_card" / "CreditCard".
-    def requested_accountable_class
-      requested = params.dig(:account, :accountable_type).to_s
-      Accountable.from_type(requested.underscore.camelize)
+    def requested_accountable_class(account)
+      requested = account[:accountable_type]
+      Accountable.from_type(requested.underscore.camelize) if requested.is_a?(String)
     end
 
-    # Accountable attributes are permitted per type through the same lists the
-    # web forms use, so the API cannot set anything the UI cannot.
-    def account_create_params(accountable_class)
+    # Every field is read as exactly the shape its column takes, before
+    # anything else sees it. `permit` would drop an array or object from a
+    # scalar field without a word and ActiveRecord would turn false into 0,
+    # true into "t" and a bad date into nil, so those requests would be
+    # saved as something the client never sent. Null and "" mean "not sent".
+    #
+    # Accountable fields come from the same lists the web forms use, so the
+    # API cannot set anything the UI cannot.
+    def account_create_params(account, accountable_class)
+      attributes = typed_attributes(Account, account, ACCOUNT_FIELDS)
+
+      details = account[:accountable_attributes]
+      return attributes if details.nil?
+      raise InvalidParam, "accountable_attributes must be an object" unless details.is_a?(ActionController::Parameters)
+
+      update_only = (UPDATE_ONLY_FIELDS - [ :id ]).reject { |field| details[field].to_s.strip.empty? }
+      raise InvalidParam, "#{update_only.join(', ')} can only be set when updating an account" if update_only.any?
+
       permitted = "#{accountable_class.name.pluralize}Controller".constantize.permitted_accountable_attributes
-      permitted = permitted.reject { |attribute| attribute == :id } # nothing to match on a new account
-
-      params.require(:account).permit(
-        :name, :balance, :currency, :subtype, :opening_balance_date,
-        :institution_name, :institution_domain, :notes, :exclude_from_reports,
-        accountable_attributes: permitted
-      )
+      fields, lists = permitted.reject { |field| UPDATE_ONLY_FIELDS.include?(field) }.partition { |field| field.is_a?(Symbol) }
+      attributes[:accountable_attributes] = typed_attributes(accountable_class, details, fields).merge(object_lists(details, lists))
+      attributes
     end
 
-    def parse_opening_balance_date(raw)
-      return Time.zone.today - 2.years if raw.blank?
+    def typed_attributes(model, raw, names)
+      names.each_with_object({}) do |name, typed|
+        type = FIELD_TYPES.fetch(name) { model.type_for_attribute(name.to_s) }
+        value = typed_value(name, raw[name], type)
+        typed[name] = value unless value.nil?
+      end
+    end
 
-      date = parse_date(raw)
-      raise InvalidParam, "opening_balance_date must be an ISO 8601 date (YYYY-MM-DD)" unless date
+    def typed_value(name, raw, type)
+      return if raw.nil? || (raw.is_a?(String) && raw.strip.empty?)
+
+      case type.type
+      when :integer, :decimal, :float then parse_number(name, raw, type)
+      when :boolean then BOOLEAN_VALUES.fetch(raw.is_a?(String) ? raw.strip.downcase : raw) { raise InvalidParam, "#{name} must be true or false" }
+      when :date then parse_date(raw) || raise(InvalidParam, "#{name} must be an ISO 8601 date (YYYY-MM-DD)")
+      when :uuid then (raw.is_a?(String) && valid_uuid?(raw)) ? raw : raise(InvalidParam, "#{name} must be a UUID")
+      when :string, :text, nil then text_value(name, raw)
+      else raise InvalidParam, "#{name} cannot be set through the API"
+      end
+    end
+
+    def text_value(name, raw)
+      raise InvalidParam, "#{name} must be a string" unless raw.is_a?(String)
+
+      allowed = ALLOWED_VALUES[name]
+      raise InvalidParam, "#{name} must be one of: #{allowed.join(', ')}" if allowed && !allowed.include?(raw)
+
+      raw
+    end
+
+    # A whole number or a finite decimal that fits the column exactly: a value
+    # with more decimal places than the column keeps is refused, not rounded.
+    def parse_number(name, raw, type)
+      raise InvalidParam, "#{name} must be a number" unless raw.is_a?(String) || raw.is_a?(Numeric)
+
+      raise InvalidParam, "#{name} has more digits than a JSON number can carry; send it as a string" if rounded_float?(raw)
+
+      integer = type.type == :integer
+      limit = integer ? MAX_INTEGER : (10**(type.precision - type.scale.to_i) if type.precision)
+      text = raw.to_s.strip
+      value = parse_decimal(text) if text.match?(NUMBER_FORMAT)
+
+      unless value && (!integer || value.frac.zero?) && (limit.nil? || value.abs < limit)
+        raise InvalidParam, "#{name} must be a #{'whole ' if integer}number#{" below #{limit}" if limit}"
+      end
+      raise InvalidParam, "#{name} can have at most #{type.scale} decimal places" if type.scale && value != value.round(type.scale)
+
+      integer ? value.to_i : value
+    end
+
+    # A JSON number is read as a Float, which holds about 15 digits exactly.
+    # A longer one has already been rounded by the time it gets here.
+    def rounded_float?(raw)
+      raw.is_a?(Float) && raw.to_s.sub(/e.*/i, "").delete("-.").sub(/\A0+/, "").length > 15
+    end
+
+    # Lists of objects such as a loan's rate_changes. Every row needs all of
+    # its fields and nothing else; the model checks the rates are in range.
+    def object_lists(details, lists)
+      lists.reduce({}, :merge).each_with_object({}) do |(name, fields), result|
+        rows = details[name]
+        next if rows.nil?
+        raise InvalidParam, "#{name} must be a list of objects" unless rows.is_a?(Array) && rows.all?(ActionController::Parameters)
+
+        result[name] = rows.map do |row|
+          raise InvalidParam, "each #{name} row can only have #{fields.join(' and ')}" if (row.keys.map(&:to_sym) - fields).any?
+
+          fields.index_with do |field|
+            typed_value("#{name}.#{field}", row[field], FIELD_TYPES.fetch(field)) || raise(InvalidParam, "each #{name} row needs #{fields.join(' and ')}")
+          end
+        end
+        # The model keeps one row per date, so a repeated one would be lost.
+        raise InvalidParam, "#{name} has two rows with the same #{fields.first}" if result[name].uniq { |row| row[fields.first] }.size != rows.size
+      end
+    end
+
+    def opening_balance_date_for(date)
+      return Time.zone.today - 2.years unless date
       raise InvalidParam, "opening_balance_date cannot be in the future" if date > Date.current
 
       date
     end
 
-    # Casts the values ActiveRecord would otherwise coerce without complaint:
-    # "1,250.50" becomes 1, "abc" becomes 0, a bad start_date becomes nil and
-    # quietly falls back to the opening balance date, and an unknown currency
-    # is only caught after the account is saved. Everything after this sees
-    # numbers, a Date, a known subtype and a valid currency code.
-    def cast_create_attributes!(accountable_class, attributes, family)
-      attributes[:balance] = parse_number(:balance, attributes[:balance], Account.columns_hash["balance"])
-
-      details = attributes[:accountable_attributes]
-      if details
-        accountable_class.columns_hash.slice(*details.keys).each do |name, column|
-          details[name] = parse_number(name, details[name], column) if NUMERIC_COLUMN_TYPES.include?(column.type) && details[name].present?
-        end
-        if details[:start_date].present?
-          details[:start_date] = parse_date(details[:start_date]) || raise(InvalidParam, "start_date must be an ISO 8601 date (YYYY-MM-DD)")
-        end
-      end
-
-      reject_unknown_subtype!(accountable_class, attributes[:subtype].presence || details&.dig(:subtype).presence)
-
-      currency = attributes[:currency].present? ? Family.normalize_currency_code(attributes[:currency]) : family.currency
-      attributes[:currency] = currency || raise(InvalidParam, "currency must be a supported ISO 4217 code")
+    def supported_currency(code, family)
+      currency = code ? Family.normalize_currency_code(code) : family.currency
+      currency || raise(InvalidParam, "currency must be a supported ISO 4217 code")
     end
 
-    # A whole number or a finite decimal that fits the column.
-    def parse_number(name, raw, column)
-      value = column.type == :integer ? Integer(raw.to_s.strip, 10, exception: false) : parse_decimal(raw)
-      limit = 10**(column.precision - column.scale.to_i) if column.precision
+    # A subtype can arrive on the account and again inside accountable_attributes,
+    # and the second one wins when the record is built, so both are checked and
+    # they must agree.
+    def reject_unknown_subtype!(accountable_class, attributes)
+      subtypes = [ attributes[:subtype], attributes.dig(:accountable_attributes, :subtype) ].compact.uniq
+      return if subtypes.empty?
 
-      return value if value && (limit.nil? || value.abs < limit)
-
-      raise InvalidParam, "#{name} must be a #{column.type == :integer ? 'whole ' : ''}number#{" below #{limit}" if limit}"
-    end
-
-    def reject_unknown_subtype!(accountable_class, subtype)
-      return if subtype.nil? || accountable_class::SUBTYPES.key?(subtype)
+      raise InvalidParam, "subtype cannot be set on #{accountable_class.name.underscore} accounts" if accountable_class::SUBTYPES.empty?
+      raise InvalidParam, "subtype was sent twice with different values" if subtypes.many?
+      return if accountable_class::SUBTYPES.key?(subtypes.first)
 
       raise InvalidParam, "subtype must be one of: #{accountable_class::SUBTYPES.keys.join(', ')}"
+    end
+
+    # A schedule on a fixed rate loan would be stored and never used.
+    def reject_unused_rate_changes!(attributes)
+      details = attributes[:accountable_attributes] || {}
+      return if details[:rate_changes].blank? || Loan::VARIABLE_RATE_TYPES.include?(details[:rate_type])
+
+      raise InvalidParam, "rate_changes only apply when rate_type is #{Loan::VARIABLE_RATE_TYPES.join(' or ')}"
+    end
+
+    # create_and_sync saves the records again after creating them, so there
+    # are no saved changes left for lock_saved_attributes! to lock. The fields
+    # the client sent are locked as the accountable is inserted instead, so a
+    # later provider refresh (an AVM re-reading a property's area, say) keeps
+    # them.
+    def lock_supplied_attributes!(accountable_class, attributes)
+      details = attributes[:accountable_attributes]
+      names = details.to_h.keys.map(&:to_s) & accountable_class.column_names
+      details[:locked_attributes] = names.index_with { Time.current } if names.any?
     end
 
     # Account.create_and_sync anchors an opening balance on the loan's
@@ -187,9 +306,9 @@ class Api::V1::AccountsController < Api::V1::BaseController
     # answering 201 with a balance that is about to change.
     def reject_overwritten_loan_balance!(attributes, opening_balance_date)
       details = attributes[:accountable_attributes] || {}
-      return unless details[:initial_balance].present? && details[:initial_balance] != attributes[:balance]
+      return unless details[:initial_balance] && details[:initial_balance] != attributes[:balance]
 
-      start_date = details[:start_date].presence
+      start_date = details[:start_date]
       anchor_date = start_date && start_date > Entry.min_supported_date ? start_date : opening_balance_date
       return unless anchor_date == Date.current
 

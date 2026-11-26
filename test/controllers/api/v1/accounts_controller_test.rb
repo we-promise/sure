@@ -4,6 +4,7 @@ require "test_helper"
 
 class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
   setup do
+    ApiRateLimiter.stubs(:limit).returns(nil) # the field matrix sends hundreds of requests
     @user = users(:family_admin) # dylan_family user
     @other_family_user = users(:family_member)
     @other_family_user.update!(family: families(:empty))
@@ -438,6 +439,7 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1450, property.area_value
     assert_equal "sqft", property.area_unit
     assert_equal tags(:one).id, property.cost_tag_id
+    assert property.user_set_area?, "an area typed in by the client must survive a later valuation refresh"
   end
 
   test "create rejects an unknown accountable type" do
@@ -449,29 +451,15 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_account_rejected({ name: "No balance", accountable_type: "Depository" })
   end
 
-  test "create rejects an invalid opening_balance_date" do
-    assert_account_rejected({ name: "Bad date", accountable_type: "Depository", balance: 1, opening_balance_date: "not-a-date" })
-  end
-
   test "create rejects balances that are not finite numbers in the stored range" do
     [ "1,250.50", "abc", "12abc", "Infinity", "NaN", "1e400", "1000000000000000" ].each do |balance|
       assert_account_rejected({ name: "Bad balance", accountable_type: "Depository", balance: balance }, "balance #{balance.inspect}")
     end
   end
 
-  test "create rejects a malformed loan initial_balance" do
-    assert_account_rejected(loan_params(initial_balance: "5,000"))
-  end
-
   test "create rejects an unsupported currency before persisting anything" do
     assert_no_difference "Entry.count" do
       assert_account_rejected({ name: "Mystery money", accountable_type: "Depository", balance: 1, currency: "ZZZ" })
-    end
-  end
-
-  test "create rejects a loan start_date that is not a real date" do
-    [ "not-a-date", "2026-13-45", "2026-6-3", "20260603" ].each do |start_date|
-      assert_account_rejected(loan_params(start_date: start_date), "start_date #{start_date.inspect}")
     end
   end
 
@@ -495,28 +483,12 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "create rejects an invalid enum value in accountable_attributes" do
-    assert_account_rejected({ name: "Coin", accountable_type: "Crypto", balance: 1, accountable_attributes: { tax_treatment: "bogus" } })
-  end
-
   test "create ignores an accountable id instead of failing to find it" do
     supplied_id = SecureRandom.uuid
     post_account(loan_params(id: supplied_id, initial_balance: "40000"))
 
     assert_response :created
     assert_not_equal supplied_id, @user.family.accounts.find(JSON.parse(response.body)["id"]).accountable_id
-  end
-
-  test "create rejects numeric accountable_attributes that are not numbers" do
-    {
-      "interest_rate" => "abc",
-      "term_months" => "12x",
-      "down_payment" => "1,000"
-    }.each do |field, value|
-      assert_account_rejected(loan_params(field => value), "#{field}=#{value.inspect}")
-    end
-
-    assert_account_rejected({ name: "Cottage", accountable_type: "Property", balance: 1, accountable_attributes: { year_built: "abc" } })
   end
 
   test "create rejects a subtype the account type does not have" do
@@ -539,6 +511,174 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_account_rejected(loan_params(start_date: 1.year.from_now.to_date.iso8601, initial_balance: nil))
   end
 
+  # Values no column of that type can hold, one for each way a request goes
+  # wrong: not a single value (an array, which `permit` would drop), a value of
+  # another type (which ActiveRecord would convert) and text that is almost
+  # right. They are sent as JSON for every field the endpoint reads, taken from
+  # the controller's own lists, so a field added later is covered here too.
+  WRONG_SHAPES = {
+    string: [ [ "x" ], true, 12345 ],
+    integer: [ [ 1 ], false, "12abc", 1.5 ],
+    decimal: [ [ 1 ], false, "12abc", "NaN", 12345678901234.1234 ],
+    date: [ "2026-13-45", "2026-6-3", 20260603, [ "2026-01-01" ] ],
+    boolean: [ "banana", 2, [ true ] ],
+    uuid: [ [ "x" ], 5, "not-a-uuid" ]
+  }.freeze
+
+  test "create refuses wrong shaped values in every account field" do
+    plain = plain_account("Depository")
+
+    Api::V1::AccountsController::ACCOUNT_FIELDS.each do |field|
+      assert_wrong_shapes_rejected(Account, field, field) { |bad| plain.merge(field => bad) }
+    end
+  end
+
+  Accountable::TYPES.each do |type|
+    fields = "#{type.pluralize}Controller".constantize.permitted_accountable_attributes.grep(Symbol) -
+             Api::V1::AccountsController::UPDATE_ONLY_FIELDS
+    next if fields.empty?
+
+    test "create refuses wrong shaped values in every #{type} field" do
+      plain = plain_account(type)
+
+      fields.each do |field|
+        assert_wrong_shapes_rejected(type.constantize, field, "#{type} #{field}") do |bad|
+          plain.merge(accountable_attributes: plain[:accountable_attributes].merge(field => bad))
+        end
+      end
+    end
+  end
+
+  test "create refuses an accountable_attributes or accountable_type that is not the right kind of value" do
+    [ [ 1 ], [], "x", true ].each do |bad|
+      assert_account_rejected(plain_account("Depository").merge(accountable_attributes: bad), bad.inspect, field: :accountable_attributes, as: :json)
+    end
+    [ [ "Loan" ], { "a" => 1 }, true, 5 ].each do |bad|
+      assert_account_rejected(plain_account("Depository").merge(accountable_type: bad), bad.inspect, field: :accountable_type, as: :json)
+    end
+  end
+
+  test "create takes a loan's rate_changes only as a list of objects with plain values" do
+    loan = plain_account("Loan")
+    loan[:accountable_attributes][:rate_type] = "variable"
+
+    [ "oops", { "a" => 1 }, [ [ 1 ] ], [ "2025-06-01" ], [ { "effective_date" => [ "2025-06-01" ], "rate" => "6" } ] ].each do |bad|
+      assert_account_rejected(loan.merge(accountable_attributes: loan[:accountable_attributes].merge(rate_changes: bad)), bad.inspect, field: :rate_changes, as: :json)
+    end
+
+    good = [ { "effective_date" => "2025-06-01", "rate" => "6.5" } ]
+    post_account(loan.merge(accountable_attributes: loan[:accountable_attributes].merge(rate_changes: good)), as: :json)
+    assert_response :created
+  end
+
+  test "create refuses values that the models only understand a few of" do
+    { "Loan" => %i[rate_type insurance_rate_type day_count_convention], "Property" => %i[area_unit],
+      "Vehicle" => %i[mileage_unit], "Crypto" => %i[tax_treatment] }.each do |type, fields|
+      fields.each do |field|
+        plain = plain_account(type)
+        assert_no_difference "Account.count" do
+          post_account(plain.merge(accountable_attributes: plain[:accountable_attributes].merge(field => "bogus")), as: :json)
+        end
+        assert_response :unprocessable_entity, "#{type} #{field}"
+      end
+    end
+  end
+
+  test "create checks the subtype sent on the account and the one sent inside accountable_attributes" do
+    cottage = { name: "Cottage", accountable_type: "Property", balance: 1 }
+
+    assert_account_rejected(cottage.merge(subtype: "single_family_home", accountable_attributes: { subtype: "bogus" }), "the second one would replace the first")
+    assert_account_rejected(cottage.merge(subtype: "single_family_home", accountable_attributes: { subtype: "condominium" }), "two valid subtypes that disagree")
+    assert_account_rejected({ name: "Car", accountable_type: "Vehicle", balance: 1, subtype: "sedan" }, "Vehicle has no subtypes")
+
+    post_account(cottage.merge(subtype: "condominium", accountable_attributes: { subtype: "condominium" }))
+    assert_response :created
+    post_account(cottage.merge(accountable_attributes: { subtype: "townhouse" }))
+    assert_response :created
+  end
+
+  test "create accepts JSON numbers, zero and booleans" do
+    post_account({
+      name: "Typed", accountable_type: "Loan", balance: 100.5, exclude_from_reports: true,
+      accountable_attributes: { initial_balance: 100.5, term_months: 12, interest_rate: 0, rate_type: "fixed", principal_only_transfers: false }
+    }, as: :json)
+
+    assert_response :created
+    account = @user.family.accounts.find(JSON.parse(response.body)["id"])
+    assert_equal BigDecimal("100.5"), account.balance
+    assert account.exclude_from_reports
+    assert_equal 0, account.accountable.interest_rate
+    assert_equal false, account.accountable.principal_only_transfers
+  end
+
+  test "create refuses numbers that Ruby would read differently from how they look" do
+    [ "1_000", "1__0", "0x10", "1e", ".", "--1", "1 000" ].each do |balance|
+      assert_account_rejected({ name: "Odd", accountable_type: "Depository", balance: balance }, "balance #{balance.inspect}", field: :balance)
+    end
+    assert_account_rejected(loan_params(term_months: "1_2"), field: :term_months)
+  end
+
+  test "create refuses a number with more decimal places than its column keeps instead of rounding it" do
+    [ "1.123456789", 0.00001 ].each do |balance|
+      assert_account_rejected({ name: "Odd", accountable_type: "Depository", balance: balance }, "balance #{balance.inspect}", field: :balance, as: :json)
+    end
+    assert_account_rejected(loan_params(interest_rate: "5.1234"), field: :interest_rate)
+  end
+
+  test "create accepts the usual ways to write a number or a flag" do
+    post_account({
+      name: "Forms", accountable_type: "Loan", balance: " 100.1234 ", exclude_from_reports: "True",
+      accountable_attributes: { initial_balance: "100.1234", term_months: 12.0, interest_rate: "5.125", rate_type: "fixed", principal_only_transfers: 0 }
+    }, as: :json)
+
+    assert_response :created
+    account = @user.family.accounts.find(JSON.parse(response.body)["id"])
+    assert_equal BigDecimal("100.1234"), account.balance
+    assert account.exclude_from_reports
+    assert_equal 12, account.accountable.term_months
+    assert_equal false, account.accountable.principal_only_transfers
+  end
+
+  test "create accepts the update-only vehicle fields when they are null or empty" do
+    post_account({ name: "Car", accountable_type: "Vehicle", balance: 1, accountable_attributes: { purchase_date: nil, initial_balance_shown: "" } }, as: :json)
+
+    assert_response :created
+  end
+
+  test "create refuses the vehicle fields that only mean something when updating" do
+    %i[purchase_date initial_balance_shown].each do |field|
+      assert_account_rejected(
+        { name: "Car", accountable_type: "Vehicle", balance: 1, accountable_attributes: { field => "2020-01-01" } },
+        field.to_s, field: field, as: :json
+      )
+    end
+  end
+
+  test "create checks every row of rate_changes" do
+    loan = plain_account("Loan")
+    loan[:accountable_attributes][:rate_type] = "variable"
+    rows = [
+      [ { "effective_date" => "2025-06-01", "rate" => "6", "pct" => "1" } ],
+      [ { "date" => "2025-06-01", "pct" => "6" } ],
+      [ { "effective_date" => "", "rate" => "" } ],
+      [ { "effective_date" => 20250601, "rate" => 6 } ],
+      [ { "effective_date" => "20250601", "rate" => 6 } ],
+      [ { "effective_date" => "2025-06-01", "rate" => "6_0" } ],
+      [ { "effective_date" => "2025-06-01", "rate" => "6" }, { "effective_date" => "2025-06-01", "rate" => "7" } ]
+    ]
+
+    rows.each do |bad|
+      assert_account_rejected(loan.merge(accountable_attributes: loan[:accountable_attributes].merge(rate_changes: bad)), bad.inspect, field: :rate_changes, as: :json)
+    end
+  end
+
+  test "create refuses rate_changes on a loan that does not have a variable rate" do
+    loan = plain_account("Loan")
+    loan[:accountable_attributes][:rate_changes] = [ { "effective_date" => "2025-06-01", "rate" => "6" } ]
+
+    assert_account_rejected(loan, field: :rate_changes, as: :json)
+  end
+
   private
 
     def write_api_key
@@ -551,17 +691,37 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
       )
     end
 
-    def post_account(account, key: write_api_key)
-      post "/api/v1/accounts", params: { account: account }, headers: api_headers(key)
+    def post_account(account, key: write_api_key, **options)
+      post "/api/v1/accounts", params: { account: account }, headers: api_headers(key), **options
     end
 
-    def assert_account_rejected(account, message = nil)
+    # The smallest valid request for an account type.
+    def plain_account(type)
+      return loan_params if type == "Loan"
+
+      { name: "Plain #{type}", accountable_type: type, balance: "100", accountable_attributes: {} }
+    end
+
+    def wrong_shape_kind(model, field)
+      type = Api::V1::AccountsController::FIELD_TYPES.fetch(field) { model.type_for_attribute(field.to_s) }.type
+      { text: :string, float: :decimal, nil => :string }.fetch(type, type)
+    end
+
+    # Pass field: to also check that the error names it.
+    def assert_account_rejected(account, message = nil, field: nil, **options)
       assert_no_difference "Account.count" do
-        post_account(account)
+        post_account(account, **options)
       end
 
       assert_response :unprocessable_entity, message
       assert_equal "validation_failed", JSON.parse(response.body)["error"]
+      assert_includes JSON.parse(response.body)["message"], field.to_s, message if field
+    end
+
+    def assert_wrong_shapes_rejected(model, field, label)
+      WRONG_SHAPES.fetch(wrong_shape_kind(model, field)).each do |bad|
+        assert_account_rejected(yield(bad), "#{label}=#{bad.inspect}", field: field, as: :json)
+      end
     end
 
     # A 36 month loan with a current balance below its original principal.
