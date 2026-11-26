@@ -266,10 +266,7 @@ class AccountStatement < ApplicationRecord
       account: target_account,
       suggested_account: nil,
       match_confidence: confidence,
-      review_status: :linked,
-      # The linked account defines the currency; a detected document currency
-      # that differs is dropped with its balances by derive_detected_balances.
-      currency: target_account.currency
+      review_status: :linked
     )
   end
 
@@ -476,10 +473,14 @@ class AccountStatement < ApplicationRecord
 
     # A linked account defines the currency. Balances entered in another
     # currency do not carry over, so they are cleared rather than relabelled.
+    # A statement with no currency of its own is in the family's currency.
     def adopt_account_currency
-      return if account.currency.blank? || account.currency == currency
+      return if account.currency.blank?
 
+      previous_currency = currency.presence || family.currency
       self.currency = account.currency
+      return if previous_currency == account.currency
+
       BALANCE_FIELDS.each { |field| self[field] = nil }
       merge_pdf_output("edited_balances" => [])
     end

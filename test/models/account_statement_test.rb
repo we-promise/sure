@@ -607,6 +607,48 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_nil statement.sanitized_parser_output.dig("pdf", "balances_source")
   end
 
+  test "linking an accountless statement to an account in another currency clears its edited balances" do
+    statement = upload_trade_republic_statement(account: nil)
+    statement.update!(closing_balance: 400)
+
+    statement.link_to_account!(@account)
+
+    assert_equal "USD", statement.reload.currency
+    assert_nil statement.opening_balance
+    assert_nil statement.closing_balance
+  end
+
+  test "keeps a typed balance when an accountless statement without a currency gets an account in the family currency" do
+    statement = upload_card_statement(account: nil, text: "nothing to read")
+    assert_nil statement.currency
+
+    statement.update!(closing_balance: 250, account: accounts(:credit_card))
+
+    assert_equal "USD", statement.reload.currency
+    assert_equal BigDecimal("250"), statement.closing_balance
+  end
+
+  test "linking an accountless statement without a currency to an account in the family currency keeps its balances" do
+    statement = upload_card_statement(account: nil, text: "nothing to read")
+    statement.update!(closing_balance: 250)
+
+    statement.link_to_account!(accounts(:credit_card))
+
+    assert_equal "USD", statement.reload.currency
+    assert_equal BigDecimal("250"), statement.closing_balance
+  end
+
+  test "linking an accountless statement without a currency to an account in another currency clears its balances" do
+    eur_account = @family.accounts.create!(name: "EUR account", balance: 0, currency: "EUR", accountable: Depository.new)
+    statement = upload_card_statement(account: nil, text: "nothing to read")
+    statement.update!(closing_balance: 250)
+
+    statement.link_to_account!(eur_account)
+
+    assert_equal "EUR", statement.reload.currency
+    assert_nil statement.closing_balance
+  end
+
   test "reads a two-digit-year period from a statement pdf with a dateless filename" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
