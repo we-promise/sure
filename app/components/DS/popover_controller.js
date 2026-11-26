@@ -29,7 +29,6 @@ export default class extends Controller {
   connect() {
     this.boundUpdate = this.update.bind(this);
     this.addEventListeners();
-    this.startAutoUpdate();
   }
 
   // Derived from the content element's own class rather than tracked as
@@ -89,6 +88,7 @@ export default class extends Controller {
     if (nextShow) {
       this.mountFrame();
       this.update();
+      this.startAutoUpdate();
       this.focusFirstElement();
     }
   };
@@ -118,6 +118,7 @@ export default class extends Controller {
   close(event) {
     this.contentTarget.classList.add("hidden");
     this.buttonTarget.setAttribute("aria-expanded", "false");
+    this.stopAutoUpdate();
     if (event) this.buttonTarget.focus();
   }
 

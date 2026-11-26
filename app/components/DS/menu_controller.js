@@ -26,7 +26,6 @@ export default class extends Controller {
   connect() {
     this.boundUpdate = this.update.bind(this);
     this.addEventListeners();
-    this.startAutoUpdate();
     // Every menu renders closed, so one that connects open is a copy Turbo
     // cached while it was open, brought back by Back.
     this.close();
@@ -120,6 +119,7 @@ export default class extends Controller {
     this.buttonTarget.setAttribute("aria-expanded", nextShow.toString());
     if (nextShow) {
       this.update();
+      this.startAutoUpdate();
       this.#focusFirstMenuItem();
     }
   };
@@ -127,6 +127,7 @@ export default class extends Controller {
   close() {
     this.contentTarget.classList.add("hidden");
     this.buttonTarget.setAttribute("aria-expanded", "false");
+    this.stopAutoUpdate();
   }
 
   #menuItems() {
