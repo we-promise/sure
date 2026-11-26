@@ -348,6 +348,26 @@ class SettingTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { Setting.reencrypt_secrets_from("") }
   end
 
+  test "a page cache env variable wins over the saved value, and bad values from either are ignored" do
+    Setting.page_cache_max_mb = 250
+    assert_equal 250, Setting.page_cache_max_mb_in_effect
+
+    with_env_overrides PAGE_CACHE_MAX_MB: "10" do
+      assert_equal 10, Setting.page_cache_max_mb_in_effect
+    end
+
+    with_env_overrides PAGE_CACHE_MAX_MB: "0", PAGE_CACHE_DAYS: "lots", PAGE_CACHE_COOLDOWN_MINUTES: "0" do
+      assert_equal 250, Setting.page_cache_max_mb_in_effect, "0 MB is out of range, so the saved value stands"
+      assert_equal Setting::PAGE_CACHE_DAYS_DEFAULT.days, Setting.page_cache_ttl
+      assert_equal 0.minutes, Setting.page_cache_cooldown, "0 is a valid cooldown"
+    end
+
+    Setting.page_cache_max_mb = 999_999
+    assert_equal Setting::PAGE_CACHE_MAX_MB_DEFAULT, Setting.page_cache_max_mb_in_effect
+  ensure
+    Setting.page_cache_max_mb = nil
+  end
+
   private
 
     def old_setting_encryptor(secret_key_base)

@@ -215,6 +215,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     processor.stubs(:simplefin_account).returns(
       stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, currency: "USD")
     )
+    processor.send(:simplefin_account).stubs(:with_lock).yields
 
     # A plain recorder rather than a mocha argument matcher, so the assertions
     # read against the real keyword arguments.
@@ -252,6 +253,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     processor.stubs(:simplefin_account).returns(
       stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, currency: "USD")
     )
+    processor.send(:simplefin_account).stubs(:with_lock).yields
 
     first_day = Date.current
 
@@ -290,6 +292,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     processor.stubs(:simplefin_account).returns(
       stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, currency: "USD")
     )
+    processor.send(:simplefin_account).stubs(:with_lock).yields
 
     recorder = recording_import_adapter
 

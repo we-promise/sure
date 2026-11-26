@@ -624,8 +624,8 @@ pyg:
   minor_unit: Céntimo
   minor_unit_conversion: 1
   smallest_denomination: 5000
-  separator: "."
-  delimiter: ","
+  separator: ","
+  delimiter: "."
   default_format: "%u%n"
   default_precision: 0
 qar:

@@ -183,6 +183,22 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "env-var token is rejected for a deactivated user" do
+    inactive_user = users(:family_member)
+    inactive_user.update!(active: false)
+
+    with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => inactive_user.email) do # pipelock:ignore
+      Rails.logger.expects(:warn).with(regexp_matches(/MCP_USER_EMAIL/)).once
+
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :unauthorized
+    end
+  ensure
+    inactive_user&.update!(active: true)
+  end
+
   test "returns 401 and warns when env-var token matches but MCP_USER_EMAIL finds no user" do
     with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => "nonexistent@example.com") do # pipelock:ignore
       Rails.logger.expects(:warn).with(regexp_matches(/MCP_USER_EMAIL/)).once
@@ -533,6 +549,22 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an external agent's document search sends nothing for a user who has AI off" do
+    use_ai_routes
+    @user.update!(ai_enabled: false)
+    @user.family.update!(vector_store_id: "vs_test123")
+    adapter = mock("vector_store_adapter")
+    adapter.expects(:search).never
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "search_family_files", arguments: { query: "tax return" } }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_equal "user_disabled", JSON.parse(JSON.parse(response.body)["result"]["content"][0]["text"])["reason"]
+    end
+  end
+
   test "tools/list includes preview tools for an opted-in user" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
 
@@ -865,6 +897,28 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       end
 
       assert_response :ok
+    end
+  end
+
+  test "tools/call import_bank_statement offers and accepts only accounts the user can write to" do
+    use_ai_routes
+    @user = users(:family_member)
+    pdf_import = PdfImport.create!(family: @user.family, document_type: "bank_statement")
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "import_bank_statement", arguments: { pdf_import_id: pdf_import.id } }).to_json,
+           headers: mcp_headers(@token)
+      listed = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+      assert_equal "account_required", listed["error"]
+      assert_not_includes listed["available_accounts"].map { |a| a["id"] }, accounts(:connected).id
+
+      assert_no_difference "Import.count" do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "import_bank_statement", arguments: { pdf_import_id: pdf_import.id, account_id: accounts(:connected).id } }).to_json,
+             headers: mcp_headers(@token)
+      end
+      refused = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+      assert_equal "account_not_found", refused["error"]
     end
   end
 
