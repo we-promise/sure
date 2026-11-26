@@ -40,8 +40,8 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
 
     # Not yet flagged while the gap is MIN_DAYS_OPEN days old or younger.
     short_checker = Balance::IntegrityChecker.new(account)
-    first_gap_waypoint_date = 3.days.ago.to_date
-    assert_not short_checker.flagged_gaps.any? { |g| g.latest_waypoint.date == first_gap_waypoint_date }
+    last_unflagged_date = 3.days.ago.to_date
+    assert_not short_checker.flagged_gaps.any? { |g| g.latest_waypoint.date == last_unflagged_date }
   end
 
   test "a self-resolving one-day outlier is never flagged" do
@@ -145,7 +145,7 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
       ]
     )
 
-    # (3.days.ago - 5.days.ago) == 2 == MIN_DAYS_OPEN, strictly-greater-than required.
+    # (3.days.ago - 5.days.ago) == 2 == min_days_open passed here; strictly-greater-than required.
     checker = Balance::IntegrityChecker.new(account, min_days_open: 2)
     assert_nil checker.latest_flagged_gap
   end
