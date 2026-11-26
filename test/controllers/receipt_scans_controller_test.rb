@@ -5,21 +5,20 @@ class ReceiptScansControllerTest < ActionDispatch::IntegrationTest
     sign_in @user = users(:family_admin)
     @account = accounts(:depository)
     use_ai_routes
-    Provider::Registry.stubs(:preferred_llm_provider).returns(stub(supports_receipt_extraction?: true))
   end
 
-  test "redirects when the configured AI provider cannot read receipts" do
+  test "redirects when no routed AI model can read receipts" do
     set_preview(true)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(stub(supports_receipt_extraction?: false))
+    use_ai_routes(extract_receipt: %w[gpu/qwen3-8b])
 
     get new_receipt_scan_url
 
     assert_redirected_to root_path
   end
 
-  test "transactions page hides receipt scanning when the AI provider cannot read receipts" do
+  test "transactions page hides receipt scanning when no routed AI model can read receipts" do
     set_preview(true)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(stub(supports_receipt_extraction?: false))
+    use_ai_routes(extract_receipt: %w[gpu/qwen3-8b])
 
     get transactions_url
 
@@ -95,6 +94,17 @@ class ReceiptScansControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Cheese"
     assert_includes response.body, I18n.t("transactions.receipt.status.needs_review")
     assert_includes response.body, ERB::Util.html_escape(I18n.t("transactions.receipt.reasons.items_total_mismatch"))
+  end
+
+  test "transaction page says a receipt couldn't be read" do
+    set_preview(true)
+    entry = entries(:transaction)
+    entry.entryable.update!(extra: { "receipt" => { "status" => "failed", "review_reasons" => [] } })
+
+    get transaction_url(entry)
+
+    assert_response :success
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("transactions.receipt.status.failed"))
   end
 
   test "transactions page links to receipt scanning for preview users" do

@@ -99,6 +99,7 @@ en:
       review_title: Check this receipt
       status:
         completed: Receipt read
+        failed: Couldn't read the receipt
         needs_review: Needs review
         processing: Processing receipt…
       uncategorized: Uncategorized
