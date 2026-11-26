@@ -354,6 +354,24 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", new_registration_path(invitation: @invitation.token), count: 0
   end
 
+  test "accepting an invitation clears stale mobile and desktop SSO handoff state" do
+    AuthConfig.stubs(:local_signup_enabled?).returns(false)
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Sign in with OpenID Connect" }
+    ])
+
+    get "/auth/mobile/openid_connect", params: { device_id: "d1", device_name: "Phone", device_type: "ios" }
+    get "/auth/desktop/openid_connect", params: { code_challenge: "a" * 43 }
+    assert session[:mobile_sso].present?
+    assert session[:desktop_sso].present?
+
+    get accept_invitation_url(@invitation.token)
+
+    assert_response :success
+    assert_nil session[:mobile_sso]
+    assert_nil session[:desktop_sso]
+  end
+
   test "accepting an invitation warns when local signup is disabled and no SSO provider is configured" do
     AuthConfig.stubs(:local_signup_enabled?).returns(false)
     AuthConfig.stubs(:sso_providers).returns([])
