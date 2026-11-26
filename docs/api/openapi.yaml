@@ -5339,6 +5339,15 @@ paths:
                       - credit_card
                       - loan
                       - other_liability
+                      - Depository
+                      - Investment
+                      - Crypto
+                      - Property
+                      - Vehicle
+                      - OtherAsset
+                      - CreditCard
+                      - Loan
+                      - OtherLiability
                       description: Account type (required). CamelCase names such as
                         CreditCard are also accepted.
                     balance:

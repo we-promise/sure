@@ -128,7 +128,7 @@ RSpec.describe 'API V1 Accounts', type: :request do
               name: { type: :string, description: 'Account name (required)' },
               accountable_type: {
                 type: :string,
-                enum: %w[depository investment crypto property vehicle other_asset credit_card loan other_liability],
+                enum: (Accountable::TYPES.map(&:underscore) + Accountable::TYPES).uniq,
                 description: 'Account type (required). CamelCase names such as CreditCard are also accepted.'
               },
               balance: { type: :number, description: 'Current balance (required). For liabilities, the amount owed.' },

@@ -429,6 +429,115 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "create rejects balances that are not finite numbers in the stored range" do
+    [ "1,250.50", "abc", "12abc", "Infinity", "NaN", "1e400", "1000000000000000" ].each do |balance|
+      assert_no_difference "Account.count" do
+        post "/api/v1/accounts",
+             params: { account: { name: "Bad balance", accountable_type: "Depository", balance: balance } },
+             headers: api_headers(write_api_key)
+      end
+
+      assert_response :unprocessable_entity, "balance #{balance.inspect} should be rejected"
+    end
+  end
+
+  test "create rejects a malformed loan initial_balance" do
+    assert_no_difference "Account.count" do
+      post "/api/v1/accounts",
+           params: { account: { name: "Bad loan", accountable_type: "Loan", balance: 100, accountable_attributes: { initial_balance: "5,000", start_date: "2026-06-03" } } },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "create accepts a zero balance and decimal strings" do
+    post "/api/v1/accounts",
+         params: { account: { name: "Empty", accountable_type: "Depository", balance: "0" } },
+         headers: api_headers(write_api_key)
+    assert_response :created
+    assert_equal 0, JSON.parse(response.body)["balance_cents"]
+
+    post "/api/v1/accounts",
+         params: { account: { name: "Decimal", accountable_type: "Depository", balance: "1250.50" } },
+         headers: api_headers(write_api_key)
+    assert_response :created
+    assert_equal 125_050, JSON.parse(response.body)["balance_cents"]
+  end
+
+  test "create rejects an unsupported currency before persisting anything" do
+    assert_no_difference [ "Account.count", "Entry.count" ] do
+      post "/api/v1/accounts",
+           params: { account: { name: "Mystery money", accountable_type: "Depository", balance: 1, currency: "ZZZ" } },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "create normalizes the currency code" do
+    post "/api/v1/accounts",
+         params: { account: { name: "Euro account", accountable_type: "Depository", balance: 1, currency: "eur" } },
+         headers: api_headers(write_api_key)
+
+    assert_response :created
+    assert_equal "EUR", JSON.parse(response.body)["currency"]
+  end
+
+  test "create rejects a loan whose balance would be replaced by initial_balance on its start date" do
+    assert_no_difference "Account.count" do
+      post "/api/v1/accounts",
+           params: {
+             account: {
+               name: "Brand new loan",
+               accountable_type: "Loan",
+               balance: "40000",
+               accountable_attributes: { initial_balance: "50000", start_date: Date.current.iso8601, term_months: 36, interest_rate: 5, rate_type: "fixed" }
+             }
+           },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_match(/initial_balance/, JSON.parse(response.body)["message"])
+  end
+
+  test "create accepts a loan starting today when balance equals initial_balance" do
+    post "/api/v1/accounts",
+         params: {
+           account: {
+             name: "Brand new loan",
+             accountable_type: "Loan",
+             balance: "50000",
+             accountable_attributes: { initial_balance: "50000", start_date: Date.current.iso8601, term_months: 36, interest_rate: 5, rate_type: "fixed" }
+           }
+         },
+         headers: api_headers(write_api_key)
+
+    assert_response :created
+    assert_equal 5_000_000, JSON.parse(response.body)["balance_cents"]
+  end
+
+  test "create keeps the entered balance for a loan that started earlier even after the initial sync" do
+    perform_enqueued_jobs do
+      post "/api/v1/accounts",
+           params: {
+             account: {
+               name: "Older loan",
+               accountable_type: "Loan",
+               balance: "40000",
+               accountable_attributes: { initial_balance: "50000", start_date: 1.year.ago.to_date.iso8601, term_months: 36, interest_rate: 5, rate_type: "fixed" }
+             }
+           },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :created
+    account = @user.family.accounts.find(JSON.parse(response.body)["id"]).reload
+    assert_equal 40_000, account.balance
+  end
+
   test "create reports model validation errors as 422" do
     assert_no_difference "Account.count" do
       post "/api/v1/accounts",
