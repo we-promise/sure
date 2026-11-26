@@ -265,6 +265,26 @@ class ChatTest < ActiveSupport::TestCase
     assert_equal 1, failed.tool_calls.count
   end
 
+  test "retry_last_message! asks again for the failed prompt when a new message lands meanwhile" do
+    chat = chats(:two)
+    chat.messages.destroy_all
+    prompt = chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "gpt-4.1")
+    chat.messages.where(type: "AssistantMessage").sole.update!(status: :failed)
+    clear_enqueued_jobs
+
+    # The new message commits right after Retry saw the failed reply as the last one.
+    concurrent = nil
+    AssistantMessage.any_instance.stubs(:failed?).with do
+      concurrent ||= chat.messages.create!(type: "UserMessage", content: "And my debts?", ai_model: "gpt-4.1")
+      true
+    end.returns(true)
+
+    chat.retry_last_message!
+
+    answered = enqueued_jobs.select { |job| job["job_class"] == "AssistantResponseJob" }.map { |job| job["arguments"].first["_aj_globalid"] }
+    assert_equal [ concurrent, prompt ].map { |message| message.to_global_id.to_s }.sort, answered.sort
+  end
+
   test "retry_last_message! leaves a finished reply alone" do
     chat = chats(:two)
     chat.messages.destroy_all

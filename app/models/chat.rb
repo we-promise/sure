@@ -88,7 +88,9 @@ class Chat < ApplicationRecord
     last_message = conversation_messages.ordered.last
     return unless last_message&.role == "user" || last_message&.failed?
 
-    prompt = messages.where(type: "UserMessage").ordered.last
+    # The prompt of the reply just checked, not one a message sent meanwhile
+    # brought in: that one already gets its own reply.
+    prompt = conversation_messages.where(type: "UserMessage", created_at: ..last_message.created_at).ordered.last
     ask_assistant_later(prompt) if prompt
   end
 
