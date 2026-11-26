@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_24_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1740,12 +1740,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_130000) do
     t.text "content"
     t.datetime "created_at", null: false
     t.boolean "debug", default: false
+    t.uuid "prompt_message_id"
     t.string "provider_id"
     t.boolean "reasoning", default: false
     t.string "status", default: "complete", null: false
     t.string "type", null: false
     t.datetime "updated_at", null: false
     t.index ["chat_id"], name: "index_messages_on_chat_id"
+    t.index ["prompt_message_id"], name: "index_messages_on_prompt_message_id"
   end
 
   create_table "mobile_devices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3290,6 +3292,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_130000) do
   add_foreign_key "mercury_accounts", "mercury_items"
   add_foreign_key "mercury_items", "families"
   add_foreign_key "messages", "chats"
+  add_foreign_key "messages", "messages", column: "prompt_message_id", on_delete: :nullify
   add_foreign_key "mobile_devices", "users"
   add_foreign_key "monobank_accounts", "monobank_items"
   add_foreign_key "monobank_items", "families"

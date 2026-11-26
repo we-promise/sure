@@ -285,6 +285,31 @@ class ChatTest < ActiveSupport::TestCase
     assert_equal [ concurrent, prompt ].map { |message| message.to_global_id.to_s }.sort, answered.sort
   end
 
+  test "a second retry still answers the original prompt after a retry that raced a new message failed" do
+    chat = chats(:two)
+    chat.messages.destroy_all
+    prompt = chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "gpt-4.1")
+    chat.messages.where(type: "AssistantMessage").sole.update!(status: :failed)
+
+    # A new message commits while the first Retry is running, before its reply is created.
+    concurrent = nil
+    AssistantMessage.any_instance.stubs(:failed?).with do
+      concurrent ||= chat.messages.create!(type: "UserMessage", content: "And my debts?", ai_model: "gpt-4.1")
+      true
+    end.returns(true)
+    retry_reply = chat.retry_last_message!
+    AssistantMessage.any_instance.unstub(:failed?)
+    chat.messages.where(type: "AssistantMessage").where.not(id: retry_reply.id).order(:created_at).last
+        .update!(content: "Your debts are...", status: :complete)
+    retry_reply.update!(content: "Half an ans", status: :failed)
+    assert_equal retry_reply, chat.conversation_messages.ordered.last
+    clear_enqueued_jobs
+
+    assert_enqueued_with(job: AssistantResponseJob, args: ->(args) { args.first == prompt }) do
+      chat.retry_last_message!
+    end
+  end
+
   test "retry_last_message! leaves a finished reply alone" do
     chat = chats(:two)
     chat.messages.destroy_all

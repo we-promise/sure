@@ -66,7 +66,7 @@ class Assistant::External < Assistant::Base
 
   def respond_to(message, assistant_message: nil)
     response_completed = false
-    assistant_message ||= AssistantMessage.new(chat: chat, content: "", ai_model: "external-agent")
+    assistant_message ||= AssistantMessage.new(chat: chat, content: "", ai_model: "external-agent", prompt_message: message)
 
     unless self.class.configured?
       raise Assistant::Error,

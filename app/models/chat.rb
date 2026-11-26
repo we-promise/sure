@@ -86,11 +86,13 @@ class Chat < ApplicationRecord
     update!(error: nil)
 
     last_message = conversation_messages.ordered.last
-    return unless last_message&.role == "user" || last_message&.failed?
+    prompt =
+      if last_message&.role == "user"
+        last_message
+      elsif last_message&.failed?
+        last_message.prompt_message
+      end
 
-    # The prompt of the reply just checked, not one a message sent meanwhile
-    # brought in: that one already gets its own reply.
-    prompt = conversation_messages.where(type: "UserMessage", created_at: ..last_message.created_at).ordered.last
     ask_assistant_later(prompt) if prompt
   end
 
@@ -131,7 +133,8 @@ class Chat < ApplicationRecord
 
   def ask_assistant_later(message)
     clear_error
-    pending = messages.create!(type: "AssistantMessage", content: "", ai_model: message.ai_model, status: :pending)
+    pending = messages.create!(type: "AssistantMessage", content: "", ai_model: message.ai_model, status: :pending,
+                               prompt_message: message)
     broadcast_pending_status(pending, busy: true) if BackgroundJobHealth.ai_busy?
     AssistantResponseJob.perform_later(message, pending)
     pending

@@ -1,4 +1,7 @@
 class AssistantMessage < Message
+  # The user message this reply answers; Retry asks for it again.
+  belongs_to :prompt_message, class_name: "UserMessage", optional: true
+
   validates :ai_model, presence: true
 
   def role

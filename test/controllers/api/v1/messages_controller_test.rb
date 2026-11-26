@@ -59,7 +59,8 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "retries a failed reply and keeps the tool calls it ran" do
-    failed = @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :failed)
+    failed = @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :failed,
+                                    prompt_message: messages(:chat1_user))
     tool_call = ToolCall::Function.create!(message: failed, provider_id: "fc_1", provider_call_id: "call_1", function_name: "create_tag",
                                            function_arguments: { name: "Groceries" }, function_result: { success: true })
 
@@ -93,7 +94,8 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "retries with a read_write API key and refuses a read-only one" do
-    @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :failed)
+    @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :failed,
+                           prompt_message: messages(:chat1_user))
     read_key = ApiKey.create!(user: @user, name: "Read key", scopes: [ "read" ], source: "web", display_key: "test_ro_#{SecureRandom.hex(8)}")
     write_key = ApiKey.create!(user: @user, name: "Write key", scopes: [ "read_write" ], source: "mobile", display_key: "test_rw_#{SecureRandom.hex(8)}")
 

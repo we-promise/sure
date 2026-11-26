@@ -18,7 +18,7 @@ class Assistant::Builtin < Assistant::Base
   end
 
   def respond_to(message, assistant_message: nil)
-    assistant_message ||= AssistantMessage.new(chat: chat, content: "", ai_model: message.ai_model)
+    assistant_message ||= AssistantMessage.new(chat: chat, content: "", ai_model: message.ai_model, prompt_message: message)
 
     llm_provider = get_model_provider(message.ai_model)
     unless llm_provider
