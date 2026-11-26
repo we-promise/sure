@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require Rails.root.join("db/migrate/20261123210000_assign_mobile_devices_to_refreshed_tokens")
+require Rails.root.join("db/migrate/20261126210000_assign_mobile_devices_to_refreshed_tokens")
 
 class AssignMobileDevicesToRefreshedTokensMigrationTest < ActiveSupport::TestCase
   setup do
@@ -11,6 +11,9 @@ class AssignMobileDevicesToRefreshedTokensMigrationTest < ActiveSupport::TestCas
     @mobile_client = MobileDevice.shared_oauth_application
   end
 
+  # The migration stamps revoked_at with the database clock, which can run ahead
+  # of Ruby's, and revoked? only counts a revoked_at already in the past, so
+  # these tests read revoked_at.
   test "gives every token refreshed from a device token that device and revokes it" do
     root = token(mobile_device_id: @device.id)
     child = token(previous: root)
@@ -19,8 +22,8 @@ class AssignMobileDevicesToRefreshedTokensMigrationTest < ActiveSupport::TestCas
     run_migration
 
     assert_equal [ @device.id ] * 2, [ child, grandchild ].map { |t| t.reload.mobile_device_id }
-    assert [ child, grandchild ].all?(&:revoked?)
-    assert_not root.reload.revoked?
+    assert [ child, grandchild ].all?(&:revoked_at)
+    assert_nil root.reload.revoked_at
   end
 
   test "revokes a refreshed descendant that a sign-in before the migration missed" do
@@ -30,8 +33,8 @@ class AssignMobileDevicesToRefreshedTokensMigrationTest < ActiveSupport::TestCas
 
     run_migration
 
-    assert root.reload.revoked?
-    assert orphan.reload.revoked?
+    assert_not_nil root.reload.revoked_at
+    assert_not_nil orphan.reload.revoked_at
     assert_not_includes @device.unrevoked_tokens, orphan
   end
 
@@ -42,7 +45,7 @@ class AssignMobileDevicesToRefreshedTokensMigrationTest < ActiveSupport::TestCas
     run_migration
 
     assert_nil lost.reload.mobile_device_id
-    assert lost.revoked?
+    assert_not_nil lost.revoked_at
   end
 
   test "leaves tokens outside a device's lineage alone" do
@@ -57,7 +60,24 @@ class AssignMobileDevicesToRefreshedTokensMigrationTest < ActiveSupport::TestCas
     assert_nil unrelated.reload.mobile_device_id
     assert_nil refreshed_unrelated.reload.mobile_device_id
     assert_equal other_device.id, stamped.reload.mobile_device_id
-    assert_not [ unrelated, refreshed_unrelated, stamped ].any?(&:revoked?)
+    assert_not [ unrelated, refreshed_unrelated, stamped ].any?(&:revoked_at)
+  end
+
+  # Installs that ran it under its first version, 20261123210000, run it again.
+  test "running it again changes nothing" do
+    root = token(mobile_device_id: @device.id)
+    child = token(previous: root)
+    lost = token(previous: token(previous: root)).tap { |t| t.update_column(:previous_refresh_token, "") }
+    tokens = [ root, child, lost ]
+
+    run_migration
+    # CURRENT_TIMESTAMP is fixed for the test's transaction, so a second
+    # revocation would only show against an earlier revoked_at.
+    Doorkeeper::AccessToken.where.not(revoked_at: nil).update_all(revoked_at: 1.hour.ago)
+    after_first_run = tokens.map { |t| t.reload.slice(:mobile_device_id, :revoked_at) }
+    run_migration
+
+    assert_equal after_first_run, tokens.map { |t| t.reload.slice(:mobile_device_id, :revoked_at) }
   end
 
   private
