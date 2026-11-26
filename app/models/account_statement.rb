@@ -499,15 +499,20 @@ class AccountStatement < ApplicationRecord
       readings = pdf_output["balance_readings"]
       return if readings.blank?
 
-      balances = TextMetadataParser.balances_for(
-        readings,
-        classification: account&.classification,
-        currency: currency.presence || account&.currency,
-        fallback_currency: family.currency
-      )
-      # An unmatched statement keeps the document's own currency, so its
-      # balances are not later labelled with the family's fallback.
-      self.currency = balances.currency if currency.blank? && account.blank? && balances&.currency.present?
+      own_currency = currency.presence || account&.currency
+      balances = TextMetadataParser.balances_for(readings, classification: account&.classification, currency: own_currency)
+      if own_currency.blank?
+        # An unmatched statement keeps a currency the document names, so its
+        # balances are not later labelled with the family's. A bare "$" is
+        # only read in the family's currency and sets no currency.
+        self.currency = balances.currency if balances && account.blank?
+        balances ||= TextMetadataParser.balances_for(
+          readings,
+          classification: account&.classification,
+          currency: nil,
+          fallback_currency: family.currency
+        )
+      end
       @derived_balances = (BALANCE_FIELDS - edited_balances).to_h do |field|
         self[field] = balances&.public_send(field)
         [ field, self[field] ]

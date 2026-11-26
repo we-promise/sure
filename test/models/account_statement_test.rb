@@ -560,6 +560,14 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal [ "pdf_text" ], statement.sanitized_parser_output["metadata_sources"]
   end
 
+  test "reads a bare dollar sign in the family currency without storing it on an accountless upload" do
+    statement = upload_card_statement(account: nil)
+
+    assert_nil statement.currency
+    assert_equal "USD", statement.statement_currency
+    assert_equal BigDecimal("435.88"), statement.closing_balance
+  end
+
   test "keeps the PDF currency and balances for an accountless upload" do
     statement = upload_trade_republic_statement(account: nil)
 
@@ -903,7 +911,7 @@ class AccountStatementTest < ActiveSupport::TestCase
 
   test "a retry after an invalid currency re-derives the balances" do
     statement = upload_card_statement(account: nil)
-    assert_equal "USD", statement.currency
+    assert_nil statement.currency
     statement.currency = "NOPE"
     assert_not statement.save
 
