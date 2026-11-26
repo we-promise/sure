@@ -1,12 +1,25 @@
 ---
 pt-BR:
+  account_order:
+    balance_asc:
+      label: Saldo (menor para maior)
+      label_short: Saldo ↑
+    balance_desc:
+      label: Saldo (maior para menor)
+      label_short: Saldo ↓
+    name_asc:
+      label: Nome (A-Z)
+      label_short: Nome ↑
+    name_desc:
+      label: Nome (Z-A)
+      label_short: Nome ↓
   activerecord:
     attributes:
       account:
         balance: Saldo
         currency: Moeda
-        family: Família
-        family_id: Família
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         name: Nome
         subtype: Subtipo
     models:

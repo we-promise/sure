@@ -16,8 +16,13 @@ pt-BR:
       first_name_placeholder: Nome
       last_name: Sobrenome
       last_name_placeholder: Sobrenome
+      group_name: Nome do grupo
+      group_name_placeholder: Nome do grupo
       household_name: Nome da família
       household_name_placeholder: Nome da família
+      moniker_prompt: Vou usar o %{product_name} com...
+      moniker_family: Membros da família (só você ou com cônjuge, filhos etc.)
+      moniker_group: Um grupo de pessoas (empresa, clube, associação ou qualquer outro tipo)
       country: País
       submit: Continuar
     preferences:
@@ -41,7 +46,7 @@ pt-BR:
       description_html: A partir de hoje você pode testar o produto a fundo.<br/>Se gostar, hospede você mesmo ou contribua para continuar usando aqui.
       try_button: Experimentar Sure por 45 dias
       continue_trial: Continuar teste
-      upgrade: Atualizar
+      upgrade: Fazer upgrade
       how_it_works: Como funciona
       today: Hoje
       today_description: Você terá acesso gratuito ao Sure por 45 dias em nosso AWS.

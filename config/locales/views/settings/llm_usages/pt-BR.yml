@@ -1,0 +1,25 @@
+---
+pt-BR:
+  settings:
+    llm_usages:
+      show:
+        page_title: Uso e custos de LLM
+        subtitle: Acompanhe seu uso de IA e os custos estimados
+        start_date: Data inicial
+        end_date: Data final
+        filter: Filtrar
+        total_tokens: Total de tokens
+        prompt: entrada
+        completion: saída
+        total_cost: Custo total
+        cost_by_operation: Custo por operação
+        cost_by_model: Custo por modelo
+        recent_usage: Uso recente
+        col_date: Data
+        col_operation: Operação
+        col_model: Modelo
+        col_tokens: Tokens
+        col_cost: Custo
+        failed: Falhou
+        no_usage_data: Nenhum dado de uso encontrado para o período selecionado
+        cost_estimates_title: Sobre as estimativas de custo

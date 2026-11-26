@@ -21,6 +21,7 @@ pt-BR:
       cancel: Cancelar
       creating: Importando...
     complete_account_setup:
+      invalid_sync_start_date: A data de início da sincronização deve ser uma data válida no passado.
       success:
         one: "%{count} conta importada"
         other: "%{count} contas importadas"

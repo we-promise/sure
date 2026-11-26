@@ -1,6 +1,11 @@
 ---
 pt-BR:
   invitations:
+    accept_choice:
+      create_account: Criar nova conta
+      joined_household: Você entrou no grupo familiar.
+      message: "%{inviter} convidou você para participar como %{role}."
+      title: Participar de %{family}
     create:
       failure: Não foi possível enviar o convite
       success: Convite enviado com sucesso
@@ -12,8 +17,9 @@ pt-BR:
       email_label: Endereço de E-mail
       email_placeholder: Digite o endereço de e-mail
       role_admin: Administrador
+      role_guest: Convidado
       role_label: Função
       role_member: Membro
       submit: Enviar Convite
-      subtitle: Envie um convite para se juntar à sua conta familiar no %{product_name}
+      subtitle: Envie um convite para participar da sua conta %{moniker} no %{product_name}
       title: Convidar Alguém

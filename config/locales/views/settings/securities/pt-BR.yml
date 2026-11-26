@@ -6,9 +6,33 @@ pt-BR:
         disable_mfa: Desabilitar 2FA
         disable_mfa_confirm: Tem certeza de que deseja desabilitar a autenticação de dois fatores? Isso tornará sua conta menos segura.
         enable_mfa: Habilitar 2FA
+        mfa_enabled_status_html: A autenticação de dois fatores está <span class="font-medium text-green-600">habilitada</span>
+        mfa_enabled_description: Sua conta está protegida por uma camada extra de segurança.
+        mfa_disabled_status_html: A autenticação de dois fatores está <span class="font-medium text-red-600">desabilitada</span>
+        mfa_disabled_description: Habilite a 2FA para adicionar uma camada extra de segurança à sua conta.
         mfa_description: Adicione uma camada extra de segurança à sua conta exigindo um código do seu aplicativo autenticador ao fazer login
         mfa_title: Autenticação de Dois Fatores
+        webauthn_add: Adicionar chave de acesso ou chave de segurança
+        webauthn_added: Adicionada em %{date}
+        webauthn_description: Use uma chave de acesso, Touch ID, Windows Hello ou uma chave de segurança física como segundo fator ao fazer login.
+        webauthn_empty: Nenhuma chave de acesso ou chave de segurança cadastrada ainda.
+        webauthn_last_used: Usada pela última vez há %{time_ago}
+        webauthn_name_label: Nome da chave
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey etc.
+        webauthn_remove: Remover
+        webauthn_remove_confirm: Tem certeza de que deseja remover esta chave de acesso ou chave de segurança?
+        webauthn_remove_confirm_body: Você precisará cadastrar esta chave de acesso ou chave de segurança novamente antes de usá-la para verificar o login.
+        webauthn_title: Chaves de acesso e chaves de segurança
+        webauthn_unsupported: Este navegador não suporta chaves de acesso nem chaves de segurança.
         page_title: Segurança
+        encryption_warning:
+          title: Chaves de criptografia ausentes
+          intro: "Dados sensíveis (chaves de API, tokens de provedores, segredos de MFA e dados pessoais) estão sendo armazenados sem criptografia. Para ativar a criptografia, defina as seguintes chaves nas suas variáveis de ambiente ou nas credenciais do Rails:"
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: "Gere um conjunto com: bin/rails db:encryption:init"
         sso_title: Contas Conectadas
         sso_subtitle: Gerencie suas conexões de contas de login único (SSO)
         sso_disconnect: Desconectar
@@ -21,3 +45,8 @@ pt-BR:
         sso_confirm_body: Tem certeza de que deseja desconectar sua conta %{provider}? Você poderá reconectá-la posteriormente fazendo login novamente com esse provedor.
         sso_confirm_button: Desconectar
         sso_warning_message: Este é o seu único método de login. Você deve definir uma senha nas suas configurações de segurança antes de desconectar, caso contrário, você poderá ficar bloqueado na sua conta.
+  webauthn_credentials:
+    default_name: Chave de segurança
+    failure: Não foi possível salvar essa chave de acesso ou chave de segurança. Tente novamente.
+    mfa_required: Habilite a autenticação de dois fatores antes de adicionar uma chave de acesso ou chave de segurança.
+    success: Chave de acesso ou chave de segurança removida.

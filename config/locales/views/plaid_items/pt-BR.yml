@@ -5,7 +5,11 @@ pt-BR:
       success: Conta vinculada com sucesso. Por favor, aguarde a sincronização das contas.
     destroy:
       success: Contas agendadas para exclusão.
+    errors:
+      link_token_generic: Não foi possível abrir o Plaid agora. Tente novamente e, se o problema persistir, verifique os logs do servidor para mais detalhes.
+      link_token_with_message: "O Plaid não conseguiu abrir a conexão: %{message}"
     plaid_item:
+      add_accounts: Adicionar contas
       add_new: Adicionar nova conexão
       confirm_accept: Excluir instituição
       confirm_body: Isso excluirá permanentemente todas as contas deste grupo e
@@ -15,17 +19,24 @@ pt-BR:
       connection_lost_description: Esta conexão não é mais válida. Você precisará
         excluir esta conexão e adicioná-la novamente para continuar sincronizando dados.
       delete: Excluir
+      deletion_in_progress: (exclusão em andamento...)
       error: Erro ocorrido durante a sincronização de dados
       no_accounts_description: Não conseguimos carregar nenhuma conta desta instituição
         financeira.
       no_accounts_title: Nenhuma conta encontrada
-      requires_update: Requer re-autenticação
+      provider_name: Plaid
+      requires_update: Reconectar
       status: Última sincronização há %{timestamp}
       status_never: Requer sincronização de dados
       syncing: Sincronizando...
       update: Atualizar conexão
     select_existing_account:
+      no_available_accounts: Nenhuma conta do Plaid disponível para vincular. Conecte primeiro uma nova conta do Plaid.
       title: "Vincular %{account_name} ao Plaid"
       description: Selecione uma conta do Plaid para vincular à sua conta existente
       cancel: Cancelar
       link_account: Vincular conta
+    link_existing_account:
+      invalid_account: Conta do Plaid selecionada inválida
+      already_linked: Esta conta do Plaid já está vinculada
+      success: Conta vinculada ao Plaid com sucesso
