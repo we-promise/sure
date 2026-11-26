@@ -47,6 +47,7 @@ class AccountStatement < ApplicationRecord
   before_validation :normalize_currency
   before_validation :sync_review_status
   before_validation :note_edited_balances
+  before_validation :keep_typed_balance_currency, if: -> { currency.blank? && account.blank? }
   before_validation :adopt_account_currency, if: -> { account.present? && will_save_change_to_account_id? }
   before_validation :derive_detected_balances
 
@@ -473,6 +474,17 @@ class AccountStatement < ApplicationRecord
           derived&.public_send(field) != self[field]
       end
       merge_pdf_output("edited_balances" => (edited_balances | edited)) if edited.any?
+    end
+
+    # A balance typed on a statement with no currency is in the family's
+    # currency, which is stored so a later family currency change does not
+    # relabel it. Derived balances are left to derive_detected_balances.
+    def keep_typed_balance_currency
+      typed = BALANCE_FIELDS.any? do |field|
+        will_save_change_to_attribute?(field) && self[field].present? &&
+          !(@derived_balances&.key?(field) && @derived_balances[field] == self[field])
+      end
+      self.currency = family.currency if typed
     end
 
     # A linked account defines the currency. Balances entered in another

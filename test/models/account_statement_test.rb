@@ -646,12 +646,25 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal BigDecimal("250"), statement.closing_balance
   end
 
-  test "shows a typed balance in the family currency on an accountless statement without a currency" do
-    statement = upload_card_statement(account: nil, text: "nothing to read")
-    statement.update!(closing_balance: 250)
+  test "shows a balance read from a bare dollar sign in the family currency on an accountless statement" do
+    statement = upload_card_statement(account: nil)
 
     assert_nil statement.currency
+    assert_equal Money.new(BigDecimal("435.88"), "USD"), statement.closing_balance_money
+  end
+
+  test "a balance typed on an accountless statement without a currency keeps its currency when the family currency changes" do
+    statement = upload_card_statement(account: nil, text: "nothing to read")
+    statement.update!(closing_balance: 250)
+    @family.update!(currency: "EUR")
+
+    statement.reload
+    assert_equal "USD", statement.currency
     assert_equal Money.new(250, "USD"), statement.closing_balance_money
+
+    statement.link_to_account!(accounts(:credit_card))
+
+    assert_equal BigDecimal("250"), statement.reload.closing_balance
   end
 
   test "linking an accountless statement without a currency to an account in another currency clears its balances" do
