@@ -79,9 +79,14 @@ class SnaptradeAccount::ActivitiesProcessor
     "RETURN_OF_CAPITAL" => { category: :cash, label: "Dividend", cash_flow: :inflow },
     "DISTRIBUTION" => { category: :cash, label: "Dividend", cash_flow: :inflow },
     "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+
+    # Card accounts (SnapTrade's LOC category) sign these from the account's
+    # perspective: purchases negative, refunds and payments positive.
     "POSDEBIT" => { category: :cash, label: "Other", cash_flow: :outflow },
     "POSCREDIT" => { category: :cash, label: "Other", cash_flow: :inflow },
     "PAYMENT" => { category: :cash, label: "Other", cash_flow: :invert },
+
+    # Card activities (Wealthsimple). Direction comes from the description, see normalize_card_activity.
     "CREDIT_CARD" => { category: :cash, label: "Other", cash_flow: :card },
     "PREPAID_CARD" => { category: :cash, label: "Other", cash_flow: :card }
   }.freeze
