@@ -14,7 +14,7 @@ class ScalableCapitalItemsController < ApplicationController
 
   def create
     input = params[:scalable_capital_item]
-    tokens = input[:choices] if input.is_a?(ActionController::Parameters)
+    tokens = input[:selection_tokens] if input.is_a?(ActionController::Parameters)
     selections = verified_selections(tokens)
     return redirect_to bank_sync_path, alert: t(".invalid") unless selections
 

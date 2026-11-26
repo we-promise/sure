@@ -163,6 +163,33 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_empty @item.scalable_capital_accounts.brokerage
   end
 
+  test "keeps separate holdings, cash legs, and checkpoints for selected broker portfolios" do
+    @item.update!(portfolio_id: nil, savings_id: nil, broker_account_id: "person", selected_sources: %w[portfolio portfolio-2].map do |id|
+      { kind: "brokerage", id: id, owner_kind: "personal" }
+    end)
+    stub_snapshot
+    @client.stubs(:identity).returns("person")
+    @client.expects(:overnight).never
+    second_broker = ->(result) { broker(result).merge("portfolio_id" => "portfolio-2") }
+    @client.stubs(:overview).with("portfolio-2").returns(second_broker.call("valuation" => { "crypto" => "0" }))
+    @client.stubs(:holdings).with("portfolio-2").returns(second_broker.call("items" => [ position ]))
+    @client.stubs(:cash).with("portfolio-2").returns(second_broker.call("cash_balance" => "19"))
+    @client.stubs(:broker_transactions).with("portfolio-2", all_of(has_key(:since), has_key(:before)))
+      .yields(second_broker.call({}), [ broker_events.first ])
+    @client.stubs(:trade).with("portfolio-2", "buy").returns(second_broker.call(trade("buy", "BUY", "1", "120", "121")))
+
+    run_sync
+
+    first_brokerage = @item.scalable_capital_accounts.brokerage.find_by!(source_key: "brokerage:portfolio").account
+    second_brokerage = @item.scalable_capital_accounts.brokerage.find_by!(source_key: "brokerage:portfolio-2").account
+    second_cash = @item.scalable_capital_accounts.cash.find_by!(source_key: "brokerage:portfolio-2").account
+    assert_equal 301.to_d, first_brokerage.entries.trades.find_by!(external_id: "buy").amount
+    assert_equal 121.to_d, second_brokerage.entries.trades.find_by!(external_id: "buy").amount
+    settlement = second_brokerage.entries.find_by!(external_id: "settlement:buy").transaction.transfer
+    assert_equal second_cash, settlement.from_account
+    assert_equal [ Time.current.iso8601 ] * 2, @item.reload.selected_sources.pluck("synced_through")
+  end
+
   test "imports a completed trade with final fill status" do
     stub_snapshot
     detail = trade("buy", "BUY", "2.5", "120", "301")

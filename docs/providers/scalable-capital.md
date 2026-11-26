@@ -1,6 +1,6 @@
 # Scalable Capital (self-hosted preview)
 
-Sure uses the official Scalable CLI to discover the broker portfolios and Overnight Savings accounts accessible to the signed-in user. Pick the accounts you want to sync in Bank Sync. Sure creates an investment account and a separate Cash account for each selected broker portfolio. It creates a selected Tagesgeld Cash account once the balance is positive and keeps it linked if the balance later returns to zero. Junior Tagesgeld accounts require explicit selection and are private by default.
+Sure uses the official Scalable CLI to discover the broker portfolios and Overnight Savings accounts accessible to the signed-in user. Pick the accounts you want to sync in Bank Sync. Sure creates an investment account and a separate Cash account for each selected broker portfolio. It creates a selected Tagesgeld Cash account once the balance is positive and keeps it linked if the balance later returns to zero. Junior Tagesgeld accounts require explicit selection and do not inherit automatic family-wide sharing.
 
 The first sync fetches 90 days of available history. After it succeeds, Sure stores a cutoff for each feed in its database. Following syncs import events from the saved cutoff onward, including newly settled events reported with a later activity timestamp. Broker transaction IDs make retries and duplicate pages safe. If a read or import fails, the cutoff stays at the last successful sync.
 

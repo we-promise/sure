@@ -1,6 +1,13 @@
 class CreateScalableCapitalConnections < ActiveRecord::Migration[8.1]
   def change
-    create_table :scalable_capital_items, id: :uuid do |t|
+    up_only do
+      # An earlier preview used the same version as upstream's price migration.
+      if table_exists?(:scalable_capital_items) && connection.select_value("SELECT 1 FROM schema_migrations WHERE version = '20261121100000'")
+        add_column :security_prices, :carried_forward, :boolean, default: false, null: false, if_not_exists: true
+      end
+    end
+
+    create_table :scalable_capital_items, id: :uuid, if_not_exists: true do |t|
       t.references :family, type: :uuid, null: false, foreign_key: true, index: { unique: true }
       t.references :owner, type: :uuid, foreign_key: { to_table: :users, on_delete: :nullify }
       t.string :portfolio_id, null: false
@@ -13,7 +20,7 @@ class CreateScalableCapitalConnections < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    create_table :scalable_capital_accounts, id: :uuid do |t|
+    create_table :scalable_capital_accounts, id: :uuid, if_not_exists: true do |t|
       t.references :scalable_capital_item, type: :uuid, null: false, foreign_key: true, index: false
       t.string :kind, null: false
       t.timestamps

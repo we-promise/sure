@@ -26,13 +26,13 @@ class ScalableCapitalItemsControllerTest < ActionDispatch::IntegrationTest
 
     post discover_scalable_capital_items_path
     assert_response :success
-    tokens = css_select("input[name='scalable_capital_item[choices][]']").map { |input| input["value"] }
+    tokens = css_select("input[name='scalable_capital_item[selection_tokens][]']").map { |input| input["value"] }
     assert_equal 3, tokens.size
     assert_includes response.body, "Junior Savings"
     assert_empty @admin.family.scalable_capital_items
 
     assert_difference -> { @admin.family.scalable_capital_items.count } do
-      post scalable_capital_items_path, params: { scalable_capital_item: { choices: [ tokens[0], tokens[2] ] } }
+      post scalable_capital_items_path, params: { scalable_capital_item: { selection_tokens: [ tokens[0], tokens[2] ] } }
     end
     assert_redirected_to settings_providers_path(anchor: "scalable-capital-connection")
     item = @admin.family.scalable_capital_items.sole
@@ -60,7 +60,7 @@ class ScalableCapitalItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "rejects selections without an authenticated discovery token" do
     assert_no_difference -> { ScalableCapitalItem.count } do
-      post scalable_capital_items_path, params: { scalable_capital_item: { choices: [ "--confirm" ] } }
+      post scalable_capital_items_path, params: { scalable_capital_item: { selection_tokens: [ "--confirm" ] } }
     end
     assert_equal I18n.t("scalable_capital_items.create.invalid"), flash[:alert]
   end

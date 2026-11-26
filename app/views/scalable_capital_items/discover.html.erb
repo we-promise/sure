@@ -17,13 +17,13 @@
         <%= render DS::Link.new(text: t(".back"), href: settings_providers_path, variant: :secondary) %>
       <% else %>
         <%= styled_form_with url: scalable_capital_items_path, class: "space-y-4" do %>
-          <fieldset class="space-y-3">
+          <fieldset class="min-w-0 space-y-3">
             <legend class="text-sm text-secondary mb-2"><%= t(".choose") %></legend>
             <% @discovery.choices.each_with_index do |choice, index| %>
               <% input_id = "scalable-choice-#{index}" %>
               <label for="<%= input_id %>" class="flex items-start gap-3 rounded-lg border border-primary p-3 cursor-pointer">
-                <%= check_box_tag "scalable_capital_item[choices][]", selection_token(choice), false, id: input_id, class: "mt-1" %>
-                <span class="space-y-1">
+                <%= check_box_tag "scalable_capital_item[selection_tokens][]", selection_token(choice), false, id: input_id, class: "mt-1" %>
+                <span class="min-w-0 space-y-1 break-words">
                   <span class="block text-sm font-medium text-primary"><%= t(".#{choice.kind == 'savings' && choice.owner_kind == 'junior' ? 'junior_savings' : choice.kind}") %></span>
                   <span class="block text-sm text-secondary"><%= choice.label.presence || t(".id_suffix", suffix: choice.id.last(4)) %></span>
                   <% if choice.kind == "brokerage" %>
@@ -34,7 +34,7 @@
             <% end %>
           </fieldset>
 
-          <div class="flex justify-end gap-2">
+          <div class="flex flex-wrap justify-end gap-2">
             <%= render DS::Link.new(text: t(".back"), href: settings_providers_path, variant: :secondary) %>
             <%= render DS::Button.new(text: t(".sync"), type: :submit) %>
           </div>
