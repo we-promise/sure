@@ -15,9 +15,11 @@
 #
 # Imports never undo the escape: a leading quote in an imported CSV may be the
 # user's own data ("'+44 Taxis"), and there is no telling it apart from one
-# this module added.
+# this module added. To keep the escape injective anyway, a value that already
+# starts with apostrophes before a trigger gets one more, so `=x` and `'=x`
+# export as `'=x` and `''=x` and never collapse into one name on re-import.
 module CsvSanitizer
-  FORMULA_TRIGGER = /\A[=+\-@\t\r\n]/
+  FORMULA_TRIGGER = /\A'*[=+\-@\t\r\n]/
   PLAIN_NUMBER = /\A[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\z/
 
   module_function
