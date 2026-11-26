@@ -138,7 +138,7 @@ class RuleJobTest < ActiveJob::TestCase
       conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
       actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @food_and_dining.id) ]
     )
-    member = @family.users.create!(email: "leaving-rule@example.com", password: "password123", role: :member)
+    member = @family.users.create!(email: "leaving-rule@example.com", password: "Password123!", role: :member)
     rule.apply_later(user: member)
     member.destroy!
 

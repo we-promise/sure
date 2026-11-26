@@ -193,7 +193,7 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
 
   test "still runs when the member who made the change is deleted while it waits" do
     create_rule("Groceries", category: @groceries, apply_immediately: true)
-    member = @family.users.create!(email: "leaving-immediate@example.com", password: "password123", role: :member)
+    member = @family.users.create!(email: "leaving-immediate@example.com", password: "Password123!", role: :member)
     Rule.apply_immediately_later(@family, [ @changed.id ], user: member)
     member.destroy!
 

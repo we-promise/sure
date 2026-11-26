@@ -76,7 +76,7 @@ class ApplyAllRulesJobTest < ActiveJob::TestCase
 
   test "still runs when the member who started it is deleted while it waits" do
     create_rule(active: true)
-    member = @family.users.create!(email: "leaving-all@example.com", password: "password123", role: :member)
+    member = @family.users.create!(email: "leaving-all@example.com", password: "Password123!", role: :member)
     ApplyAllRulesJob.perform_later(@family, user_id: member.id)
     member.destroy!
 

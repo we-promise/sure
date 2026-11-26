@@ -475,7 +475,7 @@ class Rule::RunnerTest < ActiveSupport::TestCase
   end
 
   test "AI actions leave out an account shared read-only with the member running the rule" do
-    families(:dylan_family).users.create!(email: "third-member@example.com", password: "password123", role: :member)
+    families(:dylan_family).users.create!(email: "third-member@example.com", password: "Password123!", role: :member)
     probes = ai_scope_probes
     read_only = create_transaction(account: accounts(:credit_card), name: "AI scope probe read only").entryable_id
 
