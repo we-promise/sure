@@ -1,17 +1,7 @@
-<%# locals: (icon:, label:, money:, trend: nil, rate: nil, hint: nil) %>
+<%# locals: (icon:, label:, money:, trend: nil, hint: nil) %>
 
-<%# Three value types, one card. `money` is a Money, `trend` a Trend that
-    carries its own colour and percentage, and `rate` a BigDecimal FRACTION
-    where 0.21 means 21% -- a return, which is neither of the first two.
-    Formatting it here rather than passing a string in keeps the registry free
-    of presentation, the way every other figure on this page is handled.
-
-    nil is a first-class outcome for `rate`, not an edge case: a figure is
-    suppressed when a rate is missing, the time-weighted figures when no
-    account holds two balance days and the money-weighted one when any
-    account has a single day, and the money-weighted return when any account
-    holding a balance in the period is valuation-tracked. All arrive here as
-    nil and must read as "no data" rather than as zero. %>
+<%# Two value types, one card: `money` is a Money and `trend` a Trend that
+    carries its own colour and percentage. %>
 
 <div class="bg-container-inset rounded-lg p-4">
   <div class="flex items-center gap-2 mb-3">
@@ -22,10 +12,6 @@
   <% if !money.nil? %>
     <p class="text-xl font-semibold text-primary privacy-sensitive">
       <%= format_money(money) %>
-    </p>
-  <% elsif !rate.nil? %>
-    <p class="text-xl font-semibold text-primary privacy-sensitive">
-      <%= number_to_percentage(rate * 100, precision: 2) %>
     </p>
   <% elsif !trend.nil? %>
     <p class="text-xl font-semibold privacy-sensitive" style="color: <%= trend.color %>">
