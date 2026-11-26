@@ -876,17 +876,29 @@ class Account::ProviderImportAdapter
   # allows a few days either side of it, but still requires the exact amount
   # and currency. Only entries created before their own date qualify, so
   # ordinary manual entries keep find_duplicate_transaction's exact-date rule.
+  # A split entry never matches, neither a part nor the parent. A part is a
+  # share of another movement, never the incoming one (as in
+  # find_duplicate_transaction). Claiming the parent would move it to the
+  # provider's date while its parts keep the old one, which a split never
+  # allows; find_duplicate_transaction still links it when the provider books
+  # it on its own date. When the closest match is a split parent, no farther
+  # entry is claimed in its place.
   #
   # @return [Entry, nil] the closest-dated match, or nil
   def find_scheduled_transaction(date:, amount:, currency:, date_window: SCHEDULED_MATCH_WINDOW_DAYS)
     date = Date.parse(date.to_s) unless date.is_a?(Date)
 
-    account.entries
-      .where(entryable_type: "Transaction", external_id: nil, amount: amount, currency: currency)
+    nearest = account.entries
+      .where(entryable_type: "Transaction", external_id: nil, amount: amount, currency: currency, parent_entry_id: nil)
       .where(date: (date - date_window.days)..(date + date_window.days))
       .where("entries.created_at < entries.date")
       .to_a
       .min_by { |entry| [ (entry.date - date).abs, entry.created_at ] }
+
+    # A split parent can't be claimed, and when it is the closest match a
+    # farther entry isn't either; on its own date find_duplicate_transaction
+    # links it instead.
+    nearest unless nearest&.split_parent?
   end
 
   # Finds a pending transaction that likely matches a newly posted transaction
