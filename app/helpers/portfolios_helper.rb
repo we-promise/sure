@@ -81,7 +81,11 @@ module PortfoliosHelper
   }.freeze
 
   # The grouping one level down, so a child row's label is translated in its own
-  # vocabulary rather than its parent's.
+  # vocabulary rather than its parent's. Only the asset-class ladder has a
+  # level down (InvestmentStatement#allocation_children): an asset class opens
+  # onto its sub-classes and a sub-class onto its securities, whether the
+  # sub-class is a top-level row or one reached from an asset class. Every other
+  # grouping has no children, so the "security" it falls back to is never read.
   def allocation_child_grouping(by)
     by.to_s == "asset_class" ? "asset_sub_class" : "security"
   end

@@ -630,14 +630,47 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     ids.each { |id| assert_select "#portfolio-allocation #segment_#{id}", count: 1 }
   end
 
-  # Only the asset-class ladder nests; a flat grouping renders no disclosure.
-  test "a grouping that does not nest renders its rows without a disclosure" do
-    get portfolio_path(by: "currency")
+  # A sub-class picked as the top grouping is still on the asset-class ladder,
+  # one rung down: it opens onto its securities, from every asset class, since
+  # no asset class above it narrows them.
+  test "a sub-class grouping opens onto its securities across asset classes" do
+    account = accounts(:investment)
+    share = Security.create!(ticker: "SHR9", name: "A share", asset_class: "equity", asset_sub_class: "stock", offline: true)
+    bond = Security.create!(ticker: "BND9", name: "A bond", asset_class: "fixed_income", offline: true)
+    stray = Security.create!(ticker: "UEQ9", name: "Unfiled share", asset_class: "equity", offline: true)
+    Holding.create!(account: account, security: share, date: Date.current, qty: 1, price: 600, amount: 600, currency: "USD")
+    Holding.create!(account: account, security: bond, date: Date.current, qty: 1, price: 400, amount: 400, currency: "USD")
+    Holding.create!(account: account, security: stray, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD")
+
+    get portfolio_path(by: "asset_sub_class")
     assert_response :success
 
-    assert_select "#portfolio-allocation [data-portfolio-segment]", minimum: 1
-    assert_select "#portfolio-allocation [data-controller='row-expander']", count: 0
-    assert_select "#portfolio-allocation tr[hidden]", count: 0
+    root = "#portfolio-allocation-table"
+    assert_select "#{root} [data-portfolio-segment='unclassified'] [aria-controls]", count: 1
+    # `unclassified` gathers the equity and the fixed-income position alike.
+    assert_select "#{root}-unclassified [data-portfolio-child='#{stray.id}']", { count: 1, text: /Unfiled share/ }
+    assert_select "#{root}-unclassified [data-portfolio-child='#{bond.id}']", { count: 1, text: /A bond/ }
+    assert_select "#{root}-unclassified [data-portfolio-child='#{share.id}']", count: 0
+    assert_select "#{root}-stock [data-portfolio-child='#{share.id}']", count: 1
+    # A security is the bottom: no toggle, and no third level.
+    assert_select "[data-portfolio-child] [aria-controls]", count: 0
+    assert_select "[data-portfolio-grandchild]", count: 0
+  end
+
+  # Only the asset-class ladder nests; a flat grouping renders no disclosure.
+  test "a grouping that does not nest renders its rows without a disclosure" do
+    Security.create!(ticker: "CDS9", name: "A retailer", sector: "Technology", offline: true).tap do |security|
+      Holding.create!(account: accounts(:investment), security: security, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+    end
+
+    (InvestmentStatement::ALLOCATION_GROUPINGS - %w[asset_class asset_sub_class]).each do |grouping|
+      get portfolio_path(by: grouping)
+      assert_response :success
+
+      assert_select "#portfolio-allocation [data-portfolio-segment]", { minimum: 1 }, "?by=#{grouping} rendered no rows"
+      assert_select "#portfolio-allocation [data-controller='row-expander']", { count: 0 }, "?by=#{grouping} rendered a toggle"
+      assert_select "#portfolio-allocation tr[hidden]", { count: 0 }, "?by=#{grouping} rendered a detail row"
+    end
   end
 
   private
