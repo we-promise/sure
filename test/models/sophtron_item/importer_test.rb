@@ -426,4 +426,58 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 0, result[:transactions_imported]
     assert_equal 1, result[:transactions_failed]
   end
+
+  test "unauthorized refresh marks item requires update and skips the fetch" do
+    sophtron_account = linked_sophtron_account(raw_transactions_payload: [ { id: "existing-tx" } ])
+
+    provider = mock
+    provider.expects(:refresh_account).with("acct-1")
+            .raises(Provider::Sophtron::Error.new("Unauthorized", :unauthorized))
+    provider.expects(:get_account_transactions).never
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider)
+                                   .send(:fetch_and_store_transactions, sophtron_account)
+
+    assert_not result[:success]
+    assert result[:requires_update]
+    assert_equal "Unauthorized", result[:error]
+    assert_equal "requires_update", @item.reload.status
+  end
+
+  test "forbidden transaction fetch after an mfa refresh keeps the refresh state" do
+    sophtron_account = linked_sophtron_account(raw_transactions_payload: [ { id: "existing-tx" } ])
+
+    provider = mock
+    provider.expects(:refresh_account).with("acct-1").returns({ JobID: "refresh-job" })
+    provider.expects(:get_job_information).with("refresh-job").returns({
+      SecurityQuestion: [ "Question?" ].to_json,
+      LastStatus: "Waiting"
+    })
+    provider.expects(:get_account_transactions).with("acct-1", start_date: anything)
+            .raises(Provider::Sophtron::Error.new("Forbidden", :access_forbidden))
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider)
+                                   .send(:fetch_and_store_transactions, sophtron_account)
+
+    assert_not result[:success]
+    assert result[:requires_update]
+    assert_equal "Forbidden", result[:error]
+    assert_equal "requires_update", @item.reload.status
+    assert_equal "refresh-job", @item.current_job_id
+    assert_equal [ "existing-tx" ], sophtron_account.reload.raw_transactions_payload.map { |tx| tx.with_indifferent_access[:id] }
+  end
+
+  private
+
+    def linked_sophtron_account(account_id: "acct-1", account: accounts(:depository), **attributes)
+      sophtron_account = @item.sophtron_accounts.create!(
+        account_id: account_id,
+        name: "Checking",
+        currency: "USD",
+        balance: 100,
+        **attributes
+      )
+      AccountProvider.create!(account: account, provider: sophtron_account)
+      sophtron_account
+    end
 end

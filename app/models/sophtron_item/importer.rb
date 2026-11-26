@@ -280,30 +280,31 @@ class SophtronItem::Importer
       Rails.logger.info "SophtronItem::Importer - Fetching transactions for account #{sophtron_account.account_id} from #{start_date}"
 
       refresh_result = nil
-      begin
+      result = begin
         if refresh && !initial_transaction_fetch?(sophtron_account)
           refresh_result = refresh_account_before_transaction_fetch(sophtron_account)
           return refresh_result if refresh_result.present? && !refresh_result[:transactions_available]
         end
 
-        merge_refresh_result(fetch_transactions_result(sophtron_account, start_date), refresh_result)
+        fetch_transactions_result(sophtron_account, start_date)
       rescue Provider::Sophtron::Error => e
         requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
         sophtron_item.update!(status: :requires_update) if requires_update
         Rails.logger.error "SophtronItem::Importer - Sophtron API error for account #{sophtron_account.id}: #{e.message}"
-        merge_refresh_result({ success: false, transactions_count: 0, error: e.message, requires_update: requires_update }, refresh_result)
+        { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
       rescue JSON::ParserError => e
         Rails.logger.error "SophtronItem::Importer - Failed to parse transaction response for account #{sophtron_account.id}: #{e.message}"
-        merge_refresh_result({ success: false, transactions_count: 0, error: "Failed to parse response" }, refresh_result)
+        { success: false, transactions_count: 0, error: "Failed to parse response" }
       rescue => e
         Rails.logger.error "SophtronItem::Importer - Unexpected error fetching transactions for account #{sophtron_account.id}: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
-        merge_refresh_result({ success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }, refresh_result)
+        { success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }
       end
+
+      merge_refresh_result(result, refresh_result)
     end
 
-    # Returns the raw fetch/store result; the caller merges the refresh state
-    # once, so a new return path cannot forget it.
+    # Provider errors propagate to fetch_and_store_transactions, which handles them.
     def fetch_transactions_result(sophtron_account, start_date)
       transactions_data = Provider::Sophtron.response_data!(
         sophtron_provider.get_account_transactions(
@@ -331,7 +332,6 @@ class SophtronItem::Importer
           # The refresh poller can store its own rows while this request is in
           # flight, so merge under a row lock against the stored snapshot.
           sophtron_account.with_lock do
-            sophtron_account.reload
             existing_transactions = sophtron_account.raw_transactions_payload.to_a
 
             existing_ids = existing_transactions.map do |tx|
@@ -363,18 +363,6 @@ class SophtronItem::Importer
       end
 
       { success: true, transactions_count: transactions_count }
-    rescue Provider::Sophtron::Error => e
-      requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
-      sophtron_item.update!(status: :requires_update) if requires_update
-      Rails.logger.error "SophtronItem::Importer - Sophtron API error for account #{sophtron_account.id}: #{e.message}"
-      { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
-    rescue JSON::ParserError => e
-      Rails.logger.error "SophtronItem::Importer - Failed to parse transaction response for account #{sophtron_account.id}: #{e.message}"
-      { success: false, transactions_count: 0, error: "Failed to parse response" }
-    rescue => e
-      Rails.logger.error "SophtronItem::Importer - Unexpected error fetching transactions for account #{sophtron_account.id}: #{e.class} - #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
-      { success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }
     end
 
     def merge_refresh_result(result, refresh_result)
@@ -428,11 +416,6 @@ class SophtronItem::Importer
       end
 
       nil
-    rescue Provider::Sophtron::Error => e
-      requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
-      sophtron_item.update!(status: :requires_update) if requires_update
-      Rails.logger.error "SophtronItem::Importer - Sophtron API error refreshing account #{sophtron_account.id}: #{e.message}"
-      { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
     end
 
     # Determines the appropriate start date for fetching transactions.
