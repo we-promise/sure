@@ -1,4 +1,7 @@
 class IncomeStatement::Totals
+  # Bump when TotalsRow changes: persisted rows must deserialize with this shape.
+  CACHE_VERSION = "v3"
+
   include IncomeStatement::ScopedTransactionsQuery
 
   def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil, group_by_month: false)

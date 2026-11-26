@@ -1,0 +1,7 @@
+---
+nb:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Kan ikke koble fra den siste påloggingsidentiteten
+        success: Påloggingsidentiteten er koblet fra

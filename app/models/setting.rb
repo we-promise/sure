@@ -125,6 +125,10 @@ class Setting < RailsSettings::Base
   field :chimnie_api_key, type: :string, default: ENV["CHIMNIE_API_KEY"]
   field :terrascoutx_api_key, type: :string, default: ENV["TERRASCOUTX_API_KEY"]
 
+  # Instance-wide Plaid credentials; provider configuration handles ENV fallback.
+  field :plaid_secret, type: :string
+  field :plaid_eu_secret, type: :string
+
   # Transparent encryption for API key fields.  The `field` macro defines the
   # raw getter/setter on the class.  By prepending this module we intercept
   # reads (decrypt) and writes (encrypt) while `super` delegates to the
@@ -148,6 +152,8 @@ class Setting < RailsSettings::Base
       anthropic_access_token
       jev_api_key
       external_assistant_token
+      plaid_secret
+      plaid_eu_secret
     ].freeze
 
     ENCRYPTED_FIELDS.each do |field_name|
@@ -253,6 +259,57 @@ class Setting < RailsSettings::Base
   # config/schedule.yml entry (22:00 UTC, ~1h after NYSE close) so existing
   # installations see no behavior change unless they actively reconfigure it.
   field :market_data_sync_enabled, type: :boolean, default: ENV.fetch("MARKET_DATA_SYNC_ENABLED", "1") == "1"
+
+  # The page cache (see PageCache). Each value comes from its environment
+  # variable when that is set and in range, else from the Self-Hosting form,
+  # else the default; an out-of-range value from either is ignored.
+  #
+  # How long a cached page is kept when nobody opens it.
+  PAGE_CACHE_DAYS_DEFAULT = 7
+  PAGE_CACHE_DAYS_RANGE = 1..365
+  field :page_cache_days, type: :integer
+  # The most all cached pages may take together, in megabytes.
+  PAGE_CACHE_MAX_MB_DEFAULT = 100
+  PAGE_CACHE_MAX_MB_RANGE = 1..100_000
+  field :page_cache_max_mb, type: :integer
+  # After its data changes, a cached page is still served while it is rebuilt
+  # in the background, but rebuilt at most once in this many minutes. 0
+  # rebuilds on the first visit after every change.
+  PAGE_CACHE_COOLDOWN_MINUTES_DEFAULT = 60
+  PAGE_CACHE_COOLDOWN_MINUTES_RANGE = 0..10_080
+  field :page_cache_cooldown_minutes, type: :integer
+
+  PAGE_CACHE_SETTINGS = {
+    page_cache_days: [ PAGE_CACHE_DAYS_RANGE, PAGE_CACHE_DAYS_DEFAULT ],
+    page_cache_max_mb: [ PAGE_CACHE_MAX_MB_RANGE, PAGE_CACHE_MAX_MB_DEFAULT ],
+    page_cache_cooldown_minutes: [ PAGE_CACHE_COOLDOWN_MINUTES_RANGE, PAGE_CACHE_COOLDOWN_MINUTES_DEFAULT ]
+  }.freeze
+
+  def self.page_cache_value(name)
+    range, default = PAGE_CACHE_SETTINGS.fetch(name)
+    page_cache_env_value(name) || [ public_send(name) ].find { |value| value && range.cover?(value) } || default
+  end
+
+  # The environment's value when it is a usable override (a whole number in
+  # range), else nil: an invalid one is ignored, so it neither applies nor
+  # locks the setting.
+  def self.page_cache_env_value(name)
+    range, _default = PAGE_CACHE_SETTINGS.fetch(name)
+    from_env = Integer(ENV[name.to_s.upcase].to_s.strip, 10, exception: false)
+    from_env if from_env && range.cover?(from_env)
+  end
+
+  def self.page_cache_ttl
+    page_cache_value(:page_cache_days).days
+  end
+
+  def self.page_cache_max_mb_in_effect
+    page_cache_value(:page_cache_max_mb)
+  end
+
+  def self.page_cache_cooldown
+    page_cache_value(:page_cache_cooldown_minutes).minutes
+  end
   field :market_data_sync_time, type: :string, default: ENV.fetch("MARKET_DATA_SYNC_TIME", "22:00")
   field :market_data_sync_timezone, type: :string, default: ENV.fetch("MARKET_DATA_SYNC_TIMEZONE", "UTC")
 
