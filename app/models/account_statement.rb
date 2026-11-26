@@ -441,6 +441,10 @@ class AccountStatement < ApplicationRecord
       self.currency = currency.to_s.upcase.presence if currency.present?
     end
 
+    def monetizable_currency
+      statement_currency
+    end
+
     def pdf_output
       sanitized_parser_output.to_h["pdf"].to_h
     end

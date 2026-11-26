@@ -638,6 +638,14 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal BigDecimal("250"), statement.closing_balance
   end
 
+  test "shows a typed balance in the family currency on an accountless statement without a currency" do
+    statement = upload_card_statement(account: nil, text: "nothing to read")
+    statement.update!(closing_balance: 250)
+
+    assert_nil statement.currency
+    assert_equal Money.new(250, "USD"), statement.closing_balance_money
+  end
+
   test "linking an accountless statement without a currency to an account in another currency clears its balances" do
     eur_account = @family.accounts.create!(name: "EUR account", balance: 0, currency: "EUR", accountable: Depository.new)
     statement = upload_card_statement(account: nil, text: "nothing to read")
