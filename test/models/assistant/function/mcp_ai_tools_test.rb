@@ -85,8 +85,8 @@ class McpAiToolsTest < ActiveSupport::TestCase
   end
 
   test "an import retry joins its job and completion clears the in-flight claim" do
-    inflight = "ai/tool_inflight/import_bank_statement:#{@pdf_import.id}"
     arguments = { "pdf_import_id" => @pdf_import.id, "account_id" => @account.id }
+    inflight = Ai::ToolJob.inflight_key(Assistant::Function::ImportBankStatement.name, @user, arguments)
     Ai::SharedState.write(inflight, "running-job", expires_in: 1.minute)
     Ai::SharedState.write("ai/tool_results/running-job",
                           { result: { success: true, already_imported: true, import_id: "draft-1" } },
@@ -109,6 +109,197 @@ class McpAiToolsTest < ActiveSupport::TestCase
     Ai::SharedState.delete(inflight)
   end
 
+  test "a different user cannot join another caller's running import" do
+    fn_class = Assistant::Function::ImportBankStatement
+    arguments = { "pdf_import_id" => @pdf_import.id, "account_id" => @account.id }
+    first_key = Ai::ToolJob.inflight_key(fn_class.name, @user, arguments)
+    Ai::SharedState.write(first_key, "running-job", expires_in: 1.minute)
+    Ai::SharedState.write("ai/tool_results/running-job",
+                          { result: { success: true, import_id: "first-callers-draft" } },
+                          expires_in: 1.minute)
+
+    member = users(:family_member)
+    fn_class.any_instance.expects(:call).with(arguments).returns(success: true, import_id: "member-draft")
+
+    answer = nil
+    perform_enqueued_jobs(only: Ai::ToolJob) do
+      answer = Ai::ToolJob.run(fn_class, member, arguments, timeout: 1)
+    end
+
+    assert_equal "member-draft", answer["import_id"]
+    assert_nil Ai::SharedState.read(Ai::ToolJob.inflight_key(fn_class.name, member, arguments))
+    assert_equal "running-job", Ai::SharedState.read(first_key)
+  ensure
+    Ai::SharedState.delete(first_key) if first_key
+  end
+
+  test "a different account_id cannot join a running import" do
+    fn_class = Assistant::Function::ImportBankStatement
+    arguments = { "pdf_import_id" => @pdf_import.id, "account_id" => @account.id }
+    other_arguments = arguments.merge("account_id" => accounts(:credit_card).id)
+    first_key = Ai::ToolJob.inflight_key(fn_class.name, @user, arguments)
+    Ai::SharedState.write(first_key, "running-job", expires_in: 1.minute)
+    Ai::SharedState.write("ai/tool_results/running-job",
+                          { result: { success: true, import_id: "first-callers-draft" } },
+                          expires_in: 1.minute)
+
+    fn_class.any_instance.expects(:call).with(other_arguments).returns(success: true, import_id: "other-account-draft")
+
+    answer = nil
+    perform_enqueued_jobs(only: Ai::ToolJob) do
+      answer = Ai::ToolJob.run(fn_class, @user, other_arguments, timeout: 1)
+    end
+
+    assert_equal "other-account-draft", answer["import_id"]
+    assert_equal "running-job", Ai::SharedState.read(first_key)
+  ensure
+    Ai::SharedState.delete(first_key) if first_key
+  end
+
+  test "a joining caller is revalidated before it gets the running job's result" do
+    fn_class = Assistant::Function::ImportBankStatement
+    arguments = { "pdf_import_id" => @pdf_import.id, "account_id" => @account.id }
+    inflight = Ai::ToolJob.inflight_key(fn_class.name, @user, arguments)
+    Ai::SharedState.write(inflight, "running-job", expires_in: 1.minute)
+    Ai::SharedState.write("ai/tool_results/running-job",
+                          { result: { success: true, import_id: "first-callers-draft" } },
+                          expires_in: 1.minute)
+    @pdf_import.destroy!
+
+    answer = Ai::ToolJob.run(fn_class, @user, arguments, timeout: 1)
+
+    assert_equal "The tool failed to run", answer["error"]
+    assert answer["tool_error"]
+    assert_equal "running-job", Ai::SharedState.read(inflight), "the first caller's claim is left alone"
+  ensure
+    Ai::SharedState.delete(inflight) if inflight
+  end
+
+  test "a caller whose tool is no longer listed cannot join a running job" do
+    fn_class = Assistant::Function::ImportBankStatement
+    arguments = { "pdf_import_id" => @pdf_import.id, "account_id" => @account.id }
+    inflight = Ai::ToolJob.inflight_key(fn_class.name, @user, arguments)
+    Ai::SharedState.write(inflight, "running-job", expires_in: 1.minute)
+    Ai::SharedState.write("ai/tool_results/running-job",
+                          { result: { success: true, import_id: "first-callers-draft" } },
+                          expires_in: 1.minute)
+    use_no_ai
+
+    answer = Ai::ToolJob.run(fn_class, @user, arguments, timeout: 1)
+
+    assert_equal "The tool failed to run", answer["error"]
+  ensure
+    Ai::SharedState.delete(inflight) if inflight
+  end
+
+  test "a refused enqueue clears the claim and fails instead of polling" do
+    fn_class = Assistant::Function::ImportBankStatement
+    arguments = { "pdf_import_id" => @pdf_import.id, "account_id" => @account.id }
+    inflight = Ai::ToolJob.inflight_key(fn_class.name, @user, arguments)
+    Ai::ToolJob.any_instance.stubs(:enqueue).returns(false)
+
+    answer = Ai::ToolJob.run(fn_class, @user, arguments, timeout: 1)
+
+    assert_equal "The tool failed to run", answer["error"]
+    assert answer["tool_error"]
+    assert_nil Ai::SharedState.read(inflight)
+  end
+
+  test "an enqueue error clears the claim and fails instead of polling" do
+    fn_class = Assistant::Function::ImportBankStatement
+    arguments = { "pdf_import_id" => @pdf_import.id, "account_id" => @account.id }
+    inflight = Ai::ToolJob.inflight_key(fn_class.name, @user, arguments)
+    Ai::ToolJob.any_instance.stubs(:enqueue).raises(ActiveJob::EnqueueError, "refused")
+
+    answer = Ai::ToolJob.run(fn_class, @user, arguments, timeout: 1)
+
+    assert_equal "The tool failed to run", answer["error"]
+    assert answer["tool_error"]
+    assert_nil Ai::SharedState.read(inflight)
+  end
+
+  test "the tool call runs inside a stable AI call context" do
+    fn_class = Assistant::Function::SearchFamilyFiles
+    arguments = { "query" => "tax return" }
+    correlation = Ai::ToolJob.correlation_id(fn_class.name, arguments)
+
+    fn_class.any_instance.expects(:call).with do |received|
+      assert_equal correlation, Ai::CallContext.correlation_id
+      received == arguments
+    end.returns(success: true, results: [])
+
+    answer = nil
+    perform_enqueued_jobs(only: Ai::ToolJob) do
+      answer = Ai::ToolJob.run(fn_class, @user, arguments, timeout: 1)
+    end
+
+    assert_equal({ "success" => true, "results" => [] }, answer)
+    assert_equal correlation, Ai::ToolJob.correlation_id(fn_class.name, arguments.reverse_each.to_h)
+  end
+
+  test "a failed tool call logs the same correlation id" do
+    fn_class = Assistant::Function::SearchFamilyFiles
+    arguments = { "query" => "tax return" }
+    correlation = Ai::ToolJob.correlation_id(fn_class.name, arguments)
+    fn_class.any_instance.expects(:call).with(arguments).raises(StandardError, "boom")
+
+    logged = []
+    Rails.logger.stubs(:error).with { |message| logged << message; true }
+
+    answer = nil
+    perform_enqueued_jobs(only: Ai::ToolJob) do
+      answer = Ai::ToolJob.run(fn_class, @user, arguments, timeout: 1)
+    end
+
+    assert_equal "The tool failed to run", answer["error"]
+    assert logged.any? { _1.include?("correlation: #{correlation}") }, "the failure log carries the call's id: #{logged.inspect}"
+  end
+
+  test "all unavailable-worker reasons answer busy" do
+    [ :ai_queues_not_polled, :no_worker_processes, :stale_heartbeat ].each do |reason|
+      SidekiqHealth.stubs(:current).returns(stub(reason: reason))
+
+      assert_no_enqueued_jobs(only: Ai::ToolJob) do
+        answer = Ai::ToolJob.run(Assistant::Function::SearchFamilyFiles, @user, { "query" => "tax" }, timeout: 1)
+        assert_equal "busy", answer["error"], reason
+        assert_match(/try again/i, answer["message"])
+      end
+    end
+  end
+
+  test "two initial calls claim atomically and enqueue one job" do
+    fn_class = Assistant::Function::ImportBankStatement
+    arguments = { "pdf_import_id" => @pdf_import.id, "account_id" => @account.id }
+    inflight = Ai::ToolJob.inflight_key(fn_class.name, @user, arguments)
+
+    first_thread = Thread.new { Ai::ToolJob.run(fn_class, @user, arguments, timeout: 3) }
+    Timeout.timeout(2) { sleep 0.01 until Ai::SharedState.read(inflight) }
+    job_id = Ai::SharedState.read(inflight)
+    writer = Thread.new do
+      sleep 0.05
+      Ai::SharedState.write("ai/tool_results/#{job_id}",
+                            { result: { success: true, import_id: "draft-1" } },
+                            expires_in: 1.minute)
+    end
+    second_answer = Ai::ToolJob.run(fn_class, @user, arguments, timeout: 3)
+    first_answer = first_thread.value
+    writer.join
+
+    assert_equal "draft-1", first_answer["import_id"]
+    assert_equal "draft-1", second_answer["import_id"]
+    assert_enqueued_jobs 1, only: Ai::ToolJob
+  ensure
+    [ first_thread, writer ].compact.each { |thread| thread.kill if thread.alive? }
+    [ first_thread, writer ].compact.each(&:join)
+  end
+
+  test "the in-flight claim is set only once" do
+    key = "ai/tool_inflight/test-claim"
+
+    assert_nil Ai::SharedState.claim(key, "first", expires_in: 1.minute)
+    assert_equal "first", Ai::SharedState.claim(key, "second", expires_in: 1.minute)
+  end
+
   test "the unique index allows imports without a source but no duplicates with one" do
     source = imports(:pdf)
     TransactionImport.create!(family: source.family, source_import: source)
@@ -119,11 +310,30 @@ class McpAiToolsTest < ActiveSupport::TestCase
     end
   end
 
+  test "deleting a source import keeps its derived import" do
+    source = imports(:pdf)
+    derived = TransactionImport.create!(family: source.family, source_import: source)
+
+    source.destroy!
+
+    assert derived.reload.persisted?
+    assert_nil derived.source_import_id
+  end
+
+  test "deleting a family with a derived import does not violate the source foreign key" do
+    family = Family.create!(name: "Tool imports family", currency: "USD", locale: "en")
+    source = PdfImport.create!(family:, document_type: "bank_statement")
+    TransactionImport.create!(family:, source_import: source)
+
+    assert_nothing_raised { family.destroy! }
+    assert_equal 0, Import.where(family_id: family.id).count
+  end
+
   test "the source import column and index migrate up and back down" do
     before = schema_shape
     assert_equal [ "uuid", true ], before[:column]
     assert_equal [ [ "source_import_id" ], true, "(source_import_id IS NOT NULL)" ], before[:index]
-    assert_equal [ "imports", "source_import_id" ], before[:foreign_key]
+    assert_equal [ "imports", "source_import_id", :nullify ], before[:foreign_key]
 
     migrate(:down)
     assert_nil schema_shape[:column]
@@ -149,7 +359,7 @@ class McpAiToolsTest < ActiveSupport::TestCase
       {
         column: column && [ column.sql_type, column.null ],
         index: index && [ index.columns, index.unique, index.where ],
-        foreign_key: foreign_key && [ foreign_key.to_table, foreign_key.column ]
+        foreign_key: foreign_key && [ foreign_key.to_table, foreign_key.column, foreign_key.on_delete ]
       }
     end
 end

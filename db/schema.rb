@@ -3305,7 +3305,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_000000) do
   add_foreign_key "imports", "account_statements", on_delete: :nullify
   add_foreign_key "imports", "families"
   add_foreign_key "imports", "import_sessions", column: ["import_session_id", "family_id"], primary_key: ["id", "family_id"], name: "fk_imports_session_family", on_delete: :cascade
-  add_foreign_key "imports", "imports", column: "source_import_id"
+  add_foreign_key "imports", "imports", column: "source_import_id", on_delete: :nullify
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"
   add_foreign_key "insights", "families"

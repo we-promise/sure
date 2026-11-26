@@ -65,44 +65,12 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   def call(params = {})
+    if (error = validation_error(params))
+      return error
+    end
+
     pdf_import = find_pdf_import(params["pdf_import_id"])
-
-    unless pdf_import
-      return {
-        success: false,
-        error: "PDF import not found",
-        message: "Could not find a PDF import with ID: #{params["pdf_import_id"]}"
-      }
-    end
-
-    unless pdf_import.document_type == "bank_statement"
-      return {
-        success: false,
-        error: "not_bank_statement",
-        message: "This PDF is not a bank statement. Document type: #{pdf_import.document_type}",
-        available_actions: [ "Use a different PDF that is a bank statement" ]
-      }
-    end
-
-    # If no account specified, return available accounts
-    if params["account_id"].blank?
-      return {
-        success: false,
-        error: "account_required",
-        message: "Please specify which account to import transactions into",
-        available_accounts: account_choices
-      }
-    end
-
-    account = writable_accounts.find_by(id: params["account_id"]) if valid_uuid?(params["account_id"])
-    unless account
-      return {
-        success: false,
-        error: "account_not_found",
-        message: "No writable account matched that account_id",
-        available_accounts: account_choices
-      }
-    end
+    account = writable_accounts.find_by(id: params["account_id"])
 
     # A completed job whose response was lost still owns one import. Its retry gets
     # that draft, not a second extraction, even after a worker or Redis restart.
@@ -203,6 +171,50 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       success: false,
       error: "extraction_failed",
       message: "The statement could not be extracted. Try again or choose another way to read it."
+    }
+  end
+
+  # The caller's own gates, before any extraction. Ai::ToolJob re-runs this
+  # when a later caller tries to join a job already running for the same
+  # statement: a changed account, user or import cannot inherit its result.
+  def validation_error(params)
+    pdf_import = find_pdf_import(params["pdf_import_id"])
+
+    unless pdf_import
+      return {
+        success: false,
+        error: "PDF import not found",
+        message: "Could not find a PDF import with ID: #{params["pdf_import_id"]}"
+      }
+    end
+
+    unless pdf_import.document_type == "bank_statement"
+      return {
+        success: false,
+        error: "not_bank_statement",
+        message: "This PDF is not a bank statement. Document type: #{pdf_import.document_type}",
+        available_actions: [ "Use a different PDF that is a bank statement" ]
+      }
+    end
+
+    # If no account specified, return available accounts
+    if params["account_id"].blank?
+      return {
+        success: false,
+        error: "account_required",
+        message: "Please specify which account to import transactions into",
+        available_accounts: account_choices
+      }
+    end
+
+    account = writable_accounts.find_by(id: params["account_id"]) if valid_uuid?(params["account_id"])
+    return nil if account
+
+    {
+      success: false,
+      error: "account_not_found",
+      message: "No writable account matched that account_id",
+      available_accounts: account_choices
     }
   end
 

@@ -4,7 +4,7 @@
 # rows can contain duplicates, so the durable link gets its own indexed column.
 class AddSourceImportIdToImports < ActiveRecord::Migration[8.1]
   def change
-    add_reference :imports, :source_import, type: :uuid, foreign_key: { to_table: :imports }, index: false
+    add_reference :imports, :source_import, type: :uuid, foreign_key: { to_table: :imports, on_delete: :nullify }, index: false
     add_index :imports, :source_import_id, unique: true, where: "source_import_id IS NOT NULL",
                                            name: "idx_imports_source_import_unique"
   end
