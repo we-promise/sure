@@ -1,0 +1,7 @@
+---
+pt-BR:
+  activerecord:
+    errors:
+      models:
+        loan:
+          fixed_rate_only_payments: "A parcela mensal ou a parcela final única só pode ser definida em um empréstimo com taxa fixa."

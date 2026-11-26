@@ -1,9 +1,14 @@
 ---
 pt-BR:
   loans:
+    balloon_not_applied: "A parcela final informada não pode ser aplicada com essas condições do empréstimo. O valor calculado da última parcela é %{amount}."
     edit:
       edit: Editar %{account}
     form:
+      contracted_payment: "Parcela mensal (opcional)"
+      contracted_payment_hint: "Deixe em branco para calcular a parcela com base no saldo, na taxa e no prazo. Preencha se a parcela do credor for diferente, por exemplo, devido ao arredondamento."
+      balloon_payment: "Parcela final única (opcional)"
+      balloon_payment_hint: "Valor total da última parcela quando o empréstimo termina com um pagamento único. Se não informar a parcela mensal, ela será calculada para que a última parcela corresponda a este valor."
       interest_rate: Taxa de juros
       interest_rate_placeholder: '5,25'
       initial_balance: Saldo original do empréstimo

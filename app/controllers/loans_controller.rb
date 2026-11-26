@@ -9,6 +9,11 @@ class LoansController < ApplicationController
     { rate_changes: [ :effective_date, :rate ] }
   )
 
+  def create
+    super
+    warn_if_balloon_was_not_applied if performed? && response.redirect?
+  end
+
   def update
     attributes = account_params[:accountable_attributes]
     if attributes&.key?(:rate_changes) && attributes[:rate_schedule_snapshot].blank?
@@ -16,10 +21,18 @@ class LoansController < ApplicationController
       render :edit, status: :unprocessable_entity
     else
       super
+      warn_if_balloon_was_not_applied if @account_updated
     end
   end
 
   private
+    def warn_if_balloon_was_not_applied
+      final_payment = @account.loan.amortization_schedule&.unapplied_balloon_final_payment
+      return unless final_payment
+
+      flash[:alert] = t("loans.balloon_not_applied", amount: final_payment.format)
+    end
+
     def with_account_update_lock
       @account.accountable.with_schedule_lock do
         # The account row is locked too, but the request loaded it before the lock.

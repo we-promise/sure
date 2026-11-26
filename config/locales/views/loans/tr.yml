@@ -1,9 +1,14 @@
 ---
 tr:
   loans:
+    balloon_not_applied: "Belirtilen balon ödeme bu kredi koşullarıyla uygulanamaz. Hesaplanan son ödeme %{amount}."
     edit:
       edit: "%{account} düzenle"
     form:
+      contracted_payment: "Aylık taksit (isteğe bağlı)"
+      contracted_payment_hint: "Taksitin bakiye, faiz oranı ve vadeye göre hesaplanması için boş bırakın. Kredi verenin taksiti, örneğin yuvarlama nedeniyle farklıysa doldurun."
+      balloon_payment: "Balon ödeme (isteğe bağlı)"
+      balloon_payment_hint: "Kredi toplu ödemeyle sona erdiğinde son taksidin toplam tutarı. Aylık taksit girilmezse, son taksit bu tutara eşit olacak şekilde hesaplanır."
       initial_balance: Orijinal kredi bakiyesi
       interest_rate: Faiz oranı
       interest_rate_placeholder: '5.25'

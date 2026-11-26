@@ -1,9 +1,14 @@
 ---
 hu:
   loans:
+    balloon_not_applied: "A megadott egyösszegű záró törlesztés ezekkel a hitelfeltételekkel nem alkalmazható. A számított utolsó törlesztőrészlet %{amount}."
     edit:
       edit: '%{account} szerkesztése'
     form:
+      contracted_payment: "Havi törlesztőrészlet (opcionális)"
+      contracted_payment_hint: "Hagyja üresen, ha az egyenleg, a kamatláb és a futamidő alapján szeretné kiszámítani. Akkor adja meg, ha a hitelező törlesztőrészlete eltér, például kerekítés miatt."
+      balloon_payment: "Egyösszegű záró törlesztés (opcionális)"
+      balloon_payment_hint: "Az utolsó törlesztőrészlet teljes összege, ha a hitel egyösszegű fizetéssel zárul. Havi törlesztőrészlet hiányában a rendszer úgy számol, hogy az utolsó részlet ekkora legyen."
       interest_rate: Kamatláb
       interest_rate_placeholder: '5.25'
       initial_balance: Eredeti hitelösszeg

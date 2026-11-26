@@ -128,6 +128,12 @@ class Loan::AmortizationSchedule
     simulation.payments.last&.[](:balloon_adjustment)
   end
 
+  def unapplied_balloon_final_payment
+    return unless @balloon_payment && final_balloon_adjustment.nil?
+
+    payments.last&.payment
+  end
+
   # The scheduled payment falling in the same calendar month as `date`, if any.
   # Callers use this to reconcile a real bank payment against the schedule.
   def payment_for(date)
@@ -252,13 +258,11 @@ class Loan::AmortizationSchedule
     # same simulator as the schedule itself, minus the contracted terms, so
     # the two cannot drift.
     def settlement_needed(instalment)
-      rows = Loan::Simulator.new(
+      Loan::Simulator.new(
         **simulator_options,
         payment_strategy: :hold,
         payment_amount: instalment
-      ).run.payments
-
-      [ rows.length, rows.last[:payment_amount] ]
+      ).terminal_payment
     end
 
     def schedulable?

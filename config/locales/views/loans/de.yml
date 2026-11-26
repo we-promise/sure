@@ -1,6 +1,7 @@
 ---
 de:
   loans:
+    balloon_not_applied: "Die angegebene Schlussrate ist mit diesen Darlehenskonditionen nicht möglich. Die berechnete letzte Zahlung beträgt %{amount}."
     edit:
       edit: "%{account} bearbeiten"
     form:

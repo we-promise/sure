@@ -1,9 +1,14 @@
 ---
 vi:
   loans:
+    balloon_not_applied: "Không thể áp dụng khoản trả một lần đã nhập với các điều khoản vay này. Khoản trả cuối kỳ được tính là %{amount}."
     edit:
       edit: Chỉnh sửa %{account}
     form:
+      contracted_payment: "Khoản trả hằng tháng (không bắt buộc)"
+      contracted_payment_hint: "Để trống để tính khoản trả dựa trên dư nợ, lãi suất và kỳ hạn. Hãy điền nếu khoản trả của bên cho vay khác với kết quả tính, chẳng hạn do làm tròn."
+      balloon_payment: "Khoản trả một lần cuối kỳ (không bắt buộc)"
+      balloon_payment_hint: "Tổng số tiền của kỳ trả cuối nếu khoản vay kết thúc bằng một khoản trả một lần. Nếu không nhập khoản trả hằng tháng, hệ thống sẽ tính để kỳ trả cuối bằng số tiền này."
       interest_rate: Lãi suất
       interest_rate_placeholder: '5.25'
       initial_balance: Số dư khoản vay ban đầu

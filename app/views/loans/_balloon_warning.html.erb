@@ -1,0 +1,5 @@
+<%# locals: (schedule:) %>
+
+<% if (final_payment = schedule&.unapplied_balloon_final_payment) %>
+  <%= render DS::Alert.new(variant: :warning, message: t("loans.balloon_not_applied", amount: format_money(final_payment))) %>
+<% end %>

@@ -1,0 +1,7 @@
+---
+hu:
+  activerecord:
+    errors:
+      models:
+        loan:
+          fixed_rate_only_payments: "Havi törlesztőrészlet vagy egyösszegű záró törlesztés csak rögzített kamatozású hitelnél adható meg."

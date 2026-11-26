@@ -1,6 +1,7 @@
 ---
 fr:
   loans:
+    balloon_not_applied: "Le paiement forfaitaire indiqué ne peut pas être appliqué avec ces conditions de prêt. Le montant calculé du dernier paiement est de %{amount}."
     edit:
       edit: Modifier %{account}
     form:

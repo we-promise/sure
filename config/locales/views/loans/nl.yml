@@ -1,6 +1,7 @@
 ---
 nl:
   loans:
+    balloon_not_applied: "De opgegeven slottermijn is niet mogelijk met deze leenvoorwaarden. De berekende laatste betaling is %{amount}."
     edit:
       edit: "%{account} bewerken"
     form:

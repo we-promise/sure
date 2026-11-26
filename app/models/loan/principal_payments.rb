@@ -158,6 +158,9 @@ class Loan
         )
 
         state.period_interest = (state.period_principal * factor).round(precision)
+        if payment.number == schedule.term_months
+          state.period_interest += schedule.final_balloon_adjustment || 0
+        end
       end
 
       def close_period(state, date)

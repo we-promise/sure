@@ -25,6 +25,7 @@ class Loan < ApplicationRecord
 
   # An annual percentage, matching the bound the rate-change input declares.
   MAX_INTEREST_RATE = 100
+  MAX_CONTRACT_PAYMENT = BigDecimal("999999999999999.9999")
 
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
   # The form caps the date picker at today; this is the same bound where a
@@ -45,9 +46,10 @@ class Loan < ApplicationRecord
   # the schedule's own figures; both are fixed-rate notions -- a payment that
   # is contracted to move with the rate is neither -- which the validation
   # below enforces.
-  validates :contracted_payment, numericality: { greater_than: 0 }, allow_nil: true
-  validates :balloon_payment, numericality: { greater_than: 0 }, allow_nil: true
+  validates :contracted_payment, :balloon_payment,
+            numericality: { greater_than: 0, less_than_or_equal_to: MAX_CONTRACT_PAYMENT }, allow_nil: true
   validate :contracted_amounts_require_fixed_rate
+  validate :contracted_amounts_must_survive_rounding
 
   validates :insurance_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   # The form's "None" option submits an empty string, which means no type
@@ -109,6 +111,20 @@ class Loan < ApplicationRecord
     return if contracted_payment.nil? && balloon_payment.nil?
 
     errors.add(:base, :fixed_rate_only_payments)
+  end
+
+  private def contracted_amounts_must_survive_rounding
+    return if contracted_payment.nil? && balloon_payment.nil?
+
+    return unless account&.currency.present?
+
+    precision = Money::Currency.new(account.currency).default_precision || 2
+    %i[contracted_payment balloon_payment].each do |attribute|
+      amount = public_send(attribute)
+      if amount&.positive? && amount.round(precision).zero?
+        errors.add(attribute, :greater_than_or_equal_to, count: (BigDecimal("0.5") / 10**precision).to_s("F"))
+      end
+    end
   end
 
   private def rate_changes_must_be_parseable

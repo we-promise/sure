@@ -96,6 +96,7 @@
                                    hide_currency: true %>
         </div>
         <p class="text-xs text-secondary"><%= t("loans.form.balloon_payment_hint") %></p>
+        <%= render "loans/balloon_warning", schedule: account.loan.amortization_schedule if account.persisted? && account.loan.balloon_payment.present? %>
       </div>
       <fieldset hidden data-loan-rate-changes-target="clearFixedOnly" <%= "disabled" unless variable_rate %>>
         <%= loan_form.hidden_field :contracted_payment, value: "", id: nil %>

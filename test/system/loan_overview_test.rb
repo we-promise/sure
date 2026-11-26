@@ -17,7 +17,7 @@ class LoanOverviewTest < ApplicationSystemTestCase
   end
 
   test "switching back to fixed retains both payment amounts" do
-    @account.loan.update!(contracted_payment: 2_500, balloon_payment: 50_000)
+    @account.loan.update!(initial_balance: 500_000, contracted_payment: 2_500, balloon_payment: 50_000)
     visit account_path(@account)
     within "[data-testid='account-menu']" do
       find("button[aria-haspopup='menu']").click
@@ -40,7 +40,16 @@ class LoanOverviewTest < ApplicationSystemTestCase
         assert_field I18n.t("loans.form.contracted_payment"), with: "2500.00"
         assert_field I18n.t("loans.form.balloon_payment"), with: "50000.00"
       end
+
+      rate_type.find("option[value='variable']").select_option
+      find("button[type='submit']").click
     end
+
+    assert_no_selector "dialog[open]"
+    loan = @account.loan.reload
+    assert_equal "variable", loan.rate_type
+    assert_nil loan.contracted_payment
+    assert_nil loan.balloon_payment
   end
 
   # The ring is the one part of this tab a request test cannot see. Its colours

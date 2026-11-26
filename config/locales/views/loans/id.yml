@@ -1,6 +1,7 @@
 ---
 id:
   loans:
+    balloon_not_applied: "Pembayaran sekaligus yang dimasukkan tidak dapat diterapkan dengan ketentuan pinjaman ini. Jumlah pembayaran terakhir yang dihitung adalah %{amount}."
     edit:
       edit: Edit %{account}
     form:

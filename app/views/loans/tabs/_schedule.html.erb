@@ -9,6 +9,7 @@
 <% payments = schedule.payments %>
 
 <div class="space-y-4">
+  <%= render "loans/balloon_warning", schedule: schedule %>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
     <%# A re-amortising loan has no single monthly payment, so the card says
         which one this is rather than implying the figure holds for the term. %>

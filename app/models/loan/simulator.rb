@@ -123,8 +123,37 @@ class Loan
     end
 
     def run
-      balance = @starting_balance
       payments = []
+      balance = each_step do |index, payment_date, accrual_annual, sizing_annual, step|
+        payments << {
+          payment_number: index + 1,
+          payment_date: payment_date,
+          interest_rate: BigDecimal(accrual_annual.to_s),
+          sizing_rate: BigDecimal(sizing_annual.to_s),
+          **step
+        }
+      end
+
+      SimulationResult.new(
+        payments: payments,
+        converged: balance.zero?,
+        balloon_amount: balance,
+        currency_precision: @currency_precision
+      )
+    end
+
+    def terminal_payment
+      count = 0
+      amount = nil
+      each_step do |index, _date, _accrual_annual, _sizing_annual, step|
+        count = index + 1
+        amount = step[:payment_amount]
+      end
+      [ count, amount ]
+    end
+
+    private def each_step
+      balance = @starting_balance
       payment = nil
       previous_sizing_rate = nil
       (0...@payment_schedule.length).each do |index|
@@ -144,7 +173,8 @@ class Loan
         # is also what the borrower's contracted payment is set from.
         accrual_annual = @accrual_rate_for.call(period_start)
         accrual_rate = accrual_factor(period_start, payment_date, accrual_annual)
-        sizing_rate = monthly_rate(rate_on(payment_date))
+        sizing_annual = rate_on(payment_date)
+        sizing_rate = monthly_rate(sizing_annual)
 
         # Interest first, on the balance the period OPENED with: one charge per
         # period under monthly accrual. Sizing needs it when the two rates
@@ -222,30 +252,11 @@ class Loan
           )
         end
 
-        # Two rates on the row, named for what each did: `interest_rate` is
-        # the one the interest column was computed with, so a reader who
-        # recomputes the charge from beginning_balance, this rate and the
-        # period's day count (a flat twelfth under thirty_360) gets this row's
-        # figure;
-        # `sizing_rate` is the one the payment was sized at. They differ only
-        # on a row whose period straddles a rate change.
-        payments << {
-          payment_number: index + 1,
-          payment_date: payment_date,
-          interest_rate: BigDecimal(@accrual_rate_for.call(period_start).to_s),
-          sizing_rate: BigDecimal(rate_on(payment_date).to_s),
-          **step
-        }
-
+        yield index, payment_date, accrual_annual, sizing_annual, step
         balance = step[:ending_balance]
       end
 
-      SimulationResult.new(
-        payments: payments,
-        converged: balance.zero?,
-        balloon_amount: balance,
-        currency_precision: @currency_precision
-      )
+      balance
     end
 
     private

@@ -4,5 +4,6 @@ nb:
     errors:
       models:
         loan:
+          fixed_rate_only_payments: "Månedlig terminbeløp eller stort sluttbeløp kan bare angis for lån med fast rente."
           invalid_rate_change: Rader for renteendring må ha både en gjeldende dato og en rente.
           rate_change_before_origination: En renteendring kan ikke gjelde fra før lånet ble utbetalt.

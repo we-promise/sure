@@ -1,6 +1,7 @@
 ---
 es:
   loans:
+    balloon_not_applied: "El pago final indicado no puede aplicarse con estas condiciones del préstamo. El importe calculado del último pago es %{amount}."
     edit:
       edit: Editar %{account}
     form:

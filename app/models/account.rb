@@ -2,6 +2,7 @@ class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Logoable
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
+  before_validation :set_loan_account_inverse, if: :loan?
 
   before_destroy :capture_account_statement_ids_to_move
   before_destroy :cleanup_transfers
@@ -1027,6 +1028,14 @@ class Account < ApplicationRecord
   end
 
   private
+    def set_loan_account_inverse
+      loan = association(:accountable).target
+      return unless loan&.rate_type == Loan::FIXED_RATE_TYPE
+      return if loan.contracted_payment.nil? && loan.balloon_payment.nil?
+
+      loan.association(:account).target = self
+    end
+
     # [date, signed amount in account currency] for each scheduled entry that
     # contributes to the projection.
     def scheduled_entry_flows

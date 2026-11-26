@@ -6,6 +6,20 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
   OPENING_DATE = Date.new(2026, 1, 1)
   PAYMENT_DATE = Date.new(2026, 2, 1)
 
+  test "a full quoted balloon pays its adjustment as interest, not principal" do
+    account = create_loan_account(
+      term_months: 1, interest_rate: 0, balloon_payment: 20_050,
+      entries: [
+        { type: "opening_anchor", date: OPENING_DATE, balance: 20_000 },
+        { type: "transaction", date: PAYMENT_DATE, amount: -20_050 }
+      ]
+    )
+    change = principal_payments(account).change_for(PAYMENT_DATE)
+
+    assert_equal BigDecimal("20000"), change.principal_paid
+    assert_equal BigDecimal("50"), change.interest_paid
+  end
+
   test "an unlinked payment pays interest before principal" do
     account = create_loan_account(entries: [
       { type: "opening_anchor", date: OPENING_DATE, balance: 20_000 },
