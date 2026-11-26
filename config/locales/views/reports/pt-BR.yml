@@ -128,8 +128,8 @@ pt-BR:
         category: Categoria
         amount: Valor
     transactions_breakdown:
-      title: Detalhamento de Transações
-      no_transactions: Nenhuma transação encontrada para o período e filtros selecionados
+      title: Detalhamento de Atividades
+      no_transactions: Nenhuma atividade encontrada para o período e filtros selecionados
       filters:
         title: Filtros
         category: Categoria
@@ -242,7 +242,7 @@ pt-BR:
       and_more: "+%{count} mais"
     investment_flows:
       title: Fluxos de investimento
-      description: Acompanhe o fluxo de dinheiro que entra e sai de suas contas de investimento.
+      description: Acompanhe o fluxo de dinheiro que entra e sai de suas contas de investimento por meio de contribuições e saques.
       contributions: Contribuições
       contributions_description: Dinheiro aplicado em investimentos
       withdrawals: Saques

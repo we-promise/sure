@@ -4,7 +4,7 @@ pt-BR:
     users:
       index:
         title: "Gestão de Usuários"
-        description: "Gerencie as funções de usuário da sua instância. Os superadministradores podem acessar as configurações do provedor SSO e o gerenciamento de usuários."
+        description: "Gerencie as funções de usuário, a família/grupo de cada usuário e a remoção de contas de usuário da sua instância. Os superadministradores podem acessar as configurações do provedor SSO e o gerenciamento de usuários."
         section_title: "Famílias / Grupos"
         you: "(Você)"
         trial_ends_at: "Fim do teste"
@@ -90,7 +90,7 @@ pt-BR:
         success_role_and_password: Função e senha do usuário atualizadas com sucesso.
         success_family: Família/grupo do usuário atualizado com sucesso.
         success: "Função de usuário atualizada com sucesso."
-        failure: "Falha ao atualizar a função do usuário."
+        failure: "Falha ao atualizar os dados do usuário (função ou família/grupo)."
         family_required: Selecione uma família/grupo existente ou digite um nome para criar uma nova.
         password_and_family_conflict: A senha e a família/grupo não podem ser atualizadas ao mesmo tempo.
         password_disabled: A definição de senha está desativada porque os usuários só podem entrar com SSO.

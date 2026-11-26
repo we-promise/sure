@@ -3,8 +3,8 @@ pt-BR:
   settings:
     payments:
       show:
-        page_title: Pagamento
-        subscription_subtitle: Atualize sua assinatura e detalhes de pagamento
+        page_title: Pagamentos
+        subscription_subtitle: Atualize os dados do seu cartão de crédito
         subscription_title: Gerenciar contribuições
         currently_on_plan: Atualmente no plano
         trialing: Usando a demonstração aberta do %{product_name}

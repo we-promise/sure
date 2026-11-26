@@ -55,7 +55,7 @@ pt-BR:
         securities_title: Provedores de Preços de Ativos
         securities_description: Ative um ou mais provedores para buscar preços de ações, ETFs e fundos de investimento. Nas buscas, todos os provedores ativos são consultados e os resultados são combinados.
         securities_provider_label: Provedor de Ativos (Preços de Ações)
-        env_configured_message: A seleção de provedor está desabilitada porque variáveis de ambiente (EXCHANGE_RATE_PROVIDER ou SECURITIES_PROVIDER) estão definidas. Para habilitar a seleção aqui, remova essas variáveis de ambiente da sua configuração.
+        env_configured_message: A seleção de provedor está desabilitada porque variáveis de ambiente estão definidas. Para habilitar a seleção aqui, remova essas variáveis de ambiente da sua configuração.
         twelve_data_hint: requer chave de API, 800 créditos/dia
         yahoo_finance_hint: gratuito, não requer chave de API
         requires_api_key: requer chave de API
@@ -97,9 +97,9 @@ pt-BR:
         token_label: Token da API
         token_placeholder: Insira o token fornecido pelo provedor do agente
         token_help: O token de autenticação fornecido pelo seu agente externo. Ele é enviado como token Bearer em cada requisição.
-        agent_id_label: ID do agente (opcional)
+        agent_id_label: Agente (obrigatório)
         agent_id_placeholder: main (padrão)
-        agent_id_help: Direciona para um agente específico quando o provedor hospeda vários. Deixe em branco para usar o padrão.
+        agent_id_help: O Sure carrega esta lista a partir da resposta de /v1/models do endpoint. O agente selecionado controla o roteamento; o modelo por trás dele é gerenciado pelo serviço externo.
         agent_discovery_configure_first: Salve uma URL de endpoint e um token de API válidos para carregar os agentes disponíveis.
         external_agent_required: Selecione um agente externo antes de salvar.
         external_agent_invalid: Selecione um agente retornado pelo endpoint configurado.
@@ -132,7 +132,7 @@ pt-BR:
         high_res_description: Quando ativado, os logotipos serão obtidos na resolução 120x120 em vez de 40x40. Isso gera imagens mais nítidas em telas de alta densidade (high-DPI).
       llm_provider_selector:
         title: Provedor de IA
-        description: Escolha qual LLM alimenta o chat de IA. As operações em lote (categorização de transações, detecção de estabelecimentos e processamento de PDFs) atualmente sempre usam a OpenAI.
+        description: Escolha qual LLM alimenta o chat de IA, a detecção de estabelecimentos e o processamento de PDFs. A categorização de transações é configurada separadamente abaixo.
         env_configured_message: Configurado com sucesso através da variável de ambiente LLM_PROVIDER.
         provider_label: Provedor de LLM ativo
         provider_openai: OpenAI

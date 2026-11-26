@@ -2,33 +2,33 @@
 pt-BR:
   simplefin_items:
     new:
-      title: Conectar SimpleFin
+      title: Conectar SimpleFIN
       setup_token: Token de configuração
-      setup_token_placeholder: cole seu token de configuração do SimpleFin
+      setup_token_placeholder: cole seu token de configuração do SimpleFIN
       connect: Conectar
       cancel: Cancelar
     create:
-      success: Conexão com SimpleFin adicionada com sucesso! Suas contas aparecerão em breve enquanto sincronizam em segundo plano.
+      success: Conexão com SimpleFIN adicionada com sucesso! Suas contas aparecerão em breve enquanto sincronizam em segundo plano.
       errors:
         blank_token: Por favor, insira um token de configuração do SimpleFIN.
-        invalid_token: Token de configuração inválido. Verifique se você copiou o token completo do SimpleFin Bridge.
+        invalid_token: Token de configuração inválido. Verifique se você copiou o token completo do SimpleFIN Bridge.
         token_compromised: O token de configuração pode estar comprometido, expirado ou já ter sido usado. Por favor, crie um novo.
         create_failed: "Falha ao conectar: %{message}"
-        unexpected: Ocorreu um erro inesperado. Tente novamente ou contate o suporte.
+        unexpected: Ocorreu um erro inesperado. Tente novamente.
     destroy:
-      success: A conexão com SimpleFin será removida
+      success: A conexão com SimpleFIN será removida
     update:
-      success: Conexão com SimpleFin atualizada com sucesso! Suas contas estão sendo reconectadas.
+      success: Conexão com o SimpleFIN atualizada com sucesso! Suas contas estão sendo reconectadas.
       errors:
         blank_token: Por favor, insira um token de configuração do SimpleFIN.
-        invalid_token: Token de configuração inválido. Verifique se você copiou o token completo do SimpleFin Bridge.
+        invalid_token: Token de configuração inválido. Verifique se você copiou o token completo do SimpleFIN Bridge.
         token_compromised: O token de configuração pode estar comprometido, expirado ou já ter sido usado. Por favor, crie um novo.
         update_failed: "Falha ao atualizar a conexão: %{message}"
-        unexpected: Ocorreu um erro inesperado. Tente novamente ou contate o suporte.
+        unexpected: Ocorreu um erro inesperado. Tente novamente.
     edit:
       setup_token:
-        label: "Token de Configuração do SimpleFin:"
-        placeholder: Cole seu token de configuração do SimpleFin aqui...
+        label: "Token de Configuração do SimpleFIN:"
+        placeholder: Cole seu token de configuração do SimpleFIN aqui...
         help_text: O token deve ser uma sequência longa começando com letras e números
       title: Atualizar conexão SimpleFIN
       header_subtitle: Obtenha um novo token de configuração para reconectar sua conta SimpleFIN
@@ -114,15 +114,15 @@ pt-BR:
       add_new: Adicionar nova conexão
       confirm_accept: Excluir conexão
       confirm_body: Isso excluirá permanentemente todas as contas neste grupo e todos os dados associados.
-      confirm_title: Excluir conexão SimpleFin?
+      confirm_title: Excluir conexão SimpleFIN?
       delete: Excluir
       deletion_in_progress: (exclusão em andamento...)
       error: Ocorreu um erro ao sincronizar dados
       no_accounts_description: Esta conexão ainda não possui contas sincronizadas.
       no_accounts_title: Nenhuma conta encontrada
-      requires_update: Requer reautenticação
+      requires_update: Reconectar
       setup_needed: Novas contas prontas para configurar
-      setup_description: Escolha os tipos de conta para suas contas recém-importadas do SimpleFin.
+      setup_description: Escolha os tipos de conta para suas contas recém-importadas do SimpleFIN.
       setup_action: Configurar Novas Contas
       setup_accounts_menu: Configurar contas
       more_accounts_available:
@@ -136,7 +136,7 @@ pt-BR:
       status_never: Nunca sincronizado
       status_with_summary: Sincronizado há %{timestamp} • %{summary}
       syncing: Sincronizando...
-      update: Atualizar conexão
+      update: Atualizar
       stale_pending_note: (excluídas dos orçamentos)
       stale_pending_accounts: "em: %{accounts}"
       reconciled_details_note: (veja o resumo da sincronização para mais detalhes)

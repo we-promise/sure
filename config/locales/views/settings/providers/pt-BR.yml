@@ -109,8 +109,8 @@ pt-BR:
       show:
         coinbase_title: Coinbase
       encryption_error:
-        title: Configuração de criptografia necessária
-        message: As chaves de criptografia do Active Record não estão configuradas. Certifique-se de que as credenciais de criptografia (active_record_encryption.primary_key, active_record_encryption.deterministic_key e active_record_encryption.key_derivation_salt) estejam configuradas corretamente em suas credenciais do Rails ou variáveis ​​de ambiente antes de usar provedores de sincronização.
+        title: Chaves de criptografia ausentes
+        message: A sincronização bancária precisa que a criptografia do Active Record esteja configurada. Defina primary_key, deterministic_key e key_derivation_salt nas suas credenciais do Rails ou em variáveis de ambiente.
       provider_form:
         save_and_connect: Salvar e conectar
       coinbase_panel:
@@ -344,15 +344,15 @@ pt-BR:
           title: A criptografia não está configurada
           message: As credenciais e os dados de sessão da Trade Republic não podem ser armazenados com segurança até que o Active Record Encryption seja configurado.
         steps:
-          step_1: Insira o número de telefone e o PIN que você usa no app da Trade Republic e salve.
+          step_1: Insira o número de telefone e o PIN ou a senha que você usa no app da Trade Republic e salve.
           step_2: Insira o código do seu app autenticador quando solicitado.
           step_3: Aprove o login no app da Trade Republic quando solicitado.
         phone_number_label: Número de telefone
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Deixe em branco para manter o número de telefone atual
-        pin_label: PIN
-        pin_placeholder_new: O PIN do seu app da Trade Republic
-        pin_placeholder_existing: Deixe em branco para manter o PIN atual
+        pin_label: PIN ou senha
+        pin_placeholder_new: Seu PIN ou senha da Trade Republic
+        pin_placeholder_existing: Deixe em branco para manter o PIN ou a senha atual
         currency_label: Moeda da conta
         connect: Entrar
         confirm_login: Verificar login
@@ -374,7 +374,7 @@ pt-BR:
           close: Concluído
         qr_login: Entrar com QR code
         qr_cancel: Cancelar login por QR code
-        qr_back_to_credentials: Voltar para número de telefone e PIN
+        qr_back_to_credentials: Voltar para número de telefone e PIN ou senha
         qr_loading: Preparando o QR code…
         qr_instruction: Escaneie o QR code com a câmera do celular e aprove o login no app da Trade Republic.
         qr_success: Login aprovado. O Sure está atualizando a página do provedor.

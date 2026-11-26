@@ -84,7 +84,7 @@ pt-BR:
       new_account: Nova conta
       no_accounts: Nenhuma conta ainda
     form:
-      balance: Saldo atual
+      balance: "Saldo na data:"
       opening_balance_date_label: Data do saldo inicial
       name_label: Nome da conta
       name_placeholder: Exemplo de nome da conta

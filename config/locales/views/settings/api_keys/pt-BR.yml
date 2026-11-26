@@ -87,7 +87,7 @@ pt-BR:
         name_help_text: Escolha um nome descritivo para ajudar a identificar esta chave depois.
         name_help: "Escolha um nome descritivo para ajudar a identificar o propósito desta chave."
         permissions_label: "Permissões"
-        permissions_help: "Selecione as permissões que sua chave de API precisa. Você sempre pode criar uma nova chave com permissões diferentes."
+        permissions_help: "Selecione as permissões que esta chave de API deve ter:"
         scope_read_only: Somente leitura
         scope_read_only_description: Ver suas contas, transações e saldos
         scope_read_write: Leitura/Gravação
@@ -97,7 +97,7 @@ pt-BR:
           read_transactions: "Ver dados de transação, categorias e detalhes de transação"
           read_balances: "Ver dados históricos de saldo e tendências de valor da conta"
           write_transactions: "Criar e atualizar registros de transação (em breve)"
-        security_warning_title: "Aviso de Segurança Importante"
+        security_warning_title: "Aviso de Segurança"
         security_warning_body: Sua chave de API será exibida apenas uma vez após a criação. Copie-a e guarde-a com segurança. Qualquer pessoa com acesso a esta chave poderá acessar seus dados de acordo com as permissões que você selecionar.
         security_warning: "Sua chave de API será mostrada apenas uma vez após a criação. Armazene-a com segurança e nunca a compartilhe publicamente. Se você perdê-la, precisará criar uma nova."
         create_key: "Criar Chave de API"

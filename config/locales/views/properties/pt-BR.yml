@@ -28,7 +28,7 @@ pt-BR:
       chimnie: Chimnie
       terrascoutx: TerraScoutX
     new:
-      title: Inserir detalhes do imóvel
+      title: Inserir imóvel manualmente
       next: Próximo
       avm_option: Adicionar via %{provider}
       avm_title: Adicionar imóvel via %{provider}

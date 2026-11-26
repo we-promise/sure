@@ -74,7 +74,7 @@ pt-BR:
       status: Última sincronização há %{timestamp}
       status_never: Requer sincronização de dados
       syncing: Sincronizando...
-      update: Atualizar conexão
+      update: Atualizar
     select_existing_account:
       no_available_accounts: Nenhuma conta do Plaid disponível para vincular. Conecte primeiro uma nova conta do Plaid.
       title: "Vincular %{account_name} ao Plaid"
