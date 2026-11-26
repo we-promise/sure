@@ -188,7 +188,10 @@ class Security::ClassificationProposal < ApplicationRecord
     #
     # Answering only the class it already has keeps the security's sub-class:
     # an equity ETF re-proposed as "equity" stays an ETF rather than losing the
-    # sub-class that keeps its listing country out of its region.
+    # sub-class that keeps its listing country out of its region. So does
+    # answering the class of a fund that has only its wrapper, which a provider
+    # stores when the fund's holdings settle no class: an ETF or a mutual fund
+    # can hold any class.
     #
     # A fund approved without a region loses the region its listing implies,
     # as a provider's classification of a fund does: a listing or domicile
@@ -197,7 +200,9 @@ class Security::ClassificationProposal < ApplicationRecord
     def proposed_attributes
       attrs = { sector: sector, region: region }.compact_blank
       if asset_class.present?
-        keep_sub_class = asset_sub_class.blank? && asset_class == security.asset_class
+        keep_sub_class = asset_sub_class.blank? &&
+          (asset_class == security.asset_class ||
+            (security.asset_class.blank? && security.asset_sub_class.in?(%w[etf mutual_fund])))
         attrs[:asset_class] = asset_class
         attrs[:asset_sub_class] = asset_sub_class.presence unless keep_sub_class
       end
