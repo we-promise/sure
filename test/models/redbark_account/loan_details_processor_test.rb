@@ -193,6 +193,69 @@ class RedbarkAccount::LoanDetailsProcessorTest < ActiveSupport::TestCase
     assert_equal({ "2026-09-21" => BigDecimal("6.93") }, rates)
   end
 
+  test "a balance on a band's lower bound is inside it" do
+    detail lendingRates: [ tiered("0.0693", 400_000, 500_000) ]
+
+    process
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.93") }, rates)
+  end
+
+  # One entry can carry several bands; the balance sits in the second.
+  test "an entry whose second band holds the balance is used" do
+    detail lendingRates: [ {
+      "rateType" => "VARIABLE", "rate" => "0.0693",
+      "tiers" => [
+        { "name" => "DEBIT", "minimumValue" => 0, "maximumValue" => 250_000 },
+        { "name" => "DEBIT", "minimumValue" => 250_000 }
+      ]
+    } ]
+
+    process
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.93") }, rates)
+  end
+
+  test "an entry whose bands all miss the balance records nothing" do
+    detail lendingRates: [ {
+      "rateType" => "VARIABLE", "rate" => "0.0693",
+      "tiers" => [
+        { "name" => "DEBIT", "minimumValue" => 0, "maximumValue" => 250_000 },
+        { "name" => "DEBIT", "minimumValue" => 250_000, "maximumValue" => 300_000 }
+      ]
+    } ]
+
+    process
+
+    assert_empty schedule, "a rate whose bands all miss the balance was recorded as the loan's rate"
+  end
+
+  test "a variable entry with a blank rate makes the rate unknown and is logged" do
+    detail lendingRates: [
+      { "rateType" => "VARIABLE", "rate" => "0.0699" },
+      { "rateType" => "VARIABLE", "rate" => "" }
+    ]
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      process
+    end
+
+    assert_empty schedule, "the remaining entry was taken as agreed while another reported no rate"
+    assert_equal "Redbark reported a variable rate with no value; recording none",
+                 DebugLogEntry.order(:created_at).last.message
+  end
+
+  # Most payloads carry no headline rate; its absence is not worth a line.
+  test "a missing headline rate is not logged" do
+    detail lendingRate: nil, lendingRates: [ { "rateType" => "VARIABLE", "rate" => "0.0699" } ]
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      process
+    end
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.99") }, rates)
+  end
+
   test "a band in a unit other than dollars does not hold the balance" do
     detail lendingRates: [ tiered("0.0693", 0, 500_000, unit: "PERCENT") ]
 

@@ -103,6 +103,13 @@ class RedbarkAccount::LoanDetailsProcessor
       # Compared as stored, so two figures that round to the same percentage
       # are one rate. A candidate with no usable rate may be the one that
       # applies, so it makes the answer unknown rather than dropping out.
+      # `to_percentage` is silent on a blank value, which for the headline rate
+      # is the usual case, so a blank candidate is logged here.
+      if candidates.any? { |entry| entry[:rate].blank? }
+        capture("Redbark reported a variable rate with no value; recording none")
+        return nil
+      end
+
       percentages = candidates.map { |entry| to_percentage(entry[:rate]) }
       return nil if percentages.any?(&:nil?)
 
