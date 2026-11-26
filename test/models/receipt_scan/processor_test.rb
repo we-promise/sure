@@ -198,6 +198,71 @@ class ReceiptScan::ProcessorTest < ActiveSupport::TestCase
     bank.child_entries.each { assert_equal [ tags(:one) ], _1.entryable.tags.to_a }
   end
 
+  test "a placeholder the user edited while it was read isn't merged away" do
+    bank = Entry.create!(account: @account, name: "CARD CORNER GROCER", date: @date + 1.day, currency: "USD",
+                         amount: BigDecimal("50.00"), entryable: Transaction.new)
+    scan = upload("rotated.jpg", "image/jpeg")
+    placeholder = scan.linked_transaction
+    stub_ai(:extract_receipt) do
+      placeholder.update!(category: @household)
+      placeholder.lock_attr!(:category_id)
+      receipt_ai_answer(date: @date.iso8601, line_items: [ item("Cheese", "50.00", "Food & Drink") ])
+    end
+
+    process(scan)
+
+    assert_equal placeholder, scan.reload.linked_transaction
+    assert_equal @household, placeholder.reload.category
+    assert_nil bank.entryable.reload.extra["receipt"]
+    assert_equal [ bank.id ], scan.review_reasons.find { _1["reason"] == "possible_duplicates" }["entry_ids"]
+  end
+
+  test "a scan moved to another family while it waited is still read" do
+    scan = upload("rotated.jpg", "image/jpeg")
+    requests = stub_extraction
+    other = families(:empty)
+    [ ReceiptScan.where(id: scan.id), Account.where(id: @account.id), User.where(id: @user.id) ].each { _1.update_all(family_id: other.id) }
+
+    process(scan)
+
+    assert_equal 1, requests.size
+    assert_not scan.reload.processing?
+  end
+
+  test "a placeholder deleted while the receipt was read ends the run quietly" do
+    scan = upload("rotated.jpg", "image/jpeg")
+    stub_ai(:extract_receipt) do
+      Entry.find(scan.linked_transaction.entry.id).destroy!
+      receipt_ai_answer(date: @date.iso8601)
+    end
+
+    assert_no_difference -> { DebugLogEntry.where(source: "ReceiptScan::Processor").count } do
+      assert_nothing_raised { process(scan) }
+    end
+    assert_not ReceiptScan.exists?(scan.id)
+    assert_not Ai::GenerationRun.exists?(family: @family, feature: "extract_receipt")
+  end
+
+  test "files uploaded before a later one fails are deleted" do
+    blob_count = ActiveStorage::Blob.count
+    calls = 0
+    original = ActiveStorage::Blob.method(:create_and_upload!)
+    ActiveStorage::Blob.stubs(:create_and_upload!).with do |**args|
+      calls += 1
+      raise StandardError, "storage down" if calls == 2
+
+      true
+    end.returns(original.call(io: StringIO.new("x"), filename: "a.jpg", content_type: "image/jpeg"))
+
+    assert_raises(StandardError) do
+      ReceiptScan.create_from_upload!(family: @family, user: @user, account: @account,
+                                       uploads: [ uploaded("rotated.jpg", "image/jpeg"), uploaded("rotated.jpg", "image/jpeg") ])
+    end
+    perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
+
+    assert_equal blob_count, ActiveStorage::Blob.count
+  end
+
   # Two scans can pick the same bank entry before either has merged: the second must
   # see the first one's receipt once it holds the entry's lock.
   test "a bank transaction another receipt merged into meanwhile isn't taken twice" do

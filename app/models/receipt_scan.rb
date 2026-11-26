@@ -51,7 +51,8 @@ class ReceiptScan < ApplicationRecord
     # commits. The files are uploaded first, so the run never reads a scan without its files. The
     # caller authorizes the account.
     def create_from_upload!(family:, user:, account:, uploads:)
-      blobs = normalize_uploads!(Array(uploads).compact).map { ActiveStorage::Blob.create_and_upload!(**_1) }
+      blobs = []
+      normalize_uploads!(Array(uploads).compact).each { blobs << ActiveStorage::Blob.create_and_upload!(**_1) }
 
       transaction do
         # Reloads the account's family under the lock, so a transfer that just committed fails
@@ -78,7 +79,7 @@ class ReceiptScan < ApplicationRecord
         scan
       end
     rescue StandardError
-      blobs&.each { _1.purge_later unless _1.attachments.exists? }
+      blobs.each { _1.purge_later unless _1.attachments.exists? }
       raise
     end
 

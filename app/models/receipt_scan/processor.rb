@@ -14,9 +14,11 @@ class ReceiptScan::Processor
   # Problems that make the extracted payment unreliable enough not to merge into a bank entry.
   BLOCKING_PROBLEMS = %w[missing_total non_positive_total missing_date currency_mismatch unknown_currency].freeze
 
+  # By id alone: a family transfer moves the scan while it waits, and it is read in its new
+  # family rather than left processing. The run's ids are the scans its upload queued.
   def self.from_ai_job(window:, family_id:)
-    ids = window.take_matching { |ids| ReceiptScan.where(id: ids, family_id:).pluck(:id) }
-    new(ReceiptScan.find_by(id: ids.first, family_id:))
+    ids = window.take_matching { |ids| ReceiptScan.where(id: ids).pluck(:id) }
+    new(ReceiptScan.find_by(id: ids.first))
   end
 
   # scan: nil when it was deleted while the job waited.
@@ -59,12 +61,15 @@ class ReceiptScan::Processor
     when :no_access then record_failure(StandardError.new("The uploader can no longer change this account"))
     end
     outcome == :applied ? 1 : 0
+  rescue ActiveRecord::RecordNotFound
+    0   # the scan, or its uploader or account, was deleted while the receipt was read
   end
 
   # No model the uploader may use can read images: the scan waits for review, with the
   # placeholder left for the user. Anything else ends it as failed.
   def ai_failed(error)
-    return unless scan
+    # Read again: a failed apply may have left unsaved changes, and the scan may be gone.
+    return unless scan && (@scan = ReceiptScan.find_by(id: scan.id))
 
     @placeholder = scan.linked_transaction
     return record_failure(error) unless error.is_a?(Ai::Error::Unavailable)
@@ -191,6 +196,13 @@ class ReceiptScan::Processor
 
       if bank_transaction.extra["receipt"].present?
         scan.flag!(:duplicate_receipt, entry_id: bank_entry.id)
+        return placeholder
+      end
+
+      # The user set something on the placeholder while the receipt was read: merging would drop
+      # it. The user decides which one to keep.
+      if placeholder.entry.locked_field_names.any?
+        scan.flag!(:possible_duplicates, entry_ids: [ bank_entry.id ])
         return placeholder
       end
 
