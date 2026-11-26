@@ -119,6 +119,9 @@ class Assistant::Responder
     # chain already has it (a Retry asks again for the same prompt).
     def opening_request(previous_response_id)
       unanswered_reply = latest_reply if provider_preserves_response_context?
+      # A chain another provider started (the chat switched models) cannot
+      # be continued here.
+      unanswered_reply = nil unless unanswered_reply && llm.supports_model?(unanswered_reply.ai_model)
       unanswered_calls = unanswered_reply&.unanswered_tool_calls || []
       return { previous_response_id: previous_response_id } if unanswered_calls.empty?
 

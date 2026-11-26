@@ -803,6 +803,26 @@ class AssistantTest < ActiveSupport::TestCase
     end
   end
 
+  test "a new message on the Responses API does not continue a chain another provider started" do
+    anthropic = ScriptedModel.new(api: :anthropic, plan: [ [ "create_tag" ] ], failures: { 2 => :error })
+    responses = ScriptedModel.new(api: :responses, plan: [])
+    Assistant::Builtin.any_instance.stubs(:get_model_provider).with("claude-sonnet-4-5").returns(anthropic)
+    Assistant::Builtin.any_instance.stubs(:get_model_provider).with("gpt-4.1").returns(responses)
+    Assistant::Function::CreateTag.any_instance.stubs(:call).returns({ success: true })
+
+    clear_enqueued_jobs
+    @chat.messages.where(type: "AssistantMessage").destroy_all
+    @chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "claude-sonnet-4-5")
+    perform_enqueued_jobs
+    assert_equal "failed", @chat.messages.where(type: "AssistantMessage").order(:created_at).last.status
+
+    @chat.messages.create!(type: "UserMessage", content: "Did it work?", ai_model: "gpt-4.1")
+    perform_enqueued_jobs
+
+    assert_equal "Done.", @chat.messages.where(type: "AssistantMessage").order(:created_at).last.content
+    assert_nil responses.requests.last[:previous_response_id]
+  end
+
   test "a failed reply's partial text stays out of the history" do
     model = use_scripted_model(api: :chat_completions, plan: [ [ "create_tag" ] ], failures: { 2 => :partial })
     Assistant::Function::CreateTag.any_instance.stubs(:call).returns({ success: true })
@@ -977,6 +997,10 @@ class AssistantTest < ActiveSupport::TestCase
 
       def supports_responses_endpoint?
         @api == :responses
+      end
+
+      def supports_model?(model)
+        model.start_with?(@api == :anthropic ? "claude" : "gpt")
       end
 
       def chat_response(prompt, function_results:, previous_response_id:, streamer:, messages:, conversation_history:, **)
