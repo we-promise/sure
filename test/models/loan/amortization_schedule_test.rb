@@ -290,6 +290,23 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
       "the interest plug must never sit below the period's accrual (#{accrued})"
   end
 
+  test "a sub-cent contracted payment uses the same rounded amount for principal and balance" do
+    schedule = build_schedule(principal: 1_000, annual_rate: 0, term_months: 120, contracted_payment: "10.005")
+
+    first = schedule.payments.first
+    assert_equal BigDecimal("10.01"), first.principal.amount
+    assert_equal BigDecimal("989.99"), first.ending_balance.amount
+    assert_equal schedule.principal, schedule.payments.sum { |row| row.principal.amount }
+  end
+
+  test "balloon sizing corrects a short seed even when the higher probe pays off early" do
+    schedule = build_schedule(principal: 1_000, annual_rate: 0, term_months: 120, balloon_payment: 100)
+
+    assert_equal BigDecimal("7.57"), schedule.periodic_payment.amount
+    assert_equal 120, schedule.payments.length
+    assert_equal BigDecimal("100"), schedule.payments.last.payment.amount
+  end
+
   # With nothing recorded the run is the one it always was: the fixture loan
   # carries neither column and gets the payment the formula sizes.
   test "a loan without contracted figures builds the schedule it always did" do

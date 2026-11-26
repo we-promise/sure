@@ -396,9 +396,6 @@ class LoanTest < ActiveSupport::TestCase
     assert_includes loan.errors[:balloon_payment], "must be greater than 0"
   end
 
-  # A contracted instalment and a balloon are fixed-rate notions: a payment
-  # contracted to move with the rate is neither. Blank rate types say nothing
-  # either way, so only a variable type is refused.
   test "contracted and balloon payments can only be set on a fixed-rate loan" do
     loan = Loan.new(rate_type: "variable", contracted_payment: 1_000)
     assert_not loan.valid?
@@ -410,10 +407,13 @@ class LoanTest < ActiveSupport::TestCase
     assert_not loan.valid?
     assert loan.errors.of_kind?(:base, :fixed_rate_only_payments)
 
-    [ "fixed", nil, "" ].each do |rate_type|
+    [ nil, "" ].each do |rate_type|
       loan = Loan.new(rate_type: rate_type, contracted_payment: 1_000, balloon_payment: 10_000)
-      assert loan.valid?, "#{rate_type.inspect} must not refuse the figures"
+      assert_not loan.valid?, "a loan with #{rate_type.inspect} rate type cannot use the figures"
+      assert loan.errors.of_kind?(:base, :fixed_rate_only_payments)
     end
+
+    assert Loan.new(rate_type: "fixed", contracted_payment: 1_000, balloon_payment: 10_000).valid?
   end
 
   # The schedule is memoised on the loan; assigning a column it is built from

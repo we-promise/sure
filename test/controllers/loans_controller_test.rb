@@ -852,6 +852,15 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-loan-rate-changes-target='fixedOnly'][hidden]", count: 0
   end
 
+  test "the payment fields use the account currency rather than the family currency" do
+    @account.update!(currency: "EUR")
+
+    get edit_loan_path(@account)
+
+    assert_response :success
+    assert_select "[data-loan-rate-changes-target='fixedOnly'] [data-money-field-separator-currency-value='EUR']", count: 2
+  end
+
   # `disabled` used to be applied only by Stimulus, so without JavaScript the
   # sentinel submitted and the writer read it as "remove them all".
   test "the edit form of a fixed loan disables the whole rate-change section server-side" do

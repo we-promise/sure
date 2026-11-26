@@ -16,10 +16,8 @@ import { Controller } from "@hotwired/stimulus";
 // next save resubmits them rather than the bare sentinel that would clear them.
 //
 // The contracted/balloon block mirrors that in reverse: shown only for fixed.
-// It is hidden, never disabled — a disabled input submits nothing, so a fixed
-// loan's recorded figures would survive a switch to variable and fail
-// validation while invisible. Hidden means BLANKED instead: the amount inputs
-// are emptied so they submit "" and save NULL.
+// When hidden, the amounts are disabled and separate empty inputs submit
+// instead. Switching back to fixed restores the editable amounts unchanged.
 export default class extends Controller {
   static targets = [
     "rows",
@@ -28,6 +26,7 @@ export default class extends Controller {
     "section",
     "rateType",
     "fixedOnly",
+    "clearFixedOnly",
   ];
   // The one rate type that cannot move. Anything else non-blank is variable,
   // the same reading as Loan#variable_rate_type?, so a provider-written value
@@ -64,15 +63,12 @@ export default class extends Controller {
     }
     if (this.hasFixedOnlyTarget) {
       this.fixedOnlyTarget.hidden = applies;
-      if (applies) {
-        // Blank, not disabled — a hidden fixed-only field must still submit,
-        // and "" saves NULL rather than keeping a figure the loan now rejects.
-        for (const el of this.fixedOnlyTarget.querySelectorAll(
-          "input[data-money-field-target='amount']",
-        )) {
-          el.value = "";
-        }
+      for (const el of this.fixedOnlyTarget.querySelectorAll(
+        "input[data-money-field-target='amount']",
+      )) {
+        el.disabled = applies;
       }
+      this.clearFixedOnlyTarget.disabled = !applies;
     }
     this.#sync();
   }

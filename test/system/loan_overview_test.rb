@@ -16,6 +16,30 @@ class LoanOverviewTest < ApplicationSystemTestCase
     @account.update_column(:balance, 415_000)
   end
 
+  test "switching back to fixed retains both payment amounts" do
+    @account.loan.update!(contracted_payment: 2_500, balloon_payment: 50_000)
+    visit account_path(@account)
+    find("a[href='#{edit_account_path(@account)}']", visible: :all).execute_script("this.click()")
+
+    within "dialog[open]" do
+      amounts = "[data-loan-rate-changes-target='fixedOnly']"
+      rate_type = find("[data-loan-rate-changes-target='rateType']")
+      rate_type.find("option[value='variable']").select_option
+      assert_no_selector amounts
+      assert_equal [ "", "" ], page.evaluate_script(<<~'JS')
+        Array.from(new FormData(document.querySelector("dialog[open] form")))
+          .filter(([key]) => /\[(contracted_payment|balloon_payment)\]$/.test(key))
+          .map(([, value]) => value)
+      JS
+
+      rate_type.find("option[value='fixed']").select_option
+      within amounts do
+        assert_field I18n.t("loans.form.contracted_payment"), with: "2500.00"
+        assert_field I18n.t("loans.form.balloon_payment"), with: "50000.00"
+      end
+    end
+  end
+
   # The ring is the one part of this tab a request test cannot see. Its colours
   # are CSS variables, and the donut controller passes a colour through to the
   # SVG fill ONLY for the segment ids it is told to -- every other one goes

@@ -24,8 +24,7 @@ class Loan::AmortizationSchedule
       return nil unless loan.amortizable?
 
       # A contracted payment or a balloon is a fixed-rate concept -- the
-      # model refuses them on a variable loan, and here they are not even
-      # read off one.
+      # model requires an explicit fixed rate, and other loans never read them.
       fixed_rate = loan.rate_type == Loan::FIXED_RATE_TYPE
 
       new(
@@ -61,8 +60,8 @@ class Loan::AmortizationSchedule
     @start_date = start_date
     @rate_resolver = rate_resolver
     @day_count_convention = day_count_convention
-    @contracted_payment = contracted_payment && BigDecimal(contracted_payment.to_s)
-    @balloon_payment = balloon_payment && BigDecimal(balloon_payment.to_s)
+    @contracted_payment = contracted_payment && BigDecimal(contracted_payment.to_s).round(currency_precision)
+    @balloon_payment = balloon_payment && BigDecimal(balloon_payment.to_s).round(currency_precision)
   end
 
   # True when this schedule re-amortises part-way through, i.e. the repayment
@@ -121,6 +120,13 @@ class Loan::AmortizationSchedule
   # The date of the final payment, or nil when there's nothing to amortise.
   def payoff_date
     payments.last&.date
+  end
+
+  def final_balloon_payment
+    return unless @balloon_payment
+
+    last = payments.last
+    @balloon_payment if last&.number == term_months && last.payment.amount == @balloon_payment
   end
 
   # The scheduled payment falling in the same calendar month as `date`, if any.
@@ -208,11 +214,13 @@ class Loan::AmortizationSchedule
       rows1, needed1 = settlement_needed(seed + 1)
       slope = needed0 - needed1
 
-      # `needed` decreases (near-)linearly in the instalment. A run that
-      # cleared early has no settlement on the last date to measure, and a
-      # slope that is not positive leaves nothing to extrapolate with -- in
-      # either case the seed stands on its own.
-      return seed if rows0 < term_months || rows1 < term_months || slope <= 0
+      return seed if rows0 < term_months
+      if rows1 < term_months
+        return seed if needed0 <= @balloon_payment
+
+        return balloon_payment_between(seed, seed + 1)
+      end
+      return seed if slope <= 0
 
       instalment = [ (seed + (needed0 - @balloon_payment) / slope).ceil(currency_precision), BigDecimal("0") ].max
 
@@ -226,6 +234,17 @@ class Loan::AmortizationSchedule
       end
 
       instalment
+    end
+
+    def balloon_payment_between(seed, upper_bound)
+      units = 10**currency_precision
+      first_covering = ((seed * units).to_i + 1..(upper_bound * units).to_i).bsearch do |amount|
+        rows, needed = settlement_needed(BigDecimal(amount) / units)
+        rows < term_months || needed <= @balloon_payment
+      end
+      instalment = BigDecimal(first_covering) / units
+      rows, = settlement_needed(instalment)
+      rows == term_months ? instalment : seed
     end
 
     # What the last scheduled instalment must cover at a given held

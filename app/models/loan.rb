@@ -105,7 +105,7 @@ class Loan < ApplicationRecord
   end
 
   private def contracted_amounts_require_fixed_rate
-    return unless variable_rate_type?
+    return if rate_type == FIXED_RATE_TYPE
     return if contracted_payment.nil? && balloon_payment.nil?
 
     errors.add(:base, :fixed_rate_only_payments)

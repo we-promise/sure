@@ -19,6 +19,29 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_equal 0, projection.months_saved
   end
 
+  test "a borrower on contract projects the quoted balloon without artificial interest savings" do
+    loan = build_loan(term_months: 24, interest_rate: 0)
+    loan.update!(contracted_payment: 20_000, balloon_payment: 40_050)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    projection = loan.payoff_projection(as_of: @today)
+
+    assert projection.converged?
+    assert_equal BigDecimal("40050"), projection.payments.last[:payment_amount]
+    assert_equal 0, projection.interest_saved.amount
+  end
+
+  test "a balloon loan with no regular instalments can still be projected" do
+    loan = build_loan(term_months: 24, interest_rate: 0)
+    loan.update!(balloon_payment: 500_050)
+
+    projection = loan.payoff_projection(as_of: @today)
+
+    assert projection.applicable?
+    assert_equal 0, projection.payments.first[:payment_amount]
+    assert_equal BigDecimal("500050"), projection.payments.last[:payment_amount]
+  end
+
   # Extra payments already made need no input of their own: they are why the
   # recorded balance sits below the scheduled one, and the projection starts
   # from that balance (#100, decision 10).
