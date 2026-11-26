@@ -9,6 +9,9 @@ module Onboardable
     # First, we require onboarding, then once that's complete, we require an upgrade for non-subscribed users.
     def require_onboarding_and_upgrade
       return unless Current.user
+      # Authentication#end_orphaned_session! handles (logs + signs out) a user
+      # whose family was destroyed mid-request; never dereference a nil family.
+      return unless Current.family
       return unless redirectable_path?(request.path)
 
       if Current.user.needs_onboarding?

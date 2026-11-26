@@ -27,4 +27,15 @@ class OnboardableTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :success
   end
+
+  test "signs out instead of crashing when the user's family vanished mid-request" do
+    @user.update!(onboarded_at: 1.day.ago)
+    session_record = @user.sessions.order(:created_at).last
+    User.any_instance.stubs(:family).returns(nil)
+
+    get reports_path
+
+    assert_redirected_to new_session_url
+    assert_not Session.exists?(session_record.id)
+  end
 end
