@@ -5303,8 +5303,14 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '400':
+          description: missing account parameter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or the key belongs to a guest
           content:
             application/json:
               schema:
@@ -5359,7 +5365,8 @@ paths:
                       description: ISO 4217 code. Defaults to the family currency.
                     subtype:
                       type: string
-                      description: Account subtype, valid values depend on accountable_type
+                      description: Account subtype. Must be one of the subtypes of
+                        the accountable_type, otherwise the request is rejected.
                     opening_balance_date:
                       type: string
                       format: date

@@ -321,7 +321,6 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal account_names.sort, account_names
   end
 
-  # CREATE action tests
   test "create requires authentication" do
     post "/api/v1/accounts", params: { account: { name: "X", accountable_type: "Depository", balance: 1 } }
     assert_response :unauthorized
@@ -329,20 +328,26 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
 
   test "create is forbidden for a read-only key" do
     assert_no_difference "Account.count" do
-      post "/api/v1/accounts",
-           params: { account: { name: "X", accountable_type: "Depository", balance: 1 } },
-           headers: api_headers(@api_key)
+      post_account({ name: "X", accountable_type: "Depository", balance: 1 }, key: @api_key)
     end
 
     assert_response :forbidden
     assert_equal "insufficient_scope", JSON.parse(response.body)["error"]
   end
 
+  test "create does not let a guest create accounts" do
+    @user.update!(role: :guest)
+
+    assert_no_difference "Account.count" do
+      post_account({ name: "Guest account", accountable_type: "Depository", balance: 1 })
+    end
+
+    assert_response :forbidden
+  end
+
   test "create makes a depository account owned by the key's user" do
     assert_difference -> { @user.family.accounts.count }, 1 do
-      post "/api/v1/accounts",
-           params: { account: { name: "API Chequing", accountable_type: "depository", balance: "1250.50", currency: "CAD" } },
-           headers: api_headers(write_api_key)
+      post_account({ name: "API Chequing", accountable_type: "depository", balance: "1250.50", currency: "CAD" })
     end
 
     assert_response :created
@@ -356,33 +361,35 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @user, account.owner
   end
 
+  test "create accepts a zero balance" do
+    post_account({ name: "Empty", accountable_type: "Depository", balance: "0" })
+
+    assert_response :created
+    assert_equal 0, JSON.parse(response.body)["balance_cents"]
+  end
+
   test "create defaults the currency to the family currency" do
-    post "/api/v1/accounts",
-         params: { account: { name: "Default Currency", accountable_type: "CreditCard", balance: 100 } },
-         headers: api_headers(write_api_key)
+    post_account({ name: "Default Currency", accountable_type: "CreditCard", balance: 100 })
 
     assert_response :created
     assert_equal @user.family.currency, JSON.parse(response.body)["currency"]
     assert_equal "credit_card", JSON.parse(response.body)["account_type"]
   end
 
+  test "create normalizes the currency code" do
+    post_account({ name: "Euro account", accountable_type: "Depository", balance: 1, currency: "eur" })
+
+    assert_response :created
+    assert_equal "EUR", JSON.parse(response.body)["currency"]
+  end
+
   test "create makes a loan with its terms and current balance" do
-    post "/api/v1/accounts",
-         params: {
-           account: {
-             name: "Car Lease",
-             accountable_type: "Loan",
-             balance: "48000.00",
-             accountable_attributes: {
-               initial_balance: "51000.00",
-               start_date: "2026-06-03",
-               interest_rate: "6.5",
-               rate_type: "fixed",
-               term_months: 36
-             }
-           }
-         },
-         headers: api_headers(write_api_key)
+    post_account({
+      name: "Car Lease",
+      accountable_type: "Loan",
+      balance: "48000.00",
+      accountable_attributes: { initial_balance: "51000.00", start_date: "2026-06-03", interest_rate: "6.5", rate_type: "fixed", term_months: 36 }
+    })
 
     assert_response :created
     body = JSON.parse(response.body)
@@ -396,171 +403,175 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_in_delta 6.5, loan.interest_rate.to_f, 0.001
   end
 
-  test "create rejects an unknown accountable type" do
-    assert_no_difference "Account.count" do
-      post "/api/v1/accounts",
-           params: { account: { name: "Bad", accountable_type: "Spaceship", balance: 1 } },
-           headers: api_headers(write_api_key)
+  test "create keeps the entered balance for a loan that started earlier even after the initial sync" do
+    perform_enqueued_jobs do
+      post_account(loan_params(start_date: 1.year.ago.to_date.iso8601))
     end
-
-    assert_response :unprocessable_entity
-    assert_equal "validation_failed", JSON.parse(response.body)["error"]
-  end
-
-  test "create requires a name and a balance" do
-    post "/api/v1/accounts",
-         params: { account: { accountable_type: "Depository", balance: 1 } },
-         headers: api_headers(write_api_key)
-    assert_response :unprocessable_entity
-
-    post "/api/v1/accounts",
-         params: { account: { name: "No balance", accountable_type: "Depository" } },
-         headers: api_headers(write_api_key)
-    assert_response :unprocessable_entity
-  end
-
-  test "create rejects an invalid opening_balance_date" do
-    assert_no_difference "Account.count" do
-      post "/api/v1/accounts",
-           params: { account: { name: "Bad date", accountable_type: "Depository", balance: 1, opening_balance_date: "not-a-date" } },
-           headers: api_headers(write_api_key)
-    end
-
-    assert_response :unprocessable_entity
-  end
-
-  test "create rejects balances that are not finite numbers in the stored range" do
-    [ "1,250.50", "abc", "12abc", "Infinity", "NaN", "1e400", "1000000000000000" ].each do |balance|
-      assert_no_difference "Account.count" do
-        post "/api/v1/accounts",
-             params: { account: { name: "Bad balance", accountable_type: "Depository", balance: balance } },
-             headers: api_headers(write_api_key)
-      end
-
-      assert_response :unprocessable_entity, "balance #{balance.inspect} should be rejected"
-    end
-  end
-
-  test "create rejects a malformed loan initial_balance" do
-    assert_no_difference "Account.count" do
-      post "/api/v1/accounts",
-           params: { account: { name: "Bad loan", accountable_type: "Loan", balance: 100, accountable_attributes: { initial_balance: "5,000", start_date: "2026-06-03" } } },
-           headers: api_headers(write_api_key)
-    end
-
-    assert_response :unprocessable_entity
-  end
-
-  test "create accepts a zero balance and decimal strings" do
-    post "/api/v1/accounts",
-         params: { account: { name: "Empty", accountable_type: "Depository", balance: "0" } },
-         headers: api_headers(write_api_key)
-    assert_response :created
-    assert_equal 0, JSON.parse(response.body)["balance_cents"]
-
-    post "/api/v1/accounts",
-         params: { account: { name: "Decimal", accountable_type: "Depository", balance: "1250.50" } },
-         headers: api_headers(write_api_key)
-    assert_response :created
-    assert_equal 125_050, JSON.parse(response.body)["balance_cents"]
-  end
-
-  test "create rejects an unsupported currency before persisting anything" do
-    assert_no_difference [ "Account.count", "Entry.count" ] do
-      post "/api/v1/accounts",
-           params: { account: { name: "Mystery money", accountable_type: "Depository", balance: 1, currency: "ZZZ" } },
-           headers: api_headers(write_api_key)
-    end
-
-    assert_response :unprocessable_entity
-    assert_equal "validation_failed", JSON.parse(response.body)["error"]
-  end
-
-  test "create normalizes the currency code" do
-    post "/api/v1/accounts",
-         params: { account: { name: "Euro account", accountable_type: "Depository", balance: 1, currency: "eur" } },
-         headers: api_headers(write_api_key)
 
     assert_response :created
-    assert_equal "EUR", JSON.parse(response.body)["currency"]
+    assert_equal 40_000, @user.family.accounts.find(JSON.parse(response.body)["id"]).reload.balance
   end
 
   test "create rejects a loan whose balance would be replaced by initial_balance on its start date" do
-    assert_no_difference "Account.count" do
-      post "/api/v1/accounts",
-           params: {
-             account: {
-               name: "Brand new loan",
-               accountable_type: "Loan",
-               balance: "40000",
-               accountable_attributes: { initial_balance: "50000", start_date: Date.current.iso8601, term_months: 36, interest_rate: 5, rate_type: "fixed" }
-             }
-           },
-           headers: api_headers(write_api_key)
-    end
-
-    assert_response :unprocessable_entity
+    assert_account_rejected(loan_params(start_date: Date.current.iso8601))
     assert_match(/initial_balance/, JSON.parse(response.body)["message"])
   end
 
   test "create accepts a loan starting today when balance equals initial_balance" do
-    post "/api/v1/accounts",
-         params: {
-           account: {
-             name: "Brand new loan",
-             accountable_type: "Loan",
-             balance: "50000",
-             accountable_attributes: { initial_balance: "50000", start_date: Date.current.iso8601, term_months: 36, interest_rate: 5, rate_type: "fixed" }
-           }
-         },
-         headers: api_headers(write_api_key)
+    post_account(loan_params(balance: "50000", start_date: Date.current.iso8601))
 
     assert_response :created
     assert_equal 5_000_000, JSON.parse(response.body)["balance_cents"]
   end
 
-  test "create keeps the entered balance for a loan that started earlier even after the initial sync" do
-    perform_enqueued_jobs do
-      post "/api/v1/accounts",
-           params: {
-             account: {
-               name: "Older loan",
-               accountable_type: "Loan",
-               balance: "40000",
-               accountable_attributes: { initial_balance: "50000", start_date: 1.year.ago.to_date.iso8601, term_months: 36, interest_rate: 5, rate_type: "fixed" }
-             }
-           },
-           headers: api_headers(write_api_key)
-    end
+  test "create keeps the property details the web form accepts" do
+    post_account({
+      name: "Cottage",
+      accountable_type: "Property",
+      balance: "350000",
+      accountable_attributes: { year_built: 1987, area_value: 1450, area_unit: "sqft", cost_tag_id: tags(:one).id }
+    })
 
     assert_response :created
-    account = @user.family.accounts.find(JSON.parse(response.body)["id"]).reload
-    assert_equal 40_000, account.balance
+    property = @user.family.accounts.find(JSON.parse(response.body)["id"]).accountable
+    assert_equal 1987, property.year_built
+    assert_equal 1450, property.area_value
+    assert_equal "sqft", property.area_unit
+    assert_equal tags(:one).id, property.cost_tag_id
+  end
+
+  test "create rejects an unknown accountable type" do
+    assert_account_rejected({ name: "Bad", accountable_type: "Spaceship", balance: 1 })
+  end
+
+  test "create requires a name and a balance" do
+    assert_account_rejected({ accountable_type: "Depository", balance: 1 })
+    assert_account_rejected({ name: "No balance", accountable_type: "Depository" })
+  end
+
+  test "create rejects an invalid opening_balance_date" do
+    assert_account_rejected({ name: "Bad date", accountable_type: "Depository", balance: 1, opening_balance_date: "not-a-date" })
+  end
+
+  test "create rejects balances that are not finite numbers in the stored range" do
+    [ "1,250.50", "abc", "12abc", "Infinity", "NaN", "1e400", "1000000000000000" ].each do |balance|
+      assert_account_rejected({ name: "Bad balance", accountable_type: "Depository", balance: balance }, "balance #{balance.inspect}")
+    end
+  end
+
+  test "create rejects a malformed loan initial_balance" do
+    assert_account_rejected(loan_params(initial_balance: "5,000"))
+  end
+
+  test "create rejects an unsupported currency before persisting anything" do
+    assert_no_difference "Entry.count" do
+      assert_account_rejected({ name: "Mystery money", accountable_type: "Depository", balance: 1, currency: "ZZZ" })
+    end
+  end
+
+  test "create rejects a loan start_date that is not a real date" do
+    [ "not-a-date", "2026-13-45", "2026-6-3", "20260603" ].each do |start_date|
+      assert_account_rejected(loan_params(start_date: start_date), "start_date #{start_date.inspect}")
+    end
+  end
+
+  test "create rejects a property cost tag from another family" do
+    foreign_tag = families(:empty).tags.create!(name: "Not yours")
+
+    assert_account_rejected({
+      name: "Cottage", accountable_type: "Property", balance: "1", accountable_attributes: { cost_tag_id: foreign_tag.id }
+    })
+  end
+
+  test "create answers a missing account with 400 and a non-object account with 422" do
+    post "/api/v1/accounts", params: {}, headers: api_headers(write_api_key), as: :json
+    assert_response :bad_request
+
+    [ "foo", [ 1 ] ].each do |account|
+      assert_no_difference "Account.count" do
+        post "/api/v1/accounts", params: { account: account }, headers: api_headers(write_api_key), as: :json
+      end
+      assert_response :unprocessable_entity, "account #{account.inspect}"
+    end
+  end
+
+  test "create rejects an invalid enum value in accountable_attributes" do
+    assert_account_rejected({ name: "Coin", accountable_type: "Crypto", balance: 1, accountable_attributes: { tax_treatment: "bogus" } })
+  end
+
+  test "create ignores an accountable id instead of failing to find it" do
+    supplied_id = SecureRandom.uuid
+    post_account(loan_params(id: supplied_id, initial_balance: "40000"))
+
+    assert_response :created
+    assert_not_equal supplied_id, @user.family.accounts.find(JSON.parse(response.body)["id"]).accountable_id
+  end
+
+  test "create rejects numeric accountable_attributes that are not numbers" do
+    {
+      "interest_rate" => "abc",
+      "term_months" => "12x",
+      "down_payment" => "1,000"
+    }.each do |field, value|
+      assert_account_rejected(loan_params(field => value), "#{field}=#{value.inspect}")
+    end
+
+    assert_account_rejected({ name: "Cottage", accountable_type: "Property", balance: 1, accountable_attributes: { year_built: "abc" } })
+  end
+
+  test "create rejects a subtype the account type does not have" do
+    assert_account_rejected({ name: "Odd", accountable_type: "Depository", balance: 1, subtype: "bogus" })
+
+    post_account({ name: "Savings", accountable_type: "Depository", balance: 1, subtype: "savings" })
+    assert_response :created
+  end
+
+  test "create rejects an opening_balance_date in the future" do
+    assert_account_rejected({ name: "Future", accountable_type: "Depository", balance: 1, opening_balance_date: 1.day.from_now.to_date.iso8601 })
+  end
+
+  test "create reports a loan start_date in the future as a start_date problem" do
+    assert_account_rejected(loan_params(start_date: 3.days.from_now.to_date.iso8601))
+    assert_no_match(/opening date is today/, JSON.parse(response.body)["message"])
   end
 
   test "create reports model validation errors as 422" do
-    assert_no_difference "Account.count" do
-      post "/api/v1/accounts",
-           params: { account: { name: "Future loan", accountable_type: "Loan", balance: 10, accountable_attributes: { start_date: 1.year.from_now.to_date.iso8601 } } },
-           headers: api_headers(write_api_key)
-    end
-
-    assert_response :unprocessable_entity
+    assert_account_rejected(loan_params(start_date: 1.year.from_now.to_date.iso8601, initial_balance: nil))
   end
 
   private
 
     def write_api_key
-      @write_api_key ||= begin
-        key = ApiKey.create!(
-          user: @user,
-          name: "Test Write Key",
-          scopes: [ "read_write" ],
-          source: "mobile",
-          display_key: "test_write_#{SecureRandom.hex(8)}"
-        )
-        key
+      @write_api_key ||= ApiKey.create!(
+        user: @user,
+        name: "Test Write Key",
+        scopes: [ "read_write" ],
+        source: "mobile",
+        display_key: "test_write_#{SecureRandom.hex(8)}"
+      )
+    end
+
+    def post_account(account, key: write_api_key)
+      post "/api/v1/accounts", params: { account: account }, headers: api_headers(key)
+    end
+
+    def assert_account_rejected(account, message = nil)
+      assert_no_difference "Account.count" do
+        post_account(account)
       end
+
+      assert_response :unprocessable_entity, message
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    end
+
+    # A 36 month loan with a current balance below its original principal.
+    def loan_params(balance: "40000", **loan_attributes)
+      {
+        name: "Loan",
+        accountable_type: "Loan",
+        balance: balance,
+        accountable_attributes: { initial_balance: "50000", term_months: 36, interest_rate: 5, rate_type: "fixed" }.merge(loan_attributes)
+      }
     end
 
     def api_headers(api_key)

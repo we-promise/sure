@@ -128,12 +128,12 @@ RSpec.describe 'API V1 Accounts', type: :request do
               name: { type: :string, description: 'Account name (required)' },
               accountable_type: {
                 type: :string,
-                enum: (Accountable::TYPES.map(&:underscore) + Accountable::TYPES).uniq,
+                enum: Accountable::TYPES.map(&:underscore) + Accountable::TYPES,
                 description: 'Account type (required). CamelCase names such as CreditCard are also accepted.'
               },
               balance: { type: :number, description: 'Current balance (required). For liabilities, the amount owed.' },
               currency: { type: :string, description: 'ISO 4217 code. Defaults to the family currency.' },
-              subtype: { type: :string, description: 'Account subtype, valid values depend on accountable_type' },
+              subtype: { type: :string, description: 'Account subtype. Must be one of the subtypes of the accountable_type, otherwise the request is rejected.' },
               opening_balance_date: {
                 type: :string, format: :date,
                 description: 'Date of the opening balance. Defaults to two years ago; a loan\'s start_date takes precedence.'
@@ -187,7 +187,15 @@ RSpec.describe 'API V1 Accounts', type: :request do
         run_test!
       end
 
-      response '403', 'insufficient scope' do
+      response '400', 'missing account parameter' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { {} }
+
+        run_test!
+      end
+
+      response '403', 'insufficient scope, or the key belongs to a guest' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
