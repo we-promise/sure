@@ -89,8 +89,14 @@ module Family::VectorSearchable
     document.file_size = file.size
     document.file.attach(io: file, filename:, content_type:)
     document.save!
-    IndexFamilyDocumentJob.perform_later(document)
-    document
+    # A queue that refuses the job (ActiveJob::EnqueueError) returns false. The row is already
+    # committed, so it must not stay pending with a file no job will ever index.
+    queued = IndexFamilyDocumentJob.perform_later(document)
+    return document unless queued == false
+
+    document.mark_error!("indexing job could not be queued")
+    document.purge_file_if_settled
+    false
   end
 
   def upload_document(file_content:, filename:, metadata: {})

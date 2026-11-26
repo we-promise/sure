@@ -326,8 +326,11 @@ class ImportsController < ApplicationController
         return
       end
 
-      Current.family.upload_document_later(file)
-      redirect_to new_import_path, notice: t("imports.create.document_uploaded")
+      if Current.family.upload_document_later(file)
+        redirect_to new_import_path, notice: t("imports.create.document_uploaded")
+      else
+        redirect_to new_import_path, alert: t("imports.create.document_upload_failed")
+      end
     end
 
     def document_upload_supported_extensions

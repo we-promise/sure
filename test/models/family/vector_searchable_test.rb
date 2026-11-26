@@ -66,6 +66,19 @@ class Family::VectorSearchableTest < ActiveSupport::TestCase
     assert_equal "a note", document.file.download
   end
 
+  test "upload_document_later fails and purges the staged file when the queue rejects the job" do
+    file = uploaded_file(filename: "notes.txt", content_type: "text/plain", content: "a note")
+    IndexFamilyDocumentJob.expects(:perform_later).returns(false)
+
+    result = @family.upload_document_later(file)
+
+    document = @family.family_documents.find_by!(filename: "notes.txt")
+    assert_equal false, result
+    assert_equal "error", document.status
+    assert_match(/could not be queued/, document.metadata["error"])
+    assert_not document.file.attached?
+  end
+
   test "indexing a pending row records processing and queues its poll after the write" do
     document = @family.family_documents.create!(filename: "notes.txt", status: "pending")
     adapter = stub("adapter")

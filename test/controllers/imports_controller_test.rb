@@ -203,6 +203,25 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("imports.create.document_uploaded"), flash[:notice]
   end
 
+  test "does not report success when the document indexing job is rejected" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.csv .pdf])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
+    Family.any_instance.expects(:upload_document_later).returns(false)
+
+    post imports_url, params: {
+      import: {
+        type: "DocumentImport",
+        import_file: file_fixture_upload("imports/valid.csv", "text/csv")
+      }
+    }
+
+    assert_redirected_to new_import_url
+    assert_nil flash[:notice]
+    assert_equal I18n.t("imports.create.document_upload_failed"), flash[:alert]
+  end
+
   test "summary renders the import outcome for a pdf import" do
     get summary_import_url(imports(:pdf_with_rows))
 
