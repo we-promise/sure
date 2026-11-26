@@ -17,10 +17,18 @@ en:
       monthly_subscriptions: What am I paying monthly for subscriptions?
       safe_to_spend: How much is safe to spend this period?
     smart_configurations:
+      create:
+        title: "AI suggestions for %{name}"
+        waiting: Reading this bill's payment history to check its configuration.
+        worker_unhealthy: The background worker that runs AI work may be down or backed up.
+        failed: Could not start the analysis. This bill's configuration is untouched.
       show:
+        stop: Stop
         trigger: Let AI configure
         title: "AI suggestions for %{name}"
         intro: Check the changes to apply. Unchecked ones are left exactly as they are.
+        stopped: Stopped. The model may still finish this request; nothing here will change.
+        back: Back to the bill
         no_changes: This bill already matches its payment history. Nothing to change.
         failed: Could not analyze this bill right now. Its configuration is untouched.
         field_name: Name

@@ -2709,13 +2709,13 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     use_ai_routes
     get_bill_drawer(bill)
     assert_response :success
-    assert_match smart_configuration_bill_path(bill), response.body
+    assert_match bill_smart_configurations_path(bill), response.body
 
     Assistant.stubs(:builtin_provider).returns(Object.new)
     use_no_ai
     get_bill_drawer(bill)
     assert_response :success
-    assert_no_match smart_configuration_bill_path(bill), response.body
+    assert_no_match bill_smart_configurations_path(bill), response.body
   end
 
   test "price changes on accounts the member cannot reach stay out of notices and the rollup" do

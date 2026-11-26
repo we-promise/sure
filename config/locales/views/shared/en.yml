@@ -4,6 +4,8 @@ en:
     self_hostable:
       redis_configured: "Redis is now configured properly! You can now setup your Sure application."
   shared:
+    ai_suggestion_failure:
+      generation_failed: The analysis could not be completed. Your entries are unchanged.
     preview: Preview
     exchange_rate_notes:
       missing:

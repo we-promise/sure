@@ -6,6 +6,7 @@ class DataCleanerJob < ApplicationJob
     clean_expired_archived_exports
     clean_stale_enable_banking_psu_ips
     clean_abandoned_ai_generation_runs
+    clean_old_ai_suggestions
   end
 
   private
@@ -14,6 +15,14 @@ class DataCleanerJob < ApplicationJob
       deleted_count = Ai::GenerationRun.sweep
 
       Rails.logger.info("DataCleanerJob: Deleted #{deleted_count} abandoned AI generation runs") if deleted_count > 0
+    end
+
+    # Nothing reads a suggestion once its dialog is closed; the row is only the
+    # job's hand-off to the browser, so a week is plenty.
+    def clean_old_ai_suggestions
+      deleted_count = RecurringTransaction::Suggestion.where(created_at: ...7.days.ago).delete_all
+
+      Rails.logger.info("DataCleanerJob: Deleted #{deleted_count} old AI bill suggestions") if deleted_count > 0
     end
 
     def clean_old_merchant_associations

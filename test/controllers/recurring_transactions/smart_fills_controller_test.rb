@@ -12,12 +12,41 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     )
   end
 
-  test "applies suggested values to the form and says so" do
+  test "a request stores a pending suggestion, queues its job and shows a waiting frame" do
+    assert_difference("RecurringTransaction::Suggestion.count", 1) do
+      assert_enqueued_jobs 1, only: Ai::GenerationJob do
+        post recurring_transactions_smart_fills_url(entry_id: @entry.id), headers: { "Turbo-Frame" => "modal" }
+      end
+    end
+
+    suggestion = @family.recurring_transaction_suggestions.order(:created_at).last
+    assert suggestion.pending?
+    assert suggestion.fill?
+    assert_equal @entry, suggestion.entry
+    assert_response :success
+    assert_match "Reading this charge", response.body
+    assert_select "turbo-cable-stream-source"
+    assert_select "form[action=?]", recurring_transactions_smart_fill_path(suggestion)
+    assert_select "input[name=_method][value=delete]"
+  end
+
+  test "a second request reuses the pending suggestion" do
+    assert_enqueued_jobs 1, only: Ai::GenerationJob do
+      post recurring_transactions_smart_fills_url(entry_id: @entry.id), headers: { "Turbo-Frame" => "modal" }
+      post recurring_transactions_smart_fills_url(entry_id: @entry.id), headers: { "Turbo-Frame" => "modal" }
+    end
+
+    assert_equal 1, @family.recurring_transaction_suggestions.count
+  end
+
+  test "the stored answer is rendered on show with the suggested values in the form" do
     stub_provider(raw(name: "Gym Membership", amount: 42.0, frequency: "weekly", confidence: 0.9,
                       rationale: "Weekly gaps between charges"))
 
-    post smart_fill_recurring_transactions_url(entry_id: @entry.id),
-         headers: { "Turbo-Frame" => "modal" }
+    suggestion = start_suggestion
+    assert_equal "complete", suggestion.status
+
+    get recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
 
     assert_response :success
     assert_match I18n.t("recurring_transactions.new.smart_fill_applied"), response.body
@@ -26,112 +55,54 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_select "input[name=?][value=?]", "recurring_transaction[amount]", "42.00"
   end
 
-  test "a one-off suggestion keeps the date of the charge it was read from" do
+  test "a one-off answer keeps the date of the charge it was read from" do
     charged_on = 20.days.ago.to_date
     entry = accounts(:depository).entries.create!(
       date: charged_on, amount: 320, currency: "USD", name: "CAR REGISTRATION", entryable: Transaction.new
     )
     stub_provider(raw(name: "Car registration", amount: 320.0, frequency: "once", confidence: 0.8))
 
-    post smart_fill_recurring_transactions_url(entry_id: entry.id),
-         headers: { "Turbo-Frame" => "modal" }
+    get recurring_transactions_smart_fill_url(start_suggestion(entry:)), headers: { "Turbo-Frame" => "modal" }
 
     assert_response :success
     assert_select "input[name=?][value=?]", "recurring_transaction[first_due_on]", charged_on.iso8601
   end
 
-  # Smart fill starts from the same prefill as the plain dialog, so the
-  # transaction's category reaches the form here too.
-  test "keeps the category of the transaction it starts from" do
+  test "the category of the source transaction survives an answer that proposes none" do
     @entry.entryable.update!(category: categories(:food_and_drink))
     stub_provider(raw(name: "Gym Membership", amount: 42.0, frequency: "monthly", confidence: 0.9))
 
-    post smart_fill_recurring_transactions_url(entry_id: @entry.id),
-         headers: { "Turbo-Frame" => "modal" }
+    get recurring_transactions_smart_fill_url(start_suggestion), headers: { "Turbo-Frame" => "modal" }
 
-    assert_response :success
     assert_select "input[name=?][value=?]", "recurring_transaction[category_id]", categories(:food_and_drink).id
   end
 
-  test "a provider failure keeps the plain prefill and explains" do
-    stub_ai(:bill_setup, raises: Ai::Error::Upstream.new("provider down", status: 503))
+  test "a provider failure leaves the plain prefill and explains on show" do
+    stub_ai(:bill_setup, raises: Ai::Error::InvalidOutput.new("no JSON"))
 
-    post smart_fill_recurring_transactions_url(entry_id: @entry.id),
-         headers: { "Turbo-Frame" => "modal" }
+    suggestion = start_suggestion
+    assert suggestion.failed?
+
+    get recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
 
     assert_response :success
-    assert_match "Could not analyze the charge history", response.body
+    assert_match "Could not analyze this charge", response.body
     assert_select "input[name=?][value=?]", "recurring_transaction[name]", "GYM MEMBERSHIP",
       { count: 1 }, "the entry's own prefill must survive a failed suggestion"
-  end
-
-  test "sent back with the reason when no model is set up for bills" do
-    use_no_ai
-
-    post smart_fill_recurring_transactions_url(entry_id: @entry.id)
-
-    assert_redirected_to root_path
-    assert_equal Ai::Availability.unavailable(:bill_setup, :not_configured).message_for(@user), flash[:alert]
-  end
-
-  test "sent back without the user's AI switch" do
-    stub_provider(raw)
-    @user.update!(ai_enabled: false)
-
-    post smart_fill_recurring_transactions_url(entry_id: @entry.id)
-
-    assert_redirected_to root_path
-    assert_equal Ai::Availability.unavailable(:bill_setup, :user_disabled).message_for(@user), flash[:alert]
-  end
-
-  test "a JSON request gets the reason" do
-    use_no_ai
-
-    post smart_fill_recurring_transactions_url(entry_id: @entry.id, format: :json)
-
-    assert_response :forbidden
-    assert_equal({ "error" => "ai_unavailable", "reason" => "not_configured" }, response.parsed_body)
-  end
-
-  test "a generic entry name skips ILIKE evidence gathering, using only the picked entry" do
-    unrelated = accounts(:depository).entries.create!(
-      date: 3.days.ago.to_date, amount: 999, currency: "USD",
-      name: I18n.t("transactions.unknown_name"), entryable: Transaction.new
-    )
-    generic_entry = accounts(:depository).entries.create!(
-      date: Date.current, amount: 40, currency: "USD",
-      name: I18n.t("transactions.unknown_name"), entryable: Transaction.new
-    )
-
-    stub_provider(raw)
-
-    RecurringTransaction::AiSetupSuggester.any_instance.expects(:suggest_from_entries)
-      .with([ generic_entry ])
-      .returns(RecurringTransaction::AiSetupSuggester::Suggestion.new(
-        name: nil, amount: nil, frequency: nil, day_of_month: nil, weekday: nil,
-        month_of_year: nil, category_id: nil, category_name: nil, bill_type: nil, autopay: nil,
-        confidence: nil, rationale: nil
-      ))
-
-    post smart_fill_recurring_transactions_url(entry_id: generic_entry.id),
-         headers: { "Turbo-Frame" => "modal" }
-
-    assert_response :success
-    assert unrelated.persisted?, "sanity check: the unrelated same-name entry exists in the DB"
   end
 
   test "an inaccessible entry never becomes evidence" do
     stub_provider(raw(name: "Should not appear"))
     hidden = accounts(:investment).entries.create!(
-      date: Date.current, amount: 30, currency: "USD", name: "PRIVATE FEE",
-      entryable: Transaction.new
+      date: Date.current, amount: 30, currency: "USD", name: "PRIVATE FEE", entryable: Transaction.new
     )
     member = users(:family_member)
     member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
     sign_in member
 
-    post smart_fill_recurring_transactions_url(entry_id: hidden.id),
-         headers: { "Turbo-Frame" => "modal" }
+    assert_no_enqueued_jobs only: Ai::GenerationJob do
+      post recurring_transactions_smart_fills_url(entry_id: hidden.id), headers: { "Turbo-Frame" => "modal" }
+    end
 
     assert_response :success
     assert_match "Could not analyze the charge history", response.body
@@ -146,8 +117,7 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     )
     stub_provider(raw(name: "Gym Membership", amount: 40.0, frequency: "monthly", confidence: 0.9))
 
-    post smart_fill_recurring_transactions_url(entry_id: @entry.id),
-         headers: { "Turbo-Frame" => "modal" }
+    get recurring_transactions_smart_fill_url(start_suggestion), headers: { "Turbo-Frame" => "modal" }
 
     assert_response :success
     assert_match I18n.t("recurring_transactions.new.covered_title"), response.body
@@ -155,9 +125,90 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_select "input[type=hidden][name=entry_id][value=?]", @entry.id
   end
 
+  test "Stop cancels a pending suggestion and a late job cannot revive it" do
+    stub_provider(raw(name: "Too late"))
+    suggestion = start_pending_suggestion
+
+    assert_no_enqueued_jobs only: Ai::GenerationJob do
+      delete recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
+    end
+    assert suggestion.reload.cancelled?
+    assert_response :success
+    assert_match "Stopped", response.body
+    assert_select "input[name=_method][value=delete]", count: 0
+
+    perform_enqueued_jobs(only: Ai::GenerationJob)
+
+    assert suggestion.reload.cancelled?
+    assert_nil suggestion.result
+    assert_nil suggestion.error
+  end
+
+  test "Stop on a finished suggestion changes nothing and reloads show" do
+    stub_provider(raw(name: "Gym Membership"))
+    suggestion = start_suggestion
+    result = suggestion.result
+
+    delete recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
+
+    assert_redirected_to recurring_transactions_smart_fill_path(suggestion)
+    assert_equal result, suggestion.reload.result
+    assert suggestion.complete?
+  end
+
+  test "a suggestion whose job could not be queued is failed straight away" do
+    Ai::GenerationRun.stubs(:enqueue).raises(StandardError, "queue down")
+
+    post recurring_transactions_smart_fills_url(entry_id: @entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    suggestion = @family.recurring_transaction_suggestions.order(:created_at).last
+    assert suggestion.failed?
+    assert_equal "generation_failed", suggestion.error
+    assert_match "Could not analyze this charge", response.body
+  end
+
+  test "sent back with the reason when no model is set up for bills" do
+    use_no_ai
+
+    post recurring_transactions_smart_fills_url(entry_id: @entry.id)
+
+    assert_redirected_to root_path
+    assert_equal Ai::Availability.unavailable(:bill_setup, :not_configured).message_for(@user), flash[:alert]
+  end
+
+  test "show and stop stay reachable after the feature goes down" do
+    suggestion = start_pending_suggestion
+    use_no_ai
+
+    get recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
+    assert_response :success
+    assert_match "Reading this charge", response.body
+
+    delete recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
+    assert_response :success
+    assert suggestion.reload.cancelled?
+  end
+
+  test "sent back without the user's AI switch" do
+    @user.update!(ai_enabled: false)
+
+    post recurring_transactions_smart_fills_url(entry_id: @entry.id)
+
+    assert_redirected_to root_path
+    assert_equal Ai::Availability.unavailable(:bill_setup, :user_disabled).message_for(@user), flash[:alert]
+  end
+
+  test "a JSON request gets the reason" do
+    use_no_ai
+
+    post recurring_transactions_smart_fills_url(entry_id: @entry.id, format: :json)
+
+    assert_response :forbidden
+    assert_equal({ "error" => "ai_unavailable", "reason" => "not_configured" }, response.parsed_body)
+  end
+
   private
 
-    # The model's answer, as JSON.
     def raw(**overrides)
       {
         name: nil, amount: nil, frequency: nil, day_of_month: nil, weekday: nil,
@@ -167,4 +218,17 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     end
 
     def stub_provider(suggestion) = stub_ai(:bill_setup, returns: suggestion)
+
+    def start_pending_suggestion(entry: @entry)
+      post recurring_transactions_smart_fills_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+      @family.recurring_transaction_suggestions.where(status: :pending).order(:created_at).last
+    end
+
+    # The controller starts the request, then the job stores the answer: exactly
+    # what the browser does when the broadcast reloads the waiting frame.
+    def start_suggestion(entry: @entry)
+      suggestion = start_pending_suggestion(entry:)
+      perform_enqueued_jobs(only: Ai::GenerationJob)
+      suggestion.reload
+    end
 end

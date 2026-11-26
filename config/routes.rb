@@ -654,9 +654,9 @@ Rails.application.routes.draw do
       post :ai_review, to: "bills/ai_reviews#create"
       post :reset_feed_token
     end
-    member do
-      get :smart_configuration, to: "bills/smart_configurations#show"
-    end
+    # Each request is its own resource, so show and Stop can name the suggestion
+    # the job is working on. The old member route goes with the synchronous flow.
+    resources :smart_configurations, only: %i[create show destroy], module: :bills
   end
   get "bills_feed/:token", to: "bills_feeds#show", as: :bills_feed, defaults: { format: :ics }
 
@@ -686,7 +686,6 @@ Rails.application.routes.draw do
       # URL and outside CSRF protection. Every call site passes method: :post.
       post :identify
       post :cleanup
-      post :smart_fill, to: "recurring_transactions/smart_fills#create"
       patch :update_settings
     end
 
@@ -695,6 +694,12 @@ Rails.application.routes.draw do
       post :confirm
       post :dismiss
     end
+  end
+
+  # The suggestion is a resource: create starts the job, show renders its stored
+  # answer, destroy stops it. Replaces the one-shot smart_fill POST.
+  namespace :recurring_transactions do
+    resources :smart_fills, only: %i[create show destroy]
   end
 
   resources :auto_matches, only: %i[index] do

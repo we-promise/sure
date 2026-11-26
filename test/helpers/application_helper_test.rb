@@ -231,6 +231,20 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal "•••12", mask_last4("12")
   end
 
+  test "#ai_failure_message never shows provider text" do
+    suggestion = stub(error: "generation_failed")
+
+    assert_equal I18n.t("shared.ai_suggestion_failure.generation_failed"), ai_failure_message(suggestion)
+  end
+
+  test "#ai_failure_message words a router reason for the current user" do
+    user = users(:family_admin)
+    Current.stubs(:user).returns(user)
+    suggestion = stub(error: "not_configured")
+
+    assert_equal Ai::Availability.unavailable(:bill_setup, :not_configured).message_for(user), ai_failure_message(suggestion)
+  end
+
   # `group-open:` matches any open ancestor `.group`, so a chevron inside a
   # closed disclosure nested in an open one would show as open.
   test "#disclosure_chevron follows its own details element" do

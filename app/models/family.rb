@@ -129,6 +129,7 @@ class Family < ApplicationRecord
 
   has_many :llm_usages, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  has_many :recurring_transaction_suggestions, class_name: "RecurringTransaction::Suggestion", dependent: :destroy
   has_many :recurring_occurrences, dependent: :destroy
   has_many :insights, dependent: :destroy
 
