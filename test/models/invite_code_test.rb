@@ -22,4 +22,12 @@ class InviteCodeTest < ActiveSupport::TestCase
       assert_equal InviteCode.generate!, InviteCode.last.token
     end
   end
+
+  test "claim! returns nil when a concurrent claim already removed the code" do
+    code = InviteCode.create!
+    InviteCode.where(id: code.id).delete_all
+    InviteCode.stubs(:find_by).returns(code)
+
+    assert_nil InviteCode.claim!(code.token)
+  end
 end
