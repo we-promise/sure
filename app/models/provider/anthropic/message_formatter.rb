@@ -5,8 +5,9 @@ class Provider::Anthropic::MessageFormatter
   # - prompt: text of the current user turn, sent on its own only when there
   #   is no stored conversation
   # - conversation_history: the stored conversation, chronologically ordered
-  #   Message records (UserMessage / AssistantMessage) up to and including the
-  #   current prompt, as Assistant::Responder#history_messages selects them
+  #   Message records (UserMessage / AssistantMessage) ending with the current
+  #   prompt and its failed replies, as Assistant::Responder#history_messages
+  #   selects them
   # - function_results: tool-result entries for the in-flight follow-up call
   #   (the responder feeds these back after executing the tool_use blocks
   #   returned by the previous requests, tagging each with its :round)

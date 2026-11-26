@@ -197,22 +197,33 @@ class Assistant::Responder
     end
 
     # The stored conversation every provider request replays, in order and
-    # including the current prompt. Only the reply being generated (pending)
-    # is left out; its tool rounds travel as in-flight function_results.
-    # Failed replies stay in: the tools they ran happened, and a model that
-    # does not see them would run them again. Their partial text does not
+    # ending with the turn being answered: the current prompt and the replies
+    # to it that failed. Only the reply being generated (pending) is left out;
+    # its tool rounds travel as in-flight function_results. Failed replies
+    # stay in: the tools they ran happened, and a model that does not see them
+    # would run them again. Their partial text does not
     # (Message#replayed_content). Memoized so a turn fires one history query.
     def history_messages
       @history_messages ||=
         if chat&.messages
-          chat.messages
-              .where(type: [ "UserMessage", "AssistantMessage" ], status: [ "complete", "failed" ])
-              .includes(:tool_calls)
-              .ordered
-              .to_a
+          up_to_current_turn(
+            chat.messages
+                .where(type: [ "UserMessage", "AssistantMessage" ], status: [ "complete", "failed" ])
+                .includes(:tool_calls)
+                .ordered
+                .to_a
+          )
         else
           []
         end
+    end
+
+    # A prompt sent after this one gets its own reply. Replaying it here
+    # would answer it twice and leave this prompt without an answer.
+    def up_to_current_turn(messages)
+      position = messages.index(message)
+      later_prompt = position && messages.drop(position + 1).index { |chat_message| chat_message.is_a?(UserMessage) }
+      later_prompt ? messages.first(position + 1 + later_prompt) : messages
     end
 
     # Builds the OpenAI-shaped messages payload (role: "user" | "assistant" |

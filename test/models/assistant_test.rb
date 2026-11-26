@@ -778,6 +778,19 @@ class AssistantTest < ActiveSupport::TestCase
     end
   end
 
+  %i[chat_completions anthropic].each do |api|
+    test "a reply answers its own prompt when another message arrives before it runs (#{api})" do
+      model = use_scripted_model(api: api, plan: [])
+      @chat.messages.create!(type: "UserMessage", content: "And my debts?", ai_model: "gpt-4.1")
+
+      perform_enqueued_jobs
+
+      first_request, second_request = model.requests
+      assert_equal @message.content, first_request[:transcript].last
+      assert_equal "And my debts?", second_request[:transcript].last
+    end
+  end
+
   test "a failed reply's partial text stays out of the history" do
     model = use_scripted_model(api: :chat_completions, plan: [ [ "create_tag" ] ], failures: { 2 => :partial })
     Assistant::Function::CreateTag.any_instance.stubs(:call).returns({ success: true })
