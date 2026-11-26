@@ -3,7 +3,6 @@ class ScalableCapitalItem::Syncer
 
   SOURCE = "scalable_capital"
   CURRENCY = Provider::ScalableCapital::Snapshot::CURRENCY
-  CLI_LOCK_KEY = 439_927_190_381_238_853
 
   def initialize(item, client: Provider::ScalableCapital.new)
     @item = item
@@ -13,26 +12,16 @@ class ScalableCapitalItem::Syncer
   def perform_sync(sync)
     raise Provider::ScalableCapital::Error, "Scalable Capital is disabled for this household" unless @item.configured?
 
-    with_cli_lock do
-      reader = Provider::ScalableCapital::Snapshot.new(@client, @item.reload)
-      snapshots = reader.fetch
+    ScalableCapitalItem.with_cli_lock do
+      @item.reload
+      snapshots, checkpoints, skipped = read_snapshots
       next if sync.cancel_requested?
 
       # Price-provider lookups run before the ledger transaction.
       securities = ScalableCapitalItem::Securities.new(@item, snapshots)
       accounts = @item.with_lock do
         result = import_snapshots(snapshots, securities)
-        checkpoints = {
-          broker_account_id: reader.broker_account_id,
-          broker_synced_through: [ @item.broker_synced_through, reader.through ].compact.max,
-          security_ids: securities.mapping,
-          status: :good
-        }
-        if snapshots.any? { |snapshot| snapshot.fetch(:kind) == :savings }
-          checkpoints[:savings_id] = reader.savings_id
-          checkpoints[:savings_synced_through] = [ @item.savings_synced_through, reader.through ].compact.max
-        end
-        @item.update!(checkpoints)
+        @item.update!(checkpoints.merge(security_ids: securities.mapping, status: :good))
         result
       end
 
@@ -41,7 +30,7 @@ class ScalableCapitalItem::Syncer
       collect_transaction_stats(sync, account_ids: account_ids, source: SOURCE)
       collect_trades_stats(sync, account_ids: account_ids, source: SOURCE)
       collect_health_stats(sync)
-      report_skipped(reader.skipped) if reader.skipped.positive?
+      report_skipped(skipped) if skipped.positive?
     end
   rescue Provider::ScalableCapital::AuthenticationError => error
     @item.update!(status: :requires_update)
@@ -62,18 +51,41 @@ class ScalableCapitalItem::Syncer
 
   private
 
-    def with_cli_lock
-      ScalableCapitalItem.with_connection do |connection|
-        unless connection.select_value("SELECT pg_try_advisory_lock(#{CLI_LOCK_KEY})")
-          raise Provider::ScalableCapital::Error, "A Scalable Capital sync is already running"
-        end
+    def read_snapshots
+      return read_legacy_snapshots if @item.selected_sources.blank?
 
-        begin
-          yield
-        ensure
-          connection.select_value("SELECT pg_advisory_unlock(#{CLI_LOCK_KEY})")
-        end
+      identity = @client.identity
+      if identity != @item.broker_account_id
+        raise Provider::ScalableCapital::AuthenticationError, "Sign in with the original Scalable account"
       end
+
+      through = Time.at(Time.current.to_i).utc
+      skipped = 0
+      snapshots = []
+      selections = @item.selected_sources.map do |attributes|
+        selection = ScalableCapitalItem::Selection.new(attributes, item: @item)
+        reader = Provider::ScalableCapital::Snapshot.new(@client, selection, identity: identity, through: through)
+        source_snapshots = reader.fetch
+        snapshots.concat(source_snapshots.map { |snapshot| snapshot.merge(selection.snapshot_attributes) })
+        skipped += reader.skipped
+        source_snapshots.empty? ? attributes : selection.advanced(through)
+      end
+      [ snapshots, { selected_sources: selections }, skipped ]
+    end
+
+    def read_legacy_snapshots
+      reader = Provider::ScalableCapital::Snapshot.new(@client, @item)
+      snapshots = reader.fetch
+      checkpoints = {
+        broker_account_id: reader.broker_account_id,
+        broker_synced_through: [ @item.broker_synced_through, reader.through ].compact.max,
+        broker_history_version: ScalableCapitalItem::BROKER_HISTORY_VERSION
+      }
+      if snapshots.any? { |snapshot| snapshot.fetch(:kind) == :savings }
+        checkpoints[:savings_id] = reader.savings_id
+        checkpoints[:savings_synced_through] = [ @item.savings_synced_through, reader.through ].compact.max
+      end
+      [ snapshots, checkpoints, reader.skipped ]
     end
 
     def import_snapshots(snapshots, securities)
@@ -85,18 +97,18 @@ class ScalableCapitalItem::Syncer
         account.lock!
         next unless source.reload.account_provider&.account_id == account.id && !account.pending_deletion?
 
-        result[snapshot.fetch(:kind)] = Account::ProviderImportAdapter.new(account)
+        result[[ snapshot[:source_key], snapshot.fetch(:kind) ]] = Account::ProviderImportAdapter.new(account)
       end
 
-      securities.resolve_pending! if adapters[:brokerage]
+      securities.resolve_pending! if adapters.keys.any? { |_, kind| kind == :brokerage }
 
       cash_transaction_ids = snapshots.each_with_object([]) do |snapshot, ids|
-        adapter = adapters[snapshot.fetch(:kind)]
+        adapter = adapters[[ snapshot[:source_key], snapshot.fetch(:kind) ]]
         next unless adapter
 
         snapshot.fetch(:entries).each do |entry|
           if entry.key?(:isin)
-            import_trade(adapter, adapters[:cash], securities, entry)
+            import_trade(adapter, adapters[[ snapshot[:source_key], :cash ]], securities, entry)
           elsif (imported = import_transaction(adapter, entry))
             ids << imported.entryable_id
           end
@@ -106,7 +118,7 @@ class ScalableCapitalItem::Syncer
       revalidate_cash_transfers(cash_transaction_ids)
 
       snapshots.each do |snapshot|
-        adapter = adapters[snapshot.fetch(:kind)]
+        adapter = adapters[[ snapshot[:source_key], snapshot.fetch(:kind) ]]
         update_balance(adapter, snapshot, securities) if adapter
       end
 
@@ -114,10 +126,11 @@ class ScalableCapitalItem::Syncer
     end
 
     def find_or_create_source(snapshot)
-      source = @item.scalable_capital_accounts.find_or_initialize_by(kind: snapshot.fetch(:kind))
+      source = @item.scalable_capital_accounts.find_or_initialize_by(kind: snapshot.fetch(:kind), source_key: snapshot[:source_key])
       if source.new_record?
         source.save!
-        source.create_linked_account!(balance: snapshot.fetch(:balance), cash_balance: snapshot.fetch(:cash))
+        source.create_linked_account!(balance: snapshot.fetch(:balance), cash_balance: snapshot.fetch(:cash),
+                                      label: snapshot[:source_label], junior: snapshot[:junior])
       end
       source
     end
@@ -139,7 +152,8 @@ class ScalableCapitalItem::Syncer
     def import_trade(adapter, cash_adapter, securities, entry)
       external_id = entry.fetch(:external_id)
       settlement_id = "settlement:#{external_id}"
-      trade_entry = Entry.where(account_id: adapter.account.id, external_id: external_id)
+      trade_ids = entry[:related_trade_ids] || [ external_id ]
+      trade_entry = Entry.where(account_id: adapter.account.id, external_id: trade_ids)
       account_ids = [ adapter.account.id, cash_adapter&.account&.id ].compact
       settlement_entries = Entry.transactions.where(account_id: account_ids, external_id: settlement_id)
 
@@ -148,7 +162,7 @@ class ScalableCapitalItem::Syncer
       return if existing.any? { |record| cash_amount_protected?(record) }
 
       security = securities.resolve(entry.fetch(:isin), entry[:security_name])
-      trade = adapter.import_trade(**entry.except(:isin, :security_name), security: security, source: SOURCE, currency: CURRENCY)
+      trade = adapter.import_trade(**entry.except(:isin, :security_name, :related_trade_ids), security: security, source: SOURCE, currency: CURRENCY)
       import_settlement(adapter, cash_adapter, trade, settlement_id)
     end
 

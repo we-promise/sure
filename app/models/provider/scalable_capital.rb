@@ -6,6 +6,14 @@ class Provider::ScalableCapital
   class AuthenticationError < Error; end
   class InvalidResponse < Error; end
   class NoOvernightAccount < Error; end
+  class OvernightDiscoveryUnavailable < Error
+    attr_reader :ids
+
+    def initialize(ids = [])
+      @ids = ids
+      super("Scalable could not list available Overnight Savings accounts")
+    end
+  end
 
   COMMAND_TIMEOUT = 45
   OUTPUT_LIMIT = 8.megabytes
@@ -13,6 +21,7 @@ class Provider::ScalableCapital
   MAX_PAGES = 100
   READ_INTERVAL = 1
   AUTH_ERRORS = %w[no_session refresh_relogin_required auth_grant_not_enabled].freeze
+  OVERNIGHT_CHOICES = /\AUnable to resolve overnight savings account id: multiple active overnight accounts found \[(.+)\]\. Provide --savings-account-id <ID>\.\z/
 
   def self.executable
     ENV["SCALABLE_CAPITAL_CLI_PATH"].presence
@@ -20,6 +29,40 @@ class Provider::ScalableCapital
 
   def initialize(executable: self.class.executable)
     @executable = executable
+  end
+
+  def identity
+    data = read("whoami")
+    raise AuthenticationError, "Sign in with Scalable CLI 1.3 or later in local read-only mode" unless data.dig("session", "local_read_only") == true
+
+    id = data.dig("result", "personOverview", "id")
+    raise InvalidResponse, "Scalable did not return an account identity" unless ScalableCapitalItem.valid_source_id?(id)
+
+    id
+  end
+
+  def portfolios
+    values = read("broker", "portfolios")["portfolios"]
+    unless values.is_a?(Array) && values.all? { |row| row.is_a?(Hash) && ScalableCapitalItem.valid_source_id?(row["portfolio_id"]) }
+      raise InvalidResponse, "Scalable returned an invalid portfolio list"
+    end
+
+    values.pluck("portfolio_id").uniq
+  end
+
+  def overnight_accounts
+    [ overnight(nil) ]
+  rescue NoOvernightAccount
+    []
+  rescue OvernightDiscoveryUnavailable => error
+    raise if error.ids.empty?
+
+    error.ids.map do |id|
+      data = overnight(id)
+      raise InvalidResponse, "Scalable returned a different Overnight Savings account" unless data["savings_account_id"] == id
+
+      data
+    end
   end
 
   def overview(portfolio_id)
@@ -96,10 +139,10 @@ class Provider::ScalableCapital
         raise AuthenticationError, "Sign in again with the Scalable CLI, then retry"
       elsif code == "overnight_selection_required"
         message = envelope.dig("error", "message")
-        if message.to_s.include?("no accessible overnight accounts found")
+        if message == "Unable to resolve overnight savings account id: no accessible overnight accounts found."
           raise NoOvernightAccount, "No active Overnight Savings account was found"
         end
-        raise Error, "Specify an active personal Overnight Savings account ID"
+        raise OvernightDiscoveryUnavailable.new(overnight_candidates(message))
       elsif code == "rate_limited"
         raise Error, "Scalable is rate limiting requests. Wait before syncing again"
       end
@@ -110,6 +153,18 @@ class Provider::ScalableCapital
       raise InvalidResponse, "Scalable CLI returned invalid JSON"
     rescue Errno::ENOENT, Errno::EACCES
       raise Error, "Scalable CLI is unavailable to the worker"
+    end
+
+    def overnight_candidates(message)
+      # CLI 1.3 only provides this list in its bounded error text. An incomplete
+      # response must not look like there are no other accounts to select.
+      choices = OVERNIGHT_CHOICES.match(message.to_s)&.[](1)
+      return [] unless choices
+
+      ids = choices.split(/(?<=, personal\)|, junior\)), /).map do |choice|
+        /\A([A-Za-z0-9][A-Za-z0-9_-]{0,127}) \([^\r\n]*, (?:personal|junior)\)\z/.match(choice)&.[](1)
+      end
+      ids.size > 1 && ids.none?(&:nil?) && ids.uniq == ids ? ids : []
     end
 
     def capture(args)

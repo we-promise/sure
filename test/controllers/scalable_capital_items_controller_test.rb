@@ -8,19 +8,37 @@ class ScalableCapitalItemsControllerTest < ActionDispatch::IntegrationTest
     sign_in @admin
   end
 
-  test "configured admin can see the connect form and queue the initial sync" do
+  test "configured admin discovers accounts and queues sync for only the selected sources" do
+    client = mock
+    Provider::ScalableCapital.stubs(:new).returns(client)
+    client.expects(:identity).returns("person")
+    client.expects(:portfolios).returns([ "portfolio-1234", "portfolio-5678" ])
+    client.expects(:overnight_accounts).returns([
+      { "savings_account_id" => "junior", "account" => { "display_name" => "Junior Savings", "owner_kind" => "junior", "is_active" => true } }
+    ])
+
     get connect_form_settings_providers_path(provider_key: "scalable_capital")
     assert_response :success
-    assert_select "input[name='scalable_capital_item[portfolio_id]']"
+    assert_select "input[name='scalable_capital_item[portfolio_id]']", count: 0
+    assert_select "input[name='scalable_capital_item[savings_id]']", count: 0
     assert_includes response.body, I18n.t("scalable_capital_items.panel.trust_statement")
     assert_select "#scalable-capital-providers-panel button[type=submit].w-full", text: I18n.t("scalable_capital_items.panel.connect")
 
+    post discover_scalable_capital_items_path
+    assert_response :success
+    tokens = css_select("input[name='scalable_capital_item[choices][]']").map { |input| input["value"] }
+    assert_equal 3, tokens.size
+    assert_includes response.body, "Junior Savings"
+    assert_empty @admin.family.scalable_capital_items
+
     assert_difference -> { @admin.family.scalable_capital_items.count } do
-      post scalable_capital_items_path, params: { scalable_capital_item: { portfolio_id: "portfolio" } }
+      post scalable_capital_items_path, params: { scalable_capital_item: { choices: [ tokens[0], tokens[2] ] } }
     end
     assert_redirected_to settings_providers_path(anchor: "scalable-capital-connection")
     item = @admin.family.scalable_capital_items.sole
     assert_equal @admin, item.owner
+    assert_equal "person", item.broker_account_id
+    assert_equal [ "portfolio-1234", "junior" ], item.selected_sources.pluck("id")
     assert_equal 1, item.syncs.count
   end
 
@@ -40,11 +58,11 @@ class ScalableCapitalItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_providers_path(anchor: "scalable-capital-connection")
   end
 
-  test "rejects a flag as a portfolio identifier" do
+  test "rejects selections without an authenticated discovery token" do
     assert_no_difference -> { ScalableCapitalItem.count } do
-      post scalable_capital_items_path, params: { scalable_capital_item: { portfolio_id: "--confirm" } }
+      post scalable_capital_items_path, params: { scalable_capital_item: { choices: [ "--confirm" ] } }
     end
-    assert_match(/valid Scalable account IDs/, flash[:alert])
+    assert_equal I18n.t("scalable_capital_items.create.invalid"), flash[:alert]
   end
 
   test "accounts renders a linked Scalable account and lets its owner enable it again" do

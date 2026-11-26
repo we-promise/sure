@@ -1,0 +1,45 @@
+<% content_for :title, t(".title") %>
+
+<section class="mx-auto max-w-xl space-y-4 px-4 py-6">
+  <%= render DS::Card.new do %>
+    <div class="flex items-center gap-3">
+      <%= render ProviderLogo.new(provider_key: :scalable_capital) %>
+      <h1 class="text-lg font-semibold text-primary"><%= t(".title") %></h1>
+    </div>
+
+    <div class="space-y-4 mt-4">
+      <% if @discovery.savings_unavailable %>
+        <%= render DS::Alert.new(message: t(".savings_unavailable"), variant: :warning) %>
+      <% end %>
+
+      <% if @discovery.choices.empty? %>
+        <%= render DS::Alert.new(message: t(".empty"), variant: :info) %>
+        <%= render DS::Link.new(text: t(".back"), href: settings_providers_path, variant: :secondary) %>
+      <% else %>
+        <%= styled_form_with url: scalable_capital_items_path, class: "space-y-4" do %>
+          <fieldset class="space-y-3">
+            <legend class="text-sm text-secondary mb-2"><%= t(".choose") %></legend>
+            <% @discovery.choices.each_with_index do |choice, index| %>
+              <% input_id = "scalable-choice-#{index}" %>
+              <label for="<%= input_id %>" class="flex items-start gap-3 rounded-lg border border-primary p-3 cursor-pointer">
+                <%= check_box_tag "scalable_capital_item[choices][]", selection_token(choice), false, id: input_id, class: "mt-1" %>
+                <span class="space-y-1">
+                  <span class="block text-sm font-medium text-primary"><%= t(".#{choice.kind == 'savings' && choice.owner_kind == 'junior' ? 'junior_savings' : choice.kind}") %></span>
+                  <span class="block text-sm text-secondary"><%= choice.label.presence || t(".id_suffix", suffix: choice.id.last(4)) %></span>
+                  <% if choice.kind == "brokerage" %>
+                    <span class="block text-xs text-secondary"><%= t(".includes_cash") %></span>
+                  <% end %>
+                </span>
+              </label>
+            <% end %>
+          </fieldset>
+
+          <div class="flex justify-end gap-2">
+            <%= render DS::Link.new(text: t(".back"), href: settings_providers_path, variant: :secondary) %>
+            <%= render DS::Button.new(text: t(".sync"), type: :submit) %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+</section>

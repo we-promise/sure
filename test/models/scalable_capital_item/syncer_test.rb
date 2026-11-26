@@ -83,6 +83,86 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_nil cash.entries.find_by(external_id: "cancelled")
   end
 
+  test "imports the CLI's filled SINGLE trades and only books a final IPO allocation" do
+    stub_snapshot
+    buy = cash_event("buy", "SECURITY_TRANSACTION").merge("security_transaction_type" => "SINGLE", "side" => "BUY")
+    sell = cash_event("sell", "SECURITY_TRANSACTION").merge("security_transaction_type" => "SINGLE", "side" => "SELL")
+    ipo = cash_event("ipo", "SECURITY_TRANSACTION").merge("security_transaction_type" => "IPO")
+    pending = ipo.merge("id" => "pending-ipo", "status" => "PENDING")
+    stub_broker_trades(buy, sell, ipo, pending)
+    @client.expects(:trade).with("portfolio", "pending-ipo").never
+    @client.stubs(:trade).with("portfolio", "ipo").returns(broker(trade("ipo", "BUY", "2", "25", "51")))
+
+    run_sync
+
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    assert_equal %w[buy ipo sell], brokerage.entries.trades.order(:external_id).pluck(:external_id)
+    assert_equal 51.to_d, brokerage.entries.trades.find_by!(external_id: "ipo").amount
+    assert_equal(-51.to_d, brokerage.entries.find_by!(external_id: "settlement:ipo").amount)
+  end
+
+  test "keeps standalone security taxes and does not duplicate a fee included in settlement" do
+    stub_snapshot
+    tax = cash_event("standalone-tax", "TAX", amount: "3").merge("cash_transaction_type" => "TAX", "related_isin" => "IE00B4L5Y983")
+    fee = cash_event("linked-fee", "FEE", amount: "1").merge("cash_transaction_type" => "FEE", "related_isin" => "IE00B4L5Y983")
+    stub_broker_history(broker_events.first, tax, fee, cash_event("pocket-money", "POCKET_MONEY", amount: "1.50"))
+    @client.stubs(:trade).with("portfolio", "standalone-tax").returns(broker({ "id" => "standalone-tax", "linked_transaction_ids" => [] }))
+    @client.stubs(:trade).with("portfolio", "linked-fee").returns(broker({ "id" => "linked-fee", "linked_transaction_ids" => [ "buy" ] }))
+    buy = trade("buy", "BUY", "2.5", "120", "301")
+    buy["security_trade"]["trade_transaction_amounts"] = { "transaction_fee" => "1", "market_valuation" => "300" }
+    @client.stubs(:trade).with("portfolio", "buy").returns(broker(buy))
+
+    run_sync
+
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    assert_equal 3.to_d, cash.entries.find_by!(external_id: "standalone-tax").amount
+    assert_equal(-1.5.to_d, cash.entries.find_by!(external_id: "pocket-money").amount)
+    refute cash.entries.exists?(external_id: "linked-fee")
+  end
+
+  test "imports both verified priced exchange legs once without a cash settlement" do
+    stub_snapshot
+    swap_out = cash_event("out", "SECURITY_TRANSACTION").merge("summary_type" => "BrokerNonTradeSecurityTransactionSummary",
+      "non_trade_security_transaction_type" => "SWAP_OUT")
+    swap_in = swap_out.merge("id" => "in", "non_trade_security_transaction_type" => "SWAP_IN")
+    stub_broker_history(swap_out, swap_in)
+    [ [ "out", "in", "SWAP_OUT", "US0378331005", "2", "50" ], [ "in", "out", "SWAP_IN", "IE00B4L5Y983", "1", "100" ] ].each do |id, linked_id, type, isin, qty, price|
+      @client.expects(:trade).with("portfolio", id).once.returns(broker({
+        "id" => id, "currency" => "EUR", "is_pending" => false, "is_cancellation" => false,
+        "last_event_datetime" => swap_out.fetch("last_event_datetime"), "linked_transaction_ids" => [ linked_id ],
+        "non_trade_security" => { "isin" => isin, "non_trade_security_transaction_type" => type,
+                                  "quantity" => qty, "average_price" => price, "total_amount" => "100" }
+      }))
+    end
+
+    run_sync
+
+    brokerage = @item.scalable_capital_accounts.brokerage.sole.account
+    trades = brokerage.entries.trades.order(:external_id).map(&:trade)
+    assert_equal [ 1.to_d, -2.to_d ], trades.map(&:qty)
+    assert_equal [ "Exchange", "Exchange" ], trades.map(&:investment_activity_label)
+    assert_predicate trades.last, :disposal?
+    assert_empty brokerage.entries.where(external_id: %w[settlement:in settlement:out])
+  end
+
+  test "syncs a selected junior savings source on its own without brokerage reads" do
+    @item.update!(portfolio_id: nil, savings_id: nil, broker_account_id: "person",
+                  selected_sources: [ { kind: "savings", id: "junior", label: "Junior Savings", owner_kind: "junior" } ])
+    @client.stubs(:identity).returns("person")
+    @client.expects(:overview).never
+    envelope = savings({ "balance" => "15" }, id: "junior").merge("account" => { "owner_kind" => "junior", "is_active" => true })
+    @client.stubs(:overnight).with("junior").returns(envelope)
+    @client.expects(:overnight_transactions).with("junior", all_of(has_key(:since), has_key(:before))).yields(envelope, [ cash_event("interest", "INTEREST") ])
+
+    run_sync
+
+    account = @item.scalable_capital_accounts.savings.sole
+    assert_equal "savings:junior", account.source_key
+    assert_equal 15.to_d, account.account.balance
+    assert_equal Time.current.iso8601, @item.reload.selected_sources.sole.fetch("synced_through")
+    assert_empty @item.scalable_capital_accounts.brokerage
+  end
+
   test "imports a completed trade with final fill status" do
     stub_snapshot
     detail = trade("buy", "BUY", "2.5", "120", "301")

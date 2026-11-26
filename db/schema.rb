@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_23_220100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2365,20 +2365,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_220100) do
     t.datetime "created_at", null: false
     t.string "kind", null: false
     t.uuid "scalable_capital_item_id", null: false
+    t.string "source_key"
     t.datetime "updated_at", null: false
-    t.index ["scalable_capital_item_id", "kind"], name: "index_scalable_capital_accounts_on_item_and_kind", unique: true
+    t.index ["scalable_capital_item_id", "kind", "source_key"], name: "index_scalable_capital_accounts_on_source", unique: true, nulls_not_distinct: true
   end
 
   create_table "scalable_capital_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "broker_account_id"
+    t.integer "broker_history_version", default: 0, null: false
     t.datetime "broker_synced_through"
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
     t.uuid "owner_id"
-    t.string "portfolio_id", null: false
+    t.string "portfolio_id"
     t.string "savings_id"
     t.datetime "savings_synced_through"
     t.jsonb "security_ids", default: {}, null: false
+    t.jsonb "selected_sources", default: [], null: false
     t.string "status", default: "good", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_scalable_capital_items_on_family_id", unique: true

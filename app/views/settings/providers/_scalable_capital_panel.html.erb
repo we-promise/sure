@@ -18,10 +18,8 @@
   <% elsif preview_features_enabled? && ScalableCapitalItem.configured_family_id == Current.family.id %>
     <%= render DS::Pill.new(label: t("scalable_capital_items.panel.preview")) %>
     <p class="text-sm text-secondary"><%= t("scalable_capital_items.panel.description") %></p>
-    <%= styled_form_with scope: :scalable_capital_item, url: scalable_capital_items_path,
-                         data: { turbo_frame: "_top" }, class: "space-y-3" do |form| %>
-      <%= form.text_field :portfolio_id, label: t("scalable_capital_items.panel.portfolio_id"), required: true %>
-      <%= form.text_field :savings_id, label: t("scalable_capital_items.panel.savings_id") %>
+    <%= styled_form_with url: discover_scalable_capital_items_path,
+                         data: { turbo: false }, class: "space-y-3" do |form| %>
       <%= form.submit t("scalable_capital_items.panel.connect") %>
     <% end %>
   <% else %>

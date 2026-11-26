@@ -6,10 +6,25 @@ en:
       brokerage: Scalable Broker
       cash: Scalable Broker Cash
       savings: Scalable Overnight Savings
+      junior_savings: Scalable Junior Overnight Savings
       settlement: "%{name} settlement"
     create:
       started: Scalable Capital sync queued.
-      invalid: Enter valid Scalable account IDs and check whether a connection already exists.
+      invalid: Reopen the Scalable account picker and select at least one account. Only one connection is allowed per household.
+    discover:
+      title: Choose Scalable Capital accounts
+      choose: Select the accounts you want to sync to Sure.
+      brokerage: Broker portfolio
+      savings: Overnight Savings (Tagesgeld)
+      junior_savings: Junior Overnight Savings (Tagesgeld)
+      id_suffix: Account ending in %{suffix}
+      includes_cash: Includes a separate account for uninvested cash.
+      empty: Scalable returned no eligible active accounts.
+      savings_unavailable: Scalable could not provide a complete Overnight Savings list. Broker portfolios can still be selected.
+      sign_in: Sign in to Scalable CLI 1.3 or later on the server in local read-only mode, then try again.
+      unavailable: Sure could not read your available Scalable accounts. Try again after any running Scalable sync finishes.
+      back: Back to Bank Sync
+      sync: Sync selected accounts
     sync:
       started: Scalable Capital sync queued.
     destroy:
@@ -18,9 +33,7 @@ en:
       preview: Preview
       trust_statement: Read-only access. The Scalable CLI manages broker credentials on the server.
       unavailable: Enable preview features and configure the Scalable CLI for this household to connect.
-      description: Sign in to the server’s Scalable CLI in local read-only mode, then enter your portfolio ID. Sure creates separate investment and Cash accounts. Enter an Overnight Savings ID if Scalable has multiple active savings accounts.
-      portfolio_id: Broker portfolio ID
-      savings_id: Overnight Savings ID (optional)
+      description: Sign in to the server’s Scalable CLI in local read-only mode, then connect to choose which accounts to sync.
       connect: Connect Scalable Capital
       reconnect: Sign in to the server’s Scalable CLI again, then sync this connection.
       disconnect: Disconnect

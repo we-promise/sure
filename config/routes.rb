@@ -236,6 +236,7 @@ Rails.application.routes.draw do
   # Trade Republic routes (login steps are TR-specific: web login needs a
   # two-phase initiate/confirm handshake with the Trade Republic app)
   resources :scalable_capital_items, only: %i[create destroy] do
+    post :discover, on: :collection
     post :sync, on: :member
   end
 
