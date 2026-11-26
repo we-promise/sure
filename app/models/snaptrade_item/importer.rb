@@ -324,11 +324,14 @@ class SnaptradeItem::Importer
           stats["activities_found"] = stats.fetch("activities_found", 0) + all_activities.size
         end
 
+        # The liability sign repair only trusts activities a successful fetch brought in
+        snaptrade_account.update_columns(activities_fetch_failed: false) if snaptrade_account.activities_fetch_failed?
         all_activities.size
       rescue => e
         Rails.logger.error "SnaptradeItem::Importer - Failed to fetch activities: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
         register_error(e, context: "activities", account_id: snaptrade_account.id)
+        snaptrade_account.update_columns(activities_fetch_failed: true)
         # nil, not 0: a fetch that failed is not SnapTrade still syncing, and
         # must not queue the background job to repeat it.
         nil
