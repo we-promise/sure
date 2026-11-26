@@ -8,12 +8,13 @@ module Localize
   end
 
   class_methods do
-    # ApplicationController registers switch_timezone before token-authenticated
-    # controllers set Current.session, so the family is unknown and the request
-    # runs in the app zone. Call this after the controller's authentication
-    # before_action to resolve the zone once the family is known.
-    def switch_timezone_after_authentication
-      skip_around_action :switch_timezone
+    # ApplicationController registers these before token-authenticated
+    # controllers set Current.session, so the user and family are unknown and
+    # the request runs in the default locale and the app zone. Declare this
+    # after the authenticating before_action to resolve both once they are known.
+    def localize_after_authentication
+      skip_around_action :switch_locale, :switch_timezone
+      around_action :switch_locale
       around_action :switch_timezone
     end
   end

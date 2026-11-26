@@ -14,7 +14,7 @@ class McpController < ApplicationController
   skip_before_action :detect_os
 
   before_action :authenticate_mcp_token!
-  switch_timezone_after_authentication
+  localize_after_authentication
   after_action :set_mcp_response_headers
 
   def handle

@@ -56,6 +56,17 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     Redis.new.del("api_rate_limit:#{other_key.id}") if other_key
   end
 
+  test "answers in the authenticated user's saved locale" do
+    @user.update!(locale: "es")
+
+    post "/api/v1/categories",
+      params: { category: { name: categories(:food_and_drink).name } },
+      headers: { "X-Api-Key" => @plain_api_key }
+
+    assert_response :unprocessable_entity
+    assert_includes response.parsed_body["message"], I18n.t("errors.messages.taken", locale: :es)
+  end
+
   test "should require authentication" do
     # Test that endpoints require OAuth tokens
     get "/api/v1/test"

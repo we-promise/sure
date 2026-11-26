@@ -24,7 +24,7 @@ class Api::V1::BaseController < ApplicationController
   before_action :force_json_format
   # Use our custom authentication that supports both OAuth and API keys
   before_action :authenticate_request!
-  switch_timezone_after_authentication
+  localize_after_authentication
   before_action :check_api_key_rate_limit
   before_action :log_api_access
 
