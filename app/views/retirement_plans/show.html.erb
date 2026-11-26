@@ -41,6 +41,7 @@
     </div>
 
     <% if @streams.any? %>
+      <p class="text-sm text-secondary mb-3"><%= t(".streams_explainer") %></p>
       <%= render DS::Table.new(rows: @streams, id: "retirement-plan-streams", inset: true, label: t(".streams"),
                                row_opts: ->(stream) { { data: { stream_id: stream.id } } }) do |table| %>
         <% table.with_column(t(".columns.name"), row_header: true) { |stream| stream.name } %>

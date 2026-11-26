@@ -138,6 +138,47 @@ class RetirementPlans::StreamsControllerTest < ActionDispatch::IntegrationTest
     assert_equal BigDecimal("5"), others.reload.annual_amount
   end
 
+  # The simulation leaves seeded spending out before retirement, since the
+  # contribution already nets today's spending. A seeded stream turned into
+  # something else is the user's own line, so it must count from its start.
+  test "a seeded stream whose type is changed becomes manual, and counts before retirement" do
+    plan = RetirementPlan.create!(user: @user, birth_year: 1980, retirement_date: Date.new(2045, 1, 1))
+    stream = plan.streams.create!(kind: "expense", source: "seeded_living_costs", name: "Living costs", annual_amount: 30_000)
+    RetirementPlan.any_instance.stubs(:projection).returns(stub(annual_contribution: 0))
+    next_year = Date.current.year + 1
+
+    patch retirement_plan_stream_url(stream), params: { retirement_plan_stream: { kind: "income", annual_amount: "12000", start_year: next_year.to_s } }
+
+    assert_redirected_to retirement_plan_path
+    assert_equal [ "income", "manual" ], [ stream.reload.kind, stream.source ]
+    paid_in = ->(sim) { sim.rows.find { |row| row.year == next_year }.contribution }
+    with_pension = paid_in.call(RetirementPlan.find(plan.id).simulation(as_of: Date.current))
+    stream.destroy!
+    assert_operator with_pension - paid_in.call(RetirementPlan.find(plan.id).simulation(as_of: Date.current)), :>=, 12_000
+  end
+
+  test "an edit that keeps the type leaves a seeded stream seeded" do
+    stream = RetirementPlan.create!(user: @user).streams.create!(kind: "expense", source: "seeded_loan", name: "Car loan", annual_amount: 6_000, indexed: false)
+
+    patch retirement_plan_stream_url(stream), params: { retirement_plan_stream: { kind: "expense", annual_amount: "7000" } }
+
+    assert_equal [ BigDecimal("7000"), "seeded_loan" ], [ stream.reload.annual_amount, stream.source ]
+  end
+
+  # The FI number is built from the last 12 months' spending, while the
+  # streams drive the year-by-year path, so editing a stream moves one and
+  # not the other. The planner says so wherever streams are listed.
+  test "the planner explains the FI number is from recent spending, not the streams" do
+    explainer = I18n.t("retirement_plans.show.streams_explainer")
+
+    get retirement_plan_url
+    assert_select "p", text: explainer, count: 0
+
+    RetirementPlan.create!(user: @user).streams.create!(kind: "expense", name: "Rent", annual_amount: 12_000, source: "manual")
+    get retirement_plan_url
+    assert_select "p", text: explainer
+  end
+
   test "a user's own stream can be changed and deleted" do
     stream = RetirementPlan.create!(user: @user).streams.create!(kind: "expense", name: "Mine", annual_amount: 5, source: "manual")
 
