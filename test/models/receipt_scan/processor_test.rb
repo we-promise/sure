@@ -455,6 +455,7 @@ class ReceiptScan::ProcessorTest < ActiveSupport::TestCase
   end
 
   test "sends a PDF as page images to a model that reads images" do
+    Pdf::PageImages.stubs(:render).returns([ "page-1-png" ])   # pdftoppm isn't installed on CI
     scan = upload("receipt.pdf", "application/pdf")
     requests = stub_ai(:extract_receipt, returns: receipt_ai_answer(date: @date.iso8601))
 

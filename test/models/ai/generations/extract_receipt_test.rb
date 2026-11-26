@@ -26,9 +26,12 @@ class Ai::Generations::ExtractReceiptTest < ActiveSupport::TestCase
   end
 
   test "a PDF is sent as its page images, a photo as it is" do
+    # Rendered by pdftoppm, which CI doesn't install; Pdf::PageImagesTest covers the rendering.
+    Pdf::PageImages.expects(:render).with(pdf.data, pages: 1..3).returns(%w[page-1 page-2 page-3])
+
     attachments = generation(files: [ pdf ]).attachments
 
-    assert attachments.any?
+    assert_equal %w[receipt-page-1.png receipt-page-2.png receipt-page-3.png], attachments.map(&:filename)
     assert attachments.all?(&:image?)
     assert_equal [ photo ], generation.attachments
   end
