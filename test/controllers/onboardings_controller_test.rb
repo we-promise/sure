@@ -206,14 +206,21 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "an mcp_only household is told the assistant won't run, even with a provider set" do
+  test "an mcp_only household on a self-hosted instance is told the assistant won't run, even with a provider set" do
+    @family.update!(assistant_type: "mcp_only")
+
+    with_self_hosting do
+      with_ai_configuration(settings: { openai_access_token: "sk-test" }) do
+        assert_builtin_warnings not_configured: false, unavailable: true
+      end
+    end
+  end
+
+  test "an mcp_only household on a managed instance is told the assistant won't run" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
     @family.update!(assistant_type: "mcp_only")
 
     with_ai_configuration(settings: { openai_access_token: "sk-test" }) do
-      with_self_hosting do
-        assert_builtin_warnings not_configured: false, unavailable: true
-      end
-
       assert_builtin_warnings not_configured: false, unavailable: true
     end
   end
@@ -258,6 +265,8 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "built-in AI on a managed instance shows no warning without self-hosted keys" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+
     with_ai_configuration do
       assert_builtin_warnings not_configured: false, unavailable: false
     end
@@ -411,10 +420,12 @@ end
 
       # Runs the block with only the AI configuration given: every other AI
       # setting and environment variable is cleared, and the settings are
-      # restored afterwards.
+      # restored afterwards. Cleared settings are stored as "" rather than nil:
+      # the provider keys default to the environment as it was when Setting
+      # loaded, and a stored nil falls back to that default.
       def with_ai_configuration(settings: {}, env: {})
         previous = AI_SETTINGS.index_with { |name| Setting.public_send(name) }
-        AI_SETTINGS.each { |name| Setting.public_send("#{name}=", settings[name]) }
+        AI_SETTINGS.each { |name| Setting.public_send("#{name}=", settings.fetch(name, "")) }
         with_env_overrides(**AI_ENV.merge(env)) { yield }
       ensure
         previous&.each { |name, value| Setting.public_send("#{name}=", value) }
