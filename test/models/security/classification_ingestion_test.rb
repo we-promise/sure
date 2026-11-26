@@ -102,9 +102,8 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
   # The reason `include_classification` defaults to false. The unbounded shape
   # is the importers' cadence -- they walk every security on every sync -- so a
   # caller that has not opted in must not widen the gate and inherit that cost.
-  # `HoldingsController#sync_prices` is the one such caller: a POST behind
-  # `require_holding_write_permission!`, where the user asked for prices rather
-  # than for classification.
+  # `HoldingsController#sync_prices` and `Family::MarketDataRefresher` are such
+  # callers: each was asked for prices rather than for classification.
   test "a caller that has not opted in makes no provider call" do
     @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png")
     provider = capable_provider("provider")
@@ -373,16 +372,17 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
   end
 
   # Same for a caller that did not ask for a classification: the importers
-  # must still ask on their next pass.
+  # must still ask on their next pass. The answer it fetched is still applied.
   test "a caller that has not opted in leaves no record, even when it fetches" do
     @security.update!(name: nil, logo_url: nil, website_url: nil)
     provider = capable_provider("provider")
     provider.stubs(:class).returns(Provider::Eodhd)
-    provider.expects(:fetch_security_info).once.returns(provider_success_response(info))
+    provider.expects(:fetch_security_info).once.returns(provider_success_response(info(sector: "Technology")))
     @security.stubs(:price_data_provider).returns(provider)
 
-    @security.import_provider_details
-
+    assert_changes -> { @security.reload.sector }, from: nil, to: "Technology" do
+      @security.import_provider_details
+    end
     assert_nil @security.reload.classification_fetched_at
   end
 
