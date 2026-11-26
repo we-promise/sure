@@ -220,6 +220,7 @@ class Loan
       def simulation
         return nil unless applicable?
 
+        balloon_adjustment = schedule.final_balloon_adjustment
         @simulation ||= Simulator.new(
           starting_balance: current_balance.amount,
           accrual_start_date: current_period_start,
@@ -236,7 +237,8 @@ class Loan
           # schedule's does.
           payment_amount: method(:scheduled_payment_for),
           payment_strategy: :scheduled,
-          final_payment: schedule.final_balloon_payment,
+          final_payment: (remaining_scheduled_payments.last.payment.amount if balloon_adjustment),
+          final_balloon_adjustment: balloon_adjustment,
           currency_precision: currency_precision,
           # A projection that cannot clear the balance must SAY so. Settling the
           # final payment regardless would manufacture a payoff date for a loan

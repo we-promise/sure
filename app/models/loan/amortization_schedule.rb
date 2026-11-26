@@ -122,11 +122,10 @@ class Loan::AmortizationSchedule
     payments.last&.date
   end
 
-  def final_balloon_payment
+  def final_balloon_adjustment
     return unless @balloon_payment
 
-    last = payments.last
-    @balloon_payment if last&.number == term_months && last.payment.amount == @balloon_payment
+    simulation.payments.last&.[](:balloon_adjustment)
   end
 
   # The scheduled payment falling in the same calendar month as `date`, if any.

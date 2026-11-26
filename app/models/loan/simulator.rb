@@ -75,7 +75,8 @@ class Loan
       payment_amount: nil,
       settle_at_schedule_end: true,
       day_count_convention: DEFAULT_DAY_COUNT_CONVENTION,
-      final_payment: nil
+      final_payment: nil,
+      final_balloon_adjustment: nil
     )
       @starting_balance = BigDecimal(starting_balance.to_s)
       @accrual_start_date = accrual_start_date
@@ -100,6 +101,7 @@ class Loan
       # lump sum, replacing the settlement the run would otherwise compute
       # when it covers that row's balance plus interest -- see #balloon_step.
       @final_payment = final_payment.nil? ? nil : BigDecimal(final_payment.to_s)
+      @final_balloon_adjustment = final_balloon_adjustment
 
       raise ArgumentError, "payment schedule must not be empty" if @payment_schedule.empty?
       if @payment_schedule.length > MAX_PERIODS
@@ -205,7 +207,7 @@ class Loan
         # behind and quietly charge the borrower less than the period ran.
         step = if @final_payment && index == @payment_schedule.length - 1 &&
                   @final_payment >= balance + interest
-          balloon_step(balance)
+          balloon_step(balance, interest)
         else
           final = (@settle_at_schedule_end && index == @payment_schedule.length - 1) ||
             payment >= balance + interest
@@ -253,14 +255,19 @@ class Loan
       # period's accrual, which is exactly how a lender's table reads when the
       # final instalment is a round number. Reached only when the balloon
       # covers balance + interest, so the plug is never below the accrual.
-      def balloon_step(balance)
-        payment = @final_payment.round(@currency_precision)
+      def balloon_step(balance, interest)
+        payment = @final_payment
+        if @final_balloon_adjustment
+          payment = [ payment, balance + interest + @final_balloon_adjustment ].min
+        end
+        payment = payment.round(@currency_precision)
         principal = balance.round(@currency_precision)
 
         {
           payment_amount: payment,
           principal_payment: principal,
           interest_payment: (payment - principal).round(@currency_precision),
+          balloon_adjustment: (payment - principal - interest).round(@currency_precision),
           beginning_balance: balance.round(@currency_precision),
           ending_balance: BigDecimal("0")
         }

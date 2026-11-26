@@ -42,6 +42,18 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_equal BigDecimal("500050"), projection.payments.last[:payment_amount]
   end
 
+  test "extra principal payments reduce the projected balloon without increasing interest" do
+    loan = build_loan(term_months: 24, interest_rate: 0)
+    loan.update!(balloon_payment: 500_050)
+
+    projection = loan.payoff_projection(as_of: @today, extra: 1_000)
+
+    assert projection.converged?
+    assert_equal BigDecimal("489050"), projection.payments.last[:payment_amount]
+    assert_equal BigDecimal("50"), projection.total_interest.amount
+    assert_equal BigDecimal("500050"), projection.total_cost.amount
+  end
+
   # Extra payments already made need no input of their own: they are why the
   # recorded balance sits below the scheduled one, and the projection starts
   # from that balance (#100, decision 10).
