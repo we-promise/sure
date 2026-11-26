@@ -148,7 +148,7 @@ class RetirementPlan::Simulation
       one_offs = total(year, "one_off")
 
       net = if year < retirement_year
-        @annual_contribution * inflation_factor(n) * part_of_year(n) +
+        @annual_contribution * contribution_inflation(n) * part_of_year(n) +
           total(year, "income", manual_only: true) - total(year, "expense", manual_only: true)
       else
         total(year, "income") - total(year, "expense")
@@ -172,6 +172,14 @@ class RetirementPlan::Simulation
       return stream.annual_amount unless stream.indexed
 
       stream.annual_amount * inflation_factor(year - (stream.base_year || first_year))
+    end
+
+    # The contribution is today's money, so it grows from the reference date
+    # to the start of row n, as end_value_real deflates from it: indexed by
+    # calendar years instead, 31 December would save a year's inflation more
+    # than 1 January did the next morning.
+    def contribution_inflation(n)
+      n.zero? ? 1 : inflation_factor(years_elapsed(n) - 1)
     end
 
     def part_of_year(n)
