@@ -654,10 +654,10 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     assert_nil Balance::IntegrityChecker.new(account).latest_flagged_gap
   end
 
-  # The open gap equals the day's bookings, so "the snapshot misses exactly
-  # these bookings" would also fit; the ledger agreeing to the cent says it
-  # does not.
-  test "an open gap closes on the busy day its late bookings arrive and agree" do
+  # An unrelated purchase of the same size as the open gap, booked after a
+  # busy day's sync, must not pass for the missing transaction.
+  test "a same-sized purchase booked after a busy day's sync keeps the open gap" do
+    freeze_time
     account = accounts(:connected)
     account.entries.destroy_all
 
@@ -665,12 +665,15 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     (5..10).reverse_each do |days_ago|
       add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 950, kind: "reconciliation")
     end
-    assert Balance::IntegrityChecker.new(account).latest_flagged_gap, "the payment is in the balance before it is booked"
-
     add_linked_entry(account, date: 4.days.ago.to_date, amount: 50)
-    add_linked_entry(account, date: 4.days.ago.to_date, amount: 950, kind: "current_anchor")
+    add_linked_entry(account, date: 4.days.ago.to_date, amount: 950, kind: "reconciliation")
+    add_linked_entry(account, date: 3.days.ago.to_date, amount: 900, kind: "current_anchor")
 
-    assert_nil Balance::IntegrityChecker.new(account).latest_flagged_gap
+    gap = Balance::IntegrityChecker.new(account).latest_flagged_gap
+
+    assert gap
+    assert_equal 10.days.ago.to_date, gap.first_open_waypoint.date
+    assert_in_delta(-50, gap.difference, 0.01)
   end
 
   private

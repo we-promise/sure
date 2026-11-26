@@ -204,11 +204,6 @@ class Balance::IntegrityChecker
         return closed ? :closed : open_residual
       end
 
-      # Ledger and snapshot agreeing to the cent settle it, even when the
-      # open gap also equals some of the day's bookings: those are the late
-      # bookings that explain it.
-      return :closed if residual.abs <= tolerance
-
       candidates = sums.map { |sum| residual - sum }
       return open_residual if candidates.any? { |gap| (gap - open_residual).abs <= tolerance }
       return :closed if candidates.any? { |gap| gap.abs <= tolerance }
