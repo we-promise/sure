@@ -602,6 +602,23 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "success" => true, "results" => [] }, JSON.parse(result["content"][0]["text"]))
   end
 
+  test "tools/call hands AI work to the worker without calling a transport on the web thread" do
+    use_ai_routes
+    SidekiqHealth.stubs(:current).returns(stub(reason: nil))
+    Ai::ToolJob.expects(:run)
+               .with(Assistant::Function::SearchFamilyFiles, anything, anything, timeout: 30)
+               .returns({ "success" => true, "results" => [] })
+    Ai::Transport.expects(:for).never
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "search_family_files", arguments: { query: "tax" } }).to_json,
+           headers: mcp_headers(@token)
+    end
+
+    assert_response :ok
+    assert_equal({ "success" => true, "results" => [] }, JSON.parse(JSON.parse(response.body)["result"]["content"][0]["text"]))
+  end
+
   test "tools/call returns a busy tool error in the MCP envelope" do
     use_ai_routes
     SidekiqHealth.stubs(:current).returns(stub(reason: :ai_queues_not_polled))
