@@ -299,7 +299,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
   test "should hide an unlinked statement import from a guest" do
     guest = @family.users.create!(
       first_name: "Guest", last_name: "Viewer", email: "guest-#{SecureRandom.hex(4)}@example.com",
-      password: "password", role: "guest", onboarded_at: Time.current
+      password: "Password123!", role: "guest", onboarded_at: Time.current
     )
     guest_key = read_only_key_for(guest)
     unlinked_import = pdf_import_with_row(account: nil)
