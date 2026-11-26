@@ -465,4 +465,32 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert transfer.persisted?
     assert_equal "open", pledge.reload.status
   end
+
+  test "an identical retry returns the same transfer when the converted amount has more than 4 decimals" do
+    euro_account = @family.accounts.create!(name: "Euro", balance: 0, currency: "EUR", accountable: Depository.new)
+    attributes = {
+      family: @family, source_account_id: @source_account.id, destination_account_id: euro_account.id,
+      date: @date, amount: 1, exchange_rate: "0.333333", idempotency_key: SecureRandom.uuid
+    }
+
+    first = Transfer::Creator.new(**attributes).create
+
+    assert_no_difference "Transfer.count" do
+      assert_equal first, Transfer::Creator.new(**attributes).create
+    end
+  end
+
+  test "a retry with different tags is a stale key, not a replay" do
+    other_depository = @family.accounts.create!(name: "Savings", balance: 1000, currency: "USD", accountable: Depository.new)
+    attributes = {
+      family: @family, source_account_id: @source_account.id, destination_account_id: other_depository.id,
+      date: @date, amount: @amount, idempotency_key: SecureRandom.uuid
+    }
+
+    Transfer::Creator.new(**attributes, tag_ids: [ tags(:one).id ]).create
+
+    assert_raises(Transfer::Creator::StaleIdempotencyKeyError) do
+      Transfer::Creator.new(**attributes, tag_ids: [ tags(:two).id ]).create
+    end
+  end
 end

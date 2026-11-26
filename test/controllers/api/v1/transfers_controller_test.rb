@@ -203,11 +203,15 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "insufficient_scope", JSON.parse(response.body)["error"]
   end
 
+  test "create does not let a guest move money" do
+    @user.update!(role: :guest)
+
+    assert_transfer_rejected(status: :forbidden)
+  end
+
   test "create books both legs of a transfer" do
     assert_difference "Transfer.count", 1 do
-      post api_v1_transfers_url,
-           params: { transfer: create_params(amount: "25.50", date: "2024-02-01") },
-           headers: api_headers(write_api_key)
+      post_transfer(amount: "25.50", date: "2024-02-01")
     end
 
     assert_response :created
@@ -223,153 +227,113 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal(-25.5, transfer.inflow_transaction.entry.amount)
   end
 
+  test "create books fees, tags and a cross-currency rate" do
+    tag = tags(:one)
+
+    assert_difference "Transfer.count", 1 do
+      post_transfer(to_account_id: euro_account.id, amount: "100", exchange_rate: "0.9", source_fee_amount: "1.5", destination_fee_amount: "0.25", tag_ids: [ tag.id ])
+    end
+
+    assert_response :created
+    transfer = Transfer.find(JSON.parse(response.body)["id"])
+    assert_equal 100, transfer.outflow_transaction.entry.amount
+    assert_equal(-90, transfer.inflow_transaction.entry.amount)
+    assert_equal 1.5, transfer.derived_source_fee_amount
+    assert_equal 0.25, transfer.derived_destination_fee_amount
+    assert_equal [ tag.id ], transfer.outflow_transaction.tag_ids
+  end
+
   test "create into a loan is a loan payment" do
     loan = @family.accounts.create!(name: "Transfer Loan", accountable: Loan.new, balance: 5000, currency: "USD")
 
-    post api_v1_transfers_url,
-         params: { transfer: create_params(to_account_id: loan.id, amount: "200") },
-         headers: api_headers(write_api_key)
+    post_transfer(to_account_id: loan.id, amount: "200")
 
     assert_response :created
     assert_equal "loan_payment", JSON.parse(response.body)["transfer_type"]
   end
 
   test "create defaults the date to today" do
-    post api_v1_transfers_url,
-         params: { transfer: create_params.except(:date) },
-         headers: api_headers(write_api_key)
+    post api_v1_transfers_url, params: { transfer: create_params.except(:date) }, headers: api_headers(write_api_key)
 
     assert_response :created
     assert_equal Date.current.iso8601, JSON.parse(response.body)["date"]
   end
 
   test "create replays an idempotent request instead of duplicating" do
-    key = SecureRandom.uuid
-    params = { transfer: create_params(idempotency_key: key) }
+    overrides = { idempotency_key: SecureRandom.uuid }
 
-    assert_difference "Transfer.count", 1 do
-      post api_v1_transfers_url, params: params, headers: api_headers(write_api_key)
-      assert_response :created
-      @first_id = JSON.parse(response.body)["id"]
+    post_transfer(**overrides)
+    assert_response :created
+    first_id = JSON.parse(response.body)["id"]
 
-      post api_v1_transfers_url, params: params, headers: api_headers(write_api_key)
-      assert_response :ok
+    assert_no_difference "Transfer.count" do
+      post_transfer(**overrides)
     end
 
-    assert_equal @first_id, JSON.parse(response.body)["id"]
+    assert_response :ok
+    assert_equal first_id, JSON.parse(response.body)["id"]
   end
 
-  test "create rejects a reused idempotency key for a different request" do
-    key = SecureRandom.uuid
-    post api_v1_transfers_url, params: { transfer: create_params(idempotency_key: key) }, headers: api_headers(write_api_key)
+  test "create replays a cross-currency request whose converted amount has more than 4 decimals" do
+    overrides = { to_account_id: euro_account.id, amount: "1", exchange_rate: "0.333333", source_fee_amount: "0.5", idempotency_key: SecureRandom.uuid }
+
+    post_transfer(**overrides)
     assert_response :created
 
     assert_no_difference "Transfer.count" do
-      post api_v1_transfers_url,
-           params: { transfer: create_params(idempotency_key: key, amount: "99") },
-           headers: api_headers(write_api_key)
+      post_transfer(**overrides)
     end
 
-    assert_response :conflict
-    assert_equal "idempotency_key_conflict", JSON.parse(response.body)["error"]
+    assert_response :ok
+  end
+
+  test "create answers a reused idempotency key for a different request with 409" do
+    key = SecureRandom.uuid
+    tag = tags(:one)
+    post_transfer(idempotency_key: key, tag_ids: [ tag.id ])
+    assert_response :created
+
+    [ { amount: "99" }, { tag_ids: [ tags(:two).id ] } ].each do |changed|
+      assert_transfer_rejected(status: :conflict, **{ idempotency_key: key, tag_ids: [ tag.id ] }.merge(changed))
+      assert_equal "idempotency_key_conflict", JSON.parse(response.body)["error"]
+    end
+
+    post_transfer(idempotency_key: key, tag_ids: [ tag.id ])
+    assert_response :ok
   end
 
   test "create rejects a malformed idempotency key instead of dropping it" do
     [ "not-a-uuid", "", [ SecureRandom.uuid ], { "a" => "b" } ].each do |key|
-      assert_no_difference "Transfer.count" do
-        post api_v1_transfers_url,
-             params: { transfer: create_params(idempotency_key: key) },
-             headers: api_headers(write_api_key)
-      end
-
-      assert_response :unprocessable_entity, "idempotency_key #{key.inspect} should be rejected"
+      assert_transfer_rejected(idempotency_key: key)
     end
   end
 
-  test "create rejects a reused idempotency key when the tags differ" do
-    key = SecureRandom.uuid
-    tag_a = tags(:one)
-    tag_b = tags(:two)
-
-    post api_v1_transfers_url,
-         params: { transfer: create_params(idempotency_key: key, tag_ids: [ tag_a.id ]) },
-         headers: api_headers(write_api_key)
-    assert_response :created
-
-    assert_no_difference "Transfer.count" do
-      post api_v1_transfers_url,
-           params: { transfer: create_params(idempotency_key: key, tag_ids: [ tag_b.id ]) },
-           headers: api_headers(write_api_key)
-    end
-    assert_response :conflict
-
-    post api_v1_transfers_url,
-         params: { transfer: create_params(idempotency_key: key, tag_ids: [ tag_a.id ]) },
-         headers: api_headers(write_api_key)
-    assert_response :ok
-  end
-
-  test "create replays a cross-currency request whose converted amount has more than 4 decimals" do
-    euro_account = @family.accounts.create!(name: "Transfer Euro", accountable: Depository.new, balance: 0, currency: "EUR")
-    params = {
-      transfer: create_params(
-        to_account_id: euro_account.id,
-        amount: "1",
-        exchange_rate: "0.333333",
-        source_fee_amount: "0.5",
-        idempotency_key: SecureRandom.uuid
-      )
-    }
-
-    assert_difference "Transfer.count", 1 do
-      post api_v1_transfers_url, params: params, headers: api_headers(write_api_key)
-      assert_response :created
-
-      post api_v1_transfers_url, params: params, headers: api_headers(write_api_key)
-      assert_response :ok
-    end
-  end
-
-  test "create rejects amounts, fees and rates that are not finite or fit the stored range" do
+  test "create rejects amounts, fees and rates that are missing, not finite or outside the stored range" do
     {
-      amount: [ "1000000000000000", "1e400", "Infinity", "NaN", "1,250.50", "12abc", "0.00001", "0.12345" ],
+      amount: [ nil, "0", "-5", "abc", "1000000000000000", "1e400", "Infinity", "NaN", "1,250.50", "12abc", "0.00001", "0.12345" ],
       source_fee_amount: [ "abc", "-1", "1000000000000000", "0.00001" ],
       destination_fee_amount: [ "abc", "Infinity" ],
       exchange_rate: [ "abc", "0", "-2", "Infinity" ]
     }.each do |field, values|
-      values.each do |value|
-        assert_no_difference "Transfer.count" do
-          post api_v1_transfers_url,
-               params: { transfer: create_params(field => value) },
-               headers: api_headers(write_api_key)
-        end
-
-        assert_response :unprocessable_entity, "#{field}=#{value.inspect} should be rejected with 422"
-      end
+      values.each { |value| assert_transfer_rejected(field => value) }
     end
   end
 
   test "create rejects a converted amount that overflows the stored range" do
-    euro_account = @family.accounts.create!(name: "Transfer Euro", accountable: Depository.new, balance: 0, currency: "EUR")
-
-    assert_no_difference "Transfer.count" do
-      post api_v1_transfers_url,
-           params: { transfer: create_params(to_account_id: euro_account.id, amount: "999999999999999", exchange_rate: "1000") },
-           headers: api_headers(write_api_key)
-    end
-
-    assert_response :unprocessable_entity
+    assert_transfer_rejected(to_account_id: euro_account.id, amount: "999999999999999", exchange_rate: "1000")
   end
 
-  test "create rejects a reduced-precision date" do
-    %w[2024-01 2024 20240120].each do |date|
-      assert_no_difference "Transfer.count" do
-        post api_v1_transfers_url,
-             params: { transfer: create_params(date: date) },
-             headers: api_headers(write_api_key)
-      end
+  test "create rejects dates that are not a full YYYY-MM-DD date" do
+    %w[not-a-date 2024-01 2024 20240120].each do |date|
+      assert_transfer_rejected(date: date)
+    end
+  end
 
-      assert_response :unprocessable_entity, "date #{date.inspect} should be rejected"
+  test "create rejects tag_ids that are malformed or not the family's" do
+    foreign_tag = families(:empty).tags.create!(name: "Not yours")
+
+    [ tags(:one).id, "not-a-uuid", [ "not-a-uuid" ], [ SecureRandom.uuid ], [ foreign_tag.id ], { "a" => "b" } ].each do |tag_ids|
+      assert_transfer_rejected(tag_ids: tag_ids, as: :json)
     end
   end
 
@@ -385,121 +349,36 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "create books fees, tags and a cross-currency rate" do
-    euro_account = @family.accounts.create!(name: "Transfer Euro", accountable: Depository.new, balance: 0, currency: "EUR")
-    tag = tags(:one)
-
-    assert_difference "Transfer.count", 1 do
-      post api_v1_transfers_url,
-           params: { transfer: create_params(to_account_id: euro_account.id, amount: "100", exchange_rate: "0.9", source_fee_amount: "1.5", destination_fee_amount: "0.25", tag_ids: [ tag.id ]) },
-           headers: api_headers(write_api_key)
-    end
-
-    assert_response :created
-    transfer = Transfer.find(JSON.parse(response.body)["id"])
-    assert_equal 100, transfer.outflow_transaction.entry.amount
-    assert_equal(-90, transfer.inflow_transaction.entry.amount)
-    assert_equal 1.5, transfer.derived_source_fee_amount
-    assert_equal 0.25, transfer.derived_destination_fee_amount
-    assert_equal [ tag.id ], transfer.outflow_transaction.tag_ids
-  end
-
-  test "create rejects tag_ids that are malformed or not the family's" do
-    foreign_tag = families(:empty).tags.create!(name: "Not yours")
-
-    [ tags(:one).id, "not-a-uuid", [ "not-a-uuid" ], [ SecureRandom.uuid ], [ foreign_tag.id ], { "a" => "b" } ].each do |tag_ids|
-      assert_no_difference "Transfer.count" do
-        post api_v1_transfers_url,
-             params: { transfer: create_params(tag_ids: tag_ids) },
-             headers: api_headers(write_api_key), as: :json
-      end
-
-      assert_response :unprocessable_entity, "tag_ids #{tag_ids.inspect}"
-    end
-  end
-
-  test "create does not let a guest move money" do
-    @user.update!(role: :guest)
-
+  test "create requires both accounts" do
     assert_no_difference "Transfer.count" do
-      post api_v1_transfers_url, params: { transfer: create_params }, headers: api_headers(write_api_key)
+      post api_v1_transfers_url, params: { transfer: create_params.except(:to_account_id) }, headers: api_headers(write_api_key)
     end
 
-    assert_response :forbidden
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "create rejects the same account on both sides" do
+    assert_transfer_rejected(to_account_id: @account.id)
   end
 
   test "create cannot use an account the caller can only read" do
     @account.update_columns(owner_id: users(:family_member).id)
     AccountShare.create!(account: @account, user: @user, permission: "read_only")
 
-    assert_no_difference "Transfer.count" do
-      post api_v1_transfers_url, params: { transfer: create_params }, headers: api_headers(write_api_key)
-    end
-
-    assert_response :not_found
+    assert_transfer_rejected(status: :not_found)
   end
 
   test "create cannot use a disabled account" do
     @destination_account.update!(status: "disabled")
 
-    assert_no_difference "Transfer.count" do
-      post api_v1_transfers_url, params: { transfer: create_params }, headers: api_headers(write_api_key)
-    end
-
-    assert_response :not_found
-  end
-
-  test "create requires both accounts" do
-    post api_v1_transfers_url,
-         params: { transfer: create_params.except(:to_account_id) },
-         headers: api_headers(write_api_key)
-
-    assert_response :unprocessable_entity
-    assert_equal "validation_failed", JSON.parse(response.body)["error"]
-  end
-
-  test "create requires a positive amount" do
-    [ nil, "0", "-5", "abc" ].each do |amount|
-      assert_no_difference "Transfer.count" do
-        post api_v1_transfers_url,
-             params: { transfer: create_params(amount: amount) },
-             headers: api_headers(write_api_key)
-      end
-
-      assert_response :unprocessable_entity, "amount #{amount.inspect} should be rejected"
-    end
-  end
-
-  test "create rejects an invalid date" do
-    assert_no_difference "Transfer.count" do
-      post api_v1_transfers_url,
-           params: { transfer: create_params(date: "not-a-date") },
-           headers: api_headers(write_api_key)
-    end
-
-    assert_response :unprocessable_entity
-  end
-
-  test "create rejects the same account on both sides" do
-    assert_no_difference "Transfer.count" do
-      post api_v1_transfers_url,
-           params: { transfer: create_params(to_account_id: @account.id) },
-           headers: api_headers(write_api_key)
-    end
-
-    assert_response :unprocessable_entity
+    assert_transfer_rejected(status: :not_found)
   end
 
   test "create cannot touch another family's account" do
     other_account = families(:empty).accounts.create!(name: "Foreign", accountable: Depository.new, balance: 0, currency: "USD")
 
-    assert_no_difference "Transfer.count" do
-      post api_v1_transfers_url,
-           params: { transfer: create_params(to_account_id: other_account.id) },
-           headers: api_headers(write_api_key)
-    end
-
-    assert_response :not_found
+    assert_transfer_rejected(to_account_id: other_account.id, status: :not_found)
   end
 
   private
@@ -522,6 +401,22 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
         amount: "10",
         date: "2024-01-20"
       }.merge(overrides)
+    end
+
+    def post_transfer(as: nil, **overrides)
+      post api_v1_transfers_url, params: { transfer: create_params(overrides) }, headers: api_headers(write_api_key), as: as
+    end
+
+    def assert_transfer_rejected(status: :unprocessable_entity, as: nil, **overrides)
+      assert_no_difference "Transfer.count" do
+        post_transfer(as: as, **overrides)
+      end
+
+      assert_response status, "#{overrides.inspect} should answer #{status}"
+    end
+
+    def euro_account
+      @euro_account ||= @family.accounts.create!(name: "Transfer Euro", accountable: Depository.new, balance: 0, currency: "EUR")
     end
 
     def write_api_key

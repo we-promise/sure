@@ -35,27 +35,23 @@ class Api::V1::TransfersController < Api::V1::BaseController
     render :show
   end
 
-  # Moves money between two of the caller's accounts, booking both legs through
-  # Transfer::Creator exactly as the web form does. Sending the same
-  # idempotency_key (a UUID) again returns the transfer it already created.
+  # Sending the same idempotency_key (a UUID) again returns the transfer it
+  # already created.
   def create
-    raise InvalidParam, "transfer must be an object" unless params.require(:transfer).is_a?(ActionController::Parameters)
-
-    details = transfer_params
-    raise InvalidParam, "from_account_id and to_account_id are required" unless details[:from_account_id].present? && details[:to_account_id].present?
+    raise InvalidParam, "from_account_id and to_account_id are required" unless transfer_params[:from_account_id].present? && transfer_params[:to_account_id].present?
 
     family = current_resource_owner.family
-    amount = parse_number(:amount, details[:amount], required: true, greater_than: 0, decimals: 4)
-    source_fee_amount = parse_number(:source_fee_amount, details[:source_fee_amount], minimum: 0, decimals: 4)
-    destination_fee_amount = parse_number(:destination_fee_amount, details[:destination_fee_amount], minimum: 0, decimals: 4)
-    exchange_rate = parse_number(:exchange_rate, details[:exchange_rate], greater_than: 0)
-    date = parse_transfer_date(details[:date])
-    tag_ids = parse_tag_ids(family)
+    amount = parse_number(:amount, required: true, greater_than: 0)
+    source_fee_amount = parse_number(:source_fee_amount, minimum: 0)
+    destination_fee_amount = parse_number(:destination_fee_amount, minimum: 0)
+    exchange_rate = parse_number(:exchange_rate, greater_than: 0, decimals: nil)
+    date = parse_transfer_date
     key = parse_idempotency_key
+    tag_ids = parse_tag_ids(family)
 
     accounts = family.accounts.writable_by(current_resource_owner).visible
-    source_account = accounts.find(details[:from_account_id])
-    destination_account = accounts.find(details[:to_account_id])
+    source_account = accounts.find(transfer_params[:from_account_id])
+    destination_account = accounts.find(transfer_params[:to_account_id])
 
     @transfer = Transfer::Creator.new(
       family: family,
@@ -71,7 +67,7 @@ class Api::V1::TransfersController < Api::V1::BaseController
     ).create
 
     render :show, status: @transfer.previously_new_record? ? :created : :ok
-  rescue InvalidParam => e
+  rescue InvalidParam, Money::ConversionError => e
     render_validation_error(e.message)
   rescue Transfer::Creator::StaleIdempotencyKeyError
     render_json({
@@ -79,12 +75,10 @@ class Api::V1::TransfersController < Api::V1::BaseController
       message: "idempotency_key was already used for a different transfer"
     }, status: :conflict)
   rescue ActiveRecord::RecordInvalid => e
-    render_validation_error(e.record.errors.full_messages.to_sentence.presence || e.message)
+    render_validation_error(e.record.errors.full_messages.to_sentence)
   rescue ActiveRecord::RangeError
     # amount * exchange_rate can overflow numeric(19, 4) even when each input fits.
     render_validation_error("amount (after applying exchange_rate) is out of range")
-  rescue Money::ConversionError => e
-    render_validation_error(e.message)
   end
 
   private
@@ -93,17 +87,27 @@ class Api::V1::TransfersController < Api::V1::BaseController
       authorize_scope!(:write)
     end
 
+    # permit drops anything that is not a scalar (or, for tag_ids, an array of
+    # scalars). The raw params are read where a dropped value would otherwise
+    # be ignored without an error.
     def transfer_params
-      params.require(:transfer).permit(
-        :from_account_id, :to_account_id, :amount, :date, :exchange_rate,
-        :source_fee_amount, :destination_fee_amount, :idempotency_key, tag_ids: []
-      )
+      @transfer_params ||= begin
+        transfer = params.require(:transfer)
+        raise InvalidParam, "transfer must be an object" unless transfer.is_a?(ActionController::Parameters)
+
+        transfer.permit(
+          :from_account_id, :to_account_id, :amount, :date, :exchange_rate,
+          :source_fee_amount, :destination_fee_amount, :idempotency_key, tag_ids: []
+        )
+      end
     end
 
-    # A finite decimal below the stored range (numeric(19, 4)), or nil when the
-    # param is absent and not required. String#to_d would read "abc" as 0 and
-    # a fourth-decimal-place amount of 0.00001 would be stored as 0.
-    def parse_number(key, raw, required: false, greater_than: nil, minimum: nil, decimals: nil)
+    # A finite decimal within numeric(19, 4), or nil when the param is absent
+    # and not required. Too many decimal places are rejected rather than
+    # rounded: a retry is matched against the amount as sent, so a rounded
+    # amount would never match the stored one.
+    def parse_number(key, required: false, greater_than: nil, minimum: nil, decimals: 4)
+      raw = transfer_params[key]
       if raw.nil? || (raw.is_a?(String) && raw.strip.empty?)
         raise InvalidParam, "#{key} is required" if required
         return nil
@@ -119,39 +123,32 @@ class Api::V1::TransfersController < Api::V1::BaseController
       value
     end
 
-    def parse_transfer_date(raw)
-      return Date.current if raw.blank?
+    def parse_transfer_date
+      return Date.current if transfer_params[:date].blank?
 
-      parse_date(raw) || raise(InvalidParam, "date must be an ISO 8601 date (YYYY-MM-DD)")
+      parse_date(transfer_params[:date]) || raise(InvalidParam, "date must be an ISO 8601 date (YYYY-MM-DD)")
     end
 
-    # Read from the raw params because permit drops anything that is not an
-    # array of scalars, which would otherwise leave the transfer untagged
-    # without an error.
     def parse_tag_ids(family)
       raw = params[:transfer][:tag_ids]
       return [] if raw.nil?
 
-      unless raw.is_a?(Array) && raw.all? { |id| id.is_a?(String) && valid_uuid?(id) }
-        raise InvalidParam, "tag_ids must be an array of tag ids"
-      end
+      raise InvalidParam, "tag_ids must be an array of tag ids" unless raw.is_a?(Array) && raw.all? { |id| valid_uuid?(id) }
 
-      ids = raw.uniq
+      id_type = Tag.type_for_attribute(:id)
+      ids = raw.map { |id| id_type.cast(id) }.uniq
       raise InvalidParam, "tag_ids includes a tag that does not exist" unless family.tags.where(id: ids).count == ids.size
 
       ids
     end
 
-    # Absent means "no retry protection requested". A key that is present but
-    # not a UUID string is rejected rather than dropped: the caller believes
-    # retries are safe, and silently ignoring it would let one duplicate the
-    # transfer. Read from raw params because permit filters out non-scalars.
+    # A key that is present but not a UUID is rejected, not dropped, so a caller
+    # who thinks retries are safe never gets a duplicate.
     def parse_idempotency_key
       key = params[:transfer][:idempotency_key]
-      return nil if key.nil?
-      return key if key.is_a?(String) && valid_uuid?(key)
+      raise InvalidParam, "idempotency_key must be a UUID" unless key.nil? || valid_uuid?(key)
 
-      raise InvalidParam, "idempotency_key must be a UUID"
+      key
     end
 
     def set_transfer

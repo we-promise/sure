@@ -1,8 +1,9 @@
 class Transfer::Creator
   # Raised when the submitted idempotency key already belongs to an entry,
   # but that entry's transfer doesn't match the current request (different
-  # destination/amount/date) — i.e. a stale key from a cached form rather
-  # than a genuine double-submit. See #find_existing_transfer.
+  # destination/amount/date/tags) — i.e. a stale key from a cached form, or a
+  # key reused for a different API request, rather than a genuine
+  # double-submit. See #find_existing_transfer.
   StaleIdempotencyKeyError = Class.new(StandardError)
 
   def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, idempotency_key: nil)
@@ -131,7 +132,8 @@ class Transfer::Creator
         inflow_entry.account_id == destination_account.id &&
         outflow_entry.date == date &&
         outflow_entry.amount == amount &&
-        inflow_entry.amount == stored(inflow_converted_amount) * -1 &&
+        # The stored amount is rounded to numeric(19, 4); the converted amount is not.
+        inflow_entry.amount == inflow_converted_amount.round(4) * -1 &&
         transfer.derived_source_fee_amount == source_fee_amount &&
         transfer.derived_destination_fee_amount == destination_fee_amount &&
         transfer.outflow_transaction.tag_ids.sort == requested_tag_ids.sort
@@ -156,15 +158,8 @@ class Transfer::Creator
       { idempotency_key: key }
     end
 
-    # entries.amount is numeric(19, 4), so what's persisted is the converted
-    # amount rounded to 4 places. Comparing the raw value (e.g. 0.333333)
-    # against it would make an identical replay look like a different request.
-    def stored(value)
-      value.round(4)
-    end
-
     def requested_tag_ids
-      family.tags.where(id: tag_ids).pluck(:id)
+      @requested_tag_ids ||= tag_ids.empty? ? [] : family.tags.where(id: tag_ids).pluck(:id)
     end
 
     def apply_tags!(transfer)
