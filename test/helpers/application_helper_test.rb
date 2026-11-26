@@ -218,6 +218,16 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal "•••12", mask_last4("12")
   end
 
+  test "#format_date writes month names of the family date format in the user's locale" do
+    family = families(:empty)
+    family.update!(date_format: "%d %b %Y")
+    Current.stubs(:family).returns(family)
+
+    I18n.with_locale(:"pt-BR") do
+      assert_equal "05 out 2026", format_date(Date.new(2026, 10, 5))
+    end
+  end
+
   # `group-open:` matches any open ancestor `.group`, so a chevron inside a
   # closed disclosure nested in an open one would show as open.
   test "#disclosure_chevron follows its own details element" do
