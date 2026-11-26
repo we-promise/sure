@@ -36,8 +36,28 @@ class BalanceSheet::AccountActiveUntilDatesTest < ActiveSupport::TestCase
     assert_equal({ @account.id => 10.days.ago.to_date }, active_until_dates)
   end
 
+  test "the cutoff leaves the chart series unchanged" do
+    create_balance(account: @account, date: 10.days.ago.to_date, balance: 1000)
+    create_balance(account: @account, date: 5.days.ago.to_date, balance: 0)
+
+    without_cutoff = series_values(account_active_until_dates: {})
+    with_cutoff = series_values(account_active_until_dates: active_until_dates)
+
+    assert_includes without_cutoff, Money.new(1000, @account.currency)
+    assert_equal without_cutoff, with_cutoff
+  end
+
   private
     def active_until_dates
       BalanceSheet::AccountActiveUntilDates.new([ @account.reload ]).to_h
+    end
+
+    def series_values(account_active_until_dates:)
+      Balance::ChartSeriesBuilder.new(
+        account_ids: [ @account.id ],
+        account_active_until_dates: account_active_until_dates,
+        currency: @account.currency,
+        period: Period.last_30_days
+      ).balance_series.values.map(&:value)
     end
 end
