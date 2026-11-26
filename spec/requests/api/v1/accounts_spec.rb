@@ -135,19 +135,22 @@ RSpec.describe 'API V1 Accounts', type: :request do
                 enum: Accountable::TYPES.map(&:underscore) + Accountable::TYPES,
                 description: 'Account type (required). CamelCase names such as CreditCard are also accepted.'
               },
-              balance: { type: :number, description: 'Current balance (required). For liabilities, the amount owed.' },
-              currency: { type: :string, description: 'ISO 4217 code. Defaults to the family currency.' },
-              subtype: { type: :string, description: 'Account subtype. Must be one of the subtypes of the accountable_type, otherwise the request is rejected.' },
+              balance: {
+                oneOf: [ { type: :number }, { type: :string } ],
+                description: 'Current balance (required), as a number or a numeric string. For liabilities, the amount owed.'
+              },
+              currency: { type: :string, nullable: true, description: 'ISO 4217 code. Defaults to the family currency.' },
+              subtype: { type: :string, nullable: true, description: 'Account subtype. Must be one of the subtypes of the accountable_type, otherwise the request is rejected.' },
               opening_balance_date: {
-                type: :string, format: :date,
+                type: :string, format: :date, nullable: true,
                 description: 'Date of the opening balance. Defaults to two years ago; a loan\'s start_date takes precedence.'
               },
-              institution_name: { type: :string },
-              institution_domain: { type: :string },
-              notes: { type: :string },
-              exclude_from_reports: { type: :boolean },
+              institution_name: { type: :string, nullable: true },
+              institution_domain: { type: :string, nullable: true },
+              notes: { type: :string, nullable: true },
+              exclude_from_reports: { type: :boolean, nullable: true },
               accountable_attributes: {
-                type: :object,
+                type: :object, nullable: true,
                 description: 'Type-specific attributes, the same ones the web form accepts (for a loan: ' \
                              'initial_balance, start_date, interest_rate, rate_type, term_months, ...). ' \
                              'Must be an object. A `subtype` here must match the one on the account, if both are sent.',

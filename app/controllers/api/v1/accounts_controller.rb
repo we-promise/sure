@@ -21,7 +21,7 @@ class Api::V1::AccountsController < Api::V1::BaseController
   FIELD_TYPES = {
     opening_balance_date: ActiveModel::Type::Date.new,
     effective_date: ActiveModel::Type::Date.new, # a row of rate_changes
-    rate: ActiveModel::Type::Decimal.new
+    rate: ActiveModel::Type::Decimal.new(precision: 9, scale: 6) # the model limits it to 0..Loan::MAX_INTEREST_RATE
   }.freeze
 
   # Free text columns that the models only understand a few values of.
@@ -39,11 +39,21 @@ class Api::V1::AccountsController < Api::V1::BaseController
   private_constant :BOOLEAN_VALUES
 
   # Ruby also reads "1_000" as 1000, so the shape is checked before converting.
-  NUMBER_FORMAT = /\A[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\z/
+  # An exponent has at most 4 digits: a longer one can underflow to 0 or ask
+  # for a number with millions of digits.
+  NUMBER_FORMAT = /\A[+-]?(\d+(\.\d+)?|\.\d+)([eE][+-]?\d{1,4})?\z/
   private_constant :NUMBER_FORMAT
 
   MAX_INTEGER = 2**31 # integer columns are 4 bytes
   private_constant :MAX_INTEGER
+
+  # Precision and scale of a decimal that has no column of its own, such as a
+  # vehicle's initial_balance: it ends up in an entry amount.
+  AMOUNT_PRECISION = [ 19, 4 ].freeze
+  private_constant :AMOUNT_PRECISION
+
+  MAX_LIST_ROWS = 1_000 # a variable rate loan has one rate_changes row per reset
+  private_constant :MAX_LIST_ROWS
 
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: :create
@@ -97,7 +107,10 @@ class Api::V1::AccountsController < Api::V1::BaseController
   end
 
   def create
-    account = params.require(:account)
+    # Missing is null, "" or {} (Rails wraps an empty JSON body as {}); anything
+    # else that is not an object, an empty array included, is the wrong type.
+    account = params[:account]
+    raise ActionController::ParameterMissing, :account if omitted?(account) || (account.is_a?(ActionController::Parameters) && account.empty?)
     raise InvalidParam, "account must be an object" unless account.is_a?(ActionController::Parameters)
 
     accountable_class = requested_accountable_class(account)
@@ -116,8 +129,10 @@ class Api::V1::AccountsController < Api::V1::BaseController
 
     @account = family.accounts.create_and_sync(
       attributes.merge(accountable_type: accountable_class.name, owner: current_resource_owner),
-      opening_balance_date: opening_balance_date
+      opening_balance_date: opening_balance_date,
+      skip_initial_sync: true
     )
+    schedule_initial_sync(@account)
 
     render :show, status: :created
   rescue ActionController::ParameterMissing, ActiveRecord::RecordNotFound
@@ -166,7 +181,7 @@ class Api::V1::AccountsController < Api::V1::BaseController
       attributes = typed_attributes(Account, account, ACCOUNT_FIELDS)
 
       details = account[:accountable_attributes]
-      return attributes if details.nil?
+      return attributes if omitted?(details)
       raise InvalidParam, "accountable_attributes must be an object" unless details.is_a?(ActionController::Parameters)
 
       update_only = (UPDATE_ONLY_FIELDS - [ :id ]).reject { |field| details[field].to_s.strip.empty? }
@@ -178,6 +193,11 @@ class Api::V1::AccountsController < Api::V1::BaseController
       attributes
     end
 
+    # null and "" both mean the field was not sent.
+    def omitted?(raw)
+      raw.nil? || (raw.is_a?(String) && raw.strip.empty?)
+    end
+
     def typed_attributes(model, raw, names)
       names.each_with_object({}) do |name, typed|
         type = FIELD_TYPES.fetch(name) { model.type_for_attribute(name.to_s) }
@@ -187,7 +207,7 @@ class Api::V1::AccountsController < Api::V1::BaseController
     end
 
     def typed_value(name, raw, type)
-      return if raw.nil? || (raw.is_a?(String) && raw.strip.empty?)
+      return if omitted?(raw)
 
       case type.type
       when :integer, :decimal, :float then parse_number(name, raw, type)
@@ -216,14 +236,14 @@ class Api::V1::AccountsController < Api::V1::BaseController
       raise InvalidParam, "#{name} has more digits than a JSON number can carry; send it as a string" if rounded_float?(raw)
 
       integer = type.type == :integer
-      limit = integer ? MAX_INTEGER : (10**(type.precision - type.scale.to_i) if type.precision)
+      precision, scale = type.precision ? [ type.precision, type.scale.to_i ] : AMOUNT_PRECISION
+      limit = integer ? MAX_INTEGER : 10**(precision - scale)
       text = raw.to_s.strip
       value = parse_decimal(text) if text.match?(NUMBER_FORMAT)
 
-      unless value && (!integer || value.frac.zero?) && (limit.nil? || value.abs < limit)
-        raise InvalidParam, "#{name} must be a #{'whole ' if integer}number#{" below #{limit}" if limit}"
-      end
-      raise InvalidParam, "#{name} can have at most #{type.scale} decimal places" if type.scale && value != value.round(type.scale)
+      in_range = value && (integer ? value.between?(-limit, limit - 1) : value.abs < limit)
+      raise InvalidParam, "#{name} must be a #{'whole ' if integer}number below #{limit}" unless in_range && (!integer || value.frac.zero?)
+      raise InvalidParam, "#{name} can have at most #{scale} decimal places" if !integer && value != value.round(scale)
 
       integer ? value.to_i : value
     end
@@ -239,8 +259,9 @@ class Api::V1::AccountsController < Api::V1::BaseController
     def object_lists(details, lists)
       lists.reduce({}, :merge).each_with_object({}) do |(name, fields), result|
         rows = details[name]
-        next if rows.nil?
+        next if omitted?(rows)
         raise InvalidParam, "#{name} must be a list of objects" unless rows.is_a?(Array) && rows.all?(ActionController::Parameters)
+        raise InvalidParam, "#{name} can have at most #{MAX_LIST_ROWS} rows" if rows.size > MAX_LIST_ROWS
 
         result[name] = rows.map do |row|
           raise InvalidParam, "each #{name} row can only have #{fields.join(' and ')}" if (row.keys.map(&:to_sym) - fields).any?
@@ -280,6 +301,25 @@ class Api::V1::AccountsController < Api::V1::BaseController
       raise InvalidParam, "subtype must be one of: #{accountable_class::SUBTYPES.keys.join(', ')}"
     end
 
+    # The account is already committed, so a queue that is down must not turn
+    # this into a failed create (a retry would make a second account). The
+    # regular syncs pick the account up.
+    def schedule_initial_sync(account)
+      account.sync_later
+    rescue StandardError => e
+      Rails.logger.error "AccountsController#create could not schedule the first sync of account #{account.id}: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}"
+      Sentry.capture_exception(e) if defined?(Sentry)
+      DebugLogEntry.capture(
+        category: "api",
+        level: "error",
+        message: "Could not schedule the first sync of an account created through the API: #{e.class}",
+        source: self.class.name,
+        account: account,
+        family: account.family,
+        metadata: { error_class: e.class.name } # the message can carry a connection URL; the log and Sentry have it
+      )
+    end
+
     # A schedule on a fixed rate loan would be stored and never used.
     def reject_unused_rate_changes!(attributes)
       details = attributes[:accountable_attributes] || {}
@@ -294,9 +334,13 @@ class Api::V1::AccountsController < Api::V1::BaseController
     # later provider refresh (an AVM re-reading a property's area, say) keeps
     # them.
     def lock_supplied_attributes!(accountable_class, attributes)
-      details = attributes[:accountable_attributes]
-      names = details.to_h.keys.map(&:to_s) & accountable_class.column_names
-      details[:locked_attributes] = names.index_with { Time.current } if names.any?
+      supplied = attributes[:accountable_attributes].to_h.keys.map(&:to_s)
+      supplied << "subtype" if attributes[:subtype] # Account#subtype= stores it on the accountable
+      names = supplied.uniq & accountable_class.column_names
+      return if names.empty?
+
+      attributes[:accountable_attributes] ||= {}
+      attributes[:accountable_attributes][:locked_attributes] = names.index_with { Time.current }
     end
 
     # Account.create_and_sync anchors an opening balance on the loan's

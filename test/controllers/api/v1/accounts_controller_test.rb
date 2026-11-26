@@ -471,11 +471,16 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     })
   end
 
-  test "create answers a missing account with 400 and a non-object account with 422" do
+  test "create answers a missing account with 400 and a wrong-typed account with 422" do
     post "/api/v1/accounts", params: {}, headers: api_headers(write_api_key), as: :json
     assert_response :bad_request
 
-    [ "foo", [ 1 ] ].each do |account|
+    [ "", {}, nil ].each do |account|
+      post "/api/v1/accounts", params: { account: account }, headers: api_headers(write_api_key), as: :json
+      assert_response :bad_request, "account #{account.inspect}"
+    end
+
+    [ "foo", [ 1 ], [] ].each do |account|
       assert_no_difference "Account.count" do
         post "/api/v1/accounts", params: { account: account }, headers: api_headers(write_api_key), as: :json
       end
@@ -518,8 +523,8 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
   # the controller's own lists, so a field added later is covered here too.
   WRONG_SHAPES = {
     string: [ [ "x" ], true, 12345 ],
-    integer: [ [ 1 ], false, "12abc", 1.5 ],
-    decimal: [ [ 1 ], false, "12abc", "NaN", 12345678901234.1234 ],
+    integer: [ [ 1 ], false, "12abc", 1.5, "1e1000000000" ],
+    decimal: [ [ 1 ], false, "12abc", "NaN", 12345678901234.1234, "1e-1000000000", "1e1000000000", "1e-99999999999999999999" ],
     date: [ "2026-13-45", "2026-6-3", 20260603, [ "2026-01-01" ] ],
     boolean: [ "banana", 2, [ true ] ],
     uuid: [ [ "x" ], 5, "not-a-uuid" ]
@@ -664,6 +669,8 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
       [ { "effective_date" => 20250601, "rate" => 6 } ],
       [ { "effective_date" => "20250601", "rate" => 6 } ],
       [ { "effective_date" => "2025-06-01", "rate" => "6_0" } ],
+      [ { "effective_date" => "2025-06-01", "rate" => "1e-1000000000" } ],
+      [ { "effective_date" => "2025-06-01", "rate" => "1e-99999999999999999999" } ],
       [ { "effective_date" => "2025-06-01", "rate" => "6" }, { "effective_date" => "2025-06-01", "rate" => "7" } ]
     ]
 
@@ -677,6 +684,60 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     loan[:accountable_attributes][:rate_changes] = [ { "effective_date" => "2025-06-01", "rate" => "6" } ]
 
     assert_account_rejected(loan, field: :rate_changes, as: :json)
+  end
+
+  test "create answers 201 for an account that is committed even when scheduling its first sync fails" do
+    Account.any_instance.stubs(:sync_later).raises(StandardError, "queue is down")
+
+    assert_difference "Account.count", 1 do
+      post_account({ name: "Queue down", accountable_type: "Depository", balance: 10 })
+    end
+
+    assert_response :created
+    assert DebugLogEntry.exists?(category: "api", level: "error"), "the failure should leave a trace"
+  end
+
+  test "create accepts the numbers the format allows, exponents and leading dots included" do
+    { "1.5e3" => 1500, ".5" => 0.5, "+7" => 7, "0" => 0, "-3.25" => -3.25 }.each do |written, expected|
+      post_account({ name: "Number #{written}", accountable_type: "Depository", balance: written }, as: :json)
+
+      assert_response :created, "balance #{written.inspect}"
+      assert_equal BigDecimal(expected.to_s), @user.family.accounts.find(JSON.parse(response.body)["id"]).balance
+    end
+  end
+
+  test "create refuses a trailing dot and a list of more than 1000 rate_changes rows" do
+    assert_account_rejected({ name: "Dot", accountable_type: "Depository", balance: "100." }, field: :balance, as: :json)
+
+    loan = plain_account("Loan")
+    loan[:accountable_attributes].merge!(rate_type: "variable", rate_changes: Array.new(1001) { { "effective_date" => "2025-06-01", "rate" => "5" } })
+    assert_account_rejected(loan, field: :rate_changes, as: :json)
+  end
+
+  test "create accepts a rate_changes rate with more than three decimals" do
+    loan = plain_account("Loan")
+    loan[:accountable_attributes].merge!(rate_type: "variable", rate_changes: [ { "effective_date" => "2025-06-01", "rate" => "4.1255" } ])
+
+    post_account(loan, as: :json)
+
+    assert_response :created
+  end
+
+  test "create treats an empty string for a whole object or list as not sent" do
+    post_account({ name: "Empty", accountable_type: "Depository", balance: 1, accountable_attributes: "" }, as: :json)
+    assert_response :created
+
+    loan = plain_account("Loan")
+    loan[:accountable_attributes].merge!(rate_type: "variable", rate_changes: "")
+    post_account(loan, as: :json)
+    assert_response :created
+  end
+
+  test "create locks a subtype that was sent on the account as well as one inside accountable_attributes" do
+    post_account({ name: "Condo", accountable_type: "Property", balance: 1, subtype: "condominium" })
+
+    assert_response :created
+    assert @user.family.accounts.find(JSON.parse(response.body)["id"]).accountable.locked?(:subtype)
   end
 
   private
