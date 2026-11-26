@@ -73,6 +73,23 @@ class RetirementPlan::SolverTest < ActiveSupport::TestCase
     assert_equal jan1, dec31
   end
 
+  # The reviewer's second case: the spending is valued in 2026, so it grows
+  # from 2026 whichever day the plan is read. The contribution is today's
+  # money, so it grows from the reference date too, not from the first
+  # calendar year of the run: otherwise 2027 saves 30,900 read on
+  # 31 December and 30,000 the next morning, and the answer moves a year.
+  test "the solved year does not move overnight when the spending carries its own base year" do
+    inputs = { current_assets: 300_000, annual_contribution: 30_000, expected_annual_return: BigDecimal("0.07"),
+               inflation_rate: BigDecimal("0.03"),
+               streams: [ Stream.new(kind: "expense", annual_amount: 30_000, base_year: 2026, seeded: true) ],
+               birth_year: 1980, end_age: 90 }
+
+    dec31 = RetirementPlan::Solver.new(**inputs, as_of: Date.new(2026, 12, 31)).call.retirement_year
+    jan1 = RetirementPlan::Solver.new(**inputs, as_of: Date.new(2027, 1, 1)).call.retirement_year
+
+    assert_equal jan1, dec31
+  end
+
   private
     def base
       {

@@ -205,6 +205,20 @@ class RetirementPlan::SimulationTest < ActiveSupport::TestCase
     assert_in_delta 117_000, dec31.rows.find { _1.year == 2027 }.end_value, 60
   end
 
+  # The contribution is in today's money and grows from the reference date:
+  # read on 31 December 2026, 2027's 10,000 has grown one day, 10,000 x
+  # 1.03^(1/365) = 10,000.81, not a whole year to 10,300. Each later year
+  # adds a whole year. The day left of 2026 saves 10,000 / 365 = 27.40, with
+  # no inflation yet.
+  test "the contribution grows with inflation from the reference date, not the first calendar year" do
+    sim = simulation(as_of: Date.new(2026, 12, 31), annual_contribution: 10_000, inflation_rate: BigDecimal("0.03"))
+    by_year = sim.rows.index_by(&:year)
+
+    assert_equal "27.4", by_year[2026].contribution.round(2).to_s("F")
+    assert_equal "10000.81", by_year[2027].contribution.round(2).to_s("F")
+    assert_equal "10300.83", by_year[2028].contribution.round(2).to_s("F")
+  end
+
   # In today's money the first year deflates by the part of the year left,
   # not a whole year: 100,000 at 0% with 3% inflation from 2 July.
   test "the first year's value in today's money deflates by the part of the year left" do
