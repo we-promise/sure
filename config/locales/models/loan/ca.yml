@@ -5,4 +5,5 @@ ca:
       models:
         loan:
           invalid_rate_change: Les files de canvi de tipus necessiten una data d'efecte i un tipus d'interès.
+          invalid_rate_schedule_snapshot: No s'han pogut comparar els canvis de tipus amb el calendari desat. Torneu a carregar el préstec i apliqueu de nou els canvis.
           rate_change_before_origination: Un canvi de tipus no pot tenir efecte abans de la data de formalització del préstec.

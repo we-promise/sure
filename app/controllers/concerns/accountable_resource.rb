@@ -100,38 +100,42 @@ module AccountableResource
     # account's cached balance; before this, a validation failing on the
     # attributes (a half-filled loan rate change, say) returned 422 with the
     # balance half of the rejected form already committed.
-    saved = Account.transaction do
-      # Handle balance update if the value actually changed
-      if account_params[:balance].present? && account_params[:balance].to_d != @account.balance
-        result = @account.set_current_balance(account_params[:balance].to_d)
-        unless result.success?
-          @account.assign_attributes(update_params)
-          @error_message = result.error
+    saved = with_account_update_lock do
+      # Loan updates already hold a row-lock transaction. Use a savepoint so
+      # Rollback undoes these writes without being swallowed by that outer scope.
+      Account.transaction(requires_new: true) do
+        # Handle balance update if the value actually changed
+        if account_params[:balance].present? && account_params[:balance].to_d != @account.balance
+          result = @account.set_current_balance(account_params[:balance].to_d)
+          unless result.success?
+            @account.assign_attributes(update_params)
+            @error_message = result.error
+            raise ActiveRecord::Rollback
+          end
+        end
+
+        # Update remaining account attributes. Note: currency is intentionally allowed
+        # here so all account types (depositories, credit cards, loans, etc.) can
+        # have their currency changed via this shared update path.
+        # One save: lock_saved_attributes! below locks what this save changed,
+        # and a second save would leave it nothing to lock.
+        @account.assign_attributes(update_params)
+        @account.cost_basis_method = cost_basis_method if cost_basis_method && @account.supports_trades?
+        unless @account.save
+          @error_message = @account.errors.full_messages.join(", ")
           raise ActiveRecord::Rollback
         end
-      end
 
-      # Update remaining account attributes. Note: currency is intentionally allowed
-      # here so all account types (depositories, credit cards, loans, etc.) can
-      # have their currency changed via this shared update path.
-      # One save: lock_saved_attributes! below locks what this save changed,
-      # and a second save would leave it nothing to lock.
-      @account.assign_attributes(update_params)
-      @account.cost_basis_method = cost_basis_method if cost_basis_method && @account.supports_trades?
-      unless @account.save
-        @error_message = @account.errors.full_messages.join(", ")
+        # Inside the transaction, as `create` does: the locks are saved with
+        # `update!`, and a raise there after the commit left the balance and the
+        # attributes above in place behind a failed request.
+        @account.lock_saved_attributes!
+
+        true
+      rescue ActiveRecord::RecordInvalid => e
+        @error_message = e.record.errors.full_messages.join(", ").presence || e.message
         raise ActiveRecord::Rollback
       end
-
-      # Inside the transaction, as `create` does: the locks are saved with
-      # `update!`, and a raise there after the commit left the balance and the
-      # attributes above in place behind a failed request.
-      @account.lock_saved_attributes!
-
-      true
-    rescue ActiveRecord::RecordInvalid => e
-      @error_message = e.record.errors.full_messages.join(", ").presence || e.message
-      raise ActiveRecord::Rollback
     end
 
     unless saved
@@ -144,11 +148,33 @@ module AccountableResource
     # them. Compared by hand: lock_saved_attributes! saves again, which clears
     # saved_change_to_cost_basis_method?.
     @account.sync_later if @account.cost_basis_method != previous_cost_basis_method
+    @account_updated = true
 
-    redirect_back_or_to account_path(@account), notice: t("accounts.update.success", type: accountable_type.name.underscore.humanize)
+    notice = t("accounts.update.success", type: accountable_type.name.underscore.humanize)
+    respond_to do |format|
+      format.html { redirect_back_or_to account_path(@account), notice: notice }
+      # The form submitted through Turbo from the modal: return to the page it
+      # was opened on with a "replace" visit, which Turbo turns into a
+      # morphing refresh of the same page, keeping its scroll position.
+      format.turbo_stream do
+        flash[:notice] = notice
+        render turbo_stream: turbo_stream.action(:redirect, url_from(request.referer) || account_path(@account))
+      end
+    end
   end
 
   private
+    # Hook for subclasses to serialize persistence. The default takes no lock;
+    # loans override it, leaving rendering and redirects outside the lock.
+    def with_account_update_lock
+      yield
+    end
+
+    # Whether `update` saved the account, for controllers that save more after it.
+    def account_updated?
+      @account_updated.present?
+    end
+
     def logo_choice
       params.dig(:account, :logo_choice).presence
     end

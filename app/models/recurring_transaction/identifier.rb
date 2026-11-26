@@ -4,10 +4,13 @@ class RecurringTransaction
   # them, lands unclaimed patterns as `suggested`, and offers candidate patterns
   # to the add-bill pickers.
   class Identifier
-    attr_reader :family
+    # Ids of the series the last identify_recurring_patterns run attributed
+    # ordinary charges to, by claiming or creating them.
+    attr_reader :family, :claimed_series_ids
 
     def initialize(family)
       @family = family
+      @claimed_series_ids = []
     end
 
     # Amounts within this percentage of a cluster's running mean belong to the
@@ -104,6 +107,7 @@ class RecurringTransaction
 
     # Identify and create/update recurring transactions for the family
     def identify_recurring_patterns
+      claimed_series_ids.clear
       three_months_ago = 3.months.ago.to_date
       recurring_patterns = collect_patterns(min_occurrences: 3)
 
@@ -125,7 +129,9 @@ class RecurringTransaction
         if claimed
           # Manual rows are refreshed by the dedicated variance pass; ended
           # rows are tombstones (the user dismissed or cancelled the bill).
-          next if claimed.manual? || claimed.ended?
+          # A reference-only series is tracked by its note alone, not by the
+          # name or merchant groups this pass refreshes it from.
+          next if claimed.manual? || claimed.ended? || claimed.reference_only?
 
           update_claimed_series(claimed, pattern)
           next
@@ -133,13 +139,14 @@ class RecurringTransaction
 
         begin
           created = create_suggested_series(pattern, scoped: candidates.any?)
+          claimed_series_ids << created.id
           (existing_by_identity[identity] ||= []) << created
         rescue ActiveRecord::RecordNotUnique
           # Race: another process created the same identity between load and
           # save. Re-read and treat it as the claimed series.
           racer = family.recurring_transactions.find_by(identity_conditions(pattern, scoped: candidates.any?))
           next unless racer
-          next if racer.manual? || racer.ended?
+          next if racer.manual? || racer.ended? || racer.reference_only?
 
           update_claimed_series(racer, pattern)
         end
@@ -343,7 +350,7 @@ class RecurringTransaction
       def preload_series_to_refresh(recurring_patterns, existing_by_identity)
         to_refresh = recurring_patterns.filter_map do |pattern|
           claimed = nearest_within_tolerance(existing_by_identity[pattern_identity(pattern)] || [], pattern[:expected_amount_avg])
-          claimed unless claimed.nil? || claimed.manual? || claimed.ended?
+          claimed unless claimed.nil? || claimed.manual? || claimed.ended? || claimed.reference_only?
         end.uniq
 
         return if to_refresh.empty?
@@ -365,6 +372,7 @@ class RecurringTransaction
       # PriceChangeDetector), and so is the due day once the user has pinned
       # the schedule.
       def update_claimed_series(recurring, pattern)
+        claimed_series_ids << recurring.id
         # A detected day shift lands before the date math, so the persisted
         # next_expected_date agrees with the regenerated occurrences instead
         # of keeping the old day for a cycle.
@@ -522,6 +530,8 @@ class RecurringTransaction
       end
 
       def manual_recurring_matches_entry?(recurring, entry)
+        # Identified by its note alone; the matcher tracks it, not name and day.
+        return false if recurring.reference_only?
         return false unless entry.currency == recurring.currency
         return false if recurring.account_id.present? && entry.account_id != recurring.account_id
         # Anchor on the row's stable, user-set seed amount (not

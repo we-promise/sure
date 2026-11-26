@@ -59,10 +59,10 @@ class PasswordResetsController < ApplicationController
         next false unless @user.update(password_params)
 
         SecurityAuditLog.log_password_changed!(user: @user, request: request)
-        # The user is signed out on this path, so every session and every
-        # OAuth token (mobile app included) goes (CWE-613).
+        # The user is signed out on this path, so every session goes
+        # (CWE-613). User#revoke_oauth_access has already revoked every OAuth
+        # token (mobile app included) as part of the update.
         @user.sessions.destroy_all
-        @user.revoke_oauth_tokens!
 
         true
       end

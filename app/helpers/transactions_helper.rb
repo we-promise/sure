@@ -20,7 +20,7 @@ module TransactionsHelper
       { key: "attachment_filter", label: t("transactions.search.filters.attachment"), icon: "paperclip" }
     ]
 
-    if Current.family&.manual_reconciliation?
+    if manual_reconciliation_filter_available?
       filters.insert(4, { key: "reconcile_status_filter", label: t("transactions.search.filters.reconcile_status"), icon: "check-circle" })
     end
 
@@ -29,6 +29,14 @@ module TransactionsHelper
     end
 
     filters.reject { |filter| exclude.include?(filter[:key]) }
+  end
+
+  # Whether the reconciliation filter is worth offering. The setting alone is
+  # not enough: the filter only matches manual accounts, so it would return an
+  # empty list for a user with no accessible manual account.
+  def manual_reconciliation_filter_available?
+    Current.family&.manual_reconciliation? &&
+      (Current.user ? Current.user.accessible_accounts.manual.exists? : Current.family.accounts.manual.exists?)
   end
 
   # @param label [String] a stored investment_activity_label such as "Sweep In"
@@ -162,7 +170,9 @@ module TransactionsHelper
       # The "Transfer?" hint is drawn inside the cached row.
       @transfer_hint_transaction_ids&.include?(transaction.id) || false,
       can_annotate_account?(entry.account),
+      Current.family&.manual_reconciliation?,
       can_reconcile_account?(entry.account),
+      (manual_account?(entry.account) if transfer.present?),
       counterpart.present? && @accessible_account_ids&.include?(counterpart.id),
       Setting.brand_fetch_logo_size,
       Setting.brand_fetch_client_id.presence&.then { |id| Digest::SHA256.hexdigest(id) },
@@ -178,6 +188,15 @@ module TransactionsHelper
       (category_key.(other_leg.category) if transfer && !outflow_leg),
       transaction.activity_security&.cache_key_with_version
     ]
+  end
+
+  # Name of the category an automatic assignment recorded — falls back to a
+  # generic label when that category has since been deleted.
+  def category_provenance_category_name(transaction, provenance)
+    return transaction.category&.name if provenance.current?
+
+    Current.family.categories.find_by(id: provenance.category_id)&.name ||
+      t("transactions.category_provenance.deleted_category")
   end
 
   # Whether the current user may annotate (e.g. re-tag) entries on this
@@ -201,6 +220,30 @@ module TransactionsHelper
 
     @reconcilable_account_ids ||= Account.writable_by(Current.user).pluck(:id).to_set
     @reconcilable_account_ids.include?(account.id)
+  end
+
+  # Memoized per request so reading the row cache key does not run one
+  # account-provider query per transfer row.
+  def manual_account?(account)
+    return false unless account
+
+    @manual_account_cache ||= {}
+    @manual_account_cache.fetch(account.id) do
+      @manual_account_cache[account.id] = account.manual?
+    end
+  end
+
+  # A matched transfer cannot be bulk edited like a normal entry: its date,
+  # category and merchant belong to the pair or to the outflow leg. The
+  # checkbox is offered only where manual reconciliation is available, and
+  # Edit then exposes the safe fields (name, notes, tags, reconciliation).
+  def bulk_reconcilable_transfer?(entry)
+    transaction = entry.entryable
+
+    transaction&.transfer.present? &&
+      Current.family&.manual_reconciliation? &&
+      manual_account?(entry.account) &&
+      can_reconcile_account?(entry.account)
   end
 
   # The dashboard drill-down filters by account id, so its filter chips name
@@ -403,6 +446,35 @@ module TransactionsHelper
     JSON.pretty_generate(value)
   rescue StandardError
     value.to_s
+  end
+
+  # Options for the convert-to-trade security picker: label, id and the data
+  # its price check reads. That check compares against the price the
+  # transaction implies, so only a positive quote converted to `currency`
+  # carries data-price-cents. Without a rate the quote is still shown, under its own
+  # currency. The securities share one rate lookup per quote currency and day.
+  def convert_to_trade_security_options(securities, currency)
+    rates = {}
+    securities.map do |security|
+      price = security.current_price_in(currency, rates: rates)
+      shown_price = price || security.current_price
+      label = security.ticker.to_s.dup
+      label << " (#{format_money(shown_price)})" if shown_price
+      label << " - #{security.name.truncate(25)}" if security.name.present?
+      # Fractional cents are kept: a converted quote can be worth less than a
+      # cent (1 JPY in USD), and a zero would make the check divide by zero.
+      price_cents = price_cents_for_check(price)
+      [ label, security.id, { "data-price-cents" => price_cents, "data-ticker" => security.ticker } ]
+    end
+  end
+
+  # @param price [Money, nil] a quote in the transaction's currency
+  # @return [Integer, Float, nil] the quote in cents, whole cents as an integer
+  def price_cents_for_check(price)
+    return unless price&.amount&.positive?
+
+    cents = price.amount.to_d * 100
+    cents.frac.zero? ? cents.to_i : cents.to_f
   end
 
   # A pending transfer match as the viewer may see it from `transaction`'s
