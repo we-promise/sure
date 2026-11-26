@@ -93,6 +93,21 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilderTest < ActiveSupport::TestCase
     assert_nil parsed["values"].last["trend"]["percent"]
   end
 
+  test "passes the zero-balance cutoff to the chart" do
+    period = Period.custom(start_date: Date.new(2026, 4, 15), end_date: Date.new(2026, 7, 15))
+    create_balance(account: @asset_account, date: Date.new(2026, 5, 1), balance: 1000)
+    create_balance(account: @asset_account, date: Date.new(2026, 6, 1), balance: 0)
+
+    chart = Balance::ChartSeriesBuilder.new(account_ids: [], currency: @family.currency, period: period, interval: "1 month")
+    Balance::ChartSeriesBuilder.stubs(:new).returns(chart)
+    Balance::ChartSeriesBuilder.expects(:new)
+      .with { |args| args[:account_active_until_dates][@asset_account.id] == Date.new(2026, 6, 1) }
+      .twice
+      .returns(chart)
+
+    builder.breakdown_series(period: period)
+  end
+
   test "cache key includes payload version" do
     period = Period.custom(start_date: Date.new(2026, 6, 15), end_date: Date.new(2026, 7, 15))
 
