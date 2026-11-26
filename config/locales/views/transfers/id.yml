@@ -5,6 +5,7 @@ id:
       success: Transfer berhasil dibuat
       exchange_rate_unavailable: Kurs valas tidak tersedia untuk mata uang dan tanggal yang dipilih
       date_invalid: tidak valid
+      amounts_invalid: "Kurs dan biaya harus berupa angka positif."
       stale_form: Formulir ini telah dikirimkan sebelumnya dengan rincian yang berbeda. Silakan muat ulang halaman dan coba lagi.
     destroy:
       success: Transfer berhasil dihapus

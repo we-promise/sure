@@ -5,6 +5,7 @@ es:
       success: Transferencia creada
       exchange_rate_unavailable: No hay tipo de cambio disponible para las divisas y la fecha seleccionadas
       date_invalid: no es válida
+      amounts_invalid: "El tipo de cambio y las comisiones deben ser números positivos."
       stale_form: Este formulario ya se envió con otros datos. Recarga la página e inténtalo de nuevo.
     destroy:
       success: Transferencia eliminada

@@ -5,6 +5,7 @@ zh-CN:
       success: 转账已创建
       exchange_rate_unavailable: 所选货币和日期没有可用汇率
       date_invalid: 无效
+      amounts_invalid: "汇率和手续费必须为正数。"
       stale_form: 表单已提交且内容有所变更，请刷新页面后重试。
     destroy:
       success: 转账已移除

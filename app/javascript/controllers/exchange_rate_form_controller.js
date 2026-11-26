@@ -23,6 +23,12 @@ export default class extends Controller {
     this.sourceCurrency = null;
     this.destinationCurrency = null;
     this.activeTab = "convert";
+    // A form redrawn after a rejected submit carries the rate that was
+    // entered; the first lookup must not replace it with the market rate.
+    this.currencyCheckStarted = false;
+    this.keepRenderedRate =
+      this.hasExchangeRateFieldTarget &&
+      this.exchangeRateFieldTarget.value.trim() !== "";
 
     // A money field reformats its text when its currency lookup lands, which
     // fires no "input", so the derived rate or destination is worked out again.
@@ -51,6 +57,10 @@ export default class extends Controller {
   }
 
   checkCurrencyDifference() {
+    // Only the lookup started on connect may keep a redrawn rate: once the
+    // accounts or date change, the rate belongs to another pair or day.
+    if (this.currencyCheckStarted) this.keepRenderedRate = false;
+    this.currencyCheckStarted = true;
     this.syncCurrencySources();
 
     const context = this.getExchangeRateContext();
@@ -132,13 +142,11 @@ export default class extends Controller {
       return;
     }
 
-    // amountTarget is the shared money field, so it can hold a comma decimal
-    // or expression ("12,50+4,30"); Number.parseFloat stops at the first
-    // comma and silently truncates it. exchangeRateFieldTarget is a plain
-    // type="number" input, which the browser already normalizes to a dot
-    // decimal or empty string, so parseFloat is safe there.
+    // Both are money fields, so they can hold a comma decimal or an
+    // expression ("12,50+4,30", "1/0,92"); Number.parseFloat would stop at
+    // the first comma and silently truncate it.
     const amount = submittedAmount(this.application, this.amountTarget);
-    const rate = Number.parseFloat(this.exchangeRateFieldTarget.value);
+    const rate = submittedAmount(this.application, this.exchangeRateFieldTarget);
 
     if (amount && rate && rate !== 0) {
       const destAmount = (amount * rate).toFixed(2);
@@ -169,10 +177,10 @@ export default class extends Controller {
       const rate = destAmount / amount;
       const formattedRate = this.formatExchangeRate(rate);
       this.calculateRateDisplayTarget.textContent = formattedRate;
-      this.exchangeRateFieldTarget.value = rate.toFixed(14);
+      this.#setExchangeRate(rate.toFixed(14));
     } else {
       this.calculateRateDisplayTarget.textContent = "-";
-      this.exchangeRateFieldTarget.value = "";
+      this.#setExchangeRate("");
     }
   }
 
@@ -191,7 +199,7 @@ export default class extends Controller {
 
   clearConvertFields() {
     if (this.hasExchangeRateFieldTarget) {
-      this.exchangeRateFieldTarget.value = "";
+      this.#setExchangeRate("");
     }
     if (this.hasConvertDestinationDisplayTarget) {
       this.convertDestinationDisplayTarget.textContent = "-";
@@ -206,7 +214,7 @@ export default class extends Controller {
       this.calculateRateDisplayTarget.textContent = "-";
     }
     if (this.hasExchangeRateFieldTarget) {
-      this.exchangeRateFieldTarget.value = "";
+      this.#setExchangeRate("");
     }
   }
 
@@ -260,8 +268,14 @@ export default class extends Controller {
   }
 
   showExchangeRateField(rate) {
-    if (this.hasExchangeRateFieldTarget) {
-      this.exchangeRateFieldTarget.value = this.formatExchangeRate(rate);
+    if (this.hasExchangeRateFieldTarget && !this.#takeRenderedRate()) {
+      // On the calculate tab the rate follows the typed destination amount,
+      // not the market rate.
+      if (this.activeTab === "calculateRate") {
+        this.calculateRateFromAmounts();
+      } else {
+        this.#setExchangeRate(this.formatExchangeRate(rate));
+      }
     }
     if (this.hasExchangeRateContainerTarget) {
       this.exchangeRateContainerTarget.classList.remove("hidden");
@@ -275,8 +289,8 @@ export default class extends Controller {
     this.sourceCurrency = context?.fromCurrency || null;
     this.destinationCurrency = context?.toCurrency || null;
 
-    if (this.hasExchangeRateFieldTarget) {
-      this.exchangeRateFieldTarget.value = "";
+    if (this.hasExchangeRateFieldTarget && !this.#takeRenderedRate()) {
+      this.#setExchangeRate("");
     }
     if (this.hasExchangeRateContainerTarget) {
       this.exchangeRateContainerTarget.classList.remove("hidden");
@@ -294,11 +308,12 @@ export default class extends Controller {
   }
 
   hideExchangeRateField() {
+    this.keepRenderedRate = false;
     if (this.hasExchangeRateContainerTarget) {
       this.exchangeRateContainerTarget.classList.add("hidden");
     }
     if (this.hasExchangeRateFieldTarget) {
-      this.exchangeRateFieldTarget.value = "";
+      this.#setExchangeRate("");
     }
     if (this.hasConvertDestinationDisplayTarget) {
       this.convertDestinationDisplayTarget.textContent = "-";
@@ -312,6 +327,21 @@ export default class extends Controller {
 
     this.sourceCurrency = null;
     this.destinationCurrency = null;
+  }
+
+  // True once, for the first lookup after connect when the form was drawn
+  // with a rate; any later lookup (another account or date) replaces it.
+  #takeRenderedRate() {
+    const keep = this.keepRenderedRate;
+    this.keepRenderedRate = false;
+    return keep;
+  }
+
+  // The rate is a money field, which tracks its validity on "input", so a
+  // rate written here clears a stale invalid text the user left in it.
+  #setExchangeRate(value) {
+    this.exchangeRateFieldTarget.value = value;
+    this.exchangeRateFieldTarget.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
   // The destination amount is a money field, which tracks its validity on
