@@ -66,7 +66,7 @@ en:
       open: Open %{name}
     ai_metadata:
       title: What the AI read
-      summary: "Model %{model}, prompt version %{version}."
+      summary: "Model %{model}, prompt %{prompt}."
     index:
       title: Purchases
       tabs_label: Show

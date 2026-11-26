@@ -87,7 +87,7 @@
       <% if @purchase.status.in?(Purchase::OPEN_STATUSES) %>
         <%= render DS::Button.new(text: t(".dismiss"), href: dismiss_purchase_path(@purchase), method: :post, variant: :outline, size: :sm) %>
       <% end %>
-      <% if @purchase.failed? && @purchase.email? %>
+      <% if @purchase.reprocessable? %>
         <%= render DS::Button.new(text: t(".reprocess"), href: reprocess_purchase_path(@purchase), method: :post, variant: :outline, size: :sm, icon: "refresh-cw") %>
       <% end %>
       <% if @purchase.email? && @purchase.original_email.attached? && @purchase.user_id == Current.user.id %>

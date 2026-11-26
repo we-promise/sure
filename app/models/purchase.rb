@@ -139,12 +139,15 @@ class Purchase < ApplicationRecord
     result.kind
   end
 
+  # A failed order email that can be read again: one whose original was never stored has
+  # nothing to read.
+  def reprocessable? = failed? && email? && original_email.attached?
+
   # Starts reading a failed order email again. Under the purchase's lock, so two clicks start
   # one run. Returns whether it started one.
   def reprocess!
     with_lock do
-      # A purchase whose original email was never stored has nothing to read.
-      next false unless failed? && email? && original_email.attached?
+      next false unless reprocessable?
 
       update!(status: :processing, error: nil)
       Ai::GenerationRun.enqueue(:extract_purchase, family:, ids: [ id ])

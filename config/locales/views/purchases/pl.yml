@@ -74,7 +74,7 @@ pl:
       open: Otwórz %{name}
     ai_metadata:
       title: Co odczytało AI
-      summary: "Model %{model}, wersja promptu %{version}."
+      summary: "Model %{model}, prompt %{prompt}."
     index:
       title: Zakupy
       tabs_label: Pokaż

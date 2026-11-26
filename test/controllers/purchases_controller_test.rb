@@ -220,12 +220,22 @@ class PurchasesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "reprocess restarts a failed email purchase only" do
+    @awaiting.original_email.attach(io: StringIO.new("From: a@b.c\r\n\r\nOrder"), filename: "order.eml", content_type: "message/rfc822")
     @awaiting.update!(status: :failed)
 
-    assert_enqueued_with(job: Purchase::EmailProcessJob) { post reprocess_purchase_url(@awaiting) }
+    assert_enqueued_with(job: Ai::GenerationJob) { post reprocess_purchase_url(@awaiting) }
     assert_equal "processing", @awaiting.reload.status
 
-    assert_no_enqueued_jobs(only: Purchase::EmailProcessJob) { post reprocess_purchase_url(@matched) }
+    assert_no_enqueued_jobs(only: Ai::GenerationJob) { post reprocess_purchase_url(@matched) }
+  end
+
+  test "a failed email without its original offers no read-again button" do
+    @awaiting.update!(status: :failed)
+
+    get purchase_url(@awaiting)
+
+    assert_response :success
+    assert_select "form[action='#{reprocess_purchase_path(@awaiting)}']", count: 0
   end
 
   test "the original email downloads as an attachment, never inline" do

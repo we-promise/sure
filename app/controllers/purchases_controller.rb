@@ -30,8 +30,7 @@ class PurchasesController < ApplicationController
   end
 
   def reprocess
-    if @purchase.failed? && @purchase.email?
-      @purchase.reprocess!
+    if @purchase.reprocess!
       redirect_to purchase_path(@purchase), notice: t(".reprocessing")
     else
       redirect_to purchase_path(@purchase)
