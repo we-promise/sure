@@ -1,4 +1,4 @@
-<%# locals: (statement:, period:, as_of:, segments:, by:) %>
+<%# locals: (statement:, period:, as_of:, segments:, by:, sort:, dir:) %>
 
 <%
   active_by = by.presence || "security"
@@ -12,7 +12,7 @@
       <% sc.with_segment(
         t("portfolios.allocation.groupings.#{grouping}"),
         active: active_by == grouping,
-        href: allocation_grouping_link(grouping)
+        href: allocation_grouping_link(grouping, sort: sort, dir: dir)
       ) %>
     <% end %>
   <% end %>

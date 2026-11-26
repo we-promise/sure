@@ -197,6 +197,21 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
       "precondition: the kind grouping differs from the default"
   end
 
+  # Each section's links keep the other section's state, so each gets it as a
+  # local: the requested sort and direction (not the fallback) for the
+  # grouping picker, and the grouping for the holdings headers.
+  test "passes each section the other section's query-string state" do
+    sections = Portfolio::SectionRegistry.new(
+      statement: @statement, period: @period, as_of: @as_of, user: @user, sort: "name", dir: "asc", by: "kind"
+    ).sections
+
+    assert_equal "kind", sections.find { |s| s[:key] == "holdings" }[:locals][:by]
+    assert_equal [ "name", "asc" ], sections.find { |s| s[:key] == "allocation" }[:locals].values_at(:sort, :dir)
+
+    unsorted = registry(by: "kind").sections.find { |s| s[:key] == "allocation" }[:locals]
+    assert_equal [ nil, nil ], unsorted.values_at(:sort, :dir), "no requested sort means none in the grouping links"
+  end
+
   private
     def stub_section
       { key: "stub", title: "portfolios.sections.accounts", partial: "portfolios/accounts",

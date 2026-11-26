@@ -4,12 +4,37 @@ class PortfoliosHelperTest < ActionView::TestCase
   include PortfoliosHelper
 
   test "a holdings header flips its own direction and opens another column on its natural one" do
-    active = { active_sort: "value", active_dir: "desc" }
+    active = { active_sort: "value", active_dir: "desc", by: nil }
 
     assert_equal portfolio_path(sort: "value", dir: "asc"), holdings_sort_link("value", **active)
-    assert_equal portfolio_path(sort: "value", dir: "desc"), holdings_sort_link("value", active_sort: "value", active_dir: "asc")
+    assert_equal portfolio_path(sort: "value", dir: "desc"), holdings_sort_link("value", active_sort: "value", active_dir: "asc", by: nil)
     assert_equal portfolio_path(sort: "name", dir: "asc"), holdings_sort_link("name", **active)
     assert_equal portfolio_path(sort: "weight", dir: "desc"), holdings_sort_link("weight", **active)
+  end
+
+  # The controller has already reduced the query string to the whitelists, so
+  # the links use the values they are given and never re-read params.
+  test "a holdings sort link carries the grouping it is given, not the one in params" do
+    params[:by] = "currency"
+
+    assert_equal portfolio_path(by: "kind", sort: "value", dir: "asc"),
+      holdings_sort_link("value", active_sort: "value", active_dir: "desc", by: "kind")
+  end
+
+  test "a grouping link carries the sort it is given, not the one in params" do
+    params[:sort] = "weight"
+    params[:dir] = "asc"
+
+    assert_equal portfolio_path(by: "currency", sort: "name", dir: "desc"),
+      allocation_grouping_link("currency", sort: "name", dir: "desc")
+  end
+
+  test "a value the controller dropped never reaches a link from params" do
+    params.merge!(by: "drop table", sort: "drop table", dir: "sideways")
+
+    assert_equal portfolio_path(sort: "value", dir: "asc"),
+      holdings_sort_link("value", active_sort: "value", active_dir: "desc", by: nil)
+    assert_equal portfolio_path(by: "currency"), allocation_grouping_link("currency", sort: nil, dir: nil)
   end
 
   test "only the active holdings column carries an aria-sort value" do

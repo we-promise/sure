@@ -28,7 +28,9 @@ class Portfolio::SectionRegistry
   # and the allocation donut, passed through as given: the statement
   # whitelists them (InvestmentStatement::HOLDINGS_SORT_KEYS,
   # HOLDINGS_SORT_DIRECTIONS, ALLOCATION_GROUPINGS) and falls back to its
-  # defaults for anything else.
+  # defaults for anything else. The partials' sort and grouping links carry
+  # them back into the URL as given, so the caller passes them already reduced
+  # to those whitelists, as PortfoliosController does.
   #
   # `extra_sections` are appended after the built-ins, in the order given. It
   # is the seam that keeps this list open: a section can be added (or a test
@@ -80,7 +82,7 @@ class Portfolio::SectionRegistry
           key: "holdings",
           title: "portfolios.sections.holdings",
           partial: "portfolios/holdings",
-          locals: shared_locals.merge(rows: holdings_rows, sort: holdings_sort.first, dir: holdings_sort.last),
+          locals: shared_locals.merge(rows: holdings_rows, sort: holdings_sort.first, dir: holdings_sort.last, by: by),
           visible: holdings_rows.any?,
           collapsible: true
         },
@@ -96,7 +98,7 @@ class Portfolio::SectionRegistry
           key: "allocation",
           title: "portfolios.sections.allocation",
           partial: "portfolios/allocation",
-          locals: shared_locals.merge(segments: allocation_segments, by: by),
+          locals: shared_locals.merge(segments: allocation_segments, by: by, sort: sort, dir: dir),
           visible: allocation_segments.any?,
           collapsible: true
         }
