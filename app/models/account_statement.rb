@@ -377,6 +377,19 @@ class AccountStatement < ApplicationRecord
     currency.presence || account&.currency || family.currency
   end
 
+  # statement_currency for the form, as a known code: a save rejected for an
+  # unknown code falls back to the saved one, then the account's or family's.
+  def known_statement_currency
+    [ currency, currency_in_database, account&.currency, family.currency ].each do |code|
+      next if code.blank?
+
+      return Money::Currency.new(code).iso_code
+    rescue Money::Currency::UnknownCurrencyError
+      next
+    end
+    nil
+  end
+
   def pdf?
     content_type.in?(ALLOWED_EXTENSION_CONTENT_TYPES[".pdf"])
   end

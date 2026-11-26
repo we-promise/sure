@@ -442,6 +442,22 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an unknown currency redraws the form with its error" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+
+    statement.update_column(:currency, "EUR")
+
+    patch account_statement_url(statement), params: { account_statement: { currency: "ZZZ", closing_balance: "12.50" } }
+
+    assert_response :unprocessable_entity
+    assert_select "select[name='account_statement[currency]'] option[selected][value='EUR']"
+    assert_select "[data-controller~='money-field'][data-money-field-separator-currency-value='EUR'] input[name='account_statement[closing_balance]']"
+  end
+
   test "updates metadata" do
     statement = AccountStatement.create_from_upload!(
       family: @account.family,
