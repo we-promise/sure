@@ -5,7 +5,7 @@ pt-PT:
       success: Transferência criada
       exchange_rate_unavailable: Taxa de câmbio indisponível para as moedas e data selecionadas
       date_invalid: é inválida
-      amounts_invalid: "A taxa de câmbio e as comissões têm de ser números positivos."
+      amounts_invalid: "A taxa de câmbio tem de ser positiva e as comissões não podem ser negativas."
     destroy:
       success: Transferência removida
     form:

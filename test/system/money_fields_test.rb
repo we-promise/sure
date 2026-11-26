@@ -98,6 +98,24 @@ class MoneyFieldsTest < ApplicationSystemTestCase
     assert_equal "1.1", page.evaluate_script(submitted)
   end
 
+  test "a calculated rate survives a date without a market rate" do
+    eur_account = @user.family.accounts.create!(name: "EUR Savings", balance: 1000, currency: "EUR", accountable: Depository.new)
+
+    visit new_transfer_url
+    select_ds("From", accounts(:depository))
+    select_ds("To", eur_account)
+    fill_in "transfer[amount]", with: "100"
+    find("button[data-id='calculateRate']").click
+    find("[data-transfer-form-target='destinationAmount']").fill_in(with: "92")
+    assert_selector "[data-transfer-form-target='calculateRateDisplay']", text: "0.92"
+
+    fill_in "Date", with: 3.days.ago.to_date
+
+    assert_selector "[data-transfer-form-target='calculateRateDisplay']", text: "0.92"
+    rate = 'document.querySelector("[data-transfer-form-target=\'exchangeRateField\']").value'
+    assert_equal "0.92", page.evaluate_script(rate).to_f.round(2).to_s
+  end
+
   test "text typed between two pending currency switches keeps the new reading" do
     jpy_account = @user.family.accounts.create!(name: "JPY Savings", balance: 100_000, currency: "JPY", accountable: Depository.new)
     eur_account = @user.family.accounts.create!(name: "EUR Savings", balance: 1_000, currency: "EUR", accountable: Depository.new)

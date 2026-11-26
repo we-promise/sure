@@ -265,15 +265,21 @@ export default function evaluateAmountExpression(value, options = {}) {
 // happens when a number below 1e-6 is converted back through Number()/
 // String(). Trimming the padding zeros toFixed leaves behind keeps a
 // sub-cent crypto price ("0.00000001") intact instead of rounding it to 0.
-// Keeps 15 significant digits, which drops float drift (0.1 + 0.2) but not
-// the digits of a tiny value such as an exchange rate to BTC (3.8e-10),
-// and never falls back to exponential notation.
+// Rounds to 15 significant digits when that only drops float drift (0.1 +
+// 0.2, a few units in the last place) and keeps the 16th and 17th digit
+// otherwise, so a large amount keeps its cents (12345678901234.25) and a
+// tiny exchange rate to BTC (3.8e-10) keeps its digits. Never falls back to
+// exponential notation.
 export function formatUnroundedAmount(amount) {
   if (amount === 0 || !Number.isFinite(amount)) return amount.toFixed(0)
 
   const integerDigits = Math.floor(Math.log10(Math.abs(amount))) + 1
   const decimals = Math.min(20, Math.max(0, 15 - integerDigits))
-  const fixed = amount.toFixed(decimals)
+  const driftTolerance = Math.abs(amount) * Number.EPSILON * 4
+  let fixed = amount.toFixed(decimals)
+  for (let extra = 1; extra <= 2 && Math.abs(Number(fixed) - amount) > driftTolerance; extra++) {
+    fixed = amount.toFixed(Math.min(20, decimals + extra))
+  }
   return fixed.includes(".") ? fixed.replace(/0+$/, "").replace(/\.$/, "") : fixed
 }
 

@@ -245,7 +245,7 @@ export default class extends Controller {
         if (this.shouldShowManualExchangeRate(data)) {
           this.showManualExchangeRateField();
         } else {
-          this.hideExchangeRateField();
+          this.#lookupFailed();
         }
         return;
       }
@@ -263,6 +263,19 @@ export default class extends Controller {
       }
 
       console.error("Error fetching exchange rate:", error);
+      if (this.isCurrentExchangeRateState(fromCurrency, toCurrency, date)) {
+        this.#lookupFailed();
+      }
+    }
+  }
+
+  // A failed lookup keeps the rate of a form redrawn after a rejected submit
+  // and the amounts typed on the calculate tab, and lets the user change
+  // them; otherwise the field hides.
+  #lookupFailed() {
+    if (this.keepRenderedRate || this.activeTab === "calculateRate") {
+      this.showManualExchangeRateField();
+    } else {
       this.hideExchangeRateField();
     }
   }
@@ -290,7 +303,12 @@ export default class extends Controller {
     this.destinationCurrency = context?.toCurrency || null;
 
     if (this.hasExchangeRateFieldTarget && !this.#takeRenderedRate()) {
-      this.#setExchangeRate("");
+      // On the calculate tab the rate still follows the typed amounts.
+      if (this.activeTab === "calculateRate") {
+        this.calculateRateFromAmounts();
+      } else {
+        this.#setExchangeRate("");
+      }
     }
     if (this.hasExchangeRateContainerTarget) {
       this.exchangeRateContainerTarget.classList.remove("hidden");

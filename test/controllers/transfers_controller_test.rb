@@ -287,6 +287,38 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, I18n.t("transfers.create.date_invalid")
   end
 
+  test "a date too long to parse is reported as an invalid date" do
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: "2" * 200,
+        amount: "100",
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, I18n.t("transfers.create.date_invalid")
+    assert_not_includes response.body, I18n.t("transfers.create.amounts_invalid")
+  end
+
+  test "a rejected transfer keeps a date written out in words" do
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: "15 Jan 2024",
+        amount: "100",
+        source_fee_amount: "-1",
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='transfer[date]'][value='2024-01-15']"
+  end
+
   test "the amounts error is translated wherever the other transfer errors are" do
     locales = I18n.available_locales.select { |locale| I18n.exists?("transfers.create.date_invalid", locale, fallback: false) }
     missing = locales.reject { |locale| I18n.exists?("transfers.create.amounts_invalid", locale, fallback: false) }

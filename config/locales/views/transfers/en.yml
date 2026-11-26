@@ -5,7 +5,7 @@ en:
       success: Transfer created
       exchange_rate_unavailable: Exchange rate unavailable for selected currencies and date
       date_invalid: is invalid
-      amounts_invalid: The exchange rate and fees must be positive numbers.
+      amounts_invalid: The exchange rate must be positive, and fees cannot be negative.
       stale_form: This form was already submitted with different details. Please refresh the page and try again.
     destroy:
       success: Transfer removed

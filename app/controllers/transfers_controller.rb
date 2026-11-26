@@ -49,7 +49,7 @@ class TransfersController < ApplicationController
       family: Current.family,
       source_account_id: source_account.id,
       destination_account_id: destination_account.id,
-      date: transfer_params[:date].present? ? Date.parse(transfer_params[:date]) : Date.current,
+      date: transfer_params[:date].present? ? parse_transfer_date : Date.current,
       amount: transfer_params[:amount].to_d,
       exchange_rate: transfer_params[:exchange_rate].presence&.to_d,
       source_fee_amount: transfer_params[:source_fee_amount],
@@ -235,8 +235,16 @@ class TransfersController < ApplicationController
       BigDecimal(text) if text.match?(/\A-?\d{1,20}(\.\d{1,20})?\z/)
     end
 
+    # Date.parse raises a plain ArgumentError, not Date::Error, for a string
+    # over its length limit; both are an invalid date here.
+    def parse_transfer_date
+      Date.parse(transfer_params[:date].to_s)
+    rescue ArgumentError
+      raise Date::Error, "invalid date"
+    end
+
     def submitted_date
-      Date.iso8601(transfer_params[:date].to_s)
+      parse_transfer_date
     rescue Date::Error
       nil
     end
