@@ -79,7 +79,7 @@ id:
             unavailable: Pengaturan AI keluarga Anda saat ini tidak menjalankan asisten dalam aplikasi, jadi asisten tidak akan menjawab sampai admin mengubahnya.
           external:
             title: Hubungkan agen Anda saat Anda siap.
-            body: Ini menonaktifkan asisten dalam aplikasi untuk akun Anda. Agar asisten Anda sendiri dapat bekerja dengan %{product_name}, hubungkan dari Pengaturan → MCP. Pilihan ini tidak membuat, mengubah, atau menghapus koneksi apa pun.
+            body: Ini membuat AI tetap aktif untuk akun Anda. Jika keluarga Anda dikonfigurasi untuk obrolan eksternal, percakapan akan menggunakan asisten eksternal Anda, bukan asisten bawaan %{product_name}, di antarmuka obrolan yang sama. %{product_name} tetap menangani impor, kategorisasi, dan proses lainnya sebagai catatan utama data Anda. Agen Anda dapat berinteraksi dengannya melalui MCP atau sure-cli; untuk menghubungkannya, buka Pengaturan → MCP. Pilihan ini tidak mengonfigurasi layanan obrolan dan tidak membuat, mengubah, atau menghapus koneksi apa pun.
       submit: Berikutnya
     trial:
       title: Coba Sure selama 45 hari

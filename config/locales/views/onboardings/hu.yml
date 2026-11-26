@@ -79,7 +79,7 @@ hu:
             unavailable: A háztartásod jelenlegi MI-beállításai nem futtatják az alkalmazáson belüli asszisztenst, ezért nem fog válaszolni, amíg egy adminisztrátor meg nem változtatja őket.
           external:
             title: Csatlakoztasd az ügynöködet, amikor készen állsz.
-            body: 'Ez kikapcsolja az alkalmazáson belüli asszisztenst a fiókodban. Ha azt szeretnéd, hogy a saját asszisztensed a(z) %{product_name} alkalmazással dolgozzon, csatlakoztasd itt: Beállítások → MCP. Ez a választás nem hoz létre, nem módosít és nem töröl egyetlen kapcsolatot sem.'
+            body: "Így az MI bekapcsolva marad a fiókodban. Ha a háztartásod külső csevegésre van beállítva, a beszélgetések a beállított külső asszisztensedet használják a(z) %{product_name} beépített asszisztense helyett, ugyanabban a csevegőfelületben. A(z) %{product_name} továbbra is kezeli az importálást, a kategorizálást és a többi folyamatot, az adataid elsődleges nyilvántartásaként. Az ügynököd MCP-n vagy a sure-cli-n keresztül dolgozhat vele; a csatlakoztatáshoz lásd: Beállítások → MCP. Ez a választás nem állítja be a csevegési szolgáltatást, és nem hoz létre, nem módosít és nem töröl egyetlen kapcsolatot sem."
       submit: Tovább
     trial:
       title: Próbáld ki a Sure-t 45 napig

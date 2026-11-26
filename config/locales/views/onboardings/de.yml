@@ -79,7 +79,7 @@ de:
             unavailable: Mit den aktuellen KI-Einstellungen deines Haushalts läuft der integrierte Assistent nicht. Er antwortet erst, wenn ein Admin sie ändert.
           external:
             title: Verbinde deinen Agenten, wann immer du bereit bist.
-            body: Damit wird der integrierte Assistent für dein Konto deaktiviert. Damit dein eigener Assistent mit %{product_name} arbeiten kann, verbinde ihn unter Einstellungen → MCP. Diese Auswahl erstellt, ändert oder entfernt keine Verbindung.
+            body: Damit bleibt KI für dein Konto aktiviert. Wenn dein Haushalt für externen Chat eingerichtet ist, nutzen Unterhaltungen deinen eingerichteten externen Assistenten statt des integrierten Assistenten von %{product_name}, in derselben Chat-Oberfläche. %{product_name} übernimmt weiterhin Importe, Kategorisierung und andere Abläufe als maßgebliche Quelle deiner Daten. Dein Agent kann über MCP oder sure-cli damit arbeiten; verbinden kannst du ihn unter Einstellungen → MCP. Diese Auswahl richtet weder das Chat-Backend ein noch erstellt, ändert oder entfernt sie eine Verbindung.
       submit: Weiter
     trial:
       title: Sure 45 Tage kostenlos testen

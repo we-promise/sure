@@ -79,7 +79,7 @@ nl:
             unavailable: Met de huidige AI-instellingen van uw huishouden draait de ingebouwde assistent niet. Hij antwoordt pas als een beheerder ze wijzigt.
           external:
             title: Koppel uw agent wanneer u er klaar voor bent.
-            body: Hiermee wordt de ingebouwde assistent voor uw account uitgeschakeld. Koppel uw eigen assistent via Instellingen → MCP om hem met %{product_name} te laten werken. Deze keuze maakt geen koppeling aan, wijzigt er geen en verwijdert er geen.
+            body: Hiermee blijft AI ingeschakeld voor uw account. Als uw huishouden is ingesteld voor externe chat, gebruiken gesprekken uw externe assistent in plaats van de ingebouwde assistent van %{product_name}, in dezelfde chatomgeving. %{product_name} blijft importeren, categoriseren en de andere processen afhandelen als centrale registratie van uw gegevens. Uw agent kan er via MCP of sure-cli mee werken; koppel hem via Instellingen → MCP. Deze keuze stelt de chatdienst niet in en maakt geen koppeling aan, wijzigt er geen en verwijdert er geen.
       submit: Volgende
     trial:
       title: "Probeer Sure 45 dagen"

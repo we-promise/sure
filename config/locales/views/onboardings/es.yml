@@ -79,7 +79,7 @@ es:
             unavailable: La configuración de IA actual de tu hogar no permite usar el asistente de la app, así que no responderá hasta que un administrador la cambie.
           external:
             title: Conecta tu agente cuando quieras.
-            body: Esto desactiva el asistente de la app para tu cuenta. Para que tu propio asistente trabaje con %{product_name}, conéctalo desde Ajustes → MCP. Esta elección no crea, cambia ni elimina ninguna conexión.
+            body: Esto mantiene la IA activada para tu cuenta. Cuando tu hogar esté configurado para el chat externo, las conversaciones usarán tu asistente externo en lugar del asistente integrado de %{product_name}, en la misma interfaz de chat. %{product_name} sigue encargándose de las importaciones, la categorización y el resto de procesos como registro principal de tus datos. Tu agente puede interactuar con él mediante MCP o sure-cli; para conectarlo, ve a Ajustes → MCP. Esta elección no configura el servicio de chat ni crea, cambia o elimina ninguna conexión.
       submit: Siguiente
     trial:
       title: Prueba Sure durante 45 días

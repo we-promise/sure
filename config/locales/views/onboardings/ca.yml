@@ -81,7 +81,7 @@ ca:
             unavailable: La configuració d'IA actual de la teva llar no permet fer servir l'assistent de l'app, així que no respondrà fins que un administrador la canviï.
           external:
             title: Connecta el teu agent quan vulguis.
-            body: Això desactiva l'assistent de l'app per al teu compte. Perquè el teu propi assistent treballi amb %{product_name}, connecta'l des de Configuració → MCP. Aquesta elecció no crea, canvia ni elimina cap connexió.
+            body: Això manté la IA activada per al teu compte. Quan la teva llar estigui configurada per al xat extern, les converses faran servir el teu assistent extern en lloc de l'assistent integrat de %{product_name}, a la mateixa interfície de xat. %{product_name} continua encarregant-se de les importacions, la categorització i la resta de processos com a registre principal de les teves dades. El teu agent hi pot interactuar mitjançant MCP o sure-cli; per connectar-lo, ves a Configuració → MCP. Aquesta elecció no configura el servei de xat ni crea, canvia o elimina cap connexió.
       submit: Següent
     trial:
       continue_trial: Continua la prova

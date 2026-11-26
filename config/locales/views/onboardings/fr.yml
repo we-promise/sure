@@ -81,7 +81,7 @@ fr:
             unavailable: 'Les paramètres d''IA actuels de votre foyer ne permettent pas d''exécuter l''assistant intégré : il ne répondra pas tant qu''un administrateur ne les aura pas modifiés.'
           external:
             title: Connectez votre agent quand vous serez prêt.
-            body: L'assistant intégré est désactivé pour votre compte. Pour que votre propre assistant fonctionne avec %{product_name}, connectez-le depuis Paramètres → MCP. Ce choix ne crée, ne modifie ni ne supprime aucune connexion.
+            body: L'IA reste activée pour votre compte. Lorsque votre foyer est configuré pour le chat externe, les conversations utilisent votre assistant externe au lieu de l'assistant intégré de %{product_name}, dans la même interface de chat. %{product_name} continue de gérer les importations, la catégorisation et les autres processus en tant que source de référence de vos données. Votre agent peut interagir avec lui via MCP ou sure-cli ; pour le connecter, allez dans Paramètres → MCP. Ce choix ne configure pas le service de chat et ne crée, ne modifie ni ne supprime aucune connexion.
       submit: Suivant
     trial:
       continue_trial: Continuer l'essai

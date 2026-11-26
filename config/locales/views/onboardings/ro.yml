@@ -74,7 +74,7 @@ ro:
             unavailable: Setările AI actuale ale gospodăriei nu rulează asistentul integrat, așa că nu va răspunde până când un administrator nu le schimbă.
           external:
             title: Conectează-ți agentul când ești gata.
-            body: Astfel dezactivezi asistentul integrat pentru contul tău. Ca propriul asistent să lucreze cu %{product_name}, conectează-l din Setări → MCP. Această alegere nu creează, nu modifică și nu elimină nicio conexiune.
+            body: Astfel AI rămâne activat pentru contul tău. Când gospodăria ta este configurată pentru chat extern, conversațiile folosesc asistentul tău extern în locul asistentului integrat al %{product_name}, în aceeași interfață de chat. %{product_name} continuă să se ocupe de importuri, categorizare și celelalte procese, ca evidență principală a datelor tale. Agentul tău poate interacționa cu el prin MCP sau sure-cli; pentru a-l conecta, mergi la Setări → MCP. Această alegere nu configurează serviciul de chat și nu creează, nu modifică și nu elimină nicio conexiune.
       submit: Următorul
     trial:
       title: Încearcă Sure timp de 45 de zile

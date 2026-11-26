@@ -79,7 +79,7 @@ pt-PT:
             unavailable: As definições de IA atuais do seu agregado familiar não executam o assistente da aplicação, pelo que este não responderá até que um administrador as altere.
           external:
             title: Ligue o seu agente quando quiser.
-            body: Isto desativa o assistente da aplicação na sua conta. Para que o seu próprio assistente funcione com o %{product_name}, ligue-o em Definições → MCP. Esta escolha não cria, altera nem remove nenhuma ligação.
+            body: Isto mantém a IA ativada na sua conta. Quando o seu agregado familiar estiver configurado para chat externo, as conversas usam o seu assistente externo em vez do assistente integrado do %{product_name}, na mesma interface de chat. O %{product_name} continua a tratar das importações, da categorização e dos restantes processos como registo principal dos seus dados. O seu agente pode interagir com ele através de MCP ou sure-cli; para o ligar, aceda a Definições → MCP. Esta escolha não configura o serviço de chat nem cria, altera ou remove nenhuma ligação.
       submit: Seguinte
     trial:
       title: Experimente o Sure durante 45 dias

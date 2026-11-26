@@ -79,7 +79,7 @@ vi:
             unavailable: Cài đặt AI hiện tại của hộ gia đình bạn không chạy trợ lý trong ứng dụng, nên trợ lý sẽ không phản hồi cho đến khi quản trị viên thay đổi cài đặt.
           external:
             title: Kết nối tác nhân của bạn khi bạn sẵn sàng.
-            body: Thao tác này tắt trợ lý trong ứng dụng cho tài khoản của bạn. Để trợ lý của riêng bạn làm việc với %{product_name}, hãy kết nối trong Cài đặt → MCP. Lựa chọn này không tạo, thay đổi hay xóa kết nối nào.
+            body: Thao tác này giữ AI ở trạng thái bật cho tài khoản của bạn. Khi hộ gia đình của bạn được cấu hình cho trò chuyện bên ngoài, các cuộc trò chuyện sẽ dùng trợ lý bên ngoài của bạn thay cho trợ lý tích hợp của %{product_name}, trong cùng giao diện trò chuyện. %{product_name} vẫn xử lý việc nhập dữ liệu, phân loại và các quy trình khác với vai trò nơi lưu trữ chính dữ liệu của bạn. Tác tử của bạn có thể tương tác với nó qua MCP hoặc sure-cli; để kết nối, hãy vào Cài đặt → MCP. Lựa chọn này không cấu hình dịch vụ trò chuyện và không tạo, thay đổi hay xóa kết nối nào.
       submit: Tiếp theo
     trial:
       title: Dùng thử Sure trong 45 ngày

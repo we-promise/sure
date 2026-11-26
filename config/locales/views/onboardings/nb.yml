@@ -79,7 +79,7 @@ nb:
             unavailable: Husholdningens nåværende AI-innstillinger kjører ikke den innebygde assistenten, så den svarer ikke før en administrator endrer dem.
           external:
             title: Koble til agenten din når du er klar.
-            body: Dette slår av den innebygde assistenten for kontoen din. For at din egen assistent skal kunne jobbe med %{product_name}, kobler du den til under Innstillinger → MCP. Dette valget oppretter, endrer eller fjerner ingen tilkobling.
+            body: Dette holder AI slått på for kontoen din. Når husholdningen din er satt opp for ekstern chat, bruker samtalene den eksterne assistenten din i stedet for den innebygde assistenten i %{product_name}, i det samme chatgrensesnittet. %{product_name} håndterer fortsatt import, kategorisering og andre prosesser som hovedregister for dataene dine. Agenten din kan samhandle med den via MCP eller sure-cli; for å koble den til, gå til Innstillinger → MCP. Dette valget setter ikke opp chattjenesten og oppretter, endrer eller fjerner ingen tilkobling.
       submit: Neste
     trial:
       title: Prøv Sure i 45 dager

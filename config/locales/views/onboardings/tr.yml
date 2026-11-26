@@ -81,7 +81,7 @@ tr:
             unavailable: Hanenizin mevcut yapay zeka ayarları uygulama içi asistanı çalıştırmıyor; bir yönetici bu ayarları değiştirene kadar asistan yanıt vermez.
           external:
             title: Hazır olduğunuzda ajanınızı bağlayın.
-            body: Bu, hesabınız için uygulama içi asistanı kapatır. Kendi asistanınızın %{product_name} ile çalışması için onu Ayarlar → MCP bölümünden bağlayın. Bu seçim herhangi bir bağlantı oluşturmaz, değiştirmez veya kaldırmaz.
+            body: Bu, hesabınız için yapay zekayı açık tutar. Haneniz harici sohbet için yapılandırıldığında, konuşmalar aynı sohbet arayüzünde %{product_name} uygulamasının yerleşik asistanı yerine harici asistanınızı kullanır. %{product_name}, verilerinizin ana kaydı olarak içe aktarmaları, kategorizasyonu ve diğer süreçleri yürütmeye devam eder. Ajanınız onunla MCP veya sure-cli üzerinden etkileşime girebilir; bağlamak için Ayarlar → MCP bölümüne gidin. Bu seçim sohbet hizmetini yapılandırmaz ve herhangi bir bağlantı oluşturmaz, değiştirmez veya kaldırmaz.
       submit: Sonraki
     trial:
       continue_trial: Denemeye devam et
