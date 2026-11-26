@@ -865,17 +865,19 @@ class Account::ProviderImportAdapter
     # 7. Not in the excluded IDs list (if provided)
     # 8. Not a part of a split entry: a person's share of another movement,
     #    never a copy of the incoming one
+    # The receipt conditions read the entry's own transaction through the join, so they cost
+    # nothing beyond the account's candidate rows.
     query = account.entries
-                   .where(entryable_type: "Transaction")
-                   .where.not(entryable_id: Transaction.where("transactions.extra -> 'receipt' ->> 'status' = 'processing'").select(:id))
+                   .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+                   .where("transactions.extra -> 'receipt' ->> 'status' IS DISTINCT FROM 'processing'")
                    .where(amount: amount)
                    .where(currency: currency)
                    .where(parent_entry_id: nil)
 
     # A zero-amount receipt is a placeholder whose receipt was never read, not a payment, and a
     # receipt paid in cash is another expense than a bank charge of the same amount.
-    query = query.where.not(entryable_id: Transaction.where("transactions.extra ? 'receipt'").select(:id)) if exclude_receipts || amount.to_d.zero?
-    query = query.where.not(entryable_id: Transaction.where("transactions.extra -> 'receipt' ->> 'payment_method' = 'cash'").select(:id))
+    query = query.where.not("transactions.extra ? 'receipt'") if exclude_receipts || amount.to_d.zero?
+    query = query.where("transactions.extra -> 'receipt' ->> 'payment_method' IS DISTINCT FROM 'cash'")
 
     query = if date_window.to_i.zero?
       query.where(date: date)
