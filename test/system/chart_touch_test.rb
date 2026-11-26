@@ -318,6 +318,7 @@ class ChartTouchTest < ApplicationSystemTestCase
 
     assert_equal "pan-y pinch-zoom", page.evaluate_script(%(getComputedStyle(document.querySelector("#{CHART} svg")).touchAction)),
       "the chart takes horizontal slides and leaves vertical scrolling and pinch zoom to the browser"
+    wait_until { scroll_offsets != before }
     assert_not_equal before, scroll_offsets, "the page did not scroll"
     assert_not tooltip_visible?, "the tooltip stayed after the page scrolled"
     assert_no_selector "#{CHART} .touch-selection", visible: :all
@@ -408,6 +409,8 @@ class ChartTouchTest < ApplicationSystemTestCase
     def center_chart_in_window(height:)
       page.document.synchronize(5) do
         page.execute_script(%(document.querySelector("#{CHART}").scrollIntoView({ block: "center" })))
+        # Touch hit-testing uses the compositor's frame, not the layout read below.
+        page.evaluate_async_script("const done = arguments[0]; requestAnimationFrame(() => requestAnimationFrame(done));")
         box = chart_box
         inner = page.evaluate_script("innerHeight")
         unless inner < height && box["top"] >= 0 && box["top"] + box["height"] <= inner
