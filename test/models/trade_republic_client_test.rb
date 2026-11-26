@@ -1133,6 +1133,42 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
   end
 
+  test "maps the pre-determined tax base to a cash outflow and leaves the older securities transfer unmapped" do
+    categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
+    assert_equal "POC_CREATED", categories["PRE_DETERMINED_TAX_BASE"]
+    assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => "PRE_DETERMINED_TAX_BASE")
+    assert_not Provider::TradeRepublicClient.requires_trade_detail?("eventType" => "PRE_DETERMINED_TAX_BASE")
+
+    assert_not categories.key?("ACCOUNT_TRANSFER_INCOMING")
+    assert_equal :unknown, Provider::TradeRepublicTimelineEvent.classify("eventType" => "ACCOUNT_TRANSFER_INCOMING")
+    assert_not Provider::TradeRepublicClient.requires_trade_detail?("eventType" => "ACCOUNT_TRANSFER_INCOMING")
+  end
+
+  test "a pre-determined tax base keeps the debit from the timeline item, and a detail with tax breakdown tables still reads the total" do
+    item = {
+      "id" => "evt_tax_base", "eventType" => "PRE_DETERMINED_TAX_BASE", "title" => "Fund",
+      "subtitle" => "Pre-Determined Tax Base", "status" => "EXECUTED", "amount" => { "value" => -12.34, "currency" => "EUR" }
+    }
+    event = @client.send(:build_skeleton_event, item)
+    assert_equal "POC_CREATED", event["category"]
+    assert_equal(-12.34, event.dig("detail", "amount"))
+
+    row = ->(title, text) { { "title" => title, "detail" => { "text" => text } } }
+    raw = {
+      "sections" => [
+        { "title" => "Overview", "data" => [ row.call("Event", "Pre-Determined Tax Base"), row.call("Asset", "Fund") ] },
+        { "title" => "Transaction", "data" => [ row.call("Shares", "20"), row.call("Tax", "€12.34"), row.call("Total", "€12.34") ] },
+        { "type" => "table", "data" => [ row.call("Capital gains tax", "€9.00"), row.call("Solidarity surcharge", "€0.49"), row.call("Church tax", "€0.85"), row.call("Tax", "€10.34") ] },
+        { "type" => "table", "data" => [ row.call("Fee", "Free") ] }
+      ]
+    }
+    detail = @client.send(:normalize_event_detail, raw, item: item)
+
+    assert_equal "12.34", detail["amount"]
+    assert_equal "12.34", detail["taxes"]
+    assert_nil detail["price"]
+  end
+
   test "maps credit card top-ups and stock bonuses" do
     categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
     assert_equal "PAYMENT_RECEIVED", categories["PAYMENT_INBOUND_CREDIT_CARD"]

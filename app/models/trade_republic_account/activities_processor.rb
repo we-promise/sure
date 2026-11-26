@@ -8,6 +8,13 @@ class TradeRepublicAccount::ActivitiesProcessor
   # Shares moved into or out of Trade Republic from/to another broker
   # (Depotübertrag): a quantity change with no cash impact.
   SECURITIES_TRANSFER_EVENT_TYPES = %w[SSP_SECURITIES_TRANSFER_INCOMING SSP_SECURITIES_TRANSFER_OUTGOING].freeze
+  # Event types that are known but can't be imported. They are logged once per
+  # event with the reason, so the user knows to add them manually.
+  UNSUPPORTED_EVENT_REASONS = {
+    # The older form of the securities transfer (late 2023 and 2024). A booking
+    # and its later removal share the type and the same detail.
+    "ACCOUNT_TRANSFER_INCOMING" => "a securities transfer's direction and price are not in the detail; add it manually"
+  }.freeze
   PRIVATE_MARKETS_TRADE_EVENT_TYPE = "PRIVATE_MARKET_FUND_TRADE_EXECUTED"
   # The bonus units Trade Republic adds to a Private Markets order ("1 %
   # Bonus"). The statement credits their value and buys them with it in one
@@ -53,6 +60,9 @@ class TradeRepublicAccount::ActivitiesProcessor
       event = event.with_indifferent_access
       classification = classify_timeline_event(event)
       next if classification == :ignored
+
+      # Whatever category a stored copy carries, these are never imported.
+      classification = :unknown if UNSUPPORTED_EVENT_REASONS.key?(event[:eventType].to_s)
       next if lifecycle_blocks_import?(event)
       # After routing, so split portfolio/cash connections log an unknown
       # event once (from the cash side) instead of twice.
@@ -1072,10 +1082,15 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     def record_unknown_event(event)
+      reason = UNSUPPORTED_EVENT_REASONS[event[:eventType].to_s]
+      return if reason && unsupported_event_logged?(event)
+
+      detail = event[:detail].is_a?(Hash) ? event[:detail].with_indifferent_access : {}
       DebugLogEntry.capture(
         category: "sync",
-        level: "info",
-        message: "TradeRepublicAccount::ActivitiesProcessor - Skipping unsupported timeline event (no guessed mapping)",
+        level: reason ? "warn" : "info",
+        message: "TradeRepublicAccount::ActivitiesProcessor - Skipping unsupported timeline event" +
+          (reason ? " #{event[:eventType]}: #{reason}" : " (no guessed mapping)"),
         source: "trade_republic",
         family: @trade_republic_account.trade_republic_item.family,
         provider_key: "trade_republic",
@@ -1083,9 +1098,24 @@ class TradeRepublicAccount::ActivitiesProcessor
           event_id: event[:id],
           event_type: event[:eventType],
           category: event[:category],
-          status: event[:status]
-        }
+          status: event[:status],
+          reason: reason,
+          date: parse_date(event[:timestamp])&.iso8601,
+          isin: detail[:isin].presence,
+          name: (detail[:name].presence || event[:title].presence if reason)
+        }.compact
       )
+    end
+
+    # A known unsupported event stays in the timeline, so every sync sees it
+    # again; it is logged once. An older generic entry (written before the
+    # event had a reason) has no reason, so it does not count.
+    def unsupported_event_logged?(event)
+      DebugLogEntry
+        .where(source: "trade_republic", family_id: @trade_republic_account.trade_republic_item.family_id)
+        .where("metadata ->> 'event_id' = ? AND metadata ->> 'event_type' = ? " \
+          "AND metadata ->> 'reason' IS NOT NULL", event[:id].to_s, event[:eventType].to_s)
+        .exists?
     end
 
     def build_trade_name(provider_name, security, signed_quantity)

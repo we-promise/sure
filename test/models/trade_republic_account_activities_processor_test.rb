@@ -503,6 +503,56 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-500"), Entry.find_by!(external_id: "trade_republic_event_evt_credit_card_cash_in").amount
   end
 
+  test "a pre-determined tax base debit imports as an expense, not income" do
+    # The German Vorabpauschale booked in January 2024: the item has no
+    # category, a negative amount, and the fund's name as its title.
+    import_event({
+      id: "evt_tax_base",
+      timestamp: "2024-01-05T05:00:00.000+0000",
+      eventType: "PRE_DETERMINED_TAX_BASE",
+      title: "STOXX Global Dividend 100 EUR (Dist)",
+      subtitle: "Pre-Determined Tax Base",
+      status: "EXECUTED",
+      category: nil,
+      detail: { amount: -12.34, signed_amount: -12.34, currency: "EUR" }
+    })
+
+    entry = Entry.find_by!(external_id: "trade_republic_event_evt_tax_base")
+    assert_equal BigDecimal("12.34"), entry.amount
+    assert_equal "EUR", entry.currency
+    assert_equal Date.new(2024, 1, 5), entry.date
+    assert_equal "PRE_DETERMINED_TAX_BASE", entry.entryable.extra.dig("trade_republic", "event_type")
+  end
+
+  test "a pre-determined tax base debit is not imported twice" do
+    event = {
+      id: "evt_tax_base", timestamp: "2024-01-05T05:00:00.000+0000", eventType: "PRE_DETERMINED_TAX_BASE",
+      title: "STOXX Global Dividend 100 EUR (Dist)", subtitle: "Pre-Determined Tax Base", status: "EXECUTED",
+      detail: { amount: -12.34, signed_amount: -12.34, currency: "EUR" }
+    }
+    import_event(event)
+    import_event(event)
+
+    assert_equal 1, Entry.where(external_id: "trade_republic_event_evt_tax_base").count
+  end
+
+  test "a pre-determined tax base debit books on the linked cash account only" do
+    cash_account, cash_sure = create_linked_cash_account!
+    event = {
+      id: "evt_tax_base_linked", timestamp: "2024-01-05T05:00:00.000+0000", eventType: "PRE_DETERMINED_TAX_BASE",
+      title: "STOXX Global Dividend 100 EUR (Dist)", subtitle: "Pre-Determined Tax Base", status: "EXECUTED",
+      detail: { amount: -12.34, signed_amount: -12.34, currency: "EUR" }
+    }
+    @tr_account.update!(raw_timeline_payload: [ event ])
+    cash_account.update!(raw_timeline_payload: [ event ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_equal BigDecimal("12.34"), Entry.find_by!(account: cash_sure, external_id: "trade_republic_event_evt_tax_base_linked").amount
+    assert_not Entry.exists?(account: @account, external_id: "trade_republic_event_evt_tax_base_linked")
+  end
+
   test "a stamp duty cancellation books nothing" do
     # Trade Republic turns the charge's timeline item into its cancellation.
     # The statement books the charge and the refund, which cancel out.
@@ -884,6 +934,83 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "SSP_SECURITIES_TRANSFER_OUTGOING", trade.entryable.extra.dig("trade_republic", "event_type")
 
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_tr_out")
+  end
+
+  test "an older securities transfer is logged once with its reason and not imported" do
+    cash_account, = create_linked_cash_account!
+    event = {
+      id: "evt_old_in", timestamp: "2023-11-23T09:00:00.000+0000", eventType: "ACCOUNT_TRANSFER_INCOMING",
+      title: "STOXX Global Dividend 100 EUR (Dist)", subtitle: "Securities transfer", status: "EXECUTED", detail: nil
+    }
+    @tr_account.update!(raw_timeline_payload: [ event ])
+    cash_account.update!(raw_timeline_payload: [ event ])
+
+    assert_no_difference "Entry.where(source: 'trade_republic').count" do
+      3.times do
+        TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+        TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+      end
+    end
+
+    logs = DebugLogEntry.where("message LIKE ?", "%ACCOUNT_TRANSFER_INCOMING%")
+    assert_equal 1, logs.count
+    log = logs.first
+    assert_equal "warn", log.level
+    assert_match(/direction and price are not in the detail; add it manually/, log.message)
+    assert_equal "evt_old_in", log.metadata["event_id"]
+    assert_equal "2023-11-23", log.metadata["date"]
+    assert_equal "STOXX Global Dividend 100 EUR (Dist)", log.metadata["name"]
+    assert_equal 0, incomplete_execution_logs.count
+  end
+
+  test "an older generic diagnostic for a securities transfer does not suppress the warning with the reason" do
+    event = {
+      id: "evt_old_generic", timestamp: "2023-11-23T09:00:00.000+0000", eventType: "ACCOUNT_TRANSFER_INCOMING",
+      title: "Fund", subtitle: "Securities transfer", status: "EXECUTED", detail: nil
+    }
+    DebugLogEntry.capture(
+      category: "sync", level: "info",
+      message: "TradeRepublicAccount::ActivitiesProcessor - Skipping unsupported timeline event (no guessed mapping)",
+      source: "trade_republic", family: @tr_account.trade_republic_item.family, provider_key: "trade_republic",
+      metadata: { event_id: "evt_old_generic", event_type: "ACCOUNT_TRANSFER_INCOMING", status: "EXECUTED" }
+    )
+    @tr_account.update!(raw_timeline_payload: [ event ])
+
+    assert_difference -> { DebugLogEntry.where(level: "warn").where("message LIKE ?", "%add it manually%").count }, 1 do
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    end
+    assert_no_difference "DebugLogEntry.count" do
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    end
+  end
+
+  test "an older securities transfer is not imported even if a copy carries an order execution category" do
+    import_event({
+      id: "evt_old_cat", timestamp: "2023-11-23T09:00:00.000+0000", eventType: "ACCOUNT_TRANSFER_INCOMING", category: "orderExecution",
+      title: "Fund", subtitle: "Securities transfer", status: "EXECUTED", amount: 450.0,
+      detail: { isin: "DE000A0F5UH1", quantity: "10", amount: "450.0", currency: "EUR" }
+    })
+
+    assert_equal 0, Entry.where(source: "trade_republic").count
+    log = DebugLogEntry.find_by!("message LIKE ?", "%ACCOUNT_TRANSFER_INCOMING%")
+    assert_equal "DE000A0F5UH1", log.metadata["isin"]
+    assert_equal "2023-11-23", log.metadata["date"]
+  end
+
+  test "each older securities transfer gets its own log entry with the ISIN when the detail has one" do
+    base = { timestamp: "2023-11-23T09:00:00.000+0000", eventType: "ACCOUNT_TRANSFER_INCOMING", title: "Fund", status: "EXECUTED" }
+    @tr_account.update!(raw_timeline_payload: [
+      base.merge(id: "evt_old_a", detail: { isin: "DE000A0F5UH1", quantity: "10" }),
+      base.merge(id: "evt_old_b", timestamp: "2024-05-07T09:00:00.000+0000", detail: { isin: "DE000A0F5UH1", quantity: "10" })
+    ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+
+    logs = DebugLogEntry.where("message LIKE ?", "%ACCOUNT_TRANSFER_INCOMING%")
+    assert_equal %w[evt_old_a evt_old_b], logs.map { |log| log.metadata["event_id"] }.sort
+    assert_equal [ "DE000A0F5UH1" ], logs.map { |log| log.metadata["isin"] }.uniq
+    assert_equal 0, Entry.where(source: "trade_republic", entryable_type: "Trade").count
   end
 
   test "Private Markets bonus units import as a portfolio trade without a cash leg" do

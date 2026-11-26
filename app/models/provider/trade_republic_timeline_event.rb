@@ -67,6 +67,10 @@ module Provider::TradeRepublicTimelineEvent
     # cancellation arrives with the same event type and is turned into a
     # credit by the activities processor.
     "STAMP_DUTY_TAX_PAID" => "POC_CREATED",
+    # German advance lump sum (Vorabpauschale) for tax year 2023, charged in
+    # January 2024. From 2025 Trade Republic books it as
+    # SSP_CORPORATE_ACTION_CASH.
+    "PRE_DETERMINED_TAX_BASE" => "POC_CREATED",
     "SSP_CORPORATE_ACTION_CASH" => "DIVIDEND",
     "ssp_corporate_action_invoice_cash" => "DIVIDEND",
     "SSP_CORPORATE_ACTION_CASH_NON_DIVIDEND" => "PAYMENT_RECEIVED",
