@@ -71,6 +71,13 @@ module Provider::ExchangeRateConcept
     raise NotImplementedError, "Subclasses must implement #fetch_exchange_rates"
   end
 
+  # Whether a pair the provider lacks may be derived from its two USD legs (see
+  # ExchangeRate::UsdCross). Override with false in a provider for which that
+  # can never succeed, so the legs are not fetched for nothing.
+  def usd_cross?
+    true
+  end
+
   # Maximum number of calendar days of historical FX data the provider can
   # return. Returns nil when the provider has no known limit (unbounded).
   # Callers should clamp start_date when non-nil to avoid requesting data

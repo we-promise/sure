@@ -1,21 +1,8 @@
 ---
 ca:
   onboardings:
-    goals:
-      ai_insights: Deixar que la IA m'ajudi a entendre les meves finances
-      budgeting: Gestionar plans financers i pressupostos
-      cashflow: Entendre el flux de caixa i les despeses
-      investments: Fer el seguiment d'inversions
-      optimization: Analitzar i optimitzar comptes
-      partner: Gestionar les finances amb la parella
-      reduce_stress: Reduir l'estrès o l'ansietat financera
-      submit: Següent
-      subtitle: Selecciona un o més objectius que tens amb %{product_name} com a eina
-        de finances personals.
-      title: Què t'ha portat aquí?
-      unified_accounts: Veure tots els meus comptes en un sol lloc
     header:
-      goals: Objectius
+      tools: Eines/IA
       preferences: Preferències
       setup: Configuració
       sign_out: Tanca la sessió
@@ -53,6 +40,8 @@ ca:
       submit: Continua
       subtitle: Primer de tot, completem el teu perfil.
       title: Configurem el teu compte
+    tools:
+      submit: Següent
     trial:
       continue_trial: Continua la prova
       data_deletion: Les dades s'eliminaran després

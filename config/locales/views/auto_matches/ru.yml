@@ -27,6 +27,11 @@ ru:
       from: Откуда
       to: Куда
       date: Дата
+      days_apart:
+        one: "%{count} день разницы"
+        few: "%{count} дня разницы"
+        many: "%{count} дней разницы"
+        other: "%{count} дня разницы"
       actions: Действия
       separator: "·"
     bulk_actions:

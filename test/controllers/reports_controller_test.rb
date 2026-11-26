@@ -600,6 +600,21 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a blank period is this month's report, so the plain page can be served from it" do
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
+    budget.budget_categories.find_or_initialize_by(category: @family.categories.expenses.first)
+          .update!(budgeted_spending: Money.new(50000, @family.currency))
+
+    with_memory_cache do
+      get reports_path(period_type: "")
+      assert_select "p", text: I18n.t("reports.summary.of_budget_used")
+
+      ReportsController.any_instance.expects(:render_report_body).never
+      get reports_path
+      assert_select "p", text: I18n.t("reports.summary.of_budget_used")
+    end
+  end
+
   test "changing whether investment contributions count as spending builds the report again" do
     with_memory_cache do
       get reports_path(period_type: :ytd)
@@ -1607,6 +1622,23 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       assert rows.any? { |r| r.first == "'#{name}" }, "the #{name} category cell must be escaped"
       assert_not rows.any? { |r| r.first == name }, "a raw #{name} must not lead a row"
     end
+  end
+
+  test "transactions export quotes every cell so a separator inside a category name cannot split it" do
+    category = @family.categories.create!(name: "Food;=1+1", color: "#000000")
+    @family.accounts.first.entries.create!(
+      name: "Payee", date: Date.current, amount: 25, currency: "USD",
+      entryable: Transaction.new(category: category, kind: "standard")
+    )
+
+    get export_transactions_reports_path(
+      format: :csv, period_type: :ytd,
+      start_date: Date.current.beginning_of_year, end_date: Date.current
+    )
+
+    assert_response :ok
+    assert_includes @response.body, %q("Food;=1+1")
+    assert_includes CSV.parse(@response.body).flatten, "Food;=1+1"
   end
 
   # The card was gated on `investment_accounts`, which is visible accounts
