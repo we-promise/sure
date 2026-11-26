@@ -22,6 +22,7 @@ zh-CN:
         save: 保存
         tags_label: 标签
         transactions_section: 交易
+        transfer_fields_hint: 对于转账，日期和商户保持不变。分类仅适用于允许设置分类的转出记录。
     unknown_name: 未知交易
     selection_bar:
       duplicate: 重复
@@ -60,6 +61,7 @@ zh-CN:
       submit: 添加交易
       tag_search_placeholder: 搜索或创建标签
       tags_label: 标签
+      tags_save_error: 无法保存标签。请再次更改以重试，或刷新页面。
       transfer: 转账
     create:
       created: 交易已创建
@@ -266,6 +268,7 @@ zh-CN:
         type: 类型
         status: 状态
         reconcile_status: 核对状态
+        reconcile_status_hint: 仅包含手动录入的账户。
         amount: 金额
         category: 分类
         tag: 标签
@@ -373,6 +376,7 @@ zh-CN:
         category_filter: 分类
         clear_filters: 清除筛选
         date_filter: 日期
+        loading: 正在加载筛选条件...
         merchant_filter: 商户
         reconcile_status_filter: 核对状态
         status_filter: 状态

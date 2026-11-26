@@ -217,6 +217,7 @@ zh-CN:
       subtitle: 为您导入的账户选择正确的账户类型
       sync_start_date_help: 选择您希望向前同步交易历史的时间范围。
       sync_start_date_label: "从以下日期开始同步交易："
+      skip_notice: 未勾选的账户将被跳过：在您将它们关联到账户之前，Sure 将停止拉取这些账户的数据。
       title: 设置您的 Indexa Capital 账户
     complete_account_setup:
       all_skipped: 所有账户都已跳过，未创建任何账户。
