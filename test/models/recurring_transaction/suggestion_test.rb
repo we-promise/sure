@@ -35,39 +35,29 @@ class RecurringTransaction::SuggestionTest < ActiveSupport::TestCase
     assert_equal suggestion.id, entry.metadata["suggestion_id"]
   end
 
-  test "a late answer or failure cannot overwrite a stopped suggestion" do
-    stub_ai(:bill_setup, returns: raw(name: "Too late"))
-    suggestion = fill_suggestion
-    answer = suggestion.ai_generation.call
-    suggestion.update!(status: :cancelled)
-
-    assert_equal 0, suggestion.apply_ai(answer)
-    suggestion.ai_failed(StandardError.new("late failure"))
-    suggestion.ai_failed(Ai::Error::Cancelled.new("cancelled"))
-
-    assert suggestion.reload.cancelled?
-    assert_nil suggestion.result
-    assert_nil suggestion.error
-  end
-
-  test "a cancellation error does not fail a pending suggestion" do
-    suggestion = fill_suggestion
-
-    suggestion.ai_failed(Ai::Error::Cancelled.new("cancelled"))
-
-    assert suggestion.reload.pending?
-    assert_nil suggestion.error
-  end
-
-  test "a failed suggestion is not overwritten by a late answer" do
+  test "only a pending suggestion records an answer or a failure" do
     stub_provider(raw(name: "Too late"))
-    suggestion = fill_suggestion
-    answer = suggestion.ai_generation.call
-    suggestion.update!(status: :failed, error: "already failed")
+    answer = fill_suggestion.ai_generation.call
 
-    assert_equal 0, suggestion.apply_ai(answer)
-    assert_equal "already failed", suggestion.reload.error
-    assert_nil suggestion.result
+    stopped = fill_suggestion
+    stopped.update!(status: :cancelled)
+    assert_equal 0, stopped.apply_ai(answer)
+    stopped.ai_failed(StandardError.new("late failure"))
+    stopped.ai_failed(Ai::Error::Cancelled.new("cancelled"))
+    assert stopped.reload.cancelled?
+    assert_nil stopped.result
+    assert_nil stopped.error
+
+    failed = fill_suggestion
+    failed.update!(status: :failed, error: "already failed")
+    assert_equal 0, failed.apply_ai(answer)
+    assert_equal "already failed", failed.reload.error
+    assert_nil failed.result
+
+    pending = fill_suggestion
+    pending.ai_failed(Ai::Error::Cancelled.new("cancelled"))
+    assert pending.reload.pending?
+    assert_nil pending.error
   end
 
   test "the answer is broadcast as a frame pointing at the stored result" do
@@ -122,65 +112,50 @@ class RecurringTransaction::SuggestionTest < ActiveSupport::TestCase
     assert_equal 40.0, answer.amount.to_f
   end
 
-  test "an explicit autopay false survives normalization as a real proposal" do
+  test "autopay treats false as a proposal and other values as none" do
     stub_provider(raw(autopay: false))
-
     answer = complete_answer(fill_suggestion)
-
-    assert_equal false, answer.autopay, "false proposes turning autopay off; only nil means no proposal"
+    assert_equal false, answer.autopay
     assert answer.any_proposal?
-  end
 
-  test "a non-boolean autopay normalizes to no proposal" do
     stub_provider(raw(autopay: "yes"))
-
     answer = complete_answer(fill_suggestion)
-
     assert_nil answer.autopay
     assert_not answer.any_proposal?
   end
 
-  test "resolves the category to this family's own id, case-insensitively" do
+  test "categories resolve only to this family's own, case-insensitively" do
     category = @family.categories.create!(name: "Utilities", color: "#0000ff")
     stub_provider(raw(category_name: "utilities"))
-
     answer = complete_answer(fill_suggestion)
-
     assert_equal category.id, answer.category_id
     assert_equal "Utilities", answer.category_name
-  end
 
-  test "an LLM-invented category resolves to nothing" do
     stub_provider(raw(category_name: "Definitely Not A Real Category"))
-
     answer = complete_answer(fill_suggestion)
-
     assert_nil answer.category_id
     assert_nil answer.category_name
   end
 
-  test "configure mode sends the series' current configuration to the provider" do
+  test "configure mode sends the series' current configuration" do
     series = create_series(name: "Gym")
     # On the series' expected day: matching_transactions is day-of-month scoped.
     create_entry(name: "Gym", amount: 40, date: Date.current.beginning_of_month + 8.days - 1.month)
     requests = stub_ai(:bill_setup, returns: raw(confidence: 0.9, rationale: "already right"))
 
     answer = complete_answer(configure_suggestion(series))
-
     assert_equal "Gym", current_config_sent(requests.first)["name"]
     assert_includes requests.first.instructions, "A current configuration is provided"
     refute answer.any_proposal?, "all-null fields mean the configuration is already right"
-  end
 
-  test "configure mode reports an every-N cadence to the provider as custom" do
-    series = create_series(name: "Water", amount: 60)
-    RecurringTransaction::FrequencyPreset.apply(series, preset: "interval", interval: 2, interval_unit: "monthly",
-                                                         day_of_month: 9)
-    series.save!
+    interval = create_series(name: "Water", amount: 60)
+    RecurringTransaction::FrequencyPreset.apply(interval, preset: "interval", interval: 2, interval_unit: "monthly",
+                                                          day_of_month: 9)
+    interval.save!
     create_entry(name: "Water", amount: 60, date: Date.current.beginning_of_month + 8.days - 2.months)
     requests = stub_ai(:bill_setup, returns: raw(confidence: 0.9, rationale: "already right"))
 
-    complete_answer(configure_suggestion(series))
+    complete_answer(configure_suggestion(interval))
 
     assert_equal "custom", current_config_sent(requests.first)["frequency"]
   end

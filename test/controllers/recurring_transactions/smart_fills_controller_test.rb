@@ -19,7 +19,7 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
       end
     end
 
-    suggestion = RecurringTransaction::Suggestion.last
+    suggestion = @family.recurring_transaction_suggestions.order(:created_at).last
     assert suggestion.pending?
     assert suggestion.fill?
     assert_equal @entry, suggestion.entry
@@ -125,24 +125,18 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_select "input[type=hidden][name=entry_id][value=?]", @entry.id
   end
 
-  test "Stop cancels the pending suggestion and removes the waiting state" do
+  test "Stop cancels a pending suggestion and a late job cannot revive it" do
+    stub_provider(raw(name: "Too late"))
     suggestion = start_pending_suggestion
 
     assert_no_enqueued_jobs only: Ai::GenerationJob do
       delete recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
     end
-
     assert suggestion.reload.cancelled?
     assert_response :success
     assert_match "Stopped", response.body
     assert_select "input[name=_method][value=delete]", count: 0
-  end
 
-  test "a job that finishes after Stop leaves the cancelled suggestion alone" do
-    stub_provider(raw(name: "Too late"))
-    suggestion = start_pending_suggestion
-
-    delete recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
     perform_enqueued_jobs(only: Ai::GenerationJob)
 
     assert suggestion.reload.cancelled?
@@ -167,7 +161,7 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
 
     post recurring_transactions_smart_fills_url(entry_id: @entry.id), headers: { "Turbo-Frame" => "modal" }
 
-    suggestion = RecurringTransaction::Suggestion.last
+    suggestion = @family.recurring_transaction_suggestions.order(:created_at).last
     assert suggestion.failed?
     assert_equal "generation_failed", suggestion.error
     assert_match "Could not analyze this charge", response.body
@@ -182,23 +176,17 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_equal Ai::Availability.unavailable(:bill_setup, :not_configured).message_for(@user), flash[:alert]
   end
 
-  test "show is guarded too" do
+  test "show and stop stay reachable after the feature goes down" do
     suggestion = start_pending_suggestion
     use_no_ai
 
-    get recurring_transactions_smart_fill_url(suggestion)
+    get recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
+    assert_response :success
+    assert_match "Reading this charge", response.body
 
-    assert_redirected_to root_path
-  end
-
-  test "stop is guarded too" do
-    suggestion = start_pending_suggestion
-    use_no_ai
-
-    delete recurring_transactions_smart_fill_url(suggestion)
-
-    assert_redirected_to root_path
-    assert suggestion.reload.pending?
+    delete recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
+    assert_response :success
+    assert suggestion.reload.cancelled?
   end
 
   test "sent back without the user's AI switch" do
@@ -233,7 +221,7 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
 
     def start_pending_suggestion(entry: @entry)
       post recurring_transactions_smart_fills_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
-      RecurringTransaction::Suggestion.last
+      @family.recurring_transaction_suggestions.where(status: :pending).order(:created_at).last
     end
 
     # The controller starts the request, then the job stores the answer: exactly

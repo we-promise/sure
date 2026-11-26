@@ -1,13 +1,14 @@
-# Proposes configuration corrections for one bill from its charge history. The
-# dialog shell is rendered here; #show renders the stored answer in a normal
-# request, and its form PATCHes the ordinary update action, so applying keeps
-# every check that path already makes.
+# Proposes configuration corrections for one bill. #show renders the stored
+# answer; its form PATCHes the ordinary update action, so applying keeps every
+# check that path already makes.
 class Bills::SmartConfigurationsController < ApplicationController
   include AiFeatureGuard
   include RecurringFeatureGuardable
 
   before_action :ensure_recurring_enabled
-  requires_ai :bill_setup
+  # Only starting a request needs the feature; show and Stop read or cancel a
+  # stored suggestion and must stay reachable if availability changes later.
+  requires_ai :bill_setup, only: :create
   before_action :set_suggestion, :set_series, only: %i[show destroy]
 
   def create

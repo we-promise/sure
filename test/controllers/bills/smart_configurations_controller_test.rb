@@ -27,7 +27,7 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
       end
     end
 
-    suggestion = RecurringTransaction::Suggestion.last
+    suggestion = @family.recurring_transaction_suggestions.order(:created_at).last
     assert suggestion.pending?
     assert suggestion.configure?
     assert_equal @series, suggestion.recurring_transaction
@@ -82,29 +82,25 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 45.0, @series.reload.amount.to_f
   end
 
-  test "Stop cancels the pending suggestion and removes the waiting state" do
+  test "Stop cancels a pending suggestion but leaves a finished answer alone" do
     suggestion = start_pending_suggestion
 
     assert_no_enqueued_jobs only: Ai::GenerationJob do
       delete bill_smart_configuration_url(@series, suggestion), headers: { "Turbo-Frame" => "modal" }
     end
-
     assert suggestion.reload.cancelled?
     assert_response :success
     assert_match I18n.t("bills.smart_configurations.show.stopped"), response.body
     assert_select "input[name=_method][value=delete]", count: 0
-  end
 
-  test "Stop on a finished suggestion changes nothing and reloads show" do
     stub_provider(raw(amount: 45.0))
-    suggestion = start_suggestion
-    result = suggestion.result
+    finished = start_suggestion
+    result = finished.result
+    delete bill_smart_configuration_url(@series, finished), headers: { "Turbo-Frame" => "modal" }
 
-    delete bill_smart_configuration_url(@series, suggestion), headers: { "Turbo-Frame" => "modal" }
-
-    assert_redirected_to bill_smart_configuration_path(@series, suggestion)
-    assert_equal result, suggestion.reload.result
-    assert suggestion.complete?
+    assert_redirected_to bill_smart_configuration_path(@series, finished)
+    assert_equal result, finished.reload.result
+    assert finished.complete?
   end
 
   test "a suggestion whose job could not be queued is failed straight away" do
@@ -112,7 +108,7 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
 
     post bill_smart_configurations_url(@series), headers: { "Turbo-Frame" => "modal" }
 
-    suggestion = RecurringTransaction::Suggestion.last
+    suggestion = @family.recurring_transaction_suggestions.order(:created_at).last
     assert suggestion.failed?
     assert_equal "generation_failed", suggestion.error
     assert_match I18n.t("bills.smart_configurations.show.failed"), response.body
@@ -127,16 +123,17 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal Ai::Availability.unavailable(:bill_setup, :not_configured).message_for(@user), flash[:alert]
   end
 
-  test "show and stop are guarded too" do
+  test "show and stop stay reachable after the feature goes down" do
     suggestion = start_pending_suggestion
     use_no_ai
 
-    get bill_smart_configuration_url(@series, suggestion)
-    assert_redirected_to root_path
+    get bill_smart_configuration_url(@series, suggestion), headers: { "Turbo-Frame" => "modal" }
+    assert_response :success
+    assert_match "Reading this bill", response.body
 
-    delete bill_smart_configuration_url(@series, suggestion)
-    assert_redirected_to root_path
-    assert suggestion.reload.pending?
+    delete bill_smart_configuration_url(@series, suggestion), headers: { "Turbo-Frame" => "modal" }
+    assert_response :success
+    assert suggestion.reload.cancelled?
   end
 
   test "another family's bill is not found" do
@@ -176,7 +173,7 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
 
     def start_pending_suggestion
       post bill_smart_configurations_url(@series), headers: { "Turbo-Frame" => "modal" }
-      RecurringTransaction::Suggestion.last
+      @family.recurring_transaction_suggestions.where(status: :pending).order(:created_at).last
     end
 
     def start_suggestion

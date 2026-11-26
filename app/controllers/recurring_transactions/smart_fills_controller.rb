@@ -1,7 +1,6 @@
 # Renders the add-bill dialog with a waiting frame; the job's broadcast points
-# that frame at #show, which renders the stored answer in a normal request with
-# a fresh authenticity token. Inherits RecurringTransactionsController so the
-# dialog's partials resolve against recurring_transactions/.
+# it at #show, which renders the stored answer in a normal request with a fresh
+# authenticity token. Inherits the parent so the dialog's partials resolve.
 class RecurringTransactions::SmartFillsController < RecurringTransactionsController
   include AiFeatureGuard
   include RecurringFeatureGuardable
@@ -12,7 +11,9 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
   skip_before_action :ensure_series_writable, only: :destroy
 
   before_action :ensure_recurring_enabled
-  requires_ai :bill_setup
+  # Only starting a request needs the feature; show and Stop read or cancel a
+  # stored suggestion and must stay reachable if availability changes later.
+  requires_ai :bill_setup, only: :create
   before_action :prepare_form, only: %i[show destroy]
 
   # One request per pending suggestion: a second click reuses the row instead

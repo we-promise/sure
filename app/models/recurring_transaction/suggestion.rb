@@ -1,8 +1,6 @@
-# One smart-fill or smart-configure request. The browser watches this row: the
-# controller creates it and enqueues its Ai::GenerationJob, and the job stores
-# the answer here and broadcasts a frame with this row's show URL (a broadcast
-# can't carry a form's authenticity token). Keeping the answer also makes a
-# dialog reload show the same result.
+# One smart-fill or smart-configure request. The controller enqueues its job,
+# the job stores the answer here, and the browser reloads #show from a broadcast
+# frame: a broadcast can't carry a form's authenticity token.
 class RecurringTransaction::Suggestion < ApplicationRecord
   include Ai::Requester
   ai_feature :bill_setup
@@ -104,9 +102,8 @@ class RecurringTransaction::Suggestion < ApplicationRecord
     normalize(result)
   end
 
-  # Applies only the fields the add form carries, as the smart-fill controller
-  # did before the answer moved into a job. The entry's own date anchors a
-  # one-off; a guessed monthly date is only useful for a repeating bill.
+  # Applies only the add form's fields. A one-off keeps the entry's date; a
+  # guessed monthly date is only useful for a repeating bill.
   def apply_to(recurring_transaction)
     answer = proposal
     return recurring_transaction if answer.nil?
@@ -156,9 +153,8 @@ class RecurringTransaction::Suggestion < ApplicationRecord
       end
     end
 
-    # The picked entry's own history: same account, same sign, same name shape,
-    # recency-ordered so drifting amounts weight toward the present. A generic
-    # name (the "Unknown transaction" fallback) would match unrelated entries.
+    # Same account, sign and name shape, newest first. A generic name (the
+    # "Unknown transaction" fallback) would match unrelated entries.
     def evidence_entries
       found = if entry.generic_name?
         [ entry ]
@@ -194,9 +190,8 @@ class RecurringTransaction::Suggestion < ApplicationRecord
       }.compact
     end
 
-    # Ai::Schema has already typed every field and turned values outside the
-    # presets and ranges into nil; resolve the category to this family's own,
-    # keep only a positive amount and clamp the confidence.
+    # Ai::Schema already typed the fields; resolve the category locally, keep
+    # only a positive amount and clamp the confidence.
     def normalize(raw)
       raw = raw.to_h.symbolize_keys
       category = resolve_category(raw[:category_name])

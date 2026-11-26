@@ -1,10 +1,8 @@
 <%# locals: (suggestion:, series:, detection:) %>
 <% proposal = suggestion.proposal %>
 <% if suggestion.complete? && proposal&.any_proposal? %>
-  <%# Each proposal is a checkbox CARRYING the proposed value as the real form
-      param: unchecked rows submit nothing, so only accepted changes reach
-      recurring_transactions#update. The schedule's companion day fields ride
-      along as hidden inputs. %>
+  <%# Each checkbox carries its proposed value: unchecked rows submit nothing.
+      The schedule's companion day fields ride along as hidden inputs. %>
   <%= form_with url: recurring_transaction_path(series), method: :patch,
                 data: { turbo_frame: :_top } do %>
     <%# Keeps an all-unchecked submit a harmless no-op: params.require is met,
