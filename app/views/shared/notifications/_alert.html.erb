@@ -1,4 +1,4 @@
-<%# locals: (message:) %>
+<%# locals: (message:, sensitive: false) %>
 
 <%= tag.div class: "flex gap-3 rounded-lg bg-container p-4 group w-full md:max-w-80 shadow-border-lg",
             data: { controller: "element-removal" } do %>
@@ -8,7 +8,9 @@
     </div>
   </div>
 
-  <%= tag.p message, class: "text-primary text-sm font-medium line-clamp-3 min-w-0", title: message %>
+  <%= tag.p message,
+            class: ["text-primary text-sm font-medium line-clamp-3 min-w-0", ("privacy-sensitive" if sensitive)],
+            title: (message unless sensitive) %>
 
   <div class="ml-auto">
     <%= icon "x", data: { action: "click->element-removal#remove" }, class: "cursor-pointer" %>

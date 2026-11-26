@@ -453,9 +453,15 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :redirect
     warning = I18n.t("loans.balloon_not_applied", amount: Money.new(BigDecimal("0.40"), @account.currency).format)
-    assert_equal warning, flash[:alert]
+    assert_equal warning, flash[:sensitive_alert]
+    follow_redirect!
+    assert_select "#notification-tray p.privacy-sensitive:not([title])", text: warning
+
     get edit_loan_path(@account)
-    assert_includes response.body, warning
+    assert_select "p.privacy-sensitive", text: warning
+
+    get account_path(@account, tab: "schedule")
+    assert_select "p.privacy-sensitive", text: warning
   end
 
   test "create validates the payments in the new loan account currency" do

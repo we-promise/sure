@@ -30,7 +30,7 @@ class LoansController < ApplicationController
       final_payment = @account.loan.amortization_schedule&.unapplied_balloon_final_payment
       return unless final_payment
 
-      flash[:alert] = t("loans.balloon_not_applied", amount: final_payment.format)
+      flash[:sensitive_alert] = t("loans.balloon_not_applied", amount: final_payment.format)
     end
 
     def with_account_update_lock

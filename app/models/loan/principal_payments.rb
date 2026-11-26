@@ -37,6 +37,7 @@ class Loan
       :period_start,
       :period_principal,
       :payment_index,
+      :remaining_balloon_adjustment,
       keyword_init: true
     )
 
@@ -87,7 +88,8 @@ class Loan
           period_interest: nil,
           period_start: anchor_date,
           period_principal: opening_balance,
-          payment_index: 0
+          payment_index: 0,
+          remaining_balloon_adjustment: schedule.final_balloon_adjustment || BigDecimal("0")
         )
 
         changes = {}
@@ -158,16 +160,13 @@ class Loan
         )
 
         state.period_interest = (state.period_principal * factor).round(precision)
-        if payment.number == schedule.term_months
-          state.period_interest += schedule.final_balloon_adjustment || 0
-        end
       end
 
       def close_period(state, date)
         payment = schedule.payments[state.payment_index]
         return unless payment && payment.date == date
 
-        state.carried_interest += period_interest(state)
+        state.carried_interest += period_interest(state) + period_balloon_adjustment(state)
         state.period_interest = nil
         state.period_start = date
         state.period_principal = state.principal
@@ -263,7 +262,10 @@ class Loan
           state.period_interest -= from_period
         end
 
-        from_carried + from_period
+        from_balloon = [ amount - from_carried - from_period, period_balloon_adjustment(state) ].min
+        state.remaining_balloon_adjustment -= from_balloon
+
+        from_carried + from_period + from_balloon
       end
 
       # The premium is charged alongside the instalment and is senior to
@@ -297,7 +299,9 @@ class Loan
       end
 
       def principal_only_interest(state)
-        paid = state.carried_interest
+        balloon = period_balloon_adjustment(state)
+        state.remaining_balloon_adjustment -= balloon
+        paid = state.carried_interest + balloon
         state.carried_interest = BigDecimal("0")
 
         if state.period_interest&.positive?
@@ -395,6 +399,14 @@ class Loan
 
       def period_interest(state)
         state.period_interest || BigDecimal("0")
+      end
+
+      def period_balloon_adjustment(state)
+        if state.period_interest && state.period_principal.positive? && state.payment_index == schedule.term_months - 1
+          state.remaining_balloon_adjustment
+        else
+          BigDecimal("0")
+        end
       end
 
       def opening_balance
