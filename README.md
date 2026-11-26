@@ -65,15 +65,15 @@ Issue https://github.com/we-promise/sure/issues/5077 tracks follow-up work defer
   - https://github.com/we-promise/sure/pull/5756 4a. Lanes: a queue per AI lane, and chat threads of its own.
   - https://github.com/we-promise/sure/pull/5758 4b. Gate: one per local model host, with lanes and interrupts.
   - https://github.com/we-promise/sure/pull/5784 4c. Typing hold and visible waiting: chat at the gate, and what it waits for.
- 
+
 ---
 
 ### Waiting on #5784
 
-- Bill suggestions and Stop.
-- Stopping a PDF import.
-- Documents in a job.
-- MCP tools in a job.
+- https://github.com/we-promise/sure/pull/5827 Bill suggestions and Stop.
+- https://github.com/we-promise/sure/pull/5825 Stopping a PDF import.
+- https://github.com/we-promise/sure/pull/5824 Documents in a job.
+- https://github.com/we-promise/sure/pull/5826 MCP tools in a job.
 
 - Receipt scanning: https://github.com/we-promise/sure/pull/5703
 - Receipt scanning, web UI: https://github.com/we-promise/sure/pull/5794
@@ -85,7 +85,7 @@ Issue https://github.com/we-promise/sure/issues/5077 tracks follow-up work defer
 
 ### Waiting on #5824, #5826, #5827
 
-- https://github.com/we-promise/sure/pull/5857 Capsule-only check (enforcement), once the four have landed.
+- https://github.com/we-promise/sure/pull/5857 Capsule-only check (enforcement), once #5784, #5824, #5826 and #5827 have landed. #5825 may land before or after: it fences work already running in `ProcessPdfJob` and does not move a transport call off a web thread.
 
 ---
 
