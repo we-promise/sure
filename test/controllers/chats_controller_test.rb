@@ -47,6 +47,15 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_select "textarea[name='chat[content]'][autofocus]", text: /#{Regexp.escape(insight.title)}/
   end
 
+  test "Dig in with AI asks a user with AI off to turn it on before anything is sent" do
+    @user.update!(ai_enabled: false)
+
+    get new_chat_url(insight_id: insights(:spending_anomaly_dining).id)
+
+    assert_select "h3", text: I18n.t("chats.ai_consent.title")
+    assert_select "textarea[name='chat[content]']", count: 0
+  end
+
   test "new chat ignores another family's insight" do
     insight = insights(:spending_anomaly_dining)
     insight.update_columns(family_id: families(:empty).id)
@@ -150,6 +159,17 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     # in the desktop-only sidebar, which the mobile Assistant entry never shows.
     assert_select "div.max-w-sm h3", text: I18n.t("chats.ai_consent.title")
     assert_select "form textarea", count: 0
+  end
+
+  test "the consent screen tells a family admin, and only an admin, that it also covers the family's background AI" do
+    @user.update!(ai_enabled: false)
+    get new_chat_url
+    assert_includes response.body, I18n.t("chats.ai_consent.family_note")
+
+    sign_in users(:family_member)
+    users(:family_member).update!(ai_enabled: false)
+    get new_chat_url
+    assert_not_includes response.body, I18n.t("chats.ai_consent.family_note")
   end
 
   test "new shows the AI consent screen instead of the compose form when AI is disabled" do

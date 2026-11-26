@@ -8,8 +8,16 @@ class Transactions::BulkDeletionsController < ApplicationController
                       .where(parent_entry_id: nil)
     changed_accounts = accounts_changed_by_transfer_removal(entries_scope)
     blocked_ids = changed_accounts.filter_map { |entry_id, accounts| entry_id if accounts.any? { |account| !writable_account_ids.include?(account.id) } }
-    destroyed = entries_scope.where.not(id: blocked_ids).destroy_by(id: bulk_delete_params[:entry_ids])
+    kept = []
+    destroyed = entries_scope.where.not(id: blocked_ids).where(id: bulk_delete_params[:entry_ids]).filter_map do |entry|
+      entry.destroy_unless_split_part_transferred!
+    rescue Entry::SplitPartTransferredError
+      kept << entry
+      nil
+    end
     (destroyed.map(&:account) + destroyed.flat_map { |entry| changed_accounts.fetch(entry.id, []) }).uniq.each(&:sync_later)
+
+    flash[:alert] = t(".part_transferred", count: kept.size) if kept.any?
     redirect_back_or_to transactions_url, notice: "#{destroyed.count} transaction#{destroyed.count == 1 ? "" : "s"} deleted"
   end
 

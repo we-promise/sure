@@ -11,7 +11,7 @@ class SnaptradeItem::Syncer
     Rails.logger.info "SnaptradeItem::Syncer - Starting sync for item #{snaptrade_item.id}"
 
     # Verify the item is authorized
-    unless snaptrade_item.oauth_configured?
+    unless snaptrade_item.credentials_configured?
       raise StandardError, "SnapTrade is not authorized"
     end
 

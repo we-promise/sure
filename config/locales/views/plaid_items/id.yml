@@ -1,0 +1,84 @@
+---
+id:
+  plaid_items:
+    auto_link_opener:
+      create_failed: Kami tidak dapat memastikan koneksi ini telah ditambahkan. Muat ulang halaman untuk memeriksa sebelum mencoba lagi.
+    create:
+      already_connected: Anda sudah memiliki koneksi untuk lembaga ini, sehingga koneksi ini tidak ditambahkan.
+      exchange_failed: Kami tidak dapat menambahkan koneksi ini. Coba lagi, dan jika masalah berlanjut, periksa log server.
+      success: Rekening berhasil ditautkan. Harap tunggu hingga rekening selesai disinkronkan.
+      token_expired: Koneksi ini kedaluwarsa sebelum ditambahkan. Hubungkan lembaga tersebut lagi.
+    destroy:
+      success: Rekening dijadwalkan untuk dihapus.
+    duplicate_warning:
+      close: Tutup
+      confirm: Konfirmasi koneksi ini
+      connected_by: Dihubungkan oleh %{name}
+      eu_no_add_accounts: Plaid tidak mendukung penambahan rekening ke koneksi UE yang sudah ada. Untuk mengubah rekening yang terhubung, hapus koneksi ini dan tambahkan lagi.
+      linked_on: Ditautkan %{date}
+      manage_connection: Buka rekening
+      mask: "****%{mask}"
+      no_accounts: Belum ada rekening yang disinkronkan dari koneksi ini.
+      overlap:
+        all_connected:
+          one: Rekening yang Anda coba tambahkan sudah terhubung, sehingga menambahkannya lagi hanya akan membuat duplikat.
+          other: Semua %{count} rekening yang Anda coba tambahkan sudah terhubung, sehingga menambahkannya lagi hanya akan membuat duplikat.
+        different_login: Untuk menghubungkan login %{institution} yang berbeda, pilih Rekening baru lagi, lalu masuk dengan login tersebut melalui Plaid.
+        more_accounts: Untuk menambahkan lebih banyak rekening ke koneksi ini, tutup dialog ini dan pilih Tambah rekening pada koneksi %{institution}.
+        others_connected:
+          one: Sure sudah memiliki rekening ini melalui koneksi %{name}, sehingga menambahkan milik Anda hanya akan membuat duplikat.
+          other: Sure sudah memiliki rekening-rekening ini melalui koneksi %{name}, sehingga menambahkan milik Anda hanya akan membuat duplikat.
+        others_connected_several:
+          one: Sure sudah memiliki rekening ini melalui koneksi anggota lain, sehingga menambahkan milik Anda hanya akan membuat duplikat.
+          other: Sure sudah memiliki rekening-rekening ini melalui koneksi anggota lain, sehingga menambahkan milik Anda hanya akan membuat duplikat.
+        none_connected: Belum ada satu pun rekening yang Anda coba tambahkan yang terhubung, sehingga ini kemungkinan adalah login yang berbeda. Menambahkannya hanya dihitung sebagai koneksi Plaid lainnya.
+        some_connected:
+          connected:
+            one: Satu rekening lainnya sudah terhubung, sehingga menambahkan koneksi ini akan menduplikasinya dan dihitung sebagai koneksi Plaid lainnya.
+            other: "%{count} rekening lainnya sudah terhubung, sehingga menambahkan koneksi ini akan menduplikasinya dan dihitung sebagai koneksi Plaid lainnya."
+          unconnected:
+            one: "Satu rekening yang Anda coba tambahkan belum terhubung:"
+            other: "%{count} rekening yang Anda coba tambahkan belum terhubung:"
+        unknown:
+          one: Rekening-rekening ini tidak dapat diperiksa terhadap koneksi Anda yang sudah ada. Jika rekening-rekening tersebut sama, menambahkan koneksi ini akan menduplikasinya dan dihitung sebagai koneksi Plaid lainnya.
+          other: Rekening-rekening ini tidak dapat diperiksa terhadap koneksi Anda yang sudah ada. Jika rekening-rekening tersebut sama, menambahkan koneksi ini akan menduplikasinya dan dihitung sebagai koneksi Plaid lainnya.
+      title:
+        one: Anda sudah memiliki koneksi untuk lembaga ini
+        other: Anda sudah memiliki %{count} koneksi untuk lembaga ini
+      title_all_connected: Anda sudah membuat koneksi ini
+      title_others_connected:
+        one: Rekening ini sudah terhubung
+        other: Rekening-rekening ini sudah terhubung
+      update_existing: Perbarui koneksi yang ada
+    errors:
+      link_token_generic: Kami tidak dapat membuka Plaid saat ini. Silakan coba lagi, dan jika masalah berlanjut, periksa log server untuk detailnya.
+      link_token_with_message: "Plaid tidak dapat membuka koneksi: %{message}"
+    plaid_item:
+      add_accounts: Tambah rekening
+      add_new: Tambah koneksi baru
+      confirm_accept: Hapus lembaga
+      confirm_body: Tindakan ini akan menghapus secara permanen semua rekening dalam grup ini beserta semua data terkait.
+      confirm_title: Hapus lembaga?
+      connection_lost: Koneksi terputus
+      connection_lost_description: Koneksi ini tidak lagi valid. Anda perlu menghapus koneksi ini dan menambahkannya lagi untuk melanjutkan sinkronisasi data.
+      delete: Hapus
+      deletion_in_progress: (penghapusan sedang berlangsung...)
+      error: Terjadi kesalahan saat menyinkronkan data
+      no_accounts_description: Kami tidak dapat memuat rekening apa pun dari lembaga keuangan ini.
+      no_accounts_title: Tidak ada rekening ditemukan
+      provider_name: Plaid
+      requires_update: Hubungkan kembali
+      status: Terakhir disinkronkan %{timestamp} lalu
+      status_never: Memerlukan sinkronisasi data
+      syncing: Menyinkronkan...
+      update: Perbarui
+    select_existing_account:
+      no_available_accounts: Tidak ada rekening Plaid yang tersedia untuk ditautkan. Silakan hubungkan rekening Plaid baru terlebih dahulu.
+      title: "Tautkan %{account_name} ke Plaid"
+      description: Pilih rekening Plaid untuk ditautkan ke rekening Anda yang sudah ada
+      cancel: Batal
+      link_account: Tautkan rekening
+    link_existing_account:
+      invalid_account: Rekening Plaid yang dipilih tidak valid
+      already_linked: Rekening Plaid ini sudah ditautkan
+      success: Rekening berhasil ditautkan ke Plaid
