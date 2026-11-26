@@ -97,6 +97,18 @@ class Insight::Generators::CashFlowWarningGeneratorTest < ActiveSupport::TestCas
     assert_equal "cash_flow_warning.negative", generate.first.template_key
   end
 
+  # The credit card is visible to every member, so the series passes the
+  # shared-series scope; only the cash-account check keeps it out.
+  test "income into a shared account that is not projected cash does not count" do
+    clear_schedule
+    IncomeStatement.any_instance.stubs(:median_expense).returns(2_500)
+    accounts(:depository).update_columns(balance: 1_500)
+    schedule("Card refund", -3_000, Date.current + 5, account: accounts(:credit_card))
+
+    assert_equal [], flow_amounts
+    assert_equal "cash_flow_warning.negative", generate.first.template_key
+  end
+
   test "a scheduled transfer is not counted as income" do
     clear_schedule
     schedule("From savings", 3_000, Date.current + 5, account: accounts(:connected), destination: accounts(:depository))
