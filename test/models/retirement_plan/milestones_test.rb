@@ -76,6 +76,17 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
     assert_not m.reached_already
   end
 
+  # From 1 January the whole of 2026 is left, so today's assets have 20
+  # years to grow: the bar is 300,000 / 1.05^20 = 113,066.84, not
+  # 300,000 / 1.05^19 = 118,720.19. 113,100 is above it and 113,000 below.
+  test "Coast FI already reached from 1 January counts the whole of this year" do
+    above = find(milestones(current_assets: 113_100).all, "coast")
+    below = find(milestones(current_assets: 113_000).all, "coast")
+
+    assert above.reached_already
+    assert_not below.reached_already
+  end
+
   test "Coast FI counts only the saving years, so a portfolio that only grows past the target after retiring never coasted" do
     # Retiring in 2030, the saving years end at 164,651.88 against a target of
     # 300,000 for 2029; the portfolio passes 300,000 only in the 2040s.
@@ -114,13 +125,17 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
 
   # Retiring this year, the target is the FI number itself (no years left to
   # grow) and there are no saving years left: 400,000 against 300,000 is
-  # reached already; 100,000 is not, and has no year to reach it in.
+  # reached already; 100,000 is not, and has no year to reach it in. Nor is
+  # 290,000: it would pass with a year's growth to come (300,000 / 1.05 =
+  # 285,714), but retirement has already begun.
   test "a retirement year that is this year still has Coast FI" do
     reached = find(milestones(retirement_year: 2026, current_assets: 400_000).all, "coast")
     short = find(milestones(retirement_year: 2026, current_assets: 100_000).all, "coast")
+    no_growth_left = find(milestones(retirement_year: 2026, current_assets: 290_000).all, "coast")
 
     assert_equal [ true, nil ], [ reached&.reached_already, reached&.year ]
     assert_equal [ false, nil ], [ short&.reached_already, short&.year ]
+    assert_not no_growth_left.reached_already
   end
 
   test "milestones need a birth year to give an age" do
