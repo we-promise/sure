@@ -23,7 +23,8 @@ class PurchasesTest < ApplicationSystemTestCase
       click_on "AMAZON MKTP"
     end
 
-    assert_text I18n.t("purchase_links.create.linked")
+    # The notice isn't checked here: the account sync the link starts can refresh the page and
+    # take the toast with it. PurchaseLinksControllerTest checks it.
     assert_text I18n.t("purchases.statuses.matched")
     assert_text "AMAZON MKTP"
     assert_selector "a[href='#{transaction_path(@payment)}']"

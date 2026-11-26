@@ -26,6 +26,7 @@ class PurchaseLinksControllerTest < ActionDispatch::IntegrationTest
     post purchase_link_url(@purchase), params: { entry_id: @entry.id }
 
     assert_redirected_to purchase_url(@purchase)
+    assert_equal I18n.t("purchase_links.create.linked"), flash[:notice]
     assert_equal @entry.entryable, @purchase.reload.linked_transaction
   end
 
