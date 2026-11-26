@@ -87,11 +87,10 @@ class AutoMatchesController < ApplicationController
   end
 
   private
+    # Filters entries by an accessible-account subquery instead of joining
+    # transactions to entries, accounts and shares for every transfer leg.
     def accessible_transaction_ids
-      Current.family.transactions
-        .joins(entry: :account)
-        .merge(Account.accessible_by(Current.user))
-        .select(:id)
+      Entry.where(entryable_type: "Transaction", account_id: Current.user.accessible_accounts.select(:id)).select(:entryable_id)
     end
 
     def auto_match_settings_params
