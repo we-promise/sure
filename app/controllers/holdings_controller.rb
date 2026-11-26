@@ -1,7 +1,7 @@
 class HoldingsController < ApplicationController
   include StreamExtensions
 
-  before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security sync_prices]
+  before_action :set_holding, only: %i[show cost_basis_editor update destroy unlock_cost_basis remap_security reset_security sync_prices]
   before_action :require_holding_write_permission!, only: %i[update destroy unlock_cost_basis remap_security reset_security sync_prices]
 
   def index
@@ -21,6 +21,11 @@ class HoldingsController < ApplicationController
     # cleared.
     @lots_provider_cost = @lots.any? && @holding.provider_cost_position?
     @can_write_lots = Account.writable_by(Current.user).exists?(id: @holding.account_id)
+  end
+
+  # The holdings list's cost basis popover loads its editor from here.
+  def cost_basis_editor
+    render layout: false
   end
 
   def update
