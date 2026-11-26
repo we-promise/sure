@@ -29,6 +29,8 @@ export default class extends Controller {
   connect() {
     this.boundUpdate = this.update.bind(this);
     this.addEventListeners();
+    // A copy Turbo cached while open comes back visible without toggle() running.
+    if (this.show) this.startAutoUpdate();
   }
 
   // Derived from the content element's own class rather than tracked as
@@ -90,6 +92,8 @@ export default class extends Controller {
       this.update();
       this.startAutoUpdate();
       this.focusFirstElement();
+    } else {
+      this.stopAutoUpdate();
     }
   };
 

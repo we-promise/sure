@@ -121,6 +121,8 @@ export default class extends Controller {
       this.update();
       this.startAutoUpdate();
       this.#focusFirstMenuItem();
+    } else {
+      this.stopAutoUpdate();
     }
   };
 
