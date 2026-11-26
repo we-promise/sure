@@ -560,18 +560,31 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal [ "pdf_text" ], statement.sanitized_parser_output["metadata_sources"]
   end
 
-  test "reads a bare dollar sign in the family currency without storing it on an accountless upload" do
+  test "stores the family currency as a default when an accountless upload only prints a bare dollar sign" do
     statement = upload_card_statement(account: nil)
 
-    assert_nil statement.currency
-    assert_equal "USD", statement.statement_currency
+    assert_equal "USD", statement.currency
+    assert statement.currency_source_family_default?
     assert_equal BigDecimal("435.88"), statement.closing_balance
+  end
+
+  test "a bare dollar balance keeps its currency when the family currency changes" do
+    statement = upload_card_statement(account: nil)
+
+    @family.update!(currency: "EUR")
+
+    statement.reload
+    assert_equal "USD", statement.currency
+    assert_equal Money.new(BigDecimal("435.88"), "USD"), statement.closing_balance_money
+    statement.save!
+    assert_equal Money.new(BigDecimal("435.88"), "USD"), statement.reload.closing_balance_money
   end
 
   test "keeps the PDF currency and balances for an accountless upload" do
     statement = upload_trade_republic_statement(account: nil)
 
     assert_equal "EUR", statement.currency
+    assert statement.currency_source_document?
     assert_equal Date.new(2026, 4, 1), statement.period_start_on
     assert_equal Date.new(2026, 4, 30), statement.period_end_on
     assert_equal BigDecimal("1101.14"), statement.opening_balance
@@ -628,7 +641,7 @@ class AccountStatementTest < ActiveSupport::TestCase
 
   test "keeps a typed balance when an accountless statement without a currency gets an account in the family currency" do
     statement = upload_card_statement(account: nil, text: "nothing to read")
-    assert_nil statement.currency
+    assert statement.currency_source_family_default?
 
     statement.update!(closing_balance: 250, account: accounts(:credit_card))
 
@@ -644,13 +657,6 @@ class AccountStatementTest < ActiveSupport::TestCase
 
     assert_equal "USD", statement.reload.currency
     assert_equal BigDecimal("250"), statement.closing_balance
-  end
-
-  test "shows a balance read from a bare dollar sign in the family currency on an accountless statement" do
-    statement = upload_card_statement(account: nil)
-
-    assert_nil statement.currency
-    assert_equal Money.new(BigDecimal("435.88"), "USD"), statement.closing_balance_money
   end
 
   test "a balance typed on an accountless statement without a currency keeps its currency when the family currency changes" do
@@ -874,7 +880,7 @@ class AccountStatementTest < ActiveSupport::TestCase
     @family.update!(currency: "EUR")
     card = @family.accounts.create!(name: "AUD card", balance: 0, currency: "AUD", accountable: CreditCard.new)
     statement = upload_card_statement(account: nil)
-    assert_nil statement.currency
+    assert_equal "EUR", statement.currency
     assert_nil statement.closing_balance, "a dollar amount was read as euros"
 
     statement.link_to_account!(card)
@@ -924,7 +930,7 @@ class AccountStatementTest < ActiveSupport::TestCase
 
   test "a retry after an invalid currency re-derives the balances" do
     statement = upload_card_statement(account: nil)
-    assert_nil statement.currency
+    assert_equal "USD", statement.currency
     statement.currency = "NOPE"
     assert_not statement.save
 

@@ -327,18 +327,35 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name='account_statement[account_id]']", 0
   end
 
-  test "metadata form offers to detect the currency for an accountless statement" do
+  test "saving the metadata form keeps a family default currency the user left alone" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: nil,
+      file: uploaded_file(filename: "unmatched_statement.csv", content_type: "text/csv")
+    )
+    assert statement.currency_source_family_default?
+
+    patch account_statement_url(statement), params: {
+      account_statement: { institution_name_hint: "Acme", currency: statement.currency }
+    }
+
+    assert_redirected_to account_statement_url(statement)
+    assert statement.reload.currency_source_family_default?
+  end
+
+  test "a currency picked on the metadata form is the user's" do
     statement = AccountStatement.create_from_upload!(
       family: @account.family,
       account: nil,
       file: uploaded_file(filename: "unmatched_statement.csv", content_type: "text/csv")
     )
 
-    get account_statement_url(statement)
+    patch account_statement_url(statement), params: { account_statement: { currency: "GBP" } }
 
-    assert_response :success
-    assert_select "select[name='account_statement[currency]'] option[value='']",
-      text: I18n.t("account_statements.show.currency_detect")
+    assert_redirected_to account_statement_url(statement)
+    statement.reload
+    assert_equal "GBP", statement.currency
+    assert statement.currency_source_user?
   end
 
   test "links suggested statement" do

@@ -601,8 +601,9 @@ class PdfImport < Import
       updates = {}
 
       if currency.present?
-        if account_statement.currency.blank? && account_statement.account_id.blank?
+        if account_statement.family_default_currency?
           updates[:currency] = currency.to_s.upcase
+          updates[:currency_source] = "document"
         end
         parser_output = (account_statement.sanitized_parser_output || {}).dup
         if parser_output["extracted_currency"] != currency.to_s.upcase

@@ -209,7 +209,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
   test "an AI balance in a currency the text can't resolve is kept" do
     detect_card_statement!(account: nil)
-    @statement.update_columns(currency: nil)
+    @statement.update_columns(currency_source: "family_default")
     assert_equal "USD", @statement.reload.statement_currency
     stub_extracted_balances(opening: 1066.47, closing: 435.88, currency: "EUR")
 
@@ -223,7 +223,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
   test "an AI balance in another currency is kept when the same statement was saved earlier in the job" do
     detect_card_statement!(account: nil)
-    @statement.update_columns(currency: nil)
+    @statement.update_columns(currency_source: "family_default")
     stub_extracted_balances(opening: 1066.47, closing: 435.88, currency: "EUR")
     period = { "statement_period_start" => @statement.period_start_on.to_s, "statement_period_end" => @statement.period_end_on.to_s }
     PdfImport::AiProcessor.any_instance.stubs(:process).returns(OpenStruct.new(extracted_data: period))
@@ -238,6 +238,18 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal "EUR", @statement.currency
     assert_equal BigDecimal("1066.47"), @statement.opening_balance
     assert_equal BigDecimal("435.88"), @statement.closing_balance
+  end
+
+  test "an AI currency does not replace a currency the user picked" do
+    detect_card_statement!(account: nil)
+    @statement.update!(currency: "GBP")
+    assert @statement.currency_source_user?
+    stub_extracted_balances(opening: 1066.47, closing: 435.88, currency: "EUR")
+
+    @import.extract_transactions
+
+    assert_equal "GBP", @statement.reload.currency
+    assert @statement.currency_source_user?
   end
 
   test "an AI balance keeps the hand edits already recorded on the statement" do

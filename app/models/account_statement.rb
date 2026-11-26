@@ -44,16 +44,25 @@ class AccountStatement < ApplicationRecord
   enum :source, { manual_upload: "manual_upload" }, validate: true, default: "manual_upload"
   enum :upload_status, { stored: "stored", failed: "failed" }, validate: true, default: "stored"
   enum :review_status, { unmatched: "unmatched", linked: "linked", rejected: "rejected" }, validate: true, default: "unmatched", scopes: false
+  # Where the currency came from. Only a family default is replaced by a
+  # currency the document names later.
+  enum :currency_source, {
+    document: "document",
+    account: "account",
+    user: "user",
+    family_default: "family_default"
+  }, prefix: true, validate: true, scopes: false
 
   monetize :opening_balance, :closing_balance
 
   before_validation :sync_file_metadata, if: -> { original_file.attached? }
   before_validation :normalize_currency
+  before_validation :note_user_currency, if: -> { persisted? && currency.present? && will_save_change_to_currency? && !will_save_change_to_currency_source? }
   before_validation :sync_review_status
   before_validation :note_edited_balances
-  before_validation :keep_typed_balance_currency, if: -> { currency.blank? && account.blank? }
   before_validation :adopt_account_currency, if: -> { account.present? && will_save_change_to_account_id? }
   before_validation :derive_detected_balances
+  before_validation :assign_default_currency
 
   validates :filename, :content_type, :checksum, presence: true
   validates :byte_size, presence: true, numericality: { greater_than: 0, less_than_or_equal_to: MAX_FILE_SIZE }
@@ -125,8 +134,7 @@ class AccountStatement < ApplicationRecord
         content_sha256: prepared_upload.content_sha256,
         source: :manual_upload,
         upload_status: :stored,
-        review_status: account.present? ? :linked : :unmatched,
-        currency: account&.currency
+        review_status: account.present? ? :linked : :unmatched
       )
 
       statement.original_file.attach(
@@ -374,6 +382,11 @@ class AccountStatement < ApplicationRecord
     checks
   end
 
+  # A currency the document names can still replace this one.
+  def family_default_currency?
+    account.blank? && (currency.blank? || currency_source_family_default?)
+  end
+
   def statement_currency
     currency.presence || account&.currency || family.currency
   end
@@ -453,10 +466,6 @@ class AccountStatement < ApplicationRecord
       self.currency = currency.to_s.upcase.presence if currency.present?
     end
 
-    def monetizable_currency
-      statement_currency
-    end
-
     def pdf_output
       sanitized_parser_output.to_h["pdf"].to_h
     end
@@ -487,15 +496,8 @@ class AccountStatement < ApplicationRecord
       merge_pdf_output("edited_balances" => (edited_balances | edited)) if edited.any?
     end
 
-    # A balance typed on a statement with no currency is in the family's
-    # currency, which is stored so a later family currency change does not
-    # relabel it. Derived balances are left to derive_detected_balances.
-    def keep_typed_balance_currency
-      typed = BALANCE_FIELDS.any? do |field|
-        will_save_change_to_attribute?(field) && self[field].present? &&
-          !(@derived_balances&.key?(field) && @derived_balances[field] == self[field])
-      end
-      self.currency = family.currency if typed
+    def note_user_currency
+      self.currency_source = "user"
     end
 
     # A linked account defines the currency. Balances entered in another
@@ -506,6 +508,7 @@ class AccountStatement < ApplicationRecord
 
       previous_currency = currency.presence || family.currency
       self.currency = account.currency
+      self.currency_source = "account"
       return if previous_currency == account.currency
 
       BALANCE_FIELDS.each { |field| self[field] = nil }
@@ -522,20 +525,12 @@ class AccountStatement < ApplicationRecord
       readings = pdf_output["balance_readings"]
       return if readings.blank?
 
-      own_currency = currency.presence || account&.currency
-      balances = TextMetadataParser.balances_for(readings, classification: account&.classification, currency: own_currency)
-      if own_currency.blank?
-        # An unmatched statement keeps a currency the document names, so its
-        # balances are not later labelled with the family's. A bare "$" is
-        # only read in the family's currency and sets no currency.
-        self.currency = balances.currency if balances && account.blank?
-        balances ||= TextMetadataParser.balances_for(
-          readings,
-          classification: account&.classification,
-          currency: nil,
-          fallback_currency: family.currency
-        )
+      if family_default_currency?
+        named = TextMetadataParser.balances_for(readings, classification: nil, currency: nil)
+        self.attributes = { currency: named.currency, currency_source: "document" } if named
       end
+
+      balances = TextMetadataParser.balances_for(readings, classification: account&.classification, currency: statement_currency)
       @derived_balances = (BALANCE_FIELDS - edited_balances).to_h do |field|
         self[field] = balances&.public_send(field)
         [ field, self[field] ]
@@ -544,6 +539,16 @@ class AccountStatement < ApplicationRecord
         "balances_source" => balances&.source,
         "balances_detected" => opening_balance.present? && closing_balance.present?
       )
+    end
+
+    # Every statement stores a currency, so it does not follow a later change
+    # of the family's.
+    def assign_default_currency
+      if currency.blank?
+        self.currency = account&.currency.presence || family.currency
+        self.currency_source = account&.currency.present? ? "account" : "family_default"
+      end
+      self.currency_source ||= (account.present? && account.currency == currency) ? "account" : "user"
     end
 
     def sync_review_status
