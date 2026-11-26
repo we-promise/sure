@@ -401,8 +401,14 @@ module Security::Provided
           rescue => e
             # A write the pre-checks missed (an invalid byte sequence Postgres
             # refuses) must not cost the security its name and classification,
-            # nor stop the sync's remaining securities.
+            # nor stop the sync's remaining securities. The stored set is kept,
+            # as the transaction rolled its replacement back, and the answer is
+            # stamped like an unreadable one: unstamped, the fund would be
+            # fetched again on every sync. The cost is that a temporary database
+            # error is not retried until a market data reset (`clear_cache`) or
+            # a change of provider.
             log_failed_constituents(provider, e)
+            stamp_constituents(provider)
           end
         end
         # `with_lock` re-reads the row, so precedence is checked against what
@@ -521,10 +527,9 @@ module Security::Provided
   # would roll the whole fund back unstamped and stop both market data
   # importers at this fund on every run.
   #
-  # An answer that says nothing about the fund leaves the stored set and the
-  # stamp alone, so the next sync asks again: a holdings block the provider's
-  # parser could not read, or a non-empty list none of whose rows can be
-  # stored.
+  # An answer that says nothing about the fund leaves the stored set alone, but
+  # is still stamped: a holdings block the provider's parser could not read, or
+  # a non-empty list none of whose rows can be stored.
   def store_constituents(list, provider = price_data_provider)
     return unless provider&.supplies_constituents?
 

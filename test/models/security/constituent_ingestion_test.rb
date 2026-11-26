@@ -708,8 +708,11 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
   end
 
   # A write the pre-checks did not foresee must not cost the fund its name, nor
-  # escape into the importer's loop.
+  # escape into the importer's loop. The stored set is kept, and the answer is
+  # stamped so the fund is not fetched again on every sync.
   test "a failure storing the holdings is logged and the rest of the answer still lands" do
+    @security.constituents.create!(ticker: "OLD", name: "Old", weight: 5)
+    assert_nil @security.constituents_fetched_at
     Security::Constituent.stubs(:insert_all!).raises(ActiveRecord::StatementInvalid, "PG::CharacterNotInRepertoire")
 
     assert_nothing_raised do
@@ -719,8 +722,12 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
       ))
     end
 
-    assert_equal "Fund Name", @security.reload.name
+    @security.reload
+    assert_equal "Fund Name", @security.name
     assert_equal "Failed to store a fund's holdings", last_holdings_log.message
+    assert_not_nil @security.constituents_fetched_at, "a failed store was not stamped"
+    assert_equal "twelve_data", @security.constituents_fetched_from
+    assert_equal %w[OLD], @security.constituents.pluck(:ticker)
   end
 
   test "a ticker that is not a string skips that row and stores the rest" do
