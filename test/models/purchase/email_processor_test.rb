@@ -104,6 +104,65 @@ class Purchase::EmailProcessorTest < ActiveSupport::TestCase
     assert @purchase.ai_metadata["files_rejected"]
   end
 
+  test "when the model can't use the attachments the order is read again from its text" do
+    attach_email_with_files
+    requests = stub_ai(:extract_purchase) do |request|
+      raise Ai::Error::InvalidOutput, "unusable" if request.attachments.any?
+
+      purchase_ai_answer
+    end
+
+    process
+    perform_enqueued_jobs(only: Ai::GenerationJob, at: Time.current)   # the text-only run
+
+    @purchase.reload
+    assert_equal "awaiting_payment", @purchase.status
+    assert_equal [ true, false ], requests.map { _1.attachments.any? }
+    assert @purchase.ai_metadata["files_rejected"]
+    assert_empty @purchase.receipt_files
+  end
+
+  test "an email whose text can't be read either fails" do
+    attach_email_with_files
+    requests = stub_ai(:extract_purchase, raises: Ai::Error::InvalidOutput.new("unusable"))
+
+    process
+    perform_enqueued_jobs(only: Ai::GenerationJob, at: Time.current)   # the text-only run
+
+    assert @purchase.reload.failed?
+    assert_equal [ true, false ], requests.map { _1.attachments.any? }
+  end
+
+  test "a purchase moved to another family while it waited is still read" do
+    requests = stub_purchase_extraction
+    other = families(:empty)
+    Ai::GenerationRun.enqueue(:extract_purchase, family: @purchase.family, ids: [ @purchase.id ])
+    [ Purchase.where(id: @purchase.id), User.where(id: @purchase.user_id) ].each { _1.update_all(family_id: other.id) }
+
+    perform_enqueued_jobs(only: Ai::GenerationJob, at: Time.current)
+
+    assert_equal 1, requests.size
+    assert_not @purchase.reload.processing?
+  end
+
+  test "a purchase deleted while its email was read ends the run quietly" do
+    stub_ai(:extract_purchase) do
+      Purchase.find(@purchase.id).destroy!
+      purchase_ai_answer
+    end
+
+    assert_nothing_raised { process }
+    assert_not Ai::GenerationRun.exists?(feature: "extract_purchase")
+  end
+
+  test "reprocess! doesn't restart a purchase whose original email was never stored" do
+    @purchase.original_email.detach
+    @purchase.update!(status: :failed, error: "The original email couldn't be stored")
+
+    assert_not @purchase.reprocess!
+    assert @purchase.reload.failed?
+  end
+
   test "a purchase paid in cash isn't matched to a bank payment" do
     payment(date: @ordered_on)
     stub_purchase_extraction(build_purchase_extraction(payment_method: "cash"))

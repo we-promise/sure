@@ -11,26 +11,33 @@ class Purchase::EmailProcessor
   include Ai::Requester
   ai_feature :extract_purchase
 
-  def self.from_ai_job(window:, family_id:)
-    ids = window.take_matching { |ids| Purchase.where(id: ids, family_id:).pluck(:id) }
-    new(Purchase.find_by(id: ids.first, family_id:))
+  # Failures that the attachments may have caused: the email is read once more from its text.
+  TEXT_ONLY_RETRY = [ Ai::Error::Refused, Ai::Error::InvalidOutput, Ai::Error::ContextTooLong, Pdf::PageImages::Error ].freeze
+
+  # By id alone: a family transfer moves the purchase while it waits, and it is read in its new
+  # family rather than left processing. The run's ids are the purchases the mailbox queued.
+  def self.from_ai_job(window:, family_id:, text_only: false)
+    ids = window.take_matching { |ids| Purchase.where(id: ids).pluck(:id) }
+    new(Purchase.find_by(id: ids.first), text_only:)
   end
 
-  # purchase: nil when it was deleted while the job waited.
-  def initialize(purchase)
+  # purchase: nil when it was deleted while the job waited. text_only: leave the attachments out,
+  # after a read with them failed.
+  def initialize(purchase, text_only: false)
     @purchase = purchase
+    @text_only = text_only
   end
 
   # The generation for a purchase still being read. Attachments go only to a model that reads
   # images; without one the email is read from its text.
   def ai_generation
-    return unless purchase&.reload&.processing?
+    return unless purchase && (@purchase = Purchase.find_by(id: purchase.id))&.processing?
 
     mail = Mail.new(purchase.original_email.download)
     @email_text = Purchase::EmailText.new(mail).call
     @subject = mail.subject
     @files = email_text.files
-    if files.any? && !self.class.reads_files?(family:, user: purchase.user)
+    if files.any? && (@text_only || !self.class.reads_files?(family:, user: purchase.user))
       @files_rejected = true
       @files = []
     end
@@ -56,10 +63,18 @@ class Purchase::EmailProcessor
     match if outcome == :processed
     ActiveRecord.after_all_transactions_commit { notify(outcome) }
     1
+  rescue ActiveRecord::RecordNotFound
+    0   # the purchase was deleted while the email was read
   end
 
+  # An attachment the model refused, or couldn't make sense of, shouldn't cost the order: the
+  # email is read again from its text alone. Anything else fails the purchase.
   def ai_failed(error)
-    record_failure(error) if purchase
+    # Read again: a failed apply may have left unsaved changes, and the purchase may be gone.
+    return unless purchase && (@purchase = Purchase.find_by(id: purchase.id))
+    return read_text_only(error) if files.present? && TEXT_ONLY_RETRY.any? { error.is_a?(_1) } && purchase.processing?
+
+    record_failure(error)
   end
 
   def ai_correlation_id = purchase && "purchase:#{purchase.id}"
@@ -72,6 +87,19 @@ class Purchase::EmailProcessor
 
   private
     attr_reader :purchase, :extraction, :email_text, :subject, :files, :files_rejected
+
+    def read_text_only(error)
+      DebugLogEntry.capture(
+        category: "ai",
+        level: "warn",
+        message: "Order email attachments couldn't be read, reading the text only: #{error.message}",
+        source: self.class.name,
+        family:,
+        user: purchase.user,
+        metadata: { purchase_id: purchase.id, files: files.size, error_class: error.class.name }
+      )
+      Ai::GenerationRun.enqueue(self.class.ai_feature, family:, ids: [ purchase.id ], text_only: true)
+    end
 
     def family = purchase.family
 

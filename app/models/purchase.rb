@@ -143,7 +143,8 @@ class Purchase < ApplicationRecord
   # one run. Returns whether it started one.
   def reprocess!
     with_lock do
-      next false unless failed? && email?
+      # A purchase whose original email was never stored has nothing to read.
+      next false unless failed? && email? && original_email.attached?
 
       update!(status: :processing, error: nil)
       Ai::GenerationRun.enqueue(:extract_purchase, family:, ids: [ id ])
