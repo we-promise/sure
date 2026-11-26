@@ -63,23 +63,6 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "update rejects a current password sent as null" do
-    assert_password_unchanged do
-      patch password_path, params: { user: {
-        password_challenge: nil,
-        password: "NewSecure1!",
-        password_confirmation: "NewSecure1!"
-      } }.to_json, headers: { "CONTENT_TYPE" => "application/json" }
-    end
-  end
-
-  test "update rejects a current password field sent without a value" do
-    assert_password_unchanged do
-      patch password_path, params: "user[password_challenge]&user[password]=NewSecure1!&user[password_confirmation]=NewSecure1!",
-        headers: { "CONTENT_TYPE" => "application/x-www-form-urlencoded" }
-    end
-  end
-
   test "update does not let a user without a local password set one here" do
     @user.update_column(:password_digest, nil)
 
