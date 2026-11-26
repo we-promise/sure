@@ -14,7 +14,12 @@ class ReceiptScan < ApplicationRecord
   # Not `:transaction`: that name would shadow ActiveRecord::Base#transaction.
   belongs_to :linked_transaction, class_name: "Transaction", foreign_key: :transaction_id, optional: true
 
-  has_many_attached :files
+  # The same files are the transaction's attachments. A blob is deleted once neither holds it:
+  # see purge_unshared_files.
+  has_many_attached :files, dependent: false
+
+  before_destroy :release_files
+  after_destroy_commit :purge_unshared_files
 
   enum :status, {
     processing: "processing",
@@ -113,6 +118,15 @@ class ReceiptScan < ApplicationRecord
   end
 
   private
+    def release_files
+      @released_blob_ids = files_attachments.pluck(:blob_id)
+      files_attachments.delete_all
+    end
+
+    def purge_unshared_files
+      ActiveStorage::Blob.where(id: @released_blob_ids).where.missing(:attachments).find_each(&:purge_later)
+    end
+
     def account_belongs_to_family
       return if account.nil? || family.nil?
 

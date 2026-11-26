@@ -71,7 +71,7 @@ class TransactionAttachmentsController < ApplicationController
       return
     end
 
-    @attachment.purge
+    @transaction.purge_attachment(@attachment)
     message = t("transactions.attachments.attachment_deleted")
     respond_to do |format|
       format.html { redirect_back_or_to transaction_path(@transaction), notice: message }

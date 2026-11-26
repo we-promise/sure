@@ -15,7 +15,8 @@ class Transaction < ApplicationRecord
     attachable.variant :thumbnail, resize_to_limit: [ 150, 150 ]
   end
 
-  has_one :receipt_scan, foreign_key: :transaction_id, dependent: :nullify, inverse_of: :linked_transaction
+  # A receipt goes with its transaction, files and all.
+  has_one :receipt_scan, foreign_key: :transaction_id, dependent: :destroy, inverse_of: :linked_transaction
 
   # Attachment validation constants
   MAX_ATTACHMENTS_PER_TRANSACTION = 10
@@ -600,6 +601,13 @@ class Transaction < ApplicationRecord
   # pick. See Category.recently_used_for.
   def record_category_usage!
     category.touch(:last_used_at) if saved_change_to_category_id? && category.present?
+  end
+
+  # Deletes an attached file. A receipt's file is also its scan's, which lets go of it first, so
+  # the file itself is deleted.
+  def purge_attachment(attachment)
+    receipt_scan&.files_attachments&.where(blob_id: attachment.blob_id)&.delete_all
+    attachment.purge
   end
 
   def from_receipt?

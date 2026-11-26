@@ -23,6 +23,38 @@ class ReceiptScanTest < ActiveSupport::TestCase
     assert_not ReceiptScan.extraction_available?(family: @family, user: @user)
   end
 
+  test "deleting the transaction deletes its receipt and the receipt's files" do
+    scan = upload
+    blob_ids = scan.files.map(&:blob_id)
+
+    perform_enqueued_jobs(only: ActiveStorage::PurgeJob) { scan.linked_transaction.entry.destroy! }
+
+    assert_not ReceiptScan.exists?(scan.id)
+    assert_not ActiveStorage::Blob.exists?(id: blob_ids)
+  end
+
+  test "deleting the receipt's file from its transaction deletes the file" do
+    scan = upload
+    transaction = scan.linked_transaction
+    attachment = transaction.attachments.first
+
+    transaction.purge_attachment(attachment)
+
+    assert_not ActiveStorage::Blob.exists?(attachment.blob_id)
+    assert_empty scan.reload.files
+  end
+
+  test "a receipt whose file is still attached elsewhere leaves the file" do
+    scan = upload
+    other = Entry.create!(account: @account, name: "Other", date: Date.current, amount: 1, currency: "USD", entryable: Transaction.new)
+    other.entryable.attachments.attach(scan.files.blobs)
+    blob_ids = scan.files.map(&:blob_id)
+
+    perform_enqueued_jobs(only: ActiveStorage::PurgeJob) { scan.destroy! }
+
+    assert_equal blob_ids.size, ActiveStorage::Blob.where(id: blob_ids).count
+  end
+
   test "account must belong to the family" do
     scan = ReceiptScan.new(family: families(:empty), user: @user, account: @account)
 

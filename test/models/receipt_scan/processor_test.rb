@@ -465,15 +465,16 @@ class ReceiptScan::ProcessorTest < ActiveSupport::TestCase
     assert_equal baseline, open_during_call
   end
 
-  test "a placeholder deleted before it was read ends the scan as failed" do
+  test "a placeholder deleted before it was read takes its receipt with it, and the run ends quietly" do
     scan = upload("rotated.jpg", "image/jpeg")
     requests = stub_extraction
     scan.linked_transaction.entry.destroy!
 
     assert_nothing_raised { process(scan) }
 
-    assert scan.reload.failed?
+    assert_not ReceiptScan.exists?(scan.id)
     assert_empty requests
+    assert_not Ai::GenerationRun.exists?(family: @family, feature: "extract_receipt")
   end
 
   test "an error after extraction marks the scan failed instead of raising" do
