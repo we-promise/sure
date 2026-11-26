@@ -1387,6 +1387,15 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal [ counted, excluded ].map(&:entryable_id).sort, search_ids(excluded: nil)
   end
 
+  test "excluded=false keeps rows whose stored flag is null, as the serializer reads them" do
+    unflagged = create_transaction(account: @checking_account, amount: 10)
+    unflagged.update_column(:excluded, nil)
+    excluded = create_transaction(account: @checking_account, amount: 20, excluded: true)
+
+    assert_equal [ unflagged.entryable_id ], search_ids(excluded: false)
+    assert_equal [ excluded.entryable_id ], search_ids(excluded: true)
+  end
+
   test "category_ids, merchant_ids and tag_ids match ids exactly, and an empty list matches nothing" do
     parent = categories(:food_and_drink)
     child = @family.categories.create!(name: "Search child #{SecureRandom.hex(3)}", parent:, color: "#000000")

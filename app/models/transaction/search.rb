@@ -259,7 +259,8 @@ class Transaction::Search
       query = EntrySearch.apply_accounts_filter(query, accounts, account_ids)
       query = apply_id_filters(query)
       query = apply_signed_amount_filters(query)
-      query = query.where(entries: { excluded: }) unless excluded.nil?
+      # The column is nullable and the serializer shows NULL as false.
+      query = query.where(entries: { excluded: excluded ? true : [ false, nil ] }) unless excluded.nil?
       query = query.where(NATURE_CONDITIONS.fetch(nature)) if NATURE_CONDITIONS.key?(nature)
       query = query.where(id: budget.reportable_transactions.select(:id)) if budget
 
