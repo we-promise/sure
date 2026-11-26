@@ -9,12 +9,14 @@ class Api::V1::CashFlowsController < Api::V1::BaseController
     response.headers["Cache-Control"] = "private, no-store"
     today = Date.current
     statement = IncomeStatement.new(current_resource_owner.family, user: current_resource_owner)
+    # Sending include with view, or group_by without view, is refused before
+    # the values are read, whatever they are.
+    raise QueryError.new("invalid_view", "include and view cannot be combined") unless params[:include].nil? || params[:view].nil?
     include_mode, view = reading_as("invalid_view", "include and view support only sankey") do
       [ enum_filter_param(:include, SANKEY), enum_filter_param(:view, SANKEY) ]
     end
-    raise QueryError.new("invalid_view", "include and view cannot be combined") if include_mode && view
 
-    raise QueryError.new("invalid_group_by", "group_by requires view=sankey") if params[:group_by].present? && !view
+    raise QueryError.new("invalid_group_by", "group_by requires view=sankey") unless params[:group_by].nil? || view
     group_by = reading_as("invalid_group_by", "group_by must be category or account") do
       enum_filter_param(:group_by, IncomeStatement::CashFlowGraph::GROUPINGS.keys)
     end
