@@ -316,6 +316,15 @@ class Api::V1::BaseController < ApplicationController
       nil
     end
 
+    # A finite decimal, or nil for anything else. String#to_d would read "abc"
+    # as 0 and "12abc" as 12. exception: false does not cover a NUL byte.
+    def parse_decimal(raw)
+      value = BigDecimal(raw.to_s.strip, exception: false)
+      value if value&.finite?
+    rescue ArgumentError
+      nil
+    end
+
     def parse_date_param(key)
       Date.iso8601(params[key].to_s)
     rescue ArgumentError

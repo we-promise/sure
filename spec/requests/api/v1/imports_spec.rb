@@ -37,6 +37,7 @@ RSpec.describe 'API V1 Imports', type: :request do
       user: user,
       name: 'No Read Docs Key',
       key: key,
+      display_key: key,
       scopes: %w[write],
       source: 'web'
     ).tap { |api_key| api_key.save!(validate: false) }
@@ -47,6 +48,7 @@ RSpec.describe 'API V1 Imports', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Test Checking',
       balance: 1000,
       currency: 'USD',
@@ -84,7 +86,7 @@ RSpec.describe 'API V1 Imports', type: :request do
 
   path '/api/v1/imports' do
     get 'List imports' do
-      description 'List all imports for the user\'s family with pagination and filtering.'
+      description 'List the family\'s imports the user can view, with pagination and filtering. An import made from an account statement is as private as that statement, so it is left out for users who cannot view the statement.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -144,7 +146,7 @@ RSpec.describe 'API V1 Imports', type: :request do
           account_id: {
             type: :string,
             format: :uuid,
-            description: 'Account ID to import into'
+            description: 'Account ID to import into. Must be an account the API user can write to'
           },
           publish: {
             type: :string,
@@ -250,7 +252,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '403', 'guest users cannot import family configuration' do
+      response '403', 'guest users cannot import family configuration, or the account is shared without write access' do
         schema oneOf: [
           { '$ref' => '#/components/schemas/ErrorResponse' },
           { '$ref' => '#/components/schemas/ErrorResponseWithImportId' }
@@ -318,7 +320,7 @@ RSpec.describe 'API V1 Imports', type: :request do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'Retrieve an import' do
-      description 'Retrieve detailed information about a specific import, including configuration, row statistics, and SureImport readback verification when available.'
+      description 'Retrieve detailed information about a specific import, including configuration, row statistics, and SureImport readback verification when available. An import made from an account statement the user cannot view returns 404.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -331,7 +333,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '404', 'import not found' do
+      response '404', 'import not found, or made from a statement the user cannot view' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
@@ -345,7 +347,7 @@ RSpec.describe 'API V1 Imports', type: :request do
     parameter name: :id, in: :path, type: :string, required: true, description: 'Import ID'
 
     get 'List import row diagnostics' do
-      description 'List sanitized import rows with validation errors and mapping resolution state.'
+      description 'List sanitized import rows with validation errors and mapping resolution state. An import made from an account statement the user cannot view returns 404.'
       tags 'Imports'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -378,7 +380,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '404', 'import not found' do
+      response '404', 'import not found, or made from a statement the user cannot view' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
@@ -426,7 +428,7 @@ RSpec.describe 'API V1 Imports', type: :request do
           account_id: {
             type: :string,
             format: :uuid,
-            description: 'Account ID used for account-scoped CSV import validation'
+            description: 'Account ID used for account-scoped CSV import validation. Must be an account the API user can write to'
           },
           date_col_label: { type: :string, description: 'CSV imports only. Header name for the date column' },
           amount_col_label: { type: :string, description: 'CSV imports only. Header name for the amount column' },
@@ -502,6 +504,33 @@ RSpec.describe 'API V1 Imports', type: :request do
       response '422', 'missing or invalid content' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:body) { { type: 'SureImport' } }
+
+        run_test!
+      end
+
+      response '403', 'account is shared with the user without write access' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:read_only_account) do
+          owner = family.users.create!(
+            email: 'api-account-owner@example.com',
+            password: 'password123',
+            password_confirmation: 'password123'
+          )
+          Account.create!(
+            family: family,
+            owner: owner,
+            name: 'Shared Checking',
+            balance: 1000,
+            currency: 'USD',
+            accountable: Depository.new
+          ).tap { |shared| shared.account_shares.create!(user: user, permission: 'read_only') }
+        end
+        let(:body) do
+          {
+            raw_file_content: "date,amount,name\n01/15/2024,50.00,New Transaction",
+            account_id: read_only_account.id
+          }
+        end
 
         run_test!
       end
