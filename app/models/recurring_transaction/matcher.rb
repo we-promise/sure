@@ -75,6 +75,8 @@ class RecurringTransaction
     end
 
     # Live mode: exact tier auto-links, high tier lands in the review queue.
+    # Historical rows are deliberately left alone; they are backdated cycles
+    # and only the backfill pass or a manual link touches them.
     def run!
       reconcile_reference_allocations!
       written = apply(collect_candidates, suggest: true)
@@ -84,9 +86,14 @@ class RecurringTransaction
 
     # Backfill mode: only unambiguous exact-tier matches are written, as
     # confirmed history. Historical suggestions would bury the review queue.
+    # Historical rows are eligible here so a backdated bill can pick up the
+    # payments it already had.
     def run_backfill!
-      reconcile_reference_allocations!
-      written = apply(collect_candidates(include_closed_window: true), suggest: false)
+      reconcile_reference_allocations!(include_historical: true)
+      written = apply(
+        collect_candidates(include_closed_window: true, include_historical: true),
+        suggest: false
+      )
       close_reference_settled!
       written
     end
@@ -175,7 +182,7 @@ class RecurringTransaction
       # kinds of allocation can need either step, and only those are loaded: on a
       # reference-only bill, carrying a reference signal, or whose note names a
       # bill's reference. A family without a bank reference skips the scan.
-      def reconcile_reference_allocations!
+      def reconcile_reference_allocations!(include_historical: false)
         return unless reference_bills?
 
         rehomes = []
@@ -185,6 +192,8 @@ class RecurringTransaction
           next unless series.active? && entry
 
           current = allocation.recurring_occurrence
+          next if !include_historical && current.historical?
+
           if contradicted_allocation?(series, entry)
             Allocator.new(current).unallocate!(allocation) if releasable_cycle?(current, series)
           elsif allocation.match_signals.to_h["reference"].present? && matched_reference(series, entry)
@@ -195,7 +204,7 @@ class RecurringTransaction
         # Oldest payment first, each against the cycles as the moves before it
         # left them, so a backlog fills in order instead of piling onto one cycle.
         rehomes.sort_by { |_, _, entry| [ entry.date, entry.id ] }.each do |allocation, series, entry|
-          rehome_reference_allocation!(allocation, series, entry)
+          rehome_reference_allocation!(allocation, series, entry, include_historical: include_historical)
         rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
           # The target cycle already holds this entry; leave the allocation where it is.
           next
@@ -240,9 +249,9 @@ class RecurringTransaction
         needles.map { |needle| "%#{Entry.sanitize_sql_like(needle).gsub(/\s+/, '%')}%" }
       end
 
-      def rehome_reference_allocation!(allocation, series, entry)
+      def rehome_reference_allocation!(allocation, series, entry, include_historical: false)
         current = allocation.recurring_occurrence
-        target = target_cycle(series, entry)
+        target = target_cycle(series, entry, include_historical: include_historical)
         return if target.nil? || target.id == current.id
         return unless rehome_target?(target, current, entry)
 
@@ -292,8 +301,13 @@ class RecurringTransaction
       # The reference decides which bill, not which month: of a bill's cycles the
       # payment goes to the oldest open one whose window covers it, and only when
       # none does, to the nearest by due date.
-      def target_cycle(series, entry)
-        pick_cycle(series.recurring_occurrences.reload.select { |occurrence| occurrence.scheduled? || occurrence.paid? }, entry)
+      def target_cycle(series, entry, include_historical: false)
+        cycles = series.recurring_occurrences.reload.select do |occurrence|
+          (occurrence.scheduled? || occurrence.paid?) &&
+            (include_historical || !occurrence.historical?)
+        end
+
+        pick_cycle(cycles, entry)
       end
 
       # An open cycle a late payment can still be for: the entry is inside its
@@ -435,8 +449,9 @@ class RecurringTransaction
       # The hard filters depend on the series and the entry, not the individual
       # occurrence, so they are asked once per series rather than once per cycle
       # the bill has ever had.
-      def collect_candidates(include_closed_window: false)
-        occurrences = open_occurrences + paid_reference_occurrences(include_closed_window)
+      def collect_candidates(include_closed_window: false, include_historical: false)
+        occurrences = open_occurrences(include_historical: include_historical) +
+                      paid_reference_occurrences(include_closed_window, include_historical: include_historical)
         return [] if occurrences.empty?
 
         rejected = rejected_pairs
@@ -509,13 +524,13 @@ class RecurringTransaction
       # superseded twin of an active one and would only make every payment look
       # ambiguous. Paused and inactive series keep theirs, so a late payment
       # still reaches a paused bill's overdue leftover.
-      def open_occurrences
-        family.recurring_occurrences
-              .open_status
-              .joins(:recurring_transaction)
-              .where.not(recurring_transactions: { status: "ended" })
-              .includes(recurring_transaction: :recurrence_rules)
-              .to_a
+      def open_occurrences(include_historical: false)
+        scope = include_historical ? family.recurring_occurrences.open_status : family.recurring_occurrences.current_open
+
+        scope.joins(:recurring_transaction)
+             .where.not(recurring_transactions: { status: "ended" })
+             .includes(recurring_transaction: :recurrence_rules)
+             .to_a
       end
 
       # Settled cycles of bills that carry a bank reference stay candidates for
@@ -523,13 +538,14 @@ class RecurringTransaction
       # run only sees payments from the last REFERENCE_LOOKBACK_DAYS, so a cycle
       # can only be the nearest one for them if it is at most one cadence older
       # than that; backfill takes all history.
-      def paid_reference_occurrences(include_closed_window)
+      def paid_reference_occurrences(include_closed_window, include_historical: false)
         scope = family.recurring_occurrences
                       .paid
                       .joins(:recurring_transaction)
                       .merge(RecurringTransaction.active)
                       .where.not("recurring_transactions.matcher_hints->>'bank_reference' IS NULL")
-                      .includes(recurring_transaction: :recurrence_rules)
+        scope = scope.where(historical: false) unless include_historical
+        scope = scope.includes(recurring_transaction: :recurrence_rules)
         return scope.to_a if include_closed_window
 
         scope.where("recurring_occurrences.due_on >= ?", (REFERENCE_LOOKBACK_DAYS + MAX_CYCLE_DAYS).days.ago.to_date).select do |occurrence|
@@ -670,7 +686,9 @@ class RecurringTransaction
 
           window_start = occurrence.effective_due_on - early
           window_end = occurrence.effective_due_on + late
-          window_end = [ window_end, Date.current ].max if occurrence.derived_state == :overdue
+          if occurrence.derived_state.in?([ :overdue, :historical ])
+            window_end = [ window_end, Date.current ].max
+          end
 
           window_start..window_end
         end

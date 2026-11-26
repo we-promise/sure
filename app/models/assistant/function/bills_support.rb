@@ -158,7 +158,7 @@ module Assistant::Function::BillsSupport
     # current_occurrence resolved from the preloaded association instead of
     # the model's per-series queries (100 series would mean 100 queries).
     def current_occurrence_from_loaded(series)
-      occurrences = series.recurring_occurrences
+      occurrences = series.recurring_occurrences.reject(&:historical?)
       occurrences.select(&:scheduled?).min_by(&:due_on) ||
         occurrences.max_by(&:due_on)
     end

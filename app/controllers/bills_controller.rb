@@ -164,7 +164,10 @@ class BillsController < ApplicationController
     # bill costs no more than its summary, and the aggregates behind the chart
     # and the per-year totals run only once it is scrolled to.
     if params[:display] == "history"
-      @history = @series.recurring_occurrences.closed.order(due_on: :desc).limit(12).includes(allocations: :entry)
+      # The last 12 cycles, including backdated open months. Historical rows
+      # are past cycles the user can still link a payment to; closed rows are
+      # the settled history this list has always shown.
+      @history = @series.recurring_occurrences.history.order(due_on: :desc).limit(12).includes(allocations: :entry)
       @upcoming = @series.schedule.occurrences_between(Date.current + 1, Date.current + 400).first(3)
       @analytics = paid_analytics
       load_deep_extras
@@ -440,7 +443,7 @@ class BillsController < ApplicationController
       materialize_for_calendar(@grid_end) if @grid_end > today + 89
 
       occurrences = Current.family.recurring_occurrences
-                           .where(recurring_transaction_id: payable_series_ids)
+                           .where(recurring_transaction_id: payable_series_ids, historical: false)
                            .due_between(@grid_start, @grid_end)
                            .includes(recurring_transaction: { merchant: { logo_attachment: :blob } })
                            .to_a
@@ -489,6 +492,9 @@ class BillsController < ApplicationController
       # snoozed date, the one index lists them by.
       Current.family.recurring_occurrences
              .where(recurring_transaction_id: payable_series_ids)
+             # Backdated open months stay out of the worklist, but a historical
+             # cycle that was actually paid is still a paid row in its month.
+             .where("historical = FALSE OR status <> 'scheduled'")
              .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} >= ? OR status = 'scheduled'", Date.current.beginning_of_month)
              .where("due_on <= ?", Date.current + 90)
              .includes(recurring_transaction: [ { merchant: { logo_attachment: :blob } }, :recurring_price_changes, :recurrence_rules ])

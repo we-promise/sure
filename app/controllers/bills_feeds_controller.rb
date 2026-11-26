@@ -27,7 +27,7 @@ class BillsFeedsController < ApplicationController
     raise ActiveRecord::RecordNotFound unless user.preview_features_enabled? && !family.recurring_transactions_disabled?
 
     occurrences = family.recurring_occurrences
-                        .open_status
+                        .current_open
                         .joins(:recurring_transaction)
                         .merge(RecurringTransaction.accessible_by(user))
                         .where(recurring_transactions: { status: :active })

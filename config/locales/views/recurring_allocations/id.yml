@@ -5,6 +5,7 @@ id:
     missing_rate: Nilai tukar tidak tersedia; masukkan jumlahnya secara eksplisit
     already_allocated: Transaksi tersebut sudah dialokasikan ke tagihan ini
     entry_exhausted: Jumlah penuh dari transaksi tersebut sudah dialokasikan ke pembayaran lain yang jatuh tempo
+    entry_not_eligible: "Transaksi ini tidak dapat diterapkan ke tagihan ini"
     invalid: Pembayaran tidak dapat dicatat
     create:
       success: Pembayaran dialokasikan

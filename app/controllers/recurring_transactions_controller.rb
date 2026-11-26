@@ -191,6 +191,7 @@ class RecurringTransactionsController < ApplicationController
   def update
     @recurring_transaction.assign_attributes(recurring_transaction_params)
     apply_editable_identity
+    apply_started_on
     apply_frequency_preset
 
     if @recurring_transaction.typed_installment? && @recurring_transaction.end_after_count.present?
@@ -410,10 +411,16 @@ class RecurringTransactionsController < ApplicationController
     end
 
     def build_declared_bill
+      # started_on is deliberately not mass-assignable: it is parsed by the
+      # declared-bill builder, which owns the schedule's date rules.
+      attrs = new_recurring_transaction_params
+      started_on = params.dig(:recurring_transaction, :started_on)
+      attrs[:started_on] = started_on if started_on.present?
+
       RecurringTransaction::DeclaredBill.new(
         family: Current.family,
         user: Current.user,
-        attrs: new_recurring_transaction_params
+        attrs: attrs
       ).build
     end
 
@@ -452,6 +459,25 @@ class RecurringTransactionsController < ApplicationController
     # a persisted series, so offering it would be a field that silently fails.
     # The day a bill falls due is edited through the frequency picker.
     #
+    # started_on is different: it bounds history rather than the schedule, so
+    # it stays editable after creation. Parsed here from the raw value because
+    # Active Record casts an unparseable date to nil, which would silently
+    # clear the field instead of telling the user it was invalid.
+    def apply_started_on
+      attrs = params.require(:recurring_transaction)
+      return unless attrs.key?(:started_on)
+
+      raw = attrs[:started_on]
+      @recurring_transaction.started_on =
+        if raw.blank?
+          nil
+        else
+          Date.iso8601(raw.to_s)
+        end
+    rescue Date::Error, TypeError
+      @recurring_transaction.errors.add(:started_on, :invalid)
+    end
+
     # Currency deliberately does not follow the account: it shapes the schedule
     # and is tied to existing allocations, and the allocator already converts
     # cross-currency payments.

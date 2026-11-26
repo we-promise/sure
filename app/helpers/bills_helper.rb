@@ -310,6 +310,7 @@ module BillsHelper
     # directly beside its own "$11.99 of $11.99 paid" total. Once a cycle is
     # closed the only useful fact left is when it had been due.
     return t("bills.due_label.settled", date: date) unless occurrence.scheduled?
+    return t("bills.due_label.historical", date: date) if occurrence.historical?
 
     # Nobody is paying a bill that isn't active, so its leftover isn't late.
     # The label leads with the bill's status instead, as its page does.
@@ -365,6 +366,8 @@ module BillsHelper
   # payment gives that reason instead, uncoloured: in red it read as the
   # problem itself. The row's date still says the bill is late.
   def bills_attention_reason(occurrence, suggestion: nil)
+    return if occurrence.historical?
+
     series = occurrence.recurring_transaction
     return t("bills.attention.paused") unless series.active?
     return t("bills.attention.needs_review") if suggestion.present?

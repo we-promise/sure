@@ -57,6 +57,7 @@ nl:
       last_account: "Laatst gebruikte account"
       upcoming: "Binnenkort"
       manual_payment: "Handmatige betaling"
+      no_payment: "Geen betaling gekoppeld"
       history: "Geschiedenis"
       payment_count:
         one: "1 betaling"
@@ -132,6 +133,7 @@ nl:
         other: "%{count} dagen achterstallig, verviel op %{date}"
       today: "Vervalt vandaag"
       settled: "Verviel op %{date}"
+      historical: "Was verschuldigd op %{date}"
       due_since: "Verviel op %{date}"
       snoozed: "Uitgesteld tot %{date}"
       upcoming:

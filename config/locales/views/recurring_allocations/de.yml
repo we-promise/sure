@@ -4,6 +4,7 @@ de:
     over_allocation: Damit würdest du mehr als den Transaktionsbetrag zuordnen.
     missing_rate: Kein Wechselkurs verfügbar. Gib den Betrag manuell ein.
     already_allocated: Diese Transaktion ist dieser Rechnung bereits zugeordnet
+    entry_not_eligible: "Diese Transaktion kann dieser Rechnung nicht zugeordnet werden"
     invalid: Die Zahlung konnte nicht erfasst werden
     create:
       success: Zahlung zugeordnet

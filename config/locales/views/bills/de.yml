@@ -7,6 +7,7 @@ de:
         other: Seit %{count} Tagen überfällig · fällig am %{date}
       today: Heute fällig
       settled: War am %{date} fällig
+      historical: "War am %{date} fällig"
       due_since: Fällig am %{date}
       snoozed: Verschoben bis %{date}
       upcoming:
@@ -173,6 +174,7 @@ de:
       last_account: "Zuletzt genutztes Konto"
       upcoming: "Demnächst"
       manual_payment: "Manuelle Zahlung"
+      no_payment: "Keine Zahlung verknüpft"
       history: "Verlauf"
       payment_count:
         one: "1 Zahlung"

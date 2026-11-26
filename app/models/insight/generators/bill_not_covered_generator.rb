@@ -161,7 +161,7 @@ class Insight::Generators::BillNotCoveredGenerator < Insight::Generator
     def upcoming_occurrences(account_ids)
       RecurringOccurrence.preload_confirmed_allocated(
         family.recurring_occurrences
-              .open_status
+              .current_open
               .joins(:recurring_transaction)
               .where(recurring_transactions: { status: :active })
               .where("recurring_transactions.account_id IN (:ids) OR recurring_transactions.destination_account_id IN (:ids)", ids: account_ids)

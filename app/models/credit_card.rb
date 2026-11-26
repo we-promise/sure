@@ -306,7 +306,7 @@ class CreditCard < ApplicationRecord
     end
 
     def next_open_due_date(payment, as_of)
-      occurrence = payment.recurring_occurrences.select(&:scheduled?).min_by(&:due_on)
+      occurrence = payment.recurring_occurrences.select { |candidate| candidate.scheduled? && !candidate.historical? }.min_by(&:due_on)
       return occurrence.effective_due_on if occurrence
 
       payment.next_expected_date if payment.next_expected_date >= as_of

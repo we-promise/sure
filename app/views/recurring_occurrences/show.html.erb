@@ -148,10 +148,10 @@
         </div>
       <% end %>
 
-      <% if @occurrence.scheduled? %>
+      <% if @occurrence.scheduled? || @occurrence.paid? %>
         <div class="space-y-2">
           <p class="text-xs font-medium text-secondary uppercase">
-            <%= @occurrence.partially_paid? ? t(".add_heading") : t(".find_heading") %>
+            <%= @occurrence.scheduled? && !@occurrence.partially_paid? ? t(".find_heading") : t(".add_heading") %>
           </p>
 
           <%# Ranked by the engine that decides auto-links, so the app agrees

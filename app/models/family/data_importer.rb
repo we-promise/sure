@@ -704,6 +704,7 @@ class Family::DataImporter
           renews_on: parse_import_date(data["renews_on"]),
           trial_ends_on: parse_import_date(data["trial_ends_on"]),
           cancelled_on: parse_import_date(data["cancelled_on"]),
+          started_on: parse_import_date(data["started_on"]),
           anchor_date: parse_import_date(data["anchor_date"]),
           end_mode: imported_enum_value(data["end_mode"], RecurringTransaction.end_modes, "never"),
           end_on: parse_import_date(data["end_on"]),
@@ -725,6 +726,15 @@ class Family::DataImporter
           }.compact
         )
 
+        # An export can carry a started_on after the cached next_expected_date
+        # when a manual payment left that hint on the settled cycle. Recurrence
+        # rules have not been restored yet at this point, so the live schedule
+        # cannot be validated here.
+        recurring_transaction.skip_started_on_bound_validation = true
+        # The export carries its occurrences. Reconstructing here can run before
+        # a later chunk restores the recurrence rules, and the implicit monthly
+        # fallback would leave the wrong history behind.
+        recurring_transaction.skip_started_on_backfill = true
         recurring_transaction.save!
         map_source!(:recurring_transactions, old_id, recurring_transaction)
         # A replacement points at another series that may not exist yet, so it
@@ -821,6 +831,7 @@ class Family::DataImporter
           # A check constraint limits closed_source; an unknown export value
           # degrades to nil rather than aborting the import.
           closed_source: data["closed_source"].to_s.presence_in(%w[auto user]),
+          historical: boolean_import_value(data, "historical", default: false),
           notes: data["notes"]
         )
         # A check constraint ties status and closed_at together, so a closed row
@@ -995,7 +1006,10 @@ class Family::DataImporter
     def boolean_import_value(data, key, default:)
       return default unless data.key?(key)
 
-      ActiveModel::Type::Boolean.new.cast(data[key])
+      # A key that is present but null or blank casts to nil rather than to the
+      # default, which would store nil in a `null: false` column.
+      value = ActiveModel::Type::Boolean.new.cast(data[key])
+      value.nil? ? default : value
     end
 
     def import_transactions(records)

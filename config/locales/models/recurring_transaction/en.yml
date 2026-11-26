@@ -15,6 +15,7 @@ en:
         payment_url: "Payment link"
         bank_reference: "Bank reference"
         frequency_interval: "Repeat interval"
+        started_on: "Started on"
     errors:
       models:
         recurring_transaction:
@@ -26,6 +27,9 @@ en:
               invalid_scheme: "must be a valid http:// or https:// address"
             anchor_date:
               required_for_intervals: "is required when a rule repeats every 2 or more periods"
+            started_on:
+              after_next_due: "cannot be later than the next due date"
+              before_anchor: "cannot be earlier than the first occurrence of this plan"
             bill_type:
               transfer_shape_mismatch: "can only be transfer when a destination account is set"
             expected_amount_min:

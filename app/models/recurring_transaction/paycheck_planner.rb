@@ -128,7 +128,7 @@ class RecurringTransaction
       def upcoming_income_occurrences
         @upcoming_income_occurrences ||=
           family.recurring_occurrences
-                .open_status
+                .current_open
                 .joins(:recurring_transaction)
                 .where(recurring_transactions: { status: :active, bill_type: :income, manual: true })
                 .merge(RecurringTransaction.accessible_by(user))
@@ -253,7 +253,7 @@ class RecurringTransaction
         debt_accounts = Account.where(family_id: family.id, accountable_type: %w[CreditCard Loan]).select(:id)
 
         family.recurring_occurrences
-              .open_status
+              .current_open
               .joins(:recurring_transaction)
               .where(recurring_transactions: { status: :active })
               .where("recurring_transactions.amount > 0")

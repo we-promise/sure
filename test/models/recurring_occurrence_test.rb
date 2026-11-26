@@ -23,6 +23,16 @@ class RecurringOccurrenceTest < ActiveSupport::TestCase
     assert_equal 18.99, occurrence.resolved_expected_amount
   end
 
+  test "a historical past cycle is not overdue and stays in history" do
+    occurrence = create_occurrence
+    occurrence.update!(historical: true, due_on: 2.months.ago.to_date)
+
+    assert_equal :historical, occurrence.derived_state
+    assert_not occurrence.overdue?
+    assert_not occurrence.due?
+    assert_includes RecurringOccurrence.history, occurrence
+  end
+
   test "remaining_spending_money is the whole remaining amount for a series never split" do
     occurrence = create_occurrence
 

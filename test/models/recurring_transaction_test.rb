@@ -2,6 +2,7 @@ require "test_helper"
 
 class RecurringTransactionTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include ActiveJob::TestHelper
 
   def setup
     @family = families(:dylan_family)
@@ -447,6 +448,223 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     assert_not recurring.valid?
     assert_includes recurring.errors[:base], "Either merchant or name must be present"
+  end
+
+  test "creating a bill with started_on enqueues the history backfill" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Backdated", amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true, started_on: 2.months.ago.to_date
+    )
+
+    assert_operator series.recurring_occurrences.count, :>, 0, "the create after_commit ran"
+    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ series.id ])
+  end
+
+  test "started_on cannot be later than the next due date" do
+    recurring = build_recurring(started_on: 2.months.from_now.to_date)
+
+    assert_not recurring.valid?
+    assert_includes recurring.errors[:started_on], "cannot be later than the next due date"
+  end
+
+  test "a persisted edit also cannot start after the next due date" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Dated", amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current + 5,
+      status: "active", manual: true
+    )
+
+    series.started_on = Date.current + 10
+    assert_not series.valid?
+    assert_includes series.errors[:started_on], "cannot be later than the next due date"
+  end
+
+  test "started_on validates against the new schedule during a frequency edit" do
+    travel_to Date.new(2026, 11, 10) do
+      series = @family.recurring_transactions.create!(
+        account: @account, name: "Dated", amount: 80, currency: "USD",
+        expected_day_of_month: 5, anchor_date: Date.new(2026, 11, 5),
+        last_occurrence_date: Date.new(2026, 10, 5), next_expected_date: Date.new(2026, 11, 5),
+        status: "active", manual: true
+      )
+      series.expected_day_of_month = 25
+      series.started_on = Date.new(2026, 11, 20)
+
+      assert series.valid?, series.errors.full_messages.to_sentence
+      series.save!
+
+      # The old overdue November 5 row is kept by regeneration. A later rename
+      # must not revalidate the unchanged start date against it.
+      series.name = "Renamed"
+      assert series.valid?, series.errors.full_messages.to_sentence
+    end
+  end
+
+  test "a failed history enqueue does not abort the start-date update" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Queued", amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    BackfillRecurringHistoryJob.stubs(:perform_later).raises(StandardError, "queue down")
+
+    assert_nothing_raised { series.update!(started_on: 2.months.ago.to_date) }
+  end
+
+  test "an import activation does not reconstruct history before its rules land" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Imported paused", amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "paused", manual: true
+    )
+    series.update_column(:started_on, 2.months.ago.to_date)
+    series.skip_started_on_backfill = true
+    series.expects(:reconstruct_history!).never
+
+    series.update!(status: "active")
+  end
+
+  test "resuming a paused bill with a start date reconstructs its history" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Resumed", amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "paused", manual: true
+    )
+    series.update_column(:started_on, 2.months.ago.to_date)
+    series.expects(:reconstruct_history!).once.returns(true)
+
+    series.update!(status: "active")
+  end
+
+  test "a stale next expected date does not reject a persisted start date" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Dated", amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.new(2020, 1, 1),
+      status: "active", manual: true
+    )
+    series.recurring_occurrences.delete_all
+    series.started_on = 3.months.ago.to_date
+
+    assert series.valid?, series.errors.full_messages.to_sentence
+  end
+
+  test "reconstruct history reloads started_on after another edit" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Reloaded", amount: 80, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    stale = RecurringTransaction.find(series.id)
+    series.update_column(:started_on, 2.years.ago.to_date)
+
+    assert stale.reconstruct_history!
+    assert series.recurring_occurrences.where(historical: true).exists?,
+      "the job must use the latest start date, not the one loaded before the lock"
+  end
+
+  test "started_on cannot precede an installment plan's anchor" do
+    recurring = build_recurring(
+      bill_type: "installment",
+      end_mode: "after_count",
+      end_after_count: 6,
+      anchor_date: 1.month.from_now.to_date,
+      started_on: 1.year.ago.to_date
+    )
+
+    assert_not recurring.valid?
+    assert_includes recurring.errors[:started_on], "cannot be earlier than the first occurrence of this plan"
+  end
+
+  test "current occurrence ignores historical cycles" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Rent", amount: 100, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    current = series.recurring_occurrences.order(:due_on).first
+    series.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true
+    )
+
+    assert_equal current, series.current_occurrence
+    assert_equal current, series.next_open_occurrence
+
+    series.recurring_occurrences.load
+    assert_equal current, series.next_open_occurrence
+  end
+
+  test "current occurrence does not fall back to an old historical cycle" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Rent", amount: 100, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    series.recurring_occurrences.delete_all
+    series.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date, due_on: 2.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true
+    )
+
+    assert_nil series.current_occurrence
+  end
+
+  test "moving started_on later removes only unallocated history" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Rent", amount: 100, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    old = series.recurring_occurrences.create!(
+      family: @family, original_due_on: 4.months.ago.to_date, due_on: 4.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true
+    )
+    paid = series.recurring_occurrences.create!(
+      family: @family, original_due_on: 3.months.ago.to_date, due_on: 3.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true
+    )
+    paid.allocations.create!(allocated_amount: 100, currency: "USD", source: "user_created")
+
+    series.update_column(:started_on, 2.months.ago.to_date)
+    series.trim_unallocated_history_before_started_on!
+
+    assert_not RecurringOccurrence.exists?(old.id)
+    assert RecurringOccurrence.exists?(paid.id), "a recorded payment keeps its month"
+  end
+
+  test "clearing started_on removes open history but keeps recorded payments" do
+    series = @family.recurring_transactions.create!(
+      account: @account, name: "Rent", amount: 100, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    open = series.recurring_occurrences.create!(
+      family: @family, original_due_on: 4.months.ago.to_date, due_on: 4.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true
+    )
+    paid = series.recurring_occurrences.create!(
+      family: @family, original_due_on: 3.months.ago.to_date, due_on: 3.months.ago.to_date,
+      currency: "USD", status: "scheduled", historical: true
+    )
+    paid.allocations.create!(allocated_amount: 100, currency: "USD", source: "user_created")
+
+    series.update_column(:started_on, nil)
+    series.trim_unallocated_history_before_started_on!
+
+    assert_not RecurringOccurrence.exists?(open.id)
+    assert RecurringOccurrence.exists?(paid.id), "a recorded payment keeps its month"
   end
 
   test "both merchant-based and name-based patterns can coexist" do

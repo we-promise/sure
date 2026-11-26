@@ -59,6 +59,7 @@ class RecurringTransaction < ApplicationRecord
   validate :anchor_required_for_intervals
   validate :end_mode_fields_consistent
   validate :bill_type_matches_shape
+  validate :started_on_within_schedule
 
   normalizes :payment_url, with: ->(url) { normalize_payment_url(url) }
 
@@ -77,11 +78,12 @@ class RecurringTransaction < ApplicationRecord
   attr_accessor :rules_rewritten
 
   after_commit :generate_occurrences, on: :create
+  after_commit :backfill_history_from_started_on, if: :should_backfill_history?
   # Ahead of regeneration: activation changes status, so both run, and with
   # load_defaults 7.1+ these run in the order defined. An exception in one
   # stops the rest, so a failed regeneration must not cost the bill its
   # history; reconstruct_history! generates the upcoming rows itself.
-  after_commit :reconstruct_history_on_activation, on: :update, if: :activated_from_suggestion?
+  after_commit :reconstruct_history_on_activation, on: :update, if: :should_reconstruct_history?
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
   before_save :preserve_detected_name, if: -> { name_changed? && name_was.present? && matcher_hints.to_h["detected_name"].blank? }
   after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
@@ -91,7 +93,8 @@ class RecurringTransaction < ApplicationRecord
   # FrequencyPreset and the controller translate these on save. Not persisted.
   attr_accessor :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
                 :frequency_weekday, :frequency_month_of_year, :frequency_interval, :frequency_interval_unit,
-                :frequency_once_on, :first_due_on, :is_income
+                :frequency_once_on, :first_due_on, :is_income, :skip_started_on_bound_validation,
+                :skip_started_on_backfill
 
   # A scheme, followed by either "//" or by something that is not a port number.
   # "example.com:8080" is a host and port, not a scheme, so it does not match.
@@ -273,11 +276,24 @@ class RecurringTransaction < ApplicationRecord
   # family-wide on purpose (exact-tier, idempotent, and scoping it would need
   # a parallel Matcher entry point). Returns false only when another pipeline
   # holds the family lock.
-  def reconstruct_history!
+  #
+  # A manually declared bill may carry started_on. That date bounds the
+  # historical window, so the backfill generates up to 12 past cycles and keeps
+  # them as history instead of pruning them as fabricated debt.
+  def reconstruct_history!(from: nil)
     return true if family.recurring_transactions_disabled?
 
     Pipeline.with_family_lock(family_id) do
+      # Read the latest start date under the lock without reloading self:
+      # after_commit callbacks later in the chain still need this record's
+      # saved changes (regeneration checks them).
+      latest = self.class.find_by(id: id)
+      return true unless latest
+
+      from ||= latest.started_on
       series_scope = family.recurring_transactions.where(id: id)
+
+      latest.trim_unallocated_history_before_started_on!
 
       # The current cycle and the upcoming occurrences first, as Pipeline#run!
       # does, so the history pass can match an early payment to the occurrence
@@ -288,10 +304,31 @@ class RecurringTransaction < ApplicationRecord
       series_scope.find_each { |series| OccurrenceGenerator.new(series).generate! }
       HistoryBackfiller.new(
         family,
-        months: Pipeline::FIRST_RUN_BACKFILL_MONTHS,
-        series_scope: series_scope
+        from: from,
+        series_scope: series_scope,
+        keep_history: latest.started_on.present?
       ).run!
     end
+  end
+
+  # The cycle the bill is currently living in. Anything before it belongs to
+  # history when started_on asks for backdated cycles.
+  def current_cycle_start
+    schedule.cycle_for(Date.current)&.begin
+  end
+
+  # Moving started_on later, or clearing it, should not leave generated open
+  # months the user has explicitly excluded. Rows with a real payment stay put,
+  # and so does a closed row the user acted on; an open historical row with no
+  # confirmed payment is safe to remove because it represented no money.
+  def trim_unallocated_history_before_started_on!
+    scope = recurring_occurrences
+            .where(historical: true)
+            .open_status
+            .where.not(id: RecurringAllocation.confirmed.select(:recurring_occurrence_id))
+    scope = scope.where("due_on < ?", started_on) if started_on.present?
+
+    scope.delete_all
   end
 
   # Read from the saved change rather than the current status: update_bill
@@ -299,6 +336,39 @@ class RecurringTransaction < ApplicationRecord
   # whichever route it took.
   def activated_from_suggestion?
     saved_change_to_status?(from: "suggested", to: "active")
+  end
+
+  # A paused bill that comes back should not lose the history its started_on
+  # asks for. Detection confirmation already has its own callback, so this
+  # covers only the resume path.
+  def should_reconstruct_history?
+    return false if skip_started_on_backfill
+    return true if activated_from_suggestion?
+
+    saved_change_to_status? && active? && (started_on.present? || saved_change_to_started_on?)
+  end
+
+  # A create with a start date, or any edit of the start date, asks for the
+  # history pass. Clearing it or moving it forward still needs the pass so the
+  # generated open history outside the new bound can be reconciled. An
+  # activation has its own path, which must not enqueue a second job.
+  def should_backfill_history?
+    return false if skip_started_on_backfill
+
+    if saved_change_to_id?
+      return started_on.present? && active?
+    end
+
+    return false unless saved_change_to_started_on?
+    return true unless saved_change_to_status?
+
+    !active?
+  end
+
+  def backfill_history_from_started_on
+    BackfillRecurringHistoryJob.perform_later(id)
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
   end
 
   # Skipping under a held lock used to leave the bill without history for
@@ -335,7 +405,7 @@ class RecurringTransaction < ApplicationRecord
     return if was.blank?
 
     recurring_occurrences
-      .open_status
+      .current_open
       .where(expected_amount: nil)
       .where("due_on <= ?", Date.current)
       .find_each do |occurrence|
@@ -422,6 +492,45 @@ class RecurringTransaction < ApplicationRecord
         errors.add(:end_after_count, :blank)
       end
     end
+  end
+
+  # Backdating history is not a schedule rewrite. It may only reach back from
+  # the current schedule, and a finite plan counts its occurrences from the
+  # anchor, so a date before that anchor would either create nothing or change
+  # what the plan means.
+  def schedule_shape_changing?
+    rules_rewritten || SCHEDULE_SHAPING_ATTRIBUTES.any? { |attribute| will_save_change_to_attribute?(attribute) }
+  end
+
+  def started_on_within_schedule
+    return if started_on.blank?
+    return if expected_day_of_month.blank?
+    # A start date accepted by an earlier edit stays valid on a later save that
+    # leaves both the start date and the schedule alone.
+    return if persisted? && !will_save_change_to_started_on? && !schedule_shape_changing?
+
+    # A new record (including a data import) validates before its recurrence
+    # rules have landed, so it reads the stored next expected date. A persisted
+    # record reads the live schedule instead: next_expected_date is only a
+    # cached hint and can freeze in the past after a settlement.
+    unless skip_started_on_bound_validation
+      boundary =
+        if new_record?
+          next_expected_date
+        elsif schedule_shape_changing?
+          schedule.first_occurrence_after(Date.current)
+        else
+          next_open_occurrence&.effective_due_on || schedule.first_occurrence_after(Date.current)
+        end
+
+      errors.add(:started_on, :after_next_due) if boundary.present? && started_on > boundary
+    end
+
+    return if anchor_date.blank?
+    return unless ends_after_count?
+    return unless started_on < anchor_date
+
+    errors.add(:started_on, :before_anchor)
   end
 
   def amount_variance_consistency
@@ -514,15 +623,15 @@ class RecurringTransaction < ApplicationRecord
   # this runs once per row.
   def next_open_occurrence
     if recurring_occurrences.loaded?
-      recurring_occurrences.select(&:scheduled?).min_by(&:due_on)
+      recurring_occurrences.select { |occurrence| occurrence.scheduled? && !occurrence.historical? }.min_by(&:due_on)
     else
-      recurring_occurrences.open_status.order(:due_on).first
+      recurring_occurrences.current_open.order(:due_on).first
     end
   end
 
   def current_occurrence
-    recurring_occurrences.open_status.order(:due_on).first ||
-      recurring_occurrences.order(due_on: :desc).first
+    recurring_occurrences.current_open.order(:due_on).first ||
+      recurring_occurrences.where(historical: false).order(due_on: :desc).first
   end
 
   # The occurrences are the schedule. They are what the app materializes,
