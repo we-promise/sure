@@ -1,4 +1,32 @@
 ---
 es:
   provider_warnings:
-    limited_investment_data: "Los datos de inversión de este proveedor son limitados. Las etiquetas de actividad (Compra, Venta, Dividendo) no están disponibles, lo que puede afectar la precisión del presupuesto. Considere crear reglas para excluir o categorizar las transacciones de inversión."
+    limited_investment_data: "Los datos de inversión de este proveedor son limitados. Las etiquetas de actividad (Compra, Venta, Dividendo) no están disponibles, lo que puede afectar a la precisión del presupuesto. Plantéate crear reglas para excluir o categorizar las transacciones de inversión."
+    enable_banking_history_truncated:
+      one: 'Enable Banking: no se ha podido obtener el historial completo de transacciones de %{count} cuenta, así que pueden faltar transacciones antiguas'
+      other: 'Enable Banking: no se ha podido obtener el historial completo de transacciones de %{count} cuentas, así que pueden faltar transacciones antiguas'
+    lunchflow_accounts_failed:
+      one: 'Importación de Lunchflow: no se ha podido actualizar %{count} cuenta'
+      other: 'Importación de Lunchflow: no se han podido actualizar %{count} cuentas'
+    lunchflow_transactions_failed:
+      one: 'Importación de Lunchflow: no se han podido obtener las transacciones de %{count} cuenta'
+      other: 'Importación de Lunchflow: no se han podido obtener las transacciones de %{count} cuentas'
+    lunchflow_import_error: 'Importación de Lunchflow: %{error}'
+    truelayer_accounts_failed:
+      one: 'Importación de TrueLayer: no se ha podido actualizar %{count} cuenta'
+      other: 'Importación de TrueLayer: no se han podido actualizar %{count} cuentas'
+    truelayer_transactions_failed:
+      one: 'Importación de TrueLayer: no se han podido obtener las transacciones de %{count} cuenta'
+      other: 'Importación de TrueLayer: no se han podido obtener las transacciones de %{count} cuentas'
+    truelayer_balances_failed:
+      one: 'Importación de TrueLayer: no se han podido obtener los saldos de %{count} cuenta'
+      other: 'Importación de TrueLayer: no se han podido obtener los saldos de %{count} cuentas'
+    truelayer_processing_failed:
+      one: 'Importación de TrueLayer: no se ha podido procesar %{count} cuenta'
+      other: 'Importación de TrueLayer: no se han podido procesar %{count} cuentas'
+    truelayer_entries_failed:
+      one: 'Importación de TrueLayer: no se ha podido importar %{count} transacción'
+      other: 'Importación de TrueLayer: no se han podido importar %{count} transacciones'
+    truelayer_scheduling_failed:
+      one: 'Importación de TrueLayer: no se ha podido programar la actualización del saldo de %{count} cuenta'
+      other: 'Importación de TrueLayer: no se ha podido programar la actualización del saldo de %{count} cuentas'
