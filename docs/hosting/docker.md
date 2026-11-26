@@ -1054,12 +1054,30 @@ that now non-empty folder or continue with startup commands after an error.
 In the target directory, use a clean shell with the same Compose overrides
 cleared. Inspect the restored `.env` and custom files for source-specific paths
 and overrides, adapt the target copies and supply any missing files first. Keep
-the original backup unchanged. Validate the target's resolved configuration and verify that its database,
+the original backup unchanged. Validate the target's resolved configuration,
+including the `sure-backup` profile, and verify that its database,
 volumes, mounts, networks and external uploads cannot overwrite the source instance.
 Use the printed restore sequence with that reviewed target configuration. If you
 added custom Compose files, update the printed `COMPOSE_FILE` export as well;
 keep `compose.restore.yml` last to retain the pinned image and restore service.
 Do not overwrite the reviewed selection with an earlier, incomplete file list.
+
+If configuration validation failed before a restore sequence was printed, the
+prepared target still contains `compose.restore.yml`, `bin/sure-backup` and the
+copied backup. After fixing the target configuration and verifying the isolation
+checks above, continue from that target with the Compose overrides cleared.
+Replace the backup ID below with the copied backup's actual version/name:
+
+```bash
+docker compose --profile sure-backup config --quiet &&
+  docker compose up -d db redis &&
+  docker compose run --rm -e SURE_RECOVER=1 sure-backup restore 0.7.6/2026-10-27_111135-manual --yes
+```
+
+Stop on any error. Only after a successful restore and with the matching keys
+in place, start `web` alone (`docker compose up -d web`) under the access
+restrictions needed for verification; keep `worker` stopped.
+
 Use the matching keys and any
 [external-upload restore](#backup-and-restore-prerequisites). Keep the worker and
 normal access off until data and SSO checks succeed. Do not use new-folder recovery
