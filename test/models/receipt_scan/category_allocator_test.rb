@@ -18,6 +18,26 @@ class ReceiptScan::CategoryAllocatorTest < ActiveSupport::TestCase
     assert_equal [ "Cheese", "Bread" ], groups.first[:item_names]
   end
 
+  test "a refund keeps its categories, with small groups folded by size" do
+    groups = allocate(total: "-100.00", items: [
+      item("Cheese", "-60.00", "Food & Drink"),
+      item("Soap", "-38.00", "Household"),
+      item("Bag", "-2.00", nil)
+    ])
+
+    assert_equal [ [ @food, BigDecimal("-62.00") ], [ @household, BigDecimal("-38.00") ] ], summary(groups)
+  end
+
+  test "a refund read with positive lines is split in the total's sign" do
+    groups = allocate(total: "-100.00", items: [
+      item("Cheese", "60.00", "Food & Drink"),
+      item("Soap", "38.00", "Household"),
+      item("Bag", "2.00", nil)
+    ])
+
+    assert_equal [ [ @food, BigDecimal("-62.00") ], [ @household, BigDecimal("-38.00") ] ], summary(groups)
+  end
+
   test "the rounding correction never leaves a negative group" do
     categories = Array.new(5) { |i| @family.categories.create!(name: "Cat #{i}", color: "#000000") }
     groups = ReceiptScan::CategoryAllocator.new(

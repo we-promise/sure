@@ -81,19 +81,10 @@ class ReceiptScan::Validator
 
     def currency_problems
       code = extraction.currency
-      return [ problem(:unknown_currency, currency: code) ] unless known_currency?(code)
+      return [ problem(:unknown_currency, currency: code) ] unless ReceiptScan.known_currency?(code)
       return [ problem(:currency_mismatch, currency: code, account_currency: account.currency) ] if code != account.currency
 
       []
-    end
-
-    def known_currency?(code)
-      return false if code.blank?
-
-      Money::Currency.new(code)
-      true
-    rescue Money::Currency::UnknownCurrencyError
-      false
     end
 
     def decimal(value)

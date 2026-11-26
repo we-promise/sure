@@ -1,7 +1,7 @@
 # Groups a receipt's line items by the category the model assigned them, into amounts that add
 # up exactly to the receipt total, ready to become the parts of a split transaction.
 class ReceiptScan::CategoryAllocator
-  # Groups smaller than this share of the total join the largest group, so a carrier bag doesn't
+  # Groups smaller than this share of the total, in size, join the largest group, so a carrier bag doesn't
   # become its own split.
   FOLD_SHARE = BigDecimal("0.05")
 
@@ -19,7 +19,8 @@ class ReceiptScan::CategoryAllocator
 
     nets = extraction.line_items.map { |item| [ item, decimal(item["amount"]) - decimal(item["discount"]) ] }
     items_total = nets.sum { |_, net| net }
-    return [ group(nil, total, []) ] unless items_total.positive?
+    # Items are scaled to the total, so a refund read with positive lines still splits.
+    return [ group(nil, total, []) ] if items_total.zero?
 
     grouped = nets.group_by { |item, _| category_for(item["category_name"]) }.map do |category, rows|
       group(category, rows.sum { |_, net| net * total / items_total }.round(precision), rows.map { |item, _| item["name"] })
@@ -43,7 +44,7 @@ class ReceiptScan::CategoryAllocator
     def fold_small(groups)
       largest, *rest = groups
       kept = rest.reject do |candidate|
-        next false if candidate[:amount] >= FOLD_SHARE * total
+        next false if candidate[:amount].abs >= FOLD_SHARE * total.abs
 
         largest[:amount] += candidate[:amount]
         largest[:item_names] += candidate[:item_names]
