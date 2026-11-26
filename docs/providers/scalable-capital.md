@@ -8,12 +8,19 @@ Buys, sells, and identifiable securities transfers feed the investment ledger. T
 
 Sure calculates each brokerage balance from the holdings in its inventory response and dates it when the inventory is read. Holdings use Scalable’s reported per-share cost when available. Sure uses a ticker only when a configured market-data provider confirms the exact ISIN, preferring EUR listings. Otherwise the ISIN identifies the holding. The CLI does not identify children’s broker depots or Altersvorsorgedepots as separate product types in discovery. Those products, fixed-term savings, and native crypto remain outside the documented preview.
 
-## Configure the server
+## Configure Docker or Unraid
 
-1. Install a verified [Scalable CLI 1.3.0](https://github.com/ScalableCapital/scalable-cli/releases/tag/v1.3.0) binary for your server architecture. The Linux binary requires glibc 2.38 or later. For Docker or Unraid, mount the verified binary read-only at the configured path in the Sure worker container. The operator is responsible for supplying a compatible runtime.
-2. Use a private CLI configuration and session directory owned by the Unix user running Sure. On Linux, set `XDG_CONFIG_HOME` for the web and worker processes, and persist the directory across container restarts. On hosts without Secret Service, set `session_backend = "file"` under `[auth]` in `$XDG_CONFIG_HOME/scalable-cli/config.toml` and restrict access to the directory. [Scalable CLI configuration](https://github.com/ScalableCapital/scalable-cli/blob/v1.3.0/public-docs/configuration.md)
-3. Enable CLI access in your Scalable web profile. As the Sure service user in that same environment, run `sc login --local-read-only` and complete the device-code flow in your browser.
-4. Set `SCALABLE_CAPITAL_CLI_PATH` to the absolute executable path and `SCALABLE_CAPITAL_FAMILY_ID` to the UUID of the one Sure household authorized to use the session. Set both variables on the Sure web and worker processes. You can retrieve the UUID with `bin/rails runner 'puts User.find_by!(email: ARGV.fetch(0)).family_id' ADMIN_EMAIL` in the Sure container.
+Sure's Linux Docker images for AMD64 and ARM64 bundle [Scalable CLI 1.3.0](https://github.com/ScalableCapital/scalable-cli/releases/tag/v1.3.0) at `/usr/local/bin/sc`. Image builds check the archive against a checksum pinned from Scalable's signed manifest. Sure redistributes the release binary and its notices under `/opt/scalable-cli`.
+
+1. Add `SCALABLE_CAPITAL_FAMILY_ID=<household UUID>` to your Compose `.env`. Retrieve the household UUID with `docker compose exec -T web bin/rails runner 'puts User.find_by!(email: ARGV.fetch(0)).family_id' ADMIN_EMAIL`.
+2. Use the `scalable-cli-state` volume and family ID configuration from [Sure's Compose example](../../compose.example.yml). For an existing Compose file or Unraid templates, set `SCALABLE_CAPITAL_FAMILY_ID` on both web and worker and mount the same private persistent directory at `/home/rails/.config/scalable-cli` in both containers. The Docker image presets file-based sessions. If you use an empty bind mount, give UID `1000` write access and create `config.toml` with `[auth]` and `session_backend = "file"` before signing in. Keep this volume separate from the uploads volume and Sure backups.
+3. Recreate web and worker to apply the configuration. Enable CLI access in your Scalable web profile, run `docker compose exec worker sc login --local-read-only`, and complete the device-code flow in your browser. On Unraid, run the same `sc login --local-read-only` command in the worker container's console as the user running Sure.
+
+## Configure a source installation
+
+Install a verified [Scalable CLI release](https://github.com/ScalableCapital/scalable-cli/releases/tag/v1.3.0) and set `SCALABLE_CAPITAL_CLI_PATH` to its absolute path. The Linux binary requires glibc 2.38 or later. Set `SCALABLE_CAPITAL_FAMILY_ID` on both processes, use the same private CLI configuration directory for web and worker, and run `sc login --local-read-only` as the Sure service user. [Scalable CLI configuration](https://github.com/ScalableCapital/scalable-cli/blob/v1.3.0/public-docs/configuration.md)
+
+## Select accounts
 
 A household administrator can then enable **Preview features**, open **Settings → Bank Sync → Scalable Capital**, choose **Connect Scalable Capital**, and select accounts to sync. The CLI can truncate the list when multiple Overnight Savings accounts are available. When Sure cannot verify the complete list, the picker displays a warning and still offers broker portfolios. Use a dedicated Scalable session for this connector. Sure invokes only read commands. The CLI manages broker credentials and signing keys and enforces local read-only mode.
 

@@ -11,6 +11,9 @@
 /.env*
 !/.env*.erb
 
+# Ignore local Scalable CLI sessions and keys.
+/scalable-state/
+
 # Ignore all default key files.
 /config/master.key
 /config/credentials/*.key
