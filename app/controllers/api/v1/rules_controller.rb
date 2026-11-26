@@ -19,8 +19,6 @@ class Api::V1::RulesController < Api::V1::BaseController
     rules_query = rules_query.where(resource_type: params[:resource_type]) if params[:resource_type].present?
     if params.key?(:active)
       active = boolean_filter_param(:active)
-      return if performed?
-
       rules_query = rules_query.where(active: active)
     end
 
