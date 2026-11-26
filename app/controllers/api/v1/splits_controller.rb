@@ -13,10 +13,6 @@ class Api::V1::SplitsController < Api::V1::BaseController
   NotSplittable = Class.new(StandardError)
   NotSplit = Class.new(StandardError)
 
-  # entries.amount is decimal(19,4). Children are rounded independently on
-  # assignment, so raw values that sum to the parent can persist as a total
-  # that does not: 33.33335 + 66.66665 becomes 33.3334 + 66.6667 = 100.0001.
-  AMOUNT_SCALE = 4
   # 15 integer digits. Oversized amounts that cancel out pass split!'s sum
   # check and then overflow the column, which surfaces as a 500.
   AMOUNT_LIMIT = BigDecimal(10)**15
@@ -202,7 +198,9 @@ class Api::V1::SplitsController < Api::V1::BaseController
           return nil
         end
 
-        amount = amount.round(AMOUNT_SCALE)
+        # Children are rounded independently on assignment, so raw values
+        # that sum to the parent could persist as a total that does not.
+        amount = amount.round(Entry.columns_hash["amount"].scale)
         unless amount.abs < AMOUNT_LIMIT
           render_unprocessable("split amount is out of range")
           return nil

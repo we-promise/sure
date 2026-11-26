@@ -238,27 +238,42 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_not @entry.reload.split_parent?
   end
 
+  # entries.amount stores 18 decimals; these amounts carry 19.
   test "rounds amounts to the stored scale so children sum exactly" do
     params = { split: { splits: [
-      { name: "A", amount: "33.33335" },
-      { name: "B", amount: "66.66660" }
+      { name: "A", amount: "33.3333333333333333335" },
+      { name: "B", amount: "66.666666666666666666" }
     ] } }
 
     post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
     assert_response :created
-    assert_equal [ BigDecimal("33.3334"), BigDecimal("66.6666") ],
+    assert_equal [ BigDecimal("33.333333333333333334"), BigDecimal("66.666666666666666666") ],
                  @entry.reload.child_entries.order(:name).map(&:amount)
   end
 
   test "rejects amounts that only sum to the parent before rounding" do
     params = { split: { splits: [
-      { name: "A", amount: "33.33335" },
-      { name: "B", amount: "66.66665" }
+      { name: "A", amount: "33.3333333333333333335" },
+      { name: "B", amount: "66.6666666666666666665" }
     ] } }
 
     post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
     assert_response :unprocessable_entity
     assert_not @entry.reload.split_parent?
+  end
+
+  test "splits a crypto transaction at its full stored precision" do
+    btc_account = @family.accounts.create!(name: "BTC wallet", balance: 0, currency: "BTC", accountable: Crypto.new)
+    entry = create_transaction(account: btc_account, currency: "BTC", amount: BigDecimal("0.12345678"), name: "BTC buy")
+    params = { split: { splits: [
+      { name: "A", amount: "0.1" },
+      { name: "B", amount: "0.02345678" }
+    ] } }
+
+    post api_v1_transaction_split_url(entry.entryable), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :created
+    assert_equal [ BigDecimal("0.1"), BigDecimal("0.02345678") ],
+                 entry.reload.child_entries.order(:name).map(&:amount)
   end
 
   test "returns 422 when a split element is not an object" do
@@ -295,7 +310,7 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
 
   test "returns 422 for amounts too large to store, even when they sum to the parent" do
     # The second is under the limit as sent and only reaches it once rounded.
-    [ "1#{"0" * 20}", "999999999999999.99995" ].each do |huge|
+    [ "1#{"0" * 20}", "999999999999999.#{"9" * 18}5" ].each do |huge|
       params = { split: { splits: [
         { name: "A", amount: huge },
         { name: "B", amount: "-#{huge}" },

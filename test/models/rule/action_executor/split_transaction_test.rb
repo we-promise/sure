@@ -63,8 +63,27 @@ class Rule::ActionExecutor::SplitTransactionTest < ActiveSupport::TestCase
     assert_equal 0, klass.amount_precision("JPY")
     assert_equal 2, klass.amount_precision("EUR")
     assert_equal 3, klass.amount_precision("KWD")
-    assert_equal 4, klass.amount_precision("BTC"), "entries.amount stores 4 decimals"
+    assert_equal 8, klass.amount_precision("BTC")
     assert_equal 2, klass.amount_precision("XXQ"), "unknown codes fall back to cents"
+  end
+
+  test "fixed split accepts and applies shares at a crypto transaction's full precision" do
+    btc_account = @family.accounts.create!(name: "BTC split test", balance: 0, currency: "BTC", accountable: Crypto.new)
+    entry = create_transaction(amount: BigDecimal("0.12345678"), currency: "BTC", name: "BTC buy", account: btc_account)
+    action = build_action(type: "fixed", splits: [ { name: "A", share: "0.1" }, { name: "B", share: "0.02345678" } ])
+
+    assert_empty Rule::ActionExecutor::SplitTransaction.config_errors(action.value, family: @family)
+
+    action.apply(btc_account.transactions)
+
+    assert_equal [ BigDecimal("0.1"), BigDecimal("0.02345678") ], entry.reload.child_entries.order(:name).pluck(:amount)
+  end
+
+  test "fixed split rejects a share with more decimals than entries.amount stores" do
+    action = build_action(type: "fixed", splits: [ { name: "A", share: "0.#{"0" * 18}1" }, { name: "B", share: "1" } ])
+
+    assert_includes Rule::ActionExecutor::SplitTransaction.config_errors(action.value, family: @family).map(&:first),
+                    :split_share_invalid
   end
 
   test "ignores a merchant and tags that don't belong to the family" do
