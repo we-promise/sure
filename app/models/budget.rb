@@ -550,7 +550,7 @@ class Budget < ApplicationRecord
       0.to_d
     end
     def income_statement
-      @income_statement ||= family.income_statement(user: current_user, accounts: income_statement_accounts)
+      @income_statement ||= family.income_statement(user: current_user, accounts: income_statement_accounts, currency: currency)
     end
 
     # nil for the household budget (IncomeStatement falls back to whatever

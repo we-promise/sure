@@ -5,14 +5,15 @@ class IncomeStatement
 
   monetize :median_expense, :median_income
 
-  attr_reader :family, :user
+  attr_reader :family, :user, :currency
 
   # `accounts:` overrides the account scope entirely (e.g. a personal
   # budget's "owned accounts only" view) instead of inferring it from
   # `user.finance_accounts`. `user` is still kept for cache-key/estimate
   # purposes when both are given.
-  def initialize(family, user: nil, accounts: nil)
+  def initialize(family, user: nil, accounts: nil, currency: nil)
     @family = family
+    @currency = currency || family.currency
     @user = user || Current.user
     @accounts = accounts
   end
@@ -30,9 +31,9 @@ class IncomeStatement
 
     ScopeTotals.new(
       transactions_count: result.sum(&:transactions_count),
-      income_money: Money.new(total_income, family.currency),
-      expense_money: Money.new(total_expense, family.currency),
-      invested_money: Money.new(total_invested, family.currency)
+      income_money: Money.new(total_income, currency),
+      expense_money: Money.new(total_expense, currency),
+      invested_money: Money.new(total_invested, currency)
     )
   end
 
@@ -100,7 +101,7 @@ class IncomeStatement
   # contributions are already part of expense_totals.
   def invested_total(period: Period.current_month)
     total = totals_for_period(period).select { |t| t.classification == "investment" }.sum(&:total)
-    Money.new(total, family.currency)
+    Money.new(total, currency)
   end
 
   def net_category_totals(period: Period.current_month)
@@ -149,12 +150,12 @@ class IncomeStatement
 
     net_expense_categories = raw_expense_categories.map do |r|
       weight = total_net_expense.zero? ? 0 : (r[:total].to_f / total_net_expense) * 100
-      CategoryTotal.new(category: r[:category], total: r[:total], currency: family.currency, weight: weight)
+      CategoryTotal.new(category: r[:category], total: r[:total], currency: currency, weight: weight)
     end
 
     net_income_categories = raw_income_categories.map do |r|
       weight = total_net_income.zero? ? 0 : (r[:total].to_f / total_net_income) * 100
-      CategoryTotal.new(category: r[:category], total: r[:total], currency: family.currency, weight: weight)
+      CategoryTotal.new(category: r[:category], total: r[:total], currency: currency, weight: weight)
     end
 
     @net_category_totals_by_period[key] = NetCategoryTotals.new(
@@ -162,7 +163,7 @@ class IncomeStatement
       net_income_categories: net_income_categories,
       total_net_expense: total_net_expense,
       total_net_income: total_net_income,
-      currency: family.currency
+      currency: currency
     )
   end
 
@@ -290,7 +291,7 @@ class IncomeStatement
         CategoryTotal.new(
           category: category,
           total: category_total,
-          currency: family.currency,
+          currency: currency,
           weight: weight,
         )
       end
@@ -298,7 +299,7 @@ class IncomeStatement
       PeriodTotal.new(
         classification: classification,
         total: category_totals.reject { |ct| ct.category.subcategory? }.sum(&:total),
-        currency: family.currency,
+        currency: currency,
         category_totals: category_totals
       )
     end
@@ -323,7 +324,7 @@ class IncomeStatement
           family,
           transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period),
           date_range: period.date_range,
-          included_account_ids: included_account_ids
+          included_account_ids: included_account_ids, currency: currency
         ).call
       end
     end
@@ -343,7 +344,7 @@ class IncomeStatement
           family,
           transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period),
           date_range: period.date_range,
-          included_account_ids: included_account_ids,
+          included_account_ids: included_account_ids, currency: currency,
           by_category: true
         ).call
       end
@@ -367,14 +368,14 @@ class IncomeStatement
       @family_stats ||= {}
       @family_stats[interval] ||= Rails.cache.fetch([
         "income_statement", "family_stats", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
-      ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids).call }
+      ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids, currency: currency).call }
     end
 
     def category_stats(interval: "month")
       @category_stats ||= {}
       @category_stats[interval] ||= Rails.cache.fetch([
         "income_statement", "category_stats", CategoryStats::CACHE_VERSION, ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
-      ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids).call }
+      ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids, currency: currency).call }
     end
 
     def included_account_ids
@@ -413,7 +414,7 @@ class IncomeStatement
         family.entries_cache_version,
         family.tags_version,
         family.accounts_status_version,
-        family.currency,
+        currency,
         ExchangeRate.updated_at_version,
         family.investment_contributions_as_spending?
       ]
@@ -426,7 +427,7 @@ class IncomeStatement
 
       Rails.cache.fetch([
         "income_statement", "totals_query", Totals::CACHE_VERSION, ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key, *freshness
-      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
+      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids, currency: currency).call }
     end
 
     def monthly_totals_query(transactions_scope:, date_range:)
@@ -434,10 +435,10 @@ class IncomeStatement
 
       Rails.cache.fetch([
         "income_statement", "monthly_totals_query", Totals::CACHE_VERSION, ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key, family.accounts.maximum(:updated_at)&.to_i
-      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids, group_by_month: true).call }
+      ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids, currency: currency, group_by_month: true).call }
     end
 
     def monetizable_currency
-      family.currency
+      currency
     end
 end

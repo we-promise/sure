@@ -160,6 +160,28 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "USD", @budget.budget_categories.find_by!(category:).currency
   end
 
+  test "newly synced historical lines keep spending and rollover in the budget currency" do
+    category = @family.categories.create!(name: "Historical currency carry", color: "#654321")
+    previous = @family.budgets.create!(start_date: @budget.start_date.prev_month.beginning_of_month,
+      end_date: @budget.start_date.prev_month.end_of_month, budgeted_spending: 100, currency: "USD")
+    previous.budget_categories.create!(category:, budgeted_spending: 100, currency: "USD", rollover_enabled: true)
+    [ [ previous.start_date + 2.days, 40 ], [ @budget.start_date + 2.days, 30 ] ].each do |date, amount|
+      Entry.create!(account: accounts(:depository), entryable: Transaction.new(category:),
+        name: "Historical rollover spending", date:, amount:, currency: "USD")
+      ExchangeRate.upsert_all([ { from_currency: "USD", to_currency: "EUR", date:, rate: BigDecimal("0.8") } ],
+        unique_by: %i[from_currency to_currency date])
+    end
+    @family.update!(currency: "EUR")
+
+    get api_v1_budget_categories_url, params: { budget_id: @budget.id, per_page: 100 }, headers: api_headers(@api_key)
+    assert_response :success
+    line = JSON.parse(response.body)["budget_categories"].find { |item| item.dig("category", "id") == category.id }
+    assert_equal "USD", line["currency"]
+    assert_equal 6000, line["rolled_over_amount_cents"]
+    assert_equal 3000, line["actual_spending_cents"]
+    assert_equal 3000, line["available_to_spend_cents"]
+  end
+
   test "index still lists when a concurrent request synced the same line first" do
     duplicate = @budget.budget_categories.build(category: @category)
     duplicate.errors.add(:budget_id, :taken)

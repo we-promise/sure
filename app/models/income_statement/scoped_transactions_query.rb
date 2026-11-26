@@ -93,7 +93,7 @@ module IncomeStatement::ScopedTransactionsQuery
     # Bind params every income statement query needs; classes merge their
     # extras (date range, interval, account ids) on top.
     def base_sql_params(extra = {})
-      { target_currency: @family.currency, family_id: @family.id, today: Date.current }.merge(extra).tap do |params|
+      { target_currency: @currency || @family.currency, family_id: @family.id, today: Date.current }.merge(extra).tap do |params|
         ids = @family.tax_advantaged_account_ids
         params[:tax_advantaged_account_ids] = ids if ids.present?
       end

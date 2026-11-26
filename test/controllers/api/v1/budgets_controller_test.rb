@@ -76,6 +76,34 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_equal data["available_to_allocate_cents"], data.dig("uncategorized", "budgeted_spending_cents")
   end
 
+  test "historical budget actuals retain their currency with nonzero spending after a family currency change" do
+    date = @budget.start_date + 3.days
+    Entry.create!(account: accounts(:depository), entryable: Transaction.new,
+      name: "Historical uncategorized expense", date:, amount: 100, currency: "USD")
+    Entry.create!(account: accounts(:depository), entryable: Transaction.new(category: @budget_category.category),
+      name: "Historical category expense", date:, amount: 100, currency: "USD")
+    ExchangeRate.upsert_all([ { from_currency: "USD", to_currency: "EUR", date:, rate: BigDecimal("0.8") } ],
+      unique_by: %i[from_currency to_currency date])
+    @family.update!(currency: "EUR")
+
+    # Warm the family-currency cache first: budget snapshots must not reuse its EUR totals.
+    assert_equal BigDecimal("160"), @family.income_statement.expense_totals(period: @budget.period).total
+    get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
+    assert_response :success
+    data = JSON.parse(response.body)
+    assert_equal 20_000, data["actual_spending_cents"]
+    assert_equal "USD", data.dig("uncategorized", "currency")
+    assert_equal 10_000, data.dig("uncategorized", "actual_spending_cents")
+    assert_equal 240_000, data.dig("uncategorized", "available_to_spend_cents")
+
+    get api_v1_budget_categories_url, params: { budget_id: @budget.id, per_page: 100 }, headers: api_headers(@api_key)
+    assert_response :success
+    line = JSON.parse(response.body)["budget_categories"].find { |item| item["id"] == @budget_category.id }
+    assert_equal "USD", line["currency"]
+    assert_equal 10_000, line["actual_spending_cents"]
+    assert_equal 40_000, line["available_to_spend_cents"]
+  end
+
   test "shows a budget" do
     get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
 
