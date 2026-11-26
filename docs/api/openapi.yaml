@@ -11237,13 +11237,25 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or the key belongs to a guest
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '400':
+          description: missing transfer parameter
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: account not found
+          description: account not found, not writable, or disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '409':
+          description: idempotency_key was already used for a different transfer
           content:
             application/json:
               schema:
@@ -11273,29 +11285,33 @@ paths:
                       description: Destination account (required)
                     amount:
                       type: number
-                      description: Positive amount, in the source account's currency
-                        (required)
+                      description: Positive amount with at most 4 decimal places,
+                        in the source account's currency (required)
                     date:
                       type: string
                       format: date
                       description: Defaults to today
                     exchange_rate:
                       type: number
-                      description: Source-to-destination rate when the currencies
-                        differ
+                      description: Greater than 0. Source-to-destination rate when
+                        the currencies differ
                     source_fee_amount:
                       type: number
+                      description: Zero or more, at most 4 decimal places
                     destination_fee_amount:
                       type: number
+                      description: Zero or more, at most 4 decimal places
                     tag_ids:
                       type: array
                       items:
                         type: string
                         format: uuid
+                      description: Ids of tags in the family. Unknown ids are rejected.
                     idempotency_key:
                       type: string
                       format: uuid
-                      description: Makes retries safe
+                      description: Makes retries safe. Reusing it with different values
+                        returns 409.
                   required:
                   - from_account_id
                   - to_account_id

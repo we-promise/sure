@@ -8,8 +8,12 @@ class Api::V1::TransfersController < Api::V1::BaseController
   MAX_AMOUNT = BigDecimal("999999999999999.9999")
   private_constant :MAX_AMOUNT
 
+  InvalidParam = Class.new(StandardError)
+  private_constant :InvalidParam
+
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: :create
+  before_action :reject_guest_writes!, only: :create
   before_action :set_transfer, only: :show
 
   def index
@@ -35,35 +39,26 @@ class Api::V1::TransfersController < Api::V1::BaseController
   # Transfer::Creator exactly as the web form does. Sending the same
   # idempotency_key (a UUID) again returns the transfer it already created.
   def create
-    unless transfer_params[:from_account_id].present? && transfer_params[:to_account_id].present?
-      render_validation_error("from_account_id and to_account_id are required")
-      return
-    end
+    raise InvalidParam, "transfer must be an object" unless params.require(:transfer).is_a?(ActionController::Parameters)
 
-    amount = parse_decimal_param(:amount, required: true, greater_than: 0)
-    return if performed?
+    details = transfer_params
+    raise InvalidParam, "from_account_id and to_account_id are required" unless details[:from_account_id].present? && details[:to_account_id].present?
 
-    source_fee_amount = parse_decimal_param(:source_fee_amount, minimum: 0)
-    return if performed?
-
-    destination_fee_amount = parse_decimal_param(:destination_fee_amount, minimum: 0)
-    return if performed?
-
-    exchange_rate = parse_decimal_param(:exchange_rate, greater_than: 0)
-    return if performed?
-
-    date = parse_transfer_date
-    return if performed?
-
+    family = current_resource_owner.family
+    amount = parse_number(:amount, details[:amount], required: true, greater_than: 0, decimals: 4)
+    source_fee_amount = parse_number(:source_fee_amount, details[:source_fee_amount], minimum: 0, decimals: 4)
+    destination_fee_amount = parse_number(:destination_fee_amount, details[:destination_fee_amount], minimum: 0, decimals: 4)
+    exchange_rate = parse_number(:exchange_rate, details[:exchange_rate], greater_than: 0)
+    date = parse_transfer_date(details[:date])
+    tag_ids = parse_tag_ids(family)
     key = parse_idempotency_key
-    return if performed?
 
-    writable_accounts = current_resource_owner.family.accounts.writable_by(current_resource_owner)
-    source_account = writable_accounts.find(transfer_params[:from_account_id])
-    destination_account = writable_accounts.find(transfer_params[:to_account_id])
+    accounts = family.accounts.writable_by(current_resource_owner).visible
+    source_account = accounts.find(details[:from_account_id])
+    destination_account = accounts.find(details[:to_account_id])
 
     @transfer = Transfer::Creator.new(
-      family: current_resource_owner.family,
+      family: family,
       source_account_id: source_account.id,
       destination_account_id: destination_account.id,
       date: date,
@@ -71,17 +66,24 @@ class Api::V1::TransfersController < Api::V1::BaseController
       exchange_rate: exchange_rate,
       source_fee_amount: source_fee_amount,
       destination_fee_amount: destination_fee_amount,
-      tag_ids: transfer_params[:tag_ids],
+      tag_ids: tag_ids,
       idempotency_key: key
     ).create
 
     render :show, status: @transfer.previously_new_record? ? :created : :ok
+  rescue InvalidParam => e
+    render_validation_error(e.message)
+  rescue Transfer::Creator::StaleIdempotencyKeyError
+    render_json({
+      error: "idempotency_key_conflict",
+      message: "idempotency_key was already used for a different transfer"
+    }, status: :conflict)
   rescue ActiveRecord::RecordInvalid => e
     render_validation_error(e.record.errors.full_messages.to_sentence.presence || e.message)
   rescue ActiveRecord::RangeError
     # amount * exchange_rate can overflow numeric(19, 4) even when each input fits.
     render_validation_error("amount (after applying exchange_rate) is out of range")
-  rescue ArgumentError, Money::ConversionError, Transfer::Creator::StaleIdempotencyKeyError => e
+  rescue Money::ConversionError => e
     render_validation_error(e.message)
   end
 
@@ -98,38 +100,46 @@ class Api::V1::TransfersController < Api::V1::BaseController
       )
     end
 
-    # A finite decimal within the stored range, nil when the param is absent
-    # (unless required), or a 422 render. String#to_d would read "abc" as 0.
-    def parse_decimal_param(key, required: false, greater_than: nil, minimum: nil)
-      raw = transfer_params[key]
-
-      if raw.blank?
-        render_validation_error("#{key} is required") if required
+    # A finite decimal below the stored range (numeric(19, 4)), or nil when the
+    # param is absent and not required. String#to_d would read "abc" as 0 and
+    # a fourth-decimal-place amount of 0.00001 would be stored as 0.
+    def parse_number(key, raw, required: false, greater_than: nil, minimum: nil, decimals: nil)
+      if raw.nil? || (raw.is_a?(String) && raw.strip.empty?)
+        raise InvalidParam, "#{key} is required" if required
         return nil
       end
 
       value = parse_decimal(raw)
-      if value.nil? || value.abs > MAX_AMOUNT
-        render_validation_error("#{key} must be a number no larger than #{MAX_AMOUNT.to_s('F')}")
-      elsif greater_than && value <= greater_than
-        render_validation_error("#{key} must be greater than #{greater_than}")
-      elsif minimum && value < minimum
-        render_validation_error("#{key} must be at least #{minimum}")
-      else
-        return value
-      end
+      raise InvalidParam, "#{key} must be a number" unless value
+      raise InvalidParam, "#{key} must be no larger than #{MAX_AMOUNT.to_s('F')}" if value.abs > MAX_AMOUNT
+      raise InvalidParam, "#{key} can have at most #{decimals} decimal places" if decimals && value != value.round(decimals)
+      raise InvalidParam, "#{key} must be greater than #{greater_than}" if greater_than && value <= greater_than
+      raise InvalidParam, "#{key} must be at least #{minimum}" if minimum && value < minimum
 
-      nil
+      value
     end
 
-    def parse_transfer_date
-      return Date.current if transfer_params[:date].blank?
+    def parse_transfer_date(raw)
+      return Date.current if raw.blank?
 
-      date = parse_date(transfer_params[:date])
-      return date if date
+      parse_date(raw) || raise(InvalidParam, "date must be an ISO 8601 date (YYYY-MM-DD)")
+    end
 
-      render_validation_error("date must be an ISO 8601 date (YYYY-MM-DD)")
-      nil
+    # Read from the raw params because permit drops anything that is not an
+    # array of scalars, which would otherwise leave the transfer untagged
+    # without an error.
+    def parse_tag_ids(family)
+      raw = params[:transfer][:tag_ids]
+      return [] if raw.nil?
+
+      unless raw.is_a?(Array) && raw.all? { |id| id.is_a?(String) && valid_uuid?(id) }
+        raise InvalidParam, "tag_ids must be an array of tag ids"
+      end
+
+      ids = raw.uniq
+      raise InvalidParam, "tag_ids includes a tag that does not exist" unless family.tags.where(id: ids).count == ids.size
+
+      ids
     end
 
     # Absent means "no retry protection requested". A key that is present but
@@ -137,12 +147,11 @@ class Api::V1::TransfersController < Api::V1::BaseController
     # retries are safe, and silently ignoring it would let one duplicate the
     # transfer. Read from raw params because permit filters out non-scalars.
     def parse_idempotency_key
-      key = params.require(:transfer)[:idempotency_key]
+      key = params[:transfer][:idempotency_key]
       return nil if key.nil?
       return key if key.is_a?(String) && valid_uuid?(key)
 
-      render_validation_error("idempotency_key must be a UUID")
-      nil
+      raise InvalidParam, "idempotency_key must be a UUID"
     end
 
     def set_transfer

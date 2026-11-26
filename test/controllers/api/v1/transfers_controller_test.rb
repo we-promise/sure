@@ -270,7 +270,8 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
            headers: api_headers(write_api_key)
     end
 
-    assert_response :unprocessable_entity
+    assert_response :conflict
+    assert_equal "idempotency_key_conflict", JSON.parse(response.body)["error"]
   end
 
   test "create rejects a malformed idempotency key instead of dropping it" do
@@ -300,7 +301,7 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
            params: { transfer: create_params(idempotency_key: key, tag_ids: [ tag_b.id ]) },
            headers: api_headers(write_api_key)
     end
-    assert_response :unprocessable_entity
+    assert_response :conflict
 
     post api_v1_transfers_url,
          params: { transfer: create_params(idempotency_key: key, tag_ids: [ tag_a.id ]) },
@@ -315,7 +316,7 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
         to_account_id: euro_account.id,
         amount: "1",
         exchange_rate: "0.333333",
-        source_fee_amount: "0.00001",
+        source_fee_amount: "0.5",
         idempotency_key: SecureRandom.uuid
       )
     }
@@ -331,8 +332,8 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
 
   test "create rejects amounts, fees and rates that are not finite or fit the stored range" do
     {
-      amount: [ "1000000000000000", "1e400", "Infinity", "NaN", "1,250.50", "12abc" ],
-      source_fee_amount: [ "abc", "-1", "1000000000000000" ],
+      amount: [ "1000000000000000", "1e400", "Infinity", "NaN", "1,250.50", "12abc", "0.00001", "0.12345" ],
+      source_fee_amount: [ "abc", "-1", "1000000000000000", "0.00001" ],
       destination_fee_amount: [ "abc", "Infinity" ],
       exchange_rate: [ "abc", "0", "-2", "Infinity" ]
     }.each do |field, values|
@@ -370,6 +371,82 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :unprocessable_entity, "date #{date.inspect} should be rejected"
     end
+  end
+
+  test "create answers a missing transfer with 400 and a non-object transfer with 422" do
+    post api_v1_transfers_url, params: {}, headers: api_headers(write_api_key), as: :json
+    assert_response :bad_request
+
+    [ "foo", [ 1 ] ].each do |transfer|
+      assert_no_difference "Transfer.count" do
+        post api_v1_transfers_url, params: { transfer: transfer }, headers: api_headers(write_api_key), as: :json
+      end
+      assert_response :unprocessable_entity, "transfer #{transfer.inspect}"
+    end
+  end
+
+  test "create books fees, tags and a cross-currency rate" do
+    euro_account = @family.accounts.create!(name: "Transfer Euro", accountable: Depository.new, balance: 0, currency: "EUR")
+    tag = tags(:one)
+
+    assert_difference "Transfer.count", 1 do
+      post api_v1_transfers_url,
+           params: { transfer: create_params(to_account_id: euro_account.id, amount: "100", exchange_rate: "0.9", source_fee_amount: "1.5", destination_fee_amount: "0.25", tag_ids: [ tag.id ]) },
+           headers: api_headers(write_api_key)
+    end
+
+    assert_response :created
+    transfer = Transfer.find(JSON.parse(response.body)["id"])
+    assert_equal 100, transfer.outflow_transaction.entry.amount
+    assert_equal(-90, transfer.inflow_transaction.entry.amount)
+    assert_equal 1.5, transfer.derived_source_fee_amount
+    assert_equal 0.25, transfer.derived_destination_fee_amount
+    assert_equal [ tag.id ], transfer.outflow_transaction.tag_ids
+  end
+
+  test "create rejects tag_ids that are malformed or not the family's" do
+    foreign_tag = families(:empty).tags.create!(name: "Not yours")
+
+    [ tags(:one).id, "not-a-uuid", [ "not-a-uuid" ], [ SecureRandom.uuid ], [ foreign_tag.id ], { "a" => "b" } ].each do |tag_ids|
+      assert_no_difference "Transfer.count" do
+        post api_v1_transfers_url,
+             params: { transfer: create_params(tag_ids: tag_ids) },
+             headers: api_headers(write_api_key), as: :json
+      end
+
+      assert_response :unprocessable_entity, "tag_ids #{tag_ids.inspect}"
+    end
+  end
+
+  test "create does not let a guest move money" do
+    @user.update!(role: :guest)
+
+    assert_no_difference "Transfer.count" do
+      post api_v1_transfers_url, params: { transfer: create_params }, headers: api_headers(write_api_key)
+    end
+
+    assert_response :forbidden
+  end
+
+  test "create cannot use an account the caller can only read" do
+    @account.update_columns(owner_id: users(:family_member).id)
+    AccountShare.create!(account: @account, user: @user, permission: "read_only")
+
+    assert_no_difference "Transfer.count" do
+      post api_v1_transfers_url, params: { transfer: create_params }, headers: api_headers(write_api_key)
+    end
+
+    assert_response :not_found
+  end
+
+  test "create cannot use a disabled account" do
+    @destination_account.update!(status: "disabled")
+
+    assert_no_difference "Transfer.count" do
+      post api_v1_transfers_url, params: { transfer: create_params }, headers: api_headers(write_api_key)
+    end
+
+    assert_response :not_found
   end
 
   test "create requires both accounts" do

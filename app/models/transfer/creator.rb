@@ -130,10 +130,10 @@ class Transfer::Creator
       outflow_entry.account_id == source_account.id &&
         inflow_entry.account_id == destination_account.id &&
         outflow_entry.date == date &&
-        outflow_entry.amount == stored(amount) &&
+        outflow_entry.amount == amount &&
         inflow_entry.amount == stored(inflow_converted_amount) * -1 &&
-        transfer.derived_source_fee_amount == stored(source_fee_amount) &&
-        transfer.derived_destination_fee_amount == stored(destination_fee_amount) &&
+        transfer.derived_source_fee_amount == source_fee_amount &&
+        transfer.derived_destination_fee_amount == destination_fee_amount &&
         transfer.outflow_transaction.tag_ids.sort == requested_tag_ids.sort
     rescue Money::ConversionError
       false
@@ -156,10 +156,9 @@ class Transfer::Creator
       { idempotency_key: key }
     end
 
-    # entries.amount is numeric(19, 4), so what's persisted is the request's
-    # value rounded to 4 places. Comparing the raw request value (e.g. a
-    # converted amount of 0.333333) against it would make an identical replay
-    # look like a different request.
+    # entries.amount is numeric(19, 4), so what's persisted is the converted
+    # amount rounded to 4 places. Comparing the raw value (e.g. 0.333333)
+    # against it would make an identical replay look like a different request.
     def stored(value)
       value.round(4)
     end

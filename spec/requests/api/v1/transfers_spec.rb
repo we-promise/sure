@@ -144,13 +144,13 @@ RSpec.describe 'API V1 Transfers', type: :request do
             properties: {
               from_account_id: { type: :string, format: :uuid, description: 'Source account (required)' },
               to_account_id: { type: :string, format: :uuid, description: 'Destination account (required)' },
-              amount: { type: :number, description: 'Positive amount, in the source account\'s currency (required)' },
+              amount: { type: :number, description: 'Positive amount with at most 4 decimal places, in the source account\'s currency (required)' },
               date: { type: :string, format: :date, description: 'Defaults to today' },
-              exchange_rate: { type: :number, description: 'Source-to-destination rate when the currencies differ' },
-              source_fee_amount: { type: :number },
-              destination_fee_amount: { type: :number },
-              tag_ids: { type: :array, items: { type: :string, format: :uuid } },
-              idempotency_key: { type: :string, format: :uuid, description: 'Makes retries safe' }
+              exchange_rate: { type: :number, description: 'Greater than 0. Source-to-destination rate when the currencies differ' },
+              source_fee_amount: { type: :number, description: 'Zero or more, at most 4 decimal places' },
+              destination_fee_amount: { type: :number, description: 'Zero or more, at most 4 decimal places' },
+              tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Ids of tags in the family. Unknown ids are rejected.' },
+              idempotency_key: { type: :string, format: :uuid, description: 'Makes retries safe. Reusing it with different values returns 409.' }
             },
             required: %w[from_account_id to_account_id amount]
           }
@@ -213,7 +213,7 @@ RSpec.describe 'API V1 Transfers', type: :request do
         run_test!
       end
 
-      response '403', 'insufficient scope' do
+      response '403', 'insufficient scope, or the key belongs to a guest' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
@@ -221,10 +221,48 @@ RSpec.describe 'API V1 Transfers', type: :request do
         run_test!
       end
 
-      response '404', 'account not found' do
+      response '400', 'missing transfer parameter' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { {} }
+
+        run_test!
+      end
+
+      response '404', 'account not found, not writable, or disabled' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { transfer: { from_account_id: checking.id, to_account_id: SecureRandom.uuid, amount: 10 } } }
+
+        run_test!
+      end
+
+      response '409', 'idempotency_key was already used for a different transfer' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:idempotency_key) { SecureRandom.uuid }
+        let(:body) do
+          {
+            transfer: {
+              from_account_id: checking.id,
+              to_account_id: savings.id,
+              amount: 999,
+              date: Date.current.to_s,
+              idempotency_key: idempotency_key
+            }
+          }
+        end
+
+        before do
+          Transfer::Creator.new(
+            family: family,
+            source_account_id: checking.id,
+            destination_account_id: savings.id,
+            date: Date.current,
+            amount: 125,
+            idempotency_key: idempotency_key
+          ).create
+        end
 
         run_test!
       end
