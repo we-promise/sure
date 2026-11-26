@@ -1,0 +1,16 @@
+---
+en:
+  receipt_scans:
+    placeholder_name: Processing receipt…
+    fallback_name: Receipt
+    failed_name: Receipt couldn't be read
+    uncategorized_split_name: Other
+    errors:
+      no_files: Add at least one photo or file of the receipt.
+      account_not_writable: You can't add receipts to this account.
+      too_many_files: A receipt can have at most %{count} files.
+      pdf_with_other_files: Send a PDF receipt on its own, without other files.
+      too_large: Each receipt file can be at most %{size} MB.
+      not_a_file: Send each receipt photo or PDF as a file.
+      too_many_pages: "%{filename} has more than %{count} pages. Send a receipt or an invoice, not a longer document."
+      unsupported_file: "%{filename} is not a supported receipt file (JPEG, PNG, WebP, HEIC or PDF)."

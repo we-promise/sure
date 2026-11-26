@@ -1109,6 +1109,20 @@ class UserTest < ActiveSupport::TestCase
     assert_equal user, plaid_item.owner
   end
 
+  test "transfer_to_family! moves the receipt scans of the accounts, whoever uploaded them" do
+    user = users(:family_member)
+    source_family = user.family
+    new_family = Family.create!(name: "Transferred Receipts Family")
+    account = Account.create!(family: source_family, owner: user, name: "Receipts Checking", balance: 100, currency: "USD", accountable: Depository.new)
+    scan = ReceiptScan.create!(family: source_family, user: users(:family_admin), account:)
+    other = ReceiptScan.create!(family: source_family, user:, account: accounts(:depository))
+
+    user.transfer_to_family!(new_family, role: "admin")
+
+    assert_equal new_family, scan.reload.family
+    assert_equal source_family, other.reload.family
+  end
+
   test "transfer_to_family! moves unmapped FinanceKit items owned by the user" do
     user = users(:family_member)
     source_family = user.family

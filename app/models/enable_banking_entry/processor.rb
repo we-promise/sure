@@ -423,10 +423,12 @@ class EnableBankingEntry::Processor
       return false if @external_id.nil? || @external_id == plain_id
 
       plain = account.entries.find_by(source: "enable_banking", external_id: plain_id)
-      # The adapter tries a scheduled or manual duplicate before the pending match; keep those.
+      # The adapter tries a scheduled entry, a receipt and a manual duplicate before the pending
+      # match, by the same rules; keep those.
       plain&.entryable.try(:pending?) &&
         !import_adapter.find_scheduled_transaction(date: date, amount: amount, currency: currency) &&
-        !import_adapter.find_duplicate_transaction(date: date, amount: amount, currency: currency) &&
+        !import_adapter.find_receipt_transaction(date: date, amount: amount, currency: currency) &&
+        !import_adapter.find_duplicate_transaction(date: date, amount: amount, currency: currency, exclude_receipts: true) &&
         import_adapter.find_pending_transaction(date: date, amount: amount, currency: currency, source: "enable_banking") == plain
     end
 

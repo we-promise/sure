@@ -17,7 +17,7 @@ class Ai::LegacyEnvConfig
   # OpenAI's vector store embeds files on its own side, so the `embed` route names this stand-in
   # model on the OpenAI endpoint.
   VECTOR_STORE_MODEL = "vector_store".freeze
-  LLM_FEATURES = %i[bill_setup extract_pdf detect_merchants enhance_merchants].freeze
+  LLM_FEATURES = %i[bill_setup extract_pdf extract_receipt detect_merchants enhance_merchants].freeze
   # Each generation feature's prompt folder: OpenAI's detailed prompt on native OpenAI, the
   # simplified one on custom servers, and Anthropic's own.
   PROMPTS = {
@@ -100,6 +100,8 @@ class Ai::LegacyEnvConfig
     # PDF import uses only a model with `vision`, so OPENAI_SUPPORTS_PDF_PROCESSING=false, which
     # takes `vision` away, keeps it off.
     routes[:extract_pdf] = route_list(:extract_pdf, preferred.select { _1.capable?(:vision) }.map { pdf_model(_1) })
+    # Receipts are sent as images, PDFs as their pages, so only a model with `vision` reads them.
+    routes[:extract_receipt] = route_list(:extract_receipt, preferred.select { _1.capable?(:vision) })
     routes[:chat] = route_list(:chat, reached + [ agent_model ].compact)
     # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM; the shadow
     # route runs the other one.

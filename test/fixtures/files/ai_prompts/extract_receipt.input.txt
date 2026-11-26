@@ -1,0 +1,1 @@
+Read the attached receipt (1 image of one document). Assign each line item to one of these categories, or null when none fits: Groceries, Household.
