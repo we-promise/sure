@@ -5,7 +5,7 @@
     level in a detail row; every other row has none, so a sector is not dressed
     up as something you can open. %>
 <%
-  marker = %w[segment child grandchild][depth]
+  marker = %w[segment child grandchild].fetch(depth)
   children = segments.to_h { |segment| [ segment.id, statement.allocation_children(by, segment.id, parent: parent) ] }
 %>
 <%= render DS::Table.new(
