@@ -5,7 +5,7 @@ vi:
       sign_out: Đăng xuất
       setup: Thiết lập
       preferences: Tùy chọn
-      goals: Mục tiêu
+      tools: Công cụ/AI
       start: Bắt đầu
     logout:
       sign_out: Đăng xuất
@@ -38,17 +38,7 @@ vi:
       currency: Tiền tệ
       date_format: Định dạng ngày
       submit: Hoàn tất
-    goals:
-      title: Điều gì đưa bạn đến đây?
-      subtitle: Chọn một hoặc nhiều mục tiêu bạn muốn đạt được khi sử dụng %{product_name} làm công cụ tài chính cá nhân.
-      unified_accounts: Xem tất cả tài khoản ở một nơi
-      cashflow: Hiểu dòng tiền và chi tiêu
-      budgeting: Quản lý kế hoạch tài chính và ngân sách
-      partner: Quản lý tài chính cùng người thân
-      investments: Theo dõi đầu tư
-      ai_insights: Để AI giúp tôi hiểu tài chính
-      optimization: Phân tích và tối ưu hóa tài khoản
-      reduce_stress: Giảm căng thẳng hoặc lo lắng về tài chính
+    tools:
       submit: Tiếp theo
     trial:
       title: Dùng thử Sure trong 45 ngày

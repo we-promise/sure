@@ -70,19 +70,23 @@ RSpec.describe 'API V1 Trades', type: :request do
     )
   end
 
+  # A EUR trade in the USD account, with a fee and a stored rate, so the
+  # documented fee, exchange_rate and amount_currency fields are populated.
   let!(:trade) do
     trade_record = Trade.new(
       security: security,
       qty: 100,
       price: 250.50,
-      currency: 'USD',
+      fee: 1.25,
+      currency: 'EUR',
+      exchange_rate: 1.08,
       investment_activity_label: 'Buy'
     )
     entry = account.entries.create!(
       name: 'Buy 100 shares of VTI',
       date: Date.current,
-      amount: 25_050,
-      currency: 'USD',
+      amount: 25_051.25,
+      currency: 'EUR',
       entryable: trade_record
     )
     entry.entryable
@@ -203,6 +207,7 @@ RSpec.describe 'API V1 Trades', type: :request do
               },
               fee: {
                 type: :number,
+                minimum: 0,
                 description: 'Optional fee (buy/sell/sweep_in/sweep_out/reinvestment)'
               },
               type: {
@@ -599,10 +604,10 @@ RSpec.describe 'API V1 Trades', type: :request do
             type: :object,
             properties: {
               date: { type: :string, format: :date },
-              qty: { type: :number },
-              price: { type: :number },
-              type: { type: :string, enum: %w[buy sell sweep_in sweep_out reinvestment] },
-              nature: { type: :string, enum: %w[inflow outflow] },
+              qty: { type: :number, description: 'Positive quantity. Sending qty, price, type or nature recomputes the entry amount as signed qty * price + fee, where qty is negative on a sell; what the request leaves out is taken from the trade.' },
+              price: { type: :number, description: 'Positive price per unit' },
+              type: { type: :string, enum: %w[buy sell sweep_in sweep_out reinvestment], description: 'Side of the trade; takes precedence over nature' },
+              nature: { type: :string, enum: %w[inflow outflow], description: 'inflow is a sell, outflow a buy' },
               name: { type: :string },
               notes: { type: :string },
               currency: { type: :string },
@@ -670,6 +675,15 @@ RSpec.describe 'API V1 Trades', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+
+      response '422', 'qty or price is not a positive number, or nature is not inflow or outflow' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { trade.id }
+        let(:body) { { trade: { price: 'abc' } } }
 
         run_test!
       end

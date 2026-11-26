@@ -315,12 +315,12 @@ class User < ApplicationRecord
 
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
   after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
-  # Runs inside the update's transaction: the user row stays locked until commit,
-  # so a concurrent /api/v1/auth/refresh (which takes the same lock) cannot mint
-  # a token the revocation misses. Doorkeeper's own /oauth/token refresh locks
-  # only the old token, so a refresh already holding it can still commit a new
-  # token the in-transaction sweep does not see; the second sweep after commit
-  # revokes it, and any later refresh finds the old token revoked.
+  # Runs inside the update's transaction, so the user row stays locked until
+  # commit. Every endpoint that issues a token from an existing credential
+  # (/api/v1/auth/refresh and Oauth::TokensController) takes the same lock
+  # first, so none can mint a token this sweep misses. The sweep after commit
+  # catches grants issued without that lock, such as an authorization code
+  # created by /oauth/authorize while the change was in flight.
   after_update :revoke_oauth_access, if: :saved_change_to_password_digest?
   after_update_commit :revoke_oauth_access, if: :saved_change_to_password_digest?
 
@@ -703,6 +703,60 @@ class User < ApplicationRecord
 
   def account_order
     AccountOrder.find(default_account_order) || AccountOrder.default
+  end
+
+  # Answers to onboarding's Tools/AI step: where the user is coming from and
+  # how they want AI. They don't import anything or configure a provider.
+  ONBOARDING_TOOLS = %w[
+    actual_budget banktivity copilot_money firefly_iii gnucash lunch_money maybe
+    monarch_money money_manager_ex moneywiz pocketsmith quicken_classic quicken_simplifi ynab other
+  ].freeze
+  ONBOARDING_NO_TOOLS = "nothing_yet".freeze
+  ONBOARDING_AI_MODES = %w[none builtin external].freeze
+  ONBOARDING_OTHER_TOOL_MAX_LENGTH = 80
+
+  def onboarding_tools
+    tools = preferences&.dig("onboarding_tools")
+    tools.is_a?(Array) ? tools : []
+  end
+
+  def onboarding_other_tool
+    preferences&.dig("onboarding_other_tool").presence
+  end
+
+  # The saved answer, unless the AI switch has changed since: then the switch wins, so
+  # resubmitting the step without touching it never turns AI (or household consent) on or off.
+  def onboarding_ai_mode
+    mode = preferences&.dig("onboarding_ai_mode")
+    current = ai_enabled ? "builtin" : "none"
+    return current unless ONBOARDING_AI_MODES.include?(mode)
+
+    (mode != "none") == ai_enabled ? mode : current
+  end
+
+  # "Nothing yet" excludes every other tool and unknown values are dropped.
+  # Built-in and external AI enable this user's AI features; only no AI turns them off.
+  # The household's assistant settings still select the conversation backend.
+  # For an admin that switch is also the household's AI consent (Family#ai_consented?).
+  # Guests always have AI on, so they aren't asked.
+  # rendered_ai_mode is the choice the page showed: when the user left it as it was,
+  # the AI switch stays as it is now, even if it changed after the page rendered.
+  def save_onboarding_tools_and_ai(tools:, other_tool:, ai_mode:, rendered_ai_mode: nil)
+    chosen = Array(tools).map(&:to_s)
+    chosen = chosen.include?(ONBOARDING_NO_TOOLS) ? [ ONBOARDING_NO_TOOLS ] : chosen & ONBOARDING_TOOLS
+    other = other_tool.to_s.strip.first(ONBOARDING_OTHER_TOOL_MAX_LENGTH).presence if chosen.include?("other")
+    mode = ONBOARDING_AI_MODES.include?(ai_mode.to_s) ? ai_mode.to_s : "none"
+
+    transaction do
+      with_locked_preferences do |prefs|
+        prefs["onboarding_tools"] = chosen
+        prefs["onboarding_ai_mode"] = mode unless guest?
+        other ? prefs["onboarding_other_tool"] = other : prefs.delete("onboarding_other_tool")
+      end
+      attributes = { set_onboarding_goals_at: Time.current, onboarded_at: Time.current }
+      attributes[:ai_enabled] = mode != "none" unless guest? || mode == rendered_ai_mode.to_s
+      update!(attributes)
+    end
   end
 
   # Whether the activity feed of a linked account always lists the balance

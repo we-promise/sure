@@ -1,4 +1,5 @@
 class Import::RowsController < ApplicationController
+  include ViewableImports
   include ImportGuestGuardable
 
   before_action :set_import_row
@@ -19,7 +20,7 @@ class Import::RowsController < ApplicationController
     end
 
     def set_import_row
-      @import = Current.family.imports.find(params[:import_id])
+      @import = viewable_imports.find(params[:import_id])
       @row = @import.rows.find(params[:id])
     end
 end

@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { shouldCloseOnClick } from "utils/dialog_click_outside";
 
 const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -28,6 +29,7 @@ export default class extends Controller {
     this._frame = this.element.closest("turbo-frame");
     this._onKeydown = this.#onKeydown.bind(this);
     this._onClose = this.#onClose.bind(this);
+    this._pressTarget = null;
 
     this.element.addEventListener("keydown", this._onKeydown);
     this.element.addEventListener("close", this._onClose);
@@ -59,10 +61,24 @@ export default class extends Controller {
     }
   }
 
+  // Where the gesture that may end in a click started. Only the primary
+  // pointer counts, so a second finger cannot overwrite the first one's origin.
+  trackPress(e) {
+    if (e.isPrimary === false) return;
+    this._pressTarget = e.target;
+  }
+
+  clearPress() {
+    this._pressTarget = null;
+  }
+
   // If the user clicks anywhere outside of the visible content, close the dialog
   clickOutside(e) {
     if (this.disableClickOutsideValue) return;
-    if (!this.contentTarget.contains(e.target)) {
+    // A click with no detail comes from the keyboard, not from the press kept here.
+    const pressTarget = e.detail === 0 ? null : this._pressTarget;
+    this._pressTarget = null;
+    if (shouldCloseOnClick(pressTarget, e.target, this.contentTarget)) {
       this.close();
     }
   }

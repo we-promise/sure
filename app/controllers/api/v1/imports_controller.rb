@@ -11,8 +11,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
   before_action :set_import, only: [ :rows ]
 
   def index
-    family = current_resource_owner.family
-    imports_query = family.imports.ordered
+    imports_query = import_scope.ordered
 
     # Apply filters
     if params[:status].present?
@@ -215,7 +214,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
     end
 
     def import_scope
-      current_resource_owner.family.imports
+      current_resource_owner.family.imports.viewable_by(current_resource_owner)
     end
 
     def render_import_not_found
