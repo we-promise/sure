@@ -40,6 +40,10 @@ class IncreaseEntryAmountPrecision < ActiveRecord::Migration[8.1]
   end
 
   def down
+    # Held until the migration commits, so no write lands between the check
+    # and the narrowing. The ALTER TABLE takes this lock anyway.
+    execute "LOCK TABLE #{COLUMNS.keys.map { |table| quote_table_name(table) }.join(", ")} IN ACCESS EXCLUSIVE MODE"
+
     if COLUMNS.any? { |table, columns| columns.any? { |column| excess_precision?(table, column) } }
       raise ActiveRecord::IrreversibleMigration,
         "Reducing transaction amounts to four decimal places would discard stored cryptocurrency precision"
