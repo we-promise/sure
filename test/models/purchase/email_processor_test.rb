@@ -122,6 +122,20 @@ class Purchase::EmailProcessorTest < ActiveSupport::TestCase
     assert_empty @purchase.receipt_files
   end
 
+  test "a PDF that can't be rendered leaves the email to be read from its text" do
+    attach_email_with_files
+    Pdf::PageImages.stubs(:render).raises(Pdf::PageImages::Error.new("pdftoppm is not installed (poppler-utils)", code: :missing_binary))
+    requests = stub_purchase_extraction
+
+    process
+    perform_enqueued_jobs(only: Ai::GenerationJob, at: Time.current)   # the text-only run
+
+    @purchase.reload
+    assert_equal "awaiting_payment", @purchase.status
+    assert @purchase.ai_metadata["files_rejected"]
+    assert_equal [ [] ], requests.map(&:attachments)
+  end
+
   test "an email whose text can't be read either fails" do
     attach_email_with_files
     requests = stub_ai(:extract_purchase, raises: Ai::Error::InvalidOutput.new("unusable"))
@@ -371,7 +385,10 @@ class Purchase::EmailProcessorTest < ActiveSupport::TestCase
       perform_enqueued_jobs(only: Ai::GenerationJob, at: Time.current)
     end
 
+    # The PDF's page is "rendered" here: CI doesn't install pdftoppm, and Pdf::PageImagesTest
+    # covers the rendering.
     def attach_email_with_files
+      Pdf::PageImages.stubs(:render).returns([ "page-1-png" ])
       mail = Mail.new(from: "Bob Dylan <bob@bobdylan.com>", subject: "Receipt", body: "My receipt")
       mail.add_file(filename: "receipt.png", content: Vips::Image.gaussnoise(300, 300).cast(:uchar).pngsave_buffer)
       mail.add_file(filename: "terms.pdf", content: build_pdf)

@@ -24,6 +24,8 @@ class Ai::Generations::ExtractPurchaseTest < ActiveSupport::TestCase
 
   test "files are sent as images named after their number" do
     pdf = Ai::Attachment.pdf(build_pdf(pages: 2), filename: "invoice.pdf")
+    # Rendered by pdftoppm, which CI doesn't install; Pdf::PageImagesTest covers the rendering.
+    Pdf::PageImages.expects(:render).with(pdf.data, pages: 1..2).returns(%w[page-1 page-2])
     photo = Ai::Attachment.new(filename: "receipt.jpg", content_type: "image/jpeg", data: file_fixture("receipts/rotated.jpg").binread)
 
     names = generation(files: [ photo, pdf ]).attachments.map(&:filename)
