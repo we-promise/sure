@@ -778,6 +778,18 @@ class AssistantTest < ActiveSupport::TestCase
     end
   end
 
+  test "a new message after a failed follow-up does not run the tool again when the history is trimmed" do
+    model = use_scripted_model(api: :chat_completions, plan: [ [ "create_tag" ] ], failures: { 2 => :error }, history_tokens: 50)
+    Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true, tags: "groceries " * 400 })
+
+    perform_enqueued_jobs
+    @chat.messages.create!(type: "UserMessage", content: "Did it work?", ai_model: "gpt-4.1")
+    perform_enqueued_jobs
+
+    assert_equal "Done.", last_reply.content
+    assert_sees_tool_result model.requests.last, "call_1_0", after: @message.content, prompt: "Did it work?"
+  end
+
   %i[chat_completions anthropic].each do |api|
     test "a reply answers its own prompt when another message arrives before it runs (#{api})" do
       model = use_scripted_model(api: api, plan: [])
@@ -947,15 +959,17 @@ class AssistantTest < ActiveSupport::TestCase
     # - :responses, the server-side chain: a request names a previous response
     #   and must send exactly the outputs of the tools that response asked for.
     # `failures` maps a request number to :error, or :partial (text, then error).
+    # `history_tokens` trims the OpenAI-shaped history to that budget.
     class ScriptedModel
       include ProviderTestHelper
 
       attr_reader :requests
 
-      def initialize(api:, plan:, failures: {})
+      def initialize(api:, plan:, failures: {}, history_tokens: nil)
         @api = api
         @plan = plan
         @failures = failures
+        @history_tokens = history_tokens
         @requests = []
         @rounds = []
         @responses = {}
@@ -966,6 +980,8 @@ class AssistantTest < ActiveSupport::TestCase
       end
 
       def chat_response(prompt, function_results:, previous_response_id:, streamer:, messages:, conversation_history:, **)
+        # As Provider::Openai#build_generic_messages trims the history of a small-context model.
+        messages = Assistant::HistoryTrimmer.new(messages, max_tokens: @history_tokens).call if @history_tokens
         request = { api: @api, prompt: prompt, function_results: function_results, previous_response_id: previous_response_id,
                     messages: messages }
         @requests << request

@@ -63,7 +63,7 @@ class Assistant::HistoryTrimmerTest < ActiveSupport::TestCase
 
   test "never splits tool_call + tool_result pair when dropping" do
     messages = [
-      { role: "assistant", content: "", tool_calls: [ { id: "c1", type: "function", function: { name: "f", arguments: "{}" } } ] },
+      { role: "assistant", content: "Checking", tool_calls: [ { id: "c1", type: "function", function: { name: "f", arguments: "{}" } } ] },
       { role: "tool", tool_call_id: "c1", name: "f", content: "x" * 200 },
       { role: "user", content: "y" * 20 }
     ]
@@ -114,5 +114,20 @@ class Assistant::HistoryTrimmerTest < ActiveSupport::TestCase
     result = Assistant::HistoryTrimmer.new(messages, max_tokens: 50).call
 
     assert_equal messages.last(3), result
+  end
+
+  test "keeps the tools a failed reply ran when a new question follows it" do
+    messages = [
+      { role: "user", content: "old message" },
+      { role: "assistant", content: "old answer" },
+      { role: "user", content: "Tag my groceries" },
+      { role: "assistant", content: "", tool_calls: [ { id: "call_1", type: "function", function: { name: "create_tag", arguments: "{}" } } ] },
+      { role: "tool", tool_call_id: "call_1", content: "tag " * 400 },
+      { role: "user", content: "Did it work?" }
+    ]
+
+    result = Assistant::HistoryTrimmer.new(messages, max_tokens: 50).call
+
+    assert_equal messages.last(4), result
   end
 end
