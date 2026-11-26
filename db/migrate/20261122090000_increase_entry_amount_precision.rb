@@ -4,26 +4,19 @@ class IncreaseEntryAmountPrecision < ActiveRecord::Migration[8.1]
   # Amounts a crypto account can hold end to end. The balance history feeds
   # accounts.balance back through Balance::Materializer, so widening only the
   # account column would still round on the next sync.
-  COLUMNS = [
-    [ :entries, :amount, { null: false } ],
-    [ :accounts, :balance, {} ],
-    [ :accounts, :cash_balance, { default: 0.0 } ],
-    [ :transfers, :amount, { default: 0.0, null: false } ],
-    [ :balances, :balance, { null: false } ],
-    [ :balances, :cash_adjustments, { default: 0.0, null: false } ],
-    [ :balances, :cash_balance, { default: 0.0 } ],
-    [ :balances, :cash_inflows, { default: 0.0, null: false } ],
-    [ :balances, :cash_outflows, { default: 0.0, null: false } ],
-    [ :balances, :net_market_flows, { default: 0.0, null: false } ],
-    [ :balances, :non_cash_adjustments, { default: 0.0, null: false } ],
-    [ :balances, :non_cash_inflows, { default: 0.0, null: false } ],
-    [ :balances, :non_cash_outflows, { default: 0.0, null: false } ],
-    [ :balances, :start_cash_balance, { default: 0.0, null: false } ],
-    [ :balances, :start_non_cash_balance, { default: 0.0, null: false } ]
-  ].freeze
+  COLUMNS = {
+    entries: %i[amount],
+    accounts: %i[balance cash_balance],
+    transfers: %i[amount],
+    balances: %i[
+      balance cash_adjustments cash_balance cash_inflows cash_outflows
+      net_market_flows non_cash_adjustments non_cash_inflows non_cash_outflows
+      start_cash_balance start_non_cash_balance
+    ]
+  }.freeze
 
   # Postgres will not alter a column a generated column depends on, so these
-  # are dropped and re-added around the base-column change.
+  # are dropped and re-added in the same ALTER TABLE as the type change.
   GENERATED_COLUMNS = {
     start_balance: "start_cash_balance + start_non_cash_balance",
     end_cash_balance: "start_cash_balance + ((cash_inflows - cash_outflows) * flows_factor) + cash_adjustments",
@@ -43,31 +36,31 @@ class IncreaseEntryAmountPrecision < ActiveRecord::Migration[8.1]
   }.freeze
 
   def up
-    drop_generated_columns
-    COLUMNS.each { |table, column, options| change_column table, column, :decimal, precision: 34, scale: 18, **options }
-    add_generated_columns(precision: 34, scale: 18)
+    change_precision(precision: 34, scale: 18)
   end
 
   def down
-    if COLUMNS.any? { |table, column, _| excess_precision?(table, column) }
+    if COLUMNS.any? { |table, columns| columns.any? { |column| excess_precision?(table, column) } }
       raise ActiveRecord::IrreversibleMigration,
         "Reducing transaction amounts to four decimal places would discard stored cryptocurrency precision"
     end
 
-    drop_generated_columns
-    COLUMNS.each { |table, column, options| change_column table, column, :decimal, precision: 19, scale: 4, **options }
-    add_generated_columns(precision: 19, scale: 4)
+    change_precision(precision: 19, scale: 4)
   end
 
   private
-    def drop_generated_columns
-      GENERATED_COLUMNS.each_key { |column| remove_column :balances, column }
-    end
+    # One ALTER TABLE per table, so each table is rewritten once.
+    def change_precision(precision:, scale:)
+      COLUMNS.each do |table, columns|
+        change_table table, bulk: true do |t|
+          generated = table == :balances ? GENERATED_COLUMNS : {}
 
-    def add_generated_columns(precision:, scale:)
-      GENERATED_COLUMNS.each do |column, expression|
-        add_column :balances, column, :virtual,
-          type: :decimal, precision: precision, scale: scale, as: expression, stored: true
+          generated.each_key { |column| t.remove column }
+          columns.each { |column| t.change column, :decimal, precision: precision, scale: scale }
+          generated.each do |column, expression|
+            t.virtual column, type: :decimal, precision: precision, scale: scale, as: expression, stored: true
+          end
+        end
       end
     end
 
