@@ -135,7 +135,11 @@ RSpec.describe 'API V1 Transfers', type: :request do
       produces 'application/json'
       description 'Moves money between two accounts the API key\'s user can write to, booking both legs ' \
                   'as the web form does. Requires the read_write scope. Repeating a request with the same ' \
-                  '`idempotency_key` returns the transfer it already created (200) instead of a duplicate.'
+                  '`idempotency_key` returns the transfer it already created (200) instead of a duplicate. ' \
+                  'Send each value as the type its field has: ids and the key as UUID strings, amounts as numbers or ' \
+                  'numeric strings, the date as `YYYY-MM-DD`. A value of the wrong type, such as an array or a boolean, ' \
+                  'is rejected with a 422 instead of being ignored; null means the field was not sent. ' \
+                  'A number with more than 15 digits has to be sent as a string, because a JSON number cannot carry it exactly.'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -145,8 +149,8 @@ RSpec.describe 'API V1 Transfers', type: :request do
               from_account_id: { type: :string, format: :uuid, description: 'Source account (required)' },
               to_account_id: { type: :string, format: :uuid, description: 'Destination account (required)' },
               amount: { type: :number, description: 'Positive amount with at most 4 decimal places, in the source account\'s currency (required)' },
-              date: { type: :string, format: :date, description: 'Defaults to today' },
-              exchange_rate: { type: :number, description: 'Greater than 0. Source-to-destination rate when the currencies differ' },
+              date: { type: :string, format: :date, description: 'Defaults to today. A retry with an idempotency_key that leaves the date out matches the transfer made on an earlier day.' },
+              exchange_rate: { type: :number, description: 'Greater than 0. Source-to-destination rate. Only for accounts in different currencies; refused otherwise' },
               source_fee_amount: { type: :number, description: 'Zero or more, at most 4 decimal places' },
               destination_fee_amount: { type: :number, description: 'Zero or more, at most 4 decimal places' },
               tag_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'Ids of tags in the family. Unknown ids are rejected.' },

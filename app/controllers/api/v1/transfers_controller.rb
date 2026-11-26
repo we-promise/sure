@@ -11,6 +11,10 @@ class Api::V1::TransfersController < Api::V1::BaseController
   InvalidParam = Class.new(StandardError)
   private_constant :InvalidParam
 
+  # Ruby also reads "1_000" as 1000, so the shape is checked before converting.
+  NUMBER_FORMAT = /\A[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\z/
+  private_constant :NUMBER_FORMAT
+
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: :create
   before_action :reject_guest_writes!, only: :create
@@ -38,7 +42,8 @@ class Api::V1::TransfersController < Api::V1::BaseController
   # Sending the same idempotency_key (a UUID) again returns the transfer it
   # already created.
   def create
-    raise InvalidParam, "from_account_id and to_account_id are required" unless transfer_params[:from_account_id].present? && transfer_params[:to_account_id].present?
+    from_account_id = parse_uuid(:from_account_id, required: true)
+    to_account_id = parse_uuid(:to_account_id, required: true)
 
     family = current_resource_owner.family
     amount = parse_number(:amount, required: true, greater_than: 0)
@@ -46,12 +51,15 @@ class Api::V1::TransfersController < Api::V1::BaseController
     destination_fee_amount = parse_number(:destination_fee_amount, minimum: 0)
     exchange_rate = parse_number(:exchange_rate, greater_than: 0, decimals: nil)
     date = parse_transfer_date
-    key = parse_idempotency_key
+    key = parse_uuid(:idempotency_key)
     tag_ids = parse_tag_ids(family)
 
     accounts = family.accounts.writable_by(current_resource_owner).visible
-    source_account = accounts.find(transfer_params[:from_account_id])
-    destination_account = accounts.find(transfer_params[:to_account_id])
+    source_account = accounts.find(from_account_id)
+    destination_account = accounts.find(to_account_id)
+    if exchange_rate && source_account.currency == destination_account.currency
+      raise InvalidParam, "exchange_rate only applies when the accounts use different currencies"
+    end
 
     @transfer = Transfer::Creator.new(
       family: family,
@@ -87,19 +95,20 @@ class Api::V1::TransfersController < Api::V1::BaseController
       authorize_scope!(:write)
     end
 
-    # permit drops anything that is not a scalar (or, for tag_ids, an array of
-    # scalars). The raw params are read where a dropped value would otherwise
-    # be ignored without an error.
+    # The raw request, checked to be an object. Nothing goes through `permit`,
+    # which would drop an array or object from a one-value field without a word.
     def transfer_params
       @transfer_params ||= begin
         transfer = params.require(:transfer)
         raise InvalidParam, "transfer must be an object" unless transfer.is_a?(ActionController::Parameters)
 
-        transfer.permit(
-          :from_account_id, :to_account_id, :amount, :date, :exchange_rate,
-          :source_fee_amount, :destination_fee_amount, :idempotency_key, tag_ids: []
-        )
+        transfer
       end
+    end
+
+    # null and "" both mean the field was left out.
+    def omitted?(raw)
+      raw.to_s.strip.empty?
     end
 
     # A finite decimal within numeric(19, 4), or nil when the param is absent
@@ -108,12 +117,15 @@ class Api::V1::TransfersController < Api::V1::BaseController
     # amount would never match the stored one.
     def parse_number(key, required: false, greater_than: nil, minimum: nil, decimals: 4)
       raw = transfer_params[key]
-      if raw.nil? || (raw.is_a?(String) && raw.strip.empty?)
+      if omitted?(raw)
         raise InvalidParam, "#{key} is required" if required
         return nil
       end
 
-      value = parse_decimal(raw)
+      raise InvalidParam, "#{key} has more digits than a JSON number can carry; send it as a string" if rounded_float?(raw)
+
+      text = raw.to_s.strip
+      value = parse_decimal(text) if (raw.is_a?(String) || raw.is_a?(Numeric)) && text.match?(NUMBER_FORMAT)
       raise InvalidParam, "#{key} must be a number" unless value
       raise InvalidParam, "#{key} must be no larger than #{MAX_AMOUNT.to_s('F')}" if value.abs > MAX_AMOUNT
       raise InvalidParam, "#{key} can have at most #{decimals} decimal places" if decimals && value != value.round(decimals)
@@ -123,14 +135,35 @@ class Api::V1::TransfersController < Api::V1::BaseController
       value
     end
 
-    def parse_transfer_date
-      return Date.current if transfer_params[:date].blank?
+    # A JSON number is read as a Float, which holds about 15 digits exactly.
+    # A longer one has already been rounded by the time it gets here.
+    def rounded_float?(raw)
+      raw.is_a?(Float) && raw.to_s.sub(/e.*/i, "").delete("-.").sub(/\A0+/, "").length > 15
+    end
 
-      parse_date(transfer_params[:date]) || raise(InvalidParam, "date must be an ISO 8601 date (YYYY-MM-DD)")
+    # nil when the date was left out: Transfer::Creator then uses today for a
+    # new transfer, and for a retry the day the first request was made.
+    def parse_transfer_date
+      raw = transfer_params[:date]
+      return if omitted?(raw)
+
+      parse_date(raw) || raise(InvalidParam, "date must be an ISO 8601 date (YYYY-MM-DD)")
+    end
+
+    # A lowercase UUID string, or nil when the field was left out. A value that
+    # is present but not a UUID is rejected, not dropped: for an idempotency_key
+    # that would give a caller who thinks retries are safe a duplicate. The case
+    # is folded because the Creator compares keys as plain text.
+    def parse_uuid(key, required: false)
+      raw = transfer_params[key]
+      raise InvalidParam, "#{key} is required" if raw.nil? && required
+      raise InvalidParam, "#{key} must be a UUID" unless raw.nil? || valid_uuid?(raw)
+
+      raw&.downcase
     end
 
     def parse_tag_ids(family)
-      raw = params[:transfer][:tag_ids]
+      raw = transfer_params[:tag_ids]
       return [] if raw.nil?
 
       raise InvalidParam, "tag_ids must be an array of tag ids" unless raw.is_a?(Array) && raw.all? { |id| valid_uuid?(id) }
@@ -140,15 +173,6 @@ class Api::V1::TransfersController < Api::V1::BaseController
       raise InvalidParam, "tag_ids includes a tag that does not exist" unless family.tags.where(id: ids).count == ids.size
 
       ids
-    end
-
-    # A key that is present but not a UUID is rejected, not dropped, so a caller
-    # who thinks retries are safe never gets a duplicate.
-    def parse_idempotency_key
-      key = params[:transfer][:idempotency_key]
-      raise InvalidParam, "idempotency_key must be a UUID" unless key.nil? || valid_uuid?(key)
-
-      key
     end
 
     def set_transfer

@@ -493,4 +493,26 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
       Transfer::Creator.new(**attributes, tag_ids: [ tags(:two).id ]).create
     end
   end
+
+  test "a keyed retry that leaves the date out matches the transfer made on an earlier day" do
+    other_depository = @family.accounts.create!(name: "Savings", balance: 1000, currency: "USD", accountable: Depository.new)
+    attributes = {
+      family: @family, source_account_id: @source_account.id, destination_account_id: other_depository.id,
+      amount: @amount, idempotency_key: SecureRandom.uuid
+    }
+
+    first = Transfer::Creator.new(**attributes, date: nil).create
+    assert_equal Date.current, first.outflow_transaction.entry.date
+
+    travel_to 1.day.from_now do
+      assert_no_difference "Transfer.count" do
+        assert_equal first, Transfer::Creator.new(**attributes, date: nil).create
+      end
+
+      # A date that was asked for must still agree with the stored one.
+      assert_raises(Transfer::Creator::StaleIdempotencyKeyError) do
+        Transfer::Creator.new(**attributes, date: Date.current).create
+      end
+    end
+  end
 end

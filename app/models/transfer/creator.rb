@@ -6,11 +6,14 @@ class Transfer::Creator
   # double-submit. See #find_existing_transfer.
   StaleIdempotencyKeyError = Class.new(StandardError)
 
+  # date may be nil: a new transfer is then made today, and a retry of a keyed
+  # request matches the transfer made on whichever day the first one was.
   def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, idempotency_key: nil)
     @family = family
     @source_account = family.accounts.find(source_account_id) # early throw if not found
     @destination_account = family.accounts.find(destination_account_id) # early throw if not found
-    @date = date
+    @requested_date = date
+    @date = date || Date.current
     @amount = amount.to_d
     @source_fee_amount = source_fee_amount.to_d
     @destination_fee_amount = destination_fee_amount.to_d
@@ -94,7 +97,7 @@ class Transfer::Creator
   end
 
   private
-    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids, :idempotency_key
+    attr_reader :family, :source_account, :destination_account, :date, :requested_date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids, :idempotency_key
 
     # Scoped to source_account + idempotency_key so it only ever finds a
     # transfer this same key could plausibly refer to, but the key alone
@@ -127,13 +130,14 @@ class Transfer::Creator
     def matches_request?(transfer)
       outflow_entry = transfer.outflow_transaction.entry
       inflow_entry = transfer.inflow_transaction.entry
+      matching_date = requested_date || outflow_entry.date
 
       outflow_entry.account_id == source_account.id &&
         inflow_entry.account_id == destination_account.id &&
-        outflow_entry.date == date &&
+        outflow_entry.date == matching_date &&
         outflow_entry.amount == amount &&
         # The stored amount is rounded to numeric(19, 4); the converted amount is not.
-        inflow_entry.amount == inflow_converted_amount.round(4) * -1 &&
+        inflow_entry.amount == inflow_converted_amount(matching_date).round(4) * -1 &&
         transfer.derived_source_fee_amount == source_fee_amount &&
         transfer.derived_destination_fee_amount == destination_fee_amount &&
         transfer.outflow_transaction.tag_ids.sort == requested_tag_ids.sort
@@ -196,7 +200,7 @@ class Transfer::Creator
     def inflow_transaction
       name = "#{name_prefix} from #{source_account.name}"
 
-      net_inflow = inflow_converted_amount
+      net_inflow = inflow_converted_amount(date)
 
       Transaction.new(
         kind: "funds_movement",
@@ -245,11 +249,11 @@ class Transfer::Creator
       family.categories.find_or_create_by!(name: I18n.t("models.category.defaults.fees"))
     end
 
-    def inflow_converted_amount
+    def inflow_converted_amount(on)
       Money.new(amount.abs, source_account.currency)
            .exchange_to(
              destination_account.currency,
-             date: date,
+             date: on,
              custom_rate: exchange_rate
            ).amount
     end

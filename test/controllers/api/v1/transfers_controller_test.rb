@@ -302,9 +302,72 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
-  test "create rejects a malformed idempotency key instead of dropping it" do
-    [ "not-a-uuid", "", [ SecureRandom.uuid ], { "a" => "b" } ].each do |key|
-      assert_transfer_rejected(idempotency_key: key)
+  # Values no field of that kind can hold, sent as JSON to every field: an
+  # array (which `permit` would drop), false (which reads as blank) and text
+  # that is almost right.
+  WRONG_SHAPES = {
+    uuid: [ [ "x" ], { "a" => "b" }, false, "", "not-a-uuid" ],
+    number: [ [ 1 ], false, "12abc", "1_000", 12345678901234.1234 ],
+    date: [ "2024-13-45", "2024-1-5", 20240120, [ "2024-01-20" ], false ],
+    tag_ids: [ "x", { "a" => "b" }, [ "not-a-uuid" ], [ 5 ] ]
+  }.freeze
+
+  TRANSFER_FIELDS = {
+    from_account_id: :uuid, to_account_id: :uuid, idempotency_key: :uuid,
+    amount: :number, source_fee_amount: :number, destination_fee_amount: :number, exchange_rate: :number,
+    date: :date, tag_ids: :tag_ids
+  }.freeze
+
+  test "create refuses wrong shaped values in every field" do
+    ApiRateLimiter.stubs(:limit).returns(nil)
+
+    TRANSFER_FIELDS.each do |field, kind|
+      WRONG_SHAPES.fetch(kind).each do |bad|
+        assert_transfer_rejected(as: :json, field => bad)
+        assert_includes JSON.parse(response.body)["message"], field.to_s, "#{field}=#{bad.inspect}"
+      end
+    end
+  end
+
+  test "create treats an idempotency key in another letter case as the same key" do
+    key = SecureRandom.uuid
+    post_transfer(idempotency_key: key)
+    assert_response :created
+
+    assert_no_difference "Transfer.count" do
+      post_transfer(idempotency_key: key.upcase)
+    end
+
+    assert_response :ok
+  end
+
+  test "create refuses an exchange_rate between accounts of the same currency" do
+    assert_transfer_rejected(exchange_rate: "7")
+  end
+
+  test "create accepts JSON numbers and zero" do
+    post_transfer(as: :json, to_account_id: euro_account.id, amount: 10, exchange_rate: 0.5, source_fee_amount: 0.25, destination_fee_amount: 0)
+
+    assert_response :created
+    transfer = Transfer.find(JSON.parse(response.body)["id"])
+    assert_equal 10, transfer.outflow_transaction.entry.amount
+    assert_equal(-5, transfer.inflow_transaction.entry.amount)
+    assert_equal 0.25, transfer.derived_source_fee_amount
+  end
+
+  test "create replays a keyed request that left the date out even on a later day" do
+    key = SecureRandom.uuid
+    post_transfer(as: :json, idempotency_key: key, date: nil)
+    assert_response :created
+    first_id = JSON.parse(response.body)["id"]
+
+    travel_to 1.day.from_now do
+      assert_no_difference "Transfer.count" do
+        post_transfer(as: :json, idempotency_key: key, date: nil)
+      end
+
+      assert_response :ok
+      assert_equal first_id, JSON.parse(response.body)["id"]
     end
   end
 
@@ -323,16 +386,10 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_transfer_rejected(to_account_id: euro_account.id, amount: "999999999999999", exchange_rate: "1000")
   end
 
-  test "create rejects dates that are not a full YYYY-MM-DD date" do
-    %w[not-a-date 2024-01 2024 20240120].each do |date|
-      assert_transfer_rejected(date: date)
-    end
-  end
-
-  test "create rejects tag_ids that are malformed or not the family's" do
+  test "create rejects tag_ids that are not the family's" do
     foreign_tag = families(:empty).tags.create!(name: "Not yours")
 
-    [ tags(:one).id, "not-a-uuid", [ "not-a-uuid" ], [ SecureRandom.uuid ], [ foreign_tag.id ], { "a" => "b" } ].each do |tag_ids|
+    [ [ SecureRandom.uuid ], [ foreign_tag.id ] ].each do |tag_ids|
       assert_transfer_rejected(tag_ids: tag_ids, as: :json)
     end
   end
