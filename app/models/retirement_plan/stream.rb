@@ -30,11 +30,14 @@ class RetirementPlan::Stream < ApplicationRecord
   validate :account_is_in_the_users_finances, if: :will_save_change_to_account_id?
 
   # The amount in `currency` at the rate on `date`. Raises
-  # Money::ConversionError when there is no rate.
+  # Money::ConversionError when there is no rate. A seeded stream is today's
+  # spending, which the contribution already nets before retirement; one the
+  # user has given another type counts as their own line until it is an
+  # expense again.
   def to_simulation_stream(currency:, date:)
     amount = Money.new(annual_amount, self.currency).exchange_to(currency, date: date).amount
     RetirementPlan::Simulation::Stream.new(kind:, annual_amount: amount, start_year:, end_year:, indexed:,
-                                           base_year:, seeded: source != "manual")
+                                           base_year:, seeded: source != "manual" && kind == "expense")
   end
 
   private

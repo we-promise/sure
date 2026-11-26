@@ -141,7 +141,7 @@ class RetirementPlans::StreamsControllerTest < ActionDispatch::IntegrationTest
   # The simulation leaves seeded spending out before retirement, since the
   # contribution already nets today's spending. A seeded stream turned into
   # something else is the user's own line, so it must count from its start.
-  test "a seeded stream whose type is changed becomes manual, and counts before retirement" do
+  test "a seeded stream whose type is changed counts before retirement" do
     plan = RetirementPlan.create!(user: @user, birth_year: 1980, retirement_date: Date.new(2045, 1, 1))
     stream = plan.streams.create!(kind: "expense", source: "seeded_living_costs", name: "Living costs", annual_amount: 30_000)
     RetirementPlan.any_instance.stubs(:projection).returns(stub(annual_contribution: 0))
@@ -150,11 +150,26 @@ class RetirementPlans::StreamsControllerTest < ActionDispatch::IntegrationTest
     patch retirement_plan_stream_url(stream), params: { retirement_plan_stream: { kind: "income", annual_amount: "12000", start_year: next_year.to_s } }
 
     assert_redirected_to retirement_plan_path
-    assert_equal [ "income", "manual" ], [ stream.reload.kind, stream.source ]
+    assert_equal [ "income", "seeded_living_costs" ], [ stream.reload.kind, stream.source ]
     paid_in = ->(sim) { sim.rows.find { |row| row.year == next_year }.contribution }
     with_pension = paid_in.call(RetirementPlan.find(plan.id).simulation(as_of: Date.current))
     stream.destroy!
     assert_operator with_pension - paid_in.call(RetirementPlan.find(plan.id).simulation(as_of: Date.current)), :>=, 12_000
+  end
+
+  test "a seeded stream whose type is changed and changed back is seeded again" do
+    plan = RetirementPlan.create!(user: @user, birth_year: 1980, retirement_date: Date.new(2045, 1, 1))
+    stream = plan.streams.create!(kind: "expense", source: "seeded_living_costs", name: "Living costs", annual_amount: 30_000)
+    RetirementPlan.any_instance.stubs(:projection).returns(stub(annual_contribution: 0))
+    next_year = Date.current.year + 1
+    paid_in = -> { RetirementPlan.find(plan.id).simulation(as_of: Date.current).rows.find { |row| row.year == next_year }.contribution }
+    never_changed = paid_in.call
+
+    patch retirement_plan_stream_url(stream), params: { retirement_plan_stream: { kind: "income" } }
+    patch retirement_plan_stream_url(stream), params: { retirement_plan_stream: { kind: "expense" } }
+
+    assert_equal [ "expense", "seeded_living_costs" ], [ stream.reload.kind, stream.source ]
+    assert_equal never_changed, paid_in.call
   end
 
   test "an edit that keeps the type leaves a seeded stream seeded" do
