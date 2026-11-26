@@ -434,7 +434,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '403', 'account is shared with you without full control' do
+      response '403', 'you lack full control of the account, or of another account the deletion changes (a transfer fee, or a counterpart whose balance counts transfers)' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { read_only_transaction.id }

@@ -24,6 +24,21 @@ class Assistant::Function::DeleteTransactionTest < ActiveSupport::TestCase
     assert_nil Entry.find_by(id: entry_id)
   end
 
+  test "does not delete a transfer leg whose counterpart counts transfers and is not writable" do
+    liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
+    outflow = create_transaction(account: accounts(:depository), amount: 250, kind: "funds_movement")
+    inflow = create_transaction(account: liability, amount: -250, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "confirmed")
+
+    result = nil
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      result = @function.call("id" => outflow.transaction.id)
+    end
+
+    assert_equal false, result[:success]
+    assert_equal "other_account_not_writable", result[:error]
+  end
+
   test "returns not_found for an unknown id" do
     result = @function.call("id" => "00000000-0000-0000-0000-000000000000")
 

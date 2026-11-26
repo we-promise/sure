@@ -38,6 +38,9 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
         transaction. It will not delete a split child transaction individually —
         delete the split parent instead. It will not delete a split while a part
         of it is linked as a transfer; that transfer must be removed first.
+        It will not delete a transfer leg when removing the transfer changes an
+        account the user can't edit (a fee there, or an other asset or other
+        liability whose balance the transfer moved).
       INSTRUCTIONS
     end
   end
@@ -70,13 +73,21 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
   # post-delete account sync (best-effort), and returns a result hash. Returns
   # { success: true, deleted: true, transaction: } on success (with an optional
   # :warning if the sync could not be enqueued), or an error hash for
-  # not_found / split_child / split_part_transferred / delete_aborted.
+  # not_found / split_child / other_account_not_writable / split_part_transferred /
+  # delete_aborted.
   def call(params = {})
     transaction = find_transaction(params["id"], params["account_id"])
     return error("not_found", "No transaction with id '#{params["id"]}' in an account you can write to.") unless transaction
 
     entry = transaction.entry
     return error("split_child", "Split child transactions cannot be deleted individually. Delete the split parent instead.") if entry.split_child?
+
+    # Deleting a transfer leg removes the transfer with its fees, and on a
+    # counterpart that counts transfers the balance it moved.
+    changed_accounts = entry.accounts_changed_by_transfer_removal
+    if Account.writable_by(user).where(id: changed_accounts.map(&:id)).count < changed_accounts.size
+      return error("other_account_not_writable", "This transaction is part of a transfer that also changes an account you can't edit, so it was not deleted.")
+    end
 
     # Snapshot before destruction so the response never reads destroyed
     # associations or triggers lazy loads on a deleted record.
@@ -106,6 +117,7 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     sync_warning = nil
     begin
       entry.sync_account_later
+      changed_accounts.each { |account| account.sync_later }
     rescue StandardError => e
       sync_warning = "Transaction deleted, but the post-delete account sync could not be enqueued (#{e.class}). The balance will recalculate on the next sync."
     end

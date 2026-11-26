@@ -17,7 +17,10 @@ class Transactions::BulkDeletionsController < ApplicationController
     end
     (destroyed.map(&:account) + destroyed.flat_map { |entry| changed_accounts.fetch(entry.id, []) }).uniq.each(&:sync_later)
 
-    flash[:alert] = t(".part_transferred", count: kept.size) if kept.any?
+    alerts = []
+    alerts << t(".part_transferred", count: kept.size) if kept.any?
+    alerts << t(".other_account_not_writable", count: blocked_ids.size) if blocked_ids.any?
+    flash[:alert] = alerts.join(" ") if alerts.any?
     redirect_back_or_to transactions_url, notice: "#{destroyed.count} transaction#{destroyed.count == 1 ? "" : "s"} deleted"
   end
 
@@ -26,13 +29,13 @@ class Transactions::BulkDeletionsController < ApplicationController
       params.require(:bulk_delete).permit(entry_ids: [])
     end
 
-    # Deleting a transfer leg (or a split whose child is one) removes the
-    # transfer, its fee transactions and, on a counterpart that counts
-    # transfers, the balance it moved. Returns those accounts by entry id;
-    # entries touching an account the user cannot write are skipped.
+    # Deleting a transfer leg removes the transfer, its fee transactions and,
+    # on a counterpart that counts transfers, the balance it moved. Returns
+    # those accounts by entry id; entries touching an account the user cannot
+    # write are skipped.
     def accounts_changed_by_transfer_removal(scope)
       scope.where(id: bulk_delete_params[:entry_ids], entryable_type: "Transaction")
-           .includes(:entryable, child_entries: :entryable)
+           .includes(:entryable)
            .to_h { |entry| [ entry.id, entry.accounts_changed_by_transfer_removal ] }
     end
 

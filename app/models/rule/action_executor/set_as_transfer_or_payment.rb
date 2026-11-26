@@ -29,12 +29,11 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     target_account = family.accounts.find_by_id(value)
     return 0 unless target_account
-    # Like Transfer::Matcher, skip split children and excluded entries (split
-    # parents are always excluded): a transfer on a split would count its
-    # amount twice, and an excluded entry's counterpart would not be excluded.
-    # A transfer needs two accounts, so the target's own entries are skipped.
+    # Excluded entries are skipped, split parents among them: a transfer on a
+    # split parent would count its amount twice, and an excluded entry's
+    # counterpart would not be excluded. A split part can be a leg. A transfer
+    # needs two accounts, so the target's own entries are skipped.
     scope = transaction_scope.with_entry
-      .where(entries: { parent_entry_id: nil })
       .where(entries: { excluded: [ false, nil ] })
       .where.not(entries: { account_id: target_account.id })
 

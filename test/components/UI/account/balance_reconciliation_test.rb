@@ -24,6 +24,16 @@ class UI::Account::BalanceReconciliationTest < ViewComponent::TestCase
     assert_equal Money.new(500, "USD"), flow_item(account, balance)[:value]
   end
 
+  test "a cash account keeps showing only its cash flow" do
+    account = accounts(:depository)
+    balance = account.balances.create!(
+      date: Date.current, currency: "USD", balance: 4500, cash_balance: 4500,
+      start_cash_balance: 5000, cash_outflows: 500, non_cash_inflows: 500, flows_factor: 1
+    )
+
+    assert_equal Money.new(-500, "USD"), flow_item(account, balance)[:value]
+  end
+
   private
     def flow_item(account, balance)
       UI::Account::BalanceReconciliation.new(balance: balance, account: account)

@@ -74,7 +74,6 @@ class Api::V1::SplitsController < Api::V1::BaseController
     # between; resplit! re-checks under the lock instead of resurrecting the split.
     raise NotSplit unless @entry.resplit!(splits)
     @entry.sync_account_later
-    sync_accounts_changed_by_unsplit
     @entry.reload
 
     render_split
@@ -90,7 +89,6 @@ class Api::V1::SplitsController < Api::V1::BaseController
 
     raise NotSplit unless @entry.unsplit_once!
     @entry.sync_account_later
-    sync_accounts_changed_by_unsplit
 
     head :no_content
   rescue NotSplit
@@ -100,10 +98,6 @@ class Api::V1::SplitsController < Api::V1::BaseController
   end
 
   private
-
-    def sync_accounts_changed_by_unsplit
-      @accounts_changed_by_unsplit.to_a.each { |account| account.sync_later(window_start_date: @entry.date) }
-    end
 
     def ensure_read_scope
       authorize_scope!(:read)
@@ -119,11 +113,8 @@ class Api::V1::SplitsController < Api::V1::BaseController
     # else's transaction.
     def ensure_account_write_permission
       return if performed?
-      # Unsplitting or resplitting also removes a transfer a child is a leg of.
-      @accounts_changed_by_unsplit = action_name == "create" ? [] : @entry.accounts_changed_by_transfer_removal
-      [ @entry.account, *@accounts_changed_by_unsplit ].each do |account|
-        return unless require_api_account_permission!(account, :write)
-      end
+
+      require_api_account_permission!(@entry.account, :write)
     end
 
     def set_transaction

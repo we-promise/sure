@@ -1,6 +1,11 @@
 ---
 de:
   transactions:
+    bulk_deletions:
+      create:
+        other_account_not_writable:
+          one: "1 Buchung wurde nicht gelöscht: sie gehört zu einer Überweisung, die ein Konto ändert, das du nicht bearbeiten darfst."
+          other: "%{count} Buchungen wurden nicht gelöscht: jede gehört zu einer Überweisung, die ein Konto ändert, das du nicht bearbeiten darfst."
     unknown_name: Unbekannte Transaktion
     form:
       account: Konto

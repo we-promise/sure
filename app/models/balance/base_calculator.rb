@@ -202,16 +202,7 @@ class Balance::BaseCalculator
     # Legs and fees of confirmed transfers only: a transfer kind alone (a pending
     # match, an unmatched provider leg) is no money moved from another account.
     def confirmed_transfer_transaction_ids
-      @confirmed_transfer_transaction_ids ||= begin
-        transaction_ids = account.entries.where(entryable_type: "Transaction").select(:entryable_id)
-        confirmed = Transfer.confirmed
-
-        Set.new(
-          confirmed.where(inflow_transaction_id: transaction_ids).pluck(:inflow_transaction_id) +
-          confirmed.where(outflow_transaction_id: transaction_ids).pluck(:outflow_transaction_id) +
-          Transaction.where(id: transaction_ids, transfer_id: confirmed.select(:id)).pluck(:id)
-        )
-      end
+      @confirmed_transfer_transaction_ids ||= account.confirmed_transfer_transaction_ids
     end
 
     def signed_entry_flows(entries)

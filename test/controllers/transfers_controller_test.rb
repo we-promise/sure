@@ -1032,9 +1032,10 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       delete transaction_url(leg)
       post transactions_bulk_deletion_url, params: { bulk_delete: { entry_ids: [ leg.id ] } }
     end
+    assert_equal I18n.t("transactions.bulk_deletions.create.other_account_not_writable", count: 1), flash[:alert]
   end
 
-  test "cannot delete a split whose child is a confirmed transfer leg into an account that counts transfers" do
+  test "a split whose child is a confirmed transfer leg into an account that counts transfers keeps the split-part answer" do
     other_liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
     parent = create_transaction(account: accounts(:depository), amount: 250)
     child = parent.split!([ { name: "Payment", amount: 200 }, { name: "Groceries", amount: 50 } ]).first
@@ -1048,6 +1049,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       delete transaction_split_url(parent)
       patch transaction_split_url(parent), params: { split: { splits: { "0" => { name: "All", amount: "250" } } } }
     end
+    assert_equal I18n.t("splits.edit.part_transferred"), flash[:alert]
     assert_equal accounts(:other_liability).name, Transfer.find_by!(outflow_transaction: child.transaction).to_account.name
   end
 

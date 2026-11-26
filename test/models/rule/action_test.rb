@@ -407,16 +407,18 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal category, transfer.outflow_transaction.category
   end
 
-  test "set_as_transfer_or_payment leaves split parents and split children alone" do
+  test "set_as_transfer_or_payment links split parts but leaves the split parent alone" do
     entry = @txn1.entry
     children = entry.split!([ { name: "Part A", amount: 60 }, { name: "Part B", amount: 40 } ])
     transaction_ids = [ @txn1.id ] + children.map(&:entryable_id)
 
     action = Rule::Action.new(rule: @transaction_rule, action_type: "set_as_transfer_or_payment", value: accounts(:other_asset).id)
 
-    assert_no_difference "Transfer.count" do
-      assert_equal 0, action.apply(Transaction.where(id: transaction_ids))
+    assert_difference "Transfer.count", 2 do
+      assert_equal 2, action.apply(Transaction.where(id: transaction_ids))
     end
+    assert_nil @txn1.reload.transfer
+    assert children.all? { |child| child.transaction.reload.transfer&.confirmed? }
   end
 
   test "set_as_transfer_or_payment leaves excluded transactions and the target's own transactions alone" do

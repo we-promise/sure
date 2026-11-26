@@ -220,6 +220,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     @entry.destroy_unless_split_part_transferred!
     @entry.sync_account_later
+    @accounts_changed_by_transfer_removal.each { |account| account.sync_later }
 
     render json: {
       message: "Transaction deleted successfully"
@@ -252,7 +253,15 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     def ensure_write_permission
       level = action_name == "update" && annotate_only_update? ? :annotate : :write
 
-      require_api_account_permission!(@entry.account, level, resource: "transaction")
+      return unless require_api_account_permission!(@entry.account, level, resource: "transaction")
+      return unless action_name == "destroy"
+
+      # Deleting a transfer leg removes the transfer with its fees, and on a
+      # counterpart that counts transfers the balance it moved.
+      @accounts_changed_by_transfer_removal = @entry.accounts_changed_by_transfer_removal
+      @accounts_changed_by_transfer_removal.each do |account|
+        return unless require_api_account_permission!(account, :write, resource: "transaction")
+      end
     end
 
     # Judged on the permitted params, not raw params: keys outside

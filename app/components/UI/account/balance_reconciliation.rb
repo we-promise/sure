@@ -139,6 +139,8 @@ class UI::Account::BalanceReconciliation < ApplicationComponent
     # Other assets and liabilities carry their transfer legs as non-cash flows. An inflow
     # (a payment) lowers what a liability owes, so it is shown as a decrease there.
     def net_balance_flow
+      return net_cash_flow unless account.balance_counts_transfers?
+
       flow = net_cash_flow + net_non_cash_flow
       account.liability? ? flow * -1 : flow
     end

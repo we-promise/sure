@@ -25,6 +25,7 @@ class Transfer < ApplicationRecord
   # their own transaction never lock an account row while holding theirs.
   after_save :note_status_change
   after_commit :sync_transfer_counting_accounts_later, if: :moved_transfer_counting_balances?
+  after_rollback { @status_changed_in_transaction = false }
   # Destroying locks this row before the fee transactions and the legs, the
   # order confirm! and Entry#unsplit! take them in, so an unlink and a confirm
   # or unsplit do not deadlock each other.

@@ -601,6 +601,23 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal 2990, calculated.find { |b| b.date == 1.day.ago.to_date }.balance
   end
 
+  test "a split destination fee on an other asset still lowers its balance" do
+    account = create_account_with_ledger(
+      account: { type: OtherAsset, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 2.days.ago.to_date, balance: 2500 } ]
+    )
+    source = families(:empty).accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
+    transfer = Transfer::Creator.new(
+      family: families(:empty), source_account_id: source.id, destination_account_id: account.id,
+      date: 1.day.ago.to_date, amount: 500, destination_fee_amount: 10
+    ).create
+    transfer.fee_transactions.first.entry.split!([ { name: "Fee part A", amount: 6 }, { name: "Fee part B", amount: 4 } ])
+
+    calculated = Balance::ForwardCalculator.new(account.reload).calculate
+
+    assert_equal 2990, calculated.find { |b| b.date == 1.day.ago.to_date }.balance
+  end
+
   test "property and vehicle accounts ignore transfers for balance calculation" do
     [ Property, Vehicle ].each do |account_type|
       account = create_account_with_ledger(
