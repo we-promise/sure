@@ -30,7 +30,9 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
     # The recurring bills are part of the monthly median too — subtract them so
     # they aren't counted twice when we spread the remainder across the horizon.
     # Income is not part of the expense median, so it only adds on its date.
-    recurring_expense_total = later_flows.sum { |flow| [ -flow.amount, 0.to_d ].max }
+    # A bill snoozed out of the horizon will not be paid in it either, so it
+    # leaves the baseline although it is not applied on any date.
+    recurring_expense_total = later_flows.sum { |flow| [ -flow.amount, 0.to_d ].max } + snoozed_out_expense_total
     other_daily_spend = [ median_monthly_expense - recurring_expense_total, 0.to_d ].max / HORIZON_DAYS
 
     balance = starting_balance + today_flows.sum { |flow| [ flow.amount, 0.to_d ].max }
@@ -118,20 +120,9 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
     def upcoming_recurring_flows(accounts)
       cash_account_ids = accounts.pluck(:id).to_set
 
-      occurrences = family.recurring_occurrences
-        .open_status
-        .joins(:recurring_transaction)
-        .where(recurring_transactions: { status: :active, destination_account_id: nil })
-        .merge(shared_recurring_transactions)
-        .where(currency: family.currency)
-        .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} BETWEEN ? AND ?", Date.current, Date.current + HORIZON_DAYS)
-        .includes(:recurring_transaction)
-        .to_a
-
-      # remaining_amount reads the confirmed-allocation sum, and this runs
-      # nightly for every family: one grouped query instead of one SUM per
-      # occurrence in the horizon.
-      RecurringOccurrence.preload_confirmed_allocated(occurrences)
+      occurrences = load_occurrences(
+        projected_occurrences.where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} BETWEEN ? AND ?", Date.current, horizon_end)
+      )
 
       occurrences.filter_map do |occurrence|
         series = occurrence.recurring_transaction
@@ -146,5 +137,44 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
           Flow.new(date: occurrence.effective_due_on, amount: -remaining)
         end
       end
+    end
+
+    # Bills originally due inside the horizon but snoozed past it: what
+    # remains of them is part of the monthly expense median, yet nothing of it
+    # will be spent in this window.
+    def snoozed_out_expense_total
+      occurrences = load_occurrences(
+        projected_occurrences
+          .where(due_on: Date.current..horizon_end)
+          .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} > ?", horizon_end)
+      )
+
+      occurrences.sum do |occurrence|
+        next 0.to_d if occurrence.recurring_transaction.amount.negative?
+
+        [ occurrence.remaining_amount.to_d, 0.to_d ].max
+      end
+    end
+
+    def projected_occurrences
+      family.recurring_occurrences
+        .open_status
+        .joins(:recurring_transaction)
+        .where(recurring_transactions: { status: :active, destination_account_id: nil })
+        .merge(shared_recurring_transactions)
+        .where(currency: family.currency)
+    end
+
+    # remaining_amount reads the confirmed-allocation sum, and this runs
+    # nightly for every family: one grouped query instead of one SUM per
+    # occurrence.
+    def load_occurrences(scope)
+      scope.includes(:recurring_transaction).to_a.tap do |occurrences|
+        RecurringOccurrence.preload_confirmed_allocated(occurrences)
+      end
+    end
+
+    def horizon_end
+      Date.current + HORIZON_DAYS
     end
 end

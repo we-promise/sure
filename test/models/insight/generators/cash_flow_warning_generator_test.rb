@@ -109,9 +109,10 @@ class Insight::Generators::CashFlowWarningGeneratorTest < ActiveSupport::TestCas
     assert_equal "cash_flow_warning.negative", generate.first.template_key
   end
 
-  test "a scheduled transfer is not counted as income" do
+  # Out of the shared cash account, so only the transfer guard keeps it out.
+  test "a scheduled transfer is not counted as a bill" do
     clear_schedule
-    schedule("From savings", 3_000, Date.current + 5, account: accounts(:connected), destination: accounts(:depository))
+    schedule("To card", 3_000, Date.current + 5, destination: accounts(:credit_card))
 
     assert_equal [], flow_amounts
   end
@@ -119,6 +120,15 @@ class Insight::Generators::CashFlowWarningGeneratorTest < ActiveSupport::TestCas
   test "a bill snoozed past the horizon is not projected on its original date" do
     clear_schedule
     IncomeStatement.any_instance.stubs(:median_expense).returns(0)
+    accounts(:depository).update_columns(balance: 1_000)
+    schedule("Insurance", 800, Date.current + 3).snooze!(Date.current + 45)
+
+    assert_empty generate
+  end
+
+  test "a bill snoozed past the horizon leaves the spending baseline" do
+    clear_schedule
+    IncomeStatement.any_instance.stubs(:median_expense).returns(800)
     accounts(:depository).update_columns(balance: 1_000)
     schedule("Insurance", 800, Date.current + 3).snooze!(Date.current + 45)
 
