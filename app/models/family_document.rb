@@ -82,6 +82,15 @@ class FamilyDocument < ApplicationRecord
     update!(status: "error", metadata: (metadata || {}).merge("error" => error_message))
   end
 
+  # A retry before the terminal status commits must still find the bytes; a poll keeps them until
+  # the store reports a settled status.
+  def purge_file_if_settled
+    return false unless file.attached? && status.in?(%w[ready unreadable error])
+
+    file.purge
+    true
+  end
+
   def supported_extension?
     ext = File.extname(filename).downcase
     SUPPORTED_EXTENSIONS.include?(ext)
