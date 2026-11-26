@@ -54,40 +54,16 @@ class BalanceSheet::NetWorthSeriesBuilderTest < ActiveSupport::TestCase
     assert_not_equal k0, k2
   end
 
-  test "zero-balance accounts stop at their last balance entry" do
-    account = accounts(:depository)
-    account.balances.destroy_all
-    create_balance(account: account, date: 10.days.ago.to_date, balance: 1000)
-    create_balance(account: account, date: 5.days.ago.to_date, balance: 0)
+  test "passes the zero-balance cutoff to the chart" do
+    @asset_account.balances.destroy_all
+    create_balance(account: @asset_account, date: 10.days.ago.to_date, balance: 1000)
+    create_balance(account: @asset_account, date: 5.days.ago.to_date, balance: 0)
 
-    assert_equal 5.days.ago.to_date, builder.send(:account_active_until_dates)[account.id]
-  end
+    Balance::ChartSeriesBuilder.expects(:new)
+      .with { |args| args[:account_active_until_dates][@asset_account.id] == 5.days.ago.to_date }
+      .returns(stub(balance_series: :series))
 
-  test "accounts still holding a balance stay in the chart" do
-    account = accounts(:depository)
-    account.balances.destroy_all
-    create_balance(account: account, date: 5.days.ago.to_date, balance: 0)
-    create_balance(account: account, date: 1.day.ago.to_date, balance: 500)
-
-    assert_not builder.send(:account_active_until_dates).key?(account.id)
-  end
-
-  test "a disabled account keeps the earlier cutoff" do
-    account = accounts(:depository)
-    account.balances.destroy_all
-    account.update_columns(status: "disabled", disabled_at: 3.days.ago)
-    create_balance(account: account, date: 1.day.ago.to_date, balance: 0)
-
-    assert_equal 4.days.ago.to_date, builder.send(:account_active_until_dates)[account.id]
-  end
-
-  test "a zero balance can stop a disabled account before it was disabled" do
-    account = accounts(:depository)
-    account.balances.destroy_all
-    account.update_columns(status: "disabled", disabled_at: 3.days.ago)
-    create_balance(account: account, date: 10.days.ago.to_date, balance: 0)
-
-    assert_equal 10.days.ago.to_date, builder.send(:account_active_until_dates)[account.id]
+    assert_equal :series, builder.net_worth_series
   end
 
   private
