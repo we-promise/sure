@@ -334,6 +334,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     processor.stubs(:simplefin_account).returns(
       stub(id: "sfa-test", name: "Wealthfront", account_provider: nil, currency: "USD")
     )
+    processor.send(:simplefin_account).stubs(:with_lock).yields
 
     recorder = recording_import_adapter
 
@@ -365,6 +366,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     processor.stubs(:simplefin_account).returns(
       stub(id: "sfa-test", name: "Wealthfront", account_provider: nil, currency: "USD")
     )
+    processor.send(:simplefin_account).stubs(:with_lock).yields
 
     recorder = recording_import_adapter
 
@@ -396,6 +398,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     processor.stubs(:simplefin_account).returns(
       stub(id: "sfa-test", name: "Wealthfront", account_provider: nil, currency: "USD")
     )
+    processor.send(:simplefin_account).stubs(:with_lock).yields
 
     recorder = recording_import_adapter
 
