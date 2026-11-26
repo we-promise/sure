@@ -89,10 +89,108 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "should get goals" do
-    get goals_onboarding_url
+  test "should get tools, with no AI selected for a user without AI" do
+    @user.update!(ai_enabled: false)
+    get tools_onboarding_url
     assert_response :success
-    assert_select "h1", text: /What brings you here/i
+    assert_select "h1", text: I18n.t("onboardings.tools.title")
+    assert_select "input[type=radio][name='user[onboarding_ai_mode]'][value=none][checked]"
+  end
+
+  test "admins are told their AI choice is also the household's consent" do
+    get tools_onboarding_url
+    assert_select "[data-ai-panel=builtin]", text: /#{Regexp.escape(I18n.t("onboardings.tools.ai.panels.admin_on"))}/
+  end
+
+  test "members don't see the household consent note" do
+    sign_in users(:family_member)
+    get tools_onboarding_url
+    assert_select "[data-ai-panel=builtin]"
+    assert_select "[data-ai-panel=builtin]", text: /#{Regexp.escape(I18n.t("onboardings.tools.ai.panels.admin_on"))}/, count: 0
+  end
+
+  test "resubmitting after turning AI off in settings keeps it off" do
+    patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "builtin" } }
+    @user.reload.update!(ai_enabled: false)
+
+    get tools_onboarding_url
+    assert_select "input[type=radio][value=none][checked]"
+    patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "none" } }
+    assert_not @user.reload.ai_enabled
+  end
+
+  test "revisiting the step keeps an enabled assistant selected" do
+    @user.update!(ai_enabled: true)
+    get tools_onboarding_url
+    assert_select "input[type=radio][value=builtin][checked]"
+  end
+
+  test "the old goals step redirects to tools" do
+    get "/onboarding/goals"
+    assert_redirected_to "/onboarding/tools"
+  end
+
+  test "saving tools and built-in AI turns the assistant on and goes to the trial" do
+    @user.update!(ai_enabled: false)
+
+    patch tools_onboarding_url, params: { user: {
+      onboarding_tools: %w[ynab other], onboarding_other_tool: "Spreadsheet", onboarding_ai_mode: "builtin"
+    } }
+
+    assert_redirected_to trial_onboarding_url
+    @user.reload
+    assert_equal %w[ynab other], @user.onboarding_tools
+    assert_equal "Spreadsheet", @user.onboarding_other_tool
+    assert_equal "builtin", @user.onboarding_ai_mode
+    assert @user.ai_enabled
+    assert_not_nil @user.set_onboarding_goals_at
+    assert_not_nil @user.onboarded_at
+  end
+
+  test "no AI turns the assistant off" do
+    @user.update!(ai_enabled: true)
+    patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "none", rendered_ai_mode: "builtin" } }
+    assert_not @user.reload.ai_enabled
+    assert_equal "none", @user.onboarding_ai_mode
+  end
+
+  test "external AI stays enabled and selected when revisiting onboarding" do
+    @user.update!(ai_enabled: false)
+    patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "external", rendered_ai_mode: "none" } }
+    assert @user.reload.ai_enabled
+    assert_equal "external", @user.onboarding_ai_mode
+
+    get tools_onboarding_url
+    assert_select "input[type=radio][value=external][checked]"
+    assert_select "[data-ai-panel=external]", text: /#{Regexp.escape(I18n.t("onboardings.tools.ai.panels.admin_on"))}/
+    assert_select "[data-ai-panel=external]", text: /#{Regexp.escape(I18n.t("onboardings.tools.ai.panels.admin_off"))}/, count: 0
+
+    patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "external", rendered_ai_mode: "external" } }
+    assert @user.reload.ai_enabled
+    assert_equal "external", @user.onboarding_ai_mode
+  end
+
+  test "built-in AI warns about a missing provider only when the assistant can't run" do
+    with_self_hosting do
+      Provider::Openai.stubs(:configured?).returns(false)
+      Provider::Anthropic.stubs(:configured?).returns(false)
+      not_configured = Regexp.escape(I18n.t("onboardings.tools.ai.panels.builtin.not_configured"))
+
+      User.any_instance.stubs(:ai_available?).returns(true)
+      get tools_onboarding_url
+      assert_select "[data-ai-panel=builtin]", text: /#{not_configured}/, count: 0
+
+      User.any_instance.stubs(:ai_available?).returns(false)
+      get tools_onboarding_url
+      assert_select "[data-ai-panel=builtin]", text: /#{not_configured}/
+    end
+  end
+
+  test "self-hosted onboarding finishes on the dashboard" do
+    with_self_hosting do
+      patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "none" } }
+      assert_redirected_to root_url
+    end
   end
 
   test "should get trial" do
@@ -184,7 +282,7 @@ end
     get preferences_onboarding_url
     assert_response :success
 
-    get goals_onboarding_url
+    get tools_onboarding_url
     assert_response :success
 
     get trial_onboarding_url
@@ -200,7 +298,7 @@ end
   get preferences_onboarding_url
   assert_redirected_to new_session_url
 
-  get goals_onboarding_url
+  get tools_onboarding_url
   assert_redirected_to new_session_url
 
   get trial_onboarding_url

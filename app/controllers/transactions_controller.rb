@@ -231,6 +231,11 @@ class TransactionsController < ApplicationController
               locals: { entry: @entry }
             ) if can_edit_entry? && !@entry.split_child?),
             turbo_stream.replace(
+              dom_id(@entry, :category_provenance),
+              partial: "transactions/category_provenance",
+              locals: { entry: @entry }
+            ),
+            turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",
               locals: { entry: @entry, in_split_group: in_split_group }
@@ -824,6 +829,14 @@ class TransactionsController < ApplicationController
         ep
       else
         {} # read_only — no edits allowed
+      end
+
+      # A split part's amount, currency and kind belong to the split; the editor
+      # disables them, and a change would make the parts stop adding up to the
+      # parent or turn a transfer leg back into a plain transaction.
+      if @entry.split_child?
+        permitted = permitted.except(:amount, :currency)
+        permitted[:entryable_attributes] = permitted[:entryable_attributes].except(:kind) if permitted[:entryable_attributes]
       end
 
       # A matched transfer's category lives on its outflow leg; a category
