@@ -231,6 +231,11 @@ class TransactionsController < ApplicationController
               locals: { entry: @entry }
             ) if can_edit_entry? && !@entry.split_child?),
             turbo_stream.replace(
+              dom_id(@entry, :category_provenance),
+              partial: "transactions/category_provenance",
+              locals: { entry: @entry }
+            ),
+            turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",
               locals: { entry: @entry, in_split_group: in_split_group }
