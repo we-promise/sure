@@ -164,7 +164,7 @@ RSpec.describe 'API V1 Transfers', type: :request do
                 description: 'Zero or more, at most 4 decimal places'
               },
               tag_ids: { type: :array, nullable: true, items: { type: :string, format: :uuid }, description: 'Ids of tags in the family. Unknown ids are rejected.' },
-              idempotency_key: { type: :string, format: :uuid, nullable: true, description: 'Makes retries safe. Reusing it with different values returns 409.' }
+              idempotency_key: { type: :string, format: :uuid, nullable: true, description: 'Makes retries safe. Reusing it with different values returns 409, but only for the same from_account_id: a key is matched within its source account, so the same key with another source account makes a separate transfer.' }
             },
             required: %w[from_account_id to_account_id amount]
           }

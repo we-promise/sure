@@ -39,7 +39,7 @@ class Transfer::Creator
     # by the time this one runs. Return the existing transfer instead of
     # creating a second, identical one.
     if idempotency_key && (existing_transfer = find_existing_transfer)
-      return existing_transfer
+      return replayed(existing_transfer)
     end
 
     transfer = Transfer.new(
@@ -67,12 +67,13 @@ class Transfer::Creator
       apply_tags!(transfer) if tag_ids.any?
     end
 
-    transfer.sync_account_later
-
     # After commit, including a caller's own transaction, so a reconcile
     # error can never roll back the transfer. Only the inflow can resolve a
-    # transfer pledge.
+    # transfer pledge. Queued before the sync is scheduled, so an error
+    # scheduling the sync cannot skip it once the transfer is saved.
     GoalPledge::Reconciler.run_after_commit(transfer.inflow_transaction.entry)
+
+    transfer.sync_account_later
 
     transfer
   rescue ActiveRecord::RecordNotUnique
@@ -93,7 +94,7 @@ class Transfer::Creator
     existing_transfer = idempotency_key && find_existing_transfer
     raise StaleIdempotencyKeyError unless existing_transfer
 
-    existing_transfer
+    replayed(existing_transfer)
   end
 
   private
@@ -144,6 +145,14 @@ class Transfer::Creator
         transfer.derived_source_fee_amount == source_fee_amount &&
         transfer.derived_destination_fee_amount == destination_fee_amount &&
         transfer.outflow_transaction.tag_ids.sort == requested_tag_ids.sort
+    end
+
+    # The first request may have saved the transfer and then failed to schedule
+    # the sync (a queue outage), so a retry schedules it again; sync_later
+    # reuses a sync that is already waiting.
+    def replayed(transfer)
+      transfer.sync_account_later
+      transfer
     end
 
     def rate_looked_up?

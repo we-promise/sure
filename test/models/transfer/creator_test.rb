@@ -449,6 +449,40 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_nil pledge.matched_transaction_id
   end
 
+  test "a failure to schedule the account sync still reconciles the pledge of the saved transfer" do
+    pledge = goal_pledges(:open_transfer)
+    source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
+    Transfer.any_instance.stubs(:sync_account_later).raises(StandardError, "queue is down")
+
+    assert_difference "Transfer.count", 1 do
+      assert_raises(StandardError) do
+        Transfer::Creator.new(
+          family: @family, source_account_id: source.id, destination_account_id: pledge.account_id,
+          date: Date.current, amount: 200
+        ).create
+      end
+    end
+
+    assert_equal "matched", pledge.reload.status
+  end
+
+  test "a retry of a saved transfer schedules the account sync again" do
+    source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
+    attributes = {
+      family: @family, source_account_id: source.id, destination_account_id: @destination_account.id,
+      date: @date, amount: @amount, idempotency_key: SecureRandom.uuid
+    }
+    Transfer.any_instance.stubs(:sync_account_later).raises(StandardError, "queue is down")
+    assert_raises(StandardError) { Transfer::Creator.new(**attributes).create }
+
+    Transfer.any_instance.unstub(:sync_account_later)
+    Transfer.any_instance.expects(:sync_account_later).once
+
+    assert_no_difference "Transfer.count" do
+      Transfer::Creator.new(**attributes).create
+    end
+  end
+
   test "a reconcile failure does not undo the transfer" do
     pledge = goal_pledges(:open_transfer)
     source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)

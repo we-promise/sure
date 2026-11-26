@@ -11338,8 +11338,10 @@ paths:
                       type: string
                       format: uuid
                       nullable: true
-                      description: Makes retries safe. Reusing it with different values
-                        returns 409.
+                      description: 'Makes retries safe. Reusing it with different
+                        values returns 409, but only for the same from_account_id:
+                        a key is matched within its source account, so the same key
+                        with another source account makes a separate transfer.'
                   required:
                   - from_account_id
                   - to_account_id
