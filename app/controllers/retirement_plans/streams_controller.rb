@@ -21,8 +21,14 @@ class RetirementPlans::StreamsController < ApplicationController
   def edit
   end
 
+  # A seeded stream given another type is no longer today's spending, which
+  # the contribution already nets before retirement: it becomes the user's
+  # own line, counted from its start year.
   def update
-    if @stream.update(stream_params)
+    @stream.assign_attributes(stream_params)
+    @stream.source = "manual" if @stream.kind_changed?
+
+    if @stream.save
       saved
     else
       render :edit, status: :unprocessable_entity

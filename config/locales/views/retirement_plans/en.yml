@@ -50,6 +50,7 @@ en:
         other: "%{count} accounts are left out of the plan because they have no exchange rate for today."
       streams: Spending and income
       add_stream: Add
+      streams_explainer: These lines drive your plan year by year. Your financial independence number is worked out from your spending over the last 12 months, so changing a line here moves the plan but not that number.
       no_streams: Nothing added yet. Your living costs and loan repayments are added the first time you save your settings.
       columns:
         name: Name

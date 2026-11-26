@@ -258,9 +258,11 @@ class RetirementPlan < ApplicationRecord
 
     # Two spending figures, on purpose. The contribution before retirement is
     # #projection's: income less the median month over all history, without
-    # contributions, loan payments in. Living costs after it are the seeded
-    # stream, from #annual_living_costs, the figure the FI number is built
-    # from (each loan seeds its own stream). Not a mismatch to reconcile.
+    # contributions, loan payments in. Spending after it is the streams. The
+    # living-costs stream is seeded once from #annual_living_costs, the
+    # figure the FI number is built from, but the user can change or delete
+    # it and the FI number keeps following the last 12 months' spending. The
+    # planner says so beside the streams.
     def simulation_inputs(as_of:)
       {
         as_of: as_of,
