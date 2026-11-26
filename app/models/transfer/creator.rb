@@ -119,14 +119,17 @@ class Transfer::Creator
     # exchange_rate or fee would otherwise be reported as "success" while
     # silently keeping the old inflow amount and fee entries.
     #
-    # inflow_converted_amount re-applies the current request's exchange_rate
-    # (or re-fetches the rate for the same date, which is cached/stable) to
+    # inflow_converted_amount re-applies the request's exchange_rate to
     # compare against what's actually persisted, rather than trying to
     # recover the original request's exchange_rate from stored state (it
     # isn't persisted anywhere - only its effect on the inflow amount is).
-    # A rate that's no longer available on retry means this isn't a
-    # same-request retry either, so treat that as a mismatch too and let the
-    # normal create path surface the real Money::ConversionError.
+    # Between two currencies, a request that names no rate asked for whatever
+    # rate the lookup gave at the time, which is not stored either, and the
+    # rates can change before a retry (a later import adds the exact day), so
+    # the inflow is not compared then. That also lets such a retry replay a
+    # transfer made with an explicit rate: omitted means "as it was", the same
+    # as an omitted date. Accounts, date, outflow amount, fees and tags still
+    # have to match.
     def matches_request?(transfer)
       outflow_entry = transfer.outflow_transaction.entry
       inflow_entry = transfer.inflow_transaction.entry
@@ -137,12 +140,14 @@ class Transfer::Creator
         outflow_entry.date == matching_date &&
         outflow_entry.amount == amount &&
         # The stored amount is rounded to numeric(19, 4); the converted amount is not.
-        inflow_entry.amount == inflow_converted_amount(matching_date).round(4) * -1 &&
+        (rate_looked_up? || inflow_entry.amount == inflow_converted_amount(matching_date).round(4) * -1) &&
         transfer.derived_source_fee_amount == source_fee_amount &&
         transfer.derived_destination_fee_amount == destination_fee_amount &&
         transfer.outflow_transaction.tag_ids.sort == requested_tag_ids.sort
-    rescue Money::ConversionError
-      false
+    end
+
+    def rate_looked_up?
+      exchange_rate.nil? && source_account.currency != destination_account.currency
     end
 
     # Every leg gets a role-specific suffix except the outflow (find_existing_transfer

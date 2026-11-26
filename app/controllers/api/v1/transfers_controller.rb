@@ -12,7 +12,9 @@ class Api::V1::TransfersController < Api::V1::BaseController
   private_constant :InvalidParam
 
   # Ruby also reads "1_000" as 1000, so the shape is checked before converting.
-  NUMBER_FORMAT = /\A[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\z/
+  # An exponent has at most 4 digits: a longer one can underflow to 0 or ask
+  # for a number with millions of digits.
+  NUMBER_FORMAT = /\A[+-]?(\d+(\.\d+)?|\.\d+)([eE][+-]?\d{1,4})?\z/
   private_constant :NUMBER_FORMAT
 
   before_action :ensure_read_scope, only: [ :index, :show ]
@@ -97,9 +99,12 @@ class Api::V1::TransfersController < Api::V1::BaseController
 
     # The raw request, checked to be an object. Nothing goes through `permit`,
     # which would drop an array or object from a one-value field without a word.
+    # Missing is null, "" or {} (Rails wraps an empty JSON body as {}); anything
+    # else that is not an object, an empty array included, is the wrong type.
     def transfer_params
       @transfer_params ||= begin
-        transfer = params.require(:transfer)
+        transfer = params[:transfer]
+        raise ActionController::ParameterMissing, :transfer if omitted?(transfer) || (transfer.is_a?(ActionController::Parameters) && transfer.empty?)
         raise InvalidParam, "transfer must be an object" unless transfer.is_a?(ActionController::Parameters)
 
         transfer
@@ -108,7 +113,7 @@ class Api::V1::TransfersController < Api::V1::BaseController
 
     # null and "" both mean the field was left out.
     def omitted?(raw)
-      raw.to_s.strip.empty?
+      raw.nil? || (raw.is_a?(String) && raw.strip.empty?)
     end
 
     # A finite decimal within numeric(19, 4), or nil when the param is absent

@@ -11219,8 +11219,9 @@ paths:
         its field has: ids and the key as UUID strings, amounts as numbers or numeric
         strings, the date as `YYYY-MM-DD`. A value of the wrong type, such as an array
         or a boolean, is rejected with a 422 instead of being ignored; null means
-        the field was not sent. A number with more than 15 digits has to be sent as
-        a string, because a JSON number cannot carry it exactly.'
+        the field was not sent (so does an empty string for an amount, a rate or the
+        date, but not for an id or the idempotency_key). A number with more than 15
+        digits has to be sent as a string, because a JSON number cannot carry it exactly.'
       parameters: []
       responses:
         '201':
@@ -11289,27 +11290,46 @@ paths:
                       format: uuid
                       description: Destination account (required)
                     amount:
-                      type: number
-                      description: Positive amount with at most 4 decimal places,
-                        in the source account's currency (required)
+                      oneOf:
+                      - type: number
+                      - type: string
+                      description: Positive amount, as a number or a numeric string
+                        with at most 4 decimal places, in the source account's currency
+                        (required)
                     date:
                       type: string
                       format: date
+                      nullable: true
                       description: Defaults to today. A retry with an idempotency_key
                         that leaves the date out matches the transfer made on an earlier
                         day.
                     exchange_rate:
-                      type: number
+                      anyOf:
+                      - type: number
+                        nullable: true
+                      - type: string
+                        nullable: true
                       description: Greater than 0. Source-to-destination rate. Only
-                        for accounts in different currencies; refused otherwise
+                        for accounts in different currencies; refused otherwise. A
+                        retry that leaves it out matches the transfer whichever rate
+                        it used.
                     source_fee_amount:
-                      type: number
+                      anyOf:
+                      - type: number
+                        nullable: true
+                      - type: string
+                        nullable: true
                       description: Zero or more, at most 4 decimal places
                     destination_fee_amount:
-                      type: number
+                      anyOf:
+                      - type: number
+                        nullable: true
+                      - type: string
+                        nullable: true
                       description: Zero or more, at most 4 decimal places
                     tag_ids:
                       type: array
+                      nullable: true
                       items:
                         type: string
                         format: uuid
@@ -11317,6 +11337,7 @@ paths:
                     idempotency_key:
                       type: string
                       format: uuid
+                      nullable: true
                       description: Makes retries safe. Reusing it with different values
                         returns 409.
                   required:

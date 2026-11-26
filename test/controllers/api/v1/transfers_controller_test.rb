@@ -307,7 +307,7 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
   # that is almost right.
   WRONG_SHAPES = {
     uuid: [ [ "x" ], { "a" => "b" }, false, "", "not-a-uuid" ],
-    number: [ [ 1 ], false, "12abc", "1_000", 12345678901234.1234 ],
+    number: [ [ 1 ], false, "12abc", "1_000", 12345678901234.1234, "1e-99999999999999999999", "1e-1000000000" ],
     date: [ "2024-13-45", "2024-1-5", 20240120, [ "2024-01-20" ], false ],
     tag_ids: [ "x", { "a" => "b" }, [ "not-a-uuid" ], [ 5 ] ]
   }.freeze
@@ -394,11 +394,16 @@ class Api::V1::TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "create answers a missing transfer with 400 and a non-object transfer with 422" do
+  test "create answers a missing transfer with 400 and a wrong-typed transfer with 422" do
     post api_v1_transfers_url, params: {}, headers: api_headers(write_api_key), as: :json
     assert_response :bad_request
 
-    [ "foo", [ 1 ] ].each do |transfer|
+    [ "", {}, nil ].each do |transfer|
+      post api_v1_transfers_url, params: { transfer: transfer }, headers: api_headers(write_api_key), as: :json
+      assert_response :bad_request, "transfer #{transfer.inspect}"
+    end
+
+    [ "foo", [ 1 ], [] ].each do |transfer|
       assert_no_difference "Transfer.count" do
         post api_v1_transfers_url, params: { transfer: transfer }, headers: api_headers(write_api_key), as: :json
       end
