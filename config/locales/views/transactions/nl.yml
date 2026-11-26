@@ -1,6 +1,11 @@
 ---
 nl:
   transactions:
+    bulk_deletions:
+      create:
+        part_transferred:
+          one: "1 gesplitste transactie is niet verwijderd: een deel ervan is gekoppeld als overboeking. Verwijder eerst die overboeking."
+          other: "%{count} gesplitste transacties zijn niet verwijderd: van elk is een deel gekoppeld als overboeking. Verwijder eerst die overboekingen."
     bulk_updates:
       new:
         cancel: "Annuleren"
