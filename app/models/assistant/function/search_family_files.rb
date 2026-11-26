@@ -4,6 +4,8 @@
 # embedding is an `embed.ai` call, traced and recorded like any other; OpenAI's store embeds the
 # query itself, inside its search API, so that path has no `embed.ai` event.
 class Assistant::Function::SearchFamilyFiles < Assistant::Function
+  self.ai_feature = :search_documents
+
   class << self
     def name
       "search_family_files"

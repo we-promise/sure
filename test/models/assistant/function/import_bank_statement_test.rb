@@ -26,6 +26,7 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     draft = @user.family.imports.find(result[:import_id])
     assert_equal "TransactionImport", draft.type
     assert_equal @import.id, draft.source_pdf_import_id
+    assert_equal @import.id, draft.source_import_id
     assert_equal [ "application/pdf" ], requests.sole.attachments.map(&:content_type)
   end
 
@@ -41,21 +42,48 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert_equal "PDF import not found", result[:error]
   end
 
-  test "a second extraction for the same statement does not leave another live draft" do
-    stub_ai(:extract_pdf, returns: statement)
+  test "a retry returns the derived import without extracting again" do
+    requests = stub_ai(:extract_pdf, returns: statement)
 
     first = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
     assert first[:success], first[:message]
+    assert_nil first[:already_imported]
     second = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
 
-    assert_not second[:success]
-    assert_equal "draft_already_exists", second[:error]
+    assert second[:success]
+    assert second[:already_imported]
     assert_equal first[:import_id], second[:import_id]
-    assert_match(/delete draft import/i, second[:message])
-    assert_match(/write access/i, second[:message])
-    assert_match(/delete draft import/i, second[:available_actions].sole)
-    assert_match(/draft_already_exists/, Assistant::Function::ImportBankStatement.description)
+    assert_equal 1, requests.size, "the retry must not call the model"
     assert_equal 1, @user.family.imports.where(type: "TransactionImport", source_pdf_import_id: @import.id).count
+  end
+
+  test "the same statement for another account is an error, not the first account's import" do
+    stub_ai(:extract_pdf, returns: statement)
+    first = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+    draft = Import.find(first[:import_id])
+
+    result = @fn.call("pdf_import_id" => @import.id, "account_id" => accounts(:credit_card).id)
+
+    assert_not result[:success]
+    assert_equal "account_mismatch", result[:error]
+    assert_equal draft.id, result[:import_id]
+    assert_equal draft.id, @import.reload.derived_import.id, "the first account still owns the draft"
+  end
+
+  test "a legacy draft without a source import still blocks another extraction" do
+    Ai::PdfReading.any_instance.expects(:extract).never
+    legacy = @user.family.imports.create!(
+      type: "TransactionImport", account: @account, source_pdf_import_id: @import.id, status: :pending
+    )
+
+    result = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert_not result[:success]
+    assert_equal "draft_already_exists", result[:error]
+    assert_equal legacy.id, result[:import_id]
+    assert_match(/delete draft import/i, result[:message])
+    assert_match(/write access/i, result[:message])
+    assert_match(/draft_already_exists/, Assistant::Function::ImportBankStatement.description)
   end
 
   test "a failed revert that restored entries still blocks another draft" do
