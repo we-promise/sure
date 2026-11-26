@@ -5,7 +5,7 @@ it:
       sign_out: Disconnetti
       setup: Configurazione
       preferences: Preferenze
-      goals: Obiettivi
+      tools: Strumenti/IA
       start: Inizia
     logout:
       sign_out: Disconnetti
@@ -38,17 +38,7 @@ it:
       currency: Valuta
       date_format: Formato data
       submit: Completa
-    goals:
-      title: Cosa ti porta qui?
-      subtitle: Seleziona uno o più obiettivi che hai nell'utilizzare %{product_name} come strumento di finanza personale.
-      unified_accounts: Vedere tutti i miei conti in un unico posto
-      cashflow: Capire i flussi di cassa e le spese
-      budgeting: Gestire piani finanziari e budget
-      partner: Gestire le finanze con un partner
-      investments: Monitorare gli investimenti
-      ai_insights: Usare l'AI per capire meglio le mie finanze
-      optimization: Analizzare e ottimizzare i conti
-      reduce_stress: Ridurre lo stress o l'ansia finanziaria
+    tools:
       submit: Avanti
     trial:
       title: Prova Sure per 45 giorni

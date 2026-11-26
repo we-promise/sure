@@ -59,9 +59,10 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
 
         It deletes the transaction's root ledger entry, which cascades to the
         transaction. It will not delete a split child transaction individually —
-        delete the split parent instead. Deleting a transfer leg also deletes
-        the transfer's fee transactions, so it is refused when a fee is in an
-        account the user cannot write.
+        delete the split parent instead. It will not delete a split while a part
+        of it is linked as a transfer; that transfer must be removed first.
+        Deleting a transfer leg also deletes the transfer's fee transactions, so
+        it is refused when a fee is in an account the user cannot write.
       INSTRUCTIONS
     end
   end
@@ -99,14 +100,18 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
   # a transfer with its fees), enqueues the post-delete account sync
   # (best-effort), and returns { success: true, deleted: true, transaction: }
   # (with an optional :warning if the sync could not be enqueued). Errors:
-  # not_found, split_child, transfer_spans_unwritable_account,
-  # preview_required, preview_stale, delete_aborted.
+  # not_found, split_child, split_part_transferred,
+  # transfer_spans_unwritable_account, preview_required, preview_stale,
+  # delete_aborted.
   def call(params = {})
     transaction = find_transaction(params["id"], params["account_id"])
     return error("not_found", "No transaction with id '#{params["id"]}' in an account you can write to.") unless transaction
 
     entry = transaction.entry
     return error("split_child", "Split child transactions cannot be deleted individually. Delete the split parent instead.") if entry.split_child?
+    # Refused before the preview so the user is never asked to confirm a delete
+    # that would be refused; destroy_entry checks again under the split lock.
+    return split_part_transferred_error if entry.split_parent? && entry.split_part_transferred?
     return unwritable_fee_error if unwritable_fees?(transaction.transfer)
 
     # The preview is both what the user confirms and the deleted record in the
@@ -127,8 +132,9 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     def destroy_entry(entry, snapshot)
       # Entry is the delegated_type root record; destroy! cascades to the
       # Transaction child (delegated_type ... dependent: :destroy). This is the
-      # exact record the native destroy action destroys.
-      entry.destroy!
+      # exact record and the same refusal as the native destroy action: a
+      # split whose part is a transfer leg is not deleted.
+      entry.destroy_unless_split_part_transferred!
 
       {
         success: true,
@@ -136,12 +142,18 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
         transaction: snapshot,
         message: "Deleted #{snapshot[:name]} (#{snapshot[:amount_formatted]} on #{snapshot[:date]})."
       }
+    rescue Entry::SplitPartTransferredError
+      split_part_transferred_error
     rescue ActiveRecord::RecordNotDestroyed
       # A before_destroy guard aborted the destroy (e.g. a split child that
       # slipped past the pre-check, or another constraint). `throw :abort` in
       # a before_destroy makes destroy! raise RecordNotDestroyed — the record
       # was NOT deleted.
       error("delete_aborted", "Deletion was aborted by a record constraint; the transaction was not deleted.")
+    end
+
+    def split_part_transferred_error
+      error("split_part_transferred", "A part of this split is linked as a transfer. Remove that transfer before you delete the transaction.")
     end
 
     # Recalculates the account balance/sync window after the delete commits.
