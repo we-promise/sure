@@ -19,7 +19,10 @@ class LoanOverviewTest < ApplicationSystemTestCase
   test "switching back to fixed retains both payment amounts" do
     @account.loan.update!(contracted_payment: 2_500, balloon_payment: 50_000)
     visit account_path(@account)
-    find("a[href='#{edit_account_path(@account)}']", visible: :all).execute_script("this.click()")
+    within "[data-testid='account-menu']" do
+      find("button[aria-haspopup='menu']").click
+      find("a[href='#{edit_account_path(@account)}']").click
+    end
 
     within "dialog[open]" do
       amounts = "[data-loan-rate-changes-target='fixedOnly']"
