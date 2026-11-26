@@ -81,8 +81,6 @@ module Family::VectorSearchable
     max_results ? allowed.first(max_results) : allowed
   end
 
-  # Keeps an uploaded file on a pending row until IndexFamilyDocumentJob has sent it to the store.
-  # A job argument can't carry the bytes, so the browser hands the whole file to the model here.
   def upload_document_later(file)
     filename = file.original_filename.to_s
     content_type = file.content_type.presence || Marcel::MimeType.for(name: filename)
@@ -107,8 +105,6 @@ module Family::VectorSearchable
     index_document(document, file_content:)
   end
 
-  # Sends bytes to the store and writes the outcome on the row, whether the caller just built that
-  # row or a job is indexing one it already holds.
   def index_document(document, file_content:)
     adapter = vector_store_adapter
     return nil unless adapter

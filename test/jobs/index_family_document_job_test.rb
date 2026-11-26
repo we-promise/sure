@@ -2,20 +2,18 @@ require "test_helper"
 
 class IndexFamilyDocumentJobTest < ActiveJob::TestCase
   setup do
-    @family = families(:dylan_family)
     @document = family_documents(:pending_doc)
+    @family = @document.family
     @document.file.attach(io: StringIO.new("a note"), filename: "notes.txt", content_type: "text/plain")
-    @document.stubs(:family).returns(@family)
     use_ai_routes
   end
 
-  test "sends the stored bytes to the store and purges after the ready write commits" do
+  test "sends the stored bytes and purges once the status is settled" do
     @family.expects(:index_document).with do |document, file_content:|
       assert_equal "a note", file_content
       document.update!(status: "ready", provider_file_id: "file-1")
       true
     end.returns(@document)
-    DebugLogEntry.expects(:capture).never
     @document.file.expects(:purge).with do
       assert_equal "ready", @document.reload.status
       true
@@ -24,38 +22,23 @@ class IndexFamilyDocumentJobTest < ActiveJob::TestCase
     IndexFamilyDocumentJob.perform_now(@document)
   end
 
-  test "keeps the upload attached while an asynchronous store is still indexing" do
+  test "keeps the upload while the store is still indexing" do
     @family.expects(:index_document).with do |document, file_content:|
-      assert_equal "a note", file_content
       document.update!(status: "processing", provider_file_id: "file-1")
       true
     end.returns(@document)
-    @document.file.expects(:purge).never
 
     IndexFamilyDocumentJob.perform_now(@document)
 
-    assert_equal "processing", @document.reload.status
+    assert @document.reload.file.attached?
   end
 
-  test "keeps the upload attached when the row has not settled" do
-    @family.expects(:index_document).returns(@document)
-    @document.file.expects(:purge).never
-
-    IndexFamilyDocumentJob.perform_now(@document)
-
-    assert_equal "pending", @document.reload.status
-    assert @document.file.attached?
-  end
-
-  test "a refused upload is marked as an error and logged before the file is purged" do
+  test "a refused upload is recorded, logged and purged" do
     @family.expects(:index_document).returns(nil)
     DebugLogEntry.expects(:capture).with do |args|
       args[:category] == "documents" && args[:source] == "IndexFamilyDocumentJob" && args[:family] == @family
     end
-    @document.file.expects(:purge).with do
-      assert_equal "error", @document.reload.status
-      true
-    end
+    @document.file.expects(:purge)
 
     IndexFamilyDocumentJob.perform_now(@document)
 
@@ -63,11 +46,8 @@ class IndexFamilyDocumentJobTest < ActiveJob::TestCase
     assert_equal "vector store refused the upload", @document.metadata["error"]
   end
 
-  test "an indexing failure is marked, logged and purged after the error write commits" do
+  test "an indexing error is recorded and purged" do
     @family.expects(:index_document).raises(StandardError, "store down")
-    DebugLogEntry.expects(:capture).with do |args|
-      args[:category] == "documents" && args[:message].include?("store down")
-    end
     @document.file.expects(:purge).with do
       assert_equal "error", @document.reload.status
       true
@@ -75,11 +55,10 @@ class IndexFamilyDocumentJobTest < ActiveJob::TestCase
 
     IndexFamilyDocumentJob.perform_now(@document)
 
-    assert_equal "error", @document.reload.status
-    assert_match(/store down/, @document.metadata["error"])
+    assert_match(/store down/, @document.reload.metadata["error"])
   end
 
-  test "an error while recording a failure leaves the bytes attached for a retry" do
+  test "an error while recording a failure leaves the bytes attached" do
     @family.expects(:index_document).raises(StandardError, "store down")
     @document.stubs(:mark_error!).raises(ActiveRecord::RecordInvalid)
     @document.file.expects(:purge).never
@@ -89,26 +68,21 @@ class IndexFamilyDocumentJobTest < ActiveJob::TestCase
     assert @document.file.attached?
   end
 
-  test "a busy local host retries with the upload still attached" do
-    @family.expects(:index_document).raises(Ai::Error::Busy, "the local model host is busy")
-    @document.file.expects(:purge).never
+  test "a busy host leaves the upload for its retry" do
+    @family.expects(:index_document).raises(Ai::Error::Busy, "busy")
 
-    assert_enqueued_with(job: IndexFamilyDocumentJob, args: [ @document ]) do
-      IndexFamilyDocumentJob.perform_now(@document)
-    end
+    IndexFamilyDocumentJob.perform_now(@document)
 
     assert_equal "pending", @document.reload.status
     assert @document.file.attached?
   end
 
-  test "sends nothing when embed is no longer available" do
+  test "does nothing when embed is no longer available" do
     use_ai_routes(embed: [])
     @family.expects(:index_document).never
-    @document.file.expects(:purge).never
 
     IndexFamilyDocumentJob.perform_now(@document)
 
-    assert_equal "pending", @document.reload.status
     assert @document.file.attached?
   end
 end

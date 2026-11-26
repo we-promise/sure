@@ -82,9 +82,10 @@ class FamilyDocument < ApplicationRecord
     update!(status: "error", metadata: (metadata || {}).merge("error" => error_message))
   end
 
-  # Called after the status write commits, so a retry before that write still has the bytes.
-  def purge_file
-    return false unless file.attached?
+  # A retry before the terminal status commits must still find the bytes; a poll keeps them until
+  # the store reports a settled status.
+  def purge_file_if_settled
+    return false unless file.attached? && status.in?(%w[ready unreadable error])
 
     file.purge
     true
