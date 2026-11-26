@@ -256,6 +256,10 @@ Pull request [#2811](https://github.com/we-promise/sure/pull/2811), which is sti
 
 Run `docker compose up -d` after changing `compose.yml` or `.env`. It recreates the containers whose settings changed. `docker compose restart` keeps the old environment, so new settings do not take effect.
 
+During a restore or encryption-key change, use the
+[recovery startup sequence](#verify-recovery-before-resuming-services) instead;
+do not use this all-services command before recovery verification.
+
 To check what the worker sees, without printing the password:
 
 ```bash
@@ -685,10 +689,10 @@ manual path's final verification; do not put it in `.env` or the service configu
 **Choose the startup path before starting services:** if the Active Record
 conversion has succeeded (or its independent keys were preserved), and the settings
 write reports `"ok":true` with an empty `not_decryptable` list, unset
-`OLD_SECRET_KEY_BASE`, then run `docker compose up -d` with the SSO access restrictions still in place, and check
-sign-in, MFA, provider connections, and the recorded SSO blocks before restoring
-normal access. If settings
-need re-entry, do not run that all-services command; use the manual path instead.
+`OLD_SECRET_KEY_BASE` and follow
+[Verify recovery before resuming services](#verify-recovery-before-resuming-services).
+Keep workers stopped through that verification. If settings need re-entry, use
+the manual path below first; do not start all services.
 
 #### Manual settings recovery
 
@@ -696,13 +700,14 @@ Use this path only after the Active Record data is readable with the current key
 and any required Active Record conversion succeeded. It handles settings recovery,
 not unreadable user records, lost Active Record keys, or a failed backfill.
 
-Keep `worker` and other writers stopped. Restrict web access to the administrator
-performing the recovery and avoid normal app use until the settings are verified.
-Start only `web`; the sample Compose file also starts its database and Redis
-dependencies, but not `worker`:
+Keep `worker` and other writers stopped. Before starting `web`, apply the
+administrator-only access restrictions in
+[Verify recovery before resuming services](#verify-recovery-before-resuming-services)
+and avoid normal app use until the settings are verified. Keep the database and
+Redis running. Start only `web`, without starting dependencies:
 
 ```bash
-docker compose up -d web
+docker compose up -d --no-deps web
 ```
 
 Sign in as an administrator with access to the self-hosting settings. Re-enter each
@@ -724,19 +729,66 @@ Before starting workers, require `"ok":true`, `"dry_run":true`,
 an empty `not_decryptable` list, and only `current` or `not_stored` entries. If any
 `would_reencrypt` entries remain, stop `web` again and return to the settings
 conversion before resuming. For any other unresolved result, keep workers stopped
-and investigate; do not change the current secret again. Unset the temporary
-variable, then start the worker only after the settings are saved and checked:
+and investigate; do not change the current secret again. Only after that final
+dry run succeeds, unset the temporary variable:
 
 ```bash
 unset OLD_SECRET_KEY_BASE
-docker compose up -d worker
 ```
 
-Check sign-in, MFA, provider connections, and the recorded SSO blocks before
-restoring normal access and any other writers you stopped. Re-establish affected
-blocks as described in the encryption guide; retain identity-provider restrictions
-if a legacy block cannot be verified. If recovery cannot be completed, keep
-writers stopped and use [Restoring after an interrupted rotation](#restoring-after-an-interrupted-rotation).
+Keep `web` restricted and `worker` stopped, then complete
+[Verify recovery before resuming services](#verify-recovery-before-resuming-services).
+If recovery cannot be completed, keep writers stopped and use
+[Restoring after an interrupted rotation](#restoring-after-an-interrupted-rotation).
+
+#### Verify recovery before resuming services
+
+Use this sequence after a restore, encryption conversion, key switch or settings
+recovery. Do not run an all-services `docker compose up -d` or a script's printed
+startup chain to resume a recovering instance.
+
+1. Keep `worker` and all other writers stopped. Before starting `web`, complete
+   any database and local/external-upload restore. Confirm the image,
+   configuration and effective keys match the data now in the target. After a
+   successful conversion, retain the converted keys; do not restore the
+   pre-conversion configuration onto converted data. Require the successful
+   conversion reports specified by the procedure you followed. If settings still need re-entry, use
+   [Manual settings recovery](#manual-settings-recovery) under the restrictions
+   below, then return here after its final verification. A readable rollback with
+   unchanged secrets does not need a settings-secret rotation.
+2. **Apply access restrictions before starting `web`.** Allow only the recovery
+   administrator through the reverse proxy/firewall or a private tunnel, and
+   block other routes to the published Docker port, including IPv6 if enabled.
+   `ALLOWED_HOSTS` and CORS settings are not administrator authentication. Keep
+   affected SSO identities denied at the identity provider until their blocks
+   are verified or re-established. Confirm these restrictions cover the recovered
+   target, not just the original instance.
+3. Keep the database and Redis running, and start only the web service. The
+   `--no-deps` option prevents custom Compose dependencies from starting workers:
+
+   ```bash
+   docker compose up -d --no-deps web
+   ```
+
+4. With normal access still restricted, check sign-in, configured MFA, provider
+   connections and the recorded SSO blocks. Confirm the app can read the restored
+   data without decryption errors. If a check fails, keep workers stopped and
+   access restricted; stop `web` before retrying a conversion or restore. Do not
+   change secrets again to bypass an error.
+5. Only after those checks succeed, resume workers and any other writers you
+   stopped, then restore normal access. For a separate restored copy, leave its
+   worker stopped while the original instance can still run workers or scheduled
+   jobs. Before promoting the copy to the active instance, stop the original
+   `web`, workers, scheduled jobs and any other writers. For the instance you
+   have verified and chosen to resume:
+
+   ```bash
+   docker compose up -d --no-deps worker
+   ```
+
+Do not remove identity-provider restrictions for any SSO block that remains
+unverified. If verification cannot be completed, keep the recovery restrictions
+and writers stopped rather than continuing with startup.
 
 #### Restoring after an interrupted rotation
 
@@ -770,9 +822,9 @@ Record keys cannot be recovered by restoring the same unreadable data.
 Keep previous-key variables and `OLD_SECRET_KEY_BASE` limited to the one-off
 conversion commands. If the restored snapshot still needs recovery, require the
 successful conversions and settings verification above before starting workers.
-For a known-readable rollback with all matching keys restored, start only `web`
-with administrator-only access, check sign-in, MFA, provider connections, and SSO
-blocks, then start `worker` and restore normal access. Do not run settings-secret
+For a known-readable rollback with all matching keys restored, follow
+[Verify recovery before resuming services](#verify-recovery-before-resuming-services),
+then resume workers and normal access only after its checks succeed. Do not run settings-secret
 rotation when the old and current secrets are the same; a readable rollback does
 not require another secret change.
 
@@ -880,15 +932,23 @@ docker compose --profile backup-offsite up -d backup-offsite
 
 ### Roll back an upgrade
 
+Stop all writers, including any separate web-only recovery session or custom
+writer services. Keep the database and Redis running for the restore:
+
 ```bash
 docker compose stop web worker
-docker compose run --rm backup restore 0.7.4/2026-10-01_080524-manual   # or "latest"
+docker compose run --rm --no-deps backup restore 0.7.4/2026-10-01_080524-manual   # or "latest"
 # Set SURE_IMAGE_TAG=0.7.4 in .env
-docker compose up -d
 ```
 
 `restore` replaces the database and local uploaded files; external uploads need
 their matching provider restore. It refuses while other clients are connected to the database, and asks you to type `restore` to confirm (pass `--yes` to skip in scripts).
+Stop on a restore error. After a successful restore, restore the matching image,
+configuration and keys, then follow
+[Verify recovery before resuming services](#verify-recovery-before-resuming-services).
+For an interrupted key rotation, choose the named backup and keys using
+[Restoring after an interrupted rotation](#restoring-after-an-interrupted-rotation)
+instead of choosing `latest`.
 
 ### Restore into a new folder or onto a new machine
 
@@ -915,7 +975,9 @@ It verifies the backup and asks for a folder for the restored instance (new or e
 
 The example above only prepares the folder. Inspect its configuration and finish
 the restore using [Preparing a separate recovery environment](#preparing-a-separate-recovery-environment)
-before starting services. Options such as `--target ~/sure-restored --port 3001`
+before starting services. Do not paste the printed startup chain: its final
+command starts `web` before the verification access restrictions are applied.
+Options such as `--target ~/sure-restored --port 3001`
 supply answers non-interactively; `--yes` skips confirmation prompts.
 
 > [!WARNING]
@@ -942,6 +1004,9 @@ For `recover` into a new folder, use the separate environment below instead of
 the source installation's exported Compose selection.
 
 The script finds your `web` container and runs itself once in a container from that exact image, with your uploaded-files volume, network and database settings. It reads the version from the image and checks it against the database, so no `--version` is needed. Backups go to `./backups`, or `BACKUP_DIR` from `.env`. `restore` refuses while `web` or `worker` is running.
+After a successful in-place restore, use
+[Verify recovery before resuming services](#verify-recovery-before-resuming-services)
+with the matching image, configuration and keys; stop on any restore error.
 
 To take a backup every day without the service, add a cron job on the host, for example `0 2 * * * cd /opt/sure && sh sure-backup scheduled`. That takes a backup and removes scheduled backups older than `BACKUP_KEEP_DAYS`.
 
@@ -1057,30 +1122,37 @@ and overrides, adapt the target copies and supply any missing files first. Keep
 the original backup unchanged. Validate the target's resolved configuration,
 including the `sure-backup` profile, and verify that its database,
 volumes, mounts, networks and external uploads cannot overwrite the source instance.
-Use the printed restore sequence with that reviewed target configuration. If you
-added custom Compose files, update the printed `COMPOSE_FILE` export as well;
+Use a separate Redis/queue endpoint as well; a restored copy must not enqueue or
+consume jobs in the source instance's queue.
+Do not execute the printed startup chain. Omit its final `docker compose up -d web`
+command (or `web worker` if the preparation was run without `--without-worker`);
+use the separate restore and verification steps below instead. If you added
+custom Compose files, update the target's `COMPOSE_FILE` selection as well;
 keep `compose.restore.yml` last to retain the pinned image and restore service.
 Do not overwrite the reviewed selection with an earlier, incomplete file list.
 
-If configuration validation failed before a restore sequence was printed, the
-prepared target still contains `compose.restore.yml`, `bin/sure-backup` and the
-copied backup. After fixing the target configuration and verifying the isolation
-checks above, continue from that target with the Compose overrides cleared.
+The same steps apply after successful preparation and after correcting a
+configuration-validation failure: the prepared target contains
+`compose.restore.yml`, `bin/sure-backup` and the copied backup. With the target
+configuration valid and the isolation checks above complete, continue from that
+target with the Compose overrides cleared. Keep `web`, `worker` and any other
+writers stopped; these commands start only the data services and restore data.
+`--no-deps` prevents custom dependencies from starting other services; `--wait`
+waits for the database and Redis health checks before the restore. Retain working
+health checks for both services in a customized Compose file.
 Replace the backup ID below with the copied backup's actual version/name:
 
 ```bash
 docker compose --profile sure-backup config --quiet &&
-  docker compose up -d db redis &&
-  docker compose run --rm -e SURE_RECOVER=1 sure-backup restore 0.7.6/2026-10-27_111135-manual --yes
+  docker compose up -d --no-deps --wait db redis &&
+  docker compose run --rm --no-deps -e SURE_RECOVER=1 sure-backup restore 0.7.6/2026-10-27_111135-manual --yes
 ```
 
-Stop on any error. Only after a successful restore and with the matching keys
-in place, start `web` alone (`docker compose up -d web`) under the access
-restrictions needed for verification; keep `worker` stopped.
-
-Use the matching keys and any
-[external-upload restore](#backup-and-restore-prerequisites). Keep the worker and
-normal access off until data and SSO checks succeed. Do not use new-folder recovery
+Stop on any error. After a successful restore, complete any matching
+[external-upload restore](#backup-and-restore-prerequisites) and confirm the keys
+before following [Verify recovery before resuming services](#verify-recovery-before-resuming-services).
+That sequence applies access restrictions before starting `web` and keeps
+workers stopped until verification succeeds. Do not use new-folder recovery
 as a substitute for the [interrupted-rotation recovery checks](#restoring-after-an-interrupted-rotation).
 
 ### Upgrading from the database-only backup service (v0.7.5)
@@ -1205,12 +1277,13 @@ Update Sure to a version that includes this guide first and let it start once, s
 
    The command must finish without an error, and the JSON report on its last line must show `"ok":true` and `"failed_count":0`. If it does not, keep writers stopped and investigate the per-table `failed_samples`. After fixing the cause, repeat the command. If you must restore, use the named backup from step 2 and the [backup-state-specific recovery guidance](#restoring-after-an-interrupted-rotation).
 
-5. Start the app with `docker compose up -d`, sign in, and open **Settings > Bank Sync** to check that your connections load.
+5. Follow [Verify recovery before resuming services](#verify-recovery-before-resuming-services): apply administrator-only access restrictions, start only `web`, check that your connections load in **Settings > Bank Sync**, and complete the remaining checks before starting workers.
 
 A clean write pass records the current backfill version. On the next boot, the
 initializer uses that record to disable legacy plaintext reads and query fallback.
 A dry run does not mark completion; a failed write leaves completion unset. Use the
-successful write report and restart both services to apply the result. Successful
+successful write report and the staged startup in step 5 to apply the result to
+both services. Successful
 sign-in alone, or setting `ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA=false`,
 is not proof of completion. The manifest in
 [`lib/active_record_encryption_config.rb`](../../lib/active_record_encryption_config.rb)
@@ -1264,7 +1337,7 @@ Update Sure to a version that includes this guide first and let it start once, s
 
    The command must finish without an error, and the JSON report on its last line must show `"ok":true` and `"failed_count":0`. If it does not, keep writers stopped and inspect the per-table `failed_samples`. Fix the cause before repeating the command with the same current and previous keys. If the conversion cannot be completed, undo the change as described below.
 
-6. Start the app with `docker compose up -d`, sign in, and open **Settings > Bank Sync** to check that your connections load.
+6. Follow [Verify recovery before resuming services](#verify-recovery-before-resuming-services): apply administrator-only access restrictions, start only `web`, check that your connections load in **Settings > Bank Sync**, and complete the remaining checks before starting workers.
 
 To undo the switch, stop `web` and `worker` and use the backup from step 2 by its name (not `latest`, which may be a newer scheduled backup taken with the keys). Follow [Restoring after an interrupted rotation](#restoring-after-an-interrupted-rotation) to pair it with the correct image, configuration, and keys. A backup taken after an accidental key change may already contain mixed-key data and still require recovery; do not restart until it is readable. Remove the three explicit keys only if the backed-up data does not require them. With the current backup service:
 

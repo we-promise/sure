@@ -13,6 +13,14 @@ Take a database backup before starting and stop the app (web and worker)
 for the duration. Docker users: the same steps with `docker compose`
 commands are in the [Docker guide](docker.md#upgrading-an-install-that-is-already-running-keep-your-secret_key_base).
 
+> [!IMPORTANT]
+> For Docker deployments, follow the complete Docker procedure rather than
+> substituting the generic startup steps below. Its
+> [recovery verification sequence](docker.md#verify-recovery-before-resuming-services)
+> requires administrator-only access restrictions before starting `web`, with
+> workers stopped until verification succeeds. This also applies when returning
+> here to identify previous keys or review what a secret change invalidates.
+
 ## Before you start: find the values in use
 
 You need the `SECRET_KEY_BASE` your data was encrypted with, and the three
