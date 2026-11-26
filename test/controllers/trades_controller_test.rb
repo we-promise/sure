@@ -1,7 +1,7 @@
 require "test_helper"
 
 class TradesControllerTest < ActionDispatch::IntegrationTest
-  include EntryableResourceInterfaceTest
+  include EntryableResourceInterfaceTest, EntriesTestHelper
   include GoalPledgeTestHelper
 
   setup do
@@ -22,6 +22,22 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     # picker further down the page.
     assert_select "span.text-secondary.text-sm", text: I18n.t("trades.header.transfer")
     assert_select "span.text-secondary.text-sm", text: I18n.t("trades.header.buy"), count: 0
+  end
+
+  # A quote in the listing's currency was shown and netted against the trade's
+  # price as if both were in the trade's currency. 10 bought at 180 EUR, quoted
+  # at 200 USD, USD->EUR 0.9: the position is worth what it cost.
+  test "the header converts a quote in another currency to the trade's" do
+    @entry.update!(amount: 1800, currency: "EUR")
+    @entry.trade.update!(qty: 10, price: 180, fee: 0, currency: "EUR")
+    Security.any_instance.stubs(:current_price).returns(Money.new(200, "USD"))
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    get trade_url(@entry)
+
+    assert_response :success
+    assert_select "dd", text: /#{Regexp.escape(Money.new(180, "EUR").format)}\s*\(#{Regexp.escape(Money.new(200, "USD").format)}\)/
+    assert_select "dd p", text: I18n.t("shared.trend_change.no_change")
   end
 
   test "the German header localizes supported provider activity labels" do
@@ -537,6 +553,41 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert @entry.protected_from_sync?, "Entry should be protected from sync"
   end
 
+  test "the drawer offers the lot choice only on a fifo sale" do
+    account, buy, sale = lot_choice_account
+    lot_select = "select[name='entry[entryable_attributes][lot_source_entry_id]']"
+
+    get trade_url(sale)
+    assert_select lot_select, count: 0
+
+    account.update!(cost_basis_method: "fifo")
+    get trade_url(sale)
+    assert_select "#{lot_select} option[value='#{buy.id}']", count: 1
+
+    get trade_url(buy)
+    assert_select lot_select, count: 0
+  end
+
+  test "naming a lot on a sale saves it and restates the account" do
+    account, buy, sale = lot_choice_account(method: "fifo")
+
+    patch trade_url(sale), params: { entry: { entryable_attributes: { id: sale.entryable_id, lot_source_entry_id: buy.id } } }
+
+    assert_redirected_to account_url(account)
+    assert_enqueued_with job: SyncJob
+    assert_equal buy.id, sale.trade.reload.lot_source_entry_id
+  end
+
+  test "naming another account's lot on a sale is refused" do
+    _account, _buy, sale = lot_choice_account(method: "fifo")
+    other = families(:empty).accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Investment.new, cost_basis_method: "fifo")
+    theirs = create_trade(sale.trade.security, account: other, qty: 5, price: 10, date: 3.days.ago.to_date)
+
+    patch trade_url(sale), params: { entry: { entryable_attributes: { id: sale.entryable_id, lot_source_entry_id: theirs.id } } }
+
+    assert_response :unprocessable_entity
+    assert_nil sale.trade.reload.lot_source_entry_id
+  end
 
   # we-promise/sure#4226: a deposit with no "from" account books a standalone
   # inflow on the investment account, which must resolve its pledge.
@@ -564,6 +615,15 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def lot_choice_account(method: "average")
+      account = accounts(:investment)
+      account.update!(cost_basis_method: method)
+      security = Security.create!(ticker: "LOTN", name: "LOTN")
+      buy = create_trade(security, account: account, qty: 40, price: 20, date: 3.days.ago.to_date)
+      sale = create_trade(security, account: account, qty: -10, price: 25, date: 1.day.ago.to_date)
+      [ account, buy, sale ]
+    end
+
     # family_member gets the investment account with full control; fixtures
     # already share depository with full control and credit_card read-only,
     # and leave connected private to family_admin.

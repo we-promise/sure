@@ -2,6 +2,11 @@
 zh-CN:
   settings:
     encryption_migration_guide: 加密配置与数据迁移指南
+    settings_search:
+      aria_label: 搜索设置
+      no_results: 没有与您搜索匹配的设置。
+      placeholder: 搜索设置
+      results_label: 匹配的设置
     settings_nav:
       accounts_label: 账户
       advanced_section_title: 高级

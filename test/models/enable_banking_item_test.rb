@@ -11,6 +11,19 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     )
   end
 
+  # The settings panel labels the field as a private key, so the validation
+  # message has to use the same name.
+  test "a missing private key is reported as a private key" do
+    @item.client_certificate = nil
+
+    assert_not @item.valid?(:create)
+    assert_includes @item.errors.full_messages, "Private key can't be blank"
+
+    I18n.with_locale(:de) do
+      assert_equal "Privater Schlüssel", EnableBankingItem.human_attribute_name(:client_certificate)
+    end
+  end
+
   test "select_auth_method prefers REDIRECT over DECOUPLED and EMBEDDED" do
     aspsp = {
       auth_methods: [
