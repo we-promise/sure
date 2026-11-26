@@ -30,6 +30,18 @@ class Provider::Binance
     signed_get("/api/v3/account")
   end
 
+  # Binance exposes this read-only wallet query as a signed POST.
+  def get_funding_account
+    params = timestamp_params
+    query = URI.encode_www_form(params.sort)
+    response = self.class.post(
+      "/sapi/v1/asset/get-funding-asset",
+      body: "#{query}&signature=#{sign(query)}",
+      headers: auth_headers.merge("Content-Type" => "application/x-www-form-urlencoded")
+    )
+    handle_response(response)
+  end
+
   # Margin account — requires signed request
   def get_margin_account
     signed_get("/sapi/v1/margin/account")
@@ -90,6 +102,13 @@ class Provider::Binance
     params["startTime"] = start_time.to_s if start_time
     params["endTime"] = end_time.to_s if end_time
     signed_get("/api/v3/myTrades", extra_params: params)
+  end
+
+  # Public aggregate trades from from_id, or the most recent ones without it.
+  def get_agg_trades(symbol, from_id: nil, limit: 1)
+    query = { symbol: symbol, limit: limit }
+    query[:fromId] = from_id if from_id
+    handle_response(self.class.get("/api/v3/aggTrades", query: query))
   end
 
   # USDⓈ-M Futures account — requires signed request

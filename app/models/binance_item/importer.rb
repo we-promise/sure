@@ -22,8 +22,9 @@ class BinanceItem::Importer
     margin_result = BinanceItem::MarginImporter.new(binance_item, provider: binance_provider).import
     earn_result   = BinanceItem::EarnImporter.new(binance_item, provider: binance_provider).import
     futures_result = BinanceItem::FuturesImporter.new(binance_item, provider: binance_provider).import
+    funding_result = BinanceItem::FundingImporter.new(binance_item, provider: binance_provider).import
 
-    results = [ spot_result, margin_result, earn_result, futures_result ]
+    results = [ spot_result, margin_result, earn_result, futures_result, funding_result ]
     all_assets = results.flat_map { |result| tagged_assets(result) }
 
     if results.all? { |result| result[:error].present? }
@@ -45,15 +46,18 @@ class BinanceItem::Importer
       return { success: true, assets_imported: 0, total_usd: 0 }
     end
 
-    total_usd = calculate_total_usd(all_assets)
+    quotes = quote_assets(all_assets)
+    total_usd = calculate_total_usd(all_assets, quotes)
 
     upsert_binance_account(
       all_assets: all_assets,
       total_usd: total_usd,
+      quotes: quotes,
       spot_raw: spot_result[:raw],
       margin_raw: margin_result[:raw],
       earn_raw: earn_result[:raw],
-      futures_raw: futures_result[:raw]
+      futures_raw: futures_result[:raw],
+      funding_raw: funding_result[:raw]
     )
 
     binance_item.upsert_binance_snapshot!({
@@ -61,6 +65,7 @@ class BinanceItem::Importer
       "margin" => margin_result[:raw],
       "earn" => earn_result[:raw],
       "futures" => futures_result[:raw],
+      "funding" => funding_result[:raw],
       "imported_at" => Time.current.iso8601
     })
 
@@ -119,27 +124,30 @@ class BinanceItem::Importer
       )
     end
 
-    def calculate_total_usd(assets)
+    # The holdings processor values each holding with these same quotes, so the
+    # account total and its holdings agree even when a quote had to be reused.
+    def quote_assets(assets)
+      previous = binance_item.binance_accounts.find_by(account_type: "combined")&.raw_payload&.dig("quotes")
+      pricer = BinanceAccount::AssetPricer.new(binance_provider, previous_quotes: previous || {})
+
+      assets.filter_map { |asset| asset[:symbol] if asset[:total].to_d.nonzero? }.uniq.each_with_object({}) do |symbol, quotes|
+        quote = pricer.quote(symbol)
+        quotes[symbol] = quote if quote
+      rescue StandardError => e
+        Rails.logger.warn "BinanceItem::Importer - could not get price for #{symbol}: #{e.message}"
+      end
+    end
+
+    def calculate_total_usd(assets, quotes)
       assets.sum do |asset|
         quantity = asset[:total].to_d
         next 0 if quantity.zero?
 
-        price = price_for(asset[:symbol])
-        quantity * price
+        quantity * quotes.dig(asset[:symbol], "price_usd").to_d
       end.round(2)
     end
 
-    def price_for(symbol)
-      return 1.0 if BinanceAccount::STABLECOINS.include?(symbol)
-
-      price = binance_provider.get_spot_price("#{symbol}USDT")
-      price.to_d
-    rescue => e
-      Rails.logger.warn "BinanceItem::Importer - could not get price for #{symbol}: #{e.message}"
-      0
-    end
-
-    def upsert_binance_account(all_assets:, total_usd:, spot_raw:, margin_raw:, earn_raw:, futures_raw:)
+    def upsert_binance_account(all_assets:, total_usd:, quotes:, spot_raw:, margin_raw:, earn_raw:, futures_raw:, funding_raw:)
       ba = binance_item.binance_accounts.find_or_initialize_by(account_type: "combined")
 
       ba.assign_attributes(
@@ -152,7 +160,9 @@ class BinanceItem::Importer
           "margin" => margin_raw,
           "earn" => earn_raw,
           "futures" => futures_raw,
+          "funding" => funding_raw,
           "assets" => all_assets.map(&:stringify_keys),
+          "quotes" => quotes,
           "fetched_at" => Time.current.iso8601
         }
       )
@@ -162,7 +172,7 @@ class BinanceItem::Importer
     end
 
     def build_institution_metadata(all_assets)
-      %w[spot margin earn futures].each_with_object({}) do |source, hash|
+      %w[spot margin earn futures funding].each_with_object({}) do |source, hash|
         source_assets = all_assets.select { |a| a[:source] == source }
         hash[source] = {
           "asset_count" => source_assets.size,
