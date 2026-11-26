@@ -4,8 +4,23 @@ pt-BR:
     entries:
       destroy:
         success: Lançamento excluído com sucesso.
+        part_transferred: Uma parte desta divisão está vinculada como transferência. Remova essa transferência antes de excluir a transação.
   accounts:
+    reconciliation_indicator:
+      matched: Todas as transações conciliadas
+      needs_attention: Há transações a conciliar
     not_authorized: Você não tem permissão para gerenciar esta conta
+    reconcile_all:
+      success:
+        one: "%{count} transação marcada como %{status}."
+        other: "%{count} transações marcadas como %{status}."
+      invalid_status: Escolha um status de conciliação válido.
+      not_manual_account: A conciliação em massa só está disponível para contas inseridas manualmente.
+    scheduled_balance_tooltip:
+      description: Seu saldo depois que todas as transações agendadas forem lançadas
+      current: Saldo atual
+      scheduled: Agendadas
+      projected: Saldo projetado
     account:
       complete_setup: Concluir configuração
       edit: Editar
@@ -28,6 +43,36 @@ pt-BR:
       data_not_available: Dados não disponíveis para o período selecionado
     create:
       success: "Conta %{type} criada"
+    logo_caption:
+      appstore: Da App Store
+      brandfetch: Do Brandfetch
+      duckduckgo: Do DuckDuckGo
+      google: Do Google
+      googleplay: Do Google Play
+      none: Ainda sem ícone
+      rustore: Da RuStore
+      uploaded: Enviado por você
+      yandex: Do Yandex
+    logo_field:
+      current: atual
+      domain_needed: Informe o domínio da instituição, como bb.com.br, para escolher um ícone.
+      empty: Nenhum ícone encontrado para este domínio. Envie o seu abaixo.
+      pick: Escolher ícone
+      pending: Aplicado ao salvar
+      remove: Remover
+      removal: Removido ao salvar; o ícone automático volta
+      searching: Buscando…
+    logo_options:
+      size: "%{size} px"
+      sources:
+        appstore: App Store
+        brandfetch: Brandfetch
+        duckduckgo: DuckDuckGo
+        google: Google
+        googleplay: Google Play
+        rustore: RuStore
+        yandex: Yandex
+      stored: Ícone salvo
     set_default:
       depository_only: Somente contas bancárias e de cartão de crédito podem ser definidas como padrão.
     destroy:
@@ -48,11 +93,21 @@ pt-BR:
       institution_name_placeholder: "ex.: Banco do Brasil"
       institution_domain_label: Domínio da instituição
       institution_domain_placeholder: "ex.: bb.com.br"
+      institution_domain_hint: Usado para encontrar o ícone da instituição.
+      institution_domain_missing_logo_key_hint: Usado para encontrar o ícone da instituição. Os logotipos do Brandfetch não estão disponíveis porque nenhum Client ID do Brandfetch está configurado.
+      institution_domain_settings_link: Adicione um nas configurações de auto-hospedagem
+      logo_label: Ícone
+      logo_hint: Ou envie sua própria imagem PNG, JPEG, GIF, WebP ou ICO de até 1 MB. Ela substitui o logotipo do Brandfetch.
       notes_label: Observações
       notes_placeholder: Guarde informações adicionais, como número da conta, agência, IBAN, chave Pix etc.
       exclude_from_reports: Desconsiderar em todos os relatórios
       enable_category_matcher_label: Ativar sugestão automática de categoria
       enable_category_matcher_hint: Quando ativada, a categoria sugerida pelo provedor é aplicada às transações importadas. Desative para deixar as novas transações sem categoria.
+      cost_basis_method_label: Método de custo de aquisição
+      cost_basis_method_hint: Define como uma venda é associada às ações de onde ela saiu. Alterá-lo recalcula os ganhos realizados anteriores e o custo médio do que você possui. Uma venda de ações com custo desconhecido mostra o ganho como desconhecido.
+      cost_basis_methods:
+        average: Custo médio
+        fifo: Primeiro a entrar, primeiro a sair (FIFO)
     index:
       accounts: Contas
       financekit_accounts:
@@ -96,6 +151,7 @@ pt-BR:
       limited_fx_history_warning: O histórico de taxas de câmbio só está disponível a partir de %{date}. Transações anteriores a essa data usam conversões de moeda aproximadas — isso pode acontecer quando o provedor de câmbio oferece apenas um período histórico limitado.
       tabs:
         activity: Atividade
+        extra_repayments: Amortizações extras
         holdings: Posições
         overview: Visão geral
         schedule: Cronograma
@@ -137,12 +193,20 @@ pt-BR:
         import_trades: Importar negociações
         import_transactions: Importar transações
         manage: Gerenciar contas
+        reconcile_all:
+          cleared: Marcar todas como compensadas
+          confirm_accept: Marcar todas como %{status}
+          confirm_body: Isso altera o status de conciliação de todas as transações desta conta. Os extratos enviados continuam iguais.
+          confirm_title: Marcar todas as transações como %{status}?
+          reconciled: Marcar todas como conciliadas
+          unreconciled: Marcar todas como não conciliadas
         sharing: Compartilhamento
         statements: Extratos
         exclude_from_reports: Desconsiderar em todos os relatórios
         include_in_reports: Considerar nos relatórios
     update:
       success: "Conta %{type} atualizada"
+      logo_not_applied: A conta foi salva, mas não foi possível baixar o ícone escolhido. Tente novamente ou envie o seu.
     sidebar:
       missing_data: Dados históricos ausentes
       missing_data_description: "%{product} usa provedores terceirizados para buscar taxas de câmbio históricas, preços de ativos e muito mais. Esses dados são necessários para calcular saldos de contas históricos com precisão."
@@ -157,6 +221,12 @@ pt-BR:
       new_account_group: "Novo(a) %{account_group}"
       expand_all: Expandir tudo
       collapse_all: Recolher tudo
+      reorder_account: Mover %{account}
+      reorder_hint: Arraste para reordenar. Pelo teclado, pressione Enter e depois as setas.
+      sort_mode:
+        start: Ordenar contas
+        hint: Arraste as contas pela alça para reordená-las.
+        done: Concluído
     types:
       depository: Dinheiro
       investment: Investimento

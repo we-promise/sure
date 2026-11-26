@@ -75,6 +75,7 @@ pt-BR:
         title: Conta disponível
         account_type_investment: Carteira de investimentos
         account_type_cash: Conta de saldo em dinheiro
+        account_type_crypto: Conta de criptomoedas
         account_summary: "%{account_type} • Saldo: %{balance}"
         account_id: "ID da conta: %{account_id}"
       link_existing:

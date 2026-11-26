@@ -39,13 +39,19 @@ pt-BR:
       placeholder: O conteúdo dos termos de serviço será exibido aqui.
     dashboard:
       cashflow_preview:
+        opt_in_title: Mostrar o novo gráfico
+        opt_in_description: Compare um diagrama de Sankey experimental com o gráfico acima. Você pode desativar isso a qualquer momento.
         node_labels:
           cash_flow: "Fluxo de caixa"
           surplus: "Superávit"
           deficit: "Déficit"
+          invested: Investido
         title: Novo gráfico Sankey
         preview: Prévia
         preview_tooltip: Esta visualização substituirá a de cima, pois usa uma nova API compartilhada com o app móvel em Swift.
+        group_by_label: Mostrar fluxos por
+        group_by_category: Categoria
+        group_by_account: Conta
         feedback_prompt: Compare este gráfico com o original acima e diga se ele parece diferente em algo além da ordenação.
         positive: Parece certo
         negative: Algo parece errado
@@ -55,11 +61,24 @@ pt-BR:
         feedback_thanks: Obrigado por ajudar a melhorar o gráfico!
         feedback_privacy: Sua resposta é enviada ao PostHog. Descreva o problema sem números de conta, saldos ou outros dados financeiros privados.
         feedback_submit: Enviar feedback
+        sort_label: Ordenar fluxos
+        sort_auto: Automática
+        sort_ascending: Menores primeiro
+        sort_descending: Maiores primeiro
       welcome: "Bem-vindo(a) de volta, %{name}"
       subtitle: "Veja o que está acontecendo com suas finanças"
       new: "Novo"
       sections_aria_label: Seções do painel
       toggle_section: "Alternar visibilidade da seção"
+      customize:
+        start: Personalizar
+        done: Concluído
+        hide: Ocultar %{title}
+        hidden_title: Widgets ocultos
+        hidden_description: Adicione um widget de volta ao painel.
+        none_hidden: Todos os widgets estão visíveis. Oculte um pelo botão de olho.
+        all_hidden_title: Todos os widgets estão ocultos
+        all_hidden_description: Personalize o painel para adicionar widgets de volta.
       widget_size:
         label: Ajustar tamanho
         width_label: Largura
@@ -113,6 +132,25 @@ pt-BR:
         categories: "Categorias"
         value: "Valor"
         weight: "Peso"
+      cashflow_donut:
+        title: Anéis do fluxo de caixa
+        date_range: "%{start_date} a %{end_date}"
+        month_picker_aria_label: Selecionar mês
+        filter_accounts: Filtrar contas (%{count})
+        filter_accounts_all: Todas as contas
+        period_scope_hint: Mostra o mês que você escolher aqui — independente do período do painel no topo.
+        search_accounts: Buscar contas
+        apply: Aplicar
+        no_data: Nenhum fluxo de caixa neste mês
+        spent: Gasto
+        of_income: de %{amount} de receita
+        left_amount: Restam %{amount}
+        over_amount: Excedido em %{amount}
+        left: Disponível para gastar
+        over: Acima da receita
+        inflows: Entradas
+        outflows: Saídas
+        weight: Peso
       investment_summary:
         title: Investimentos
         total_return: Retorno Total
@@ -145,6 +183,14 @@ pt-BR:
         date_range_short: "%{start_date} - %{end_day}, %{year}"
         date_range_short_single: "%{date}, %{year}"
         month_picker_aria_label: Selecionar mês
+        compare_picker_aria_label: Selecionar meses para comparar
+        compare_months:
+          one: vs mês passado
+          other: vs últimos %{count} meses
+        filter_categories: Filtrar categorias (%{count})
+        filter_categories_all: Todas as categorias
+        search_categories: Buscar categorias
+        apply: Aplicar
         period_scope_hint: Mostra o mês que você escolher aqui — independente do período do painel lá em cima.
         no_data: Sem dados de gastos para este mês
         previous_comparison_days: (1-%{end_day})

@@ -11,6 +11,8 @@ pt-BR:
       mileage_unit: Unidade
       model: Modelo
       model_placeholder: Camry
+      purchase_date: Data de compra
+      purchase_price: Preço de compra
       year: Ano
       year_placeholder: '2023'
       mileage_unit_kilometers: Quilômetros

@@ -159,6 +159,7 @@ pt-BR:
       fetch_failed: Falha ao obter as contas
       import_selected: Importar contas selecionadas
       instructions: Selecione as contas que você deseja importar da IndexaCapital. Você pode escolher várias contas.
+      skip_notice: "Contas desmarcadas são ignoradas: o Sure deixa de buscá-las até que você as vincule a uma conta."
       no_accounts: Nenhuma conta não vinculada encontrada nesta conexão da IndexaCapital.
       no_accounts_to_setup: Nenhuma conta para configurar
       no_api_key: As credenciais da IndexaCapital não estão configuradas. Verifique as configurações da conexão.

@@ -12,6 +12,7 @@ pt-BR:
     expected_on: Previsto para %{date}
     day_of_month: Dia %{day} do mês
     frequency_presets:
+      once: Uma vez
       monthly: Mensal
       weekly: Semanal
       biweekly: A cada 2 semanas
@@ -33,6 +34,8 @@ pt-BR:
       quarterly: Trimestral, no %{day}
       semiannual: Semestral, no %{day}
       annual: Anual, no %{day} de %{month}
+      once: Uma vez
+      once_on: Uma vez, em %{date}
       every_n_weeks: "A cada %{interval} semanas: %{weekday}"
       every_n_months: A cada %{interval} meses, no %{day}
       every_n_years: A cada %{interval} anos, no %{day} de %{month}
@@ -53,6 +56,8 @@ pt-BR:
       autopay: Débito automático
       autopay_aria: "%{name} é paga automaticamente; abrir o portal em uma nova aba"
     new:
+      title: Nova conta a pagar
+      income_title: Nova receita
       start_from_title: Começar a partir de uma cobrança recorrente que identificamos
       start_from_income_title: Começar a partir de um depósito recorrente que identificamos
       start_from_hint: Opcional. Escolher uma apenas preenche o formulário; você ainda pode alterar qualquer coisa.
@@ -62,6 +67,20 @@ pt-BR:
       pick_different: Começar a partir de outra transação
       smart_fill: Preencher com IA
       smart_fill_applied: A IA sugeriu estes valores com base no histórico de cobranças. Revise antes de salvar.
+      covered_title: Esta transação já pertence a uma conta a pagar
+      covered_body: "%{name} já acompanha este pagamento, então uma nova conta a pagar o contaria duas vezes."
+      covered_open: Abrir conta a pagar
+      covered_suggested_title: O Sure já sugeriu uma conta a pagar para este pagamento
+      covered_suggested_body: "%{name} está aguardando nas suas sugestões. Confirme-a para começar a acompanhá-la, assim uma nova conta a pagar não conta este pagamento duas vezes. Os pagamentos correspondentes são vinculados automaticamente, e você pode vincular este pela conta a pagar."
+      covered_confirm: Confirmar conta a pagar
+      covered_create_anyway: Criar uma conta a pagar separada mesmo assim
+      covered_income_title: Este depósito já pertence a uma receita
+      covered_income_body: "%{name} já acompanha este depósito, então adicioná-lo novamente o contaria duas vezes."
+      covered_income_open: Abrir receita
+      covered_income_suggested_title: O Sure já sugeriu esta receita
+      covered_income_suggested_body: "%{name} está aguardando nas suas sugestões. Adicione-a para começar a acompanhá-la, assim este depósito não é contado duas vezes. Os depósitos correspondentes são vinculados automaticamente, e você pode vincular este pela receita."
+      covered_income_confirm: Adicionar receita
+      covered_income_create_anyway: Adicionar uma receita separada mesmo assim
     smart_fills:
       create:
         failed: Não foi possível analisar o histórico de cobranças agora. O formulário manteve os valores da própria transação.
@@ -80,7 +99,9 @@ pt-BR:
       success_income: Receita adicionada
       due_date_required: Informe a próxima data de vencimento da conta a pagar
       amount_invalid: Informe o valor apenas como número
+      amount_too_precise: Use no máximo 4 casas decimais
       account_invalid: Escolha uma conta à qual você possa adicionar contas a pagar ou deixe em branco
+      category_invalid: Escolha uma das suas categorias ou deixe em branco
       already_exists: Esta conta a pagar já existe
     edit:
       trigger_label: Editar conta a pagar
@@ -90,6 +111,11 @@ pt-BR:
       payment_url_label: Link de pagamento
       payment_url_placeholder: bank.example.com/pay
       payment_url_hint: Onde você paga esta conta. Abre em uma nova aba a partir das listas de recorrentes e próximas contas.
+      bank_reference_label: Referência bancária
+      bank_reference_placeholder: Número do contrato ou do cliente
+      reference_only_label: Identificar apenas pela referência
+      reference_only_hint: Ignora o nome da conta a pagar e o favorecido; só correspondem os pagamentos cuja descrição contém a referência. Requer uma referência bancária.
+      bank_reference_hint: Um código fixo presente na descrição do pagamento (Verwendungszweck). Os pagamentos nesta conta cuja descrição o contenha correspondem a esta conta a pagar, independentemente do valor ou da data, a menos que o pagamento tenha um estabelecimento diferente do definido em uma conta a pagar vinculada a um estabelecimento. Use algo característico, com pelo menos 3 caracteres.
       autopay_label: Paga automaticamente
       autopay_hint: Mantém na sua lista de contas a pagar, mas deixa de tratá-la como uma pendência.
       more_options: Mais opções
@@ -130,6 +156,12 @@ pt-BR:
       frequency_new_hint: Os detalhes do dia vêm da data de vencimento acima. Você pode ajustar a periodicidade depois de salvar.
       frequency_label: Frequência
       frequency_hint: Com que frequência esta conta vence. Ajuste os detalhes do dia para coincidir com sua fatura ou extrato.
+      once_on_label: Vence em
+      income_once_on_label: Em
+      once_hint: Vence uma única vez, nesta data. Não se repete. Marque a transação como pontual para mantê-la fora das suas médias.
+      income_once_hint: Entra uma única vez, nesta data. Não se repete. Marque a transação como pontual para mantê-la fora das suas médias.
+      once_new_hint: Vence uma única vez, na data acima. Não se repete. Marque a transação como pontual para mantê-la fora das suas médias.
+      income_once_new_hint: Entra uma única vez, na data acima. Não se repete. Marque a transação como pontual para mantê-la fora das suas médias.
       frequency_day_label: No dia
       frequency_interval_label: Repete a cada
       frequency_interval_unit_label: Unidade
@@ -138,6 +170,7 @@ pt-BR:
       frequency_month_label: Mês
     update:
       success: Conta a pagar atualizada
+      once_date_locked: Este pagamento já foi registrado, então a data dele não pode ser alterada.
       success_with_siblings:
         one: Conta a pagar atualizada, e o link de pagamento foi copiado para %{count} outra conta a pagar
         other: Conta a pagar atualizada, e o link de pagamento foi copiado para %{count} outras contas a pagar
@@ -167,6 +200,7 @@ pt-BR:
     confirm_delete_income: Remover %{name} das receitas? Suas transações continuam exatamente como estão. Isso remove apenas a receita e sua periodicidade.
     marked_as_recurring: Transação marcada como recorrente
     already_exists: Já existe uma transação recorrente manual para este padrão
+    already_covered: Esta transação já corresponde a uma transação recorrente
     creation_failed: Falha ao criar transação recorrente. Verifique os detalhes e tente novamente.
     unexpected_error: Ocorreu um erro inesperado ao criar a transação recorrente
     amount_range: "Faixa: %{min} até %{max}"
@@ -196,7 +230,12 @@ pt-BR:
       collapsed_hint: Toque para revisar
       confirm: Adicionar conta a pagar
       dismiss: Não é uma conta a pagar
+    suggested_income:
+      title: Possível nova receita
+      confirm: Adicionar receita
+      dismiss: Não é receita
     confirmed: Conta a pagar adicionada às suas transações recorrentes
+    confirmed_income: Receita adicionada às suas transações recorrentes
     dismissed: Descartada. Este padrão não será mais sugerido.
     badges:
       manual: Manual

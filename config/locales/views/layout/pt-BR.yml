@@ -16,6 +16,7 @@ pt-BR:
         budgets: Orçamentos
         home: Início
         plan: Planejamento
+        portfolio: Carteira
         reports: Relatórios
         goals: Metas
         transactions: Transações
@@ -41,6 +42,7 @@ pt-BR:
         download_complete: Download concluído
         download_failed: Falha no download. Tente novamente.
         download_location: O arquivo está na sua pasta Downloads.
+        order_save_failed: Não foi possível confirmar se a nova ordenação foi salva. Verifique sua conexão e recarregue a página para ver a ordenação salva.
     trial:
       open_demo: Demo aberta
       data_deleted_in_days: Os dados serão excluídos em %{days} dias

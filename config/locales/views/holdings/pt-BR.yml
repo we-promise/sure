@@ -29,7 +29,9 @@ pt-BR:
     cost_basis_cell:
       unknown: "--"
       set: Definir
+      set_cost_basis_header: Definir custo de aquisição de %{ticker}
       total_cost_basis_label: Custo de aquisição total
+      per_share_label: Por ação
       cancel: Cancelar
       save: Salvar
       overwrite_confirm_title: Substituir o custo de aquisição?
@@ -50,6 +52,17 @@ pt-BR:
       no_holdings: Nenhuma posição para mostrar.
       return: Retorno total
       weight: Peso
+    lots:
+      title: Lotes
+      opening: Em carteira antes da primeira negociação
+      unknown: Custo por unidade desconhecido
+      per_unit: "%{amount} por unidade"
+      total_cost_label: Total pago por este lote
+      total_cost_hint: Quanto custou o lote inteiro quando você o adquiriu. Excluir a negociação correspondente remove o lote e o custo que você definiu.
+      save: Salvar
+      unlock: Limpar o custo manual
+      provider_cost_hint: O seu provedor informa o custo desta posição, então não é possível definir o custo dos lotes.
+      provider_cost_clear_hint: Ainda é possível limpar um custo que você definiu antes.
     missing_price_tooltip:
       description: Este investimento tem valores ausentes e não conseguimos calcular seus retornos ou valor.
       missing_data: Dados ausentes

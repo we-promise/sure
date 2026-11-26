@@ -54,6 +54,8 @@ pt-BR:
         sync_error: Erro de sincronização
         no_recent_sync: Sincronização atrasada
         reconsent_required: Novo consentimento necessário
+        login_required: Login necessário
+        login_expires_soon: O login expira em %{time} (%{at})
         reconsent_needed:
           one: Novo consentimento necessário em %{count} dia
           other: Novo consentimento necessário em %{count} dias
@@ -74,6 +76,7 @@ pt-BR:
         monobank: Sincronize cartões e cofrinhos do Monobank ucraniano com um token de API pessoal.
         fio: Sincronize uma conta do Fio banka com um token de API somente leitura.
         enable_banking: Sincronize contas bancárias europeias via open banking PSD2.
+        truelayer: Sincronize contas bancárias e cartões de crédito do Reino Unido pelo open banking da TrueLayer.
         coinstats: Acompanhe todo o seu portfólio de cripto em carteiras e corretoras.
         wise: Sincronize automaticamente seus saldos multimoeda e transferências internacionais da Wise.
         mercury: Sincronize automaticamente suas contas empresariais da Mercury.
@@ -82,8 +85,10 @@ pt-BR:
         binance: Sincronize seus saldos à vista da Binance usando uma chave de API somente leitura.
         kraken: Sincronize saldos e execuções de negociações à vista da Kraken usando uma chave de API somente leitura.
         coinspot: Sincronize saldos, valores em AUD, transferências, depósitos, saques e histórico de ordens da CoinSpot usando uma chave de API somente leitura.
+        onchain_wallet: Acompanhe carteiras de autocustódia Bitcoin, EVM, Solana, Cosmos e Polkadot a partir dos endereços públicos.
         snaptrade: Conecte contas de corretora pela rede de agregação SnapTrade.
         trading212: Sincronize seu portfólio de investimentos da Trading 212 usando uma chave de API somente leitura.
+        sharesight: Sincronize pela API as carteiras que você acompanha na Sharesight.
         trade_republic: Sincronize sua conta de investimentos da Trade Republic via login web seguro e somente leitura.
         ibkr: Sincronize contas de investimento da Interactive Brokers por importações de Flex Query.
         questrade: Sincronize suas contas de investimento da Questrade diretamente pela API da Questrade.
@@ -120,6 +125,7 @@ pt-BR:
         connect_button: Conectar à Coinbase
         syncing: Sincronizando...
         sync: Sincronizar
+        disconnect: Desconectar
         disconnect_confirm: Tem certeza de que deseja desconectar esta conexão com a Coinbase? Suas contas sincronizadas se tornarão contas manuais.
       binance_panel:
         setup_instructions: "Para conectar a Binance, crie uma chave de API somente leitura:"
@@ -141,6 +147,7 @@ pt-BR:
         historical_import: Configurações de importação do histórico
         sync_start_date_label: Importar dados a partir de
         sync_start_date_help: Selecione até quando no passado buscar o histórico de negociações.
+        disconnect: Desconectar
         disconnect_confirm: Tem certeza de que deseja desconectar a Binance?
       kraken_panel:
         step1_html: Acesse as <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">configurações de API da Kraken</a>
@@ -205,12 +212,14 @@ pt-BR:
         callback_url_instruction: "Para a URL de retorno de chamada, use %{callback_url}."
         connection_error: Erro de conexão
         step_1_html: Acesse %{link} e obtenha suas credenciais de desenvolvedor.
+        step_2: Escolha seu país e cole o Application ID + a chave privada abaixo.
         step_3: Salve e use Adicionar conexão para vincular seu banco.
         config_locked_title: Configuração bloqueada
         config_locked_message: Desconecte todos os bancos vinculados antes de alterar estas credenciais.
         application_id_label: Application ID
         application_id_placeholder_new: Insira o Application ID
         application_id_placeholder_update: Insira o novo ID para atualizar
+        client_certificate_label: Chave privada (.pem)
         keep_client_certificate_hint: "Deixe em branco para manter a chave privada atual"
         save_and_connect: Salvar e conectar
         update_connection: Atualizar conexão
@@ -239,6 +248,8 @@ pt-BR:
         api_key_placeholder_update: Insira a nova chave de API para atualizar
         base_url_label: URL base (opcional)
         base_url_placeholder: https://lunchflow.app/api/v1 (padrão)
+        sync_start_date_label: Importar transações a partir de
+        sync_start_date_help: Deixe em branco para importar tudo o que o Lunch Flow tiver. Antecipar a data importa o período que falta na próxima sincronização. Adiá-la não afeta as transações já importadas.
         save_and_connect: Salvar e conectar
         update_connection: Atualizar conexão
       akahu_panel:
@@ -273,6 +284,12 @@ pt-BR:
       not_found: Provedor não encontrado.
       sync_provider_no_items: Nenhuma conexão disponível para sincronizar.
       ibkr_panel:
+        add_connection: Adicionar conexão com a Interactive Brokers
+        connection_name_label: Nome da conexão
+        connection_name_placeholder: "ex.: IBKR Irlanda, IBKR EUA"
+        disconnect: Desconectar
+        disconnect_confirm_named: Desconectar %{name}?
+        setup_accounts: Configurar contas
         steps:
           step_1: No IBKR Client Portal, acesse "Performance & Reports" > "Flex Queries".
           step_2: Clique no ícone "+" na seção "Activity Flex Query" para criar uma nova consulta.
@@ -291,6 +308,7 @@ pt-BR:
           cash_report_options: "Opções: None"
           cash_report_fields: "Campos: Currency, Ending Cash"
           cash_transactions: "Cash Transactions:"
+          cash_transactions_options: "Opções: Deposits & Withdrawals, Dividends, Payment In Lieu Of Dividends, Withholding Tax, Broker Interest Paid, Broker Interest Received, Bond Interest Paid, Bond Interest Received, Other Fees, Commission Adjustments, Detail"
           cash_transactions_fields: "Campos: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type"
           change_in_position_value_summary: "Change In Position Value Summary: Currency, End Of Period Value"
           net_asset_value: "Net Asset Value (NAV) in Base:"
@@ -358,8 +376,11 @@ pt-BR:
         qr_cancel: Cancelar login por QR code
         qr_back_to_credentials: Voltar para número de telefone e PIN
         qr_loading: Preparando o QR code…
+        qr_instruction: Escaneie o QR code com a câmera do celular e aprove o login no app da Trade Republic.
         qr_success: Login aprovado. O Sure está atualizando a página do provedor.
         qr_error: Não foi possível iniciar o login por QR code. Tente novamente.
+        requires_update: Faça login novamente para retomar a sincronização.
+        session_expires_in: O login expira em %{time} (%{at}).
         add_account: Adicionar outra conexão
         save_configuration: Salvar e iniciar login
         update_configuration: Atualizar configuração
@@ -378,6 +399,22 @@ pt-BR:
           other: "%{count} contas da Trade Republic encontradas."
         status_configured_suffix: para gerenciar as contas encontradas.
         not_configured: Não configurado.
+      sharesight_panel:
+        steps:
+          step_1: Peça ao suporte da Sharesight para ativar o acesso à API. Ele está disponível nos planos pagos.
+          step_2: Nas configurações da sua conta da Sharesight, abra a página da API e copie o Client ID e o Client secret.
+          step_3: Cole os dois abaixo e salve. Em seguida, o Sure encontra suas carteiras para que você possa vinculá-las.
+        client_id_label: Client ID
+        client_id_placeholder_new: Cole o Client ID da Sharesight
+        client_id_placeholder_existing: Deixe em branco para manter o Client ID atual
+        client_secret_label: Client secret
+        client_secret_placeholder_new: Cole o Client secret da Sharesight
+        client_secret_placeholder_existing: Deixe em branco para manter o Client secret atual
+        save_configuration: Salvar configuração
+        update_configuration: Atualizar configuração
+        status_configured_prefix: Configurado. Acesse a aba
+        accounts_tab: Contas
+        status_configured_suffix: para vincular suas carteiras.
       trading212_panel:
         steps:
           step_1: Acesse Trading 212 → Configurações → API (web ou app).

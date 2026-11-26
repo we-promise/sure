@@ -35,6 +35,10 @@ pt-BR:
         merchant_detector:
           title: Detector de Estabelecimentos
           subtitle: A IA identifica e enriquece dados de transações com informações do estabelecimento
+        insight_dig_in:
+          title: Aprofundar insight
+          subtitle: Primeira mensagem do chat quando você aprofunda um insight com IA
+          label: Mensagem de aprofundamento
       update:
         success: Prompts de IA atualizados
         multiple_errors: Vários prompts são longos demais (o máximo é %{count} caracteres)

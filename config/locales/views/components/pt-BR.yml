@@ -68,7 +68,14 @@ pt-BR:
           interactive_chart: gráfico interativo
           no_payoff: não quitado no ritmo atual de pagamento
           aria_description: Gráfico do saldo do empréstimo. Saldo registrado de %{current_balance}. Quitação prevista no cronograma original em %{scheduled_payoff_date}. Quitação projetada a partir do saldo de hoje em %{projected_payoff_date}.
+          aria_extra_payoff: "Quitação projetada com a amortização extra: %{date}."
+          extra: Com amortização extra
           aria_actual_history_starts: O histórico de saldo registrado começa em %{date}.
+          aria_interest_share: Nos pagamentos do primeiro ano, cerca de %{first}% do valor pago são juros; nos do último ano, cerca de %{last}%.
+          aria_interest_share_overall: Em todos os pagamentos, cerca de %{share}% do valor pago são juros.
+          aria_composition: Na dica de cada parcela programada, ela aparece dividida em %{principal} e %{interest}.
+          interest_share: Proporção de juros
+          principal_share: Proporção do principal
           projected_payoff: Quitação projetada
           months_saved:
             one: "%{count} mês antes do previsto"
@@ -100,6 +107,8 @@ pt-BR:
       activity_date:
         balance_tooltip: O saldo no fim do dia, após todas as transações e ajustes
         no_balance_data: Nenhum dado de saldo disponível para esta data
+        projected: Projetado
+        projected_balance_tooltip: "Uma estimativa: saldo atual mais os lançamentos programados até esta data"
   ds:
     alert:
       variants:

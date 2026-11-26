@@ -1,6 +1,12 @@
 ---
 pt-BR:
   goals:
+    currency_warning:
+      title: Alguns saldos não são contabilizados
+      body:
+        one: Ainda não há taxa de câmbio %{from} → %{to} disponível, então os saldos em %{from} ficam fora deste total.
+        other: Ainda não há taxas de câmbio de %{from} para %{to} disponíveis, então esses saldos ficam fora deste total.
+      settings_link: Configurações do provedor de taxas de câmbio
     color_picker:
       trigger_label: Escolher cor e ícone
       color_heading: Cor
@@ -39,6 +45,9 @@ pt-BR:
           paused:
             one: "%{count} pausada"
             other: "%{count} pausadas"
+          pace_unknown:
+            one: "%{count} com ritmo desconhecido"
+            other: "%{count} com ritmo desconhecido"
         on_track_sub_all_good: Todas as metas ativas no ritmo
         on_track_all_caught_up: Tudo em dia
       goals_section:
@@ -102,10 +111,12 @@ pt-BR:
       amount_hint: No momento, %{saved} está destinado a esta meta.
       account_label: De qual conta?
       earmark_note: O valor registrado deixa de estar destinado a esta meta, e suas outras metas nessa conta recuperam a parte delas.
+      goal_currency_hint: Informe o valor em %{currency}. Para uma conta em outra moeda, ele é convertido pela cotação de hoje antes de ser descontado do valor destinado nessa conta.
       cancel: Cancelar
       submit: Registrar
       success: "%{amount} registrado como usado."
       errors:
+        missing_exchange_rate: Ainda não há taxa de câmbio disponível para a moeda desta conta, então este gasto não pode ser registrado.
         non_positive: Insira um valor maior que zero.
         maintained: Uma reserva é usada e reabastecida, não gasta — o valor que falta já aparece na meta.
         exceeds_target: Esse valor é maior do que o objetivo total desta meta.
@@ -139,6 +150,8 @@ pt-BR:
       funding_accounts_heading: Contas de financiamento
       funding_accounts:
         earmarked_of: "%{earmarked} destinados de %{balance}"
+        converted: ≈ %{amount}
+        rate_unavailable: Ainda sem taxa de câmbio, então esta conta não é contabilizada.
         empty:
           heading: Nenhuma conta de financiamento vinculada ainda
           body: Edite a meta para vincular as contas bancárias em que você guarda dinheiro.
@@ -151,6 +164,7 @@ pt-BR:
         behind_covered: os aportes pendentes cobrem a diferença
         on_track: atinge a meta por volta de %{date}
         no_target_date: defina uma data-alvo para projetar a conclusão
+        pace_unknown: ainda não é possível medir o ritmo com estas contas; para isso é preciso uma atualização de saldo no último ano e um ano de histórico de saldos
       pending_pledge:
         title:
           zero: "Pendente: %{amount} para %{account} · expira hoje"
@@ -175,6 +189,12 @@ pt-BR:
         to_go: faltam %{amount}
         of_target: do objetivo
         market_value: "Valor de mercado: %{amount}"
+        basis:
+          balance: Considera quanto as contas valem hoje
+          contributions: Considera apenas o que você aportou
+        basis_at_completion:
+          balance: Considerou quanto as contas valiam quando a meta foi concluída
+          contributions: Considerou apenas o que você tinha aportado quando a meta foi concluída
         aria_label: Meta %{percent}% concluída. %{amount} de %{target} guardados.
         aria_label_with_used: Meta %{percent}% concluída. %{amount} de %{target}, incluindo %{used} já usados.
       projection:
@@ -186,6 +206,7 @@ pt-BR:
         reached: Você atingiu o objetivo. Nenhuma projeção necessária.
         no_target_date: Nenhuma data-alvo definida. Defina uma para projetar a conclusão.
         no_pace: Nenhum depósito ainda. Adicione dinheiro a uma conta vinculada para iniciar uma projeção.
+        pace_unknown: Ainda não há histórico suficiente nestas contas para medir o ritmo, então não há projeção.
         behind: No ritmo atual, a meta não será atingida a tempo.
         on_track_html: No ritmo atual, você vai atingir esta meta por volta de <strong class="text-primary whitespace-nowrap">%{date}</strong>.
         aria_label: Gráfico de projeção de %{name}
@@ -251,6 +272,7 @@ pt-BR:
       reached: Atingida
       completed: Concluída
       no_target_date: Sem prazo
+      pace_unknown: Ritmo desconhecido
       paused: Pausada
       archived: Arquivada
     empty_state:
@@ -262,6 +284,7 @@ pt-BR:
       add_account: Adicionar uma conta
     goal_card:
       including_used: Inclui %{amount} já usados
+      partial_total: Alguns saldos não são contabilizados (ainda sem taxa de câmbio)
       no_accounts: Nenhuma conta vinculada
       n_accounts: "%{first} +%{count}"
       left: restantes
@@ -277,6 +300,8 @@ pt-BR:
         other: faltam %{count} dias
       pace_with_target: "%{avg}/mês · objetivo %{target}/mês"
       pace_no_target: média de %{avg}/mês
+      pace_unknown_with_target: Ritmo desconhecido · objetivo %{target}/mês
+      pace_unknown: Ritmo desconhecido
       footer_paused: Pausada
       footer_archived: Arquivada
       footer_reserve_intact: Reserva completa
@@ -297,6 +322,14 @@ pt-BR:
       target_modes:
         fixed: Um valor fixo
         months_of_expenses: Um número de meses de despesas
+      progress_basis_locked: O progresso desta meta foi congelado quando ela foi concluída. Reabra ou restaure a meta para alterar o que conta para ela.
+      progress_bases:
+        balance:
+          label: Quanto as contas valem hoje
+          hint: Valor de mercado. Ganhos e perdas de investimentos contam para a meta.
+        contributions:
+          label: Apenas o que eu aportei
+          hint: Aportes líquidos. Ganhos e perdas de mercado ficam de fora.
       kinds:
         one_off:
           hint: Guarde para algo específico e encerre a meta quando gastar o valor.
@@ -314,6 +347,7 @@ pt-BR:
         accounts_required: Escolha pelo menos uma conta de financiamento.
       earmark:
         headroom: "{left} ainda disponível para destinar nesta conta."
+        converted: Este valor destinado ≈ {amount}.
         prorata: Suas metas nesta conta somam {total} para um saldo de {balance} — elas vão progredir proporcionalmente.
         whole_balance: Esta conta vai financiar o que sobrar depois das outras destinações.
         whole_balance_alone: Esta meta vai usar o saldo inteiro desta conta.
@@ -332,9 +366,12 @@ pt-BR:
         notes: Anotações (opcional)
         notes_placeholder: Um lembrete para o seu eu do futuro…
         funding_accounts: Contas de financiamento
+        progress_basis: O que conta para esta meta
         funding_accounts_hint: O saldo desta meta é o saldo (ou a parte destinada) destas contas.
+        whole_balance: "Em branco: saldo inteiro"
         earmark_for: Valor destinado de %{account}
         earmark_hint: Deixe um valor em branco para dedicar o saldo inteiro da conta.
+        currency_conversion_hint: As contas podem usar moedas diferentes. Os totais são convertidos para %{currency}; os valores destinados ficam na moeda de cada conta.
       subtypes:
         checking: Conta corrente
         savings: Poupança

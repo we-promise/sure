@@ -116,6 +116,9 @@ pt-BR:
       life_insurance:
         short: Seguro de vida
         long: Seguro de vida
+      epf:
+        short: EPF
+        long: Employees' Provident Fund (EPF)
       ppf:
         short: PPF
         long: Public Provident Fund
@@ -188,6 +191,8 @@ pt-BR:
     value_tooltip:
       cash: Dinheiro
       holdings: Posições
+      projected: Saldo projetado
+      scheduled: Agendadas
       total: Saldo do portfólio
       total_value_tooltip: O saldo total do portfólio é a soma do dinheiro da corretora
         (disponível para negociação) e o valor de mercado atual de suas posições.

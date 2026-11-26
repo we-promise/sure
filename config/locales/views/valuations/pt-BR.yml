@@ -1,6 +1,21 @@
 ---
 pt-BR:
   valuations:
+    names:
+      current_account_value: Valor atual da conta
+      current_balance: Saldo atual
+      current_loan_balance: Saldo devedor atual do empréstimo
+      current_market_value: Valor de mercado atual
+      manual_balance_update: Atualização manual de saldo
+      manual_principal_update: Atualização manual do principal
+      manual_value_update: Atualização manual de valor
+      opening_account_value: Valor inicial da conta
+      opening_balance: Saldo inicial
+      original_principal: Principal original
+      original_purchase_price: Preço de compra original
+      synced_balance: Saldo sincronizado
+      synced_principal: Principal sincronizado
+      synced_value: Valor sincronizado
     confirmation_contents:
       this_will: Isso vai %{action_verb} o valor da conta em
       to_colon: "para:"
@@ -44,6 +59,8 @@ pt-BR:
       value: valor
     new:
       title: Novo saldo
+      amount: Valor
+      submit: Adicionar atualização de saldo
     show:
       amount: Valor
       amount_label: Valor da conta na data

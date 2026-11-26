@@ -6,6 +6,7 @@ pt-BR:
     entries:
       default_name: Transação Wise
       fee_name: Tarifa Wise
+      refund_name: Reembolso Wise
     activities:
       jar_deposit: Transferência para cofrinho
       jar_withdrawal: Transferência do cofrinho
@@ -53,6 +54,9 @@ pt-BR:
       account_sync_failed:
         one: Não foi possível agendar a sincronização de %{count} conta Wise.
         other: Não foi possível agendar a sincronização de %{count} contas Wise.
+      fetch_failed:
+        one: "%{count} requisição ao Wise falhou. A próxima sincronização tentará novamente."
+        other: "%{count} requisições ao Wise falharam. A próxima sincronização tentará novamente."
     provider_panel:
       add_connection: Adicionar conexão Wise
       token_label: Token de API
@@ -63,6 +67,7 @@ pt-BR:
       sync_start_date_label: Importar transações a partir de
       sync_start_date_help: Os extratos do Wise são importados a partir desta data. Mantenha o padrão para importar até um ano de histórico.
       import_all_history_label: Importar todo o histórico de transações
+      import_all_history_help: Importar todo o histórico do Wise (transferências, atividades e extratos) em vez de apenas o último ano. Assim, cada saldo começa em 0 no dia em que o Wise o abriu.
       connect: Conectar Wise
       update_connection: Atualizar conexão
       setup_accounts: Configurar contas
@@ -70,6 +75,7 @@ pt-BR:
       disconnect: Desconectar
       disconnect_label: Desconectar %{name}
       disconnect_confirm: Tem certeza de que deseja desconectar %{name}? Isso removerá todos os dados de contas sincronizados.
+      sandbox_note_html: Use a URL base do <strong>sandbox</strong> (<code>https://api.wise-sandbox.com</code>) para testes. Defina <code>WISE_BASE_URL</code> no seu ambiente.
       encryption_warning:
         title: A criptografia do banco de dados não está configurada
         message: Configure as chaves de criptografia do Active Record antes de adicionar tokens do Wise em produção. Sem criptografia, os tokens são armazenados em texto simples.
@@ -138,6 +144,7 @@ pt-BR:
       link_account: Vincular saldo
       cancel: Cancelar
     select_existing_account:
+      not_found: Conta ou saldo Wise não encontrado.
       title: Vincular %{account_name} ao Wise
       description: Selecione o saldo em moeda do Wise que deseja vincular a esta conta. As transações serão sincronizadas automaticamente.
       no_accounts_found: Nenhum saldo do Wise disponível para vincular.
@@ -149,6 +156,9 @@ pt-BR:
       failed: Falha ao vincular o saldo do Wise. Tente novamente.
     link_existing_account:
       not_found: Conta ou saldo do Wise não encontrado.
+      account_already_linked: Esta conta já está vinculada a um provedor.
+      unsupported_account_type: Saldos Wise só podem ser vinculados a contas de dinheiro.
+      currency_mismatch: Este saldo Wise está em %{balance_currency}, mas a conta está em %{account_currency}. Escolha um saldo na moeda da conta.
       success: "%{account_name} vinculada ao Wise com sucesso"
       failed: Falha ao vincular a conta. Tente novamente.
     complete_account_setup:

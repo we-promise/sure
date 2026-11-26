@@ -85,7 +85,9 @@ pt-BR:
     complete_account_setup:
       all_skipped: Todas as contas foram ignoradas. Nenhuma conta foi criada.
       no_accounts: Nenhuma conta para configurar.
-      success: Criada(s) com sucesso %{count} conta(s) SimpleFIN! Suas transações e investimentos estão sendo importados em segundo plano.
+      success:
+        one: "%{count} conta SimpleFIN criada com sucesso! Suas transações e posições estão sendo importadas em segundo plano."
+        other: "%{count} contas SimpleFIN criadas com sucesso! Suas transações e posições estão sendo importadas em segundo plano."
       stale_accounts_processed: "Contas desatualizadas: %{deleted} excluídas, %{moved} movidas."
       stale_accounts_errors:
         one: "%{count} ação em conta desatualizada falhou. Verifique os logs para mais detalhes."

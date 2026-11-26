@@ -45,6 +45,7 @@ pt-BR:
       earmarked: Já destinado a metas
       free: Realmente livre
       goals_link: Ver metas
+      currency_warning: Os saldos em %{currencies} não estão incluídos porque ainda não há taxa de câmbio para %{currency} disponível.
     show:
       categories:
         amount: Valor

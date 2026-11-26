@@ -3,6 +3,10 @@ pt-BR:
   categories:
     bootstrap:
       success: Categorias padrão criadas com sucesso
+    locked: As categorias estão bloqueadas. Desbloqueie-as para adicionar uma nova categoria.
+    toggle_lock:
+      locked: Categorias bloqueadas
+      unlocked: Categorias desbloqueadas
     category:
       delete: Excluir categoria
       edit: Editar categoria
@@ -31,8 +35,11 @@ pt-BR:
       categories_incomes: Categorias de receitas
       delete_all: Excluir todas
       empty: Nenhuma categoria encontrada
+      lock_categories: Bloquear a criação de categorias
+      locked_message: A criação de categorias está bloqueada. Importações e sincronizações bancárias ainda podem adicionar categorias.
       merge: Mesclar categorias
       new: Nova categoria
+      unlock_categories: Desbloquear a criação de categorias
     merge:
       title: Mesclar categorias
       description: Selecione uma categoria de destino e as categorias que serão mescladas nela. As transações e linhas de orçamento correspondentes serão movidas para a categoria de destino.

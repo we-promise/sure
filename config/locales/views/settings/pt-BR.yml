@@ -7,6 +7,7 @@ pt-BR:
       advanced_section_title: Avançado
       ai_prompts_label: Prompts de IA
       auto_matches_label: Correspondências automáticas
+      classifier_label: Classificador
       background_jobs_label: Tarefas em segundo plano
       api_key_label: Chaves de API
       payment_label: Pagamento
@@ -39,6 +40,11 @@ pt-BR:
       appearance_label: Aparência
       bank_sync_label: Sincronização bancária
       debug_label: Depuração
+    settings_search:
+      aria_label: Buscar configurações
+      no_results: Nenhuma configuração corresponde à sua busca.
+      placeholder: Buscar configurações
+      results_label: Configurações correspondentes
     settings_nav_link_large:
       next: Próximo
       previous: Voltar

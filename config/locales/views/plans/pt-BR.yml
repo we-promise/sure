@@ -18,6 +18,9 @@ pt-BR:
       set_up: Configurar o orçamento deste mês
     goals_card:
       title: Suas metas
+      currency_warning:
+        one: 1 meta deixa de fora saldos em %{currencies} (ainda sem taxa de câmbio).
+        other: "%{count} metas deixam de fora saldos em %{currencies} (ainda sem taxa de câmbio)."
       new_goal: Nova meta
       active_count:
         one: "%{count} ativa"

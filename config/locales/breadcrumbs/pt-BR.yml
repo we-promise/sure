@@ -18,6 +18,7 @@ pt-BR:
     categorize: Categorizar
     changelog: Novidades
     chats: Conversas
+    classifier: Classificador
     coinbase_items: Coinbase
     coinstats_items: CoinStats
     credit_cards: Cartões de crédito
@@ -62,6 +63,7 @@ pt-BR:
     pending_duplicate_merges: Revisão de duplicatas
     plaid_items: Plaid
     plan: Planejamento
+    portfolio: Carteira
     preferences: Preferências
     profile: Dados do perfil
     profiles: Dados do perfil

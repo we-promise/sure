@@ -12,6 +12,7 @@ pt-BR:
     openid_connect:
       account_linked: Conta vinculada com sucesso a %{provider}
       failed: Não foi possível autenticar via OpenID Connect.
+      legacy_issuer_relink_required: Esta conexão OIDC antiga precisa ser verificada novamente. Digite sua senha do Sure para reconectá-la; se você não tiver uma senha local, entre em contato com um administrador.
     failure:
       failed: Não foi possível autenticar.
       sso_provider_unavailable: O provedor de SSO está indisponível no momento. Tente novamente mais tarde ou entre em contato com um administrador.

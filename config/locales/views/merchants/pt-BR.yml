@@ -13,6 +13,9 @@ pt-BR:
       name_placeholder: Nome do estabelecimento
       website_placeholder: "Site (ex.: starbucks.com)"
       website_hint: Informe o site do estabelecimento para exibir o logotipo automaticamente
+      logo_label: Logotipo
+      logo_hint: Substitui o logotipo do site. JPEG, PNG ou WebP, até %{max_megabytes} MB.
+      remove_logo_label: Remover logotipo enviado
     index:
       empty: Nenhum estabelecimento ainda
       new: Novo estabelecimento
@@ -79,3 +82,12 @@ pt-BR:
     update:
       success: Estabelecimento atualizado com sucesso
       converted_success: Estabelecimento convertido e atualizado com sucesso
+  merchants:
+    show:
+      average_transaction: Transação média
+      edit: Editar estabelecimento
+      first_transaction: Primeira transação
+      last_transaction: Última transação
+      summary: Resumo
+      total_spending: Gasto total
+      total_transactions: Total de transações

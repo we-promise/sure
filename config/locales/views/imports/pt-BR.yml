@@ -24,6 +24,15 @@ pt-BR:
         split_warning_title: Transações divididas detectadas
         split_warning_description: Este arquivo QIF contém transações divididas. Revise abaixo as categorias e tags de divisão detectadas antes de importar.
         split_badge: dividida
+        selection_list_changed_title: As categorias e tags mudaram
+        selection_list_changed_description: Com o novo formato de data, o arquivo contém categorias ou tags diferentes. Revise a seleção abaixo; todos os itens foram selecionados novamente.
+        unknown_account_type_name: “%{type}”
+        unknown_account_type_title:
+          one: Tipo de conta desconhecido
+          other: Tipos de conta desconhecidos
+        unknown_account_type_description:
+          one: Este arquivo QIF contém o tipo de conta %{types}, que o %{product_name} não reconhece. As transações dele serão importadas como as de uma conta bancária.
+          other: Este arquivo QIF contém os tipos de conta %{types}, que o %{product_name} não reconhece. As transações deles serão importadas como as de uma conta bancária.
         empty_state_primary: Nenhuma categoria ou tag foi encontrada neste arquivo QIF.
         empty_state_secondary: Todas as transações serão importadas sem categorias ou tags.
         submit: Continuar para a revisão
@@ -43,6 +52,40 @@ pt-BR:
     configurations:
       update:
         success: Importação configurada com sucesso.
+        monarch_success: Escolhas das contas salvas.
+      monarch:
+        title: Revise cada conta do Monarch
+        description: Escolha para onde vai cada conta, de que tipo ela é e o que trazer.
+        help_title: Como funciona cada escolha
+        help_account: Importe para uma conta nova, com o nome que quiser, ou para uma das suas contas manuais. Uma conta existente mantém o nome, o tipo e os próprios lançamentos, e o saldo inicial dela passa para o início do histórico do Monarch, caso esteja dentro dele. A situação dela segue o Status que você escolher. Não é possível importar para contas com posições ou negociações.
+        help_closed: Mude o Status para Encerrada nas contas que você encerrou. O saldo delas vai a zero no dia seguinte ao último saldo do Monarch e elas ficam ocultas nos saldos atuais, mas continuam no histórico do seu patrimônio líquido. Contas marcadas como inativas não tiveram movimentação nos últimos %{days} dias, o que nem sempre significa que estejam encerradas.
+        help_transactions: Desative as transações para importar só o histórico de saldos de uma conta.
+        help_balance: O saldo de hoje começa com o saldo mais recente do Monarch. Altere-o se estiver desatualizado, e ele será registrado como o saldo de hoje. Informe os valores devidos em cartões e empréstimos como números positivos.
+        table_label: Contas do Monarch
+        import_column: Importar
+        account_column: Nome da conta
+        destination_column: Importar para
+        type_column: Tipo
+        status_column: Status
+        status_open: Aberta
+        status_closed: Encerrada
+        toggle_all_label: "%{column} em todas as contas"
+        transactions_column: Transações
+        balance_column: Saldo de hoje
+        import_label: Importar %{name}
+        destination_label: Para onde importar %{name}
+        name_label: Nome no Sure para %{name}
+        monarch_name: "No Monarch: %{name}"
+        type_label: Tipo de %{name}
+        status_label: "%{name} está aberta"
+        transactions_label: Importar as transações de %{name}
+        balance_label: Saldo de hoje de %{name}
+        new_account: Nova conta
+        inactive: Inativa
+        last_activity: Última movimentação em %{date}
+        no_activity: Sem movimentação
+        no_transactions: Nenhuma
+        submit: Revisar importação
       account_import:
         leave_empty: Deixar em branco
         default: Padrão
@@ -203,12 +246,30 @@ pt-BR:
           sem categoria.
         tag_mapping_title: Atribuir suas tags
     uploads:
+      sample_csv:
+        unavailable: Não há um CSV de exemplo disponível para este tipo de importação.
       handle_qif_upload:
         qif_uploaded: Arquivo QIF enviado com sucesso.
         qif_account_required: Selecione uma conta para a importação QIF
       update:
         qif_uploaded: Arquivo QIF enviado com sucesso.
+        qif_account_required: Selecione uma conta para a importação QIF
+        monarch_uploaded: Exportações do Monarch enviadas.
+        monarch_balances_required: Escolha a exportação de saldos do Monarch.
       show:
+        monarch_title: Envie suas exportações do Monarch
+        monarch_description: Traga suas contas, transações e histórico de saldos do Monarch.
+        monarch_export_title: Baixe seus dados do Monarch
+        monarch_export_step_settings_html: Entre no Monarch pela web e abra %{link}.
+        monarch_export_settings_link: Settings → Data
+        monarch_export_step_download: Baixe suas transações e o histórico de saldos das contas, cada um como um arquivo CSV.
+        monarch_export_step_upload: Escolha os arquivos abaixo.
+        monarch_export_help_html: O Monarch explica cada download em %{link}.
+        monarch_export_help_link: seu artigo de ajuda
+        monarch_balances_label: Exportação de saldos
+        monarch_transactions_label: Exportação de transações
+        monarch_transactions_hint: Deixe a exportação de transações de fora para importar só o histórico de saldos.
+        monarch_upload_button: Enviar exportações
         csv_invalid: Deve ser um CSV válido, com cabeçalhos e pelo menos uma linha de dados
         drop_csv_title: Solte o CSV para enviar
         drop_csv_subtitle: Seu arquivo será enviado automaticamente
@@ -249,6 +310,7 @@ pt-BR:
         hint_html: Envie o arquivo <strong>all.ndjson</strong> do ZIP da sua exportação de dados
         ndjson_invalid: Deve ser um NDJSON válido com pelo menos um registro
   imports:
+    configuration_locked: Os dados desta importação já estão no Sure, então os arquivos e as escolhas dela não podem mudar. Tente novamente para concluí-la ou exclua-a para recomeçar.
     mapping_labels:
       account_type: Tipo de conta
       account: Conta
@@ -310,6 +372,7 @@ pt-BR:
     publish:
       started: Sua importação foi iniciada em segundo plano.
       max_rows_exceeded: Sua importação excede o número máximo de %{max} linhas.
+      guest_new_categories_or_tags: Convidados não podem criar categorias nem tags. Associe-as às existentes ou deixe-as em branco.
     revert:
       started: A importação está sendo revertida em segundo plano.
     cancel:
@@ -360,6 +423,7 @@ pt-BR:
       mint_import: Importação do Mint
       actual_import: Importação do Actual
       ynab_import: Importação do YNAB
+      monarch_import: Importação do Monarch
       qif_import: Importação QIF
       category_import: Importação de categorias
       rule_import: Importação de regras
@@ -369,6 +433,7 @@ pt-BR:
       sure_import: Importação do Sure
     steps:
       upload: Enviar
+      accounts: Contas
       configure: Configurar
       clean: Limpar
       map: Mapear
@@ -423,6 +488,7 @@ pt-BR:
       tab_financial_tools: Ferramentas financeiras e arquivos
       tab_raw_data: Dados brutos
       import_ynab: Importar do YNAB
+      import_monarch: Importar do Monarch
       import_accounts: Importar contas
       import_categories: Importar categorias
       import_merchants: Importar estabelecimentos
@@ -448,6 +514,7 @@ pt-BR:
       pdf_too_large: O arquivo PDF é grande demais. O tamanho máximo é %{max_size} MB.
       pdf_processing: Seu PDF está sendo processado. Você receberá um e-mail quando a análise terminar.
       invalid_pdf: O arquivo enviado não é um PDF válido.
+      missing_upload: Não recebemos seu arquivo. Tente enviá-lo novamente.
       duplicate_pdf_unavailable: Este PDF já está armazenado como um extrato ao qual você não tem acesso.
       document_too_large: O arquivo do documento é grande demais. O tamanho máximo é %{max_size} MB.
       invalid_document_file_type: Tipo de arquivo de documento inválido para o vector store ativo.
@@ -461,6 +528,26 @@ pt-BR:
     ready:
       description: Aqui está um resumo dos novos itens que serão adicionados à sua conta
         assim que você publicar esta importação.
+      monarch_existing_names_title: Já existem contas com estes nomes
+      monarch_existing_names_description: Você já tem contas chamadas %{names}. Ao publicar, novas contas serão criadas ao lado delas. Para importar para uma delas, escolha-a na etapa Contas.
+      monarch_conflicts_title: Alguns saldos existentes diferem dos do Monarch
+      monarch_conflicts_description:
+        one: Em 1 dia, uma conta para a qual você está importando já tem uma atualização de saldo diferente da do Monarch. O valor existente será mantido.
+        other: Em %{count} dias, contas para as quais você está importando já têm atualizações de saldo diferentes das do Monarch. Os valores existentes serão mantidos.
+      monarch_overlap_title: Transações existentes no mesmo período
+      monarch_overlap_description:
+        one: 1 transação existente está dentro do histórico do Monarch de uma conta para a qual você está importando e não corresponde a nenhuma transação do Monarch. Ela será mantida e entra no cálculo do saldo.
+        other: "%{count} transações existentes estão dentro do histórico do Monarch de contas para as quais você está importando e não correspondem a nenhuma transação do Monarch. Elas serão mantidas e entram no cálculo do saldo."
+      monarch_duplicates_title: Transações que já estão no Sure são ignoradas
+      monarch_duplicates_description:
+        one: 1 transação do Monarch já está na conta de destino, de uma importação anterior ou com a mesma data e valor, por isso será ignorada.
+        other: "%{count} transações do Monarch já estão nas contas de destino, de uma importação anterior ou com a mesma data e valor, por isso serão ignoradas."
+      monarch_kept_title: Alguns saldos iniciais ficaram como você os editou
+      monarch_kept_description: Desfazer a importação não restaurou o saldo inicial de %{names}, porque ele foi alterado depois da importação. Confira-o antes de importar novamente.
+      monarch_opening_title: Saldos iniciais serão movidos
+      monarch_opening_description:
+        one: O saldo inicial de 1 conta existente passa para o início do histórico do Monarch dela. Desfazer a importação o restaura.
+        other: Os saldos iniciais de %{count} contas existentes passam para o início do histórico do Monarch delas. Desfazer a importação os restaura.
       title: Confirmar seus dados de importação
       summary_item_label: Item
       summary_count_label: Quantidade

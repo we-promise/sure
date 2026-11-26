@@ -26,6 +26,9 @@ pt-BR:
       type_interest: Juros
       dividend_requires_security: O ativo é obrigatório para dividendos
       trade_requires_security: Um ativo (ticker) é obrigatório para negociações de compra e venda
+    trade:
+      scheduled: Agendada
+      scheduled_tooltip: Com data futura — não afetará seu saldo até lá
     header:
       buy: Compra
       current_market_price_label: Preço de Mercado Atual
@@ -57,6 +60,9 @@ pt-BR:
       date_label: Data
       delete: Excluir
       fee_label: Taxa de corretagem
+      lot_label: Lote da venda
+      lot_oldest_first: Mais antigo primeiro
+      lot_option: "%{date} · %{qty} a %{price}"
       delete_subtitle: Esta ação não pode ser desfeita
       delete_title: Excluir Negociação
       details: Detalhes

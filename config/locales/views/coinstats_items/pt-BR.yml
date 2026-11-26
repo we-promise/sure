@@ -52,6 +52,7 @@ pt-BR:
       step3_html: Após conectar com sucesso, acesse a aba <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Contas</a> para configurar suas contas de criptomoedas.
       api_key_label: Chave de API
       api_key_placeholder: Obrigatório
+      api_key_placeholder_update: Insira a nova chave de API para atualizar
       configure: Configurar
       update_configuration: Reconfigurar
       default_name: Conexão CoinStats

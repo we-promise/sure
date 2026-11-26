@@ -40,3 +40,4 @@ pt-BR:
       no_pending_oidc: Nenhuma autenticação OIDC pendente encontrada
       account_creation_disabled: A criação de contas via SSO está desativada. Entre em contato com um administrador.
       account_created: Boas-vindas! Sua conta foi criada.
+      duplicate_account: Já existe uma conta ou identidade de login com esses dados

@@ -14,6 +14,8 @@ pt-BR:
   oauth:
     registration:
       invalid_redirect_uris: redirect_uris deve usar https, http de loopback ou um esquema de URI de aplicativo nativo
+      invalid_client_name: client_name não pode conter caracteres de controle bidirecionais
+      reserved_client_name: client_name é reservado para aplicativos oficiais
   activerecord:
     errors:
       messages:

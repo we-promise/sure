@@ -1,6 +1,11 @@
 ---
 pt-BR:
   transactions:
+    bulk_deletions:
+      create:
+        part_transferred:
+          one: "%{count} transação dividida não foi excluída: uma parte dela está vinculada como transferência. Remova essa transferência primeiro."
+          other: "%{count} transações divididas não foram excluídas: uma parte de cada uma está vinculada como transferência. Remova essas transferências primeiro."
     bulk_updates:
       new:
         cancel: Cancelar
@@ -12,10 +17,14 @@ pt-BR:
         merchant_prompt: Selecione um estabelecimento
         name_label: Nome
         name_placeholder: Digite um nome que será aplicado às transações selecionadas
+        no_change: (sem alteração)
         none: (nenhum)
         notes_label: Notas
         notes_placeholder: Digite uma nota que será aplicada às transações selecionadas
         overview: Visão geral
+        reconciled_status_hint: Vale apenas para contas manuais (sem sincronização bancária).
+        reconciled_status_label: Status de conciliação
+        transfer_fields_hint: Em transferências, a data e o estabelecimento não mudam. A categoria só se aplica às saídas de transferência que a permitem.
         save: Salvar
         tags_label: Tags
         transactions_section: Transações
@@ -23,6 +32,7 @@ pt-BR:
     selection_bar:
       duplicate: Duplicar
       edit: Editar
+      reconcile: Conciliar
       selected: selecionada(s)
     form:
       details: Detalhes
@@ -35,6 +45,9 @@ pt-BR:
       category_search_placeholder: Pesquisar categorias
       create_category: Criar "%{name}"
       create_category_error: Não foi possível criar a categoria
+      create_as_subcategory: Adicionar como subcategoria…
+      choose_parent: "Criar \"%{name}\" dentro de:"
+      back_to_categories: Voltar
       date: Data
       description: Descrição
       description_placeholder: Descreva a transação
@@ -49,9 +62,11 @@ pt-BR:
       create_merchant: Criar
       create_merchant_error: Não foi possível criar o estabelecimento
       merchant_search_placeholder: Pesquisar ou criar estabelecimento
+      no_matching_categories: Nenhuma categoria correspondente
       submit: Adicionar transação
       tag_search_placeholder: Pesquisar ou criar tag
       tags_label: Tags
+      tags_save_error: Não foi possível salvar as tags. Altere-as novamente para tentar de novo ou recarregue a página.
       transfer: Transferência
     create:
       created: Transação criada
@@ -59,7 +74,11 @@ pt-BR:
       updated: Transação atualizada
     new:
       new_transaction: Nova transação
+    transaction_category:
+      set_on_outflow: A categoria pertence ao lado de saída desta transferência e só pode ser alterada lá
     show:
+      category_set_on_hidden_outflow: Este é o lado de entrada de uma transferência. A categoria pertence ao lado de saída, em uma conta à qual você não tem acesso, e só pode ser alterada lá.
+      category_set_on_outflow: Este é o lado de entrada de uma transferência. A categoria pertence ao lado de saída e só pode ser alterada lá, para que os orçamentos a contem uma única vez.
       keep_both: Não, manter ambas
       loan_payment: Pagamento de empréstimo
       account_label: Conta
@@ -158,10 +177,29 @@ pt-BR:
     split_parent_row:
       split_label: Dividida
     transfer_match:
+      auto_matched: Vincular?
+      auto_matched_short: Vincular?
+      auto_matched_tooltip_html: "%{amount} em %{account} no dia %{date}. Clique para revisar."
+      auto_matched_tooltip_hidden: Uma transação em uma conta que você não pode ver.
       confirm_match: Confirmar vínculo
       payment_confirmed: O pagamento está confirmado
       reject_match: Rejeitar vínculo
       transfer_confirmed: A transferência está confirmada
+    category_provenance:
+      title: Categorização automática
+      assigned: Categoria “%{category}” atribuída %{source} há %{time_ago}.
+      changed_afterwards: A categoria foi alterada depois.
+      deleted_category: uma categoria que não existe mais
+      sources:
+        ai: pela IA
+        bayes: pelo classificador Bayes local
+      labels:
+        ai:
+          current: IA
+          history: Histórico de IA
+        bayes:
+          current: Bayes
+          history: Histórico Bayes
     header:
       edit_categories: Editar categorias
       edit_imports: Editar importações
@@ -177,15 +215,34 @@ pt-BR:
       potential_duplicate_tooltip: Esta pode ser uma duplicata de outra transação
       review_recommended: Revisar
       review_recommended_tooltip: Grande diferença de valor — recomenda-se revisar para verificar se é uma duplicata
+      scheduled: Agendada
+      scheduled_tooltip: Com data futura — não afetará seu saldo até lá
       split: Dividida
       split_tooltip: Esta transação foi dividida em várias partes
       split_child_tooltip: Parte de uma transação dividida
+      transfer_hint: Transferência?
+      transfer_hint_dismiss: Não é uma transferência
+      transfer_hint_tooltip: Uma transação correspondente em outra conta parece ser o outro lado de uma transferência — clique para vinculá-las
+      view_merchant: Ver estabelecimento
     merge_duplicate:
       success: Transações mescladas com sucesso
       failure: Não foi possível mesclar as transações
     dismiss_duplicate:
       success: Mantidas como transações separadas
       failure: Não foi possível descartar a sugestão de duplicata
+    reconcile:
+      success: Marcada como %{status}
+      failure: Não foi possível atualizar o status de conciliação
+      unavailable: A conciliação não está ativada para esta família
+      not_manual_account: O status de conciliação vale apenas para contas manuais (sem sincronização bancária)
+      statuses:
+        unreconciled: Não conciliada
+        cleared: Compensada
+        reconciled: Conciliada
+      badge:
+        unreconciled_tooltip: Ainda não conferida com um extrato. Clique para marcar como compensada.
+        cleared_tooltip: Confirmada em um extrato, mas ainda não totalmente conciliada. Clique para marcar como conciliada.
+        reconciled_tooltip: Período do extrato totalmente conciliado. Clique para voltar para não conciliada.
     pending_duplicate_merge:
       possible_duplicate: Duplicata?
       possible_duplicate_short: Dup?
@@ -195,6 +252,9 @@ pt-BR:
       reject_title: Manter como transações separadas
     summary:
       total_transactions: Total de transações
+      scheduled_count:
+        one: incluindo %{count} agendada
+        other: incluindo %{count} agendadas
       income: Receitas
       expenses: Despesas
       inflow: Entradas
@@ -255,14 +315,19 @@ pt-BR:
     toggle_recurring_section: Mostrar ou ocultar as próximas transações recorrentes
     search:
       filters:
+        balance_updates: Saldos
         account: Conta
         date: Data
         type: Tipo
         status: Status
+        reconcile_status: Conciliação
+        reconcile_status_hint: Apenas contas manuais são incluídas.
         amount: Valor
         category: Categoria
         tag: Tag
         merchant: Estabelecimento
+        ai: IA
+        attachment: Anexo
     convert_to_trade:
       title: Converter em negociação com ativo
       description: Converta esta transação em uma negociação com os dados do ativo
@@ -307,6 +372,11 @@ pt-BR:
         unexpected_error: "Erro inesperado durante a conversão: %{error}"
     searches:
       filters:
+        balance_updates_filter:
+          always_shown: Sempre exibidas, conforme definido em
+          hint: Somente nesta visualização. Para exibi-las sempre, ative-as em
+          preferences_link: Preferências
+          show: Mostrar atualizações de saldo sincronizadas
         account_filter:
           filter_accounts: Filtrar contas
         category_filter:
@@ -324,6 +394,7 @@ pt-BR:
           less_than: Menor que
           placeholder: '0'
         badge:
+          balance_updates: Saldos sincronizados
           expense: Despesa
           income: Receita
           on_or_after: em ou após %{date}
@@ -331,6 +402,18 @@ pt-BR:
           transfer: Transferência
           confirmed: Lançada
           pending: Pendente
+          ai_current: IA
+          ai_history: Histórico de IA
+          attachment_with: Com anexo
+          attachment_without: Sem anexo
+        attachment_filter:
+          with: Com anexo
+          without: Sem anexo
+        ai_filter:
+          current: IA
+          current_description: A categoria ainda é a atribuída automaticamente (IA ou Bayes).
+          history: Histórico de IA
+          history_description: Foi categorizada automaticamente, mas a categoria foi alterada depois.
         type_filter:
           expense: Despesa
           income: Receita
@@ -346,7 +429,9 @@ pt-BR:
         category_filter: Categoria
         clear_filters: Limpar filtros
         date_filter: Data
+        loading: Carregando filtros...
         merchant_filter: Estabelecimento
+        reconcile_status_filter: Conciliação
         status_filter: Status
         tag_filter: Tag
         type_filter: Tipo

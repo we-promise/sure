@@ -33,6 +33,8 @@ pt-BR:
         subjacentes.
       delete_title: Remover transferência?
       details: Detalhes
+      investment_contribution_subtitle: Considerar esta transferência como gasto em orçamentos e relatórios. Desative quando a conta de corretora ou de cripto apenas converter o dinheiro para outra moeda.
+      investment_contribution_title: Aporte em investimento
       mark_recurring: Marcar como recorrente
       mark_recurring_subtitle: Acompanhe esta transferência como um padrão recorrente na lista de próximas transações e na página de recorrentes.
       mark_recurring_title: Marcar transferência como recorrente
@@ -44,6 +46,7 @@ pt-BR:
       to: Para
       date: Data
       transfer_amount: Valor da transferência
+      transaction: Transação
       total: Total
       bank_charges: Tarifas bancárias
       source_fee: Tarifa na origem
