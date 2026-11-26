@@ -275,8 +275,8 @@ class CoinbaseAccount::Processor
       # round-trips. Dividend/Interest is real income, just paid in-kind
       # instead of cash -- InvestmentStatement::Totals reports it as
       # -SUM(entries.amount), so zeroing it here would make every imported
-      # staking reward look like $0 of income. Same sign convention as a Buy:
-      # negative when received, since nothing here was paid for in cash.
+      # staking reward look like $0 of income. Income is negative when
+      # received, the same as any cash arriving in the account.
       amount = INCOME_LABELS.include?(label) ? (received ? -native_amount : native_amount) : 0
 
       notes_parts = []
@@ -446,11 +446,11 @@ class CoinbaseAccount::Processor
 
       # Create the trade
       if txn_type == "buy"
-        # Buy: positive qty, money going out (negative amount)
+        # Buy: positive qty, money going out (positive amount)
         account.entries.create!(
           date: date,
           name: "Buy #{qty.round(8)} #{security.ticker}",
-          amount: -native_amount,
+          amount: native_amount,
           currency: txn_currency,
           external_id: external_id,
           source: "coinbase",
@@ -465,11 +465,11 @@ class CoinbaseAccount::Processor
         )
         Rails.logger.info("CoinbaseAccount::Processor - Created buy trade: #{qty} #{security.ticker} @ #{price} #{txn_currency}")
       else
-        # Sell: negative qty, money coming in (positive amount)
+        # Sell: negative qty, money coming in (negative amount)
         account.entries.create!(
           date: date,
           name: "Sell #{qty.round(8)} #{security.ticker}",
-          amount: native_amount,
+          amount: -native_amount,
           currency: txn_currency,
           external_id: external_id,
           source: "coinbase",
@@ -517,7 +517,7 @@ class CoinbaseAccount::Processor
       account.entries.create!(
         date: date,
         name: "Buy #{security.ticker}",
-        amount: -total,
+        amount: total,
         currency: currency,
         external_id: external_id,
         source: "coinbase",
@@ -562,7 +562,7 @@ class CoinbaseAccount::Processor
       account.entries.create!(
         date: date,
         name: "Sell #{security.ticker}",
-        amount: total,
+        amount: -total,
         currency: currency,
         external_id: external_id,
         source: "coinbase",
