@@ -167,10 +167,10 @@ At the time of writing, `tools/list` includes:
 | `import_bank_statement` | Import bank statement data. Idempotent per `pdf_import_id`: a repeated call returns the existing import with `already_imported: true` instead of extracting again, and returns an error if that import belongs to a different account |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
 
-Both AI-backed tools run in a worker. If no worker polls their AI queue, or too
-many calls are already waiting, they answer `isError` with a "busy, try again"
-message; `import_bank_statement` says to call again with the same `pdf_import_id`
-when its extraction is still running.
+When their AI feature is available, both AI-backed tools run in a worker. If no
+worker polls that queue, or too many calls are already waiting, they answer
+`isError` with a "busy, try again" message; `import_bank_statement` says to call
+again with the same `pdf_import_id` when its extraction is still running.
 
 ### Preview Tools
 

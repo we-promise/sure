@@ -20,12 +20,20 @@ class Ai::ToolJob < ApplicationJob
   class << self
     def timeout_for(fn_class) = TIMEOUTS.fetch(fn_class.name)
 
+    # Only an import needs a retry to join a job already running: a search has no lasting
+    # side effect, and its retry can wait for a fresh result.
+    def inflight_key(function_name, arguments)
+      return unless function_name == "import_bank_statement"
+
+      "ai/tool_inflight/import_bank_statement:#{arguments["pdf_import_id"]}"
+    end
+
     def run(fn_class, user, arguments, timeout: timeout_for(fn_class))
       return busy_result(fn_class) if ai_queues_unpolled?
       return busy_result(fn_class) unless WAITING.try_acquire
 
       acquired = true
-      inflight = inflight_key(fn_class, arguments)
+      inflight = inflight_key(fn_class.name, arguments)
       if inflight && (running_job_id = Ai::SharedState.read(inflight))
         return wait_for(running_job_id, fn_class, timeout)
       end
@@ -62,14 +70,6 @@ class Ai::ToolJob < ApplicationJob
 
       def busy_result(fn_class)
         { "success" => false, "error" => "busy", "message" => BUSY_MESSAGES.fetch(fn_class.name), "tool_error" => true }
-      end
-
-      # Only an import needs a retry to join a job already running: a search has
-      # no lasting side effect, and its retry can wait for a fresh result.
-      def inflight_key(fn_class, arguments)
-        return unless fn_class.name == "import_bank_statement"
-
-        "ai/tool_inflight/import_bank_statement:#{arguments["pdf_import_id"]}"
       end
 
       def wait_for(job_id, fn_class, timeout)
@@ -113,9 +113,7 @@ class Ai::ToolJob < ApplicationJob
     end
 
     def clear_inflight(function_name, arguments)
-      return unless function_name == "import_bank_statement"
-
-      key = "ai/tool_inflight/import_bank_statement:#{arguments["pdf_import_id"]}"
-      Ai::SharedState.delete(key) if Ai::SharedState.read(key) == job_id
+      key = self.class.inflight_key(function_name, arguments)
+      Ai::SharedState.delete(key) if key && Ai::SharedState.read(key) == job_id
     end
 end
