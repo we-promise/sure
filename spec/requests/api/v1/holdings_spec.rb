@@ -66,7 +66,7 @@ RSpec.describe 'API V1 Holdings', type: :request do
 
   path '/api/v1/holdings' do
     get 'List holdings' do
-      description 'Excludes calculated holdings superseded by a recalculation in another currency.'
+      description 'Excludes calculated holdings superseded by a recalculation in another currency. Holdings are ordered by date, then by holding ID for rows on the same date.'
       tags 'Holdings'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'

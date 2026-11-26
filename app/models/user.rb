@@ -705,6 +705,60 @@ class User < ApplicationRecord
     AccountOrder.find(default_account_order) || AccountOrder.default
   end
 
+  # Answers to onboarding's Tools/AI step: where the user is coming from and
+  # how they want AI. They don't import anything or configure a provider.
+  ONBOARDING_TOOLS = %w[
+    actual_budget banktivity copilot_money firefly_iii gnucash lunch_money maybe
+    monarch_money money_manager_ex moneywiz pocketsmith quicken_classic quicken_simplifi ynab other
+  ].freeze
+  ONBOARDING_NO_TOOLS = "nothing_yet".freeze
+  ONBOARDING_AI_MODES = %w[none builtin external].freeze
+  ONBOARDING_OTHER_TOOL_MAX_LENGTH = 80
+
+  def onboarding_tools
+    tools = preferences&.dig("onboarding_tools")
+    tools.is_a?(Array) ? tools : []
+  end
+
+  def onboarding_other_tool
+    preferences&.dig("onboarding_other_tool").presence
+  end
+
+  # The saved answer, unless the AI switch has changed since: then the switch wins, so
+  # resubmitting the step without touching it never turns AI (or household consent) on or off.
+  def onboarding_ai_mode
+    mode = preferences&.dig("onboarding_ai_mode")
+    current = ai_enabled ? "builtin" : "none"
+    return current unless ONBOARDING_AI_MODES.include?(mode)
+
+    (mode != "none") == ai_enabled ? mode : current
+  end
+
+  # "Nothing yet" excludes every other tool and unknown values are dropped.
+  # Built-in and external AI enable this user's AI features; only no AI turns them off.
+  # The household's assistant settings still select the conversation backend.
+  # For an admin that switch is also the household's AI consent (Family#ai_consented?).
+  # Guests always have AI on, so they aren't asked.
+  # rendered_ai_mode is the choice the page showed: when the user left it as it was,
+  # the AI switch stays as it is now, even if it changed after the page rendered.
+  def save_onboarding_tools_and_ai(tools:, other_tool:, ai_mode:, rendered_ai_mode: nil)
+    chosen = Array(tools).map(&:to_s)
+    chosen = chosen.include?(ONBOARDING_NO_TOOLS) ? [ ONBOARDING_NO_TOOLS ] : chosen & ONBOARDING_TOOLS
+    other = other_tool.to_s.strip.first(ONBOARDING_OTHER_TOOL_MAX_LENGTH).presence if chosen.include?("other")
+    mode = ONBOARDING_AI_MODES.include?(ai_mode.to_s) ? ai_mode.to_s : "none"
+
+    transaction do
+      with_locked_preferences do |prefs|
+        prefs["onboarding_tools"] = chosen
+        prefs["onboarding_ai_mode"] = mode unless guest?
+        other ? prefs["onboarding_other_tool"] = other : prefs.delete("onboarding_other_tool")
+      end
+      attributes = { set_onboarding_goals_at: Time.current, onboarded_at: Time.current }
+      attributes[:ai_enabled] = mode != "none" unless guest? || mode == rendered_ai_mode.to_s
+      update!(attributes)
+    end
+  end
+
   # Whether the activity feed of a linked account always lists the balance
   # updates its syncs leave behind (see Account#hides_balance_updates_by_default?).
   # Off until turned on in Settings > Preferences. The activity Filter menu can
