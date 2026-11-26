@@ -55,7 +55,7 @@
               <% else %>
                 <p class="text-primary font-medium">
                   <%= [ fio_account.current_account&.name || fio_account.name,
-                        [ fio_account.fio_account_id, fio_account.bank_id ].compact_blank.join("/").presence ].compact_blank.join(" · ") %>
+                        [ mask_last4(fio_account.fio_account_id), fio_account.bank_id ].compact_blank.join("/").presence ].compact_blank.join(" · ") %>
                 </p>
                 <% unless fio_account.current_account %>
                   <p class="text-secondary text-xs"><%= t("fio_items.provider_panel.account_needs_setup") %></p>

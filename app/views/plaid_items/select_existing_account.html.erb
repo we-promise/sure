@@ -22,7 +22,7 @@
                   </div>
                   <div class="text-xs text-secondary mt-1">
                     <% if plaid_account.mask.present? %>
-                      ****<%= plaid_account.mask %> •
+                      <%= mask_last4(plaid_account.mask) %> •
                     <% end %>
                     <%= plaid_account.plaid_item.name %> • <%= plaid_account.currency %> • <%= plaid_account.plaid_type %>
                   </div>

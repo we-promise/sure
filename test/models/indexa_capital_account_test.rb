@@ -142,7 +142,7 @@ class IndexaCapitalAccountTest < ActiveSupport::TestCase
     @account.reload
     assert @account.ignored?
     assert_equal "LPYH3MCQ", @account.indexa_capital_account_id
-    assert_equal "Indexa Capital Mutual Fund (LPYH3MCQ)", @account.name
+    assert_equal "Indexa Capital Mutual Fund (•••3MCQ)", @account.name
     assert_nil @account.current_balance
     assert_nil @account.raw_payload
     assert_equal [], @account.raw_holdings_payload

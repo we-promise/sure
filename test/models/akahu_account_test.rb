@@ -97,4 +97,10 @@ class AkahuAccountTest < ActiveSupport::TestCase
     refute result.key?(:errors)
     refute_includes result.inspect, raw_message
   end
+
+  test "masked_account_number keeps the last 4 account digits" do
+    @account.update!(formatted_account: "12-3456-7890123-00")
+
+    assert_equal "•••2300", @account.masked_account_number
+  end
 end

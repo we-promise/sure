@@ -87,6 +87,15 @@ class MercuryEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Office supplies - Q1 restock", @account.entries.last.notes
   end
 
+  test "does not copy a structured details object with routing info into notes" do
+    process(tx(note: "Rent", details: {
+      electronicRoutingInfo: { accountNumber: "123456789012", routingNumber: "021000021" },
+      internationalWireRoutingInfo: { iban: "DE89370400440532013000", swiftCode: "COBADEFFXXX" } # pipelock:ignore IBAN
+    }))
+
+    assert_equal "Rent", @account.entries.last.notes
+  end
+
   test "note alone stored without separator" do
     process(tx(note: "Reimbursement"))
     assert_equal "Reimbursement", @account.entries.last.notes

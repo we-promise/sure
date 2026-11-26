@@ -19,7 +19,7 @@
               <label class="flex items-center gap-3 p-2 rounded border border-secondary hover:border-primary cursor-pointer">
                 <%= radio_button_tag :ibkr_account_id, ibkr_account.id, false %>
                 <div class="flex flex-col">
-                  <span class="text-sm text-primary font-medium"><%= ibkr_account.name.presence || ibkr_account.ibkr_account_id %></span>
+                  <span class="text-sm text-primary font-medium"><%= ibkr_account.name.presence || mask_last4(ibkr_account.ibkr_account_id) %></span>
                   <span class="text-xs text-secondary">
                     <%= ibkr_account.currency %> • <%= t(".balance") %>: <%= number_to_currency((ibkr_account.current_balance || 0), unit: Money::Currency.new(ibkr_account.currency || "USD").symbol) %>
                   </span>
