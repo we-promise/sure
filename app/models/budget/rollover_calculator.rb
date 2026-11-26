@@ -80,10 +80,6 @@ class Budget::RolloverCalculator
         ring_fenced_children = ring_fenced_children_by_parent(budget)
 
         budget.budget_categories.each do |budget_category|
-          # Subcategories that share their parent's budget have no allocation
-          # of their own, so there is nothing for them to carry forward.
-          next if budget_category.inherits_parent_budget?
-
           incoming = incoming_carry(carry, budget_category)
 
           if budget_category[:rolled_over_amount] != incoming
@@ -92,6 +88,10 @@ class Budget::RolloverCalculator
               "updated_at" => now
             )
           end
+
+          # Clear stale carry before skipping a child that resumed sharing its
+          # parent's budget after rollover was disabled.
+          next if budget_category.inherits_parent_budget?
 
           # Switching the toggle off has to stop the money in both directions.
           # Gating only what a month receives would let an opted-out month hand
