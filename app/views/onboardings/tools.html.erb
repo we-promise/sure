@@ -1,0 +1,118 @@
+<%= content_for :previous_path, preferences_onboarding_path %>
+
+<%= content_for :header_nav do %>
+  <%= render "onboardings/onboarding_nav", user: @user %>
+<% end %>
+
+<%= content_for :cancel_action do %>
+  <%= render "onboardings/logout" %>
+<% end %>
+
+<%= content_for :footer do %>
+  <%= render "layouts/shared/footer" %>
+<% end %>
+
+<% selected_tools = @user.onboarding_tools %>
+<% ai_mode = @user.onboarding_ai_mode %>
+
+<div class="grow max-w-lg w-full mx-auto bg-surface flex flex-col justify-center md:py-0 py-6 px-4 md:px-0">
+  <div class="space-y-1 mb-6 text-center">
+    <h1 class="text-2xl font-medium"><%= t(".title") %></h1>
+    <p class="text-secondary text-sm"><%= t(".subtitle", product_name: product_name) %></p>
+  </div>
+
+  <%= form_with model: @user, url: tools_onboarding_path, method: :patch, class: "space-y-6" do |form| %>
+    <%= form.hidden_field :rendered_ai_mode, value: ai_mode %>
+    <section class="space-y-3" aria-labelledby="onboarding-starting-point">
+      <div class="space-y-1">
+        <p class="text-xs uppercase text-secondary"><%= t(".starting_point.eyebrow") %></p>
+        <h2 id="onboarding-starting-point" class="font-medium text-primary"><%= t(".starting_point.title") %></h2>
+        <p class="text-sm text-secondary"><%= t(".starting_point.description") %></p>
+      </div>
+
+      <%= render DS::Disclosure.new(title: t(".starting_point.select"), align: :left, variant: :card, open: selected_tools.any?) do %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-2">
+          <% ([ User::ONBOARDING_NO_TOOLS ] + User::ONBOARDING_TOOLS).each do |tool| %>
+            <label class="flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer hover:bg-container-inset-hover text-sm text-primary">
+              <%= form.check_box :onboarding_tools, { multiple: true, checked: selected_tools.include?(tool), include_hidden: false }, tool, nil %>
+              <span><%= t(".starting_point.tools.#{tool}") %></span>
+            </label>
+          <% end %>
+        </div>
+        <div class="form-field mt-2">
+          <div class="form-field__body">
+            <%= form.text_field :onboarding_other_tool,
+                  value: @user.onboarding_other_tool,
+                  maxlength: User::ONBOARDING_OTHER_TOOL_MAX_LENGTH,
+                  placeholder: t(".starting_point.other_placeholder"),
+                  aria: { label: t(".starting_point.other_placeholder") },
+                  class: "form-field__input" %>
+          </div>
+        </div>
+      <% end %>
+
+      <p class="text-xs text-secondary"><%= t(".starting_point.hint") %></p>
+    </section>
+
+    <% unless @user.guest? %>
+    <section class="group space-y-3" aria-labelledby="onboarding-ai-preference">
+      <div class="space-y-1">
+        <p class="text-xs uppercase text-secondary"><%= t(".ai.eyebrow") %></p>
+        <h2 id="onboarding-ai-preference" class="font-medium text-primary"><%= t(".ai.title", product_name: product_name) %></h2>
+        <p class="text-sm text-secondary"><%= t(".ai.description") %></p>
+      </div>
+
+      <% User::ONBOARDING_AI_MODES.each do |mode| %>
+        <label class="flex items-start gap-3 p-4 rounded-lg border border-tertiary cursor-pointer hover:bg-container transition-colors [&:has(input:checked)]:border-primary [&:has(input:checked)]:bg-container">
+          <%= form.radio_button :onboarding_ai_mode, mode, checked: ai_mode == mode, id: "ai-mode-#{mode}", class: "mt-0.5" %>
+          <span class="space-y-0.5">
+            <span class="flex items-center gap-2 text-sm font-medium text-primary">
+              <%= t(".ai.modes.#{mode}.title") %>
+              <% if mode == "none" %>
+                <%= render DS::Pill.new(label: t(".ai.default"), tone: :gray, marker: false) %>
+              <% end %>
+            </span>
+            <span class="block text-sm text-secondary"><%= t(".ai.modes.#{mode}.description") %></span>
+          </span>
+        </label>
+      <% end %>
+
+      <div class="hidden group-has-[#ai-mode-none:checked]:block" data-ai-panel="none">
+        <%= render DS::Note.new(title: t(".ai.panels.none.title")) do %>
+          <p><%= t(".ai.panels.none.body") %></p>
+          <% if @user.admin? %>
+            <p class="mt-2"><%= t(".ai.panels.admin_off") %></p>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="hidden group-has-[#ai-mode-builtin:checked]:block" data-ai-panel="builtin">
+        <%= render DS::Note.new(title: t(".ai.panels.builtin.title")) do %>
+          <p><%= t(".ai.panels.builtin.body") %></p>
+          <% if @user.admin? %>
+            <p class="mt-2"><%= t(".ai.panels.admin_on") %></p>
+          <% end %>
+          <% unless @user.ai_available? %>
+            <% if self_hosted? && @user.family.effective_assistant_type == "builtin" %>
+              <p class="mt-2"><%= t(".ai.panels.builtin.not_configured") %></p>
+            <% else %>
+              <p class="mt-2"><%= t(".ai.panels.builtin.unavailable") %></p>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="hidden group-has-[#ai-mode-external:checked]:block" data-ai-panel="external">
+        <%= render DS::Note.new(title: t(".ai.panels.external.title")) do %>
+          <p><%= t(".ai.panels.external.body", product_name: product_name) %></p>
+          <% if @user.admin? %>
+            <p class="mt-2"><%= t(".ai.panels.admin_on") %></p>
+          <% end %>
+        <% end %>
+      </div>
+    </section>
+    <% end %>
+
+    <%= render DS::Button.new(text: t(".submit"), type: :submit, full_width: true) %>
+  <% end %>
+</div>
