@@ -3,15 +3,20 @@ pt-PT:
   onchain:
     chains:
       arbitrum: Arbitrum
+      avalanche_c: Avalanche C-Chain
+      avalanche_p: Avalanche P-Chain
       base: Base
       bitcoin: Bitcoin
       cosmos: Cosmos Hub
       ethereum: Ethereum
+      ethereum_validator: Validador Ethereum
       gnosis: Gnosis
       optimism: Optimism
       polkadot: Polkadot
       polygon: Polygon
+      polygon_stake: Staking de Polygon
       solana: Solana
+      solana_stake: Conta de staking Solana
     institution_name: Carteiras de autocustódia
   onchain_wallet_item:
     movement:
