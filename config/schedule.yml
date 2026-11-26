@@ -144,3 +144,17 @@ backfill_account_logos:
   active_job: true
   queue: "scheduled"
   description: "Fetches icons for accounts with an institution domain and no logo"
+
+poll_purchase_inbox:
+  cron: "*/5 * * * *"
+  class: "PurchaseInbox::PollJob"
+  active_job: true
+  queue: "scheduled"
+  description: "Reads forwarded order emails from the order mailbox (no-op unless configured)"
+
+match_pending_purchases:
+  cron: "*/30 * * * *"
+  class: "Purchase::MatchPendingJob"
+  active_job: true
+  queue: "scheduled"
+  description: "Links forwarded orders to payments that arrived since, and flags overdue ones"

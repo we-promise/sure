@@ -1,0 +1,24 @@
+allegro_awaiting:
+  family: dylan_family
+  user: family_admin
+  source: email
+  status: awaiting_payment
+  merchant: Allegro
+  order_number: "A-1001"
+  ordered_on: <%= 2.days.ago.to_date %>
+  total: 249.99
+  currency: USD
+  payment_method: card
+
+allegro_matched:
+  family: dylan_family
+  user: family_admin
+  source: email
+  status: matched
+  merchant: Allegro
+  order_number: "A-1000"
+  ordered_on: <%= 1.day.ago.to_date %>
+  total: 10
+  currency: USD
+  payment_method: card
+  linked_transaction: one

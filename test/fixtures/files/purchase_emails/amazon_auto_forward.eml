@@ -1,0 +1,51 @@
+Date: Thu, 12 Nov 2026 18:42:00 -0500
+From: "Amazon.com" <auto-confirm@amazon.com>
+To: bob@bobdylan.com
+Message-ID: <ab2fcc840a1caef0@fixture.example>
+Subject: Your Amazon.com order #112-1234567-1234567
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="--==_mimepart_6afc26e7495c7_18f0fe07604e"
+Content-Transfer-Encoding: 7bit
+Authentication-Results: mx.google.com; dkim=pass header.i=@amazon.com
+ header.s=s2 header.b=def; arc=pass (i=1 spf=pass spfdomain=amazon.com
+ dkim=pass dkdomain=amazon.com dmarc=pass fromdomain=amazon.com); spf=pass
+ smtp.mailfrom=bounce@amazon.com; dmarc=pass (p=QUARANTINE sp=QUARANTINE
+ dis=NONE) header.from=amazon.com
+Delivered-To: orders+bob@example.com
+X-Forwarded-To: orders+bob@example.com
+X-Forwarded-For: bob@bobdylan.com orders+bob@example.com
+
+
+----==_mimepart_6afc26e7495c7_18f0fe07604e
+Content-Type: text/plain;
+ charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Thanks for your order, Bob!
+Order #112-1234567-1234567
+Order Total: $249.99
+Payment method: Visa ending in 1234
+
+----==_mimepart_6afc26e7495c7_18f0fe07604e
+Content-Type: text/html;
+ charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+<html><head><style>td{color:red}</style><script>alert(1)</script></head><body>
+<h1>Thanks for your order, Bob!</h1>
+<p>Order #<b>112-1234567-1234567</b></p>
+<p>Placed on November 12, 2026</p>
+<table>
+  <tr><th>Item</th><th>Sold by</th><th>Qty</th><th>Price</th></tr>
+  <tr><td>HEPA filter for XR-200 vacuum</td><td>HomeParts LLC</td><td>2</td><td>$79.98</td></tr>
+  <tr><td>Insulated travel mug, 16 oz</td><td>Amazon.com</td><td>1</td><td>$150.01</td></tr>
+</table>
+<p>Shipping &amp; Handling: $20.00</p>
+<p><a href="https://www.amazon.com/your-orders/order-details?orderID=112-1234567-1234567">View or manage order</a></p>
+<p>Order Total: <b>$249.99</b></p>
+<p>Payment method: Visa ending in 1234</p>
+<img src="https://www.amazon.com/logo.png" alt="logo">
+</body></html>
+
+----==_mimepart_6afc26e7495c7_18f0fe07604e--

@@ -1,0 +1,39 @@
+---
+en:
+  purchase_mailer:
+    unknown_merchant: your order
+    linked_to: "Linked to the transaction %{name} on %{account}, %{date}."
+    processed:
+      subject: "Order read: %{merchant}, %{total}"
+      heading: "We read your order from %{merchant}"
+      summary: "Ordered on %{date}, total %{total}."
+      waiting: We're waiting for the payment to show up in your accounts and will link it automatically.
+      needs_matching: More than one transaction could be this payment, so it isn't linked yet.
+      manual: This order won't be matched to its payment automatically.
+    matched:
+      subject: "Payment found: %{merchant}, %{total}"
+      heading: "We found the payment for your order from %{merchant}"
+    unmatched:
+      subject: "No payment found yet: %{merchant}, %{total}"
+      heading: "We haven't found the payment for your order from %{merchant}"
+      body: "No transaction of %{total} has shown up in the %{days} days since the order."
+    needs_matching:
+      subject: "Pick the payment: %{merchant}, %{total}"
+      heading: "Which payment was your order from %{merchant}?"
+      body: "Several transactions of %{total} could be this order, so its items aren't recorded on any of them yet."
+    rejected:
+      subject: "Email not added: %{merchant}"
+      heading: We couldn't add the email you forwarded
+      subject_line: "Email: %{subject}"
+      not_an_order: "It doesn't look like an order confirmation: %{reason}"
+      no_reason: no order details were found.
+      duplicate: This order is already in your purchases.
+    failed:
+      subject: "We couldn't read your order email: %{merchant}"
+      heading: We couldn't read the order email you forwarded
+      body: Something went wrong while reading it. Forward the email again to try again.
+    preview_required:
+      subject: "Turn on preview features to use the order mailbox in %{product_name}"
+      heading: Your forwarded email wasn't added
+      body: "The order mailbox is a preview feature. Turn on preview features in %{product_name} and forward the email again."
+      button: Open preferences

@@ -1,0 +1,39 @@
+---
+pl:
+  purchase_mailer:
+    unknown_merchant: Twoje zamówienie
+    linked_to: "Powiązano z transakcją %{name} na koncie %{account}, %{date}."
+    processed:
+      subject: "Odczytano zamówienie: %{merchant}, %{total}"
+      heading: "Odczytaliśmy Twoje zamówienie z %{merchant}"
+      summary: "Zamówione %{date}, kwota %{total}."
+      waiting: Czekamy, aż płatność pojawi się na Twoich kontach, i powiążemy ją automatycznie.
+      needs_matching: Ta płatność może być jedną z kilku transakcji, więc nie jest jeszcze powiązana.
+      manual: To zamówienie nie zostanie automatycznie dopasowane do płatności.
+    matched:
+      subject: "Znaleziono płatność: %{merchant}, %{total}"
+      heading: "Znaleźliśmy płatność za Twoje zamówienie z %{merchant}"
+    unmatched:
+      subject: "Nie znaleziono jeszcze płatności: %{merchant}, %{total}"
+      heading: "Nie znaleźliśmy płatności za Twoje zamówienie z %{merchant}"
+      body: "Przez %{days} dni od zamówienia nie pojawiła się transakcja na kwotę %{total}."
+    needs_matching:
+      subject: "Wybierz płatność: %{merchant}, %{total}"
+      heading: "Która płatność dotyczy Twojego zamówienia z %{merchant}?"
+      body: "Kilka transakcji na kwotę %{total} może być tym zamówieniem, więc pozycje nie są jeszcze przypisane do żadnej z nich."
+    rejected:
+      subject: "Nie dodano maila: %{merchant}"
+      heading: Nie udało się dodać przekazanego maila
+      subject_line: "Mail: %{subject}"
+      not_an_order: "To nie wygląda na potwierdzenie zamówienia: %{reason}"
+      no_reason: nie znaleziono szczegółów zamówienia.
+      duplicate: To zamówienie jest już w Twoich zakupach.
+    failed:
+      subject: "Nie udało się odczytać maila z zamówieniem: %{merchant}"
+      heading: Nie udało się odczytać przekazanego maila z zamówieniem
+      body: Coś poszło nie tak podczas odczytu. Przekaż mail ponownie, żeby spróbować jeszcze raz.
+    preview_required:
+      subject: "Włącz funkcje testowe, aby korzystać ze skrzynki zamówień w %{product_name}"
+      heading: Przekazany mail nie został dodany
+      body: "Skrzynka zamówień jest funkcją testową. Włącz funkcje testowe w %{product_name} i przekaż mail ponownie."
+      button: Otwórz preferencje

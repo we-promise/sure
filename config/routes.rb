@@ -849,6 +849,7 @@ Rails.application.routes.draw do
       resources :accounts, only: [ :index, :show ]
       resources :account_statements, only: [ :index, :show, :create ]
       resources :balances, only: [ :index, :show ]
+      resources :receipts, only: [ :show, :create ]
       resources :budgets, only: [ :index, :show ]
       resources :budget_categories, only: [ :index, :show ]
       resources :categories, only: [ :index, :show, :create ]
@@ -863,6 +864,7 @@ Rails.application.routes.draw do
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ] do
         resource :split, only: [ :show, :create, :update, :destroy ]
+        resources :attachments, only: [ :show ], controller: :transaction_attachments
       end
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
       resources :holdings, only: [ :index, :show ]

@@ -5,7 +5,9 @@ module Ai::Requesters
   CLASSES = {
     categorize: "Family::AutoCategorizer",
     detect_merchants: "Family::AutoMerchantDetector",
-    enhance_merchants: "ProviderMerchant::Enhancer"
+    enhance_merchants: "ProviderMerchant::Enhancer",
+    extract_receipt: "ReceiptScan::Processor",
+    extract_purchase: "Purchase::EmailProcessor"
   }.freeze
 
   module_function

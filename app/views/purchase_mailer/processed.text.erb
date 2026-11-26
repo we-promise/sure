@@ -1,0 +1,14 @@
+<%= t(".heading", merchant: @purchase.merchant || t("purchase_mailer.unknown_merchant")) %>
+
+<%= t(".summary", date: @purchase.ordered_on ? l(@purchase.ordered_on, format: :long) : "—", total: purchase_total) %>
+
+<%= render "purchase_mailer/items", purchase: @purchase %>
+<% if @purchase.matched? %>
+<%= render "purchase_mailer/transaction", purchase: @purchase %>
+<% elsif @purchase.needs_matching? %>
+<%= t(".needs_matching") %>
+<% elsif @purchase.unmatched? %>
+<%= t(".manual") %>
+<% else %>
+<%= t(".waiting") %>
+<% end %>

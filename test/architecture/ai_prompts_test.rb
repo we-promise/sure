@@ -72,6 +72,25 @@ class AiPromptsTest < ActiveSupport::TestCase
     end
   end
 
+  test "extract_receipt renders today's text" do
+    one = render("extract_receipt", :extract_receipt, files: 1, category_names: %w[Groceries Household])
+    many = render("extract_receipt", :extract_receipt, files: 2, category_names: [])
+
+    assert_equal GOLDEN.join("extract_receipt.instructions.txt").read, one.instructions
+    assert_equal GOLDEN.join("extract_receipt.input.txt").read, one.input
+    assert_equal GOLDEN.join("extract_receipt.many.input.txt").read, many.input
+  end
+
+  test "extract_purchase renders today's text" do
+    text_only = render("extract_purchase", :extract_purchase, text: "Order #1", files: [], images: [], category_names: %w[Groceries])
+    with_files = render("extract_purchase", :extract_purchase, text: "Receipt", files: %w[receipt.jpg invoice.pdf],
+                                                             images: %w[file-1.jpg file-2-page-1.png], category_names: [])
+
+    assert_equal GOLDEN.join("extract_purchase.instructions.txt").read, text_only.instructions
+    assert_equal GOLDEN.join("extract_purchase.input.txt").read, text_only.input
+    assert_equal GOLDEN.join("extract_purchase.files.input.txt").read, with_files.input
+  end
+
   test "the removed tool sentences are the only difference from today's Anthropic text" do
     TOOL_SENTENCE_REMOVED.each do |name, (old, _new)|
       assert_includes GOLDEN.join("#{name}.instructions.txt").read, old, name
@@ -109,8 +128,10 @@ class AiPromptsTest < ActiveSupport::TestCase
       [ base, "#{base}_anthropic", *("#{base}_simple" if Ai::LegacyEnvConfig::SIMPLE_PROMPTS.include?(feature)) ]
     end
     used += Ai::Config::Model::OCR_PROMPTS.map { "ocr_#{_1}" }
-    # extract_pdf's two generations each run their own folder; a route entry's prompt doesn't name them.
-    used += [ Ai::Generations::ReadPdf, Ai::Generations::ExtractBankStatement ].map(&:prompt_key)
+    # extract_pdf's two generations and receipt scanning each run their own folder; a route entry's
+    # prompt doesn't name them.
+    used += [ Ai::Generations::ReadPdf, Ai::Generations::ExtractBankStatement, Ai::Generations::ExtractReceipt,
+              Ai::Generations::ExtractPurchase ].map(&:prompt_key)
     folders = Ai::Prompt::ROOT.children.select(&:directory?).map { _1.basename.to_s } - %w[shared]
 
     assert_empty folders - used, "prompt folders no route can name"

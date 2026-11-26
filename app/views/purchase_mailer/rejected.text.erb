@@ -1,0 +1,11 @@
+<%= t(".heading") %>
+<% if @purchase.ai_metadata["subject"].present? %>
+
+<%= t(".subject_line", subject: @purchase.ai_metadata["subject"]) %>
+<% end %>
+
+<% if @reason&.dig("reason") == "duplicate" %>
+<%= t(".duplicate") %>
+<% else %>
+<%= t(".not_an_order", reason: @purchase.ai_metadata.dig("raw_output", "not_order_reason").presence || t(".no_reason")) %>
+<% end %>

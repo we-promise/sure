@@ -34,6 +34,7 @@ require Rails.root.join("test/support/ai_test_helper").to_s
 require Rails.root.join("test/support/ai_legacy_setups").to_s
 require Rails.root.join("test/support/ai_test_generation").to_s
 require Rails.root.join("test/support/ai_e2e_helper").to_s
+require Rails.root.join("test/support/receipt_test_helper").to_s
 
 VCR.configure do |config|
   config.cassette_library_dir = "test/vcr_cassettes"
@@ -101,6 +102,8 @@ module ActiveSupport
 
     include SqlQueryCapture
     include AiTestHelper
+    include ReceiptTestHelper
+    include PurchaseTestHelper
 
     # Add more helper methods to be used by all tests here...
     def sign_in(user)

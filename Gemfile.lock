@@ -984,6 +984,7 @@ DEPENDENCIES
   minitest (~> 6.1)
   minitest-mock
   mocha
+  net-imap
   octokit
   omniauth (~> 2.2)
   omniauth-github

@@ -133,6 +133,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
     t.check_constraint "cost_basis_method::text = ANY (ARRAY['average'::character varying::text, 'fifo'::character varying::text])", name: "accounts_cost_basis_method_known"
   end
 
+  create_table "action_mailbox_inbound_emails", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "message_checksum", null: false
+    t.string "message_id", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id", "message_checksum"], name: "index_action_mailbox_inbound_emails_uniqueness", unique: true
+  end
+
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "blob_id", null: false
     t.datetime "created_at", null: false
@@ -2043,6 +2052,66 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
     t.index ["provider_key", "period"], name: "index_provider_request_counts_on_provider_key_and_period", unique: true
   end
 
+  create_table "purchase_inbox_routes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "kind", null: false
+    t.string "value", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "kind, lower((value)::text)", name: "index_purchase_inbox_routes_on_kind_and_value", unique: true
+    t.index ["user_id"], name: "index_purchase_inbox_routes_on_user_id"
+  end
+
+  create_table "purchase_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "purchase_id", null: false
+    t.uuid "category_id"
+    t.string "name", null: false
+    t.decimal "quantity", precision: 19, scale: 4
+    t.decimal "unit_price", precision: 19, scale: 4
+    t.decimal "amount", precision: 19, scale: 4
+    t.string "seller"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category_id"], name: "index_purchase_items_on_category_id"
+    t.index ["purchase_id", "position"], name: "index_purchase_items_on_purchase_id_and_position"
+  end
+
+  create_table "purchases", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "user_id", null: false
+    t.uuid "transaction_id"
+    t.uuid "receipt_scan_id"
+    t.string "inbound_email_message_id"
+    t.string "source", null: false
+    t.string "status", default: "processing", null: false
+    t.string "merchant"
+    t.string "order_number"
+    t.date "ordered_on"
+    t.decimal "total", precision: 19, scale: 4
+    t.string "currency"
+    t.decimal "shipping_cost", precision: 19, scale: 4
+    t.string "payment_method", default: "unknown", null: false
+    t.uuid "match_candidate_entry_ids", default: [], null: false, array: true
+    t.uuid "rejected_entry_ids", default: [], null: false, array: true
+    t.datetime "matched_at"
+    t.date "match_deadline_on"
+    t.datetime "unmatched_notified_at"
+    t.jsonb "review_reasons", default: [], null: false
+    t.jsonb "ai_metadata", default: {}, null: false
+    t.text "error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "merchant_domain"
+    t.index "family_id, lower((merchant)::text), lower((order_number)::text)", name: "index_purchases_on_family_merchant_order_number"
+    t.index ["family_id", "ordered_on"], name: "index_purchases_on_family_id_and_ordered_on"
+    t.index ["family_id", "status"], name: "index_purchases_on_family_id_and_status"
+    t.index ["family_id"], name: "index_purchases_on_family_id"
+    t.index ["receipt_scan_id"], name: "index_purchases_on_receipt_scan_id", unique: true
+    t.index ["transaction_id"], name: "index_purchases_on_transaction_id", unique: true
+    t.index ["user_id"], name: "index_purchases_on_user_id"
+  end
+
   create_table "push_deliveries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "subscription_type", null: false
     t.uuid "subscription_id", null: false
@@ -2125,6 +2194,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_questrade_items_on_family_id"
     t.index ["status"], name: "index_questrade_items_on_status"
+  end
+
+  create_table "receipt_scans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "account_id", null: false
+    t.uuid "user_id"
+    t.uuid "transaction_id"
+    t.string "status", default: "processing", null: false
+    t.jsonb "review_reasons", default: [], null: false
+    t.text "error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_receipt_scans_on_account_id"
+    t.index ["family_id", "created_at"], name: "index_receipt_scans_on_family_id_and_created_at"
+    t.index ["family_id"], name: "index_receipt_scans_on_family_id"
+    t.index ["transaction_id"], name: "index_receipt_scans_on_transaction_id"
+    t.index ["user_id"], name: "index_receipt_scans_on_user_id"
   end
 
   create_table "recurrence_rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3332,10 +3418,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
   add_foreign_key "plaid_items", "families"
   add_foreign_key "plaid_items", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "properties", "tags", column: "cost_tag_id", on_delete: :nullify
+  add_foreign_key "purchase_inbox_routes", "users", on_delete: :cascade
+  add_foreign_key "purchase_items", "categories", on_delete: :nullify
+  add_foreign_key "purchase_items", "purchases", on_delete: :cascade
+  add_foreign_key "purchases", "families"
+  add_foreign_key "purchases", "receipt_scans", on_delete: :nullify
+  add_foreign_key "purchases", "transactions", on_delete: :nullify
+  add_foreign_key "purchases", "users"
   add_foreign_key "push_deliveries", "insights"
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"
+  add_foreign_key "receipt_scans", "accounts"
+  add_foreign_key "receipt_scans", "families"
+  add_foreign_key "receipt_scans", "transactions", on_delete: :nullify
+  add_foreign_key "receipt_scans", "users", on_delete: :nullify
   add_foreign_key "recurrence_rules", "recurring_transactions", on_delete: :cascade
   add_foreign_key "recurring_allocations", "entries", on_delete: :nullify
   add_foreign_key "recurring_allocations", "recurring_occurrences", column: ["recurring_occurrence_id", "currency"], primary_key: ["id", "currency"], name: "fk_recurring_allocations_currency_matches_occurrence", on_delete: :cascade

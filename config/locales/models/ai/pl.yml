@@ -1,0 +1,38 @@
+---
+pl:
+  ai:
+    availability:
+      capability_missing:
+        admin: "Funkcja „%{feature}” jest niedostępna: żaden ze skonfigurowanych modeli AI tego nie potrafi. Sprawdź modele w Ustawienia → Hosting własny."
+        member: "Funkcja „%{feature}” jest niedostępna: żaden ze skonfigurowanych modeli AI tego nie potrafi."
+      not_configured:
+        admin: "Funkcja „%{feature}” jest niedostępna: nie ustawiono do tego modelu AI. Dodaj go w Ustawienia → Hosting własny."
+        member: "Funkcja „%{feature}” jest niedostępna: AI nie jest do tego skonfigurowane w tej instancji."
+      user_disabled:
+        member: "Funkcja „%{feature}” wymaga włączenia AI. Możesz je włączyć w asystencie AI."
+    consent_rows:
+      bill_setup: Rachunki
+      categorize: Kategorie
+      chat: Czat
+      detect_merchants: Sprzedawcy
+      embed: Dokumenty
+      extract_pdf: Import PDF
+      extract_receipt: Skanowanie paragonów
+      extract_purchase: Maile z zamówieniami
+    sends:
+      bill_configuration: Bieżące ustawienia rachunku
+      category_names: Nazwy Twoich kategorii
+      chat_messages: Twoje wiadomości na czacie
+      depends_on_vector_store: Przesłane dokumenty, jako całe pliki do bazy wektorowej albo jako fragmenty tekstu do modelu embeddingów
+      looked_up_financial_data: Dane finansowe, które asystent sprawdza, by odpowiedzieć
+      merchant_names: Nazwy sprzedawców
+      order_email_attachments: Zdjęcia i pliki PDF załączone do maili z zamówieniami, które przekazujesz
+      order_email_text: Treść maili z zamówieniami, które przekazujesz
+      provider_category_hints: Kategorie sugerowane przez Twój bank
+      receipt_images: Przesyłane zdjęcia i pliki paragonów
+      search_query: Twoje wyszukiwane hasło
+      stored_document_text: Tekst wyciągów zapisanych w Twoim sejfie
+      transaction_amounts: Kwoty transakcji
+      transaction_dates: Daty transakcji
+      transaction_names: Nazwy transakcji
+      uploaded_document: Przesyłany dokument

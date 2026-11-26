@@ -16,6 +16,10 @@ module Ai::Routes
     # An OCR model alone can't extract (`requires`): it only transcribes for the model that reads.
     extract_pdf:       { lane: :prompt,      needs: { generation: %i[structured_output], ocr: %i[ocr] }, requires: :generation, consent: :user,
                          sends: %i[uploaded_document] },
+    extract_receipt:   { lane: :prompt,      needs: %i[structured_output],      consent: :user,
+                         sends: %i[receipt_images category_names] },
+    extract_purchase:  { lane: :background,  needs: %i[structured_output],      consent: :user,
+                         sends: %i[order_email_text order_email_attachments category_names] },
     embed:             { lane: :prompt,      needs: %i[embedding],              consent: :user,
                          sends: %i[depends_on_vector_store] },
     search_documents:  { lane: :interactive, route_of: :embed, consent_as: :embed, consent: :user,

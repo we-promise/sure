@@ -1,0 +1,3 @@
+<% if (entry = purchase_transaction_entry) %>
+  <p><%= t("purchase_mailer.linked_to", name: entry.name, account: entry.account.name, date: l(entry.date, format: :long)) %></p>
+<% end %>
