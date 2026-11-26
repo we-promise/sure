@@ -730,6 +730,24 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_equal %w[OLD], @security.constituents.pluck(:ticker)
   end
 
+  # The stamp after a failed store is a write of its own. When the database is
+  # what failed, the stamp fails too, and that must not escape either.
+  test "a failure stamping after a failed store is logged and does not stop the import" do
+    Security::Constituent.stubs(:insert_all!).raises(ActiveRecord::StatementInvalid, "PG::CharacterNotInRepertoire")
+    @security.stubs(:stamp_constituents).raises(ActiveRecord::ConnectionNotEstablished, "connection lost")
+
+    assert_nothing_raised do
+      import(Provider::SecurityConcept::SecurityInfo.new(
+        symbol: "AAPL", name: "Fund Name", links: nil, logo_url: nil, description: nil,
+        kind: nil, exchange_operating_mic: "XNAS", constituents: [ constituent("AAA", "A", 5) ]
+      ))
+    end
+
+    assert_equal "Fund Name", @security.reload.name
+    errors = DebugLogEntry.where(category: "security_holdings").map { |entry| entry.metadata["error"] }
+    assert_includes errors, "connection lost"
+  end
+
   test "a ticker that is not a string skips that row and stores the rest" do
     import(info(constituents: [ { ticker: [ "MSFT" ], name: "Microsoft", weight: 5 }, constituent("NVDA", "Nvidia", 4) ]))
 

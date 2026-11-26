@@ -406,9 +406,14 @@ module Security::Provided
             # stamped like an unreadable one: unstamped, the fund would be
             # fetched again on every sync. The cost is that a temporary database
             # error is not retried until a market data reset (`clear_cache`) or
-            # a change of provider.
+            # a change of provider. The stamp is a write too, so when the
+            # database is what failed, its own error is logged the same way.
             log_failed_constituents(provider, e)
-            stamp_constituents(provider)
+            begin
+              stamp_constituents(provider)
+            rescue => stamp_error
+              log_failed_constituents(provider, stamp_error)
+            end
           end
         end
         # `with_lock` re-reads the row, so precedence is checked against what
