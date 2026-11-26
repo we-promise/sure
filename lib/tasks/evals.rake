@@ -325,7 +325,7 @@ namespace :evals do
       categories: [ { id: "1", name: "Food & Drink", is_subcategory: false, parent_id: nil } ],
       family: nil
     )
-    result = generation.call(plan: Ai::Plan.new(feature: :categorize, lane: :background, routes: [ route ]))
+    result = Ai::Capsule.outside { generation.call(plan: Ai::Plan.new(feature: :categorize, lane: :background, routes: [ route ])) }
 
     # A success can still hold no answer for the sample (skipped as too long for the model); an
     # explicit null category is an answer.
