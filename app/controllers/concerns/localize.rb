@@ -5,6 +5,9 @@ module Localize
     around_action :switch_locale
     around_action :switch_timezone
     helper_method :locale_from_param
+    # The web saves a detected Accept-Language as the user's locale. MCP and
+    # API clients send theirs per request, so it applies to that response only.
+    class_attribute :save_detected_locale, instance_writer: false, default: true
   end
 
   class_methods do
@@ -13,6 +16,7 @@ module Localize
     # the request runs in the default locale and the app zone. Declare this
     # after the authenticating before_action to resolve both once they are known.
     def localize_after_authentication
+      self.save_detected_locale = false
       skip_around_action :switch_locale, :switch_timezone
       around_action :switch_locale
       around_action :switch_timezone
@@ -49,7 +53,7 @@ module Localize
       return unless I18n.available_locales.include?(locale_sym)
 
       # Auto-save detected locale to user profile (once per user, not per session)
-      if Current.user.present? && Current.user.locale.blank?
+      if save_detected_locale && Current.user.present? && Current.user.locale.blank?
         Current.user.update_column(:locale, locale_sym.to_s)
       end
 

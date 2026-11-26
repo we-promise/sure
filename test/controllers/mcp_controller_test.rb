@@ -847,6 +847,22 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools/call applies Accept-Language to the response without saving it to the user" do
+    assert_nil @user.locale
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", {
+        name: "create_tag",
+        arguments: { name: tags(:one).name }
+      }).to_json, headers: mcp_headers(@token).merge("Accept-Language" => "es-ES,es;q=0.9")
+
+      assert_response :ok
+      inner = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+      assert_includes inner["message"], I18n.t("errors.messages.taken", locale: :es)
+      assert_nil @user.reload.locale
+    end
+  end
+
   test "tools/call wraps function errors as isError response" do
     Usage.expects(:capture).with("mcp_call_served_daily").once
     with_mcp_env do

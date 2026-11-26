@@ -67,6 +67,18 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.parsed_body["message"], I18n.t("errors.messages.taken", locale: :es)
   end
 
+  test "applies Accept-Language to the response without saving it to the user" do
+    assert_nil @user.locale
+
+    post "/api/v1/categories",
+      params: { category: { name: categories(:food_and_drink).name } },
+      headers: { "X-Api-Key" => @plain_api_key, "Accept-Language" => "es-ES,es;q=0.9" }
+
+    assert_response :unprocessable_entity
+    assert_includes response.parsed_body["message"], I18n.t("errors.messages.taken", locale: :es)
+    assert_nil @user.reload.locale
+  end
+
   test "should require authentication" do
     # Test that endpoints require OAuth tokens
     get "/api/v1/test"
