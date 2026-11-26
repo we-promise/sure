@@ -89,15 +89,24 @@ class Assistant::Function::GetHoldings < Assistant::Function
   end
 
   def call(params = {})
-    holdings_query = build_holdings_query(params)
+    holdings = build_holdings_query(params).includes(:security, :account).to_a
 
-    ordered_holdings = holdings_query.order(amount: :desc)
-    pagy = Pagy.new(count: ordered_holdings.count, page: resolved_page(params), limit: default_page_size)
-    paginated_holdings = ordered_holdings.includes(:security, :account).offset(pagy.offset).limit(pagy.limit)
+    # A provider snapshot can be in another currency than the account, and the
+    # family's accounts can differ too, so amounts are converted to the family
+    # currency before they are ordered and totaled. They convert at today's
+    # rate, as InvestmentStatement and the balance sheet do for family totals,
+    # even when a provider snapshot is dated earlier. (Account#current_holdings_total
+    # uses each holding's own date, but converts into the account currency for
+    # the weights.) A currency with no rate counts as 0 rather than 1:1.
+    rates = ExchangeRate.rates_for(holdings.map(&:currency), to: family.currency, date: Date.current)
+    family_amounts = holdings.index_with { |holding| holding.amount * (rates[holding.currency] || 0) }
 
-    total_value = holdings_query.sum(:amount)
+    ordered_holdings = holdings.sort_by { |holding| [ -family_amounts[holding], holding.id ] }
+    pagy = Pagy.new(count: ordered_holdings.size, page: resolved_page(params), limit: default_page_size)
+    paginated_holdings = ordered_holdings[pagy.offset, pagy.limit] || []
 
-    paginated_holdings = paginated_holdings.to_a
+    total_value = family_amounts.values.sum
+
     open_lots = Holding.open_lots_for(paginated_holdings)
 
     normalized_holdings = paginated_holdings.map do |holding|
