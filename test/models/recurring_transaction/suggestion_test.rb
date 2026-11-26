@@ -31,15 +31,96 @@ class RecurringTransaction::SuggestionTest < ActiveSupport::TestCase
     assert suggestion.failed?
     assert_equal "generation_failed", suggestion.error
     entry = DebugLogEntry.where(category: "bill_setup").last
-    assert_includes entry.metadata["error_message"], "IBAN"
+    assert_equal "IBAN #{Ai::Instrumentation::Redactor::MASK}", entry.metadata["error_message"]
     assert_equal suggestion.id, entry.metadata["suggestion_id"]
+  end
+
+  test "a revoked entry share stops evidence gathering before the provider call" do
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    suggestion = @family.recurring_transaction_suggestions.create!(user: member, entry: @entry, mode: :fill)
+    requests = stub_ai(:bill_setup, returns: raw(name: "Should not appear"))
+    account_shares(:depository_shared_with_member).destroy!
+
+    run_job(suggestion)
+
+    assert_empty requests
+    assert suggestion.reload.failed?
+    assert_equal "generation_failed", suggestion.error
+  end
+
+  test "a revoked bill share stops evidence gathering before the provider call" do
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    series = create_series(name: "Gym")
+    create_entry(name: "Gym", amount: 40, date: Date.current.beginning_of_month + 8.days - 1.month)
+    suggestion = @family.recurring_transaction_suggestions.create!(
+      user: member, recurring_transaction: series, mode: :configure
+    )
+    requests = stub_ai(:bill_setup, returns: raw(name: "Should not appear"))
+    account_shares(:depository_shared_with_member).destroy!
+
+    run_job(suggestion)
+
+    assert_empty requests
+    assert suggestion.reload.failed?
+  end
+
+  test "the result is broadcast only after the surrounding transaction commits" do
+    stub_provider(raw(name: "Gym"))
+    suggestion = fill_suggestion
+    answer = suggestion.ai_generation.call
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).never
+
+    ActiveRecord::Base.transaction do
+      suggestion.apply_ai(answer)
+      raise ActiveRecord::Rollback
+    end
+
+    assert suggestion.reload.pending?
+  end
+
+  test "a broadcast failure does not roll the result back" do
+    stub_provider(raw(name: "Gym"))
+    suggestion = fill_suggestion
+    answer = suggestion.ai_generation.call
+    Turbo::StreamsChannel.stubs(:broadcast_replace_to).raises(StandardError, "cable down")
+
+    assert_nothing_raised { suggestion.apply_ai(answer) }
+    assert suggestion.reload.complete?
+  end
+
+  test "only one pending fill suggestion exists per entry and requester" do
+    suggestion = fill_suggestion
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      @family.recurring_transaction_suggestions.create!(user: @user, entry: @entry, mode: :fill)
+    end
+
+    suggestion.update!(status: :failed)
+    assert_nothing_raised do
+      @family.recurring_transaction_suggestions.create!(user: @user, entry: @entry, mode: :fill)
+    end
+  end
+
+  test "only one pending configure suggestion exists per bill and requester" do
+    series = create_series(name: "Gym")
+    suggestion = configure_suggestion(series)
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      @family.recurring_transaction_suggestions.create!(user: @user, recurring_transaction: series, mode: :configure)
+    end
+
+    suggestion.update!(status: :cancelled)
+    assert_nothing_raised do
+      @family.recurring_transaction_suggestions.create!(user: @user, recurring_transaction: series, mode: :configure)
+    end
   end
 
   test "only a pending suggestion records an answer or a failure" do
     stub_provider(raw(name: "Too late"))
-    answer = fill_suggestion.ai_generation.call
-
     stopped = fill_suggestion
+    answer = stopped.ai_generation.call
     stopped.update!(status: :cancelled)
     assert_equal 0, stopped.apply_ai(answer)
     stopped.ai_failed(StandardError.new("late failure"))

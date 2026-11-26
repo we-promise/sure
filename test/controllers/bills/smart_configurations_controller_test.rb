@@ -34,6 +34,8 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Reading this bill", response.body
     assert_select "turbo-cable-stream-source"
+    assert_select "[role=status]"
+    assert_select "[data-ai-suggestion-url-value=?]", bill_smart_configuration_path(@series, suggestion)
     assert_select "form[action=?]", bill_smart_configuration_path(@series, suggestion)
     assert_select "input[name=_method][value=delete]"
   end

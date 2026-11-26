@@ -26,6 +26,8 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_response :success
     assert_match "Reading this charge", response.body
     assert_select "turbo-cable-stream-source"
+    assert_select "[role=status]"
+    assert_select "[data-ai-suggestion-url-value=?]", recurring_transactions_smart_fill_path(suggestion)
     assert_select "form[action=?]", recurring_transactions_smart_fill_path(suggestion)
     assert_select "input[name=_method][value=delete]"
   end
@@ -51,6 +53,8 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_response :success
     assert_match I18n.t("recurring_transactions.new.smart_fill_applied"), response.body
     assert_match "Weekly gaps between charges", response.body
+    assert_select "[role=status]"
+    assert_select "form[action=?][data-turbo-frame=modal]", recurring_transactions_path
     assert_select "input[name=?][value=?]", "recurring_transaction[name]", "Gym Membership"
     assert_select "input[name=?][value=?]", "recurring_transaction[amount]", "42.00"
   end
@@ -107,6 +111,22 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_response :success
     assert_match "Could not analyze the charge history", response.body
     assert_no_match "Should not appear", response.body
+  end
+
+  test "show does not prefill from an entry whose access was revoked after the request" do
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
+    stub_provider(raw(name: nil, amount: nil, frequency: nil))
+    suggestion = start_pending_suggestion
+    perform_enqueued_jobs(only: Ai::GenerationJob)
+    account_shares(:depository_shared_with_member).destroy!
+
+    get recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_no_match "GYM MEMBERSHIP", response.body
+    assert_select "input[type=hidden][name=entry_id]", count: 0
   end
 
   test "smart fill on a transaction a bill already covers still warns" do

@@ -23,9 +23,7 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
     entry = Current.accessible_entries.find_by(id: params[:entry_id])
     return render_missing_entry(income:) if entry.nil?
 
-    @suggestion = Current.family.recurring_transaction_suggestions.find_or_create_by!(
-      user: Current.user, entry:, income:, mode: :fill, status: :pending
-    )
+    @suggestion = pending_suggestion(entry:, income:)
 
     enqueue_job if @suggestion.previously_new_record?
     prepare_form(entry:, income:)
@@ -53,9 +51,29 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
                               .where(user: Current.user, mode: :fill).find(params[:id])
     end
 
+    def pending_suggestion(entry:, income:)
+      # Two clicks can arrive together; the entry lock keeps the second one
+      # behind the first insert. The unique index is the backstop if a row is
+      # inserted by another path, in which case reuse it without a second job.
+      # Entry#transaction is the delegated-type accessor, so with_lock cannot be
+      # used here: the explicit class-level transaction is the one that locks.
+      Entry.transaction do
+        entry.lock!
+        Current.family.recurring_transaction_suggestions.find_or_create_by!(
+          user: Current.user, entry:, income:, mode: :fill, status: :pending
+        )
+      end
+    rescue ActiveRecord::RecordNotUnique
+      Current.family.recurring_transaction_suggestions.find_by!(
+        user: Current.user, entry:, income:, mode: :fill, status: :pending
+      )
+    end
+
     def prepare_form(entry: nil, income: nil)
       @suggestion ||= suggestion
-      entry ||= @suggestion.entry
+      # Access can be revoked after the request was queued. Stop and show must
+      # not prefill from an entry the requester can no longer read.
+      entry ||= Current.accessible_entries.find_by(id: @suggestion.entry_id)
       income = @suggestion.income if income.nil?
 
       @recurring_transaction = Current.family.recurring_transactions.new(
@@ -64,7 +82,9 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
         currency: Current.family.currency
       )
       @recurring_transaction.is_income = income
-      prefill_recurring_from_entry(entry)
+      @source_entry = entry
+      @covering_series = nil
+      prefill_recurring_from_entry(entry) if entry
       @suggestion.apply_to(@recurring_transaction)
     end
 

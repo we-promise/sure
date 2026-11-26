@@ -13,8 +13,17 @@ class RecurringTransaction::Suggestion < ApplicationRecord
   enum :mode, { fill: "fill", configure: "configure" }
   enum :status, { pending: "pending", complete: "complete", failed: "failed", cancelled: "cancelled" }
 
+  after_update_commit :deliver_result_broadcast
+
   Error = Class.new(StandardError)
   MAX_CHARGES = 40
+
+  # Provider errors can quote an account identifier back at us. Mask the
+  # shapes that carry one, on top of the AI redactor's key/secret shapes.
+  ACCOUNT_IDENTIFIER_PATTERNS = [
+    /\b[A-Z]{2}\d{2}(?:[ -]?[A-Z0-9]{1,4}){2,}\b/,
+    /\b\d(?:[ -]?\d){9,}\b/
+  ].freeze
 
   # nil means "no proposal for this field"; false is a real proposal (turn
   # autopay off), so presence is non-nil rather than truthy.
@@ -37,17 +46,25 @@ class RecurringTransaction::Suggestion < ApplicationRecord
     availability = Ai.availability(:bill_setup, family:, user:)
     raise Ai::Error::Unavailable.new(availability.reason) unless availability.available?
 
+    series = nil
     charges = if fill?
-      charges_from(evidence_entries)
-    else
-      raise Error, "No charge history to analyze" if recurring_transaction.matching_transactions.none?
+      # The requester runs later, so the requester's account access is checked
+      # again here instead of trusting the access the controller saw at create.
+      source = accessible_entries.find_by(id: entry_id)
+      raise Error, "Entry is no longer accessible" if source.nil?
 
-      charges_from(recurring_transaction.matching_transactions)
+      charges_from(evidence_entries(source))
+    else
+      series = family.recurring_transactions.accessible_by(user).find_by(id: recurring_transaction_id)
+      raise Error, "Bill is no longer accessible" if series.nil?
+      raise Error, "No charge history to analyze" if series.matching_transactions.none?
+
+      charges_from(series.matching_transactions)
     end
     raise Error, "No charge history to analyze" if charges.empty?
 
     Ai::Generations::SuggestBillSetup.new(
-      charges:, categories: family.categories.pluck(:name), current_config: current_config, family:, user:
+      charges:, categories: family.categories.pluck(:name), current_config: current_config(series), family:, user:
     )
   end
 
@@ -62,7 +79,6 @@ class RecurringTransaction::Suggestion < ApplicationRecord
       update!(result: normalized.to_h, status: :complete, error: nil)
       applied = true
     end
-    broadcast_result if applied
     applied ? 1 : 0
   end
 
@@ -75,17 +91,14 @@ class RecurringTransaction::Suggestion < ApplicationRecord
     DebugLogEntry.capture(
       category: "bill_setup", level: "error", message: "Bill suggestion failed",
       source: self.class.name, family:, user:,
-      metadata: { error_class: error.class.name, error_message: error.message.truncate(500), suggestion_id: id }
+      metadata: { error_class: error.class.name, error_message: scrub_error(error.message).truncate(500), suggestion_id: id }
     )
 
-    failed = false
     with_lock do
       next unless pending?
 
       update!(status: :failed, error: code)
-      failed = true
     end
-    broadcast_result if failed
   end
 
   def ai_cancelled? = reload.cancelled?
@@ -146,7 +159,29 @@ class RecurringTransaction::Suggestion < ApplicationRecord
     broadcast_replace_to self, target:, html: frame
   end
 
+  # apply_ai and ai_failed run inside the generation job's transaction. Wait for
+  # that transaction to commit before publishing a frame the browser will load,
+  # and keep a cable failure from deciding whether the result was saved.
+  def deliver_result_broadcast
+    return unless saved_change_to_status? && (complete? || failed? || cancelled?)
+
+    broadcast_result
+  rescue StandardError => error
+    Rails.error.report(error, handled: true, context: { feature: "bill_setup", suggestion_id: id })
+  end
+
   private
+    # Mirrors Current.accessible_entries: jobs have no Current, so the user's
+    # current account shares decide whether the subject may still be read.
+    def accessible_entries
+      family.entries.joins(:account).merge(Account.accessible_by(user))
+    end
+
+    def scrub_error(message)
+      scrubbed = Ai::Instrumentation::Redactor.scrub(message)
+      ACCOUNT_IDENTIFIER_PATTERNS.reduce(scrubbed) { |text, pattern| text.gsub(pattern, Ai::Instrumentation::Redactor::MASK) }
+    end
+
     def charges_from(entries)
       entries.first(MAX_CHARGES).map do |entry|
         { date: entry.date.iso8601, amount: entry.amount.abs.to_s, name: entry.name }
@@ -155,26 +190,26 @@ class RecurringTransaction::Suggestion < ApplicationRecord
 
     # Same account, sign and name shape, newest first. A generic name (the
     # "Unknown transaction" fallback) would match unrelated entries.
-    def evidence_entries
-      found = if entry.generic_name?
-        [ entry ]
+    def evidence_entries(source)
+      found = if source.generic_name?
+        [ source ]
       else
-        pattern = "%#{ActiveRecord::Base.sanitize_sql_like(entry.name.to_s)}%"
-        entry.account.entries
-             .where(entryable_type: "Transaction")
-             .where(income || entry.amount.negative? ? "entries.amount < 0" : "entries.amount > 0")
-             .where("entries.name ILIKE ?", pattern)
-             .order(date: :desc)
-             .limit(MAX_CHARGES)
-             .to_a.presence || [ entry ]
+        pattern = "%#{ActiveRecord::Base.sanitize_sql_like(source.name.to_s)}%"
+        accessible_entries
+          .where(entryable_type: "Transaction")
+          .where(account_id: source.account_id)
+          .where(income || source.amount.negative? ? "entries.amount < 0" : "entries.amount > 0")
+          .where("entries.name ILIKE ?", pattern)
+          .order(date: :desc)
+          .limit(MAX_CHARGES)
+          .to_a.presence || [ source ]
       end
       found
     end
 
-    def current_config
+    def current_config(series)
       return unless configure?
 
-      series = recurring_transaction
       detection = RecurringTransaction::FrequencyPreset.detect(series)
       {
         name: series.display_name,

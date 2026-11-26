@@ -27,14 +27,18 @@ class DataCleanerJobTest < ActiveSupport::TestCase
 
   test "deletes bill suggestions older than a week and keeps recent ones" do
     family = families(:dylan_family)
-    series = family.recurring_transactions.create!(
-      name: "Gym", account: accounts(:depository), amount: 40, currency: "USD",
-      expected_day_of_month: 9, anchor_date: Date.current, last_occurrence_date: 1.month.ago.to_date,
-      next_expected_date: Date.current, status: "active", manual: true
-    )
-    old = family.recurring_transaction_suggestions.create!(user: users(:family_admin), recurring_transaction: series,
+    create_series = ->(name:) do
+      family.recurring_transactions.create!(
+        name:, account: accounts(:depository), amount: 40, currency: "USD",
+        expected_day_of_month: 9, anchor_date: Date.current, last_occurrence_date: 1.month.ago.to_date,
+        next_expected_date: Date.current, status: "active", manual: true
+      )
+    end
+    old_series = create_series.call(name: "Old gym")
+    recent_series = create_series.call(name: "Recent gym")
+    old = family.recurring_transaction_suggestions.create!(user: users(:family_admin), recurring_transaction: old_series,
                                                            mode: :configure, created_at: 8.days.ago)
-    recent = family.recurring_transaction_suggestions.create!(user: users(:family_admin), recurring_transaction: series,
+    recent = family.recurring_transaction_suggestions.create!(user: users(:family_admin), recurring_transaction: recent_series,
                                                               mode: :configure)
 
     DataCleanerJob.perform_now

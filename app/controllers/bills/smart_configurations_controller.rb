@@ -15,9 +15,7 @@ class Bills::SmartConfigurationsController < ApplicationController
     @series = Current.family.recurring_transactions.accessible_by(Current.user).find(params[:bill_id])
     @detection = RecurringTransaction::FrequencyPreset.detect(@series)
 
-    @suggestion = Current.family.recurring_transaction_suggestions.find_or_create_by!(
-      user: Current.user, recurring_transaction: @series, mode: :configure, status: :pending
-    )
+    @suggestion = pending_suggestion(@series)
 
     enqueue_job if @suggestion.previously_new_record?
     render layout: dialog_layout
@@ -39,6 +37,21 @@ class Bills::SmartConfigurationsController < ApplicationController
   end
 
   private
+    def pending_suggestion(series)
+      # Two clicks can arrive together; the bill lock keeps the second one
+      # behind the first insert. The unique index is the backstop if another
+      # path inserted the row first, in which case reuse it without a new job.
+      series.with_lock do
+        Current.family.recurring_transaction_suggestions.find_or_create_by!(
+          user: Current.user, recurring_transaction: series, mode: :configure, status: :pending
+        )
+      end
+    rescue ActiveRecord::RecordNotUnique
+      Current.family.recurring_transaction_suggestions.find_by!(
+        user: Current.user, recurring_transaction: series, mode: :configure, status: :pending
+      )
+    end
+
     def set_suggestion
       @suggestion ||= Current.family.recurring_transaction_suggestions
                               .where(user: Current.user, mode: :configure, recurring_transaction_id: params[:bill_id])

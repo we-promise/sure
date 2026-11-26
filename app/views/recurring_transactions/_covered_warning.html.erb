@@ -36,11 +36,11 @@
   <%= render DS::Disclosure.new(title: t("#{covered}_create_anyway"), align: "left") do %>
     <div class="pt-2">
       <%= render "recurring_transactions/form", recurring_transaction:, sibling_count: 0,
-                 source_entry_id: source_entry&.id, allow_duplicate: true %>
+                 source_entry_id: source_entry&.id, allow_duplicate: true, form_frame: :modal %>
     </div>
   <% end %>
 <% else %>
   <%# A failed save after "anyway" keeps that choice for the resubmit. %>
   <%= render "recurring_transactions/form", recurring_transaction:, sibling_count: 0,
-             source_entry_id: source_entry&.id, allow_duplicate: %>
+             source_entry_id: source_entry&.id, allow_duplicate:, form_frame: :modal %>
 <% end %>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2231,6 +2231,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_100000) do
     t.datetime "updated_at", null: false
     t.index ["entry_id"], name: "index_recurring_transaction_suggestions_on_entry_id"
     t.index ["family_id", "created_at"], name: "idx_on_family_id_created_at_6dd3058987"
+    t.index ["family_id", "user_id", "entry_id", "income"], name: "idx_recurring_suggestions_pending_fill", unique: true, where: "(((status)::text = 'pending'::text) AND ((mode)::text = 'fill'::text))"
+    t.index ["family_id", "user_id", "recurring_transaction_id"], name: "idx_recurring_suggestions_pending_configure", unique: true, where: "(((status)::text = 'pending'::text) AND ((mode)::text = 'configure'::text))"
     t.index ["family_id"], name: "index_recurring_transaction_suggestions_on_family_id"
     t.index ["recurring_transaction_id"], name: "idx_on_recurring_transaction_id_508da50dc8"
     t.index ["user_id"], name: "index_recurring_transaction_suggestions_on_user_id"

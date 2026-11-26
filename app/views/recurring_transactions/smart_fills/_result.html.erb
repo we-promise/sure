@@ -1,22 +1,22 @@
 <%# locals: (suggestion:, recurring_transaction:, covering_series: nil, source_entry: nil) %>
 <% if suggestion.complete? && suggestion.proposal&.any_proposal? %>
-  <div class="mb-5 rounded-lg bg-container-inset px-3 py-2 text-sm">
-    <p class="text-primary"><%= t("recurring_transactions.new.smart_fill_applied") %></p>
+  <%= render DS::Alert.new(variant: :success, live: :polite) do %>
+    <p><%= t("recurring_transactions.new.smart_fill_applied") %></p>
     <% if suggestion.proposal.rationale.present? %>
       <p class="text-xs text-secondary"><%= suggestion.proposal.rationale %></p>
     <% end %>
-  </div>
+  <% end %>
   <%= render "recurring_transactions/covered_warning", series: covering_series,
-        recurring_transaction:, source_entry: source_entry || suggestion.entry %>
+        recurring_transaction:, source_entry: %>
 <% else %>
   <%# No usable answer: keep the plain, prefilled form so the user can carry on
       without losing the transaction this dialog was opened from. %>
-  <div class="mb-5 rounded-lg bg-container-inset px-3 py-2 text-sm text-secondary">
+  <%= render DS::Alert.new(variant: :error, live: :polite) do %>
     <p><%= suggestion.failed? ? t(".failed") : t(".stopped") %></p>
     <% if suggestion.failed? && suggestion.error.present? %>
       <p class="text-xs"><%= ai_failure_message(suggestion) %></p>
     <% end %>
-  </div>
+  <% end %>
   <%= render "recurring_transactions/covered_warning", series: covering_series,
-        recurring_transaction:, source_entry: source_entry || suggestion.entry %>
+        recurring_transaction:, source_entry: %>
 <% end %>

@@ -1,21 +1,25 @@
 import { Controller } from "@hotwired/stimulus";
 
 // A job can answer before the browser subscribes to the suggestion's stream.
-// The cable source marks itself `connected` when it subscribes: reload the
-// frame once on that transition. `show` renders whatever the row holds, so a
-// reload is always right, whether the answer arrived before or after us.
+// The cable source marks itself `connected` when it subscribes: navigate the
+// waiting frame to #show once on that transition, so the stored result is read
+// in a request with a valid token. The flag lives in session storage because
+// the frame is replaced by the response, which may still be a waiting frame.
 export default class extends Controller {
   static targets = ["source", "frame"];
+  static values = { url: String, key: String };
 
   connect() {
-    this.reload = this.reload.bind(this);
+    this.navigate = this.navigate.bind(this);
+
+    if (this.navigated) return;
 
     if (this.sourceTarget.hasAttribute("connected")) {
-      this.reload();
+      this.navigate();
       return;
     }
 
-    this.observer = new MutationObserver(this.reload);
+    this.observer = new MutationObserver(this.navigate);
     this.observer.observe(this.sourceTarget, {
       attributes: true,
       attributeFilter: ["connected"],
@@ -26,10 +30,27 @@ export default class extends Controller {
     this.observer?.disconnect();
   }
 
-  reload() {
-    if (this.reloaded) return;
-    this.reloaded = true;
+  navigate() {
+    if (this.navigated) return;
+
+    this.markNavigated();
     this.observer?.disconnect();
-    this.frameTarget.reload();
+    this.frameTarget.src = this.urlValue;
+  }
+
+  get navigated() {
+    try {
+      return sessionStorage.getItem(this.keyValue) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  markNavigated() {
+    try {
+      sessionStorage.setItem(this.keyValue, "1");
+    } catch {
+      // A browser with storage disabled still gets one navigation per controller.
+    }
   }
 }
