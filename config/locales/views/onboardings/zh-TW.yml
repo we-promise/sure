@@ -5,7 +5,7 @@ zh-TW:
       sign_out: 登出
       setup: 設定
       preferences: 偏好設定
-      goals: 目標
+      tools: 工具/AI
       start: 開始
     logout:
       sign_out: 登出
@@ -38,17 +38,7 @@ zh-TW:
       currency: 幣別
       date_format: 日期格式
       submit: 完成
-    goals:
-      title: 是什麼讓您來到這裡？
-      subtitle: 請選擇一個或多個您想用 %{product_name} 達成的理財目標。
-      unified_accounts: 在一個地方查看所有帳戶
-      cashflow: 了解現金流和支出
-      budgeting: 管理財務計畫和預算
-      partner: 與伴侶共同管理財務
-      investments: 追蹤投資
-      ai_insights: 讓 AI 幫助我了解我的財務狀況
-      optimization: 分析和最佳化帳戶
-      reduce_stress: 減輕財務壓力或焦慮
+    tools:
       submit: 下一步
     trial:
       title: 試用 Sure 45 天
