@@ -447,6 +447,32 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 1, result[:transactions_failed]
   end
 
+  test "mfa on the first account stops the loop so its job id is kept" do
+    linked_sophtron_account(raw_transactions_payload: [ { id: "existing-tx" } ])
+    linked_sophtron_account(account_id: "acct-2", account: accounts(:credit_card), raw_transactions_payload: [ { id: "existing-tx-2" } ])
+
+    provider = mock
+    provider.expects(:get_accounts).with("ui-1").returns({
+      accounts: [
+        { account_id: "acct-1", account_name: "Checking", currency: "USD" }.with_indifferent_access,
+        { account_id: "acct-2", account_name: "Card", currency: "USD" }.with_indifferent_access
+      ],
+      total: 2
+    })
+    provider.expects(:refresh_account).once.returns({ JobID: "first-mfa-job" })
+    provider.expects(:get_job_information).with("first-mfa-job").returns({
+      SecurityQuestion: [ "Question?" ].to_json,
+      LastStatus: "Waiting"
+    })
+    provider.expects(:get_account_transactions).once.returns({ transactions: [], total: 0 })
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+
+    assert_not result[:success]
+    assert_equal "Sophtron refresh requires MFA", result[:error]
+    assert_equal "first-mfa-job", @item.reload.current_job_id
+  end
+
   test "unauthorized refresh marks item requires update and skips the fetch" do
     sophtron_account = linked_sophtron_account(raw_transactions_payload: [ { id: "existing-tx" } ])
 
