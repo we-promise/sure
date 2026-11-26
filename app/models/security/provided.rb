@@ -319,10 +319,12 @@ module Security::Provided
   # costs one provider request per security per sync, indefinitely. The gate
   # closing is what bounds that, and the importers opt in on that basis.
   #
-  # The third caller, `HoldingsController#sync_prices`, is a POST behind
-  # `require_holding_write_permission!` -- a user asking for one holding's
-  # prices, not a page view; `#show` makes no provider call at all. It keeps
-  # the narrow gate because the user asked for prices, not for classification.
+  # The other callers keep the narrow gate because they were asked for prices,
+  # not for classification: `HoldingsController#sync_prices`, a POST behind
+  # `require_holding_write_permission!` for one holding (`#show` makes no
+  # provider call at all), and `Family::MarketDataRefresher`, a family's
+  # market data refresh. When their fetch runs for missing metadata, its
+  # classification is still applied, but it is not stamped.
   #
   # `include_constituents` is the same opt-in for a fund's holdings, on the same
   # terms: it rides the same `fetch_security_info` call, and the importers pass
@@ -399,8 +401,19 @@ module Security::Provided
           rescue => e
             # A write the pre-checks missed (an invalid byte sequence Postgres
             # refuses) must not cost the security its name and classification,
-            # nor stop the sync's remaining securities.
+            # nor stop the sync's remaining securities. The stored set is kept,
+            # as the transaction rolled its replacement back, and the answer is
+            # stamped like an unreadable one: unstamped, the fund would be
+            # fetched again on every sync. The cost is that a temporary database
+            # error is not retried until a market data reset (`clear_cache`) or
+            # a change of provider. The stamp is a write too, so when the
+            # database is what failed, its own error is logged the same way.
             log_failed_constituents(provider, e)
+            begin
+              stamp_constituents(provider)
+            rescue => stamp_error
+              log_failed_constituents(provider, stamp_error)
+            end
           end
         end
         # `with_lock` re-reads the row, so precedence is checked against what
@@ -419,8 +432,9 @@ module Security::Provided
           # they now refuse (a legacy region, a ticker clash). Its answer is
           # stamped anyway, with the refusal logged for support: an unstamped
           # row is asked again on every sync, and each ask costs a provider
-          # request. A lock set while the provider answered rejects the answer
-          # instead, and closes the gate on its own.
+          # request. A market data reset (`clear_cache`) or a change of
+          # provider asks again. A lock set while the provider answered
+          # rejects the answer instead, and closes the gate on its own.
           if wants_classification && !classification_locked?
             log_refused_classification(provider, errors.full_messages) unless stored
             update_columns(classification_fetched_at: Time.current, classification_fetched_from: provider_key)
@@ -518,10 +532,9 @@ module Security::Provided
   # would roll the whole fund back unstamped and stop both market data
   # importers at this fund on every run.
   #
-  # An answer that says nothing about the fund leaves the stored set and the
-  # stamp alone, so the next sync asks again: a holdings block the provider's
-  # parser could not read, or a non-empty list none of whose rows can be
-  # stored.
+  # An answer that says nothing about the fund leaves the stored set alone, but
+  # is still stamped: a holdings block the provider's parser could not read, or
+  # a non-empty list none of whose rows can be stored.
   def store_constituents(list, provider = price_data_provider, forced: false)
     return unless provider&.supplies_constituents?
 
