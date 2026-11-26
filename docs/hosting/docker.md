@@ -98,6 +98,43 @@ POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 
 To encrypt sensitive data such as bank credentials with your own keys, set them now, before the first start; see [Encrypting sensitive data](#encrypting-sensitive-data).
 
+#### Restricting who can reach your instance
+
+These optional variables tighten things once your instance is reachable from
+the internet. All are unset by default, and leaving them unset keeps the app
+answering to any `Host`. Cross-origin browser requests are refused unless an
+origin is listed.
+
+| Variable | Purpose |
+|---|---|
+| `ALLOWED_ORIGINS` | Comma-separated list of browser origins allowed to call the app cross-origin, including the scheme, for example `https://app.example.com,https://staging.example.com`. Without it the app answers cross-origin requests the way any site does by default: it does not. Native mobile clients are unaffected, since they send no `Origin` header. |
+| `APP_DOMAIN` | The single host your instance is served on. Used as the fallback for `ALLOWED_ORIGINS`, and added to the `Host` allow-list once `ALLOWED_HOSTS` is set. On its own it does not turn the `Host` check on. |
+| `ALLOWED_HOSTS` | Comma-separated hostnames the app answers to. Setting it turns the `Host` check on, with `APP_DOMAIN` added to the list. One host per entry: a leading dot is refused rather than read as a wildcard, and IPv6 goes in brackets, `[::1]`. |
+
+Prefer `ALLOWED_ORIGINS` when a reverse proxy terminates TLS for you. The
+`APP_DOMAIN` fallback has to guess the scheme from `RAILS_FORCE_SSL` and
+`RAILS_ASSUME_SSL`, so with both off, a common setting behind Traefik, NGINX or
+a Cloudflare Tunnel, it builds an `http://` origin while the browser sends
+`https://` and the request is refused.
+
+Setting `ALLOWED_HOSTS` turns on DNS-rebinding protection: any request whose
+`Host` header is neither in `ALLOWED_HOSTS` nor `APP_DOMAIN` is refused with a
+403. List every name you reach the app by, such as a LAN address, a Tailscale
+name or `localhost`, or those requests stop working. The `/up` health endpoint
+is always exempt, so container probes keep passing. With
+`compose.example.ai.yml`, Pipelock forwards MCP requests to the app with the
+`Host` header `web:3000`, so add `web` to `ALLOWED_HOSTS` or every MCP call
+through it is refused.
+
+Without `ALLOWED_HOSTS`, the app answers to any `Host`, whether or not
+`APP_DOMAIN` is set, and logs a `[SECURITY]` warning when the web server
+starts.
+
+Like the SMTP settings below, these reach the app only when `compose.yml` lists
+them in the `x-rails-env` anchor, for example `ALLOWED_HOSTS: ${ALLOWED_HOSTS}`.
+Setting them in `.env` alone does nothing; see **Passing the settings to the
+containers** under [Sending email (SMTP)](#sending-email-smtp).
+
 #### Using HTTPS
 
 Assuming you want to access your instance from the internet, you should have secured your URL address with an SSL certificate.  
@@ -138,7 +175,7 @@ Invitations are never emailed on a self-hosted instance, even with SMTP set up. 
 | `SMTP_TLS_SKIP_VERIFY` | `true` turns off verification of the SMTP server's certificate. | Off (the certificate is verified) |
 | `SSL_CA_FILE` | Path inside the container to a CA certificate (PEM) for verifying a server with a self-signed or internal certificate. The file must be mounted into the containers; see **Using a custom CA certificate** below. | None |
 | `EMAIL_SENDER` | Address that emails are sent from, for example `sure@example.com`. | `sender@sure.local` |
-| `APP_DOMAIN` | Host name your instance is reached at, for example `sure.example.com`. Used to build links in emails. | None |
+| `APP_DOMAIN` | Host name your instance is reached at, for example `sure.example.com`. Used to build links in emails. It does not restrict which `Host` the app answers to unless `ALLOWED_HOSTS` is also set; see [Restricting who can reach your instance](#restricting-who-can-reach-your-instance). | None |
 
 A few things to watch:
 
@@ -229,6 +266,26 @@ WEBAUTHN_ALLOWED_ORIGINS="https://sure.example.com"
 ```
 
 `WEBAUTHN_RP_ID` should usually be your registrable domain, not a full URL. See [WebAuthn MFA Configuration](webauthn.md) before changing hostnames or reverse proxy settings for an instance with registered passkeys.
+
+#### Privacy policy and terms links (optional)
+
+To link your own privacy policy and terms of service from the login, signup and onboarding pages, set their full URLs in your `.env` file:
+
+```txt
+LEGAL_PRIVACY_URL="https://example.com/privacy"
+LEGAL_TERMS_URL="https://example.com/terms"
+```
+
+`compose.example.yml` passes both to the app through its `x-rails-env` anchor. If your `compose.yml` was copied before they were added, add them there yourself:
+
+```yaml
+x-rails-env: &rails_env
+  # ...existing keys...
+  LEGAL_PRIVACY_URL: ${LEGAL_PRIVACY_URL:-}
+  LEGAL_TERMS_URL: ${LEGAL_TERMS_URL:-}
+```
+
+`/privacy` and `/terms` then redirect to these URLs. Each footer link appears only when its URL is set, so an instance without them shows neither link. Restart the app after changing them; the redirects are read at boot.
 
 #### Binding to IPv6 (optional)
 

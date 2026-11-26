@@ -50,6 +50,29 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(180), buy.unrealized_gain_loss.value.amount
   end
 
+  # A quote comes in the listing's currency, which need not be the trade's.
+  # `Money#-` takes the right operand's bare amount, so a 200 USD quote against
+  # a 180 EUR purchase price read as a 20 "EUR" gain per share. 10 bought at
+  # 180 EUR, quoted at 200 USD with USD->EUR 0.9: worth 1,800 EUR, no gain.
+  test "a purchase's unrealized gain converts a quote in another currency to the trade's" do
+    buy = cross_currency_purchase
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    gain = buy.unrealized_gain_loss
+
+    assert_equal BigDecimal(0), gain.value.amount
+    assert_equal "EUR", gain.value.currency.iso_code
+    assert_equal BigDecimal(1800), gain.current.amount
+  end
+
+  # No rate means the gain is unknown, not the figure a rate of 1.0 would give.
+  test "a purchase quoted in another currency with no rate has no unrealized gain" do
+    buy = cross_currency_purchase
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    assert_nil buy.unrealized_gain_loss
+  end
+
   # No rate for that date means the gain is unknown, not zero and not the
   # figure a rate of 1.0 would produce.
   test "a cross-currency disposal with no rate for its date has no figure" do
@@ -157,6 +180,244 @@ class TradeTest < ActiveSupport::TestCase
     # 2 units at 150 EUR is 300 EUR of proceeds, 240 GBP at 0.8, against a basis
     # of 2 x 100 GBP.
     assert_equal [ BigDecimal(40) ] * 4, trades.map { |t| t.realized_gain_loss.value.amount }
+  end
+
+  # A sale that closes the position leaves a snapshot holding nothing, with no
+  # stored basis, so the snapshot cannot say what the units cost. Average cost
+  # does not move on a sale, so the sale is priced at the average before it:
+  # 10 at 100 and 10 at 200 is 3,000 for 20, sold at 180 for 3,600, a 600
+  # gain. Replaying through the sale itself closes the position and leaves no
+  # figure at all.
+  test "a sale that closes the position realises its gain against the cost before the sale" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 3), price: 200)
+    sell = create_trade(security, account: account, qty: -20, date: Date.new(2026, 3, 4), price: 180).entryable
+    closed_snapshot(account, security, Date.new(2026, 3, 4))
+
+    gain = sell.realized_gain_loss
+
+    assert_not_nil gain, "a closing sale still realises a gain"
+    assert_equal BigDecimal(3000), gain.previous.amount
+    assert_equal BigDecimal(600), gain.value.amount
+  end
+
+  # Bought and sold on one day, the only snapshot is the closed one and there
+  # is no earlier day to read a cost from. The buy sorts before the sale in
+  # Entry.chronological order, so it is the cost: 10 at 100 sold at 130 is a
+  # 300 gain.
+  test "a position bought and sold on the same day realises its gain" do
+    account, security = cross_currency_account
+    date = Date.new(2026, 3, 4)
+    create_trade(security, account: account, qty: 10, date: date, price: 100)
+    sell = create_trade(security, account: account, qty: -10, date: date, price: 130).entryable
+    closed_snapshot(account, security, date)
+
+    gain = sell.realized_gain_loss
+
+    assert_not_nil gain, "the same day's buy is the cost"
+    assert_equal BigDecimal(300), gain.value.amount
+  end
+
+  # An import stamps a day's trades with one created_at, and the calculators
+  # then replay a buy before a sale whatever their ids
+  # (Holding::PortfolioCache#trades). The sale's cost must too, even when the
+  # sale's id sorts first.
+  test "a same-day sale imported with its buy realises its gain whatever the ids" do
+    account, security = cross_currency_account
+    date = Date.new(2026, 3, 4)
+    buy = create_trade(security, account: account, qty: 10, date: date, price: 100)
+    sell_entry = create_trade(security, account: account, qty: -10, date: date, price: 130)
+    stamp = Time.zone.local(2026, 3, 4, 9)
+    Entry.where(id: [ buy.id, sell_entry.id ]).update_all(created_at: stamp)
+    sell_entry.update_columns(id: "00000000-0000-0000-0000-000000000001")
+    closed_snapshot(account, security, date)
+
+    gain = Trade.find(sell_entry.entryable_id).realized_gain_loss
+
+    assert_not_nil gain, "the same day's buy is the cost"
+    assert_equal BigDecimal(300), gain.value.amount
+  end
+
+  # A provider can hold a position in the security's currency rather than the
+  # account's, and the replayed cost is then in that currency too. 10 bought
+  # at 100 EUR and sold at 130 EUR is a 300 EUR gain; costing the units in
+  # USD (150 each at 1.5) but labelling them EUR reported a 200 EUR loss.
+  test "a closing sale of a position held in another currency realises its gain in that currency" do
+    account, security = cross_currency_account
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.new(2026, 3, 2), rate: 1.5)
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100, currency: "EUR")
+    sell = create_trade(security, account: account, qty: -10, date: Date.new(2026, 3, 4), price: 130, currency: "EUR").entryable
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 4), qty: 0, price: 0,
+                             amount: 0, currency: "EUR", cost_basis: nil)
+
+    gain = sell.realized_gain_loss
+
+    assert_equal Money.new(BigDecimal(1000), "EUR"), gain.previous
+    assert_equal Money.new(BigDecimal(300), "EUR"), gain.value
+  end
+
+  # A split applies at the open of its ex-date, before that day's trades. 10
+  # bought at 100 become 20 at 50 on a 2-for-1 split; all 20 sold that day at
+  # 70 is 1,400 against 1,000, a 400 gain. Pricing the 20 units at the
+  # pre-split 100 would report a 600 loss.
+  test "a closing sale after a split uses the split-adjusted cost" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    security.splits.create!(ex_date: Date.new(2026, 3, 4), numerator: 2, denominator: 1, source: "manual")
+    sell = create_trade(security, account: account, qty: -20, date: Date.new(2026, 3, 4), price: 70).entryable
+    closed_snapshot(account, security, Date.new(2026, 3, 4))
+
+    gain = sell.realized_gain_loss
+
+    assert_not_nil gain
+    assert_equal BigDecimal(1000), gain.previous.amount
+    assert_equal BigDecimal(400), gain.value.amount
+  end
+
+  # A sale that leaves units held keeps reading the snapshot's own figure. The
+  # stored 160 is deliberately not what the trades replay to (150), so this
+  # fails if the replay ever displaces a basis the snapshot has: 5 sold at 180
+  # is 900 against 800, a 100 gain.
+  test "a partial sale's realized gain is unchanged" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 3), price: 200)
+    sell = create_trade(security, account: account, qty: -5, date: Date.new(2026, 3, 4), price: 180).entryable
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 4), qty: 15, price: 180,
+                             amount: BigDecimal(2700), currency: "USD", cost_basis: 160)
+
+    gain = sell.realized_gain_loss
+
+    assert_equal BigDecimal(800), gain.previous.amount
+    assert_equal BigDecimal(100), gain.value.amount
+  end
+
+  # With no stored basis, the snapshot's own figure is unknown, and the cost
+  # before the sale is all the gain needs. Replaying the history for the
+  # snapshot first, only to find a closed position, then replaying it again up
+  # to the sale, reads every trade and split twice on each sale Reports prices.
+  test "realized gain on a closing sale with no stored basis replays the history once" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 3), price: 200)
+    sell = create_trade(security, account: account, qty: -20, date: Date.new(2026, 3, 4), price: 180).entryable
+    closed_snapshot(account, security, Date.new(2026, 3, 4))
+    sell.entry.account
+
+    gain = nil
+    # Uncached, so a second replay counts rather than hitting the query cache.
+    queries = ActiveRecord::Base.uncached { capture_sql_queries { gain = sell.realized_gain_loss } }
+
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "security_splits"') }
+    assert_equal BigDecimal(600), gain.value.amount
+  end
+
+  # Units sold beyond the position are priced at the acquisitions that cover
+  # them, as a fifo sale's shortfall is (Holding::LotBook#cover): 5 held at
+  # 100 and 5 covered by the same day's later buy at 200 is 1,500 against
+  # 1,800 of proceeds.
+  test "a sale beyond the position prices the units held at the average and the rest at their cover" do
+    account, security = cross_currency_account
+    closed_snapshot(account, security, Date.new(2026, 3, 1))
+    create_trade(security, account: account, qty: 5, date: Date.new(2026, 3, 2), price: 100)
+    sale = create_trade(security, account: account, qty: -10, date: Date.new(2026, 3, 3), price: 180)
+    cover = create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 3), price: 200)
+    cover.update_columns(created_at: sale.created_at + 1.second)
+
+    assert_equal BigDecimal(300), sale.entryable.realized_gain_loss.value.amount
+  end
+
+  # An earlier sale's shortfall is covered first, so this one takes the 200.
+  test "a sale beyond the position is covered after an earlier sale's shortfall" do
+    account, security = cross_currency_account
+    closed_snapshot(account, security, Date.new(2026, 3, 1))
+    create_trade(security, account: account, qty: -5, date: Date.new(2026, 3, 2), price: 180)
+    sale = create_trade(security, account: account, qty: -5, date: Date.new(2026, 3, 3), price: 180)
+    create_trade(security, account: account, qty: 5, date: Date.new(2026, 3, 4), price: 100)
+    create_trade(security, account: account, qty: 5, date: Date.new(2026, 3, 5), price: 200)
+
+    assert_equal BigDecimal(-100), sale.entryable.realized_gain_loss.value.amount
+  end
+
+  # Nothing covers the shortfall, a transfer in or a foreign buy with no rate
+  # covers it at a cost nothing here knows, a split comes before the cover, or
+  # the units held have no known cost: each leaves the sale's cost unknown.
+  test "a sale beyond the position with no known cover realises no gain" do
+    cases = {
+      uncovered: [ [ 5, 100, 2 ], [ :sale, 3 ] ],
+      transfer_cover: [ [ :sale, 2 ], [ :transfer, 3 ], [ 5, 100, 4 ] ],
+      unpriced_cover: [ [ :sale, 2 ], [ :unpriced, 3 ] ],
+      split_first: [ [ :sale, 2 ], [ :split, 3 ], [ 10, 100, 4 ] ],
+      unknown_held: [ [ :transfer, 2 ], [ :sale, 3 ], [ 10, 200, 4 ] ]
+    }
+
+    gains = cases.transform_values do |steps|
+      account, security = cross_currency_account
+      closed_snapshot(account, security, Date.new(2026, 3, 1))
+      sale = nil
+      steps.each do |kind, *rest|
+        day = Date.new(2026, 3, rest.last)
+        case kind
+        when :sale then sale = create_trade(security, account: account, qty: -10, date: day, price: 180)
+        when :transfer
+          moved_in = create_trade(security, account: account, qty: 5, date: day, price: 100)
+          moved_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+        when :split then security.splits.create!(ex_date: day, numerator: 2, denominator: 1, source: "manual")
+        when :unpriced then create_trade(security, account: account, qty: 10, date: day, price: 100, currency: "CAD")
+        else create_trade(security, account: account, qty: kind, date: day, price: rest.first)
+        end
+      end
+      sale.entryable.realized_gain_loss
+    end
+
+    assert_equal cases.keys.index_with(nil), gains
+  end
+
+  # A reverse-synced account with two shares from before its first imported
+  # trade: 10 bought, 5 moved in, 15 sold, 8 bought at 150, then 3 sold. The
+  # -15 sale left two shares, so the transferred units were never cleared out
+  # and the cost of what the later sale disposes of is unknown -- pricing it
+  # at the rebuy's 150 would book a gain the history cannot support.
+  test "a sale after opening shares kept transferred units held realises no gain" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    transfer_in = create_trade(security, account: account, qty: 5, date: Date.new(2026, 3, 3), price: 120)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    create_trade(security, account: account, qty: -15, date: Date.new(2026, 3, 4), price: 130)
+    create_trade(security, account: account, qty: 8, date: Date.new(2026, 3, 5), price: 150)
+    sell = create_trade(security, account: account, qty: -3, date: Date.new(2026, 3, 6), price: 170).entryable
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 6), qty: 7, price: 170,
+                             amount: BigDecimal(1190), currency: "USD", cost_basis: nil)
+
+    assert_nil sell.realized_gain_loss
+  end
+
+  # The latest snapshot on or before the sale can predate trades the replay
+  # still needs. Its quantity explains the trades up to its own date only:
+  # the 8 held on 3/5 is the whole history (10 in, 5 moved in, 15 sold, 8
+  # bought), so the position did close and the transfer is released. The 3
+  # sold on 3/6 came after the snapshot, and undoing it too would invent 3
+  # opening shares that keep the transfer held. 2 sold at 170 against 150 is
+  # a 40 gain.
+  test "a sale after the snapshot's date walks back only the snapshot's trades" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    transfer_in = create_trade(security, account: account, qty: 5, date: Date.new(2026, 3, 3), price: 120)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    create_trade(security, account: account, qty: -15, date: Date.new(2026, 3, 4), price: 130)
+    create_trade(security, account: account, qty: 8, date: Date.new(2026, 3, 5), price: 150)
+    create_trade(security, account: account, qty: -3, date: Date.new(2026, 3, 6), price: 160)
+    sell = create_trade(security, account: account, qty: -2, date: Date.new(2026, 3, 7), price: 170).entryable
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 5), qty: 8, price: 150,
+                             amount: BigDecimal(1200), currency: "USD", cost_basis: nil)
+
+    gain = sell.realized_gain_loss
+
+    assert_not_nil gain, "the history explains the whole position, so the rebuy is the cost"
+    assert_equal BigDecimal(300), gain.previous.amount
+    assert_equal BigDecimal(40), gain.value.amount
   end
 
   # A sale is measured against its security's latest position on or before the
@@ -419,6 +680,13 @@ class TradeTest < ActiveSupport::TestCase
       create_trade(security, account: account, qty: -2, date: date, price: 150, fee: fee, currency: "EUR").entryable
     end
 
+    # The snapshot the calculators write on the day a position closes: nothing
+    # held and no basis.
+    def closed_snapshot(account, security, date)
+      account.holdings.create!(security: security, date: date, qty: 0, price: 0,
+                               amount: 0, currency: "USD", cost_basis: nil)
+    end
+
     def cross_currency_account
       account = families(:empty).accounts.create!(
         name: "Brokerage", balance: 10_000, currency: "USD", accountable: Investment.new
@@ -426,6 +694,16 @@ class TradeTest < ActiveSupport::TestCase
       security = Security.create!(ticker: "EUX#{SecureRandom.hex(3)}", name: "Euro Listed")
 
       [ account, security ]
+    end
+
+    def cross_currency_purchase
+      account = families(:empty).accounts.create!(
+        name: "Depot", balance: 10_000, currency: "EUR", accountable: Investment.new
+      )
+      security = Security.create!(ticker: "USX#{SecureRandom.hex(3)}", name: "Dollar Listed")
+      buy = create_trade(security, account: account, qty: 10, date: Date.current, price: 180, currency: "EUR").entryable
+      buy.security.stubs(:current_price).returns(Money.new(200, "USD"))
+      buy
     end
 
     test "label_for_side follows the side for Buy, Sell and a missing label, and keeps any other activity" do

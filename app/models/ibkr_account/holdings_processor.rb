@@ -1,12 +1,14 @@
 class IbkrAccount::HoldingsProcessor
   include IbkrAccount::DataHelpers
 
-  # Categories this importer accepts. STK resolves to an exchange-listed
-  # security by symbol. CRYPTO (custodied at Paxos) and CMDTY (spot metals)
-  # have no listing to resolve against and carry no securityID, so they are
-  # tracked under a namespace of their own.
+  # Categories this importer accepts, held long. STK, FUND (mutual funds) and
+  # BOND resolve to a security by what IBKR reports for them. CRYPTO (custodied
+  # at Paxos) and CMDTY (spot metals) have no listing to resolve against and
+  # carry no securityID, so they are tracked under a namespace of their own.
+  # Anything else is left out and reported (see capture_skipped_positions):
+  # Sure has no model for a short position or for a derivative's contract.
   UNLISTED_ASSET_CATEGORIES = %w[CRYPTO CMDTY].freeze
-  SUPPORTED_ASSET_CATEGORIES = (%w[STK] + UNLISTED_ASSET_CATEGORIES).freeze
+  SUPPORTED_ASSET_CATEGORIES = (%w[STK FUND BOND] + UNLISTED_ASSET_CATEGORIES).freeze
 
   # "CRYPTO:" is the ticker namespace every crypto integration here shares, so
   # a coin lives in one Security row across providers. The prefix is also what
@@ -32,9 +34,12 @@ class IbkrAccount::HoldingsProcessor
   def process
     return unless account.present?
 
+    @skipped_positions = Hash.new(0)
     grouped_positions.each do |(_, _, report_date), group|
       process_group(group, report_date)
     end
+    capture_skipped_positions
+    capture_bond_unit_disagreements
   end
 
   private
@@ -50,6 +55,7 @@ class IbkrAccount::HoldingsProcessor
     def grouped_positions
       Array(@ibkr_account.raw_holdings_payload).each_with_object({}) do |position, groups|
         data = position.with_indifferent_access
+        next if unsupported_kind?(data)
         next unless supported_position?(data)
 
         currency = extract_currency(data, fallback: @ibkr_account.currency)
@@ -104,7 +110,9 @@ class IbkrAccount::HoldingsProcessor
     #
     # Each lot is valued at its own mark: a group holds every lot of one asset,
     # which for an unlisted position can span conids that IBKR marks separately.
-    # price is the weighted average that amount and quantity imply.
+    # price is the weighted average that amount and quantity imply. A bond lot
+    # whose value is not its quantity x quoted price has its prices carried to
+    # it, so its value stays what IBKR reports.
     def valid_lots(rows)
       total_quantity = BigDecimal("0")
       total_cost = BigDecimal("0")
@@ -123,9 +131,11 @@ class IbkrAccount::HoldingsProcessor
           next
         end
 
-        total_quantity += row_quantity.abs
-        total_cost     += row_quantity.abs * row_cost_basis
-        total_value    += row_quantity.abs * row_price
+        units = row_quantity.abs * quantity_multiplier(row)
+        scale = price_scale(row)
+        total_quantity += units
+        total_cost     += lot_cost(row, units, row_cost_basis, scale)
+        total_value    += units * row_price * scale
       end
 
       return nil if total_quantity.zero?
@@ -138,6 +148,17 @@ class IbkrAccount::HoldingsProcessor
       }
     end
 
+    # What a lot cost. A bond's costBasisMoney is IBKR's own figure, so it is
+    # taken as it stands: its price is carried to the lot's current value, which
+    # a value factor has moved off what was paid. Without it, the cost price is
+    # carried the way the mark price is.
+    def lot_cost(row, units, cost_basis_price, scale)
+      money = parse_decimal(row[:cost_basis_money]) if bond?(row)
+      return money.abs if money&.finite? && money.positive?
+
+      units * cost_basis_price * scale
+    end
+
     def resolve_position_security(row)
       return resolve_security(row) unless unlisted?(row)
 
@@ -148,14 +169,14 @@ class IbkrAccount::HoldingsProcessor
     end
 
     def unlisted?(row)
-      UNLISTED_ASSET_CATEGORIES.include?(row[:asset_category].to_s)
+      UNLISTED_ASSET_CATEGORIES.include?(asset_category(row))
     end
 
     def unlisted_ticker(row)
       symbol = row[:symbol].to_s.strip.upcase
       return nil if symbol.blank?
 
-      prefix = TICKER_PREFIXES[row[:asset_category].to_s]
+      prefix = TICKER_PREFIXES[asset_category(row)]
       symbol.start_with?(prefix) ? symbol : "#{prefix}#{symbol}"
     end
 
@@ -176,7 +197,7 @@ class IbkrAccount::HoldingsProcessor
     end
 
     def pricing_attributes(row)
-      return { offline: true, offline_reason: COMMODITY_OFFLINE_REASON } unless row[:asset_category].to_s == "CRYPTO"
+      return { offline: true, offline_reason: COMMODITY_OFFLINE_REASON } unless asset_category(row) == "CRYPTO"
 
       {
         exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC,
@@ -184,10 +205,59 @@ class IbkrAccount::HoldingsProcessor
       }
     end
 
+    # A position of a category or side Sure does not import, counted so the
+    # sync can report it.
+    def unsupported_kind?(row)
+      category = asset_category(row)
+      kind = if !SUPPORTED_ASSET_CATEGORIES.include?(category)
+        category.presence || "unknown"
+      elsif row[:side].to_s != "Long"
+        "#{category} #{row[:side].to_s.strip.presence || "unknown"}"
+      end
+      return false unless kind
+
+      @skipped_positions[kind] += 1
+      true
+    end
+
+    # The holdings leave a skipped position out, while the balance is IBKR's
+    # figure, so whatever value it includes for one shows as cash.
+    def capture_skipped_positions
+      return if @skipped_positions.empty?
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Skipped IBKR positions of unsupported types",
+        source: self.class.name,
+        provider_key: "ibkr",
+        account_provider: @ibkr_account.account_provider,
+        family: @ibkr_account.ibkr_item&.family,
+        metadata: { ibkr_account_id: @ibkr_account.id, skipped_position_types: @skipped_positions }
+      )
+    end
+
+    # A position whose value is not quantity x its quoted price (quoted per
+    # unit, or principal-adjusted) has its price carried to the value, which
+    # the holding's price shows.
+    def capture_bond_unit_disagreements
+      disagreements = bond_unit_disagreements(:positions)
+      return if disagreements.empty?
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "IBKR bond positions priced to their reported value",
+        source: self.class.name,
+        provider_key: "ibkr",
+        account_provider: @ibkr_account.account_provider,
+        family: @ibkr_account.ibkr_item&.family,
+        metadata: { ibkr_account_id: @ibkr_account.id, bonds: disagreements }
+      )
+    end
+
     def supported_position?(row)
-      SUPPORTED_ASSET_CATEGORIES.include?(row[:asset_category].to_s) &&
-        row[:side].to_s == "Long" &&
-        row[:conid].present? &&
+      row[:conid].present? &&
         # conid identifies an unlisted position; IBKR sends it no securityID.
         (unlisted?(row) || (row[:security_id].present? && row[:security_id_type].present?)) &&
         row[:symbol].present? &&
