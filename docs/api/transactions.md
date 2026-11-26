@@ -58,7 +58,7 @@ The `GET /api/v1/transactions` endpoint supports the following query parameters 
 | `search` | string | Search by name, notes, or merchant name; surrounding spaces are ignored |
 | `budget_id` | uuid | Only transactions the budget's category drill-down lists (see below) |
 | `exclude_split_parents` | boolean | `true` leaves out transactions that have been split; their split children are still listed |
-| `excluded` | boolean | Filters on the entry excluded flag only: `false` lists entries not flagged excluded, `true` only flagged ones (split parents included). It does not apply all budget or report eligibility rules, even with `budget_id`, so the results are not guaranteed to match totals. Omit to list both |
+| `excluded` | boolean | Filters on the entry excluded flag only: `false` lists entries not flagged excluded, `true` only flagged ones (split parents included). Without `budget_id`, this flag alone does not apply the report eligibility rules. With `budget_id`, the budget reporting rules apply independently, so `excluded=true` returns no rows. Omit to leave this flag unfiltered |
 
 Filters combine, so `budget_id` can be narrowed further with `category_id`, `account_id`, a date range and so on. A single id and its list (`account_id` and `account_ids[]`, and likewise for categories and merchants) match the ids in both.
 
@@ -69,13 +69,13 @@ A parameter that is present must be valid, or the request returns `422`: ids mus
 `budget_id` returns the rows the web budget category drill-down lists for that budget:
 
 - transactions dated within the budget's period;
-- on the accounts the budget's spending is computed from: for the household budget, the accounts the caller owns or has been shared that are included in reports; for a personal budget, its owner's accounts that are included in reports;
+- on the accounts the budget's spending is computed from: for the household budget, the caller's finance accounts (owned accounts and shared accounts with `include_in_finances: true`) that are included in reports; for a personal budget, its owner's accounts that are included in reports;
 - and, as everywhere in this API, only on accounts the caller can access. A shared personal budget does not share the owner's accounts, so a viewer only sees the rows on accounts the owner has also shared with them, and the list can then add up to less than the budget's spending;
 - leaving out the `funds_movement`, `cc_payment` and `one_time` kinds, which budgets ignore, and `investment_contribution` too when the family does not count investing as spending.
 
 The budget must be one `GET /api/v1/budgets/{id}` would return to the caller (the household budget, the caller's own, or one shared with them); any other id returns `404`. Unlike the unfiltered list, rows on disabled accounts are left out, as they are on the web.
 
-The budget list uses the totals' reporting rules: excluded and split-parent entries, pending and future-dated transactions, tax-advantaged accounts, and internal investment transfers/sweeps/exchanges are omitted. Only accounts included in the budget income statement count. Category-filtered rows therefore reconcile with that budget line's actual spending when the caller can access all of its accounts.
+The budget list uses the totals' reporting rules: excluded and split-parent entries, pending and future-dated transactions, tax-advantaged accounts, and internal investment transfers/sweeps/exchanges are omitted. Only accounts included in the budget income statement count. For a leaf category, `category_id` selects that line's rows. A parent line's actual spending includes its subcategories, while `category_id` matches only one category: use `category_ids[]` with the parent and its subcategory IDs to include the entire parent line. These rows reconcile with the line's actual spending when the caller can access all of its accounts and no additional filters narrow the results.
 
 ## Transaction object
 
