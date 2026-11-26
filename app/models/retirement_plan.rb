@@ -86,8 +86,10 @@ class RetirementPlan < ApplicationRecord
   # rather than a past one.
   #
   # The assets come first: converting them can fetch and store a missing rate,
-  # and the medians read stored rates only.
+  # and the medians read stored rates only. Every account is converted, linked
+  # or not, since the medians take in every account's spending.
   def projection(as_of:)
+    assets_as_of(as_of)
     current_assets = funding_total(as_of)
 
     RetirementPlan::Projection.new(
