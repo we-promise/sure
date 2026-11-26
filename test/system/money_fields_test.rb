@@ -109,11 +109,16 @@ class MoneyFieldsTest < ApplicationSystemTestCase
     find("[data-transfer-form-target='destinationAmount']").fill_in(with: "92")
     assert_selector "[data-transfer-form-target='calculateRateDisplay']", text: "0.92"
 
+    # A placeholder the lookup for the new date must replace, so the check
+    # below only passes once that lookup has landed (blanked without the fix).
+    rate = 'document.querySelector("[data-transfer-form-target=\'exchangeRateField\']")'
+    page.execute_script("#{rate}.value = '7'")
     fill_in "Date", with: 3.days.ago.to_date
 
+    page.document.synchronize do
+      raise Capybara::ExpectationNotMet unless page.evaluate_script("#{rate}.value").start_with?("0.92")
+    end
     assert_selector "[data-transfer-form-target='calculateRateDisplay']", text: "0.92"
-    rate = 'document.querySelector("[data-transfer-form-target=\'exchangeRateField\']").value'
-    assert_equal "0.92", page.evaluate_script(rate).to_f.round(2).to_s
   end
 
   test "text typed between two pending currency switches keeps the new reading" do
