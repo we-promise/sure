@@ -49,6 +49,11 @@
       <% end %>
     <% end %>
     <%= render "entries/protection_indicator", entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) %>
+    <% if @entry.transaction.from_receipt? %>
+      <% dialog.with_section(title: t(".receipt"), open: true) do %>
+        <%= render "transactions/receipt", receipt: @entry.transaction.extra["receipt"] %>
+      <% end %>
+    <% end %>
     <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div class="space-y-2">
         <% split_locked = @entry.split_child? || @entry.split_parent? %>

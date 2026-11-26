@@ -26,6 +26,8 @@ class User < ApplicationRecord
   belongs_to :default_account, class_name: "Account", optional: true
   has_many :sessions, dependent: :destroy
   has_many :chats, dependent: :destroy
+  # A scan belongs to its account; it stays there when the member who uploaded it is removed.
+  has_many :receipt_scans, dependent: :nullify
   has_many :api_keys, dependent: :destroy
   has_many :push_subscriptions, dependent: :destroy
   has_many :web_push_subscriptions, dependent: :destroy
@@ -467,7 +469,11 @@ class User < ApplicationRecord
         account.update!(family: new_family)
       end
 
-      AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current) if accounts_to_move.any?
+      if accounts_to_move.any?
+        AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current)
+        # Scans follow their account, whichever member uploaded them.
+        ReceiptScan.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current)
+      end
 
       provider_items_to_move.each do |provider_item|
         if provider_item.is_a?(FinancekitItem)

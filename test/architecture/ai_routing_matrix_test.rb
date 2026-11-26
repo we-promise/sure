@@ -33,8 +33,8 @@ class AiRoutingMatrixTest < ActiveSupport::TestCase
     end
   end
 
-  test "there are exactly six consent rows, each with a label" do
-    assert_equal 6, Ai::Routes.consent_keys.size
+  test "there are exactly seven consent rows, each with a label" do
+    assert_equal 7, Ai::Routes.consent_keys.size
     Ai::Routes.consent_keys.each do |key|
       assert I18n.exists?("ai.consent_rows.#{key}", :en), "add ai.consent_rows.#{key} to config/locales/models/ai/en.yml"
     end

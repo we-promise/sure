@@ -32,6 +32,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     transactions_query = transactions_query.includes(
       { entry: :account },
       :category, :merchant, :tags,
+      { attachments_attachments: :blob },
       transfer_as_outflow: { inflow_transaction: { entry: :account } },
       transfer_as_inflow: { outflow_transaction: { entry: :account } }
     ).reverse_chronological

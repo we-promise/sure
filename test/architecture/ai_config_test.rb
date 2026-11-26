@@ -13,16 +13,17 @@ class AiConfigTest < ActiveSupport::TestCase
     @user = users(:family_admin)   # AI switch on
   end
 
-  # Setups where PDF import refuses to run: its model has no PDF support (extract_pdf's route
-  # lists only a model with `vision`).
+  # Setups where PDF import and receipt scanning refuse to run: the model can't read images
+  # (extract_pdf's and extract_receipt's routes list only a model with `vision`).
   PDF_IMPORT_OFF = %w[C8].freeze
+  VISION_FEATURES = %i[extract_pdf extract_receipt].freeze
 
   SETUPS.each_key do |id|
     test "#{id}: every non-chat feature's first route is today's provider and model" do
       in_ai_setup(id, family: @family) do
         today = Assistant.builtin_provider
         LLM_FEATURES.each do |feature|
-          expected = feature == :extract_pdf && PDF_IMPORT_OFF.include?(id) ? nil : today
+          expected = VISION_FEATURES.include?(feature) && PDF_IMPORT_OFF.include?(id) ? nil : today
           assert_same_route(expected, Ai.plan(feature, family: @family, user: @user), "#{id} #{feature}")
         end
 
