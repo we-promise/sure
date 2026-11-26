@@ -20,6 +20,10 @@ class Balance::Materializer
       # them serialise in one lock order rather than deadlocking on each other's
       # holding rows.
       account.lock!
+      # Do not rewrite verified statement history from a feed that is not
+      # authoritative for this account's current holdings.
+      next if account.verified_investment_snapshot_date?
+
       materialize_holdings
       calculate_balances
 

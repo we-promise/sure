@@ -430,10 +430,14 @@ class Account::ProviderImportAdapter
   # @param cash_balance [BigDecimal, Numeric] Cash balance (for investment accounts)
   # @param source [String] Provider name (for logging/debugging)
   def update_balance(balance:, cash_balance: nil, source: nil)
-    account.update!(
-      balance: balance,
-      cash_balance: cash_balance || balance
-    )
+    account.with_lock do
+      unless account.verified_investment_snapshot_date?
+        account.update!(
+          balance: balance,
+          cash_balance: cash_balance || balance
+        )
+      end
+    end
   end
 
   # Imports or updates a holding (investment position) from a provider

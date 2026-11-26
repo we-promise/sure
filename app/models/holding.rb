@@ -66,6 +66,7 @@ class Holding < ApplicationRecord
   def avg_cost
     # Use stored cost_basis if available (eliminates N+1 queries)
     return stored_avg_cost if known_cost_basis
+    return if account_provider_id.nil? && external_id&.start_with?(Account::VerifiedInvestmentSnapshot::EXTERNAL_ID_PREFIX)
 
     # A caller that has many holdings can compute the fallback for all of
     # them in one query and hand each its answer (.preload_avg_costs), so a

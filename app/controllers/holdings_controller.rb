@@ -208,7 +208,12 @@ class HoldingsController < ApplicationController
     end
 
     def require_holding_write_permission!
-      require_account_permission!(@holding.account)
+      account = @holding.account
+      require_account_permission!(account)
+      return if performed?
+      return unless account.verified_investment_snapshot_date?
+
+      redirect_to account_path(account, tab: "holdings"), alert: t("verified_investment_snapshot.read_only"), status: :see_other
     end
 
     def holding_params

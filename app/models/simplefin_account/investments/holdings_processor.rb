@@ -8,6 +8,8 @@ class SimplefinAccount::Investments::HoldingsProcessor
   end
 
   def process_holdings
+    return if account&.verified_investment_snapshot_date?
+
     if holdings_data.empty?
       close_positions if simplefin_account.raw_holdings_payload == []
       return
