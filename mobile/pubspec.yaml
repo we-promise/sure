@@ -34,6 +34,8 @@ dependencies:
   flutter_markdown: ^0.7.2
   sentry_flutter: ^8.14.2
   upgrader: ^13.5.0
+  image_picker: ^1.1.2
+  cunning_document_scanner: 3.0.4
 
 dev_dependencies:
   flutter_test:

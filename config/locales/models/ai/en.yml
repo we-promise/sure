@@ -19,6 +19,7 @@ en:
       detect_merchants: Merchants
       embed: Documents
       extract_pdf: PDF import
+      extract_receipt: Receipt scanning
     sends:
       bill_configuration: The bill's current settings
       category_names: Your category names
@@ -27,6 +28,7 @@ en:
       looked_up_financial_data: The financial data the assistant looks up to answer
       merchant_names: Merchant names
       provider_category_hints: Categories your bank suggests
+      receipt_images: The receipt photos and files you upload
       search_query: Your search text
       stored_document_text: The text of statements stored in your vault
       transaction_amounts: Transaction amounts

@@ -7,6 +7,7 @@ class PreferencesService {
   static const _showCategoryFilterKey = 'dashboard_show_category_filter';
   static const _themeModeKey = 'theme_mode';
   static const _moneyHiddenKey = 'privacy_money_hidden';
+  static const _lastReceiptAccountIdKey = 'receipt_last_account_id';
 
   static PreferencesService? _instance;
   SharedPreferences? _prefs;
@@ -80,5 +81,16 @@ class PreferencesService {
   Future<void> setThemeMode(String mode) async {
     final prefs = await _preferences;
     await prefs.setString(_themeModeKey, mode);
+  }
+
+  /// The account the last receipt was uploaded to, preselected next time.
+  Future<String?> getLastReceiptAccountId() async {
+    final prefs = await _preferences;
+    return prefs.getString(_lastReceiptAccountIdKey);
+  }
+
+  Future<void> setLastReceiptAccountId(String accountId) async {
+    final prefs = await _preferences;
+    await prefs.setString(_lastReceiptAccountIdKey, accountId);
   }
 }

@@ -2071,6 +2071,144 @@ components:
         transfer:
           "$ref": "#/components/schemas/Transfer"
           nullable: true
+        receipt:
+          "$ref": "#/components/schemas/TransactionReceipt"
+        attachments:
+          type: array
+          items:
+            "$ref": "#/components/schemas/TransactionAttachment"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TransactionReceipt:
+      type: object
+      nullable: true
+      description: The receipt this transaction was created from or matched to; null
+        when there is none.
+      required:
+      - status
+      - review_reasons
+      - line_items
+      properties:
+        scan_id:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum:
+          - processing
+          - completed
+          - needs_review
+        merchant:
+          type: string
+          nullable: true
+        review_reasons:
+          type: array
+          items:
+            "$ref": "#/components/schemas/ReceiptReviewReason"
+        line_items:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              quantity:
+                type: string
+                nullable: true
+              amount:
+                type: string
+                nullable: true
+              discount:
+                type: string
+                nullable: true
+              category_name:
+                type: string
+                nullable: true
+    TransactionAttachment:
+      type: object
+      required:
+      - id
+      - filename
+      - content_type
+      - url
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        content_type:
+          type: string
+        url:
+          type: string
+          format: uri
+        thumbnail_url:
+          type: string
+          format: uri
+          nullable: true
+    ReceiptReviewReason:
+      type: object
+      required:
+      - reason
+      description: Why a receipt needs review, with details that depend on the reason.
+      properties:
+        reason:
+          type: string
+          enum:
+          - ai_unavailable
+          - missing_total
+          - non_positive_total
+          - missing_date
+          - future_date
+          - old_date
+          - invalid_nip
+          - items_total_mismatch
+          - vat_total_mismatch
+          - currency_mismatch
+          - unknown_currency
+          - possible_duplicates
+          - duplicate_receipt
+          - too_many_attachments
+          - split_after_booking
+      additionalProperties: true
+    ReceiptScan:
+      type: object
+      required:
+      - id
+      - status
+      - account_id
+      - review_reasons
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - processing
+          - completed
+          - needs_review
+          - failed
+        account_id:
+          type: string
+          format: uuid
+        transaction_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: The transaction holding the receipt; changes when the receipt
+            is matched to an existing bank transaction.
+        review_reasons:
+          type: array
+          items:
+            "$ref": "#/components/schemas/ReceiptReviewReason"
         created_at:
           type: string
           format: date-time
@@ -9154,6 +9292,98 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '204':
           description: token unregistered
+  "/api/v1/receipts":
+    post:
+      summary: Upload a receipt
+      description: Uploads up to 5 photos, or one PDF on its own, of one receipt,
+        bill or invoice (10 MB each; JPEG, PNG, WebP, HEIC, PDF) for an account the
+        caller can write to. A "Processing receipt…" transaction is created at once;
+        the receipt is then read in the background, the transaction filled in and
+        split by category, or the receipt attached to an existing bank transaction
+        for the same payment. Poll the receipt for its status.
+      tags:
+      - Receipts
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '202':
+          description: receipt accepted for processing
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ReceiptScan"
+        '403':
+          description: 'receipt scanning is not available: preview features off, or
+            no AI provider that can read images'
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account not found or not writable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid files
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - account_id
+              - files[]
+              properties:
+                account_id:
+                  type: string
+                  format: uuid
+                  description: Account the receipt was paid from (needs write access
+                    to it)
+                files[]:
+                  type: array
+                  minItems: 1
+                  maxItems: 5
+                  description: Up to 5 photos, or one PDF, of one receipt, 10 MB each
+                    (JPEG, PNG, WebP, HEIC, PDF). Send each file as a files[] part.
+                  items:
+                    type: string
+                    format: binary
+        required: true
+        description: Receipt photos or PDF, as files[]
+  "/api/v1/receipts/{id}":
+    parameters:
+    - name: id
+      in: path
+      format: uuid
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Retrieve a receipt
+      tags:
+      - Receipts
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: receipt
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ReceiptScan"
+        '404':
+          description: not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/recurring_transactions":
     get:
       summary: List recurring transactions
@@ -10821,6 +11051,78 @@ paths:
         '404':
           description: trade not found
           content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/transactions/{transaction_id}/attachments/{id}":
+    parameters:
+    - name: transaction_id
+      in: path
+      format: uuid
+      required: true
+      schema:
+        type: string
+    - name: id
+      in: path
+      format: uuid
+      required: true
+      schema:
+        type: string
+    - name: variant
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+        - thumbnail
+      description: thumbnail returns a small preview of an image attachment
+    get:
+      summary: Download a transaction attachment
+      description: Returns the file attached to a transaction, such as a receipt photo,
+        using the API credentials. Transaction JSON links each attachment here.
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: attachment file
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: transaction or attachment not found
+          content:
+            image/jpeg:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+            image/png:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+            image/webp:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+            application/pdf:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"

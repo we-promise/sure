@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/api_config.dart';
+import '../widgets/receipt_details_section.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart' as models;
 import '../models/merchant.dart';
@@ -7,6 +9,7 @@ import '../models/transaction_tag.dart';
 import '../providers/auth_provider.dart';
 import '../providers/categories_provider.dart';
 import '../providers/merchants_provider.dart';
+import '../providers/privacy_provider.dart';
 import '../providers/tags_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../l10n/app_localizations.dart';
@@ -27,6 +30,8 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _notesController;
+  late final Future<String?> _receiptImageToken =
+      Provider.of<AuthProvider>(context, listen: false).getValidAccessToken();
   String? _selectedCategoryId;
   String? _selectedMerchantId;
   late Set<String> _selectedTagIds;
@@ -329,6 +334,17 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (widget.transaction.receipt != null) ...[
+              FutureBuilder<String?>(
+                future: _receiptImageToken,
+                builder: (context, snapshot) => ReceiptDetailsSection(
+                  receipt: widget.transaction.receipt,
+                  imageHeaders: snapshot.data == null ? null : ApiConfig.getAuthHeaders(snapshot.data!),
+                  hideAmounts: context.watch<PrivacyProvider>().hidden,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             if (!canEdit) ...[
               Card(
                 color: colorScheme.errorContainer,

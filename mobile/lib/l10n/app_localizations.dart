@@ -63,7 +63,7 @@ import 'app_localizations_sv.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,16 +86,16 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('sv'),
+    Locale('sv')
   ];
 
   /// Application title shown in the OS task switcher.
@@ -2281,6 +2281,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t load transactions'**
   String get cashFlowTransactionsLoadFailed;
+
+  /// Title of the receipt capture screen and the add-receipt option.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan receipt'**
+  String get receiptScanTitle;
+
+  /// Button that opens the camera to photograph a receipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Take photo'**
+  String get receiptTakePhoto;
+
+  /// Button that picks receipt photos from the photo library.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from gallery'**
+  String get receiptChooseFromGallery;
+
+  /// Hint under the receipt photos explaining the photo limit.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {count} photos of one receipt'**
+  String receiptMaxPhotos(int count);
+
+  /// Label of the account picker on the receipt capture screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid from'**
+  String get receiptAccountLabel;
+
+  /// Button that uploads the receipt photos.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload receipt'**
+  String get receiptUpload;
+
+  /// Confirmation after a receipt upload.
+  ///
+  /// In en, this message translates to:
+  /// **'Receipt uploaded. Its transaction will be filled in shortly.'**
+  String get receiptUploaded;
+
+  /// Shown when the document scanner cannot be opened.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the scanner: {message}'**
+  String receiptScannerFailed(String message);
+
+  /// Shown when the photo gallery cannot be opened.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open your photos: {message}'**
+  String receiptGalleryFailed(String message);
+
+  /// Error shown when a receipt upload fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t upload the receipt: {message}'**
+  String receiptUploadFailed(String message);
+
+  /// Tooltip of the button that removes a selected receipt photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove photo'**
+  String get receiptRemovePhoto;
+
+  /// Option in the add menu that opens the new transaction form.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction'**
+  String get addTransactionOption;
+
+  /// Badge on a transaction whose receipt is still being read.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing receipt…'**
+  String get receiptProcessing;
+
+  /// Badge on a transaction whose receipt needs the user to check it.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs review'**
+  String get receiptNeedsReview;
+
+  /// Badge on a transaction whose receipt couldn't be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read the receipt'**
+  String get receiptFailed;
+
+  /// Heading of the receipt section on the transaction screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Receipt'**
+  String get receiptSectionTitle;
 }
 
 class _AppLocalizationsDelegate
@@ -2310,9 +2406,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }
