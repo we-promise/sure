@@ -1,0 +1,17 @@
+<%# locals: (rejections:) %>
+<% if rejections.any? %>
+  <div class="rounded-lg shadow-border-xs bg-container divide-y divide-subdued">
+    <% rejections.each do |entry| %>
+      <div class="p-3 text-sm space-y-1">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-primary truncate"><%= entry.metadata["from"].presence || "—" %></span>
+          <span class="text-secondary shrink-0"><%= l(entry.created_at, format: :short) %></span>
+        </div>
+        <p class="text-secondary truncate"><%= entry.metadata["subject"] %></p>
+        <p class="text-secondary"><%= t(".reasons.#{entry.metadata["reason"]}", default: entry.metadata["reason"].to_s) %></p>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <p class="text-sm text-secondary"><%= t(".empty") %></p>
+<% end %>

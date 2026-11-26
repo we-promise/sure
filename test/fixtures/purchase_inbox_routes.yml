@@ -1,0 +1,9 @@
+admin_sender:
+  user: family_admin
+  kind: sender
+  value: bob@bobdylan.com
+
+admin_tag:
+  user: family_admin
+  kind: tag
+  value: bob

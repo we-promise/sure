@@ -131,6 +131,18 @@ module ApplicationHelper
     )
   end
 
+  def purchases_nav_item
+    preview_gated_nav_item(
+      {
+        name: t("layouts.application.nav.purchases"),
+        path: purchases_path,
+        icon: "shopping-bag",
+        icon_custom: false,
+        active: page_active?(purchases_path)
+      }
+    )
+  end
+
   # Budgets and Goals share one nav slot. Preview users get the "Plan" hub
   # entry fronting both (it stays lit while browsing either subpage, since
   # page_active? is a path-prefix match and /budgets · /goals don't share

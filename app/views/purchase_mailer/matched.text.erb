@@ -1,0 +1,5 @@
+<%= t(".heading", merchant: @purchase.merchant || t("purchase_mailer.unknown_merchant")) %>
+
+<%= render "purchase_mailer/transaction", purchase: @purchase %>
+
+<%= t("purchase_mailer.view_purchase") %>: <%= @purchase_url %>

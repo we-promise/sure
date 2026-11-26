@@ -303,6 +303,8 @@ pl:
       edit: Edytuj
       selected: zaznaczone
     show:
+      receipt: Paragon
+      purchase: Zakup
       account_label: Konto
       activity_type: Typ aktywności
       activity_type_description: Typ aktywności inwestycyjnej (kupno, sprzedaż, dywidenda

@@ -13,6 +13,7 @@ en:
       nav:
         assistant: Assistant
         bills: Bills
+        purchases: Purchases
         budgets: Budgets
         home: Home
         plan: Plan

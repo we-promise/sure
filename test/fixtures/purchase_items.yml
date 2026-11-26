@@ -1,0 +1,8 @@
+allegro_matched_item:
+  purchase: allegro_matched
+  name: Coffee beans
+  quantity: 1
+  unit_price: 10
+  amount: 10
+  category: food_and_drink
+  position: 0

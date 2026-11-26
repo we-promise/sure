@@ -1,0 +1,26 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) do %>
+    <%= render DS::Pill.new(label: t(".preview")) %>
+  <% end %>
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <p class="text-sm text-secondary"><%= t(".description", count: ReceiptScan::MAX_FILES) %></p>
+
+      <% if @error %>
+        <%= render DS::Alert.new(message: @error, variant: :error, live: :alert) %>
+      <% end %>
+
+      <%= styled_form_with scope: :receipt_scan, url: receipt_scans_path, multipart: true, class: "space-y-3", data: { turbo_frame: "_top" } do |f| %>
+        <%= f.select :account_id,
+              options_from_collection_for_select(@accounts, :id, :name, params.dig(:receipt_scan, :account_id)),
+              { label: t(".account"), required: true } %>
+        <%= f.file_field :files,
+              multiple: true,
+              required: true,
+              accept: ReceiptScan::ACCEPTED_CONTENT_TYPES.join(","),
+              label: t(".files") %>
+        <%= f.submit t(".submit") %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

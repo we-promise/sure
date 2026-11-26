@@ -1,0 +1,36 @@
+<%# locals: (purchase:) %>
+<% first_item = purchase.items.first %>
+<% shop = purchase.merchant.presence || t("purchases.unknown_merchant") %>
+<%# The title is the first item, or the shop when nothing was read; the line below names the shop
+    only when the title doesn't. %>
+<% details = [
+     (first_item ? shop : t("purchases.sources.#{purchase.source}")),
+     (l(purchase.ordered_on, format: :short) if purchase.ordered_on),
+     (t("purchases.sources.receipt").downcase if purchase.receipt? && first_item),
+     (t("purchases.items_count", count: purchase.items.size) if first_item)
+   ].compact %>
+<%= link_to purchase_path(purchase), class: "flex items-center gap-3 px-4 py-3 hover:bg-container-hover" do %>
+  <%= render "purchases/logo", purchase: purchase %>
+  <span class="min-w-0 flex-1 space-y-0.5">
+    <span class="flex items-baseline gap-1 text-sm font-medium text-primary min-w-0">
+      <span class="truncate"><%= first_item&.name || shop %></span>
+      <% if purchase.items.size > 1 %>
+        <span class="shrink-0 font-normal text-secondary">+<%= purchase.items.size - 1 %></span>
+      <% end %>
+    </span>
+    <span class="flex items-center gap-2 text-xs text-secondary min-w-0">
+      <span class="truncate"><%= details.join(" · ") %></span>
+      <% if first_item&.category %>
+        <span class="hidden sm:block min-w-0">
+          <%= render DS::Pill.new(label: first_item.category.name, custom_color: first_item.category.color, size: :sm, marker: false, truncate: true) %>
+        </span>
+      <% end %>
+    </span>
+  </span>
+  <span class="flex flex-col items-end gap-1 shrink-0">
+    <span class="text-sm font-medium text-primary privacy-sensitive">
+      <%= purchase_amount(purchase, purchase.total) %>
+    </span>
+    <%= render "purchases/status_badge", purchase: purchase %>
+  </span>
+<% end %>

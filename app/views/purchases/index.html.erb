@@ -1,0 +1,48 @@
+<%= content_for :page_title, t(".title") %>
+<div class="space-y-4 pb-6 lg:pb-12">
+  <header class="flex justify-between items-center gap-2">
+    <h1 class="text-xl font-medium text-primary"><%= t(".title") %></h1>
+  </header>
+
+  <%= render "purchases/summary", summary: @summary %>
+
+  <% filters = { q: @query.presence, start_date: params[:start_date].presence, end_date: params[:end_date].presence }.compact %>
+  <% date_input_classes = "h-10 min-w-0 flex-1 sm:flex-none sm:w-40 rounded-md border border-secondary bg-container px-3 text-base sm:text-sm text-primary focus-ring" %>
+  <%# Everything wraps to the width of the content column, not the window: with the side panels
+      open the column is far narrower than the viewport breakpoints assume. %>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <%= render DS::SegmentedControl.new(aria_label: t(".tabs_label")) do |sc| %>
+      <% sc.with_segment(t(".tabs.all"), href: purchases_path(**filters), active: @tab == "all") %>
+      <% sc.with_segment(t(".tabs.to_match", count: @to_match_count), href: purchases_path(tab: "to_match", **filters), active: @tab == "to_match") %>
+    <% end %>
+
+    <%= form_with url: purchases_path, method: :get, class: "flex flex-wrap items-center gap-2 grow" do |form| %>
+      <%= hidden_field_tag :tab, @tab if @tab == "to_match" %>
+      <%= render DS::SearchInput.new(name: "q", value: @query, placeholder: t(".search_placeholder"), class: "grow basis-56") %>
+      <div class="flex items-center gap-2 grow sm:grow-0">
+        <%= form.date_field :start_date, value: params[:start_date], class: date_input_classes, "aria-label": t(".from") %>
+        <span class="text-secondary text-sm" aria-hidden="true">–</span>
+        <%= form.date_field :end_date, value: params[:end_date], class: date_input_classes, "aria-label": t(".to") %>
+      </div>
+      <div class="flex items-center gap-2">
+        <%= render DS::Button.new(type: "submit", text: t(".filter"), variant: :secondary, size: :md, icon: "list-filter") %>
+        <% if filters.any? %>
+          <%= render DS::Link.new(text: t(".clear"), href: purchases_path(tab: (@tab if @tab == "to_match")), variant: :ghost, size: :md) %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <% if @purchases.any? %>
+    <div class="space-y-4">
+      <% @purchases.group_by { _1.ordered_on&.beginning_of_month }.each do |month, purchases| %>
+        <%= render "purchases/month_group", month: month, purchases: purchases, totals: @month_totals.fetch(month, []) %>
+      <% end %>
+    </div>
+    <%= render "shared/pagination", pagy: @pagy %>
+  <% else %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <%= render DS::EmptyState.new(icon: "shopping-bag", title: t(".empty.title"), description: t(".empty.description")) %>
+    </div>
+  <% end %>
+</div>

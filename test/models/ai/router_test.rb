@@ -9,11 +9,11 @@ class Ai::RouterTest < ActiveSupport::TestCase
 
   test "chat, bills and document search need the person's own AI switch" do
     use_ai_routes
-    assert_equal %i[chat bill_setup extract_pdf embed search_documents],
+    assert_equal %i[chat bill_setup extract_pdf extract_receipt extract_purchase embed search_documents],
                  Ai::Routes.features.select { Ai::Routes.fetch(_1)[:consent] == :user }
 
     @user.update!(ai_enabled: false)
-    %i[chat bill_setup embed search_documents].each do |feature|
+    %i[chat bill_setup extract_receipt embed search_documents].each do |feature|
       assert_equal :user_disabled, Ai.availability(feature, family: @family, user: @user).reason, feature
     end
     assert_equal :user_disabled, Ai.availability(:bill_setup, family: @family).reason

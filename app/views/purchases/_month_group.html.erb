@@ -1,0 +1,14 @@
+<%# locals: (month:, purchases:, totals:) %>
+<section class="bg-container rounded-xl shadow-border-xs overflow-hidden">
+  <header data-testid="purchase-month" class="flex items-center justify-between gap-3 px-4 py-2 bg-container-inset text-xs font-medium uppercase text-secondary">
+    <h2><%= month ? purchase_month_title(month) : t("purchases.index.no_date") %></h2>
+    <% if totals.any? %>
+      <span class="privacy-sensitive normal-case"><%= totals.map { format_money(_1) }.join(" + ") %></span>
+    <% end %>
+  </header>
+  <div class="divide-y divide-subdued">
+    <% purchases.each do |purchase| %>
+      <%= render "purchases/purchase_row", purchase: purchase %>
+    <% end %>
+  </div>
+</section>

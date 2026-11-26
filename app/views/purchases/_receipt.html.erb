@@ -1,0 +1,22 @@
+<%# locals: (files:) %>
+<%= render DS::Card.new(class: "gap-3", data: { testid: "purchase-receipt" }) do %>
+  <h2 class="text-sm font-medium text-primary"><%= t("purchases.receipt.title") %></h2>
+  <div class="flex flex-wrap items-start gap-3">
+    <% files.each do |file| %>
+      <% url = rails_blob_path(file, disposition: :inline) %>
+      <% if file.image? %>
+        <%= link_to url, target: "_blank", rel: "noopener", class: "block rounded-lg focus-ring",
+                         "aria-label": t("purchases.receipt.open", name: file.filename) do %>
+          <%= image_tag url, alt: "", loading: "lazy",
+                class: "h-40 w-auto max-w-full rounded-lg border border-secondary bg-container-inset object-cover" %>
+        <% end %>
+      <% else %>
+        <%= link_to url, target: "_blank", rel: "noopener",
+                         class: "flex items-center gap-2 rounded-lg bg-container-inset px-3 py-2.5 text-sm text-primary hover:bg-container-inset-hover" do %>
+          <%= icon "file-text", size: "sm", color: "secondary" %>
+          <span class="truncate"><%= file.filename %></span>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

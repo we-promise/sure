@@ -133,3 +133,29 @@ end
 # Additional metadata
 json.created_at transaction.created_at.iso8601
 json.updated_at transaction.updated_at.iso8601
+
+# Receipt the transaction was created from or matched to (see ReceiptScan), or null.
+receipt = transaction.extra.is_a?(Hash) ? transaction.extra["receipt"] : nil
+if receipt
+  json.receipt do
+    json.scan_id receipt["scan_id"]
+    json.status receipt["status"]
+    json.merchant receipt["merchant"]
+    json.review_reasons Array(receipt["review_reasons"])
+    json.line_items Array(receipt["line_items"])
+  end
+else
+  json.receipt nil
+end
+
+# The purchase (order email or receipt) this transaction paid for, or null.
+json.purchase_id transaction.purchase&.id
+
+json.attachments transaction.attachments do |attachment|
+  json.id attachment.id
+  json.filename attachment.filename.to_s
+  json.content_type attachment.content_type
+  # Served by Api::V1::TransactionAttachmentsController with the caller's API credentials.
+  json.url api_v1_transaction_attachment_url(transaction, attachment)
+  json.thumbnail_url(attachment.variable? ? api_v1_transaction_attachment_url(transaction, attachment, variant: "thumbnail") : nil)
+end

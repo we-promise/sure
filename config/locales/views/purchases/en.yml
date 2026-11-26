@@ -1,0 +1,131 @@
+---
+en:
+  purchases:
+    not_authorized: You can't change this purchase.
+    unknown_merchant: Unknown shop
+    sold_by: "sold by %{seller}"
+    items_count:
+      one: "%{count} item"
+      other: "%{count} items"
+    summary:
+      this_month: This month
+      purchases:
+        one: "%{count} purchase"
+        other: "%{count} purchases"
+      items:
+        one: "%{count} item"
+        other: "%{count} items"
+      to_match: To match
+      to_match_waiting: Waiting for a payment
+      to_match_none: Every order is paid
+      top_merchant: Top shop
+      top_merchant_orders:
+        one: "%{count} order this month"
+        other: "%{count} orders this month"
+      top_merchant_none: No orders this month yet
+    sources:
+      email: Order email
+      receipt: Receipt
+    statuses:
+      processing: Reading
+      awaiting_payment: Waiting for payment
+      needs_matching: Pick the payment
+      matched: Paid
+      unmatched: No payment found
+      dismissed: No payment
+      rejected: Not added
+      failed: Couldn't read
+    payment_methods:
+      card: Card
+      blik: BLIK
+      transfer: Bank transfer
+      cash_on_delivery: Cash on delivery
+      cash: Cash
+      installments: Installments
+      other: Other
+      unknown: Unknown
+    review_reasons:
+      missing_total: The total couldn't be read.
+      non_positive_total: The total isn't a positive amount.
+      missing_date: The order date couldn't be read.
+      future_date: The order date is in the future.
+      too_old: The order is more than a year old.
+      unknown_currency: The currency wasn't recognized.
+      items_mismatch: The items don't add up to the total.
+      items_mismatch_detail: "The items don't add up to the total: items %{items} + delivery %{shipping} − discounts %{discount} = %{expected}, but the total is %{actual}."
+      unknown_categories: Some items were given categories you don't have.
+      amount_differs: The linked transaction's amount differs from the order, so it wasn't categorized.
+      pending: The linked transaction is still pending, so it wasn't categorized.
+      transfer: The linked transaction is a transfer, so it wasn't categorized.
+      not_an_order: The email isn't an order confirmation.
+      duplicate: This order was already added from another email.
+      already_linked: Its transaction already belongs to another purchase, so this one isn't linked.
+      too_many_attachments: The linked transaction has no room for more attachments, so the receipt stays on this purchase only.
+    receipt:
+      title: Receipt
+      open: Open %{name}
+    ai_metadata:
+      title: What the AI read
+      summary: "Model %{model}, prompt %{prompt}."
+    index:
+      title: Purchases
+      tabs_label: Show
+      tabs:
+        all: All
+        to_match: "To match (%{count})"
+      search_placeholder: Search shops, orders and items
+      from: From
+      to: To
+      filter: Filter
+      clear: Clear
+      no_date: No date
+      empty:
+        title: No purchases yet
+        description: Forward order confirmation emails to the order mailbox, or scan a receipt, and they'll show up here.
+    show:
+      back: All purchases
+      order_number: Order number
+      payment_method: Payment
+      shipping: Delivery
+      payment: Payment
+      items: Items
+      link: Link a transaction
+      unlink: Unlink
+      unlink_confirm: Unlink this transaction from the purchase? Its categories stay as they are.
+      dismiss: No payment
+      reprocess: Read again
+      download_email: Download the original email
+      view_receipt: View the receipt
+      linked_elsewhere: Linked to a transaction on an account you can't see.
+      categories_held_back: You set this transaction's category yourself, so the order's categories weren't used.
+      apply_categories: Use the order's categories
+      no_payment:
+        default: No transaction is linked.
+        processing: The email is still being read.
+        awaiting_payment: Waiting for the payment to show up in your accounts.
+        needs_matching: Several transactions could be this payment. Pick the right one.
+        unmatched: No payment found yet. Link the transaction when it arrives.
+        dismissed: Marked as having no payment.
+        rejected: This email wasn't added as a purchase.
+        failed: The email couldn't be read.
+    dismiss:
+      dismissed: Marked as having no payment.
+    reprocess:
+      reprocessing: Reading the email again.
+    apply_categories:
+      applied: The order's categories were applied to the transaction.
+  purchase_links:
+    new:
+      title: Link a transaction
+      subtitle: "Pick the payment of %{total}."
+      candidates: Likely matches
+      search_placeholder: Search transactions
+      no_results: "No transactions match “%{query}”."
+    create:
+      linked: Transaction linked.
+      not_linkable: That transaction can't be linked to this purchase.
+    destroy:
+      unlinked: Transaction unlinked.
+  transactions:
+    purchase:
+      view: View purchase

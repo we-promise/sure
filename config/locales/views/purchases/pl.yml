@@ -1,0 +1,139 @@
+---
+pl:
+  purchases:
+    not_authorized: Nie możesz zmienić tego zakupu.
+    unknown_merchant: Nieznany sklep
+    sold_by: "sprzedawca: %{seller}"
+    items_count:
+      one: "%{count} pozycja"
+      few: "%{count} pozycje"
+      many: "%{count} pozycji"
+      other: "%{count} pozycji"
+    summary:
+      this_month: Ten miesiąc
+      purchases:
+        one: "%{count} zakup"
+        few: "%{count} zakupy"
+        many: "%{count} zakupów"
+        other: "%{count} zakupu"
+      items:
+        one: "%{count} pozycja"
+        few: "%{count} pozycje"
+        many: "%{count} pozycji"
+        other: "%{count} pozycji"
+      to_match: Do dopasowania
+      to_match_waiting: Czekają na płatność
+      to_match_none: Wszystkie zamówienia opłacone
+      top_merchant: Najczęściej
+      top_merchant_orders:
+        one: "%{count} zamówienie w tym miesiącu"
+        few: "%{count} zamówienia w tym miesiącu"
+        many: "%{count} zamówień w tym miesiącu"
+        other: "%{count} zamówienia w tym miesiącu"
+      top_merchant_none: Brak zamówień w tym miesiącu
+    sources:
+      email: Zamówienie z maila
+      receipt: Paragon
+    statuses:
+      processing: Odczytywanie
+      awaiting_payment: Czeka na płatność
+      needs_matching: Wybierz płatność
+      matched: Opłacone
+      unmatched: Nie znaleziono płatności
+      dismissed: Bez płatności
+      rejected: Nie dodano
+      failed: Nie odczytano
+    payment_methods:
+      card: Karta
+      blik: BLIK
+      transfer: Przelew
+      cash_on_delivery: Za pobraniem
+      cash: Gotówka
+      installments: Raty
+      other: Inna
+      unknown: Nieznana
+    review_reasons:
+      missing_total: Nie udało się odczytać kwoty.
+      non_positive_total: Kwota nie jest dodatnia.
+      missing_date: Nie udało się odczytać daty zamówienia.
+      future_date: Data zamówienia jest w przyszłości.
+      too_old: Zamówienie jest starsze niż rok.
+      unknown_currency: Nie rozpoznano waluty.
+      items_mismatch: Pozycje nie sumują się do kwoty zamówienia.
+      items_mismatch_detail: "Pozycje nie sumują się do kwoty zamówienia: pozycje %{items} + dostawa %{shipping} − rabaty %{discount} = %{expected}, a kwota to %{actual}."
+      unknown_categories: Niektórym pozycjom przypisano kategorie, których nie masz.
+      amount_differs: Kwota powiązanej transakcji różni się od zamówienia, więc nie została skategoryzowana.
+      pending: Powiązana transakcja jest jeszcze oczekująca, więc nie została skategoryzowana.
+      transfer: Powiązana transakcja to przelew własny, więc nie została skategoryzowana.
+      not_an_order: Mail nie jest potwierdzeniem zamówienia.
+      duplicate: To zamówienie zostało już dodane z innego maila.
+      already_linked: Jego transakcja należy już do innego zakupu, więc ten nie został powiązany.
+      too_many_attachments: Powiązana transakcja nie ma miejsca na więcej załączników, więc paragon jest tylko przy tym zakupie.
+    receipt:
+      title: Paragon
+      open: Otwórz %{name}
+    ai_metadata:
+      title: Co odczytało AI
+      summary: "Model %{model}, prompt %{prompt}."
+    index:
+      title: Zakupy
+      tabs_label: Pokaż
+      tabs:
+        all: Wszystkie
+        to_match: "Do dopasowania (%{count})"
+      search_placeholder: Szukaj sklepów, zamówień i pozycji
+      from: Od
+      to: Do
+      filter: Filtruj
+      clear: Wyczyść
+      no_date: Bez daty
+      empty:
+        title: Nie ma jeszcze zakupów
+        description: Przekaż maile z potwierdzeniem zamówienia na skrzynkę zamówień albo zeskanuj paragon, a pojawią się tutaj.
+    show:
+      back: Wszystkie zakupy
+      order_number: Numer zamówienia
+      payment_method: Płatność
+      shipping: Dostawa
+      payment: Płatność
+      items: Pozycje
+      link: Powiąż transakcję
+      unlink: Odłącz
+      unlink_confirm: Odłączyć tę transakcję od zakupu? Jej kategorie pozostaną bez zmian.
+      dismiss: Bez płatności
+      reprocess: Odczytaj ponownie
+      download_email: Pobierz oryginalny mail
+      view_receipt: Zobacz paragon
+      linked_elsewhere: Powiązano z transakcją na koncie, którego nie widzisz.
+      categories_held_back: Kategoria tej transakcji została ustawiona ręcznie, więc kategorie z zamówienia nie zostały użyte.
+      apply_categories: Użyj kategorii z zamówienia
+      no_payment:
+        default: Nie powiązano żadnej transakcji.
+        processing: Mail jest jeszcze odczytywany.
+        awaiting_payment: Czekamy, aż płatność pojawi się na Twoich kontach.
+        needs_matching: Ta płatność może być jedną z kilku transakcji. Wybierz właściwą.
+        unmatched: Nie znaleziono jeszcze płatności. Powiąż transakcję, gdy się pojawi.
+        dismissed: Oznaczono jako bez płatności.
+        rejected: Ten mail nie został dodany jako zakup.
+        failed: Nie udało się odczytać maila.
+    dismiss:
+      dismissed: Oznaczono jako bez płatności.
+    reprocess:
+      reprocessing: Odczytujemy mail ponownie.
+    apply_categories:
+      applied: Kategorie z zamówienia zostały przypisane do transakcji.
+  purchase_links:
+    new:
+      title: Powiąż transakcję
+      subtitle: "Wybierz płatność na kwotę %{total}."
+      candidates: Najbardziej pasujące
+      search_placeholder: Szukaj transakcji
+      no_results: "Brak transakcji pasujących do „%{query}”."
+    create:
+      linked: Transakcja powiązana.
+      not_linkable: Tej transakcji nie można powiązać z tym zakupem.
+    destroy:
+      unlinked: Transakcja odłączona.
+  transactions:
+    purchase:
+      view: Zobacz zakup

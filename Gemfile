@@ -61,6 +61,9 @@ gem "aws-sdk-s3", "~> 1.208.0", require: false
 gem "google-cloud-storage", "~> 1.59", require: false
 gem "image_processing", ">= 1.2"
 
+# Action Mailbox: the order mailbox is read over IMAP
+gem "net-imap"
+
 # Other
 gem "ostruct"
 gem "bcrypt", "~> 3.1"

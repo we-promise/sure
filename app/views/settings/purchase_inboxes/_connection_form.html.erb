@@ -1,0 +1,65 @@
+<%# locals: (config:) %>
+<div class="space-y-4">
+  <p class="text-sm text-secondary">
+    <% if Setting.purchase_inbox_last_polled_at %>
+      <%= t(".last_polled", time: time_ago_in_words(Setting.purchase_inbox_last_polled_at)) %>
+    <% else %>
+      <%= t(".never_polled") %>
+    <% end %>
+  </p>
+  <% if Setting.purchase_inbox_last_error.present? %>
+    <%= render DS::Alert.new(message: t(".last_error", error: Setting.purchase_inbox_last_error), variant: :error) %>
+  <% end %>
+
+  <%= styled_form_with url: settings_purchase_inbox_path, scope: :setting, method: :patch, class: "space-y-4" do |form| %>
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <p id="purchase_inbox_enabled_label" class="text-sm text-primary"><%= t(".enabled") %></p>
+        <p class="text-sm text-secondary"><%= t(".enabled_hint") %></p>
+      </div>
+      <%= form.toggle :enabled, checked: config.enabled, "aria-labelledby": "purchase_inbox_enabled_label" %>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="sm:col-span-2">
+        <%= form.text_field :host, label: t(".host"), value: config.host, placeholder: "imap.gmail.com" %>
+      </div>
+      <%= form.number_field :port, label: t(".port"), value: config.port, min: 1 %>
+    </div>
+
+    <div class="flex items-center justify-between gap-4">
+      <p id="purchase_inbox_ssl_label" class="text-sm text-primary"><%= t(".ssl") %></p>
+      <%= form.toggle :ssl, checked: config.ssl, "aria-labelledby": "purchase_inbox_ssl_label" %>
+    </div>
+
+    <%= form.text_field :username, label: t(".username"), value: config.username, autocomplete: "off" %>
+    <%= form.password_field :password, label: t(".password"), value: nil, autocomplete: "new-password",
+                            placeholder: config.password.present? ? t(".password_stored") : t(".password_placeholder") %>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <%= form.text_field :folder, label: t(".folder"), value: config.folder %>
+      <%= form.text_field :processed_folder, label: t(".processed_folder"), value: config.processed_folder %>
+    </div>
+
+    <%= form.text_field :shop_domains, label: t(".shop_domains"), value: config.shop_domains.join(", "),
+                        placeholder: "allegro.pl, amazon.com" %>
+    <p class="text-sm text-secondary"><%= t(".shop_domains_hint") %></p>
+
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <p id="purchase_inbox_auth_label" class="text-sm text-primary"><%= t(".require_sender_auth") %></p>
+        <p class="text-sm text-secondary"><%= t(".require_sender_auth_hint") %></p>
+      </div>
+      <%= form.toggle :require_sender_auth, checked: config.require_sender_auth, "aria-labelledby": "purchase_inbox_auth_label" %>
+    </div>
+    <%= form.text_field :authserv_id, label: t(".authserv_id"), value: config.authserv_id, placeholder: "mx.google.com" %>
+    <p class="text-sm text-secondary"><%= t(".authserv_id_hint") %></p>
+
+    <div class="flex items-center gap-3">
+      <%= form.submit t(".save") %>
+    </div>
+  <% end %>
+
+  <%= render DS::Button.new(text: t(".test_connection"), href: test_connection_settings_purchase_inbox_path,
+                            method: :post, variant: :outline, size: :sm, icon: "plug") %>
+</div>

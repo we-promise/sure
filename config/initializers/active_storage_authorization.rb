@@ -3,7 +3,7 @@ Rails.application.config.to_prepare do
   module ActiveStorageAttachmentAuthorization
     extend ActiveSupport::Concern
     # STI subclasses (PdfImport, SureImport, ...) are stored under their base class, "Import".
-    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement FamilyExport Import FamilyDocument].freeze
+    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement FamilyExport Import FamilyDocument ReceiptScan Purchase].freeze
 
     included do
       include Authentication
@@ -43,6 +43,10 @@ Rails.application.config.to_prepare do
           import_attachment_authorized?(attachment)
         when "FamilyDocument"
           family_record_attachment_authorized?(attachment)
+        when "ReceiptScan"
+          receipt_scan_attachment_authorized?(attachment)
+        when "Purchase"
+          purchase_attachment_authorized?(attachment)
         else
           false
         end
@@ -55,6 +59,31 @@ Rails.application.config.to_prepare do
 
         account = transaction.entry.account
         account.family_id == Current.family&.id && account.shared_with?(Current.user)
+      rescue ActiveRecord::RecordNotFound, NoMethodError
+        false
+      end
+
+      # A receipt follows the account it was uploaded for, like the transaction it becomes.
+      def receipt_scan_attachment_authorized?(attachment)
+        scan = attachment.record
+        return false if scan.nil?
+
+        scan.family_id == Current.family&.id && scan.account.shared_with?(Current.user)
+      rescue ActiveRecord::RecordNotFound, NoMethodError
+        false
+      end
+
+      # A forwarded order email may hold a delivery address, so only its owner gets it (mirrors
+      # PurchasesController#original_email). Receipt files also sit on the linked transaction, so
+      # whoever the transaction's account is shared with may see them too.
+      def purchase_attachment_authorized?(attachment)
+        purchase = attachment.record
+        return false if purchase.nil? || purchase.family_id != Current.family&.id
+        return true if purchase.user_id == Current.user&.id
+        return false unless attachment.name == "receipt_files"
+
+        account = purchase.linked_transaction&.entry&.account
+        account.present? && account.shared_with?(Current.user)
       rescue ActiveRecord::RecordNotFound, NoMethodError
         false
       end

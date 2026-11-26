@@ -1,0 +1,107 @@
+<% shop = @purchase.merchant.presence || t("purchases.unknown_merchant") %>
+<%= content_for :page_title, shop %>
+<div class="space-y-4 pb-6 lg:pb-12 max-w-3xl">
+  <%= render DS::Link.new(text: t(".back"), href: purchases_path, variant: :default, icon: "arrow-left", class: "text-sm") %>
+
+  <%= render DS::Card.new do %>
+    <header data-testid="purchase-header" class="flex items-center gap-4">
+      <%= render "purchases/logo", purchase: @purchase, size: "lg" %>
+      <div class="min-w-0 flex-1">
+        <h1 class="text-lg font-medium text-primary truncate"><%= shop %></h1>
+        <p class="text-sm text-secondary">
+          <%= [ (l(@purchase.ordered_on, format: :long) if @purchase.ordered_on), t("purchases.sources.#{@purchase.source}") ].compact.join(" · ") %>
+        </p>
+      </div>
+      <div class="flex flex-col items-end gap-1 shrink-0">
+        <p class="text-2xl font-medium text-primary privacy-sensitive">
+          <%= purchase_amount(@purchase, @purchase.total) %>
+        </p>
+        <%= render "purchases/status_badge", purchase: @purchase %>
+      </div>
+    </header>
+
+    <dl class="mt-4 -mb-2 border-t border-subdued divide-y divide-subdued">
+      <%= render DS::DetailRow.new(label: t(".payment_method"), value: t("purchases.payment_methods.#{@purchase.payment_method}"), align: :center, class: "py-2.5") %>
+      <% if @purchase.shipping_cost %>
+        <%= render DS::DetailRow.new(label: t(".shipping"), value: purchase_amount(@purchase, @purchase.shipping_cost), align: :center, value_class: "privacy-sensitive", class: "py-2.5") %>
+      <% end %>
+      <% if @purchase.order_number.present? %>
+        <%= render DS::DetailRow.new(label: t(".order_number"), value: @purchase.order_number, align: :center, truncate: true, class: "py-2.5") %>
+      <% end %>
+    </dl>
+  <% end %>
+
+  <% if @purchase.review_reasons.any? %>
+    <%= render DS::Alert.new(variant: :warning, message: @purchase.review_reasons.map { purchase_review_reason(@purchase, _1) }.uniq.to_sentence) %>
+  <% end %>
+
+  <% receipt_documents = @purchase.receipt_documents_for(Current.user) %>
+  <% if receipt_documents.any? %>
+    <%= render "purchases/receipt", files: receipt_documents %>
+  <% end %>
+
+  <% if @purchase.items.any? %>
+    <%= render DS::Card.new(class: "gap-1") do %>
+      <h2 class="text-sm font-medium text-primary">
+        <%= t(".items") %> <span class="font-normal text-secondary">· <%= @purchase.items.size %></span>
+      </h2>
+      <%= render "purchases/items", purchase: @purchase %>
+    <% end %>
+  <% end %>
+
+  <%= render DS::Card.new(class: "gap-3", data: { testid: "purchase-payment" }) do %>
+    <h2 class="text-sm font-medium text-primary"><%= t(".payment") %></h2>
+    <% if @entry %>
+      <%= link_to transaction_path(@entry), class: "flex items-center gap-3 rounded-lg bg-container-inset px-3 py-2.5 hover:bg-container-inset-hover", data: { turbo_frame: :drawer } do %>
+        <%= render "accounts/logo", account: @entry.account, size: "md" %>
+        <span class="min-w-0 flex-1">
+          <span class="block text-sm font-medium text-primary truncate"><%= @entry.name %></span>
+          <span class="block text-xs text-secondary truncate"><%= l(@entry.date, format: :short_with_year) %> · <%= @entry.account.name %></span>
+        </span>
+        <span class="shrink-0 text-sm font-medium text-primary privacy-sensitive"><%= format_money(-@entry.amount_money) %></span>
+      <% end %>
+    <% elsif @purchase.matched? %>
+      <p class="text-sm text-secondary"><%= t(".linked_elsewhere") %></p>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t(".no_payment.#{@purchase.status}", default: t(".no_payment.default")) %></p>
+    <% end %>
+
+    <% can_change = @entry && @purchase.changeable_by?(Current.user) %>
+    <% held_back = can_change && @purchase.categories_held_back? %>
+    <% if held_back %>
+      <%= render DS::Alert.new(variant: :info, message: t(".categories_held_back")) %>
+    <% end %>
+
+    <div class="flex flex-wrap gap-2">
+      <% if held_back %>
+        <%= render DS::Button.new(text: t(".apply_categories"), href: apply_categories_purchase_path(@purchase), method: :post, variant: :primary, size: :sm, icon: "tags") %>
+      <% end %>
+      <% if can_change %>
+        <%= render DS::Button.new(text: t(".unlink"), href: purchase_link_path(@purchase), method: :delete, variant: :outline, size: :sm,
+                                  data: { turbo_confirm: t(".unlink_confirm") }) %>
+      <% end %>
+      <% if !@entry && !@purchase.matched? && (@purchase.status.in?(Purchase::OPEN_STATUSES) || @purchase.dismissed?) %>
+        <%= render DS::Link.new(text: t(".link"), href: new_purchase_link_path(@purchase), variant: :primary, size: :sm,
+                                icon: "link", frame: :modal) %>
+      <% end %>
+      <% if @purchase.status.in?(Purchase::OPEN_STATUSES) %>
+        <%= render DS::Button.new(text: t(".dismiss"), href: dismiss_purchase_path(@purchase), method: :post, variant: :outline, size: :sm) %>
+      <% end %>
+      <% if @purchase.reprocessable? %>
+        <%= render DS::Button.new(text: t(".reprocess"), href: reprocess_purchase_path(@purchase), method: :post, variant: :outline, size: :sm, icon: "refresh-cw") %>
+      <% end %>
+      <% if @purchase.email? && @purchase.original_email.attached? && @purchase.user_id == Current.user.id %>
+        <%= render DS::Link.new(text: t(".download_email"), href: original_email_purchase_path(@purchase), variant: :outline, size: :sm, icon: "download", data: { turbo: false }) %>
+      <% end %>
+      <% if @purchase.receipt? && @entry %>
+        <%= render DS::Link.new(text: t(".view_receipt"), href: transaction_path(@entry), variant: :outline, size: :sm, icon: "receipt", data: { turbo_frame: :drawer }) %>
+      <% end %>
+    </div>
+
+    <% if @purchase.ai_metadata.present? %>
+      <div class="border-t border-subdued pt-3">
+        <%= render "purchases/ai_metadata", purchase: @purchase %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

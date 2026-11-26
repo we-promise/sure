@@ -1109,6 +1109,53 @@ class UserTest < ActiveSupport::TestCase
     assert_equal user, plaid_item.owner
   end
 
+  test "transfer_to_family! moves the receipt scans of the accounts, whoever uploaded them" do
+    user = users(:family_member)
+    source_family = user.family
+    new_family = Family.create!(name: "Transferred Receipts Family")
+    account = Account.create!(family: source_family, owner: user, name: "Receipts Checking", balance: 100, currency: "USD", accountable: Depository.new)
+    scan = ReceiptScan.create!(family: source_family, user: users(:family_admin), account:)
+    other = ReceiptScan.create!(family: source_family, user:, account: accounts(:depository))
+
+    user.transfer_to_family!(new_family, role: "admin")
+
+    assert_equal new_family, scan.reload.family
+    assert_equal source_family, other.reload.family
+  end
+
+  test "transfer_to_family! takes the user's purchases along and drops links across the families" do
+    user = users(:family_member)
+    source_family = user.family
+    new_family = Family.create!(name: "Transferred Purchases Family")
+    moving = Account.create!(family: source_family, owner: user, name: "Moving", balance: 100, currency: "USD", accountable: Depository.new)
+    staying = accounts(:depository)
+    moving_tx = moving.entries.create!(name: "Shop", date: Date.current, amount: 20, currency: "USD", entryable: Transaction.new).entryable
+    staying_tx = staying.entries.create!(name: "Shop", date: Date.current, amount: 30, currency: "USD", entryable: Transaction.new).entryable
+    stays_linked = Purchase.create!(family: source_family, user:, source: :email, status: :matched, linked_transaction: moving_tx)
+    loses_link = Purchase.create!(family: source_family, user:, source: :email, status: :matched, linked_transaction: staying_tx)
+    others = Purchase.create!(family: source_family, user: users(:family_admin), source: :email, status: :matched,
+                              linked_transaction: moving.entries.create!(name: "Shop", date: Date.current, amount: 40, currency: "USD", entryable: Transaction.new).entryable)
+
+    moving_scan = ReceiptScan.create!(family: source_family, user: users(:family_admin), account: moving)
+    staying_scan = ReceiptScan.create!(family: source_family, user:, account: staying)
+    others_receipt = Purchase.create!(family: source_family, user: users(:family_admin), source: :receipt, status: :unmatched, receipt_scan: moving_scan)
+    own_receipt = Purchase.create!(family: source_family, user:, source: :receipt, status: :unmatched, receipt_scan: staying_scan)
+
+    user.transfer_to_family!(new_family, role: "admin")
+
+    assert_nil others_receipt.reload.receipt_scan
+    assert_nil own_receipt.reload.receipt_scan
+    assert_equal [ new_family, moving_tx ], [ stays_linked.reload.family, stays_linked.linked_transaction ]
+    assert_equal new_family, loses_link.reload.family
+    assert_nil loses_link.linked_transaction
+    assert_equal source_family, others.reload.family
+    assert_nil others.linked_transaction
+    visible = Purchase.visible_to(user.reload).where(family: new_family)
+    assert_includes visible, stays_linked
+    assert_includes visible, loses_link
+    assert_not_includes Purchase.visible_to(users(:family_admin)), loses_link
+  end
+
   test "transfer_to_family! moves unmapped FinanceKit items owned by the user" do
     user = users(:family_member)
     source_family = user.family

@@ -1,0 +1,16 @@
+Date: Sun, 22 Nov 2026 11:00:00 -0500
+From: Bob Dylan <bob@bobdylan.com>
+To: orders@example.com
+Message-ID: <135a89cf7dd29d21@fixture.example>
+Subject: Fwd: Your package has shipped
+MIME-Version: 1.0
+Content-Type: text/plain;
+ charset=UTF-8
+Content-Transfer-Encoding: 7bit
+Authentication-Results: mx.google.com; dkim=pass header.i=@bobdylan.com;
+ dmarc=pass header.from=bobdylan.com
+
+---------- Forwarded message ---------
+From: Amazon.com <shipment-tracking@amazon.com>
+
+Your package has shipped. Tracking number: 1Z999AA10123456784.

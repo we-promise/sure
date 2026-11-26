@@ -1111,6 +1111,77 @@ RSpec.configure do |config|
                 items: { '$ref' => '#/components/schemas/Tag' }
               },
               transfer: { '$ref' => '#/components/schemas/Transfer', nullable: true },
+              receipt: { '$ref' => '#/components/schemas/TransactionReceipt' },
+              purchase_id: { type: :string, format: :uuid, nullable: true,
+                             description: 'The purchase (forwarded order email or scanned receipt) this transaction paid for.' },
+              attachments: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/TransactionAttachment' }
+              },
+              created_at: { type: :string, format: :'date-time' },
+              updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          TransactionReceipt: {
+            type: :object,
+            nullable: true,
+            description: 'The receipt this transaction was created from or matched to; null when there is none.',
+            required: %w[status review_reasons line_items],
+            properties: {
+              scan_id: { type: :string, format: :uuid, nullable: true },
+              status: { type: :string, enum: %w[processing completed needs_review] },
+              merchant: { type: :string, nullable: true },
+              review_reasons: { type: :array, items: { '$ref' => '#/components/schemas/ReceiptReviewReason' } },
+              line_items: {
+                type: :array,
+                items: {
+                  type: :object,
+                  properties: {
+                    name: { type: :string },
+                    quantity: { type: :string, nullable: true },
+                    amount: { type: :string, nullable: true },
+                    discount: { type: :string, nullable: true },
+                    category_name: { type: :string, nullable: true }
+                  }
+                }
+              }
+            }
+          },
+          TransactionAttachment: {
+            type: :object,
+            required: %w[id filename content_type url],
+            properties: {
+              id: { type: :string, format: :uuid },
+              filename: { type: :string },
+              content_type: { type: :string },
+              url: { type: :string, format: :uri },
+              thumbnail_url: { type: :string, format: :uri, nullable: true }
+            }
+          },
+          ReceiptReviewReason: {
+            type: :object,
+            required: %w[reason],
+            description: 'Why a receipt needs review, with details that depend on the reason.',
+            properties: {
+              reason: {
+                type: :string,
+                enum: %w[ai_unavailable missing_total non_positive_total missing_date future_date old_date invalid_nip
+                         items_total_mismatch vat_total_mismatch currency_mismatch unknown_currency possible_duplicates
+                         duplicate_receipt too_many_attachments split_after_booking]
+              }
+            },
+            additionalProperties: true
+          },
+          ReceiptScan: {
+            type: :object,
+            required: %w[id status account_id review_reasons created_at updated_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              status: { type: :string, enum: %w[processing completed needs_review failed] },
+              account_id: { type: :string, format: :uuid },
+              transaction_id: { type: :string, format: :uuid, nullable: true,
+                                description: 'The transaction holding the receipt; changes when the receipt is matched to an existing bank transaction.' },
+              review_reasons: { type: :array, items: { '$ref' => '#/components/schemas/ReceiptReviewReason' } },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' }
             }
