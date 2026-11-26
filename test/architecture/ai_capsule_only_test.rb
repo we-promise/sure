@@ -27,13 +27,7 @@ class AiCapsuleOnlyTest < ActionController::TestCase
     AiTestGeneration.new(transactions:, family: Family.first).call(batches: 1)
   end
 
-  class WebController < ApplicationController
-    skip_authentication
-    skip_before_action :verify_authenticity_token
-    skip_before_action :require_onboarding_and_upgrade
-    skip_before_action :set_default_chat
-    skip_before_action :detect_os
-
+  class WebController < ActionController::Base
     def index
       AiCapsuleOnlyTest.call_ai
       render plain: "ok"
@@ -51,15 +45,12 @@ class AiCapsuleOnlyTest < ActionController::TestCase
     stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
   end
 
-  test "a transport called from a controller raises" do
+  test "a transport called outside an AI job raises" do
     assert_equal "ai_background", AiQueueJob.new.queue_name
-    assert_raises(Ai::Capsule::Violation) { get :index }
-  end
-
-  test "a transport called from a rule job or a default-queue job raises" do
     assert_equal "medium_priority", RuleStyleJob.new.queue_name
     assert_equal "default", DefaultQueueJob.new.queue_name
 
+    assert_raises(Ai::Capsule::Violation) { get :index }
     assert_raises(Ai::Capsule::Violation) { RuleStyleJob.perform_now }
     assert_raises(Ai::Capsule::Violation) { DefaultQueueJob.perform_now }
   end

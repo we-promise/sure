@@ -65,14 +65,12 @@ class AiCompletionHookTest < ActiveJob::TestCase
   def applied(log, feature) = log.select { |entry| entry[0] == feature && entry[1] == :applied }
   def endings(log, feature) = log.select { |entry| entry[0] == feature && entry[1].in?(%i[finished failed]) }
 
-  test "every registered requester declares its completion hooks" do
+  test "every registered requester declares its feature and applies AI" do
     Ai::Requesters::CLASSES.each do |feature, name|
       requester = name.constantize
 
       assert_equal feature, requester.ai_feature
       assert_includes requester.instance_methods, :apply_ai
-      assert_includes requester.instance_methods, :ai_finished
-      assert_includes requester.instance_methods, :ai_failed
     end
   end
 

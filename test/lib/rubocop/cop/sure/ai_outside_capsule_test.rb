@@ -24,7 +24,7 @@ class RuboCop::Cop::Sure::AiOutsideCapsuleTest < ActiveSupport::TestCase
     assert_includes config.fetch("Include"), "lib/**/*.rake"
   end
 
-  test "every allowlisted path still needs the opt-out" do
+  test "each allowlist pattern still needs the opt-out" do
     ALLOWED.each do |pattern|
       paths = Rails.root.glob(pattern)
       assert_not_empty paths, "#{pattern} matches no files"
