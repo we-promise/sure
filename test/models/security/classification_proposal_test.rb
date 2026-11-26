@@ -449,6 +449,18 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
     assert_nil @security.asset_sub_class
   end
 
+  # Only an unanswered class keeps the wrapper. A proposal that changes a
+  # class the fund already has answers the pair, so its blank sub-class wins.
+  test "changing the class of a fund clears a wrapper the proposal did not answer" do
+    @security.update!(asset_class: "equity", asset_sub_class: "etf", classification_source: "provider")
+
+    assert propose(asset_class: "fixed_income").approve!
+
+    @security.reload
+    assert_equal "fixed_income", @security.asset_class
+    assert_nil @security.asset_sub_class
+  end
+
   test "a fund approved without a region loses the region its listing implies" do
     @security.update_columns(country_code: "IE", region: "europe")
 
