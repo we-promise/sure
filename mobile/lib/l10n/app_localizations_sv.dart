@@ -1314,5 +1314,8 @@ class AppLocalizationsSv extends AppLocalizations {
   String get receiptNeedsReview => 'Needs review';
 
   @override
+  String get receiptFailed => 'Couldn\'t read the receipt';
+
+  @override
   String get receiptSectionTitle => 'Receipt';
 }

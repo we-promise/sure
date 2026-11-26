@@ -1246,6 +1246,9 @@
   "receiptNeedsReview": "Needs review",
   "@receiptNeedsReview": { "description": "Badge on a transaction whose receipt needs the user to check it." },
 
+  "receiptFailed": "Couldn't read the receipt",
+  "@receiptFailed": { "description": "Badge on a transaction whose receipt couldn't be read." },
+
   "receiptSectionTitle": "Receipt",
   "@receiptSectionTitle": { "description": "Heading of the receipt section on the transaction screen." }
 }

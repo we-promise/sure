@@ -39,10 +39,11 @@ class Transaction {
   /// the transaction's attachments; null when there is neither.
   final TransactionReceipt? receipt;
 
-  /// "processing", "completed" or "needs_review", or null without a receipt.
+  /// "processing", "completed", "needs_review" or "failed", or null without a receipt.
   String? get receiptStatus => receipt?.status;
   bool get receiptProcessing => receiptStatus == 'processing';
   bool get receiptNeedsReview => receiptStatus == 'needs_review';
+  bool get receiptFailed => receiptStatus == 'failed';
   List<String> get receiptReviewReasons => receipt?.reviewReasons ?? const [];
   List<ReceiptLineItem> get receiptLineItems => receipt?.lineItems ?? const [];
   List<TransactionAttachment> get attachments => receipt?.attachments ?? const [];

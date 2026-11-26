@@ -2366,6 +2366,12 @@ abstract class AppLocalizations {
   /// **'Needs review'**
   String get receiptNeedsReview;
 
+  /// Badge on a transaction whose receipt couldn't be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read the receipt'**
+  String get receiptFailed;
+
   /// Heading of the receipt section on the transaction screen.
   ///
   /// In en, this message translates to:

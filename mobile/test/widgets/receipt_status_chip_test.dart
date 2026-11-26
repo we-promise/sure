@@ -34,6 +34,11 @@ void main() {
     expect(find.text('Needs review'), findsOneWidget);
   });
 
+  testWidgets('shows a receipt that could not be read', (tester) async {
+    await pump(tester, transaction('failed'));
+    expect(find.text("Couldn't read the receipt"), findsOneWidget);
+  });
+
   testWidgets('shows processing', (tester) async {
     await pump(tester, transaction('processing'));
     expect(find.text('Processing receipt…'), findsOneWidget);

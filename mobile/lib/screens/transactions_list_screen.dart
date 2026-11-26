@@ -715,7 +715,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                           color: colorScheme.onSurfaceVariant,
                                         ),
                                   ),
-                                  if (transaction.receiptProcessing || transaction.receiptNeedsReview) ...[
+                                  if (transaction.receiptProcessing || transaction.receiptNeedsReview || transaction.receiptFailed) ...[
                                     const SizedBox(height: 4),
                                     ReceiptStatusChip(transaction: transaction),
                                   ],

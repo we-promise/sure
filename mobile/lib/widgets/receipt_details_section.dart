@@ -52,6 +52,10 @@ class ReceiptDetailsSection extends StatelessWidget {
                   Text(l.receiptNeedsReview,
                       style: textTheme.labelMedium
                           ?.copyWith(color: colorScheme.error)),
+                if (receipt.status == 'failed')
+                  Text(l.receiptFailed,
+                      style: textTheme.labelMedium
+                          ?.copyWith(color: colorScheme.error)),
               ],
             ),
             for (final reason in receipt.reviewReasons)
