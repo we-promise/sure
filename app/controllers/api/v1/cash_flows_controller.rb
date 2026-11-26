@@ -14,10 +14,10 @@ class Api::V1::CashFlowsController < Api::V1::BaseController
     end
     raise QueryError.new("invalid_view", "include and view cannot be combined") if include_mode && view
 
+    raise QueryError.new("invalid_group_by", "group_by requires view=sankey") if params[:group_by].present? && !view
     group_by = reading_as("invalid_group_by", "group_by must be category or account") do
       enum_filter_param(:group_by, IncomeStatement::CashFlowGraph::GROUPINGS.keys)
     end
-    raise QueryError.new("invalid_group_by", "group_by requires view=sankey") if group_by && !view
 
     start_date, end_date = reading_as("invalid_period", INVALID_RANGE) do
       [ date_filter_param(:start_date), date_filter_param(:end_date) ]

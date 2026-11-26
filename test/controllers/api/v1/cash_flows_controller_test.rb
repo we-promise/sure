@@ -102,6 +102,18 @@ class Api::V1::CashFlowsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "group_by without the sankey view is refused before its value is read" do
+    [ { group_by: "merchant" }, { group_by: "account" }, { include: "sankey", group_by: "merchant" } ].each do |query|
+      get "/api/v1/cash_flow", params: query, headers: api_headers(@auth)
+      assert_response :unprocessable_entity
+      assert_equal "group_by requires view=sankey", response.parsed_body["message"], query.inspect
+    end
+
+    get "/api/v1/cash_flow", params: { view: "sankey", group_by: "merchant" }, headers: api_headers(@auth)
+    assert_response :unprocessable_entity
+    assert_equal "group_by must be category or account", response.parsed_body["message"]
+  end
+
   test "rejects conflicting graph modes" do
     [ {}, { month: "2024-01-01" }, { start_date: "2024-01-01", end_date: "2024-01-02" } ].each do |period|
       get "/api/v1/cash_flow", params: period.merge(include: "sankey", view: "sankey"), headers: api_headers(@auth)
