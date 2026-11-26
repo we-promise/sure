@@ -341,6 +341,26 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       sophtron_account.reload.raw_transactions_payload.map { |tx| tx.with_indifferent_access[:id] }
   end
 
+  test "empty response does not overwrite rows the poller stored" do
+    sophtron_account = linked_sophtron_account
+
+    provider = mock
+    provider.expects(:get_account_transactions).with("acct-1", start_date: anything).returns({
+      transactions: [],
+      total: 0
+    })
+
+    # The refresh poller stores its row after this instance loaded a nil payload.
+    SophtronAccount.find(sophtron_account.id).update!(raw_transactions_payload: [ { id: "poller-tx" } ])
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider)
+                                   .import_transactions_after_refresh(sophtron_account)
+
+    assert result[:success], result.inspect
+    assert_equal [ "poller-tx" ],
+      sophtron_account.reload.raw_transactions_payload.map { |tx| tx.with_indifferent_access[:id] }
+  end
+
   test "refresh job still running imports stored transactions and enqueues poll job" do
     account = accounts(:depository)
     sophtron_account = @item.sophtron_accounts.create!(

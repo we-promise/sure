@@ -327,39 +327,35 @@ class SophtronItem::Importer
       transactions_count = transactions.count
       Rails.logger.info "SophtronItem::Importer - Fetched #{transactions_count} transactions for account #{sophtron_account.account_id}"
 
-      if transactions.any?
-        begin
-          # The refresh poller can store its own rows while this request is in
-          # flight, so merge under a row lock against the stored snapshot.
-          sophtron_account.with_lock do
-            existing_transactions = sophtron_account.raw_transactions_payload.to_a
+      begin
+        # The refresh poller can store its own rows while this request is in
+        # flight, so read and write the stored snapshot under a row lock.
+        sophtron_account.with_lock do
+          stored_payload = sophtron_account.raw_transactions_payload
+          existing_transactions = stored_payload.to_a
 
-            existing_ids = existing_transactions.map do |tx|
-              tx.with_indifferent_access[:id]
-            end.to_set
+          existing_ids = existing_transactions.map do |tx|
+            tx.with_indifferent_access[:id]
+          end.to_set
 
-            new_transactions = transactions.select do |tx|
-              next false unless tx.is_a?(Hash)
+          new_transactions = transactions.select do |tx|
+            next false unless tx.is_a?(Hash)
 
-              tx_id = tx.with_indifferent_access[:id]
-              tx_id.present? && !existing_ids.include?(tx_id)
-            end
-
-            if new_transactions.any?
-              Rails.logger.info "SophtronItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions.count - new_transactions.count} duplicates skipped) for account #{sophtron_account.account_id}"
-              sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions + new_transactions)
-            else
-              Rails.logger.info "SophtronItem::Importer - No new transactions to store (all #{transactions.count} were duplicates) for account #{sophtron_account.account_id}"
-              sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions) if sophtron_account.raw_transactions_payload.nil?
-            end
+            tx_id = tx.with_indifferent_access[:id]
+            tx_id.present? && !existing_ids.include?(tx_id)
           end
-        rescue => e
-          Rails.logger.error "SophtronItem::Importer - Failed to store transactions for account #{sophtron_account.account_id}: #{e.message}"
-          return { success: false, transactions_count: 0, error: "Failed to store transactions: #{e.message}" }
+
+          if new_transactions.any?
+            Rails.logger.info "SophtronItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions_count - new_transactions.count} duplicates skipped) for account #{sophtron_account.account_id}"
+            sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions + new_transactions)
+          else
+            Rails.logger.info "SophtronItem::Importer - No new transactions to store (#{transactions_count} fetched) for account #{sophtron_account.account_id}"
+            sophtron_account.upsert_sophtron_transactions_snapshot!([]) if stored_payload.nil?
+          end
         end
-      else
-        Rails.logger.info "SophtronItem::Importer - No transactions to store for account #{sophtron_account.account_id}"
-        sophtron_account.upsert_sophtron_transactions_snapshot!([]) if sophtron_account.raw_transactions_payload.nil?
+      rescue => e
+        Rails.logger.error "SophtronItem::Importer - Failed to store transactions for account #{sophtron_account.account_id}: #{e.message}"
+        return { success: false, transactions_count: 0, error: "Failed to store transactions: #{e.message}" }
       end
 
       { success: true, transactions_count: transactions_count }
