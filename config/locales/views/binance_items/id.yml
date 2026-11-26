@@ -28,8 +28,8 @@ id:
     complete_account_setup:
       invalid_sync_start_date: Tanggal mulai sinkronisasi harus berupa tanggal yang valid di masa lalu.
       success:
-        one: "Mengimpor %{count} rekening"
-        other: "Mengimpor %{count} rekening"
+        one: "Berhasil mengimpor %{count} rekening"
+        other: "Berhasil mengimpor %{count} rekening"
       none_selected: Tidak ada rekening yang dipilih
       no_accounts: Tidak ada rekening untuk diimpor
     binance_item:

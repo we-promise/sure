@@ -26,8 +26,8 @@ id:
       creating: Mengimpor...
     complete_account_setup:
       success:
-        one: "Mengimpor %{count} dompet"
-        other: "Mengimpor %{count} dompet"
+        one: "Berhasil mengimpor %{count} dompet"
+        other: "Berhasil mengimpor %{count} dompet"
       none_selected: Tidak ada dompet yang dipilih
       no_accounts: Tidak ada dompet untuk diimpor
     coinbase_item:
