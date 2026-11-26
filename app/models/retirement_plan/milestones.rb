@@ -85,8 +85,14 @@ class RetirementPlan::Milestones
     # years before retirement.
     def today_coast_target
       growth = @real_growth**[ @retirement_year - @first_year - 1, 0 ].max
-      growth *= @real_growth.power(@first_year_fraction, 20) if @first_year_fraction < 1 && @retirement_year > @first_year
+      growth *= first_year_real_growth if @retirement_year > @first_year
       @fi_number / growth
+    end
+
+    # BigDecimal#** takes only whole exponents exactly; a part year needs
+    # #power with a precision.
+    def first_year_real_growth
+      @first_year_fraction == 1 ? @real_growth : @real_growth.power(@first_year_fraction, 20)
     end
 
     def milestone(key, year, reached_already:)
