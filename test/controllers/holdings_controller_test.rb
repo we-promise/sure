@@ -387,7 +387,7 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("holdings.sync_prices.success"), flash[:notice]
   end
 
-  # The one caller of import_provider_details that must not ask for a
+  # A caller of import_provider_details that must not ask for a
   # classification: a manual price refresh is not a classification sync.
   test "sync_prices does not ask for a classification" do
     Security.any_instance.stubs(:import_provider_prices).returns([ 31, nil ])

@@ -319,10 +319,12 @@ module Security::Provided
   # costs one provider request per security per sync, indefinitely. The gate
   # closing is what bounds that, and the importers opt in on that basis.
   #
-  # The third caller, `HoldingsController#sync_prices`, is a POST behind
-  # `require_holding_write_permission!` -- a user asking for one holding's
-  # prices, not a page view; `#show` makes no provider call at all. It keeps
-  # the narrow gate because the user asked for prices, not for classification.
+  # The other callers keep the narrow gate because they were asked for prices,
+  # not for classification: `HoldingsController#sync_prices`, a POST behind
+  # `require_holding_write_permission!` for one holding (`#show` makes no
+  # provider call at all), and `Family::MarketDataRefresher`, a family's
+  # market data refresh. When their fetch runs for missing metadata, its
+  # classification is still applied, but it is not stamped.
   def import_provider_details(clear_cache: false, include_classification: false)
     # Resolved once: each call re-reads the enabled providers and the registry.
     provider = price_data_provider
@@ -377,8 +379,9 @@ module Security::Provided
           # they now refuse (a legacy region, a ticker clash). Its answer is
           # stamped anyway, with the refusal logged for support: an unstamped
           # row is asked again on every sync, and each ask costs a provider
-          # request. A lock set while the provider answered rejects the answer
-          # instead, and closes the gate on its own.
+          # request. A market data reset (`clear_cache`) or a change of
+          # provider asks again. A lock set while the provider answered
+          # rejects the answer instead, and closes the gate on its own.
           if wants_classification && !classification_locked?
             log_refused_classification(provider, errors.full_messages) unless stored
             update_columns(classification_fetched_at: Time.current, classification_fetched_from: classification_provider_key)
