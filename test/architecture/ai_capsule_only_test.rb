@@ -42,8 +42,11 @@ class AiCapsuleOnlyTest < ActionController::TestCase
 
   tests WebController
 
+  with_routing do |set|
+    set.draw { get "index" => "ai_capsule_only_test/web#index" }
+  end
+
   setup do
-    @routes.draw { get "index" => "ai_capsule_only_test/web#index" }
     use_ai_routes(detect_merchants: %w[gpu/qwen3-8b])
     stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
   end
