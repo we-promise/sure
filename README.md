@@ -67,9 +67,9 @@ Issue https://github.com/we-promise/sure/issues/5077 tracks follow-up work defer
 - https://github.com/we-promise/sure/stack/5748 stack, on #5608
   - https://github.com/we-promise/sure/pull/5744 Count a mixed rule's ordinary changes as modified.
   - https://github.com/we-promise/sure/pull/5745 Outbox: record each AI job and deliver it again when lost.
-  - https://github.com/we-promise/sure/pull/5756 4a. Lanes: a queue per AI lane, and chat a thread of its own.
+  - https://github.com/we-promise/sure/pull/5756 4a. Lanes: a queue per AI lane, and chat threads of its own.
   - https://github.com/we-promise/sure/pull/5758 4b. Gate: one per local model host, with lanes and interrupts.
-  - 4c. Typing hold and visible waiting.
+  - https://github.com/we-promise/sure/pull/5784 4c. Typing hold and visible waiting: chat at the gate, and what it waits for.
 - One PR each, on 4c, landing in any order:
   - Bill suggestions and Stop.
   - Stopping a PDF import.
