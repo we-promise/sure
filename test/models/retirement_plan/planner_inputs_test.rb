@@ -213,6 +213,22 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     end
   end
 
+  # The simulation leaves seeded streams out before retirement. Only today's
+  # spending is seeded: a seeded stream of another type, and anything the
+  # user added, count.
+  test "a stream is seeded spending only while it is a seeded expense" do
+    seeded = ->(source, kind) do
+      @plan.streams.new(source: source, kind: kind, name: "x", annual_amount: 1, currency: "USD", base_year: 2026)
+           .to_simulation_stream(currency: "USD", date: AS_OF).seeded
+    end
+
+    assert seeded.call("seeded_living_costs", "expense")
+    assert seeded.call("seeded_loan", "expense")
+    assert_not seeded.call("seeded_living_costs", "income")
+    assert_not seeded.call("seeded_loan", "one_off")
+    assert_not seeded.call("manual", "expense")
+  end
+
   # --- Funding accounts -----------------------------------------------------
 
   test "linked accounts replace the default set of accounts" do
