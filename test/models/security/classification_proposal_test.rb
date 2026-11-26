@@ -424,6 +424,31 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
     assert_equal "etf", @security.reload.asset_sub_class
   end
 
+  # A provider stores the wrapper alone when a fund's holdings settle no class.
+  # Answering that class keeps the wrapper, and with it the fund's region: a
+  # US listing says nothing about what the fund holds.
+  test "answering the class of a fund that has only its wrapper keeps the wrapper" do
+    @security.update_columns(asset_class: nil, asset_sub_class: "etf", country_code: "US", region: nil)
+
+    assert propose(asset_class: "equity").approve!
+
+    @security.reload
+    assert_equal %w[equity etf], @security.values_at(:asset_class, :asset_sub_class)
+    assert_nil @security.region
+  end
+
+  # The other side: a sub-class that belongs to one class is not a wrapper,
+  # so a class it does not belong to still clears it.
+  test "answering the class of a security with only a class-specific sub-class clears it" do
+    @security.update_columns(asset_class: nil, asset_sub_class: "bond")
+
+    assert propose(asset_class: "equity").approve!
+
+    @security.reload
+    assert_equal "equity", @security.asset_class
+    assert_nil @security.asset_sub_class
+  end
+
   test "a fund approved without a region loses the region its listing implies" do
     @security.update_columns(country_code: "IE", region: "europe")
 
