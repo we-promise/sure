@@ -7,6 +7,17 @@ module Localize
     helper_method :locale_from_param
   end
 
+  class_methods do
+    # ApplicationController registers switch_timezone before token-authenticated
+    # controllers set Current.session, so the family is unknown and the request
+    # runs in the app zone. Call this after the controller's authentication
+    # before_action to resolve the zone once the family is known.
+    def switch_timezone_after_authentication
+      skip_around_action :switch_timezone
+      around_action :switch_timezone
+    end
+  end
+
   private
     def switch_locale(&action)
       locale = locale_from_param || locale_from_user || locale_from_accept_language || locale_from_family || I18n.default_locale

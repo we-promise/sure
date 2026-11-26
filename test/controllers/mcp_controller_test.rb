@@ -813,6 +813,24 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools/call runs in the family's time zone" do
+    @user.family.update!(timezone: "America/Los_Angeles")
+
+    # 03:00 UTC on December 1st is still November 30th in Los Angeles.
+    travel_to Time.utc(2026, 12, 1, 3) do
+      with_mcp_env do
+        post "/mcp", params: jsonrpc_request("tools/call", {
+          name: "get_budget",
+          arguments: {}
+        }).to_json, headers: mcp_headers(@token)
+
+        assert_response :ok
+        inner = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+        assert_equal "2026-11-01", inner["months"].last.dig("period", "start_date")
+      end
+    end
+  end
+
   test "tools/call wraps function errors as isError response" do
     Usage.expects(:capture).with("mcp_call_served_daily").once
     with_mcp_env do
