@@ -707,6 +707,20 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "renaming a merchant marks the cached report stale" do
+    merchant = @family.merchants.create!(name: "Corner Bakery")
+    create_transaction(date: Date.current, amount: 12, merchant: merchant)
+
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+
+      travel Setting.page_cache_cooldown + 1.minute do
+        merchant.update!(name: "Village Bakery")
+        assert_enqueued_with(job: RebuildReportJob) { get reports_path(period_type: :ytd) }
+      end
+    end
+  end
+
   test "a new month's report is built, not served from last month's" do
     with_memory_cache do
       travel_to Date.new(2026, 11, 30).noon do

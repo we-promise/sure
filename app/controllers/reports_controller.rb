@@ -344,6 +344,7 @@ class ReportsController < ApplicationController
         family.build_cache_key("reports_body", invalidate_on_data_updates: true),
         family.entries_version,
         family.tags_version,
+        family.merchants.pick(Arel.sql("count(*)"), Arel.sql('max("merchants"."updated_at")'))&.join("-"),
         family.holdings_version,
         ExchangeRate.updated_at_version,
         family.budgets.maximum(:updated_at)&.to_f,
