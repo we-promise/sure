@@ -24,6 +24,7 @@ class ApiConfig {
   static String? _apiKeyValue;
 
   static bool get isApiKeyAuth => _isApiKeyAuth;
+  static String? get apiKey => _isApiKeyAuth ? _apiKeyValue : null;
 
   static void setApiKeyAuth(String apiKey) {
     _isApiKeyAuth = true;
