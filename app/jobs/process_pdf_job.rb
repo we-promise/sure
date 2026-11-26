@@ -50,7 +50,6 @@ class ProcessPdfJob < ApplicationJob
 
       process_result = pdf_import.process_with_ai(reread_token:, cancelled:)
       return unless process_result
-      return if cancelled&.call
       return unless owns_claim?(pdf_import, reread_token)
 
       document_type = resolve_document_type(pdf_import, process_result)
@@ -63,10 +62,8 @@ class ProcessPdfJob < ApplicationJob
       if statement_with_transactions?(document_type)
         Rails.logger.info("ProcessPdfJob: Extracting transactions for #{document_type} import #{pdf_import.id}")
         return unless pdf_import.extract_transactions(reread_token:, cancelled:)
-        return if cancelled&.call
         Rails.logger.info("ProcessPdfJob: Extracted #{pdf_import.extracted_transactions.size} transactions")
 
-        return if cancelled&.call
         return unless pdf_import.with_claim(reread_token) do
           pdf_import.generate_rows_from_extracted_data
           pdf_import.sync_mappings
@@ -75,7 +72,6 @@ class ProcessPdfJob < ApplicationJob
         Rails.logger.info("ProcessPdfJob: Generated #{pdf_import.rows_count} import rows")
       end
 
-      return if cancelled&.call
       return unless owns_claim?(pdf_import, reread_token)
 
       # Find the user who created this import (first admin or any user in the family)
@@ -86,8 +82,6 @@ class ProcessPdfJob < ApplicationJob
       # Other document types are marked complete (no further action needed)
       final_status = statement_with_transactions?(document_type) && pdf_import.rows_count > 0 ? :pending : :complete
       pdf_import.with_claim(reread_token) { pdf_import.update!(status: final_status, reread_token: nil) }
-    rescue Ai::Error::Cancelled
-      raise   # Stop, not a failed import: the outer rescue leaves the status cancelled.
     rescue Ai::Error::Base, Pdf::PageImages::Error => e
       # The outer rescue records these through the same claim fence.
       raise

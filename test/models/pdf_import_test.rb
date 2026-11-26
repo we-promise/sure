@@ -414,25 +414,19 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal "text", import.reload.read_as
   end
 
-  test "ai_cancelled? sees a stop made since the record was loaded" do
-    @import.update!(status: :importing, reread_token: "attempt")
-
-    @import.update_column(:status, "cancelled")
-
-    assert @import.ai_cancelled?
-  end
-
   test "cancel_ai_processing! stops only an importing import and releases its claim" do
     assert_not @import.cancel_ai_processing!, "a pending import has no processing to stop"
     assert @import.pending?
 
     @import.update!(status: :importing, reread_token: "attempt", error: "old error")
+    stale = PdfImport.find(@import.id)
     assert @import.cancel_ai_processing!
 
     @import.reload
     assert @import.cancelled?
     assert_nil @import.error
     assert_nil @import.reread_token
+    assert stale.ai_cancelled?, "a request already sent sees the stop"
     assert_not @import.cancel_ai_processing!, "stopping twice is a no-op"
   end
 

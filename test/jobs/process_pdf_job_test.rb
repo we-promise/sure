@@ -260,24 +260,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_nil @import.document_type
   end
 
-  test "stop after the read skips embedding, extraction and the email" do
-    attach_pdf!(@import)
-    result = Struct.new(:document_type).new("bank_statement")
-    @import.define_singleton_method(:process_with_ai) do |reread_token: nil, cancelled: nil|
-      cancel_ai_processing!
-      result
-    end
-    @family.expects(:upload_document).never
-    @import.expects(:extract_transactions).never
-    @import.expects(:send_next_steps_email).never
-
-    ProcessPdfJob.perform_now(@import)
-
-    assert @import.reload.cancelled?
-    assert_equal 0, @import.rows_count
-  end
-
-  test "a late model result keeps its usage row and writes nothing to a cancelled import" do
+  test "a late result after Stop writes nothing and keeps its usage row" do
     attach_pdf!(@import)
     call_id = SecureRandom.uuid
     usage = @family.llm_usages.create!(
@@ -288,6 +271,9 @@ class ProcessPdfJobTest < ActiveJob::TestCase
       cancel_ai_processing!   # the model answered after Stop arrived
       Struct.new(:document_type).new("bank_statement")
     end
+    @family.expects(:upload_document).never
+    @import.expects(:extract_transactions).never
+    @import.expects(:send_next_steps_email).never
 
     ProcessPdfJob.perform_now(@import)
 

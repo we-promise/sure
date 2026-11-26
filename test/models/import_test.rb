@@ -3,10 +3,6 @@ require "test_helper"
 class ImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
-  test "cancelled is an import status without a migration" do
-    assert_includes Import.statuses.keys, "cancelled"
-  end
-
   test "publish_later releases the claim when enqueueing raises" do
     import = imports(:transaction)
     import.stubs(:publishable?).returns(true)
