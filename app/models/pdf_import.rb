@@ -134,7 +134,10 @@ class PdfImport < Import
   end
 
   def stoppable_by?(user)
-    importing? && (account_statement.blank? || account_statement.manageable_by?(user))
+    return false unless importing?
+
+    statement = account_statement
+    statement.present? ? statement.manageable_by?(user) : AccountStatement.statement_manager?(user)
   end
 
   # A PdfImport's importing status is a processing claim (AI extraction or

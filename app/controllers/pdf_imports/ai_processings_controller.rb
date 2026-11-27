@@ -20,8 +20,11 @@ class PdfImports::AiProcessingsController < ApplicationController
 
     def require_statement_import_permission!
       statement = @import.account_statement
-      return if statement.blank? || statement.manageable_by?(Current.user)
+      # A legacy import has no statement to ask, but stopping is still a write: guests don't have
+      # the baseline statement-manager permission even when they can view the import.
+      permitted = statement.present? ? statement.manageable_by?(Current.user) : AccountStatement.statement_manager?(Current.user)
+      return if permitted
 
-      redirect_back_or_to @import.account || statement, alert: t("accounts.not_authorized")
+      redirect_back_or_to(@import.account || statement || imports_path, alert: t("accounts.not_authorized"))
     end
 end

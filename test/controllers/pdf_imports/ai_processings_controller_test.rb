@@ -36,6 +36,18 @@ class PdfImports::AiProcessingsControllerTest < ActionDispatch::IntegrationTest
     assert @import.reload.importing?
   end
 
+  test "a guest cannot stop a legacy import without a statement" do
+    @import.update!(status: :importing)
+    guest = users(:family_member)
+    guest.update!(role: :guest)
+    sign_in guest
+
+    delete pdf_import_ai_processing_path(@import)
+
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert @import.reload.importing?
+  end
+
   test "a member can stop an import whose statement they manage" do
     import = statement_import(account: nil)
     import.update!(status: :importing)

@@ -430,6 +430,15 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_not @import.cancel_ai_processing!, "stopping twice is a no-op"
   end
 
+  test "stoppable_by? requires statement-manager permission for a statement-less import" do
+    @import.update!(status: :importing)
+    assert @import.stoppable_by?(users(:family_member)), "a member can stop a legacy import"
+
+    guest = users(:family_member)
+    guest.update!(role: :guest)
+    assert_not @import.stoppable_by?(guest)
+  end
+
   test "with_claim refuses a late result after stopping" do
     @import.update!(status: :importing)
     @import.cancel_ai_processing!
