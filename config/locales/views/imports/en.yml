@@ -473,6 +473,7 @@ en:
         status:
           in_progress: In progress
           uploading: Processing rows
+          cancelled: Stopped
           reverting: Reverting
           revert_failed: Revert failed
           complete: Complete
@@ -617,6 +618,8 @@ en:
       processing_title: Processing your PDF
       processing_description: We're analyzing your document using AI. This may take a moment. You'll receive an email when the analysis is complete.
       check_status: Check status
+      stop: Stop
+      stopped_title: Processing stopped
       back_to_dashboard: Back to dashboard
       failed_title: Processing failed
       failed_description: We were unable to process your PDF document. Please try again or contact support.

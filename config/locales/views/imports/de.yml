@@ -324,6 +324,7 @@ de:
         status:
           in_progress: Wird ausgeführt
           uploading: Zeilen werden verarbeitet
+          cancelled: Gestoppt
           reverting: Wird rückgängig gemacht
           revert_failed: Rückgängig machen fehlgeschlagen
           complete: Abgeschlossen
@@ -408,6 +409,8 @@ de:
       processing_title: Deine PDF wird verarbeitet
       processing_description: Wir analysieren dein Dokument mit KI. Das kann einen Moment dauern. Du bekommst eine E-Mail, sobald die Analyse fertig ist.
       check_status: Status prüfen
+      stop: Stopp
+      stopped_title: Verarbeitung gestoppt
       back_to_dashboard: Zurück zur Übersicht
       failed_title: Verarbeitung fehlgeschlagen
       failed_description: Deine PDF ließ sich nicht verarbeiten. Versuch es noch einmal oder wende dich an den Support.

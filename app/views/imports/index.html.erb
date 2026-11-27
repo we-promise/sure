@@ -54,6 +54,10 @@
                   <%= render "shared/badge", color: "warning", pulse: true do %>
                     <%= t("imports.table.row.status.uploading") %>
                   <% end %>
+                <% elsif import.cancelled? %>
+                  <%= render "shared/badge" do %>
+                    <%= t("imports.table.row.status.cancelled") %>
+                  <% end %>
                 <% elsif import.failed? %>
                   <%= render "shared/badge", color: "error" do %>
                     <%= t("imports.table.row.status.failed") %>
