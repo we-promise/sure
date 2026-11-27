@@ -290,6 +290,80 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal no_data, kpi_card_figure("unrealized_pnl")
   end
 
+  test "the value chart says it has no data once when no account converts" do
+    no_data = I18n.t("portfolios.value_chart.no_data")
+    move_investments_to_currency_without_rate("JPY")
+
+    get portfolio_path(period: "last_30_days")
+    assert_response :success
+
+    assert_select "#portfolio-value-chart p", text: no_data, count: 1
+  end
+
+  test "the net contributions and income cards show not enough data when no account converts" do
+    no_data = I18n.t("portfolios.kpi_row.no_data")
+    get portfolio_path
+    assert_response :success
+    assert_not_equal no_data, kpi_card_figure("net_contributions")
+    assert_not_equal no_data, kpi_card_figure("income")
+
+    move_investments_to_currency_without_rate("JPY")
+    get portfolio_path
+    assert_response :success
+
+    assert_equal no_data, kpi_card_figure("net_contributions")
+    assert_equal no_data, kpi_card_figure("income")
+  end
+
+  test "the net contributions and income cards still print a genuine zero" do
+    Entry.where(account: InvestmentStatement.new(@family, user: @user).investment_accounts).destroy_all
+
+    get portfolio_path
+    assert_response :success
+
+    zero = ApplicationController.helpers.format_money(Money.new(0, @family.currency))
+    assert_equal zero, kpi_card_figure("net_contributions")
+    assert_equal zero, kpi_card_figure("income")
+  end
+
+  # A holding in a currency with no rate converts to zero on both legs, so it
+  # adds nothing to the day change or the unrealised P&L. The cards have to
+  # count it out, or a partial figure reads as a whole one.
+  test "the day change card counts out a position whose currency has no rate" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", rate: 1.1, date: Date.current)
+    euro_broker = foreign_broker_holding("EUR", ticker: "EURX")
+
+    get portfolio_path
+    assert_response :success
+    assert_nil kpi_card_hint("day_change"), "every position converts and has a previous snapshot, so nothing is left out"
+
+    assert_nil ExchangeRate.find_by(from_currency: "JPY", to_currency: "USD"), "the premise: JPY has no rate into USD"
+    foreign_broker_holding("JPY", ticker: "YENX")
+    get portfolio_path
+    assert_response :success
+
+    current = InvestmentStatement.new(@family, user: @user).current_holdings.to_a
+    assert_includes current.map(&:account), euro_broker, "the converting foreign position must count, or the negative case proves nothing"
+    total = current.size
+    assert_equal I18n.t("portfolios.kpi_row.day_change_partial", covered: total - 1, total: total), kpi_card_hint("day_change")
+    # The holdings table already drops it: a position counts there only when
+    # its converted value is positive.
+    assert_select "tr[data-portfolio-holding='YENX']", count: 0
+  end
+
+  test "the unrealised P&L card counts out a position whose currency has no rate" do
+    get portfolio_path
+    assert_response :success
+    assert_nil kpi_card_hint("unrealized_pnl"), "every fixture position must convert and have a cost basis, or this proves nothing"
+
+    assert_nil ExchangeRate.find_by(from_currency: "JPY", to_currency: "USD"), "the premise: JPY has no rate into USD"
+    foreign_broker_holding("JPY", ticker: "YENX", cost_basis: 1_000)
+    get portfolio_path
+    assert_response :success
+
+    assert_equal I18n.t("portfolios.kpi_row.unrealized_unconvertible", count: 1), kpi_card_hint("unrealized_pnl")
+  end
+
   test "the value chart is mounted with the statement's series" do
     seed_investment_balances
 
@@ -1061,6 +1135,17 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
       accounts.update_all(currency: currency)
       Balance.where(account: accounts).update_all(currency: currency)
       Holding.where(account: accounts).update_all(currency: currency)
+    end
+
+    # A broker in `currency` holding one position with a previous snapshot, so
+    # it would count in the day change if its currency converted.
+    def foreign_broker_holding(currency, ticker:, cost_basis: nil)
+      broker = @family.accounts.create!(name: "#{currency} broker", balance: 1_200, cash_balance: 0, currency: currency,
+                                        accountable: Investment.new, owner: @user)
+      security = Security.create!(ticker: ticker, name: "#{currency} listed")
+      Holding.create!(account: broker, security: security, date: 1.day.ago.to_date, qty: 1, price: 1_000, amount: 1_000, currency: currency, cost_basis: cost_basis)
+      Holding.create!(account: broker, security: security, date: Date.current, qty: 1, price: 1_200, amount: 1_200, currency: currency, cost_basis: cost_basis)
+      broker
     end
 
     # Two days of balances whose end_balance is the account's balance, as a

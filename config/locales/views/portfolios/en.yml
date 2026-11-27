@@ -44,6 +44,9 @@ en:
       unrealized_missing_cost_basis:
         one: excludes 1 position with no cost basis
         other: excludes %{count} positions with no cost basis
+      unrealized_unconvertible:
+        one: excludes 1 position with no exchange rate
+        other: excludes %{count} positions with no exchange rate
       unrealized_pnl: Unrealised P&L
       value: Value
     performance:

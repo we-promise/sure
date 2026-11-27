@@ -186,7 +186,7 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
 
     assert_equal @statement.portfolio_value_money, kpis[:value]
     assert_equal %i[value value_unconvertible day_change day_change_coverage unrealized unrealized_missing_cost_basis
-                    period_return period_return_unconvertible net_contributions income], kpis.keys
+                    unrealized_unconvertible period_return period_return_unconvertible net_contributions income], kpis.keys
   end
 
   # Created in reverse name order, so the cards come back by name only if the
