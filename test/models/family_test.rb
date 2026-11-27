@@ -958,6 +958,118 @@ class FamilyTest < ActiveSupport::TestCase
     assert_empty family.currencies_without_exchange_rate(accounts: family.accounts.where(id: home.id))
   end
 
+  # The notes render on every dashboard, transactions and reports load, so
+  # the currency lists are cached rather than read from every entry each time.
+  test "exchange rate notes read their currencies from the cache on a repeat load" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    family = families(:empty)
+    account = family.accounts.create!(name: "Brokerage", balance: 1, currency: family.currency, accountable: Investment.new)
+    security = Security.create!(ticker: "SEK#{SecureRandom.hex(2)}", name: "Stockholm Listed")
+    account.entries.create!(name: "Buy", date: Date.current, amount: 100, currency: family.currency,
+                            entryable: Trade.new(security: security, qty: 1, price: 1000, currency: "SEK"))
+    account.holdings.create!(security: security, date: Date.current, qty: 1, price: 1_000, amount: 1_000, currency: "JPY")
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 30.days.ago.to_date, rate: 0.0067)
+
+    assert_equal %w[SEK], family.currencies_without_exchange_rate
+    assert_equal({ "JPY" => 30.days.ago.to_date }, family.stale_exchange_rate_dates)
+
+    # Uncached, so the query cache cannot hide a repeat read.
+    ActiveRecord::Base.uncached do
+      warm = Family.find(family.id)
+      assert_no_queries_match(/FROM "(entries|trades|holdings)"/) do
+        assert_equal %w[SEK], warm.currencies_without_exchange_rate
+        assert_equal({ "JPY" => 30.days.ago.to_date }, warm.stale_exchange_rate_dates)
+      end
+    end
+  end
+
+  # The two lists are different sets: the stale note counts only balances and
+  # current holdings, so it must not read back the wider in-use list.
+  test "a cached in-use list does not make an old trade's currency stale" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Brokerage", balance: 1, currency: family.currency, accountable: Investment.new)
+    security = Security.create!(ticker: "JPT#{SecureRandom.hex(2)}", name: "Tokyo Listed")
+    account.entries.create!(name: "Old buy", date: 400.days.ago.to_date, amount: 100, currency: family.currency,
+                            entryable: Trade.new(security: security, qty: 1, price: 1000, currency: "JPY"))
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 400.days.ago.to_date, rate: 0.0067)
+    uncached = Family.find(family.id).stale_exchange_rate_dates
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Family.find(family.id).currencies_without_exchange_rate
+
+    assert_empty uncached
+    assert_equal uncached, Family.find(family.id).stale_exchange_rate_dates
+  end
+
+  # A failed sync never moves latest_sync_completed_at, so the cache keys on
+  # sync activity instead.
+  test "currencies_without_exchange_rate names a new currency after a failed sync" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    family = families(:empty)
+    home = family.accounts.create!(name: "Home", balance: 1, currency: family.currency, accountable: Depository.new)
+    assert_empty Family.find(family.id).currencies_without_exchange_rate
+
+    home.entries.create!(name: "Toronto dinner", date: Date.current, amount: 50, currency: "CAD", entryable: Transaction.new)
+    sync = home.syncs.create!
+    sync.start!
+    sync.fail!
+
+    assert_equal %w[CAD], Family.find(family.id).currencies_without_exchange_rate
+  end
+
+  test "stale_exchange_rate_dates names a newly held currency once a sync starts" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    family = families(:empty)
+    account = family.accounts.create!(name: "Brokerage", balance: 1, currency: family.currency, accountable: Investment.new)
+    assert_empty Family.find(family.id).stale_exchange_rate_dates
+
+    security = Security.create!(ticker: "JPH#{SecureRandom.hex(2)}", name: "Tokyo Listed")
+    account.holdings.create!(security: security, date: Date.current, qty: 1, price: 1_000, amount: 1_000, currency: "JPY")
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 30.days.ago.to_date, rate: 0.0067)
+    assert_empty Family.find(family.id).stale_exchange_rate_dates, "the cached list stands until sync activity moves"
+
+    account.syncs.create!
+
+    assert_equal({ "JPY" => 30.days.ago.to_date }, Family.find(family.id).stale_exchange_rate_dates)
+  end
+
+  test "cached exchange rate note currencies expire after a day without sync activity" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    family = families(:empty)
+    account = family.accounts.create!(name: "Brokerage", balance: 1, currency: family.currency, accountable: Investment.new)
+    assert_empty Family.find(family.id).currencies_without_exchange_rate
+    assert_empty Family.find(family.id).stale_exchange_rate_dates
+
+    security = Security.create!(ticker: "JPH#{SecureRandom.hex(2)}", name: "Tokyo Listed")
+    account.holdings.create!(security: security, date: Date.current, qty: 1, price: 1_000, amount: 1_000, currency: "JPY")
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 30.days.ago.to_date, rate: 0.0067)
+    account.entries.create!(name: "Toronto fee", date: Date.current, amount: 5, currency: "CAD", entryable: Transaction.new)
+    assert_empty Family.find(family.id).currencies_without_exchange_rate, "the cached list stands until it expires"
+    assert_empty Family.find(family.id).stale_exchange_rate_dates, "the cached list stands until it expires"
+
+    travel 25.hours do
+      family = Family.find(family.id)
+      assert_equal %w[CAD], family.currencies_without_exchange_rate
+      assert_equal [ "JPY" ], family.stale_exchange_rate_dates.keys
+    end
+  end
+
+  test "members who see different accounts get different notes from a warm cache" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    family = families(:dylan_family)
+    admin = users(:family_admin)
+    member = users(:family_member)
+    family.accounts.create!(name: "Admin KRW", owner: admin, balance: 1, currency: "KRW", accountable: Depository.new)
+    family.accounts.create!(name: "Admin JPY", owner: admin, balance: 1, currency: "JPY", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 30.days.ago.to_date, rate: 0.0067)
+
+    assert_includes Family.find(family.id).currencies_without_exchange_rate(accounts: admin.accessible_accounts), "KRW"
+    assert_includes Family.find(family.id).stale_exchange_rate_dates(accounts: admin.accessible_accounts), "JPY"
+
+    assert_not_includes Family.find(family.id).currencies_without_exchange_rate(accounts: member.accessible_accounts), "KRW"
+    assert_not_includes Family.find(family.id).stale_exchange_rate_dates(accounts: member.accessible_accounts), "JPY"
+  end
+
   test "earliest_activity_date ignores valuations, using earliest Transaction/Trade entry" do
     family = families(:empty)
     account = family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
