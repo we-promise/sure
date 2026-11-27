@@ -44,8 +44,12 @@ module PortfoliosHelper
     t("portfolios.kpi_row.day_change_partial", covered: covered, total: total) if covered < total
   end
 
-  # The unrealised P&L card's hint, only when a position has no cost basis.
-  def kpi_unrealized_hint(missing_cost_basis_count)
-    t("portfolios.kpi_row.unrealized_missing_cost_basis", count: missing_cost_basis_count) if missing_cost_basis_count.positive?
+  # The unrealised P&L card's hint, only when a position is left out of it:
+  # for want of a cost basis, or of an exchange rate.
+  def kpi_unrealized_hint(missing_cost_basis_count, unconvertible_count = 0)
+    parts = []
+    parts << t("portfolios.kpi_row.unrealized_missing_cost_basis", count: missing_cost_basis_count) if missing_cost_basis_count.positive?
+    parts << t("portfolios.kpi_row.unrealized_unconvertible", count: unconvertible_count) if unconvertible_count.positive?
+    parts.join(" · ").presence
   end
 end

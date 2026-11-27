@@ -3022,6 +3022,23 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 1, InvestmentStatement.new(@family, user: nil).unrealized_missing_cost_basis_count
   end
 
+  test "unrealized_gains_trend has no figure when every holding with a cost basis has no rate" do
+    usd = create_investment_account(balance: 1000)
+    Holding.create!(account: usd, security: Security.create!(ticker: "NOBASIS", name: "No basis"), date: Date.current,
+                    qty: 1, price: 10, amount: 10, currency: "USD")
+    yen = create_investment_account(balance: 1200, currency: "JPY")
+    assert_nil ExchangeRate.find_by(from_currency: "JPY", to_currency: "USD"), "the premise: JPY has no rate into USD"
+    Holding.create!(account: yen, security: Security.create!(ticker: "YENX", name: "Yen listed"), date: Date.current,
+                    qty: 1, price: 1_200, amount: 1_200, cost_basis: 1_000, currency: "JPY")
+
+    statement = InvestmentStatement.new(@family, user: nil)
+    assert_equal 1, statement.unrealized_unconvertible_count
+    assert_nil statement.unrealized_gains_trend
+
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", rate: 0.0067, date: Date.current)
+    assert_in_delta 1_200 * 0.0067, InvestmentStatement.new(@family, user: nil).unrealized_gains_trend.current.amount, 0.001
+  end
+
   test "portfolio_value_unconvertible_count counts accounts whose currency has no rate" do
     create_investment_account(balance: 1000, currency: "USD")
     assert_equal 0, @statement.portfolio_value_unconvertible_count

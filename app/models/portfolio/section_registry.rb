@@ -120,18 +120,19 @@ class Portfolio::SectionRegistry
           day_change_coverage: statement.day_change_coverage,
           unrealized: (statement.unrealized_gains_trend unless value_unavailable?),
           unrealized_missing_cost_basis: statement.unrealized_missing_cost_basis_count,
+          unrealized_unconvertible: statement.unrealized_unconvertible_count,
           period_return: statement.period_return_trend(period: period),
           period_return_unconvertible: statement.period_return_unconvertible_count(period: period),
-          net_contributions: statement.net_contributions(period: period),
-          income: statement.totals(period: period).total_income
+          net_contributions: (statement.net_contributions(period: period) unless value_unavailable?),
+          income: (statement.totals(period: period).total_income unless value_unavailable?)
         }
       end
     end
 
     # True when no investment account converts into the family currency.
     # Every figure built from converted balances is then a zero that reads as
-    # a real one, so the value card, the value chart, the day change and the
-    # unrealised P&L all show "not enough data" instead.
+    # a real one, so the value chart and every KPI card but the period return
+    # show "not enough data" instead.
     def value_unavailable?
       return @value_unavailable if defined?(@value_unavailable)
 

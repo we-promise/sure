@@ -63,5 +63,11 @@ class PortfoliosHelperTest < ActionView::TestCase
       assert_equal "excludes 1 position with no cost basis", kpi_unrealized_hint(1)
       assert_equal "excludes 2 positions with no cost basis", kpi_unrealized_hint(2)
     end
+
+    test "the unrealised hint also counts positions with no exchange rate" do
+      assert_nil kpi_unrealized_hint(0, 0)
+      assert_equal "excludes 1 position with no exchange rate", kpi_unrealized_hint(0, 1)
+      assert_equal "excludes 1 position with no cost basis · excludes 2 positions with no exchange rate", kpi_unrealized_hint(1, 2)
+    end
   end
 end

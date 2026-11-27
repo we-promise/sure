@@ -22,7 +22,7 @@
         label: t("portfolios.kpi_row.unrealized_pnl"),
         money: nil,
         trend: kpis[:unrealized],
-        hint: kpi_unrealized_hint(kpis[:unrealized_missing_cost_basis]) %>
+        hint: kpi_unrealized_hint(kpis[:unrealized_missing_cost_basis], kpis[:unrealized_unconvertible]) %>
 
   <%# An account whose currency has no rate to the family currency is left
       out of this figure rather than converted at parity, so the hint says how

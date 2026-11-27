@@ -41,6 +41,9 @@ de:
       unrealized_missing_cost_basis:
         one: 1 Position ohne Kostenbasis ausgeschlossen
         other: "%{count} Positionen ohne Kostenbasis ausgeschlossen"
+      unrealized_unconvertible:
+        one: 1 Position ohne Wechselkurs ausgeschlossen
+        other: "%{count} Positionen ohne Wechselkurs ausgeschlossen"
       unrealized_pnl: Nicht realisiertes Ergebnis
       value: Wert
     sections:
