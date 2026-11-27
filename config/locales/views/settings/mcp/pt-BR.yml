@@ -1,0 +1,23 @@
+---
+pt-BR:
+  settings:
+    mcp:
+      show:
+        page_title: Servidor MCP
+        connect_title: Conectar um assistente de IA
+        connect_subtitle: Cole esta URL no Claude.ai (ou em qualquer cliente compatível com MCP) para conectá-lo à sua conta do Sure.
+        copy_url: Copiar
+        copied: Copiado!
+        how_to_connect_title: Como conectar o Claude
+        step_1: Abra o Claude.ai e acesse Configurações → Personalizar → Conectores.
+        step_2: Clique em "Adicionar conector" e cole a URL do servidor MCP acima.
+        step_3: Clique em Conectar — você será redirecionado ao Sure para entrar e autorizar o acesso.
+        step_4: Após a autorização, o Claude poderá ler suas contas, transações e dados de saldo.
+        connected_title: Clientes conectados
+        connected_subtitle: Estes aplicativos têm acesso aos seus dados do Sure no momento. Revogue os que você não usa mais.
+        unknown_client: Cliente desconhecido
+        connected_ago: Conectado há %{time}
+        revoke: Revogar
+        revoke_confirm: Revogar o acesso deste cliente?
+      revoke:
+        revoked: Conexão revogada.
