@@ -365,6 +365,32 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Other", entry.entryable.investment_activity_label
   end
 
+  test "processes REIMBURSEMENT and PROMOTION as negative cash inflows" do
+    process_activities(
+      build_cash_activity(id: "reimb_001", type: "REIMBURSEMENT", amount: 216.23, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "promo_001", type: "PROMOTION", amount: 5.00, settlement_date: Date.current.to_s)
+    )
+
+    reimbursement = snaptrade_entry("reimb_001")
+    promotion = snaptrade_entry("promo_001")
+
+    assert_not_nil reimbursement
+    assert_not_nil promotion
+    assert_equal(-216.23, reimbursement.amount.to_f, "cashback paid into the account must be stored as an inflow")
+    assert_equal(-5.00, promotion.amount.to_f, "a promotional bonus must be stored as an inflow")
+    assert_equal "Other", reimbursement.entryable.investment_activity_label
+  end
+
+  test "processes a negative REIMBURSEMENT (clawback) as an outflow" do
+    process_activities(
+      build_cash_activity(id: "reimb_neg_001", type: "REIMBURSEMENT", amount: -12.50, settlement_date: Date.current.to_s)
+    )
+
+    entry = snaptrade_entry("reimb_neg_001")
+    assert_not_nil entry
+    assert_equal 12.50, entry.amount.to_f
+  end
+
   test "processes RETURN_OF_CAPITAL, DISTRIBUTION, and SUBSTITUTE_DIVIDEND as negative cash inflows with Dividend label" do
     process_activities(
       build_cash_activity(id: "roc_001", type: "RETURN_OF_CAPITAL", amount: 75.00, settlement_date: Date.current.to_s, symbol: "VTI"),
