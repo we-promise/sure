@@ -2818,8 +2818,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
     t.string "kind", default: "portfolio", null: false
     t.datetime "last_positions_sync"
     t.string "name"
+    t.string "provider_cash_account_id"
     t.jsonb "raw_positions_payload", default: [], null: false
     t.jsonb "raw_timeline_payload", default: [], null: false
+    t.datetime "timeline_backfill_started_at"
+    t.datetime "timeline_backfilled_at"
     t.string "trade_republic_account_id"
     t.uuid "trade_republic_item_id", null: false
     t.datetime "updated_at", null: false

@@ -12,6 +12,10 @@ module TradeRepublicAccount::DataHelpers
     PAYMENT_INBOUND_CREDIT_CARD
   ].freeze
 
+  # Moves cash from the primary cash account into the PEA. Both accounts
+  # book it: an outflow on the primary side, a contribution on the PEA.
+  PEA_TRANSFER_EVENT_TYPES = %w[PEA_DEPOSIT_DEBIT].freeze
+
   class << self
     # Portfolio is the full timeline; cash is a filtered subset. Prefer portfolio
     # rows, then append cash-only events, deduped by event id.

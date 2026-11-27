@@ -56,6 +56,8 @@ module Provider::TradeRepublicTimelineEvent
     "SAVEBACK_AGGREGATE" => "POC_CREATED",
     "ACQUISITION_TRADE_PERK" => "POC_CREATED",
     "BANK_TRANSACTION_OUTGOING_SCHEDULED" => "POC_CREATED",
+    # Cash moved into the French PEA (see PEA_TRANSFER_EVENT_TYPES).
+    "PEA_DEPOSIT_DEBIT" => "POC_CREATED",
     "CARD_ATM_WITHDRAWAL" => "POC_CREATED",
     # Card-funded transfers out (Account Funding Transaction), e.g. topping up
     # PayPal, Revolut or Paysafecard with the Trade Republic card.
