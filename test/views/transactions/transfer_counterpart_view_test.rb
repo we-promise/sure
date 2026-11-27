@@ -17,13 +17,13 @@ class Transactions::TransferCounterpartViewTest < ActionView::TestCase
     outflow_tx = Transaction.create!(kind: "funds_movement")
     outflow_entry = Entry.create!(
       account: @checking, entryable: outflow_tx,
-      name: "Transfer to Savings", amount: 100, currency: "USD", date: Date.today
+      name: "Transfer to Savings", amount: 100, currency: "USD", date: Date.current
     )
 
     inflow_tx = Transaction.create!(kind: "funds_movement")
     inflow_entry = Entry.create!(
       account: @savings, entryable: inflow_tx,
-      name: "Transfer from Checking", amount: -100, currency: "USD", date: Date.today
+      name: "Transfer from Checking", amount: -100, currency: "USD", date: Date.current
     )
 
     Transfer.create!(
@@ -44,13 +44,13 @@ class Transactions::TransferCounterpartViewTest < ActionView::TestCase
     outflow_tx = Transaction.create!(kind: "funds_movement")
     outflow_entry = Entry.create!(
       account: @checking, entryable: outflow_tx,
-      name: "Transfer to Savings", amount: 100, currency: "USD", date: Date.today
+      name: "Transfer to Savings", amount: 100, currency: "USD", date: Date.current
     )
 
     inflow_tx = Transaction.create!(kind: "funds_movement")
     inflow_entry = Entry.create!(
       account: @savings, entryable: inflow_tx,
-      name: "Transfer from Checking", amount: -100, currency: "USD", date: Date.today
+      name: "Transfer from Checking", amount: -100, currency: "USD", date: Date.current
     )
 
     Transfer.create!(
@@ -71,7 +71,7 @@ class Transactions::TransferCounterpartViewTest < ActionView::TestCase
     tx = Transaction.create!(kind: "funds_movement")
     entry = Entry.create!(
       account: @checking, entryable: tx,
-      name: "Unmatched Transfer", amount: 100, currency: "USD", date: Date.today
+      name: "Unmatched Transfer", amount: 100, currency: "USD", date: Date.current
     )
 
     html = render(partial: "transactions/transaction", locals: {

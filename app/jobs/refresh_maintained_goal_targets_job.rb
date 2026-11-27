@@ -11,9 +11,10 @@ class RefreshMaintainedGoalTargetsJob < ApplicationJob
   def perform
     scope = Goal.where(kind: "maintained", target_mode: "months_of_expenses")
                 .where.not(state: Goal::RELEASED_STATES)
+                .includes(:family)
 
     scope.find_each do |goal|
-      refresh(goal)
+      goal.family.with_time_zone { refresh(goal) }
     end
   end
 

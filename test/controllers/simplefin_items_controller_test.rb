@@ -507,7 +507,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     post complete_account_setup_simplefin_item_url(@simplefin_item), params: {
       account_types: { unlinked_sfa.id => "CreditCard" },
       account_subtypes: { unlinked_sfa.id => "credit_card" },
-      sync_start_date: Date.today.to_s
+      sync_start_date: Date.current.to_s
     }
 
     assert_redirected_to accounts_path
@@ -1011,7 +1011,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       name: "Test Transaction",
       amount: 100,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       entryable: Transaction.create!
     )
 
@@ -1073,7 +1073,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       name: "P2P Transfer",
       amount: 300,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       entryable: Transaction.create!
     )
     entry2 = Entry.create!(
@@ -1081,7 +1081,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       name: "Another Transfer",
       amount: 200,
       currency: "USD",
-      date: Date.today - 1,
+      date: Date.current - 1,
       entryable: Transaction.create!
     )
 
@@ -1151,7 +1151,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     own, shared, private_account = create_manual_accounts_for_scope_test
 
     post complete_account_setup_simplefin_item_url(@simplefin_item),
-         params: { sync_start_date: Date.today.to_s },
+         params: { sync_start_date: Date.current.to_s },
          headers: { "Turbo-Frame" => "modal" }
 
     assert_turbo_stream action: "update", target: "manual-accounts"

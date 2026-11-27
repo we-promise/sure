@@ -171,7 +171,7 @@ class Provider::Etherscan
     end
 
     def throttle_request
-      @last_request_at ||= Time.at(0)
+      @last_request_at ||= Time.zone.at(0)
       remaining = MIN_REQUEST_INTERVAL - (Time.current - @last_request_at)
       sleep(remaining) if remaining.positive?
       @last_request_at = Time.current

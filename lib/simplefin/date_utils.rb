@@ -27,7 +27,9 @@ module Simplefin
         if stripped.match?(/\A\d+(?:\.\d+)?\z/)
           Time.at(stripped.to_f).utc
         else
-          Time.parse(stripped)
+          # Keeps the offset the string carries, so to_date is the bridge's own
+          # calendar day; Time.zone.parse would move it into the family's zone.
+          Time.parse(stripped) # rubocop:disable Rails/TimeZone
         end
       else
         nil

@@ -17,8 +17,8 @@ class Provider::MonobankTest < ActiveSupport::TestCase
     }) do
       transactions = Provider::Monobank.new("mono-token").get_statement(
         account_id: "acc_1",
-        from: Time.at(1_767_800_000),
-        to: Time.at(1_767_960_000)
+        from: Time.zone.at(1_767_800_000),
+        to: Time.zone.at(1_767_960_000)
       )
 
       assert_equal [ "tx_1" ], transactions.map { |tx| tx[:id] }
@@ -41,8 +41,8 @@ class Provider::MonobankTest < ActiveSupport::TestCase
         error = assert_raises(Provider::Monobank::Error) do
           Provider::Monobank.new("mono-token").get_statement(
             account_id: "acc_1",
-            from: Time.at(1_767_800_000),
-            to: Time.at(1_767_960_000)
+            from: Time.zone.at(1_767_800_000),
+            to: Time.zone.at(1_767_960_000)
           )
         end
 

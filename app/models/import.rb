@@ -69,7 +69,7 @@ class Import < ApplicationRecord
   ].freeze
 
   def self.reasonable_date_range
-    Date.new(1970, 1, 1)..Date.today.next_year(5)
+    Date.new(1970, 1, 1)..Date.current.next_year(5)
   end
 
   def self.max_csv_size

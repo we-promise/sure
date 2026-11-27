@@ -82,7 +82,7 @@ class SimplefinAccountTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("2000.0"), @simplefin_account.current_balance
     assert_equal BigDecimal("1800.0"), @simplefin_account.available_balance
-    assert_equal Time.parse(balance_date), @simplefin_account.balance_date
+    assert_equal Time.zone.parse(balance_date), @simplefin_account.balance_date
     assert_equal "savings", @simplefin_account.account_type
     assert_equal "Updated Savings Account", @simplefin_account.name
     assert_equal({ "account_number_last_4" => "1234" }, @simplefin_account.extra)

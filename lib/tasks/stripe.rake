@@ -21,7 +21,7 @@ namespace :stripe do
         interval: details.plan.interval,
         amount: details.plan.amount / 100.0,
         currency: details.plan.currency.upcase,
-        current_period_ends_at: Time.at(details.current_period_end)
+        current_period_ends_at: Time.zone.at(details.current_period_end)
       )
     end
   end

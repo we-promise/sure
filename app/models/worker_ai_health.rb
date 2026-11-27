@@ -114,7 +114,7 @@ class WorkerAiHealth
       results = Array(cache.read(CACHE_KEY))
       # Filter out entries older than RETENTION
       results = results.select { |r| r.checked_at && r.checked_at > RETENTION.ago }
-      results.sort_by { |r| r.checked_at || Time.at(0) }.reverse
+      results.sort_by { |r| r.checked_at || Time.zone.at(0) }.reverse
     end
 
     # Stable identity for "this OS process" -- hostname:pid. Good enough to

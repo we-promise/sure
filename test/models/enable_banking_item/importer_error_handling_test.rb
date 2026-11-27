@@ -85,7 +85,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
 
   test "fetch_and_store_transactions does not flip whole connection on per-account unauthorized error" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
-    @importer.stubs(:determine_sync_start_date).returns(Date.today)
+    @importer.stubs(:determine_sync_start_date).returns(Date.current)
     @importer.expects(:fetch_paginated_transactions).raises(Provider::EnableBanking::EnableBankingError.new("Unauthorized", :unauthorized))
 
     result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
@@ -97,7 +97,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
   test "fetch_and_store_transactions succeeds and skips pending when ASPSP rejects PDNG transaction_status" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
     enable_banking_account.stubs(:upsert_enable_banking_transactions_snapshot!)
-    @importer.stubs(:determine_sync_start_date).returns(Date.today)
+    @importer.stubs(:determine_sync_start_date).returns(Date.current)
     @importer.stubs(:include_pending?).returns(true)
 
     pdng_error = Provider::EnableBanking::EnableBankingError.new(
@@ -118,7 +118,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
   test "fetch_and_store_transactions succeeds and skips pending when ASPSP rejects PDNG with a bad_request error" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
     enable_banking_account.stubs(:upsert_enable_banking_transactions_snapshot!)
-    @importer.stubs(:determine_sync_start_date).returns(Date.today)
+    @importer.stubs(:determine_sync_start_date).returns(Date.current)
     @importer.stubs(:include_pending?).returns(true)
 
     trade_republic_pdng_error = Provider::EnableBanking::EnableBankingError.new(
@@ -147,7 +147,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
   test "fetch_and_store_transactions succeeds when ASPSP rejects PDNG with WRONG_REQUEST_PARAMETERS" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
     enable_banking_account.stubs(:upsert_enable_banking_transactions_snapshot!)
-    @importer.stubs(:determine_sync_start_date).returns(Date.today)
+    @importer.stubs(:determine_sync_start_date).returns(Date.current)
     @importer.stubs(:include_pending?).returns(true)
 
     imagin_error = Provider::EnableBanking::EnableBankingError.new(
@@ -166,7 +166,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
 
   test "fetch_and_store_transactions propagates non-validation EnableBankingError from PDNG fetch" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
-    @importer.stubs(:determine_sync_start_date).returns(Date.today)
+    @importer.stubs(:determine_sync_start_date).returns(Date.current)
     @importer.stubs(:include_pending?).returns(true)
 
     rate_limit_error = Provider::EnableBanking::EnableBankingError.new(
@@ -203,7 +203,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       transactions, truncated = @importer.send(
         :fetch_paginated_transactions,
         enable_banking_account,
-        start_date: Date.today,
+        start_date: Date.current,
         transaction_status: "BOOK"
       )
 
@@ -242,7 +242,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
     transactions, truncated = @importer.send(
       :fetch_paginated_transactions,
       enable_banking_account,
-      start_date: Date.today,
+      start_date: Date.current,
       transaction_status: "PDNG"
     )
 
@@ -262,7 +262,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       @importer.send(
         :fetch_paginated_transactions,
         enable_banking_account,
-        start_date: Date.today,
+        start_date: Date.current,
         transaction_status: "BOOK"
       )
     end
@@ -288,7 +288,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       @importer.send(
         :fetch_paginated_transactions,
         enable_banking_account,
-        start_date: Date.today,
+        start_date: Date.current,
         transaction_status: "BOOK"
       )
     end
@@ -309,7 +309,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       @importer.send(
         :fetch_paginated_transactions,
         enable_banking_account,
-        start_date: Date.today,
+        start_date: Date.current,
         transaction_status: "BOOK"
       )
     end

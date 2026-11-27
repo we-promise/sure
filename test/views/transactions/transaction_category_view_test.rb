@@ -13,13 +13,13 @@ class Transactions::TransactionCategoryViewTest < ActionView::TestCase
     outflow_tx = Transaction.create!(kind: "investment_contribution")
     Entry.create!(
       account: accounts(:depository), entryable: outflow_tx,
-      name: "Contribution", amount: 500, currency: "USD", date: Date.today
+      name: "Contribution", amount: 500, currency: "USD", date: Date.current
     )
 
     inflow_tx = Transaction.create!(kind: "funds_movement")
     Entry.create!(
       account: accounts(:investment), entryable: inflow_tx,
-      name: "Contribution", amount: -500, currency: "USD", date: Date.today
+      name: "Contribution", amount: -500, currency: "USD", date: Date.current
     )
 
     Transfer.create!(inflow_transaction: inflow_tx, outflow_transaction: outflow_tx, status: "confirmed")
@@ -36,13 +36,13 @@ class Transactions::TransactionCategoryViewTest < ActionView::TestCase
     outflow_tx = Transaction.create!(kind: "investment_contribution", category: category)
     Entry.create!(
       account: accounts(:depository), entryable: outflow_tx,
-      name: "Contribution", amount: 500, currency: "USD", date: Date.today
+      name: "Contribution", amount: 500, currency: "USD", date: Date.current
     )
 
     inflow_tx = Transaction.create!(kind: "funds_movement")
     Entry.create!(
       account: accounts(:investment), entryable: inflow_tx,
-      name: "Contribution", amount: -500, currency: "USD", date: Date.today
+      name: "Contribution", amount: -500, currency: "USD", date: Date.current
     )
 
     Transfer.create!(inflow_transaction: inflow_tx, outflow_transaction: outflow_tx, status: "confirmed")
@@ -62,9 +62,9 @@ class Transactions::TransactionCategoryViewTest < ActionView::TestCase
       owner: users(:family_admin), name: "Private checking", balance: 0, currency: "USD", accountable: Depository.new
     )
     outflow_tx = Transaction.create!(kind: "investment_contribution", category: category)
-    Entry.create!(account: owner_only, entryable: outflow_tx, name: "Contribution", amount: 500, currency: "USD", date: Date.today)
+    Entry.create!(account: owner_only, entryable: outflow_tx, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
     inflow_tx = Transaction.create!(kind: "funds_movement")
-    Entry.create!(account: accounts(:investment), entryable: inflow_tx, name: "Contribution", amount: -500, currency: "USD", date: Date.today)
+    Entry.create!(account: accounts(:investment), entryable: inflow_tx, name: "Contribution", amount: -500, currency: "USD", date: Date.current)
     Transfer.create!(inflow_transaction: inflow_tx, outflow_transaction: outflow_tx, status: "confirmed")
 
     @accessible_account_ids = [ accounts(:investment).id ]
@@ -80,13 +80,13 @@ class Transactions::TransactionCategoryViewTest < ActionView::TestCase
     outflow_tx = Transaction.create!(kind: "funds_movement")
     Entry.create!(
       account: accounts(:depository), entryable: outflow_tx,
-      name: "Transfer", amount: 500, currency: "USD", date: Date.today
+      name: "Transfer", amount: 500, currency: "USD", date: Date.current
     )
 
     inflow_tx = Transaction.create!(kind: "funds_movement")
     Entry.create!(
       account: accounts(:connected), entryable: inflow_tx,
-      name: "Transfer", amount: -500, currency: "USD", date: Date.today
+      name: "Transfer", amount: -500, currency: "USD", date: Date.current
     )
 
     Transfer.create!(inflow_transaction: inflow_tx, outflow_transaction: outflow_tx, status: "confirmed")
@@ -103,7 +103,7 @@ class Transactions::TransactionCategoryViewTest < ActionView::TestCase
     tx = Transaction.create!(kind: "funds_movement")
     Entry.create!(
       account: accounts(:depository), entryable: tx,
-      name: "Unmatched internal movement", amount: 500, currency: "USD", date: Date.today
+      name: "Unmatched internal movement", amount: 500, currency: "USD", date: Date.current
     )
 
     html = render(partial: "transactions/transaction_category", locals: {

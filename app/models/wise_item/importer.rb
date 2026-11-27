@@ -439,7 +439,7 @@ class WiseItem::Importer
       candidates = stored_transfer_rows
         .select { |row| reread_transfer?(row) && row["wise_superseded_by"].blank? && except.exclude?(row["id"].to_s) }
         .reject { |row| row["wise_missing_count"].to_i >= MISSING_TRANSFER_REREADS }
-        .sort_by { |row| transfer_created_at(row) || Time.at(0) }
+        .sort_by { |row| transfer_created_at(row) || Time.zone.at(0) }
         .last(MAX_TRANSFER_REREADS)
         .reverse
       newly_missing = 0

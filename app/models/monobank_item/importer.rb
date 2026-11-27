@@ -453,7 +453,7 @@ class MonobankItem::Importer
       value = transaction.with_indifferent_access[:time]
       return nil if value.blank?
 
-      Time.at(value.to_i)
+      Time.zone.at(value.to_i)
     end
 
     # The timestamp history should reach back to: an explicit per-account or

@@ -56,7 +56,7 @@
 
                   <% if stats["rate_limited"].present? || stats["rate_limited_at"].present? %>
                     <% ts = stats["rate_limited_at"] %>
-                    <% ago = (ts.present? ? (begin; time_ago_in_words(Time.parse(ts)); rescue StandardError; nil; end) : nil) %>
+                    <% ago = (ts.present? ? (begin; time_ago_in_words(Time.zone.parse(ts)); rescue StandardError; nil; end) : nil) %>
                     <%= render DS::Tooltip.new(
                           text: (ago ? t(".rate_limited_ago", time: ago) : t(".rate_limited_recently")),
                           icon: "clock",

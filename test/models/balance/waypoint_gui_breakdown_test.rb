@@ -18,7 +18,7 @@ class Balance::WaypointGuiBreakdownTest < ActiveSupport::TestCase
           "non_cash_inflows", "non_cash_outflows",
           "net_market_flows", "cash_adjustments", "non_cash_adjustments",
           "flows_factor"
-        ).merge("updated_at" => Time.now)
+        ).merge("updated_at" => Time.current)
       },
       unique_by: %i[account_id date currency]
     )

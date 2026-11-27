@@ -70,7 +70,7 @@ class SimplefinAccount::ActivitySummaryTest < ActiveSupport::TestCase
     summary = SimplefinAccount::ActivitySummary.new([
       { "transacted_at" => 0, "posted" => posted_ts, "amount" => "-5" }
     ])
-    assert_equal Time.at(posted_ts), summary.last_transacted_at
+    assert_equal Time.zone.at(posted_ts), summary.last_transacted_at
   end
 
   test "dormant? returns true when no activity within window" do

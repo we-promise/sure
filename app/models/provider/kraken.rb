@@ -159,7 +159,7 @@ class Provider::Kraken
     def throttle_request(bucket = :default)
       @last_request_at ||= {}
 
-      elapsed = Time.current - (@last_request_at[bucket] || Time.at(0))
+      elapsed = Time.current - (@last_request_at[bucket] || Time.zone.at(0))
       sleep_time = (bucket == :history ? history_min_request_interval : min_request_interval) - elapsed
       sleep(sleep_time) if sleep_time > 0
 

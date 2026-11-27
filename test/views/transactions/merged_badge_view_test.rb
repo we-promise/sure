@@ -12,7 +12,7 @@ class Transactions::MergedBadgeViewTest < ActionView::TestCase
       name: "Cafe",
       amount: -987,
       currency: "USD",
-      date: Date.today
+      date: Date.current
     )
 
     html = render(partial: "transactions/transaction", locals: { entry: entry, balance_trend: nil, view_ctx: "global" })

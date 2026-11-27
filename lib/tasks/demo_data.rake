@@ -13,29 +13,29 @@ namespace :demo_data do
 
   desc "Load empty demo dataset (no financial data)"
   task empty: :environment do
-    start = Time.now
+    start = Time.current
     skip_clear = ENV.fetch("SKIP_CLEAR", "1") == "1"
     puts "🚀 Loading EMPTY demo data#{skip_clear ? ' (preserving existing data)' : ' (clearing existing data)'}…"
 
     Demo::Generator.new.generate_empty_data!(skip_clear: skip_clear)
 
-    puts "✅ Done in #{(Time.now - start).round(2)}s"
+    puts "✅ Done in #{(Time.current - start).round(2)}s"
   end
 
   desc "Load new-user demo dataset (family created but not onboarded)"
   task new_user: :environment do
-    start = Time.now
+    start = Time.current
     skip_clear = ENV.fetch("SKIP_CLEAR", "1") == "1"
     puts "🚀 Loading NEW-USER demo data#{skip_clear ? ' (preserving existing data)' : ' (clearing existing data)'}…"
 
     Demo::Generator.new.generate_new_user_data!(skip_clear: skip_clear)
 
-    puts "✅ Done in #{(Time.now - start).round(2)}s"
+    puts "✅ Done in #{(Time.current - start).round(2)}s"
   end
 
   desc "Load full realistic demo dataset"
   task default: :environment do
-    start    = Time.now
+    start    = Time.current
     seed     = ENV.fetch("SEED", Random.new_seed)
     skip_clear = ENV.fetch("SKIP_CLEAR", "1") == "1"
     puts "🚀 Loading FULL demo data (seed=#{seed})#{skip_clear ? ' (preserving existing data)' : ' (clearing existing data)'}…"
@@ -45,7 +45,7 @@ namespace :demo_data do
 
     validate_demo_data
 
-    elapsed = Time.now - start
+    elapsed = Time.current - start
     puts "🎉 Demo data ready in #{elapsed.round(2)}s"
   end
 
