@@ -1673,6 +1673,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
     t.string "status", default: "good"
     t.datetime "sync_start_date"
     t.datetime "updated_at", null: false
+    t.boolean "include_raw_data", default: false, null: false
     t.index ["family_id"], name: "index_lunchflow_items_on_family_id"
     t.index ["status"], name: "index_lunchflow_items_on_status"
   end

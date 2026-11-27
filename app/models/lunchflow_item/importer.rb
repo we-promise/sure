@@ -258,15 +258,17 @@ class LunchflowItem::Importer
       start_date = determine_sync_start_date(lunchflow_account)
       fetch_started_at = Time.current
       include_pending = Rails.configuration.x.lunchflow.include_pending
+      include_raw = lunchflow_item.include_raw_data?
 
-      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date || "the beginning"} (include_pending=#{include_pending})"
+      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date || "the beginning"} (include_pending=#{include_pending}, include_raw=#{include_raw})"
 
       begin
         # Fetch transactions
         transactions_data = lunchflow_provider.get_account_transactions(
           lunchflow_account.account_id,
           start_date: start_date,
-          include_pending: include_pending
+          include_pending: include_pending,
+          include_raw: include_raw
         )
 
         # Optional: Debug logging

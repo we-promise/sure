@@ -27,6 +27,17 @@ class Provider::LunchflowTest < ActiveSupport::TestCase
     @provider.get_account_transactions("acct-1")
   end
 
+  test "adds include_raw=true only when raw data is requested" do
+    success = response(200, { transactions: [] }.to_json, "OK")
+
+    Provider::Lunchflow.expects(:get).with(
+      "https://www.lunchflow.app/api/v1/accounts/acct-1/transactions?include_raw=true",
+      anything
+    ).returns(success)
+
+    @provider.get_account_transactions("acct-1", include_raw: true)
+  end
+
   test "retries a wrapped GoCardless rate limit and preserves its type" do
     rate_limited = response(
       503,

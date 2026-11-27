@@ -701,7 +701,7 @@ class LunchflowItemsController < ApplicationController
     end
 
     def lunchflow_params
-      params.require(:lunchflow_item).permit(:name, :sync_start_date, :api_key, :base_url)
+      params.require(:lunchflow_item).permit(:name, :sync_start_date, :api_key, :base_url, :include_raw_data)
     end
 
     # Sanitize return_to parameter to prevent XSS attacks

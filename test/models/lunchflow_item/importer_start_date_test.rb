@@ -147,6 +147,24 @@ class LunchflowItem::ImporterStartDateTest < ActiveSupport::TestCase
     assert_equal Time.zone.parse("2026-03-01"), @lunchflow_account.reload.history_synced_from
   end
 
+  test "forwards the item's include_raw_data setting to the provider" do
+    @item.update!(include_raw_data: true)
+
+    @provider.expects(:get_account_transactions)
+      .with("acct-1", has_entries(include_raw: true))
+      .returns({ transactions: [] })
+
+    import_transactions
+  end
+
+  test "does not request raw data when the item leaves it off" do
+    @provider.expects(:get_account_transactions)
+      .with("acct-1", has_entries(include_raw: false))
+      .returns({ transactions: [] })
+
+    import_transactions
+  end
+
   test "a successful fetch records when it ran" do
     expect_fetch_from(nil)
 

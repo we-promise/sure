@@ -100,6 +100,7 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not transaction.pending?
     assert_nil transaction.extra.dig("lunchflow", "pending")
     assert_nil transaction.extra.dig("lunchflow")
+    refute transaction.extra.key?("lunchflow"), "an empty details namespace must not be persisted"
   end
 
   test "handles string true value for isPending" do
@@ -123,6 +124,204 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     transaction = result.entryable
     assert_equal true, transaction.pending?
     assert_equal true, transaction.extra.dig("lunchflow", "pending")
+  end
+
+  test "stores the provider raw payload in metadata" do
+    transaction_data = {
+      id: "lf_txn_raw",
+      accountId: 456,
+      amount: -50.00,
+      currency: "USD",
+      date: "2025-01-15",
+      merchant: "Test Merchant",
+      description: "Test transaction",
+      isPending: false,
+      raw: {
+        "reference" => "BANK-REF-1",
+        "counterparty" => { "name" => "Test Merchant", "type" => "X" }
+      }
+    }
+
+    result = LunchflowEntry::Processor.new(
+      transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result
+    raw = result.entryable.extra.dig("lunchflow", "raw")
+    assert_equal "BANK-REF-1", raw["reference"]
+    assert_equal "X", raw.dig("counterparty", "type")
+  end
+
+  test "stores raw payload without pending metadata when isPending is absent" do
+    transaction_data = {
+      id: "lf_txn_raw_only",
+      accountId: 456,
+      amount: -50.00,
+      currency: "USD",
+      date: "2025-01-15",
+      merchant: "Test Merchant",
+      description: "Test transaction",
+      raw: { "reference" => "BANK-REF-2" }
+    }
+
+    result = LunchflowEntry::Processor.new(
+      transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result
+    lunchflow_extra = result.entryable.extra["lunchflow"]
+    assert_equal "BANK-REF-2", lunchflow_extra.dig("raw", "reference")
+    assert_not lunchflow_extra.key?("pending")
+    assert_not result.entryable.pending?
+  end
+
+  test "does not store raw metadata when the provider omits it" do
+    transaction_data = {
+      id: "lf_txn_no_raw",
+      accountId: 456,
+      amount: -50.00,
+      currency: "USD",
+      date: "2025-01-15",
+      merchant: "Test Merchant",
+      description: "Test transaction",
+      isPending: false
+    }
+
+    result = LunchflowEntry::Processor.new(
+      transaction_data,
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    assert_not_nil result
+    assert_nil result.entryable.extra.dig("lunchflow", "raw")
+  end
+
+  test "replaces the stored raw payload when it changes between syncs" do
+    base_data = {
+      id: "lf_txn_raw_change",
+      accountId: 456,
+      amount: -50.00,
+      currency: "USD",
+      date: "2025-01-15",
+      merchant: "Test Merchant",
+      description: "Test transaction",
+      isPending: false
+    }
+
+    LunchflowEntry::Processor.new(
+      base_data.merge(raw: { "reference" => "OLD", "dropped" => "gone" }),
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    result = LunchflowEntry::Processor.new(
+      base_data.merge(raw: { "reference" => "NEW" }),
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    raw = result.entryable.reload.extra.dig("lunchflow", "raw")
+    assert_equal "NEW", raw["reference"]
+    assert_not raw.key?("dropped"), "stale raw keys must not survive a sync"
+  end
+
+  # The namespace is sent even when empty so replacement clears a stale raw branch,
+  # but storing the empty branch would leave every plain transaction with an empty
+  # "Additional details" section.
+  test "drops the lunchflow namespace when a later sync carries no metadata" do
+    base_data = {
+      id: "lf_txn_namespace_cleared",
+      accountId: 456,
+      amount: -50.00,
+      currency: "USD",
+      date: "2025-01-15",
+      merchant: "Test Merchant",
+      description: "Test transaction"
+    }
+
+    LunchflowEntry::Processor.new(
+      base_data.merge(raw: { "reference" => "OLD" }),
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    result = LunchflowEntry::Processor.new(base_data, lunchflow_account: @lunchflow_account).process
+
+    transaction = result.entryable.reload
+    assert_empty transaction.extra
+    refute transaction.extra.key?("lunchflow")
+  end
+
+  test "clearing the lunchflow namespace leaves user-owned extra alone" do
+    base_data = {
+      id: "lf_txn_namespace_foreign",
+      accountId: 456,
+      amount: -50.00,
+      currency: "USD",
+      date: "2025-01-15",
+      merchant: "Test Merchant",
+      description: "Test transaction"
+    }
+
+    entry = LunchflowEntry::Processor.new(
+      base_data.merge(raw: { "reference" => "OLD" }),
+      lunchflow_account: @lunchflow_account
+    ).process
+
+    entry.transaction.update!(extra: entry.transaction.extra.merge("exchange_rate" => "1.23"))
+
+    LunchflowEntry::Processor.new(base_data, lunchflow_account: @lunchflow_account).process
+
+    extra = entry.reload.transaction.extra
+    assert_equal "1.23", extra["exchange_rate"]
+    refute extra.key?("lunchflow")
+  end
+
+  test "drops stored raw from an import-locked entry once raw is no longer sent" do
+    base_data = {
+      id: "lf_txn_raw_locked",
+      accountId: 456,
+      amount: -50.00,
+      currency: "USD",
+      date: "2025-01-15",
+      merchant: "Test Merchant",
+      description: "Test transaction",
+      isPending: false
+    }
+
+    entry = LunchflowEntry::Processor.new(
+      base_data.merge(raw: { "reference" => "OLD" }),
+      lunchflow_account: @lunchflow_account
+    ).process
+    entry.update!(import_locked: true)
+
+    LunchflowEntry::Processor.new(base_data, lunchflow_account: @lunchflow_account).process
+
+    entry.reload
+    assert entry.import_locked?, "the import lock must be preserved"
+    assert_nil entry.transaction.extra.dig("lunchflow", "raw")
+    assert_equal false, entry.transaction.extra.dig("lunchflow", "pending")
+  end
+
+  test "keeps raw on an import-locked entry while the provider still sends it" do
+    data = {
+      id: "lf_txn_raw_locked_kept",
+      accountId: 456,
+      amount: -50.00,
+      currency: "USD",
+      date: "2025-01-15",
+      merchant: "Test Merchant",
+      description: "Test transaction",
+      raw: { "reference" => "KEEP" }
+    }
+
+    entry = LunchflowEntry::Processor.new(data, lunchflow_account: @lunchflow_account).process
+    entry.update!(import_locked: true)
+
+    LunchflowEntry::Processor.new(data, lunchflow_account: @lunchflow_account).process
+
+    entry.reload
+    assert entry.import_locked?
+    assert_equal "KEEP", entry.transaction.extra.dig("lunchflow", "raw", "reference")
   end
 
   test "generates temporary ID for pending transactions with blank ID" do
