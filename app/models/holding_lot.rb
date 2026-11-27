@@ -69,7 +69,7 @@ class HoldingLot < ApplicationRecord
         end
         if openings && opening_rows.any?
           upsert_all(opening_rows, unique_by: :index_holding_lots_one_opening_lot_per_position,
-            update_only: %i[origin_security_id qty original_quantity unit_cost currency clamped])
+            update_only: %i[origin_security_id qty original_quantity original_quantity_as_of unit_cost currency clamped])
         end
       end
     end
@@ -134,9 +134,11 @@ class HoldingLot < ApplicationRecord
           replace_opening!(target, lot)
         else
           unit_cost, currency = merged_opening_cost(target, lot)
+          merged_orig, merged_as_of = merged_original_quantity(target, lot, target_orig, lot_orig)
           target.update_columns(
             qty: target.qty + lot.qty,
-            original_quantity: target_orig + lot_orig,
+            original_quantity: merged_orig,
+            original_quantity_as_of: merged_as_of,
             unit_cost: unit_cost,
             currency: currency,
             updated_at: Time.current
@@ -149,12 +151,34 @@ class HoldingLot < ApplicationRecord
         target.update_columns(
           qty: lot.qty,
           original_quantity: lot.original_quantity,
+          original_quantity_as_of: lot.original_quantity_as_of,
           unit_cost: lot.unit_cost,
           currency: lot.currency,
           clamped: false,
           updated_at: Time.current
         )
         lot.delete
+      end
+
+      def merged_original_quantity(target, lot, target_orig, lot_orig)
+        target_as_of = target.original_quantity_as_of
+        lot_as_of = lot.original_quantity_as_of
+        return [ target_orig + lot_orig, target_as_of || lot_as_of ] if target_as_of.nil? || lot_as_of.nil? || target_as_of == lot_as_of
+
+        merged_as_of = [ target_as_of, lot_as_of ].max
+        target_scaled = scale_to_date(target.security_id, target_orig, target_as_of, merged_as_of)
+        lot_scaled = scale_to_date(target.security_id, lot_orig, lot_as_of, merged_as_of)
+        [ target_scaled + lot_scaled, merged_as_of ]
+      end
+
+      def scale_to_date(security_id, qty, from, to)
+        return qty if from >= to
+
+        factor = Security::Split.where(security_id: security_id)
+          .where("ex_date > ? AND ex_date <= ?", from, to)
+          .order(:ex_date)
+          .reduce(Rational(1)) { |acc, split| acc * split.ratio }
+        factor == 1 ? qty : Security::Split.scale(qty, factor)
       end
 
       def merged_opening_cost(target, lot)

@@ -1,5 +1,5 @@
 require "test_helper"
-require Rails.root.join("db/migrate/20261115120000_add_original_quantity_to_holding_lots")
+require Rails.root.join("db/migrate/20261115120001_backfill_original_quantity_on_holding_lots")
 
 class HoldingLotDisposalTest < ActiveSupport::TestCase
   include EntriesTestHelper
@@ -804,9 +804,9 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       trade(@security, -30, 300, 6)
       materialize(:forward)
 
-      opening_lot.update_columns(original_quantity: nil)
+      opening_lot.update_columns(original_quantity: nil, original_quantity_as_of: nil)
 
-      AddOriginalQuantityToHoldingLots.new.up
+      ActiveRecord::Migration.suppress_messages { BackfillOriginalQuantityOnHoldingLots.new.up }
 
       assert_equal 2, opening_lot.reload.original_quantity, "original_quantity must be 2, not 14"
 
@@ -862,8 +862,8 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       assert_equal 0, opening_lot.qty
       assert_equal 6, opening_lot.original_quantity
 
-      opening_lot.update_columns(original_quantity: nil)
-      AddOriginalQuantityToHoldingLots.new.up
+      opening_lot.update_columns(original_quantity: nil, original_quantity_as_of: nil)
+      ActiveRecord::Migration.suppress_messages { BackfillOriginalQuantityOnHoldingLots.new.up }
 
       assert_equal 6, opening_lot.reload.original_quantity
     end
@@ -890,10 +890,155 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       trade(security, -20, 300, 6)
       materialize(:forward)
 
-      opening_lot.update_columns(original_quantity: nil)
-      AddOriginalQuantityToHoldingLots.new.up
+      opening_lot.update_columns(original_quantity: nil, original_quantity_as_of: nil)
+      ActiveRecord::Migration.suppress_messages { BackfillOriginalQuantityOnHoldingLots.new.up }
 
       assert_equal 6, opening_lot.reload.original_quantity
+    end
+  end
+
+  test "unlink and forward sync: splits after original_quantity_as_of are replayed rather than unscaled" do
+    security = priced_security("FIFPA", 30)
+    buy = nil
+
+    travel_to d(5) do
+      setup_account(method: "fifo")
+      link_account
+      buy = trade(security, 10, 100, 2)
+      Security::Split.create!(security: security, ex_date: d(3), numerator: 2, denominator: 1, source: "manual")
+      trade(security, -1, 300, 4)
+      @account.holdings.create!(security: security, date: d(5), qty: 21, price: 30, amount: 630, currency: "USD",
+        account_provider: @account_provider)
+
+      materialize(:reverse)
+      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+      assert_equal 1, opening_lot.qty
+      assert_equal 2, opening_lot.original_quantity
+      assert_equal d(5), opening_lot.original_quantity_as_of
+
+      @account_provider.destroy!
+    end
+
+    travel_to TODAY do
+      Security::Split.create!(security: security, ex_date: d(7), numerator: 2, denominator: 1, source: "manual")
+      post_unlink_sale = trade(security, -3, 300, 8)
+
+      materialize(:forward)
+
+      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+      assert_equal 1, opening_lot.qty
+      assert_equal 2, opening_lot.original_quantity
+      assert_equal d(5), opening_lot.original_quantity_as_of
+      assert_nil Trade.find(post_unlink_sale.entryable_id).realized_gain_loss
+      assert_equal [ [ nil, 2 ], [ buy.id, 1 ] ],
+        HoldingLotDisposal.where(sale_entry: post_unlink_sale).map { |r| [ r.lot_source_entry_id, r.qty ] }.sort_by { |id, _| id.to_s }
+      assert_equal 39, HoldingLot.find_by!(account: @account, source_entry: buy).qty
+    end
+  end
+
+  test "linked reverse sync updates original_quantity and original_quantity_as_of across a subsequent split" do
+    security = priced_security("FIFLR", 30)
+    buy = nil
+    sale = nil
+
+    travel_to d(5) do
+      setup_account(method: "fifo")
+      link_account
+      buy = trade(security, 10, 100, 3)
+      sale = trade(security, -4, 300, 4)
+      @account.holdings.create!(security: security, date: d(5), qty: 8, price: 30, amount: 240, currency: "USD",
+        account_provider: @account_provider)
+
+      materialize(:reverse)
+      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+      assert_equal 0, opening_lot.qty
+      assert_equal 2, opening_lot.original_quantity
+      assert_equal d(5), opening_lot.original_quantity_as_of
+    end
+
+    travel_to TODAY do
+      Security::Split.create!(security: security, ex_date: d(7), numerator: 2, denominator: 1, source: "manual")
+      @account.holdings.create!(security: security, date: d(10), qty: 16, price: 30, amount: 480, currency: "USD",
+        account_provider: @account_provider)
+
+      materialize(:reverse)
+      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+      assert_equal 0, opening_lot.qty
+      assert_equal 4, opening_lot.original_quantity
+      assert_equal d(10), opening_lot.original_quantity_as_of
+
+      @account_provider.destroy!
+      materialize(:forward)
+
+      assert_nil Trade.find(sale.entryable_id).realized_gain_loss
+      assert_equal [ [ nil, 2 ], [ buy.id, 2 ] ],
+        HoldingLotDisposal.where(sale_entry: sale).map { |r| [ r.lot_source_entry_id, r.qty ] }.sort_by { |id, _| id.to_s }
+      assert_equal 16, HoldingLot.find_by!(account: @account, source_entry: buy).qty
+    end
+  end
+
+  test "backfill caps nil-source disposals at linked baseline before scaling splits" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      link_account
+      security = priced_security("FIFSC", 30)
+      buy1 = trade(security, 10, 100, 3)
+      sale = trade(security, -15, 300, 4)
+      Security::Split.create!(security: security, ex_date: d(5), numerator: 2, denominator: 1, source: "manual")
+      buy2 = trade(security, 6, 150, 6)
+      @account.holdings.create!(security: security, date: d(10), qty: 4, price: 30, amount: 120, currency: "USD",
+        account_provider: @account_provider)
+
+      materialize(:reverse)
+      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+      assert_equal 0, opening_lot.qty
+      assert_equal 8, opening_lot.original_quantity
+
+      opening_lot.update_columns(original_quantity: nil, original_quantity_as_of: nil)
+      ActiveRecord::Migration.suppress_messages { BackfillOriginalQuantityOnHoldingLots.new.up }
+
+      opening_lot.reload
+      assert_equal 8, opening_lot.original_quantity
+      assert_equal TODAY.to_date, opening_lot.original_quantity_as_of
+
+      @account_provider.destroy!
+      materialize(:forward)
+
+      assert_equal [ [ nil, 1 ], [ nil, 4 ], [ buy1.id, 10 ] ],
+        HoldingLotDisposal.where(sale_entry: sale).order(:id).map { |r| [ r.lot_source_entry_id, r.qty ] }
+          .sort_by { |id, qty| [ id.to_s, qty ] }
+      assert_equal 4, HoldingLot.find_by!(account: @account, source_entry: buy2).qty
+    end
+  end
+
+  test "repeated reverse sync updates original_quantity and original_quantity_as_of when snapshot grows" do
+    security = priced_security("FIFUP", 30)
+
+    travel_to d(5) do
+      setup_account(method: "fifo")
+      link_account
+      trade(security, 10, 100, 3)
+      trade(security, 10, 200, 4)
+      trade(security, -4, 300, 5)
+      @account.holdings.create!(security: security, date: d(5), qty: 18, price: 30, amount: 540, currency: "USD",
+        account_provider: @account_provider)
+
+      materialize(:reverse)
+      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+      assert_equal 0, opening_lot.qty
+      assert_equal 2, opening_lot.original_quantity
+      assert_equal d(5), opening_lot.original_quantity_as_of
+    end
+
+    travel_to TODAY do
+      @account.holdings.create!(security: security, date: d(10), qty: 22, price: 30, amount: 660, currency: "USD",
+        account_provider: @account_provider)
+
+      materialize(:reverse)
+      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+      assert_equal 2, opening_lot.qty
+      assert_equal 6, opening_lot.original_quantity
+      assert_equal d(10), opening_lot.original_quantity_as_of
     end
   end
 
@@ -919,7 +1064,10 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
 
   # The snapshot is the open lots' mean after the sale, not what the sale
   # consumed, so under fifo a sale its lot records do not cover has an unknown
-  # gain rather than one priced off the snapshot.
+  # gain rather than one priced off the snapshot. Intentionally, when an unlinked
+  # forward sync seeds opening units only into the lot book, trades-only holdings
+  # remain smaller than total lot quantities so HoldingLot.in_partition stays
+  # empty and unknown opening costs do not masquerade as complete lot coverage.
   test "unlink, forward sync, then read: lots out of partition leave a fifo gain unknown" do
     travel_to TODAY do
       # 6 units before the trades: the sale takes 4 of them, and 2 stay open.

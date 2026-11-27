@@ -757,6 +757,24 @@ class HoldingLotTest < ActiveSupport::TestCase
     assert_not HoldingLot.exists?(moved.id)
   end
 
+  test "merging opening lots with different original_quantity_as_of dates scales to the newer date across a split on target" do
+    setup_account
+    old_security = priced_security("LOTD1", 30)
+    new_security = priced_security("LOTD2", 30)
+    Security::Split.create!(security: new_security, ex_date: d(6), numerator: 2, denominator: 1, source: "manual")
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 5, price: 30, amount: 150, currency: "USD")
+    moved = opening_lot(old_security, 5)
+    moved.update!(original_quantity: 5, original_quantity_as_of: d(8), unit_cost: 50, currency: "USD")
+    target = opening_lot(new_security, 0)
+    target.update!(original_quantity: 4, original_quantity_as_of: d(4), unit_cost: nil, currency: "USD")
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ 5, 13, d(8), 50, "USD" ],
+      [ target.reload.qty, target.original_quantity, target.original_quantity_as_of, target.unit_cost, target.currency ]
+    assert_not HoldingLot.exists?(moved.id)
+  end
+
   # --- User-set lot cost --------------------------------------------------------
 
   test "a user-set cost on a transfer-in lot resolves the position, forward" do

@@ -1190,6 +1190,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_220100) do
     t.decimal "manual_total_cost", precision: 19, scale: 4
     t.uuid "origin_security_id"
     t.decimal "original_quantity", precision: 34, scale: 18
+    t.date "original_quantity_as_of"
     t.decimal "qty", precision: 34, scale: 18, null: false
     t.uuid "security_id", null: false
     t.uuid "source_entry_id"
