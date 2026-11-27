@@ -189,12 +189,12 @@ class Assistant::Function::GetTransactions < Assistant::Function
       end
     end
 
-    accessible_account_ids = user.accessible_accounts.visible.pluck(:id)
+    visible_account_ids = user.accessible_accounts.visible.pluck(:id)
 
     search = Transaction::Search.new(
       family,
       filters: search_params,
-      accessible_account_ids: accessible_account_ids
+      accessible_account_ids: visible_account_ids
     )
     transactions_query = search.transactions_scope
     pagy_query = ordered(transactions_query, params)
@@ -212,12 +212,13 @@ class Assistant::Function::GetTransactions < Assistant::Function
 
     totals = search.totals
 
+    accessible = accessible_account_ids
     normalized_transactions = paginated_transactions.map do |txn|
       entry = txn.entry
       row = {
         id: txn.id,
         entry_id: entry.id,
-        name: entry_name(entry),
+        name: entry_name(entry, accessible),
         date: entry.date,
         amount: entry.amount.abs,
         currency: entry.currency,
@@ -243,7 +244,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
       # the other end would disclose an account this user cannot reach. The key
       # is then left out rather than blanked, matching the sparse convention.
       counterparty = txn.counterpart_account
-      row[:transfer_account] = counterparty.name if counterparty && accessible_account_ids.include?(counterparty.id)
+      row[:transfer_account] = counterparty.name if counterparty && visible_account_ids.include?(counterparty.id)
 
       apply_label_hints(row, entry)
 

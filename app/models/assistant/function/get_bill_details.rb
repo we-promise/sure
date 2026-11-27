@@ -56,7 +56,7 @@ class Assistant::Function::GetBillDetails < Assistant::Function
       bill: serialize_series(series).merge(configuration(series)),
       analytics: analytics(series),
       open_occurrences: open_occurrences.map { |occurrence| serialize_occurrence(occurrence) },
-      history: history.map { |occurrence| serialize_history_row(occurrence) },
+      history: serialize_history(history),
       history_window: truncation(history.size, closed.count),
       upcoming_due_dates: series.schedule.occurrences_between(Date.current + 1, Date.current + 400).first(3).map(&:iso8601),
       price_changes: changes,
@@ -137,7 +137,12 @@ class Assistant::Function::GetBillDetails < Assistant::Function
       { count: total, truncated: total > shown }
     end
 
-    def serialize_history_row(occurrence)
+    def serialize_history(history)
+      accessible = accessible_account_ids
+      history.map { |occurrence| serialize_history_row(occurrence, accessible) }
+    end
+
+    def serialize_history_row(occurrence, accessible)
       serialize_occurrence(occurrence).merge(
         status: occurrence.status,
         payments: occurrence.allocations.map do |allocation|
@@ -146,7 +151,7 @@ class Assistant::Function::GetBillDetails < Assistant::Function
             paid_on: allocation.paid_on&.iso8601,
             source: allocation.source,
             state: allocation.state,
-            transaction_name: entry_name(allocation.entry)
+            transaction_name: entry_name(allocation.entry, accessible)
           }.compact
         end
       )

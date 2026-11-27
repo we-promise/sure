@@ -161,8 +161,9 @@ class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
     # different date on every line, so grouping on `entries.name` would report
     # one payee per transaction and be useless for proposing rules.
     def group_by_payee(entries)
+      accessible = accessible_account_ids
       entries
-        .group_by { |entry| payee_key(entry) }
+        .group_by { |entry| payee_key(entry, accessible) }
         .map do |(label, rail, currency, classification), group|
           {
             label: label,
@@ -179,11 +180,11 @@ class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
     # Currency is part of the key so a group's total is always expressible as
     # one Money. A payee billed in two currencies legitimately reads as two
     # rows, which is also what the user would want to see.
-    def payee_key(entry)
+    def payee_key(entry, accessible)
       merchant = entry.entryable.merchant
       return [ merchant.name, nil, entry.currency, classification_of(entry) ] if merchant
 
-      label = Transaction::LabelNormalizer.normalize(entry_name(entry), on: entry.date, region: family.country)
+      label = Transaction::LabelNormalizer.normalize(entry_name(entry, accessible), on: entry.date, region: family.country)
       [ label.name.upcase, label.rail, entry.currency, classification_of(entry) ]
     end
 

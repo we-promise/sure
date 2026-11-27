@@ -119,18 +119,22 @@ class Assistant::Function
       page.positive? ? page : 1
     end
 
+    # Ids of the accounts the user can open (owned or shared, hidden ones
+    # included), e.g. to tell whether a transfer's other side may be named.
+    # Read on every call: one instance serves a whole chat response, and a
+    # share can be revoked between its tool calls.
+    def accessible_account_ids
+      family.accounts.accessible_by(user).pluck(:id).to_set
+    end
+
     def family
       user.family
     end
 
-    # The accounts this user can open (owned or shared).
-    def accessible_account_ids
-      @accessible_account_ids ||= family.accounts.accessible_by(user).pluck(:id).to_set
-    end
-
-    # The entry's name as this user may read it (Entry#name_for).
-    def entry_name(entry)
-      entry&.name_for(accessible_account_ids)
+    # The entry's name as this user may read it (Entry#name_for). A tool that
+    # names many entries reads accessible_account_ids once and passes it in.
+    def entry_name(entry, accessible = accessible_account_ids)
+      entry&.name_for(accessible)
     end
 
     def valid_uuid?(str)

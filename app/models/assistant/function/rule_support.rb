@@ -396,7 +396,7 @@ module Assistant::Function::RuleSupport
       {
         match_count: match_count,
         visible_match_count: visible.count,
-        sample: sample.map { |txn| serialize_sample(txn) },
+        sample: serialize_samples(sample),
         actions: rule.actions.reject(&:marked_for_destruction?).map { |a| describe_action(rule, a) },
         preview_token: preview_token(rule, match_count, shown: sample.size)
       }.compact
@@ -448,13 +448,18 @@ module Assistant::Function::RuleSupport
       Rails.application.message_verifier("assistant/rule_preview")
     end
 
-    def serialize_sample(txn)
+    def serialize_samples(sample)
+      accessible = accessible_account_ids
+      sample.map { |txn| serialize_sample(txn, accessible) }
+    end
+
+    def serialize_sample(txn, accessible)
       entry = txn.entry
       {
         id: txn.id,
         date: entry.date.iso8601,
         account: entry.account.name,
-        name: entry_name(entry),
+        name: entry_name(entry, accessible),
         amount: entry.amount.to_s,
         currency: entry.currency,
         category: txn.category&.name_with_parent,
