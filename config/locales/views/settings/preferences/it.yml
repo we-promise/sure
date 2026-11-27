@@ -3,6 +3,14 @@ it:
   settings:
     preferences:
       show:
+        rule_suggestions_hint: "Proponi di creare una regola dopo aver modificato la categoria di una transazione"
+        rule_suggestions: "Suggerimenti di regole"
+        manual_reconciliation_hint: "Mostra i comandi di riconciliazione nei conti gestiti manualmente. I conti sincronizzati con la banca utilizzano invece la riconciliazione degli estratti conto."
+        manual_reconciliation: "Riconciliazione manuale"
+        transactions_subtitle: "Configura il comportamento delle transazioni"
+        transactions_title: "Transazioni"
+        show_balance_updates_hint: "Mostra sempre nell'attività dei conti collegati i saldi giornalieri registrati dalla sincronizzazione bancaria"
+        show_balance_updates: "Aggiornamenti dei saldi sincronizzati"
         country: Paese
         currency: Valuta
         date_format: Formato data
@@ -43,3 +51,21 @@ it:
         preview:
           title: Abilita funzionalità in anteprima
           description: Opta per le funzionalità in corso contrassegnate come anteprima o canary.
+
+        default_account_order_hint: "Con l'ordinamento manuale, trascina i conti nella barra laterale per impostarne l'ordine."
+        budget_title: "Budget"
+        budget_subtitle: "Configura il funzionamento dei budget"
+        investment_contributions_as_spending: "Considera gli investimenti come spese"
+        investment_contributions_as_spending_hint: "Il denaro trasferito ai conti di investimento viene conteggiato come spesa nei budget, nei report e nel grafico del flusso di cassa. Disattiva questa opzione per mostrarlo come importo investito."
+        personal_budgets: "Budget personali"
+        personal_budgets_hint: "Abilita budget individuali per ogni membro del nucleo familiare."
+        household_budget_enabled: "Budget familiare"
+        household_budget_enabled_hint: "Mantieni un budget condiviso per il nucleo familiare oltre ai budget personali. Disattiva per utilizzare soltanto i budget personali."
+        budget_sharing_title: "Condivisione del budget"
+        budget_sharing_subtitle: "Consenti agli altri membri di visualizzare o modificare il tuo budget personale"
+        budget_sharing_no_members: "Non ci sono altri membri nel tuo %{moniker} con cui condividere"
+        budget_sharing_permission_label: "Accesso di %{name}"
+        budget_sharing_permissions:
+          none: "Nessun accesso"
+          read_only: "Sola visualizzazione"
+          read_write: "Può modificare"

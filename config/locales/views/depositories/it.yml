@@ -24,3 +24,7 @@ it:
       savings:
         long: Conto Risparmio
         short: Risparmio
+
+      cash:
+        long: "Contanti"
+        short: "Contanti"

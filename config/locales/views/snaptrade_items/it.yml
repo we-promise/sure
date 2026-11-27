@@ -1,6 +1,9 @@
 ---
 it:
   snaptrade_items:
+    personal_key:
+      missing_fields: "Inserisci sia il client ID sia la consumer key di SnapTrade."
+      success: "Chiave API personale SnapTrade salvata. Sincronizzazione dei conti in corso…"
     default_name: "Connessione SnapTrade"
     link_accounts:
       use_setup_flow: Usa il flusso di configurazione account
@@ -43,6 +46,10 @@ it:
       success: "Autorizzazione SnapTrade completata."
       setup_incomplete: "L'autorizzazione SnapTrade è completa, ma sono necessarie le credenziali API prima che i conti possano sincronizzarsi."
       failed: "Impossibile completare l'autorizzazione del dispositivo OAuth SnapTrade. Riprova."
+      device_code_required: Nessuna autorizzazione dispositivo SnapTrade è in corso per questa connessione. Avviala di nuovo per ottenere un nuovo codice.
+      authorization_pending: SnapTrade non ha ancora ricevuto la tua conferma. Approva il codice su SnapTrade, poi riprova.
+      expired: Questo codice dispositivo è scaduto. Avvia di nuovo l'autorizzazione.
+      access_denied: L'autorizzazione SnapTrade è stata rifiutata.
     start_oauth_device_flow:
       failed: "Impossibile avviare l'autorizzazione del dispositivo OAuth SnapTrade. Riprova."
     select_existing_account:
@@ -103,6 +110,14 @@ it:
       link_button: "Collega"
       linked_accounts: "Già collegati"
       linked_to: "Collegato a:"
+      account_type_label: Tipo di conto
+      account_types:
+        depository: Conto corrente o di risparmio
+        credit_card: Carta di credito
+        investment: Conto d'investimento
+        crypto: Conto crypto
+        loan: Prestito o linea di credito
+        other_asset: Altro asset
     snaptrade_item:
       accounts_need_setup:
         one: "%{count} conto da configurare"
@@ -128,8 +143,23 @@ it:
       no_accounts_title: "Nessun conto trovato"
       no_accounts_description: "Connetti un brokerage per importare i tuoi conti investimento."
 
+    oauth_authorize:
+      not_configured: L'autorizzazione di SnapTrade tramite browser richiede SNAPTRADE_OAUTH_CLIENT_SECRET oltre a SNAPTRADE_OAUTH_CLIENT_ID. Impostalo e riavvia, oppure autorizza con un codice dispositivo.
+    oauth_callback:
+      success: Autorizzazione SnapTrade completata.
+      access_denied: L'autorizzazione SnapTrade è stata annullata.
+      state_mismatch: L'autorizzazione SnapTrade non ha superato un controllo di sicurezza. Riprova.
+      failed: Impossibile completare l'autorizzazione SnapTrade. Riprova.
+
   providers:
     snaptrade:
+      oauth_status_personal_key: "Sincronizzazione tramite la tua chiave API personale SnapTrade. Autorizzando tramite OAuth, questa connessione passerà a OAuth."
+      oauth_alternative: "Gestisci Sure per altre persone? Registra invece un'app OAuth SnapTrade:"
+      personal_key_save_button: "Salva chiave"
+      personal_key_consumer_key_label: "Chiave consumer"
+      personal_key_client_id_label: "Client ID"
+      personal_key_description_html: "Usa la chiave personale gratuita per i tuoi conti di intermediazione. Creala su <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">dashboard.snaptrade.com</a> e incolla qui il client ID e la consumer key."
+      personal_key_title: "Chiave API personale SnapTrade"
       name: "SnapTrade"
       connection_description: "Connetti al tuo brokerage tramite SnapTrade (25+ broker supportati)"
       description: "SnapTrade si connette a 25+ principali brokerage (Fidelity, Vanguard, Schwab, Robinhood, ecc.) e fornisce cronologia completa delle operazioni con etichette di attività e costo base."
@@ -187,6 +217,12 @@ it:
       delete_orphaned_user_title: "Eliminare la registrazione orfana?"
       delete_orphaned_user_body: "Questo eliminerà definitivamente questo utente SnapTrade orfano e tutte le loro connessioni brokerage, liberando slot di connessione."
       delete_orphaned_user_confirm: "Elimina registrazione"
+      oauth_setup_step_1_html: Registra un'app OAuth su <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: 'Solo per il flusso via browser: aggiungi l''URL di callback di questa app (<code>%{callback_url}</code>) come redirect URI registrato'
+      oauth_setup_step_3: Imposta SNAPTRADE_OAUTH_CLIENT_ID nel tuo ambiente e riavvia. Questo basta per abilitare il flusso con codice dispositivo; aggiungi anche SNAPTRADE_OAUTH_CLIENT_SECRET per il flusso via browser
+      oauth_status_ready_device: Autorizza Sure con un codice dispositivo per leggere i dati del tuo account SnapTrade.
+      oauth_device_button: Usa un codice dispositivo
+      manage_at_snaptrade: Gestisci le connessioni su SnapTrade
   snaptrade_item:
     sync_status:
       no_accounts: "Nessun conto trovato"
@@ -202,7 +238,7 @@ it:
     brokerage_summary:
       none: "Nessun brokerage connesso"
       count:
-        one: "%{count} brokerage"
+        one: "%{count} intermediario"
         other: "%{count} brokerage"
     syncer:
       discovering: "Ricerca conti..."

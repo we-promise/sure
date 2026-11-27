@@ -65,6 +65,10 @@ it:
       errors:
         only_manual: Solo i conti manuali possono essere collegati a Coinbase
         invalid_coinbase_account: Conto Coinbase non valido
+    select_accounts:
+      connection_unavailable: "Questa connessione Coinbase non è disponibile. Selezionane una nelle impostazioni dei provider."
+      no_credentials_configured: "Collega Coinbase nelle impostazioni dei provider prima di aggiungere i suoi wallet."
+      select_connection: "Seleziona una connessione Coinbase nelle impostazioni dei provider."
   coinbase_item:
     syncer:
       checking_credentials: Verifica credenziali...

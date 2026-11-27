@@ -1,0 +1,46 @@
+---
+it:
+  settings:
+    background_jobs:
+      show:
+        page_title: Operazioni in background
+        title: Stato dei processi in background
+        subtitle: "Stato attuale di Sidekiq: processi worker, code, tentativi e processi falliti."
+        redis_unreachable: "Stato di Sidekiq non disponibile (Redis non raggiungibile). La disponibilità dei processi non è verificabile, quindi le azioni sono disabilitate."
+        operations_title: Operazioni in corso
+        operations_subtitle: "Sincronizzazioni, importazioni ed esportazioni di tutte le famiglie non ancora concluse. Le operazioni inattive da oltre 30 minuti senza processi visibili sono considerate perse e possono essere contrassegnate come tali."
+        empty: Nessuna operazione in corso.
+        missing_value: "-"
+        stats:
+          workers: Processi worker
+          busy: Occupati
+          enqueued: In coda
+          retries: Nuovi tentativi
+          scheduled: Pianificati
+          dead: Falliti definitivamente
+          queue_label: "%{name}: %{size} · latenza %{latency}s"
+        table:
+          type: Operazione
+          family: Famiglia
+          status: Stato
+          last_activity: Ultima attività
+          liveness: Disponibilità
+          action: Azione
+      operation:
+        ago: "%{time} fa"
+        sync_label: "Sincronizzazione · %{type}"
+        running: In esecuzione
+        queued: In coda
+        recent: Recente
+        unknown: Sconosciuto
+        stuck: "Bloccata — presumibilmente persa"
+        confirm: "Contrassegnare questa operazione come persa? Il record passerà a uno stato finale per consentire un nuovo tentativo. I dati sottostanti non verranno modificati."
+        missing_value: "-"
+        actions:
+          mark_stale: Contrassegna come obsoleta
+          mark_failed: Contrassegna come fallita
+          release_claim: Rilascia assegnazione
+      cancel:
+        cancelled: "%{type} contrassegnata come persa."
+        not_cancellable: "Questa operazione non può essere modificata al momento: il relativo processo potrebbe essere ancora in coda o in esecuzione. Riprova dopo 30 minuti di inattività."
+        cancelled_error: "Contrassegnata come fallita da un amministratore: l'operazione in background è stata considerata persa."

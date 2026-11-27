@@ -1,0 +1,5 @@
+---
+it:
+  models:
+    investment_statement:
+      cash: Liquidità

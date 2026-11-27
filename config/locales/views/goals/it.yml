@@ -27,6 +27,9 @@ it:
         on_track_label: Obiettivi in regola
         on_track_value: "%{on_track} di %{total}"
         on_track_sub_parts:
+          pace_unknown:
+            other: "%{count} con ritmo di risparmio non determinabile"
+            one: "1 con ritmo di risparmio non determinabile"
           reached:
             one: 1 raggiunto
             other: "%{count} raggiunti"
@@ -64,6 +67,7 @@ it:
         no_target_date: Aperto
         paused: In pausa
         completed: Completato
+      chips_aria: Filtra obiettivi per stato
     new:
       heading: Nuovo obiettivo
       subtitle: Risparmia per qualcosa di specifico.
@@ -112,14 +116,18 @@ it:
         empty:
           heading: Nessun conto di finanziamento collegato
           body: Modifica l'obiettivo per collegare i conti correnti in cui risparmi.
+        converted: "≈ %{amount}"
+        rate_unavailable: "Tasso di cambio non ancora disponibile; questo conto non viene conteggiato."
       notes: Note
       funding_last_30d: ultimi 30gg
       funding_last_90d: ultimi 90gg
       status_callout:
+        pace_unknown: "non è ancora possibile stimare il ritmo di risparmio per questi conti: occorre un aggiornamento del saldo nell'ultimo anno e uno storico dei saldi di un anno"
         behind: "risparmia %{amount}/mese in più per recuperare"
         behind_covered: "gli impegni in sospeso colmano il divario"
         on_track: "raggiunge l'obiettivo intorno al %{date}"
         no_target_date: "imposta una data obiettivo per proiettare un traguardo"
+        depleted: '%{amount} sotto il saldo obiettivo — ricaricala per ripristinare la riserva'
       pending_pledge:
         title:
           zero: "In sospeso: %{amount} in %{account} · scade oggi"
@@ -144,6 +152,8 @@ it:
         of_target: dell'obiettivo
         market_value: "Valore di mercato %{amount}"
         aria_label: "Obiettivo %{percent}%% completato. %{amount} di %{target} risparmiati."
+        including_used: Inclusi %{amount} già utilizzati
+        aria_label_with_used: Obiettivo completato al %{percent}%. %{amount} di %{target}, inclusi %{used} già utilizzati.
         basis:
           balance: Conta ciò che valgono oggi i conti
           contributions: Conta solo ciò che hai versato
@@ -151,6 +161,7 @@ it:
           balance: Ha contato ciò che valevano i conti al completamento dell'obiettivo
           contributions: Ha contato solo ciò che avevi versato al completamento dell'obiettivo
       projection:
+        pace_unknown: "Lo storico di questi conti non è ancora sufficiente per stimare il ritmo di risparmio, quindi non è disponibile alcuna proiezione."
         heading: Proiezione
         legend_saved: Risparmiato
         legend_projection: Proiezione
@@ -165,6 +176,7 @@ it:
         tooltip_projected: "Proiettato: %{amount}"
         tooltip_saved: "Risparmiato: %{amount}"
         tooltip_target_relation: "%{percent}%% di %{target} obiettivo"
+        reserve: Una riserva mantiene un saldo obiettivo, quindi non c'è un traguardo da proiettare.
       catch_up:
         title: "Risparmia %{amount}/mese in più per recuperare"
         body: "Ritmo attuale %{avg}/mese · necessario %{required}/mese per raggiungere l'obiettivo."
@@ -191,6 +203,12 @@ it:
         heading: Obiettivo raggiunto. Ottimo lavoro.
         body: "Obiettivo chiuso a %{saved} di %{target}. Tienilo come registro o archivialo ora."
         archive_cta: Archivia obiettivo
+        heading_reserve: Riserva intatta
+        body_reserve: La tua riserva è al saldo obiettivo, %{saved} di %{target}. Non devi fare nulla — resta accantonata.
+        body_reached: Hai raggiunto l'obiettivo con %{saved} di %{target}. Non è ancora chiuso — il denaro resta accantonato.
+        close_cta: Chiudi questo obiettivo
+        close_hint: La chiusura libera il denaro accantonato per gli altri tuoi obiettivi sullo stesso conto. Fallo quando lo avrai effettivamente speso.
+        frozen: Raggiunto il %{date} · %{amount}
       inactive:
         heading_paused: Questo obiettivo è in pausa
         heading_archived: Questo obiettivo è archiviato
@@ -202,6 +220,10 @@ it:
       empty:
         heading: Nessun deposito ancora
         body: Effettua un trasferimento nel tuo conto collegato. L'app lo rileverà alla prossima sincronizzazione. Oppure aggiorna il saldo del tuo conto manuale.
+      consume: Ho usato parte di questo denaro
+      reserve_shortfall:
+        heading: Riserva sotto il saldo obiettivo
+        body: Hai %{saved} su %{target}. Aggiungi %{missing} per riportarla al saldo obiettivo.
     errors:
       not_found: Questo obiettivo non è stato trovato. Potrebbe essere stato eliminato.
     states:
@@ -210,6 +232,7 @@ it:
       completed: Completato
       archived: Archiviato
     status:
+      pace_unknown: "Ritmo di risparmio non determinabile"
       on_track: In regola
       behind: In ritardo
       reached: Raggiunto
@@ -217,6 +240,8 @@ it:
       no_target_date: Aperto
       paused: In pausa
       archived: Archiviato
+      funded: Riserva intatta
+      depleted: Da ricaricare
     empty_state:
       heading: Nessun obiettivo ancora
       body: Imposta un obiettivo, collega i conti in cui risparmi e osserva i tuoi progressi accumularsi.
@@ -225,6 +250,8 @@ it:
       no_depository_accounts: Hai bisogno di almeno un conto corrente (conto corrente, risparmio, HSA, CD, mercato monetario) prima di creare un obiettivo.
       add_account: Aggiungi un conto
     goal_card:
+      pace_unknown: "Ritmo di risparmio non determinabile"
+      pace_unknown_with_target: "Ritmo di risparmio non determinabile · obiettivo %{target}/mese"
       no_accounts: Nessun conto collegato
       n_accounts: "%{first} +%{count}"
       left: rimanente
@@ -254,6 +281,10 @@ it:
       footer_last_days:
         one: Ultimo impegno abbinato 1 giorno fa
         other: "Ultimo impegno abbinato %{count} giorni fa"
+      including_used: Inclusi %{amount} già utilizzati
+      footer_reserve_intact: Riserva intatta
+      footer_reserve_short: '%{amount} da ricaricare'
+      partial_total: "Alcuni saldi sono esclusi (tasso di cambio non ancora disponibile)"
     form:
       create: Crea obiettivo
       save: Salva modifiche
@@ -276,6 +307,13 @@ it:
         whole_balance: "Vuoto: tutto il saldo"
         earmark_for: Accantona un importo per %{account}
         earmark_hint: Lascia vuoto un importo per dedicare l'intero saldo di quel conto.
+        target_mode: Come viene impostato il saldo obiettivo
+        target_months: Mesi di spese
+        target_months_hint: Ricalcolato il 1° di ogni mese in base alla tua spesa mensile mediana.
+        target_balance: Saldo obiettivo
+        target_balance_pending: Calcolato al salvataggio
+        target_balance_hint: In base alla tua spesa mensile mediana per i mesi indicati sopra. Aggiornato ogni mese.
+        currency_conversion_hint: "I conti possono avere valute diverse. I totali sono convertiti in %{currency}; gli accantonamenti restano nella valuta di ciascun conto."
         progress_basis: Cosa conta per questo obiettivo
       subtypes:
         checking: Conto corrente
@@ -284,6 +322,23 @@ it:
         cd: CD
         money_market: Mercato monetario
         other: Altro
+
+      target_modes:
+        fixed: Un importo fisso
+        months_of_expenses: Un numero di mesi di spese
+      kinds:
+        one_off:
+          hint: Risparmia per qualcosa, poi chiudilo quando lo spendi.
+          label: Obiettivo una tantum
+        maintained:
+          hint: Un saldo da mantenere, come un fondo di emergenza. Non viene mai chiuso.
+          label: Riserva da mantenere
+      earmark:
+        headroom: '{left} ancora da accantonare su questo conto.'
+        prorata: I tuoi obiettivi su questo conto ammontano a {total} a fronte di un saldo di {balance} — avanzeranno pro rata.
+        whole_balance: Questo conto finanzierà quanto resta dopo gli altri accantonamenti.
+        whole_balance_alone: Questo obiettivo userà l'intero saldo di questo conto.
+        converted: "Questo accantonamento ≈ {amount}."
       progress_basis_locked: I progressi di questo obiettivo sono stati congelati al completamento. Riaprilo o ripristinalo per cambiare cosa conta.
       progress_bases:
         balance:
@@ -292,3 +347,37 @@ it:
         contributions:
           label: Solo ciò che ho versato
           hint: Contributi netti. Guadagni e perdite di mercato restano esclusi.
+    consume:
+      title: Registra una spesa
+      subtitle: '%{goal}'
+      amount_label: Quanto hai usato?
+      amount_hint: '%{saved} sostengono attualmente questo obiettivo.'
+      account_label: Da quale conto?
+      earmark_note: L'importo che registri non è più riservato a questo obiettivo, quindi gli altri obiettivi su quel conto riottengono la loro quota.
+      cancel: Annulla
+      submit: Registra
+      success: '%{amount} registrati come utilizzati.'
+      errors:
+        non_positive: Inserisci un importo maggiore di zero.
+        maintained: Una riserva si prosciuga e si ricostituisce, non si spende — il suo ammanco è già indicato sull'obiettivo.
+        exceeds_target: È più di quanto questo obiettivo si sia mai prefissato di risparmiare.
+        account_required: Questo obiettivo è finanziato da più conti — indica da quale è uscito il denaro.
+        account_not_linked: Quel conto non finanzia questo obiettivo.
+        not_active: Questo obiettivo non è più attivo, quindi non è possibile registrare nulla a suo carico.
+        exceeds_earmark: È più di quanto l'obiettivo abbia accantonato su questo conto.
+        transaction_already_claimed: Questa uscita è già stata attribuita.
+        transaction_not_found: Questa uscita non è più disponibile per l'attribuzione.
+        no_linked_account: A questo obiettivo non resta alcun conto di finanziamento.
+        missing_exchange_rate: "Il tasso di cambio per la valuta di questo conto non è ancora disponibile, quindi la spesa non può essere registrata."
+      goal_currency_hint: "Inserisci l'importo in %{currency}. Per un conto in un'altra valuta viene convertito al tasso odierno prima di essere sottratto all'accantonamento del conto."
+    unattributed_outflows:
+      heading: Denaro uscito da questi conti
+      body: Se una parte è stata spesa per %{goal}, indicalo e smetterà di contare contro l'obiettivo.
+      attribute: È questa
+
+    currency_warning:
+      title: "Alcuni saldi non sono conteggiati"
+      body:
+        one: "Il tasso di cambio %{from} → %{to} non è ancora disponibile, quindi i saldi in %{from} sono esclusi da questo totale."
+        other: "I tassi di cambio da %{from} a %{to} non sono ancora disponibili, quindi questi saldi sono esclusi dal totale."
+      settings_link: "Impostazioni del provider dei tassi di cambio"

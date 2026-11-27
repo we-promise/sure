@@ -7,6 +7,15 @@ it:
       close: "Chiudi"
   global:
     expand: "Espandi"
+  mcp:
+    errors:
+      invalid_session_id: "Identificativo di sessione MCP non valido"
+      unsupported_protocol_version: "Versione del protocollo MCP non supportata: %{version}"
+  oauth:
+    registration:
+      invalid_redirect_uris: "redirect_uris deve usare HTTPS, HTTP su loopback oppure uno schema URI per app native"
+      invalid_client_name: "client_name non deve contenere caratteri di controllo bidirezionali"
+      reserved_client_name: "client_name è riservato alle applicazioni ufficiali"
   activerecord:
     errors:
       messages:

@@ -63,6 +63,24 @@ it:
       link: Collega
       cancel: Annulla
     setup_accounts:
+      select_type: "Seleziona il tipo"
+      select_subtype: "Seleziona il sottotipo"
+      psd2_savings_notice: "Nota: alcuni conti di risparmio regolamentati francesi (Livret A, PEL, LEP, LDDS) potrebbero avere un accesso limitato o assente tramite Open Banking (PSD2). Se manca un conto di risparmio, puoi aggiungerlo manualmente."
+      subtype_messages:
+        other_asset: "Le altre attività patrimoniali verranno configurate come attività generiche."
+        credit_card: "Le carte di credito verranno configurate automaticamente come conti di tipo carta di credito."
+      subtype_labels:
+        loan: "Tipo di finanziamento:"
+        investment: "Tipo di investimento:"
+        depository: "Sottotipo di conto:"
+      account_types:
+        other_asset: "Altra attività patrimoniale"
+        loan: "Finanziamento o mutuo"
+        investment: "Conto di investimento"
+        credit_card: "Carta di credito"
+        depository: "Conto corrente o di risparmio"
+        skip: "Ignora questo conto"
+      skip_notice: "I conti ignorati vengono memorizzati: Sure smette di importarli finché non li associ a un conto."
       title: Configura i tuoi conti Enable Banking
       header_subtitle: Scegli i tipi di conto corretti per i conti importati
       choose_account_type: "Scegli il tipo di conto corretto per ogni conto Enable Banking:"

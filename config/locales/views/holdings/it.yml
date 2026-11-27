@@ -1,6 +1,17 @@
 ---
 it:
   holdings:
+    lots:
+      provider_cost_clear_hint: "Puoi comunque rimuovere un costo impostato in precedenza."
+      provider_cost_hint: "Il costo di questa posizione è fornito dal provider, pertanto non è possibile impostare il costo dei singoli lotti."
+      unlock: "Rimuovi il costo manuale"
+      save: "Salva"
+      total_cost_hint: "Costo complessivo del lotto al momento dell'acquisto. Eliminando la relativa operazione eliminerai anche il lotto e il costo impostato."
+      total_cost_label: "Importo totale pagato per questo lotto"
+      per_unit: "%{amount} per unità"
+      unknown: "Costo unitario sconosciuto"
+      opening: "Detenuto prima della prima operazione"
+      title: "Lotti"
     cash:
       brokerage_cash: Liquidità di conto
     destroy:
@@ -36,6 +47,8 @@ it:
       save: Salva
       overwrite_confirm_title: Sovrascrivere il costo base?
       overwrite_confirm_body: "Questo sostituirà il costo base attuale di %{current}."
+      or_per_share_label: "Oppure inserisci per azione:"
+      per_share: per azione
     holding:
       per_share: per azione
       shares: "%{qty} azioni"

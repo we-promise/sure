@@ -10,9 +10,36 @@ it:
         main_system_prompt:
           title: Prompt di sistema principale
           subtitle: Istruzioni fondamentali che definiscono come l'assistente AI si comporta in tutte le conversazioni
+          label: "Prompt di sistema della chat"
         transaction_categorizer:
           title: Categorizzatore transazioni
           subtitle: L'AI categorizza automaticamente le tue transazioni in base alle categorie definite
         merchant_detector:
           title: Rilevatore esercenti
           subtitle: L'AI identifica e arricchisce i dati delle transazioni con informazioni sull'esercente
+
+        save: "Salva i prompt"
+        save_confirm:
+          title: "Salvare i prompt IA personalizzati?"
+          body: "I prompt personalizzati sostituiscono le istruzioni di sistema e le protezioni integrate (come le restrizioni sui consigli finanziari) per il tuo nucleo familiare."
+          dont_show_again: "Non mostrare più questo avviso"
+          cancel: "Annulla"
+          confirm: "Conferma"
+        insight_dig_in:
+          title: "Approfondisci un'analisi"
+          subtitle: "Primo messaggio della chat quando approfondisci un'analisi con l'IA"
+          label: "Messaggio di approfondimento"
+      prompt_field:
+        provider_label: "Provider"
+        prompt_label: "Prompt"
+        provider_openai: "OpenAI"
+        provider_anthropic: "Anthropic"
+        reset: "Ripristina impostazione predefinita"
+        reset_confirm_title: "Ripristinare il prompt predefinito?"
+        reset_confirm_body: "Il tuo prompt personalizzato verrà eliminato e saranno ripristinate le istruzioni predefinite dell'applicazione."
+        status_custom: "Stai usando un prompt personalizzato"
+        status_default: "Stai usando il prompt predefinito dell'applicazione"
+        format_risk: "Il prompt %{provider} non contiene più l'esempio {\"%{key}\": ...}. Ogni richiesta richiede comunque questo formato, quindi di norma la lettura della risposta funziona, ma una personalizzazione che richieda un formato diverso potrebbe comprometterla."
+      update:
+        success: "Prompt IA aggiornati"
+        multiple_errors: "Più prompt sono troppo lunghi (massimo %{count} caratteri)"

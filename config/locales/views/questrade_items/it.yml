@@ -22,9 +22,7 @@ it:
         calculating: Calcolo dei saldi...
         importing_data: Importazione dei dati dei conti...
         checking_setup: Verifica della configurazione dei conti...
-        needs_setup:
-          one: "%{count} conto deve essere configurato..."
-          other: "%{count} conti devono essere configurati..."
+        needs_setup: "Conti da configurare: %{count}..."
       success: Sincronizzazione avviata
     panel:
       eyebrow: Configurazione · solo desktop
@@ -254,8 +252,6 @@ it:
       all_skipped: Tutti i conti sono stati ignorati. Non è stato creato alcun conto.
       creation_failed: "Impossibile creare i conti: %{error}"
       no_accounts: Nessun conto da configurare.
-      success:
-        one: "%{count} conto creato correttamente."
-        other: "%{count} conti creati correttamente."
+      success: "Conti creati correttamente: %{count}."
     preload_accounts:
       no_credentials_configured: Prima configura le credenziali Questrade nelle impostazioni dei provider.

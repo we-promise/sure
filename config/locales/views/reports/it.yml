@@ -1,12 +1,33 @@
 ---
 it:
   reports:
+    biggest_expenses:
+      table:
+        amount: "Importo"
+        category: "Categoria"
+        name: "Nome"
+      limit_aria: "Numero di spese da visualizzare"
+      one_time: "Una tantum"
+      title: "Spese maggiori"
     index:
+      refresh: "Aggiorna"
+      updating: "aggiornamento in background"
+      built_at: "Aggiornato %{time} fa"
+      section_aria: "Sezione %{title}. Premi Invio o Spazio per selezionarla, quindi usa i tasti freccia per spostarla."
+      tag_filter:
+        apply: "Applica"
+        search: "Cerca tag"
+        selected:
+          other: "%{count} tag"
+          one: "%{count} tag"
+        all: "Tutti i tag"
       title: Rapporti
       subtitle: Analisi approfondita della tua salute finanziaria
       export: Esporta CSV
       print_report: Stampa rapporto
       periods:
+        all_time: "Intero periodo"
+        last_12_months: "Ultimi 12 mesi"
         monthly: Mensile
         quarterly: Trimestrale
         ytd: Da inizio anno
@@ -20,17 +41,22 @@ it:
       next_period: "Periodo successivo"
       today: "Oggi"
       period_label:
+        all_time: "%{start} – %{end}"
+        last_12_months: "%{start} – %{end}"
         quarterly: "T%{quarter} %{year}"
-        ytd: "YTD %{year}"
+        ytd: "Da inizio anno %{year}"
         past_year: "%{year}"
         last_6_months: "%{start} – %{end}"
       period_picker:
         quarter: "T%{quarter} %{year}"
-        ytd: "YTD %{year}"
+        ytd: "Da inizio anno %{year}"
       previous_year: "Anno precedente"
       next_year: "Anno successivo"
       previous_decade: "Decennio precedente"
       next_decade: "Decennio successivo"
+      drag_to_reorder: "Trascina per riordinare la sezione"
+      sections_aria: "Sezioni dei report"
+      shortcut_hint: "%{action} (%{key})"
     invalid_date_range: "La data di fine non può essere precedente alla data di inizio. Le date sono state scambiate."
     summary:
       total_income: Entrate totali
@@ -55,6 +81,25 @@ it:
         warning: Vicino al limite
         over: Oltre il budget
     trends:
+      category_trend:
+        prompt: "Seleziona le categorie per visualizzarne l'andamento."
+        no_data: "Scegli un periodo più lungo per visualizzare l'andamento."
+        data_table_period: "Periodo"
+        data_table_caption: "Valori dell'andamento per periodo"
+        data_table: "Mostra tabella dei dati"
+        granularity_aria: "Frequenza di aggregazione"
+        year: "Anno"
+        month: "Mese"
+        clear: "Azzera"
+        apply: "Applica"
+        search: "Cerca categorie"
+        selected:
+          other: "%{count} categorie"
+          one: "%{count} categoria"
+        select: "Seleziona categorie"
+        filtered_by_tags: "Filtrato per tag"
+        subtitle: "Totali mensili o annuali delle categorie selezionate, al netto dei rimborsi."
+        title: "Andamento delle categorie"
       title: Tendenze e Approfondimenti
       monthly_breakdown: Ripartizione mensile
       month: Mese
@@ -137,6 +182,9 @@ it:
       no_assets: Nessuna attività
       no_liabilities: Nessuna passività
     investment_performance:
+      unconverted_note:
+        other: "%{count} guadagni esclusi: tasso di cambio verso %{currency} non disponibile"
+        one: "%{count} guadagno escluso: tasso di cambio verso %{currency} non disponibile"
       title: Performance investimenti
       portfolio_value: Valore portafoglio
       total_return: Rendimento totale
@@ -185,7 +233,20 @@ it:
       then_use: Poi usa l'URL completo con =IMPORTDATA() in Google Sheets.
       go_to_api_keys: Vai alle chiavi API
       close: Capito
+      title_with_key: "✅ Copia URL per Google Sheets"
+      ready: Il tuo URL CSV (con chiave API) è pronto.
+      steps: "Per importare in Google Sheets:\n1. Crea un nuovo Google Sheet\n2. Nella cella A1, inserisci la formula mostrata sotto\n3. Premi Invio"
+      security_warning: "Questo URL include la tua chiave API. Tienila al sicuro!"
+      open_sheets: Apri Google Sheets
     print:
+      biggest_expenses:
+        one_time: "Una tantum"
+        amount: "Importo"
+        account: "Conto"
+        category: "Categoria"
+        name: "Nome"
+        date: "Data"
+        title: "Spese maggiori"
       document_title: Rapporto finanziario
       title: Rapporto finanziario
       generated_on: "Generato il %{date}"
@@ -235,3 +296,32 @@ it:
         amount: Importo
         percent: "%"
         more_categories: "+ %{count} altre categorie"
+
+    spending_vs_normal:
+      title: "Spese rispetto alla media abituale"
+      summary_html: "%{total} spesi in questo periodo. La spesa abituale per un periodo di pari durata è %{normal}, calcolata dal %{baseline_start} al %{baseline_end}."
+      summary_so_far_html: "Finora hai speso %{total}. La spesa abituale per lo stesso numero di giorni è %{normal}, calcolata dal %{baseline_start} al %{baseline_end}."
+      no_history_html: "%{total} spesi in questo periodo. Non ci sono ancora dati storici sufficienti per stimare la spesa abituale."
+      no_history_short: "Non ci sono ancora dati storici sufficienti per effettuare un confronto."
+      no_spending: "Nessuna spesa in questo periodo."
+      no_changes: "La spesa di ogni categoria corrisponde alla media abituale."
+      treemap_title: "Dove sono finiti i soldi"
+      changes_title: "Cosa è cambiato"
+      direct: "%{category} (senza sottocategoria)"
+      tooltip:
+        path: "%{parent} › %{category}"
+        total: "%{category}: %{amount}"
+        normal: "Spesa abituale: %{amount}"
+        more: "%{amount} in più rispetto alla media abituale (%{percent})"
+        less: "%{amount} in meno rispetto alla media abituale (%{percent})"
+        more_no_percent: "%{amount} in più rispetto alla media abituale"
+        less_no_percent: "%{amount} in meno rispetto alla media abituale"
+        no_normal: "Nessun dato storico precedente con cui confrontare"
+        open: "Seleziona per visualizzare queste transazioni"
+      legend:
+        less: "50–100% in meno"
+        slightly_less: "15–50% in meno"
+        normal: "Vicino alla media abituale"
+        slightly_more: "15–50% in più"
+        more: "50–100% in più"
+        much_more: "Oltre il 100% in più"

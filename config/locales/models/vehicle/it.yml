@@ -1,0 +1,14 @@
+---
+it:
+  activerecord:
+    attributes:
+      account/accountable:
+        purchase_date: Data di acquisto
+      vehicle:
+        purchase_date: Data di acquisto
+    errors:
+      models:
+        vehicle:
+          attributes:
+            purchase_date:
+              must_precede_entries: "deve precedere la voce più vecchia del conto"

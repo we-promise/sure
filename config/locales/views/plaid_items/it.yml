@@ -3,6 +3,9 @@ it:
   plaid_items:
     create:
       success: Conto collegato con successo. Attendi la sincronizzazione dei conti.
+      already_connected: "Esiste già una connessione a questo istituto, quindi non ne è stata aggiunta un'altra."
+      exchange_failed: "Impossibile aggiungere questa connessione. Riprova e, se il problema persiste, controlla i log del server."
+      token_expired: "Questa connessione è scaduta prima di essere aggiunta. Collega nuovamente l'istituto."
     destroy:
       success: Conti pianificati per l'eliminazione.
     errors:
@@ -25,6 +28,8 @@ it:
       status_never: Richiede sincronizzazione dati
       syncing: Sincronizzazione in corso...
       update: Aggiorna
+      add_accounts: Aggiungi conti
+      provider_name: Plaid
     select_existing_account:
       no_available_accounts: Nessun conto Plaid disponibile da collegare. Collega prima un nuovo conto Plaid.
       title: "Collega %{account_name} a Plaid"
@@ -35,3 +40,46 @@ it:
       invalid_account: Conto Plaid selezionato non valido
       already_linked: Questo conto Plaid è già collegato
       success: Conto collegato con successo a Plaid
+
+    auto_link_opener:
+      create_failed: "Non è stato possibile confermare l'aggiunta della connessione. Ricarica la pagina e controlla prima di riprovare."
+    duplicate_warning:
+      close: "Chiudi"
+      confirm: "Conferma questa connessione"
+      connected_by: "Collegato da %{name}"
+      eu_no_add_accounts: "Plaid non supporta l'aggiunta di conti a una connessione UE esistente. Per cambiare i conti collegati, elimina la connessione e aggiungila nuovamente."
+      linked_on: "Collegato il %{date}"
+      manage_connection: "Vai ai conti"
+      mask: "****%{mask}"
+      no_accounts: "Nessun conto è stato ancora sincronizzato da questa connessione."
+      overlap:
+        all_connected:
+          one: "Il conto che hai provato ad aggiungere è già collegato; aggiungerlo nuovamente creerebbe soltanto un duplicato."
+          other: "Tutti i %{count} conti che hai provato ad aggiungere sono già collegati; aggiungerli nuovamente creerebbe soltanto dei duplicati."
+        different_login: "Per collegare un altro accesso a %{institution}, scegli di nuovo Nuovo conto e accedi con quelle credenziali tramite Plaid."
+        more_accounts: "Per aggiungere altri conti a questa connessione, chiudi questa finestra e scegli Aggiungi conti nella connessione %{institution}."
+        others_connected:
+          one: "Sure ha già questo conto tramite la connessione di %{name}; aggiungere la tua creerebbe soltanto un duplicato."
+          other: "Sure ha già questi conti tramite la connessione di %{name}; aggiungere la tua creerebbe soltanto dei duplicati."
+        others_connected_several:
+          one: "Sure ha già questo conto tramite le connessioni di altri membri; aggiungere la tua creerebbe soltanto un duplicato."
+          other: "Sure ha già questi conti tramite le connessioni di altri membri; aggiungere la tua creerebbe soltanto dei duplicati."
+        none_connected: "Nessuno dei conti che hai provato ad aggiungere è già collegato: probabilmente stai usando un accesso diverso. L'aggiunta conterà come un'altra connessione Plaid."
+        some_connected:
+          connected:
+            one: "L'altro conto è già collegato: aggiungere questa connessione lo duplicherebbe e conterebbe come un'altra connessione Plaid."
+            other: "Gli altri %{count} conti sono già collegati: aggiungere questa connessione li duplicherebbe e conterebbe come un'altra connessione Plaid."
+          unconnected:
+            one: "Uno dei conti che hai provato ad aggiungere non è ancora collegato:"
+            other: "%{count} dei conti che hai provato ad aggiungere non sono ancora collegati:"
+        unknown:
+          one: "Non è possibile confrontare questi conti con la tua connessione esistente. Se sono gli stessi conti, aggiungere questa connessione li duplicherebbe e conterebbe come un'altra connessione Plaid."
+          other: "Non è possibile confrontare questi conti con le tue connessioni esistenti. Se sono gli stessi conti, aggiungere questa connessione li duplicherebbe e conterebbe come un'altra connessione Plaid."
+      title:
+        one: "Hai già una connessione a questo istituto"
+        other: "Hai già %{count} connessioni a questo istituto"
+      title_all_connected: "Hai già creato questa connessione"
+      title_others_connected:
+        one: "Questo conto è già collegato"
+        other: "Questi conti sono già collegati"
+      update_existing: "Aggiorna la connessione esistente"

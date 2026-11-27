@@ -1,0 +1,9 @@
+---
+it:
+  sure_import:
+    preflight:
+      missing_reference: "La riga %{line} (%{type}) fa riferimento a %{field} %{value}, che non esiste."
+      skipped_missing_reference: "La riga %{line} (%{type}) fa riferimento a %{field} %{value}, che non esiste. Sarà ignorata durante l'importazione."
+      skipped_missing_merchant_reference: "La riga %{line} (%{type}) fa riferimento a un esercente (%{value}) non presente in questa esportazione. Può accadere se l'esportazione è stata creata prima che Sure includesse gli esercenti assegnati dai provider. La riga verrà importata senza tale esercente."
+      skipped_unnamed_recurring: "La riga %{line} (%{type}) non ha un nome e fa riferimento a un esercente (%{value}) non presente in questa esportazione. Sarà ignorata durante l'importazione."
+      provider_merchant_diff: "Alla riga %{line}, ProviderMerchant %{name} esiste già con valori diversi per %{fields}. Verrà mantenuto l'esercente esistente."

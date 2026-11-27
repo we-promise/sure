@@ -1,0 +1,9 @@
+---
+it:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: "Per ogni variazione del tasso servono una data di decorrenza e un tasso."
+          invalid_rate_schedule_snapshot: "Impossibile confrontare le variazioni del tasso con il piano salvato. Ricarica il prestito e applica nuovamente le modifiche."
+          rate_change_before_origination: "Una variazione del tasso non può decorrere prima dell'erogazione del prestito."

@@ -1,0 +1,35 @@
+---
+it:
+  ai:
+    availability:
+      capability_missing:
+        admin: "%{feature} non disponibile: nessuno dei modelli IA configurati supporta questa funzione. Controlla i modelli in Impostazioni → Self-Hosting."
+        member: "%{feature} non disponibile: nessuno dei modelli IA configurati supporta questa funzione."
+      no_family_consent:
+        member: "%{feature} richiede che un amministratore del nucleo familiare abiliti l'IA. Può farlo dall'assistente IA."
+      not_configured:
+        admin: "%{feature} non disponibile: nessun modello IA è configurato per questa funzione. Aggiungine uno in Impostazioni → Self-Hosting."
+        member: "%{feature} non disponibile: l'IA non è configurata per questa funzione."
+      user_disabled:
+        member: "%{feature} richiede l'attivazione dell'IA. Puoi abilitarla dall'assistente IA."
+    consent_rows:
+      bill_setup: Scadenze
+      categorize: Categorie
+      chat: Chat
+      detect_merchants: Esercenti
+      embed: Documenti
+      extract_pdf: Importazione PDF
+    sends:
+      bill_configuration: Impostazioni attuali della scadenza
+      category_names: Nomi delle tue categorie
+      chat_messages: Messaggi delle tue chat
+      depends_on_vector_store: I documenti caricati, come file completi in un archivio vettoriale o come frammenti di testo inviati a un modello di embedding
+      looked_up_financial_data: Dati finanziari consultati dall'assistente per rispondere
+      merchant_names: Nomi degli esercenti
+      provider_category_hints: Categorie suggerite dalla tua banca
+      search_query: Testo della tua ricerca
+      stored_document_text: Testo degli estratti conto conservati nel tuo archivio
+      transaction_amounts: Importi delle transazioni
+      transaction_dates: Date delle transazioni
+      transaction_names: Nomi delle transazioni
+      uploaded_document: Documento che carichi

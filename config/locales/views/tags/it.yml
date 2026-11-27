@@ -17,8 +17,13 @@ it:
       new: Nuova etichetta
       tags: Etichette
       delete_all: Elimina tutto
+    menu:
+      label: Modifica etichette
     new:
       new: Nuova etichetta
+    summary:
+      add: Aggiungi etichette
+      title: 'Etichette: %{names}'
     tag:
       delete: Elimina
       edit: Modifica

@@ -19,6 +19,9 @@ it:
       original_date: "Data:"
       original_amount: "Importo"
       split_number: "Divisione n.%{number}"
+      merchant_label: "Esercente"
+      no_merchant: "(esercente della transazione)"
+      tags_label: "Etichette"
     create:
       success: Transazione divisa con successo
       not_splittable: Questa transazione non può essere divisa.
@@ -38,6 +41,7 @@ it:
       description: Modifica le voci divise per questa transazione.
       submit: Aggiorna divisione
       not_split: Questa transazione non è divisa.
+      part_transferred: "Una parte di questa divisione è collegata a un trasferimento. Rimuovi il collegamento prima di modificare o annullare la divisione."
     update:
       success: Divisione aggiornata con successo
     child:

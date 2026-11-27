@@ -1,0 +1,19 @@
+---
+it:
+  sync_schedules:
+    menu_item: Frequenza di sincronizzazione
+    intervals:
+      minutes: "Ogni %{count} minuti"
+      hours:
+        one: Ogni ora
+        other: "Ogni %{count} ore"
+    edit:
+      title: Frequenza di sincronizzazione
+      description: "Ogni connessione segue la sincronizzazione della famiglia, solitamente una volta al giorno. Scegli un intervallo per sincronizzare %{name} autonomamente durante la giornata."
+      interval_label: Sincronizzazione
+      no_schedule: Solo sincronizzazione abituale
+      hint: "Le sincronizzazioni frequenti incidono sui limiti di richiesta dei provider e alcuni addebitano un costo per ogni richiesta."
+      save: Salva
+    update:
+      updated: Frequenza di sincronizzazione salvata.
+      cleared: Frequenza di sincronizzazione rimossa. La connessione è tornata alla sincronizzazione abituale.

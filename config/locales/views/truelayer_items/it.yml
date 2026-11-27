@@ -1,0 +1,113 @@
+---
+it:
+  truelayer_items:
+    default_name: Connessione TrueLayer
+    redirect_blocked: "Impossibile aprire TrueLayer. Riprova."
+    create:
+      success: Credenziali TrueLayer salvate. Ora puoi collegare una banca.
+    update:
+      success: Credenziali TrueLayer aggiornate.
+    destroy:
+      success: Connessione TrueLayer programmata per l'eliminazione.
+    connect:
+      credentials_required: Inserisci prima l'ID client e il segreto TrueLayer.
+    sync:
+      not_connected: Collega una banca prima di sincronizzare.
+    callback:
+      authorization_error: "Autorizzazione TrueLayer non riuscita: %{error}"
+      authorization_failed: "Impossibile completare la connessione TrueLayer: %{message}"
+      invalid_callback: "L'accesso a TrueLayer è scaduto oppure non corrisponde a questa sessione. Ricomincia."
+      success: "Banca collegata. I conti sono in fase di importazione: configurali al termine della sincronizzazione."
+    truelayer_item:
+      consent_expiring: "L'accesso alla banca scade il %{date}"
+      delete: Elimina connessione
+      deletion_in_progress: eliminazione in corso...
+      error: Errore
+      history_missed: "La cronologia precedente non è stata importata. Ricollega la banca per recuperarla."
+      no_accounts_description: Nessun conto ancora collegato a questa connessione.
+      no_accounts_title: Nessun conto
+      reconnect: Ricollega
+      requires_update: Ricollega questa banca per continuare la sincronizzazione
+      setup_action: Configura nuovi conti
+      setup_description: "%{linked} conti collegati su %{total}. Scegli il tipo dei conti TrueLayer appena importati."
+      setup_needed: Nuovi conti da configurare
+      status: "Sincronizzato %{timestamp} fa"
+      status_never: Mai sincronizzato
+      status_with_summary: "Ultima sincronizzazione %{timestamp} fa • %{summary}"
+      syncing: Sincronizzazione in corso...
+      sync_status:
+        no_accounts: Nessun conto trovato
+        synced:
+          one: "%{count} conto sincronizzato"
+          other: "%{count} conti sincronizzati"
+        partial_setup:
+          one: "%{linked} sincronizzati, %{unlinked} da configurare"
+          other: "%{linked} sincronizzati, %{unlinked} da configurare"
+    subtype_select:
+      placeholder:
+        subtype: Seleziona sottotipo
+        type: Seleziona tipo
+    setup_accounts:
+      account_type_label: "Tipo di conto:"
+      all_accounts_linked: Tutti i tuoi conti TrueLayer sono già configurati.
+      cancel: Annulla
+      choose_account_type: "Scegli il tipo corretto per ogni conto TrueLayer:"
+      create_accounts: Crea conti
+      creating_accounts: Creazione dei conti...
+      kind_account: Conto bancario
+      kind_card: Carta
+      no_accounts_to_setup: Nessun conto da configurare
+      page_title: Configura conti TrueLayer
+      subtitle: Scegli il tipo corretto per i conti importati
+      sync_start_date_help: Le transazioni precedenti a questa data saranno escluse. Lascia vuoto per conservare tutti i dati forniti dalla banca.
+      sync_start_date_label: Importa transazioni a partire dal
+      title: Configura i tuoi conti TrueLayer
+      account_types:
+        skip: Ignora questo conto
+        depository: Conto corrente o di risparmio
+        credit_card: Carta di credito
+        loan: Prestito o mutuo
+      subtype_labels:
+        depository: "Sottotipo di conto:"
+        credit_card: ""
+        loan: "Tipo di prestito:"
+      subtype_messages:
+        credit_card: Le carte di credito verranno configurate automaticamente come conti carta di credito.
+    complete_account_setup:
+      all_skipped: Tutti i conti sono stati ignorati. Non è stato creato alcun conto.
+      creation_failed: "Creazione dei conti non riuscita: %{error}"
+      success:
+        one: "Creato %{count} conto."
+        other: "Creati %{count} conti."
+    select_existing_account:
+      cancel: Annulla
+      description: Scegli il conto TrueLayer da collegare. Le sue transazioni verranno sincronizzate con questo conto.
+      link_account: Collega conto
+      no_accounts: Non ci sono conti TrueLayer da collegare. Collega prima una banca in Impostazioni → Provider.
+      title: "Collega %{account_name} a TrueLayer"
+    link_existing_account:
+      already_linked: Questo conto TrueLayer è già collegato a un altro conto.
+      only_manual: Solo i conti manuali possono essere collegati a TrueLayer.
+      success: "%{account_name} collegato a TrueLayer."
+  settings:
+    providers:
+      truelayer_panel:
+        client_id_label: ID client
+        client_id_placeholder: "es. sure-abc123 (sandbox-... per la banca di prova)"
+        client_secret_label: Segreto client
+        client_secret_placeholder_new: Incolla il segreto client
+        client_secret_placeholder_update: Lascia vuoto per mantenere il segreto attuale
+        connect_bank: Collega una banca
+        consent_expires: "L'accesso alla banca scade il %{date}"
+        reconnect: Ricollega
+        reconnect_required: Riconnessione richiesta
+        remove: Rimuovi
+        remove_confirm: Rimuovere questa connessione bancaria? I conti collegati conserveranno la cronologia ma non verranno più sincronizzati.
+        save_credentials: Salva credenziali
+        step_1_html: "Crea un'app su %{link} e copia l'ID client e il segreto."
+        step_2_html: "Aggiungi %{callback_url} agli URI di reindirizzamento consentiti dell'app."
+        step_3: Salva le credenziali qui sotto, poi collega una banca. Sure importerà l'intera cronologia nei minuti successivi all'autorizzazione.
+        step_4: Le banche del Regno Unito richiedono una nuova autorizzazione ogni 90 giorni. Sure mostrerà il pulsante Ricollega prima della scadenza.
+        sync: Sincronizza
+        syncing: Sincronizzazione in corso...
+        update_credentials: Aggiorna credenziali

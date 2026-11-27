@@ -52,3 +52,5 @@ it:
         resend_confirmation_link: richiedi una nuova email di conferma
         save: Salva
         unconfirmed_email_notice_html: Hai richiesto di cambiare la tua email in %{email}. Vai alla tua email e conferma affinché la modifica abbia effetto. Se non hai ricevuto l'email, controlla la cartella spam, o %{resend_link}.
+
+        invite_multiple: "Aggiungi più membri"

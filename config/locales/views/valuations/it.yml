@@ -21,6 +21,8 @@ it:
       recalculate_notice: "Tutte le transazioni e i saldi futuri verranno ricalcolati sulla base di questa %{change_or_update}."
       change: modifica
       update: aggiornamento
+      action_set: impostare
+      action_update: aggiornare
     create:
       account_updated: Conto aggiornato
     update:
@@ -41,6 +43,8 @@ it:
       valuations: Valore
       value: valore
     new:
+      submit: "Aggiungi aggiornamento del saldo"
+      amount: "Importo"
       title: Nuovo saldo
     show:
       amount: Importo
@@ -58,3 +62,26 @@ it:
       settings: Impostazioni
       opening_balance: "Saldo iniziale"
       update_value: Aggiorna valore
+
+    confirm_create:
+      confirm: Conferma
+      title: Conferma nuovo saldo
+    confirm_update:
+      title: Aggiorna saldo
+      update: Aggiorna
+
+    names:
+      synced_value: "Valore sincronizzato"
+      synced_principal: "Capitale residuo sincronizzato"
+      synced_balance: "Saldo sincronizzato"
+      current_account_value: "Valore attuale del conto"
+      current_balance: "Saldo attuale"
+      current_loan_balance: "Debito residuo attuale"
+      current_market_value: "Valore di mercato attuale"
+      manual_balance_update: "Aggiornamento manuale del saldo"
+      manual_principal_update: "Aggiornamento manuale del capitale"
+      manual_value_update: "Aggiornamento manuale del valore"
+      opening_account_value: "Valore iniziale del conto"
+      opening_balance: "Saldo iniziale"
+      original_principal: "Capitale iniziale"
+      original_purchase_price: "Prezzo di acquisto originale"

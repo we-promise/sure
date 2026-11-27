@@ -1,0 +1,157 @@
+---
+it:
+  providers:
+    sharesight:
+      name: Sharesight
+      connection_description: Collega i tuoi portafogli Sharesight tramite le API di Sharesight
+      institution_name: Sharesight
+  sharesight_accounts:
+    settings_fields:
+      title: Liquidità e dividendi Sharesight
+      description: Scegli dove vengono registrati la liquidità e i dividendi del portafoglio per evitare che Sure li conteggi due volte.
+      cash_mode: Liquidità
+      cash_modes:
+        broker: Detenuta presso il broker
+        settlement: Regolata tramite un altro conto
+        untracked: Non monitorata (solo titoli)
+      cash_mode_help: >-
+        Se la liquidità viene gestita da un altro conto o non viene monitorata, qui saranno visualizzati soltanto i titoli.
+        I movimenti di liquidità delle operazioni verranno compensati con trasferimenti collegati al conto di regolamento.
+      settlement_account: Conto di regolamento
+      settlement_starts_on: Regolamento su questo conto a partire dal
+      settlement_window_days: Giorni necessari alla banca per registrare il movimento
+      settlement_help: >-
+        Ogni acquisto, vendita e dividendo versato sul conto viene confrontato per importo con una transazione del conto
+        e collegato tramite un trasferimento. Se il conto è manuale, viene registrata una transazione.
+        Prima della data iniziale, la liquidità era detenuta presso il broker.
+      choose_account: Scegli un conto
+      no_account: Nessuno
+      funding_account: Conto di finanziamento
+      funding_match_terms: Testo delle transazioni di finanziamento
+      funding_match_terms_placeholder: CMC Share Transfer, CMC Markets
+      funding_help: >-
+        Versamenti e prelievi sul conto di finanziamento il cui nome o le cui note contengono uno di questi termini
+        (separati da virgole) vengono riprodotti qui e collegati come trasferimenti.
+      cash_anchor_amount: Liquidità presso il broker
+      cash_anchor_on: Alla data del
+      cash_anchor_help: >-
+        Per la liquidità che Sharesight non può rilevare: inserisci il saldo alla data indicata.
+        Sure lo aggiornerà con tutti i movimenti registrati successivamente. Aggiornalo ogni volta che verifichi il saldo del broker.
+      dividend_mode: Dividendi e distribuzioni
+      dividend_modes:
+        with_cash: Sul conto che detiene la liquidità
+        other_account: Versati su un altro conto
+        skip: Non importare (sono già presenti tramite un'altra connessione)
+      dividend_mode_help: >-
+        I dividendi pagati restano conteggiati qui come entrate e vengono collegati al versamento sul conto destinatario.
+      dividend_account: Versati su
+      sync_start_date: Importa attività a partire dal
+      sync_start_date_help: Le operazioni e i dividendi precedenti saranno esclusi; quelli già importati verranno rimossi.
+    errors:
+      settlement_account_missing: Scegli il conto usato per il regolamento delle operazioni del portafoglio.
+      dividend_account_missing: Scegli il conto su cui vengono versati i dividendi.
+      cash_anchor_incomplete: Indica sia la liquidità presso il broker sia la data del saldo.
+      invalid_date:
+        settlement_starts_on: La data di inizio del regolamento su questo conto non è valida.
+        cash_anchor_on: La data del saldo presso il broker non è valida.
+        sync_start_date: La data iniziale per l'importazione non è valida.
+      account_not_in_family: "%{name} non appartiene ai tuoi conti."
+      account_is_portfolio: "%{name} è il conto del portafoglio stesso."
+    notices:
+      unsettled_debit: "Non risulta ancora un addebito di %{amount} su %{account} per %{description} del %{date}."
+      unsettled_credit: "Non risulta ancora un accredito di %{amount} su %{account} per %{description} del %{date}."
+      units_drift: "%{account}: Sharesight riporta %{held} %{ticker}, ma le operazioni sommano %{traded}."
+  sharesight_items:
+    defaults:
+      name: Sharesight
+      portfolio_name: "Portafoglio Sharesight %{id}"
+    sharesight_item:
+      deletion_in_progress: Eliminazione in corso
+      syncing: Sincronizzazione in corso
+      requires_update: Il client API richiede attenzione
+      error: Errore
+      synced: "Sincronizzato %{time} fa. %{summary}."
+      never_synced: Mai sincronizzato.
+      setup_accounts: Configura portafogli
+      delete: Elimina
+      accounts_need_setup: Portafogli da configurare
+      accounts_need_setup_description: I portafogli Sharesight devono essere collegati ai conti Sure.
+      no_accounts_discovered: Nessun portafoglio Sharesight ancora individuato.
+      no_accounts_discovered_description: Avvia una sincronizzazione dopo aver salvato il client API per individuare i portafogli.
+    setup_accounts:
+      page_title: Configura portafogli Sharesight
+      dialog_title: Configura i tuoi portafogli Sharesight
+      subtitle: Collega i portafogli Sharesight ai conti di investimento.
+      info_box:
+        title: Importazione tramite API Sharesight
+        items:
+          item_1: Posizioni attuali con prezzi, quantità e valore del portafoglio
+          item_2: Acquisti, vendite, saldi iniziali, restituzioni di capitale e dividendi, inclusi quelli reinvestiti
+          item_3: Versamenti, prelievi, interessi e commissioni dei conti liquidità Sharesight
+      status:
+        fetching_accounts: Recupero dei portafogli da Sharesight...
+        no_accounts_found_title: Nessun portafoglio trovato.
+        no_accounts_found_description: Sure non ha trovato portafogli Sharesight. Controlla che il client API sia valido.
+      available_accounts:
+        title: Portafogli disponibili
+        account_type_investment: Investimento
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "ID portafoglio: %{account_id}"
+      link_existing:
+        description: Oppure collega un portafoglio individuato a un conto di investimento manuale già esistente.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Seleziona un conto...
+      linked_accounts:
+        title: Già collegati
+        linked_to_html: "Collegato a: %{account}"
+      buttons:
+        refresh: Aggiorna
+        cancel: Annulla
+        back_to_settings: Torna alle impostazioni
+        create_selected_accounts: Crea conti selezionati
+        link: Collega
+        done: Fine
+    sync:
+      status:
+        checking_credentials: Verifica delle credenziali Sharesight...
+        importing_portfolios: Importazione dei portafogli Sharesight...
+        checking_configuration: Verifica della configurazione dei portafogli...
+        accounts_need_setup:
+          one: 1 portafoglio Sharesight da configurare...
+          other: "%{count} portafogli Sharesight da configurare..."
+        processing_activity: Elaborazione delle posizioni e dei movimenti...
+        calculating_balances: Calcolo dei saldi...
+    sync_status:
+      no_accounts: Nessun portafoglio Sharesight ancora individuato
+      all_linked:
+        one: 1 portafoglio collegato
+        other: "%{count} portafogli collegati"
+      partial: "%{linked} collegati, %{unlinked} da configurare"
+    select_existing_account:
+      title: Collega portafoglio Sharesight
+      no_accounts_available: Nessun portafoglio Sharesight scollegato disponibile.
+      run_sync_hint: "Avvia una sincronizzazione da Impostazioni > Provider dopo aver salvato il client API."
+      wait_for_sync: Attendi la fine della sincronizzazione di individuazione dei portafogli.
+      balance: Saldo
+      link: Collega
+      cancel: Annulla
+    create:
+      success: Sharesight configurato correttamente.
+    update:
+      success: Configurazione Sharesight aggiornata.
+    destroy:
+      success: Connessione Sharesight programmata per l'eliminazione.
+    select_accounts:
+      not_configured: Sharesight non è configurato.
+    link_existing_account:
+      not_found: Conto o portafoglio Sharesight non trovato.
+      only_manual_investment: Solo i conti di investimento manuali possono essere collegati a Sharesight.
+      already_linked: Questo portafoglio Sharesight è già collegato.
+      success: Collegamento al portafoglio Sharesight completato.
+      failed: Collegamento al portafoglio Sharesight non riuscito.
+    complete_account_setup:
+      success:
+        one: "Creato %{count} conto Sharesight."
+        other: "Creati %{count} conti Sharesight."
+      none_selected: Nessun portafoglio selezionato.
+      none_created: Nessun conto creato.

@@ -7,9 +7,13 @@ it:
       joined_household: Hai aderito alla famiglia.
       message: "%{inviter} ti ha invitato a unirti come %{role}."
       title: Unisciti a %{family}
+      sign_in_existing: Ho già un account
     create:
       failure: Impossibile inviare l'invito
       success: Invito inviato con successo
+      existing_user_added: L'utente è stato aggiunto alla tua famiglia.
+      existing_user_has_family_data: Quell'utente possiede già una famiglia con conti. Deve rimuovere o trasferire quei conti prima di unirsi alla tua.
+      own_email: "Non puoi invitare te stesso."
     destroy:
       failure: Si è verificato un problema nella rimozione dell'invito.
       not_authorized: Non sei autorizzato a gestire gli inviti.
@@ -24,3 +28,28 @@ it:
       submit: Invia invito
       subtitle: Invia un invito per unirsi al tuo account %{moniker} su %{product_name}
       title: Invita qualcuno
+
+    bulk_create:
+      download: "Scarica il rapporto"
+      errors:
+        email_not_queued: "Invito salvato, ma non è stato possibile accodare l'email. Elimina l'invito e riprova."
+        processing_failed: "Impossibile elaborare l'invito. Prima di riprovare, controlla se esiste già un invito in sospeso."
+      invalid_role: "Gli inviti multipli possono essere inviati solo a membri e ospiti."
+      invite_more: "Invita altre persone"
+      no_emails: "Inserisci almeno un indirizzo email."
+      status:
+        invalid: "Invito non riuscito"
+        link_only: "Pronto per la condivisione"
+        sent: "Invito inviato"
+      summary: "%{sent} inviati, %{link_only} pronti da condividere, %{invalid} non riusciti."
+      title: "Risultati degli inviti"
+      too_many: "Puoi invitare fino a %{max} persone alla volta. Riduci il numero di destinatari."
+    bulk_new:
+      emails_label: "Indirizzi email"
+      emails_placeholder: "Inserisci gli indirizzi email separati da virgole o righe nuove"
+      role_guest: "Ospite"
+      role_label: "Ruolo"
+      role_member: "Membro"
+      submit: "Invia inviti"
+      subtitle: "Invita più persone a unirsi al tuo account %{moniker} su %{product_name}"
+      title: "Invita più persone"

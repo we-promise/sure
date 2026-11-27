@@ -1,0 +1,9 @@
+---
+it:
+  activerecord:
+    errors:
+      models:
+        sophtron_item:
+          attributes:
+            base_url:
+              official_hosts_only: deve essere vuoto oppure corrispondere a https://api.sophtron.com/api

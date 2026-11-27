@@ -1,0 +1,56 @@
+---
+it:
+  recurring_occurrences:
+    history_status:
+      paid: Pagato
+      skipped: Ignorato
+      missed: Mancato
+      scheduled: Aperto
+    show:
+      used_up_hint: "Altre scadenze utilizzano già l'intero importo di questa transazione."
+      used_up: "Già utilizzato"
+      amount_left: "%{amount} residui"
+      due_on: "Scadenza %{date}"
+      paid_of: "Pagati %{paid} su %{expected}"
+      paid_headline: "%{amount} pagati"
+      remaining: "%{amount} rimanenti"
+      settled: Pagato integralmente
+      overpaid: più del previsto
+      skipped: Ignorato
+      missed: Segnato come mancato
+      payments: Pagamenti
+      manual_payment: Pagamento manuale
+      unlink: Rimuovi associazione
+      review_heading: Verifica pagamento
+      find_heading: Cerca un pagamento
+      add_heading: Aggiungi un altro pagamento
+      other_matches: Altre possibili corrispondenze
+      no_ranked_candidates: "Non risultano ancora transazioni compatibili con questa scadenza."
+      search_all: Cerca in tutte le transazioni
+      search_placeholder: Cerca transazioni
+      no_candidates: Nessuna transazione vicina alla scadenza da associare.
+      no_search_results: "Nessun risultato per %{query}."
+      link_payment: Associa pagamento
+      not_this_one: Non è questo
+      cant_find: Non trovi la transazione?
+      manual_explainer: "Registra un pagamento effettuato quando nessuna delle transazioni disponibili corrisponde."
+      manual_amount_label: Importo
+      manual_date_label: Data
+      record_payment: Registra pagamento
+      mark_paid: Segna come pagato
+      mark_paid_hint: "Salda il resto senza registrare una transazione."
+      skip: Ignora
+      snooze_week: Rimanda di una settimana
+      reopen: Riapri
+      view_bill: Visualizza scadenza
+    mark_paid:
+      success: Scadenza segnata come pagata
+    skip:
+      success: Scadenza ignorata
+    reopen:
+      success: Scadenza riaperta
+    snooze:
+      success: "Rimandata fino al %{date}"
+      invalid_date: Impossibile interpretare la data
+    override_amount:
+      success: Importo previsto aggiornato

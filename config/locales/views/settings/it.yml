@@ -1,6 +1,11 @@
 ---
 it:
   settings:
+    settings_search:
+      results_label: Impostazioni corrispondenti
+      placeholder: Cerca impostazioni
+      no_results: Nessuna impostazione corrisponde alla ricerca.
+      aria_label: Cerca impostazioni
     encryption_migration_guide: Guida alla configurazione della crittografia e alla migrazione
     settings_nav:
       accounts_label: Conti
@@ -37,11 +42,32 @@ it:
       appearance_label: Aspetto
       bank_sync_label: Sincronizzazione bancaria
       debug_label: Debug
+      background_jobs_label: Job in background
+      system_health_label: Stato del sistema
+      classifier_label: Classificatore
     settings_nav_link_large:
       next: Avanti
       previous: Indietro
     user_avatar_field:
       accepted_formats: JPG o PNG. Max 5MB.
       choose: Carica foto
-      choose_label: (opzionale)
+      choose_label: "(opzionale)"
       change: Cambia foto
+    llm_usages:
+      show:
+        total_requests: Richieste totali
+        avg_cost_per_request: Costo medio/richiesta
+        based_on_requests: Basato su %{with_cost} di %{total} richieste con dati di costo
+    ai_prompts:
+      show:
+        openai_label: OpenAI
+        prompt_instructions: Istruzioni prompt
+    providers:
+      meta:
+        registration_needed: Registrazione richiesta
+      ibkr_panel:
+        disconnect_confirm: Disconnettere Interactive Brokers?
+        save_configuration: Salva configurazione
+        status_configured_prefix: "%{summary}. Visita la scheda"
+        accounts_tab: Conti
+        status_configured_suffix: per gestire i conti rilevati.
