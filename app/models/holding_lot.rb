@@ -16,6 +16,7 @@ class HoldingLot < ApplicationRecord
   scope :opening, -> { where(source_entry_id: nil) }
 
   validates :manual_total_cost, numericality: { greater_than_or_equal_to: 0, less_than: BigDecimal("1e15") }, allow_nil: true
+  validates :original_quantity, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validate :manual_unit_cost_fits, if: :manual_total_cost
 
   def opening?
@@ -66,9 +67,9 @@ class HoldingLot < ApplicationRecord
           upsert_all(derived_rows, unique_by: %i[account_id source_entry_id],
             update_only: %i[security_id acquired_on qty unit_cost currency])
         end
-        if opening_rows.any?
+        if openings && opening_rows.any?
           upsert_all(opening_rows, unique_by: :index_holding_lots_one_opening_lot_per_position,
-            update_only: %i[origin_security_id qty unit_cost currency clamped])
+            update_only: %i[origin_security_id qty original_quantity original_quantity_as_of unit_cost currency clamped])
         end
       end
     end
@@ -91,31 +92,108 @@ class HoldingLot < ApplicationRecord
 
     # Moves lots to another security with their trades. Derived lots keep
     # their own rows. An opening lot moved onto a position with its own is
-    # merged into it: the quantities add, and the cost stays only where both
-    # sides know it and agree, in the same currency, since one figure cannot
-    # stand for two different ones. An opening lot with no units (a clamp
-    # records one) has no cost to weigh, so it is dropped rather than merged;
-    # moved onto one, the units keep their own cost and the lot is no longer a
-    # clamp. The merged lot keeps the target's origin until the next
-    # materialization, which restates it from the latest provider snapshot.
+    # merged into it: remaining and original quantities add, and the cost stays
+    # only where sides with remaining units agree in the same currency, since
+    # one figure cannot stand for two different ones. A clamped lot has no
+    # units to weigh, so it is dropped rather than merged; moved onto one, the
+    # units keep their own cost and the lot is no longer a clamp. An empty
+    # moved lot with historical original_quantity merges its original_quantity
+    # while leaving the target's remaining-unit cost intact, and vice versa.
+    # The merged lot keeps the target's origin until the next materialization,
+    # which restates it from the latest provider snapshot.
     def move!(derived:, opening:, to:)
       derived.update_all(security_id: to.id, updated_at: Time.current)
       opening.find_each do |lot|
         target = where(account_id: lot.account_id, security_id: to.id).opening.first
-        if target && lot.qty.zero?
-          lot.delete
-        elsif target&.qty&.zero?
-          target.update_columns(qty: lot.qty, unit_cost: lot.unit_cost, currency: lot.currency, clamped: false, updated_at: Time.current)
-          lot.delete
-        elsif target
-          unit_cost = target.unit_cost if lot.unit_cost && lot.unit_cost == target.unit_cost && lot.currency == target.currency
-          target.update_columns(qty: target.qty + lot.qty, unit_cost: unit_cost, updated_at: Time.current)
-          lot.delete
+        if target
+          merge_opening!(target, lot)
         else
           lot.update_columns(security_id: to.id, updated_at: Time.current)
         end
       end
     end
+
+    private
+      def merge_opening!(target, lot)
+        if lot.clamped?
+          lot.delete
+          return
+        end
+
+        if target.clamped?
+          replace_opening!(target, lot)
+          return
+        end
+
+        target_orig = target.original_quantity || target.qty
+        lot_orig = lot.original_quantity || lot.qty
+
+        if lot.qty.zero? && lot_orig.zero?
+          lot.delete
+        elsif target.qty.zero? && target_orig.zero?
+          replace_opening!(target, lot)
+        else
+          unit_cost, currency = merged_opening_cost(target, lot)
+          merged_orig, merged_as_of = merged_original_quantity(target, lot, target_orig, lot_orig)
+          target.update_columns(
+            qty: target.qty + lot.qty,
+            original_quantity: merged_orig,
+            original_quantity_as_of: merged_as_of,
+            unit_cost: unit_cost,
+            currency: currency,
+            updated_at: Time.current
+          )
+          lot.delete
+        end
+      end
+
+      def replace_opening!(target, lot)
+        target.update_columns(
+          qty: lot.qty,
+          original_quantity: lot.original_quantity,
+          original_quantity_as_of: lot.original_quantity_as_of,
+          unit_cost: lot.unit_cost,
+          currency: lot.currency,
+          clamped: false,
+          updated_at: Time.current
+        )
+        lot.delete
+      end
+
+      def merged_original_quantity(target, lot, target_orig, lot_orig)
+        target_as_of = target.original_quantity_as_of
+        lot_as_of = lot.original_quantity_as_of
+        return [ target_orig + lot_orig, target_as_of || lot_as_of ] if target_as_of.nil? || lot_as_of.nil? || target_as_of == lot_as_of
+
+        merged_as_of = [ target_as_of, lot_as_of ].max
+        target_scaled = scale_to_date(target.security_id, target_orig, target_as_of, merged_as_of)
+        lot_scaled = scale_to_date(target.security_id, lot_orig, lot_as_of, merged_as_of)
+        [ target_scaled + lot_scaled, merged_as_of ]
+      end
+
+      def scale_to_date(security_id, qty, from, to)
+        return qty if from >= to
+
+        factor = Security::Split.where(security_id: security_id)
+          .where("ex_date > ? AND ex_date <= ?", from, to)
+          .order(:ex_date)
+          .reduce(Rational(1)) { |acc, split| acc * split.ratio }
+        factor == 1 ? qty : Security::Split.scale(qty, factor)
+      end
+
+      def merged_opening_cost(target, lot)
+        if lot.qty.zero? && target.qty.zero?
+          [ nil, target.currency ]
+        elsif lot.qty.zero?
+          [ target.unit_cost, target.currency ]
+        elsif target.qty.zero?
+          [ lot.unit_cost, lot.currency ]
+        elsif lot.unit_cost && lot.unit_cost == target.unit_cost && lot.currency == target.currency
+          [ target.unit_cost, target.currency ]
+        else
+          [ nil, target.currency ]
+        end
+      end
   end
 
   private

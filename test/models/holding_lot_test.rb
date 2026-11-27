@@ -310,8 +310,22 @@ class HoldingLotTest < ActiveSupport::TestCase
 
       clamped = HoldingLot.opening.find_by!(security: @gapped)
       assert_equal [ 0, true ], [ clamped.qty, clamped.clamped ]
+      assert_equal 0, clamped.original_quantity, "clamped position records 0 original quantity"
       assert_equal [ @gapped.id ], HoldingLot.where(clamped: true).pluck(:security_id), "nothing flagged on the controls"
     end
+  end
+
+  test "opening lot original_quantity validates non-negative" do
+    setup_account
+    lot = HoldingLot.new(account: @account, security: priced_security("FIFN", 10), qty: 0, original_quantity: -1, currency: "USD")
+    assert_not lot.valid?
+    assert_includes lot.errors[:original_quantity], "must be greater than or equal to 0"
+
+    lot.original_quantity = 0
+    assert lot.valid?
+
+    lot.original_quantity = BigDecimal("2.5")
+    assert lot.valid?
   end
 
   # One share through a 1-for-3 split is stored as 0.333...3 to 18 places, and
@@ -708,6 +722,57 @@ class HoldingLotTest < ActiveSupport::TestCase
 
     assert_equal [ 5, 50 ], [ kept.reload.qty, kept.unit_cost ]
     assert_not HoldingLot.exists?(empty.id)
+  end
+
+  test "merging a consumed opening lot keeps target cost and adds original_quantity" do
+    setup_account
+    old_security = priced_security("LOTC1", 30)
+    new_security = priced_security("LOTC2", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 0, price: 30, amount: 0, currency: "USD")
+    consumed = opening_lot(old_security, 0)
+    consumed.update!(original_quantity: 4, unit_cost: nil)
+    kept = opening_lot(new_security, 5)
+    kept.update!(original_quantity: 5, unit_cost: 50, currency: "USD")
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ 5, 9, 50, "USD" ], [ kept.reload.qty, kept.original_quantity, kept.unit_cost, kept.currency ]
+    assert_not HoldingLot.exists?(consumed.id)
+  end
+
+  test "merging an open lot onto a consumed opening lot uses moved cost and adds original_quantity" do
+    setup_account
+    old_security = priced_security("LOTC3", 30)
+    new_security = priced_security("LOTC4", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 5, price: 30, amount: 150, currency: "EUR")
+    moved = opening_lot(old_security, 5)
+    moved.update!(original_quantity: 5, unit_cost: 50, currency: "EUR")
+    consumed_target = opening_lot(new_security, 0)
+    consumed_target.update!(original_quantity: 4, unit_cost: nil, currency: "USD")
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ 5, 9, 50, "EUR" ],
+      [ consumed_target.reload.qty, consumed_target.original_quantity, consumed_target.unit_cost, consumed_target.currency ]
+    assert_not HoldingLot.exists?(moved.id)
+  end
+
+  test "merging opening lots with different original_quantity_as_of dates scales to the newer date across a split on target" do
+    setup_account
+    old_security = priced_security("LOTD1", 30)
+    new_security = priced_security("LOTD2", 30)
+    Security::Split.create!(security: new_security, ex_date: d(6), numerator: 2, denominator: 1, source: "manual")
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 5, price: 30, amount: 150, currency: "USD")
+    moved = opening_lot(old_security, 5)
+    moved.update!(original_quantity: 5, original_quantity_as_of: d(8), unit_cost: 50, currency: "USD")
+    target = opening_lot(new_security, 0)
+    target.update!(original_quantity: 4, original_quantity_as_of: d(4), unit_cost: nil, currency: "USD")
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ 5, 13, d(8), 50, "USD" ],
+      [ target.reload.qty, target.original_quantity, target.original_quantity_as_of, target.unit_cost, target.currency ]
+    assert_not HoldingLot.exists?(moved.id)
   end
 
   # --- User-set lot cost --------------------------------------------------------
