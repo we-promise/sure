@@ -1,8 +1,12 @@
 class Balance::SyncCache
   # start_date skips entries before it; only safe when the caller seeds balances from a persisted prior day.
-  def initialize(account, start_date: nil)
+  #
+  # `report_missing_rates: false` is for read paths. A page render must not
+  # write diagnostics for data the next sync will inspect anyway.
+  def initialize(account, start_date: nil, report_missing_rates: true)
     @account = account
     @start_date = start_date
+    @report_missing_rates = report_missing_rates
     @unconvertible_entry_count = 0
     @unconvertible_holding_count = 0
   end
@@ -146,6 +150,8 @@ class Balance::SyncCache
     end
 
     def report_missing_rates(message:, counts:, missing_rate_pairs:)
+      return unless @report_missing_rates
+
       DebugLogEntry.capture(
         category: "sync",
         level: "warn",
