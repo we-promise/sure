@@ -8,7 +8,7 @@ class DataCacheClearJob < ApplicationJob
   # the refreshed exchange rates.
   #
   # A sync that is already running would have its freshly written balances
-  # deleted, and sync_later would only join it, so the job waits for it.
+  # deleted while it is still writing them, so the job waits for it to finish.
   def perform(family)
     return retry_later(family) if sync_running?(family)
 

@@ -103,13 +103,14 @@ class PlaidItemTest < ActiveSupport::TestCase
     assert_equal "link-token", result
   end
 
-  test "sync_later_with_follow_up queues a follow-up after an active sync" do
+  test "a sync requested during an active sync queues a follow-up" do
     active_sync = @plaid_item.syncs.create!
     active_sync.start!
 
-    assert_enqueued_with job: PlaidFollowUpSyncJob do
-      @plaid_item.sync_later_with_follow_up
+    assert_difference "@plaid_item.syncs.count", 1 do
+      @plaid_item.sync_later
     end
+    assert @plaid_item.syncs.pending.where.not(id: active_sync.id).exists?
   end
 
   test "get_update_link_token re-raises other Plaid errors so the controller can surface them" do
@@ -213,7 +214,7 @@ class PlaidItemTest < ActiveSupport::TestCase
 
   test "user sync preserves follow-up sync while requesting provider refresh" do
     @plaid_item.expects(:request_transactions_refresh_later).once
-    @plaid_item.expects(:sync_later_with_follow_up).once
+    @plaid_item.expects(:sync_later).once
 
     @plaid_item.sync_later_with_provider_refresh
   end

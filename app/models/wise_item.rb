@@ -113,8 +113,8 @@ class WiseItem < ApplicationRecord
   end
 
   # For a balance the user has just linked to a Sure account. A sync in flight
-  # picked the accounts it processes before the link existed, and sync_later
-  # would only reuse it, so the balance then gets processing of its own.
+  # picked the accounts it processes before the link existed, so the balance
+  # then gets processing of its own rather than waiting for the next sync.
   def sync_linked_account_later(wise_account)
     if syncing?
       WiseItem::ProcessLinkedAccountJob.perform_later(wise_account)

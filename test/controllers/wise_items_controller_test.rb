@@ -33,9 +33,8 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
 
   # Linking a balance to a Sure account
 
-  # A sync in flight has already picked the accounts it processes, and
-  # sync_later only reuses it, so the new account used to stay empty until the
-  # next sync.
+  # A sync in flight has already picked the accounts it processes, so the new
+  # account needs its own pass instead of waiting for the next sync.
   test "a balance set up while the connection syncs is processed straight away" do
     wise_account = wise_accounts(:checking)
     wise_account.update!(raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001 },

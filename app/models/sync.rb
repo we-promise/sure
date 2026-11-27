@@ -163,6 +163,17 @@ class Sync < ApplicationRecord
     in_progress? && created_at > VISIBLE_FOR.ago
   end
 
+  # True while this sync has not started and another sync of the same syncable is running, so
+  # that two syncs never calculate the same syncable at once. Running syncs older than
+  # VISIBLE_FOR are not waited for: their job may have been lost (see `visible`).
+  def waiting_for_running_sync?
+    pending? && Sync.syncing
+      .where(syncable_type: syncable_type, syncable_id: syncable_id)
+      .where.not(id: id)
+      .where("syncs.created_at > ?", VISIBLE_FOR.ago)
+      .exists?
+  end
+
   def terminal?
     completed? || failed? || stale?
   end
@@ -365,8 +376,9 @@ class Sync < ApplicationRecord
       # loaded its own row.
       return unless Sync.where(id: id).pick(:full_resync_requested)
 
-      # Another partial sync can already be running. Mark it instead of
-      # reusing it through sync_later, which cannot widen a running window.
+      # Another partial sync can already be running, and its window cannot
+      # widen. Mark it to resync in full when it finishes rather than queuing
+      # a partial follow-up behind it.
       if (running = syncable.syncs.visible.where(status: "syncing").first)
         running.update!(full_resync_requested: true)
       else

@@ -93,9 +93,10 @@ class EnableBankingItem::Syncer
     raise
   end
 
-  # An authorization that completes while a sync runs reuses that sync
-  # through sync_later. While a full-history request newer than the latest
-  # sync is open, run one more sync while the bank still serves full history.
+  # A sync that is running when an authorization completes may have read the
+  # item before the full-history request. While a full-history request newer
+  # than the latest sync is open, run one more sync while the bank still
+  # serves full history (joining a sync the callback already queued).
   # That covers a request that arrived after the sync's last read of it, and
   # one the sync read but whose early fetch failed (one retry). Read from the
   # database, since the callback writes it from another process.
@@ -104,9 +105,8 @@ class EnableBankingItem::Syncer
   # sync row lock. The check runs once that transaction has committed: then
   # sync_later doesn't take the item row lock while the sync row is locked (a
   # deadlock with a sync that holds the item lock and waits for the sync row),
-  # and a callback whose sync_later still reused this sync has committed its
-  # request before the read. A later callback finds no running sync and
-  # starts its own.
+  # and a callback that ran during this sync has committed its request before
+  # the read.
   #
   # The block runs outside Sync#perform_post_sync's rescue, so it handles its
   # own errors: one that escaped would skip finalizing the parent sync.

@@ -20,11 +20,11 @@ class SophtronTransactionsReprocessJob < ApplicationJob
     job.class.perform_later(job.arguments.first, reprocess: false)
   end
 
-  # A running sync may have read the amounts before they were re-signed, and
-  # sync_later would join it rather than start a fresh calculation. sync_later
-  # only joins a sync for Sync::VISIBLE_FOR after it was created, so these
-  # retries outlast the guard, and running out of them means something else
-  # is wrong; it is logged rather than joined.
+  # A running sync may have read the amounts before they were re-signed, so
+  # the job waits for it to finish before requesting a fresh calculation. A
+  # sync counts as running for at most Sync::VISIBLE_FOR after it was created,
+  # so these retries outlast that, and running out of them means something
+  # else is wrong; it is logged.
   retry_on AccountSyncInProgress, wait: SYNC_WAIT, attempts: (Sync::VISIBLE_FOR / SYNC_WAIT).ceil + 2 do |job, error|
     job.record_failure(error, "Gave up waiting for a running sync after re-signing Sophtron transactions")
   end

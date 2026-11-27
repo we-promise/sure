@@ -2,8 +2,8 @@
 
 # Processes a Wise balance that was linked to a Sure account while its
 # connection was already syncing. That sync picked the accounts it processes
-# before the link existed, and WiseItem#sync_later only reuses a sync in
-# flight, so without this the new account stayed empty until the next sync.
+# before the link existed, so the balance is processed on its own right away
+# instead of waiting for the connection's next sync.
 class WiseItem::ProcessLinkedAccountJob < ApplicationJob
   queue_as :high_priority
 

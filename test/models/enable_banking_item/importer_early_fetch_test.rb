@@ -161,8 +161,8 @@ class EnableBankingItem::ImporterEarlyFetchTest < ActiveSupport::TestCase
     provider.define_singleton_method(:get_account_transactions) do |**p|
       requests << p
       if p[:account_id] == "early-uuid" && !EnableBankingAccount.exists?(uid: "new_uid")
-        # The OAuth callback commits while the linked account is fetched; its
-        # sync_later reuses this sync.
+        # The OAuth callback commits while the linked account is fetched,
+        # during this running sync.
         EnableBankingAccount.create!(enable_banking_item: item, name: "New", uid: "new_uid", account_id: "new-uuid", currency: "EUR")
         EnableBankingItem.where(id: item.id).update_all(full_history_fetch_requested_at: Time.current)
       end
