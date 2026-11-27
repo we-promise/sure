@@ -10,11 +10,9 @@ class AccountsLogoViewTest < ActionView::TestCase
 
     assert_select "span.relative" do
       assert_select "div", text: @account.name.first
-      assert_select "img[src='https://example.com/logo.png']" do |images|
-        on_error = images.first["onerror"]
-        assert on_error.end_with?(ProviderLogo::REMOVE_ON_ERROR), "the image removes itself"
-        assert_includes on_error, "removeAttribute('data-turbo-permanent')", "a kept sidebar wrapper stops being kept"
-      end
+      assert_select "img[src='https://example.com/logo.png'][data-controller='image-fallback'][data-action='error->image-fallback#remove']" \
+        "[data-image-fallback-retry-value='true'][data-image-fallback-release-permanent-value='true']"
+      assert_select "img[onerror]", count: 0
     end
   end
 

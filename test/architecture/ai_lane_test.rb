@@ -14,7 +14,9 @@ class AiLaneTest < ActiveSupport::TestCase
       Ai::ToolJob.new(Assistant::Function::ImportBankStatement.name, users(:family_admin), {}) => :extract_pdf,
       Ai::ToolJob.new(Assistant::Function::SearchFamilyFiles.name, users(:family_admin), {}) => :search_documents,
       IndexAccountStatementJob.new => :embed,
+      IndexFamilyDocumentJob.new => :embed,
       VectorStore::IndexStatusJob.new => :embed,
+      VectorStore::PurgeDocumentFileJob.new => :embed,
       VectorStore::RequeueIndexPollsJob.new => :embed,
       Ai::ShadowJob.new(:categorize) => :shadow_categorize
     }

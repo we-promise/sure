@@ -122,6 +122,29 @@ class PdfImport < Import
     end
   end
 
+  # The cancellation callable passed through the reading and extraction calls. It reloads so a
+  # request already sent sees a Stop made while it was running.
+  def ai_cancelled? = reload.cancelled?
+
+  # Stop is a write under the same row lock as the job's status writes: a job finishing between
+  # the page render and the click either owns the claim and completes, or leaves it to be stopped.
+  def cancel_ai_processing!
+    with_lock do
+      return false unless importing?
+
+      update!(status: :cancelled, error: nil, reread_token: nil)
+    end
+
+    true
+  end
+
+  def stoppable_by?(user)
+    return false unless importing?
+
+    statement = account_statement
+    statement.present? ? statement.manageable_by?(user) : AccountStatement.statement_manager?(user)
+  end
+
   # A PdfImport's importing status is a processing claim (AI extraction or
   # publish). Release a lost claim (release_lost_claim!) so the user can re-trigger
   # processing, mirroring ProcessPdfJob's own reclaim; lost reverts keep the
@@ -289,8 +312,8 @@ class PdfImport < Import
   end
 
   # What the document is (Ai::Generations::ReadPdf), read the way the upload asked for.
-  def process_with_ai(reread_token: nil)
-    outcome = pdf_reading.read(read_as: requested_way)
+  def process_with_ai(reread_token: nil, cancelled: nil)
+    outcome = pdf_reading.read(read_as: requested_way, cancelled:)
     analysis = Analysis.new(summary: outcome.value[:summary], document_type: outcome.value[:document_type] || "other",
                             extracted_data: outcome.value[:extracted_data])
     return unless with_claim(reread_token) { update!(ai_summary: analysis.summary, document_type: analysis.document_type) }
@@ -302,11 +325,11 @@ class PdfImport < Import
   # The statement's rows (Ai::Generations::ExtractBankStatement), read the way the upload asked
   # for, or by Auto starting from the way that last passed for this account and model. A failing
   # extraction is kept and flagged for review, never dropped.
-  def extract_transactions(reread_token: nil)
+  def extract_transactions(reread_token: nil, cancelled: nil)
     return unless statement_with_transactions?
 
     reading = pdf_reading
-    outcome = reading.extract(read_as: requested_way, start: self.class.last_passing_way(account:, model: reading.model&.name))
+    outcome = reading.extract(read_as: requested_way, start: self.class.last_passing_way(account:, model: reading.model&.name), cancelled:)
     # String keys: every reader here digs with strings, and jsonb keeps the hash as assigned
     # until the record is reloaded.
     data = Ai::Generations::ExtractBankStatement.statement(outcome.value).deep_stringify_keys
@@ -378,9 +401,11 @@ class PdfImport < Import
 
   # Runs a write only while this attempt still owns the import. A long OCR read can outlive the
   # claim's recovery window; once another reread takes over, the stale job must leave the new
-  # attempt's data and token alone. A blank token is a direct read/publish on an unclaimed import.
+  # attempt's data and token alone. Stop clears the token as well as the status, so cancellation
+  # needs its own check: a late model result must not overwrite a stopped import.
   def with_claim(token)
     with_lock do
+      next false if cancelled?
       next false if token.blank? && reread_token.present?
       next false if token.present? && !(importing? && reread_token == token)
 

@@ -1,0 +1,7 @@
+---
+en:
+  pdf_imports:
+    ai_processings:
+      destroy:
+        stopped: Stopped. The model may still finish this request.
+        not_processing: This import is no longer processing.

@@ -56,6 +56,8 @@ class SplitsController < ApplicationController
     @entry.sync_account_later
 
     redirect_to transactions_path, notice: t("splits.update.success")
+  rescue Entry::SplitPartTransferredError
+    redirect_to transactions_path, alert: t("splits.edit.part_transferred")
   rescue ActiveRecord::RecordInvalid => e
     redirect_to transactions_path, alert: e.message
   end
@@ -75,6 +77,8 @@ class SplitsController < ApplicationController
     @entry.sync_account_later
 
     redirect_to transactions_path, notice: t("splits.destroy.success")
+  rescue Entry::SplitPartTransferredError
+    redirect_to transactions_path, alert: t("splits.edit.part_transferred")
   end
 
   private

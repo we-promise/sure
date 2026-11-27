@@ -120,9 +120,11 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         end
 
         # Stored on the draft so a retry whose response was lost can repeat the check warning.
+        # The transactions come from the statement, so the import keeps its privacy.
         created = family.imports.create!(
           type: "TransactionImport",
           account: account,
+          account_statement: pdf_import.account_statement,
           raw_file_str: csv_content,
           source_pdf_import_id: pdf_import.id,
           source_import: pdf_import,
@@ -187,6 +189,17 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         success: false,
         error: "PDF import not found",
         message: "Could not find a PDF import with ID: #{params["pdf_import_id"]}"
+      }
+    end
+
+    # The web lets only those who can manage a statement act on its import, and
+    # the import made here carries the statement, so the same rule applies.
+    statement = pdf_import.account_statement
+    if statement && !statement.manageable_by?(user)
+      return {
+        success: false,
+        error: "statement_not_manageable",
+        message: "You can view this statement but not import from it"
       }
     end
 

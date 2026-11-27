@@ -590,6 +590,33 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
     assert result.failing?
     assert_equal :missing_binary, result.failure_code
+    assert I18n.exists?("admin.system_health.show.ai.failure_codes.#{result.failure_code}", :en), "System health has no text for the reason"
+  end
+
+  test "the PDF vision probe reports a renderer that fails as such, and logs what it did" do
+    Rails.logger.stubs(:error)
+    { failed: "pdftoppm failed (exit 1)", blank_page: "pdftoppm rendered page 1 as 1x1", timeout: "pdftoppm took longer than 30s" }.each do |code, message|
+      Pdf::PageImages.stubs(:render).raises(Pdf::PageImages::Error.new(message, code:))
+      DebugLogEntry.expects(:capture).with { |entry| entry[:metadata][:renderer_error] == "#{code}: #{message}" }
+
+      result = @probe.pdf_vision_processing(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                                            model: "vision-model-#{code}")
+
+      assert_equal :render_failed, result.failure_code
+    end
+    %i[en de].each { |locale| assert I18n.exists?("admin.system_health.show.ai.failure_codes.render_failed", locale, fallback: false) }
+  end
+
+  test "the PDF vision probe reports a model that takes no images as such, not as a failed request" do
+    Pdf::PageImages.stubs(:render).returns([ "png" ])
+    stub_ai(:extract_pdf, raises: Ai::Error::UnsupportedInput.new("image input is not supported", status: 500))
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.pdf_vision_processing(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                                          model: "text-model")
+
+    assert_equal :images_refused, result.failure_code
   end
 
   test "a PDF probe neither skips nor marks down production's routes" do

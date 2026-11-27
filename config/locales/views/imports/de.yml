@@ -324,6 +324,7 @@ de:
         status:
           in_progress: Wird ausgeführt
           uploading: Zeilen werden verarbeitet
+          cancelled: Gestoppt
           reverting: Wird rückgängig gemacht
           revert_failed: Rückgängig machen fehlgeschlagen
           complete: Abgeschlossen
@@ -383,7 +384,7 @@ de:
       missing_upload: Deine Datei ist nicht bei uns angekommen. Lade sie bitte noch einmal hoch.
       document_too_large: Dokument ist zu groß. Maximale Größe %{max_size} MB.
       invalid_document_file_type: Ungültiger Dokumenttyp für den aktiven Vektorspeicher.
-      document_uploaded: Dokument wurde erfolgreich hochgeladen.
+      document_uploaded: Hochgeladen; die Datei ist durchsuchbar, sobald sie indiziert wurde.
       document_upload_failed: Das Dokument ließ sich nicht in den Vektorspeicher hochladen. Versuch es noch einmal.
       document_provider_not_configured: Kein Vektorspeicher für Dokument-Uploads konfiguriert.
       duplicate_pdf_unavailable: Diese PDF liegt bereits als Auszug vor, auf den du keinen Zugriff hast.
@@ -408,6 +409,8 @@ de:
       processing_title: Deine PDF wird verarbeitet
       processing_description: Wir analysieren dein Dokument mit KI. Das kann einen Moment dauern. Du bekommst eine E-Mail, sobald die Analyse fertig ist.
       check_status: Status prüfen
+      stop: Stopp
+      stopped_title: Verarbeitung gestoppt
       back_to_dashboard: Zurück zur Übersicht
       failed_title: Verarbeitung fehlgeschlagen
       failed_description: Deine PDF ließ sich nicht verarbeiten. Versuch es noch einmal oder wende dich an den Support.

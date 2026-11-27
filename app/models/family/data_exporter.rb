@@ -78,7 +78,9 @@ class Family::DataExporter
     private_constant :SanitizedCsv
 
     def generate_sanitized_csv
-      CSV.generate do |csv|
+      # Every cell is quoted so a locale separator inside a value can never split
+      # it into a second, unescaped cell.
+      CSV.generate(force_quotes: true) do |csv|
         yield SanitizedCsv.new(csv)
       end
     end
@@ -918,9 +920,9 @@ class Family::DataExporter
         merchant = split_operand_record(:merchants, split["merchant_id"])
         tags = Array(split["tag_ids"]).filter_map { |id| split_operand_record(:tags, id) }
 
-        row["category"] = category.name if category
-        row["merchant"] = merchant.name if merchant
-        row["tags"] = tags.map(&:name) if tags.any?
+        row["category"] = operand_name(category.name) if category
+        row["merchant"] = operand_name(merchant.name) if merchant
+        row["tags"] = tags.map { |tag| operand_name(tag.name) } if tags.any?
         row
       end
 
@@ -938,7 +940,7 @@ class Family::DataExporter
     def resolve_multi_tag_operand(value)
       ids = value.to_s.split(",")
       records = ids.map { |id| resolve_rule_operand_record(:tags, id, fallback_to_name: true) }
-      names = records.each_with_index.map { |record, i| record&.name || ids[i] }
+      names = records.each_with_index.map { |record, i| record ? operand_name(record.name) : ids[i] }
       refs = records.compact.map { |record| rule_value_ref("Tag", record) }
 
       {
@@ -957,7 +959,7 @@ class Family::DataExporter
       record = relation && resolve_rule_operand_record(relation, value, fallback_to_name: fallback_to_name)
 
       {
-        value: record&.name || value,
+        value: record ? operand_name(record.name) : value,
         value_ref: record ? rule_value_ref(type, record) : nil
       }
     end
@@ -999,10 +1001,25 @@ class Family::DataExporter
     end
 
     def serialize_conditions_for_csv(conditions)
-      conditions.where(parent_id: nil).map { |c| serialize_condition(c) }.to_json
+      with_csv_operand_names { conditions.where(parent_id: nil).map { |c| serialize_condition(c) }.to_json }
     end
 
     def serialize_actions_for_csv(actions)
-      actions.map { |a| serialize_action(a) }.to_json
+      with_csv_operand_names { actions.map { |a| serialize_action(a) }.to_json }
+    end
+
+    # Category, merchant and tag names inside rule operands must read exactly like
+    # the same names in categories.csv, merchants.csv and transactions.csv (which
+    # are escaped), or an import creates a second record for the same name. Only
+    # the CSV path does this; all.ndjson and value_ref keep the raw names.
+    def with_csv_operand_names
+      @csv_operand_names = true
+      yield
+    ensure
+      @csv_operand_names = false
+    end
+
+    def operand_name(name)
+      @csv_operand_names ? CsvSanitizer.sanitize(name) : name
     end
 end
