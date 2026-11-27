@@ -40,9 +40,9 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
       "FRESHNESS_BALANCE_TYPES drifted from BALANCE_TYPE_PRIORITY - every accepted spelling here must also be recognized there"
   end
 
-  test "PERIOD_BOUNDARY_TYPES lists both the ISO code and descriptive spelling for OPBD and PRCD" do
-    assert_equal %w[opbd openingbooked prcd previouslyclosedbooked].sort, EnableBankingItem::Importer::PERIOD_BOUNDARY_TYPES.sort,
-      "PERIOD_BOUNDARY_TYPES must cover both spellings for OPBD/PRCD, mirroring FRESHNESS_BALANCE_TYPES, or the freshness guard silently skips ASPSPs that send the descriptive spelling"
+  test "PERIOD_BOUNDARY_TYPES lists both the ISO code and descriptive spelling for CLBD, OPBD and PRCD" do
+    assert_equal %w[clbd closingbooked opbd openingbooked prcd previouslyclosedbooked].sort, EnableBankingItem::Importer::PERIOD_BOUNDARY_TYPES.sort,
+      "PERIOD_BOUNDARY_TYPES must cover both spellings for CLBD/OPBD/PRCD, mirroring FRESHNESS_BALANCE_TYPES, or the freshness guard silently skips ASPSPs that send the descriptive spelling"
   end
 
   test "fetch_and_update_balance prefers booked balance before available balance" do
@@ -337,6 +337,160 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("50.00"), @enable_banking_account.reload.current_balance
+  end
+
+  # Commerzbank DE: CLBD stays at the last closed business day, ITAV/XPCD carry
+  # today's bookings and only a last_change_date_time.
+  test "fetch_and_update_balance prefers a newer expected balance over a stale closing booked balance" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        clbd("1000.00", reference_date: "2026-11-25"),
+        {
+          balance_type: "ITAV",
+          last_change_date_time: "2026-11-27T18:32:22.389463",
+          balance_amount: { amount: "2500.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "XPCD",
+          last_change_date_time: "2026-11-27T18:32:22.389400",
+          balance_amount: { amount: "2500.01", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("2500.01"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance keeps a closing booked balance from the same day as the interim balances" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        clbd("1000.00", reference_date: "2026-11-27"),
+        {
+          balance_type: "XPCD",
+          last_change_date_time: "2026-11-27T18:32:22",
+          balance_amount: { amount: "2500.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("1000.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance prefers a newer interim booked balance over a same-day available one" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        clbd("100.00", reference_date: "2026-11-25"),
+        {
+          balance_type: "ITAV",
+          reference_date: "2026-11-27",
+          balance_amount: { amount: "900.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "ITBD",
+          reference_date: "2026-11-27",
+          balance_amount: { amount: "150.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("150.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance prefers a newer opening booked balance over a same-day available one when replacing a stale closing booked balance" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        clbd("1000.00", reference_date: "2026-11-26"),
+        {
+          balance_type: "ITAV",
+          reference_date: "2026-11-27",
+          balance_amount: { amount: "6000.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "OPBD",
+          reference_date: "2026-11-27",
+          balance_amount: { amount: "1100.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("1100.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance keeps a stale closing booked balance on a credit card over a newer available balance" do
+    link_account(CreditCard.create!)
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        clbd("100.00", reference_date: "2026-11-25"),
+        {
+          balance_type: "ITAV",
+          reference_date: "2026-11-27",
+          balance_amount: { amount: "900.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("100.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance replaces a stale closing booked balance on a credit card with a newer expected balance" do
+    link_account(CreditCard.create!)
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        clbd("100.00", reference_date: "2026-11-25"),
+        {
+          balance_type: "ITAV",
+          reference_date: "2026-11-27",
+          balance_amount: { amount: "900.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "XPCD",
+          reference_date: "2026-11-26",
+          balance_amount: { amount: "120.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("120.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance treats a descriptive-spelling closing booked balance as stale too" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        clbd("100.00", reference_date: "2026-11-25").merge(balance_type: "closingBooked"),
+        {
+          balance_type: "expected",
+          reference_date: "2026-11-27",
+          balance_amount: { amount: "200.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("200.00"), @enable_banking_account.reload.current_balance
   end
 
   test "fetch_and_update_balance falls back to the first balance when only unprioritized types are present" do
