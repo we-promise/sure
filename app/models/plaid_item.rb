@@ -104,6 +104,7 @@ class PlaidItem < ApplicationRecord
     end
 
     Rails.cache.delete(transactions_refresh_cache_key) unless enqueued_job
+    enqueued_job
   end
 
   def sync_later_with_provider_refresh

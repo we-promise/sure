@@ -19,7 +19,8 @@ class SyncScheduledItemsJobTest < ActiveJob::TestCase
 
   test "a Plaid connection is asked to refresh, as every other sync entry point does" do
     due_schedule(@plaid_item)
-    PlaidItem.any_instance.expects(:sync_later_with_provider_refresh).once
+    PlaidItem.any_instance.expects(:request_transactions_refresh_later).once
+    PlaidItem.any_instance.expects(:sync_later_with_follow_up).once
 
     SyncScheduledItemsJob.perform_now
   end
@@ -77,7 +78,7 @@ class SyncScheduledItemsJobTest < ActiveJob::TestCase
   test "keeps going when one connection fails to sync, and records the failure for support" do
     due_schedule(@plaid_item)
     due_schedule(@wise_item)
-    PlaidItem.any_instance.stubs(:sync_later_with_provider_refresh).raises(StandardError, "boom")
+    PlaidItem.any_instance.stubs(:sync_later_with_follow_up).raises(StandardError, "boom")
 
     assert_difference -> { @wise_item.syncs.count }, 1 do
       assert_nothing_raised { SyncScheduledItemsJob.perform_now }
@@ -87,6 +88,45 @@ class SyncScheduledItemsJobTest < ActiveJob::TestCase
     assert_equal [ "provider_sync", "error", "SyncScheduledItemsJob", "plaid" ], [ entry.category, entry.level, entry.source, entry.provider_key ]
     assert_equal @plaid_item.family, entry.family
     assert_equal({ "syncable_type" => "PlaidItem", "syncable_id" => @plaid_item.id, "error_class" => "StandardError" }, entry.metadata)
+  end
+
+  test "a run whose sync could not be started stays due for the next tick" do
+    schedule = due_schedule(@plaid_item)
+    schedule.update!(interval_minutes: 20160)
+    due_at = 1.minute.ago.change(usec: 0)
+    schedule.update_column(:next_run_at, due_at)
+    PlaidItem.any_instance.stubs(:request_transactions_refresh_later).returns(nil)
+    PlaidItem.any_instance.stubs(:sync_later_with_follow_up).raises(RedisClient::CannotConnectError, "queue down")
+
+    assert_nothing_raised { SyncScheduledItemsJob.perform_now }
+
+    assert_equal due_at, schedule.reload.next_run_at
+    assert_includes SyncSchedule.due, schedule
+  end
+
+  # The queued refresh ends in a sync of its own; retrying the run would
+  # pay Plaid for a second refresh.
+  test "a run whose Plaid refresh was queued is not retried when its sync could not be started" do
+    schedule = due_schedule(@plaid_item)
+    schedule.update!(interval_minutes: 20160)
+    schedule.update_column(:next_run_at, 1.minute.ago)
+    PlaidItem.any_instance.stubs(:request_transactions_refresh_later).returns(true)
+    PlaidItem.any_instance.stubs(:sync_later_with_follow_up).raises(RedisClient::CannotConnectError, "queue down")
+
+    assert_nothing_raised { SyncScheduledItemsJob.perform_now }
+
+    assert_operator schedule.reload.next_run_at, :>, Time.current
+    assert_not_includes SyncSchedule.due, schedule
+  end
+
+  test "a run whose sync started moves on to the next interval" do
+    schedule = due_schedule(@plaid_item)
+    schedule.update!(interval_minutes: 20160)
+    schedule.update_column(:next_run_at, 1.minute.ago)
+
+    SyncScheduledItemsJob.perform_now
+
+    assert_operator schedule.reload.next_run_at, :>, Time.current
   end
 
   private
