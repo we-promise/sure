@@ -970,8 +970,13 @@ class Goal < ApplicationRecord
   # static chart annotations (target line, projection-end / shortfall,
   # pending-pledge badge) so the Stimulus controller only has to render
   # strings server-side rather than build them with its own Intl calls.
+  #
+  # `today` is read once and handed to the saved history, the milestones and
+  # the projection end value, so those three agree on the day. `status` and
+  # `required_monthly` still read the clock for themselves.
   def projection_payload
-    series_values = balance_series_values
+    today = Date.current
+    series_values = balance_series_values(today)
     # The historical series tracks the whole linked-account balances. Scale it
     # to this goal's backing so the saved line meets current_balance at "today"
     # instead of dropping off a cliff for earmarked goals. Assumes the earmark
@@ -994,12 +999,12 @@ class Goal < ApplicationRecord
 
     earliest = series_values.first&.date || created_at.to_date
     target_amt = target_amount.to_d
-    proj_end = projection_end_amount
+    proj_end = projection_end_amount(as_of: today)
 
     {
       saved_series: saved_series,
       start_date: earliest.to_s,
-      today: Date.current.to_s,
+      today: today.to_s,
       target_date: target_date&.to_s,
       target_amount: target_amt.to_f,
       target_amount_label: Money.new(target_amt, currency).format(precision: 0),
@@ -1014,16 +1019,55 @@ class Goal < ApplicationRecord
       status: status.to_s,
       projection_end_value: proj_end.to_f,
       projection_end_label: Money.new(proj_end, currency).format(precision: 0),
-      projection_shortfall_label: (pace_measurable? && target_amt > proj_end ? Money.new(target_amt - proj_end, currency).format(precision: 0) : nil)
+      projection_shortfall_label: (pace_measurable? && target_amt > proj_end ? Money.new(target_amt - proj_end, currency).format(precision: 0) : nil),
+      milestones: milestones(as_of: today)
     }
+  end
+
+  MILESTONE_PERCENTS = [ 25, 50, 75 ].freeze
+  # How far ahead a milestone can be dated. Past this it is undated: a goal
+  # with no target date has nothing else to stop a tiny pace dating one
+  # thousands of years out.
+  MILESTONE_HORIZON_MONTHS = 600
+
+  # The quarter, half and three-quarter marks on the way to the target. One
+  # already saved past is `reached`; one ahead is dated by when the projection
+  # line reaches it: months of 30.44 days at the current pace, the arithmetic
+  # projection_end_amount uses, rounded up to the day. A mark is undated when
+  # the pace is not measurable or not positive; when the goal is not saving
+  # toward a finish line (paused, archived, completed, or a reserve); when it
+  # falls after the target date; and, for a goal with no target date, when it
+  # is more than MILESTONE_HORIZON_MONTHS away. The reference date is handed
+  # in: the projection payload passes the one it stamps as `today`.
+  def milestones(as_of:)
+    target = target_amount.to_d
+    return [] unless target.positive?
+
+    saved = current_balance.to_d
+    monthly = pace.to_d
+    datable = !(paused? || archived? || completed? || maintained?) && pace_measurable? && monthly.positive?
+
+    MILESTONE_PERCENTS.map do |percent|
+      amount = target * percent / 100
+      reached = saved >= amount
+      months = (amount - saved) / monthly if !reached && datable
+      date = (as_of + (months * 30.44).ceil) if months
+      date = nil if date && (target_date ? date > target_date : months > MILESTONE_HORIZON_MONTHS)
+
+      {
+        percent: percent, amount: amount.to_f, reached: reached, date: date&.to_s,
+        label: date && I18n.t("goals.show.milestone", percent: percent, date: I18n.l(date, format: "%b %Y"))
+      }
+    end
   end
 
   # Projected balance at the target_date given the current pace. Mirrors
   # the JS calculation so the server can pre-format the chart annotation
-  # without re-rendering after each Stimulus draw.
-  def projection_end_amount
+  # without re-rendering after each Stimulus draw. Measured from the
+  # payload's own `today`, so the end value and the line agree on the day.
+  def projection_end_amount(as_of:)
     return current_balance.to_d if target_date.nil? || !pace_measurable?
-    months = ((target_date - Date.current).to_f / 30.44).clamp(0.0, Float::INFINITY)
+    months = ((target_date - as_of).to_f / 30.44).clamp(0.0, Float::INFINITY)
     projected = current_balance.to_d + (pace.to_d * months)
     [ current_balance.to_d, projected ].max
   end
@@ -1518,13 +1562,15 @@ class Goal < ApplicationRecord
       end
     end
 
-    def balance_series_values
+    # The 90 days of saved history ending on `today`, the payload's own date, so
+    # a request that crosses midnight doesn't start the window a day late.
+    def balance_series_values(today)
       return [] if linked_accounts.empty?
 
       Balance::ChartSeriesBuilder.new(
         account_ids: linked_accounts.map(&:id),
         currency: currency,
-        period: Period.last_90_days,
+        period: Period.new(start_date: today - 90, end_date: today),
         strict_currency_conversion: true
       ).balance_series.values
     rescue Money::ConversionError => e

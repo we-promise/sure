@@ -145,6 +145,7 @@ pt-PT:
       notes: Notas
       funding_last_30d: últimos 30 dias
       funding_last_90d: últimos 90 dias
+      milestone: "%{percent}% · %{date}"
       status_callout:
         depleted: "faltam %{amount} para o nível — reforce-o para repor a reserva"
         behind: "poupe mais %{amount}/mês para recuperar o atraso"
