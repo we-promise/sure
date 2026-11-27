@@ -926,6 +926,20 @@ class UserTest < ActiveSupport::TestCase
     assert_equal %w[balance_sheet net_worth_chart], @user.dashboard_section_order
   end
 
+  test "an opt-in section stays hidden until added, without touching the saved hidden list" do
+    @user.update!(preferences: { "hidden_sections" => %w[net_worth_chart] })
+    assert_equal %w[net_worth_chart account_balances], @user.dashboard_hidden_sections_including_opt_in
+
+    @user.update_dashboard_section_hidden("account_balances", false)
+    assert_equal %w[net_worth_chart], @user.reload.dashboard_hidden_sections_including_opt_in
+    assert_equal %w[net_worth_chart], @user.dashboard_hidden_sections
+    assert_equal %w[account_balances], @user.preferences["shown_sections"]
+
+    @user.update_dashboard_section_hidden("account_balances", true)
+    assert_equal %w[net_worth_chart account_balances], @user.reload.dashboard_hidden_sections_including_opt_in
+    assert_equal %w[net_worth_chart], @user.dashboard_hidden_sections
+  end
+
   test "update_dashboard_preferences keeps a hidden section's place when the rest are reordered" do
     @user.update!(preferences: {
       "section_order" => %w[cashflow_sankey net_worth_chart balance_sheet outflows_donut],

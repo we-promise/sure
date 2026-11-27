@@ -63,6 +63,67 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "account", @user.reload.cashflow_sankey_group_by
   end
 
+  test "the account balances widget starts hidden and is offered in the hidden list" do
+    get root_path, params: { customize: true }
+    assert_response :ok
+
+    assert_select "section[data-section-key='account_balances']", 0
+    assert_select "form[action='#{dashboard_section_hidden_path("account_balances")}']", 1
+  end
+
+  test "dashboard renders the account balances widget with its full-screen dialog" do
+    @user.update_dashboard_section_hidden("account_balances", false)
+    get root_path
+    assert_response :ok
+
+    assert_select "section[data-section-key='account_balances']" do
+      assert_select "[data-controller='account-balances-chart']"
+      assert_select "button[data-action='click->cashflow-expand#open']"
+      assert_select "dialog#account-balances-expanded-dialog" do
+        assert_select "[data-account-balances-chart-target='saveError'][hidden]", 1, "a failed save is reported in full screen too"
+      end
+    end
+    assert_select "section[data-section-key='account_balances'][data-controller~='cashflow-expand']"
+  end
+
+  test "update_preferences saves the account balances settings, keeping only valid values" do
+    patch "/dashboard/preferences", params: {
+      preferences: { account_balances: { horizon: 6, hide_negative: true, hidden_account_ids: [ accounts(:investment).id ], list_open: true, unknown: "x" } }
+    }, as: :json
+    assert_response :success
+
+    settings = @user.reload.account_balances_settings
+    assert_equal 6, settings["horizon"]
+    assert settings["hide_negative"]
+    assert settings["list_open"]
+    assert_equal [ accounts(:investment).id ], settings["hidden_account_ids"]
+    assert_not settings.key?("unknown")
+    assert_not @user.preferences.fetch("account_balances").key?("unknown"), "unknown keys are not stored either"
+
+    patch "/dashboard/preferences", params: { preferences: { account_balances: { horizon: 7 } } }, as: :json
+    assert_equal 6, @user.reload.account_balances_settings["horizon"], "an unsupported forecast length is ignored"
+
+    patch "/dashboard/preferences", params: { preferences: { account_balances: { shown_account_ids: [ accounts(:depository).id ] } } }, as: :json
+    assert_equal [ accounts(:depository).id ], @user.reload.account_balances_settings["shown_account_ids"], "a mostly hidden selection is saved as the shown list"
+    patch "/dashboard/preferences", params: { preferences: { account_balances: { shown_account_ids: nil } } }, as: :json
+    assert_nil @user.reload.account_balances_settings["shown_account_ids"], "and cleared again"
+
+    patch "/dashboard/preferences", params: { preferences: { account_balances: { horizon: [] } } }, as: :json
+    assert_response :success
+    patch "/dashboard/preferences", params: { preferences: { account_balances: { horizon: "soon" } } }, as: :json
+    assert_equal 6, @user.reload.account_balances_settings["horizon"], "a non-numeric length is dropped, not read as 0 (Off)"
+  end
+
+  test "the account balances widget can be added and hidden again like the others" do
+    assert_includes @user.dashboard_hidden_sections_including_opt_in, "account_balances"
+
+    patch dashboard_section_hidden_path("account_balances"), params: { hidden: false }
+    assert_not_includes @user.reload.dashboard_hidden_sections_including_opt_in, "account_balances"
+
+    patch dashboard_section_hidden_path("account_balances"), params: { hidden: true }
+    assert_includes @user.reload.dashboard_hidden_sections_including_opt_in, "account_balances"
+  end
+
   test "update_preferences persists dashboard section width" do
     patch "/dashboard/preferences", params: {
       preferences: { dashboard_section_layout: { cashflow_sankey: { col_span: "single" } } }

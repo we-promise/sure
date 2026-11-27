@@ -870,17 +870,33 @@ class User < ApplicationRecord
     preferences&.[]("section_order") || default_dashboard_section_order
   end
 
+  # Widgets that start hidden, so they don't change anyone's dashboard until
+  # the user adds them from the hidden list. Adding one is saved under
+  # "shown_sections": for these, hidden is the default rather than a choice.
+  OPT_IN_DASHBOARD_SECTIONS = %w[account_balances].freeze
+
   def dashboard_hidden_sections
     preferences&.[]("hidden_sections") || []
+  end
+
+  # The saved hidden sections plus the opt-in ones not added yet.
+  def dashboard_hidden_sections_including_opt_in
+    dashboard_hidden_sections | (OPT_IN_DASHBOARD_SECTIONS - (preferences&.[]("shown_sections") || []))
   end
 
   # Adds or removes one key rather than taking the whole list, so a stale tab
   # hiding one widget can't bring back another hidden elsewhere.
   def update_dashboard_section_hidden(section_key, hidden)
     with_locked_preferences do |prefs|
-      keys = dashboard_hidden_sections - [ section_key ]
-      keys << section_key if hidden
-      prefs["hidden_sections"] = keys
+      if OPT_IN_DASHBOARD_SECTIONS.include?(section_key)
+        shown = (prefs["shown_sections"] || []) - [ section_key ]
+        shown << section_key unless hidden
+        prefs["shown_sections"] = shown
+      else
+        keys = dashboard_hidden_sections - [ section_key ]
+        keys << section_key if hidden
+        prefs["hidden_sections"] = keys
+      end
     end
   end
 
@@ -1048,6 +1064,42 @@ class User < ApplicationRecord
   # enabled without a second chart rendering underneath the cash flow widget.
   def cashflow_preview_enabled?
     preferences&.dig("cashflow_preview_enabled") == true
+  end
+
+  ACCOUNT_BALANCES_HORIZONS = [ 0, 1, 3, 6, 12 ].freeze
+  ACCOUNT_BALANCES_DEFAULTS = {
+    "horizon" => 3, "hide_negative" => false, "show_transactions" => false,
+    "hidden_account_ids" => [], "shown_account_ids" => nil, "list_open" => false, "open_groups" => []
+  }.freeze
+
+  # Account Balances widget settings: forecast length in months, whether the
+  # axis hides the negative side, whether the transaction lane shows, which
+  # accounts are left out of the chart (or, when most are, which are shown),
+  # and the state of its account list.
+  def account_balances_settings
+    ACCOUNT_BALANCES_DEFAULTS.merge(self.class.sanitize_account_balances_settings(preferences&.dig("account_balances") || {}))
+  end
+
+  # Keeps only known keys with values of the right shape, so the widget can
+  # save its settings through the generic dashboard preferences endpoint.
+  def self.sanitize_account_balances_settings(raw)
+    raw = raw.to_h.stringify_keys
+    boolean = ActiveModel::Type::Boolean.new
+    {}.tap do |clean|
+      horizon = raw["horizon"].is_a?(Integer) || raw["horizon"].is_a?(String) ? Integer(raw["horizon"], exception: false) : nil
+      clean["horizon"] = horizon if ACCOUNT_BALANCES_HORIZONS.include?(horizon)
+      %w[hide_negative show_transactions list_open].each do |key|
+        clean[key] = boolean.cast(raw[key]) == true if raw.key?(key)
+      end
+      %w[hidden_account_ids open_groups].each do |key|
+        clean[key] = Array(raw[key]).map(&:to_s).reject(&:blank?).uniq.first(1000) if raw.key?(key)
+      end
+      # Saved instead of hidden_account_ids when most accounts are hidden;
+      # nil clears it.
+      if raw.key?("shown_account_ids")
+        clean["shown_account_ids"] = raw["shown_account_ids"].nil? ? nil : Array(raw["shown_account_ids"]).map(&:to_s).reject(&:blank?).uniq.first(1000)
+      end
+    end
   end
 
   private

@@ -377,6 +377,7 @@ Rails.application.routes.draw do
   patch "release_highlight/dismiss", to: "release_highlights#dismiss"
   get "feedback", to: "pages#feedback"
   get "dashboard/cash_flow", to: "cash_flows#show", as: :dashboard_cash_flow
+  get "dashboard/account_balances/transactions", to: "account_balance_transactions#index", as: :dashboard_account_balance_transactions
   patch "dashboard/preferences", to: "pages#update_preferences"
   patch "dashboard/sections/:section_key/hidden", to: "pages#update_section_hidden", as: :dashboard_section_hidden
 
