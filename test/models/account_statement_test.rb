@@ -560,25 +560,128 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal [ "pdf_text" ], statement.sanitized_parser_output["metadata_sources"]
   end
 
-  test "skips Trade Republic balances when the statement currency differs" do
-    statement = AccountStatement.create_from_upload!(
-      family: @family,
-      account: nil,
-      file: Rack::Test::UploadedFile.new(
-        file_fixture("account_statements/trade_republic_it_2026_04.pdf"),
-        "application/pdf",
-        true,
-        original_filename: "statement.pdf"
-      )
-    )
+  test "stores the family currency as a default when an accountless upload only prints a bare dollar sign" do
+    statement = upload_card_statement(account: nil)
 
     assert_equal "USD", statement.currency
+    assert statement.currency_source_family_default?
+    assert_equal BigDecimal("435.88"), statement.closing_balance
+  end
+
+  test "a bare dollar balance keeps its currency when the family currency changes" do
+    statement = upload_card_statement(account: nil)
+
+    @family.update!(currency: "EUR")
+
+    statement.reload
+    assert_equal "USD", statement.currency
+    assert_equal Money.new(BigDecimal("435.88"), "USD"), statement.closing_balance_money
+    statement.save!
+    assert_equal Money.new(BigDecimal("435.88"), "USD"), statement.reload.closing_balance_money
+  end
+
+  test "keeps the PDF currency and balances for an accountless upload" do
+    statement = upload_trade_republic_statement(account: nil)
+
+    assert_equal "EUR", statement.currency
+    assert statement.currency_source_document?
     assert_equal Date.new(2026, 4, 1), statement.period_start_on
     assert_equal Date.new(2026, 4, 30), statement.period_end_on
+    assert_equal BigDecimal("1101.14"), statement.opening_balance
+    assert_equal BigDecimal("11948.59"), statement.closing_balance
+    assert_equal "€", statement.sanitized_parser_output.dig("pdf", "balance_readings", "summary_table", "opening_balance", "currency")
+    assert_equal true, statement.sanitized_parser_output.dig("pdf", "balances_detected")
+    assert_equal "summary_table", statement.sanitized_parser_output.dig("pdf", "balances_source")
+  end
+
+  test "links an accountless EUR statement to a EUR account keeping its currency and balances" do
+    eur_account = @family.accounts.create!(name: "EUR account", balance: 0, currency: "EUR", accountable: Depository.new)
+    statement = upload_trade_republic_statement(account: nil)
+
+    statement.link_to_account!(eur_account)
+
+    assert_equal "EUR", statement.reload.currency
+    assert_equal BigDecimal("1101.14"), statement.opening_balance
+    assert_equal BigDecimal("11948.59"), statement.closing_balance
+  end
+
+  test "adopting a different-currency account clears edited balances" do
+    statement = upload_trade_republic_statement(account: nil)
+    statement.update!(closing_balance: 400)
+
+    statement.update!(account: @account)
+
+    assert_equal "USD", statement.reload.currency
+    assert_nil statement.opening_balance
+    assert_nil statement.closing_balance
+  end
+
+  test "drops the PDF balances when an accountless statement is linked to an account in another currency" do
+    statement = upload_trade_republic_statement(account: nil)
+
+    statement.link_to_account!(@account)
+
+    assert_equal "USD", statement.reload.currency
     assert_nil statement.opening_balance
     assert_nil statement.closing_balance
     assert_equal false, statement.sanitized_parser_output.dig("pdf", "balances_detected")
     assert_nil statement.sanitized_parser_output.dig("pdf", "balances_source")
+  end
+
+  test "linking an accountless statement to an account in another currency clears its edited balances" do
+    statement = upload_trade_republic_statement(account: nil)
+    statement.update!(closing_balance: 400)
+
+    statement.link_to_account!(@account)
+
+    assert_equal "USD", statement.reload.currency
+    assert_nil statement.opening_balance
+    assert_nil statement.closing_balance
+  end
+
+  test "keeps a typed balance when an accountless statement without a currency gets an account in the family currency" do
+    statement = upload_card_statement(account: nil, text: "nothing to read")
+    assert statement.currency_source_family_default?
+
+    statement.update!(closing_balance: 250, account: accounts(:credit_card))
+
+    assert_equal "USD", statement.reload.currency
+    assert_equal BigDecimal("250"), statement.closing_balance
+  end
+
+  test "linking an accountless statement without a currency to an account in the family currency keeps its balances" do
+    statement = upload_card_statement(account: nil, text: "nothing to read")
+    statement.update!(closing_balance: 250)
+
+    statement.link_to_account!(accounts(:credit_card))
+
+    assert_equal "USD", statement.reload.currency
+    assert_equal BigDecimal("250"), statement.closing_balance
+  end
+
+  test "a balance typed on an accountless statement without a currency keeps its currency when the family currency changes" do
+    statement = upload_card_statement(account: nil, text: "nothing to read")
+    statement.update!(closing_balance: 250)
+    @family.update!(currency: "EUR")
+
+    statement.reload
+    assert_equal "USD", statement.currency
+    assert_equal Money.new(250, "USD"), statement.closing_balance_money
+
+    statement.link_to_account!(accounts(:credit_card))
+
+    assert_equal BigDecimal("250"), statement.reload.closing_balance
+  end
+
+  test "linking an accountless statement without a currency to an account in another currency clears its balances" do
+    eur_account = @family.accounts.create!(name: "EUR account", balance: 0, currency: "EUR", accountable: Depository.new)
+    statement = upload_card_statement(account: nil, text: "nothing to read")
+    statement.update!(closing_balance: 250)
+
+    statement.link_to_account!(eur_account)
+
+    assert_equal "EUR", statement.reload.currency
+    assert_nil statement.closing_balance
   end
 
   test "reads a two-digit-year period from a statement pdf with a dateless filename" do
@@ -1246,6 +1349,19 @@ class AccountStatementTest < ActiveSupport::TestCase
   end
 
   private
+
+    def upload_trade_republic_statement(account:)
+      AccountStatement.create_from_upload!(
+        family: @family,
+        account: account,
+        file: Rack::Test::UploadedFile.new(
+          file_fixture("account_statements/trade_republic_it_2026_04.pdf"),
+          "application/pdf",
+          true,
+          original_filename: "statement.pdf"
+        )
+      )
+    end
 
     def upload_card_statement(account:, text: CARD_STATEMENT_TEXT)
       Pdf::TextExtractor.stubs(:pages).returns([ text ])

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_100100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -53,7 +53,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
     t.string "content_sha256"
     t.string "content_type", limit: 100, null: false
     t.datetime "created_at", null: false
-    t.string "currency", limit: 3
+    t.string "currency", limit: 3, null: false
+    t.string "currency_source", null: false
     t.uuid "family_id", null: false
     t.string "filename", limit: 255, null: false
     t.string "institution_name_hint", limit: 200
@@ -82,6 +83,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
     t.check_constraint "char_length(filename::text) <= 255", name: "chk_account_statements_filename_length"
     t.check_constraint "content_sha256 IS NULL OR content_sha256::text ~ '^[0-9a-f]{64}$'::text", name: "chk_account_statements_content_sha256"
     t.check_constraint "currency IS NULL OR char_length(currency::text) <= 3", name: "chk_account_statements_currency_length"
+    t.check_constraint "currency_source::text = ANY (ARRAY['document'::character varying::text, 'account'::character varying::text, 'user'::character varying::text, 'family_default'::character varying::text])", name: "chk_account_statements_currency_source"
     t.check_constraint "institution_name_hint IS NULL OR char_length(institution_name_hint::text) <= 200", name: "chk_account_statements_institution_hint_length"
     t.check_constraint "match_confidence IS NULL OR match_confidence >= 0::numeric AND match_confidence <= 1::numeric", name: "chk_account_statements_match_confidence"
     t.check_constraint "parser_confidence IS NULL OR parser_confidence >= 0::numeric AND parser_confidence <= 1::numeric", name: "chk_account_statements_parser_confidence"
