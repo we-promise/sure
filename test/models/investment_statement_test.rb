@@ -2996,6 +2996,62 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(200), @statement.day_change.previous
   end
 
+  test "day_change_coverage counts the current holdings day_change sums against all of them" do
+    account = create_investment_account(balance: 1000)
+    covered = Security.create!(ticker: "COV", name: "Covered")
+    uncovered = Security.create!(ticker: "UNCOV", name: "Uncovered")
+    Holding.create!(account: account, security: covered, date: 1.day.ago.to_date, qty: 1, price: 100, amount: 100, currency: "USD")
+    Holding.create!(account: account, security: covered, date: Date.current, qty: 1, price: 110, amount: 110, currency: "USD")
+    Holding.create!(account: account, security: uncovered, date: Date.current, qty: 1, price: 50, amount: 50, currency: "USD")
+
+    assert_equal [ 1, 2 ], @statement.day_change_coverage
+    assert_equal Money.new(10, "USD"), @statement.day_change.value
+  end
+
+  test "unrealized_missing_cost_basis_count counts non-cash holdings with no cost basis" do
+    account = create_investment_account(balance: 1000)
+    assert_equal 0, @statement.unrealized_missing_cost_basis_count
+
+    Holding.create!(account: account, security: Security.create!(ticker: "KNOWN", name: "Known"), date: Date.current,
+                    qty: 1, price: 10, amount: 10, cost_basis: 8, currency: "USD")
+    Holding.create!(account: account, security: Security.create!(ticker: "NOBASIS", name: "No basis"), date: Date.current,
+                    qty: 1, price: 10, amount: 10, currency: "USD")
+    Holding.create!(account: account, security: Security.create!(ticker: "CASHX", name: "Cash", kind: "cash"), date: Date.current,
+                    qty: 5, price: 1, amount: 5, currency: "USD")
+
+    assert_equal 1, InvestmentStatement.new(@family, user: nil).unrealized_missing_cost_basis_count
+  end
+
+  test "unrealized_gains_trend has no figure when every holding with a cost basis has no rate" do
+    usd = create_investment_account(balance: 1000)
+    Holding.create!(account: usd, security: Security.create!(ticker: "NOBASIS", name: "No basis"), date: Date.current,
+                    qty: 1, price: 10, amount: 10, currency: "USD")
+    yen = create_investment_account(balance: 1200, currency: "JPY")
+    assert_nil ExchangeRate.find_by(from_currency: "JPY", to_currency: "USD"), "the premise: JPY has no rate into USD"
+    Holding.create!(account: yen, security: Security.create!(ticker: "YENX", name: "Yen listed"), date: Date.current,
+                    qty: 1, price: 1_200, amount: 1_200, cost_basis: 1_000, currency: "JPY")
+
+    statement = InvestmentStatement.new(@family, user: nil)
+    assert_equal 1, statement.unrealized_unconvertible_count
+    assert_nil statement.unrealized_gains_trend
+
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", rate: 0.0067, date: Date.current)
+    assert_in_delta 1_200 * 0.0067, InvestmentStatement.new(@family, user: nil).unrealized_gains_trend.current.amount, 0.001
+  end
+
+  test "portfolio_value_unconvertible_count counts accounts whose currency has no rate" do
+    create_investment_account(balance: 1000, currency: "USD")
+    assert_equal 0, @statement.portfolio_value_unconvertible_count
+
+    create_investment_account(balance: 500, currency: "EUR")
+    statement = InvestmentStatement.new(@family, user: nil)
+    assert_equal 1, statement.portfolio_value_unconvertible_count
+    assert_equal 1000, statement.portfolio_value
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", rate: 1.1, date: Date.current)
+    assert_equal 0, InvestmentStatement.new(@family, user: nil).portfolio_value_unconvertible_count
+  end
+
   test "holdings table rows with the same figure keep a fixed order in both directions" do
     account = create_investment_account(balance: 10_000)
     %w[Beta Alpha Gamma].each_with_index do |name, i|

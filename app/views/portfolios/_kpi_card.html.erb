@@ -1,0 +1,30 @@
+<%# locals: (icon:, label:, money:, trend: nil, hint: nil) %>
+
+<%# Two value types, one card: `money` is a Money and `trend` a Trend that
+    carries its own colour and percentage. %>
+
+<div class="bg-container-inset rounded-lg p-4">
+  <div class="flex items-center gap-2 mb-3">
+    <%= icon(icon, size: "sm") %>
+    <span class="text-sm text-secondary"><%= label %></span>
+  </div>
+
+  <% if !money.nil? %>
+    <p class="text-xl font-semibold text-primary privacy-sensitive">
+      <%= format_money(money) %>
+    </p>
+  <% elsif !trend.nil? %>
+    <p class="text-xl font-semibold privacy-sensitive" style="color: <%= trend.color %>">
+      <%= format_money(trend.value) %>
+      <% unless trend.direction.flat? %>
+        <span class="text-base font-normal">(<%= trend.percent_formatted %>)</span>
+      <% end %>
+    </p>
+  <% else %>
+    <p class="text-xl font-semibold text-secondary"><%= t("portfolios.kpi_row.no_data") %></p>
+  <% end %>
+
+  <% if hint.present? %>
+    <p class="text-xs text-secondary mt-1"><%= hint %></p>
+  <% end %>
+</div>

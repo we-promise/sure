@@ -17,7 +17,7 @@ class Portfolio::SectionRegistry
   # The built-in section keys, in declaration order. The preferences
   # endpoint accepts only these, so a saved order or collapsed set cannot
   # carry arbitrary strings into the user's preferences.
-  KEYS = %w[holdings accounts].freeze
+  KEYS = %w[kpis value_chart holdings accounts].freeze
 
   # Everything an account card's logo reads, preloaded onto the cards.
   CARD_PRELOADS = [ { logo_attachment: :blob }, :accountable, :plaid_account, :simplefin_account, { account_providers: :provider } ].freeze
@@ -75,6 +75,22 @@ class Portfolio::SectionRegistry
     def built_in_sections
       [
         {
+          key: "kpis",
+          title: "portfolios.sections.kpis",
+          partial: "portfolios/kpi_row",
+          locals: shared_locals.merge(kpis: kpis),
+          visible: true,
+          collapsible: true
+        },
+        {
+          key: "value_chart",
+          title: "portfolios.sections.value_chart",
+          partial: "portfolios/value_chart",
+          locals: shared_locals.merge(series: (statement.value_series(period: period) unless value_unavailable?)),
+          visible: true,
+          collapsible: true
+        },
+        {
           key: "holdings",
           title: "portfolios.sections.holdings",
           partial: "portfolios/holdings",
@@ -91,6 +107,36 @@ class Portfolio::SectionRegistry
           collapsible: true
         }
       ]
+    end
+
+    # The six KPI figures, read from the statement here so the partial only
+    # formats them.
+    def kpis
+      @kpis ||= begin
+        {
+          value: (statement.portfolio_value_money unless value_unavailable?),
+          value_unconvertible: statement.portfolio_value_unconvertible_count,
+          day_change: (statement.day_change unless value_unavailable?),
+          day_change_coverage: statement.day_change_coverage,
+          unrealized: (statement.unrealized_gains_trend unless value_unavailable?),
+          unrealized_missing_cost_basis: statement.unrealized_missing_cost_basis_count,
+          unrealized_unconvertible: statement.unrealized_unconvertible_count,
+          period_return: statement.period_return_trend(period: period),
+          period_return_unconvertible: statement.period_return_unconvertible_count(period: period),
+          net_contributions: (statement.net_contributions(period: period) unless value_unavailable?),
+          income: (statement.totals(period: period).total_income unless value_unavailable?)
+        }
+      end
+    end
+
+    # True when no investment account converts into the family currency.
+    # Every figure built from converted balances is then a zero that reads as
+    # a real one, so the value chart and every KPI card but the period return
+    # show "not enough data" instead.
+    def value_unavailable?
+      return @value_unavailable if defined?(@value_unavailable)
+
+      @value_unavailable = statement.portfolio_value_unconvertible_count == statement.investment_accounts.size
     end
 
     def holdings_rows

@@ -45,6 +45,12 @@ class InvestmentStatement
     Money.new(portfolio_value, family.currency)
   end
 
+  # How many investment accounts #portfolio_value leaves out because their
+  # currency has no rate into the family currency.
+  def portfolio_value_unconvertible_count
+    investment_accounts.to_a.count { |a| !convertible?(a.currency) }
+  end
+
   # Total cash in investment accounts
   def cash_balance
     investment_accounts.sum { |a| convert_to_family_currency(a.cash_balance, a.currency) }
@@ -330,8 +336,9 @@ class InvestmentStatement
     holdings = holdings_with_avg_costs
     return nil if holdings.empty?
 
-    # Only include holdings with known cost basis in the calculation
-    holdings_with_cost_basis = holdings.select(&:avg_cost)
+    # Only include holdings with known cost basis in the calculation, and a
+    # currency that converts: one without a rate would add zero to both legs.
+    holdings_with_cost_basis = holdings.select { |h| h.avg_cost && convertible?(h.currency) }
     return nil if holdings_with_cost_basis.empty?
 
     current = holdings_with_cost_basis.sum do |h|
@@ -345,6 +352,18 @@ class InvestmentStatement
       current: Money.new(current, family.currency),
       previous: Money.new(previous, family.currency)
     )
+  end
+
+  # How many holdings #unrealized_gains_trend leaves out for want of a cost
+  # basis, by the rule #data_quality_issues flags them with.
+  def unrealized_missing_cost_basis_count
+    holdings_with_avg_costs.count { |holding| !holding.security.cash? && holding.avg_cost.nil? }
+  end
+
+  # How many holdings with a cost basis #unrealized_gains_trend leaves out
+  # because their currency has no rate into the family currency.
+  def unrealized_unconvertible_count
+    holdings_with_avg_costs.count { |holding| holding.avg_cost && !convertible?(holding.currency) }
   end
 
   # How many investment accounts #period_return_trend leaves out of the
@@ -492,14 +511,7 @@ class InvestmentStatement
 
   # Day change across portfolio, summed in family currency
   def day_change
-    changes = current_holdings.to_a.filter_map do |h|
-      t = holding_day_change(h)
-      next nil unless t
-      [
-        convert_to_family_currency(t.current.amount, h.currency),
-        convert_to_family_currency(t.previous.amount, h.currency)
-      ]
-    end
+    changes = day_change_legs
 
     return nil if changes.empty?
 
@@ -507,6 +519,13 @@ class InvestmentStatement
       current: Money.new(changes.sum { |c, _| c }, family.currency),
       previous: Money.new(changes.sum { |_, p| p }, family.currency)
     )
+  end
+
+  # [covered, total]: how many current holdings #day_change sums, against how
+  # many there are. A holding without an amount or a previous snapshot, or in
+  # a currency with no rate into the family currency, is left out of it.
+  def day_change_coverage
+    [ day_change_legs.size, current_holdings.to_a.size ]
   end
 
   # Time- and money-weighted returns, volatility, drawdown and the drivers
@@ -729,6 +748,27 @@ class InvestmentStatement
       return numeric if from_currency == family.currency
       rate = exchange_rates[from_currency]
       rate ? numeric * rate : 0
+    end
+
+    # Whether #convert_to_family_currency has a rate for `currency`, rather
+    # than counting it at zero.
+    def convertible?(currency)
+      currency == family.currency || !exchange_rates[currency].nil?
+    end
+
+    # Each current holding's day change legs in family currency, for the
+    # holdings that have a previous snapshot and a currency that converts.
+    # Memoized.
+    def day_change_legs
+      @day_change_legs ||= current_holdings.to_a.filter_map do |h|
+        next nil unless convertible?(h.currency)
+        t = holding_day_change(h)
+        next nil unless t
+        [
+          convert_to_family_currency(t.current.amount, h.currency),
+          convert_to_family_currency(t.previous.amount, h.currency)
+        ]
+      end
     end
 
     def all_time_totals

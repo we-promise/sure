@@ -12,8 +12,9 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
   test "registers the built-in sections with their partials and locals" do
     sections = registry.sections
 
+    assert_equal %w[kpis value_chart holdings accounts], Portfolio::SectionRegistry::KEYS
     assert_equal Portfolio::SectionRegistry::KEYS, sections.map { |s| s[:key] }
-    assert_equal %w[portfolios/holdings portfolios/accounts], sections.map { |s| s[:partial] }
+    assert_equal %w[portfolios/kpi_row portfolios/value_chart portfolios/holdings portfolios/accounts], sections.map { |s| s[:partial] }
     assert sections.all? { |s| s[:collapsible] }
 
     # Every partial gets its locals passed in: none of them reaches for
@@ -30,6 +31,48 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     empty_statement = InvestmentStatement.new(families(:empty), user: nil)
     empty = Portfolio::SectionRegistry.new(statement: empty_statement, period: @period, as_of: @as_of, user: @user).sections
     assert_not empty.find { |s| s[:key] == "accounts" }[:visible]
+  end
+
+  # The KPI row and the value chart speak for themselves when empty: each says
+  # there is not enough data rather than disappearing. (The controller shows
+  # the whole-page empty state anyway.)
+  test "the KPI row and the value chart stay visible for a family with no data" do
+    empty_statement = InvestmentStatement.new(families(:empty), user: nil)
+    empty = Portfolio::SectionRegistry.new(statement: empty_statement, period: @period, as_of: @as_of, user: @user).sections
+
+    assert_equal %w[kpis value_chart], empty.select { |s| s[:visible] }.map { |s| s[:key] }
+  end
+
+  # Every period-dependent figure reads the registry's period. A custom range
+  # differs from every default, so a figure that fell back to one would show.
+  test "the KPI row and the value chart read the registry's period" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: 3.days.ago.to_date)
+    # The fixture's figures are the same for any period, so these three are
+    # pinned by the argument they are asked with rather than by their value.
+    trend = Trend.new(current: Money.new(110, "USD"), previous: Money.new(100, "USD"))
+    totals = @statement.totals(period: period)
+    @statement.expects(:period_return_trend).with(period: period).returns(trend)
+    @statement.expects(:period_return_unconvertible_count).with(period: period).returns(2)
+    # net_contributions reads totals for the same period, hence at least once.
+    @statement.expects(:totals).with(period: period).at_least_once.returns(totals)
+
+    sections = registry(period: period).sections.index_by { |s| s[:key] }
+    kpis = sections["kpis"][:locals][:kpis]
+
+    assert_same trend, kpis[:period_return]
+    assert_equal 2, kpis[:period_return_unconvertible]
+    assert_equal totals.total_income, kpis[:income]
+    assert_equal @statement.net_contributions(period: period), kpis[:net_contributions]
+    assert_equal @statement.value_series(period: period).values.size, sections["value_chart"][:locals][:series].values.size
+    assert_equal period.end_date, sections["value_chart"][:locals][:series].values.last.date
+  end
+
+  test "the KPI row carries the statement's current figures" do
+    kpis = registry.sections.find { |s| s[:key] == "kpis" }[:locals][:kpis]
+
+    assert_equal @statement.portfolio_value_money, kpis[:value]
+    assert_equal %i[value value_unconvertible day_change day_change_coverage unrealized unrealized_missing_cost_basis
+                    unrealized_unconvertible period_return period_return_unconvertible net_contributions income], kpis.keys
   end
 
   # Created in reverse name order, so the cards come back by name only if the
@@ -101,7 +144,7 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
   test "orders sections by the user's saved order, appending anything it omits" do
     @user.update_section_preferences("portfolio", order: %w[stub])
 
-    assert_equal %w[stub holdings accounts], registry(extra_sections: [ stub_section ]).sections.map { |s| s[:key] }
+    assert_equal %w[stub kpis value_chart holdings accounts], registry(extra_sections: [ stub_section ]).sections.map { |s| s[:key] }
   end
 
   test "a saved order that repeats a key renders that section once" do
@@ -109,19 +152,19 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
 
     keys = registry(extra_sections: [ stub_section ]).sections.map { |s| s[:key] }
 
-    assert_equal %w[stub accounts holdings], keys
+    assert_equal %w[stub accounts kpis value_chart holdings], keys
   end
 
   test "ignores keys in the saved order that no longer exist" do
     @user.update_section_preferences("portfolio", order: %w[gone accounts])
 
-    assert_equal %w[accounts holdings], registry.sections.map { |s| s[:key] }
+    assert_equal %w[accounts kpis value_chart holdings], registry.sections.map { |s| s[:key] }
   end
 
   test "appends extra sections after the built-ins" do
     sections = registry(extra_sections: [ stub_section ]).sections
 
-    assert_equal %w[holdings accounts stub], sections.map { |s| s[:key] }
+    assert_equal %w[kpis value_chart holdings accounts stub], sections.map { |s| s[:key] }
   end
 
   # A family whose investment accounts hold nothing has no rows to list, so
@@ -177,10 +220,10 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
         locals: {}, visible: true, collapsible: true }
     end
 
-    def registry(extra_sections: [])
+    def registry(extra_sections: [], period: @period)
       Portfolio::SectionRegistry.new(
         statement: @statement,
-        period: @period,
+        period: period,
         as_of: @as_of,
         user: @user,
         extra_sections: extra_sections

@@ -29,4 +29,27 @@ module PortfoliosHelper
       safe_join([ label, (icon(active_dir == "asc" ? "chevron-up" : "chevron-down", size: "xs") if active) ].compact)
     end
   end
+
+  # A KPI card's hint. Ordinarily just `label`; when an account has been
+  # withheld for want of an exchange rate, it also says so, because a partial
+  # figure that does not announce itself reads as a whole one.
+  def kpi_hint(label, unconvertible_count)
+    return label if unconvertible_count.to_i.zero?
+
+    "#{label} · #{t('portfolios.kpi_row.unconvertible_accounts', count: unconvertible_count)}"
+  end
+
+  # The day change card's hint, only when some positions are left out of it.
+  def kpi_day_change_hint((covered, total))
+    t("portfolios.kpi_row.day_change_partial", covered: covered, total: total) if covered < total
+  end
+
+  # The unrealised P&L card's hint, only when a position is left out of it:
+  # for want of a cost basis, or of an exchange rate.
+  def kpi_unrealized_hint(missing_cost_basis_count, unconvertible_count = 0)
+    parts = []
+    parts << t("portfolios.kpi_row.unrealized_missing_cost_basis", count: missing_cost_basis_count) if missing_cost_basis_count.positive?
+    parts << t("portfolios.kpi_row.unrealized_unconvertible", count: unconvertible_count) if unconvertible_count.positive?
+    parts.join(" · ").presence
+  end
 end
