@@ -5,7 +5,7 @@ class SimplefinEntry::Processor
 
   # Institution-specific sign normalization for unambiguous cash descriptors.
   # Prefer an exact provider domain; use the exact name only when domain is absent.
-  FIDELITY_DOMAIN = "fidelity.com"
+  FIDELITY_DOMAINS = %w[fidelity.com www.fidelity.com].freeze
   FIDELITY_ORGANIZATION = /\AFidelity Investments\z/i
   FIDELITY_AMOUNT_NORMALIZATION_RULES = {
     direct_debit: { direction: :expense, pattern: /\ADIRECT\s+DEBIT\b/i },
@@ -237,7 +237,7 @@ class SimplefinEntry::Processor
           if institution_name.is_a?(String) && institution_name.strip.match?(FIDELITY_ORGANIZATION)
             FIDELITY_AMOUNT_NORMALIZATION_RULES
           end
-        elsif domain.is_a?(String) && domain.strip.casecmp?(FIDELITY_DOMAIN)
+        elsif domain.is_a?(String) && FIDELITY_DOMAINS.any? { |candidate| domain.strip.casecmp?(candidate) }
           FIDELITY_AMOUNT_NORMALIZATION_RULES
         end
       end

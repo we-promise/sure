@@ -587,10 +587,16 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
   end
 
   test "matches the exact Fidelity domain before the fallback name" do
-    # Synthetic organization and amount inputs; no account/provider observations.
+    # Synthetic transaction amounts; the www alias is independently observed in
+    # stored provider org metadata, not inferred from these synthetic inputs.
     cases = [
       [ { domain: " FIDELITY.COM ", name: "Renamed institution" }, true ],
       [ { "domain" => "fidelity.com" }, true ],
+      [ { domain: "www.fidelity.com", name: "Fidelity Investments" }, true ],
+      [ { domain: " WWW.FIDELITY.COM " }, true ],
+      [ { domain: "401k.fidelity.com", name: "Fidelity Investments" }, false ],
+      [ { domain: "evilfidelity.com", name: "Fidelity Investments" }, false ],
+      [ { domain: "www.fidelity.com.example", name: "Fidelity Investments" }, false ],
       [ { domain: nil, name: " Fidelity Investments " }, true ],
       [ { "domain" => " ", "name" => "Fidelity Investments" }, true ],
       [ { domain: "example.com", name: "Fidelity Investments" }, false ],
