@@ -262,6 +262,7 @@ pl:
           tinkoff_invest: T-Invest (T-Bank)
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
+          mansa: Mansa
         requires_api_key: wymaga klucza API
         requires_api_key_alpha_vantage: wymaga klucza API, limit 25 zapytań dziennie
         requires_api_key_eodhd: wymaga klucza API, limit 20 zapytań dziennie

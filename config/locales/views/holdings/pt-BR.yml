@@ -67,6 +67,7 @@ pt-BR:
       description: Este investimento tem valores ausentes e não conseguimos calcular seus retornos ou valor.
       missing_data: Dados ausentes
     show:
+      price_source_label: "Fonte de cotações"
       avg_cost_label: Custo Médio
       current_market_price_label: Preço de Mercado Atual
       delete: Excluir

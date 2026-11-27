@@ -52,6 +52,36 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(@holding, :shares)}", text: "10.374"
   end
 
+  test "shows the assigned price provider" do
+    Security.stubs(:provider_for).returns(nil)
+    Security.stubs(:provider_for).with("yahoo_finance").returns(mock("provider"))
+    Security.any_instance.stubs(:current_price).returns(nil)
+    @holding.security.update!(price_provider: "yahoo_finance", offline: false)
+
+    get holding_path(@holding)
+
+    assert_select "##{dom_id(@holding, :price_source)} dd", text: "Yahoo Finance"
+  end
+
+  test "marks the fallback price provider as default" do
+    Security.stubs(:providers).returns([ Provider::YahooFinance.new ])
+    Security.any_instance.stubs(:current_price).returns(nil)
+    @holding.security.update!(price_provider: nil, offline: false)
+
+    get holding_path(@holding)
+
+    assert_select "##{dom_id(@holding, :price_source)} dd", text: "Yahoo Finance (default)"
+  end
+
+  test "says no provider fetches prices for an offline security" do
+    Security.stubs(:providers).returns([ Provider::YahooFinance.new ])
+    @holding.security.update!(price_provider: nil, offline: true, offline_reason: nil)
+
+    get holding_path(@holding)
+
+    assert_select "##{dom_id(@holding, :price_source)} dd", text: I18n.t("securities.price_source.none")
+  end
+
   # The quote is in the listing's currency; the value and cost beside it are in
   # the holding's. Showing the quote alone put a foreign figure among them.
   test "shows a quote in another currency converted to the holding's, with the quote beside it" do

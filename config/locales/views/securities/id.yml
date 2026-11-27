@@ -4,13 +4,10 @@ id:
     combobox:
       display: "%{symbol} - %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
-    providers:
-      twelve_data: Twelve Data
-      yahoo_finance: Yahoo Finance
-      tiingo: Tiingo
-      eodhd: EODHD
-      alpha_vantage: Alpha Vantage
-      mfapi: MFAPI.in
-      binance_public: Binance
-      moex_public: MOEX
-      mansa: Mansa
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (bawaan)"
+      offline: "%{provider} (dijeda)"
+      unavailable: "%{provider} (tidak tersedia)"
+      none: "Tidak ada, tidak ada penyedia harga aktif"
+    unknown_provider: "Tidak diketahui"

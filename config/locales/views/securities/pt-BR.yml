@@ -4,6 +4,13 @@ pt-BR:
     combobox:
       display: "%{symbol} - %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (padrão)"
+      offline: "%{provider} (pausado)"
+      unavailable: "%{provider} (indisponível)"
+      none: "Nenhuma, sem provedor de preços ativo"
+    unknown_provider: "Desconhecido"
     providers:
       twelve_data: Twelve Data
       yahoo_finance: Yahoo Finance

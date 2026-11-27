@@ -58,6 +58,7 @@ uk:
       description: "Ця інвестиція має відсутні значення, і ми не змогли розрахувати її дохідність або вартість."
       missing_data: "Відсутні дані"
     show:
+      price_source_label: "Джерело котирувань"
       avg_cost_label: "Середня вартість"
       current_market_price_label: "Поточна ринкова ціна"
       delete: "Видалити"

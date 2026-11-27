@@ -4,13 +4,10 @@ nl:
     combobox:
       display: "%{symbol} - %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
-    providers:
-      twelve_data: "Twelve Data"
-      yahoo_finance: "Yahoo Finance"
-      tiingo: "Tiingo"
-      eodhd: "EODHD"
-      alpha_vantage: "Alpha Vantage"
-      mfapi: "MFAPI.in"
-      binance_public: "Binance"
-      moex_public: "MOEX"
-      mansa: "Mansa"
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (standaard)"
+      offline: "%{provider} (gepauzeerd)"
+      unavailable: "%{provider} (niet beschikbaar)"
+      none: "Geen, geen actieve koersaanbieder"
+    unknown_provider: "Onbekend"

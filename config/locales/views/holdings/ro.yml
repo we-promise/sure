@@ -24,6 +24,7 @@ ro:
         randamentele sau valoarea sa.
       missing_data: Date lipsă
     show:
+      price_source_label: "Sursa prețurilor"
       avg_cost_label: Cost mediu
       current_market_price_label: Preț curent de piață
       delete: Șterge

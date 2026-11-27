@@ -1,6 +1,13 @@
 ---
 nb:
   securities:
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (standard)"
+      offline: "%{provider} (pauset)"
+      unavailable: "%{provider} (ikke tilgjengelig)"
+      none: "Ingen, ingen aktiv kursleverandør"
+    unknown_provider: "Ukjent"
     combobox:
       display: '%{symbol} - %{name} (%{exchange})'
       exchange_label: '%{symbol} (%{exchange})'
