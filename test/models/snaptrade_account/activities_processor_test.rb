@@ -2552,6 +2552,81 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Food Hall", entry.name
   end
 
+  test "identical card twins import once" do
+    process_activities(
+      card_activity(id: "twin_a", description: "CREDIT_CARD PURCHASE: Parking Lot 4", amount: -46.00),
+      card_activity(id: "twin_b", description: "CREDIT_CARD PURCHASE: Parking Lot 4", amount: -46.00)
+    )
+
+    assert_equal 1, @account.entries.where(source: "snaptrade", external_id: %w[twin_a twin_b]).count
+  end
+
+  test "a pending and a posted copy of one card charge import once" do
+    process_activities(
+      card_activity(id: "air_posted", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: -409.69),
+      card_activity(id: "air_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69)
+    )
+
+    entries = @account.entries.where(source: "snaptrade", external_id: %w[air_posted air_pending])
+    assert_equal 1, entries.count
+    assert_equal 409.69, entries.first.amount.to_f
+  end
+
+  test "a duplicate card charge already imported is removed on the next sync" do
+    process_activities(card_activity(id: "dup_first", description: "CREDIT_CARD PURCHASE: Book Shop", amount: -12.00))
+    @account.entries.create!(
+      name: "Book Shop", date: Date.current, amount: 12.00, currency: "USD",
+      external_id: "dup_second", source: "snaptrade", entryable: Transaction.new
+    )
+
+    process_activities(
+      card_activity(id: "dup_first", description: "CREDIT_CARD PURCHASE: Book Shop", amount: -12.00),
+      card_activity(id: "dup_second", description: "CREDIT_CARD PURCHASE: Book Shop", amount: -12.00)
+    )
+
+    assert_not_nil snaptrade_entry("dup_first")
+    assert_nil snaptrade_entry("dup_second")
+  end
+
+  test "a bare CREDIT_CARD row re-sent in the merchant format imports once" do
+    process_activities(card_activity(id: "bare_row", description: "CREDIT_CARD", amount: 43.00))
+    assert_not_nil snaptrade_entry("bare_row")
+
+    process_activities(
+      card_activity(id: "bare_row", description: "CREDIT_CARD", amount: 43.00),
+      card_activity(id: "named_row", description: "CREDIT_CARD PURCHASE: Marketplace Ad", amount: -43.00)
+    )
+
+    assert_nil snaptrade_entry("bare_row")
+    assert_equal "Marketplace Ad", snaptrade_entry("named_row").name
+  end
+
+  test "an edited duplicate card entry is kept" do
+    process_activities(card_activity(id: "edit_a", description: "CREDIT_CARD PURCHASE: Cafe", amount: -5.00))
+    edited = @account.entries.create!(
+      name: "Cafe with friends", date: Date.current, amount: 5.00, currency: "USD",
+      external_id: "edit_b", source: "snaptrade", entryable: Transaction.new
+    )
+    edited.mark_user_modified!
+
+    process_activities(
+      card_activity(id: "edit_a", description: "CREDIT_CARD PURCHASE: Cafe", amount: -5.00),
+      card_activity(id: "edit_b", description: "CREDIT_CARD PURCHASE: Cafe", amount: -5.00)
+    )
+
+    assert_not_nil snaptrade_entry("edit_b")
+  end
+
+  test "card charges with different amounts or merchants are not merged" do
+    process_activities(
+      card_activity(id: "diff_a", description: "CREDIT_CARD PURCHASE: Grocer", amount: -10.00),
+      card_activity(id: "diff_b", description: "CREDIT_CARD PURCHASE: Grocer", amount: -11.00),
+      card_activity(id: "diff_c", description: "CREDIT_CARD PURCHASE: Pharmacy", amount: -10.00)
+    )
+
+    assert_equal 3, @account.entries.where(source: "snaptrade", external_id: %w[diff_a diff_b diff_c]).count
+  end
+
   private
 
     def card_activity(id:, description:, amount:, type: "CREDIT_CARD")

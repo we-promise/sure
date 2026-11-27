@@ -107,7 +107,7 @@ class SnaptradeAccount::ActivitiesProcessor
   end
 
   def process
-    activities_data = @snaptrade_account.raw_activities_payload
+    activities_data = dedupe_card_activities(@snaptrade_account.raw_activities_payload)
     return { trades: 0, transactions: 0, failed: 0 } if activities_data.blank?
 
     Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Processing #{activities_data.size} activities"
@@ -667,6 +667,82 @@ class SnaptradeAccount::ActivitiesProcessor
         [ -amount, description ]
       else
         [ amount, description ]
+      end
+    end
+
+    # Wealthsimple sends some card charges twice, under two SnapTrade ids:
+    # - identical twins (same day, amount and description),
+    # - a pending and a posted copy whose merchant names differ past the first
+    #   characters ("Turkish Airlines" / "Turkish Airl00000005Ydmbv"),
+    # - an older bare "CREDIT_CARD" row re-sent in the "CREDIT_CARD PURCHASE: <merchant>" format.
+    # Each would import as its own charge. Keep one row per charge: the one
+    # already imported if there is one, preferring a row with a merchant name,
+    # and remove the extra copy's entry unless the user has edited it.
+    def dedupe_card_activities(activities)
+      return activities if activities.blank? || account.nil?
+
+      rows = activities.map(&:with_indifferent_access).select { |row| row[:type].to_s.upcase == "CREDIT_CARD" && row[:id].present? }
+      return activities if rows.size < 2
+
+      drop_ids = Set.new
+      rows.group_by { |row| [ card_row_amount(row), card_row_date(row), card_dedupe_key(row) ] }.each_value do |group|
+        next if group.size < 2
+
+        keeper = card_duplicate_keeper(group)
+        group.each { |row| drop_ids << row[:id].to_s unless row[:id].to_s == keeper }
+      end
+
+      # An older bare row for a charge that also arrived in the newer format.
+      newer = rows.reject { |row| card_dedupe_key(row).first == :bare }
+                  .map { |row| [ card_row_amount(row).abs, card_row_date(row) ] }.to_set
+      rows.each do |row|
+        next unless card_dedupe_key(row).first == :bare
+        drop_ids << row[:id].to_s if newer.include?([ card_row_amount(row).abs, card_row_date(row) ])
+      end
+
+      return activities if drop_ids.empty?
+
+      remove_duplicate_card_entries(drop_ids)
+      activities.reject { |activity| drop_ids.include?(activity.with_indifferent_access[:id].to_s) }
+    end
+
+    def card_row_amount(row)
+      parse_decimal(row[:amount]) || 0.to_d
+    end
+
+    def card_row_date(row)
+      (row[:trade_date].presence || row[:settlement_date]).to_s[0, 10]
+    end
+
+    # [ :bare, description ] for an older bare row, otherwise the kind and the
+    # first characters of the merchant, which a pending and a posted copy share.
+    def card_dedupe_key(row)
+      description = row[:description].to_s.strip
+      match = CARD_DESCRIPTION.match(description)
+      return [ :bare, description ] unless match
+
+      [ match[1], match[2].to_s.downcase.gsub(/[^a-z0-9]/, "")[0, 10] ]
+    end
+
+    def card_duplicate_keeper(group)
+      ids = group.map { |row| row[:id].to_s }
+      entries = account.entries.where(external_id: ids, source: "snaptrade").to_a
+      keeper = entries.min_by { |entry| [ entry.name.to_s.start_with?("CREDIT_CARD") ? 1 : 0, entry.created_at, entry.external_id ] }
+      keeper&.external_id || ids.min
+    end
+
+    def remove_duplicate_card_entries(ids)
+      account.entries.where(external_id: ids.to_a, source: "snaptrade").find_each do |entry|
+        if entry.protected_from_sync?
+          capture_debug_log(
+            message: "Keeping edited duplicate card entry #{entry.id} (#{entry.external_id})",
+            metadata: { activity_id: entry.external_id, reason: "protected" }
+          )
+          next
+        end
+
+        Rails.logger.info("SnaptradeAccount::ActivitiesProcessor - Removing duplicate card activity #{entry.external_id}")
+        entry.destroy!
       end
     end
 
