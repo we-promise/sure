@@ -225,12 +225,20 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           amount_type_strategy: {
             type: :string,
-            enum: %w[signed_amount custom_column],
+            enum: %w[signed_amount custom_column debit_credit_columns],
             description: 'CSV imports only. Amount parsing strategy'
           },
           amount_type_inflow_value: {
             type: :string,
             description: 'CSV imports only. Column value that marks an amount as an inflow when using custom_column strategy'
+          },
+          debit_col_label: {
+            type: :string,
+            description: 'CSV transaction imports only. Header name for the money out column when using debit_credit_columns strategy'
+          },
+          credit_col_label: {
+            type: :string,
+            description: 'CSV transaction imports only. Header name for the money in column when using debit_credit_columns strategy'
           }
         }
       }
@@ -466,12 +474,20 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           amount_type_strategy: {
             type: :string,
-            enum: %w[signed_amount custom_column],
+            enum: %w[signed_amount custom_column debit_credit_columns],
             description: 'CSV imports only. Amount parsing strategy'
           },
           amount_type_inflow_value: {
             type: :string,
             description: 'CSV imports only. Column value that marks an amount as an inflow when using custom_column strategy'
+          },
+          debit_col_label: {
+            type: :string,
+            description: 'CSV transaction imports only. Header name for the money out column when using debit_credit_columns strategy'
+          },
+          credit_col_label: {
+            type: :string,
+            description: 'CSV transaction imports only. Header name for the money in column when using debit_credit_columns strategy'
           }
         }
       }

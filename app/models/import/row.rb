@@ -121,6 +121,9 @@ class Import::Row < ApplicationRecord
         else
           value * (inflow_treatment == "inflows_positive" ? 1 : -1)
         end
+      elsif import.amount_type_strategy == "debit_credit_columns"
+        # The row amount is credit minus debit, so money in is positive
+        value * -1
       else
         raise "Unknown amount type strategy for import: #{import.amount_type_strategy}"
       end

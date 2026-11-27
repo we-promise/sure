@@ -79,6 +79,8 @@ class Import::ConfigurationsController < ApplicationController
         :amount_type_strategy,
         :amount_type_identifier_value,
         :amount_type_inflow_value,
+        :debit_col_label,
+        :credit_col_label,
         :rows_to_skip
       )
     end

@@ -33,6 +33,8 @@ class Import::Preflight
     col_sep
     amount_type_strategy
     amount_type_inflow_value
+    debit_col_label
+    credit_col_label
     rows_to_skip
   ].freeze
 
@@ -298,7 +300,10 @@ class Import::Preflight
     end
 
     def required_header_labels(import)
-      import.required_column_keys.filter_map do |key|
+      import.required_column_keys.flat_map do |key|
+        # With separate debit and credit columns, those two columns replace the amount column.
+        next [ import.debit_col_label, import.credit_col_label ].compact_blank if key == :amount && import.amount_type_strategy == "debit_credit_columns"
+
         import.respond_to?("#{key}_col_label") ? import.public_send("#{key}_col_label").presence || key.to_s : key.to_s
       end
     end
