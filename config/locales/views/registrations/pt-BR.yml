@@ -8,19 +8,20 @@ pt-BR:
       user:
         create: Continuar
   registrations:
+    closed: As inscrições estão fechadas no momento.
     create:
       failure: Houve um problema ao se inscrever.
       invalid_invite_code: Código de convite inválido, tente novamente.
       success: Você se inscreveu com sucesso.
     new:
       invitation_message: "%{inviter} convidou você para se juntar como %{role}"
-      join_family_title: Juntar-se a %{family}
+      join_family_title: Juntar-se a %{family} (%{moniker})
       role_admin: administrador
+      role_guest: convidado
       role_member: membro
       submit: Criar conta
       title: Criar sua conta
-      welcome_body: Para começar, você deve se inscrever para uma nova conta. Então você
-        poderá configurar configurações adicionais dentro do aplicativo.
+      welcome_body: Para começar, você deve se inscrever para uma nova conta. Então você poderá ajustar configurações adicionais dentro do aplicativo.
       welcome_title: Bem-vindo ao Self Hosted %{product_name}!
       password_placeholder: Digite sua senha
       password_requirements:
