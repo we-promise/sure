@@ -85,6 +85,24 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     assert response_body["messages"].is_a?(Array)
   end
 
+  test "index pages chats 20 at a time" do
+    get "/api/v1/chats", headers: api_headers(read_api_key)
+    assert_response :success
+
+    assert_equal 20, response.parsed_body.dig("pagination", "per_page")
+  end
+
+  test "show pages messages 50 at a time" do
+    25.times { |i| @chat.messages.create!(type: "AssistantMessage", content: "reply #{i}", ai_model: "gpt-4.1") }
+
+    get "/api/v1/chats/#{@chat.id}", headers: api_headers(read_api_key)
+    assert_response :success
+
+    body = response.parsed_body
+    assert_equal 50, body.dig("pagination", "per_page")
+    assert_equal [ @chat.messages.count, 50 ].min, body["messages"].size
+  end
+
   test "should create chat with write scope" do
     assert_difference "Chat.count" do
       post "/api/v1/chats",
@@ -219,5 +237,15 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }
+    end
+
+    def read_api_key
+      ApiKey.create!(
+        user: @user,
+        name: "Read Key",
+        scopes: [ "read" ],
+        source: "web",
+        display_key: "test_read_#{SecureRandom.hex(8)}"
+      )
     end
 end
