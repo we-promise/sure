@@ -1,0 +1,4 @@
+<%# locals: (value:, compact: false) %>
+
+<span class="privacy-sensitive whitespace-nowrap"><%= format_reward_value(value) %><%= " #{value.currency.iso_code}" if value && !compact %></span>
+<span class="block text-xs font-normal text-secondary"><%= t(compact ? ".short_label" : ".label") %></span>
