@@ -26,6 +26,9 @@ class TransfersController < ApplicationController
     # CTA that the controller would reject via `require_account_permission!`
     # for read-only sharers.
     endpoint_ids = [ @transfer.from_account&.id, @transfer.to_account&.id ].compact
+    # The drawer opens with access to the inflow side only; each side's own
+    # transaction name is shown only to a user who can see that side's account.
+    @readable_account_ids = Account.accessible_by(Current.user).where(id: endpoint_ids).distinct.pluck(:id)
     writable_endpoint_count = Account.writable_by(Current.user).where(id: endpoint_ids).distinct.count
     both_endpoints_writable = endpoint_ids.size == 2 && writable_endpoint_count == 2
     @can_mark_as_recurring_transfer = !Current.family.recurring_transactions_disabled? && both_endpoints_writable
@@ -100,6 +103,8 @@ class TransfersController < ApplicationController
     return unless require_account_permission!(inflow_account, redirect_path: transactions_url)
 
     begin
+      # The transfer row before any leg, the order unlinking, confirm! and
+      # Entry#unsplit! take them in, so an edit racing an unlink cannot deadlock.
       @transfer.with_edit_lock do
         update_transfer_status
         update_transfer_fees_and_amount
@@ -173,14 +178,7 @@ class TransfersController < ApplicationController
     return unless require_account_permission!(source_account)
     return unless require_account_permission!(destination_account)
 
-    existing = Current.family.recurring_transactions.find_by(
-      account_id: source_account.id,
-      destination_account_id: destination_account.id,
-      amount: @transfer.outflow_transaction.entry.amount,
-      currency: @transfer.outflow_transaction.entry.currency
-    )
-
-    if existing
+    if RecurringTransaction.transfer_series_for(@transfer)
       flash[:alert] = t("recurring_transactions.transfer_already_exists")
       respond_to do |format|
         format.html { redirect_back_or_to transactions_path }
@@ -195,9 +193,15 @@ class TransfersController < ApplicationController
         format.html { redirect_back_or_to transactions_path }
       end
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
-      # RecordNotUnique covers the race window between `find_by` and `create!`
-      # (the partial unique index protects us at the DB level).
-      flash[:alert] = t("recurring_transactions.transfer_creation_failed")
+      # RecordNotUnique covers the race window between the series lookup and
+      # `create!` (the partial unique index protects us at the DB level). When
+      # the colliding series is the one we were creating, a concurrent request
+      # won the insert, which is the same outcome as marking it twice.
+      flash[:alert] = if RecurringTransaction.transfer_series_for(@transfer)
+        t("recurring_transactions.transfer_already_exists")
+      else
+        t("recurring_transactions.transfer_creation_failed")
+      end
       respond_to do |format|
         format.html { redirect_back_or_to transactions_path }
       end
@@ -412,7 +416,18 @@ class TransfersController < ApplicationController
       # Confirming from the transaction list sends only the status; leave the
       # category and notes alone unless the form actually submitted them.
       if transfer_update_params.key?(:category_id)
-        @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
+        outflow = @transfer.outflow_transaction
+        # Reloaded under its row lock, so a cleanup clearing the category
+        # meanwhile cannot leave an unchanged choice saved as a locked blank.
+        # The lock marks it the user's choice, which syncs and the
+        # stale-category cleanup leave alone, as they do a category set on the
+        # transaction itself. Dropping the automatic categorizers' claim keeps
+        # it the user's even where it is the value the AI or Bayes had set.
+        outflow.with_lock do
+          outflow.update!(category_id: transfer_update_params[:category_id])
+          outflow.lock_attr!(:category_id)
+          Transaction.drop_automatic_category_claims!([ outflow.id ])
+        end
       end
       if transfer_update_params.key?(:notes)
         @transfer.update!(notes: transfer_update_params[:notes])
@@ -428,7 +443,9 @@ class TransfersController < ApplicationController
       current_destination_fee = @transfer.derived_destination_fee_amount
       source_fee_changed = new_source_fee.present? && new_source_fee.to_d != current_source_fee
       dest_fee_changed = new_destination_fee.present? && new_destination_fee.to_d != current_destination_fee
-      amount_changed = new_amount.present? && new_amount.to_d != @transfer.amount.to_d
+      # A split part's amount belongs to the split: changing it here would make
+      # the parts stop adding up to the parent.
+      amount_changed = new_amount.present? && new_amount.to_d != @transfer.amount.to_d && !split_part_leg?
 
       return unless amount_changed || source_fee_changed || dest_fee_changed
 
@@ -465,6 +482,10 @@ class TransfersController < ApplicationController
       end
 
       @transfer.save!
+    end
+
+    def split_part_leg?
+      [ @transfer.outflow_transaction, @transfer.inflow_transaction ].any? { |transaction| transaction.entry.split_child? }
     end
 
     def update_fee_transaction(account:, old_fee:, new_fee:, name:)

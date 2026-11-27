@@ -39,6 +39,47 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal 1, account.raw_positions_payload.size
   end
 
+  test "import falls back to the cash currency when account metadata has none" do
+    @item.update!(currency: "SEK")
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "session_txt" => "# refreshed cookies",
+      "account" => { "brokerage_account_id" => "DE9994" },
+      "cash" => { "amount" => "10", "currency" => "EUR" },
+      "positions" => [ { "isin" => "US0378331005", "name" => "Apple Inc.", "quantity" => "2", "price" => "100" } ],
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal "EUR", @item.trade_republic_accounts.find_by(kind: "cash").currency
+    assert_equal "EUR", @item.trade_republic_accounts.find_by(kind: "portfolio").currency
+    assert_equal "EUR", @item.reload.currency
+  end
+
+  test "import keeps the stored item currency when the cash fetch failed" do
+    @item.update!(currency: "SEK")
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "partial",
+      "session_txt" => "# refreshed cookies",
+      "account" => { "brokerage_account_id" => "DE9993" },
+      "cash" => nil,
+      "positions" => [],
+      "events" => [],
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal "SEK", @item.reload.currency
+    assert_equal "SEK", @item.trade_republic_accounts.find_by(kind: "cash").currency
+  end
+
   test "import creates a Crypto account valued at the crypto positions" do
     provider = mock("trade_republic_provider")
     provider.expects(:sync).returns(client_result(

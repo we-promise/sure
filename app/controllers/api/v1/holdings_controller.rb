@@ -10,7 +10,7 @@ class Api::V1::HoldingsController < Api::V1::BaseController
     holdings_query = accessible_holdings
 
     holdings_query = apply_filters(holdings_query)
-    holdings_query = holdings_query.includes(:account, :security).chronological
+    holdings_query = holdings_query.includes(:account, :security).chronological.order(Holding.arel_table[:id])
 
     @pagy, @holdings = pagy(
       holdings_query,
