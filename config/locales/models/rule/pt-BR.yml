@@ -1,0 +1,45 @@
+---
+pt-BR:
+  activerecord:
+    attributes:
+      rule:
+        new_rule_group_name: Novo grupo
+        rule_group: Grupo
+    errors:
+      models:
+        rule:
+          min_actions: deve ter pelo menos uma ação
+          duplicate_actions: A regra não pode ter ações duplicadas %{types}
+          nested_conditions: Condições compostas não podem ser aninhadas
+          split_not_alone: Uma regra de divisão não pode ter outras ações
+        rule/action:
+          attributes:
+            value:
+              invalid_config: deve ser uma configuração de divisão válida
+              invalid_split_count: deve ter entre %{min} e %{max} divisões
+              split_name_required: a divisão nº %{index} está sem nome
+              split_name_too_long: o nome da divisão nº %{index} é longo demais (máximo de 255 caracteres)
+              split_name_invalid: o nome da divisão nº %{index} contém caracteres inválidos
+              split_type_invalid: o tipo da divisão nº %{index} deve ser valor fixo ou porcentagem
+              split_share_invalid: a parte da divisão nº %{index} deve ser um número positivo
+              split_category_invalid: a categoria da divisão nº %{index} não pertence a esta família
+              split_merchant_invalid: o estabelecimento da divisão nº %{index} não pertence a esta família
+              split_tags_invalid: a divisão nº %{index} tem uma tag que não pertence a esta família
+              percentages_must_total_100: "as porcentagens devem somar 100 (total atual: %{total})"
+              fixed_requires_exact_amount_condition: "divisões de valor fixo exigem uma condição na regra que corresponda a um valor exato de transação (ex.: Valor = 42,00); caso contrário, não há como garantir que as partes somem o total de cada transação correspondente"
+              fixed_shares_must_equal_condition_amount: as partes da divisão devem somar %{amount}, o valor exato exigido pela condição desta regra
+        rule/condition:
+          attributes:
+            value:
+              regex_invalid: não é uma expressão regular válida
+              regex_too_complex: é complexo demais para ser executado com segurança
+              regex_too_long: é longo demais (o máximo é de %{count} caracteres)
+              regex_backreference: não pode usar referências retroativas (\1 a \9)
+  rule:
+    actions:
+      set_transaction_merchant:
+        not_accessible: Estabelecimento em uma conta que você não pode acessar
+        unassigned: "%{name} (não está mais atribuído)"
+        unavailable: Estabelecimento não está mais disponível
+    conditions:
+      unsupported_label: Não suportada (%{type})
