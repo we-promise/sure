@@ -106,12 +106,13 @@ class Transfer < ApplicationRecord
     label || name
   end
 
-  # Names both legs after the label and protects the names from provider syncs.
-  # A blank label restores the default names, but only when there is a label to
-  # remove, so differing bank-provided names are never discarded.
+  # Names both legs after the label and protects the names from provider syncs,
+  # even when the label is already their shared name. A blank label restores
+  # the default names, but only when there is a label to remove, so differing
+  # bank-provided names are never discarded.
   def update_label!(new_label)
     new_label = new_label.to_s.strip.presence
-    return if new_label == label
+    return if new_label.nil? && label.nil?
 
     names = if new_label
       { outflow: new_label, inflow: new_label }

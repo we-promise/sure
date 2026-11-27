@@ -1278,6 +1278,20 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-stream[target=?]", dom_id(transfer.outflow_transaction.entry, :transfer_leg_name)
   end
 
+  test "locks a submitted label that matches the legs' shared name" do
+    transfer = transfers(:one)
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
+      entry.update!(name: "Internal transfer")
+    end
+
+    patch transfer_url(transfer), params: { transfer: { name: "Internal transfer" } }, as: :turbo_stream
+
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
+      assert entry.reload.locked?(:name)
+      assert entry.user_modified?
+    end
+  end
+
   test "restores the default names when the label is cleared" do
     transfer = transfers(:one)
     transfer.update_label!("Holiday savings")
