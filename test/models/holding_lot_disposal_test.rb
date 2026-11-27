@@ -1,5 +1,4 @@
 require "test_helper"
-require Rails.root.join("db/migrate/20261115120001_backfill_original_quantity_on_holding_lots")
 
 class HoldingLotDisposalTest < ActiveSupport::TestCase
   include EntriesTestHelper
@@ -763,6 +762,8 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
 
       trade = Trade.find(@sale.entryable_id)
       assert_nil trade.realized_gain_loss
+      assert_equal [ [ nil, 4 ] ],
+        HoldingLotDisposal.where(sale_entry: @sale).map { |r| [ r.lot_source_entry_id, r.qty ] }
     end
   end
 
@@ -792,30 +793,6 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
-  test "unlink and forward sync: opening lot is not inflated by shortfall disposals during backfill" do
-    travel_to TODAY do
-      build_reverse_fixture(pre_history: 2)
-      materialize(:reverse)
-      opening_lot = HoldingLot.where(account: @account, security: @security).opening.sole
-      assert_equal 0, opening_lot.qty
-      assert_equal 2, opening_lot.original_quantity
-
-      @account_provider.destroy!
-      trade(@security, -30, 300, 6)
-      materialize(:forward)
-
-      opening_lot.update_columns(original_quantity: nil, original_quantity_as_of: nil)
-
-      ActiveRecord::Migration.suppress_messages { BackfillOriginalQuantityOnHoldingLots.new.up }
-
-      assert_equal 2, opening_lot.reload.original_quantity, "original_quantity must be 2, not 14"
-
-      materialize(:forward)
-      assert_equal 2, opening_lot.reload.original_quantity
-      assert_equal 0, opening_lot.qty
-    end
-  end
-
   test "unlink and forward sync: split on account.start_date is included when seeding opening lots" do
     travel_to TODAY do
       setup_account(method: "fifo")
@@ -842,58 +819,6 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       assert_equal 10, HoldingLot.where(account: @account, security: security).sum(:qty),
         "only the 10 bought units remain open, not 14 from double-scaling the opening lot"
       assert_equal 10, HoldingLot.find_by!(account: @account, source_entry: first).qty
-    end
-  end
-
-  test "backfill keeps counting opening disposals after a sale from a named purchased lot" do
-    travel_to TODAY do
-      setup_account(method: "fifo")
-      link_account
-      security = priced_security("FIFNL", 30)
-      buy = trade(security, 10, 100, 2)
-      named_sale = trade(security, -2, 300, 3)
-      name_lot(named_sale, buy)
-      trade(security, -6, 300, 4)
-      @account.holdings.create!(security: security, date: d(10), qty: 8, price: 30, amount: 240, currency: "USD",
-        account_provider: @account_provider)
-
-      materialize(:reverse)
-      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
-      assert_equal 0, opening_lot.qty
-      assert_equal 6, opening_lot.original_quantity
-
-      opening_lot.update_columns(original_quantity: nil, original_quantity_as_of: nil)
-      ActiveRecord::Migration.suppress_messages { BackfillOriginalQuantityOnHoldingLots.new.up }
-
-      assert_equal 6, opening_lot.reload.original_quantity
-    end
-  end
-
-  test "backfill excludes shortfall after named-lot sale followed by ordinary FIFO depletion" do
-    travel_to TODAY do
-      setup_account(method: "fifo")
-      link_account
-      security = priced_security("FIFNS", 30)
-      buy = trade(security, 10, 100, 2)
-      named_sale = trade(security, -2, 300, 3)
-      name_lot(named_sale, buy)
-      trade(security, -7, 300, 4)
-      @account.holdings.create!(security: security, date: d(10), qty: 7, price: 30, amount: 210, currency: "USD",
-        account_provider: @account_provider)
-
-      materialize(:reverse)
-      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
-      assert_equal 0, opening_lot.qty
-      assert_equal 6, opening_lot.original_quantity
-
-      @account_provider.destroy!
-      trade(security, -20, 300, 6)
-      materialize(:forward)
-
-      opening_lot.update_columns(original_quantity: nil, original_quantity_as_of: nil)
-      ActiveRecord::Migration.suppress_messages { BackfillOriginalQuantityOnHoldingLots.new.up }
-
-      assert_equal 6, opening_lot.reload.original_quantity
     end
   end
 
@@ -977,7 +902,7 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
-  test "backfill caps nil-source disposals at linked baseline before scaling splits" do
+  test "unlink and forward sync: shortfall across a split preserves linked opening quantity and disposals" do
     travel_to TODAY do
       setup_account(method: "fifo")
       link_account
@@ -993,12 +918,6 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
       assert_equal 0, opening_lot.qty
       assert_equal 8, opening_lot.original_quantity
-
-      opening_lot.update_columns(original_quantity: nil, original_quantity_as_of: nil)
-      ActiveRecord::Migration.suppress_messages { BackfillOriginalQuantityOnHoldingLots.new.up }
-
-      opening_lot.reload
-      assert_equal 8, opening_lot.original_quantity
       assert_equal TODAY.to_date, opening_lot.original_quantity_as_of
 
       @account_provider.destroy!
@@ -1008,6 +927,39 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
         HoldingLotDisposal.where(sale_entry: sale).order(:id).map { |r| [ r.lot_source_entry_id, r.qty ] }
           .sort_by { |id, qty| [ id.to_s, qty ] }
       assert_equal 4, HoldingLot.find_by!(account: @account, source_entry: buy2).qty
+    end
+  end
+
+  test "reverse sync stamps original_quantity_as_of with the calculation anchor date across midnight" do
+    security = priced_security("FIFMD", 30)
+    test_context = self
+
+    travel_to Time.zone.local(2024, 6, 9, 23, 59, 59) do
+      setup_account(method: "fifo")
+      link_account
+      trade(security, 10, 100, 3)
+      trade(security, -4, 300, 4)
+      @account.holdings.create!(security: security, date: d(9), qty: 8, price: 30, amount: 240, currency: "USD",
+        account_provider: @account_provider)
+      Security::Split.create!(security: security, ex_date: d(10), numerator: 2, denominator: 1, source: "manual")
+
+      materializer = Holding::Materializer.new(@account.reload, strategy: :reverse)
+      original_persist_holdings = materializer.method(:persist_holdings)
+      materializer.define_singleton_method(:persist_holdings) do
+        original_persist_holdings.call
+        test_context.travel_to(Time.zone.local(2024, 6, 10, 0, 0, 5))
+      end
+      materializer.materialize_holdings
+    end
+
+    opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+    assert_equal 2, opening_lot.original_quantity
+    assert_equal d(9), opening_lot.original_quantity_as_of
+
+    @account_provider.destroy!
+    travel_to TODAY do
+      materialize(:forward)
+      assert_equal 16, HoldingLot.where(account: @account, security: security).sum(:qty)
     end
   end
 

@@ -16,7 +16,6 @@ class HoldingLot < ApplicationRecord
   scope :opening, -> { where(source_entry_id: nil) }
 
   validates :manual_total_cost, numericality: { greater_than_or_equal_to: 0, less_than: BigDecimal("1e15") }, allow_nil: true
-  validates :original_quantity, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validate :manual_unit_cost_fits, if: :manual_total_cost
 
   def opening?

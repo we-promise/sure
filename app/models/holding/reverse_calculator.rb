@@ -1,12 +1,13 @@
 class Holding::ReverseCalculator
   include Holding::TradeCalculatorHelpers
 
-  attr_reader :account, :portfolio_snapshot
+  attr_reader :account, :portfolio_snapshot, :as_of_date
 
   def initialize(account, portfolio_snapshot:, security_ids: nil)
     @account = account
     @portfolio_snapshot = portfolio_snapshot
     @security_ids = security_ids
+    @as_of_date = Date.current
   end
 
   # Every lot of each security, the opening lot included, once #calculate has run.
@@ -35,23 +36,23 @@ class Holding::ReverseCalculator
     # since it is common for a provider to supply "current day" holdings but not all the historical
     # trades that make up those holdings.
     def portfolio_cache
-      @portfolio_cache ||= Holding::PortfolioCache.new(account, use_holdings: true, security_ids: @security_ids)
+      @portfolio_cache ||= Holding::PortfolioCache.new(account, use_holdings: true, security_ids: @security_ids, as_of_date: as_of_date)
     end
 
     def calculate_holdings
       # Start with the portfolio snapshot passed in from the materializer,
-      # brought forward to today first (see #starting_portfolio).
+      # brought forward to as_of_date first (see #starting_portfolio).
       current_portfolio = starting_portfolio
       previous_portfolio = {}
 
       holdings = []
 
-      Date.current.downto(account.start_date).each do |date|
+      as_of_date.downto(account.start_date).each do |date|
         today_trades = portfolio_cache.get_trades(date: date)
         previous_portfolio = undo_splits(transform_portfolio(current_portfolio, today_trades, direction: :reverse), date)
 
-        # If current day, always use holding prices (since that's what Plaid gives us).  For historical values, use market data (since Plaid doesn't supply historical prices)
-        holdings.concat(build_holdings(current_portfolio, date, price_source: date == Date.current ? "holding" : nil))
+        # If as_of_date, always use holding prices (since that's what Plaid gives us).  For historical values, use market data (since Plaid doesn't supply historical prices)
+        holdings.concat(build_holdings(current_portfolio, date, price_source: date == as_of_date ? "holding" : nil))
         current_portfolio = previous_portfolio
       end
 
@@ -79,7 +80,7 @@ class Holding::ReverseCalculator
         dates = portfolio_snapshot.effective_dates || {}
 
         portfolio_snapshot.to_h.to_h do |security_id, qty|
-          factor = portfolio_cache.split_factor_between(security_id, dates[security_id], Date.current)
+          factor = portfolio_cache.split_factor_between(security_id, dates[security_id], as_of_date)
           next [ security_id, qty ] if factor == 1
 
           [ security_id, Security::Split.scale(qty, factor) ]
@@ -148,9 +149,9 @@ class Holding::ReverseCalculator
       # Re-sorting by date alone is unstable and could reorder same-day trades,
       # which matters because the lot book is order-sensitive once sells relieve.
       trades = portfolio_cache.get_trades
-      # A scheduled trade has not happened yet, so it explains none of today's
+      # A scheduled trade has not happened yet, so it explains none of as_of_date's
       # position.
-      trades = trades.reject { |te| te.date > Date.current }
+      trades = trades.reject { |te| te.date > as_of_date }
       # A scoped run (a remap, a price sync) replays only its own securities;
       # the cache holds every trade in the account.
       trades = trades.select { |te| @security_ids.include?(te.entryable.security_id) } if @security_ids

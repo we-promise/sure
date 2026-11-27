@@ -56,19 +56,20 @@ class Holding::Materializer
     # trades know of, except on a position no trade explains, where it takes the
     # provider's figure.
     def persist_lots
+      anchor_date = @calculator.as_of_date
       rows = @calculator.lots_by_security.flat_map do |security_id, lots|
         explained = lots.any?(&:source_id)
         lots.map do |lot|
           unit_cost, currency = (lot.source_id || explained) ? [ lot.unit_cost, account.currency ] : provider_unit_cost(security_id)
           if lot.source_id.nil?
             orig_qty = lot.original_qty
-            orig_as_of = Date.current
+            orig_as_of = anchor_date
           end
           lot_row(security_id, lot.source_id, qty: lot.qty, original_quantity: orig_qty, original_quantity_as_of: orig_as_of, acquired_on: lot.acquired_on, unit_cost: unit_cost, currency: currency)
         end
       end
       rows += @calculator.clamped_security_ids.map do |security_id|
-        lot_row(security_id, nil, qty: 0, original_quantity: 0, original_quantity_as_of: Date.current, clamped: true)
+        lot_row(security_id, nil, qty: 0, original_quantity: 0, original_quantity_as_of: anchor_date, clamped: true)
       end
 
       # Only the reverse walk knows the units held before the trades.
@@ -120,7 +121,7 @@ class Holding::Materializer
       date, cost_basis, currency = provider_cost_basis_snapshots[security_id].last
       return [ nil, account.currency ] unless cost_basis
 
-      [ split_adjusted_cost_basis(cost_basis, security_id, date, Date.current), currency ]
+      [ split_adjusted_cost_basis(cost_basis, security_id, date, @calculator.as_of_date), currency ]
     end
 
     def persist_holdings

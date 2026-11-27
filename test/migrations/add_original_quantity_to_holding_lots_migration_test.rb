@@ -1,5 +1,5 @@
 require "test_helper"
-require Rails.root.join("db/migrate/20261115120000_add_original_quantity_to_holding_lots")
+require Rails.root.join("db/migrate/20261127120000_add_original_quantity_to_holding_lots")
 
 class AddOriginalQuantityToHoldingLotsMigrationTest < ActiveSupport::TestCase
   CONSTRAINT_NAME = AddOriginalQuantityToHoldingLots::CONSTRAINT_NAME

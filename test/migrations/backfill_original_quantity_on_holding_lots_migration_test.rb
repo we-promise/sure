@@ -1,5 +1,5 @@
 require "test_helper"
-require Rails.root.join("db/migrate/20261115120001_backfill_original_quantity_on_holding_lots")
+require Rails.root.join("db/migrate/20261127120001_backfill_original_quantity_on_holding_lots")
 
 class BackfillOriginalQuantityOnHoldingLotsMigrationTest < ActiveSupport::TestCase
   include ActiveSupport::Testing::TimeHelpers
@@ -15,12 +15,12 @@ class BackfillOriginalQuantityOnHoldingLotsMigrationTest < ActiveSupport::TestCa
     travel_to TODAY do
       account = create_account(method: "fifo")
       provider = link_account(account)
-      security = create_security("MGBL")
+      security = priced_security("MGBL")
 
       buy1 = create_trade(security, account: account, qty: 10, price: 100, date: d(3))
       sale = create_trade(security, account: account, qty: -15, price: 300, date: d(4))
       Security::Split.create!(security: security, ex_date: d(5), numerator: 2, denominator: 1, source: "manual")
-      create_trade(security, account: account, qty: 6, price: 150, date: d(6))
+      buy2 = create_trade(security, account: account, qty: 6, price: 150, date: d(6))
       account.holdings.create!(security: security, date: d(10), qty: 4, price: 30, amount: 120, currency: "USD",
         account_provider: provider)
 
@@ -33,6 +33,82 @@ class BackfillOriginalQuantityOnHoldingLotsMigrationTest < ActiveSupport::TestCa
       opening_lot.reload
       assert_equal 8, opening_lot.original_quantity
       assert_equal d(10), opening_lot.original_quantity_as_of
+
+      provider.destroy!
+      Holding::Materializer.new(account.reload, strategy: :forward).materialize_holdings
+
+      assert_equal [ [ nil, 1 ], [ nil, 4 ], [ buy1.id, 10 ] ],
+        HoldingLotDisposal.where(sale_entry: sale).order(:id).map { |r| [ r.lot_source_entry_id, r.qty ] }
+          .sort_by { |id, qty| [ id.to_s, qty ] }
+      assert_equal 4, HoldingLot.find_by!(account: account, source_entry: buy2).qty
+    end
+  end
+
+  test "excludes shortfall disposals on unlinked 2 + 10 + 10 - 4 - 30 before and after forward sync" do
+    travel_to TODAY do
+      account = create_account(method: "fifo")
+      provider = link_account(account)
+      security = priced_security("MGSF")
+
+      trade_buy1 = create_trade(security, account: account, qty: 10, price: 100, date: d(3))
+      create_trade(security, account: account, qty: 10, price: 200, date: d(4))
+      create_trade(security, account: account, qty: -4, price: 300, date: d(5))
+      account.holdings.create!(security: security, date: d(10), qty: 18, price: 30, amount: 540, currency: "USD",
+        account_provider: provider)
+
+      Holding::Materializer.new(account.reload, strategy: :reverse).materialize_holdings
+      opening_lot = HoldingLot.where(account: account, security: security).opening.sole
+      assert_equal 2, opening_lot.original_quantity
+
+      provider.destroy!
+      create_trade(security, account: account, qty: -30, price: 300, date: d(6))
+      Holding::Materializer.new(account.reload, strategy: :forward).materialize_holdings
+
+      opening_lot.update_columns(original_quantity: nil, original_quantity_as_of: nil)
+      run_backfill_up
+
+      assert_equal 2, opening_lot.reload.original_quantity
+
+      Holding::Materializer.new(account.reload, strategy: :forward).materialize_holdings
+      assert_equal 2, opening_lot.reload.original_quantity
+      assert_equal 0, opening_lot.qty
+      assert_equal 0, HoldingLot.find_by!(account: account, source_entry: trade_buy1).qty
+    end
+  end
+
+  test "does not re-scale splits for linked securities with no trades" do
+    travel_to TODAY do
+      account = create_account(method: "fifo")
+      provider = link_account(account)
+      traded = create_security("MGTRD")
+      no_trade_2x = create_security("MGNT2")
+      no_trade_3x = create_security("MGNT3")
+      no_trade_stale_snap = create_security("MGNTS")
+
+      # Establish an account start date before D5 splits.
+      create_trade(traded, account: account, qty: 5, price: 50, date: d(1))
+      Security::Split.create!(security: no_trade_2x, ex_date: d(5), numerator: 2, denominator: 1, source: "manual")
+      Security::Split.create!(security: no_trade_3x, ex_date: d(5), numerator: 3, denominator: 1, source: "manual")
+      Security::Split.create!(security: no_trade_stale_snap, ex_date: d(5), numerator: 2, denominator: 1, source: "manual")
+
+      account.holdings.create!(security: no_trade_stale_snap, date: d(3), qty: 5, price: 30, amount: 150, currency: "USD",
+        account_provider: provider)
+      account.holdings.create!(security: traded, date: d(10), qty: 5, price: 50, amount: 250, currency: "USD",
+        account_provider: provider)
+      account.holdings.create!(security: no_trade_2x, date: d(10), qty: 10, price: 30, amount: 300, currency: "USD",
+        account_provider: provider)
+      account.holdings.create!(security: no_trade_3x, date: d(10), qty: 10, price: 30, amount: 300, currency: "USD",
+        account_provider: provider)
+
+      lot_2x = create_opening_lot(account, no_trade_2x, qty: 10, updated_at: TODAY)
+      lot_3x = create_opening_lot(account, no_trade_3x, qty: 10, updated_at: TODAY)
+      lot_stale = create_opening_lot(account, no_trade_stale_snap, qty: 10, updated_at: TODAY)
+
+      run_backfill_up
+
+      assert_equal 10, lot_2x.reload.original_quantity
+      assert_equal 10, lot_3x.reload.original_quantity
+      assert_equal 10, lot_stale.reload.original_quantity
     end
   end
 
@@ -226,6 +302,12 @@ class BackfillOriginalQuantityOnHoldingLotsMigrationTest < ActiveSupport::TestCa
 
     def create_security(ticker)
       Security.create!(ticker: ticker, name: ticker)
+    end
+
+    def priced_security(ticker)
+      security = create_security(ticker)
+      Security::Price.insert_all((d(1)..d(10)).map { |date| { security_id: security.id, date: date, price: 30, currency: "USD" } })
+      security
     end
 
     def create_opening_lot(account, security, qty:, clamped: false, updated_at: TODAY)

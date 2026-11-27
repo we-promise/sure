@@ -17,10 +17,11 @@ class Holding::PortfolioCache
     end
   end
 
-  def initialize(account, use_holdings: false, security_ids: nil)
+  def initialize(account, use_holdings: false, security_ids: nil, as_of_date: Date.current)
     @account = account
     @use_holdings = use_holdings
     @security_ids = security_ids
+    @as_of_date = as_of_date
     load_prices
   end
 
@@ -105,15 +106,15 @@ class Holding::PortfolioCache
     # not applied early; it takes effect when that date arrives.
     def splits
       @splits ||= Security::Split
-        .where(security_id: @security_cache.keys, ex_date: account.start_date..Date.current)
+        .where(security_id: @security_cache.keys, ex_date: account.start_date..@as_of_date)
         .order(:ex_date)
         .to_a
     end
 
-    # Every split up to today, however early, for carrying a snapshot forward.
+    # Every split up to the calculation date, however early, for carrying a snapshot forward.
     def splits_through_today
       @splits_through_today ||= Security::Split
-        .where(security_id: @security_cache.keys, ex_date: ..Date.current)
+        .where(security_id: @security_cache.keys, ex_date: ..@as_of_date)
         .order(:ex_date)
         .to_a
     end

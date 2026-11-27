@@ -117,6 +117,13 @@ class BackfillOriginalQuantityOnHoldingLots < ActiveRecord::Migration[8.1]
 
       trades = context[:trades_by_key].fetch(key, []).select { |t| t[:date] <= basis_date }
       all_splits = context[:splits_by_security].fetch(security_id, []).select { |s| s[:ex_date] <= basis_date }
+      linked_pos = resolve_linked_position(account_id, security_id, basis_date, all_splits, context)
+
+      # ReverseCalculator leaves untraded securities at their snapshot quantity without
+      # unscaling or rescaling splits, so do not replay split events when trades are empty.
+      if trades.empty?
+        return linked_pos ? [ hl_qty, linked_pos, BigDecimal("0") ].max : [ hl_qty, BigDecimal("0") ].max
+      end
 
       min_entry_date = context[:min_entry_dates][account_id]
       account_start_date = (min_entry_date && min_entry_date <= basis_date ? min_entry_date : basis_date) - 1
@@ -126,15 +133,15 @@ class BackfillOriginalQuantityOnHoldingLots < ActiveRecord::Migration[8.1]
                replay_splits.each_with_index.map { |s, idx| [ s[:ex_date], 0, idx, :split, s ] }
       events.sort_by! { |date, kind, idx, _, _| [ date, kind, idx ] }
 
-      baseline = resolve_linked_baseline(account_id, security_id, basis_date, trades, all_splits, events, context)
-      if baseline
+      if linked_pos
+        baseline = resolve_linked_baseline(linked_pos, events)
         reconstruct_capped(hl_qty, baseline, events, context[:disposals_by_sale])
       else
         reconstruct_from_disposals(hl_qty, events, context[:disposals_by_sale])
       end
     end
 
-    def resolve_linked_baseline(account_id, security_id, basis_date, trades, all_splits, events, context)
+    def resolve_linked_position(account_id, security_id, basis_date, all_splits, context)
       provider_dates = context[:provider_dates_by_account].fetch(account_id, [])
       snapshot_date = provider_dates.select { |d| d <= basis_date }.max
       linked = context[:linked_accounts].include?(account_id)
@@ -164,8 +171,11 @@ class BackfillOriginalQuantityOnHoldingLots < ActiveRecord::Migration[8.1]
         end
       end
 
-      return [ pos, BigDecimal("0") ].max if trades.empty?
+      [ pos, BigDecimal("0") ].max
+    end
 
+    def resolve_linked_baseline(linked_pos, events)
+      pos = linked_pos
       events.reverse_each do |_, _, _, kind, payload|
         if kind == :split
           pos = unscale_qty(pos, payload[:numerator], payload[:denominator])

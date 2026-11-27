@@ -1,11 +1,12 @@
 class Holding::ForwardCalculator
   include Holding::TradeCalculatorHelpers
 
-  attr_reader :account
+  attr_reader :account, :as_of_date
 
   def initialize(account, security_ids: nil)
     @account = account
     @security_ids = security_ids
+    @as_of_date = Date.current
     # The lots of each security, which also give the weighted-average cost
     # basis, relieving sells so the figure stays correct after a position is
     # fully sold and repurchased.
@@ -37,7 +38,7 @@ class Holding::ForwardCalculator
       next_portfolio = {}
       holdings = []
 
-      account.start_date.upto(Date.current).each do |date|
+      account.start_date.upto(as_of_date).each do |date|
         trades = portfolio_cache.get_trades(date: date)
         next_portfolio = apply_trades(apply_splits(current_portfolio, date), trades)
         holdings.concat(build_holdings(next_portfolio, date))
@@ -50,7 +51,7 @@ class Holding::ForwardCalculator
 
   private
     def portfolio_cache
-      @portfolio_cache ||= Holding::PortfolioCache.new(account, security_ids: @security_ids)
+      @portfolio_cache ||= Holding::PortfolioCache.new(account, security_ids: @security_ids, as_of_date: as_of_date)
     end
 
     def empty_portfolio
@@ -172,7 +173,7 @@ class Holding::ForwardCalculator
     def seed_opening_lots
       opening_lots.each do |lot|
         orig_qty = lot.original_quantity || lot.qty
-        as_of = lot.original_quantity_as_of || Date.current
+        as_of = lot.original_quantity_as_of || as_of_date
         factor = portfolio_cache.split_factor_between(lot.security_id, account.start_date - 1, as_of)
         initial_qty = factor == 1 ? orig_qty : Security::Split.unscale(orig_qty, factor)
         @lot_books[lot.security_id].add_unknown(initial_qty, original_qty: initial_qty)
