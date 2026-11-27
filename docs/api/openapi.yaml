@@ -10888,12 +10888,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TransactionCollection"
-        '422':
-          description: min_amount or max_amount is not a number
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
     post:
       summary: Create transaction
       tags:

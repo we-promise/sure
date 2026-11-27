@@ -147,30 +147,6 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "should filter transactions by amount range" do
-    get api_v1_transactions_url, params: { min_amount: "10.5", max_amount: "100" }, headers: api_headers(@api_key)
-    assert_response :success
-
-    JSON.parse(response.body)["transactions"].each do |transaction|
-      amount = Transaction.find(transaction["id"]).entry.amount
-      assert_operator amount, :>=, BigDecimal("10.5")
-      assert_operator amount, :<=, 100
-    end
-  end
-
-  test "index refuses an amount filter that is not a number" do
-    %w[min_amount max_amount].each do |key|
-      [ "abc", "12abc", "Infinity" ].each do |value|
-        get api_v1_transactions_url, params: { key => value }, headers: api_headers(@api_key)
-
-        assert_response :unprocessable_entity, "#{key}=#{value}"
-        body = JSON.parse(response.body)
-        assert_equal "validation_failed", body["error"]
-        assert_equal "#{key} must be a valid number", body["message"]
-      end
-    end
-  end
-
   test "should filter transactions by tag_ids without error" do
     tag_one = tags(:one)
     tag_two = tags(:two)

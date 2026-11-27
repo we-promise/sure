@@ -51,8 +51,6 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # Rails will automatically use app/views/api/v1/transactions/index.json.jbuilder
     render :index
 
-  rescue InvalidFilterError => e
-    handle_invalid_filter(e)
   rescue => e
     Rails.logger.error "TransactionsController#index error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -329,8 +327,15 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       end
 
       # Amount filtering
-      query = query.where("entries.amount >= ?", decimal_filter_param(:min_amount)) if params[:min_amount].present?
-      query = query.where("entries.amount <= ?", decimal_filter_param(:max_amount)) if params[:max_amount].present?
+      if params[:min_amount].present?
+        min_amount = params[:min_amount].to_f
+        query = query.where("entries.amount >= ?", min_amount)
+      end
+
+      if params[:max_amount].present?
+        max_amount = params[:max_amount].to_f
+        query = query.where("entries.amount <= ?", max_amount)
+      end
 
       # Tag filtering
       if params[:tag_ids].present?
@@ -351,10 +356,6 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       end
 
       query
-    end
-
-    def decimal_filter_param(key)
-      parse_decimal(params[key]) || raise(InvalidFilterError, "#{key} must be a valid number")
     end
 
     def apply_search(query)

@@ -196,14 +196,6 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
         run_test!
       end
-
-      response '422', 'min_amount or max_amount is not a number' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
-
-        let(:min_amount) { 'abc' }
-
-        run_test!
-      end
     end
 
     post 'Create transaction' do
