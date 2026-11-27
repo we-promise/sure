@@ -692,14 +692,10 @@ class SnaptradeAccount::ActivitiesProcessor
       imported = account.entries.where(external_id: rows.map { |row| row[:id].to_s }, source: "snaptrade").pluck(:external_id).to_set
       drop_ids = Set.new
 
-      card_duplicate_pairs(rows).each do |extra, keeper|
-        next if drop_ids.include?(keeper[:id].to_s)
-
-        # Keep whichever copy is already in the ledger so nothing is imported twice.
-        if imported.include?(extra[:id].to_s) && !imported.include?(keeper[:id].to_s)
-          extra, keeper = keeper, extra
-        end
-        drop_ids << extra[:id].to_s
+      # Every copy of one charge ends up in one group; exactly one row per group is imported.
+      card_duplicate_groups(rows).each do |group|
+        keeper = group.min_by { |row| [ imported.include?(row[:id].to_s) ? 0 : 1, card_copy_rank(row), row[:id].to_s ] }
+        group.each { |row| drop_ids << row[:id].to_s unless row.equal?(keeper) }
       end
 
       return activities if drop_ids.empty?
@@ -707,40 +703,48 @@ class SnaptradeAccount::ActivitiesProcessor
       activities.reject { |activity| activity.is_a?(Hash) && drop_ids.include?(activity.with_indifferent_access[:id].to_s) }
     end
 
-    # [ extra, keeper ] pairs: the extra row is the pending or bare copy.
-    def card_duplicate_pairs(rows)
+    # Groups of rows that are copies of one charge: a posted purchase with its
+    # pending copies and with a bare row for the same purchase.
+    def card_duplicate_groups(rows)
       purchases = rows.filter_map do |row|
         match = CARD_DESCRIPTION.match(row[:description].to_s.strip)
         [ row, match[2].to_s ] if match && match[1] == "PURCHASE"
       end
       posted = purchases.reject { |_, merchant| pending_card_merchant(merchant) }
 
-      pairs = []
-      used = Set.new
-      take = lambda do |extra, candidates|
-        keeper = candidates.find { |row| !used.include?(row[:id].to_s) }
+      groups = {}
+      claimed = Set.new
+      join = lambda do |extra, candidates|
+        keeper = candidates.find { |row| !claimed.include?([ extra[:_copy], row[:id].to_s ]) }
         return unless keeper
 
-        used << keeper[:id].to_s
-        pairs << [ extra, keeper ]
+        claimed << [ extra[:_copy], keeper[:id].to_s ]
+        (groups[keeper[:id].to_s] ||= [ keeper ]) << extra
       end
 
       purchases.each do |row, merchant|
         prefix = pending_card_merchant(merchant)
         next unless prefix
 
-        take.call(row, posted.filter_map do |other, other_merchant|
+        row[:_copy] = :pending
+        join.call(row, posted.filter_map do |other, other_merchant|
           other if same_card_charge?(row, other) && card_merchant_key(other_merchant).start_with?(prefix)
         end)
       end
 
       rows.each do |row|
-        next if CARD_DESCRIPTION.match?(row[:description].to_s.strip)
+        next unless row[:description].to_s.strip.upcase == "CREDIT_CARD"
 
-        take.call(row, posted.filter_map { |other, _| other if same_card_charge?(row, other, absolute: true) })
+        row[:_copy] = :bare
+        join.call(row, posted.filter_map { |other, _| other if same_card_charge?(row, other, absolute: true) })
       end
 
-      pairs
+      groups.values
+    end
+
+    # Which copy to keep when none is imported yet: posted, then pending, then bare.
+    def card_copy_rank(row)
+      { nil => 0, pending: 1, bare: 2 }.fetch(row[:_copy], 0)
     end
 
     # The merchant name a pending copy was cut down to, or nil when the name is

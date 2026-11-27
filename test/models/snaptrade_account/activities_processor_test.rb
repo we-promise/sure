@@ -2626,6 +2626,38 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not_nil snaptrade_entry("refund")
   end
 
+  test "pending, posted and bare copies of one charge import once" do
+    process_activities(
+      card_activity(id: "tri_bare", description: "CREDIT_CARD", amount: 409.69),
+      card_activity(id: "tri_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69),
+      card_activity(id: "tri_posted", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: -409.69)
+    )
+
+    assert_equal %w[tri_posted], @account.entries.where(source: "snaptrade", external_id: %w[tri_bare tri_pending tri_posted]).pluck(:external_id)
+  end
+
+  test "a pending copy already imported stays the only copy when bare and posted copies arrive" do
+    process_activities(card_activity(id: "only_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69))
+
+    process_activities(
+      card_activity(id: "only_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69),
+      card_activity(id: "late_bare", description: "CREDIT_CARD", amount: 409.69),
+      card_activity(id: "late_posted", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: -409.69)
+    )
+
+    assert_equal %w[only_pending], @account.entries.where(source: "snaptrade", external_id: %w[only_pending late_bare late_posted]).pluck(:external_id)
+  end
+
+  test "only an exact bare CREDIT_CARD description is matched with a purchase" do
+    process_activities(
+      card_activity(id: "card_fee", description: "CREDIT_CARD FEE", amount: 43.00),
+      card_activity(id: "fee_day_buy", description: "CREDIT_CARD PURCHASE: Marketplace Ad", amount: -43.00)
+    )
+
+    assert_not_nil snaptrade_entry("card_fee")
+    assert_not_nil snaptrade_entry("fee_day_buy")
+  end
+
   test "card charges with different amounts or merchants are not merged" do
     process_activities(
       card_activity(id: "diff_a", description: "CREDIT_CARD PURCHASE: Grocer", amount: -10.00),
