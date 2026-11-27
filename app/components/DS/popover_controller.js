@@ -29,7 +29,8 @@ export default class extends Controller {
   connect() {
     this.boundUpdate = this.update.bind(this);
     this.addEventListeners();
-    this.startAutoUpdate();
+    // A copy Turbo cached while open comes back visible without toggle() running.
+    if (this.show) this.startAutoUpdate();
   }
 
   // Derived from the content element's own class rather than tracked as
@@ -89,7 +90,10 @@ export default class extends Controller {
     if (nextShow) {
       this.mountFrame();
       this.update();
+      this.startAutoUpdate();
       this.focusFirstElement();
+    } else {
+      this.stopAutoUpdate();
     }
   };
 
@@ -118,6 +122,7 @@ export default class extends Controller {
   close(event) {
     this.contentTarget.classList.add("hidden");
     this.buttonTarget.setAttribute("aria-expanded", "false");
+    this.stopAutoUpdate();
     if (event) this.buttonTarget.focus();
   }
 
