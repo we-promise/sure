@@ -99,6 +99,139 @@ class Trading212HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("50"), holding.cost_basis
   end
 
+  test "processor stores a known instrument under its shortName" do
+    @trading212_item.update!(raw_instruments_payload: [
+      { "ticker" => "GARENA_US_EQ", "shortName" => "SE", "name" => "Sea", "currencyCode" => "USD" }
+    ])
+    @trading212_account.reload
+    @trading212_account.update!(
+      raw_positions_payload: [
+        {
+          "instrument" => {
+            "ticker" => "GARENA_US_EQ",
+            "isin" => "US81141R1005",
+            "name" => "Sea",
+            "currency" => "USD"
+          },
+          "quantity" => "12",
+          "currentPrice" => "120.00"
+        }
+      ]
+    )
+
+    Trading212Account::HoldingsProcessor.new(@trading212_account).process
+
+    security = Security.find_by(ticker: "SE")
+    assert_not_nil security
+    assert_nil Security.find_by(ticker: "GARENA")
+    assert_not_nil @account.holdings.find_by(security: security)
+  end
+
+  test "processor keeps a locked cost basis when a position moves to its shortName" do
+    @trading212_account.update!(
+      raw_positions_payload: [
+        {
+          "instrument" => {
+            "ticker" => "GARENA_US_EQ",
+            "name" => "Sea",
+            "currency" => "USD"
+          },
+          "quantity" => "12",
+          "currentPrice" => "120.00",
+          "averagePricePaid" => "90.00"
+        }
+      ]
+    )
+    day_one = 2.days.ago
+    day_two = day_one + 1.day
+
+    travel_to(day_one) { Trading212Account::HoldingsProcessor.new(@trading212_account).process }
+    @account.holdings.find_by!(security: Security.find_by!(ticker: "GARENA")).set_manual_cost_basis!(85)
+
+    @trading212_item.update!(raw_instruments_payload: [
+      { "ticker" => "GARENA_US_EQ", "shortName" => "SE", "name" => "Sea", "currencyCode" => "USD" }
+    ])
+    @trading212_account.reload
+    travel_to(day_two) { Trading212Account::HoldingsProcessor.new(@trading212_account).process }
+
+    holding = @account.holdings.find_by!(date: day_two.to_date)
+    assert_equal "SE", holding.security.ticker
+    assert holding.cost_basis_locked?
+    assert_equal BigDecimal("85"), holding.cost_basis
+  end
+
+  test "processor does not carry a locked cost basis into another currency" do
+    @trading212_account.update!(
+      raw_positions_payload: [
+        {
+          "instrument" => { "ticker" => "SGLNl_EQ", "name" => "iShares Physical Gold" },
+          "quantity" => "4",
+          "currentPrice" => "6141.0",
+          "averagePricePaid" => "5000.0"
+        }
+      ]
+    )
+    day_one = 2.days.ago
+    day_two = day_one + 1.day
+
+    travel_to(day_one) { Trading212Account::HoldingsProcessor.new(@trading212_account).process }
+    @account.holdings.find_by!(security: Security.find_by!(ticker: "SGLNL")).set_manual_cost_basis!(85)
+
+    @trading212_item.update!(raw_instruments_payload: [
+      { "ticker" => "SGLNl_EQ", "shortName" => "SGLN", "name" => "iShares Physical Gold", "currencyCode" => "GBX" }
+    ])
+    @trading212_account.update!(
+      raw_positions_payload: [
+        {
+          "instrument" => { "ticker" => "SGLNl_EQ", "name" => "iShares Physical Gold", "currency" => "GBX" },
+          "quantity" => "4",
+          "currentPrice" => "6141.0",
+          "averagePricePaid" => "5000.0"
+        }
+      ]
+    )
+    @trading212_account.reload
+    travel_to(day_two) { Trading212Account::HoldingsProcessor.new(@trading212_account).process }
+
+    holding = @account.holdings.find_by!(date: day_two.to_date)
+    assert_equal "GBP", holding.currency
+    assert_not holding.cost_basis_locked?
+    assert_equal BigDecimal("50"), holding.cost_basis
+  end
+
+  test "processor does not carry a locked cost basis onto another provider's row" do
+    @trading212_account.update!(
+      raw_positions_payload: [
+        {
+          "instrument" => { "ticker" => "GARENA_US_EQ", "name" => "Sea", "currency" => "USD" },
+          "quantity" => "12",
+          "currentPrice" => "120.00",
+          "averagePricePaid" => "90.00"
+        }
+      ]
+    )
+    day_one = 2.days.ago
+    day_two = day_one + 1.day
+
+    travel_to(day_one) { Trading212Account::HoldingsProcessor.new(@trading212_account).process }
+    @account.holdings.find_by!(security: Security.find_by!(ticker: "GARENA")).set_manual_cost_basis!(85)
+
+    other_provider = AccountProvider.create!(account: @account, provider: snaptrade_accounts(:vanguard_ira))
+    others = @account.holdings.create!(
+      security: Security.create!(ticker: "SE", name: "Sea"), account_provider: other_provider,
+      date: day_two.to_date, currency: "USD", qty: 5, price: 100, amount: 500, cost_basis: 77, cost_basis_source: "provider"
+    )
+    @trading212_item.update!(raw_instruments_payload: [
+      { "ticker" => "GARENA_US_EQ", "shortName" => "SE", "name" => "Sea", "currencyCode" => "USD" }
+    ])
+    @trading212_account.reload
+    travel_to(day_two) { Trading212Account::HoldingsProcessor.new(@trading212_account).process }
+
+    others.reload
+    assert_equal BigDecimal("77"), others.cost_basis
+    assert_not others.cost_basis_locked?
+  end
+
   test "processor skips position with blank ticker" do
     @trading212_account.update!(
       raw_positions_payload: [
