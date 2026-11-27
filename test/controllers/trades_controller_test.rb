@@ -24,6 +24,22 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_select "span.text-secondary.text-sm", text: I18n.t("trades.header.buy"), count: 0
   end
 
+  # A quote in the listing's currency was shown and netted against the trade's
+  # price as if both were in the trade's currency. 10 bought at 180 EUR, quoted
+  # at 200 USD, USD->EUR 0.9: the position is worth what it cost.
+  test "the header converts a quote in another currency to the trade's" do
+    @entry.update!(amount: 1800, currency: "EUR")
+    @entry.trade.update!(qty: 10, price: 180, fee: 0, currency: "EUR")
+    Security.any_instance.stubs(:current_price).returns(Money.new(200, "USD"))
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    get trade_url(@entry)
+
+    assert_response :success
+    assert_select "dd", text: /#{Regexp.escape(Money.new(180, "EUR").format)}\s*\(#{Regexp.escape(Money.new(200, "USD").format)}\)/
+    assert_select "dd p", text: I18n.t("shared.trend_change.no_change")
+  end
+
   test "the German header localizes supported provider activity labels" do
     @user.update!(locale: "de")
 
@@ -165,6 +181,16 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to @investment
+  end
+
+  # The price and the fee each had a model[currency] picker, and the fee's,
+  # submitted last, overrode the currency picked for the price.
+  test "a buy form submits one currency, the price's, which the fee follows" do
+    get new_trade_url(account_id: @entry.account_id, type: "buy")
+
+    assert_response :success
+    assert_select "select[name='model[currency]']", count: 1
+    assert_select "[data-money-field-currency-source-value] input[name='model[fee]']"
   end
 
   test "the transfer account picker only offers accounts the member may write to" do

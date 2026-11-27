@@ -119,9 +119,10 @@ class Family::FinancialDataReset
       scope(:budget_categories).destroy_all
       scope(:taggings).destroy_all
       scope(:family_merchant_associations).delete_all
-      scope(:account_statements).destroy_all
       scope(:family_exports).destroy_all
+      # Imports first: a statement cannot be destroyed while an import carries it.
       scope(:imports).destroy_all
+      scope(:account_statements).destroy_all
       scope(:import_sessions).destroy_all
       scope(:entries).destroy_all
       scope(:holdings).destroy_all
