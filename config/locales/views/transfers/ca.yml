@@ -5,6 +5,7 @@ ca:
       success: Transferència creada
       exchange_rate_unavailable: No hi ha cap tipus de canvi disponible per a les monedes i la data seleccionades
       date_invalid: no és vàlida
+      amounts_invalid: "El tipus de canvi ha de ser positiu i les comissions no poden ser negatives."
       stale_form: Aquest formulari ja s'ha enviat amb dades diferents. Actualitza la pàgina i torna-ho a provar.
     destroy:
       success: Transferència eliminada

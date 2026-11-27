@@ -3,6 +3,7 @@ pl:
   transfers:
     create:
       date_invalid: jest nieprawidłowa
+      amounts_invalid: "Kurs wymiany musi być dodatni, a opłaty nie mogą być ujemne."
       exchange_rate_unavailable: Kurs wymiany niedostępny dla wybranych walut i daty
       stale_form: Ten formularz został już wysłany z innymi danymi. Odśwież stronę
         i spróbuj ponownie.

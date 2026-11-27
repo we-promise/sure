@@ -276,4 +276,12 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal [ nil, 2 ], money_field_value("starbucks", currency: "USD")
     assert_equal [ nil, 2 ], money_field_value("12,50", currency: "USD")
   end
+
+  test "plain_decimal_text writes a small rate without exponent notation" do
+    assert_equal "0.000063", plain_decimal_text(0.000063)
+    assert_equal "1.0857", plain_decimal_text(1.0857)
+    assert_equal "2", plain_decimal_text(2.0)
+    assert_equal "abc", plain_decimal_text("abc")
+    assert_equal "", plain_decimal_text(nil)
+  end
 end

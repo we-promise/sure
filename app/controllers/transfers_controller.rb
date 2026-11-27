@@ -49,7 +49,7 @@ class TransfersController < ApplicationController
       family: Current.family,
       source_account_id: source_account.id,
       destination_account_id: destination_account.id,
-      date: transfer_params[:date].present? ? Date.parse(transfer_params[:date]) : Date.current,
+      date: transfer_params[:date].present? ? parse_transfer_date : Date.current,
       amount: transfer_params[:amount].to_d,
       exchange_rate: transfer_params[:exchange_rate].presence&.to_d,
       source_fee_amount: transfer_params[:source_fee_amount],
@@ -65,34 +65,32 @@ class TransfersController < ApplicationController
         format.turbo_stream { stream_redirect_back_or_to transactions_path, notice: success_message }
       end
     else
-      @from_account_id = transfer_params[:from_account_id]
-      @tags = Current.family.tags.alphabetically
-      render :new, status: :unprocessable_entity
+      render_new_with_submitted_input
     end
   rescue Money::ConversionError
     @transfer ||= Transfer.new(amount: transfer_params[:amount].presence)
-    @transfer.tag_ids = transfer_params[:tag_ids]
     @transfer.errors.add(:base, t(".exchange_rate_unavailable"))
-    @from_account_id = transfer_params[:from_account_id]
-    set_accounts
-    @tags = Current.family.tags.alphabetically
-    render :new, status: :unprocessable_entity
-  rescue ArgumentError
+    render_new_with_submitted_input
+  rescue ActiveRecord::RecordInvalid => e
+    @transfer = Transfer.new(amount: transfer_params[:amount].presence)
+    e.record.errors.full_messages.each { |message| @transfer.errors.add(:base, message) }
+    render_new_with_submitted_input
+  rescue Date::Error
     @transfer ||= Transfer.new(amount: transfer_params[:amount].presence)
-    @transfer.tag_ids = transfer_params[:tag_ids]
     @transfer.errors.add(:date, t(".date_invalid"))
-    @from_account_id = transfer_params[:from_account_id]
-    set_accounts
-    @tags = Current.family.tags.alphabetically
-    render :new, status: :unprocessable_entity
+    render_new_with_submitted_input
+  rescue ArgumentError
+    # Transfer::Creator rejects a zero rate or a negative fee this way.
+    @transfer ||= Transfer.new(amount: transfer_params[:amount].presence)
+    @transfer.errors.add(:base, t(".amounts_invalid"))
+    render_new_with_submitted_input
   rescue Transfer::Creator::StaleIdempotencyKeyError
     @transfer ||= Transfer.new(amount: transfer_params[:amount].presence)
-    @transfer.tag_ids = transfer_params[:tag_ids]
     @transfer.errors.add(:base, t(".stale_form"))
-    @from_account_id = transfer_params[:from_account_id]
-    set_accounts
-    @tags = Current.family.tags.alphabetically
-    render :new, status: :unprocessable_entity
+    # The submitted key is taken, so the redrawn form gets a fresh one;
+    # otherwise resubmitting it would fail the same way every time.
+    @new_transfer_idempotency_key = SecureRandom.uuid
+    render_new_with_submitted_input
   end
 
   def update
@@ -214,6 +212,43 @@ class TransfersController < ApplicationController
   end
 
   private
+    # Redraws the form after a rejected submit with what was entered, so the
+    # destination account, fees and rate do not have to be picked again.
+    def render_new_with_submitted_input
+      @transfer.tag_ids = transfer_params[:tag_ids]
+      @transfer.source_fee_amount = submitted_decimal(:source_fee_amount)
+      @transfer.destination_fee_amount = submitted_decimal(:destination_fee_amount)
+      @from_account_id = transfer_params[:from_account_id]
+      @to_account_id = transfer_params[:to_account_id]
+      @exchange_rate = submitted_decimal(:exchange_rate)&.to_s("F")
+      @date = submitted_date
+      set_accounts
+      @tags = Current.family.tags.alphabetically
+      render :new, status: :unprocessable_entity
+    end
+
+    # The money fields submit a plain number; anything else (a submit without
+    # JavaScript, or exponent notation that would print as millions of
+    # digits) is dropped rather than shown as a different number.
+    def submitted_decimal(key)
+      text = transfer_params[key].to_s.strip
+      BigDecimal(text) if text.match?(/\A-?\d{1,20}(\.\d{1,20})?\z/)
+    end
+
+    # Date.parse raises a plain ArgumentError, not Date::Error, for a string
+    # over its length limit; both are an invalid date here.
+    def parse_transfer_date
+      Date.parse(transfer_params[:date].to_s)
+    rescue ArgumentError
+      raise Date::Error, "invalid date"
+    end
+
+    def submitted_date
+      parse_transfer_date
+    rescue Date::Error
+      nil
+    end
+
     def set_transfer
       # Finds the transfer and ensures the user has access to it. Unlinking
       # (reject/destroy) only needs access to one side, so a user can undo a

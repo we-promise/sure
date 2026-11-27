@@ -13,6 +13,8 @@
    display_precision = options[:precision].presence || [ currency.default_precision, options[:min_precision].to_i ].max
    amount_min = options[:min] || -99999999999999
    amount_max = options[:max] || 99999999999999
+   # raw_value: text shown as given, for a value that is not a currency
+   # amount (an exchange rate) and must not be rounded to its precision.
    label_options = { class: class_names("form-field__label", options[:label_class]) }
    label_options[:for] = options[:id] if options[:id] %>
 
@@ -24,6 +26,7 @@
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
      <% if options[:min_precision].present? %> data-money-field-min-precision-value="<%= options[:min_precision] %>"<% end %>
      <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>
+     <% if options[:paste_hint] == false %> data-money-field-paste-hint-value="false"<% end %>
      <% if options[:currency_source].present? %> data-money-field-currency-source-value="<%= options[:currency_source] %>" data-action="change@document->money-field#followCurrencySource"<% end %>
      data-money-field-min-value="<%= amount_min %>"
      data-money-field-max-value="<%= amount_max %>"
@@ -71,7 +74,9 @@
           inline: true,
           placeholder: options[:placeholder] || "100",
           inputmode: "decimal",
-          value: if options[:value]
+          value: if options.key?(:raw_value)
+            options[:raw_value]
+          elsif options[:value]
             sprintf("%.#{display_precision}f", options[:value])
           elsif form.object && form.object.respond_to?(amount_method)
             val = form.object.public_send(amount_method)

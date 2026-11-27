@@ -196,6 +196,136 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "a rejected transfer keeps the destination, fees and rate it was given" do
+    assert_no_difference "Transfer.count" do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: "not-a-date",
+          amount: "100",
+          source_fee_amount: "1.25",
+          destination_fee_amount: "2",
+          exchange_rate: "1.0857",
+          idempotency_key: SecureRandom.uuid
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=hidden][name='transfer[to_account_id]'][value=?]", accounts(:credit_card).id
+    assert_select "input[name='transfer[source_fee_amount]'][value='1.25']"
+    assert_select "input[name='transfer[destination_fee_amount]'][value='2.00']"
+    assert_select "input[name='transfer[exchange_rate]'][value='1.0857']"
+  end
+
+  test "a rejected transfer drops a fee that is not a number" do
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: "not-a-date",
+        amount: "100",
+        source_fee_amount: "1,25",
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='transfer[source_fee_amount]']:not([value])"
+  end
+
+  test "a rejected transfer keeps its date and drops a rate in exponent notation" do
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:depository).id,
+        date: "2026-08-14",
+        amount: "100",
+        exchange_rate: "1e1000000000",
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='transfer[date]'][value='2026-08-14']"
+    assert_select "input[name='transfer[exchange_rate]']:not([value])"
+  end
+
+  test "a transfer to the same account comes back as the form with its error" do
+    assert_no_difference "Transfer.count" do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:depository).id,
+          date: Date.current,
+          amount: "100",
+          idempotency_key: SecureRandom.uuid
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "form[action='#{transfers_path}'] .text-destructive"
+    assert_select "input[type=hidden][name='transfer[to_account_id]'][value=?]", accounts(:depository).id
+  end
+
+  test "a zero exchange rate is reported on the amounts, not the date" do
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: "100",
+        exchange_rate: "0",
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, I18n.t("transfers.create.amounts_invalid")
+    assert_not_includes response.body, I18n.t("transfers.create.date_invalid")
+  end
+
+  test "a date too long to parse is reported as an invalid date" do
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: "2" * 200,
+        amount: "100",
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, I18n.t("transfers.create.date_invalid")
+    assert_not_includes response.body, I18n.t("transfers.create.amounts_invalid")
+  end
+
+  test "a rejected transfer keeps a date written out in words" do
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: "15 Jan 2024",
+        amount: "100",
+        source_fee_amount: "-1",
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='transfer[date]'][value='2024-01-15']"
+  end
+
+  test "the amounts error is translated wherever the other transfer errors are" do
+    locales = I18n.available_locales.select { |locale| I18n.exists?("transfers.create.date_invalid", locale, fallback: false) }
+    missing = locales.reject { |locale| I18n.exists?("transfers.create.amounts_invalid", locale, fallback: false) }
+
+    assert_empty missing
+  end
+
   test "reusing a key for a genuinely different request does not silently return the old transfer" do
     idempotency_key = SecureRandom.uuid
     from_account = accounts(:depository)
@@ -232,6 +362,9 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
+    # The redrawn form carries a fresh key, so submitting it again can work.
+    rendered_key = css_select("input[name='transfer[idempotency_key]']").first["value"]
+    assert_not_equal idempotency_key, rendered_key
   end
 
   test "reusing a key with a different fee does not silently return the old transfer" do

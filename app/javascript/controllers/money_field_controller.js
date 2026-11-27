@@ -26,6 +26,9 @@ export default class extends Controller {
     delimiter: String,
     separatorCurrency: String,
     currencySource: String,
+    // False for a value with no currency (an exchange rate): its paste is not
+    // settled by a currency's separator, so "0,925" is read as typed.
+    pasteHint: { type: Boolean, default: true },
   };
 
   requestSequence = 0;
@@ -290,6 +293,9 @@ export default class extends Controller {
       this.updateValidity();
       return;
     }
+    // A field without the paste hint (an exchange rate, which has no
+    // currency) leaves such a paste to the browser, read as typed text.
+    if (!this.pasteHintValue && this.#pasteReadsBothWays(text)) return;
     const parsed = parseAmountPaste(text, {
       separator: this.#pasteSeparator(),
       precision,

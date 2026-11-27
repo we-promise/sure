@@ -5,6 +5,7 @@ nb:
       success: Overføring opprettet
       exchange_rate_unavailable: Valutakurs er ikke tilgjengelig for de valgte valutaene og datoen
       date_invalid: er ugyldig
+      amounts_invalid: "Valutakursen må være positiv, og gebyrer kan ikke være negative."
       stale_form: Dette skjemaet er allerede sendt inn med andre opplysninger. Last inn siden på nytt og prøv igjen.
     destroy:
       success: Overføring fjernet

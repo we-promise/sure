@@ -17,6 +17,7 @@
   <% show_type_tabs = true %>
   <% account_ids = [] %>
   <% account_ids << @from_account_id if defined?(@from_account_id) && @from_account_id.present? %>
+  <% account_ids << @to_account_id if defined?(@to_account_id) && @to_account_id.present? %>
   <% account_ids << params[:from_account_id] if params[:from_account_id].present? %>
   <% account_ids << params[:to_account_id] if params[:to_account_id].present? %>
   <% account_ids << transfer.from_account_id if transfer.respond_to?(:from_account_id) && transfer.from_account_id.present? %>
@@ -24,7 +25,9 @@
   <% selected_accounts = @accounts.select { |a| account_ids.include?(a.id) } %>
   <% source_account_id = @from_account_id.presence if defined?(@from_account_id) %>
   <% source_account_id ||= transfer.from_account_id if transfer.respond_to?(:from_account_id) %>
-  <% destination_account_id = transfer.to_account_id if transfer.respond_to?(:to_account_id) %>
+  <% destination_account_id = @to_account_id.presence if defined?(@to_account_id) %>
+  <% destination_account_id ||= transfer.to_account_id if transfer.respond_to?(:to_account_id) %>
+  <% exchange_rate_text = @exchange_rate if defined?(@exchange_rate) %>
   <% source_account = @accounts.find { |a| a.id == source_account_id } %>
   <% destination_account = @accounts.find { |a| a.id == destination_account_id } %>
   <% source_currency = source_account&.currency || Current.family.currency %>
@@ -42,9 +45,9 @@
 
   <section class="space-y-2">
     <%= f.collection_select :from_account_id, @accounts, :id, :name, { prompt: t(".select_account"), label: t(".from"), selected: @from_account_id, variant: :logo, searchable: true }, { required: true, data: { transfer_form_target: "fromAccount", action: "change->transfer-form#checkCurrencyDifference" } } %>
-    <%= f.collection_select :to_account_id, @accounts, :id, :name, { prompt: t(".select_account"), label: t(".to"), variant: :logo, searchable: true }, { required: true, data: { transfer_form_target: "toAccount", action: "change->transfer-form#checkCurrencyDifference" } } %>
+    <%= f.collection_select :to_account_id, @accounts, :id, :name, { prompt: t(".select_account"), label: t(".to"), selected: destination_account_id, variant: :logo, searchable: true }, { required: true, data: { transfer_form_target: "toAccount", action: "change->transfer-form#checkCurrencyDifference" } } %>
 
-    <%= f.date_field :date, value: transfer.inflow_transaction&.entry&.date || Date.current, label: t(".date"), required: true, data: { transfer_form_target: "date", action: "change->transfer-form#checkCurrencyDifference" } %>
+    <%= f.date_field :date, value: (@date if defined?(@date)) || transfer.inflow_transaction&.entry&.date || Date.current, label: t(".date"), required: true, data: { transfer_form_target: "date", action: "change->transfer-form#checkCurrencyDifference" } %>
 
     <%# The amount and fees are in their account's currency, which the account
         pickers decide; these unnamed inputs carry that currency for the money
@@ -68,13 +71,19 @@
         ) %>
 
     <% convert_input = capture do %>
-      <%= f.number_field :exchange_rate,
+      <%# A money field, so a comma decimal or an expression ("1/0,92") works;
+          the rate has no currency, so neither a symbol nor rounding applies. %>
+      <%= f.money_field :exchange_rate,
         label: t("shared.exchange_rate_tabs.exchange_rate"),
         min: "0.00000000000001",
-        step: "0.00000000000001",
+        step: "any",
+        raw_value: exchange_rate_text,
         placeholder: "1.0",
-        class: "form-field__input",
-        data: {
+        hide_currency: true,
+        hide_symbol: true,
+        paste_hint: false,
+        autocomplete: "off",
+        amount_data: {
           transfer_form_target: "exchangeRateField",
           action: "input->transfer-form#onConvertExchangeRateChange"
         } %>
@@ -107,7 +116,7 @@
   </section>
 
   <section>
-    <%= render DS::Disclosure.new(title: t(".bank_charges"), open: false, variant: :inline) do %>
+    <%= render DS::Disclosure.new(title: t(".bank_charges"), open: transfer.source_fee_amount.present? || transfer.destination_fee_amount.present?, variant: :inline) do %>
       <%# Bottom room for the incoming fee's operator row, which otherwise
           covers the submit button while that field has focus. %>
       <div class="space-y-2 pt-2 pb-10">

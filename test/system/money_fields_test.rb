@@ -82,6 +82,45 @@ class MoneyFieldsTest < ApplicationSystemTestCase
     assert_equal "1.23", page.evaluate_script(submitted)
   end
 
+  test "a transfer's exchange rate reads a comma decimal" do
+    eur_account = @user.family.accounts.create!(name: "EUR Savings", balance: 1000, currency: "EUR", accountable: Depository.new)
+
+    visit new_transfer_url
+    select_ds("From", accounts(:depository))
+    select_ds("To", eur_account)
+    fill_in "transfer[amount]", with: "100"
+
+    rate_field = find_field("transfer[exchange_rate]", visible: true)
+    rate_field.fill_in(with: "1,1")
+
+    assert_selector "[data-transfer-form-target='convertDestinationDisplay']", text: "110.00 EUR"
+    submitted = 'new FormData(document.querySelector("input[name=\'transfer[exchange_rate]\']").form).get("transfer[exchange_rate]")'
+    assert_equal "1.1", page.evaluate_script(submitted)
+  end
+
+  test "a calculated rate survives a date without a market rate" do
+    eur_account = @user.family.accounts.create!(name: "EUR Savings", balance: 1000, currency: "EUR", accountable: Depository.new)
+
+    visit new_transfer_url
+    select_ds("From", accounts(:depository))
+    select_ds("To", eur_account)
+    fill_in "transfer[amount]", with: "100"
+    find("button[data-id='calculateRate']").click
+    find("[data-transfer-form-target='destinationAmount']").fill_in(with: "92")
+    assert_selector "[data-transfer-form-target='calculateRateDisplay']", text: "0.92"
+
+    # A placeholder the lookup for the new date must replace, so the check
+    # below only passes once that lookup has landed (blanked without the fix).
+    rate = 'document.querySelector("[data-transfer-form-target=\'exchangeRateField\']")'
+    page.execute_script("#{rate}.value = '7'")
+    fill_in "Date", with: 3.days.ago.to_date
+
+    page.document.synchronize do
+      raise Capybara::ExpectationNotMet unless page.evaluate_script("#{rate}.value").start_with?("0.92")
+    end
+    assert_selector "[data-transfer-form-target='calculateRateDisplay']", text: "0.92"
+  end
+
   test "text typed between two pending currency switches keeps the new reading" do
     jpy_account = @user.family.accounts.create!(name: "JPY Savings", balance: 100_000, currency: "JPY", accountable: Depository.new)
     eur_account = @user.family.accounts.create!(name: "EUR Savings", balance: 1_000, currency: "EUR", accountable: Depository.new)

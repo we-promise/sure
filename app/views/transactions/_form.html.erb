@@ -70,13 +70,19 @@
 
     <% convert_input = capture do %>
       <%= f.fields_for :entryable do |ef| %>
-        <%= ef.number_field :exchange_rate,
+        <%# A money field, so a comma decimal or an expression ("1/0,92") works;
+            the rate has no currency, so neither a symbol nor rounding applies. %>
+        <%= ef.money_field :exchange_rate,
           label: t("shared.exchange_rate_tabs.exchange_rate"),
           min: "0.00000000000001",
-          step: "0.00000000000001",
+          step: "any",
+          raw_value: plain_decimal_text(ef.object.exchange_rate),
           placeholder: "1.0",
-          class: "form-field__input",
-          data: {
+          hide_currency: true,
+          hide_symbol: true,
+          paste_hint: false,
+          autocomplete: "off",
+          amount_data: {
             transaction_form_target: "exchangeRateField",
             action: "input->transaction-form#onConvertExchangeRateChange"
           } %>

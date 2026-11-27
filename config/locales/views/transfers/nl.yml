@@ -5,6 +5,7 @@ nl:
       success: "Overboeking aangemaakt"
       exchange_rate_unavailable: "Wisselkoers niet beschikbaar voor de geselecteerde valuta en datum"
       date_invalid: "is ongeldig"
+      amounts_invalid: "De wisselkoers moet positief zijn en kosten mogen niet negatief zijn."
       stale_form: "Dit formulier is al met andere gegevens verzonden. Vernieuw de pagina en probeer het opnieuw."
     destroy:
       success: "Overboeking verwijderd"

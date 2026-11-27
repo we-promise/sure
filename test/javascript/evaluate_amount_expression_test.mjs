@@ -580,6 +580,26 @@ describe("formatAmountForDisplay", () => {
       assert.ok(!formatted.includes("e"), `expected no exponential notation, got ${formatted}`)
     })
 
+    it("keeps the significant digits of a tiny exchange rate", () => {
+      assert.equal(formatAmountForDisplay(0.00000000038, null, "0.00000000038"), "0.00000000038")
+      assert.equal(formatAmountForDisplay(0.00000006712345, null, "x"), "0.00000006712345")
+    })
+
+    it("drops float drift on a large amount", () => {
+      assert.equal(formatAmountForDisplay(12345678.9, null, "12345678.9"), "12345678.9")
+    })
+
+    it("keeps the cents of a large amount", () => {
+      assert.equal(formatAmountForDisplay(12345678901234.25, null, "12345678901234.25"), "12345678901234.25")
+      assert.equal(formatAmountForDisplay(1234567890123.15, null, "1234567890123.15"), "1234567890123.15")
+      assert.equal(formatAmountForDisplay(12345678901234.01, null, "12345678901234.01"), "12345678901234.01")
+    })
+
+    it("drops float drift in the last digits", () => {
+      assert.equal(formatAmountForDisplay(0.1 + 0.7, null, "0.1+0.7"), "0.8")
+      assert.equal(formatAmountForDisplay(4.35 * 100, null, "4.35*100"), "435")
+    })
+
     it("renders a whole number without a trailing decimal point", () => {
       assert.equal(formatAmountForDisplay(12, null, "12"), "12")
     })

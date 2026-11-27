@@ -1753,6 +1753,26 @@ end
     assert_not entry.protected_from_sync?
   end
 
+  test "a rejected transaction shows the exchange rate as it was entered" do
+    assert_no_difference "Entry.count" do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "New transaction",
+          date: Date.current,
+          currency: "EUR",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: { exchange_rate: "abc" }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "[data-controller='money-field'] input[name='entry[entryable_attributes][exchange_rate]'][value='abc']"
+  end
+
   test "exchange_rate endpoint returns rate for different currencies" do
     ExchangeRate.expects(:find_or_fetch_rate)
                 .with(from: "EUR", to: "USD", date: Date.current)

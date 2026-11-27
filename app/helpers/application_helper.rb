@@ -238,6 +238,17 @@ module ApplicationHelper
     [ nil, min_precision ]
   end
 
+  # A number as plain decimal text ("0.000063", not Float#to_s's "6.3e-05"),
+  # for a money field that shows a value as given (an exchange rate). Text
+  # that is not a number is returned unchanged, so an invalid entry is shown
+  # as typed.
+  def plain_decimal_text(value)
+    return value.to_s unless value.is_a?(Numeric)
+    return "" unless value.to_f.finite?
+
+    BigDecimal(value.to_s).to_s("F").delete_suffix(".0")
+  end
+
   # The decimals a saved amount has (70.1234 has 4, 1500 has 0), counted from
   # its significant digits and exponent and capped, so a stray "1e-15" cannot
   # ask a field for 15 decimals. 0 for anything that is not a finite number.
