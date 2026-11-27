@@ -114,26 +114,37 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
     end
 
     def historical_data(period, interval, classification: nil)
-      # Match the accounts behind `current`: the member's finances that are not
-      # excluded from reports. A shared account they leave out is absent from
-      # `current`, so it must not reappear in every history point.
-      scope = user.finance_accounts.visible.included_in_reports
+      return [] if period.start_date == Date.current
+
+      scope = historical_accounts
       scope = scope.where(classification: classification) if classification.present?
+      accounts = scope.to_a
 
-      if period.start_date == Date.current
-        []
-      else
-        account_ids = scope.pluck(:id)
+      builder = Balance::ChartSeriesBuilder.new(
+        account_ids: accounts.map(&:id),
+        account_active_until_dates: disabled_account_active_until_dates(accounts),
+        currency: family.currency,
+        period: period,
+        favorable_direction: "up",
+        interval: interval
+      )
 
-        builder = Balance::ChartSeriesBuilder.new(
-          account_ids: account_ids,
-          currency: family.currency,
-          period: period,
-          favorable_direction: "up",
-          interval: interval
-        )
+      to_ai_time_series(builder.balance_series)
+    end
 
-        to_ai_time_series(builder.balance_series)
+    # Match the dashboard's net worth series: the member's finance accounts
+    # included in reports, with disabled accounts counted through the day
+    # before they were disabled.
+    def historical_accounts
+      @historical_accounts ||= BalanceSheet::HistoricalAccountScope.new(family, user: user).relation
+    end
+
+    def disabled_account_active_until_dates(accounts)
+      accounts.each_with_object({}) do |account, dates|
+        next unless account.disabled?
+
+        disabled_on = (account.disabled_at || account.updated_at).to_date
+        dates[account.id] = disabled_on - 1.day
       end
     end
 

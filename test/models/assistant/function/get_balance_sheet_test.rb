@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Assistant::Function::GetBalanceSheetTest < ActiveSupport::TestCase
+  include BalanceTestHelper
+
   setup do
     @user = users(:family_admin)
     @fn = Assistant::Function::GetBalanceSheet.new(@user)
@@ -85,14 +87,31 @@ class Assistant::Function::GetBalanceSheetTest < ActiveSupport::TestCase
     assert_equal "$0.00", result[:liabilities][:current]
   end
 
-  test "history leaves out a disabled account, like the current totals" do
-    accounts(:depository).update!(status: "disabled")
+  test "history keeps a disabled account through the day before it was disabled" do
+    user = users(:empty)
+    family = user.family
 
-    ids = captured_history_account_ids(users(:family_member))
+    active_account = family.accounts.create!(
+      owner: user, name: "Checking", balance: 0, currency: "USD", accountable: Depository.new
+    )
+    disabled_account = family.accounts.create!(
+      owner: user, name: "Old checking", balance: 0, currency: "USD", accountable: Depository.new
+    )
+    disabled_account.disable!
+    disabled_on = disabled_account.reload.disabled_at.to_date
 
-    assert_equal [ accounts(:credit_card).id ], ids[:net_worth]
-    assert_empty ids[:assets]
-    assert_equal [ accounts(:credit_card).id ], ids[:liabilities]
+    create_balance(account: active_account, date: disabled_on - 1.day, balance: 1_000)
+    create_balance(account: disabled_account, date: disabled_on - 1.day, balance: 20_000)
+
+    result = Assistant::Function::GetBalanceSheet.new(user).call(
+      "start_date" => (disabled_on - 1.day).iso8601,
+      "end_date" => disabled_on.iso8601,
+      "interval" => "1 day"
+    )
+
+    values = result[:net_worth][:monthly_history][:values]
+
+    assert_equal [ 21_000.0, 1_000.0 ], values
   end
 
   private
