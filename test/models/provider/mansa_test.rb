@@ -436,6 +436,27 @@ class Provider::MansaTest < ActiveSupport::TestCase
     assert_kind_of Faraday::TimeoutError, errors.last
   end
 
+  test "an invalid MANSA_MAX_REQUESTS_PER_DAY falls back to the default and logs the variable" do
+    Provider::EnvTuning::WARNED.clear
+    Rails.logger.expects(:warn).with(regexp_matches(/\AMANSA_MAX_REQUESTS_PER_DAY must be a positive whole number, got "abc"/))
+
+    with_env_overrides("MANSA_MAX_REQUESTS_PER_DAY" => "abc") do
+      assert_equal Provider::Mansa::MAX_REQUESTS_PER_DAY, @provider.send(:max_requests_per_day)
+    end
+  end
+
+  test "a valid MANSA_MAX_REQUESTS_PER_DAY is honoured and a blank one is treated as unset" do
+    Rails.logger.expects(:warn).never
+
+    with_env_overrides("MANSA_MAX_REQUESTS_PER_DAY" => "500") do
+      assert_equal 500, @provider.send(:max_requests_per_day)
+    end
+
+    with_env_overrides("MANSA_MAX_REQUESTS_PER_DAY" => "") do
+      assert_equal Provider::Mansa::MAX_REQUESTS_PER_DAY, @provider.send(:max_requests_per_day)
+    end
+  end
+
   private
     def stub_search_response(*listings)
       mock_response = mock

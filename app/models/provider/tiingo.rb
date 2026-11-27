@@ -273,7 +273,7 @@ class Provider::Tiingo < Provider
     # min_request_interval provided by RateLimitable
 
     def max_requests_per_hour
-      ENV.fetch("TIINGO_MAX_REQUESTS_PER_HOUR", MAX_REQUESTS_PER_HOUR).to_i
+      env_positive_integer("TIINGO_MAX_REQUESTS_PER_HOUR", MAX_REQUESTS_PER_HOUR)
     end
 
     # Fetches the price currency for a symbol via the search endpoint.

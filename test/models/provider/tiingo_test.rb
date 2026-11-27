@@ -320,4 +320,25 @@ class Provider::TiingoTest < ActiveSupport::TestCase
     assert_requested search, times: 4
     assert_kind_of Faraday::TimeoutError, errors.last
   end
+
+  test "an invalid TIINGO_MAX_REQUESTS_PER_HOUR falls back to the default and logs the variable" do
+    Provider::EnvTuning::WARNED.clear
+    Rails.logger.expects(:warn).with(regexp_matches(/\ATIINGO_MAX_REQUESTS_PER_HOUR must be a positive whole number, got "abc"/))
+
+    with_env_overrides("TIINGO_MAX_REQUESTS_PER_HOUR" => "abc") do
+      assert_equal Provider::Tiingo::MAX_REQUESTS_PER_HOUR, @provider.send(:max_requests_per_hour)
+    end
+  end
+
+  test "a valid TIINGO_MAX_REQUESTS_PER_HOUR is honoured and a blank one is treated as unset" do
+    Rails.logger.expects(:warn).never
+
+    with_env_overrides("TIINGO_MAX_REQUESTS_PER_HOUR" => "5000") do
+      assert_equal 5000, @provider.send(:max_requests_per_hour)
+    end
+
+    with_env_overrides("TIINGO_MAX_REQUESTS_PER_HOUR" => "") do
+      assert_equal Provider::Tiingo::MAX_REQUESTS_PER_HOUR, @provider.send(:max_requests_per_hour)
+    end
+  end
 end

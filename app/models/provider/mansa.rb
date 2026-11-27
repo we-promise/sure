@@ -289,7 +289,7 @@ class Provider::Mansa < Provider
     end
 
     def max_requests_per_day
-      ENV.fetch("MANSA_MAX_REQUESTS_PER_DAY", MAX_REQUESTS_PER_DAY).to_i
+      env_positive_integer("MANSA_MAX_REQUESTS_PER_DAY", MAX_REQUESTS_PER_DAY)
     end
 
     # Confirmed live (2026-09-17): error responses nest a hash under "error"

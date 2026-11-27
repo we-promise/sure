@@ -106,4 +106,25 @@ class Provider::AlphaVantageTest < ActiveSupport::TestCase
     assert_requested search, times: 4
     assert_kind_of Faraday::TimeoutError, errors.last
   end
+
+  test "an invalid ALPHA_VANTAGE_MAX_REQUESTS_PER_DAY falls back to the default and logs the variable" do
+    Provider::EnvTuning::WARNED.clear
+    Rails.logger.expects(:warn).with(regexp_matches(/\AALPHA_VANTAGE_MAX_REQUESTS_PER_DAY must be a positive whole number, got "abc"/))
+
+    with_env_overrides("ALPHA_VANTAGE_MAX_REQUESTS_PER_DAY" => "abc") do
+      assert_equal Provider::AlphaVantage::MAX_REQUESTS_PER_DAY, @provider.send(:max_requests_per_day)
+    end
+  end
+
+  test "a valid ALPHA_VANTAGE_MAX_REQUESTS_PER_DAY is honoured and a blank one is treated as unset" do
+    Rails.logger.expects(:warn).never
+
+    with_env_overrides("ALPHA_VANTAGE_MAX_REQUESTS_PER_DAY" => "100") do
+      assert_equal 100, @provider.send(:max_requests_per_day)
+    end
+
+    with_env_overrides("ALPHA_VANTAGE_MAX_REQUESTS_PER_DAY" => "") do
+      assert_equal Provider::AlphaVantage::MAX_REQUESTS_PER_DAY, @provider.send(:max_requests_per_day)
+    end
+  end
 end
