@@ -45,6 +45,56 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     end
   end
 
+  # The reverse calculator prices through the same cache, so a price kept at
+  # 1:1 for want of a rate is marked on its rows too.
+  test "a price kept at 1:1 is marked on the calculated rows" do
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    euro = Security.create!(ticker: "EURR", name: "Euro listed")
+    dollar = Security.create!(ticker: "USDR", name: "Dollar listed")
+    [ 1.day.ago.to_date, Date.current ].each do |date|
+      Security::Price.create!(security: euro, date: date, price: 100, currency: "EUR")
+      Security::Price.create!(security: dollar, date: date, price: 100, currency: "USD")
+    end
+
+    @account.holdings.create!(security: euro, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "EUR")
+    @account.holdings.create!(security: dollar, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+
+    snapshot = OpenStruct.new(to_h: { euro.id => 10, dollar.id => 10 })
+    calculated = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate
+
+    assert_equal [ true, true ], calculated.select { |h| h.security_id == euro.id }.map(&:price_at_parity)
+    assert_equal [ false, false ], calculated.select { |h| h.security_id == dollar.id }.map(&:price_at_parity)
+  end
+
+  # A calculated row priced at 1:1 is stored in the account's currency, so
+  # reusing its price converts at no rate; the row's mark goes with it, until
+  # a real quote for the day outranks it.
+  test "a reused calculated price valued at 1:1 stays marked" do
+    security = Security.create!(ticker: "EURP", name: "Euro listed")
+    yesterday = 1.day.ago.to_date
+    @account.holdings.create!(security: security, date: yesterday, qty: 10, price: 100, amount: 1000, currency: "USD", price_at_parity: true)
+    @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+
+    snapshot = OpenStruct.new(to_h: { security.id => 10 })
+    calculated = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate
+
+    assert_equal({ yesterday => true, Date.current => false }, calculated.to_h { |h| [ h.date, h.price_at_parity ] })
+  end
+
+  test "a stored quote on the day clears a reused calculated price's 1:1 mark" do
+    security = Security.create!(ticker: "EURQ", name: "Euro listed")
+    yesterday = 1.day.ago.to_date
+    Security::Price.create!(security: security, date: yesterday, price: 105, currency: "USD")
+    @account.holdings.create!(security: security, date: yesterday, qty: 10, price: 100, amount: 1000, currency: "USD", price_at_parity: true)
+    @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+
+    snapshot = OpenStruct.new(to_h: { security.id => 10 })
+    held = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate.find { |h| h.date == yesterday }
+
+    assert_equal 105, held.price
+    assert_equal false, held.price_at_parity
+  end
+
   # Should be able to handle this case, although we should not be reverse-syncing an account without provided current day holdings
   test "reverse portfolio with trades but without current day holdings" do
     voo = Security.create!(ticker: "VOO", name: "Vanguard S&P 500 ETF")

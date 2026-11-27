@@ -437,6 +437,24 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal 1000, today.amount, "the position is worth what it was worth before the split"
   end
 
+  # A price kept at 1:1 for want of a rate is marked on its row, and the mark
+  # is carried with the price over days with none, across a split too.
+  test "a price kept at 1:1 stays marked on every day it is carried to" do
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    euro = Security.create!(ticker: "EURS", name: "Euro listed")
+    dollar = Security.create!(ticker: "USDS", name: "Dollar listed")
+    Security::Price.create!(security: euro, date: 5.days.ago.to_date, price: 100, currency: "EUR")
+    Security::Price.create!(security: dollar, date: 5.days.ago.to_date, price: 100, currency: "USD")
+    create_trade(euro, qty: 10, date: 5.days.ago.to_date, price: 100, account: @account)
+    create_trade(dollar, qty: 10, date: 5.days.ago.to_date, price: 100, account: @account)
+    add_split(euro, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+
+    assert calculated.select { |h| h.security_id == euro.id }.all?(&:price_at_parity), "priced day, carried days and the split day"
+    refute calculated.select { |h| h.security_id == dollar.id }.any?(&:price_at_parity)
+  end
+
   # Security::Split.scale used to keep more precision than the qty column can
   # hold, so a position sold down to the last share the column can express kept
   # about 3e-31 of a share. The forward calculator decides a liquidation by an

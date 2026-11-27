@@ -548,6 +548,66 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
   # A trade increases/decreases cash balance (i.e. "buys" and "sells", which consume/add "brokerage cash" and create/destroy "holdings")
   # A valuation can set both cash and non-cash balances to "override" investment account value.
   # Holdings are calculated separately and fed into the balance calculator; treated as "non-cash"
+  # The balance is built from a holding valued at 1:1 for want of a rate, so
+  # the day says so; a reader can then withhold a return built on it.
+  test "a balance built from a holding valued at 1:1 is marked as such" do
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 2.days.ago.to_date, balance: 5000 } ]
+    )
+    security = Security.create!(ticker: "EURH", name: "Euro holding")
+    account.holdings.create!(security: security, date: 1.day.ago.to_date, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    parity = calculated.to_h { |balance| [ balance.date, balance.holdings_valued_at_parity ] }
+    assert_equal false, parity[2.days.ago.to_date]
+    assert_equal true, parity[1.day.ago.to_date]
+  end
+
+  # Anchor cash is the total less the day's holdings, so a holding at 1:1
+  # there skews every later day's cash until a valuation resets it.
+  test "cash derived from a 1:1 anchor stays marked until a valuation resets it" do
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "reconciliation", date: 1.day.ago.to_date, balance: 1000 }
+      ]
+    )
+    security = Security.create!(ticker: "EURA", name: "Euro holding")
+    account.holdings.create!(security: security, date: 3.days.ago.to_date, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    parity = calculated.to_h { |balance| [ balance.date, balance.holdings_valued_at_parity ] }
+    assert_equal 900, calculated.find { |balance| balance.date == 2.days.ago.to_date }.cash_balance
+    assert_equal true, parity[3.days.ago.to_date]
+    assert_equal true, parity[2.days.ago.to_date]
+    assert_equal false, parity[1.day.ago.to_date]
+  end
+
+  # Only an investment account's balance is built from its holdings, so a
+  # holding row left on any other account marks nothing and is not read.
+  test "a non-investment account is never marked, whatever holding rows it has" do
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 2.days.ago.to_date, balance: 5000 } ]
+    )
+    security = Security.create!(ticker: "EURD", name: "Euro holding")
+    account.holdings.create!(security: security, date: 1.day.ago.to_date, qty: 1, price: 100, amount: 100, currency: "EUR")
+    account.holdings.create!(security: security, date: 2.days.ago.to_date, qty: 1, price: 100, amount: 100, currency: "USD", price_at_parity: true)
+    Balance::SyncCache.any_instance.expects(:holdings_valued_at_parity?).never
+
+    calculated = assert_no_difference("DebugLogEntry.count") { Balance::ForwardCalculator.new(account).calculate }
+
+    assert calculated.any?
+    refute calculated.any?(&:holdings_valued_at_parity)
+  end
+
   test "investment account calculates balance from transactions and trades and treats holdings as non-cash, additive to balance" do
     account = create_account_with_ledger(
       account: { type: Investment, currency: "USD" },
@@ -849,6 +909,50 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
         }
       ]
     )
+  end
+
+  # Cash taken from a 1:1 anchor stays wrong after the holding is sold, so a
+  # window seeded from that cash must carry the mark the full run gives it.
+  test "incremental sync keeps the parity mark carried in a seeded balance" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 4.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 1.day.ago.to_date, amount: -50 }
+      ]
+    )
+    security = Security.create!(ticker: "PARS", name: "Parity holding")
+    account.holdings.create!(security: security, date: 4.days.ago.to_date, qty: 1, price: 100, amount: 100, currency: "USD", price_at_parity: true)
+    account.holdings.create!(security: security, date: 3.days.ago.to_date, qty: 0, price: 100, amount: 0, currency: "USD", price_at_parity: true)
+    # Keep the rows above as the holdings calculator's output.
+    Holding::Materializer.any_instance.stubs(:materialize_holdings).returns(account.holdings.to_a)
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    full = account.balances.where(date: 2.days.ago.to_date..).order(:date).pluck(:holdings_valued_at_parity)
+    assert_equal [ true, true ], full
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
+    incremental = calculator.calculate
+
+    assert_equal full, incremental.select { |balance| balance.date >= 2.days.ago.to_date }.sort_by(&:date).map(&:holdings_valued_at_parity)
+    assert_not calculator.incremental?
+  end
+
+  test "incremental sync still seeds from an unmarked balance with no non-cash" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 4.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 1.day.ago.to_date, amount: -50 }
+      ]
+    )
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    assert_not account.balances.find_by!(date: 3.days.ago.to_date).holdings_valued_at_parity
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
+    result = calculator.calculate
+
+    assert calculator.incremental?
+    assert_equal [ 2.days.ago.to_date, 1.day.ago.to_date ], result.map(&:date).sort
   end
 
   test "multi-currency account falls back to full recalc so late exchange rate imports are picked up" do

@@ -169,6 +169,25 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_empty result.index_series
   end
 
+  # The account and the family are both USD, so only the balance's own mark
+  # says a holding in it was valued at 1:1 for want of a rate.
+  test "every ratio is withheld when a balance was built from a holding at 1:1" do
+    ordinary = create_portfolio_account(family: @family)
+    [ [ @account, true ], [ ordinary, false ] ].each do |account, at_parity|
+      lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+      lay_balance account: account, date: @day_two, opening: 1_000, closing: 1_100, market_flow: 100,
+                  holdings_valued_at_parity: at_parity
+    end
+
+    flagged = performance(account_ids: [ @account.id ])
+    unflagged = performance(account_ids: [ ordinary.id ])
+
+    assert flagged.rate_missing?
+    assert_nil flagged.twr
+    assert_not unflagged.rate_missing?, "the same balances without the mark"
+    assert_in_delta 0.1, unflagged.twr.to_f, 0.000001
+  end
+
   # A caller that builds a Performance only to read index_series must not pay
   # for income. Income carries a by-security read of its own, so if it rode
   # along in the shared metrics every such caller would run it for a figure it

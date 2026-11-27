@@ -161,6 +161,7 @@ class Holding::Materializer
           "qty" => holding.qty,
           "price" => holding.price,
           "amount" => holding.amount,
+          "price_at_parity" => holding.price_at_parity,
           "security_id" => holding.security_id,
           "account_id" => account.id,
           "updated_at" => current_time
