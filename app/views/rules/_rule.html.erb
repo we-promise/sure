@@ -49,11 +49,7 @@
             <% if displayed_action.nil? %>
               <%= t("rules.no_action") %>
             <% else %>
-              <% if displayed_action.value && displayed_action.options %>
-                <%= t(".action_label_to", label: displayed_action.executor.label, value: displayed_action.value_display) %>
-              <% else %>
-                <%= displayed_action.executor.label %>
-              <% end %>
+              <%= rule_action_summary(displayed_action) %>
             <% end %>
           </span>
           <% if rule.actions.size > 1 %>

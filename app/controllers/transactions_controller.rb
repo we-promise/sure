@@ -235,6 +235,7 @@ class TransactionsController < ApplicationController
               partial: "transactions/category_provenance",
               locals: { entry: @entry }
             ),
+            matching_rules_frame_stream,
             turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",
@@ -296,7 +297,8 @@ class TransactionsController < ApplicationController
             locals: { tag: @toggled_tag, entry: @entry, selected: transaction.tag_ids.include?(@toggled_tag.id), autofocus: true }
           )
         end
-        render turbo_stream: streams
+        streams << matching_rules_frame_stream
+        render turbo_stream: streams.compact
       end
     end
   end
@@ -593,6 +595,15 @@ class TransactionsController < ApplicationController
   end
 
   private
+    # A fresh lazy frame for the drawer's "Which rules match?" disclosure: an
+    # edit can change which rules match, and an open disclosure reloads it.
+    # Split parents show no disclosure (rules never match them).
+    def matching_rules_frame_stream
+      return if @entry.split_parent?
+
+      turbo_stream.replace(dom_id(@entry, :matching_rules), partial: "transactions/matching_rules_frame", locals: { entry: @entry })
+    end
+
     def uncategorized_count_cache_key
       "transactions_uncategorized_count/v5/#{Current.family.id}/#{Current.user.id}/" \
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
