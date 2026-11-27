@@ -214,9 +214,11 @@ module PortfolioReturnsTestHelper
 
     if price
       # After the journal: the arriving quantity for a journal in, and whatever
-      # is left for a journal out -- zero when the whole position went. The row
-      # still carries the security's price, which is what the flow is valued
-      # from, and `holdings` refuses a negative quantity.
+      # is left for a journal out -- zero when the whole position went. This is
+      # the row Holding::ForwardCalculator writes: it keeps the emptied position
+      # at qty 0, priced at the day's price -- the security's own when one is
+      # stored for that date, else the journal trade's zero, which is what
+      # `price: 0` models. `holdings` refuses a negative quantity.
       held = holding_qty || [ qty, 0 ].max
       account.holdings.create!(
         security: security_under_test, date: date, qty: held, price: price,
