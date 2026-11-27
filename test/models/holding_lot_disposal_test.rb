@@ -963,6 +963,40 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
+  test "unlink and forward sync: scales opening lot forward when original_quantity_as_of predates start_date" do
+    security = priced_security("FIFPS", 30)
+    earliest = nil
+
+    travel_to d(4) do
+      setup_account(method: "fifo")
+      link_account
+      earliest = trade(security, 10, 100, 3)
+      @account.holdings.create!(security: security, date: d(4), qty: 12, price: 30, amount: 360, currency: "USD",
+        account_provider: @account_provider)
+
+      materialize(:reverse)
+      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+      assert_equal 2, opening_lot.original_quantity
+      assert_equal d(4), opening_lot.original_quantity_as_of
+
+      @account_provider.destroy!
+    end
+
+    travel_to TODAY do
+      earliest.destroy!
+      Security::Split.create!(security: security, ex_date: d(6), numerator: 2, denominator: 1, source: "manual")
+      buy2 = trade(security, 10, 150, 9)
+      sale = trade(security, -3, 300, 10)
+
+      materialize(:forward)
+
+      assert_nil Trade.find(sale.entryable_id).realized_gain_loss
+      assert_equal [ [ nil, 3 ] ],
+        HoldingLotDisposal.where(sale_entry: sale).map { |r| [ r.lot_source_entry_id, r.qty ] }
+      assert_equal 10, HoldingLot.find_by!(account: @account, source_entry: buy2).qty
+    end
+  end
+
   test "repeated reverse sync updates original_quantity and original_quantity_as_of when snapshot grows" do
     security = priced_security("FIFUP", 30)
 
