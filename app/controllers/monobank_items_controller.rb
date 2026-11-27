@@ -3,6 +3,8 @@
 # through the dialogs in app/views/monobank_items. There is deliberately no
 # index/show/new/edit action: nothing links to them and they would have no template.
 class MonobankItemsController < ApplicationController
+  include SafeReturnPath
+
   before_action :set_monobank_item, only: [ :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
   before_action :require_admin!, only: [
     :create, :preload_accounts, :select_accounts, :link_accounts,
@@ -360,37 +362,5 @@ class MonobankItemsController < ApplicationController
         },
         skip_initial_sync: true
       )
-    end
-
-    # Validate the return_to param as a safe in-app relative path, or nil.
-    def safe_return_to_path
-      return nil if params[:return_to].blank?
-
-      return_to = params[:return_to].to_s.strip
-      return nil unless return_to.start_with?("/")
-      return nil if return_to[1] == "/" || return_to[1] == "\\"
-      return nil if return_to.include?("\\") || return_to.match?(/[[:cntrl:]]/)
-      return nil if encoded_path_separator?(return_to)
-
-      uri = URI.parse(return_to)
-      return nil unless uri.relative?
-
-      Rails.application.routes.recognize_path(uri.path, method: :get)
-
-      return_to
-    rescue URI::InvalidURIError, ActionController::RoutingError
-      nil
-    end
-
-    # True if the path's second char is a percent-encoded slash/backslash
-    # (used to block protocol-relative redirect bypasses).
-    def encoded_path_separator?(return_to)
-      encoded_second_character = return_to[1, 3]
-      return false unless encoded_second_character&.start_with?("%")
-
-      decoded = URI.decode_www_form_component(encoded_second_character)
-      decoded == "/" || decoded == "\\"
-    rescue ArgumentError
-      true
     end
 end

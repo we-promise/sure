@@ -625,6 +625,21 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "changing the family currency builds the report again" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      assert_response :ok
+
+      @family.update!(currency: "EUR")
+
+      ReportsController.any_instance.expects(:render_report_body).once
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd)
+
+      assert_select "#rebuilt"
+    end
+  end
+
   test "assigning a tag marks the cached report stale" do
     with_memory_cache do
       get reports_path(period_type: :ytd)
@@ -1622,6 +1637,23 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       assert rows.any? { |r| r.first == "'#{name}" }, "the #{name} category cell must be escaped"
       assert_not rows.any? { |r| r.first == name }, "a raw #{name} must not lead a row"
     end
+  end
+
+  test "transactions export quotes every cell so a separator inside a category name cannot split it" do
+    category = @family.categories.create!(name: "Food;=1+1", color: "#000000")
+    @family.accounts.first.entries.create!(
+      name: "Payee", date: Date.current, amount: 25, currency: "USD",
+      entryable: Transaction.new(category: category, kind: "standard")
+    )
+
+    get export_transactions_reports_path(
+      format: :csv, period_type: :ytd,
+      start_date: Date.current.beginning_of_year, end_date: Date.current
+    )
+
+    assert_response :ok
+    assert_includes @response.body, %q("Food;=1+1")
+    assert_includes CSV.parse(@response.body).flatten, "Food;=1+1"
   end
 
   # The card was gated on `investment_accounts`, which is visible accounts

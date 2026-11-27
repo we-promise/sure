@@ -3,6 +3,10 @@ pt-BR:
   subscriptions:
     self_hosted_alert: "%{product_name} não está disponível no modo self-hosted."
     upgrade:
+      already_contributing: Você já está contribuindo. Obrigado!
+      page_title: Fazer upgrade
+      account_settings: Configurações da conta
+      sign_out: Sair
       contribute_and_support_sure: "Contribuir e apoiar o Sure"
       cta: "Continue apoiando o desenvolvimento desta base de código!"
       header:
@@ -12,3 +16,9 @@ pt-BR:
       redirect_to_stripe: "Na próxima etapa, você será redirecionado para o Stripe, que processa cartões de crédito para nós."
       trialing: "Seus dados serão excluídos em %{days} dias"
       trial_over: "Seu período de teste terminou"
+    create:
+      welcome: Boas-vindas ao Sure!
+      trial_already_used: Você já iniciou ou concluiu um período de teste. Faça upgrade para continuar.
+    success:
+      welcome_with_contribution: Boas-vindas ao Sure! Agradecemos a sua contribuição.
+      contribution_failed: Ocorreu um erro ao processar sua contribuição. Tente novamente.

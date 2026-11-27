@@ -47,4 +47,19 @@ class CsvSanitizerTest < ActiveSupport::TestCase
   test "sanitizes every cell of a row" do
     assert_equal [ "'=a", "b", nil, 3 ], CsvSanitizer.sanitize_row([ "=a", "b", nil, 3 ])
   end
+
+  test "keeps the escape injective for values that already start with apostrophes" do
+    {
+      "=x" => "'=x",
+      "'=x" => "''=x",
+      "''-x" => "'''-x",
+      "'plain" => "'plain",
+      "'-42.5" => "''-42.5"
+    }.each do |input, expected|
+      assert_equal expected, CsvSanitizer.sanitize(input), "failed for #{input.inspect}"
+    end
+
+    inputs = [ "=x", "'=x", "''=x", "x", "'x" ]
+    assert_equal inputs.size, inputs.map { |v| CsvSanitizer.sanitize(v) }.uniq.size
+  end
 end

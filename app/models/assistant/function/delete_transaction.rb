@@ -36,7 +36,8 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
 
         It deletes the transaction's root ledger entry, which cascades to the
         transaction. It will not delete a split child transaction individually —
-        delete the split parent instead.
+        delete the split parent instead. It will not delete a split while a part
+        of it is linked as a transfer; that transfer must be removed first.
       INSTRUCTIONS
     end
   end
@@ -69,7 +70,7 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
   # post-delete account sync (best-effort), and returns a result hash. Returns
   # { success: true, deleted: true, transaction: } on success (with an optional
   # :warning if the sync could not be enqueued), or an error hash for
-  # not_found / split_child / delete_aborted.
+  # not_found / split_child / split_part_transferred / delete_aborted.
   def call(params = {})
     transaction = find_transaction(params["id"], params["account_id"])
     return error("not_found", "No transaction with id '#{params["id"]}' in an account you can write to.") unless transaction
@@ -84,9 +85,12 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     # 1) Destroy. Entry is the delegated_type root record; destroy! cascades
     #    to the Transaction child (delegated_type ... dependent: :destroy) and
     #    wraps itself in a transaction (atomic: fully destroyed or it raises).
-    #    This is the exact record the native destroy action destroys.
+    #    This is the exact record and the same refusal as the native destroy
+    #    action: a split whose part is a transfer leg is not deleted.
     begin
-      entry.destroy!
+      entry.destroy_unless_split_part_transferred!
+    rescue Entry::SplitPartTransferredError
+      return error("split_part_transferred", "A part of this split is linked as a transfer. Remove that transfer before you delete the transaction.")
     rescue ActiveRecord::RecordNotDestroyed
       # A before_destroy guard aborted the destroy (e.g. a split child that
       # slipped past the pre-check, or another constraint). `throw :abort` in
