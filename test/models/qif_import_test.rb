@@ -276,6 +276,55 @@ class QifImportTest < ActiveSupport::TestCase
     ^
   QIF
 
+  # Money owed on a credit card or loan is negative in QIF, like a charge.
+  QIF_WITH_LIABILITY_ACCOUNTS = <<~QIF
+    !Account
+    NQIF Visa
+    TCCard
+    ^
+    !Type:CCard
+    D1/ 1'24
+    U-500.00
+    T-500.00
+    POpening Balance
+    ^
+    D1/20'24
+    U-50.00
+    T-50.00
+    PGrocery Store
+    ^
+    !Account
+    NQIF Car Loan
+    TOth L
+    ^
+    !Type:Oth L
+    D1/ 1'24
+    U-10,000.00
+    T-10,000.00
+    POpening Balance
+    ^
+  QIF
+
+  QIF_PAID_OFF_LOAN = <<~QIF
+    !Type:Oth L
+    D1/ 1'24
+    U-10,000.00
+    T-10,000.00
+    POpening Balance
+    L[Car Loan]
+    ^
+    D2/15'24
+    U4,000.00
+    T4,000.00
+    PLoan Payment
+    ^
+    D3/15'24
+    U6,000.00
+    T6,000.00
+    PLoan Payment
+    ^
+  QIF
+
   QIF_WITH_SPLIT_TAGS = <<~QIF
     !Type:Bank
     D1/ 1'24
@@ -1092,6 +1141,35 @@ class QifImportTest < ActiveSupport::TestCase
     assert manager.has_opening_anchor?
     assert_equal Date.new(2024, 1, 1), manager.opening_date
     assert_equal BigDecimal("500"), manager.opening_balance
+  end
+
+  test "import! sets the opening balance of declared liability accounts to the amount owed" do
+    @import.update!(account: nil, raw_file_str: QIF_WITH_LIABILITY_ACCOUNTS)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+    @import.import!
+
+    card = @family.accounts.find_by!(name: "QIF Visa")
+    loan = @family.accounts.find_by!(name: "QIF Car Loan")
+
+    assert_equal "CreditCard", card.accountable_type
+    assert_equal "OtherLiability", loan.accountable_type
+    assert_equal BigDecimal("500"), Account::OpeningBalanceManager.new(card).opening_balance
+    assert_equal BigDecimal("10000"), Account::OpeningBalanceManager.new(loan).opening_balance
+    assert_equal BigDecimal("550"), Balance::ForwardCalculator.new(card).calculate.last.balance
+  end
+
+  test "import! leaves a paid-off loan at zero when importing into a selected loan account" do
+    loan = @family.accounts.create!(name: "Car Loan", balance: 0, currency: "USD", accountable: Loan.new)
+    import = QifImport.create!(family: @family, account: loan, raw_file_str: QIF_PAID_OFF_LOAN)
+    import.generate_rows_from_csv
+    import.sync_mappings
+    import.import!
+
+    manager = Account::OpeningBalanceManager.new(loan)
+    assert_equal Date.new(2024, 1, 1), manager.opening_date
+    assert_equal BigDecimal("10000"), manager.opening_balance
+    assert_equal BigDecimal("0"), Balance::ForwardCalculator.new(loan).calculate.last.balance
   end
 
   test "import! moves opening anchor back when transactions predate it" do

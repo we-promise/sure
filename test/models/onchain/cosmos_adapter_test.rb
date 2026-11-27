@@ -8,6 +8,7 @@ class Onchain::CosmosAdapterTest < ActiveSupport::TestCase
 
   setup do
     @adapter = Onchain::Chains.adapter_for(Onchain::Chains::COSMOS)
+    stub_rewards([])
   end
 
   test "accepts account and module addresses" do
@@ -53,6 +54,29 @@ class Onchain::CosmosAdapterTest < ActiveSupport::TestCase
     assert_equal 6, asset.decimals
     assert_equal BigDecimal("3.9"), asset.quantity
     assert_empty snapshot.movements
+  end
+
+  test "unclaimed staking rewards are part of the balance, whole uatom only" do
+    stub_balance("1000000")
+    stub_delegations([ { "balance" => { "denom" => "uatom", "amount" => "2000000" } } ])
+    stub_unbondings([])
+    stub_rewards([
+      { "denom" => "uatom", "amount" => "500000.999999999999999999" },
+      { "denom" => "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2", "amount" => "42.0" }
+    ])
+
+    assert_equal BigDecimal("3.5"), @adapter.fetch_snapshot(ADDRESS).assets.sole.quantity
+  end
+
+  test "a malformed rewards amount is not read as zero" do
+    stub_balance("1000000")
+    stub_delegations([])
+    stub_unbondings([])
+    stub_rewards([ { "denom" => "uatom", "amount" => nil } ])
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(ADDRESS)
+    end
   end
 
   test "an empty address is worth zero" do
@@ -141,6 +165,10 @@ class Onchain::CosmosAdapterTest < ActiveSupport::TestCase
 
     def stub_unbondings(responses)
       stub_json("/cosmos/staking/v1beta1/delegators/#{ADDRESS}/unbonding_delegations", { "pagination.limit" => "200" }, { "unbonding_responses" => responses })
+    end
+
+    def stub_rewards(total)
+      stub_json("/cosmos/distribution/v1beta1/delegators/#{ADDRESS}/rewards", {}, { "rewards" => [], "total" => total })
     end
 
     def stub_json(path, query, body)

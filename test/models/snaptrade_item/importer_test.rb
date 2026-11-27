@@ -120,4 +120,15 @@ class SnaptradeItem::ImporterTest < ActiveSupport::TestCase
 
     assert_not @snaptrade_account.reload.activities_fetch_pending?
   end
+
+  # The liability sign repair only judges history from a fetch that succeeded
+  test "a failed activities fetch is recorded, and the next successful one clears it" do
+    @provider.stubs(:get_account_activities).raises(Provider::Snaptrade::ApiError.new("hit the page cap"))
+    @importer.send(:import_activities, @snaptrade_account)
+    assert @snaptrade_account.reload.activities_fetch_failed?
+
+    @provider.stubs(:get_account_activities).returns([])
+    @importer.send(:import_activities, @snaptrade_account)
+    assert_not @snaptrade_account.reload.activities_fetch_failed?
+  end
 end

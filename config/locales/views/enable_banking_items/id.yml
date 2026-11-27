@@ -1,0 +1,133 @@
+---
+id:
+  enable_banking_items:
+    errors:
+      api_error: "Terjadi kesalahan komunikasi dengan bank."
+      network_unreachable: "Layanan perbankan sedang tidak dapat dijangkau sementara. Silakan coba lagi nanti."
+      session_invalid: "Sesi berakhir. Silakan hubungkan ulang bank Anda."
+      unexpected: "Terjadi kesalahan yang tidak terduga selama sinkronisasi."
+    authorize:
+      authorization_failed: "Gagal memulai otorisasi: %{message}"
+      bank_required: Silakan pilih bank.
+      invalid_redirect: URL otorisasi yang diterima tidak valid. Silakan coba lagi.
+      redirect_uri_not_allowed: Pengalihan tidak diizinkan. Silakan konfigurasikan `%{callback_url}` di pengaturan aplikasi Enable Banking Anda.
+      unexpected_error: Terjadi kesalahan yang tidak terduga. Silakan coba lagi.
+    callback:
+      authorization_error: Otorisasi gagal
+      invalid_callback: Parameter callback tidak valid.
+      item_not_found: Koneksi tidak ditemukan.
+      session_failed: Tidak dapat menyelesaikan otorisasi
+      success: Berhasil terhubung ke bank Anda. Rekening Anda sedang disinkronkan.
+      unexpected_error: Terjadi kesalahan yang tidak terduga. Silakan coba lagi.
+    complete_account_setup:
+      all_skipped: Semua rekening dilewati. Tautkan salah satunya ke rekening nanti untuk mulai menyinkronkannya.
+      no_accounts: Tidak ada rekening yang tersedia untuk diatur.
+      success: Berhasil membuat %{count} rekening!
+    create:
+      success: Konfigurasi Enable Banking berhasil.
+    destroy:
+      success: Koneksi Enable Banking telah masuk antrean penghapusan.
+    link_accounts:
+      already_linked: Rekening yang dipilih sudah tertaut.
+      link_failed: Gagal menautkan rekening
+      no_accounts_selected: Tidak ada rekening yang dipilih.
+      no_session: Tidak ada koneksi Enable Banking aktif. Silakan hubungkan ke bank terlebih dahulu.
+      success: Berhasil menautkan %{count} rekening.
+    link_existing_account:
+      success: Rekening berhasil ditautkan ke Enable Banking
+      errors:
+        only_manual: Hanya rekening manual yang dapat ditautkan
+        invalid_enable_banking_account: Rekening Enable Banking yang dipilih tidak valid
+    enable_banking_item:
+      deletion_in_progress: Penghapusan sedang berlangsung
+      provider_name: Enable Banking
+      syncing: Menyinkronkan...
+      reconnect: Hubungkan ulang
+      last_synced: Terakhir disinkronkan %{time} lalu
+      never_synced: Belum pernah disinkronkan
+      update: Perbarui
+      delete: Hapus
+      setup_needed: Pengaturan diperlukan
+      setup_needed_description:
+        one: 1 rekening yang diimpor dari Enable Banking perlu diatur
+        other: "%{count} rekening yang diimpor dari Enable Banking perlu diatur"
+      set_up_accounts: Atur rekening
+      no_accounts_found: Tidak ada rekening ditemukan
+      no_accounts_found_description: Tidak ada rekening ditemukan dari Enable Banking. Coba sinkronkan lagi.
+    select_existing_account:
+      title: Tautkan rekening Enable Banking
+      all_linked: Semua rekening Enable Banking tampaknya sudah tertaut.
+      try_after_sync: Jika Anda baru saja menghubungkan atau menyinkronkan, coba lagi setelah sinkronisasi selesai.
+      unlink_to_move: Untuk menautkan rekening lain, lepaskan tautannya terlebih dahulu dari menu tindakan rekening.
+      balance: Saldo
+      link: Tautkan
+      cancel: Batal
+    setup_accounts:
+      title: Atur Rekening Enable Banking Anda
+      header_subtitle: Pilih jenis rekening yang tepat untuk rekening yang Anda impor
+      choose_account_type: "Pilih jenis rekening yang tepat untuk setiap rekening Enable Banking:"
+      skip_notice: "Rekening yang dilewati akan diingat: Sure berhenti mengimpornya sampai Anda menautkannya ke sebuah rekening."
+      historical_data_range: "Rentang Data Historis:"
+      sync_start_date_label: "Mulai menyinkronkan transaksi dari:"
+      sync_start_date_help: Opsional. Biarkan kosong untuk mengimpor riwayat sebanyak yang disediakan bank Anda; seberapa jauh ke belakang bergantung pada bank. Jika Anda memilih tanggal, transaksi sebelum tanggal tersebut tidak akan diimpor.
+      account_type_label: "Jenis Rekening:"
+      account_types:
+        skip: Lewati rekening ini
+        depository: Rekening Giro atau Tabungan
+        credit_card: Kartu Kredit
+        investment: Rekening Investasi
+        loan: Pinjaman atau KPR
+        other_asset: Aset Lainnya
+      subtype_labels:
+        depository: "Subjenis Rekening:"
+        investment: "Jenis Investasi:"
+        loan: "Jenis Pinjaman:"
+      subtype_messages:
+        credit_card: Kartu kredit akan diatur secara otomatis sebagai rekening kartu kredit.
+        other_asset: Aset lainnya akan diatur sebagai aset umum.
+      balance: Saldo
+      create_accounts: Buat Rekening
+      creating_accounts: Membuat Rekening...
+      cancel: Batal
+      psd2_savings_notice: "Catatan: Beberapa rekening tabungan Prancis yang diregulasi (Livret A, PEL, LEP, LDDS) mungkin memiliki akses terbatas atau tidak ada akses melalui Open Banking (PSD2). Jika rekening tabungan tidak muncul, Anda dapat menambahkannya secara manual."
+      select_subtype: Pilih subjenis
+      select_type: Pilih jenis
+    new:
+      link_enable_banking_title: Tautkan Enable Banking
+      session_expired: Sesi berakhir - diperlukan otorisasi ulang
+      connected_bank: Bank Terhubung
+      session_expires: "Sesi berakhir"
+      unknown: Tidak diketahui
+      connection: Koneksi
+      configured: Dikonfigurasi
+      ready_to_connect: Siap menghubungkan bank
+      sync: Sinkronkan
+      reconnect: Hubungkan ulang
+      connect_bank: Hubungkan Bank
+      remove_confirm: Apakah Anda yakin ingin menghapus koneksi ini?
+      remove: Hapus
+      add_connection: Tambah Koneksi
+      not_configured: Koneksi Enable Banking belum dikonfigurasi
+      not_configured_description: Sebelum dapat menautkan rekening Enable Banking, Anda perlu mengonfigurasi koneksi Enable Banking Anda.
+      setup_steps_title: "Langkah Pengaturan:"
+      setup_step_1_html: "Buka <strong>Pengaturan → Penyedia</strong>"
+      setup_step_2_html: "Temukan bagian <strong>Enable Banking</strong>"
+      setup_step_3: Masukkan kredensial Enable Banking Anda
+      setup_step_4: Kembali ke sini untuk menautkan rekening Anda
+      go_to_provider_settings: Buka Pengaturan Penyedia
+    reauthorize:
+      invalid_redirect: URL otorisasi yang diterima tidak valid. Silakan coba lagi.
+      reauthorization_failed: Otorisasi ulang gagal
+    select_bank:
+      beta_label: Beta
+      cancel: Batal
+      check_country: Silakan periksa pengaturan kode negara Anda.
+      credentials_required: Silakan konfigurasikan kredensial Enable Banking Anda terlebih dahulu.
+      description: Pilih bank yang ingin Anda hubungkan ke rekening Anda.
+      no_banks: Tidak ada bank tersedia untuk negara/wilayah ini.
+      no_search_results: Tidak ada bank yang cocok dengan pencarian Anda.
+      search_label: Cari bank Anda
+      search_placeholder: Cari bank Anda...
+      title: Pilih Bank Anda
+    update:
+      success: Konfigurasi Enable Banking diperbarui.
