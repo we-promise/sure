@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Assistant::Function::GetIncomeStatementTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @user = users(:family_admin)
     @family = @user.family
@@ -28,6 +30,32 @@ class Assistant::Function::GetIncomeStatementTest < ActiveSupport::TestCase
     assert result[:insights][:net_income].present?
     assert_not result.key?(:monthly_series)
     assert_not result.key?(:previous_period)
+  end
+
+  # #5828: the monthly insights used to be family-wide, whatever the dates.
+  test "insights cover only the requested period" do
+    account = accounts(:depository)
+    create_transaction(account: account, amount: 300, date: Date.new(2021, 1, 10))
+    create_transaction(account: account, amount: 100, date: Date.new(2021, 2, 10))
+    create_transaction(account: account, amount: 150, date: Date.new(2021, 3, 5))
+    create_transaction(account: account, amount: 50, date: Date.new(2021, 3, 20))
+    create_transaction(account: account, amount: -1000, date: Date.new(2021, 3, 25))
+    create_transaction(account: account, amount: 5000, date: Date.new(2021, 6, 10))
+    create_transaction(account: account, amount: -9000, date: Date.new(2021, 6, 25))
+
+    insights = @fn.call("start_date" => "2021-01-01", "end_date" => "2021-03-31")[:insights]
+
+    assert_equal format_money(200), insights[:median_monthly_expenses]
+    assert_equal format_money(200), insights[:avg_monthly_expenses]
+    assert_equal format_money(1000), insights[:median_monthly_income]
+  end
+
+  test "insights are zero for a period without transactions" do
+    insights = @fn.call("start_date" => "2001-01-01", "end_date" => "2001-12-31")[:insights]
+
+    assert_equal format_money(0), insights[:median_monthly_income]
+    assert_equal format_money(0), insights[:median_monthly_expenses]
+    assert_equal format_money(0), insights[:avg_monthly_expenses]
   end
 
   test "group_by month returns one bucket per calendar month" do
@@ -201,4 +229,10 @@ class Assistant::Function::GetIncomeStatementTest < ActiveSupport::TestCase
     assert_equal "unknown_account_ids", result[:error]
     assert_includes result[:unknown_ids], foreign.id
   end
+
+  private
+
+    def format_money(amount)
+      Money.new(amount, @family.currency).format
+    end
 end
