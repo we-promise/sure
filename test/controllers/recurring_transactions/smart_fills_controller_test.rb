@@ -81,6 +81,19 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_select "input[name=?][value=?]", "recurring_transaction[category_id]", categories(:food_and_drink).id
   end
 
+  test "a complete answer with no proposal says the analysis found nothing to change" do
+    stub_provider(raw(confidence: 0.9))
+    suggestion = start_suggestion
+    assert suggestion.complete?
+
+    get recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.smart_fills.result.no_changes"), response.body
+    assert_no_match "Stopped", response.body
+    assert_select "input[name=?][value=?]", "recurring_transaction[name]", "GYM MEMBERSHIP"
+  end
+
   test "a provider failure leaves the plain prefill and explains on show" do
     stub_ai(:bill_setup, raises: Ai::Error::InvalidOutput.new("no JSON"))
 
@@ -113,11 +126,12 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_no_match "Should not appear", response.body
   end
 
-  test "show does not prefill from an entry whose access was revoked after the request" do
+  test "show does not disclose a stored answer after entry access was revoked" do
     member = users(:family_member)
     member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
     sign_in member
-    stub_provider(raw(name: nil, amount: nil, frequency: nil))
+    stub_provider(raw(name: "Private bill name", amount: 99.0, frequency: "weekly",
+                      rationale: "Private rationale from the model"))
     suggestion = start_pending_suggestion
     perform_enqueued_jobs(only: Ai::GenerationJob)
     account_shares(:depository_shared_with_member).destroy!
@@ -125,7 +139,12 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     get recurring_transactions_smart_fill_url(suggestion), headers: { "Turbo-Frame" => "modal" }
 
     assert_response :success
+    assert_match "This transaction is no longer available", response.body
     assert_no_match "GYM MEMBERSHIP", response.body
+    assert_no_match "Private bill name", response.body
+    assert_no_match "Private rationale from the model", response.body
+    assert_select "input[name=?][value=?]", "recurring_transaction[name]", "Private bill name", count: 0
+    assert_select "input[name=?][value=?]", "recurring_transaction[amount]", "99.00", count: 0
     assert_select "input[type=hidden][name=entry_id]", count: 0
   end
 

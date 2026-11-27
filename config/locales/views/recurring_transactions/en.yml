@@ -89,6 +89,8 @@ en:
       result:
         failed: Could not analyze this charge's history right now. The transaction's own values are still here.
         stopped: Stopped. The model may still finish this request; nothing here will change.
+        no_changes: The analysis finished without proposing any changes to this charge.
+        access_revoked: This transaction is no longer available, so its suggestion can't be shown.
     pick_entry:
       title: Find a transaction to start from
       income_title: Find a deposit to start from

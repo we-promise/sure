@@ -10,7 +10,8 @@
       <% else %>
         <%= render "recurring_transactions/smart_fills/result",
               suggestion: @suggestion, recurring_transaction: @recurring_transaction,
-              covering_series: @covering_series, source_entry: @source_entry %>
+              covering_series: @covering_series, source_entry: @source_entry,
+              entry_access_revoked: @entry_access_revoked %>
       <% end %>
     <% else %>
       <% if @candidates.present? %>

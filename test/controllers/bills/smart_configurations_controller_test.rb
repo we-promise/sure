@@ -73,6 +73,7 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match I18n.t("bills.smart_configurations.show.no_changes"), response.body
     assert_select "input[type=checkbox]", count: 0
+    assert_select "a[href=?][data-turbo-frame=?]", bill_path(@series), "_top"
   end
 
   test "checked proposals apply through the ordinary update path" do

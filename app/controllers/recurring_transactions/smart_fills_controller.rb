@@ -74,6 +74,7 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
       # Access can be revoked after the request was queued. Stop and show must
       # not prefill from an entry the requester can no longer read.
       entry ||= Current.accessible_entries.find_by(id: @suggestion.entry_id)
+      entry_revoked = @suggestion.fill? && @suggestion.entry_id.present? && entry.nil?
       income = @suggestion.income if income.nil?
 
       @recurring_transaction = Current.family.recurring_transactions.new(
@@ -83,9 +84,12 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
       )
       @recurring_transaction.is_income = income
       @source_entry = entry
-      @covering_series = nil
+      @covering_series = covering_series_for(entry) if entry
       prefill_recurring_from_entry(entry) if entry
-      @suggestion.apply_to(@recurring_transaction)
+      # The answer belongs to evidence this user can no longer read: neither its values nor its
+      # rationale may reach the form. Stop stays available while the suggestion is pending.
+      @entry_access_revoked = entry_revoked
+      @suggestion.apply_to(@recurring_transaction) unless entry_revoked
     end
 
     def render_missing_entry(income:)

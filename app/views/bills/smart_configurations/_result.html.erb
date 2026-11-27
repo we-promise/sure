@@ -87,7 +87,7 @@
     <% end %>
     <%= render DS::Link.new(
           text: t("bills.smart_configurations.show.back"), variant: :default, href: bill_path(series),
-          data: { turbo_frame: :modal }
+          data: { turbo_frame: "_top" }
         ) %>
   </div>
 <% end %>

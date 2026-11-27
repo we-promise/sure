@@ -135,6 +135,8 @@ de:
       result:
         failed: "Der Buchungsverlauf dieser Zahlung lässt sich gerade nicht analysieren. Die Werte der Transaktion sind noch da."
         stopped: "Gestoppt. Das Modell kann diese Anfrage noch abschließen; hier ändert sich nichts."
+        no_changes: "Die Analyse ist abgeschlossen, ohne Änderungen für diese Zahlung vorzuschlagen."
+        access_revoked: "Diese Transaktion ist nicht mehr verfügbar, daher kann ihr Vorschlag nicht angezeigt werden."
     pick_entry:
       title: "Transaktion als Ausgangspunkt suchen"
       income_title: "Zahlungseingang als Ausgangspunkt suchen"
