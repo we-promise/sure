@@ -14,7 +14,9 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
   end
 
   test "period totals aggregate contributions and withdrawals in one query" do
-    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    # A completed month, so none of the flows below is future-dated.
+    month = Date.current.prev_month
+    period = Period.custom(start_date: month.beginning_of_month, end_date: month.end_of_month)
 
     @account.share_with!(users(:new_email), permission: "read_only", include_in_finances: true)
     @account.share_with!(users(:intro_user), permission: "read_only", include_in_finances: true)
@@ -39,6 +41,46 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_includes aggregate_queries.first, "transactions.investment_activity_label = 'Withdrawal'"
     assert_empty queries.grep(/"transactions"\."investment_activity_label" = \$\d/)
     assert_includes aggregate_queries.first, '"entries"."account_id" IN (SELECT DISTINCT "accounts"."id"'
+  end
+
+  test "period totals leave out excluded and future-dated flows" do
+    period = Period.custom(start_date: Date.current - 5.days, end_date: Date.current + 5.days)
+
+    create_flow(label: "Contribution", amount: -100, date: Date.current)
+    create_flow(label: "Contribution", amount: -40, date: Date.current).update!(excluded: true)
+    create_flow(label: "Contribution", amount: -70, date: Date.current + 2.days)
+    create_flow(label: "Withdrawal", amount: 30, date: Date.current)
+    create_flow(label: "Withdrawal", amount: 15, date: Date.current).update!(excluded: true)
+    create_flow(label: "Withdrawal", amount: 25, date: Date.current + 2.days)
+
+    totals = InvestmentFlowStatement.new(@family).period_totals(period: period)
+
+    assert_equal Money.new(100, "USD"), totals.contributions
+    assert_equal Money.new(30, "USD"), totals.withdrawals
+  end
+
+  test "period totals agree with the investment statement on excluded, future-dated and split flows" do
+    period = Period.custom(start_date: Date.current - 5.days, end_date: Date.current + 5.days)
+    account = @family.accounts.create!(
+      owner: @user, name: "Brokerage", balance: 0, currency: "USD", accountable: Investment.new
+    )
+
+    create_flow(label: "Contribution", amount: -100, date: Date.current, account: account)
+    create_flow(label: "Contribution", amount: -40, date: Date.current, account: account).update!(excluded: true)
+    create_flow(label: "Contribution", amount: -70, date: Date.current + 2.days, account: account)
+    create_flow(label: "Contribution", amount: -200, date: Date.current, account: account)
+      .split!([ { name: "Part 1", amount: -120 }, { name: "Part 2", amount: -80 } ])
+    create_flow(label: "Withdrawal", amount: 30, date: Date.current, account: account)
+    create_flow(label: "Withdrawal", amount: 25, date: Date.current + 2.days, account: account)
+
+    flows = InvestmentFlowStatement.new(@family).period_totals(period: period)
+    totals = InvestmentStatement.new(@family, user: nil).totals(period: period)
+
+    assert_equal totals.contributions, flows.contributions
+    assert_equal totals.withdrawals, flows.withdrawals
+    # The split's parts carry no activity label, so it counts in neither.
+    assert_equal Money.new(100, "USD"), flows.contributions
+    assert_equal Money.new(30, "USD"), flows.withdrawals
   end
 
   test "a matched provider contribution still counts once after resync" do
@@ -139,8 +181,8 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
       inflow
     end
 
-    def create_flow(label:, amount:, date:)
-      @account.entries.create!(
+    def create_flow(label:, amount:, date:, account: @account)
+      account.entries.create!(
         name: label,
         amount: amount,
         date: date,
