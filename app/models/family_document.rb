@@ -58,8 +58,21 @@ class FamilyDocument < ApplicationRecord
 
         # The upload was kept because the enqueue outcome was unknown. Retry it with those bytes;
         # an accepted job that already settled the row is skipped by the indexing job itself.
-        document.update!(status: "pending", metadata: document.metadata.to_h.except("enqueue_error", "error"))
-        IndexFamilyDocumentJob.perform_later(document)
+        # Keep the marker until the job runs: enqueueing is deferred until this transaction
+        # commits, so a rejected retry would leave a pending row nothing selects again.
+        document.update!(status: "pending") unless document.status == "pending"
+        begin
+          IndexFamilyDocumentJob.perform_later(document)
+        rescue StandardError => e
+          DebugLogEntry.capture(
+            category: "documents",
+            level: "warn",
+            message: "Couldn't queue a recovery index job for an uploaded document: #{e.class}",
+            source: "FamilyDocument.requeue_index_polls",
+            family: document.family,
+            metadata: { family_document_id: document.id }
+          )
+        end
       end
     end
   end
@@ -95,10 +108,16 @@ class FamilyDocument < ApplicationRecord
   end
 
   # A retry before the terminal status commits must still find the bytes; a poll keeps them until
-  # the store reports a settled status.
+  # the store reports a settled status. An uncertain enqueue keeps them until the retry actually
+  # indexes, so an accepted job must not purge them out from under that retry.
   def purge_file_if_settled
+    return false if metadata.to_h["enqueue_error"].present?
     return false unless file.attached? && status.in?(%w[ready unreadable error])
 
+    # Active Storage destroys the blob record before it deletes the stored file. If that delete
+    # raises, a retry would reload without an attachment and never remove the bytes. Delete the
+    # bytes first (service.delete is idempotent), then the records, so either failure is retryable.
+    file.blob.service.delete(file.blob.key)
     file.purge
     true
   end

@@ -32,6 +32,31 @@ class IndexFamilyDocumentJobTest < ActiveJob::TestCase
     assert_equal "ready", @document.reload.status
   end
 
+  test "a job accepted before the enqueue raised leaves its bytes for recovery" do
+    @document.update!(status: "error", metadata: { "enqueue_error" => "Redis::CannotConnectError" })
+    @family.expects(:index_document).never
+    @document.file.expects(:purge).never
+
+    IndexFamilyDocumentJob.perform_now(@document)
+
+    assert @document.reload.file.attached?
+    assert_equal "Redis::CannotConnectError", @document.metadata["enqueue_error"]
+  end
+
+  test "the retry clears the recovery marker once it starts indexing" do
+    @document.update!(metadata: { "enqueue_error" => "Redis::CannotConnectError", "error" => "enqueue failed" })
+    @family.expects(:index_document).with do |document, file_content:|
+      assert_nil document.metadata["enqueue_error"]
+      assert_equal "a note", file_content
+      true
+    end.returns(@document)
+
+    IndexFamilyDocumentJob.perform_now(@document)
+
+    assert_nil @document.reload.metadata["enqueue_error"]
+    assert_not @document.metadata.key?("error")
+  end
+
   test "indexes inside a call context carrying the document id" do
     correlation_ids = []
     @family.expects(:index_document).with do |document, file_content:|

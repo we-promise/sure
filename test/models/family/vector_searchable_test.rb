@@ -80,7 +80,25 @@ class Family::VectorSearchableTest < ActiveSupport::TestCase
     IndexFamilyDocumentJob.expects(:perform_later).with { |arg| arg.id == document.id }
     FamilyDocument.requeue_index_polls
     assert_equal "pending", document.reload.status
-    assert_nil document.metadata["enqueue_error"]
+    # The marker stays until the job runs: after-commit enqueueing means a rejected retry must
+    # still be selectable by the next recovery pass.
+    assert_equal "Redis::CannotConnectError", document.metadata["enqueue_error"]
+    assert_equal "a note", document.file.download
+  end
+
+  test "recovery keeps the marker and the bytes when the retry enqueue fails" do
+    document = @family.family_documents.create!(filename: "notes.txt", status: "error",
+      metadata: { "enqueue_error" => "Redis::CannotConnectError", "error" => "indexing job enqueue failed" })
+    document.file.attach(io: StringIO.new("a note"), filename: "notes.txt", content_type: "text/plain")
+
+    # The retry is enqueued after the recovery transaction commits, so the queue can reject it
+    # while the row is already pending.
+    IndexFamilyDocumentJob.expects(:perform_later).raises(Redis::CannotConnectError)
+    assert_nothing_raised { FamilyDocument.requeue_index_polls }
+
+    assert_equal "pending", document.reload.status
+    assert_equal "Redis::CannotConnectError", document.metadata["enqueue_error"]
+    assert_equal "a note", document.file.download
   end
 
   test "upload_document_later fails and purges the staged file when the queue rejects the job" do

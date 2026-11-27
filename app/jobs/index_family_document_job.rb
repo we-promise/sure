@@ -5,7 +5,15 @@ class IndexFamilyDocumentJob < ApplicationJob
   def perform(document)
     # Sidekiq can redeliver a finished job. A settled row has no bytes to send; indexing it again
     # would turn a good result into an error once the attachment is gone. Cleanup stays safe.
-    index_document(document, document.family) if document.status == "pending"
+    if document.status == "pending"
+      # Recovery keeps the enqueue marker until the job really starts: enqueueing is deferred
+      # until its transaction commits, so a rejected retry must stay selectable. Clear it here,
+      # before indexing, so a settled result can be cleaned up afterwards.
+      if document.metadata.to_h["enqueue_error"].present?
+        document.update!(metadata: document.metadata.to_h.except("enqueue_error", "error"))
+      end
+      index_document(document, document.family)
+    end
     purge_file(document)
   end
 
