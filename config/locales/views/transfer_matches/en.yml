@@ -22,3 +22,4 @@ en:
       matching_transaction: Matching transaction
       target_account: Target account
       no_matching_transactions: We couldn't find any transactions to match from your other accounts. Please select an account and we will create a new inflow transaction for you.
+    split_parent: Match one of this split's parts instead. Its amount is already in the parts.

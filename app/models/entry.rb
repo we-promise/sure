@@ -701,14 +701,25 @@ class Entry < ApplicationRecord
   # split rules, a rule and an API request) can both pass a splittable? check before either
   # inserts children, and split! only validates its own amounts, so without the lock both sets
   # of children would land and the amount would count twice. A provider sync can also mark the
-  # transaction pending or a transfer in between, so those are re-checked too. Returns true
-  # when it split.
+  # transaction pending or a transfer in between, so those are re-checked too. A transfer that
+  # is only suggested goes with the split: it pairs the whole amount, and confirming it later
+  # would count that amount next to a matched part. Returns true when it split.
   def split_once!(splits, lock_attributes: false)
-    with_split_lock do |txn|
-      next false if split_parent? || excluded? || txn&.transfer? || txn&.pending?
+    self.class.transaction do
+      # Transfers before the transaction, the order Transfer#confirm! and Transfer#destroy! take them in.
+      own_transfers.order(:id).lock.pluck(:id)
 
-      split!(splits, lock_attributes: lock_attributes)
-      true
+      with_split_lock do |txn|
+        next false if split_parent? || excluded? || txn&.transfer? || txn&.pending?
+
+        # Destroying a transfer deletes its fees, so a suggestion with fees stays.
+        removed = own_transfers.pending.where.missing(:fee_transactions).destroy_all
+        split!(splits, lock_attributes: lock_attributes)
+        # A suggestion can already move the other account's balance: a principal-only
+        # loan counts a suggested payment as principal.
+        ActiveRecord.after_all_transactions_commit { removed.each(&:sync_account_later) }
+        true
+      end
     end
   end
 
@@ -1103,6 +1114,12 @@ class Entry < ApplicationRecord
       Transfer.where(outflow_transaction_id: part_ids).or(Transfer.where(inflow_transaction_id: part_ids)).order(:id).lock.pluck(:id)
       Transaction.where(id: part_ids).order(:id).lock.pluck(:id)
       raise SplitPartTransferredError, "Remove the transfer on a split part before changing the split" if split_part_transferred?
+    end
+
+    def own_transfers
+      return Transfer.none unless entryable_type == "Transaction"
+
+      Transfer.where(outflow_transaction_id: entryable_id).or(Transfer.where(inflow_transaction_id: entryable_id))
     end
 
     def split_part_transaction_ids

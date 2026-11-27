@@ -22,3 +22,4 @@ nl:
       matching_transaction: Te koppelen transactie
       target_account: Doelaccount
       no_matching_transactions: We konden geen transacties vinden om te koppelen vanuit uw andere accounts. Selecteer een account en wij maken een nieuwe inkomende transactie voor u aan.
+    split_parent: Koppel een van de gesplitste boekingen. Het bedrag van deze transactie zit daar al in.

@@ -40,6 +40,42 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=hidden][name='transfer_match[target_account_id]']:not([value=''])"
   end
 
+  test "matches a split part to a new loan payment" do
+    parent = create_transaction(amount: 100, account: accounts(:depository))
+    part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+
+    assert_difference "Transfer.count", 1 do
+      post transaction_transfer_match_path(part), params: { transfer_match: { method: "new", target_account_id: accounts(:loan).id } }
+    end
+
+    assert_equal "loan_payment", part.transaction.reload.kind
+  end
+
+  test "new is refused for a split parent" do
+    parent = create_transaction(amount: 100, account: accounts(:depository))
+    parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ])
+
+    get new_transaction_transfer_match_path(parent)
+
+    assert_redirected_to transactions_path
+    assert_equal I18n.t("transfer_matches.split_parent"), flash[:alert]
+  end
+
+  test "create is refused when either side is a split parent" do
+    parent = create_transaction(amount: 100, account: accounts(:depository))
+    parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ])
+    inflow = create_transaction(amount: -100, account: accounts(:loan))
+
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transaction_transfer_match_path(parent), params: { transfer_match: { method: "new", target_account_id: accounts(:loan).id } }
+      post transaction_transfer_match_path(parent), params: { transfer_match: { method: "existing", matched_entry_id: inflow.id } }
+      post transaction_transfer_match_path(inflow), params: { transfer_match: { method: "existing", matched_entry_id: parent.id } }
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal I18n.t("transfer_matches.split_parent"), flash[:alert]
+  end
+
   test "new preselects an unrejected candidate over a closer rejected one" do
     outflow_entry = create_transaction(amount: 123.45, account: accounts(:depository), date: Date.current)
     rejected_inflow = create_transaction(amount: -123.45, account: accounts(:investment), date: Date.current, name: "Rejected inflow")

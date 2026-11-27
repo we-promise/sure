@@ -28,24 +28,17 @@ class Transfer::Matcher
   end
 
   # Only pairs match_with! accepts: the family query already skips excluded
-  # entries (including split parents), so split children are dropped here.
+  # entries, and split parents are excluded.
   def candidates(date_window: DATE_WINDOW)
-    return [] if entry.excluded? || entry.split_child?
+    return [] if entry.excluded?
 
     filter = entry.amount.negative? ? { inflow_transaction_id: transaction.id } : { outflow_transaction_id: transaction.id }
 
-    rows = family.transfer_match_candidates(
+    family.transfer_match_candidates(
       date_window: date_window,
       exchange_rate_tolerance: Family::AutoTransferMatchable.manual_match_exchange_rate_tolerance,
       **filter
     )
-
-    split_child_ids = Entry.where(entryable_type: "Transaction", entryable_id: rows.map { |row| counterpart_id(row) })
-      .where.not(parent_entry_id: nil)
-      .pluck(:entryable_id)
-      .to_set
-
-    rows.reject { |row| split_child_ids.include?(counterpart_id(row)) }
   end
 
   # The other transaction in a candidate row.
@@ -97,9 +90,11 @@ class Transfer::Matcher
       entry.account.family
     end
 
+    # A split parent's amount is already in its parts, so matching it would move
+    # the other account's balance on top of a matched part. A part can be matched.
     def ensure_matchable!(txn)
       txn_entry = txn.entry
-      raise Error.new(:split_transaction, "Split transactions cannot be matched as transfers.") if txn_entry.split_parent? || txn_entry.split_child?
+      raise Error.new(:split_transaction, "A split transaction cannot be matched as a transfer. Match one of its parts instead.") if txn_entry.split_parent?
       raise Error.new(:excluded_transaction, "Excluded transactions cannot be matched as transfers.") if txn_entry.excluded?
       raise Error.new(:already_linked, "The transaction is already part of a transfer.") if txn.transfer.present?
     end

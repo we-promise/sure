@@ -162,15 +162,27 @@ class Transfer::MatcherTest < ActiveSupport::TestCase
     assert_equal :not_a_candidate, error.code
   end
 
-  test "refuses excluded and split transactions" do
+  test "refuses excluded transactions and split parents" do
     excluded = create_transaction(account: @checking, amount: 100, excluded: true).transaction
     error = assert_raises(Transfer::Matcher::Error) { Transfer::Matcher.new(excluded).match_to_account!(@loan) }
     assert_equal :excluded_transaction, error.code
 
-    split = create_transaction(account: @checking, amount: 100).transaction
-    Entry.any_instance.stubs(:split_parent?).returns(true)
-    error = assert_raises(Transfer::Matcher::Error) { Transfer::Matcher.new(split).match_to_account!(@loan) }
+    split = create_transaction(account: @checking, amount: 100)
+    split.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ])
+    error = assert_raises(Transfer::Matcher::Error) { Transfer::Matcher.new(split.transaction).match_to_account!(@loan) }
     assert_equal :split_transaction, error.code
+  end
+
+  test "matches a split part to an account as a loan payment" do
+    parent = create_transaction(account: @checking, amount: 100)
+    principal, interest = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ])
+
+    transfer = Transfer::Matcher.new(principal.transaction).match_to_account!(@loan)
+
+    assert transfer.confirmed?
+    assert_equal "loan_payment", principal.transaction.reload.kind
+    assert_equal(-60, transfer.inflow_transaction.entry.amount)
+    assert_equal "standard", interest.transaction.reload.kind
   end
 
   test "refuses the transaction's own account and another family's account" do
@@ -184,13 +196,17 @@ class Transfer::MatcherTest < ActiveSupport::TestCase
     assert_equal :account_not_found, error.code
   end
 
-  test "does not offer split children as candidates, or candidates for one" do
+  test "offers a split part as a candidate, and candidates for one, but not its parent" do
     parent = create_transaction(account: @card, amount: -100)
-    children = parent.split!([ { name: "Part A", amount: -60 }, { name: "Part B", amount: -40 } ])
+    part = parent.split!([ { name: "Part A", amount: -60 }, { name: "Part B", amount: -40 } ]).first.transaction
     outflow = create_transaction(account: @checking, amount: 60).transaction
+    whole_outflow = create_transaction(account: @checking, amount: 100).transaction
 
-    assert_empty Transfer::Matcher.new(outflow).candidates
-    assert_empty Transfer::Matcher.new(children.first.entryable).candidates
+    matcher = Transfer::Matcher.new(outflow)
+    assert_equal [ part.id ], matcher.candidates.map { |row| matcher.counterpart_id(row) }
+    assert_equal [ outflow.id ], Transfer::Matcher.new(part).candidates.map(&:outflow_transaction_id)
+    assert_empty Transfer::Matcher.new(whole_outflow).candidates
+    assert Transfer::Matcher.new(outflow).match_with!(part).confirmed?
   end
 
   test "lists candidates with the manual dialog's 30 day window" do
