@@ -1042,7 +1042,10 @@ RSpec.configure do |config|
                 description: 'Exact stored amount as an unrounded, locale-independent decimal string. Positive is an outflow, negative an inflow.'
               },
               currency: { type: :string },
-              name: { type: :string },
+              name: {
+                type: :string,
+                description: "On a transfer leg or transfer fee, the other account's name is replaced with \"another account\" when the caller cannot open that account."
+              },
               notes: { type: :string, nullable: true },
               external_id: { type: :string, nullable: true },
               source: { type: :string, nullable: true },

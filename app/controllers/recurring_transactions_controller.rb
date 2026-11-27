@@ -270,7 +270,7 @@ class RecurringTransactionsController < ApplicationController
     def prefill_recurring_from_entry(entry)
       @source_entry = entry
       @covering_series = covering_series_for(entry)
-      @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name
+      @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name_for(Current.accessible_account_ids)
       @recurring_transaction.amount = entry.amount.abs
       @recurring_transaction.currency = entry.currency
       @recurring_transaction.account_id = entry.account_id
@@ -353,9 +353,12 @@ class RecurringTransactionsController < ApplicationController
           .where("entries.name ILIKE :q OR entries.notes ILIKE :q OR merchants.name ILIKE :q", q: pattern)
       end
 
+      # Each row shows the entry's name as the user may read it, which looks at
+      # its transaction and, on a transfer fee, the transfer's two accounts
+      # (Entry#name_for).
       scope.order(date: :desc, created_at: :desc)
            .limit(PICKER_SHOWN)
-           .preload(:account)
+           .preload(:account, entryable: { transfer: { inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account } } })
     end
 
     # Entries already backing a bill get a "Part of X" chip rather than being

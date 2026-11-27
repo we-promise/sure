@@ -2320,6 +2320,17 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-section-key=biggest_expenses] tbody tr:nth-child(2)", text: /One-time/, count: 0
   end
 
+  test "biggest expenses does not name an account the viewer cannot open in a contribution's name" do
+    create_transfer_to_hidden_account(name: "Hidden Brokerage", accountable: Investment.new, date: BIGGEST_MONTH + 1, amount: 700)
+    sign_in users(:family_member)
+
+    get biggest_expenses_reports_path
+
+    assert_response :ok
+    assert_includes biggest_expense_names, "Transfer to another account"
+    assert_no_match "Hidden Brokerage", response.body
+  end
+
   test "biggest expenses leaves out trades" do
     security = securities(:aapl)
     create_trade(security, account: accounts(:investment), qty: 100, date: BIGGEST_MONTH + 1, price: 500)
@@ -2413,6 +2424,19 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     rows = section.css("tbody tr").map(&:text)
     assert_match(/Garage invoice\s+One-time/, rows.first)
     assert_match(/Rent/, rows.second)
+  end
+
+  test "the printed report does not name an account the viewer cannot open in a contribution's name" do
+    create_transfer_to_hidden_account(name: "Hidden Brokerage", accountable: Investment.new, date: BIGGEST_MONTH + 1, amount: 700)
+    sign_in users(:family_member)
+
+    get print_reports_path(period_type: :custom, start_date: BIGGEST_MONTH, end_date: BIGGEST_MONTH.end_of_month)
+
+    assert_response :ok
+    section = css_select("section").find { |node| node.text.include?(I18n.t("reports.print.biggest_expenses.title")) }
+    assert section, "the biggest expenses section is printed"
+    assert_match(/Transfer to another account/, section.text)
+    assert_no_match "Hidden Brokerage", response.body
   end
 
   test "the reports preferences endpoint stores an offered biggest expenses limit only" do

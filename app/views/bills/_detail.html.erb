@@ -174,7 +174,7 @@
                 <% if payments.size > 1 %>
                   &middot; <%= t("bills.detail.payment_count", count: payments.size) %>
                 <% elsif (payment = payments.first) %>
-                  &middot; <%= payment.entry&.name.presence || t("bills.detail.manual_payment") %>
+                  &middot; <%= entry_display_name(payment.entry).presence || t("bills.detail.manual_payment") %>
                 <% end %>
               </p>
             </div>

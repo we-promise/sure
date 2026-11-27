@@ -204,6 +204,18 @@ class PendingDuplicateMergesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Invalid transaction selected for merge", flash[:alert]
   end
 
+  test "new does not name an account the user cannot open in a candidate's name" do
+    create_transfer_to_hidden_account
+    pending_transaction = create_pending_transaction(amount: 100, account: @account)
+    sign_in users(:family_member)
+
+    get new_transaction_pending_duplicate_merges_path(pending_transaction)
+
+    assert_response :success
+    assert_match "Transfer to another account", response.body
+    assert_no_match "Hidden Savings", response.body
+  end
+
   private
 
     def create_pending_transaction(attributes = {})

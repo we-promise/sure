@@ -18,5 +18,6 @@ id:
           opposite_amounts: "Harus memiliki jumlah yang berlawanan"
           within_days: "Harus berjarak maksimal %{count} hari"
   transfer:
+    hidden_account: akun lain
     name: Transfer ke %{to_account}
     payment_name: Pembayaran ke %{to_account}
