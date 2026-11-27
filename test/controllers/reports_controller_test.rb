@@ -222,6 +222,33 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from JPY to USD is stored yet, so some totals may leave out amounts in JPY/
   end
 
+  test "a top holding with no exchange rate is listed without a value, on screen and in print" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = @family.accounts.create!(name: "Brokerage JPY", balance: 750_000, currency: "JPY", accountable: Investment.new)
+    security = Security.create!(ticker: "JPT#{SecureRandom.hex(3)}", name: "Tokyo Top")
+    account.holdings.create!(security: security, date: Date.current, qty: 5, price: 150_000, amount: BigDecimal(750_000), currency: "JPY")
+
+    [ reports_path, print_reports_path ].each do |path|
+      get path
+      assert_response :ok
+      row = css_select("tr").find { |tr| tr.text.include?(security.ticker) }
+      assert row, "#{path}: the holding is listed"
+      unavailable = I18n.t("shared.holding_value.unavailable")
+      assert_equal [ unavailable, "#{unavailable} #{I18n.t("shared.holding_value.no_exchange_rate")}" ], css_select(row, "td")[1, 2].map { |td| td.text.squish }, path
+    end
+  end
+
+  test "a top holding's value notes the positions it leaves out, on screen and in print" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = @family.accounts.create!(name: "Brokerage JPY", balance: 750_000, currency: "JPY", accountable: Investment.new)
+    account.holdings.create!(security: securities(:aapl), date: Date.current, qty: 5, price: 150_000, amount: BigDecimal(750_000), currency: "JPY")
+
+    [ reports_path, print_reports_path ].each do |path|
+      get path
+      assert_select "tr [data-holding-value-note]", { text: I18n.t("shared.holding_value.unvalued_positions", count: 1) }, path
+    end
+  end
+
   # Each holding's line under the card is the same arithmetic as the card's
   # total: converted into family currency, or "no data" without a rate. It
   # used to re-label the yen figure as dollars.

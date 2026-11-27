@@ -325,6 +325,35 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_includes positions.map { |a| a["href"] }, holding_path(second.holdings.first)
   end
 
+  test "holdings table lists a position with no exchange rate, its value unavailable" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = @family.accounts.create!(owner: @user, name: "Brokerage JPY", balance: 750_000, cash_balance: 0, currency: "JPY", accountable: Investment.new)
+    security = Security.create!(ticker: "JPL", name: "Tokyo Listed")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 5, price: 150_000, amount: 750_000, currency: "JPY")
+
+    get portfolio_path
+    assert_response :success
+
+    unavailable = I18n.t("shared.holding_value.unavailable")
+    no_rate = I18n.t("shared.holding_value.no_exchange_rate")
+    assert_equal "#{unavailable} #{no_rate}", css_select("#portfolio-holdings tr[data-portfolio-holding='JPL'] [data-portfolio-value]").text.squish
+    assert_select "#portfolio-holdings tr[data-portfolio-holding='JPL'] [data-portfolio-weight]", text: unavailable
+    row = css_select("#portfolio-holdings tr[data-portfolio-holding='JPL']").text
+    assert_equal 2, row.scan(no_rate).size, "the return gives the same reason"
+    assert_no_match I18n.t("portfolios.holdings.no_cost_basis"), row
+  end
+
+  test "holdings table counts the positions a row's value leaves out" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = @family.accounts.create!(owner: @user, name: "Brokerage JPY", balance: 750_000, cash_balance: 0, currency: "JPY", accountable: Investment.new)
+    Holding.create!(account: account, security: securities(:aapl), date: Date.current, qty: 5, price: 150_000, amount: 750_000, currency: "JPY")
+
+    get portfolio_path
+    assert_response :success
+
+    assert_select "#portfolio-holdings tr[data-portfolio-holding='AAPL'] [data-portfolio-value] [data-holding-value-note]", text: I18n.t("shared.holding_value.unvalued_positions", count: 1)
+  end
+
   test "holdings table sorts through links that flip the active column's direction" do
     zzz = Security.create!(ticker: "ZZZ", name: "Zeta")
     Holding.create!(account: accounts(:investment), security: zzz, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)

@@ -14,6 +14,31 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "dashboard lists a top holding with no exchange rate without a value" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = @family.accounts.create!(owner: @user, name: "Brokerage JPY", balance: 750_000, cash_balance: 0, currency: "JPY", accountable: Investment.new)
+    Holding.create!(account: account, security: Security.create!(ticker: "JPL", name: "Tokyo Listed"), date: Date.current, qty: 5, price: 150_000, amount: 750_000, currency: "JPY")
+
+    get root_path
+    assert_response :ok
+
+    row = css_select("tr").find { |tr| tr.text.include?("JPL") }
+    assert row, "the holding is listed"
+    weight, value = css_select(row, "td.text-right").first(2).map { |td| td.text.squish }
+    assert_equal I18n.t("shared.holding_value.unavailable"), weight
+    assert_equal "#{I18n.t("shared.holding_value.unavailable")} #{I18n.t("shared.holding_value.no_exchange_rate")}", value
+  end
+
+  test "dashboard notes the positions a top holding's value leaves out" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = @family.accounts.create!(owner: @user, name: "Brokerage JPY", balance: 750_000, cash_balance: 0, currency: "JPY", accountable: Investment.new)
+    Holding.create!(account: account, security: securities(:aapl), date: Date.current, qty: 5, price: 150_000, amount: 750_000, currency: "JPY")
+
+    get root_path
+
+    assert_select "tr [data-holding-value-note]", text: I18n.t("shared.holding_value.unvalued_positions", count: 1)
+  end
+
   test "dashboard renders the net worth chart as drag-selectable, opting it out of card drag-and-drop" do
     get root_path
 

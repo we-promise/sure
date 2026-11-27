@@ -255,8 +255,8 @@
             <% @investment_metrics[:top_holdings].each do |holding| %>
               <tr>
                 <td><strong><%= holding.ticker %></strong> <span class="tufte-muted"><%= truncate(holding.name, length: 25) %></span></td>
-                <td class="tufte-right"><%= number_to_percentage(holding.weight || 0, precision: 1) %></td>
-                <td class="tufte-right"><%= format_money(holding.amount_money) %></td>
+                <td class="tufte-right"><%= holding.weight ? number_to_percentage(holding.weight, precision: 1) : t("shared.holding_value.unavailable") %></td>
+                <td class="tufte-right"><%= render "shared/holding_value", amount: holding.amount, unvalued_positions: holding.unvalued_positions, note_class: "tufte-muted" %></td>
                 <td class="tufte-right">
                   <% if holding.trend %>
                     <span style="color: <%= holding.trend.color %>"><%= holding.trend.percent_formatted %></span>

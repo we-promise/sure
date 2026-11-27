@@ -1,0 +1,13 @@
+<%# locals: (amount:, unvalued_positions:, note_class: "block text-xs text-secondary") %>
+
+<%# A rolled-up holding's family-currency value: unavailable when none of its
+    positions converts, and a count of those left out when only some do. %>
+<% if amount %>
+  <%= format_money(amount) %>
+  <% if unvalued_positions.positive? %>
+    <%= tag.span t("shared.holding_value.unvalued_positions", count: unvalued_positions), class: note_class, data: { holding_value_note: true } %>
+  <% end %>
+<% else %>
+  <%= t("shared.holding_value.unavailable") %>
+  <%= tag.span t("shared.holding_value.no_exchange_rate"), class: note_class, data: { holding_value_note: true } %>
+<% end %>
