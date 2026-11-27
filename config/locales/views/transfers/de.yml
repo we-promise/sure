@@ -31,6 +31,8 @@ de:
     new:
       title: Neue Überweisung
     show:
+      label: "Bezeichnung"
+      label_placeholder: "z. B. Urlaubsrücklage"
       delete: Überweisung entfernen
       delete_subtitle: Dadurch wird die Überweisung entfernt. Die zugrunde liegenden Transaktionen bleiben erhalten.
       delete_title: Überweisung entfernen?

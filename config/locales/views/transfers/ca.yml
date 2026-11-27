@@ -30,6 +30,8 @@ ca:
     new:
       title: Nova transferència
     show:
+      label: "Concepte"
+      label_placeholder: "p. ex. Estalvi per a vacances"
       amount: Import
       category: Categoria
       date: Data

@@ -31,6 +31,8 @@ pl:
     new:
       title: Nowy przelew
     show:
+      label: "Opis"
+      label_placeholder: "np. Oszczędności na wakacje"
       bank_charges: Opłaty bankowe
       category: Kategoria
       date: Data

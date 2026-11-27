@@ -1,0 +1,3 @@
+<dl id="<%= dom_id(entry, :transfer_leg_name) %>">
+  <%= render DS::DetailRow.new(label: t("transfers.show.transaction"), value: entry.name, value_class: "font-medium") %>
+</dl>

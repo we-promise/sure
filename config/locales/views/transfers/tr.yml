@@ -30,6 +30,8 @@ tr:
     new:
       title: Yeni transfer
     show:
+      label: "Açıklama"
+      label_placeholder: "ör. Tatil birikimi"
       bank_charges: Banka ücretleri
       category: Kategori
       date: Tarih

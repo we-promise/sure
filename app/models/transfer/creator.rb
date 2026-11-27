@@ -241,11 +241,15 @@ class Transfer::Creator
     # A user-provided label names both legs; otherwise each one names the
     # account on the other side.
     def outflow_name
-      label || "#{name_prefix} to #{destination_account.name}"
+      label || default_leg_names.fetch(:outflow)
     end
 
     def inflow_name
-      label || "#{name_prefix} from #{source_account.name}"
+      label || default_leg_names.fetch(:inflow)
+    end
+
+    def default_leg_names
+      Transfer.default_leg_names(from_account: source_account, to_account: destination_account)
     end
 
     def inflow_converted_amount

@@ -86,6 +86,7 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
 
     assert_equal "Holiday savings", transfer.outflow_transaction.entry.name
     assert_equal "Holiday savings", transfer.inflow_transaction.entry.name
+    assert_equal "Holiday savings", transfer.label
   end
 
   test "keeps the default names when the label is blank" do
@@ -100,6 +101,7 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
 
     assert_equal "Transfer to #{@destination_account.name}", transfer.outflow_transaction.entry.name
     assert_equal "Transfer from #{@source_account.name}", transfer.inflow_transaction.entry.name
+    assert_nil transfer.label
   end
 
   test "rejects a reused idempotency key when the label differs" do

@@ -32,6 +32,7 @@ class TransfersController < ApplicationController
     writable_endpoint_count = Account.writable_by(Current.user).where(id: endpoint_ids).distinct.count
     both_endpoints_writable = endpoint_ids.size == 2 && writable_endpoint_count == 2
     @can_mark_as_recurring_transfer = !Current.family.recurring_transactions_disabled? && both_endpoints_writable
+    @can_rename_transfer = both_endpoints_writable
     @can_switch_investment_contribution = both_endpoints_writable && @transfer.investment_contribution_switchable?
   end
 
@@ -376,7 +377,7 @@ class TransfersController < ApplicationController
     end
 
     def transfer_update_params
-      params.require(:transfer).permit(:notes, :status, :category_id, :amount, :source_fee_amount, :destination_fee_amount, :investment_contribution)
+      params.require(:transfer).permit(:name, :notes, :status, :category_id, :amount, :source_fee_amount, :destination_fee_amount, :investment_contribution)
     end
 
     def update_transfer_status
@@ -395,7 +396,10 @@ class TransfersController < ApplicationController
 
     def update_transfer_details
       # Confirming from the transaction list sends only the status; leave the
-      # category and notes alone unless the form actually submitted them.
+      # category, name and notes alone unless the form actually submitted them.
+      if transfer_update_params.key?(:name)
+        @transfer.update_label!(transfer_update_params[:name])
+      end
       if transfer_update_params.key?(:category_id)
         outflow = @transfer.outflow_transaction
         # Reloaded under its row lock, so a cleanup clearing the category

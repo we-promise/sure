@@ -24,6 +24,8 @@ hu:
     new:
       title: Új átutalás
     show:
+      label: "Megnevezés"
+      label_placeholder: "pl. Nyaralási megtakarítás"
       delete: Átutalás eltávolítása
       delete_subtitle: Ez eltávolítja az átutalást. Az alapul szolgáló tranzakciókat nem törli.
       delete_title: Eltávolítja az átutalást?

@@ -29,6 +29,8 @@ pt-PT:
     new:
       title: Nova transferência
     show:
+      label: "Descrição"
+      label_placeholder: "ex.: Poupança para férias"
       delete: Eliminar transferência
       delete_subtitle: Isto elimina a transferência. Não eliminará as transações
         subjacentes.

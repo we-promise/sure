@@ -30,6 +30,8 @@ es:
     new:
       title: Nueva transferencia
     show:
+      label: "Concepto"
+      label_placeholder: "p. ej. Ahorro para vacaciones"
       delete: Eliminar transferencia
       delete_subtitle: Esto eliminará la transferencia. No se eliminarán las transacciones subyacentes.
       delete_title: ¿Eliminar transferencia?

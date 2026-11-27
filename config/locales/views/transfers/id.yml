@@ -30,6 +30,8 @@ id:
     new:
       title: Transfer baru
     show:
+      label: "Label"
+      label_placeholder: "mis. Tabungan liburan"
       delete: Hapus transfer
       delete_subtitle: Tindakan ini akan menghapus transfer. Transaksi yang mendasarinya tidak akan dihapus.
       delete_title: Hapus transfer?

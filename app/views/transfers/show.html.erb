@@ -11,9 +11,7 @@
           </span>
           <%= icon "arrow-left-right", size: "sm", class: "text-secondary" %>
         </h3>
-        <span class="text-sm text-secondary">
-          <%= @transfer.name %>
-        </span>
+        <%= render "transfers/title", transfer: @transfer %>
       </div>
       <%= dialog.close_button %>
     </div>
@@ -21,6 +19,16 @@
   <% dialog.with_body do %>
     <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div class="pb-4 px-3 pt-2 text-sm space-y-3 text-primary">
+        <% if @can_rename_transfer %>
+          <%= styled_form_with model: @transfer, data: { controller: "auto-submit-form" } do |f| %>
+            <%= f.text_field :name,
+                  value: @transfer.label,
+                  label: t(".label"),
+                  placeholder: t(".label_placeholder"),
+                  maxlength: 255,
+                  data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } %>
+          <% end %>
+        <% end %>
         <div class="space-y-3">
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary"><%= t(".from") %></dt>
@@ -38,9 +46,7 @@
               DS::DetailRow wraps it rather than truncating, so it can be read in
               full on a phone too. %>
           <% if @readable_account_ids.include?(@transfer.from_account&.id) %>
-            <dl>
-              <%= render DS::DetailRow.new(label: t(".transaction"), value: @transfer.outflow_transaction.entry.name, value_class: "font-medium") %>
-            </dl>
+            <%= render "transfers/leg_name", entry: @transfer.outflow_transaction.entry %>
           <% end %>
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary"><%= t(".transfer_amount") %></dt>
@@ -73,9 +79,7 @@
             <dd class="font-medium"><%= l(@transfer.inflow_transaction.entry.date, format: :long) %></dd>
           </dl>
           <% if @readable_account_ids.include?(@transfer.to_account&.id) %>
-            <dl>
-              <%= render DS::DetailRow.new(label: t(".transaction"), value: @transfer.inflow_transaction.entry.name, value_class: "font-medium") %>
-            </dl>
+            <%= render "transfers/leg_name", entry: @transfer.inflow_transaction.entry %>
           <% end %>
           <dl class="flex items-center gap-2 justify-between">
             <dt class="text-secondary"><%= t(".transfer_amount") %></dt>

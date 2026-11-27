@@ -30,6 +30,8 @@ fr:
     new:
       title: Nouveau transfert
     show:
+      label: "Libellé"
+      label_placeholder: "Ex. : Épargne vacances"
       amount: Montant
       category: Catégorie
       date: Date

@@ -30,6 +30,8 @@ ru:
     new:
       title: Новый перевод
     show:
+      label: "Название"
+      label_placeholder: "например, Накопления на отпуск"
       amount: Сумма
       category: Категория
       date: Дата

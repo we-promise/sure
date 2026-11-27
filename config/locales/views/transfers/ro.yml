@@ -20,6 +20,8 @@ ro:
     new:
       title: Transfer nou
     show:
+      label: "Descriere"
+      label_placeholder: "ex. Economii pentru vacanță"
       delete: Elimină transfer
       delete_subtitle: Aceasta elimină transferul. Nu va șterge tranzacțiile subiacente.
       delete_title: Elimini transferul?

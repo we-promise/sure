@@ -27,6 +27,8 @@ it:
     new:
       title: Nuovo bonifico
     show:
+      label: "Descrizione"
+      label_placeholder: "es. Risparmi per le vacanze"
       delete: Rimuovi bonifico
       delete_subtitle: Questo rimuove il bonifico. Non eliminerà le transazioni sottostanti.
       delete_title: Rimuovere il bonifico?
