@@ -15,7 +15,7 @@ class Api::V1::RuleRuns::ProgressesControllerTest < ActionDispatch::IntegrationT
     @rule.actions.build(action_type: "auto_detect_merchants")
     @rule.save!
     @rule_run = @rule.rule_runs.create!(rule_name: @rule.name, execution_type: "manual", status: "pending",
-                                        transactions_queued: 50, transactions_processed: 50, pending_jobs_count: 1,
+                                        transactions_queued: 50, transactions_processed: 50, pending_jobs_count: 0,
                                         executed_at: Time.current)
     @rule_run.await_ai!(50)
   end

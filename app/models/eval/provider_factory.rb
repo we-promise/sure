@@ -50,10 +50,12 @@ class Eval::ProviderFactory
 
       # A regional OpenAI host (us.api.openai.com) is native OpenAI, not a custom server (#4836).
       custom = Provider::Openai.custom_endpoint?(uri_base)
-      # The configured gateway without an installed endpoint still needs its static headers; a
-      # server of the run's own never gets them.
-      gateway_headers = installed.nil? && configured_url && same_server?(uri_base, configured_url) ? Ai::LegacyEnvConfig.static_openai_headers : {}
-      chat_provider = Provider::Openai.new(access_token, uri_base:, model:)
+      # OPENAI_EXTRA_HEADERS belong to the configured server (OpenAI's when none is); a server of
+      # the run's own never gets them. An installed endpoint carries its own static ones.
+      gateway = same_server?(uri_base, configured_url)
+      gateway_headers = installed.nil? && configured_url && gateway ? Ai::LegacyEnvConfig.static_openai_headers : {}
+      chat_provider = Provider::Openai.new(access_token, uri_base:, model:,
+                                           extra_headers: gateway || own_server ? Provider::Openai.extra_headers : {})
       endpoint =
         if own_server
           # The install's own server: its headers, API choice and timeout, as production calls it.
@@ -74,8 +76,8 @@ class Eval::ProviderFactory
       Eval::GenerationClient.new(endpoint:, model:, budget:, chat_provider:)
     end
 
-    # As the transport reaches them: `…/v1` and `…/v1/` are one server.
-    def same_server?(url, other) = Ai::Transport::Http.compatible_base(url) == Ai::Transport::Http.compatible_base(other)
+    # As the transport reaches them: `…/v1`, `…/v1/` and `…:443/v1` are one server; `/TeamA` and `/teama` aren't.
+    def same_server?(url, other) = Ai::Transport::Http.same_url?(Ai::Transport::Http.compatible_base(url), Ai::Transport::Http.compatible_base(other))
 
     # The run's Jev endpoint, else the install's: categorization through the generation's
     # judgement, as production runs it.

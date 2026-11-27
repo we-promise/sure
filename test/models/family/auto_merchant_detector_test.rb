@@ -250,7 +250,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
   test "a rule run counts its transactions down per batch and completes once" do
     use_ai_model_settings(batch_size: 2)
     ids = 5.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
                                transactions_queued: 5, executed_at: Time.current)
     rule_run.await_ai!(5)
     stub_ai(:detect_merchants) do |request|
@@ -269,9 +269,9 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal 0, rule_run.pending_jobs_count
   end
 
-  test "a deadlock while completing is retried in place, so the run's other AI action is still awaited" do
+  test "a deadlock while completing rolls the last step back, so its retry counts the batch once and the other action is still awaited" do
     ids = 2.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 2,
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
                                transactions_queued: 2, executed_at: Time.current)
     rule_run.await_ai!(2)   # this action's transactions
     rule_run.await_ai!(2)   # another AI action on the same run, not run yet
@@ -297,9 +297,59 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     RuleRun.define_method(:complete_job!, real_complete_job) if real_complete_job
   end
 
+  test "a give-up whose failure record deadlocks rolls the release back, so the retry releases once" do
+    ids = 2.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
+                               transactions_queued: 2, executed_at: Time.current)
+    rule_run.await_ai!(2)   # this action's transactions
+    rule_run.await_ai!(2)   # another AI action on the same run, not run yet
+    stub_ai(:detect_merchants, raises: Ai::Error::Refused)
+    calls = 0
+    real_fail_job = RuleRun.instance_method(:fail_job!)
+    RuleRun.define_method(:fail_job!) do |**kwargs|   # deadlocks once, then records the failure for real
+      calls += 1
+      raise ActiveRecord::Deadlocked, "deadlock detected" if calls == 1
+
+      real_fail_job.bind_call(self, **kwargs)
+    end
+    Ai::GenerationJob.perform_later(:detect_merchants, ai_run_args(:detect_merchants, ids: ids, family: @family, rule_run_id: rule_run.id))
+    job = enqueued_jobs.shift.stringify_keys
+
+    assert_raises(ActiveRecord::Deadlocked) { ActiveJob::Base.execute(job) }
+    ActiveJob::Base.execute(job)   # Sidekiq's retry
+
+    assert_equal [ 2, 1, "failed" ], rule_run.reload.values_at(:transactions_awaiting_ai, :pending_jobs_count, :status)
+  ensure
+    RuleRun.define_method(:fail_job!, real_fail_job) if real_fail_job
+  end
+
+  test "a replay whose saved next job can't be queued releases the rest of the run once, not its own committed batch" do
+    use_ai_model_settings(batch_size: 1)
+    ids = 3.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
+                               transactions_queued: 3, executed_at: Time.current)
+    rule_run.await_ai!(3)   # this action's transactions
+    rule_run.await_ai!(2)   # another AI action on the same run, not run yet
+    stub_ai(:detect_merchants) do |request|
+      batch = request.schema.dig(:properties, :merchants, :items, :properties, :transaction_id, :enum)
+      { merchants: batch.map { { transaction_id: _1, business_name: "Shop", business_url: "shop.example" } } }
+    end
+    Ai::GenerationJob.perform_later(:detect_merchants, ai_run_args(:detect_merchants, ids: ids, family: @family, rule_run_id: rule_run.id))
+    first = enqueued_jobs.shift.stringify_keys
+    ActiveJob::Base.execute(first)   # step 0 commits one transaction; its next job is lost with the worker
+    enqueued_jobs.clear
+    assert_equal 4, rule_run.reload.transactions_awaiting_ai
+
+    Ai::GenerationJob.stubs(:perform_later).returns(false)
+    ActiveJob::Base.execute(first)   # the replay can't queue step 1 either, so it gives up for it
+
+    assert_equal [ 2, 1, "failed" ], rule_run.reload.values_at(:transactions_awaiting_ai, :pending_jobs_count, :status)
+    assert_equal 0, Ai::GenerationRun.count
+  end
+
   test "a batch whose progress can't be recorded is rolled back, so its retry counts every change" do
     txn = create_transaction(account: @account, name: "McDonalds").transaction
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
                                transactions_queued: 1, executed_at: Time.current)
     rule_run.await_ai!(1)
     stub_ai(:detect_merchants, returns: { merchants: [ { transaction_id: txn.id, business_name: "McDonalds", business_url: "mcdonalds.com" } ] })
@@ -315,7 +365,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
 
   test "a batch whose transaction rolls back is released when the job gives up, so the run can finish" do
     txn = create_transaction(account: @account, name: "Chipotle burrito").transaction
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
                                transactions_queued: 1, executed_at: Time.current)
     rule_run.await_ai!(1)
     detector = Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ], rule_run:)
@@ -335,7 +385,7 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
   test "sends nothing while no family admin has turned AI on, and the rule run fails" do
     @family.users.update_all(ai_enabled: false)
     txns = 2.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction }
-    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 0,
                                transactions_queued: txns.size, executed_at: Time.current).tap { _1.await_ai!(txns.size) }
     requests = stub_ai(:detect_merchants) { flunk "sent without consent" }
 

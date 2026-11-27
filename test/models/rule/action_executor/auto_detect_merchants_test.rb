@@ -29,8 +29,8 @@ class Rule::ActionExecutor::AutoDetectMerchantsTest < ActiveSupport::TestCase
     args = enqueued_jobs.last["arguments"].second
     assert_equal [ 0, [] ], args.values_at("cursor", "pending")
     assert_equal ids.sort, Ai::GenerationRun.find(args["run_id"]).items.pluck(:item_id).sort
-    assert_equal({ async: true, modified_count: 5, jobs_count: 1 }, result)
-    assert_equal 5, rule_run.reload.transactions_awaiting_ai
+    assert_equal({ async: true, modified_count: 5 }, result)
+    assert_equal [ 1, 5 ], rule_run.reload.values_at(:pending_jobs_count, :transactions_awaiting_ai)
   end
 
   test "a job that can't be queued stops the run waiting for its transactions" do
@@ -55,7 +55,7 @@ class Rule::ActionExecutor::AutoDetectMerchantsTest < ActiveSupport::TestCase
     create_transaction(account: @account, name: "Coffee")
     rule_run = RuleRun.create!(rule: @rule, execution_type: "manual", status: "pending", transactions_queued: 1, executed_at: Time.current)
     Ai::GenerationJob.stubs(:perform_later).raises(RedisClient::CannotConnectError)
-    RuleRun.any_instance.stubs(:ai_handled!).raises(ActiveRecord::StatementInvalid, "connection lost")
+    RuleRun.any_instance.expects(:release_ai_job!).raises(ActiveRecord::StatementInvalid, "connection lost")
 
     assert_raises(RedisClient::CannotConnectError) { @executor.execute(@account.transactions, rule_run:) }
   end

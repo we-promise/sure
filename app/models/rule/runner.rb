@@ -152,10 +152,14 @@ class Rule::Runner
       rule_run
     end
 
+    def async?(result) = result.is_a?(Hash) && result[:async]
+
     def run_counts(result, queued:, rule:)
-      if result.is_a?(Hash) && result[:async]
-        # The async jobs report the modified count back via RuleRun#complete_job!
-        { status: "pending", transactions_processed: result[:modified_count] || 0, pending_jobs_count: result[:jobs_count] || 0 }
+      if async?(result)
+        # The run stays as created, pending, unless its jobs have already finished it: each AI action
+        # counted its job (RuleRun#await_ai!) before any was queued (Rule#apply), and the jobs report
+        # back via RuleRun#complete_job!.
+        { transactions_processed: result[:modified_count] || 0 }
       elsif result.is_a?(Integer)
         { status: "success", transactions_processed: queued, transactions_modified: result }
       else
@@ -165,7 +169,7 @@ class Rule::Runner
     end
 
     def changed_now(result)
-      if result.is_a?(Hash) && result[:async]
+      if async?(result)
         result[:changed_now_count] || 0
       elsif result.is_a?(Integer)
         result

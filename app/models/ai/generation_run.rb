@@ -1,8 +1,9 @@
 # The ids one Ai::GenerationJob chain works through, frozen when the run is queued, one row per
 # item in the order they were given. Each job carries the run's id, a cursor into it and the few
 # ids its last batch left unanswered, and reads only one window from here (Window), so a job
-# touches about one batch's worth of rows however long the run is (#5077). The run is deleted
-# when the requester has heard the end; DataCleanerJob sweeps any a dead job left behind.
+# touches about one batch's worth of rows however long the run is (#5077). `step` is the next job
+# step to commit (Ai::GenerationJob). The run is deleted in the transaction where the requester
+# hears the end; DataCleanerJob sweeps any a dead job left behind.
 class Ai::GenerationRun < ApplicationRecord
   self.table_name = "ai_generation_runs"
 
@@ -27,7 +28,7 @@ class Ai::GenerationRun < ApplicationRecord
   def self.enqueue(feature, family:, ids:, **args)
     run = start!(family:, feature:, ids:)
     queued = false
-    queued = Ai::GenerationJob.perform_later(feature, { run_id: run.id, cursor: 0, pending: [], family_id: family.id, **args }.compact)
+    queued = Ai::GenerationJob.perform_later(feature, { run_id: run.id, cursor: 0, pending: [], step: 0, family_id: family.id, **args }.compact)
   ensure
     run&.destroy unless queued
   end

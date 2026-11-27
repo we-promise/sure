@@ -12,6 +12,8 @@ module Ai::Transport::Http
   OPENAI_BASE = "https://api.openai.com/v1".freeze
   OPENROUTER_BASE = "https://openrouter.ai/api/v1".freeze
   PROXY_VARIABLES = %w[HTTPS_PROXY https_proxy HTTP_PROXY http_proxy].freeze
+  # The key RubyLLM gets for an endpoint without one; ProxyNetHttp sends no Authorization for it.
+  NO_KEY = "sure-no-key".freeze
 
   class << self
     # The proxy URL for a request to `url`, or nil to go direct: HTTPS_PROXY, then HTTP_PROXY,
@@ -66,19 +68,24 @@ module Ai::Transport::Http
       nil
     end
 
-    # One base URL rule for every OpenAI-compatible server, the same as ruby-openai's, so an
-    # endpoint configured for ruby-openai keeps its URL: a URL whose path ends in the API's
-    # version (`/v1`, `/v1beta/openai`, Cloudflare's `/ai/v1`) is used as given; any other gets
-    # `/v1`. A version earlier in the path is the service's, not the API's: Cloudflare's
+    # One base URL rule for every OpenAI-compatible server, matching ruby-openai's, so an
+    # endpoint configured for ruby-openai keeps its URL. A path that ends in the API's version
+    # (`/v1`, `/v1beta/openai`, Cloudflare Workers AI's `/ai/v1`) or has a `/v1` segment
+    # (Cloudflare AI Gateway's `/v1/<account>/<gateway>/openai`) is used as given; any other gets
+    # `/v1`. Another version earlier in the path is the service's, not the API's: Workers AI's
     # `/client/v4/accounts/x/ai` still needs `/v1`. A "v1" in the host (`v1-proxy.lan`) is not a
-    # version. Agent URLs are stored whole, so a trailing `/chat/completions` goes.
+    # version. Agent URLs are stored whole, so a trailing `/chat/completions` goes. Only the path
+    # changes: a query stays as written.
     def compatible_base(base_url)
-      url = base_url.to_s.strip.chomp("/").delete_suffix("/chat/completions")
+      url = base_url.to_s.strip
       return OPENAI_BASE if url.blank?
 
-      path = URI.parse(url).path
-      path.match?(%r{/v\d+[a-z0-9]*(/openai)?\z}i) ? url : "#{url}/v1"
+      uri = URI.parse(url)
+      path = uri.path.to_s.sub(%r{/+\z}, "").delete_suffix("/chat/completions")
+      uri.path = path.match?(%r{/v\d+[a-z0-9]*(/openai)?\z|/v1/}i) ? path : "#{path}/v1"
+      uri.to_s
     rescue URI::InvalidURIError
+      url = url.chomp("/").delete_suffix("/chat/completions")
       url.include?("v1") ? url : "#{url}/v1"
     end
 
@@ -148,7 +155,15 @@ module Ai::Transport::Http
   # force a direct connection; an invalid proxy URL is warned about and skipped. TLS options go
   # through the context's config.ssl. RubyLLM's file downloads skip adapters and use
   # config.http_proxy, which is set from the same resolver.
+  #
+  # It also drops the Authorization header RubyLLM builds from NO_KEY, the stand-in for an endpoint
+  # without a key, since RubyLLM requires one: a server that checks the header rejects a fake one.
   class ProxyNetHttp < Faraday::Adapter::NetHttp
+    def call(env)
+      env.request_headers.delete("Authorization") if env.request_headers["Authorization"] == "Bearer #{NO_KEY}"
+      super
+    end
+
     def build_connection(env)
       proxy = Ai::Transport::Http.proxy_or_warn(env[:url].to_s)
       env[:request][:proxy] = proxy && Faraday::ProxyOptions.from(proxy)

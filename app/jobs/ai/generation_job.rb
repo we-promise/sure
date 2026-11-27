@@ -5,12 +5,20 @@
 # The run's ids live in an Ai::GenerationRun (Ai::GenerationRun.enqueue starts one); each job reads
 # one window of them, so a job's work and payload stay at about one batch however long the run is.
 #
+# Each job is one step of the run. It claims its step in the transaction that applies its batch,
+# which also saves the next job's arguments or, on the last step, ends the run. A replayed job
+# whose step already committed queues that next job rather than reporting the batch again, and a
+# second copy of a job stops at the claim, so the requester hears each batch, and the end, once.
+#
 # On a failure, the transport has already retried 429s and 5xxs and the generation
 # has failed over and escalated; what's left is retried later when it may pass, and discarded
 # when it can't. Any other error ends the run. Either way the requester hears once, so a RuleRun
 # never stays pending.
 class Ai::GenerationJob < ApplicationJob
   queue_as { Ai::Routes.queue_for(arguments.first) }
+
+  # Another copy of this job committed its step first; that copy carries the run on.
+  StepTaken = Class.new(StandardError)
 
   RETRIED = [ Ai::Error::RateLimited, Ai::Error::Timeout, Ai::Error::Upstream, Ai::Error::Unreachable ].freeze
   DISCARDED = [ Ai::Error::Unavailable, Ai::Error::Refused, Ai::Error::Unauthorized, Ai::Error::NoCredit,
@@ -20,32 +28,36 @@ class Ai::GenerationJob < ApplicationJob
   retry_on(ActiveRecord::Deadlocked, attempts: 5) { |job, error| job.give_up(error) }
   discard_on(*DISCARDED) { |job, error| job.give_up(error) }
 
-  # feature: a key in Ai::Requesters; args: `run_id:`, `cursor:` (the run's next unread position)
-  # and `pending:` (the ids the last batch left unanswered), plus the requester's own; applied: the
-  # count the earlier batches applied; answered_before: whether any earlier batch was answered.
+  # feature: a key in Ai::Requesters; args: `run_id:`, `cursor:` (the run's next unread position),
+  # `pending:` (the ids the last batch left unanswered) and `step:` (this job's step of the run),
+  # plus the requester's own; applied: the count the earlier batches applied; answered_before:
+  # whether any earlier batch was answered.
   def perform(feature, args, applied = 0, answered_before = false)
     return if requester.nil?
+    return resume if @window.run.step > @step
 
+    runs.where(step: @step).update_all(next_job: nil)   # started: a replay of the step before won't queue this one again
     Ai::CallContext.job(correlation_id) do
       generation = requester.ai_generation
-      next finish(applied) if generation.nil?
+      next commit_step(last: true) { finish(applied) } if generation.nil?
 
       result = generation.call(batches: 1, cancelled: -> { requester.ai_cancelled? }, answered_before:, shadow: false)
       result.value!
-      applied += requester.apply_ai(result).to_i
-      # Only once applied: a deadlock in apply_ai retries the whole job, which would sample again.
-      Ai::Shadow.enqueue(generation, result)
+      last = result.remaining.none? && @window.exhausted?
+      next_job = commit_step(last:) do
+        applied += requester.apply_ai(result).to_i
+        next finish(applied) if last
 
-      if result.remaining.any? || !@window.exhausted?
-        # A result has a route only when a batch was answered. An enqueue that fails returns false
-        # rather than raising, and would leave the requester waiting.
-        next_args = args.to_h.symbolize_keys.merge(cursor: @window.cursor, pending: result.remaining_ids)
-        queued = self.class.perform_later(feature, next_args, applied, answered_before || result.route.present?)
-        raise ActiveJob::EnqueueError, "the next batch couldn't be queued" unless queued
-      else
-        finish(applied)
+        # A result has a route only when a batch was answered.
+        { args: args.to_h.symbolize_keys.merge(cursor: @window.cursor, pending: result.remaining_ids, step: @step + 1),
+          applied:, answered_before: answered_before || result.route.present? }
       end
+      # Only once committed: a deadlock in the step retries the whole job, which would sample again.
+      Ai::Shadow.enqueue(generation, result)
+      enqueue_next if !last && become(next_job)
     end
+  rescue StepTaken
+    Rails.logger.info("[Ai::GenerationJob] #{feature} step #{@step} was committed by another copy; stopping")
   rescue *RETRIED, *DISCARDED, ActiveRecord::Deadlocked
     raise
   rescue StandardError => error
@@ -68,23 +80,70 @@ class Ai::GenerationJob < ApplicationJob
     queued
   end
 
+  # Ends the run, in one transaction with the requester hearing it, so a deadlock leaves both
+  # undone. Only from the run's latest step: a copy that fell behind ends nothing.
   def give_up(error)
     Rails.logger.info("[Ai::GenerationJob] #{arguments.first} gave up: #{error.class.name.demodulize} #{error.message.truncate(200)}")
-    requester&.ai_failed(error)
-    delete_run
+    return if requester.nil?
+
+    ActiveRecord::Base.transaction { end_run { requester.ai_failed(error) } }
   end
 
   private
-    # A deadlock here is retried in place, on the same requester, which remembers what it released,
-    # and gives up there when it persists. A job retry would rebuild the requester from the original
-    # ids and, the batch being applied already, release those transactions a second time.
-    def finish(applied, attempts: 3)
-      requester.ai_finished(applied)
-      delete_run
-    rescue ActiveRecord::Deadlocked => error
-      return give_up(error) if (attempts -= 1).zero?
+    # One transaction claims this step, runs the block (the batch's apply) and saves the next job
+    # the block returns or, on the last step, ends the run. Returns the block's value.
+    def commit_step(last:)
+      ActiveRecord::Base.transaction do
+        if last
+          raise StepTaken unless end_run { yield }
+        else
+          raise StepTaken unless runs.where(step: @step).update_all(step: @step + 1, updated_at: Time.current).positive?
 
-      retry
+          yield.tap { |next_job| runs.update_all(next_job:) }
+        end
+      end
+    end
+
+    # If the run is still at this job's step: locks it, so no other copy can end it, runs the
+    # block (the requester hearing the end, which may read the window's items) and deletes the run
+    # with its items. Returns whether it ended the run.
+    def end_run
+      return false unless runs.lock.find_by(step: @step)
+
+      yield
+      runs.delete_all
+      true
+    end
+
+    def runs = Ai::GenerationRun.where(id: @window.run.id)
+
+    # This job's step committed already: it's a replay, or a second copy. When the step is the
+    # run's latest, the job that committed it may have ended before queuing the next, so that one
+    # is queued from what the step saved; if it was queued already, one of the two stops at its claim.
+    def resume
+      run = @window.run
+      return unless run.step == @step + 1 && run.next_job
+
+      enqueue_next if become(run.next_job.deep_symbolize_keys)
+    end
+
+    # From here the job stands for the step it queues, so giving up releases that step's window
+    # and the ids after it, not this step's, which committed. Returns the new requester.
+    def become(next_job)
+      self.arguments = [ arguments.first, next_job[:args], next_job[:applied], next_job[:answered_before] ]
+      remove_instance_variable(:@requester)
+      requester
+    end
+
+    # An enqueue that fails returns false rather than raising, and would leave the requester waiting.
+    def enqueue_next
+      raise ActiveJob::EnqueueError, "the next batch couldn't be queued" unless self.class.perform_later(*arguments)
+    end
+
+    # Inside commit_step, which has ended the run.
+    def finish(applied)
+      requester.ai_finished(applied)
+      nil
     end
 
     def requester
@@ -94,6 +153,7 @@ class Ai::GenerationJob < ApplicationJob
       args = arguments.second.to_h.symbolize_keys
       run = Ai::GenerationRun.find_by!(id: args.delete(:run_id), family_id: args[:family_id])
       run.touch   # progress, which the sweep goes by
+      @step = args.delete(:step).to_i
       @window = run.window(cursor: args.delete(:cursor), pending: args.delete(:pending),
                            size: Ai::Config.current.window_for(arguments.first))
       @requester = klass.from_ai_job(window: @window, **args)
@@ -106,14 +166,6 @@ class Ai::GenerationJob < ApplicationJob
       # A stale job for a feature no longer registered: give up once, don't poison the queue.
       Rails.logger.error("[Ai::GenerationJob] no requester registered for #{arguments.first.inspect}; dropping")
       @requester = nil
-    end
-
-    # Once the requester has heard the end. A run left behind is swept by DataCleanerJob, so a
-    # failure here doesn't replace the outcome the requester was told.
-    def delete_run
-      @window&.run&.destroy
-    rescue StandardError => error
-      Rails.logger.error("[Ai::GenerationJob] couldn't delete run #{@window.run.id}: #{error.class}: #{error.message}")
     end
 
     def correlation_id

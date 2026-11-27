@@ -26,8 +26,7 @@ class Eval::Langfuse::ExperimentRunnerTest < ActiveSupport::TestCase
     # is jsonb). A string-keyed caller silently fell through to ENV/Setting.
     Provider::Openai.expects(:new).with(
       "string-key-token",
-      uri_base: "https://example.test/v1",
-      model: "gpt-4.1"
+      has_entries(uri_base: "https://example.test/v1", model: "gpt-4.1")
     ).returns(stub(supports_responses_endpoint?: false))
 
     runner(
@@ -41,8 +40,7 @@ class Eval::Langfuse::ExperimentRunnerTest < ActiveSupport::TestCase
     Ai::LegacyEnvConfig.stubs(:openai_uri_base).returns(nil)   # the host's OPENAI_URI_BASE would fill in the blank one
     Provider::Openai.expects(:new).with(
       "symbol-key-token",
-      uri_base: nil,
-      model: "gpt-4.1"
+      has_entries(uri_base: nil, model: "gpt-4.1")
     ).returns(stub(supports_responses_endpoint?: false))
 
     runner(

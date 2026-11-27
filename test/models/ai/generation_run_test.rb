@@ -62,7 +62,7 @@ class Ai::GenerationRunTest < ActiveSupport::TestCase
       Ai::GenerationRun.enqueue(:categorize, family: @family, ids: @ids, rule_run_id: nil)
       run_args = ActiveJob::Arguments.deserialize(enqueued_jobs.last["arguments"]).second
     end
-    assert_equal({ cursor: 0, pending: [], family_id: @family.id }, run_args.except(:run_id))
+    assert_equal({ cursor: 0, pending: [], step: 0, family_id: @family.id }, run_args.except(:run_id))
 
     Ai::GenerationJob.stubs(:perform_later).returns(false)
     assert_not Ai::GenerationRun.enqueue(:categorize, family: @family, ids: @ids)

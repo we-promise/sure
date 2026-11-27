@@ -1612,8 +1612,10 @@ That risk applies to every mode except a strict schema the endpoint honors:
 and `auto` (the default) tries `strict`, then `json_object`, then `none`, moving
 on when the answer doesn't parse or more than half the results come back empty.
 Native OpenAI (strict schema) and Anthropic (native structured output) enforce
-the shape server-side. Bill setup follows `LLM_JSON_MODE` too, but blanks are a
-normal answer there, so `auto` moves on only when the answer doesn't parse.
+the shape server-side. In `auto`, bill setup and PDF import ask an
+OpenAI-compatible server for `json_object`, then no format if it answers 400,
+as they did before; set `LLM_JSON_MODE=strict` to give them the strict schema
+too. Any other `LLM_JSON_MODE` applies to every feature.
 
 #### In code (the default every family starts from)
 
@@ -1796,7 +1798,8 @@ its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` 
 access token saved in Settings is sent only to the OpenAI URL it was saved with: a separate
 `EMBEDDING_URI_BASE` that needs a key needs `EMBEDDING_ACCESS_TOKEN`. `OPENAI_ACCESS_TOKEN` set in
 the environment still goes to a separate `EMBEDDING_URI_BASE` when `EMBEDDING_ACCESS_TOKEN` is
-empty, as it did before this release.
+empty, as it did before this release. An inherited OpenAI URL without a version, such as
+`https://gateway.example`, gets `/v1` as it does for chat.
 
 Sure enables the `vector` extension when it first provisions the chunks table,
 provided the database user has permission. If the AI status page reports that

@@ -2,7 +2,8 @@ require "test_helper"
 
 class Ai::EmbeddingsTest < ActiveSupport::TestCase
   # The request actually sent, as #5659 checked on main: the key saved in Settings reaches OpenAI's
-  # own URL and never a separate embedding server, which gets its own token.
+  # own URL and never a separate embedding server, which gets its own token or no Authorization
+  # header at all.
   test "the OpenAI key saved in Settings goes to OpenAI only, and a separate server gets its own token" do
     VectorStore::Pgvector.stubs(:available?).returns(true)
     Setting.openai_access_token = "sk-saved"
@@ -10,7 +11,7 @@ class Ai::EmbeddingsTest < ActiveSupport::TestCase
     body = { data: [ { embedding: [ 0.1 ], index: 0 } ], model: "nomic-embed-text", usage: { prompt_tokens: 1, total_tokens: 1 } }.to_json
     json = { "Content-Type" => "application/json" }
     separate = stub_request(:post, "http://embeddings.example.test:11434/v1/embeddings")
-      .with { |request| request.headers["Authorization"] != "Bearer sk-saved" && request.headers["Authorization"] != "Bearer emb-token" }
+      .with { |request| request.headers["Authorization"].nil? }
       .to_return(body:, headers: json)
     separate_with_token = stub_request(:post, "http://embeddings.example.test:11434/v1/embeddings")
       .with(headers: { "Authorization" => "Bearer emb-token" }).to_return(body:, headers: json)

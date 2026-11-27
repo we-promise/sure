@@ -25,6 +25,10 @@ class Ai::LegacyEnvConfig
     enhance_merchants: "enhance_merchants", bill_setup: "bill_setup"
   }.freeze
   SIMPLE_PROMPTS = %i[categorize detect_merchants enhance_merchants].freeze   # bill setup has one OpenAI prompt
+  # main asked an OpenAI-compatible server for `json_object`, with no schema, for these two, and for
+  # a strict schema elsewhere. In `auto` their route entries keep that: json_object, then none on
+  # a 400. PR 7's tables carry it as each entry's JSON mode, which an admin can change.
+  JSON_OBJECT_FEATURES = %i[bill_setup extract_pdf].freeze
   JSON_MODES = Ai::Config::Endpoint::JSON_MODES.map(&:to_s).freeze
   ANTHROPIC_MAX_TOKENS = 4096
   EMBEDDING_TIMEOUT = 120
@@ -270,13 +274,14 @@ class Ai::LegacyEnvConfig
       false
     end
 
-    # The URL and key fall back to the OpenAI values saved in Settings too. The URL is used as
-    # written, without `/v1`: EMBEDDING_URI_BASE has always been the base `embeddings` is posted to.
-    # The key saved in Settings goes only to the OpenAI URL it was saved with, never to a separate
-    # embedding server; OPENAI_ACCESS_TOKEN falls back as it always has.
+    # EMBEDDING_URI_BASE is used as written, without `/v1`: it has always been the base `embeddings`
+    # is posted to. An inherited OpenAI URL is normalized as the OpenAI client normalizes it. The
+    # key saved in Settings goes only to that OpenAI URL, never to a separate embedding server;
+    # OPENAI_ACCESS_TOKEN falls back as it always has.
     def embedding_model
       own_url = env("EMBEDDING_URI_BASE")
-      base_url = own_url || openai_uri_base || VectorStore::DEFAULT_EMBEDDING_URI_BASE
+      inherited_url = Ai::Transport::Http.compatible_base(openai_uri_base) if openai_uri_base
+      base_url = own_url || inherited_url || VectorStore::DEFAULT_EMBEDDING_URI_BASE
       saved_key = Setting.openai_access_token.presence if own_url.nil? || same_server?(own_url, openai_uri_base)
       api_key = env("EMBEDDING_ACCESS_TOKEN") || env("OPENAI_ACCESS_TOKEN") || saved_key
       endpoint = Ai::Config::Endpoint.new(
@@ -289,24 +294,22 @@ class Ai::LegacyEnvConfig
       )
     end
 
-    # Whether two OpenAI-compatible base URLs name one server: scheme and host ignore case, the path
-    # keeps it, a default port is no port. A blank one is OpenAI's.
+    # Whether two OpenAI-compatible base URLs name one server (Http.same_url?: the path keeps its
+    # case, a default port is no port); a blank one is OpenAI's.
     def same_server?(url, other)
       return true if [ url, other ].all? { _1.blank? || Provider::Openai.hosted_endpoint?(_1) }
 
-      server, other_server = [ url, other ].map { server_of(_1) }
-      server.present? && server == other_server
-    end
-
-    def server_of(url)
-      uri = URI.parse(Ai::Transport::Http.compatible_base(url))
-      [ uri.scheme.downcase, uri.host.downcase, uri.port, uri.path ] if uri.scheme && uri.host
-    rescue URI::InvalidURIError
-      nil
+      Ai::Transport::Http.same_url?(Ai::Transport::Http.compatible_base(url), Ai::Transport::Http.compatible_base(other))
     end
 
     def route_list(feature, models)
-      models.map { |model| Ai::Route.new(feature:, model:, prompt: self.class.prompt_for(feature, model.endpoint)) }
+      models.map do |model|
+        Ai::Route.new(feature:, model:, prompt: self.class.prompt_for(feature, model.endpoint), json_mode: json_mode_for(feature, model.endpoint))
+      end
+    end
+
+    def json_mode_for(feature, endpoint)
+      :json_object if JSON_OBJECT_FEATURES.include?(feature) && endpoint.protocol == :compatible && endpoint.json_mode == :auto
     end
 
     def openai_uri_base = self.class.openai_uri_base

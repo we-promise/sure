@@ -207,6 +207,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.integer "item_count", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "step", default: 0, null: false
+    t.jsonb "next_job"
     t.index ["updated_at"], name: "index_ai_generation_runs_on_updated_at"
     t.index ["family_id"], name: "index_ai_generation_runs_on_family_id"
   end
