@@ -29,10 +29,11 @@
 # pending; a transfer-fee leg; the activity label on the Trade or Transaction
 # (a split child without one reads its parent's); for an unlabelled
 # Transaction its `kind`; and for a transfer, whether the counterpart leg's
-# account is inside the scope on the entry's date and, under
-# strict_leg_pairing, whether that leg posted the same day and pairs one to
-# one. Direction for an external flow comes from the Trade's quantity sign or
-# the Transaction's amount sign (negative amount = money in).
+# account is inside the scope on the entry's date and has posted (a pending
+# leg has not moved its balance yet) and, under strict_leg_pairing, whether
+# that leg posted the same day and pairs one to one. Direction for an external
+# flow comes from the Trade's quantity sign or the Transaction's amount sign
+# (negative amount = money in).
 #
 # What a caller must do with the answer:
 #
@@ -270,6 +271,8 @@ class Portfolio::FlowClassifier
           WHEN flow_transfers.inflow_transaction_id = transactions.id THEN flow_transfers.outflow_transaction_id
           ELSE flow_transfers.inflow_transaction_id
         END
+      LEFT JOIN transactions flow_counterpart_transactions
+        ON flow_counterpart_transactions.id = flow_counterpart_entries.entryable_id
       #{security_transfers_join_sql}
     SQL
   end
@@ -361,10 +364,11 @@ class Portfolio::FlowClassifier
     end
 
     # Internal only when the other leg's account is in scope on this entry's
-    # date: one of the scope's accounts, and not past its cut-off. Under
-    # strict_leg_pairing the other leg must also post that day: each leg moves
-    # its own balance on its own date, so across days each is a flow on its
-    # day.
+    # date: one of the scope's accounts, and not past its cut-off. A pending
+    # leg has not moved its balance at all (Balance::SyncCache leaves it out),
+    # so it is no counterpart until it posts. Under strict_leg_pairing the
+    # other leg must also post that day: each leg moves its own balance on its
+    # own date, so across days each is a flow on its day.
     def transfer_resolution(entry, transaction)
       counterpart_account_id, counterpart_date = transfer_counterpart(entry, transaction)
       if counterpart_account_id && in_scope_on?(counterpart_account_id, entry.date) &&
@@ -384,7 +388,14 @@ class Portfolio::FlowClassifier
       return nil unless transfer
 
       counterpart_id = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction_id : transfer.inflow_transaction_id
-      account_id, date = Entry.where(entryable_type: "Transaction", entryable_id: counterpart_id).pick(:account_id, :date)
+      # One read of the other leg: its account and date from the entry, and its
+      # pending flag from the transaction, so the two can't disagree.
+      account_id, date, extra = Entry
+        .joins("JOIN transactions ON transactions.id = entries.entryable_id")
+        .where(entryable_type: "Transaction", entryable_id: counterpart_id)
+        .pick(:account_id, :date, "transactions.extra")
+      return nil if Transaction.pending_extra?(extra)
+
       [ account_id&.to_s, date ]
     end
 
@@ -471,7 +482,9 @@ class Portfolio::FlowClassifier
 
     def transfer_resolution_sql
       same_day = "flow_counterpart_entries.date = entries.date AND " if strict_leg_pairing
-      "CASE WHEN #{same_day}#{in_scope_sql('flow_counterpart_entries.account_id')} THEN 'internal' ELSE #{direction_sql} END"
+      "CASE WHEN #{same_day}#{in_scope_sql('flow_counterpart_entries.account_id')} " \
+        "AND #{Transaction.not_pending_sql('flow_counterpart_transactions')} " \
+        "THEN 'internal' ELSE #{direction_sql} END"
     end
 
     # True when #security_transfer_legs_sql found a Transfer trade on the

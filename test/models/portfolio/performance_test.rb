@@ -904,6 +904,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     refute_equal "v9", Portfolio::Performance::CACHE_VERSION, "v9 drivers left a trade's commission in market"
     refute_equal "v10", Portfolio::Performance::CACHE_VERSION, "v10 entries predate income by security, so their income has no by_security"
     refute_equal "v11", Portfolio::Performance::CACHE_VERSION, "v11 entries converted a foreign journal in one step"
+    refute_equal "v12", Portfolio::Performance::CACHE_VERSION, "v12 entries read a transfer leg with a pending counterpart as internal"
   end
 
   # End to end, with nothing set by hand between the layers. Every other
