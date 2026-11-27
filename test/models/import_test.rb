@@ -3,6 +3,10 @@ require "test_helper"
 class ImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  test "the API can create every import type except Monarch" do
+    assert_equal Import::TYPES - %w[MonarchImport], Import.api_creatable_types
+  end
+
   test "parse_csv_str handles a quoted multi-line header followed by CRLF rows" do
     csv = Import.parse_csv_str("\"Date\nPosted\",Amount\r\n2024-01-01,5\r\n2024-01-02,6\r\n")
 
