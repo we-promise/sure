@@ -8,6 +8,8 @@ uk:
     destroy:
       success: Переказ видалено
     form:
+      label: "Назва (необов’язково)"
+      label_placeholder: "наприклад, Заощадження на відпустку"
       amount: Сума
       bank_charges: Банківські комісії
       outgoing_fee: Комісія за вихідний переказ

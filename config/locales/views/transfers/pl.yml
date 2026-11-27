@@ -10,6 +10,8 @@ pl:
     destroy:
       success: Przelew został usunięty
     form:
+      label: "Opis (opcjonalnie)"
+      label_placeholder: "np. Oszczędności na wakacje"
       amount: Kwota
       bank_charges: Opłaty bankowe
       date: Data

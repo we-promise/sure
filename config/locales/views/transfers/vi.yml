@@ -6,6 +6,8 @@ vi:
     destroy:
       success: Chuyển khoản đã được xóa
     form:
+      label: "Nội dung (không bắt buộc)"
+      label_placeholder: "ví dụ: Tiết kiệm du lịch"
       amount: Số tiền
       date: Ngày
       destination_amount: Số tiền đích

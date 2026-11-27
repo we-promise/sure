@@ -9,6 +9,8 @@ ru:
     destroy:
       success: Перевод удалён
     form:
+      label: "Название (необязательно)"
+      label_placeholder: "например, Накопления на отпуск"
       amount: Сумма
       date: Дата
       destination_amount: Сумма на счёт назначения

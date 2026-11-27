@@ -9,6 +9,8 @@ nl:
     destroy:
       success: "Overboeking verwijderd"
     form:
+      label: "Omschrijving (optioneel)"
+      label_placeholder: "bijv. Vakantiespaargeld"
       amount: "Bedrag"
       bank_charges: "Bankkosten"
       outgoing_fee: "Kosten uitgaande overboeking"

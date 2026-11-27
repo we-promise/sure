@@ -6,6 +6,8 @@ ro:
     destroy:
       success: Transfer eliminat
     form:
+      label: "Descriere (opțional)"
+      label_placeholder: "ex. Economii pentru vacanță"
       amount: Sumă
       date: Dată
       expense: Cheltuială

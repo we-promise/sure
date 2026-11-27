@@ -9,6 +9,8 @@ id:
     destroy:
       success: Transfer berhasil dihapus
     form:
+      label: "Label (opsional)"
+      label_placeholder: "mis. Tabungan liburan"
       amount: Jumlah
       bank_charges: Biaya Bank
       outgoing_fee: Biaya transfer keluar

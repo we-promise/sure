@@ -53,6 +53,7 @@ class TransfersController < ApplicationController
       source_fee_amount: transfer_params[:source_fee_amount],
       destination_fee_amount: transfer_params[:destination_fee_amount],
       tag_ids: transfer_params[:tag_ids],
+      label: transfer_params[:name],
       idempotency_key: submitted_idempotency_key
     ).create
 

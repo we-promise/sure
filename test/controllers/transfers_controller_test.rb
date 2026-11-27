@@ -1261,6 +1261,24 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Principal", transfer.reload.notes
   end
 
+  test "names both legs after the submitted label" do
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          name: "November card repayment"
+        }
+      }
+    end
+
+    transfer = Transfer.order(:created_at).last
+    assert_equal "November card repayment", transfer.outflow_transaction.entry.name
+    assert_equal "November card repayment", transfer.inflow_transaction.entry.name
+  end
+
   private
     def create_dated_transfer(date:, amount: 2000)
       outflow_entry = create_transaction(date: date, account: accounts(:depository), amount: amount)

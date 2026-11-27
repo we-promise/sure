@@ -10,6 +10,8 @@ de:
     destroy:
       success: Überweisung entfernt
     form:
+      label: "Bezeichnung (optional)"
+      label_placeholder: "z. B. Urlaubsrücklage"
       amount: Betrag
       date: Datum
       expense: Ausgabe

@@ -6,6 +6,8 @@ hu:
     destroy:
       success: Átutalás eltávolítva
     form:
+      label: "Megnevezés (nem kötelező)"
+      label_placeholder: "pl. Nyaralási megtakarítás"
       amount: Összeg
       date: Dátum
       destination_amount: Célösszeg

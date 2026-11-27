@@ -9,6 +9,8 @@ ca:
     destroy:
       success: Transferència eliminada
     form:
+      label: "Concepte (opcional)"
+      label_placeholder: "p. ex. Estalvi per a vacances"
       amount: Import
       date: Data
       destination_amount: Import rebut

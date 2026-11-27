@@ -9,6 +9,8 @@ zh-CN:
     destroy:
       success: 转账已移除
     form:
+      label: "备注名称（可选）"
+      label_placeholder: "例如：度假储蓄"
       amount: 金额
       bank_charges: 银行手续费
       outgoing_fee: 转出手续费

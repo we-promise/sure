@@ -9,6 +9,8 @@ es:
     destroy:
       success: Transferencia eliminada
     form:
+      label: "Concepto (opcional)"
+      label_placeholder: "p. ej. Ahorro para vacaciones"
       amount: Importe
       bank_charges: Comisiones bancarias
       outgoing_fee: Comisión de transferencia saliente

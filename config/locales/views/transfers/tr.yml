@@ -9,6 +9,8 @@ tr:
     destroy:
       success: Transfer kaldırıldı
     form:
+      label: "Açıklama (isteğe bağlı)"
+      label_placeholder: "ör. Tatil birikimi"
       amount: Tutar
       bank_charges: Banka ücretleri
       date: Tarih

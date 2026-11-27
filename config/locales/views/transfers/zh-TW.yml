@@ -8,6 +8,8 @@ zh-TW:
     destroy:
       success: 轉帳已移除
     form:
+      label: "名稱（選填）"
+      label_placeholder: "例如：旅遊儲蓄"
       amount: 金額
       bank_charges: 銀行費用
       outgoing_fee: 轉出手續費

@@ -9,6 +9,8 @@ fr:
     destroy:
       success: Transfert supprimé
     form:
+      label: "Libellé (facultatif)"
+      label_placeholder: "Ex. : Épargne vacances"
       amount: Montant
       date: Date
       destination_amount: Montant de destination

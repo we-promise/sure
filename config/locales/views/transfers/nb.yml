@@ -9,6 +9,8 @@ nb:
     destroy:
       success: Overføring fjernet
     form:
+      label: "Beskrivelse (valgfritt)"
+      label_placeholder: "f.eks. Feriesparing"
       amount: Beløp
       date: Dato
       expense: Utgift
