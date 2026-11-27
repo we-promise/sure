@@ -32,7 +32,8 @@ module Assistant
     Function::GetBillAudit,
     Function::CreateBill,
     Function::UpdateBill,
-    Function::RecordBillPayment
+    Function::RecordBillPayment,
+    Function::SkipBillOccurrence
   ].freeze
 
   # Guests may view family configuration (tags, categories, rules) but not

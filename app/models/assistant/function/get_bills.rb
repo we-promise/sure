@@ -25,6 +25,9 @@ class Assistant::Function::GetBills < Assistant::Function
           Amounts are always positive magnitudes; bill_type carries the direction.
         - totals exclude income and transfers (a transfer moves money, it is not spend),
           and normalize each bill to a monthly equivalent whatever its cadence.
+        - frequency is a named cadence or "custom". A custom every-N cadence also carries
+          interval_count and interval_unit (week, month or year), in the form
+          create_bill and update_bill take them.
 
         Use get_bill_details for one bill's full history and configuration.
       INSTRUCTIONS

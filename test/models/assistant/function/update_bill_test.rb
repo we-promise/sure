@@ -258,10 +258,323 @@ class Assistant::Function::UpdateBillTest < ActiveSupport::TestCase
     end
   end
 
+  test "re-anchoring a custom series rebuilds its open future and leaves paid history alone" do
+    series = hairdresser_with_paid_history
+    paid = series.recurring_occurrences.find_by!(due_on: Date.new(2026, 10, 27))
+
+    travel_to Date.new(2026, 11, 23) do
+      assert_equal %w[2026-11-17 2026-12-08 2026-12-29], open_due_dates(series).first(3)
+
+      result = call_tool(series.id, "anchor_date" => "2026-11-24", "skip_open_before_anchor" => true)
+
+      assert result[:updated], result[:error]
+      assert_equal %w[2026-11-24 2026-12-15 2027-01-05], open_due_dates(series).first(3)
+      assert_equal(
+        { created: %w[2026-11-24 2026-12-15 2027-01-05 2027-01-26 2027-02-16],
+          removed: %w[2026-12-08 2026-12-29 2027-01-19],
+          skipped: %w[2026-11-17],
+          left_open_before_anchor: [] },
+        result[:occurrences]
+      )
+      assert_equal "skipped", series.recurring_occurrences.find_by!(due_on: Date.new(2026, 11, 17)).status
+
+      assert_equal "paid", paid.reload.status, "a paid occurrence is history"
+      assert_equal 1, paid.allocations.confirmed.count, "and so is its payment"
+
+      series.reload
+      assert_equal Date.new(2026, 11, 24), series.anchor_date
+      assert series.schedule_pinned?, "a re-anchored schedule is the user's intent"
+      assert_includes result[:changed_fields], "schedule"
+      assert_equal({ frequency: "custom", interval_count: 3, interval_unit: "week" },
+                   result[:bill].slice(:frequency, :interval_count, :interval_unit))
+    end
+  end
+
+  # The leftover is still owed until the user says otherwise; it also must not
+  # stand in for the anchor's own occurrence a week later.
+  test "without skip_open_before_anchor the open past occurrence stays owed and is reported" do
+    series = hairdresser_with_paid_history
+
+    travel_to Date.new(2026, 11, 23) do
+      result = call_tool(series.id, "anchor_date" => "2026-11-24")
+
+      assert result[:updated], result[:error]
+      assert_equal %w[2026-11-17 2026-11-24 2026-12-15 2027-01-05], open_due_dates(series).first(4)
+      assert_equal %w[2026-11-17], result[:occurrences][:left_open_before_anchor]
+      assert_empty result[:occurrences][:skipped]
+      assert_match(/skip_open_before_anchor/, result[:note])
+    end
+  end
+
+  test "dry_run previews the occurrences and writes nothing" do
+    series = hairdresser_with_paid_history
+
+    travel_to Date.new(2026, 11, 23) do
+      before = database_state(series)
+
+      preview = call_tool(series.id, "anchor_date" => "2026-11-24", "skip_open_before_anchor" => true,
+                          "amount" => 35, "dry_run" => true)
+
+      assert preview[:dry_run], preview[:error]
+      assert_nil preview[:updated]
+      assert_equal before, database_state(series), "a dry run must leave every row as it was"
+
+      applied = call_tool(series.id, "anchor_date" => "2026-11-24", "skip_open_before_anchor" => true, "amount" => 35)
+
+      assert applied[:updated], applied[:error]
+      assert_equal preview[:occurrences], applied[:occurrences], "the preview is what the real call does"
+      assert_equal preview[:changed_fields], applied[:changed_fields]
+    end
+  end
+
+  test "a dry run that would fail validation reports the error and writes nothing" do
+    series = hairdresser_with_paid_history
+
+    travel_to Date.new(2026, 11, 23) do
+      before = database_state(series)
+
+      result = call_tool(series.id, "anchor_date" => "2026-10-20", "dry_run" => true)
+
+      assert_match(/before 2026-10-27/, result[:error])
+      assert_equal before, database_state(series)
+    end
+  end
+
+  test "an amount changed in the same call keeps the old figure on what was already due" do
+    series = hairdresser_with_paid_history
+
+    travel_to Date.new(2026, 11, 23) do
+      result = call_tool(series.id, "anchor_date" => "2026-11-24", "skip_open_before_anchor" => true, "amount" => 35)
+
+      assert result[:updated], result[:error]
+      series.reload
+      skipped = series.recurring_occurrences.find_by!(due_on: Date.new(2026, 11, 17))
+      assert_equal 30, skipped.expected_amount.to_f, "the skipped cycle fell due at the old price"
+      anchored = series.recurring_occurrences.find_by!(due_on: Date.new(2026, 11, 24))
+      assert_equal 35, anchored.resolved_expected_amount.to_f
+    end
+  end
+
+  test "a monthly bill moves to a custom cadence and back" do
+    travel_to Date.new(2026, 11, 23) do
+      created = Assistant::Function::CreateBill.new(@user).call(
+        "name" => "Gym", "amount" => 50, "first_due_on" => "2026-12-01"
+      )
+      series = @family.recurring_transactions.find(created[:bill][:id])
+      assert_equal %w[2026-12-01 2027-01-01 2027-02-01], open_due_dates(series)
+
+      to_custom = call_tool(series.id, "frequency" => "custom", "interval_count" => 3, "interval_unit" => "week",
+                                       "anchor_date" => "2026-11-24")
+
+      assert to_custom[:updated], to_custom[:error]
+      assert_equal %w[2026-11-24 2026-12-15 2027-01-05], open_due_dates(series).first(3)
+      assert_equal %w[2026-12-01 2027-01-01 2027-02-01], to_custom[:occurrences][:removed]
+      assert_equal "custom", to_custom[:bill][:frequency]
+      assert_equal 3, to_custom[:bill][:interval_count]
+      assert_equal "week", to_custom[:bill][:interval_unit]
+
+      to_monthly = call_tool(series.id, "frequency" => "monthly", "anchor_date" => "2026-12-05")
+
+      assert to_monthly[:updated], to_monthly[:error]
+      assert_equal %w[2026-12-05 2027-01-05 2027-02-05], open_due_dates(series)
+      assert_equal "monthly", to_monthly[:bill][:frequency]
+      assert_nil to_monthly[:bill][:interval_count]
+      assert_equal "monthly", RecurringTransaction::FrequencyPreset.detect(series.reload).key
+    end
+  end
+
+  test "interval fields are refused unless frequency is custom" do
+    series = create_series(name: "Gym", amount: 40)
+
+    with_monthly = call_tool(series.id, "frequency" => "monthly", "interval_count" => 2, "name" => "Renamed")
+    assert_match(/only applies to frequency custom/, with_monthly[:error])
+
+    alone = call_tool(series.id, "interval_count" => 2, "interval_unit" => "week")
+    assert_match(/only apply to frequency custom/, alone[:error])
+
+    assert_equal "Gym", series.reload.name, "nothing in a refused call is saved"
+  end
+
+  test "custom needs both interval fields, and days only in whole weeks" do
+    series = create_series(name: "Gym", amount: 40)
+
+    assert_match(/needs interval_unit/, call_tool(series.id, "frequency" => "custom", "interval_count" => 3)[:error])
+    assert_match(/Every 10 days/, call_tool(series.id, "frequency" => "custom", "interval_count" => 10,
+                                                        "interval_unit" => "day")[:error])
+    assert_match(/whole number/, call_tool(series.id, "frequency" => "custom", "interval_count" => "2.5",
+                                                       "interval_unit" => "week")[:error])
+
+    result = call_tool(series.id, "frequency" => "custom", "interval_count" => 21, "interval_unit" => "day",
+                                  "anchor_date" => (Date.current + 7).iso8601)
+
+    assert result[:updated], result[:error]
+    assert_equal [ 3, "week" ], result[:bill].values_at(:interval_count, :interval_unit)
+  end
+
+  test "an anchor_date before the last paid occurrence is refused" do
+    series = hairdresser_with_paid_history
+
+    travel_to Date.new(2026, 11, 23) do
+      result = call_tool(series.id, "anchor_date" => "2026-10-20")
+
+      assert_match(/before 2026-10-27/, result[:error])
+      assert_equal Date.new(2026, 10, 27), series.reload.anchor_date
+    end
+  end
+
+  test "an unparseable anchor_date is refused" do
+    series = create_series(name: "Gym", amount: 40)
+
+    result = call_tool(series.id, "anchor_date" => "24/11/2026")
+
+    assert_equal "anchor_date is not a valid date", result[:error]
+  end
+
+  test "skip_open_before_anchor needs an anchor_date" do
+    series = create_series(name: "Gym", amount: 40)
+
+    result = call_tool(series.id, "skip_open_before_anchor" => true, "name" => "Renamed")
+
+    assert_match(/needs anchor_date/, result[:error])
+    assert_equal "Gym", series.reload.name
+  end
+
+  test "a weekday that contradicts anchor_date is refused rather than moving the anchor" do
+    series = hairdresser_with_paid_history
+
+    travel_to Date.new(2026, 11, 23) do
+      result = call_tool(series.id, "frequency" => "custom", "interval_count" => 3, "interval_unit" => "week",
+                                    "weekday" => 5, "anchor_date" => "2026-11-24")
+
+      assert_match(/No occurrence/, result[:error])
+      assert_equal Date.new(2026, 10, 27), series.reload.anchor_date
+    end
+  end
+
+  test "an installment plan is not re-anchored, since its payment count runs from its start" do
+    series = create_series(name: "Sofa", amount: 100, bill_type: "installment",
+                           end_mode: "after_count", end_after_count: 6)
+
+    result = call_tool(series.id, "anchor_date" => (Date.current + 10).iso8601)
+
+    assert_match(/plan of 6 payments/, result[:error])
+  end
+
+  # Once rewrites the count to one before any later check could see the
+  # plan, so the remaining payments would have been dropped silently.
+  test "frequency once does not slip an installment plan past the re-anchoring guard" do
+    series = create_series(name: "Sofa", amount: 100, bill_type: "installment",
+                           end_mode: "after_count", end_after_count: 6)
+    rows_before = series.recurring_occurrences.pluck(:id, :due_on, :status)
+
+    result = call_tool(series.id, "frequency" => "once", "anchor_date" => (Date.current + 10).iso8601)
+
+    assert_match(/plan of 6 payments/, result[:error])
+    assert_equal 6, series.reload.end_after_count
+    assert_equal rows_before, series.recurring_occurrences.pluck(:id, :due_on, :status)
+  end
+
+  test "a bill re-anchored beyond the generation horizon reports and shows its new start" do
+    travel_to Date.new(2026, 11, 23) do
+      created = Assistant::Function::CreateBill.new(@user).call(
+        "name" => "Insurance", "amount" => 80, "first_due_on" => "2026-12-24"
+      )
+      series = @family.recurring_transactions.find(created[:bill][:id])
+
+      result = call_tool(series.id, "anchor_date" => "2027-05-24")
+
+      assert result[:updated], result[:error]
+      assert_equal "2027-05-24", result[:bill][:next_due_date], "not a date of the grid before the new start"
+      assert_equal %w[2027-05-24], open_due_dates(series), "the horizon reaches the new start"
+
+      details = Assistant::Function::GetBillDetails.new(@user).call("bill_id" => series.id.to_s)
+      assert_equal %w[2027-05-24 2027-06-24 2027-07-24], details[:upcoming_due_dates]
+    end
+  end
+
+  test "an anchor that weekend handling pays the day before still opens the schedule" do
+    travel_to Date.new(2026, 11, 23) do
+      series = create_series(name: "Rent", amount: 900, weekend_adjust: "before")
+
+      result = call_tool(series.id, "anchor_date" => "2026-11-28")
+
+      assert result[:updated], result[:error]
+      first = series.recurring_occurrences.find_by!(original_due_on: Date.new(2026, 11, 28))
+      assert_equal Date.new(2026, 11, 27), first.due_on, "Saturday the 28th is paid on Friday the 27th"
+      assert_equal "2026-11-27", result[:bill][:next_due_date]
+    end
+  end
+
+  # The paid cycle's raw date (Saturday the 28th) is before the new start,
+  # but it fell due on the anchor itself: it is the start's cycle, not an
+  # earlier one, and must not be owed a second time.
+  test "an anchor on a paid cycle's weekend-adjusted due date keeps that cycle paid" do
+    series = travel_to(Date.new(2026, 10, 28)) do
+      create_series(name: "Rent", amount: 900, weekend_adjust: "after")
+    end
+
+    travel_to Date.new(2026, 11, 30) do
+      october = series.recurring_occurrences.find_by!(original_due_on: Date.new(2026, 10, 28))
+      RecurringTransaction::Allocator.new(october).mark_paid!(paid_on: Date.new(2026, 10, 28))
+      paid = series.recurring_occurrences.find_by!(original_due_on: Date.new(2026, 11, 28))
+      assert_equal Date.new(2026, 11, 30), paid.due_on, "Saturday the 28th is paid on Monday the 30th"
+      RecurringTransaction::Allocator.new(paid).mark_paid!(paid_on: Date.new(2026, 11, 30))
+
+      result = call_tool(series.id, "anchor_date" => "2026-11-30")
+
+      assert result[:updated], result[:error]
+      assert_not_includes result[:occurrences][:created], "2026-11-30"
+      assert_equal "2026-12-30", result[:bill][:next_due_date]
+      assert_not_includes open_due_dates(series), "2026-11-30"
+      assert paid.reload.paid?
+    end
+  end
+
+  test "an anchor_date short of a full YYYY-MM-DD is refused" do
+    series = create_series(name: "Gym", amount: 40)
+
+    %w[2026-12 2026-W48-2 20261124].each do |value|
+      assert_equal "anchor_date is not a valid date", call_tool(series.id, "anchor_date" => value)[:error], value
+    end
+  end
+
   private
 
     def call_tool(bill_id, params)
       Assistant::Function::UpdateBill.new(@user).call({ "bill_id" => bill_id.to_s }.merge(params))
+    end
+
+    # Every 3 weeks from 2026-10-27, that first visit paid. As of 2026-11-23
+    # it is open on 2026-11-17 (past), 2026-12-08, 2026-12-29 and on.
+    def hairdresser_with_paid_history
+      travel_to Date.new(2026, 10, 27) do
+        created = Assistant::Function::CreateBill.new(@user).call(
+          "name" => "Hairdresser", "amount" => 30, "first_due_on" => "2026-10-27",
+          "frequency" => "custom", "interval_count" => 3, "interval_unit" => "week"
+        )
+        assert created[:created], created[:error]
+
+        series = @family.recurring_transactions.find(created[:bill][:id])
+        first = series.recurring_occurrences.find_by!(due_on: Date.new(2026, 10, 27))
+        RecurringTransaction::Allocator.new(first).mark_paid!(paid_on: Date.new(2026, 10, 27))
+        series
+      end
+    end
+
+    def open_due_dates(series)
+      series.recurring_occurrences.open_status.order(:due_on).pluck(:due_on).map(&:iso8601)
+    end
+
+    def database_state(series)
+      {
+        series: RecurringTransaction.find(series.id).attributes,
+        rules: RecurrenceRule.where(recurring_transaction_id: series.id).order(:id).map(&:attributes),
+        occurrences: RecurringOccurrence.where(recurring_transaction_id: series.id).order(:id).map(&:attributes),
+        allocations: RecurringAllocation.joins(:recurring_occurrence)
+                                        .where(recurring_occurrences: { recurring_transaction_id: series.id })
+                                        .order(:id).map(&:attributes),
+        price_changes: series.recurring_price_changes.reload.map(&:attributes)
+      }
     end
 
     def create_series(name:, amount:, **overrides)
