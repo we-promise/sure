@@ -4,6 +4,6 @@ class WorkerAiHealthCheckJob < ApplicationJob
   queue_as :high_priority
 
   def perform
-    Ai::ProbeJob.perform_later
+    raise ActiveJob::EnqueueError, "the AI probes couldn't be queued" unless Ai::ProbeJob.perform_later
   end
 end

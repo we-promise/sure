@@ -43,6 +43,15 @@ class Provider::CosmosRest
     all_pages("/cosmos/staking/v1beta1/delegators/#{encode(address)}/unbonding_delegations", "unbonding_responses")
   end
 
+  # Staking rewards accrued but not yet claimed, summed over every validator.
+  # @return [Array<Hash>] DecCoins: { "denom" => ..., "amount" => "215.316965328581351283" }
+  def delegation_rewards(address)
+    body = get_json("/cosmos/distribution/v1beta1/delegators/#{encode(address)}/rewards")
+    raise ApiError, "Cosmos REST returned no rewards total" unless body.key?("total")
+
+    Array(body["total"])
+  end
+
   private
     # Reads every page: a partial list would pass for a whole, lower balance.
     def all_pages(path, key)

@@ -23,6 +23,9 @@ de:
       from: Von
       to: An
       date: Datum
+      days_apart:
+        one: "%{count} Tag auseinander"
+        other: "%{count} Tage auseinander"
       actions: Aktionen
       separator: "·"
     bulk_actions:

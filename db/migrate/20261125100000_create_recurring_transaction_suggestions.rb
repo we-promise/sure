@@ -22,5 +22,13 @@ class CreateRecurringTransactionSuggestions < ActiveRecord::Migration[8.1]
                          "(recurring_transaction_id IS NOT NULL) <> (entry_id IS NOT NULL)",
                          name: "recurring_transaction_suggestions_one_subject"
     add_index :recurring_transaction_suggestions, [ :family_id, :created_at ]
+
+    # Two clicks can race the lookup-and-insert in both controllers. Serialising
+    # on the subject row covers ordinary requests; these partial indexes keep
+    # another writer from creating a second pending job even outside them.
+    add_index :recurring_transaction_suggestions, [ :family_id, :user_id, :entry_id, :income ],
+              unique: true, where: "status = 'pending' AND mode = 'fill'", name: "idx_recurring_suggestions_pending_fill"
+    add_index :recurring_transaction_suggestions, [ :family_id, :user_id, :recurring_transaction_id ],
+              unique: true, where: "status = 'pending' AND mode = 'configure'", name: "idx_recurring_suggestions_pending_configure"
   end
 end

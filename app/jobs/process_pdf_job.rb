@@ -13,16 +13,28 @@ class ProcessPdfJob < ApplicationJob
       return unless pdf_import.clear_reading!(reread_token: reread_token)
     end
     return reset_processing_claim(pdf_import) unless pdf_import.pdf_uploaded?
-    return if pdf_import.status.in?(%w[complete failed])
+    return if pdf_import.status.in?(%w[complete failed cancelled])
     return reset_processing_claim(pdf_import) if pdf_import.ai_processed? && (!pdf_import.statement_with_transactions? || pdf_import.rows_count > 0)
 
     token = reread ? reread_token : nil
     # Keep the family this job started with: with_lock reloads the import and can reset its
     # association cache, but the vector copy belongs to the family that queued this attempt.
     family = pdf_import.family
-    pdf_import.update!(status: :importing, reread_token: token)
+    claimed = pdf_import.with_lock do
+      next false unless pdf_import.pending? || pdf_import.importing?
+      next false if token.present? && !(pdf_import.importing? && pdf_import.reread_token == token)
+      next false if token.blank? && pdf_import.reread_token.present?
 
-    Ai::CallContext.job("pdf_import:#{pdf_import.id}") { process(pdf_import, family:, reread_token: token) }
+      pdf_import.update!(status: :importing, reread_token: token)
+      true
+    end
+    return unless claimed
+
+    cancelled = -> { pdf_import.ai_cancelled? }
+    Ai::CallContext.job("pdf_import:#{pdf_import.id}") { process(pdf_import, family:, reread_token: token, cancelled:) }
+  rescue Ai::Error::Cancelled
+    # Stop already wrote the cancelled status. A request that finishes after it keeps its usage
+    # row but its answer is fenced out by with_claim; there is no result to apply here.
   rescue Ai::Error::Base, Pdf::PageImages::Error => e
     # The import is marked failed with its reason, and a failed import isn't processed again, so
     # the job ends here: the user reads it again or uploads again. It isn't re-raised, since
@@ -33,18 +45,23 @@ class ProcessPdfJob < ApplicationJob
   end
 
   private
-    def process(pdf_import, family:, reread_token: nil)
-      process_result = pdf_import.process_with_ai(reread_token:)
+    def process(pdf_import, family:, reread_token: nil, cancelled: nil)
+      return if cancelled&.call
+
+      process_result = pdf_import.process_with_ai(reread_token:, cancelled:)
       return unless process_result
       return unless owns_claim?(pdf_import, reread_token)
 
       document_type = resolve_document_type(pdf_import, process_result)
+      return if cancelled&.call
+
       upload_to_vector_store(pdf_import, family:, document_type:)
+      return if cancelled&.call
 
       # For statements with transactions (bank/credit card), extract and generate import rows
       if statement_with_transactions?(document_type)
         Rails.logger.info("ProcessPdfJob: Extracting transactions for #{document_type} import #{pdf_import.id}")
-        return unless pdf_import.extract_transactions(reread_token:)
+        return unless pdf_import.extract_transactions(reread_token:, cancelled:)
         Rails.logger.info("ProcessPdfJob: Extracted #{pdf_import.extracted_transactions.size} transactions")
 
         return unless pdf_import.with_claim(reread_token) do
@@ -156,6 +173,7 @@ class ProcessPdfJob < ApplicationJob
     # the claim changes. Checked under the same row lock used to write each terminal status.
     def owns_claim?(pdf_import, reread_token)
       pdf_import.with_lock do
+        next false if pdf_import.cancelled?
         next false if reread_token.blank? && pdf_import.reread_token.present?
         next false if reread_token.present? && !(pdf_import.importing? && pdf_import.reread_token == reread_token)
 

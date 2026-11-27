@@ -473,6 +473,7 @@ en:
         status:
           in_progress: In progress
           uploading: Processing rows
+          cancelled: Stopped
           reverting: Reverting
           revert_failed: Revert failed
           complete: Complete
@@ -520,7 +521,7 @@ en:
       duplicate_pdf_unavailable: This PDF is already stored as a statement you cannot access.
       document_too_large: Document file is too large. Maximum size is %{max_size}MB.
       invalid_document_file_type: Invalid document file type for the active vector store.
-      document_uploaded: Document uploaded successfully.
+      document_uploaded: Uploaded; it will be searchable once indexed.
       document_upload_failed: We couldn't upload the document to the vector store. Please try again.
       invalid_ndjson_file_type: Invalid file type or format. Please upload a valid .ndjson or .json export file.
       document_provider_not_configured: No vector store is configured for document uploads.
@@ -617,6 +618,8 @@ en:
       processing_title: Processing your PDF
       processing_description: We're analyzing your document using AI. This may take a moment. You'll receive an email when the analysis is complete.
       check_status: Check status
+      stop: Stop
+      stopped_title: Processing stopped
       back_to_dashboard: Back to dashboard
       failed_title: Processing failed
       failed_description: We were unable to process your PDF document. Please try again or contact support.
@@ -647,7 +650,10 @@ en:
           needs_documents: The AI model set up here can't read a PDF file itself. Read it as text or images instead.
           needs_vision: The AI model set up here can't read page images. Read it as text instead.
           needs_ocr_route: No OCR model is set up on this instance.
-          too_large: This PDF is over what the AI provider accepts as one file. Read it as text or images instead.
+          too_large: This PDF is over what the AI provider accepts as one file. Split it into smaller files, or read it as text or images instead.
+          page_too_large: A page in this PDF is too large to read as an image. Save the PDF with a smaller page size and upload it again.
+          missing_binary: "This server can't turn PDF pages into images: pdftoppm (poppler-utils) isn't installed. Ask your administrator to install it."
+          render_failed: This server couldn't turn the PDF's pages into images. Try again, or ask your administrator to check the logs.
           unreadable: This file couldn't be opened as a PDF.
       read_as:
         label: Read PDFs as

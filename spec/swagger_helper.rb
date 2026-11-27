@@ -1432,7 +1432,7 @@ RSpec.configure do |config|
             properties: {
               id: { type: :string, format: :uuid },
               type: { type: :string, enum: Import::TYPES },
-              status: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] },
+              status: { type: :string, enum: %w[pending complete importing cancelled reverting revert_failed failed] },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' },
               account_id: { type: :string, format: :uuid, nullable: true },
@@ -1447,7 +1447,7 @@ RSpec.configure do |config|
             properties: {
               id: { type: :string, format: :uuid },
               type: { type: :string, enum: Import::TYPES },
-              status: { type: :string, enum: %w[pending complete importing reverting revert_failed failed] },
+              status: { type: :string, enum: %w[pending complete importing cancelled reverting revert_failed failed] },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' },
               account_id: { type: :string, format: :uuid, nullable: true },
@@ -1927,7 +1927,7 @@ RSpec.configure do |config|
           },
           SecurityPrice: {
             type: :object,
-            required: %w[id date price price_amount currency provisional security created_at updated_at],
+            required: %w[id date price price_amount currency provisional carried_forward security created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               date: { type: :string, format: :date },
@@ -1935,6 +1935,7 @@ RSpec.configure do |config|
               price_amount: { type: :string, description: 'Exact decimal security price' },
               currency: { type: :string },
               provisional: { type: :boolean },
+              carried_forward: { type: :boolean, description: 'The price repeats an earlier one: no quote was available for this date. A non-provisional price stored before this field was added reads false even when it repeats an earlier one' },
               security: {
                 type: :object,
                 required: %w[id ticker],

@@ -251,7 +251,7 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
 
     assert_equal [ [ :failed, @family.id, Ai::GenerationJob::Undelivered ] ], Requester.log
     assert_equal 0, Ai::GenerationRun.count
-    assert_equal 3, DebugLogEntry.where(category: "ai", level: "warn").count, "each delivery is logged"
+    assert_equal [ 1, 2, 3 ], DebugLogEntry.where(category: "ai", level: "warn").map { _1.metadata["deliveries"] }.sort, "each delivery is logged with its number"
     assert DebugLogEntry.exists?(category: "ai", level: "error", family: @family)
   end
 

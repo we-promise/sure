@@ -31,6 +31,8 @@ class Ai::PdfReading
   # One page can exceed the renderer's size limit while the rest render. Those failures leave that
   # page untranscribed; a missing renderer or unreadable file is failure of the way as a whole.
   PAGE_LOCAL_RENDER_ERRORS = %i[too_large blank_page timeout failed].freeze
+  # Pdf::PageImages' codes as reasons the import page has text for; any other is `render_failed`.
+  RENDER_REASONS = { missing_binary: :missing_binary, too_large: :page_too_large, unreadable: :unreadable }.freeze
 
   Outcome = Data.define(:value, :way, :model, :checks, :attempts) do
     def passed? = checks.nil? || checks.passed?
@@ -193,7 +195,7 @@ class Ai::PdfReading
           # The pages couldn't be rendered (pdftoppm missing, a page too large): another way may
           # still read the file, and an extraction in hand is kept.
           Rails.logger.warn("[Ai::PdfReading] #{way}: #{error.message}")
-          attempts << { way:, error: :unreadable, render_error: error.code }
+          attempts << { way:, error: render_reason(error.code), render_error: error.code }
         rescue Ai::Error::Base => error
           raise unless keep.call
 
@@ -204,18 +206,24 @@ class Ai::PdfReading
     end
 
     # A way asked for by name gives its own reason (a scan too large for the PDF limits is
-    # `too_large`). Under Auto, a scan nothing on the route can read is `no_text_layer`; otherwise
-    # the last way's reason. A failed renderer's code stays on the error for the admin's status page.
+    # `too_large`). Under Auto, a scan nothing on the route can read says why, the size first, and
+    # otherwise `no_text_layer`; a file with text gives the last way's reason. A failed renderer's
+    # code stays on the error for the admin's status page.
     def raise_unavailable(attempts, read_as)
       render_error = attempts.filter_map { _1[:render_error] }.last || @page_count_error
       last_reason = attempts.filter_map { _1[:error] }.last
       reason =
-        if WAYS.include?(read_as.to_s.presence&.to_sym) then last_reason
+        if read_as.to_s == "images" && last_reason == "UnsupportedInput" then :needs_vision
+        elsif WAYS.include?(read_as.to_s.presence&.to_sym) then last_reason
         elsif text_layer? then last_reason || ways.values.compact.first
-        else render_error ? :unreadable : :no_text_layer
+        elsif render_error.in?(%i[too_large unreadable]) then render_reason(render_error)
+        elsif ways[:pdf] == :too_large then :too_large
+        else render_error ? render_reason(render_error) : :no_text_layer
         end
       raise Ai::Error::Unavailable.new(reason || :no_way_to_read, code: render_error)
     end
+
+    def render_reason(code) = RENDER_REASONS.fetch(code, :render_failed)
 
     def reason_for(way)
       case way

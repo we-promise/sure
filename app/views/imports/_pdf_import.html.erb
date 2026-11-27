@@ -114,7 +114,30 @@
 
       <div class="space-y-2 flex flex-col">
         <%= render DS::Link.new(text: t("imports.pdf_import.check_status"), href: import_path(import), variant: "primary", full_width: true) %>
+        <% if import.stoppable_by?(Current.user) %>
+          <%= render DS::Button.new(
+                text: t("imports.pdf_import.stop"),
+                href: pdf_import_ai_processing_path(import),
+                method: :delete,
+                variant: :outline_destructive,
+                full_width: true
+              ) %>
+        <% end %>
         <%= render DS::Link.new(text: t("imports.pdf_import.back_to_dashboard"), href: root_path, variant: "secondary", full_width: true) %>
+      </div>
+
+    <% elsif import.cancelled? %>
+      <div class="mx-auto bg-warning/10 h-8 w-8 rounded-full flex items-center justify-center">
+        <%= icon "circle-stop", class: "text-warning" %>
+      </div>
+
+      <div class="text-center space-y-2">
+        <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.stopped_title") %></h1>
+        <p class="text-sm text-secondary"><%= t("pdf_imports.ai_processings.destroy.stopped") %></p>
+      </div>
+
+      <div class="space-y-2 flex flex-col">
+        <%= render DS::Link.new(text: t("imports.pdf_import.back_to_imports"), href: imports_path, variant: "primary", full_width: true) %>
       </div>
 
     <% elsif import.failed? %>

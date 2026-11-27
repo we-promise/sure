@@ -222,6 +222,13 @@ flowchart LR
   one release. `ApplicationJob` runs each job in its queue's lane (`Ai::Sequencer.lane`, fiber
   storage, so Jev's threads share it); evals and the console choose one with
   `Ai::Sequencer.with_lane(:prompt) { }`, and a call outside any lane counts as interactive.
+- **MCP's AI tools run in `Ai::ToolJob`.** Add `self.ai_feature = :feature` to an
+  `Assistant::Function` (and, unless it has a non-AI fallback, leave it out of
+  `Assistant::ALWAYS_LISTED_FUNCTION_CLASSES`); `tools/call` routes it through
+  `Ai::ToolJob.run` when the feature is available, using `Ai::Routes.queue_for`
+  on the feature's lane. The job rechecks the user's authorized function list,
+  runs as that user, and writes the answer to `Ai::SharedState` for the web to
+  poll. Chat keeps calling its tools inline inside its own job.
 - **Down marks wait only for jobs.** When every route is marked down (`Ai::DownMarks`), a call in
   the interactive lane, where someone waits, tries the routes anyway; prompt and background jobs
   fail at once with `Ai::Error::MarkedDown`, which `Ai::GenerationJob` waits out without spending

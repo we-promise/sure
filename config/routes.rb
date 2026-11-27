@@ -417,7 +417,9 @@ Rails.application.routes.draw do
   resource :onboarding, only: :show do
     collection do
       get :preferences
-      get :goals
+      get :tools
+      patch :tools, action: :update_tools
+      get :goals, to: redirect("/onboarding/tools")
       get :trial
     end
   end
@@ -586,6 +588,11 @@ Rails.application.routes.draw do
 
     resources :rows, only: %i[show update], module: :import
     resources :mappings, only: :update, module: :import
+  end
+
+  # A PDF import's processing claim can be released without deleting the import.
+  resources :pdf_imports, only: [] do
+    resource :ai_processing, only: :destroy, module: :pdf_imports
   end
 
   resources :holdings, only: %i[index new show update destroy] do
