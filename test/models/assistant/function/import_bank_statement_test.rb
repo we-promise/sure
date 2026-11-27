@@ -114,18 +114,8 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
   # the statement is neither sent to the model nor summarised back.
   test "an import of a statement the user cannot view is not found" do
     member = users(:family_member)
-    statement = AccountStatement.create_from_upload!(
-      family: member.family,
-      account: accounts(:investment),
-      file: uploaded_file(
-        filename: "statement.pdf",
-        content_type: "application/pdf",
-        content: file_fixture("imports/sample_bank_statement.pdf").binread
-      )
-    )
-    pdf_import = PdfImport.create_from_statement!(statement: statement)
-    pdf_import.update!(document_type: "bank_statement")
-    assert_not statement.viewable_by?(member)
+    pdf_import = statement_import_on(accounts(:investment))
+    assert_not pdf_import.account_statement.viewable_by?(member)
     use_ai_routes
     Provider::Registry.expects(:preferred_llm_provider).never
 
@@ -135,4 +125,57 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
 
     assert_equal "PDF import not found", result[:error]
   end
+
+  # The web lets only those who can manage a statement act on its import, so
+  # the tool does not turn a statement someone can only read into an import.
+  test "an import of a statement the user can only read is refused before any extraction" do
+    member = users(:family_member)
+    pdf_import = statement_import_on(accounts(:credit_card))
+    assert pdf_import.account_statement.viewable_by?(member)
+    assert_not pdf_import.account_statement.manageable_by?(member)
+    use_ai_routes
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    assert_no_difference -> { Import.count } do
+      result = Assistant::Function::ImportBankStatement.new(member).call(
+        "pdf_import_id" => pdf_import.id, "account_id" => accounts(:depository).id
+      )
+
+      assert_equal "statement_not_manageable", result[:error]
+    end
+  end
+
+  # The transactions come from the statement, so the import made from them is
+  # as private as the statement.
+  test "the import made from a statement keeps that statement's privacy" do
+    pdf_import = statement_import_on(accounts(:investment))
+    use_ai_routes
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(success?: true, data: { transactions: [ { date: "2026-10-01", amount: "-5.0", name: "Coffee" } ] })
+    )
+
+    result = @fn.call("pdf_import_id" => pdf_import.id, "account_id" => accounts(:depository).id)
+
+    assert result[:success], result.inspect
+    import = Import.find(result[:import_id])
+    assert_equal pdf_import.account_statement, import.account_statement
+    assert import.viewable_by?(@user)
+    assert_not import.viewable_by?(users(:family_member)), "another member can read a private statement's transactions"
+  end
+
+  private
+    def statement_import_on(account)
+      statement = AccountStatement.create_from_upload!(
+        family: account.family,
+        account: account,
+        file: uploaded_file(
+          filename: "statement.pdf",
+          content_type: "application/pdf",
+          content: file_fixture("imports/sample_bank_statement.pdf").binread
+        )
+      )
+      PdfImport.create_from_statement!(statement: statement).tap { |import| import.update!(document_type: "bank_statement") }
+    end
 end

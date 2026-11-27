@@ -206,6 +206,15 @@ module TransactionsHelper
     ]
   end
 
+  # Name of the category an automatic assignment recorded — falls back to a
+  # generic label when that category has since been deleted.
+  def category_provenance_category_name(transaction, provenance)
+    return transaction.category&.name if provenance.current?
+
+    Current.family.categories.find_by(id: provenance.category_id)&.name ||
+      t("transactions.category_provenance.deleted_category")
+  end
+
   # Whether the current user may annotate (e.g. re-tag) entries on this
   # account. Memoized per request so list rows don't query per row.
   def can_annotate_account?(account)
@@ -456,6 +465,35 @@ module TransactionsHelper
     JSON.pretty_generate(value)
   rescue StandardError
     value.to_s
+  end
+
+  # Options for the convert-to-trade security picker: label, id and the data
+  # its price check reads. That check compares against the price the
+  # transaction implies, so only a positive quote converted to `currency`
+  # carries data-price-cents. Without a rate the quote is still shown, under its own
+  # currency. The securities share one rate lookup per quote currency and day.
+  def convert_to_trade_security_options(securities, currency)
+    rates = {}
+    securities.map do |security|
+      price = security.current_price_in(currency, rates: rates)
+      shown_price = price || security.current_price
+      label = security.ticker.to_s.dup
+      label << " (#{format_money(shown_price)})" if shown_price
+      label << " - #{security.name.truncate(25)}" if security.name.present?
+      # Fractional cents are kept: a converted quote can be worth less than a
+      # cent (1 JPY in USD), and a zero would make the check divide by zero.
+      price_cents = price_cents_for_check(price)
+      [ label, security.id, { "data-price-cents" => price_cents, "data-ticker" => security.ticker } ]
+    end
+  end
+
+  # @param price [Money, nil] a quote in the transaction's currency
+  # @return [Integer, Float, nil] the quote in cents, whole cents as an integer
+  def price_cents_for_check(price)
+    return unless price&.amount&.positive?
+
+    cents = price.amount.to_d * 100
+    cents.frac.zero? ? cents.to_i : cents.to_f
   end
 
   # A pending transfer match as the viewer may see it from `transaction`'s

@@ -1,6 +1,11 @@
 ---
 en:
   transactions:
+    bulk_deletions:
+      create:
+        part_transferred:
+          one: "1 split transaction was not deleted: a part of it is linked as a transfer. Remove that transfer first."
+          other: "%{count} split transactions were not deleted: a part of each is linked as a transfer. Remove those transfers first."
     bulk_updates:
       new:
         cancel: Cancel
@@ -185,6 +190,21 @@ en:
       payment_confirmed: Payment is confirmed
       reject_match: Reject match
       transfer_confirmed: Transfer is confirmed
+    category_provenance:
+      title: Auto-categorization
+      assigned: 'Assigned "%{category}" by %{source} %{time_ago} ago.'
+      changed_afterwards: The category was changed afterwards.
+      deleted_category: a category that no longer exists
+      sources:
+        ai: AI
+        bayes: the local Bayes classifier
+      labels:
+        ai:
+          current: AI
+          history: AI history
+        bayes:
+          current: Bayes
+          history: Bayes history
     transaction:
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
