@@ -6,7 +6,8 @@ class SidekiqConfigTest < ActiveSupport::TestCase
     ProcessPdfJob => "ai_low_priority",
     IndexAccountStatementJob => "ai_low_priority",
     VectorStore::IndexStatusJob => "ai_low_priority",
-    VectorStore::RequeueIndexPollsJob => "ai_low_priority"
+    VectorStore::RequeueIndexPollsJob => "ai_low_priority",
+    Ai::ProbeJob => "ai_low_priority"
   }.freeze
 
   test "the ai capsule serves the AI queues in strict order, apart from the default capsule" do
@@ -23,6 +24,11 @@ class SidekiqConfigTest < ActiveSupport::TestCase
   test "AI jobs run on the ai capsule's queues, which SidekiqHealth knows" do
     AI_JOBS.each { |job, queue| assert_equal queue, job.new.queue_name, job.name }
     assert_equal sidekiq_config.dig(:capsules, :ai, :queues), SidekiqHealth::AI_QUEUES
+  end
+
+  # Ai::Capsule trusts the queue name: a job on these queues runs only in the ai capsule.
+  test "Ai::Capsule's queues are the ai capsule's queues" do
+    assert_equal sidekiq_config.dig(:capsules, :ai, :queues).sort, Ai::Capsule::QUEUES.sort
   end
 
   private

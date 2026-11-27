@@ -44,8 +44,6 @@ tr:
       push_notification:
         title: Sure test bildirimi
         body: Bu, Sure hesabınız için bir test anlık bildirimidir.
-      verify_worker_ai:
-        queued: Çalışan kontrolü kuyruğa alındı. Bir çalışan işlemi onu aldığında, genellikle birkaç saniye içinde aşağıda görünecek.
       show:
         title: Sistem durumu
         tabs:
@@ -80,9 +78,6 @@ tr:
           no_queues: Kayıtlı kuyruk yok. Çalışan çalışmıyor olabilir.
         ai:
           run_checks: Kontrolleri yeniden çalıştır
-          last_checked: Canlı kontroller %{time_ago} önce tamamlandı. Sonuçlar kısa süreliğine önbelleğe alınır.
-          not_checked_help: Hizmetin çalıştığını doğrulamak için AI durum URL'sini doğrudan açın veya kontrolleri çalıştırın.
-          loading: "Canlı kontroller çalıştırılıyor…"
           alerts:
             custom_openai:
               title: Barındırılan vektör deposu kontrolü bu özel uç noktada başarısız oldu
@@ -231,13 +226,8 @@ tr:
             request_failed: Hizmet isteği başarısız oldu
             unsupported_provider: Sağlayıcı bu kontrolü desteklemiyor
           worker:
-            title: Çalışan doğrulaması
-            description: Yukarıdaki kontroller bu web işleminden çalıştırıldı. AI işlerinin çoğu -- asistan yanıtları, PDF işleme, embedding'ler, otomatik kategorizasyon ve satıcı tespiti -- aslında bir Sidekiq çalışan işleminde yürütülür; bu işlemin ağ erişimi, DNS, proxy kuralları, hatta yüklenen kimlik bilgileri farklı olabilir. Bir çalışanın kendi yapılandırmasını ve bağlantısını doğrulamak için bir kontrolü kuyruğa alın.
-            verify_button: Çalışan yapılandırmasını doğrula
-            coverage_notice: Her kontrol yalnızca tek bir çalışan işlemini -- kontrolü kuyruktan alanı -- doğrular. Birden fazla çalışan replikası varsa, başarılı bir sonuç her çalışanın sağlıklı olduğunu doğrulamaz; başka bir örnek almak için kontrolü yeniden kuyruğa alın.
             empty:
               title: Henüz hiçbir çalışan kontrol bildirmedi
-              description: Eşzamansız bir kontrolü kuyruğa almak için "Çalışan yapılandırmasını doğrula" düğmesine tıklayın. Sonuç, bir çalışan işlemi onu aldığında burada görünür.
             labels:
               process: Çalışan işlemi
               checked_at: Kontrol zamanı

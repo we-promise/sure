@@ -712,6 +712,52 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
                                model: "text-model", openai_compatible: true)
   end
 
+  test "a worker's result reaches the page through Ai::SharedState, and the page never probes" do
+    request = stub_request(:get, "https://api.openai.example.test/v1/models")
+              .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: [ { id: "gpt-4.1" } ] }.to_json)
+    arguments = { provider: :openai, endpoint: "https://api.openai.example.test/v1", access_token: "token", model: "gpt-4.1" }
+
+    worker = AiHealth::Probe.new(force: true).llm(**arguments)
+    page = AiHealth::Probe.new(stored_only: true).llm(**arguments)
+
+    assert page.passing?
+    assert_in_delta worker.checked_at, page.checked_at, 0.001
+    assert_requested request, times: 1
+  end
+
+  test "with nothing stored, a stored-only probe is not checked and makes no request" do
+    result = AiHealth::Probe.new(stored_only: true).llm(provider: :openai, endpoint: "https://api.openai.example.test/v1",
+                                                        access_token: "token", model: "gpt-4.1")
+
+    assert result.not_checked?
+    assert_not_requested :any, /.*/
+  end
+
+  test "a stored-only probe whose store fails is not checked, and says why in the debug log" do
+    Ai::SharedState.stubs(:read).raises(RedisClient::CannotConnectError)
+
+    assert_difference -> { DebugLogEntry.where(category: "ai_health", level: "warn").count }, 1 do
+      assert AiHealth::Probe.new(stored_only: true).pgvector.not_checked?
+    end
+  end
+
+  test "a failing result round-trips through the store with its code and status" do
+    failing = AiHealth::Probe::Result.new(status: :failing, checked_at: Time.current, failure_code: :no_credit, http_status: 402)
+    store = AiHealth::Probe::Store.new
+
+    store.fetch("ai_health/test", expires_in: 1.minute) { failing }
+    stored = store.read("ai_health/test")
+
+    assert_equal [ :failing, :no_credit, 402 ], [ stored.status, stored.failure_code, stored.http_status ]
+    assert_in_delta failing.checked_at, stored.checked_at, 0.001
+  end
+
+  test "results are kept for AI_HEALTH_PROBE_CACHE_TTL, 60 seconds when unset" do
+    assert_equal 60.seconds, AiHealth::Probe.cache_ttl
+    ClimateControl.modify("AI_HEALTH_PROBE_CACHE_TTL" => "300") { assert_equal 300.seconds, AiHealth::Probe.cache_ttl }
+    ClimateControl.modify("AI_HEALTH_PROBE_CACHE_TTL" => "0") { assert_equal 60.seconds, AiHealth::Probe.cache_ttl }
+  end
+
   private
     def stub_tools_request(endpoint)
       stub_request(:post, "#{endpoint}/chat/completions").with { |request| JSON.parse(request.body).key?("tools") }

@@ -68,11 +68,27 @@ module AiTestHelper
   def self.included(base)
     return unless base.respond_to?(:teardown)
 
+    base.extend ClassMethods
+    # Parallel test processes share one Redis, so each test gets its own empty shared state.
+    base.setup { Ai::SharedState.store = ActiveSupport::Cache::MemoryStore.new }
     base.teardown do
       Ai::Config.override = nil
       AiTestHelper.transport_stub = nil
+      Ai::SharedState.store = nil
     end
   end
+
+  module ClassMethods
+    # Every test in the class runs inside the AI capsule, as an AI job would: for model tests that
+    # call the plumbing directly. A test that needs it for one call uses with_ai_capsule.
+    def ai_capsule!
+      setup { ActiveSupport::IsolatedExecutionState[Ai::Capsule::STATE_KEY] = :inside }
+      teardown { ActiveSupport::IsolatedExecutionState[Ai::Capsule::STATE_KEY] = nil }
+    end
+  end
+
+  # Runs the block inside the AI capsule, as an AI job would.
+  def with_ai_capsule(&block) = Ai::Capsule.within(Ai::Capsule::QUEUES.first, &block)
 
   class << self
     # Set by stub_ai: builds the transport for an endpoint instead of Ai::Transport.for.

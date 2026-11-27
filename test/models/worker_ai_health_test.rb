@@ -1,32 +1,29 @@
 require "test_helper"
 
 class WorkerAiHealthTest < ActiveSupport::TestCase
-  include ActiveJob::TestHelper
-
-  setup do
-    @cache = ActiveSupport::Cache::MemoryStore.new
-  end
+  # Whole seconds, so a snapshot read back from JSON equals the one recorded.
+  setup { freeze_time }
 
   test "records a snapshot and reads it back" do
     snapshot = passing_snapshot(process_identity: "host-a:1")
 
-    WorkerAiHealth.record!(snapshot, cache: @cache)
+    WorkerAiHealth.record!(snapshot)
 
-    assert_equal [ snapshot ], WorkerAiHealth.recent(cache: @cache)
+    assert_equal [ snapshot ], WorkerAiHealth.recent
   end
 
   test "returns an empty list when nothing has been recorded" do
-    assert_equal [], WorkerAiHealth.recent(cache: @cache)
+    assert_equal [], WorkerAiHealth.recent
   end
 
   test "recording again from the same process replaces its entry instead of duplicating" do
     first = passing_snapshot(process_identity: "host-a:1", checked_at: 2.minutes.ago)
     second = passing_snapshot(process_identity: "host-a:1", checked_at: Time.current)
 
-    WorkerAiHealth.record!(first, cache: @cache)
-    WorkerAiHealth.record!(second, cache: @cache)
+    WorkerAiHealth.record!(first)
+    WorkerAiHealth.record!(second)
 
-    results = WorkerAiHealth.recent(cache: @cache)
+    results = WorkerAiHealth.recent
     assert_equal 1, results.size
     assert_equal second, results.first
   end
@@ -35,21 +32,18 @@ class WorkerAiHealthTest < ActiveSupport::TestCase
     older = passing_snapshot(process_identity: "host-a:1", checked_at: 2.minutes.ago)
     newer = passing_snapshot(process_identity: "host-b:2", checked_at: Time.current)
 
-    WorkerAiHealth.record!(older, cache: @cache)
-    WorkerAiHealth.record!(newer, cache: @cache)
+    WorkerAiHealth.record!(older)
+    WorkerAiHealth.record!(newer)
 
-    assert_equal [ newer, older ], WorkerAiHealth.recent(cache: @cache)
+    assert_equal [ newer, older ], WorkerAiHealth.recent
   end
 
   test "bounds the number of retained results" do
     (WorkerAiHealth::MAX_RESULTS + 2).times do |i|
-      WorkerAiHealth.record!(
-        passing_snapshot(process_identity: "host-#{i}:#{i}", checked_at: i.minutes.ago),
-        cache: @cache
-      )
+      WorkerAiHealth.record!(passing_snapshot(process_identity: "host-#{i}:#{i}", checked_at: i.minutes.ago))
     end
 
-    assert_equal WorkerAiHealth::MAX_RESULTS, WorkerAiHealth.recent(cache: @cache).size
+    assert_equal WorkerAiHealth::MAX_RESULTS, WorkerAiHealth.recent.size
   end
 
   test "a snapshot without a checked_at is stale" do
@@ -139,10 +133,21 @@ class WorkerAiHealthTest < ActiveSupport::TestCase
     assert_includes identity, Process.pid.to_s
   end
 
-  test "request_check! enqueues the worker check job" do
-    assert_enqueued_with(job: WorkerAiHealthCheckJob) do
-      WorkerAiHealth.request_check!
-    end
+  test "a failing snapshot reads back with its statuses and failure codes" do
+    snapshot = passing_snapshot(llm_status: :failing, function_calling_status: :not_checked, vector_store_adapter: nil,
+                                failure_codes: %i[model_not_available timeout])
+
+    WorkerAiHealth.record!(snapshot)
+
+    assert_equal [ snapshot ], WorkerAiHealth.recent
+    assert WorkerAiHealth.recent.first.failing?
+  end
+
+  test "results are kept in the shared state for the retention window" do
+    WorkerAiHealth.record!(passing_snapshot)
+
+    travel WorkerAiHealth::RETENTION + 1.second
+    assert_empty WorkerAiHealth.recent
   end
 
   test "a snapshot never carries a credential-shaped field" do
