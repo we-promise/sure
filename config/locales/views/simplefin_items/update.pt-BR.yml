@@ -1,0 +1,7 @@
+pt-BR:
+  simplefin_items:
+    update:
+      success: "Conexão com o SimpleFIN atualizada."
+      errors:
+        blank_token: "Token de acesso do SimpleFIN ausente. Informe um token ou use Vincular contas existentes para continuar."
+        update_failed: "Falha ao atualizar a conexão com o SimpleFIN: %{message}"
