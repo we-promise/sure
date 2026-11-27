@@ -6,6 +6,8 @@ pt-BR:
       error: 'Erro ao criar tag: %{error}'
     destroy:
       deleted: Tag excluída
+    destroy_all:
+      all_deleted: Todas as tags foram excluídas
     edit:
       edit: Editar tag
     form:
@@ -14,8 +16,14 @@ pt-BR:
       empty: Nenhuma tag ainda
       new: Nova tag
       tags: Tags
+      delete_all: Excluir todas
+    menu:
+      label: Editar tags
     new:
       new: Nova tag
+    summary:
+      add: Adicionar tags
+      title: "Tags: %{names}"
     tag:
       delete: Excluir
       edit: Editar

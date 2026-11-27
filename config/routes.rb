@@ -417,7 +417,9 @@ Rails.application.routes.draw do
   resource :onboarding, only: :show do
     collection do
       get :preferences
-      get :goals
+      get :tools
+      patch :tools, action: :update_tools
+      get :goals, to: redirect("/onboarding/tools")
       get :trial
     end
   end

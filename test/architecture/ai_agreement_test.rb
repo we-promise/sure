@@ -65,7 +65,7 @@ class AiAgreementTest < ActionDispatch::IntegrationTest
       enhance_shown = response.body.include?(enhance_family_merchants_path)
 
       get new_import_path
-      document_upload_shown = css_select("form[data-turbo-frame=_top] input[type=file][onchange='this.form.requestSubmit()']").size > 1
+      document_upload_shown = css_select("form[data-turbo-frame=_top][data-controller~=auto-submit-form] input[type=file][data-auto-submit-form-target=auto]").size > 1
 
       offered = Rule::Registry::TransactionResource.new(Rule.new(family: @family, resource_type: "transaction")).action_executors.map(&:key)
       tools = Assistant.function_classes(@user)

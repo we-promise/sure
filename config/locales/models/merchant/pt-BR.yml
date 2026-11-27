@@ -1,0 +1,13 @@
+---
+pt-BR:
+  models:
+    merchant:
+      no_merchant: Sem estabelecimento
+  activerecord:
+    errors:
+      models:
+        family_merchant:
+          attributes:
+            logo:
+              invalid_content_type: deve ser uma imagem JPEG, PNG ou WebP
+              invalid_file_size: o tamanho do arquivo deve ser menor que %{max_megabytes}MB
