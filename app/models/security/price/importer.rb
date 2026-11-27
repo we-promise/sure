@@ -98,7 +98,7 @@ class Security::Price::Importer
       replace_db_price = clear_cache && earliest_provider_price.present? && date >= earliest_provider_price.date
 
       chosen_price, chosen_currency = if keep_live_quote
-        [ db_price_value, db_price_currency ]
+        [ db_price_value, db_price.currency ]
       elsif replace_db_price || is_provisional || db_price&.carried_forward
         # For provisional/carried-forward/cache clear: only use provider price, let gap-fill handle missing.
         # A carried-forward row is recomputed, so it follows a corrected price before it.

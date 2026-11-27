@@ -777,24 +777,26 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     import_with(rows, quotes: nil, provisional: saturday)
   end
 
-  test "an old Scalable live quote stays provisional until its completed close arrives" do
+  test "an old Scalable live quote keeps its currency until its completed close arrives" do
     @provider = Provider::ScalableCapitalMarketData.new(stub(market_data_portfolio_id: "portfolio"))
     date = Date.current - 12
     previous = @security.prices.create!(date: date - 1, price: 95, currency: "USD")
-    live = @security.prices.create!(date: date, price: 105, currency: "USD", provisional: true)
+    live = @security.prices.create!(date: date, price: 105, currency: "EUR", provisional: true)
     earlier_close = OpenStruct.new(date: previous.date, price: previous.price, currency: "USD")
-    completed_close = OpenStruct.new(date: date, price: 110, currency: "USD")
+    completed_close = OpenStruct.new(date: date, price: 110, currency: "EUR")
     @provider.expects(:fetch_security_prices)
       .with(symbol: @security.ticker, exchange_operating_mic: nil, start_date: get_provider_fetch_start_date(date), end_date: date)
       .returns(provider_success_response([ earlier_close ]), provider_success_response([ earlier_close, completed_close ])).twice
 
     Security::Price::Importer.new(security: @security, security_provider: @provider, start_date: previous.date, end_date: date).import_provider_prices
     assert_equal 105.to_d, live.reload.price
+    assert_equal [ "EUR" ], @security.prices.where(date: date).pluck(:currency)
     assert_predicate live, :provisional?
     refute_predicate live, :carried_forward?
 
     Security::Price::Importer.new(security: @security, security_provider: @provider, start_date: previous.date, end_date: date).import_provider_prices
     assert_equal 110.to_d, live.reload.price
+    assert_equal [ "EUR" ], @security.prices.where(date: date).pluck(:currency)
     refute_predicate live, :provisional?
     refute_predicate live, :carried_forward?
   end
