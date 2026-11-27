@@ -2,9 +2,11 @@ module IbkrAccount::DataHelpers
   extend ActiveSupport::Concern
 
   # IBKR quotes a bond as a percentage of its face value, and a bond's position
-  # or trade quantity is that face value; its multiplier (0.01) relates the two.
-  # Sure counts every bond in units of 100 face, the unit its price is quoted
-  # per, so the price reads as IBKR quotes it and quantity x price is its value.
+  # or trade quantity is that face value. The row's multiplier is never read: a
+  # sample Flex export shows 1 on a bond, and the field is absent unless the
+  # query selects it. Sure counts every bond in units of 100 face, the unit its
+  # price is quoted per, so the price reads as IBKR quotes it and quantity x
+  # price is its value.
   #
   # The unit is fixed rather than decided from the report. A sync imports only
   # its own window and never rescales a trade stored by an earlier one, so a
@@ -147,8 +149,8 @@ module IbkrAccount::DataHelpers
     # For each bond with rows of this kind (:positions or :trades) whose price
     # was moved off the quoted one: its ticker, its unit and the factors the
     # prices were multiplied by. What a debug entry reports.
-    def bond_unit_disagreements(kind)
-      rows = kind == :positions ? raw_position_rows.select { |row| row[:side].to_s == "Long" } : raw_trade_rows
+    def bond_unit_disagreements(kind, &summary_stands)
+      rows = kind == :positions ? without_covered_lots(raw_position_rows, &summary_stands).select { |row| row[:side].to_s == "Long" && (summary_stands.nil? || summary_stands.call(row)) } : raw_trade_rows
       factors = bond_rows(rows).map { |row| [ bond_ticker(row), price_scale(row) ] }
       factors.group_by(&:first).filter_map do |ticker, pairs|
         moved = pairs.map(&:last).reject { |scale| (scale - 1).abs <= BOND_PRICE_TOLERANCE }
@@ -158,6 +160,27 @@ module IbkrAccount::DataHelpers
 
     def raw_position_rows
       Array(@ibkr_account.raw_holdings_payload).map(&:with_indifferent_access)
+    end
+
+    # With Lot ticked as well as Summary, the Open Positions section reports a
+    # row per lot (levelOfDetail LOT) besides the SUMMARY row that already holds
+    # the whole position, so adding them up would count it twice. The lots of a
+    # position that has no summary row are all it has, and a report that does
+    # not carry levelOfDetail has no lot rows to tell apart. The block says
+    # whether a summary row can stand for its lots, and a lot is kept when its
+    # summary row cannot.
+    def without_covered_lots(rows)
+      summarized = rows.select { |row| level_of_detail(row) == "SUMMARY" && (!block_given? || yield(row)) }
+        .map { |row| lot_owner(row) }.to_set
+      rows.reject { |row| level_of_detail(row) == "LOT" && summarized.include?(lot_owner(row)) }
+    end
+
+    def level_of_detail(row)
+      row[:level_of_detail].to_s.strip.upcase
+    end
+
+    def lot_owner(row)
+      [ row[:conid].to_s, row[:currency].to_s.upcase, row[:report_date].to_s, row[:side].to_s ]
     end
 
     def raw_trade_rows

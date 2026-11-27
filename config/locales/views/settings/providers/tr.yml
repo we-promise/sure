@@ -154,14 +154,10 @@ tr:
           net_asset_value_fields: 'Alanlar: Currency, Report Date, Total'
           net_asset_value_options: 'Seçenekler: None'
           open_positions: 'Açık Pozisyonlar:'
-          open_positions_fields: 'Alanlar: Asset Class, Conid, Cost Basis Price, Currency,
-            FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security
-            ID Type, Side, Symbol'
-          open_positions_options: 'Seçenekler: Summary'
+          open_positions_fields: 'Alanlar: Asset Class, Conid, Cost Basis Money, Cost Basis Price, Currency, Description, FX Rate To Base, Level of Detail, Mark Price, Position Value, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol'
+          open_positions_options: 'Seçenekler: Summary (Lot seçeneğini işaretlemeyin)'
           trades: 'İşlemler:'
-          trades_fields: 'Alanlar: Asset Class, Buy/Sell, Conid, Currency, FX Rate
-            To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
-            Date, Trade ID, TradePrice, Transaction ID'
+          trades_fields: 'Alanlar: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Proceeds, Quantity, Symbol, Trade Date, Trade ID, Trade Money, TradePrice, Transaction ID'
           trades_options: 'Seçenekler: Execution'
         steps:
           step_1: IBKR Client Portal'ınızda "Performance & Reports" > "Flex Queries"

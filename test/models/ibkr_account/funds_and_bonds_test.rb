@@ -7,18 +7,18 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
   BOND_TICKER = "BOND:SURCO 3 1/2 06/15/30:900003".freeze
 
   # The bond as a later sync reports it: 10,000 face at 98.50% of par, and a
-  # sale of 5,000 of it, both with IBKR's 0.01 multiplier.
+  # sale of 5,000 of it, both with the multiplier of 1 a sample export shows.
   BOND_POSITION = {
     "asset_category" => "BOND", "conid" => "900003", "security_id" => "XX0000000037", "security_id_type" => "ISIN",
     "symbol" => "SURCO 3 1/2 06/15/30", "description" => "SURCO 3 1/2 06/15/30", "position" => "10000",
-    "multiplier" => "0.01", "mark_price" => "98.50", "position_value" => "9850.00", "currency" => "EUR",
+    "multiplier" => "1", "mark_price" => "98.50", "position_value" => "9850.00", "currency" => "EUR",
     "fx_rate_to_base" => "1", "cost_basis_price" => "97.25", "cost_basis_money" => "9725.00",
     "report_date" => "2026-05-20", "side" => "Long"
   }.freeze
 
   BOND_SALE = {
     "asset_category" => "BOND", "trade_id" => "9106", "transaction_id" => "9106a", "conid" => "900003",
-    "symbol" => "SURCO 3 1/2 06/15/30", "quantity" => "-5000", "multiplier" => "0.01", "trade_price" => "98.00",
+    "symbol" => "SURCO 3 1/2 06/15/30", "quantity" => "-5000", "multiplier" => "1", "trade_price" => "98.00",
     "proceeds" => "4900.00", "currency" => "EUR", "fx_rate_to_base" => "1", "buy_sell" => "SELL",
     "trade_date" => "2026-05-15", "ib_commission" => "0", "ib_commission_currency" => "EUR"
   }.freeze
@@ -343,6 +343,37 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions priced to their reported value")
     assert_equal [ "100.0" ], entry.metadata["bonds"].sole["row_price_factors"]
     assert_equal "0.01", entry.metadata["bonds"].sole["unit_factor"]
+  end
+
+  test "a bond's lot rows are not reported beside its summary row" do
+    summary = @statement[:open_positions].find { |row| row["asset_category"] == "BOND" }
+    summary["level_of_detail"] = "SUMMARY"
+    per_unit_position!
+    @statement[:open_positions] << summary.merge("level_of_detail" => "LOT", "position" => "4000", "position_value" => "3940.00")
+    @statement[:open_positions] << summary.merge("level_of_detail" => "LOT", "position" => "6000", "position_value" => "5910.00")
+
+    process!
+
+    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions priced to their reported value")
+    assert_equal 1, entry.metadata["bonds"].sole["differing_rows"]
+    assert_equal BigDecimal("100"), holding_for(BOND_TICKER).qty
+  end
+
+  test "a bond's lot rows are reported when their summary row cannot be imported" do
+    summary = @statement[:open_positions].find { |row| row["asset_category"] == "BOND" }
+    per_unit_position!
+    lots = [ [ "4000", "3940.00" ], [ "6000", "5910.00" ] ].map do |position, value|
+      summary.merge("level_of_detail" => "LOT", "position" => position, "position_value" => value)
+    end
+    summary.merge!("level_of_detail" => "SUMMARY", "cost_basis_price" => "N/A")
+    @statement[:open_positions].concat(lots)
+
+    process!
+
+    bond = holding_for(BOND_TICKER)
+    assert_equal [ BigDecimal("100"), BigDecimal("9850") ], [ bond.qty, bond.amount ]
+    entry = DebugLogEntry.find_by!(provider_key: "ibkr", message: "IBKR bond positions priced to their reported value")
+    assert_equal 2, entry.metadata["bonds"].sole["differing_rows"]
   end
 
   test "a short bond position, which is not imported, is not reported" do

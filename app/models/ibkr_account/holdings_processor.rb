@@ -53,8 +53,7 @@ class IbkrAccount::HoldingsProcessor
     end
 
     def grouped_positions
-      Array(@ibkr_account.raw_holdings_payload).each_with_object({}) do |position, groups|
-        data = position.with_indifferent_access
+      without_covered_lots(raw_position_rows) { |row| importable?(row) }.each_with_object({}) do |data, groups|
         next if unsupported_kind?(data)
         next unless supported_position?(data)
 
@@ -241,7 +240,7 @@ class IbkrAccount::HoldingsProcessor
     # unit, or principal-adjusted) has its price carried to the value, which
     # the holding's price shows.
     def capture_bond_unit_disagreements
-      disagreements = bond_unit_disagreements(:positions)
+      disagreements = bond_unit_disagreements(:positions) { |row| importable?(row) }
       return if disagreements.empty?
 
       DebugLogEntry.capture(
@@ -254,6 +253,12 @@ class IbkrAccount::HoldingsProcessor
         family: @ibkr_account.ibkr_item&.family,
         metadata: { ibkr_account_id: @ibkr_account.id, bonds: disagreements }
       )
+    end
+
+    # A summary row stands for its lots only if it would be imported itself.
+    def importable?(row)
+      supported_position?(row) && %i[position cost_basis_price mark_price].all? { |key| parse_decimal(row[key]) } &&
+        !parse_decimal(row[:position]).zero?
     end
 
     def supported_position?(row)
