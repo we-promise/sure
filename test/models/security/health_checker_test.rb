@@ -66,11 +66,12 @@ class Security::HealthCheckerTest < ActiveSupport::TestCase
   test "offline security with no health check that fails stays offline" do
     hc = Security::HealthChecker.new(@new_offline_security)
 
-    @provider.expects(:fetch_security_price)
+    @provider.expects(:fetch_security_prices)
       .with(
         symbol: @new_offline_security.ticker,
         exchange_operating_mic: @new_offline_security.exchange_operating_mic,
-        date: Date.current
+        start_date: Date.current - Security::HealthChecker::LOOKBACK_DAYS,
+        end_date: Date.current
       )
       .returns(
         provider_error_response(StandardError.new("No prices found"))
@@ -94,11 +95,12 @@ class Security::HealthCheckerTest < ActiveSupport::TestCase
 
     hc = Security::HealthChecker.new(@due_for_check_security)
 
-    @provider.expects(:fetch_security_price)
+    @provider.expects(:fetch_security_prices)
       .with(
         symbol: @due_for_check_security.ticker,
         exchange_operating_mic: @due_for_check_security.exchange_operating_mic,
-        date: Date.current
+        start_date: Date.current - Security::HealthChecker::LOOKBACK_DAYS,
+        end_date: Date.current
       )
       .returns(provider_error_response(StandardError.new("No prices found")))
       .times(Security::HealthChecker::MAX_CONSECUTIVE_FAILURES + 1)
@@ -129,11 +131,12 @@ class Security::HealthCheckerTest < ActiveSupport::TestCase
   test "after enough consecutive health check failures, security with no prior price history goes offline with no prices to preserve" do
     hc = Security::HealthChecker.new(@due_for_check_security)
 
-    @provider.expects(:fetch_security_price)
+    @provider.expects(:fetch_security_prices)
       .with(
         symbol: @due_for_check_security.ticker,
         exchange_operating_mic: @due_for_check_security.exchange_operating_mic,
-        date: Date.current
+        start_date: Date.current - Security::HealthChecker::LOOKBACK_DAYS,
+        end_date: Date.current
       )
       .returns(provider_error_response(StandardError.new("No prices found")))
       .times(Security::HealthChecker::MAX_CONSECUTIVE_FAILURES + 1)
@@ -155,11 +158,12 @@ class Security::HealthCheckerTest < ActiveSupport::TestCase
   test "an intermediate (non-terminal) health check failure logs a warn-level debug entry" do
     hc = Security::HealthChecker.new(@due_for_check_security)
 
-    @provider.expects(:fetch_security_price)
+    @provider.expects(:fetch_security_prices)
       .with(
         symbol: @due_for_check_security.ticker,
         exchange_operating_mic: @due_for_check_security.exchange_operating_mic,
-        date: Date.current
+        start_date: Date.current - Security::HealthChecker::LOOKBACK_DAYS,
+        end_date: Date.current
       )
       .returns(provider_error_response(StandardError.new("No prices found")))
       .once
@@ -184,7 +188,7 @@ class Security::HealthCheckerTest < ActiveSupport::TestCase
 
     hc = Security::HealthChecker.new(@due_for_check_security)
 
-    @provider.expects(:fetch_security_price).never
+    @provider.expects(:fetch_security_prices).never
 
     assert_no_difference "DebugLogEntry.count" do
       hc.run_check
@@ -199,11 +203,12 @@ class Security::HealthCheckerTest < ActiveSupport::TestCase
   test "failure incrementor increases for each health check failure" do
     hc = Security::HealthChecker.new(@due_for_check_security)
 
-    @provider.expects(:fetch_security_price)
+    @provider.expects(:fetch_security_prices)
       .with(
         symbol: @due_for_check_security.ticker,
         exchange_operating_mic: @due_for_check_security.exchange_operating_mic,
-        date: Date.current
+        start_date: Date.current - Security::HealthChecker::LOOKBACK_DAYS,
+        end_date: Date.current
       )
       .returns(provider_error_response(StandardError.new("No prices found")))
       .twice
@@ -218,13 +223,14 @@ class Security::HealthCheckerTest < ActiveSupport::TestCase
   test "failure incrementor resets to 0 when health check succeeds" do
     hc = Security::HealthChecker.new(@offline_never_checked_with_prices)
 
-    @provider.expects(:fetch_security_price)
+    @provider.expects(:fetch_security_prices)
       .with(
         symbol: @offline_never_checked_with_prices.ticker,
         exchange_operating_mic: @offline_never_checked_with_prices.exchange_operating_mic,
-        date: Date.current
+        start_date: Date.current - Security::HealthChecker::LOOKBACK_DAYS,
+        end_date: Date.current
       )
-      .returns(provider_success_response(OpenStruct.new(price: 100, date: Date.current, currency: "USD")))
+      .returns(provider_success_response([ OpenStruct.new(price: 100, date: Date.current, currency: "USD") ]))
       .once
 
     assert @offline_never_checked_with_prices.offline?
@@ -234,5 +240,50 @@ class Security::HealthCheckerTest < ActiveSupport::TestCase
     refute @offline_never_checked_with_prices.offline?
     assert_equal 0, @offline_never_checked_with_prices.failed_fetch_count
     assert_nil @offline_never_checked_with_prices.failed_fetch_at
+  end
+
+  test "health check succeeds on an earlier close in the window when today's close is missing" do
+    hc = Security::HealthChecker.new(@new_offline_security)
+
+    @provider.expects(:fetch_security_prices)
+      .with(
+        symbol: @new_offline_security.ticker,
+        exchange_operating_mic: @new_offline_security.exchange_operating_mic,
+        start_date: Date.current - Security::HealthChecker::LOOKBACK_DAYS,
+        end_date: Date.current
+      )
+      .returns(provider_success_response([ OpenStruct.new(price: "100.25", date: Date.current - 3, currency: "USD") ]))
+      .once
+
+    hc.run_check
+
+    refute @new_offline_security.offline?
+    assert_equal 0, @new_offline_security.failed_fetch_count
+  end
+
+  test "a successful response without a usable price counts as a failure" do
+    hc = Security::HealthChecker.new(@due_for_check_security)
+
+    @provider.expects(:fetch_security_prices)
+      .with(
+        symbol: @due_for_check_security.ticker,
+        exchange_operating_mic: @due_for_check_security.exchange_operating_mic,
+        start_date: Date.current - Security::HealthChecker::LOOKBACK_DAYS,
+        end_date: Date.current
+      )
+      .returns(
+        provider_success_response([]),
+        provider_success_response([
+          OpenStruct.new(price: nil, date: Date.current, currency: "USD"),
+          OpenStruct.new(price: 0, date: Date.current - 1, currency: "USD")
+        ])
+      )
+      .twice
+
+    hc.run_check
+    assert_equal 1, @due_for_check_security.failed_fetch_count
+
+    hc.run_check
+    assert_equal 2, @due_for_check_security.failed_fetch_count
   end
 end
