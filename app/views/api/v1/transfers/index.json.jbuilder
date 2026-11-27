@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 json.transfers @transfers do |transfer|
-  json.partial! "transfer", transfer: transfer
+  json.partial! "transfer", transfer: transfer, fee_amounts: @fee_amounts
 end
 
 json.pagination do
