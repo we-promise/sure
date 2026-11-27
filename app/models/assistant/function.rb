@@ -24,6 +24,10 @@ class Assistant::Function
     raise NotImplementedError, "Subclasses must implement the call method"
   end
 
+  # Failure result when this caller may not make the call, or nil when it may.
+  # Ai::ToolJob rechecks it before a second caller joins a running job.
+  def validation_error(params) = nil
+
   def name
     self.class.name
   end

@@ -1,6 +1,11 @@
 class PdfImport < Import
   has_one_attached :pdf_file, dependent: :purge_later
 
+  # The transaction import an AI tool derived from this statement. One per source,
+  # enforced by the unique partial index on imports.source_import_id. Deleting
+  # the statement keeps its draft, just without the link back to it.
+  has_one :derived_import, class_name: "Import", foreign_key: :source_import_id, dependent: :nullify
+
   # "Read as", per upload: Auto, or one way of reading the PDF.
   READ_AS = Ai::PdfReading::READ_AS.map(&:to_s).freeze
   # Reconciliation dependencies ride in extracted_data: a statement's own reading, not a new

@@ -65,6 +65,123 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   def call(params = {})
+    if (error = validation_error(params))
+      return error
+    end
+
+    pdf_import = find_pdf_import(params["pdf_import_id"])
+    account = writable_accounts.find_by(id: params["account_id"])
+
+    # A completed job whose response was lost still owns one import. Its retry gets
+    # that draft, not a second extraction, even after a worker or Redis restart.
+    if (existing = existing_import_result(pdf_import, account))
+      return existing
+    end
+
+    availability = Ai.availability(:extract_pdf, family:, user:)
+    return ai_unavailable(availability) unless availability.available?
+
+    # Two live drafts from one statement could both publish overlapping rows as
+    # new transactions. Reuse the waiting draft instead of leaving another one
+    # to publish on top of it.
+    if (draft = live_draft(pdf_import, account))
+      return draft_exists(draft)
+    end
+
+    read_as = params["read_as"].presence_in(PdfImport::READ_AS) || "auto"   # omitted is Auto, as the tool says
+    reading = Ai::PdfReading.new(content: pdf_import.pdf_file_content, filename: pdf_import.pdf_filename, family:, user:)
+    outcome = reading.extract(read_as: read_as.to_sym, start: PdfImport.last_passing_way(account:, model: reading.model&.name))
+    result = Ai::Generations::ExtractBankStatement.statement(outcome.value)
+
+    if result[:transactions].blank?
+      return {
+        success: false,
+        error: "no_transactions_found",
+        message: "Could not extract any transactions from the bank statement"
+      }
+    end
+
+    # Create a CSV from extracted transactions
+    csv_content = generate_csv(result[:transactions])
+
+    # A row-generation failure must roll the draft back too, or a retry meets an empty
+    # draft and can only report draft_already_exists. The draft is checked again under the source
+    # import's lock: another call may have created one while this one extracted.
+    import = begin
+      pdf_import.with_lock do
+        pdf_import.reload
+        # Another call may have finished while this one extracted.
+        if (existing = existing_import_result(pdf_import, account))
+          return existing
+        end
+
+        if (draft = live_draft(pdf_import, account))
+          return draft_exists(draft)
+        end
+
+        # Stored on the draft so a retry whose response was lost can repeat the check warning.
+        # The transactions come from the statement, so the import keeps its privacy.
+        created = family.imports.create!(
+          type: "TransactionImport",
+          account: account,
+          account_statement: pdf_import.account_statement,
+          raw_file_str: csv_content,
+          source_pdf_import_id: pdf_import.id,
+          source_import: pdf_import,
+          date_col_label: "date",
+          amount_col_label: "amount",
+          name_col_label: "name",
+          category_col_label: "category",
+          notes_col_label: "notes",
+          date_format: "%Y-%m-%d",
+          signage_convention: "inflows_positive",
+          extraction_checks: outcome.checks&.to_h
+        )
+
+        created.generate_rows_from_csv
+        created
+      end
+    rescue ActiveRecord::RecordNotUnique
+      # Two extractions passed the check together; the index makes one the winner.
+      pdf_import.reload
+      existing = existing_import_result(pdf_import, account)
+      return existing if existing
+      raise
+    end
+
+    {
+      success: true,
+      import_id: import.id,
+      transaction_count: result[:transactions].size,
+      transactions_preview: result[:transactions].first(5),
+      statement_period: result[:period],
+      account_holder: result[:account_holder],
+      read_as: outcome.way.to_s,
+      checks_passed: outcome.passed?,
+      message: "Successfully extracted #{result[:transactions].size} transactions. Import created with ID: #{import.id}. " \
+               "#{check_note(outcome.checks)}" \
+               "Review and publish when ready."
+    }
+  rescue Ai::Error::Unavailable => e
+    # Model-facing and not localized: the assistant words it for the user.
+    { success: false, error: "unavailable", reason: e.reason.to_s, message: "No way to read this PDF is available (#{e.reason})." }
+  # Provider messages can quote the statement (an account number, for example), so neither the
+  # log nor the model-facing answer carries raw exception text. The correlation id ties the
+  # failure to the traced request instead.
+  rescue Ai::Error::Base, Pdf::PageImages::Error, Timeout::Error, RuntimeError => e
+    Rails.logger.error("ImportBankStatement error: #{e.class.name} (correlation: #{Ai::CallContext.correlation_id})")
+    Rails.logger.error(e.backtrace.first(10).join("\n"))
+    {
+      success: false,
+      error: "extraction_failed",
+      message: "The statement could not be extracted. Try again or choose another way to read it."
+    }
+  end
+
+  # The caller's own gates, before any extraction. Ai::ToolJob re-runs this
+  # when a later caller tries to join a job already running for the same
+  # statement: a changed account, user or import cannot inherit its result.
+  def validation_error(params)
     pdf_import = find_pdf_import(params["pdf_import_id"])
 
     unless pdf_import
@@ -106,95 +223,13 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     end
 
     account = writable_accounts.find_by(id: params["account_id"]) if valid_uuid?(params["account_id"])
-    unless account
-      return {
-        success: false,
-        error: "account_not_found",
-        message: "No writable account matched that account_id",
-        available_accounts: account_choices
-      }
-    end
+    return nil if account
 
-    availability = Ai.availability(:extract_pdf, family:, user:)
-    return ai_unavailable(availability) unless availability.available?
-
-    # Two live drafts from one statement could both publish overlapping rows as
-    # new transactions. Reuse the waiting draft instead of leaving another one
-    # to publish on top of it.
-    if (draft = live_draft(pdf_import, account))
-      return draft_exists(draft)
-    end
-
-    read_as = params["read_as"].presence_in(PdfImport::READ_AS) || "auto"   # omitted is Auto, as the tool says
-    reading = Ai::PdfReading.new(content: pdf_import.pdf_file_content, filename: pdf_import.pdf_filename, family:, user:)
-    outcome = reading.extract(read_as: read_as.to_sym, start: PdfImport.last_passing_way(account:, model: reading.model&.name))
-    result = Ai::Generations::ExtractBankStatement.statement(outcome.value)
-
-    if result[:transactions].blank?
-      return {
-        success: false,
-        error: "no_transactions_found",
-        message: "Could not extract any transactions from the bank statement"
-      }
-    end
-
-    # Create a CSV from extracted transactions
-    csv_content = generate_csv(result[:transactions])
-
-    # A row-generation failure must roll the draft back too, or a retry meets an empty
-    # draft and can only report draft_already_exists. The draft is checked again under the source
-    # import's lock: another call may have created one while this one extracted.
-    import = pdf_import.with_lock do
-      if (draft = live_draft(pdf_import, account))
-        return draft_exists(draft)
-      end
-
-      # The transactions come from the statement, so the import keeps its privacy.
-      created = family.imports.create!(
-        type: "TransactionImport",
-        account: account,
-        account_statement: statement,
-        raw_file_str: csv_content,
-        source_pdf_import_id: pdf_import.id,
-        date_col_label: "date",
-        amount_col_label: "amount",
-        name_col_label: "name",
-        category_col_label: "category",
-        notes_col_label: "notes",
-        date_format: "%Y-%m-%d",
-        signage_convention: "inflows_positive"
-      )
-
-      created.generate_rows_from_csv
-      created
-    end
-
-    {
-      success: true,
-      import_id: import.id,
-      transaction_count: result[:transactions].size,
-      transactions_preview: result[:transactions].first(5),
-      statement_period: result[:period],
-      account_holder: result[:account_holder],
-      read_as: outcome.way.to_s,
-      checks_passed: outcome.passed?,
-      message: "Successfully extracted #{result[:transactions].size} transactions. Import created with ID: #{import.id}. " \
-               "#{check_note(outcome.checks)}" \
-               "Review and publish when ready."
-    }
-  rescue Ai::Error::Unavailable => e
-    # Model-facing and not localized: the assistant words it for the user.
-    { success: false, error: "unavailable", reason: e.reason.to_s, message: "No way to read this PDF is available (#{e.reason})." }
-  # Provider messages can quote the statement (an account number, for example), so neither the
-  # log nor the model-facing answer carries raw exception text. The correlation id ties the
-  # failure to the traced request instead.
-  rescue Ai::Error::Base, Pdf::PageImages::Error, Timeout::Error, RuntimeError => e
-    Rails.logger.error("ImportBankStatement error: #{e.class.name} (correlation: #{Ai::CallContext.correlation_id})")
-    Rails.logger.error(e.backtrace.first(10).join("\n"))
     {
       success: false,
-      error: "extraction_failed",
-      message: "The statement could not be extracted. Try again or choose another way to read it."
+      error: "account_not_found",
+      message: "No writable account matched that account_id",
+      available_accounts: account_choices
     }
   end
 
@@ -236,6 +271,41 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
             .where("status IN (?) OR EXISTS (SELECT 1 FROM entries WHERE entries.import_id = imports.id)",
                    %w[pending importing complete reverting revert_failed])
             .first
+    end
+
+    # The durable answer to a retry whose request ended before the job did. A
+    # different account with the same statement is a caller mistake, not a
+    # request for the first account's draft.
+    def existing_import_result(pdf_import, account)
+      derived = pdf_import.derived_import
+      return if derived.nil?
+
+      if derived.account_id != account.id
+        return {
+          success: false,
+          error: "account_mismatch",
+          import_id: derived.id,
+          message: "This statement was already imported for a different account (import #{derived.id}). " \
+                   "Call this tool again with that account to get its result."
+        }
+      end
+
+      # A published, reverting or failed draft still needs the user's attention;
+      # only a plain waiting draft is something a retry can simply return.
+      return draft_exists(derived) unless derived.pending? && derived.entries.none?
+
+      checks = if derived.extraction_checks.present?
+        Ai::Generations::ExtractBankStatement::Checks.from_h(derived.extraction_checks)
+      end
+      {
+        success: true,
+        already_imported: true,
+        import_id: derived.id,
+        transaction_count: derived.rows_count,
+        checks_passed: checks&.passed?,
+        message: "This statement was already imported (import #{derived.id}); returning the existing draft. " \
+                 "#{checks ? check_note(checks) : ""}Review and publish it when ready."
+      }
     end
 
     # What clears the guard: deleting the draft, after reverting it if it published anything.

@@ -6,9 +6,20 @@
 module Ai::SharedState
   # The store's interface is ActiveSupport::Cache's `write`, `read` and `delete`, so a test can
   # use a MemoryStore instead of the Redis that parallel test processes share.
+  ClaimUnavailable = Class.new(StandardError)
+
+  # A claim that loses a SET NX can read an absent key when the winner finishes
+  # between the write and the read. Retry rather than mistake that gap for a win.
+  CLAIM_ATTEMPTS = 3
+
   class RedisStore
-    def write(key, value, expires_in:)
-      Sidekiq.redis { _1.call("SET", key, value, "PX", (expires_in.to_f * 1000).ceil) }
+    # `unless_exist` maps to Redis's atomic SET NX PX, the same claim pattern
+    # MarketDataResetJob uses for its enqueue guard.
+    def write(key, value, expires_in:, unless_exist: false)
+      args = [ "SET", key, value ]
+      args.push("NX") if unless_exist
+      args.push("PX", (expires_in.to_f * 1000).ceil)
+      Sidekiq.redis { _1.call(*args) }
     end
 
     def read(key) = Sidekiq.redis { _1.call("GET", key) }
@@ -26,6 +37,23 @@ module Ai::SharedState
       raise ArgumentError, "expires_in must be positive, got #{expires_in.inspect}" unless expires_in.to_f.positive?
 
       store.write(key, value.to_json, expires_in:)
+    end
+
+    # Atomically take a key or return the value another caller put there first.
+    # A losing caller can join the work that owns the key; a winner owns it
+    # until the TTL or an explicit delete. A claim that cannot be settled raises
+    # rather than reporting ownership it does not have.
+    def claim(key, value, expires_in:)
+      raise ArgumentError, "expires_in must be positive, got #{expires_in.inspect}" unless expires_in.to_f.positive?
+
+      CLAIM_ATTEMPTS.times do
+        return nil if store.write(key, value.to_json, expires_in:, unless_exist: true)
+
+        existing = read(key)
+        return existing if existing
+      end
+
+      raise ClaimUnavailable, "could not settle a claim for #{key}"
     end
 
     def read(key)

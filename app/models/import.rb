@@ -95,6 +95,8 @@ class Import < ApplicationRecord
   belongs_to :account, optional: true
   belongs_to :account_statement, optional: true
   belongs_to :import_session, optional: true
+  # A tool's derived import keeps its source so a retry returns the same draft.
+  belongs_to :source_import, class_name: "Import", optional: true
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding

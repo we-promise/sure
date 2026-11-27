@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1440,6 +1440,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.integer "rows_to_skip", default: 0, null: false
     t.integer "sequence"
     t.string "signage_convention", default: "inflows_positive"
+    t.uuid "source_import_id"
     t.uuid "source_pdf_import_id"
     t.string "status"
     t.jsonb "summary", default: {}, null: false
@@ -1453,6 +1454,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.index ["import_session_id", "client_chunk_id"], name: "idx_imports_on_session_client_chunk", unique: true, where: "((import_session_id IS NOT NULL) AND (client_chunk_id IS NOT NULL))"
     t.index ["import_session_id", "sequence"], name: "idx_imports_on_session_sequence", unique: true, where: "((import_session_id IS NOT NULL) AND (sequence IS NOT NULL))"
     t.index ["import_session_id"], name: "index_imports_on_import_session_id"
+    t.index ["source_import_id"], name: "idx_imports_source_import_unique", unique: true, where: "(source_import_id IS NOT NULL)"
     t.check_constraint "checksum IS NULL OR length(checksum::text) = 64", name: "chk_imports_checksum_sha256_length"
     t.check_constraint "client_chunk_id IS NULL OR btrim(client_chunk_id::text) <> ''::text", name: "chk_imports_client_chunk_id_present"
     t.check_constraint "import_session_id IS NULL OR checksum IS NOT NULL", name: "chk_imports_session_checksum_present"
@@ -3307,6 +3309,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
   add_foreign_key "imports", "account_statements"
   add_foreign_key "imports", "families"
   add_foreign_key "imports", "import_sessions", column: ["import_session_id", "family_id"], primary_key: ["id", "family_id"], name: "fk_imports_session_family", on_delete: :cascade
+  add_foreign_key "imports", "imports", column: "source_import_id", on_delete: :nullify
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"
   add_foreign_key "insights", "families"
