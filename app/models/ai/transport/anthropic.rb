@@ -28,10 +28,20 @@ class Ai::Transport::Anthropic < Ai::Transport::Base
       return rest unless node.key?(:type)   # a properties map, whose keys are field names
 
       limits = node.slice(*NUMERIC_LIMITS)
-      return rest if limits.empty?
+      return nullable_enum(rest) if limits.empty?
 
       note = limits.map { "#{_1} #{_2}" }.join(", ")
-      rest.except(*NUMERIC_LIMITS).merge(description: [ node[:description], note ].compact.join(". "))
+      nullable_enum(rest.except(*NUMERIC_LIMITS).merge(description: [ node[:description], note ].compact.join(". ")))
+    end
+
+    # Anthropic refuses an enum on a field typed [x, "null"] ("Enum value ... does not match
+    # declared type"), so a nullable enum goes as anyOf the enum's values and null.
+    def nullable_enum(node)
+      types = Array(node[:type])
+      return node unless node.key?(:enum) && types.include?("null") && types.size > 1
+
+      others = types - [ "null" ]
+      node.except(:type, :enum).merge(anyOf: [ { type: others.one? ? others.first : others, enum: node[:enum].compact }, { type: "null" } ])
     end
 
     def probe_embedding(_model, timeout:) = raise(Ai::Error::Refused, "Anthropic has no embedding models")
