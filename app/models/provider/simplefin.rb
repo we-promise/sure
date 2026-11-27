@@ -128,6 +128,18 @@ class Provider::Simplefin
     with_retries("GET /accounts") do |attempt|
       response = self.class.get(accounts_url, **guarded_request_options(access_url, attempt: attempt))
 
+      # The bridge intermittently 307s to the same URL during backend
+      # drains/deploys. A relative Location stays on the already-checked host,
+      # so one same-host hop is SSRF-safe; absolute targets still hard-fail.
+      location = response.headers["location"] if response.respond_to?(:headers)
+      if [ 307, 308 ].include?(response.code) && location&.match?(%r{\A/})
+        target = URI.parse(accounts_url)
+        loc = URI.parse(location)
+        target.path = loc.path
+        target.query = loc.query if loc.query
+        response = self.class.get(target.to_s, **guarded_request_options(access_url, attempt: attempt))
+      end
+
       case response.code
       when 200
         JSON.parse(response.body, symbolize_names: true)
@@ -145,8 +157,12 @@ class Provider::Simplefin
         Rails.logger.error "SimpleFin API: Server error - Code: #{response.code}, Body: #{response.body}"
         raise SimplefinError.new("SimpleFin server error (#{response.code}). Please try again later.", :server_error)
       else
+        # Include the redirect target (a path/URL, never body content — bodies
+        # may carry secrets) so intermittent 307s self-document in sync stats.
+        location = response.headers["location"] if response.respond_to?(:headers)
+        detail = location.present? ? " -> #{location}" : ""
         Rails.logger.error "SimpleFin API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
-        raise SimplefinError.new("Failed to fetch accounts: #{response.code} #{response.message}", :fetch_failed)
+        raise SimplefinError.new("Failed to fetch accounts: #{response.code} #{response.message}#{detail}", :fetch_failed)
       end
     end
   end
