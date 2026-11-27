@@ -1,7 +1,7 @@
 <%# locals: (entry:, account_currencies:, manual_accounts:, categories:, merchants:, tags:) %>
 <% auto_generate_names = Current.family.auto_generate_transaction_names? %>
 
-<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: auto_generate_names ? "transaction-form transaction-name-preview category-suggestion" : "transaction-form category-suggestion", action: "formdata->category-suggestion#syncName hw-combobox:selection->category-suggestion#onNameSuggestionSelected turbo:before-cache@document->transaction-form#refreshIdempotencyKey pageshow@window->transaction-form#refreshIdempotencyKeyIfPersisted", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies.to_json } do |f| %>
+<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: auto_generate_names ? "transaction-form transaction-name-preview category-suggestion" : "transaction-form category-suggestion", action: "formdata->category-suggestion#syncName input->category-suggestion#commitFreeText hw-combobox:selection->category-suggestion#onNameSuggestionSelected turbo:before-cache@document->transaction-form#refreshIdempotencyKey pageshow@window->transaction-form#refreshIdempotencyKeyIfPersisted", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies.to_json } do |f| %>
   <% if entry.errors.any? %>
     <%= render "shared/form_errors", model: entry %>
   <% end %>

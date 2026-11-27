@@ -21,6 +21,23 @@ export default class extends Controller {
     event.formData.set("entry[name]", this.nameTarget.value)
   }
 
+  commitFreeText(event) {
+    // The description combobox only writes a typed free-text name into its hidden
+    // field once the async suggestions round-trip returns. Closing the picker
+    // before that — tapping out on mobile, where the picker is a modal dialog —
+    // makes the combobox treat the query as unjustifiably blank and wipe it, so
+    // the typed description never reaches the form. Commit the typed value
+    // synchronously on every keystroke instead; picking a real suggestion still
+    // overwrites it with the option's value.
+    if (event.target.getAttribute("role") !== "combobox") return
+
+    const combobox = event.target.closest("[data-controller~='hw-combobox']")
+    const hiddenField = combobox?.querySelector("input[type='hidden']")
+    if (!hiddenField) return
+
+    hiddenField.value = event.target.value
+  }
+
   onCategorySelected(event) {
     if (this.applyingSuggestion) return
     if (!event.target.matches('[data-category-select-target="hiddenInput"]')) return

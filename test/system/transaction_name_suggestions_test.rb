@@ -87,6 +87,80 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
     assert_category categories(:food_and_drink)
   end
 
+  test "mobile free-text description survives dismissing the picker before suggestions return" do
+    page.current_window.resize_to(390, 844)
+    open_new_transaction
+    hold_name_suggestions
+    find("#entry_name").click
+
+    within "dialog.hw-combobox__dialog" do
+      find("input[role='combobox']").set("Saturday market run")
+    end
+
+    # The suggestions request for the full query has started and is held, so
+    # its response is guaranteed not to have arrived before the picker is dismissed.
+    assert_selector "html[data-name-search-pending-query='Saturday market run']"
+
+    within "dialog.hw-combobox__dialog" do
+      # Dismiss the picker right away, without waiting for the suggestions
+      # round-trip and without picking an option, as on a phone. The typed
+      # description must stay in the field and save with the transaction.
+      find("input[role='combobox']").send_keys(:escape)
+    end
+
+    assert_field "entry_name", with: "Saturday market run"
+    release_name_suggestions
+
+    find("input[name='entry[amount]']").set("12.34")
+    click_button "Add transaction"
+    assert_created_transaction "Saturday market run"
+    entry = accounts(:depository).entries.find_by!(name: "Saturday market run")
+    assert_equal "Saturday market run", entry.name
+  end
+
+  test "desktop free-text description survives clicking outside before suggestions return" do
+    page.current_window.resize_to(1280, 800)
+    open_new_transaction
+    hold_name_suggestions
+    find("#entry_name").click
+    find("input[role='combobox']").set("Saturday market run")
+
+    # The suggestions request for the full query has started and is held, so
+    # its response is guaranteed not to have arrived before the combobox closes.
+    assert_selector "html[data-name-search-pending-query='Saturday market run']"
+
+    # Click into another field, as on a desktop: the combobox closes without
+    # a selection, and the typed description must stay in the field and save.
+    find("input[name='entry[amount]']").click
+    assert_field "entry_name", with: "Saturday market run"
+    release_name_suggestions
+
+    find("input[name='entry[amount]']").set("12.34")
+    click_button "Add transaction"
+    assert_created_transaction "Saturday market run"
+    entry = accounts(:depository).entries.find_by!(name: "Saturday market run")
+    assert_equal "Saturday market run", entry.name
+  end
+
+  test "desktop free-text description survives pressing Enter with suggestions open" do
+    page.current_window.resize_to(1280, 800)
+    open_new_transaction
+    find("#entry_name").click
+    # Wait for the suggestions list to open, as in the reporter video:
+    # pressing Enter closes the list without picking an option, and the
+    # typed description must stay in the field and save.
+    search_starbucks
+    assert_selector ".hw-combobox [role='option']", text: "Starbucks"
+    find("input[role='combobox']").send_keys(:enter)
+    assert_field "entry_name", with: "Starb"
+
+    find("input[name='entry[amount]']").set("12.34")
+    click_button "Add transaction"
+    assert_created_transaction "Starb"
+    entry = accounts(:depository).entries.find_by!(name: "Starb")
+    assert_equal "Starb", entry.name
+  end
+
   private
     def open_new_transaction
       # Open the modal from its real parent page so submission returns to the
@@ -137,6 +211,46 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
       assert_selector "html[data-name-search-callback]"
       callback_id = find("html")["data-name-search-callback"]
       assert_selector "[data-hw-combobox-target='endOfOptionsStream'][data-callback-id='#{callback_id}']", visible: :all
+    end
+
+    def hold_name_suggestions
+      # Hold name-suggestion responses so the test controls exactly when they
+      # arrive: the wrapper records that a request started
+      # (html[data-name-search-pending]) and only performs the real fetch once
+      # released. Same interception point as the fetch-recording hook in
+      # search_starbucks.
+      page.execute_script(<<~JS)
+        delete document.documentElement.dataset.nameSearchPending;
+        delete document.documentElement.dataset.nameSearchPendingQuery;
+        window.nameSearchHoldReleased = false;
+        window.__heldNameSearches = [];
+        if (!window.nameSearchHoldInstalled) {
+          window.nameSearchHoldInstalled = true;
+          const originalFetch = window.fetch;
+          window.fetch = (url, init) => {
+            const requestUrl = new URL(url, window.location.href);
+            if (requestUrl.pathname === "/transactions/name_suggestions" && !window.nameSearchHoldReleased) {
+              document.documentElement.dataset.nameSearchPending = "true";
+              document.documentElement.dataset.nameSearchPendingQuery = requestUrl.searchParams.get("q");
+              return new Promise((resolve) => {
+                window.__heldNameSearches.push(() => resolve(originalFetch(url, init)));
+              });
+            }
+            return originalFetch(url, init);
+          };
+        }
+      JS
+    end
+
+    def release_name_suggestions
+      # Stop holding first, so any debounced search fired after the release
+      # uses the real fetch instead of joining a queue that is never drained.
+      page.execute_script(<<~JS)
+        window.nameSearchHoldReleased = true;
+        window.__heldNameSearches.splice(0).forEach((release) => release());
+        delete document.documentElement.dataset.nameSearchPending;
+        delete document.documentElement.dataset.nameSearchPendingQuery;
+      JS
     end
 
     def choose_category(category)
