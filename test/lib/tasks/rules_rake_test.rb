@@ -51,7 +51,7 @@ class RulesRakeTest < ActiveJob::TestCase
 
   test "reports a busy family lock instead of silently re-enqueueing" do
     create_rule(category: @groceries)
-    Rule::Runner.any_instance.stubs(:with_family_lock).returns(false)
+    Rule::Runner.stubs(:with_family_lock).returns(false)
 
     assert_raises(SystemExit) do
       capture_io { Rake::Task["rules:apply_all"].invoke(@family.id) }

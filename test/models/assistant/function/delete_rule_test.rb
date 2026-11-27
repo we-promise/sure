@@ -56,6 +56,24 @@ class Assistant::Function::DeleteRuleTest < ActiveSupport::TestCase
     assert Rule.exists?(@rule.id)
   end
 
+  test "refuses while a rule run holds the family lock and leaves the rule in place" do
+    # Transactional tests share one PG session, and a session can re-take its
+    # own advisory lock, so holding it needs a separate connection.
+    config = ActiveRecord::Base.connection_pool.db_config.configuration_hash
+    other = PG.connect({
+      dbname: config[:database], host: config[:host], port: config[:port],
+      user: config[:username] || config[:user], password: config[:password]
+    }.compact)
+    other.exec("SELECT pg_advisory_lock(#{Rule::Runner.advisory_lock_key(@family.id)})")
+
+    result = @fn.call("rule_id" => @rule.id)
+
+    assert_equal "rules_running", result[:error]
+    assert Rule.exists?(@rule.id)
+  ensure
+    other&.close
+  end
+
   test "another family's rule is not found and left untouched" do
     foreign = families(:empty).rules.create!(
       name: "Theirs",

@@ -46,15 +46,20 @@ class Assistant::Function::DeleteRule < Assistant::Function
     return error("not_found", "No rule with id '#{params["rule_id"]}'.") unless rule
 
     snapshot = nil
-    # apply_rule activates the rule under this lock, and lock! reloads it, so
-    # an activation since the lookup is seen here.
-    rule.with_lock do
-      unless rule.active
-        snapshot = serialize_rule(rule)
-        rule.destroy!
+    # A rule run loads its rules up front and applies them without checking
+    # active again, so a rule is only deleted while no run is in progress.
+    acquired = Rule::Runner.with_family_lock(family.id) do
+      # apply_rule activates the rule under this lock, and lock! reloads it,
+      # so an activation since the lookup is seen here.
+      rule.with_lock do
+        unless rule.active
+          snapshot = serialize_rule(rule)
+          rule.destroy!
+        end
       end
     end
 
+    return error("rules_running", "Rules are running for this family right now. Try again in a minute.") unless acquired
     return error("rule_active", "Deactivate the rule first with update_rule active: false, then delete it.") unless snapshot
 
     name = snapshot[:name].present? ? "Rule '#{snapshot[:name]}'" : "Rule"
