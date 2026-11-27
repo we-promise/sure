@@ -1,0 +1,7 @@
+<%= content_for :page_title, t(".page_title") %>
+
+<p class="mb-4 text-sm text-secondary"><%= t(".description") %></p>
+
+<%= turbo_frame_tag "rule_health_report", src: health_rules_path, loading: "lazy" do %>
+  <p class="text-sm text-secondary"><%= t(".loading") %></p>
+<% end %>

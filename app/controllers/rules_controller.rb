@@ -1,7 +1,7 @@
 class RulesController < ApplicationController
   include StreamExtensions
 
-  before_action :require_non_guest!, except: %i[index]
+  before_action :require_non_guest!, except: %i[index health]
   before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm ]
 
   def index
@@ -20,6 +20,16 @@ class RulesController < ApplicationController
     @pagy, @recent_runs = pagy(recent_runs_scope, limit: safe_per_page, page_param: :runs_page)
 
     render layout: "settings"
+  end
+
+  # The report runs every rule's conditions, so the page loads it in a lazy
+  # frame after it renders. Read-only, so guests see it like the list.
+  def health
+    if turbo_frame_request?
+      render partial: "rules/health_report", locals: { health: Rule::Health.new(Current.family) }
+    else
+      render layout: "settings"
+    end
   end
 
   def new

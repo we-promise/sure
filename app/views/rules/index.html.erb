@@ -1,5 +1,13 @@
 <%= content_for :page_title, t(".page_title") %>
 <%= content_for :page_actions do %>
+  <% if @rules.any? %>
+    <%= render DS::Link.new(
+      text: t(".rule_health"),
+      variant: "ghost",
+      href: health_rules_path,
+      icon: "heart-pulse"
+    ) %>
+  <% end %>
   <% unless Current.user&.guest? %>
     <% if @rules.any? %>
       <%= render DS::Menu.new do |menu| %>
