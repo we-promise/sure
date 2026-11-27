@@ -259,12 +259,13 @@ class Trade < ApplicationRecord
     trades.each { |trade| trade.preloaded_holdings = Array(by_entry[trade.entry.id]) }
   end
 
-  # What #realized_gain_loss reads, for a whole set of sales, in a fixed
-  # number of queries however many there are: each sale's basis snapshot, the
-  # lots each fifo sale consumed, and the proceeds-to-basis rates. A sale
-  # whose snapshot stores no cost basis still replays its trades on its own
-  # (Holding#avg_cost_before). Snapshots go first, because the rate preload
-  # keys on the currency the position is carried in.
+  # What #realized_gain_loss reads, for a whole set of sales: each sale's
+  # basis snapshot, the lots each fifo sale consumed, and the proceeds-to-basis
+  # rates. The count of queries is fixed only for sales priced from a lot
+  # record or a snapshot that stores its cost basis; a sale whose snapshot
+  # stores none replays its trades on its own (Holding#avg_cost_before), a few
+  # queries each. Snapshots go first, because the rate preload keys on the
+  # currency the position is carried in.
   def self.preload_realized_gains(trades)
     return if trades.empty?
 
@@ -275,10 +276,11 @@ class Trade < ApplicationRecord
   end
 
   # The currency this disposal's basis is carried in, where it can be answered
-  # without a query. `Holding#avg_cost` is Money in the HOLDING's own currency,
-  # which is not always the account's, and that is what the proceeds are
-  # converted into. nil when holdings were not preloaded: the preloader above
-  # must not issue the queries it exists to avoid.
+  # without a query. The basis (`Holding#stored_avg_cost` or
+  # `Holding#avg_cost_before`) is Money in the HOLDING's own currency, which is
+  # not always the account's, and that is what the proceeds are converted into.
+  # nil when holdings were not preloaded: the preloader above must not issue
+  # the queries it exists to avoid.
   def preloaded_basis_currency
     return nil unless defined?(@preloaded_holdings)
 
