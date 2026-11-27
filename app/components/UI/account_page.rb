@@ -14,8 +14,10 @@ class UI::AccountPage < ApplicationComponent
   # `as_of`; nil when no extra applies.
   def initialize(account:, chart_view: nil, chart_period: nil, loan_chart: nil, as_of: Date.current, active_tab: nil,
                  statement_coverage: nil, statements: [], reconciliation_statuses: {}, reconciliation_indicator: nil,
-                 can_manage_statements: false, loan_projection: nil, loan_extra_projection: nil, extra_repayment: nil)
+                 can_manage_statements: false, loan_projection: nil, loan_extra_projection: nil, extra_repayment: nil,
+                 chart_card_requested: true)
     @account = account
+    @chart_card_requested = chart_card_requested
     @chart_view = chart_view
     @chart_period = chart_period
     @loan_chart = loan_chart

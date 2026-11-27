@@ -11,10 +11,14 @@ module Account::Chartable
   # :net_contributions.
   # The net contributions line reads Portfolio::DailyReturns, which covers
   # accounts that hold trades only; any other account draws its balance.
-  def balance_series(period: Period.last_30_days, view: :balance, interval: nil)
+  #
+  # `value_series` is for :net_contributions: the Total value series the
+  # caller already built for the same period and interval, so it is not
+  # built again.
+  def balance_series(period: Period.last_30_days, view: :balance, interval: nil, value_series: nil)
     raise ArgumentError, "Invalid view type" unless [ :balance, :cash_balance, :holdings_balance, :gains, :net_contributions ].include?(view.to_sym)
     if view.to_sym == :net_contributions
-      return net_contributions_series(period: period, interval: interval) if supports_trades?
+      return net_contributions_series(period: period, interval: interval, value_series: value_series) if supports_trades?
 
       view = :balance
     end
@@ -26,10 +30,11 @@ module Account::Chartable
 
   # True when a flow the net contributions line counts could not be valued,
   # so the chart can say the line is incomplete.
-  def net_contributions_incomplete?(period: Period.last_30_days, interval: nil)
+  # `value_dates` are the Total value line's dates, when the caller has them.
+  def net_contributions_incomplete?(period: Period.last_30_days, interval: nil, value_dates: nil)
     return false unless supports_trades?
 
-    value_dates = balance_series(period: period, view: :balance, interval: interval).values.map(&:date)
+    value_dates ||= balance_series(period: period, view: :balance, interval: interval).values.map(&:date)
 
     chart_series_builder(period: period, interval: interval)
       .net_contributions_incomplete?(anchor_date: net_contributions_anchor_date, dates: value_dates)
@@ -131,9 +136,9 @@ module Account::Chartable
     # balance query sampled it unchanged, and the balance before the day's
     # activity when the normalizer supplied it instead (a coarse interval's
     # prepended opening, or its reset of the first point).
-    def net_contributions_series(period:, interval:)
+    def net_contributions_series(period:, interval:, value_series: nil)
       builder = chart_series_builder(period: period, interval: interval)
-      value_series = balance_series(period: period, view: :balance, interval: interval)
+      value_series ||= balance_series(period: period, view: :balance, interval: interval)
       value_dates = value_series.values.map(&:date)
       normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: self, series: nil)
       anchor_date = net_contributions_anchor_date(normalizer)
