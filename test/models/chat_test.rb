@@ -409,7 +409,7 @@ class ChatTest < ActiveSupport::TestCase
     end
 
     def publish_gate(holders: [], waiters: [])
-      Ai::Gate::State.write("gpu.local:8080", holders:, waiters:, interruptions: 0, put_off: false)
+      Ai::Gate::State.write("gpu.local", holders:, waiters:, interruptions: 0, put_off: false)
     end
 
     def interactive(job) = Ai::Gate::Holder.new(lane: :interactive, job:)
