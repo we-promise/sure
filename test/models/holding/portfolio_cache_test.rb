@@ -367,6 +367,47 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     assert_equal 200, cache.get_price(@security.id, 4.days.ago.to_date).price, "the sale's post-split price, carried back across the recorded split"
   end
 
+  test "a movement on a recorded split's day takes the quote from before it, not the zero of the trade booking it" do
+    Security::Price.destroy_all
+    Entry.delete_all
+    Security::Price.create!(security: @security, date: 4.days.ago.to_date, price: 100, currency: "USD")
+    create_movement(@security, qty: 1, date: 3.days.ago.to_date, label: "Other")
+    Security::Split.create!(security: @security, ex_date: 3.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+    create_movement(@security, qty: 1, date: 3.days.ago.to_date)
+
+    cache = Holding::PortfolioCache.new(@account)
+
+    assert_equal 50, cache.get_price(@security.id, 3.days.ago.to_date).price, "carried across the recorded split"
+  end
+
+  test "a movement on a recorded split's day takes the provider's price that day over the quote from before it" do
+    Security::Price.destroy_all
+    Entry.delete_all
+    Security::Price.create!(security: @security, date: 4.days.ago.to_date, price: 100, currency: "USD")
+    create_movement(@security, qty: 1, date: 3.days.ago.to_date, label: "Other")
+    Security::Split.create!(security: @security, ex_date: 3.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+    create_movement(@security, qty: 1, date: 3.days.ago.to_date)
+    provider_holding(@security, date: 3.days.ago.to_date, price: 60)
+
+    cache = Holding::PortfolioCache.new(@account, use_holdings: true)
+
+    assert_equal 60, cache.get_price(@security.id, 3.days.ago.to_date).price
+  end
+
+  test "a movement on a recorded split's day takes a priced trade that day, though the trade booking the split wins their tie" do
+    Security::Price.destroy_all
+    Entry.delete_all
+    Security::Price.create!(security: @security, date: 4.days.ago.to_date, price: 100, currency: "USD")
+    create_movement(@security, qty: 1, date: 3.days.ago.to_date, label: "Other")
+    create_trade(@security, account: @account, qty: -1, date: 3.days.ago.to_date, price: 70)
+    Security::Split.create!(security: @security, ex_date: 3.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+    create_movement(@security, qty: 1, date: 3.days.ago.to_date)
+
+    cache = Holding::PortfolioCache.new(@account)
+
+    assert_equal 70, cache.get_price(@security.id, 3.days.ago.to_date).price
+  end
+
   # A calculated row is what an earlier sync derived from the prices known
   # then; a quote that arrived since must be able to replace it.
   test "a movement takes a quote over a later calculated holding priced on an earlier sync" do
