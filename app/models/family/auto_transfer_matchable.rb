@@ -141,8 +141,7 @@ module Family::AutoTransferMatchable
       # A cross-currency guess between two categorized transactions in different
       # categories (a fuel purchase against an income) is not one movement of
       # money. One uncategorized leg still matches, since providers often
-      # categorize only one side. Exact same-currency pairs, and pairs on a route
-      # the user has confirmed before, are not affected.
+      # categorize only one side. Exact same-currency pairs are not affected.
       require_compatible_categories: true
     )
 
@@ -367,8 +366,8 @@ module Family::AutoTransferMatchable
     # A zero direct rate is treated as missing so it cannot mask a usable derived rate.
     #
     # With :require_compatible_categories, the cross-currency branch also drops pairs
-    # whose legs are both categorized, in different categories, unless they lie on a
-    # confirmed route (computed only with :restrict_cross_currency_to_linked_accounts).
+    # whose legs are both categorized, in different categories, including on a
+    # confirmed route: one wrong confirmation is enough to open a route.
     # Only auto_match_transfers! sets it; the exact same-currency branch, the manual
     # dialog and the hint (which filters categories itself, more strictly) leave it off.
     #
@@ -529,7 +528,6 @@ module Family::AutoTransferMatchable
             ) AND
             (
               :require_compatible_categories = FALSE OR
-              confirmed_routes.outflow_account_id IS NOT NULL OR
               inflow_txns.category_id IS NULL OR
               outflow_txns.category_id IS NULL OR
               inflow_txns.category_id = outflow_txns.category_id

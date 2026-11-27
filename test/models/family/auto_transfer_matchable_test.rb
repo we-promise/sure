@@ -346,14 +346,55 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
-  # A route the user confirmed is a stronger signal than the categories, which an
-  # auto-categorizer can get wrong on one leg.
-  test "auto-matches a cross-currency pair with different categories on a confirmed route" do
+  # A confirmed route opens as soon as any transfer on it is confirmed, a wrong one
+  # included, so it is no evidence that a later pair with clashing categories is real.
+  test "does not auto-match a cross-currency pair with different categories on a confirmed route" do
     load_family_currency_rates
     confirm_transfer!(from: @depository, to: @other_asset)
 
     outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP", category: categories(:food_and_drink))
     inflow = create_transaction(date: Date.current, account: @other_asset, amount: -680, currency: "CAD", category: categories(:income))
+
+    # The route admits the manual-account pair; only the category filter drops it.
+    eligible = @family.transfer_match_candidates(include_rejected: false, restrict_cross_currency_to_linked_accounts: true, require_common_writer: true)
+    assert_includes eligible.map { |c| [ c.inflow_transaction_id, c.outflow_transaction_id ] }, [ inflow.entryable_id, outflow.entryable_id ]
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "auto-matches a cross-currency pair in the same category on a confirmed route" do
+    load_family_currency_rates
+    confirm_transfer!(from: @depository, to: @other_asset)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP", category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @other_asset, amount: -680, currency: "CAD", category: categories(:food_and_drink))
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "auto-matches a cross-currency pair with an uncategorized leg on a confirmed route" do
+    load_family_currency_rates
+    confirm_transfer!(from: @depository, to: @other_asset)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP", category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @other_asset, amount: -680, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "auto-matches a same-currency exact pair with different categories on a confirmed route" do
+    confirm_transfer!(from: @depository, to: @other_asset)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @other_asset, amount: -400, category: categories(:income))
 
     assert_difference -> { Transfer.count } => 1 do
       @family.auto_match_transfers!
