@@ -1,0 +1,11 @@
+<%# locals: (form:) %>
+<%# Whether the connection keeps eToro's instruments as securities of its own
+    (EtoroItem#own_securities). The form's namespace keeps the checkbox's id,
+    and the label pointing at it, apart from the other connections' forms. %>
+<div class="space-y-1">
+  <div class="flex items-center gap-2">
+    <%= form.check_box :own_securities, class: "checkbox checkbox--light" %>
+    <%= form.label :own_securities, t("settings.providers.etoro_panel.own_securities_label"), class: "text-sm text-primary cursor-pointer select-none" %>
+  </div>
+  <p class="text-xs text-secondary"><%= t("settings.providers.etoro_panel.own_securities_hint") %></p>
+</div>

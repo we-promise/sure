@@ -1,0 +1,165 @@
+---
+en:
+  providers:
+    etoro:
+      name: eToro
+      connection_description: Connect an eToro trading account via API key
+      institution_name: eToro
+  etoro_items:
+    defaults:
+      name: eToro
+    etoro_item:
+      deletion_in_progress: Deletion in progress
+      syncing: Syncing
+      requires_update: API keys need attention
+      error: Error
+      synced: Synced %{time} ago. %{summary}.
+      never_synced: Never synced.
+      setup_accounts: Set up accounts
+      delete: Delete
+      accounts_need_setup: Account needs setup
+      accounts_need_setup_description: Your eToro account needs to be linked to a Sure account.
+      no_accounts_discovered: No eToro account discovered yet.
+      no_accounts_discovered_description: Run a sync after saving your API keys to discover your account.
+    display_mode:
+      label: Show %{account} as
+      change: Change
+      hint:
+        holdings: Each stock, ETF or crypto is a holding, with the buys and sells of its positions.
+        totals: eToro's daily total and cash, with everything invested as one holding. Sure keeps no eToro trades or per-position holdings, nor what you changed on them, such as remaps or locked cost bases. A trade you added by hand stays and counts as a holding too, so the cash differs from eToro's by its value on the days before it.
+        copies: Each copy-trading portfolio you set up is an account of its own, from the day Sure first recorded it. This account keeps the positions you opened, your cash and any copy not set up. Another mode empties the copy accounts until you switch back, and your edits to their holdings and transfers are lost.
+      confirm:
+        title: Change how %{account} shows?
+        body: Sure rebuilds the account from what eToro sent. Your edits to its eToro trades are lost, and with Totals only also the holdings you remapped and the cost bases you locked. Leaving Per copy portfolio also loses your edits to the copy accounts' holdings and to the transfers to and from them.
+        button: Change
+      current: "%{account} shows as: %{mode}"
+      wait_for_sync: You can change this once the sync finishes.
+      options:
+        holdings: Holdings
+        totals: Totals only
+        copies: Per copy portfolio
+    totals:
+      security_name: eToro investments
+    copies:
+      account_name: "eToro copy: %{trader}"
+      transfer_to: Transfer to %{account}
+      transfer_from: Transfer from %{account}
+    copy_status:
+      recorded_since: Copy portfolio, recorded since %{date}
+      closed: Copy closed on %{date}
+    deletion_confirm:
+      title: Delete the eToro connection?
+      body: This also deletes the history Sure has recorded of your copy-trading portfolios. eToro keeps none, so it cannot be restored, and a new connection starts each copy's history again. To change your API keys, update them in the eToro panel under Settings > Bank sync instead.
+      button: Delete connection
+    setup_accounts:
+      page_title: Set Up eToro Account
+      dialog_title: Set Up Your eToro Account
+      subtitle: Link your eToro trading account.
+      info_box:
+        title: eToro API Import
+        items:
+          item_1: Current positions, including copy-trading, valued in USD
+          item_2: Buys and sells of positions closed in the last 12 months
+          item_3: Daily account value for the last 12 months, replacing a balance recorded by hand on those days (eToro does not report deposits, withdrawals or dividends)
+          copies: Each copy portfolio's history starts on the day Sure first recorded it, as eToro reports no past figures of a copy
+      status:
+        fetching_accounts: Fetching account from eToro...
+        no_accounts_found_title: No account found.
+        no_accounts_found_description: Sure could not find an eToro trading account. Check that your API keys are valid.
+        sync_failed_title: Sure couldn't fetch your account.
+        sync_failed_description: The last sync with eToro didn't finish. Try again, or check the connection under Settings → Providers.
+      available_accounts:
+        title: Available account
+        account_type_investment: Investment
+        account_summary: "%{account_type} • Balance: %{balance}"
+        account_id: "Account ID: %{account_id}"
+      link_existing:
+        description: Or link the discovered eToro account to an existing manual investment account. eToro's daily value replaces a balance you recorded by hand on a day it reports; your balances on the other days stay.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Select an account...
+      linked_accounts:
+        title: Already linked
+        linked_to_html: "Linked to: %{account}"
+      buttons:
+        refresh: Refresh
+        try_again: Try again
+        cancel: Cancel
+        back_to_settings: Back to Settings
+        create_selected_accounts: Create selected accounts
+        link: Link
+        done: Done
+    sync:
+      status:
+        checking_credentials: Checking eToro credentials...
+        importing_account: Importing eToro account...
+        checking_configuration: Checking account configuration...
+        accounts_need_setup:
+          one: 1 eToro account needs setup...
+          other: "%{count} eToro accounts need setup..."
+        processing_activity: Processing positions and activity...
+        calculating_balances: Calculating balances...
+      partial_failures:
+        trade_history: Trade history
+        balance_history: Daily account value
+        instrument_metadata: Instrument details
+        instruments_not_described:
+          one: eToro returned no details for 1 instrument, so its positions and trades are not imported yet. The next sync asks again.
+          other: "eToro returned no details for %{count} instruments, so their positions and trades are not imported yet. The next sync asks again."
+        skipped_after_rate_limit: Not fetched because eToro's rate limit was reached. The next sync fetches it.
+        trade_history_truncated: Stopped after %{pages} pages, so older trades were not fetched.
+        price_history: Price history
+        price_history_incomplete:
+          one: The prices of 1 instrument are left for the next sync, to keep within eToro's request limits.
+          other: "The prices of %{count} instruments are left for the next sync, to keep within eToro's request limits."
+        price_history_missing_rates:
+          one: Sure has no %{currency} exchange rate for 1 day, so eToro's price that day was not stored. The next sync tries again.
+          other: "Sure has no %{currency} exchange rates for %{count} days, so eToro's prices those days were not stored. The next sync tries again."
+        price_history_instruments_failed:
+          one: eToro did not send the prices of 1 instrument. The next sync asks again.
+          other: "eToro did not send the prices of %{count} instruments. The next sync asks again."
+      errors:
+        records_failed:
+          one: 1 holding, trade or daily balance could not be imported.
+          other: "%{count} holdings, trades or daily balances could not be imported."
+    sync_status:
+      no_accounts: No eToro account discovered yet
+      all_linked:
+        one: 1 account linked
+        other: "%{count} accounts linked"
+      partial: "%{linked} linked, %{unlinked} need setup"
+    select_existing_account:
+      title: Link eToro account
+      no_accounts_available: No unlinked eToro accounts are available yet.
+      run_sync_hint: "Run a sync from Settings > Providers after saving your API keys."
+      wait_for_sync: Wait for the account discovery sync to finish.
+      account_summary: "%{currency} • Balance: %{balance}"
+      link: Link
+      cancel: Cancel
+    create:
+      success: Successfully configured eToro.
+    update:
+      success: Successfully updated eToro configuration.
+    destroy:
+      success: Scheduled eToro connection for deletion.
+      syncing: Wait for the sync to finish before deleting the connection.
+    select_accounts:
+      not_configured: eToro is not configured.
+    link_existing_account:
+      not_found: Account or eToro configuration not found.
+      only_manual_investment: Only manual investment accounts can be linked to eToro.
+      already_linked: This eToro account is already linked.
+      syncing: Wait for the eToro sync to finish before linking the account.
+      success: Successfully linked to eToro account.
+      failed: Failed to link eToro account.
+    update_display_mode:
+      success: Saved. eToro is syncing to rebuild the account.
+      syncing: Wait for the sync to finish before changing how the account is shown.
+      inactive: How the account is shown can't change while it is disabled or being deleted.
+      invalid: That is not a way the account can be shown.
+    complete_account_setup:
+      success:
+        one: Successfully created %{count} eToro account.
+        other: Successfully created %{count} eToro accounts.
+      none_selected: No accounts were selected.
+      none_created: No accounts were created.
+      syncing: Wait for the sync to finish before setting up accounts.

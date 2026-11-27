@@ -25,6 +25,10 @@ class AccountProvider < ApplicationRecord
   # Linking an account the user ignored during setup is how they take it back.
   after_create :stop_ignoring_provider_account, if: -> { provider.respond_to?(:ignored?) }
 
+  # eToro's prices are for the linked account's holdings alone, so an unlink
+  # hands them back at once rather than on the connection's next sync.
+  after_destroy_commit :release_etoro_prices, if: :etoro_provider?
+
   # Returns the provider adapter for this connection
   def adapter
     Provider::Factory.create_adapter(provider, account: account)
@@ -57,6 +61,22 @@ class AccountProvider < ApplicationRecord
       if provider_type == "FinancekitAccountLineage" && provider&.family_id != account.family_id
         errors.add(:account, "must belong to the FinanceKit enrollment family")
       end
+    end
+
+    def etoro_provider?
+      provider_type == "EtoroAccount"
+    end
+
+    def release_etoro_prices
+      EtoroAccount.find_by(id: provider_id)&.etoro_item&.release_unused_prices!
+    rescue => e
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "error",
+        message: "AccountProvider##{id}: failed to hand back eToro's prices after unlinking: #{e.class} - #{e.message}",
+        source: "etoro",
+        provider_key: "etoro"
+      )
     end
 
     def coinstats_provider?
