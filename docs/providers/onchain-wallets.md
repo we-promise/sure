@@ -111,7 +111,7 @@ address, the cost is roughly:
 | Bitcoin | 1 + up to 10 history pages |
 | EVM | 1 summary + up to 10 pages of transfers + up to 10 pages of token transfers |
 | Solana | ~2 + up to 25 transaction reads |
-| Cosmos Hub | 3, plus a page per extra 200 validators staked with |
+| Cosmos Hub | 4, plus a page per extra 200 validators staked with |
 | Polkadot | 1 |
 
 History is capped by default at 10 pages per source — 250 transactions for
@@ -245,9 +245,10 @@ resolve without the list, so they keep working if it is unreachable. Names are
 cached for 24 hours per mint, misses included.
 
 **Cosmos Hub has no transfer history.** Public nodes do not index
-transactions, so only the ATOM balance is read: spendable, staked and unbonding,
-but not unclaimed rewards or IBC tokens. Past transfers are not
-imported.
+transactions, so only the ATOM balance is read: spendable, staked, unbonding and
+unclaimed staking rewards (whole uatom only), but not IBC tokens. Past transfers
+are not imported, so claimed rewards and staking changes appear as balance
+changes rather than as entries.
 
 **Polkadot has no transfer history.** No keyless source indexes transfers, so
 only the DOT balance on Asset Hub is read, staked DOT included. Other Asset Hub

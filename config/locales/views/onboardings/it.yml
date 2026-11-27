@@ -5,7 +5,7 @@ it:
       sign_out: Disconnetti
       setup: Configurazione
       preferences: Preferenze
-      goals: Obiettivi
+      tools: Strumenti/IA
       start: Inizia
     logout:
       sign_out: Disconnetti
@@ -38,17 +38,48 @@ it:
       currency: Valuta
       date_format: Formato data
       submit: Completa
-    goals:
-      title: Cosa ti porta qui?
-      subtitle: Seleziona uno o più obiettivi che hai nell'utilizzare %{product_name} come strumento di finanza personale.
-      unified_accounts: Vedere tutti i miei conti in un unico posto
-      cashflow: Capire i flussi di cassa e le spese
-      budgeting: Gestire piani finanziari e budget
-      partner: Gestire le finanze con un partner
-      investments: Monitorare gli investimenti
-      ai_insights: Usare l'AI per capire meglio le mie finanze
-      optimization: Analizzare e ottimizzare i conti
-      reduce_stress: Ridurre lo stress o l'ansia finanziaria
+    tools:
+      title: Fai come se fossi a casa tua.
+      subtitle: Un paio di scelte per rendere %{product_name} tuo.
+      starting_point:
+        eyebrow: Il tuo punto di partenza
+        title: Cosa hai usato finora?
+        description: Scegli gli strumenti che usi per gestire le finanze del tuo nucleo familiare.
+        select: Seleziona i tuoi strumenti
+        other_placeholder: Altro strumento (facoltativo)
+        hint: Seleziona tutti quelli pertinenti. Ci aiuta a suggerirti un punto di partenza, non implica che i dati siano importabili.
+        tools:
+          nothing_yet: Ancora nessuno
+          other: Altro
+      ai:
+        eyebrow: La tua preferenza sull'IA
+        title: Come vorresti usare %{product_name}?
+        description: Decidi tu. Scegli quello che fa per te.
+        default: Predefinito
+        modes:
+          none:
+            title: Nessuna IA
+            description: Gestisci le tue finanze senza l'assistente dell'app.
+          builtin:
+            title: IA integrata
+            description: Attiva l'assistente dell'app, con il provider IA di questa istanza.
+          external:
+            title: Usa il tuo agente IA
+            description: Usa il tuo assistente, collegato con il tuo permesso.
+        panels:
+          admin_on: Come amministratore, questo vale anche come consenso del tuo nucleo familiare per le funzioni IA eseguite in background, come la categorizzazione.
+          admin_off: Come amministratore, questo revoca anche il tuo consenso per le funzioni IA eseguite in background, come la categorizzazione. Restano attive solo se un altro amministratore ha l'IA attivata.
+          none:
+            title: Il tuo assistente resta disattivato.
+            body: Questo disattiva l'assistente dell'app per il tuo account.
+          builtin:
+            title: Il tuo assistente si attiva.
+            body: Questo attiva l'assistente dell'app per il tuo account. Quale provider IA usa, e se è disponibile, dipende comunque dalle impostazioni IA di questa istanza.
+            not_configured: Su questa istanza non è ancora configurato alcun provider IA. Un amministratore può aggiungerne uno in Impostazioni → Self-Hosting.
+            unavailable: Le impostazioni IA attuali del tuo nucleo familiare non attivano l'assistente dell'app, quindi non risponderà finché un amministratore non le modifica.
+          external:
+            title: Collega il tuo agente quando vuoi.
+            body: L'IA resta attiva per il tuo account. Quando il tuo nucleo familiare è configurato per la chat esterna, le conversazioni usano il tuo assistente esterno invece dell'assistente integrato di %{product_name}, nella stessa interfaccia di chat. %{product_name} continua a gestire importazioni, categorizzazione e gli altri processi come archivio principale dei tuoi dati. Il tuo agente può interagire con esso tramite MCP o sure-cli; per collegarlo, vai in Impostazioni → MCP. Questa scelta non configura il servizio di chat né crea, modifica o rimuove alcuna connessione.
       submit: Avanti
     trial:
       title: Prova Sure per 45 giorni
