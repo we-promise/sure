@@ -485,6 +485,110 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 3980, trend.previous.amount, 0.001
   end
 
+  # ------------------------------ period return: unconvertible accounts
+
+  # ExchangeRate.rate_sql leaves an unconvertible row out on its own, but row
+  # by row. The two legs read different rows, so an account is left out of
+  # both or neither, and the count says how many were left out.
+  test "an account whose in-period rows have no rate is left out of both legs" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+    usd = create_investment_account(balance: 10_500)
+    switched = create_investment_account(balance: 5000)
+    usd.balances.create!(date: period.date_range.begin - 1.day, balance: 10_000,
+                         currency: "USD", start_non_cash_balance: 10_000, net_market_flows: 0)
+    usd.balances.create!(date: period.date_range.end, balance: 10_500,
+                         currency: "USD", start_non_cash_balance: 10_000, net_market_flows: 500)
+    # Start value in the family currency, flows after a switch to a currency
+    # with no rate anywhere.
+    switched.balances.create!(date: period.date_range.begin - 1.day, balance: 4000,
+                              currency: "USD", start_non_cash_balance: 4000, net_market_flows: 0)
+    switched.balances.create!(date: period.date_range.end, balance: 4000,
+                              currency: "EUR", start_non_cash_balance: 4000, net_market_flows: 300)
+
+    trend = @statement.period_return_trend(period: period)
+
+    assert_equal 10_000, trend.previous.amount, "the start value stayed while its flows were dropped"
+    assert_equal 10_500, trend.current.amount
+    assert_equal 1, @statement.period_return_unconvertible_count(period: period)
+  end
+
+  test "an account whose start value has no rate is left out of both legs" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+    usd = create_investment_account(balance: 10_500)
+    switched = create_investment_account(balance: 5000)
+    usd.balances.create!(date: period.date_range.begin - 1.day, balance: 10_000,
+                         currency: "USD", start_non_cash_balance: 10_000, net_market_flows: 0)
+    usd.balances.create!(date: period.date_range.end, balance: 10_500,
+                         currency: "USD", start_non_cash_balance: 10_000, net_market_flows: 500)
+    switched.balances.create!(date: period.date_range.begin - 1.day, balance: 4000,
+                              currency: "EUR", start_non_cash_balance: 4000, net_market_flows: 0)
+    switched.balances.create!(date: period.date_range.end, balance: 4000,
+                              currency: "USD", start_non_cash_balance: 4000, net_market_flows: 300)
+
+    trend = @statement.period_return_trend(period: period)
+
+    assert_equal 10_000, trend.previous.amount
+    assert_equal 10_500, trend.current.amount, "the flows stayed while their start value was dropped"
+    assert_equal 1, @statement.period_return_unconvertible_count(period: period)
+  end
+
+  test "an account whose currency has no rate at all is counted as left out" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+    usd = create_investment_account(balance: 10_500)
+    eur = create_investment_account(balance: 5000, currency: "EUR")
+    [ [ usd, "USD" ], [ eur, "EUR" ] ].each do |account, currency|
+      account.balances.create!(date: period.date_range.begin - 1.day, balance: 10_000,
+                               currency: currency, start_non_cash_balance: 10_000, net_market_flows: 0)
+      account.balances.create!(date: period.date_range.end, balance: 10_500,
+                               currency: currency, start_non_cash_balance: 10_000, net_market_flows: 500)
+    end
+    # A rate from EUR to another currency does not convert it into USD.
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "AUD", date: period.date_range.begin, rate: 9)
+
+    trend = @statement.period_return_trend(period: period)
+
+    assert_equal 10_000, trend.previous.amount
+    assert_equal 10_500, trend.current.amount
+    assert_equal 1, @statement.period_return_unconvertible_count(period: period)
+  end
+
+  test "an account whose currency has a rate is converted and not counted" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+    eur = create_investment_account(balance: 5000, currency: "EUR")
+    eur.balances.create!(date: period.date_range.begin - 1.day, balance: 1000,
+                         currency: "EUR", start_non_cash_balance: 1000, net_market_flows: 0)
+    eur.balances.create!(date: period.date_range.end, balance: 1100,
+                         currency: "EUR", start_non_cash_balance: 1000, net_market_flows: 100)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: period.date_range.begin - 30, rate: 2)
+
+    trend = @statement.period_return_trend(period: period)
+
+    assert trend, "the account was left out although its currency has a rate"
+    assert_equal 2000, trend.previous.amount
+    assert_equal 2200, trend.current.amount
+    assert_equal 0, @statement.period_return_unconvertible_count(period: period)
+  end
+
+  # Only the rows the two legs read decide it: an older row in a currency
+  # with no rate changes nothing in this period's figure.
+  test "an unconvertible row before the start value does not leave the account out" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+    account = create_investment_account(balance: 10_500)
+    account.balances.create!(date: period.date_range.begin - 60.days, balance: 3000,
+                             currency: "EUR", start_non_cash_balance: 3000, net_market_flows: 0)
+    account.balances.create!(date: period.date_range.begin - 1.day, balance: 10_000,
+                             currency: "USD", start_non_cash_balance: 10_000, net_market_flows: 0)
+    account.balances.create!(date: period.date_range.end, balance: 10_500,
+                             currency: "USD", start_non_cash_balance: 10_000, net_market_flows: 500)
+
+    trend = @statement.period_return_trend(period: period)
+
+    assert trend, "the account was left out for a row neither leg reads"
+    assert_equal 10_000, trend.previous.amount
+    assert_equal 10_500, trend.current.amount
+    assert_equal 0, @statement.period_return_unconvertible_count(period: period)
+  end
+
   test "period_return_trend returns nil when no balance data in period" do
     period = Period.custom(start_date: 10.years.ago.to_date, end_date: 9.years.ago.to_date)
     assert_nil @statement.period_return_trend(period: period)
