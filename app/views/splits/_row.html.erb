@@ -1,4 +1,4 @@
-<%# locals: (index:, categories:, merchants:, tags:, name: nil, amount: nil, category_id: nil, merchant_id: nil, tag_ids: [], removable: true) %>
+<%# locals: (index:, categories:, merchants:, tags:, name: nil, amount: nil, step: "0.01", category_id: nil, merchant_id: nil, tag_ids: [], removable: true) %>
 
 <%# Styled builder fields and DS pickers, the same controls as the transaction form. %>
 <div class="p-3 rounded-lg border border-secondary bg-container space-y-2" data-split-transaction-target="row">
@@ -17,7 +17,7 @@
             value: amount,
             label: t("splits.new.amount_label"),
             placeholder: "0.00",
-            step: "0.01",
+            step: step,
             required: true,
             autocomplete: "off",
             container_class: "flex-1 md:flex-none md:w-32",

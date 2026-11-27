@@ -1,9 +1,28 @@
 class SplitsController < ApplicationController
+  include AiFeatureGuard
+  requires_ai :extract_receipt, only: :itemize
   before_action :set_entry
-  before_action :require_split_write_permission!, only: %i[create update destroy]
+  before_action :require_split_write_permission!, only: %i[create update destroy itemize]
 
   def new
     set_form_options
+    @receipt_itemization_available = Transaction::ReceiptItemizer.available?(@entry.transaction, user: Current.user)
+    if params[:receipt_itemization_id].present?
+      @receipt_itemization = ReceiptItemization.where(transaction_id: @entry.transaction.id, user: Current.user).find(params[:receipt_itemization_id])
+      return render :itemization if @receipt_itemization.status == "pending"
+
+      @receipt_proposal = @receipt_itemization.editor_proposal
+      @receipt_error = t("splits.itemize.failed") if @receipt_itemization.status == "failed"
+    end
+  end
+
+  def itemize
+    @receipt_itemization = ReceiptItemization.start!(transaction: @entry.transaction, user: Current.user, attachment_id: params[:attachment_id])
+    redirect_to new_transaction_split_path(@entry, receipt_itemization_id: @receipt_itemization.id), status: :see_other
+  rescue Transaction::ReceiptItemizer::Error
+    set_form_options
+    @receipt_error = t("splits.itemize.failed")
+    render :new, status: :unprocessable_entity
   end
 
   def create

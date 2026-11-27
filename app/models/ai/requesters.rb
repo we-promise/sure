@@ -3,6 +3,7 @@
 # declares the key it's listed under.
 module Ai::Requesters
   CLASSES = {
+    extract_receipt: "ReceiptItemization",
     categorize: "Family::AutoCategorizer",
     detect_merchants: "Family::AutoMerchantDetector",
     enhance_merchants: "ProviderMerchant::Enhancer"

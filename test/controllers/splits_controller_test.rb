@@ -365,7 +365,45 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     refute @entry.reload.excluded?
   end
 
+  test "itemize queues a proposal and shows a pending editor" do
+    use_ai_routes(extract_receipt: %w[openai/gpt-4.1-mini])
+    @user.update!(ai_enabled: true)
+    attach_receipt
+    Ai::Generations::ExtractReceipt.expects(:new).never
+    assert_enqueued_with(job: Ai::GenerationJob) { post itemize_transaction_split_path(@entry) }
+    assert_response :see_other
+    follow_redirect!
+    assert_response :success
+    assert_select "[data-controller=polling]"
+    refute @entry.reload.split_parent?
+  end
+
+  test "completed proposal retains merchant and tag pickers" do
+    use_ai_routes(extract_receipt: %w[openai/gpt-4.1-mini])
+    @user.update!(ai_enabled: true)
+    attach_receipt
+    request = ReceiptItemization.start!(transaction: @entry.transaction, user: @user)
+    request.apply_ai(Ai::Result.new(value: { line_items: [ { name: "Food", amount: 100 } ], currency: "USD" }))
+    get new_transaction_split_path(@entry, receipt_itemization_id: request.id)
+    assert_response :success
+    assert_select "input[name=?][value=?]", "split[splits][0][name]", "Food"
+    assert_select "[name=?]", "split[splits][0][merchant_id]"
+    assert_select "[name=?]", "split[splits][0][tag_ids][]"
+  end
+
+  test "itemize does not queue when consent is off" do
+    use_ai_routes(extract_receipt: %w[openai/gpt-4.1-mini])
+    @user.update!(ai_enabled: false)
+    attach_receipt
+    assert_no_enqueued_jobs(only: Ai::GenerationJob) { post itemize_transaction_split_path(@entry) }
+    assert_response :redirect
+  end
+
   private
+    def attach_receipt
+      @entry.transaction.attachments.attach(io: StringIO.new("png"), filename: "receipt.png", content_type: "image/png")
+    end
+
     def sql_queries(&block)
       queries = []
       ActiveSupport::Notifications.subscribed(->(*, payload) { queries << payload[:sql] }, "sql.active_record", &block)

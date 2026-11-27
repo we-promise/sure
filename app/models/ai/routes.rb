@@ -11,6 +11,7 @@ module Ai::Routes
                          sends: %i[chat_messages looked_up_financial_data stored_document_text] },
     bill_setup:        { lane: :interactive, needs: %i[structured_output],      consent: :user,
                          sends: %i[transaction_dates transaction_amounts transaction_names category_names bill_configuration] },
+    extract_receipt: { lane: :interactive, needs: %i[structured_output], consent: :user, sends: %i[uploaded_document] },
     # A route entry reads (a model with structured output; vision or documents per way of reading)
     # or transcribes (an OCR model, read before the text model extracts).
     # An OCR model alone can't extract (`requires`): it only transcribes for the model that reads.

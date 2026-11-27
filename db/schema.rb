@@ -2131,6 +2131,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
     t.check_constraint "weekday_ordinal IS NULL OR weekday_ordinal >= '-1'::integer AND weekday_ordinal <= 5 AND weekday_ordinal <> 0", name: "chk_recurrence_rules_weekday_ordinal_range"
   end
 
+  create_table "receipt_itemizations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "transaction_id", null: false
+    t.uuid "user_id", null: false
+    t.uuid "attachment_id", null: false
+    t.string "status", default: "pending", null: false
+    t.jsonb "proposal", default: {}, null: false
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["attachment_id"], name: "index_receipt_itemizations_on_attachment_id"
+    t.index ["transaction_id"], name: "index_receipt_itemizations_on_transaction_id"
+    t.index ["user_id"], name: "index_receipt_itemizations_on_user_id"
+  end
+
   create_table "recurring_allocations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.decimal "allocated_amount", precision: 19, scale: 4, null: false
     t.datetime "created_at", null: false
@@ -3389,4 +3403,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
   add_foreign_key "weekly_cleanup_runs", "users", on_delete: :cascade
   add_foreign_key "wise_accounts", "wise_items", on_delete: :cascade
   add_foreign_key "wise_items", "families"
+  add_foreign_key "receipt_itemizations", "active_storage_attachments", column: "attachment_id", on_delete: :cascade
+  add_foreign_key "receipt_itemizations", "transactions", on_delete: :cascade
+  add_foreign_key "receipt_itemizations", "users", on_delete: :cascade
+
 end
