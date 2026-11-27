@@ -153,7 +153,7 @@ export default class extends Controller {
     const conditionRows = document.querySelectorAll("[data-controller~='rule--conditions']");
 
     for (const row of conditionRows) {
-      if (row.classList.contains("hidden")) continue;
+      if (row.closest("[data-controller~='rule--conditions'].hidden")) continue;
 
       const typeSelect = row.querySelector("select[name*='[condition_type]']");
       const operatorSelect = row.querySelector("select[name*='[operator]']");

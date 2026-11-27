@@ -679,6 +679,45 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "update destroys a condition group marked for destruction with its sub-conditions" do
+    rule = @user.family.rules.create!(
+      name: "Grouped rule",
+      resource_type: "transaction",
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Groceries"),
+        Rule::Condition.new(
+          condition_type: "compound", operator: "or",
+          sub_conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Coffee") ]
+        )
+      ],
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
+    )
+    plain = rule.conditions.find_by!(condition_type: "transaction_name")
+    group = rule.conditions.find_by!(condition_type: "compound")
+    sub = group.sub_conditions.sole
+
+    assert_difference -> { Rule::Condition.count }, -2 do
+      patch rule_url(rule), params: {
+        rule: {
+          conditions_attributes: {
+            "0" => { id: plain.id, condition_type: "transaction_name", operator: "like", value: "Groceries", _destroy: "false" },
+            "1" => {
+              id: group.id, condition_type: "compound", operator: "or", _destroy: "1",
+              sub_conditions_attributes: {
+                "0" => { id: sub.id, condition_type: "transaction_name", operator: "like", value: "Coffee", _destroy: "false" }
+              }
+            }
+          }
+        }
+      }
+    end
+
+    assert_redirected_to rules_url
+    assert_not Rule::Condition.exists?(group.id)
+    assert_not Rule::Condition.exists?(sub.id)
+    assert_equal [ plain.id ], rule.reload.conditions.pluck(:id)
+  end
+
   test "update saves apply immediately" do
     rule = create_category_rule("Groceries")
 

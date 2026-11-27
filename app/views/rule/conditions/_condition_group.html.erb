@@ -6,6 +6,7 @@
 <li data-controller="rule--conditions" class="border border-secondary rounded-md p-4 space-y-3">
 
   <%= form.hidden_field :condition_type, value: "compound" %>
+  <%= form.hidden_field :_destroy, value: false, data: { rule__conditions_target: "destroyField" } %>
 
   <div class="flex items-center justify-between gap-2">
     <div class="flex items-center gap-2">
@@ -22,7 +23,7 @@
       "trash-2",
       as_button: true,
       size: "sm",
-      data: { action: "rule--conditions#remove" }
+      data: { action: "rule--conditions#remove", rule__conditions_destroy_param: condition.persisted? }
     ) %>
   </div>
 
