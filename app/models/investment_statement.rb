@@ -509,6 +509,63 @@ class InvestmentStatement
     )
   end
 
+  # Time- and money-weighted returns, volatility, drawdown and the drivers
+  # breakdown for the family's investment accounts over `period`.
+  #
+  # The engine is read-only and cached, so it is safe from a GET.
+  #
+  # ACCOUNT SCOPE. The *historical* scope, matching #value_series and the
+  # net-worth series: a closed or disabled account keeps its history up to its
+  # cut-off date instead of vanishing from the return. Returns and the value
+  # chart are measured over the same accounts -- the alternative let a family
+  # that closed a large account see a return history contradicting its own
+  # chart.
+  #
+  # `active_until_dates` is what carries the cut-off: Portfolio::DailyReturns
+  # stops counting an account's balances and flows after its date, so the
+  # account contributes the days it was real and nothing after.
+  #
+  # The default period is the family's month, which starts on its custom
+  # month-start day when it has one (`Period.current_month_for`), as the
+  # period picker's default does.
+  def performance(period: Period.current_month_for(family))
+    Portfolio::Performance.new(
+      family: family,
+      account_ids: historical_scope.account_ids,
+      period: period,
+      user: user,
+      active_until_dates: historical_scope.active_until_dates
+    )
+  end
+
+  # What return method each account's data can support, keyed by account id.
+  # Callers must not quote a figure an account's scope does not support.
+  #
+  # Same historical scope as #performance, and for the same reason: an account
+  # whose history is inside the aggregate return must have a scope a reader can
+  # look up, or the per-account breakdown silently omits a contributor to the
+  # total it sits beside.
+  def return_scopes(period: Period.current_month_for(family))
+    Portfolio::ReturnScope.resolve_all(
+      accounts: historical_scope.accounts, period: period,
+      active_until_dates: historical_scope.active_until_dates
+    )
+  end
+
+  # Realised profit and loss over the period, by the month it was crystallised.
+  #
+  # Same historical scope, and for the same reason #performance gives: a
+  # realised-P&L timeline printed beside a return figure must be measured over
+  # the same accounts, or the two quietly describe different portfolios.
+  def realized_gains(period: Period.current_month_for(family))
+    Portfolio::RealizedGains.new(
+      accounts: historical_scope.accounts,
+      period: period,
+      currency: family.currency,
+      active_until_dates: historical_scope.active_until_dates
+    )
+  end
+
   # Investment accounts
   def investment_accounts
     @investment_accounts ||= report_accounts.where(accountable_type: HistoricalScope::INVESTMENT_ACCOUNTABLE_TYPES)
