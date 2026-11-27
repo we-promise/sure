@@ -38,7 +38,9 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     assert_equal open_groups_before, open_group_count
 
     visit account_path(checking)
-    assert_depository_order [ plaid.id, checking.id ]
+    within_testid("account-sidebar-tabs") do
+      assert_equal [ plaid.id, checking.id ], visible_depository_ids.first(2)
+    end
   end
 
   test "leaving sort mode saves a row still held with the keyboard" do
@@ -73,14 +75,14 @@ class AccountManualOrderTest < ApplicationSystemTestCase
       handle.send_keys(:enter)
       handle.send_keys(:up)
 
-      link = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] a[href='#{account_path(plaid)}']")
-      link.hover
-      link.click
+      find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] a[href='#{account_path(plaid)}']").click
     end
 
     assert_current_path account_path(plaid)
     assert_eventually { @user.reload.manual_account_order["depository"]&.first(2) == [ plaid.id, checking.id ] }
-    assert_depository_order [ plaid.id, checking.id ]
+    within_testid("account-sidebar-tabs") do
+      assert_equal [ plaid.id, checking.id ], visible_depository_ids.first(2)
+    end
   end
 
   test "leaving sort mode keeps focus in the sidebar when no sort toggle is visible" do
@@ -227,14 +229,6 @@ class AccountManualOrderTest < ApplicationSystemTestCase
   end
 
   private
-    # The URL and saved order can update before Turbo replaces its cached preview.
-    def assert_depository_order(ids)
-      selector = "[data-testid='account-sidebar-tabs'] [data-sortable-list-url-value='#{reorder_accounts_path(group: "depository")}']"
-      assert_selector selector, visible: true do |list|
-        list.all("[data-sortable-list-target='item']").map { |item| item["data-sortable-list-id"] }.first(ids.size) == ids
-      end
-    end
-
     def open_group_count
       evaluate_script("document.querySelectorAll(\"[data-testid='account-sidebar-tabs'] details[open]\").length")
     end
