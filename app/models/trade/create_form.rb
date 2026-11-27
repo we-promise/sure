@@ -20,7 +20,8 @@ class Trade::CreateForm
   SUPPORTED_TYPES = (ACTIVITY_LABELS.keys + TRANSFER_TYPES).freeze
 
   attr_accessor :account, :date, :amount, :currency, :qty,
-                :price, :fee, :ticker, :manual_ticker, :type, :transfer_account_id
+                :price, :fee, :ticker, :manual_ticker, :type, :transfer_account_id,
+                :skip_account_sync
 
   # Either creates a trade, transaction, or transfer based on type
   # Returns the model, regardless of success or failure
@@ -86,7 +87,10 @@ class Trade::CreateForm
 
       if trade_entry.save
         trade_entry.lock_saved_attributes!
-        account.sync_later
+        # Callers that report a persisted trade even when the queue is down
+        # (the assistant) enqueue the sync themselves. Everyone else still
+        # syncs here, before this method returns.
+        account.sync_later unless skip_account_sync
       end
 
       trade_entry
