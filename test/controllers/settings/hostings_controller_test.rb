@@ -1542,6 +1542,84 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.ai_health_probe_timeout = nil
   end
 
+  ENV_LOCKED_AI_FIELDS = {
+    "input[name='setting[openai_uri_base]']" => [ "OPENAI_URI_BASE", :openai_uri_base, "http://stored.example", "http://env.example/v1" ],
+    "input[name='setting[openai_model]']" => [ "OPENAI_MODEL", :openai_model, "stored-model", "env-model" ],
+    "input[name='setting[llm_context_window]']" => [ "LLM_CONTEXT_WINDOW", :llm_context_window, 4096, "8192" ],
+    "input[name='setting[llm_max_response_tokens]']" => [ "LLM_MAX_RESPONSE_TOKENS", :llm_max_response_tokens, 256, "1024" ],
+    "input[name='setting[ai_response_timeout]']" => [ "AI_RESPONSE_TIMEOUT", :ai_response_timeout, 120, "200" ],
+    "input[name='setting[llm_max_items_per_call]']" => [ "LLM_MAX_ITEMS_PER_CALL", :llm_max_items_per_call, 10, "40" ],
+    "input[name='setting[anthropic_base_url]']" => [ "ANTHROPIC_BASE_URL", :anthropic_base_url, "https://stored.example", "https://env.example" ],
+    "input[name='setting[anthropic_model]']" => [ "ANTHROPIC_MODEL", :anthropic_model, "stored-claude", "env-claude" ]
+  }.freeze
+
+  test "env-locked AI fields show the environment value, not the stored setting" do
+    with_self_hosting do
+      ENV_LOCKED_AI_FIELDS.each_value { |_env, key, stored, _value| Setting.public_send("#{key}=", stored) }
+      Setting.openai_json_mode = "none"
+
+      env = ENV_LOCKED_AI_FIELDS.values.to_h { |name, _key, _stored, value| [ name, value ] }
+      with_env_overrides(env.merge("LLM_JSON_MODE" => "strict")) do
+        get settings_hosting_url
+      end
+
+      assert_response :success
+      ENV_LOCKED_AI_FIELDS.each do |selector, (_env, _key, stored, value)|
+        assert_select "#{selector}[disabled='disabled'][value='#{value}']", 1, "#{selector} should show #{value}"
+        assert_select "#{selector}[value='#{stored}']", 0, "#{selector} should not show the stored #{stored}"
+      end
+      assert_select "select[name='setting[openai_json_mode]'][disabled='disabled'] option[selected][value='strict']"
+      assert_select "select[name='setting[openai_json_mode]'] option[selected][value='none']", 0
+    end
+  ensure
+    %i[openai_uri_base openai_model llm_context_window llm_max_response_tokens llm_max_items_per_call openai_json_mode].each { |key| Setting.public_send("#{key}=", nil) }
+  end
+
+  test "an env value the runtime ignores locks the field but shows the value in use" do
+    with_self_hosting do
+      Setting.llm_max_items_per_call = 10
+      Setting.llm_max_response_tokens = 256
+      Setting.llm_context_window = 4096
+      Setting.ai_response_timeout = 120
+      Setting.openai_json_mode = "none"
+
+      with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "0", "LLM_MAX_RESPONSE_TOKENS" => "0", "LLM_CONTEXT_WINDOW" => "0",
+                         "AI_RESPONSE_TIMEOUT" => "10", "LLM_JSON_MODE" => "bogus") do
+        get settings_hosting_url
+      end
+
+      assert_response :success
+      assert_select "input[name='setting[llm_max_items_per_call]'][disabled='disabled'][value='10']"
+      assert_select "input[name='setting[llm_max_response_tokens]'][disabled='disabled'][value='256']"
+      assert_select "input[name='setting[llm_context_window]'][disabled='disabled'][value='4096']"
+      # Chat.response_timeout raises a positive env value below MIN_RESPONSE_TIMEOUT to that minimum.
+      assert_select "input[name='setting[ai_response_timeout]'][disabled='disabled'][value='#{Chat::MIN_RESPONSE_TIMEOUT.to_i}']"
+      assert_select "select[name='setting[openai_json_mode]'][disabled='disabled'] option[selected][value='none']"
+    end
+  ensure
+    %i[llm_max_items_per_call llm_max_response_tokens llm_context_window openai_json_mode].each { |key| Setting.public_send("#{key}=", nil) }
+  end
+
+  test "without env values, or with blank ones, AI fields stay editable and show the stored setting" do
+    with_self_hosting do
+      ENV_LOCKED_AI_FIELDS.each_value { |_env, key, stored, _value| Setting.public_send("#{key}=", stored) }
+
+      [ nil, "" ].each do |blank|
+        env = ENV_LOCKED_AI_FIELDS.values.to_h { |name, *| [ name, blank ] }
+        with_env_overrides(env.merge("LLM_JSON_MODE" => blank)) do
+          get settings_hosting_url
+        end
+
+        assert_response :success
+        ENV_LOCKED_AI_FIELDS.each do |selector, (_env, _key, stored, _value)|
+          assert_select "#{selector}[value='#{stored}']:not([disabled])", 1, "#{selector} should show the stored #{stored} (env #{blank.inspect})"
+        end
+      end
+    end
+  ensure
+    %i[openai_uri_base openai_model llm_context_window llm_max_response_tokens llm_max_items_per_call].each { |key| Setting.public_send("#{key}=", nil) }
+  end
+
   test "can clear data only when admin" do
     with_self_hosting do
       sign_in users(:family_member)
