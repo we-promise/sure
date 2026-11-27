@@ -387,6 +387,53 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Dividend", sub_div.entryable.investment_activity_label
   end
 
+  test "processes card purchases as outflows and refunds and payments as inflows" do
+    process_activities(
+      build_cash_activity(id: "purchase_001", type: "POSDEBIT", amount: -32.73, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "refund_001", type: "POSCREDIT", amount: 10.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "payment_001", type: "PAYMENT", amount: 500.00, settlement_date: Date.current.to_s)
+    )
+
+    assert_equal 32.73, snaptrade_entry("purchase_001").amount.to_f
+    assert_equal(-10.00, snaptrade_entry("refund_001").amount.to_f)
+    assert_equal(-500.00, snaptrade_entry("payment_001").amount.to_f)
+  end
+
+  test "a card payment with no matched bank side is a transfer, not income" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    @snaptrade_account.reload
+
+    process_activities(
+      build_cash_activity(id: "payment_002", type: "PAYMENT", amount: 500.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "purchase_002", type: "POSDEBIT", amount: -32.73, settlement_date: Date.current.to_s)
+    )
+
+    payment = card.entries.find_by!(external_id: "payment_002", source: "snaptrade")
+    assert_equal(-500.00, payment.amount.to_f)
+    assert_equal "funds_movement", payment.entryable.kind
+    assert_equal "standard", card.entries.find_by!(external_id: "purchase_002", source: "snaptrade").entryable.kind
+  end
+
+  # SnapTrade links a line of credit without "card" in its type as a Loan.
+  # Account::ProviderImportAdapter already classifies money into a linked Loan
+  # as loan_payment (a transfer kind), so only cards needed card_payment_kind.
+  test "a payment into a line of credit linked as a loan is a loan payment, not income" do
+    loan = @family.accounts.create!(name: "Line of credit", balance: 0, currency: "USD", accountable: Loan.new)
+    @snaptrade_account.ensure_account_provider!(loan)
+    @snaptrade_account.reload
+
+    process_activities(
+      build_cash_activity(id: "payment_003", type: "PAYMENT", amount: 300.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "purchase_003", type: "POSDEBIT", amount: -40.00, settlement_date: Date.current.to_s)
+    )
+
+    payment = loan.entries.find_by!(external_id: "payment_003", source: "snaptrade").entryable
+    assert_equal "loan_payment", payment.kind
+    assert_includes Transaction::TRANSFER_KINDS, payment.kind
+    assert_equal "standard", loan.entries.find_by!(external_id: "purchase_003", source: "snaptrade").entryable.kind
+  end
+
   test "processes cash FEE and TAX as positive outflow and INTEREST as negative inflow" do
     process_activities(
       build_cash_activity(id: "fee_001", type: "FEE", amount: -25.00, settlement_date: Date.current.to_s),
@@ -2435,7 +2482,63 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
       "db price (priority 1) must beat trade price (priority 2) and holding price (priority 3)"
   end
 
+  test "a Wealthsimple card purchase is an outflow named after the merchant" do
+    process_activities(card_activity(id: "card_buy", description: "CREDIT_CARD PURCHASE: Corner Grocery #12", amount: -42.50))
+
+    entry = snaptrade_entry("card_buy")
+    assert_equal 42.50, entry.amount.to_f
+    assert_equal "Corner Grocery #12", entry.name
+  end
+
+  test "Wealthsimple card refunds and payments are inflows" do
+    process_activities(
+      card_activity(id: "card_refund", description: "CREDIT_CARD REFUND: Clothing Store 7", amount: 80.00),
+      card_activity(id: "card_payment", description: "CREDIT_CARD PAYMENT", amount: 1200.00)
+    )
+
+    assert_equal(-80.00, snaptrade_entry("card_refund").amount.to_f)
+    assert_equal "Clothing Store 7", snaptrade_entry("card_refund").name
+    assert_equal(-1200.00, snaptrade_entry("card_payment").amount.to_f)
+    assert_equal "CREDIT_CARD PAYMENT", snaptrade_entry("card_payment").name
+  end
+
+  test "a bare CREDIT_CARD row keeps the provider sign" do
+    process_activities(card_activity(id: "card_legacy", description: "CREDIT_CARD", amount: 30.00))
+
+    assert_equal 30.00, snaptrade_entry("card_legacy").amount.to_f
+  end
+
+  test "a PREPAID_CARD spend is an outflow" do
+    process_activities(card_activity(id: "prepaid", type: "PREPAID_CARD", description: "PREPAID_CARD", amount: -25.00))
+
+    assert_equal 25.00, snaptrade_entry("prepaid").amount.to_f
+  end
+
+  test "resyncing renames a SnapTrade card entry and corrects its sign" do
+    process_activities(card_activity(id: "card_resync", description: "CREDIT_CARD", amount: -18.40))
+    assert_equal(-18.40, snaptrade_entry("card_resync").amount.to_f)
+
+    result = process_activities(card_activity(id: "card_resync", description: "CREDIT_CARD PURCHASE: Food Hall", amount: -18.40))
+
+    assert_equal 0, result[:failed]
+    entry = snaptrade_entry("card_resync")
+    assert_equal 18.40, entry.amount.to_f
+    assert_equal "Food Hall", entry.name
+  end
+
   private
+
+    def card_activity(id:, description:, amount:, type: "CREDIT_CARD")
+      {
+        "id" => id,
+        "type" => type,
+        "amount" => amount,
+        "description" => description,
+        "trade_date" => Date.current.to_s,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" }
+      }
+    end
 
     def process_activities(*activities)
       @snaptrade_account.update!(raw_activities_payload: activities)
