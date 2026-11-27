@@ -26,7 +26,8 @@ class TradeRepublicAccount::Processor
         total_balance,
         date: date,
         schedule_sync: false,
-        reuse_explained_anchor: activities[:failed].zero?
+        reuse_explained_anchor: activities[:failed].zero?,
+        apply_provider_adjustment: true
       )
     end
 

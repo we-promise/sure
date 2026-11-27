@@ -17,7 +17,7 @@ class Trading212Account::Processor
 
     # Anchor the reported balance AFTER importing, so the previous reading can be judged
     # against a complete ledger. See Account::CurrentBalanceManager.
-    account.set_current_balance(total_balance, date: date)
+    account.set_current_balance(total_balance, date: date, apply_provider_adjustment: true)
 
     account.broadcast_sync_complete
   end

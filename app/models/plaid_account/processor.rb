@@ -131,11 +131,12 @@ class PlaidAccount::Processor
         result = manager.set_current_balance(
           balance,
           date: balance_date,
-          reuse_explained_anchor: reuse_explained_anchor
+          reuse_explained_anchor: reuse_explained_anchor,
+          apply_provider_adjustment: true
         )
         raise BalanceError, "Failed to set current balance: #{result.error}" unless result.success?
 
-        account.update!(cash_balance: cash_balance) unless result.historical?
+        account.update!(cash_balance: account.provider_cash_balance(cash_balance)) unless result.historical?
       end
 
       account.sync_later
