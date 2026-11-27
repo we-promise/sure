@@ -116,6 +116,27 @@ class Assistant::Function::GetBudgetTest < ActiveSupport::TestCase
     assert_equal 1, result[:months_unavailable]
   end
 
+  # The assistant answers from a job, where Current.user is not set: a prior
+  # household month must still count only the accounts the asker can see.
+  test "trend months count only the spending on accounts the member can see" do
+    prior_start = Date.current.beginning_of_month << 1
+    category = @family.categories.create!(name: "Gifts", color: "#123456")
+    budget = Budget.find_or_bootstrap(@family, start_date: prior_start)
+    budget.budget_categories.find_by!(category: category).update!(budgeted_spending: 500)
+    spend = ->(account, amount) do
+      account.entries.create!(name: "Gift", date: prior_start + 2.days, amount: amount, currency: "USD",
+                              entryable: Transaction.new(category: category))
+    end
+    spend.call(accounts(:depository), 100) # shared with the member
+    spend.call(accounts(:connected), 300)  # not shared
+
+    result = Assistant::Function::GetBudget.new(users(:family_member)).call("prior_months" => 1)
+
+    gifts = result[:months].first[:categories].find { |line| line[:name] == "Gifts" }
+    assert_equal "$100.00", gifts[:actual]
+    assert_equal "20.0%", gifts[:percent_spent]
+  end
+
   test "raises on invalid month format" do
     assert_raises(Assistant::Error) do
       @function.call("month" => "not-a-month")
