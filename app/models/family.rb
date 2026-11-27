@@ -176,6 +176,7 @@ class Family < ApplicationRecord
   before_validation :normalize_currency
   before_validation :normalize_enabled_currencies!
   after_create_commit :add_classifier_rules
+  after_update_commit :import_added_reporting_currency_rates, if: -> { saved_change_to_enabled_currencies? || saved_change_to_currency? }
 
   def primary_currency_code
     self.class.normalize_currency_code(currency) || "USD"
@@ -237,6 +238,27 @@ class Family < ApplicationRecord
 
   def secondary_enabled_currency_objects(extra: [])
     enabled_currency_objects(extra:).reject { |currency| currency.iso_code == primary_currency_code }
+  end
+
+  # Currencies a report (the dashboard) can be shown in: the primary currency
+  # first, then the additional currencies chosen in preferences. A family that
+  # has not narrowed its currency list reports in its primary currency only,
+  # rather than being offered every currency there is.
+  def reporting_currency_codes
+    return [ primary_currency_code ] unless custom_enabled_currencies?
+
+    enabled_currency_codes
+  end
+
+  def reporting_currency_objects
+    reporting_currency_codes.map { |code| Money::Currency.new(code) }
+  end
+
+  # The reporting currency for a requested code; anything not offered (unknown,
+  # blank, or not enabled) falls back to the primary currency.
+  def reporting_currency_code(requested)
+    code = self.class.normalize_currency_code(requested)
+    reporting_currency_codes.include?(code) ? code : primary_currency_code
   end
 
   def capture_plaid_refresh_enqueue_failure(source:, error_class:)
@@ -538,13 +560,16 @@ class Family < ApplicationRecord
   # (mobile + desktop, each with 3 tabs), so a single request can ask for the
   # balance sheet many times. Rebuilding it repeats the account/sync/exchange-
   # rate queries it depends on.
-  def balance_sheet(user: Current.user)
+  # The currency is normalized first, so the primary currency asked for by
+  # name (the dashboard) and by default (the sidebar) share one balance sheet.
+  def balance_sheet(user: Current.user, currency: nil)
+    currency = Family.normalize_currency_code(currency) || self.currency
     @balance_sheets ||= {}
-    @balance_sheets[user&.id] ||= BalanceSheet.new(self, user: user)
+    @balance_sheets[[ user&.id, currency ]] ||= BalanceSheet.new(self, user: user, currency: currency)
   end
 
-  def income_statement(user: Current.user, accounts: nil)
-    IncomeStatement.new(self, user: user, accounts: accounts)
+  def income_statement(user: Current.user, accounts: nil, currency: nil)
+    IncomeStatement.new(self, user: user, accounts: accounts, currency: currency)
   end
 
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
@@ -624,9 +649,9 @@ class Family < ApplicationRecord
   end
 
   # Memoized per user for the same reason as #balance_sheet above.
-  def investment_statement(user: Current.user)
+  def investment_statement(user: Current.user, currency: nil)
     @investment_statements ||= {}
-    @investment_statements[user&.id] ||= InvestmentStatement.new(self, user: user)
+    @investment_statements[[ user&.id, currency ]] ||= InvestmentStatement.new(self, user: user, currency: currency)
   end
 
   def eu?
@@ -639,6 +664,11 @@ class Family < ApplicationRecord
   end
 
   def requires_exchange_rates_data_provider?
+    # An additional reporting currency converts every amount the family has,
+    # foreign or not, so without a provider its reports would leave out every
+    # amount with no rate into it.
+    return true if (reporting_currency_codes - [ primary_currency_code ]).any? && accounts.exists?
+
     # If family has any accounts not denominated in the family's currency, they need a provider for historical exchange rates
     return true if accounts.where.not(currency: self.currency).any?
 
@@ -656,7 +686,8 @@ class Family < ApplicationRecord
   end
 
   # Currencies the family's accounts, entries or holdings use that have no
-  # stored exchange rate into the family currency on any date. Totals built on
+  # stored exchange rate into `to` (the family currency unless the caller views
+  # another) on any date. Totals built on
   # #rate_sql leave amounts in them out rather than counting them at 1;
   # totals built on #rates_for include them only if the provider supplies a
   # rate, which is then stored. The pages that show those totals say so.
@@ -664,17 +695,18 @@ class Family < ApplicationRecord
   # Pass the viewer's accounts so the note covers the totals they see: only
   # visible accounts count, and a member is not told about the currency of an
   # account shared with someone else.
-  def currencies_without_exchange_rate(accounts: self.accounts)
-    ExchangeRate.currencies_without_rate(currencies_in_use(accounts), to: currency)
+  def currencies_without_exchange_rate(accounts: self.accounts, to: currency)
+    ExchangeRate.currencies_without_rate(currencies_in_use(accounts), to: to)
   end
 
-  # Currencies today's totals convert whose newest rate into the family
-  # currency is too old to count as today's, mapped to that rate's date. Today's
+  # Currencies today's totals convert whose newest rate into `to` (the family
+  # currency unless the caller views another) is too old to count as today's,
+  # mapped to that rate's date. Today's
   # totals use it, and the same pages say so. Only balances and current holdings
   # count: a currency only old entries use is converted at its own date's rate,
   # so an old newest rate is not out of date for it.
-  def stale_exchange_rate_dates(accounts: self.accounts)
-    ExchangeRate.stale_rate_dates(currencies_held_now(accounts), to: currency)
+  def stale_exchange_rate_dates(accounts: self.accounts, to: currency)
+    ExchangeRate.stale_rate_dates(currencies_held_now(accounts), to: to)
   end
 
   # Returns securities with plan restrictions for a specific provider
@@ -915,6 +947,22 @@ class Family < ApplicationRecord
     end
 
     # Bayes first, so the matcher lands above it.
+    # A currency that becomes a reporting currency is offered on the dashboard
+    # at once, so the rates into it are fetched now rather than at the next
+    # account sync or daily market data run, until which its reports would
+    # leave out every amount with no rate into it.
+    def import_added_reporting_currency_rates
+      before = reporting_currencies_in(attribute_before_last_save(:enabled_currencies), attribute_before_last_save(:currency))
+      after = reporting_currencies_in(enabled_currencies, currency)
+      ImportReportingCurrencyRatesJob.perform_later(self) if (after - before).any?
+    end
+
+    # The additional (non-primary) reporting currencies a stored currency list
+    # and primary currency stand for.
+    def reporting_currencies_in(codes, primary)
+      normalize_currency_codes(codes) - [ self.class.normalize_currency_code(primary) ]
+    end
+
     def add_classifier_rules
       CLASSIFIER_ACTION_TYPES.reverse_each { |action_type| add_classifier_rule!(action_type) }
     end

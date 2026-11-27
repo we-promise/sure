@@ -17,7 +17,7 @@
           <div class="flex items-center gap-2 text-sm">
             <span class="text-secondary"><%= t(".total_return") %>:</span>
             <span class="font-medium privacy-sensitive" style="color: <%= trend.color %>">
-              <%= format_money(Money.new(trend.value, Current.family.currency)) %>
+              <%= format_money(Money.new(trend.value, investment_statement.currency)) %>
               (<%= trend.percent_formatted %>)
             </span>
           </div>

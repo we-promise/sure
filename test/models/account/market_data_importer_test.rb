@@ -62,6 +62,72 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
            "Inverse rates should be computed automatically"
   end
 
+  test "syncs the account currency into each additional reporting currency" do
+    family = Family.create!(name: "Smith", currency: "USD", enabled_currencies: [ "EUR", "CAD" ])
+    account = family.accounts.create!(name: "Chequing", currency: "CAD", balance: 100, accountable: Depository.new)
+
+    # CAD→USD for the primary currency and CAD→EUR for the reporting one; CAD→CAD is skipped.
+    # CAD/EUR comes back empty, so CAD/USD is fetched again as its first USD leg.
+    { "USD" => 2, "EUR" => 1 }.each do |to, calls|
+      @provider.expects(:fetch_exchange_rates)
+               .with(from: "CAD", to: to, start_date: anything, end_date: anything)
+               .times(calls)
+               .returns(provider_success_response([]))
+    end
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
+  test "syncs a primary-currency account into each additional reporting currency" do
+    family = Family.create!(name: "Smith", currency: "USD", enabled_currencies: [ "EUR" ])
+    account = family.accounts.create!(name: "Chequing", currency: "USD", balance: 100, accountable: Depository.new)
+
+    # Nothing else needs rates, but the report still converts this account into EUR.
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR", start_date: anything, end_date: anything)
+             .once
+             .returns(provider_success_response([]))
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
+  test "fetches foreign entry currencies against the reporting currencies too" do
+    family = Family.create!(name: "Smith", currency: "USD", enabled_currencies: [ "EUR" ])
+    account = family.accounts.create!(name: "Chequing", currency: "USD", balance: 100, accountable: Depository.new)
+    account.entries.create!(date: 10.days.ago.to_date, amount: 10, currency: "GBP", name: "Card payment", entryable: Transaction.new)
+
+    # GBP→USD for the account and primary currency, GBP→EUR for the report, and the account itself into EUR.
+    # GBP/EUR comes back empty, so GBP/USD is fetched again as its first USD leg.
+    { %w[GBP USD] => 2, %w[GBP EUR] => 1, %w[USD EUR] => 1 }.each do |(from, to), calls|
+      @provider.expects(:fetch_exchange_rates)
+               .with(from: from, to: to, start_date: anything, end_date: anything)
+               .times(calls)
+               .returns(provider_success_response([]))
+    end
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
+  test "syncs foreign holding currencies into each additional reporting currency" do
+    family = Family.create!(name: "Smith", currency: "USD", enabled_currencies: [ "EUR" ])
+    account = family.accounts.create!(name: "Brokerage", currency: "CAD", balance: 0, accountable: Investment.new)
+    security = Security.create!(ticker: "VOD", exchange_operating_mic: "XLON")
+    account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "GBP")
+
+    # The account converts into the primary and reporting currencies; the GBP
+    # holding converts straight into both as well.
+    # CAD/EUR and GBP/EUR come back empty, so each source's USD pair is fetched
+    # again as its first USD leg.
+    { %w[CAD USD] => 2, %w[CAD EUR] => 1, %w[GBP USD] => 2, %w[GBP EUR] => 1 }.each do |(from, to), calls|
+      @provider.expects(:fetch_exchange_rates)
+               .with(from: from, to: to, start_date: anything, end_date: anything)
+               .times(calls)
+               .returns(provider_success_response([]))
+    end
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
   test "imports account exchange rates into the primary currency when the family currency is blank" do
     family = Family.create!(name: "Smith", currency: "USD")
     family.update_column(:currency, "")

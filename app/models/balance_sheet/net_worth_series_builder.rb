@@ -2,10 +2,11 @@ class BalanceSheet::NetWorthSeriesBuilder
   # `accounts:` (an Account relation) narrows the series to a subset of what
   # the user (or, without one, the family) would otherwise get, e.g. the
   # insights feed's accounts every member may see.
-  def initialize(family, user: nil, accounts: nil)
+  def initialize(family, user: nil, accounts: nil, currency: nil)
     @family = family
     @user = user
     @accounts = accounts
+    @currency = currency || family.currency
   end
 
   def net_worth_series(period: Period.last_30_days)
@@ -13,7 +14,7 @@ class BalanceSheet::NetWorthSeriesBuilder
       builder = Balance::ChartSeriesBuilder.new(
         account_ids: historical_account_ids,
         account_active_until_dates: disabled_account_active_until_dates,
-        currency: family.currency,
+        currency: currency,
         period: period,
         favorable_direction: "up"
       )
@@ -23,7 +24,7 @@ class BalanceSheet::NetWorthSeriesBuilder
   end
 
   private
-    attr_reader :family, :user, :accounts
+    attr_reader :family, :user, :accounts, :currency
 
     def historical_accounts
       @historical_accounts ||= begin
@@ -60,6 +61,7 @@ class BalanceSheet::NetWorthSeriesBuilder
         user&.id,
         shares_version,
         accounts_digest,
+        currency,
         period.start_date,
         period.end_date
       ].compact.join("_")

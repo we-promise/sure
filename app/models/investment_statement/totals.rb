@@ -5,11 +5,12 @@ class InvestmentStatement::Totals
   # settlement_account_ids are the accounts among account_ids that a broker
   # settles trades on but that the user may also run as a current account
   # (InvestmentStatement#totals_account_ids); see #recorded_flow_sql.
-  def initialize(family, account_ids:, date_range:, settlement_account_ids: [])
+  def initialize(family, account_ids:, date_range:, settlement_account_ids: [], currency: nil)
     @family = family
     @account_ids = account_ids
     @settlement_account_ids = Array(settlement_account_ids) & Array(account_ids)
     @date_range = date_range
+    @currency = currency || family.currency
   end
 
   def call
@@ -214,7 +215,7 @@ class InvestmentStatement::Totals
 
     def sql_params
       {
-        target_currency: @family.currency,
+        target_currency: @currency,
         account_ids: @account_ids,
         start_date: @date_range.begin,
         end_date: @date_range.end

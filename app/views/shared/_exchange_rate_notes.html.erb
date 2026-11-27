@@ -1,7 +1,10 @@
-<%# locals: (family:, classes: nil) %>
+<%# locals: (family:, classes: nil, currency: nil) %>
+<%# currency: the currency the page's totals are shown in (the dashboard's
+    currency picker); the family currency by default. %>
+<% target = currency.presence || family.currency %>
 <% accounts = Current.accessible_accounts || family.accounts %>
-<% missing = family.currencies_without_exchange_rate(accounts: accounts) %>
-<% stale = family.stale_exchange_rate_dates(accounts: accounts) %>
+<% missing = family.currencies_without_exchange_rate(accounts: accounts, to: target) %>
+<% stale = family.stale_exchange_rate_dates(accounts: accounts, to: target) %>
 <% if missing.any? || stale.any? %>
   <div class="space-y-2 <%= classes %>">
     <% if missing.any? %>
@@ -11,7 +14,7 @@
           message: t("shared.exchange_rate_notes.missing",
                      count: missing.size,
                      currencies: missing.sort.to_sentence,
-                     currency: family.currency)
+                     currency: target)
         ) %>
       </div>
     <% end %>
@@ -22,7 +25,7 @@
           variant: :info,
           message: t("shared.exchange_rate_notes.stale",
                      count: stale.size,
-                     currency: family.currency,
+                     currency: target,
                      rates: stale.sort.map { |from, date| t("shared.exchange_rate_notes.stale_rate", from: from, date: l(date, format: :long)) }.to_sentence)
         ) %>
       </div>

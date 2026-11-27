@@ -55,6 +55,13 @@ class BalanceSheet::NetWorthSeriesBuilderTest < ActiveSupport::TestCase
   end
 
   private
+    def exchange_rate_queries(&block)
+      queries = []
+      callback = ->(*, payload) { queries << payload[:sql] if payload[:sql].match?(/\bexchange_rates\b/) }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
+      queries
+    end
+
     def builder
       BalanceSheet::NetWorthSeriesBuilder.new(@family)
     end

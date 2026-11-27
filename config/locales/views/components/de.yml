@@ -172,6 +172,8 @@ de:
         vs_available_history: vs. verfügbarer Verlauf
     period_picker:
       aria_label: 'Zeitraum: %{period}'
+    currency_picker:
+      aria_label: 'Währung: %{currency}'
   ds:
     alert:
       variants:
