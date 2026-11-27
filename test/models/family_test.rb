@@ -8,6 +8,24 @@ class FamilyTest < ActiveSupport::TestCase
     @syncable = families(:dylan_family)
   end
 
+  # The foreign key refuses to delete a statement an import carries, so a
+  # family's imports must go before its statements.
+  test "destroys a family whose import carries a statement" do
+    family = Family.create!(name: "Statements", currency: "USD")
+    statement = AccountStatement.create_from_upload!(
+      family: family,
+      account: nil,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    import = TransactionImport.create!(family: family, account_statement: statement)
+
+    family.destroy!
+
+    assert_not Family.exists?(family.id)
+    assert_not AccountStatement.exists?(statement.id)
+    assert_not Import.exists?(import.id)
+  end
+
   test "missing_data_provider? is false under the keyless securities fallback" do
     family = Family.create!(name: "Fallback", currency: "USD")
     account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)

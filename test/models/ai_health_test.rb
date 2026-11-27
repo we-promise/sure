@@ -162,12 +162,26 @@ class AiHealthTest < ActiveSupport::TestCase
     assert_equal :not_checked, health.vector_store_status
   end
 
+  test "a model that takes no images is unsupported, and doesn't make the worker unhealthy" do
+    refused = failing_result(:images_refused)
+    health = probed_health(llm: :passing, function_calling: result(:passing), pdf_vision: refused)
+
+    assert_equal :unsupported, health.pdf_vision_processing_status
+    assert_equal :supported, health.pdf_text_extraction_status
+    assert_empty WorkerAiHealth::Snapshot.of(health).failure_codes
+
+    health = probed_health(llm: :passing, function_calling: result(:passing), pdf_vision: failing_result(:invalid_response))
+
+    assert_equal :failing, health.pdf_vision_processing_status
+    assert_equal [ :invalid_response ], WorkerAiHealth::Snapshot.of(health).failure_codes
+  end
+
   private
-    def probed_health(llm:, function_calling:)
+    def probed_health(llm:, function_calling:, pdf_vision: result(:passing))
       AiHealth::Probe.any_instance.stubs(:llm).returns(result(llm))
       AiHealth::Probe.any_instance.stubs(:function_calling).returns(function_calling)
       AiHealth::Probe.any_instance.stubs(:pdf_text_extraction).returns(result(:passing))
-      AiHealth::Probe.any_instance.stubs(:pdf_vision_processing).returns(result(:passing))
+      AiHealth::Probe.any_instance.stubs(:pdf_vision_processing).returns(pdf_vision)
 
       ClimateControl.modify(
         AI_ENVIRONMENT.merge(

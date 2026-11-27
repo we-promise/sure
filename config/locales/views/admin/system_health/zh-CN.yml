@@ -396,7 +396,7 @@ zh-CN:
             dimensions_mismatch: 嵌入向量维度与配置的维度不匹配
             extension_not_enabled: PostgreSQL vector 扩展未启用
             table_not_found: 未找到 vector_store_chunks 数据表
-            render_missing_binary: 此容器中缺少 pdftoppm 渲染器（poppler-utils）
+            missing_binary: 此容器中缺少 pdftoppm 渲染器（poppler-utils）
             timeout: 服务未在探测超时时间内响应
             request_failed: 服务请求失败
             no_credit: 由于该密钥余额已耗尽，服务拒绝了请求

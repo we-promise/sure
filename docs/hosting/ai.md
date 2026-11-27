@@ -1669,7 +1669,12 @@ Sure reads an uploaded PDF in one of four ways, then checks what the model retur
 
 - **PDF import runs only on a model with PDF support, as before:** OpenAI's vision models,
   Claude, and a custom OpenAI-compatible server unless `OPENAI_SUPPORTS_PDF_PROCESSING=false`,
-  which turns PDF import off.
+  which turns PDF import off, text PDFs included.
+- **A custom server whose model takes no images needs no setting.** PDFs with a text layer import as
+  text. A scan is refused and fails with the reason. System health shows the PDF vision check as not
+  supported when it recognizes the refusal (llama.cpp's and Ollama's "image input is not supported"),
+  and as failing when the server words it differently. Set `OPENAI_SUPPORTS_PDF_PROCESSING=false`
+  only to turn PDF import off.
 - **Auto, the default, tries them in that order**, skipping a way the model can't do. A scan
   with no text layer is never sent as empty text. The next statement for the same account and
   model starts from the way that last passed.

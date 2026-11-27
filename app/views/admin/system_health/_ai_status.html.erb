@@ -216,7 +216,7 @@
       <% pdf_checks.select { |check| check[:probe].failure_code }.each do |check| %>
         <div>
           <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.#{check[:key]}_failure_reason") %></dt>
-          <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{check[:probe].failure_code}") %></dd>
+          <dd class="mt-1 font-medium <%= check[:status] == :failing ? "text-destructive" : "text-warning" %>"><%= t("admin.system_health.show.ai.failure_codes.#{check[:probe].failure_code}") %></dd>
         </div>
       <% end %>
     </dl>
