@@ -188,9 +188,8 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     use_ai_routes
 
     family_document = family_documents(:tax_return)
-    Family.any_instance.expects(:upload_document).with do |file_content:, filename:, **|
-      assert_not_empty file_content
-      assert_equal "valid.csv", filename
+    Family.any_instance.expects(:upload_document_later).with do |file|
+      assert_equal "valid.csv", file.original_filename
       true
     end.returns(family_document)
 
@@ -205,6 +204,25 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_import_url
     assert_equal I18n.t("imports.create.document_uploaded"), flash[:notice]
+  end
+
+  test "does not report success when the document indexing job is rejected" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.csv .pdf])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
+    Family.any_instance.expects(:upload_document_later).returns(false)
+
+    post imports_url, params: {
+      import: {
+        type: "DocumentImport",
+        import_file: file_fixture_upload("imports/valid.csv", "text/csv")
+      }
+    }
+
+    assert_redirected_to new_import_url
+    assert_nil flash[:notice]
+    assert_equal I18n.t("imports.create.document_upload_failed"), flash[:alert]
   end
 
   test "summary renders the import outcome for a pdf import" do
@@ -226,7 +244,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     VectorStore::Registry.stubs(:adapter).returns(adapter)
     use_ai_routes
 
-    @user.family.expects(:upload_document).never
+    @user.family.expects(:upload_document_later).never
 
     assert_difference "Import.count", 1 do
       assert_difference "AccountStatement.count", 1 do
@@ -598,7 +616,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
   test "a document upload by a user with AI off sends nothing to the vector store" do
     use_ai_routes
     @user.update!(ai_enabled: false)
-    Family.any_instance.expects(:upload_document).never
+    Family.any_instance.expects(:upload_document_later).never
 
     post imports_url, params: { import: { type: "DocumentImport", import_file: file_fixture_upload("imports/valid.csv", "text/csv") } }
 
@@ -635,6 +653,21 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_import_url
     assert_equal I18n.t("imports.create.invalid_document_file_type"), flash[:alert]
+  end
+
+  test "rejects an oversized document before queueing its indexing job" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
+    file = uploaded_file(filename: "notes.txt", content_type: "text/plain", content: "x")
+    File.truncate(file.tempfile.path, Import::MAX_PDF_SIZE + 1)
+    Family.any_instance.expects(:upload_document_later).never
+
+    post imports_url, params: { import: { type: "DocumentImport", import_file: file } }
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.document_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte), flash[:alert]
   end
 
   test "publishes import" do
