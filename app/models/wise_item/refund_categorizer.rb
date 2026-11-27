@@ -78,15 +78,20 @@ class WiseItem::RefundCategorizer
       purchase if purchase.category_id.present?
     end
 
-    # Under a row lock, on the refund as it is now: a category a person set
-    # or locked meanwhile stays, and a refund whose amount or date changed
-    # meanwhile must still match the same purchase. A refund pruned, or a
-    # category deleted, meanwhile is skipped.
+    # Under a row lock, on the refund as it is now: it must still be an
+    # uncategorized, unlocked card refund (a category a person set or locked
+    # meanwhile stays), and must still match the same purchase. The category
+    # written is the one that purchase has now, read again under the lock; a
+    # purchase whose category was cleared meanwhile no longer matches. A
+    # refund pruned, or a category deleted, meanwhile is skipped.
     def categorize(refund, purchase)
       refund.with_lock do
-        refund.category_id.nil? && purchase_for(refund)&.id == purchase.id &&
-          refund.enrich_attribute(:category_id, purchase.category_id, source: "wise",
-                                  metadata: { refund_of_entry_id: purchase.entry.id })
+        next false unless refunds.exists?(refund.id)
+
+        current = purchase_for(refund)
+        current&.id == purchase.id &&
+          refund.enrich_attribute(:category_id, current.category_id, source: "wise",
+                                  metadata: { refund_of_entry_id: current.entry.id })
       end
     rescue ActiveRecord::RecordNotFound, ActiveRecord::InvalidForeignKey => e
       Rails.logger.warn("#{self.class.name} - Skipped refund transaction #{refund.id}: #{e.class}")

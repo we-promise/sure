@@ -115,7 +115,49 @@ class WiseItem::RefundCategorizerTest < ActiveSupport::TestCase
     assert_nil refund.reload.category
   end
 
+  test "gives a refund the category its purchase has once the refund is locked" do
+    purchase = card_payment("Wallapop", 6.74, Date.new(2026, 9, 5), category: @shopping)
+    refund = card_refund("Wallapop", 6.74, Date.new(2026, 9, 6))
+    clothing = @family.categories.create!(name: "Clothing", color: "#654321", lucide_icon: "shirt")
+
+    assert_equal 1, categorizer_changing_purchase_after_first_match(purchase, clothing.id).categorize!
+    assert_equal clothing, refund.reload.category
+  end
+
+  test "leaves a refund alone when its purchase's category is cleared before the refund is locked" do
+    purchase = card_payment("Wallapop", 6.74, Date.new(2026, 9, 5), category: @shopping)
+    refund = card_refund("Wallapop", 6.74, Date.new(2026, 9, 6))
+
+    assert_equal 0, categorizer_changing_purchase_after_first_match(purchase, nil).categorize!
+    assert_nil refund.reload.category
+  end
+
+  test "leaves an entry alone that stops being a refund before it is locked" do
+    card_payment("Wallapop", 6.74, Date.new(2026, 9, 5), category: @shopping)
+    refund = card_refund("Wallapop", 6.74, Date.new(2026, 9, 6))
+    categorizer = WiseItem::RefundCategorizer.new(@wise_item)
+    original = categorizer.method(:purchase_for)
+    categorizer.define_singleton_method(:purchase_for) do |transaction|
+      original.call(transaction).tap { refund.entry.update_column(:amount, 6.74) }
+    end
+
+    assert_equal 0, categorizer.categorize!
+    assert_nil refund.reload.category
+  end
+
   private
+    # A categorizer whose purchase gets the given category right after the
+    # refund's first match, before the refund is locked.
+    def categorizer_changing_purchase_after_first_match(purchase, category_id)
+      categorizer = WiseItem::RefundCategorizer.new(@wise_item)
+      original = categorizer.method(:purchase_for)
+      calls = 0
+      categorizer.define_singleton_method(:purchase_for) do |refund|
+        original.call(refund).tap { purchase.update_column(:category_id, category_id) if (calls += 1) == 1 }
+      end
+      categorizer
+    end
+
     def card_payment(name, amount, date, category:, resource_id: nil)
       wise_transaction(name, amount, date, category: category,
                        extra: { "activity_type" => "CARD_PAYMENT", "resource_id" => resource_id }.compact)
