@@ -592,6 +592,7 @@ describe("formatAmountForDisplay", () => {
     it("keeps the cents of a large amount", () => {
       assert.equal(formatAmountForDisplay(12345678901234.25, null, "12345678901234.25"), "12345678901234.25")
       assert.equal(formatAmountForDisplay(1234567890123.15, null, "1234567890123.15"), "1234567890123.15")
+      assert.equal(formatAmountForDisplay(12345678901234.01, null, "12345678901234.01"), "12345678901234.01")
     })
 
     it("drops float drift in the last digits", () => {

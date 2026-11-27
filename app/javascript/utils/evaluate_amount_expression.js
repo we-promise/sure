@@ -275,7 +275,7 @@ export function formatUnroundedAmount(amount) {
 
   const integerDigits = Math.floor(Math.log10(Math.abs(amount))) + 1
   const decimals = Math.min(20, Math.max(0, 15 - integerDigits))
-  const driftTolerance = Math.abs(amount) * Number.EPSILON * 4
+  const driftTolerance = Math.abs(amount) * Number.EPSILON
   let fixed = amount.toFixed(decimals)
   for (let extra = 1; extra <= 2 && Math.abs(Number(fixed) - amount) > driftTolerance; extra++) {
     fixed = amount.toFixed(Math.min(20, decimals + extra))
