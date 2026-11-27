@@ -54,10 +54,33 @@ class Balance::LinkedInvestmentSeriesNormalizer
           .minimum(:date)
 
         stable_holding_dates = stable_provider_holding_start_dates(account_ids)
+        reconciliation_dates = reconciliation_start_dates(account_ids)
 
         account_ids.filter_map do |account_id|
-          [ activity_dates[account_id], stable_holding_dates[account_id] ].compact.min
+          [ activity_dates[account_id], stable_holding_dates[account_id], reconciliation_dates[account_id] ].compact.min
         end.max
+      end
+
+      # Balance history the user entered as reconciliation valuations (e.g.
+      # imported from another tracker) counts as supported history, so the
+      # chart is not trimmed to the provider's first transaction. Valuations a
+      # provider created keep the existing behaviour. Only linked accounts
+      # count: a manual account in a mixed group must not move the group's
+      # start date, as with its opening anchor.
+      def reconciliation_start_dates(account_ids)
+        user_entered_reconciliations(Entry.where(account_id: Account.where(id: account_ids).linked.select(:id)))
+          .group(:account_id)
+          .minimum(:date)
+      end
+
+      # Reconciliations a person entered: by hand or via the API (no source), or
+      # restored from a Sure export (source "sure_import_session:<id>").
+      SURE_IMPORT_SOURCE_PREFIX = "sure_import_session:".freeze
+
+      def user_entered_reconciliations(scope)
+        scope
+          .where(entryable_type: "Valuation", entryable_id: Valuation.reconciliation.select(:id))
+          .where("entries.source IS NULL OR entries.source LIKE ?", "#{Entry.sanitize_sql_like(SURE_IMPORT_SOURCE_PREFIX)}%")
       end
 
       def stable_provider_holding_start_dates(account_ids)
@@ -102,6 +125,21 @@ class Balance::LinkedInvestmentSeriesNormalizer
     active_points = series.values.select { |value| value.date >= first_supported_history_date }
     return series if active_points.blank?
 
+    # History that starts with a reconciliation valuation carries its own
+    # balances, so there is no inception boundary to align: only trim.
+    if first_reconciliation_date.present? && first_reconciliation_date == first_supported_history_date &&
+        (first_provider_activity_date.nil? || first_reconciliation_date < first_provider_activity_date)
+      return series if active_points.length == series.values.length
+
+      return Series.new(
+        start_date: active_points.first.date,
+        end_date: series.end_date,
+        interval: series.interval,
+        values: active_points,
+        favorable_direction: series.favorable_direction
+      )
+    end
+
     opening_money = Money.new(opening_amount(first_supported_history_date), active_points.first.value.currency)
 
     if first_supported_history_date >= series.start_date && active_points.first.date > first_supported_history_date
@@ -137,7 +175,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
   end
 
   def supported_history_start_date
-    [ first_provider_activity_date, stable_provider_holding_start_date ].compact.min
+    [ first_provider_activity_date, stable_provider_holding_start_date, first_reconciliation_date ].compact.min
   end
 
   private
@@ -179,6 +217,13 @@ class Balance::LinkedInvestmentSeriesNormalizer
       active_points.first&.date == series.values.first&.date &&
         active_points.length == series.values.length &&
         active_points.first&.value == series.values.first&.value
+    end
+
+    # Earliest balance the user entered (not a provider) as a reconciliation.
+    def first_reconciliation_date
+      return @first_reconciliation_date if defined?(@first_reconciliation_date)
+
+      @first_reconciliation_date = self.class.send(:user_entered_reconciliations, account.entries).minimum(:date)
     end
 
     def first_provider_activity_date
