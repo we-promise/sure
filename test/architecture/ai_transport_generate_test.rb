@@ -267,6 +267,25 @@ class AiTransportGenerateTest < ActiveSupport::TestCase
     assert_equal 1, schema.dig(:properties, :day, :minimum), "the generation's own schema keeps its limits"
   end
 
+  test "Anthropic gets a nullable enum as anyOf its values and null, which it accepts" do
+    requests = stub_json(MESSAGES_URL, [ 200, anthropic_answer({ frequency: nil, weekday: 2 }) ])
+    endpoint = ai_endpoint(name: "anthropic", protocol: :anthropic, base_url: "https://anthropic.example.test")
+    schema = { type: "object",
+               properties: { frequency: { type: %w[string null], enum: [ "monthly", "yearly", nil ], description: "how often" },
+                             weekday: { type: %w[integer null], enum: [ 1, 2, nil ], minimum: 1 } },
+               required: %w[frequency weekday], additionalProperties: false }
+
+    response = generate(json_mode: :auto, endpoint_value: endpoint, schema:)
+
+    properties = requests.first.dig("output_config", "format", "schema", "properties")
+    assert_equal({ "anyOf" => [ { "type" => "string", "enum" => %w[monthly yearly] }, { "type" => "null" } ], "description" => "how often" },
+                 properties["frequency"])
+    assert_equal({ "anyOf" => [ { "type" => "integer", "enum" => [ 1, 2 ] }, { "type" => "null" } ], "description" => "minimum 1" },
+                 properties["weekday"])
+    assert_equal [ "monthly", "yearly", nil ], schema.dig(:properties, :frequency, :enum), "the generation's own schema keeps null in its enum"
+    assert_equal({ "frequency" => nil, "weekday" => 2 }, response.json)
+  end
+
   test "a fallback request gets only what's left of the call's budget as its timeout" do
     clock = [ 0.0 ]
     stub_request(:post, CHAT_URL).to_return(
