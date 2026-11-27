@@ -56,6 +56,14 @@ class Assistant::Function::DeleteRuleTest < ActiveSupport::TestCase
     assert Rule.exists?(@rule.id)
   end
 
+  test "a rule deleted by another call after the lookup is not found" do
+    stale = @family.rules.find(@rule.id)
+    @rule.destroy!
+    @fn.stubs(:find_rule).returns(stale)
+
+    assert_equal "not_found", @fn.call("rule_id" => @rule.id)[:error]
+  end
+
   test "refuses while a rule run holds the family lock and leaves the rule in place" do
     # Transactional tests share one PG session, and a session can re-take its
     # own advisory lock, so holding it needs a separate connection.

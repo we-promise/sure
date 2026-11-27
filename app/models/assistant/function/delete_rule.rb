@@ -69,5 +69,9 @@ class Assistant::Function::DeleteRule < Assistant::Function
       rule: snapshot,
       message: "#{name} deleted. Its run history was deleted with it."
     }
+  rescue ActiveRecord::RecordNotFound
+    # lock! reloads the rule, which raises when another call deleted it since
+    # the lookup.
+    error("not_found", "No rule with id '#{params["rule_id"]}'.")
   end
 end
