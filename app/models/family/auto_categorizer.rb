@@ -78,10 +78,11 @@ class Family::AutoCategorizer
       end
 
       # Rechecked under the row's lock (which reloads it): a sync or a
-      # transfer confirmation may have made it a plain transfer, or someone
-      # categorized it, since the scope's SELECT.
+      # transfer confirmation may have made it a plain transfer, Auto Match
+      # may have suggested one, or someone categorized it, since the scope's
+      # SELECT.
       applied = transaction.with_lock do
-        next false if transaction.category_id.present? || Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(transaction.kind)
+        next false if transaction.category_id.present? || Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(transaction.kind) || transaction.pending_transfer_leg?
 
         was_modified = transaction.enrich_attribute(
           :category_id,
@@ -320,11 +321,13 @@ class Family::AutoCategorizer
     # (Transaction::UNCATEGORIZED_EXCLUDED_KINDS), so they are left out too, as
     # Family#bayes_categorize_uncategorized leaves them out. Otherwise the AI
     # could put back a category Transaction.drop_stale_contribution_categories!
-    # removed.
+    # removed. The legs of a transfer Auto Match only suggested wait for the
+    # user's answer, as they do for Bayes.
     def scope
       family.transactions.with_entry
                          .where(id: transaction_ids, category_id: nil, entries: { excluded: false })
                          .where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS)
+                         .outside_pending_transfers
                          .enrichable(:category_id)
                          .includes(:category, :merchant, :entry)
     end

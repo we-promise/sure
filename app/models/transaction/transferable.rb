@@ -15,10 +15,24 @@ module Transaction::Transferable
     # We keep track of rejected transfers to avoid auto-matching them again
     has_one :rejected_transfer_as_inflow, class_name: "RejectedTransfer", foreign_key: "inflow_transaction_id", dependent: :destroy
     has_one :rejected_transfer_as_outflow, class_name: "RejectedTransfer", foreign_key: "outflow_transaction_id", dependent: :destroy
+
+    # Not a leg of a transfer Auto Match has only suggested. Until the user
+    # confirms it, a suggestion leaves both legs as ordinary transactions
+    # (Transfer#confirm! sets their kinds), so automatic categorization uses
+    # this to leave them for the match to settle.
+    scope :outside_pending_transfers, -> {
+      where.not(id: Transfer.pending.select(:inflow_transaction_id))
+           .where.not(id: Transfer.pending.select(:outflow_transaction_id))
+    }
   end
 
   def transfer
     transfer_as_inflow || transfer_as_outflow
+  end
+
+  # The instance form of Transaction.outside_pending_transfers.
+  def pending_transfer_leg?
+    transfer&.pending? || false
   end
 
   def transfer_match_candidates(

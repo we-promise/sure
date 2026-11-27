@@ -439,11 +439,13 @@ class Family < ApplicationRecord
   # locked, transfer legs aside (they never belong in Uncategorized), and
   # excluded transactions aside too, as the uncategorized badge and Quick
   # Categorize already do (Entry.uncategorized_transactions); those it isn't
-  # sure about are tried again with a better model next time. Returns the
+  # sure about are tried again with a better model next time. The legs of a
+  # transfer Auto Match only suggested wait for the user's answer. Returns the
   # modified count.
   def bayes_categorize_uncategorized(scope = categorizable_transactions)
     scope = scope.with_entry.where(entries: { excluded: false }, category_id: nil)
-                 .where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS).enrichable(:category_id)
+                 .where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS)
+                 .outside_pending_transfers.enrichable(:category_id)
     requested = scope.count
     return 0 if requested.zero?
 

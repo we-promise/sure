@@ -47,6 +47,37 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_nil transfer_leg.reload.category
   end
 
+  test "does not ask the LLM about the legs of a suggested transfer" do
+    savings = @family.accounts.create!(name: "Savings", balance: 100, currency: "USD", accountable: Depository.new)
+    outflow = create_transaction(account: @account, name: "To savings", amount: 42).transaction
+    inflow = create_transaction(account: savings, name: "From checking", amount: -42).transaction
+    @family.auto_match_transfers!
+    assert_predicate outflow.reload.transfer, :pending?
+    @llm_provider.expects(:auto_categorize).never
+
+    assert_equal 0, Family::AutoCategorizer.new(@family, transaction_ids: [ outflow.id, inflow.id ]).auto_categorize
+    assert_nil outflow.reload.category
+    assert_nil inflow.reload.category
+  end
+
+  test "leaves a leg that was suggested as a transfer after it was selected uncategorized" do
+    savings = @family.accounts.create!(name: "Savings", balance: 100, currency: "USD", accountable: Depository.new)
+    leg = create_transaction(account: @account, name: "To savings", amount: 42).transaction
+    counterpart = create_transaction(account: savings, name: "From checking", amount: -42).transaction
+    category = @family.categories.create!(name: "Savings")
+    selected = Transaction.where(id: leg.id).to_a
+    Transfer.create!(outflow_transaction: leg, inflow_transaction: counterpart, amount: 42)
+    Family::AutoCategorizer.any_instance.stubs(:scope).returns(selected)
+    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: leg.id, category_name: category.name)
+    ]))
+
+    assert_equal 0, Family::AutoCategorizer.new(@family, transaction_ids: [ leg.id ]).auto_categorize
+    leg.reload
+    assert_nil leg.category
+    assert_not leg.locked?(:category_id)
+  end
+
   # A sync or confirmation makes the leg a plain transfer after the
   # categorizer selected it: the AI's category must not land on it.
   test "leaves a leg that became a plain transfer after it was selected uncategorized" do
