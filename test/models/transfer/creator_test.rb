@@ -122,6 +122,23 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "returns the existing transfer on a retry after an account is renamed" do
+    attributes = {
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: @destination_account.id,
+      date: @date,
+      amount: @amount,
+      idempotency_key: SecureRandom.uuid
+    }
+    transfer = Transfer::Creator.new(**attributes).create
+    @destination_account.update!(name: "Renamed brokerage")
+
+    assert_no_difference "Transfer.count" do
+      assert_equal transfer, Transfer::Creator.new(**attributes).create
+    end
+  end
+
   test "creates investment contribution when transferring from depository to crypto" do
     crypto_account = accounts(:crypto)
 

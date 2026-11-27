@@ -1477,6 +1477,19 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal "active", rt.status
   end
 
+  test "create_from_transfer names the series after the transfer's label" do
+    transfer = Transfer::Creator.new(
+      family: @family,
+      source_account_id: @account.id,
+      destination_account_id: accounts(:credit_card).id,
+      date: 5.days.ago.to_date,
+      amount: 250,
+      label: "Card repayment"
+    ).create
+
+    assert_equal "Card repayment", RecurringTransaction.create_from_transfer(transfer).name
+  end
+
   test "create_from_transfer keeps same-amount series between the same accounts apart by day" do
     source = @account
     destination = accounts(:credit_card)
@@ -1711,16 +1724,17 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     # Transfer#name returns "Payment to ..." for liability destinations
     # and "Transfer to ..." otherwise, mirroring Transfer::Creator's
     # name_prefix logic. The recurring row should pick that up rather
-    # than hard-coding "Transfer to ...".
+    # than hard-coding "Transfer to ...". The legs are named differently,
+    # so the transfer has no label to take precedence.
     source = @account
     cc_destination = accounts(:credit_card) # liability
     outflow = source.entries.create!(
       date: 5.days.ago.to_date, amount: 100, currency: "USD",
-      name: "raw", entryable: Transaction.new(kind: "standard")
+      name: "raw out", entryable: Transaction.new(kind: "standard")
     )
     inflow = cc_destination.entries.create!(
       date: 5.days.ago.to_date, amount: -100, currency: "USD",
-      name: "raw", entryable: Transaction.new(kind: "standard")
+      name: "raw in", entryable: Transaction.new(kind: "standard")
     )
     transfer = Transfer.create!(
       outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable

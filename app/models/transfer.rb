@@ -102,6 +102,10 @@ class Transfer < ApplicationRecord
     outflow_name if outflow_name == inflow_transaction&.entry&.name
   end
 
+  def display_name
+    label || name
+  end
+
   # Names both legs after the label and protects the names from provider syncs.
   # A blank label restores the default names, but only when there is a label to
   # remove, so differing bank-provided names are never discarded.

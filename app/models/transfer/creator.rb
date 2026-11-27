@@ -132,8 +132,7 @@ class Transfer::Creator
         inflow_entry.account_id == destination_account.id &&
         outflow_entry.date == date &&
         outflow_entry.amount == amount &&
-        outflow_entry.name == outflow_name &&
-        inflow_entry.name == inflow_name &&
+        transfer.label == label &&
         inflow_entry.amount == inflow_converted_amount * -1 &&
         transfer.derived_source_fee_amount == source_fee_amount &&
         transfer.derived_destination_fee_amount == destination_fee_amount
