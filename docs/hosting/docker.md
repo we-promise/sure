@@ -684,15 +684,17 @@ repeat command reports `old_secret_key_base_did_not_match` after decryptable set
 were already converted. For other failures, keep writers stopped and investigate;
 preserve the current secret, original secret, backup, and effective Active Record
 keys. Retain `OLD_SECRET_KEY_BASE` in this recovery shell for retries and the
-manual path's final verification; do not put it in `.env` or the service configuration.
+final verification required by both recovery paths; do not put it in `.env` or
+the service configuration.
 
 **Choose the startup path before starting services:** if the Active Record
 conversion has succeeded (or its independent keys were preserved), and the settings
-write reports `"ok":true` with an empty `not_decryptable` list, unset
-`OLD_SECRET_KEY_BASE` and follow
-[Verify recovery before resuming services](#verify-recovery-before-resuming-services).
-Keep workers stopped through that verification. If settings need re-entry, use
-the manual path below first; do not start all services.
+write reports `"ok":true` with an empty `not_decryptable` list, keep `web` and
+workers stopped and complete
+[Final settings verification](#final-settings-verification). A successful write
+does not replace that final dry run. If settings need re-entry, use the manual
+path below first, then complete the same final verification. Do not unset
+`OLD_SECRET_KEY_BASE` or start all services before verification succeeds.
 
 #### Manual settings recovery
 
@@ -717,26 +719,51 @@ from the provider if the original value is unavailable; do not paste stored
 ciphertext back into the form. Save through the settings UI so the values are
 encrypted with the current `SECRET_KEY_BASE`.
 
-Keep the same `OLD_SECRET_KEY_BASE` available until verification succeeds. If
-resuming in a new shell, repeat the hidden-input `read`/`export` command above with
-the original secret first. While the worker remains stopped, verify the settings:
+After saving or clearing the affected settings, keep `web` restricted and workers
+stopped and complete [Final settings verification](#final-settings-verification).
+Retain `OLD_SECRET_KEY_BASE` until that verification succeeds.
+
+#### Final settings verification
+
+Both automatic settings conversion and manual settings recovery must pass this
+check before clearing the old secret or proceeding to service verification.
+Keep workers and other writers stopped; only the administrator-only `web` session
+needed for manual recovery may be running. Keep the current `SECRET_KEY_BASE`
+unchanged. Use the same `OLD_SECRET_KEY_BASE` retained for recovery. If resuming
+in a new shell, repeat the hidden-input `read`/`export` command above with the
+original secret first.
+
+Run the final dry run after the write pass or manual re-entry:
 
 ```bash
 docker compose run --rm --no-deps -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[1]"
 ```
 
-Before starting workers, require `"ok":true`, `"dry_run":true`,
-an empty `not_decryptable` list, and only `current` or `not_stored` entries. If any
-`would_reencrypt` entries remain, stop `web` again and return to the settings
-conversion before resuming. For any other unresolved result, keep workers stopped
-and investigate; do not change the current secret again. Only after that final
-dry run succeeds, unset the temporary variable:
+Require a successful command exit and a JSON report with `"ok":true`, `"dry_run":true`, an empty
+`not_decryptable` list, and only `current` or `not_stored` entries in `results`.
+`"ok":true` alone is insufficient: a dry run can still report `would_reencrypt`
+or unresolved settings.
+
+- If any `would_reencrypt` entries remain, stop the recovery `web` session if it
+  is running, return to the settings conversion with the same current and old
+  secrets, and repeat this final dry run afterwards.
+- If settings remain `not_decryptable`, including when the task reports
+  `old_secret_key_base_did_not_match`, verify the old value first. If it was wrong,
+  correct it and repeat this check. Use
+  [Manual settings recovery](#manual-settings-recovery) for settings it cannot
+  decrypt, then return here for the same final check.
+- For a failed command or any other unresolved result, keep workers stopped and
+  investigate. Retain the old secret for retries and do not change the current
+  secret again to bypass the failure.
+
+Only after all of the final dry-run requirements are met, unset the temporary
+variable:
 
 ```bash
 unset OLD_SECRET_KEY_BASE
 ```
 
-Keep `web` restricted and `worker` stopped, then complete
+Keep workers stopped and any running recovery `web` session restricted, then complete
 [Verify recovery before resuming services](#verify-recovery-before-resuming-services).
 If recovery cannot be completed, keep writers stopped and use
 [Restoring after an interrupted rotation](#restoring-after-an-interrupted-rotation).
