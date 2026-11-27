@@ -40,6 +40,16 @@ module Account::Chartable
       .net_contributions_incomplete?(anchor_date: net_contributions_anchor_date, dates: value_dates)
   end
 
+  # False when the Total value line over `value_dates` kept points from
+  # before a linked investment account's supported history starts. The
+  # normalizer trims the line to that start only when some point is on or
+  # after it, while net contributions always count from it, so there is no
+  # line to set beside those points.
+  def net_contributions_comparable?(value_dates:)
+    anchor_date = net_contributions_anchor_date
+    anchor_date.nil? || value_dates.none? { |date| date < anchor_date }
+  end
+
   def sparkline_series
     Rails.cache.fetch(sparkline_cache_key, expires_in: 24.hours) do
       balance_series
@@ -140,9 +150,8 @@ module Account::Chartable
       builder = chart_series_builder(period: period, interval: interval)
       value_series ||= balance_series(period: period, view: :balance, interval: interval)
       value_dates = value_series.values.map(&:date)
-      normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: self, series: nil)
-      anchor_date = net_contributions_anchor_date(normalizer)
-      before_activity = value_point_before_activity?(value_series, builder: builder, date: anchor_date, normalizer: normalizer)
+      anchor_date = net_contributions_anchor_date
+      before_activity = value_point_before_activity?(value_series, builder: builder, date: anchor_date)
       series = builder.net_contributions_series(
         anchor_date: anchor_date,
         dates: value_dates,
@@ -166,17 +175,23 @@ module Account::Chartable
     # normalizer's rule decides, not the point's value, since a reset point
     # can equal the day's close (a flow offset by the market). False when
     # there is no such point.
-    def value_point_before_activity?(value_series, builder:, date:, normalizer: Balance::LinkedInvestmentSeriesNormalizer.new(account: self, series: nil))
+    def value_point_before_activity?(value_series, builder:, date:)
       return false unless date && value_series.values.any? { |value| value.date == date }
 
       builder.balance_series.values.none? { |value| value.date == date } ||
-        normalizer.resets_point_on?(date)
+        supported_history.resets_point_on?(date)
     end
 
-    def net_contributions_anchor_date(normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: self, series: nil))
+    def net_contributions_anchor_date
       return unless linked? && balance_type == :investment
 
-      normalizer.supported_history_start_date
+      supported_history.supported_history_start_date
+    end
+
+    # One per account, so a chart's comparison checks and its line share the
+    # anchor's entries and holdings reads. Account#reload drops it.
+    def supported_history
+      @supported_history ||= Balance::LinkedInvestmentSeriesNormalizer.new(account: self, series: nil)
     end
 
     def normalize_linked_investment_series(series, view: :balance)

@@ -75,6 +75,7 @@ class Account < ApplicationRecord
   def reload(*)
     @scheduled_entry_flows = nil
     @current_holdings_total = nil
+    @supported_history = nil
     super
   end
 

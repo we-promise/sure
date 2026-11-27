@@ -439,6 +439,36 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_equal "100.0", closing["difference"]["value"]["amount"], "the anchor day's market gain"
   end
 
+  # Before the linked account's supported history the value line keeps its
+  # raw balances and the contributions line has nothing to count, so it would
+  # read 0 under them. The comparison, its legend and the incomplete note go
+  # together; a period ending on the first supported date still draws it.
+  test "a linked account's period before its supported history draws no net contributions" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 1_600)
+    account.stubs(:linked?).returns(true)
+    [ [ day_one, 1_000, 1_000, 0, 0 ], [ day_one + 1, 1_000, 1_000, 0, 0 ], [ day_one + 2, 1_000, 1_600, 500, 100 ] ].each do |date, opening, closing, cash, market|
+      account.balances.create!(
+        date: date, currency: "USD", balance: closing, cash_balance: opening + cash, start_cash_balance: opening,
+        start_non_cash_balance: 0, cash_inflows: cash, cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0,
+        net_market_flows: market, cash_adjustments: 0, non_cash_adjustments: 0, flows_factor: 1
+      )
+    end
+    account.entries.create!(name: "Deposit", date: day_one + 2, amount: -500, currency: "USD", source: "plaid",
+                            entryable: Transaction.new(kind: "standard"))
+    account.stubs(:net_contributions_incomplete?).returns(true)
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+    assert_selector "#lineChart"
+    assert_nil page.find("#lineChart")["data-time-series-chart-comparison-value"]
+    refute_selector "[data-net-contributions-legend]"
+    refute_selector "[data-net-contributions-incomplete]"
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 2), view: "balance"))
+    values = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"]
+    assert_equal [ (day_one + 2).iso8601 ], values.map { |v| v["date"] }
+  end
+
   test "negative net contributions leave the difference without a percentage" do
     day_one = Date.new(2026, 3, 2)
     account = create_portfolio_account(families(:empty), balance: 2_000)
