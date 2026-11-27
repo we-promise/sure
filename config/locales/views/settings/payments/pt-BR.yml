@@ -3,9 +3,20 @@ pt-BR:
   settings:
     payments:
       show:
-        page_title: Pagamento
-        subscription_subtitle: Atualize sua assinatura e detalhes de pagamento
-        subscription_title: Gerenciar assinatura
+        page_title: Pagamentos
+        subscription_subtitle: Atualize os dados do seu cartão de crédito
+        subscription_title: Gerenciar contribuições
+        currently_on_plan: Atualmente no plano
+        trialing: Usando a demonstração aberta do %{product_name}
+        trial_days_left:
+          one: Os dados serão excluídos em %{count} dia
+          other: Os dados serão excluídos em %{count} dias
+        not_contributing_prefix: No momento, você
+        not_contributing_emphasis: não está contribuindo
+        contributions_note: As contribuições para o %{product_name} aparecerão aqui.
+        manage: Gerenciar
+        choose_level: Escolher nível
+        payment_via_stripe: Pagamento via Stripe
   views:
     settings:
       payments:
