@@ -36,12 +36,20 @@ fr:
       holdings: Holdings
       name: Nom
       new_holding: Nouvelle activité
-      negative_position: "%{name} (%{ticker}) : sous zéro depuis le %{date}, au plus bas %{qty}."
-      negative_positions_hint: "Il manque probablement un achat ou un transfert. Ajoutez-le ou corrigez les opérations qui ont fait passer la position sous zéro."
-      negative_positions_title: "Certaines positions sont passées sous zéro"
       no_holdings: Aucun holding à afficher.
       return: Rendement total
       weight: Poids
+    lots:
+      title: Lots
+      opening: Détenu avant la première transaction boursière
+      unknown: Coût unitaire inconnu
+      per_unit: "%{amount} par unité"
+      total_cost_label: Total payé pour ce lot
+      total_cost_hint: Le coût total du lot au moment de son acquisition. Supprimer sa transaction boursière supprime le lot et le coût que vous avez défini.
+      save: Enregistrer
+      unlock: Effacer le coût manuel
+      provider_cost_hint: 'Votre fournisseur indique le coût de cette position : le coût de ses lots ne peut donc pas être défini.'
+      provider_cost_clear_hint: Un coût que vous avez défini précédemment peut toujours être effacé.
     missing_price_tooltip:
       description: Cet investissement a des valeurs manquantes et nous ne pouvons
         pas calculer son rendement ou sa valeur.

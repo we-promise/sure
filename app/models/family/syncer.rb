@@ -25,7 +25,7 @@ class Family::Syncer
     family.auto_create_missing_transfer_counterparts!
 
     Rails.logger.info("Applying rules for family #{family.id}")
-    ApplyRulesJob.perform_later(family)
+    ApplyRulesJob.perform_later(family, warm_reports: true)
   end
 
   # Every `*_items` association whose model is Syncable, found by reflection

@@ -17,6 +17,15 @@ module Assistant::Function::BillsSupport
     "ended" => %w[ended]
   }.freeze
 
+  BANK_REFERENCE_DESCRIPTION = "A stable token from the bank's payment note (Verwendungszweck) for this bill, " \
+                               "e.g. a contract or customer number. A payment on the bill's account whose note " \
+                               "contains it matches this bill, whatever the amount or date, unless the bill is bound " \
+                               "to a merchant and the payment carries a different one. Needs an account; not for " \
+                               "income. Use something distinctive, at least 3 characters."
+
+  REFERENCE_ONLY_DESCRIPTION = "With a bank_reference set: match payments by that reference alone and ignore " \
+                               "the bill's name and merchant. Default false; has no effect without a reference."
+
   private
     def recurring_disabled?
       family.recurring_transactions_disabled?
@@ -92,7 +101,9 @@ module Assistant::Function::BillsSupport
         account: account_ref(series.account),
         destination_account: account_ref(series.destination_account),
         monthly_equivalent: series.monthly_equivalent_amount&.abs&.format,
-        payment_url: series.payment_url
+        payment_url: series.payment_url,
+        bank_reference: series.bank_reference,
+        reference_only: series.reference_only?
       }.compact
     end
 
