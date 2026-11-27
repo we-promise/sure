@@ -1,0 +1,7 @@
+---
+pl:
+  activerecord:
+    errors:
+      models:
+        loan:
+          fixed_rate_only_payments: "Ratę miesięczną lub ratę balonową można ustawić tylko dla pożyczki o stałym oprocentowaniu."

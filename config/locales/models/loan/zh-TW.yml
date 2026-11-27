@@ -1,0 +1,7 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        loan:
+          fixed_rate_only_payments: "只有固定利率貸款才能設定每月還款額或期末大額還款。"

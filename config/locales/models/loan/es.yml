@@ -4,5 +4,6 @@ es:
     errors:
       models:
         loan:
+          fixed_rate_only_payments: Un pago mensual o un pago balón solo puede establecerse en un préstamo de tipo fijo.
           invalid_rate_change: Las filas de cambio de tipo necesitan una fecha de efecto y un tipo.
           rate_change_before_origination: Un cambio de tipo no puede tener efecto antes de la formalización del préstamo.

@@ -1,9 +1,14 @@
 ---
 pl:
   loans:
+    balloon_not_applied: "Podana rata balonowa nie jest możliwa przy tych warunkach pożyczki. Obliczona kwota ostatniej raty wynosi %{amount}."
     edit:
       edit: Edytuj %{account}
     form:
+      contracted_payment: "Rata miesięczna (opcjonalnie)"
+      contracted_payment_hint: "Pozostaw puste, aby obliczyć ratę na podstawie salda, oprocentowania i okresu spłaty. Wypełnij, jeśli rata pożyczkodawcy jest inna, np. z powodu zaokrąglenia."
+      balloon_payment: "Rata balonowa (opcjonalnie)"
+      balloon_payment_hint: "Całkowita kwota ostatniej raty, gdy pożyczka kończy się jednorazową spłatą. Jeśli nie podasz raty miesięcznej, zostanie obliczona tak, aby ostatnia rata była równa tej kwocie."
       initial_balance: Początkowe saldo pożyczki
       interest_rate: Oprocentowanie
       interest_rate_placeholder: '5.25'

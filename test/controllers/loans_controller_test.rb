@@ -411,6 +411,71 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
                  "the controller filtered out the convention the user chose"
   end
 
+  # Same end-to-end path as the day-count convention above: the form renders
+  # money fields for both figures, and without them in
+  # `permitted_accountable_attributes` a save would silently drop what the
+  # user typed.
+  test "the contracted and balloon payments entered on the form are saved" do
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          contracted_payment: "2300.50", balloon_payment: "450000"
+        }
+      }
+    }
+
+    loan = @account.loan.reload
+    assert_equal BigDecimal("2300.50"), loan.contracted_payment,
+                 "the controller filtered out the contracted payment"
+    assert_equal BigDecimal("450000"), loan.balloon_payment,
+                 "the controller filtered out the balloon payment"
+  end
+
+  test "an out-of-range or sub-unit payment returns a validation error without saving" do
+    @account.update!(currency: "JPY")
+
+    %i[contracted_payment balloon_payment].each do |field|
+      [ "1000000000000000", "0.49" ].each do |amount|
+        patch loan_path(@account), params: { account: { accountable_attributes: { field => amount } } }
+
+        assert_response :unprocessable_entity
+        assert_nil @account.loan.reload.public_send(field)
+      end
+    end
+  end
+
+  test "an unapplied balloon warns after saving and shows the actual final payment in the form" do
+    @account.loan.update!(interest_rate: 0, term_months: 120, initial_balance: 1_000,
+                          start_date: Date.new(2024, 1, 1))
+
+    patch loan_path(@account), params: { account: { accountable_attributes: { balloon_payment: "0.01" } } }
+
+    assert_response :redirect
+    warning = I18n.t("loans.balloon_not_applied", amount: Money.new(BigDecimal("0.40"), @account.currency).format)
+    assert_equal warning, flash[:sensitive_alert]
+    follow_redirect!
+    assert_select "#notification-tray p.privacy-sensitive:not([title])", text: warning
+
+    get edit_loan_path(@account)
+    assert_select "p.privacy-sensitive", text: warning
+
+    get account_path(@account, tab: "schedule")
+    assert_select "p.privacy-sensitive", text: warning
+  end
+
+  test "create validates the payments in the new loan account currency" do
+    assert_no_difference "Loan.count" do
+      post loans_path, params: { account: {
+        name: "JPY Loan", balance: 1_000, currency: "JPY", accountable_type: "Loan",
+        accountable_attributes: { rate_type: "fixed", interest_rate: 0, term_months: 12,
+                                  initial_balance: 1_000, contracted_payment: "0.49" }
+      } }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "saving principal_only_transfers queues a balance sync" do
     patch loan_path(@account), params: {
       account: {
@@ -808,6 +873,36 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal({ "2026-04-01" => "7.25" }, @account.loan.reload.variable_rate_schedule)
     assert_equal "variable", @account.loan.rate_type
+  end
+
+  # Contracted and balloon payments are fixed-rate concepts -- the model
+  # rejects them on a variable loan. The fields render inside one
+  # fixed-only block, hidden server-side on a variable loan so a save
+  # without JavaScript behaves the same as the Stimulus toggle.
+  test "the edit form hides the contracted and balloon fields on a variable loan" do
+    @account.loan.update!(rate_type: "variable")
+
+    get edit_loan_path(@account)
+
+    assert_response :success
+    assert_select "[data-loan-rate-changes-target='fixedOnly'][hidden]", count: 1
+  end
+
+  test "the edit form shows the contracted and balloon fields on a fixed loan" do
+    get edit_loan_path(@account)
+
+    assert_response :success
+    assert_select "[data-loan-rate-changes-target='fixedOnly']", count: 1
+    assert_select "[data-loan-rate-changes-target='fixedOnly'][hidden]", count: 0
+  end
+
+  test "the payment fields use the account currency rather than the family currency" do
+    @account.update!(currency: "EUR")
+
+    get edit_loan_path(@account)
+
+    assert_response :success
+    assert_select "[data-loan-rate-changes-target='fixedOnly'] [data-money-field-separator-currency-value='EUR']", count: 2
   end
 
   # `disabled` used to be applied only by Stimulus, so without JavaScript the

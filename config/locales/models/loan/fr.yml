@@ -4,6 +4,7 @@ fr:
     errors:
       models:
         loan:
+          fixed_rate_only_payments: Un paiement mensuel ou un paiement ballon ne peut être défini que sur un prêt à taux fixe.
           invalid_rate_change: Chaque ligne de changement de taux doit comporter une date d'effet et un taux.
           invalid_rate_schedule_snapshot: Les changements de taux n'ont pas pu être comparés au calendrier enregistré. Rechargez le prêt et appliquez de nouveau vos modifications.
           rate_change_before_origination: Un changement de taux ne peut pas prendre effet avant le déblocage du prêt.

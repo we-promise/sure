@@ -4,6 +4,26 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
   # 12 monthly payments through 2026.
   SCHEDULE = (1..12).map { |n| Date.new(2026, 1, 1) >> n }.freeze
 
+  test "terminal payment matches a full run without building a simulation result" do
+    [ 1_000, 3_000 ].each do |payment|
+      simulator = Loan::Simulator.new(
+        starting_balance: 12_000,
+        accrual_start_date: Date.new(2026, 1, 1),
+        payment_schedule: SCHEDULE,
+        accrual_rate_for: ->(_date) { 6 },
+        currency_precision: 2,
+        payment_strategy: :hold,
+        payment_amount: payment,
+        day_count_convention: :actual_365
+      )
+      result = simulator.run
+
+      Loan::SimulationResult.expects(:new).never
+      assert_equal [ result.payment_count, result.payments.last[:payment_amount] ], simulator.terminal_payment
+      Loan::SimulationResult.unstub(:new)
+    end
+  end
+
   test "runs one payment per scheduled date and amortises to zero" do
     result = run_simulation(starting_balance: 12_000, rate: 6)
 

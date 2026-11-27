@@ -42,8 +42,8 @@ module Notifiable
 
     def resolve_notifications(type, data)
       case type
-      when "alert"
-        [ { partial: "shared/notifications/alert", locals: { message: data } } ]
+      when "alert", "sensitive_alert"
+        [ { partial: "shared/notifications/alert", locals: { message: data, sensitive: type == "sensitive_alert" } } ]
       when "cta"
         [ resolve_cta(data) ]
       when "notice"

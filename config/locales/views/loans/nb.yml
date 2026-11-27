@@ -1,9 +1,14 @@
 ---
 nb:
   loans:
+    balloon_not_applied: "Sluttbeløpet som er oppgitt, kan ikke brukes med disse lånevilkårene. Det beregnede beløpet for siste termin er %{amount}."
     edit:
       edit: Rediger %{account}
     form:
+      contracted_payment: "Månedlig terminbeløp (valgfritt)"
+      contracted_payment_hint: "La feltet stå tomt for å beregne terminbeløpet fra saldo, rente og løpetid. Fyll det ut hvis långiverens terminbeløp avviker, for eksempel på grunn av avrunding."
+      balloon_payment: "Stort sluttbeløp (valgfritt)"
+      balloon_payment_hint: "Det totale beløpet for siste termin når lånet avsluttes med en engangsbetaling. Hvis månedlig terminbeløp ikke er oppgitt, beregnes det slik at den siste terminen blir på dette beløpet."
       interest_rate: Rente
       interest_rate_placeholder: '5.25'
       initial_balance: Opprinnelig lånebeløp

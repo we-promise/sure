@@ -1,9 +1,14 @@
 ---
 ca:
   loans:
+    balloon_not_applied: "El pagament global indicat no es pot aplicar amb aquestes condicions del préstec. El pagament final calculat és de %{amount}."
     edit:
       edit: Edita %{account}
     form:
+      contracted_payment: "Quota mensual (opcional)"
+      contracted_payment_hint: "Deixeu el camp en blanc per calcular la quota a partir del saldo, el tipus d’interès i el termini. Empleneu-lo si la quota del prestador és diferent, per exemple, per l’arrodoniment."
+      balloon_payment: "Pagament global final (opcional)"
+      balloon_payment_hint: "Import total de l’última quota si el préstec acaba amb un pagament únic. Si no indiqueu cap quota mensual, es calcula perquè l’última sigui d’aquest import."
       initial_balance: Saldo inicial del préstec
       interest_rate: Tipus d'interès
       interest_rate_placeholder: '5.25'

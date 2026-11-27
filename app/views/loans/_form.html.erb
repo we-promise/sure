@@ -66,6 +66,43 @@
                                  max: Loan::Simulator::MAX_PERIODS %>
       </div>
 
+      <%# Only submit the empty fields when switching away from fixed, so
+          changing the selection back doesn't lose edits to either amount. %>
+      <% variable_rate = account.loan.variable_rate_type? %>
+      <div class="space-y-2" data-loan-rate-changes-target="fixedOnly"
+           <%= "hidden" if variable_rate %>>
+        <div class="flex items-center gap-2">
+          <%# The instalment the lender actually charges, when it differs from
+              the computed one -- a rounded EMI is the common case. Held for the
+              whole term; the final instalment settles whatever is left. %>
+          <%= loan_form.money_field :contracted_payment,
+                                   label: t("loans.form.contracted_payment"),
+                                   currency_value_override: account.currency,
+                                   currency_source: "select[name='account[currency]']",
+                                   disabled: variable_rate,
+                                   hide_currency: true %>
+        </div>
+        <p class="text-xs text-secondary"><%= t("loans.form.contracted_payment_hint") %></p>
+
+        <div class="flex items-center gap-2">
+          <%# The total of the final instalment when the loan ends on a lump
+              sum. With no contracted payment entered, the instalment is sized
+              so the last one equals this figure. %>
+          <%= loan_form.money_field :balloon_payment,
+                                   label: t("loans.form.balloon_payment"),
+                                   currency_value_override: account.currency,
+                                   currency_source: "select[name='account[currency]']",
+                                   disabled: variable_rate,
+                                   hide_currency: true %>
+        </div>
+        <p class="text-xs text-secondary"><%= t("loans.form.balloon_payment_hint") %></p>
+        <%= render "loans/balloon_warning", schedule: account.loan.amortization_schedule if account.persisted? && account.loan.balloon_payment.present? %>
+      </div>
+      <fieldset hidden data-loan-rate-changes-target="clearFixedOnly" <%= "disabled" unless variable_rate %>>
+        <%= loan_form.hidden_field :contracted_payment, value: "", id: nil %>
+        <%= loan_form.hidden_field :balloon_payment, value: "", id: nil %>
+      </fieldset>
+
       <div class="flex items-center gap-2">
         <%# How the lender measures a period against a year. The default charges
             a flat twelfth, which is what every existing loan was built on, so
@@ -110,7 +147,7 @@
           rather than cleared. Switching the select to variable enables and
           reveals the retained rows, and the save resubmits them. The rows sit
           in a disclosure that opens closed, as Additional details does. %>
-      <% rate_changes_disabled = !account.loan.variable_rate_type? %>
+      <% rate_changes_disabled = !variable_rate %>
       <div data-loan-rate-changes-target="section" <%= "hidden" if rate_changes_disabled %>>
         <%= render DS::Disclosure.new(variant: :inline, body_class: "space-y-2 mt-2 pl-4 border-l border-primary") do |disclosure| %>
           <% disclosure.with_summary_content do %>

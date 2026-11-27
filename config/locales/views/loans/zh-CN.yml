@@ -1,6 +1,7 @@
 ---
 zh-CN:
   loans:
+    balloon_not_applied: "在这些贷款条件下无法使用所填的期末大额还款。计算出的最后一期还款额为 %{amount}。"
     edit:
       edit: 编辑%{account}
       stale_rate_schedule: 此表单已过期。请重新加载贷款页面后再次编辑，本次修改未保存。
@@ -18,6 +19,10 @@ zh-CN:
       rate_type: 利率类型
       term_months: 期限（月）
       term_months_placeholder: '360'
+      contracted_payment: 每月还款额（可选）
+      contracted_payment_hint: 留空则根据余额、利率和期限计算。当贷款机构的每期还款额不同时填写，例如因四舍五入。
+      balloon_payment: 期末大额还款（可选）
+      balloon_payment_hint: 贷款以一次性大额还款结束时最后一期的总额。未填写每月还款额时，将调整每期还款额，使最后一期等于该金额。
       none: 无
       subtype_prompt: 选择贷款类型
       subtype_none: 无

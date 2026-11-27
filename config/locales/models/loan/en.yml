@@ -4,6 +4,7 @@ en:
     errors:
       models:
         loan:
+          fixed_rate_only_payments: A monthly payment or balloon payment can only be set on a fixed-rate loan.
           invalid_rate_change: Rate change rows need both an effective date and a rate.
           invalid_rate_schedule_snapshot: The rate changes could not be compared with the saved schedule. Reload the loan and reapply your changes.
           rate_change_before_origination: A rate change cannot take effect before the loan originated.

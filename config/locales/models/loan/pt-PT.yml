@@ -1,0 +1,7 @@
+---
+pt-PT:
+  activerecord:
+    errors:
+      models:
+        loan:
+          fixed_rate_only_payments: "A prestação mensal ou a prestação final única só pode ser definida num empréstimo com taxa fixa."

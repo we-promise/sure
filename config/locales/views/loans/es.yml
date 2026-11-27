@@ -1,6 +1,7 @@
 ---
 es:
   loans:
+    balloon_not_applied: "El pago final indicado no puede aplicarse con estas condiciones del préstamo. El importe calculado del último pago es %{amount}."
     edit:
       edit: Editar %{account}
     form:
@@ -15,6 +16,10 @@ es:
       rate_type: Tipo de interés
       term_months: Plazo (meses)
       term_months_placeholder: '360'
+      contracted_payment: Pago mensual (opcional)
+      contracted_payment_hint: Déjalo en blanco para calcularlo a partir del saldo, el tipo y el plazo. Rellénalo cuando la cuota de tu prestamista difiera, por ejemplo porque está redondeada.
+      balloon_payment: Pago balón (opcional)
+      balloon_payment_hint: El total de la última cuota cuando el préstamo termina con un pago único. Sin pago mensual indicado, la cuota se calcula para que la última sea igual a este importe.
       none: Ninguno
       subtype_prompt: Selecciona el tipo de préstamo
       subtype_none: Ninguno

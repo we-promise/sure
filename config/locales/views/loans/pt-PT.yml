@@ -1,9 +1,14 @@
 ---
 pt-PT:
   loans:
+    balloon_not_applied: "A prestação final indicada não pode ser aplicada com estas condições do empréstimo. O valor calculado da última prestação é %{amount}."
     edit:
       edit: Editar %{account}
     form:
+      contracted_payment: "Prestação mensal (opcional)"
+      contracted_payment_hint: "Deixe em branco para calcular a prestação com base no saldo, na taxa e no prazo. Preencha se a prestação do credor for diferente, por exemplo, devido a arredondamentos."
+      balloon_payment: "Prestação final única (opcional)"
+      balloon_payment_hint: "Montante total da última prestação, quando o empréstimo termina com um pagamento único. Se não indicar a prestação mensal, esta é calculada de modo a que a última tenha este valor."
       interest_rate: Taxa de juro
       interest_rate_placeholder: '5.25'
       initial_balance: Saldo inicial do empréstimo

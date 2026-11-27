@@ -239,6 +239,21 @@ class I18nTest < ActiveSupport::TestCase
     end
   end
 
+  def test_loan_payment_labels_hints_and_warnings_are_translated
+    keys = %w[
+      loans.form.contracted_payment loans.form.contracted_payment_hint
+      loans.form.balloon_payment loans.form.balloon_payment_hint
+      loans.balloon_not_applied activerecord.errors.models.loan.fixed_rate_only_payments
+    ]
+
+    LanguagesHelper::SUPPORTED_LOCALES.each do |locale|
+      keys.each do |key|
+        assert I18n.exists?(key, locale, fallback: false), "#{key} is missing in #{locale}"
+      end
+      assert_includes I18n.t("loans.balloon_not_applied", locale: locale, amount: "123.45"), "123.45"
+    end
+  end
+
   def test_trade_republic_activity_labels_exist_for_each_locale
     required_labels = %w[
       contribution withdrawal interest dividend card_payment cash_withdrawal

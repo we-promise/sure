@@ -14,8 +14,20 @@ import { Controller } from "@hotwired/stimulus";
 // included, so this holds without JavaScript too; `toggle()` only follows the
 // select from there. Switching to variable enables the retained rows, and the
 // next save resubmits them rather than the bare sentinel that would clear them.
+//
+// The contracted/balloon block mirrors that in reverse: shown only for fixed.
+// When hidden, the amounts are disabled and separate empty inputs submit
+// instead. Switching back to fixed restores the editable amounts unchanged.
 export default class extends Controller {
-  static targets = ["rows", "template", "empty", "section", "rateType"];
+  static targets = [
+    "rows",
+    "template",
+    "empty",
+    "section",
+    "rateType",
+    "fixedOnly",
+    "clearFixedOnly",
+  ];
   // The one rate type that cannot move. Anything else non-blank is variable,
   // the same reading as Loan#variable_rate_type?, so a provider-written value
   // such as "arm" keeps its editor rather than being hidden by a list the
@@ -48,6 +60,15 @@ export default class extends Controller {
       "input, select, button",
     )) {
       el.disabled = !applies;
+    }
+    if (this.hasFixedOnlyTarget) {
+      this.fixedOnlyTarget.hidden = applies;
+      for (const el of this.fixedOnlyTarget.querySelectorAll(
+        "input[data-money-field-target='amount']",
+      )) {
+        el.disabled = applies;
+      }
+      this.clearFixedOnlyTarget.disabled = !applies;
     }
     this.#sync();
   }

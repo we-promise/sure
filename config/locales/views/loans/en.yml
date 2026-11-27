@@ -1,6 +1,7 @@
 ---
 en:
   loans:
+    balloon_not_applied: The quoted balloon cannot be applied with these loan terms. The calculated final payment is %{amount}.
     edit:
       edit: Edit %{account}
       stale_rate_schedule: This form is out of date. Reload the loan and reapply your changes. Nothing has been saved.
@@ -19,6 +20,14 @@ en:
       rate_type: Rate type
       term_months: Term (months)
       term_months_placeholder: '360'
+      contracted_payment: Monthly payment (optional)
+      contracted_payment_hint: Leave blank to have it calculated from the balance,
+        rate and term. Fill it in when your lender's instalment differs, for
+        example because it is rounded.
+      balloon_payment: Balloon payment (optional)
+      balloon_payment_hint: The total of the final instalment when the loan ends
+        with a lump sum. With no monthly payment entered, the instalment is
+        sized so the last one equals this amount.
       none: None
       subtype_prompt: Select loan type
       subtype_none: None

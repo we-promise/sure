@@ -1,0 +1,7 @@
+---
+it:
+  activerecord:
+    errors:
+      models:
+        loan:
+          fixed_rate_only_payments: "La rata mensile o la maxi rata finale si possono impostare solo per un prestito a tasso fisso."

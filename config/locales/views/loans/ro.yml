@@ -1,9 +1,14 @@
 ---
 ro:
   loans:
+    balloon_not_applied: "Rata finală introdusă nu se poate aplica în aceste condiții de împrumut. Valoarea calculată a ultimei rate este %{amount}."
     edit:
       edit: Editează %{account}
     form:
+      contracted_payment: "Rată lunară (opțional)"
+      contracted_payment_hint: "Lasă câmpul necompletat pentru a calcula rata pe baza soldului, a dobânzii și a duratei. Completează-l dacă rata creditorului diferă, de exemplu din cauza rotunjirii."
+      balloon_payment: "Rată finală majorată (opțional)"
+      balloon_payment_hint: "Valoarea totală a ultimei rate când împrumutul se încheie cu o plată unică. Dacă nu introduci rata lunară, aceasta se calculează astfel încât ultima rată să fie egală cu această sumă."
       interest_rate: Rata dobânzii
       interest_rate_placeholder: '5.25'
       initial_balance: Soldul inițial al împrumutului

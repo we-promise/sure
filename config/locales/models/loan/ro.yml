@@ -1,0 +1,7 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        loan:
+          fixed_rate_only_payments: "Rata lunară sau rata finală majorată se poate stabili doar pentru un împrumut cu dobândă fixă."

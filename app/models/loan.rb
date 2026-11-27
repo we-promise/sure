@@ -25,6 +25,7 @@ class Loan < ApplicationRecord
 
   # An annual percentage, matching the bound the rate-change input declares.
   MAX_INTEREST_RATE = 100
+  MAX_CONTRACT_PAYMENT = BigDecimal("999999999999999.9999")
 
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
   # The form caps the date picker at today; this is the same bound where a
@@ -38,6 +39,17 @@ class Loan < ApplicationRecord
   # a 20,000 deposit against an 80,000 loan is a different position from the
   # same loan against 5,000.
   validates :down_payment, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+
+  # The instalment the lender actually charges, when it differs from the one
+  # the schedule computes (a rounded EMI is the common case), and the total
+  # of the final instalment when the loan ends on a lump sum. Both override
+  # the schedule's own figures; both are fixed-rate notions -- a payment that
+  # is contracted to move with the rate is neither -- which the validation
+  # below enforces.
+  validates :contracted_payment, :balloon_payment,
+            numericality: { greater_than: 0, less_than_or_equal_to: MAX_CONTRACT_PAYMENT }, allow_nil: true
+  validate :contracted_amounts_require_fixed_rate
+  validate :contracted_amounts_must_survive_rounding
 
   validates :insurance_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   # The form's "None" option submits an empty string, which means no type
@@ -92,6 +104,27 @@ class Loan < ApplicationRecord
       term_months.to_i.positive? &&
       term_months.to_i <= Loan::Simulator::MAX_PERIODS &&
       original_balance.amount.positive?
+  end
+
+  private def contracted_amounts_require_fixed_rate
+    return if rate_type == FIXED_RATE_TYPE
+    return if contracted_payment.nil? && balloon_payment.nil?
+
+    errors.add(:base, :fixed_rate_only_payments)
+  end
+
+  private def contracted_amounts_must_survive_rounding
+    return if contracted_payment.nil? && balloon_payment.nil?
+
+    return unless account&.currency.present?
+
+    precision = Money::Currency.new(account.currency).default_precision || 2
+    %i[contracted_payment balloon_payment].each do |attribute|
+      amount = public_send(attribute)
+      if amount&.positive? && amount.round(precision).zero?
+        errors.add(attribute, :greater_than_or_equal_to, count: (BigDecimal("0.5") / 10**precision).to_s("F"))
+      end
+    end
   end
 
   private def rate_changes_must_be_parseable
@@ -415,7 +448,7 @@ class Loan < ApplicationRecord
   # The columns AmortizationSchedule.for reads from the loan itself. Assigning
   # any of them drops the memoised schedule, as reload does, so a read after the
   # change answers with the new terms rather than the ones it was built from.
-  SCHEDULE_INPUTS = %i[interest_rate term_months rate_type start_date variable_rate_schedule day_count_convention].freeze
+  SCHEDULE_INPUTS = %i[interest_rate term_months rate_type start_date variable_rate_schedule day_count_convention contracted_payment balloon_payment].freeze
 
   validates :day_count_convention, inclusion: { in: DAY_COUNT_CONVENTIONS }
 

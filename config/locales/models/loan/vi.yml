@@ -1,0 +1,7 @@
+---
+vi:
+  activerecord:
+    errors:
+      models:
+        loan:
+          fixed_rate_only_payments: "Chỉ có thể đặt khoản trả hằng tháng hoặc khoản trả một lần cuối kỳ cho khoản vay có lãi suất cố định."

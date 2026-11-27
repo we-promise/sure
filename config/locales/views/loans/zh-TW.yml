@@ -1,9 +1,14 @@
 ---
 zh-TW:
   loans:
+    balloon_not_applied: "在這些貸款條件下，無法採用填寫的期末大額還款。計算出的最後一期還款額為 %{amount}。"
     edit:
       edit: 編輯 %{account}
     form:
+      contracted_payment: "每月還款額（選填）"
+      contracted_payment_hint: "留空時，會依餘額、利率和期限計算。若貸方的每期還款額不同，例如因四捨五入而有差異，請在此填寫。"
+      balloon_payment: "期末大額還款（選填）"
+      balloon_payment_hint: "貸款以一次性付款結清時，最後一期的還款總額。若未填寫每月還款額，系統會將每期還款額設定為讓最後一期等於此金額。"
       interest_rate: 利率
       interest_rate_placeholder: '5.25'
       initial_balance: 原始貸款餘額

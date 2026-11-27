@@ -42,16 +42,11 @@ class Loan
     end
 
     # False when there is nothing to project: no schedule, nothing left to owe,
-    # no payments remaining, or no repayment to hold.
-    #
-    # `&&` binds tighter than `||`, so the trailing `|| false` applies to the
-    # whole chain. It turns the nil that `contracted_payment&.positive?` gives for
-    # a missing payment into false, so callers always get a boolean.
+    # or no positive repayments remaining.
     def applicable?
       schedule.present? &&
         current_balance.amount.positive? &&
-        remaining_payment_dates.any? &&
-        contracted_payment&.positive? || false
+        remaining_scheduled_payments.any? { |payment| payment.payment.amount.positive? }
     end
 
     # True when nothing is owed. Only one of the reasons applicable? can be
@@ -170,22 +165,14 @@ class Loan
         @remaining_payment_dates ||= remaining_scheduled_payments.map(&:date)
       end
 
-      # The repayment in force: the next scheduled payment's amount. For a
-      # re-amortising loan that is the figure the current rate produced, which
-      # is what the borrower is actually paying.
-      def contracted_payment
-        @contracted_payment ||= remaining_scheduled_payments.first&.payment&.amount
-      end
-
       # What the contract asks for in the projection's period `index`: the
       # schedule's row for the same date. The two walks share their dates, so a
       # recorded rate change re-sizes this exactly where the schedule re-sizes
       # its own repayment. Past the last row -- unreachable today, since the
       # projection stops at the original maturity -- the last amount holds.
       #
-      # Plus the period's extra, when there is one. The simulator settles the
-      # final period at whatever the balance needs, so an extra larger than
-      # what is left is never overpaid.
+      # Plus the period's extra, when there is one. Ordinary payments are
+      # capped at what is owed; a contracted balloon can replace the final row.
       def scheduled_payment_for(index:, **)
         row = remaining_scheduled_payments[index] || remaining_scheduled_payments.last
         row.payment.amount + extra_for(index)
@@ -233,6 +220,7 @@ class Loan
       def simulation
         return nil unless applicable?
 
+        balloon_adjustment = schedule.final_balloon_adjustment
         @simulation ||= Simulator.new(
           starting_balance: current_balance.amount,
           accrual_start_date: current_period_start,
@@ -249,6 +237,8 @@ class Loan
           # schedule's does.
           payment_amount: method(:scheduled_payment_for),
           payment_strategy: :scheduled,
+          final_payment: (remaining_scheduled_payments.last.payment.amount if balloon_adjustment),
+          final_balloon_adjustment: balloon_adjustment,
           currency_precision: currency_precision,
           # A projection that cannot clear the balance must SAY so. Settling the
           # final payment regardless would manufacture a payoff date for a loan

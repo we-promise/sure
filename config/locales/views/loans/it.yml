@@ -1,9 +1,14 @@
 ---
 it:
   loans:
+    balloon_not_applied: "La maxi rata indicata non è applicabile con queste condizioni del prestito. L’ultima rata calcolata è di %{amount}."
     edit:
       edit: Modifica %{account}
     form:
+      contracted_payment: "Rata mensile (facoltativa)"
+      contracted_payment_hint: "Lascia vuoto per calcolarla in base al saldo, al tasso e alla durata. Compila il campo se la rata del finanziatore è diversa, ad esempio per un arrotondamento."
+      balloon_payment: "Maxi rata finale (facoltativa)"
+      balloon_payment_hint: "Importo totale dell’ultima rata quando il prestito termina con un pagamento in un’unica soluzione. Se non inserisci la rata mensile, viene calcolata in modo che l’ultima rata corrisponda a questo importo."
       interest_rate: Tasso di interesse
       interest_rate_placeholder: '5.25'
       initial_balance: Capitale originale del prestito
