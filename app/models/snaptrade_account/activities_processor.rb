@@ -671,79 +671,99 @@ class SnaptradeAccount::ActivitiesProcessor
     end
 
     # Wealthsimple sends some card charges twice, under two SnapTrade ids:
-    # - identical twins (same day, amount and description),
-    # - a pending and a posted copy whose merchant names differ past the first
-    #   characters ("Turkish Airlines" / "Turkish Airl00000005Ydmbv"),
-    # - an older bare "CREDIT_CARD" row re-sent in the "CREDIT_CARD PURCHASE: <merchant>" format.
-    # Each would import as its own charge. Keep one row per charge: the one
-    # already imported if there is one, preferring a row with a merchant name,
-    # and remove the extra copy's entry unless the user has edited it.
+    # - a pending copy, whose merchant name is cut short and padded with zeros
+    #   and a code ("Turkish Airl00000005Ydmbv"), and the posted copy
+    #   ("Turkish Airlines") on the same day for the same amount,
+    # - an older bare "CREDIT_CARD" row and the same purchase re-sent in the
+    #   "CREDIT_CARD PURCHASE: <merchant>" format.
+    # Each copy would import as its own charge. Only these two shapes are
+    # merged: two rows with the same merchant, amount and day can be two real
+    # charges (parking, transit), so they are left alone. Nothing is deleted;
+    # the extra row is skipped. When one copy is already imported it is the one
+    # kept, otherwise the posted / merchant-named copy is kept.
     def dedupe_card_activities(activities)
       return activities if activities.blank? || account.nil?
 
-      rows = activities.map(&:with_indifferent_access).select { |row| row[:type].to_s.upcase == "CREDIT_CARD" && row[:id].present? }
+      rows = activities.grep(Hash).map(&:with_indifferent_access).select do |row|
+        row[:type].to_s.upcase == "CREDIT_CARD" && row[:id].present? && cash_amount(row).present? && card_row_date(row).present?
+      end
       return activities if rows.size < 2
 
+      imported = account.entries.where(external_id: rows.map { |row| row[:id].to_s }, source: "snaptrade").pluck(:external_id).to_set
       drop_ids = Set.new
-      rows.group_by { |row| [ card_row_amount(row), card_row_date(row), card_dedupe_key(row) ] }.each_value do |group|
-        next if group.size < 2
 
-        keeper = card_duplicate_keeper(group)
-        group.each { |row| drop_ids << row[:id].to_s unless row[:id].to_s == keeper }
-      end
+      card_duplicate_pairs(rows).each do |extra, keeper|
+        next if drop_ids.include?(keeper[:id].to_s)
 
-      # An older bare row for a charge that also arrived in the newer format.
-      newer = rows.reject { |row| card_dedupe_key(row).first == :bare }
-                  .map { |row| [ card_row_amount(row).abs, card_row_date(row) ] }.to_set
-      rows.each do |row|
-        next unless card_dedupe_key(row).first == :bare
-        drop_ids << row[:id].to_s if newer.include?([ card_row_amount(row).abs, card_row_date(row) ])
+        # Keep whichever copy is already in the ledger so nothing is imported twice.
+        if imported.include?(extra[:id].to_s) && !imported.include?(keeper[:id].to_s)
+          extra, keeper = keeper, extra
+        end
+        drop_ids << extra[:id].to_s
       end
 
       return activities if drop_ids.empty?
 
-      remove_duplicate_card_entries(drop_ids)
-      activities.reject { |activity| drop_ids.include?(activity.with_indifferent_access[:id].to_s) }
+      activities.reject { |activity| activity.is_a?(Hash) && drop_ids.include?(activity.with_indifferent_access[:id].to_s) }
     end
 
-    def card_row_amount(row)
-      parse_decimal(row[:amount]) || 0.to_d
+    # [ extra, keeper ] pairs: the extra row is the pending or bare copy.
+    def card_duplicate_pairs(rows)
+      purchases = rows.filter_map do |row|
+        match = CARD_DESCRIPTION.match(row[:description].to_s.strip)
+        [ row, match[2].to_s ] if match && match[1] == "PURCHASE"
+      end
+      posted = purchases.reject { |_, merchant| pending_card_merchant(merchant) }
+
+      pairs = []
+      used = Set.new
+      take = lambda do |extra, candidates|
+        keeper = candidates.find { |row| !used.include?(row[:id].to_s) }
+        return unless keeper
+
+        used << keeper[:id].to_s
+        pairs << [ extra, keeper ]
+      end
+
+      purchases.each do |row, merchant|
+        prefix = pending_card_merchant(merchant)
+        next unless prefix
+
+        take.call(row, posted.filter_map do |other, other_merchant|
+          other if same_card_charge?(row, other) && card_merchant_key(other_merchant).start_with?(prefix)
+        end)
+      end
+
+      rows.each do |row|
+        next if CARD_DESCRIPTION.match?(row[:description].to_s.strip)
+
+        take.call(row, posted.filter_map { |other, _| other if same_card_charge?(row, other, absolute: true) })
+      end
+
+      pairs
+    end
+
+    # The merchant name a pending copy was cut down to, or nil when the name is
+    # not in the pending shape (name, then a run of zeros and a short code).
+    def pending_card_merchant(merchant)
+      match = card_merchant_key(merchant).match(/\A([a-z][a-z0-9]{3,}?)0{4,}[a-z0-9]{0,12}\z/)
+      match && match[1]
+    end
+
+    def card_merchant_key(merchant)
+      merchant.to_s.downcase.gsub(/[^a-z0-9]/, "")
+    end
+
+    def same_card_charge?(row, other, absolute: false)
+      return false if row[:id].to_s == other[:id].to_s || card_row_date(row) != card_row_date(other)
+
+      a = cash_amount(row)
+      b = cash_amount(other)
+      absolute ? a.abs == b.abs : a == b
     end
 
     def card_row_date(row)
-      (row[:trade_date].presence || row[:settlement_date]).to_s[0, 10]
-    end
-
-    # [ :bare, description ] for an older bare row, otherwise the kind and the
-    # first characters of the merchant, which a pending and a posted copy share.
-    def card_dedupe_key(row)
-      description = row[:description].to_s.strip
-      match = CARD_DESCRIPTION.match(description)
-      return [ :bare, description ] unless match
-
-      [ match[1], match[2].to_s.downcase.gsub(/[^a-z0-9]/, "")[0, 10] ]
-    end
-
-    def card_duplicate_keeper(group)
-      ids = group.map { |row| row[:id].to_s }
-      entries = account.entries.where(external_id: ids, source: "snaptrade").to_a
-      keeper = entries.min_by { |entry| [ entry.name.to_s.start_with?("CREDIT_CARD") ? 1 : 0, entry.created_at, entry.external_id ] }
-      keeper&.external_id || ids.min
-    end
-
-    def remove_duplicate_card_entries(ids)
-      account.entries.where(external_id: ids.to_a, source: "snaptrade").find_each do |entry|
-        if entry.protected_from_sync?
-          capture_debug_log(
-            message: "Keeping edited duplicate card entry #{entry.id} (#{entry.external_id})",
-            metadata: { activity_id: entry.external_id, reason: "protected" }
-          )
-          next
-        end
-
-        Rails.logger.info("SnaptradeAccount::ActivitiesProcessor - Removing duplicate card activity #{entry.external_id}")
-        entry.destroy!
-      end
+      (row[:trade_date].presence || row[:settlement_date]).to_s[0, 10].presence
     end
 
     def build_description(activity_type, symbol)

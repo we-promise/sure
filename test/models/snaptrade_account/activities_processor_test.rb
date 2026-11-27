@@ -2552,46 +2552,48 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Food Hall", entry.name
   end
 
-  test "identical card twins import once" do
+  test "two identical card charges on one day are both kept" do
     process_activities(
-      card_activity(id: "twin_a", description: "CREDIT_CARD PURCHASE: Parking Lot 4", amount: -46.00),
-      card_activity(id: "twin_b", description: "CREDIT_CARD PURCHASE: Parking Lot 4", amount: -46.00)
+      card_activity(id: "park_a", description: "CREDIT_CARD PURCHASE: Parking Lot 4", amount: -6.00),
+      card_activity(id: "park_b", description: "CREDIT_CARD PURCHASE: Parking Lot 4", amount: -6.00)
     )
 
-    assert_equal 1, @account.entries.where(source: "snaptrade", external_id: %w[twin_a twin_b]).count
+    assert_equal 2, @account.entries.where(source: "snaptrade", external_id: %w[park_a park_b]).count
   end
 
-  test "a pending and a posted copy of one card charge import once" do
+  test "a pending and a posted copy of one card charge import once, as the posted copy" do
     process_activities(
-      card_activity(id: "air_posted", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: -409.69),
-      card_activity(id: "air_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69)
+      card_activity(id: "air_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69),
+      card_activity(id: "air_posted", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: -409.69)
     )
 
-    entries = @account.entries.where(source: "snaptrade", external_id: %w[air_posted air_pending])
-    assert_equal 1, entries.count
-    assert_equal 409.69, entries.first.amount.to_f
+    assert_nil snaptrade_entry("air_pending")
+    assert_equal 409.69, snaptrade_entry("air_posted").amount.to_f
+    assert_equal "Example Airlines", snaptrade_entry("air_posted").name
   end
 
-  test "a duplicate card charge already imported is removed on the next sync" do
-    process_activities(card_activity(id: "dup_first", description: "CREDIT_CARD PURCHASE: Book Shop", amount: -12.00))
-    @account.entries.create!(
-      name: "Book Shop", date: Date.current, amount: 12.00, currency: "USD",
-      external_id: "dup_second", source: "snaptrade", entryable: Transaction.new
-    )
+  test "a pending copy already imported is kept and its posted copy is skipped" do
+    process_activities(card_activity(id: "pend_first", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69))
 
     process_activities(
-      card_activity(id: "dup_first", description: "CREDIT_CARD PURCHASE: Book Shop", amount: -12.00),
-      card_activity(id: "dup_second", description: "CREDIT_CARD PURCHASE: Book Shop", amount: -12.00)
+      card_activity(id: "pend_first", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69),
+      card_activity(id: "post_later", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: -409.69)
     )
 
-    assert_not_nil snaptrade_entry("dup_first")
-    assert_nil snaptrade_entry("dup_second")
+    assert_not_nil snaptrade_entry("pend_first")
+    assert_nil snaptrade_entry("post_later")
   end
 
-  test "a bare CREDIT_CARD row re-sent in the merchant format imports once" do
-    process_activities(card_activity(id: "bare_row", description: "CREDIT_CARD", amount: 43.00))
-    assert_not_nil snaptrade_entry("bare_row")
+  test "merchants that only share a prefix are not merged" do
+    process_activities(
+      card_activity(id: "corner_12", description: "CREDIT_CARD PURCHASE: Corner Grocery #12", amount: -42.50),
+      card_activity(id: "corner_34", description: "CREDIT_CARD PURCHASE: Corner Grocery #34", amount: -42.50)
+    )
 
+    assert_equal 2, @account.entries.where(source: "snaptrade", external_id: %w[corner_12 corner_34]).count
+  end
+
+  test "a bare CREDIT_CARD row and its merchant-format copy import once" do
     process_activities(
       card_activity(id: "bare_row", description: "CREDIT_CARD", amount: 43.00),
       card_activity(id: "named_row", description: "CREDIT_CARD PURCHASE: Marketplace Ad", amount: -43.00)
@@ -2601,20 +2603,27 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Marketplace Ad", snaptrade_entry("named_row").name
   end
 
-  test "an edited duplicate card entry is kept" do
-    process_activities(card_activity(id: "edit_a", description: "CREDIT_CARD PURCHASE: Cafe", amount: -5.00))
-    edited = @account.entries.create!(
-      name: "Cafe with friends", date: Date.current, amount: 5.00, currency: "USD",
-      external_id: "edit_b", source: "snaptrade", entryable: Transaction.new
-    )
-    edited.mark_user_modified!
+  test "a bare CREDIT_CARD row already imported is kept and nothing is deleted" do
+    process_activities(card_activity(id: "old_bare", description: "CREDIT_CARD", amount: 43.00))
 
     process_activities(
-      card_activity(id: "edit_a", description: "CREDIT_CARD PURCHASE: Cafe", amount: -5.00),
-      card_activity(id: "edit_b", description: "CREDIT_CARD PURCHASE: Cafe", amount: -5.00)
+      card_activity(id: "old_bare", description: "CREDIT_CARD", amount: 43.00),
+      card_activity(id: "new_named", description: "CREDIT_CARD PURCHASE: Marketplace Ad", amount: -43.00)
     )
 
-    assert_not_nil snaptrade_entry("edit_b")
+    assert_equal 43.00, snaptrade_entry("old_bare").amount.to_f
+    assert_nil snaptrade_entry("new_named")
+  end
+
+  test "a bare CREDIT_CARD row is not matched with a refund or payment of the same amount" do
+    process_activities(
+      card_activity(id: "bare_buy", description: "CREDIT_CARD", amount: 43.00),
+      card_activity(id: "refund", description: "CREDIT_CARD REFUND: Marketplace Ad", amount: 43.00),
+      card_activity(id: "payment", description: "CREDIT_CARD PAYMENT", amount: 43.00)
+    )
+
+    assert_not_nil snaptrade_entry("bare_buy")
+    assert_not_nil snaptrade_entry("refund")
   end
 
   test "card charges with different amounts or merchants are not merged" do
@@ -2625,6 +2634,29 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     )
 
     assert_equal 3, @account.entries.where(source: "snaptrade", external_id: %w[diff_a diff_b diff_c]).count
+  end
+
+  test "a non-hash element in the payload does not stop card processing" do
+    result = process_activities(
+      nil,
+      card_activity(id: "after_nil_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -20.00),
+      card_activity(id: "after_nil_posted", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: -20.00)
+    )
+
+    assert_not_nil result
+    assert_not_nil snaptrade_entry("after_nil_posted")
+    assert_nil snaptrade_entry("after_nil_pending")
+  end
+
+  test "card rows are compared by their effective cash amount" do
+    pending = card_activity(id: "net_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: nil)
+    posted = card_activity(id: "net_posted", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: nil)
+    pending["net_amount"] = -10.00
+    posted["net_amount"] = -11.00
+
+    process_activities(pending, posted)
+
+    assert_equal 2, @account.entries.where(source: "snaptrade", external_id: %w[net_pending net_posted]).count
   end
 
   private
