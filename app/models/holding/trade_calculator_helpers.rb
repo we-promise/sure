@@ -1,7 +1,74 @@
 # Shared helpers for holding calculators (ForwardCalculator / ReverseCalculator).
-# Expects the including class to expose an `account` reader.
+# Expects the including class to expose an `account` reader and a
+# `portfolio_cache`.
 module Holding::TradeCalculatorHelpers
+  # A per-share figure the user locked, and the units it was set for.
+  ManualCostBasis = Data.define(:security_id, :date, :cost, :qty, :locked_at)
+
   private
+    # The per-share figures the user locked on this account's holdings, by
+    # security and date, in the account's currency as the lot books count.
+    # Each is the basis of the units held at the end of its date, up to the
+    # quantity it was set for (nil: every unit held), so the calculators
+    # restate the position there and roll later trades forward from it. Rows a
+    # lock was only carried onto (cost_basis_carried) are not the user's
+    # statement, so they are left out. The figure is the one the user stated
+    # (cost_basis_locked_unit_cost), not the blend the lock row may show; a
+    # lock without one reads cost_basis. A figure with no rate for its day is
+    # left out too, rather than read as the account's currency.
+    def manual_cost_bases
+      @manual_cost_bases ||= begin
+        stated = Arel.sql("COALESCE(holdings.cost_basis_locked_unit_cost, holdings.cost_basis)")
+        scope = account.holdings.where(cost_basis_locked: true, cost_basis_carried: false)
+          .where("COALESCE(holdings.cost_basis_locked_unit_cost, holdings.cost_basis) IS NOT NULL")
+        scope = scope.where(security_id: @security_ids) if @security_ids
+        scope.order(Arel.sql("holdings.currency = #{ActiveRecord::Base.connection.quote(account.currency)}"))
+          .pluck(:security_id, :date, stated, :currency, :cost_basis_locked_qty, :cost_basis_locked_at)
+          .each_with_object(Hash.new { |h, k| h[k] = {} }) do |(security_id, date, cost, currency, qty, locked_at), bases|
+            converted = currency == account.currency ? cost : manual_cost_in_account_currency(cost, currency, date)
+            bases[security_id][date] = ManualCostBasis.new(security_id:, date:, cost: converted, qty:, locked_at:) if converted
+          end
+      end
+    end
+
+    # Restates a security's lot book at the user's figure for the `held` units
+    # at the end of its date. Units in lots from trades entered after the
+    # figure keep their own cost, whatever the trades' dates: a sale entered
+    # later relieves every lot, so the units the figure still covers are what
+    # is held less what those later lots still hold, never more than the
+    # quantity it was set for. A lock from before the time was recorded
+    # covers the quantity it was set for.
+    def restate_at_manual_cost_basis(book, lock, held)
+      covered = lock.qty.nil? ? held : [ lock.qty, held ].min
+      if lock.locked_at
+        entered_later = book.lots.sum(BigDecimal("0")) { |lot| entered_after?(lot.source_id, lock.locked_at) ? lot.qty : 0 }
+        covered = [ covered, held - entered_later ].min.clamp(0, held)
+      end
+      book.restate(lock.cost, held_qty: held, covered_qty: covered) { |lot| trade_entry_order[lot.source_id] }
+    end
+
+    def entered_after?(source_id, time)
+      created_at = trade_entry_created_at[source_id]
+      created_at.present? && created_at > time
+    end
+
+    def trade_entry_created_at
+      @trade_entry_created_at ||= portfolio_cache.get_trades.to_h { |entry| [ entry.id, entry.created_at ] }
+    end
+
+    # Each trade entry's place in the order it was entered.
+    def trade_entry_order
+      @trade_entry_order ||= portfolio_cache.get_trades
+        .sort_by { |entry| [ entry.created_at, entry.id ] }
+        .each_with_index.to_h { |entry, index| [ entry.id, index ] }
+    end
+
+    def manual_cost_in_account_currency(cost, currency, date)
+      Money.new(cost, currency).exchange_to(account.currency, date: date).amount
+    rescue Money::ConversionError
+      nil
+    end
+
     # A book that keeps no lots (the tracker before lots) has none to give.
     def lots_from(books)
       books.filter_map { |security_id, book| [ security_id, book.ledger ] if book.respond_to?(:ledger) }.to_h

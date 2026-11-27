@@ -597,7 +597,11 @@ class Account::ProviderImportAdapter
       end
 
       # Only update cost_basis if reconciliation says to
-      if !corrections.key?(:cost_basis) && reconciled[:should_update]
+      if corrections.key?(:cost_basis)
+        # A copy of the user's lock, not a new statement of theirs: released
+        # with it, and never an anchor the calculators roll forward from.
+        attributes[:cost_basis_carried] = true
+      elsif reconciled[:should_update]
         attributes[:cost_basis] = reconciled[:cost_basis]
         attributes[:cost_basis_source] = reconciled[:cost_basis_source]
       end

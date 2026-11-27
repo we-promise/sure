@@ -167,6 +167,14 @@ class Holding::ReverseCalculator
       snapshot = starting_portfolio
       positions = Hash.new(0)
       trades.each { |te| positions[te.entryable.security_id] = snapshot[te.entryable.security_id] || 0 }
+      traded = positions.keys
+      # A position no imported trade touches still runs through the replay:
+      # splits restate its units, and a figure the user locked on it applies.
+      snapshot.each do |security_id, qty|
+        next if positions.key?(security_id) || (@security_ids && !@security_ids.include?(security_id))
+
+        positions[security_id] = qty
+      end
       events.reverse_each do |event|
         if event.is_a?(Security::Split)
           next unless positions.key?(event.security_id)
@@ -179,9 +187,24 @@ class Holding::ReverseCalculator
       # The snapshot covers the whole account; a scoped run books only its own.
       baselines = snapshot.merge(positions)
       baselines = baselines.slice(*@security_ids) if @security_ids
-      open_lots(baselines, traded: positions.keys)
+      open_lots(baselines, traded: traded)
 
-      events.each do |event|
+      with_manual_cost_bases(events).each do |event|
+        if event.is_a?(ManualCostBasis)
+          security_id = event.security_id
+          next unless positions[security_id].positive?
+
+          book = @lot_books[security_id]
+          restate_at_manual_cost_basis(book, event, positions[security_id])
+          record_cost_basis(security_id, event.date)
+          # The user costed the units held, transferred-in ones included.
+          if open_unknown_start[security_id] && book.lots.all?(&:unit_cost)
+            @unknown_spans[security_id] << [ open_unknown_start[security_id], event.date ]
+            open_unknown_start.delete(security_id)
+          end
+          next
+        end
+
         if event.is_a?(Security::Split)
           security_id = event.security_id
           next unless positions.key?(security_id)
@@ -272,6 +295,17 @@ class Holding::ReverseCalculator
       events = trades.each_with_index.map { |entry, index| [ entry.date, 1, index, entry ] }
       events += portfolio_cache.get_splits.map { |split| [ split.ex_date, 0, 0, split ] }
       events.sort_by { |date, kind, index, _| [ date, kind, index ] }.map(&:last)
+    end
+
+    # The replay's events with each locked figure placed after its date's
+    # trades, as the basis of the units held at the end of that day.
+    def with_manual_cost_bases(events)
+      locks = manual_cost_bases.values.flat_map(&:values)
+      return events if locks.empty?
+
+      keyed = events.each_with_index.map { |event, index| [ event.is_a?(Security::Split) ? event.ex_date : event.date, 0, index, event ] }
+      keyed += locks.map { |lock| [ lock.date, 1, 0, lock ] }
+      keyed.sort_by { |date, kind, index, _| [ date, kind, index ] }.map(&:last)
     end
 
     # [date, cost basis, whether the cost is unknown]: under fifo, whether an
