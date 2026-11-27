@@ -387,6 +387,53 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Dividend", sub_div.entryable.investment_activity_label
   end
 
+  test "processes card purchases as outflows and refunds and payments as inflows" do
+    process_activities(
+      build_cash_activity(id: "purchase_001", type: "POSDEBIT", amount: -32.73, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "refund_001", type: "POSCREDIT", amount: 10.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "payment_001", type: "PAYMENT", amount: 500.00, settlement_date: Date.current.to_s)
+    )
+
+    assert_equal 32.73, snaptrade_entry("purchase_001").amount.to_f
+    assert_equal(-10.00, snaptrade_entry("refund_001").amount.to_f)
+    assert_equal(-500.00, snaptrade_entry("payment_001").amount.to_f)
+  end
+
+  test "a card payment with no matched bank side is a transfer, not income" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    @snaptrade_account.reload
+
+    process_activities(
+      build_cash_activity(id: "payment_002", type: "PAYMENT", amount: 500.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "purchase_002", type: "POSDEBIT", amount: -32.73, settlement_date: Date.current.to_s)
+    )
+
+    payment = card.entries.find_by!(external_id: "payment_002", source: "snaptrade")
+    assert_equal(-500.00, payment.amount.to_f)
+    assert_equal "funds_movement", payment.entryable.kind
+    assert_equal "standard", card.entries.find_by!(external_id: "purchase_002", source: "snaptrade").entryable.kind
+  end
+
+  # SnapTrade links a line of credit without "card" in its type as a Loan.
+  # Account::ProviderImportAdapter already classifies money into a linked Loan
+  # as loan_payment (a transfer kind), so only cards needed card_payment_kind.
+  test "a payment into a line of credit linked as a loan is a loan payment, not income" do
+    loan = @family.accounts.create!(name: "Line of credit", balance: 0, currency: "USD", accountable: Loan.new)
+    @snaptrade_account.ensure_account_provider!(loan)
+    @snaptrade_account.reload
+
+    process_activities(
+      build_cash_activity(id: "payment_003", type: "PAYMENT", amount: 300.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "purchase_003", type: "POSDEBIT", amount: -40.00, settlement_date: Date.current.to_s)
+    )
+
+    payment = loan.entries.find_by!(external_id: "payment_003", source: "snaptrade").entryable
+    assert_equal "loan_payment", payment.kind
+    assert_includes Transaction::TRANSFER_KINDS, payment.kind
+    assert_equal "standard", loan.entries.find_by!(external_id: "purchase_003", source: "snaptrade").entryable.kind
+  end
+
   test "processes cash FEE and TAX as positive outflow and INTEREST as negative inflow" do
     process_activities(
       build_cash_activity(id: "fee_001", type: "FEE", amount: -25.00, settlement_date: Date.current.to_s),

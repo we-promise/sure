@@ -689,6 +689,22 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Test notes", transfer.reload.notes
   end
 
+  test "editing a transfer locks the transfer before its legs" do
+    transfer = transfers(:one)
+    locking = []
+    record = ->(*, payload) do
+      sql = payload[:sql]
+      locking << sql if sql.include?("FOR UPDATE") || sql.match?(/\A\s*(UPDATE|DELETE)\b/i)
+    end
+
+    ActiveSupport::Notifications.subscribed(record, "sql.active_record") do
+      patch transfer_url(transfer), params: { transfer: { category_id: categories(:food_and_drink).id, notes: "Rent" } }
+    end
+
+    assert_redirected_to transactions_url
+    assert_match(/FROM "transfers".*FOR UPDATE/, locking.first)
+  end
+
   test "a category chosen in the transfer editor is locked as the user's" do
     transfer = transfers(:one)
     category = families(:dylan_family).investment_contributions_category
@@ -1231,6 +1247,18 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       post mark_as_recurring_transfer_url(transfer)
     end
     assert_equal I18n.t("recurring_transactions.transfer_feature_disabled"), flash[:alert]
+  end
+
+  test "update leaves the amount of a transfer whose leg is a split part" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
+    part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    transfer = link_split_part_to_loan(part)
+
+    patch transfer_url(transfer), params: { transfer: { amount: "75", notes: "Principal" } }
+
+    assert_equal 60, part.reload.amount
+    assert_equal(-60, transfer.inflow_transaction.entry.reload.amount)
+    assert_equal "Principal", transfer.reload.notes
   end
 
   private

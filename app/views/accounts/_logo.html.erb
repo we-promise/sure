@@ -15,16 +15,10 @@
   rounded: true
 } %>
 
-<%# A sidebar logo sits in a wrapper Turbo carries across visits; a failed
-    image must not be carried as its initials, so it drops the permanence
-    and the next page tries the image again. %>
-<%# Before that, a same-origin image retries once at a fresh URL: iOS Safari
-    can fail an image it only revalidated (its cached redirect, then 304 Not
-    Modified, with the cached copy already dropped), and a new URL makes it
-    fetch the image again rather than give up on a logo that is there.
-    window.URL: in an inline handler a bare URL is document.URL, a string. %>
-<% retry_once = "if (!this.dataset.retried && new window.URL(this.src).origin === location.origin) { this.dataset.retried = '1'; const url = new window.URL(this.src); url.searchParams.set('retry', Date.now()); this.src = url; return; }" %>
-<% on_error = "#{retry_once} this.closest('[data-turbo-permanent]')?.removeAttribute('data-turbo-permanent'); #{ProviderLogo::REMOVE_ON_ERROR}" %>
+<%# A sidebar logo sits in a wrapper Turbo carries across visits. A failed
+    same-origin image is fetched once more at a fresh URL, then drops that
+    permanence before it removes itself (see image_fallback_controller.js). %>
+<% fallback = ProviderLogo::REMOVE_ON_ERROR.merge(image_fallback_retry_value: true, image_fallback_release_permanent_value: true) %>
 <div class="relative shrink-0">
   <% if url.present? %>
     <%# The ProviderLogo recipe: the initials sit under the image, and a logo the
@@ -36,7 +30,7 @@
             class: "absolute inset-0 w-full h-full rounded-full object-contain bg-container",
             alt: "",
             loading: "lazy",
-            onerror: on_error %>
+            data: fallback %>
     <% end %>
   <% else %>
     <%= render DS::FilledIcon.new(**initials) %>
