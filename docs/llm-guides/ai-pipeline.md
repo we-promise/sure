@@ -139,6 +139,41 @@ flowchart LR
   model the provider code uses; `ai_feature_guard_test.rb` that every action starting an AI feature
   declares `requires_ai`.
 
+## Capsule: model calls run in jobs
+
+Every model call—`generate`, `judge`, `embed`, `ocr` and `probe`—runs inside a job on a queue from
+`Ai::Routes.queue_for`, which only the worker's AI capsules poll. No model call holds a Puma
+thread, and none skips the queue that puts chat first. `ApplicationJob` marks a job as inside the
+capsule from its queue name; the mark is fiber storage, so threads a job starts (Jev's parallel
+requests) inherit it. A job calls a route's transport directly; a web request asks a job to do it.
+
+**Rules**
+
+- **Add an AI job, not a call on the web thread.** A feature's domain requester (`Ai::Requester`)
+  supplies `ai_generation`, `apply_ai`, `ai_finished` and `ai_failed` to `Ai::GenerationJob`; start
+  it with `Ai::GenerationRun.enqueue(:feature, family:, ids:)`. An `Assistant::Function` that needs
+  a model declares `ai_feature :feature`, and `tools/call` hands it to `Ai::ToolJob.run`, which
+  writes the answer to `Ai::SharedState` for the web to poll instead of holding a thread. Health
+  checks use `Ai::ProbeJob`. Never widen a cop allowlist to make a violation go away: move the call
+  into the right job.
+- **`Ai::Capsule.check!` is the guard.** Every public transport method calls it first. In
+  development and test it raises `Ai::Capsule::Violation` outside a job or capsule; in production
+  it is a no-op, since a call that slipped through is slow, not incorrect. The fault is a bug, not
+  an `Ai::Error`, so generation failover doesn't rescue it. `test/support/ai_test_helper.rb`'s
+  `FakeTransport` overrides only the private `run_*` methods, so stubbed calls are checked too.
+- **Tests that call the plumbing directly opt in.** `ai_capsule!` on an `ActiveSupport::TestCase`
+  class enters the capsule for every test in it; `with_ai_capsule { ... }` marks a single call. The
+  test helper restores the previous mark in teardown, so a one-call helper still works in a class
+  that opted in. A transport call from a controller, a `RuleJob` or a default-queue job fails:
+  `test/architecture/ai_capsule_only_test.rb` checks the boundary and
+  `test/architecture/ai_completion_hook_test.rb` checks that the requester hears each applied batch
+  once and the run's end once.
+- **Only evals call a model outside a job**, from the command line. `Eval::GenerationClient` and
+  `lib/tasks/evals.rake` wrap those runs in `Ai::Capsule.outside { ... }`. The cop
+  `Sure/AiOutsideCapsule` flags that call anywhere except `app/models/eval/**` and
+  `lib/tasks/evals.rake`; its test keeps the allowlist to those paths and checks they still need
+  it. The console can use the same block deliberately.
+
 ## Generations
 
 Every structured-output feature (categorization, merchant detection and enhancement, bill setup)

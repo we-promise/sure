@@ -5,6 +5,7 @@ require "test_helper"
 # request. Stubbed through WebMock: Mistral and Cohere are untested live until someone records
 # test/models/ai/live/ocr_live_test.rb with a key.
 class AiTransportOcrTest < ActiveSupport::TestCase
+  ai_capsule!
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
   CHAT_URL = "http://ocr.local:8080/v1/chat/completions".freeze
   PNG = "\x89PNG\r\n\x1a\n#{"\0" * 32}".b.freeze

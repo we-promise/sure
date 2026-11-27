@@ -3,6 +3,7 @@ require "test_helper"
 # Categorization on a decision model: the question Jev is asked, what comes back, and the
 # generation's loop switching class on a `judge` route.
 class Ai::Judgements::CategorizeTransactionTest < ActiveSupport::TestCase
+  ai_capsule!
   TRANSACTIONS = [
     { id: "txn_1", amount: 4.5, classification: "expense", description: "STARBUCKS 1234", merchant: nil },
     { id: "txn_2", amount: 2500, classification: "income", description: "ACME PAYROLL", merchant: "Acme" }

@@ -1,6 +1,7 @@
 require "test_helper"
 
 class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
+  ai_capsule!
   FakeObservation = Struct.new(:log) do
     def generation(**attributes) = tap { log << [ :generation, attributes ] }
     def end(**attributes) = log << [ :end, attributes ]

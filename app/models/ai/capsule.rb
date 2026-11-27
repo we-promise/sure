@@ -23,6 +23,17 @@ module Ai::Capsule
   # Passes `check!` without being inside, for code that calls a model deliberately outside a job.
   def outside(&block) = mark(:outside, &block)
 
+  # Test-harness pair for a whole test: `enter` in setup, `leave` in teardown. Nested marks
+  # restore to the state this entered from, so one-call helpers still work inside such a test.
+  def enter(state = :inside)
+    (Fiber[:ai_capsule_stack] ||= []).push(Fiber[:ai_capsule])
+    Fiber[:ai_capsule] = state
+  end
+
+  def leave
+    Fiber[:ai_capsule] = Fiber[:ai_capsule_stack]&.pop
+  end
+
   def check!
     return unless Rails.env.local?
     return if Fiber[:ai_capsule]

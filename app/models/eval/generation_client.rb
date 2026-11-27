@@ -57,7 +57,7 @@ class Eval::GenerationClient
     attr_reader :chat_provider
 
     def respond(feature, json_mode)
-      data = Ai::Config.with(ai_config(feature, json_mode:)) { yield }
+      data = Ai::Capsule.outside { Ai::Config.with(ai_config(feature, json_mode:)) { yield } }
       Provider::Response.new(success?: true, data:, error: nil)
     rescue Ai::Error::Base => error
       Provider::Response.new(success?: false, data: nil, error:)
