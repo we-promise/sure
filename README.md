@@ -44,12 +44,14 @@ Merged on this branch:
 
 The rest is one stack, https://github.com/we-promise/sure/stack/5504. Each PR targets the one below it and shows only its own changes; merge from the bottom up. Features are frozen: only bugfixes go into these PRs now.
 
+**Merging:** a PR approved by a reviewer (Luis, or anyone who helps) is ready to merge into `refactor/ai-plumbing`. Merge from the bottom, with a merge commit rather than squash or rebase, so the PRs above stay intact. `main` is merged into this branch regularly to keep the final merge small.
+
 1. https://github.com/we-promise/sure/pull/5501 3a. Capsule, shared state and probes off the web thread.
 2. https://github.com/we-promise/sure/pull/5502 Tidying 3a and dead code from 2a-2f; review fixes.
 3. https://github.com/we-promise/sure/pull/5503 Trimming tests to a few comprehensive AI tests per layer.
 4. https://github.com/we-promise/sure/pull/5521 Windowing: fixing 2c's O(N²) runs, a #5077 performance bug.
 5. https://github.com/we-promise/sure/pull/5550 2c follow-up: recorded evals that run, set-aside prompt overrides on the family.
-6. https://github.com/we-promise/sure/pull/5608 Fix #5077 follow-ups: credentials, rule-run accounting, JSON mode, eval errors.
+6. https://github.com/we-promise/sure/pull/5608 Fix #5077 follow-ups: credentials, rule-run accounting, JSON mode, eval errors. Includes https://github.com/we-promise/sure/pull/5663 (send nullable enums to Anthropic as anyOf), merged into it.
 7. https://github.com/we-promise/sure/pull/5769 Fixes before the landing: down-mark lockouts, jobs queued on main.
 8. https://github.com/we-promise/sure/pull/5744 Count a mixed rule's ordinary changes as modified.
 9. https://github.com/we-promise/sure/pull/5745 Outbox: record each AI job and deliver it again when lost.
@@ -67,7 +69,6 @@ The rest is one stack, https://github.com/we-promise/sure/stack/5504. Each PR ta
 Other contributors' PRs on these branches, left to their authors:
 
 - On this branch: https://github.com/we-promise/sure/pull/4425 Propose a transaction split from an attached receipt (draft).
-- On #5608: https://github.com/we-promise/sure/pull/5663 Send nullable enums to Anthropic as anyOf.
 - On #5784: receipt scanning https://github.com/we-promise/sure/pull/5703, web UI https://github.com/we-promise/sure/pull/5794, mobile app https://github.com/we-promise/sure/pull/5795; purchases from forwarded order emails https://github.com/we-promise/sure/pull/5704, web UI https://github.com/we-promise/sure/pull/5796.
 - On `main`, parked: https://github.com/we-promise/sure/pull/4844 Run Anthropic AI features on a Claude subscription (draft).
 
