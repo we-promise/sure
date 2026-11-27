@@ -38,6 +38,30 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal 1, @account.transactions.reload.enrichable(:category_id).count
   end
 
+  test "applies an answer to an excluded transaction but leaves it out of the modified count" do
+    excluded = create_transaction(account: @account, name: "McDonalds").transaction
+    counted = create_transaction(account: @account, name: "Amazon purchase").transaction
+    category = @family.categories.create!(name: "Shopping")
+
+    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: excluded.id, category_name: category.name),
+      AutoCategorization.new(transaction_id: counted.id, category_name: category.name)
+    ])).once
+
+    modified_transaction_ids = Set.new
+    modified_count = Family::AutoCategorizer.new(
+      @family,
+      transaction_ids: [ excluded.id, counted.id ],
+      exclude_transaction_ids: [ excluded.id ],
+      modified_transaction_ids: modified_transaction_ids
+    ).auto_categorize
+
+    assert_equal 1, modified_count
+    assert_equal [ counted.id ], modified_transaction_ids.to_a
+    assert_equal category, excluded.reload.category
+    assert_equal category, counted.reload.category
+  end
+
   test "leaves plain transfer legs uncategorized" do
     transfer_leg = create_transaction(account: @account, name: "To brokerage").transaction
     transfer_leg.update!(kind: "funds_movement")

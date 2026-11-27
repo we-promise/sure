@@ -40,6 +40,30 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal 1, @account.transactions.reload.enrichable(:merchant_id).count
   end
 
+  test "applies an answer to an excluded transaction but leaves it out of the modified count" do
+    excluded = create_transaction(account: @account, name: "McDonalds").transaction
+    counted = create_transaction(account: @account, name: "Chipotle").transaction
+
+    provider_response = provider_success_response([
+      AutoDetectedMerchant.new(transaction_id: excluded.id, business_name: "McDonalds", business_url: "mcdonalds.com"),
+      AutoDetectedMerchant.new(transaction_id: counted.id, business_name: "Chipotle", business_url: "chipotle.com")
+    ])
+    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+
+    modified_transaction_ids = Set.new
+    modified_count = Family::AutoMerchantDetector.new(
+      @family,
+      transaction_ids: [ excluded.id, counted.id ],
+      exclude_transaction_ids: [ excluded.id ],
+      modified_transaction_ids: modified_transaction_ids
+    ).auto_detect
+
+    assert_equal 1, modified_count
+    assert_equal [ counted.id ], modified_transaction_ids.to_a
+    assert_equal "McDonalds", excluded.reload.merchant.name
+    assert_equal "Chipotle", counted.reload.merchant.name
+  end
+
   test "an invalid AI merchant name leaves that transaction unassigned without failing the batch" do
     invalid_txn = create_transaction(account: @account, name: "Weird").transaction
     valid_txn = create_transaction(account: @account, name: "Chipotle").transaction

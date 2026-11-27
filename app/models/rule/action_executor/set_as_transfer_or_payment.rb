@@ -15,14 +15,14 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     family.accounts.exists?(id: value)
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil, modified_transaction_ids: nil, already_modified_count: 0)
     target_account = family.accounts.find_by_id(value)
     return 0 unless target_account
     scope = transaction_scope.with_entry
     # Checked once per run, not per transaction.
     reconcile_pledges = target_account.linked_to_goal?
 
-    count_modified_resources(scope) do |txn|
+    count_modified_resources(scope, modified_transaction_ids: modified_transaction_ids) do |txn|
       entry = txn.entry
       unless txn.transfer?
         transfer = build_transfer(target_account, entry)

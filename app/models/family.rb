@@ -425,14 +425,25 @@ class Family < ApplicationRecord
     update!(bayes_settings: bayes_settings_object.merge(changes).to_stored)
   end
 
-  def auto_categorize_transactions_later(transactions, rule_run_id: nil)
-    AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
+  def auto_categorize_transactions_later(transactions, rule_run_id: nil, exclude_transaction_ids: [], already_modified_count: 0)
+    AutoCategorizeJob.perform_later(
+      self,
+      transaction_ids: transactions.pluck(:id),
+      rule_run_id: rule_run_id,
+      exclude_transaction_ids: exclude_transaction_ids,
+      already_modified_count: already_modified_count
+    )
   end
 
   # The LLM only: Bayes is its own rule (Category classifier), so what it
   # categorized is no longer uncategorized here.
-  def auto_categorize_transactions(transaction_ids)
-    AutoCategorizer.new(self, transaction_ids: transaction_ids).auto_categorize
+  def auto_categorize_transactions(transaction_ids, exclude_transaction_ids: [], modified_transaction_ids: nil)
+    AutoCategorizer.new(
+      self,
+      transaction_ids: transaction_ids,
+      exclude_transaction_ids: exclude_transaction_ids,
+      modified_transaction_ids: modified_transaction_ids
+    ).auto_categorize
   end
 
   # Runs Bayes over the uncategorized transactions in scope the user hasn't
@@ -526,12 +537,23 @@ class Family < ApplicationRecord
     end
   end
 
-  def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil)
-    AutoDetectMerchantsJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
+  def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil, exclude_transaction_ids: [], already_modified_count: 0)
+    AutoDetectMerchantsJob.perform_later(
+      self,
+      transaction_ids: transactions.pluck(:id),
+      rule_run_id: rule_run_id,
+      exclude_transaction_ids: exclude_transaction_ids,
+      already_modified_count: already_modified_count
+    )
   end
 
-  def auto_detect_transaction_merchants(transaction_ids)
-    AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
+  def auto_detect_transaction_merchants(transaction_ids, exclude_transaction_ids: [], modified_transaction_ids: nil)
+    AutoMerchantDetector.new(
+      self,
+      transaction_ids: transaction_ids,
+      exclude_transaction_ids: exclude_transaction_ids,
+      modified_transaction_ids: modified_transaction_ids
+    ).auto_detect
   end
 
   # Memoized per user: the layout renders the account sidebar on every page

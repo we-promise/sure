@@ -197,6 +197,31 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal @groceries_category, transaction_entry.transaction.category
   end
 
+  test "a transaction changed by several actions counts once" do
+    transaction_entry = create_transaction(date: Date.current, account: @account, name: "Whole Foods")
+    second_entry = create_transaction(date: Date.current, account: @account, name: "Whole Foods")
+    tag = @family.tags.create!(name: "Rule tag")
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id),
+        Rule::Action.new(action_type: "set_transaction_tags", value: [ tag.id ])
+      ]
+    )
+
+    assert_equal 2, rule.apply
+
+    [ transaction_entry, second_entry ].each do |entry|
+      entry.reload
+      assert_equal @groceries_category, entry.transaction.category
+      assert_equal [ tag.id ], entry.transaction.tag_ids
+    end
+  end
+
   test "split_transaction rule end to end" do
     transaction_entry = create_transaction(
       date: Date.current,
@@ -570,6 +595,35 @@ class RuleTest < ActiveSupport::TestCase
 
     assert_nil transaction_entry2.transaction.category,
       "Transaction on other account should not be categorized"
+  end
+
+  test "counts changes an action reports beyond the transaction ids it tracked" do
+    transaction = create_transaction(account: @account, name: "Whole Foods").transaction
+    rule = @family.rules.create!(
+      resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    executor = Class.new(Rule::ActionExecutor) do
+      def claimed_attributes
+        []
+      end
+
+      # Tracks one transaction but reports two changes, like an executor that
+      # also changes something outside count_modified_resources.
+      def execute(scope, modified_transaction_ids: nil, **)
+        modified_transaction_ids&.add(scope.first.id)
+        2
+      end
+    end.new(rule)
+
+    scope = rule.scope_for_transaction_ids([ transaction.id ])
+
+    registry = mock
+    registry.stubs(:get_executor!).returns(executor)
+    rule.stubs(:registry).returns(registry)
+
+    assert_equal 2, rule.apply(scope: scope)
   end
 
   test "new rules are added at the end of the run order" do

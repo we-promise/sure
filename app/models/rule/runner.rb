@@ -131,16 +131,24 @@ class Rule::Runner
         # that re-checks the conditions: otherwise an action that changes a
         # matched field (e.g. the name) would hide the transactions from the
         # actions after it, while the claims below still reserve them.
+        async_jobs = []
         result = rule.apply(
           ignore_attribute_locks: ignore_attribute_locks,
           rule_run: rule_run,
           scope: rule.scope_for_transaction_ids(matched_ids),
           claimed_ids: claimed_ids,
-          skip_action_types: skip_action_types
+          skip_action_types: skip_action_types,
+          async_jobs: async_jobs
         )
 
-        rule_run.update!(**run_counts(result, queued: matched_ids.size, rule: rule))
-        @changed_now_count += changed_now(result)
+        counts = run_counts(result, queued: matched_ids.size, rule: rule)
+        @changed_now_count += counts[:transactions_modified].to_i
+
+        # Record the pending count before enqueueing anything, so a job that
+        # finishes first cannot mark the run successful while others still run.
+        rule_run.update!(**counts)
+
+        enqueue_async_jobs(rule_run, async_jobs, already_modified_count: counts[:transactions_modified].to_i)
       rescue => e
         rule_run = record_failure(rule, rule_run, e, executed_at: executed_at, queued: matched_ids.size)
       ensure
@@ -152,25 +160,44 @@ class Rule::Runner
       rule_run
     end
 
+    # The run already stores the queued job count, so enqueue only after that.
+    # When an enqueue fails, the jobs after it never start: drop them from the
+    # pending count before the failure is recorded, or the run would wait for
+    # jobs that do not exist. A job that did start may already have changed
+    # transactions, so if this drains the run, offer its result.
+    def enqueue_async_jobs(rule_run, async_jobs, already_modified_count: 0)
+      async_jobs.each_with_index do |enqueue, index|
+        begin
+          enqueued = enqueue.call
+          raise "AI job was not enqueued" if enqueued == false
+        rescue => e
+          never_enqueued = async_jobs.size - index
+          drained = false
+          rule_run.with_lock do
+            rule_run.update!(pending_jobs_count: [ rule_run.pending_jobs_count - never_enqueued, 0 ].max)
+            drained = rule_run.pending_jobs_count.zero?
+          end
+          rule_run.offer_results(already_modified_count: already_modified_count) if drained
+          raise e
+        end
+      end
+    end
+
     def run_counts(result, queued:, rule:)
       if result.is_a?(Hash) && result[:async]
-        # The async jobs report the modified count back via RuleRun#complete_job!
-        { status: "pending", transactions_processed: result[:modified_count] || 0, pending_jobs_count: result[:jobs_count] || 0 }
+        # The async jobs add their own changes via RuleRun#complete_job!.
+        {
+          status: "pending",
+          transactions_processed: queued,
+          transactions_modified: result[:modified_count] || 0,
+          modified_transaction_ids: result[:modified_transaction_ids] || [],
+          pending_jobs_count: result[:jobs_count] || 0
+        }
       elsif result.is_a?(Integer)
         { status: "success", transactions_processed: queued, transactions_modified: result }
       else
         Rails.logger.warn("Rule::Runner: Unexpected result type from rule.apply: #{result.class} for rule #{rule.id}")
-        { status: "success" }
-      end
-    end
-
-    def changed_now(result)
-      if result.is_a?(Hash) && result[:async]
-        result[:changed_now_count] || 0
-      elsif result.is_a?(Integer)
-        result
-      else
-        0
+        { status: "success", transactions_modified: 0 }
       end
     end
 

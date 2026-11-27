@@ -14,7 +14,7 @@ class Rule::ActionExecutor::FillSimilarMerchants < Rule::ActionExecutor
     false
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil, modified_transaction_ids: nil, already_modified_count: 0)
     rule.family.fill_similar_merchants(transaction_scope)
   end
 end

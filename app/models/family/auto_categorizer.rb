@@ -1,9 +1,15 @@
 class Family::AutoCategorizer
   Error = Class.new(StandardError)
 
-  def initialize(family, transaction_ids: [])
+  def initialize(family, transaction_ids: [], exclude_transaction_ids: [], modified_transaction_ids: nil)
     @family = family
     @transaction_ids = transaction_ids
+    # The rule run already counts these as modified, so the job still applies
+    # its answer but leaves them out of its modified count.
+    @exclude_transaction_ids = exclude_transaction_ids.map(&:to_s).to_set
+    # Collects the transactions this run actually changed, so a rule run can
+    # count a transaction once even when several AI jobs change it.
+    @modified_transaction_ids = modified_transaction_ids
   end
 
   def auto_categorize
@@ -90,7 +96,10 @@ class Family::AutoCategorizer
         )
         transaction.lock_attr!(:category_id)
         # enrich_attribute returns true if the transaction was actually modified
-        modified_count += 1 if was_modified
+        if was_modified && !excluded_transaction_id?(transaction.id)
+          modified_count += 1
+          modified_transaction_ids << transaction.id if modified_transaction_ids
+        end
         true
       end
       categorized_transaction_ids << transaction.id if applied
@@ -121,7 +130,11 @@ class Family::AutoCategorizer
   end
 
   private
-    attr_reader :family, :transaction_ids
+    attr_reader :family, :transaction_ids, :exclude_transaction_ids, :modified_transaction_ids
+
+    def excluded_transaction_id?(transaction_id)
+      exclude_transaction_ids.include?(transaction_id.to_s)
+    end
 
     # Memoized: this is read once to guard, once per DebugLogEntry and once to
     # run, and each registry lookup builds a fresh provider object. Memoizing

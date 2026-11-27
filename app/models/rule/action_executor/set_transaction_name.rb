@@ -15,7 +15,7 @@ class Rule::ActionExecutor::SetTransactionName < Rule::ActionExecutor
     value.present?
   end
 
-  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
+  def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil, modified_transaction_ids: nil, already_modified_count: 0)
     return 0 if value.blank?
 
     scope = transaction_scope.with_entry
@@ -27,7 +27,7 @@ class Rule::ActionExecutor::SetTransactionName < Rule::ActionExecutor
       )
     end
 
-    count_modified_resources(scope) do |txn|
+    count_modified_resources(scope, modified_transaction_ids: modified_transaction_ids) do |txn|
       # enrich_attribute returns true if the entry was actually modified, false otherwise
       txn.entry.enrich_attribute(
         :name,

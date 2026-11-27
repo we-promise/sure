@@ -290,36 +290,98 @@ class Rule < ApplicationRecord
   # transaction ids a rule higher up already set it for; an action leaves those
   # transactions alone ("top rule wins").
   #
-  # With async (AI) actions, modified_count also counts the transactions handed
-  # to the AI; changed_now_count only counts what the other actions changed.
-  def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {}, skip_action_types: [])
-    total_modified = 0
-    changed_now = 0
+  # Actions that change the same transaction count it once. Executors that
+  # only report a count (Bayes, similar merchants) cannot be deduplicated and
+  # are added as before.
+  #
+  # Async (AI) actions run last, so their jobs can leave out the transactions
+  # the other actions already changed. Each job also reports the ids it did
+  # change, and RuleRun#complete_job! records each one once, so two AI actions
+  # that change the same transaction still count it once. modified_count is
+  # therefore only what the run changed itself; the jobs' changes are added
+  # once they finish.
+  def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {}, skip_action_types: [], async_jobs: nil)
+    modified_transaction_ids = Set.new
+    untracked_modified_count = 0
+    async_actions = []
     total_async_jobs = 0
     has_async = false
+    # The runner passes its own array so it can record the pending job count
+    # before any job runs. Callers without one enqueue when apply returns.
+    enqueue_async_jobs = async_jobs.nil?
+    async_jobs ||= []
 
     actions.each do |action|
       next if skip_action_types.include?(action.action_type)
 
-      excluded_ids = action.claimed_attributes.flat_map { |attribute| claimed_ids.fetch(attribute, []).to_a }.uniq
-      action_scope = Rule.excluding_transaction_ids(scope, excluded_ids)
-      result = action.apply(action_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
+      if action.async?
+        async_actions << action
+        next
+      end
+
+      action_modified_ids = Set.new
+      result = apply_action(
+        action,
+        scope,
+        claimed_ids,
+        ignore_attribute_locks: ignore_attribute_locks,
+        rule_run: rule_run,
+        modified_transaction_ids: action_modified_ids,
+        already_modified_count: 0
+      )
+      modified_transaction_ids.merge(action_modified_ids)
+
+      if result.is_a?(Hash) && result[:async]
+        # An action that did not declare itself async should not queue work,
+        # but handle it rather than lose the jobs if one does.
+        has_async = true
+        total_async_jobs += result[:jobs_count] || 0
+      elsif result.is_a?(Integer)
+        untracked_modified_count += untracked_count(result, action_modified_ids)
+      else
+        log_unexpected_action_result(action, result)
+      end
+    end
+
+    sync_modified_count = modified_transaction_ids.size + untracked_modified_count
+
+    async_actions.each do |action|
+      result = apply_action(
+        action,
+        scope,
+        claimed_ids,
+        ignore_attribute_locks: ignore_attribute_locks,
+        rule_run: rule_run,
+        modified_transaction_ids: modified_transaction_ids,
+        already_modified_count: sync_modified_count,
+        async_jobs: async_jobs
+      )
 
       if result.is_a?(Hash) && result[:async]
         has_async = true
         total_async_jobs += result[:jobs_count] || 0
-        total_modified += result[:modified_count] || 0
       elsif result.is_a?(Integer)
-        total_modified += result
-        changed_now += result
+        # An async action that queued nothing changed nothing. If one reports
+        # changes anyway, count them as untracked like any other action.
+        untracked_modified_count += result
+        sync_modified_count = modified_transaction_ids.size + untracked_modified_count
       else
-        # Log unexpected result type but don't fail
-        Rails.logger.warn("Rule#apply: Unexpected result type from action #{action.id}: #{result.class} (value: #{result.inspect})")
+        log_unexpected_action_result(action, result)
       end
     end
 
+    total_modified = modified_transaction_ids.size + untracked_modified_count
+
     if has_async
-      { modified_count: total_modified, changed_now_count: changed_now, async: true, jobs_count: total_async_jobs }
+      async_jobs.each(&:call) if enqueue_async_jobs
+      # The run stores the ids the other actions changed, so complete_job! can
+      # leave them out even if a job reports one of them.
+      {
+        modified_count: total_modified,
+        modified_transaction_ids: modified_transaction_ids.to_a,
+        async: true,
+        jobs_count: total_async_jobs
+      }
     else
       total_modified
     end
@@ -430,6 +492,31 @@ class Rule < ApplicationRecord
   end
 
   private
+    def apply_action(action, scope, claimed_ids, ignore_attribute_locks:, rule_run:, modified_transaction_ids:, already_modified_count:, async_jobs: nil)
+      excluded_ids = action.claimed_attributes.flat_map { |attribute| claimed_ids.fetch(attribute, []).to_a }.uniq
+      action_scope = Rule.excluding_transaction_ids(scope, excluded_ids)
+      action.apply(
+        action_scope,
+        ignore_attribute_locks: ignore_attribute_locks,
+        rule_run: rule_run,
+        modified_transaction_ids: modified_transaction_ids,
+        already_modified_count: already_modified_count,
+        async_jobs: async_jobs
+      )
+    end
+
+    # The integer an action returns counts every resource it changed; the ids
+    # cover the ones it tracked through count_modified_resources. Whatever is
+    # left was changed outside that loop, or only reported as a count, and is
+    # added separately so it cannot be dropped.
+    def untracked_count(result, modified_transaction_ids)
+      [ result - modified_transaction_ids.size, 0 ].max
+    end
+
+    def log_unexpected_action_result(action, result)
+      Rails.logger.warn("Rule#apply: Unexpected result type from action #{action.id}: #{result.class} (value: #{result.inspect})")
+    end
+
     # before_create runs inside the save transaction, so the lock taken by
     # next_position_for is held until the new row is committed.
     def assign_next_position
