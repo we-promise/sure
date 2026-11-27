@@ -48,7 +48,7 @@
               <td class="px-2 py-3">
                 <% if import.pending? %>
                   <%= render "shared/badge" do %>
-                    <%= t("imports.table.row.status.in_progress") %>
+                    <%= t("imports.table.row.status.not_imported") %>
                   <% end %>
                 <% elsif import.importing? %>
                   <%= render "shared/badge", color: "warning", pulse: true do %>

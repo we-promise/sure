@@ -469,7 +469,7 @@ pt-BR:
           document_import: Documento
           sure_import: Sure
         status:
-          in_progress: Em andamento
+          not_imported: Não importado
           uploading: Processando linhas
           reverting: Revertendo
           revert_failed: Falha na reversão

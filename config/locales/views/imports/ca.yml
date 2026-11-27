@@ -503,7 +503,7 @@ ca:
         status:
           complete: Completat
           failed: Error
-          in_progress: En curs
+          not_imported: No importat
           revert_failed: Reversió fallida
           reverting: Revertint
           uploading: Processant files

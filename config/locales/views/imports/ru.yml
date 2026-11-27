@@ -530,7 +530,7 @@ ru:
         status:
           complete: Завершено
           failed: Не удалось
-          in_progress: В процессе
+          not_imported: Не импортировано
           revert_failed: Отмена не удалась
           reverting: Отмена
           uploading: Обработка строк

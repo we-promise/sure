@@ -446,7 +446,7 @@ es:
           document_import: Documento
           sure_import: Sure
         status:
-          in_progress: En progreso
+          not_imported: No importado
           uploading: Procesando filas
           reverting: Revirtiendo
           revert_failed: Reversión fallida

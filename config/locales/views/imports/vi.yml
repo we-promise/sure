@@ -328,7 +328,7 @@ vi:
           document_import: "Tài liệu"
           sure_import: "Sure"
         status:
-          in_progress: Đang xử lý
+          not_imported: Chưa nhập
           uploading: Đang xử lý hàng
           reverting: Đang hoàn tác
           revert_failed: Hoàn tác thất bại

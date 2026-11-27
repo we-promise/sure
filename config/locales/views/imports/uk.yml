@@ -382,7 +382,7 @@ uk:
           document_import: "Документ"
           sure_import: "Sure"
         status:
-          in_progress: "В процесі"
+          not_imported: "Не імпортовано"
           uploading: "Обробка рядків"
           reverting: "Скасування"
           revert_failed: "Не вдалося скасувати"

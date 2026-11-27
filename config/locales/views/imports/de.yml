@@ -322,7 +322,7 @@ de:
         actions: Aktionen
       row:
         status:
-          in_progress: Wird ausgeführt
+          not_imported: Nicht importiert
           uploading: Zeilen werden verarbeitet
           reverting: Wird rückgängig gemacht
           revert_failed: Rückgängig machen fehlgeschlagen

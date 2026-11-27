@@ -575,7 +575,7 @@ fr:
         status:
           complete: Terminé
           failed: Échoué
-          in_progress: En cours
+          not_imported: Non importé
           revert_failed: Annulation échouée
           reverting: Annulation en cours
           uploading: Traitement des lignes

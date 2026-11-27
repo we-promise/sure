@@ -376,7 +376,7 @@ zh-CN:
         actions: 操作
       row:
         status:
-          in_progress: 进行中
+          not_imported: 未导入
           uploading: 处理行数据中
           reverting: 回滚中
           revert_failed: 回滚失败

@@ -354,7 +354,7 @@ zh-TW:
           document_import: 文件
           sure_import: Sure
         status:
-          in_progress: 進行中
+          not_imported: 未匯入
           uploading: 正在處理資料列
           reverting: 還原中
           revert_failed: 還原失敗

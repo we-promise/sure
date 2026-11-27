@@ -321,7 +321,7 @@ nb:
         actions: Handlinger
       row:
         status:
-          in_progress: Pågår
+          not_imported: Ikke importert
           uploading: Behandler rader
           reverting: Tilbakefører
           revert_failed: Tilbakeføring mislyktes
