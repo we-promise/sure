@@ -215,6 +215,7 @@ de:
         merchant: Händler
         ai: KI
         attachment: Anhang
+        balance_updates: "Kontostände"
     convert_to_trade:
       title: In Wertpapier-Trade umwandeln
       description: Diese Transaktion in einen Trade mit Wertpapierdetails umwandeln
@@ -276,6 +277,7 @@ de:
           ai_history: KI-Verlauf
           attachment_with: Mit Anhang
           attachment_without: Ohne Anhang
+          balance_updates: "Synchronisierte Kontostände"
         attachment_filter:
           with: Mit Anhang
           without: Ohne Anhang
@@ -302,6 +304,11 @@ de:
           filter_merchants: Händler filtern
         tag_filter:
           filter_tags: Tags filtern
+        balance_updates_filter:
+          always_shown: "Immer angezeigt, wie eingestellt in"
+          hint: "Nur für diese Ansicht. Um sie immer anzuzeigen, schalte sie ein in"
+          preferences_link: "Einstellungen"
+          show: "Synchronisierte Kontostandsänderungen anzeigen"
       menu:
         account_filter: Konto
         amount_filter: Betrag
@@ -315,6 +322,7 @@ de:
         status_filter: Status
         tag_filter: Tag
         type_filter: Typ
+        loading: "Filter werden geladen …"
       search:
         equal_to: gleich
         greater_than: größer als
@@ -432,3 +440,23 @@ de:
       transfer_confirmed: Überweisung bestätigt
     update:
       updated: Transaktion aktualisiert
+    bulk_deletions:
+      create:
+        part_transferred:
+          one: "1 aufgeteilte Transaktion wurde nicht gelöscht: Ein Teil davon ist als Überweisung verknüpft. Entferne zuerst diese Überweisung."
+          other: "%{count} aufgeteilte Transaktionen wurden nicht gelöscht: Jeweils ein Teil ist als Überweisung verknüpft. Entferne zuerst diese Überweisungen."
+    category_provenance:
+      title: "Automatische Kategorisierung"
+      assigned: "„%{category}“ vor %{time_ago} zugewiesen durch %{source}."
+      changed_afterwards: "Die Kategorie wurde danach geändert."
+      deleted_category: "eine Kategorie, die es nicht mehr gibt"
+      sources:
+        ai: "KI"
+        bayes: "den lokalen Bayes-Klassifikator"
+      labels:
+        ai:
+          current: "KI"
+          history: "KI-Verlauf"
+        bayes:
+          current: "Bayes"
+          history: "Bayes-Verlauf"
