@@ -108,13 +108,14 @@ jobs:
   # The unit tests already use every CPU of a runner, so they are split by
   # file across two runners.
   test_unit_shard:
-    name: test_unit (${{ matrix.shard }}/${{ strategy.job-total }})
+    name: test_unit (PostgreSQL ${{ matrix.postgres }}, shard ${{ matrix.shard }})
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     strategy:
       fail-fast: false
       matrix:
+        postgres: [ 16, 19 ]
         shard: [ 1, 2 ]
 
     env:
@@ -126,7 +127,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres
+        image: postgres:${{ matrix.postgres }}-trixie
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -157,14 +158,15 @@ jobs:
 
       - name: DB setup and smoke test
         run: |
+          psql "$DATABASE_URL" -c 'SHOW server_version'
           bin/rails db:create
           bin/rails db:schema:load
           bin/rails db:seed
 
       - name: Unit and integration tests
         env:
-          SHARD: ${{ strategy.job-index }}
-          SHARDS: ${{ strategy.job-total }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: 2
         run: |
           # Same files as a plain `bin/rails test`, which leaves out system,
           # dummy and fixtures tests.
@@ -175,9 +177,9 @@ jobs:
             echo "No unit test files found" >&2
             exit 1
           fi
-          mapfile -t files < <(printf '%s\n' "${all[@]}" | awk -v n="$SHARDS" -v i="$SHARD" '(NR - 1) % n == i')
+          mapfile -t files < <(printf '%s\n' "${all[@]}" | awk -v n="$SHARDS" -v i="$SHARD" '(NR - 1) % n == i - 1')
           if [ "${#files[@]}" -eq 0 ]; then
-            echo "::warning::Unit test shard $((SHARD + 1))/${SHARDS} has no files (${#all[@]} in total)"
+            echo "::warning::Unit test shard ${SHARD}/${SHARDS} has no files (${#all[@]} in total)"
             exit 0
           fi
           echo "${#files[@]} test files in shard $((SHARD + 1))/${SHARDS}"
@@ -193,7 +195,7 @@ jobs:
       # keys because unrelated tests assume encryption is off. Only the first
       # shard runs them.
       - name: Encryption tests
-        if: ${{ !cancelled() && strategy.job-index == 0 }}
+        if: ${{ !cancelled() && matrix.shard == 1 }}
         env:
           ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: test
           ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: test
@@ -276,13 +278,14 @@ jobs:
   # System tests run serially (they flake when parallel workers compete for
   # the runner's CPUs), so they are split by file across several runners.
   test_system_shard:
-    name: test_system (${{ matrix.shard }}/${{ strategy.job-total }})
+    name: test_system (PostgreSQL ${{ matrix.postgres }}, shard ${{ matrix.shard }})
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     strategy:
       fail-fast: false
       matrix:
+        postgres: [ 16, 19 ]
         shard: [ 1, 2, 3 ]
 
     env:
@@ -294,7 +297,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres
+        image: postgres:${{ matrix.postgres }}-trixie
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -332,14 +335,15 @@ jobs:
 
       - name: DB setup and smoke test
         run: |
+          psql "$DATABASE_URL" -c 'SHOW server_version'
           bin/rails db:create
           bin/rails db:schema:load
           bin/rails db:seed
 
       - name: System tests
         env:
-          SHARD: ${{ strategy.job-index }}
-          SHARDS: ${{ strategy.job-total }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: 3
         run: |
           mapfile -t all < <(find test/system -name '*_test.rb' | LC_ALL=C sort)
           # Fail when nothing is found at all, so a moved folder can't pass
@@ -348,9 +352,9 @@ jobs:
             echo "No system test files found" >&2
             exit 1
           fi
-          mapfile -t files < <(printf '%s\n' "${all[@]}" | awk -v n="$SHARDS" -v i="$SHARD" '(NR - 1) % n == i')
+          mapfile -t files < <(printf '%s\n' "${all[@]}" | awk -v n="$SHARDS" -v i="$SHARD" '(NR - 1) % n == i - 1')
           if [ "${#files[@]}" -eq 0 ]; then
-            echo "::warning::System test shard $((SHARD + 1))/${SHARDS} has no files (${#all[@]} in total)"
+            echo "::warning::System test shard ${SHARD}/${SHARDS} has no files (${#all[@]} in total)"
             exit 0
           fi
           printf '%s\n' "${files[@]}"
@@ -363,7 +367,7 @@ jobs:
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: failure()
         with:
-          name: screenshots-${{ matrix.shard }}
+          name: screenshots-pg${{ matrix.postgres }}-${{ matrix.shard }}
           path: ${{ github.workspace }}/tmp/screenshots
           if-no-files-found: ignore
 
@@ -380,3 +384,18 @@ jobs:
         run: |
           echo "System test shards: ${RESULT}"
           [ "$RESULT" = "success" ]
+
+  test_backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the Sure image base
+        run: docker build --target base --tag sure-backup-test .
+
+      - name: Test database backup and restore
+        run: bash test/support/sure-backup-smoke.sh sure-backup-test
