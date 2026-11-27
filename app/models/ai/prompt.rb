@@ -20,10 +20,7 @@ class Ai::Prompt
   # feature, whichever provider serves it.
   OVERRIDES = { categorize: :categorize_transactions, detect_merchants: :detect_merchants }.freeze
 
-  Rendered = Data.define(:name, :instructions, :input, :locale, :override) do
-    # What instrumentation and Ai::Comparison record about the prompt that ran.
-    def to_event = { name:, locale:, override: }.compact
-  end
+  Rendered = Data.define(:instructions, :input)
 
   def self.for(feature, default:, route:, family:, locale:, locals:)
     new(feature, default:, route:, family:, locale:).render(**locals)
@@ -33,7 +30,6 @@ class Ai::Prompt
 
   def initialize(feature, default:, route:, family:, locale:)
     @feature = feature.to_sym
-    @route = route
     @name = (route&.prompt.presence || default).to_s
     @family = family
     @locale = locale&.to_s
@@ -41,14 +37,7 @@ class Ai::Prompt
   end
 
   def render(**locals)
-    override = override_text
-    Rendered.new(
-      name: @name,
-      instructions: override || part("instructions", **locals),
-      input: part("input", **locals),
-      locale: localized?("instructions") ? @locale : nil,
-      override: override.present? || nil
-    )
+    Rendered.new(instructions: override_text || part("instructions", **locals), input: part("input", **locals))
   end
 
   private

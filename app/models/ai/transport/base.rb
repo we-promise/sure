@@ -6,26 +6,26 @@ class Ai::Transport::Base
   # the share of items the model left blank or missed, for `auto` JSON mode's fallback; nil
   # means blanks are a normal answer (bill setup). `attachments` are Ai::Attachment files sent
   # after the input: a PDF or page images.
-  Request = Data.define(:feature, :family, :model, :instructions, :input, :schema, :schema_name, :max_tokens,
+  Request = Data.define(:feature, :family, :model, :instructions, :input, :schema, :schema_name,
                         :reasoning_effort, :json_mode, :failed_ratio, :attachments) do
-    def initialize(feature:, model:, instructions:, input:, schema:, schema_name:, family: nil, max_tokens: nil,
+    def initialize(feature:, model:, instructions:, input:, schema:, schema_name:, family: nil,
                    reasoning_effort: nil, json_mode: :auto, failed_ratio: nil, attachments: [])
       super(feature: feature.to_sym, family:, model:, instructions:, input:, schema:, schema_name: schema_name.to_s,
-            max_tokens:, reasoning_effort: reasoning_effort&.to_s, json_mode: json_mode.to_sym, failed_ratio:,
+            reasoning_effort: reasoning_effort&.to_s, json_mode: json_mode.to_sym, failed_ratio:,
             attachments: Array(attachments).freeze)
     end
 
     # What the `.ai` event records: never the family's data beyond what the prompt holds, and
     # files by name and size only.
     def to_event
-      { instructions:, input:, schema_name:, json_mode:, reasoning_effort:, max_tokens:,
+      { instructions:, input:, schema_name:, json_mode:, reasoning_effort:,
         attachments: attachments.map(&:to_event).presence }.compact
     end
   end
 
-  # The parsed JSON (a Hash or an Array), the summed usage of every request the call made, and
-  # the JSON mode that produced it.
-  Response = Data.define(:json, :usage, :raw_id, :finish_reason, :json_mode)
+  # The parsed JSON (a Hash or an Array), the summed usage of every request the call made, why the
+  # model stopped (recorded on the `.ai` event), and the JSON mode that produced it.
+  Response = Data.define(:json, :usage, :finish_reason, :json_mode)
 
   # One judgement request: the same questions about each state, keyed by the item's id. Jev takes
   # one state per request, so the transport fans the states out. Questions are plain
@@ -200,7 +200,7 @@ class Ai::Transport::Base
       vectors
     end
 
-    # Tolerant parsing, the one copy of what each worker did: fenced JSON (closed or not), prose
+    # Tolerant parsing: fenced JSON (closed or not), prose
     # around the object, or a bare array. Chat Completions content arrives with any think block
     # already split out (split_think_tags); those are the only protocols Sure sends here.
     # Returns a Hash or an Array, or nil when nothing parses.
@@ -233,9 +233,9 @@ class Ai::Transport::Base
       tries = 0
       begin
         tries += 1
-        check_budget!
+        Ai::CallContext.check_budget!
         result = yield
-        check_budget!(after: true)
+        Ai::CallContext.check_budget!(after: true)
         result
       rescue *Ai::Error::RETRYABLE => error
         delay = retry_delay(tries)
@@ -245,14 +245,6 @@ class Ai::Transport::Base
         sleep(delay)
         retry
       end
-    end
-
-    # Requests RubyLLM doesn't send, such as the models list, aren't checked by its instrumenter.
-    # After an attempt too, so an answer that arrives late isn't taken as a pass.
-    def check_budget!(after: false)
-      return unless Ai::CallContext.current&.expired?
-
-      raise Ai::Error::Timeout, "the attempt's time budget was spent #{after ? "before the answer arrived" : "before the request was sent"}"
     end
 
     # A request's timeout, cut to what's left of the call's budget, so a retry can't outlast it.

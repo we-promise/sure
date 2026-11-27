@@ -226,7 +226,6 @@ class Ai::GenerationTest < ActiveSupport::TestCase
 
     assert_equal %w[t0 t1], answered_ids(result)
     assert_equal %w[t2 t3], result.remaining_ids
-    assert_equal %w[gpu], result.failed_over_from.map { _1.endpoint.name }
   end
 
   test "unsupported singleton answers during bisection keep the halves already answered" do
@@ -278,7 +277,6 @@ class Ai::GenerationTest < ActiveSupport::TestCase
 
     assert_equal %w[t0 t1], answered_ids(result).sort
     assert_empty result.remaining
-    assert_equal %w[gpu], result.failed_over_from.map { _1.endpoint.name }
     fallback = requests.select { _1.model.endpoint.name == "openai" }
     assert_equal [ %w[t1] ], fallback.map { _1.input.scan(/ID: (t\d)/).flatten }, "t0 was answered already"
   end
@@ -300,7 +298,6 @@ class Ai::GenerationTest < ActiveSupport::TestCase
 
     assert_equal %w[t0 t1], answered_ids(result).sort
     assert_empty result.remaining
-    assert_empty result.failed_over_from.to_a
     fallback = requests.select { _1.model.endpoint.name == "openai" }
     assert_equal [ %w[t1] ], fallback.map { _1.input.scan(/ID: (t\d)/).flatten }, "t0 was answered already"
   end
@@ -380,7 +377,6 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     result = generation(2).call
 
     assert_equal %w[t0 t1], answered_ids(result).sort
-    assert_empty result.failed_over_from.to_a, "an unusable answer marks nothing down"
     fallback = requests.select { _1.model.endpoint.name == "openai" }
     assert_equal [ %w[t1] ], fallback.map { _1.input.scan(/ID: (t\d)/).flatten }, "t0 was answered already"
   end

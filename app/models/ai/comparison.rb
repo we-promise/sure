@@ -14,7 +14,6 @@ class Ai::Comparison < ApplicationRecord
 
   scope :for_feature, ->(feature) { where(feature: feature.to_s) }
   scope :disagreements, -> { where(agreed: false) }
-  scope :chronological, -> { order(:created_at) }
 
   # Sample size and share of agreement, as a percentage, from one query so a shadow job
   # inserting a row can't give the rate a different sample than the panel reports. Nil rate

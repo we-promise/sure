@@ -12,8 +12,8 @@ module Ai::Batch
 
   module_function
 
-  def first_slice(items, model:, fixed_tokens:, cost: ->(item) { Assistant::TokenEstimator.estimate(item) })
-    cap = model.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE
+  def first_slice(items, model:, fixed_tokens:, cost:)
+    cap = model.batch_size
     budget = budget_for(model, fixed_tokens)
     slice = []
     used = 0

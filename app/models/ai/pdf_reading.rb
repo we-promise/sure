@@ -32,9 +32,8 @@ class Ai::PdfReading
   # page untranscribed; a missing renderer or unreadable file is failure of the way as a whole.
   PAGE_LOCAL_RENDER_ERRORS = %i[too_large blank_page timeout failed].freeze
 
-  Outcome = Data.define(:value, :way, :model, :checks, :usage, :attempts) do
+  Outcome = Data.define(:value, :way, :model, :checks, :attempts) do
     def passed? = checks.nil? || checks.passed?
-    def flagged? = !passed?
   end
 
   # The OCR text layer, and the pages no route could transcribe: those rows can still net to the
@@ -58,8 +57,8 @@ class Ai::PdfReading
       ocr: (:needs_ocr_route unless models.any? { _1.capable?(:ocr) } && readers.any?) }
   end
 
-  def initialize(content:, family:, filename: "document.pdf", user: nil, plan: nil)
-    @content, @filename, @family, @user, @plan = content, filename, family, user, plan
+  def initialize(content:, family:, filename: "document.pdf", user: nil)
+    @content, @filename, @family, @user = content, filename, family, user
   end
 
   # The plan for `extract_pdf`, or Ai::Error::Unavailable with the router's reason.
@@ -105,7 +104,7 @@ class Ai::PdfReading
       value = balances.empty? ? result.value : result.value.merge(balances)
       checks = Ai::Generations::ExtractBankStatement.checks(value, source:, balances:)
                                                     .with(complete: result.skipped.empty? && result.remaining.empty? && untranscribed_pages.blank?)
-      outcome = Outcome.new(value:, way:, model: result.route&.model&.name, checks:, usage: result.usage, attempts:)
+      outcome = Outcome.new(value:, way:, model: result.route&.model&.name, checks:, attempts:)
       attempts << { way:, checks: checks.to_h }
       return outcome unless checks.worth_another_way? || balances_unknown?(checks, source)
 
@@ -122,7 +121,6 @@ class Ai::PdfReading
     attempts = []
     each_way(read_as, attempts:, cancelled:) do |way, units, _source|
       first = nil
-      usage = nil
       CLASSIFY_BATCHES.times do
         begin
           result = Ai::Generations::ReadPdf.new(units:, content:, filename:, family:, user:).call(batches: 1, plan: plan_for(way), cancelled:)
@@ -137,7 +135,6 @@ class Ai::PdfReading
           break
         end
         first ||= result
-        usage = [ usage, result.usage ].compact.reduce(:+)
         if STATEMENT_TYPES.include?(result.value[:document_type])
           first = result
           break
@@ -148,7 +145,7 @@ class Ai::PdfReading
       end
 
       attempts << { way: }
-      return Outcome.new(value: first.value, way:, model: first.route&.model&.name, checks: nil, usage:, attempts:)
+      return Outcome.new(value: first.value, way:, model: first.route&.model&.name, checks: nil, attempts:)
     end
     raise_unavailable(attempts, read_as)
   end

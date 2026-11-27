@@ -56,4 +56,12 @@ module Ai::CallContext
   end
 
   def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+  # Raises Timeout when the current attempt's budget is spent: before a request is sent, or once
+  # its answer arrives (`after:`), so a late answer isn't taken as a pass.
+  def check_budget!(after: false)
+    return unless current&.expired?
+
+    raise Ai::Error::Timeout, "the attempt's time budget was spent #{after ? "before the answer arrived" : "before the request was sent"}"
+  end
 end

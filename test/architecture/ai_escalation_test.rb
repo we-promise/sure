@@ -40,7 +40,6 @@ class AiEscalationTest < ActiveSupport::TestCase
       assert result.success?
       assert_equal "qwen3-20b", result.route.model.name
       assert_equal %w[gpu/qwen3-3b gpu/qwen3-20b], requests.map { served_by(_1) }
-      assert_nil result.failed_over_from
       assert_empty @cache.instance_variable_get(:@data).keys
     end
   end
@@ -55,7 +54,6 @@ class AiEscalationTest < ActiveSupport::TestCase
       assert_equal "openai", first.route.endpoint.name
       assert_equal %w[gpu/qwen3-3b openai/gpt-4.1-mini openai/gpt-4.1-mini], requests.map { served_by(_1) }
       assert_equal "openai", second.route.endpoint.name
-      assert_equal [ "gpu/qwen3-3b" ], first.failed_over_from.map { "#{_1.endpoint.name}/#{_1.model.name}" }
     end
   end
 

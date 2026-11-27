@@ -77,6 +77,7 @@ ca:
           seconds: '%{seconds} s'
           no_queues: No hi ha cap cua registrada. Pot ser que el worker no s'estigui executant.
         ai:
+          worker_unhealthy_warning: "Ara mateix pot ser que les comprovacions de la IA no s'executin: el procés en segon pla sembla aturat o saturat. Comprova que el teu worker de Sidekiq s'estigui executant."
           run_checks: Torna a executar les comprovacions
           alerts:
             custom_openai:
@@ -226,6 +227,7 @@ ca:
             request_failed: La petició al servei ha fallat
             unsupported_provider: El proveïdor no admet aquesta comprovació
           worker:
+            run_coverage_notice: "Cada comprovació verifica exactament un procés worker: el que l'agafi de la cua. Amb més d'una rèplica del worker, un resultat correcte no confirma que tots els workers funcionin bé; torna a executar les comprovacions per provar-ne un altre."
             empty:
               title: Encara no ha respost cap worker
             labels:

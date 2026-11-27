@@ -76,7 +76,7 @@ class WorkerAiHealth
     end
 
     def stale?
-      checked_at.nil? || checked_at < WorkerAiHealth::STALE_AFTER.ago
+      checked_at < WorkerAiHealth::STALE_AFTER.ago
     end
 
     # Most-specific-first: a stale result can't be trusted as passing or
@@ -123,12 +123,16 @@ class WorkerAiHealth
     # instant can race (read-modify-write on one cache key) and the loser's
     # result is dropped for that round. Acceptable here: this is an
     # operator-triggered, low-frequency action, not a hot path, and a
-    # dropped write just means running the check again.
+    # dropped write just means running the check again. So is a write Redis
+    # refuses: the job still has the open tabs reload.
     def record!(snapshot)
       results = recent.reject { |r| r.process_identity == snapshot.process_identity }
       results = [ snapshot, *results ].first(MAX_RESULTS)
       # Each write keeps the list for RETENTION; older entries drop by their checked_at.
       Ai::SharedState.write(STORE_KEY, results, expires_in: RETENTION)
+      snapshot
+    rescue RedisClient::Error => error
+      Rails.logger.warn("Worker AI health not recorded: #{error.class.name}")
       snapshot
     end
 
@@ -137,10 +141,12 @@ class WorkerAiHealth
     # STALE_AFTER are still returned (status: :stale) so an operator can see
     # a worker went quiet rather than the section going empty.
     def recent
-      results = Array(Ai::SharedState.read(STORE_KEY)).map { Snapshot.from_json(_1) }
-      # Filter out entries older than RETENTION
-      results = results.select { |r| r.checked_at && r.checked_at > RETENTION.ago }
-      results.sort_by { |r| r.checked_at || Time.at(0) }.reverse
+      Array(Ai::SharedState.read(STORE_KEY)).map { Snapshot.from_json(_1) }
+        .select { _1.checked_at > RETENTION.ago }
+        .sort_by(&:checked_at).reverse
+    rescue RedisClient::Error => error
+      Rails.logger.warn("Worker AI health unreadable: #{error.class.name}")
+      []
     end
 
     # Stable identity for "this OS process" -- hostname:pid. Good enough to
