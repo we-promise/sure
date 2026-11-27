@@ -5,9 +5,17 @@ class DataCleanerJob < ApplicationJob
     clean_old_merchant_associations
     clean_expired_archived_exports
     clean_stale_enable_banking_psu_ips
+    clean_abandoned_ai_generation_runs
   end
 
   private
+    # A run is deleted when its last job finishes or gives up; one still here a week on lost its job.
+    def clean_abandoned_ai_generation_runs
+      deleted_count = Ai::GenerationRun.sweep
+
+      Rails.logger.info("DataCleanerJob: Deleted #{deleted_count} abandoned AI generation runs") if deleted_count > 0
+    end
+
     def clean_old_merchant_associations
       # Delete FamilyMerchantAssociation records older than 30 days
       deleted_count = FamilyMerchantAssociation

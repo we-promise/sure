@@ -45,7 +45,7 @@ class AiE2eCategorizeTest < ActiveSupport::TestCase
 
   private
     def categorize
-      Ai::GenerationJob.perform_now(:categorize, { ids: @transactions.map(&:id), family_id: @family.id })
+      Ai::GenerationJob.perform_now(:categorize, ai_run_args(:categorize, ids: @transactions.map(&:id), family: @family))
     end
 
     # A model may abstain on an item; it may not answer outside the family's categories, and a

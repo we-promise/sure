@@ -51,6 +51,10 @@ class Ai::Config
   # before it reaches a generation (the eval runners).
   def batch_size_for(feature) = routes_for(feature).first&.model&.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE
 
+  # How many items one Ai::GenerationJob reads for the feature: the largest batch any of its routes
+  # takes, so a failover or escalation never gets a smaller batch than its own.
+  def window_for(feature) = routes_for(feature).filter_map { _1.model&.batch_size }.max || Ai::Config::Model::DEFAULT_BATCH_SIZE
+
   def endpoint(name) = endpoints.find { _1.name == name.to_s }
 
   # The model pgvector and Qdrant embed with: the `embed` route's, or one no route uses yet

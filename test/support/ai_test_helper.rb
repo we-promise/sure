@@ -80,6 +80,11 @@ module AiTestHelper
   # Runs the block inside the AI capsule, as an AI job would.
   def with_ai_capsule(&block) = Ai::Capsule.within(Ai::Routes.ai_queues.first, &block)
 
+  # The arguments of a run's first Ai::GenerationJob, for a test that performs one directly.
+  def ai_run_args(feature, ids:, family:, **args)
+    { run_id: Ai::GenerationRun.start!(family:, feature:, ids:).id, cursor: 0, pending: [], family_id: family.id, **args }
+  end
+
   class << self
     # Set by stub_ai: builds the transport for an endpoint instead of Ai::Transport.for.
     attr_accessor :transport_stub

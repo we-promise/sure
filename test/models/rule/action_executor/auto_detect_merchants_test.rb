@@ -26,7 +26,9 @@ class Rule::ActionExecutor::AutoDetectMerchantsTest < ActiveSupport::TestCase
       result = @executor.execute(@account.transactions, rule_run:)
     end
 
-    assert_equal ids.sort, enqueued_jobs.last["arguments"].second["ids"].sort
+    args = enqueued_jobs.last["arguments"].second
+    assert_equal [ 0, [] ], args.values_at("cursor", "pending")
+    assert_equal ids.sort, Ai::GenerationRun.find(args["run_id"]).items.pluck(:item_id).sort
     assert_equal({ async: true, modified_count: 5, jobs_count: 1 }, result)
     assert_equal 5, rule_run.reload.transactions_awaiting_ai
   end
