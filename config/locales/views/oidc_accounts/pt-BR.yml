@@ -2,6 +2,7 @@
 pt-BR:
   oidc_accounts:
     link:
+      no_pending_oidc: Nenhuma autenticação OIDC pendente encontrada
       title_link: Vincular conta OIDC
       title_create: Criar conta
       verify_heading: Verificar sua identidade
@@ -18,9 +19,13 @@ pt-BR:
       info_email: "E-mail:"
       info_name: "Nome:"
       submit_create: Criar conta
+      submit_accept_invitation: Aceitar convite
       account_creation_disabled: A criação de contas via login único está desativada. Entre em contato com um administrador.
       cancel: Cancelar
+    create_link:
+      no_pending_oidc: Nenhuma autenticação OIDC pendente encontrada
     new_user:
+      no_pending_oidc: Nenhuma autenticação OIDC pendente encontrada
       title: Completar sua conta
       heading: Criar sua conta
       description: Confirme seus dados para concluir a criação da conta com sua identidade %{provider}.
@@ -31,3 +36,8 @@ pt-BR:
       last_name_placeholder: Digite seu sobrenome
       submit: Criar conta
       cancel: Cancelar
+    create_user:
+      no_pending_oidc: Nenhuma autenticação OIDC pendente encontrada
+      account_creation_disabled: A criação de contas via SSO está desativada. Entre em contato com um administrador.
+      account_created: Boas-vindas! Sua conta foi criada.
+      duplicate_account: Já existe uma conta ou identidade de login com esses dados
