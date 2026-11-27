@@ -925,7 +925,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get account_url(account)
 
     assert_response :success
-    assert_select "##{dom_id(balance_update)}", text: /Synced balance/
+    assert_select "##{dom_id(balance_update)}", text: /Balance synced from Plaid/
     # Nothing left to switch in the filter: it shows as on, and points to Preferences.
     assert_select "input[type=checkbox][name=?][checked][disabled]", "q[balance_updates]"
     assert_select "#account-activity-filters li", count: 0

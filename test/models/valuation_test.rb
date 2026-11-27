@@ -14,10 +14,23 @@ class ValuationTest < ActiveSupport::TestCase
     entry = Entry.new(name: "Manual balance update", account: accounts(:connected))
     valuation = Valuation.new(kind: "reconciliation")
 
-    assert_equal "Synced balance", valuation.display_name(entry)
+    assert_equal "Balance synced from Plaid", valuation.display_name(entry)
+  end
+
+  test "a locale without the provider wording keeps its own synced name" do
+    entry = Entry.new(name: "Manual balance update", account: accounts(:connected))
+
     I18n.with_locale(:fr) do
-      assert_equal "Solde synchronisé", valuation.display_name(entry)
+      assert_equal "Solde synchronisé", Valuation.new(kind: "reconciliation").display_name(entry)
     end
+  end
+
+  test "names the provider by its brand, on an account linked through a provider connection" do
+    account = accounts(:investment)
+    AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
+
+    entry = Entry.new(name: "Manual value update", account: account.reload)
+    assert_equal "Value synced from SnapTrade", Valuation.new(kind: "reconciliation").display_name(entry)
   end
 
   test "keeps the manual name on a manual account and the anchor names on a linked one" do

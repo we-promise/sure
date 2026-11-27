@@ -1,6 +1,35 @@
 ---
 en:
   providers:
+    # Brand names, as each provider writes its own.
+    names:
+      akahu: Akahu
+      binance: Binance
+      brex: Brex
+      coinbase: Coinbase
+      coinspot: CoinSpot
+      coinstats: CoinStats
+      enable_banking: Enable Banking
+      financekit: Apple Wallet
+      fio: Fio banka
+      ibkr: Interactive Brokers
+      indexa_capital: Indexa Capital
+      kraken: Kraken
+      lunchflow: Lunch Flow
+      mercury: Mercury
+      monobank: Monobank
+      onchain_wallet: On-chain wallet
+      plaid: Plaid
+      questrade: Questrade
+      redbark: Redbark
+      sharesight: Sharesight
+      simplefin: SimpleFIN
+      snaptrade: SnapTrade
+      sophtron: Sophtron
+      trade_republic: Trade Republic
+      truelayer: TrueLayer
+      up: Up
+      wise: Wise
     truelayer:
       description: Connect to your UK bank via TrueLayer
     property_valuation:
