@@ -65,6 +65,17 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       }
     end
 
+    # The web lets only those who can manage a statement act on its import, and
+    # the import made here carries the statement, so the same rule applies.
+    statement = pdf_import.account_statement
+    if statement && !statement.manageable_by?(user)
+      return {
+        success: false,
+        error: "statement_not_manageable",
+        message: "You can view this statement but not import from it"
+      }
+    end
+
     unless pdf_import.document_type == "bank_statement"
       return {
         success: false,
@@ -131,10 +142,11 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     # Create a CSV from extracted transactions
     csv_content = generate_csv(result[:transactions])
 
-    # Create a TransactionImport
+    # The transactions come from the statement, so the import keeps its privacy.
     import = family.imports.create!(
       type: "TransactionImport",
       account: account,
+      account_statement: statement,
       raw_file_str: csv_content,
       date_col_label: "date",
       amount_col_label: "amount",
