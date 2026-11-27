@@ -1,0 +1,36 @@
+---
+pt-BR:
+  portfolios:
+    empty_state:
+      add_account: Adicionar uma conta de investimento
+      description: As contas de corretora, aposentadoria e cripto que você inclui nas suas finanças e relatórios aparecem aqui com o saldo.
+      title: Nenhuma conta de investimento para mostrar
+    holdings:
+      columns:
+        account: Conta
+        accounts: Contas
+        avg_cost: Custo médio
+        cost_basis_per_share: Custo médio por ação
+        day_change: Var. dia
+        qty: Qtd.
+        security: Ativo
+        unrealized: Resultado não realizado
+        value: Valor
+        weight: Peso
+      day_change_partial: "%{covered} de %{total} posições"
+      label: Posições
+      missing_cost_basis: Sem custo de aquisição
+      missing_cost_basis_hint: Pelo menos uma posição não tem custo de aquisição conhecido. O custo médio e o retorno consideram apenas as posições que têm.
+      no_cost_basis: sem custo de aquisição
+      open_position: Abrir
+      position_missing_cost_basis_hint: Esta posição não tem custo de aquisição conhecido, então não tem custo médio e fica fora do retorno da linha.
+      positions_caption: Posições em %{ticker} por conta
+      toggle_positions: Mostrar posições em %{ticker}
+    sections:
+      accounts: Contas
+      holdings: Posições
+    show:
+      section_aria: Seção %{title}. Pressione Enter ou Espaço para pegar e reordenar e use as setas para mover.
+      sections_aria: Seções da carteira
+      subtitle: O que você tem em todas as suas contas de investimento e quanto vale cada conta.
+      title: Carteira
