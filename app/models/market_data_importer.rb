@@ -25,10 +25,15 @@ class MarketDataImporter
     # A security may be shared by accounts with different holding periods. Merge
     # their required ranges before calling the provider once per security.
     windows = required_security_price_windows
+    # Held now or within the snapshot range: only these are worth a
+    # classification ask below.
+    current_ids = Set.new
 
     Security.online.where(id: windows.keys).find_each do |security|
       window = windows.fetch(security.id)
       next if snapshot? && window.end_date < default_start_date
+
+      current_ids << security.id
 
       security.import_provider_prices(
         start_date: snapshot? ? [ window.start_date, default_start_date ].max : window.start_date,
@@ -39,8 +44,14 @@ class MarketDataImporter
 
     # Details are metadata rather than prices, and import_provider_details skips
     # the provider once a security has them, so every online security keeps them.
+    #
+    # Classification is asked only for securities whose prices the loop above
+    # imported: held now, or traded within the snapshot range. This loop also
+    # reaches rows nobody holds (created by a search and never traded, or sold
+    # long ago), and each ask costs a provider request -- one of EODHD's 20 a
+    # day. A security that is later bought is asked by the account importer.
     Security.online.find_each do |security|
-      security.import_provider_details(clear_cache: clear_cache)
+      security.import_provider_details(clear_cache: clear_cache, include_classification: current_ids.include?(security.id))
     end
   end
 

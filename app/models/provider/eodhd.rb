@@ -16,6 +16,14 @@ class Provider::Eodhd < Provider
   # EODHD bills each fundamentals request as 10 API calls against the daily allowance
   FUNDAMENTALS_REQUEST_COST = 10
 
+  # The fundamentals response carries `General.Sector` / `General.Industry`,
+  # so this provider can answer for classification -- see
+  # `fetch_security_info` below. Without this declaration the classification
+  # gate in `Security::Provided` would never ask it.
+  def supplies_classification?
+    true
+  end
+
   # A fundamentals response is large and slow to start, so it gets a 60 s read
   # limit rather than the client's 20 s: each retry after a timeout bills
   # another ten calls.
@@ -239,7 +247,9 @@ class Provider::Eodhd < Provider
         logo_url: general.dig("LogoURL"),
         description: general.dig("Description"),
         kind: general.dig("Type"),
-        exchange_operating_mic: exchange_operating_mic
+        exchange_operating_mic: exchange_operating_mic,
+        sector: general.dig("Sector"),
+        industry: general.dig("Industry")
       )
     end
   end
