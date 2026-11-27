@@ -3,14 +3,14 @@ require "test_helper"
 class ChatReservationTest < ActiveSupport::TestCase
   setup do
     @endpoint = ai_endpoint(base_url: "http://gpu.local:8080/v1", location: :local)
-    @host = "gpu.local:8080"
+    @host = "gpu.local"
     @reservation = ChatReservation.new([ @endpoint ], lanes: %i[prompt background], user: users(:family_admin))
   end
 
   test "hold! holds chat's host for the TTL" do
     assert_equal 60, @reservation.hold!
     assert ChatReservation.held?(@host, :background)
-    assert_not ChatReservation.held?("gpu.local:8081", :background), "another server on that machine has its own gate"
+    assert_not ChatReservation.held?("other.local", :background), "another machine has its own gate"
 
     travel 61.seconds
     assert_not ChatReservation.held?(@host, :background)
@@ -27,12 +27,12 @@ class ChatReservationTest < ActiveSupport::TestCase
     user = users(:family_admin)
     user.family.update!(assistant_type: "builtin")
     ChatReservation.for(user).hold!
-    assert_equal [ true, true, false ], held([ "gpu.local:8080", :prompt ], [ "gpu.local:8080", :background ], [ "embed.local:8081", :background ])
+    assert_equal [ true, true, false ], held([ "gpu.local", :prompt ], [ "gpu.local", :background ], [ "embed.local", :background ])
 
     ChatReservation.release(Ai::Sequencer.local_endpoints, user: users(:family_admin))
     user.family.update!(assistant_type: "external")
     assert_equal 60, ChatReservation.for(user).hold!
-    assert_equal [ false, true, true ], held([ "gpu.local:8080", :prompt ], [ "gpu.local:8080", :background ], [ "embed.local:8081", :background ])
+    assert_equal [ false, true, true ], held([ "gpu.local", :prompt ], [ "gpu.local", :background ], [ "embed.local", :background ])
   end
 
   test "a message ends its own user's hold, and the last to type on a host has its hold" do

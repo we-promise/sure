@@ -12,14 +12,14 @@ class ChatReservationsControllerTest < ActionDispatch::IntegrationTest
     post chat_reservation_url, as: :turbo_stream
 
     assert_response :success
-    assert ChatReservation.held?("gpu.local:8080", :background)
+    assert ChatReservation.held?("gpu.local", :background)
     assert_select "turbo-stream[action=update][targets='.chat-reservation'] template", text: /put off some background tasks/
   end
 
   test "no bubble when no other AI work runs or waits" do
     post chat_reservation_url, as: :turbo_stream
 
-    assert ChatReservation.held?("gpu.local:8080", :background)
+    assert ChatReservation.held?("gpu.local", :background)
     assert_select "turbo-stream[action=update][targets='.chat-reservation'] template", text: ""
   end
 
@@ -52,6 +52,6 @@ class ChatReservationsControllerTest < ActionDispatch::IntegrationTest
 
   private
     def publish(holders: [], put_off: false)
-      Ai::Gate::State.write("gpu.local:8080", holders:, waiters: [], interruptions: 0, put_off:)
+      Ai::Gate::State.write("gpu.local", holders:, waiters: [], interruptions: 0, put_off:)
     end
 end
