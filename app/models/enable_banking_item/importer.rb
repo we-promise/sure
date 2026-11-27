@@ -39,7 +39,9 @@ class EnableBankingItem::Importer
   # older. That trade-off assumes the staleness is bounded to about a day, so
   # select_current_balance below guards it with the optional `reference_date` field
   # (see PERIOD_BOUNDARY_TYPES): if the same response also carries a materially
-  # newer XPCD/CLAV/ITAV, the fresher one wins instead.
+  # newer ITBD/XPCD/CLAV/ITAV, the fresher one wins instead. CLBD gets the same
+  # guard: Commerzbank DE keeps it at the last closed business day while ITAV/XPCD
+  # already include the day's bookings.
   BALANCE_TYPE_PRIORITY = %w[
     CLBD closingBooked
     ITBD interimBooked
@@ -60,7 +62,7 @@ class EnableBankingItem::Importer
     ITAV interimAvailable
   ] + BALANCE_TYPE_PRIORITY).uniq.freeze
 
-  PERIOD_BOUNDARY_TYPES = %w[opbd openingbooked prcd previouslyclosedbooked].freeze
+  PERIOD_BOUNDARY_TYPES = %w[clbd closingbooked opbd openingbooked prcd previouslyclosedbooked].freeze
 
   # Only these types may outrank OPBD/PRCD on freshness (see fresher_balance) —
   # the same accounting-semantics exclusion as BALANCE_TYPE_PRIORITY itself, so a
@@ -69,7 +71,15 @@ class EnableBankingItem::Importer
   # already-normalized balance_type (see normalize_balance_type), so both ISO
   # codes and Enable Banking's descriptive spellings are listed here pre-normalized,
   # mirroring BALANCE_TYPE_PRIORITY's own XPCD/CLAV/ITAV entries above.
-  FRESHNESS_BALANCE_TYPES = %w[xpcd expected clav closingavailable itav interimavailable].freeze
+  FRESHNESS_BALANCE_TYPES = %w[itbd interimbooked xpcd expected clav closingavailable itav interimavailable].freeze
+
+  # A stale CLBD may also be replaced by a newer OPBD/PRCD. Ordered like
+  # BALANCE_TYPE_PRIORITY, which decides between same-day candidates.
+  CLOSING_BOOKED_FRESHNESS_TYPES = (%w[itbd interimbooked opbd openingbooked prcd previouslyclosedbooked] + FRESHNESS_BALANCE_TYPES).uniq.freeze
+
+  # On a credit card read as debt, these report remaining credit, so they can't
+  # replace a booked balance on freshness.
+  AVAILABLE_FRESHNESS_TYPES = %w[clav closingavailable itav interimavailable].freeze
 
   # Balances that already count pending transactions. Sure keeps pending entries
   # out of balance history, so the pending amounts are added back before such a
@@ -574,14 +584,15 @@ class EnableBankingItem::Importer
           # Checked before the tiebreak, so a tie among OPBD/PRCD entries that a
           # fresher balance replaces anyway is neither resolved nor logged.
           newest = candidates.max_by { |candidate| parse_reference_date(candidate[:reference_date]) || Date.new(0) }
-          fresher = fresher_balance(newest, balances)
+          credit_card_debt = !prefer_available && enable_banking_account.current_account&.accountable_type == "CreditCard"
+          fresher = fresher_balance(newest, balances, credit_card_debt: credit_card_debt)
           if fresher
             # fresher_balance takes the first entry of the newest date, so
             # same-type entries of that date go through the same tiebreak.
             # Older entries of that type still make the pick unverified.
             same_type = by_type[normalize_balance_type(fresher[:balance_type])]
-            fresher_date = parse_reference_date(fresher[:reference_date])
-            same_day = same_type.select { |candidate| parse_reference_date(candidate[:reference_date]) == fresher_date }
+            fresher_date = balance_freshness_date(fresher)
+            same_day = same_type.select { |candidate| balance_freshness_date(candidate) == fresher_date }
             fresher, fresher_stage = resolve_same_type_balances(same_day, enable_banking_account)
             return [ fresher, same_day.size == same_type.size ? fresher_stage : :fresher ]
           end
@@ -840,20 +851,32 @@ class EnableBankingItem::Importer
         .first&.metadata&.dig("fingerprint")
     end
 
-    # Guards the OPBD/PRCD priority (see BALANCE_TYPE_PRIORITY) against picking a
+    # Guards the CLBD/OPBD/PRCD priority (see BALANCE_TYPE_PRIORITY) against picking a
     # stale period-boundary snapshot when the same response also carries a balance
     # with a strictly newer `reference_date` — an optional Enable Banking field, so
     # absence on either side just skips the check rather than treating it as older.
-    def fresher_balance(period_boundary_balance, balances)
+    def fresher_balance(period_boundary_balance, balances, credit_card_debt: false)
       reference_date = parse_reference_date(period_boundary_balance[:reference_date])
       return nil unless reference_date
 
+      types = freshness_types(normalize_balance_type(period_boundary_balance[:balance_type]), credit_card_debt)
+
       balances
-        .select { |balance| FRESHNESS_BALANCE_TYPES.include?(normalize_balance_type(balance[:balance_type])) }
-        .filter_map { |balance| [ balance, parse_reference_date(balance[:reference_date]) ] }
+        .select { |balance| types.include?(normalize_balance_type(balance[:balance_type])) }
+        .filter_map { |balance| [ balance, balance_freshness_date(balance) ] }
         .select { |_, date| date && date > reference_date }
-        .max_by { |_, date| date }
+        .max_by { |balance, date| [ date, -types.index(normalize_balance_type(balance[:balance_type])) ] }
         &.first
+    end
+
+    def freshness_types(period_boundary_type, credit_card_debt)
+      types = %w[clbd closingbooked].include?(period_boundary_type) ? CLOSING_BOOKED_FRESHNESS_TYPES : FRESHNESS_BALANCE_TYPES
+      credit_card_debt ? types - AVAILABLE_FRESHNESS_TYPES : types
+    end
+
+    # Some ASPSPs (Commerzbank DE) date interim balances only by last_change_date_time.
+    def balance_freshness_date(balance)
+      parse_reference_date(balance[:reference_date]) || parse_reference_date(balance[:last_change_date_time])
     end
 
     def parse_reference_date(value)
