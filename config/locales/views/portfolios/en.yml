@@ -29,14 +29,18 @@ en:
     kpi_row:
       as_of: As of %{date}
       day_change: Day change
+      day_change_partial: "%{covered} of %{total} positions"
       income: Income
       income_hint: Dividends and interest
       net_contributions: Net contributions
       no_data: Not enough data
       period_return: Period return
-      period_return_unconvertible:
+      unconvertible_accounts:
         one: excludes 1 account with no exchange rate
         other: excludes %{count} accounts with no exchange rate
+      unrealized_missing_cost_basis:
+        one: excludes 1 position with no cost basis
+        other: excludes %{count} positions with no cost basis
       unrealized_pnl: Unrealised P&L
       value: Value
     sections:
