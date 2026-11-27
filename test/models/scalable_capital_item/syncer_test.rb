@@ -135,6 +135,21 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_predicate assigned, :offline?
   end
 
+  test "the first sync after reconnecting can reuse and activate an unmapped ISIN" do
+    isin = position.fetch("isin")
+    security = Security.create!(ticker: isin, offline: true)
+    key = Provider::ScalableCapitalMarketData::KEY
+    Setting.stubs(:enabled_securities_providers).returns([ key ])
+    assert_empty @item.security_ids
+    stub_snapshot
+
+    run_sync
+
+    assert_equal security.id, @item.reload.security_ids.fetch(isin)
+    assert_equal key, security.reload.price_provider
+    refute_predicate security, :offline?
+  end
+
   test "a legacy exchange listing keeps its ID and prices when Scalable resolves the canonical listing" do
     isin = position.fetch("isin")
     legacy = Security.create!(ticker: "EUNL", exchange_operating_mic: "XETR")
@@ -202,6 +217,35 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_equal 2, @item.scalable_capital_accounts.brokerage.sole.account.trades.count
     cash = @item.scalable_capital_accounts.cash.sole.account
     assert_equal(-25.to_d, cash.entries.where(external_id: "overlap").sole.amount)
+  end
+
+  test "retries a stale snapshot even if an intervening same-second import keeps its checkpoints" do
+    stub_snapshot
+    run_sync
+    checkpoint = @item.reload.broker_synced_through
+    mapping = @item.security_ids
+    generation = @item.import_generation
+    cash = @item.scalable_capital_accounts.cash.sole.account
+
+    stub_snapshot(positions: [ position, position.merge("isin" => "US0378331005") ])
+    @client.expects(:cash).with("portfolio").returns(broker({ "cash_balance" => "200" }), broker({ "cash_balance" => "300" })).times(3)
+    Security.expects(:search_provider).with do |isin, _options|
+      assert_equal "US0378331005", isin
+      @client.stubs(:holdings).with("portfolio").returns(broker({ "items" => [ position ] }))
+      other = ScalableCapitalItem.find(@item.id)
+      ScalableCapitalItem::Syncer.new(other, client: @client).perform_sync(other.syncs.create!)
+      assert_equal checkpoint, other.reload.broker_synced_through
+      assert_equal mapping, other.security_ids
+      assert_equal generation + 1, other.import_generation
+      true
+    end.once.returns([])
+
+    run_sync
+
+    assert_equal 300.to_d, cash.reload.cash_balance
+    assert_equal checkpoint, @item.reload.broker_synced_through
+    assert_equal mapping, @item.security_ids
+    assert_equal generation + 2, @item.import_generation
   end
 
   test "imports the CLI's filled SINGLE trades and only books a final IPO allocation" do
@@ -642,8 +686,13 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     travel 1.day
     stub_snapshot
     stub_broker_history(cash_event("cash-transfer-in", "CASH_TRANSFER_IN", amount: "25", at: 1.hour.ago))
-    run_sync
+    queries = capture_sql_queries { run_sync }
 
+    transfer_lock = queries.index { |sql| sql.start_with?('SELECT "transfers".*') && sql.include?("FOR UPDATE") }
+    entry_write = queries.index { |sql| sql.start_with?('UPDATE "entries"') }
+    assert_not_nil transfer_lock
+    assert_not_nil entry_write
+    assert_operator transfer_lock, :<, entry_write
     assert_equal(-25.to_d, inflow.reload.amount)
     assert_equal 20.to_d, outflow.reload.amount
     assert_not Transfer.exists?(transfer.id)
@@ -880,6 +929,7 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     refute Transfer.exists?(transfer.id)
     assert_equal(-98.to_d, cash_leg.reload.amount)
     assert_equal cash_date, cash_leg.date
+    assert_equal "funds_movement", cash_leg.transaction.kind
     assert_nil fee.reload.transaction.transfer_id
     assert_equal 1.to_d, fee.amount
     assert_nil cash_source.reload.account

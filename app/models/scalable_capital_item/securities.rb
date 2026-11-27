@@ -72,7 +72,7 @@ class ScalableCapitalItem::Securities
         record.offline = !scalable_price_available?(isin)
         record.price_provider = SCALABLE_MARKET_DATA unless record.offline?
       end
-      return activate_scalable_fallback(isin, security) if pending_resolution?(security) && scalable_fallback?(isin, security)
+      return activate_scalable_fallback(isin, security) if scalable_fallback?(isin, security)
 
       if @failed_lookups.include?(isin)
         security.update!(offline_reason: PENDING_RESOLUTION) if security.offline? && security.offline_reason.blank?

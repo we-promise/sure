@@ -90,13 +90,16 @@ class Security::Price::Importer
       has_provider_price = provider_price_value.present? && provider_price_value.to_f > 0
       has_db_price = db_price_value.present? && db_price_value.to_f > 0
       is_provisional = db_price&.provisional
+      keep_live_quote = scalable_provider? && has_db_price && is_provisional && !db_price.carried_forward? && !has_provider_price
 
       # Choose price and currency from the same source to avoid mismatches
       # A cache clear replaces only the stored prices the provider covers;
       # stored history before its first price is kept.
       replace_db_price = clear_cache && earliest_provider_price.present? && date >= earliest_provider_price.date
 
-      chosen_price, chosen_currency = if replace_db_price || is_provisional || db_price&.carried_forward
+      chosen_price, chosen_currency = if keep_live_quote
+        [ db_price_value, db_price_currency ]
+      elsif replace_db_price || is_provisional || db_price&.carried_forward
         # For provisional/carried-forward/cache clear: only use provider price, let gap-fill handle missing.
         # A carried-forward row is recomputed, so it follows a corrected price before it.
         # This ensures stale DB values don't persist when provider has no weekend data
@@ -120,7 +123,7 @@ class Security::Price::Importer
       prev_price_value = chosen_price
       prev_currency = chosen_currency || prev_currency
 
-      provisional = determine_provisional_status(
+      provisional = keep_live_quote || determine_provisional_status(
         date: date,
         has_provider_price: has_provider_price,
         used_locf: used_locf,
@@ -257,16 +260,28 @@ class Security::Price::Importer
     # the market keeps) and is not asked for again.
     def refetchable_dates
       @refetchable_dates ||= begin
-        last_quote_on = Security::Price.where(security_id: security.id, carried_forward: false).where("price > 0").maximum(:date)
-        tail_from = [ last_quote_on&.next_day, CARRIED_FORWARD_REFETCH_DAYS.days.ago.to_date ].compact.max
+        stored = Security::Price.where(security_id: security.id)
+        quotes = stored.where(carried_forward: false).where("price > 0")
+        quotes = quotes.where(provisional: false) if scalable_provider?
+        last_quote_on = quotes.maximum(:date)
+        tail_cutoff = scalable_provider? ? start_date : CARRIED_FORWARD_REFETCH_DAYS.days.ago.to_date
+        tail_from = [ last_quote_on&.next_day, tail_cutoff ].compact.max
 
-        Security::Price
-          .where(security_id: security.id, date: start_date..end_date)
-          .where("(provisional AND date >= :lookback) OR (carried_forward AND date >= :tail_from)",
-                 lookback: PROVISIONAL_LOOKBACK_DAYS.days.ago.to_date, tail_from: tail_from)
-          .pluck(:date)
-          .to_set
+        range_start = scalable_provider? ? clamped_start_date : start_date
+        candidates = stored.where(date: range_start..end_date)
+        recent = candidates.where(provisional: true, date: PROVISIONAL_LOOKBACK_DAYS.days.ago.to_date..)
+        tail = candidates.where(carried_forward: true, date: tail_from..)
+        gaps = recent.or(tail)
+        if scalable_provider?
+          # A live mid-quote remains provisional until the provider publishes its actual close.
+          gaps = gaps.or(candidates.where(provisional: true, carried_forward: false))
+        end
+        gaps.pluck(:date).to_set
       end
+    end
+
+    def scalable_provider?
+      security_provider.is_a?(Provider::ScalableCapitalMarketData)
     end
 
     def expected_count

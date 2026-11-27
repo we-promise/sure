@@ -265,13 +265,21 @@ module Security::Provided
   def find_or_fetch_price(date: Date.current, cache: true)
     price = prices.find_by(date: date)
 
-    return price if price && (price_provider != Provider::ScalableCapitalMarketData::KEY || !scalable_cached_price_gap?(price))
+    if price
+      return price unless scalable_cached_price_gap?(price)
+      unless price_provider == Provider::ScalableCapitalMarketData::KEY
+        return price if offline? || !scalable_fallback_candidate?
+
+        provider = price_data_provider
+        return price unless provider.is_a?(Provider::ScalableCapitalMarketData)
+      end
+    end
 
     # Don't fetch prices for offline securities (e.g., custom tickers from SimpleFIN)
     return nil if offline?
 
     # Make sure we have a data provider before fetching
-    provider = price_data_provider
+    provider ||= price_data_provider
     return nil unless provider.present?
     response = provider.fetch_security_price(
       symbol: ticker,
@@ -290,7 +298,9 @@ module Security::Provided
   end
 
   def last_completed_scalable_price
-    return unless price_provider == Provider::ScalableCapitalMarketData::KEY
+    unless price_provider == Provider::ScalableCapitalMarketData::KEY
+      return unless scalable_fallback_candidate? && price_data_provider.is_a?(Provider::ScalableCapitalMarketData)
+    end
 
     prices.where(date: ...Date.current, provisional: false, carried_forward: false)
           .order(date: :desc).first
@@ -316,7 +326,11 @@ module Security::Provided
     price.carried_forward? || (price.provisional? && price.date < Date.current)
   end
 
-  private :cache_fetched_price, :scalable_cached_price_gap?
+  def scalable_fallback_candidate?
+    price_provider.blank? && exchange_operating_mic.blank? && Provider::ScalableCapitalMarketData.supports_symbol?(ticker)
+  end
+
+  private :cache_fetched_price, :scalable_cached_price_gap?, :scalable_fallback_candidate?
 
   # Throttled so a page with many holdings missing today's price doesn't
   # flood the debug log with one entry per request — at most one per

@@ -3,9 +3,10 @@ class ScalableCapitalItem::Syncer
 
   SOURCE = "scalable_capital"
   CURRENCY = Provider::ScalableCapital::Snapshot::CURRENCY
+  SETTLEMENT_PREFIX = "settlement:"
   SNAPSHOT_STATE_FIELDS = %w[
     family_id owner_id broker_account_id portfolio_id savings_id selected_sources
-    broker_synced_through savings_synced_through broker_history_version security_ids
+    broker_synced_through savings_synced_through broker_history_version security_ids import_generation
   ].freeze
   MAX_SNAPSHOT_ATTEMPTS = 2
   StaleSnapshot = Class.new(StandardError)
@@ -65,7 +66,7 @@ class ScalableCapitalItem::Syncer
           raise StaleSnapshot unless snapshot_state == state
 
           result = import_snapshots(snapshots, securities)
-          @item.update!(checkpoints.merge(security_ids: securities.mapping, status: :good))
+          @item.update!(checkpoints.merge(security_ids: securities.mapping, status: :good, import_generation: @item.import_generation + 1))
           result
         end
         [ accounts, skipped ]
@@ -73,6 +74,10 @@ class ScalableCapitalItem::Syncer
         retry if attempts < MAX_SNAPSHOT_ATTEMPTS
 
         raise Provider::ScalableCapital::Error, "Scalable Capital changed during sync. Try again."
+      rescue ActiveRecord::Deadlocked
+        retry if attempts < MAX_SNAPSHOT_ATTEMPTS
+
+        raise
       end
     end
 
@@ -129,6 +134,7 @@ class ScalableCapitalItem::Syncer
         result[[ snapshot[:source_key], snapshot.fetch(:kind) ]] = Account::ProviderImportAdapter.new(account)
       end
 
+      lock_affected_transfers(snapshots, adapters)
       securities.resolve_pending! if adapters.keys.any? { |_, kind| kind == :brokerage }
 
       cash_transaction_ids = snapshots.each_with_object([]) do |snapshot, ids|
@@ -152,6 +158,33 @@ class ScalableCapitalItem::Syncer
       end
 
       adapters.values.map(&:account).select { |account| Account::VISIBLE_STATUSES.include?(account.status) }
+    end
+
+    def lock_affected_transfers(snapshots, adapters)
+      external_ids = Hash.new { |ids, account_id| ids[account_id] = [] }
+      snapshots.each do |snapshot|
+        source_key = snapshot[:source_key]
+        adapter = adapters[[ source_key, snapshot.fetch(:kind) ]]
+        next unless adapter
+
+        snapshot.fetch(:entries).each do |entry|
+          id = entry.fetch(:external_id)
+          if entry.key?(:isin)
+            settlement = "#{SETTLEMENT_PREFIX}#{id}"
+            external_ids[adapter.account.id] << settlement
+            cash = adapters[[ source_key, :cash ]]
+            external_ids[cash.account.id] << settlement if cash
+          else
+            external_ids[adapter.account.id] << id
+          end
+        end
+      end
+      return if external_ids.empty?
+
+      affected_entries = Entry.transactions.where(source: SOURCE)
+      affected_entries = external_ids.map { |account_id, ids| affected_entries.where(account_id: account_id, external_id: ids.uniq) }.reduce(&:or)
+      # Transfer edits lock the pair before they lock either entry or update fees.
+      transfers_for(affected_entries.select(:entryable_id)).order(:id).lock.load
     end
 
     def find_or_create_source(snapshot)
@@ -180,7 +213,7 @@ class ScalableCapitalItem::Syncer
 
     def import_trade(adapter, cash_adapter, securities, entry)
       external_id = entry.fetch(:external_id)
-      settlement_id = "settlement:#{external_id}"
+      settlement_id = "#{SETTLEMENT_PREFIX}#{external_id}"
       trade_ids = entry[:related_trade_ids] || [ external_id ]
       trade_entry = Entry.where(account_id: adapter.account.id, external_id: trade_ids)
       account_ids = [ adapter.account.id, cash_adapter&.account&.id ].compact
@@ -238,10 +271,13 @@ class ScalableCapitalItem::Syncer
       return if transaction_ids.empty?
 
       # A transfer's other leg can arrive in a later feed in the same sync.
-      transfers = Transfer.where(inflow_transaction_id: transaction_ids)
-        .or(Transfer.where(outflow_transaction_id: transaction_ids))
+      transfers = transfers_for(transaction_ids)
         .includes(inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account })
       transfers.lock.find_each { |transfer| detach_transfer(transfer) unless transfer.valid? }
+    end
+
+    def transfers_for(transaction_ids)
+      Transfer.where(inflow_transaction_id: transaction_ids).or(Transfer.where(outflow_transaction_id: transaction_ids))
     end
 
     def apply_zero_amount(adapter, external_id)
@@ -263,17 +299,25 @@ class ScalableCapitalItem::Syncer
       return if invalid_transfers.empty?
 
       invalid_transfers.each { |transfer| detach_transfer(transfer) }
-      transactions.each do |transaction|
-        transaction.reload
-        transaction.update!(kind: "funds_movement") unless transaction.transfer
-      end
+      transactions.each(&:reload)
     end
 
     def detach_transfer(transfer)
-      # Keep separately recorded fees when the pairing is removed.
-      transfer.fee_transactions.update_all(transfer_id: nil)
-      transfer.fee_transactions.reset
-      transfer.destroy!
+      transfer.with_lock do
+        legs = [ transfer.inflow_transaction, transfer.outflow_transaction ].select do |transaction|
+          entry = transaction&.entry
+          entry&.source == SOURCE && entry.external_id.to_s.start_with?(SETTLEMENT_PREFIX)
+        end
+        # Preserve fees added by a user before we acquired the same row lock as the editor.
+        transfer.fee_transactions.update_all(transfer_id: nil)
+        transfer.fee_transactions.reset
+        transfer.destroy!
+        # The two synthetic legs remain cash movements even when Sure cannot pair them.
+        legs.each do |transaction|
+          transaction.reload
+          transaction.update!(kind: "funds_movement") unless transaction.transfer || transaction.kind == "funds_movement"
+        end
+      end
     end
 
     def cash_amount_protected?(entry)

@@ -87,6 +87,22 @@ class Provider::ScalableCapitalMarketDataTest < ActiveSupport::TestCase
     refute_predicate price, :carried_forward?
   end
 
+  test "an ISIN using Scalable as a fallback refetches the previous day's live quote" do
+    security = Security.create!(ticker: ISIN)
+    Security.stubs(:providers).returns([ @provider ])
+    date = Date.current
+    row = security.prices.create!(date: date, price: 84, currency: "EUR", provisional: true)
+    travel 1.day
+    @client.expects(:security_candlesticks).with(ISIN, "one_month").returns(candlesticks([
+      candle("2026-11-24T08:00:00Z", "2026-11-24T17:00:00Z", "86")
+    ]))
+
+    assert_equal 86.to_d, security.find_or_fetch_price(date: date).price
+    assert_equal 86.to_d, row.reload.price
+    refute_predicate row, :provisional?
+    assert_equal row.id, security.last_completed_scalable_price.id
+  end
+
   test "health checks use a recent Scalable close on a non-trading day" do
     security = Security.create!(ticker: ISIN, price_provider: Provider::ScalableCapitalMarketData::KEY, failed_fetch_count: 5)
     security.stubs(:price_data_provider).returns(@provider)

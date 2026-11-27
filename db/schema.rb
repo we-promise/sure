@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_26_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_27_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2377,6 +2377,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_100000) do
     t.datetime "broker_synced_through"
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
+    t.bigint "import_generation", default: 0, null: false
     t.uuid "owner_id"
     t.string "portfolio_id"
     t.string "savings_id"
