@@ -18,9 +18,8 @@
                         [t(".providers.moex_public"), "moex_public"],
                         [t(".providers.frankfurter"), "frankfurter"]
                       ],
-                      { label: t(".exchange_rate_provider_label") },
+                      { label: t(".exchange_rate_provider_label"), selected: ExchangeRate.configured_provider_name },
                       {
-                        value: ENV.fetch("EXCHANGE_RATE_PROVIDER", Setting.exchange_rate_provider),
                         disabled: ENV["EXCHANGE_RATE_PROVIDER"].present?,
                         data: { "auto-submit-form-target": "auto" }
                       } %>

@@ -121,8 +121,8 @@ class DataCacheClearJobTest < ActiveJob::TestCase
     assert lock_index < sync_check_index, "accounts are locked only after the running-sync check"
   end
 
-  test "clears the balances and syncs when no exchange rate provider is set" do
-    Setting.stubs(:exchange_rate_provider).returns(nil)
+  test "clears the balances and syncs when no exchange rate provider resolves" do
+    ExchangeRate.stubs(:configured_provider).returns(nil)
     Security.stubs(:provider).returns(nil)
     balance = @account.balances.create!(date: 1.day.ago.to_date, balance: 1000, currency: "CAD")
 

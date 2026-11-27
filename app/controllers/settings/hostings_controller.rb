@@ -28,7 +28,7 @@ class Settings::HostingsController < ApplicationController
     ]
 
     # Determine which providers are currently selected
-    exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
+    exchange_rate_provider = ExchangeRate.configured_provider_name
     enabled_securities = Setting.enabled_securities_providers
 
     # Show provider settings if used for FX or enabled for securities

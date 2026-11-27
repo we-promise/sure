@@ -6,10 +6,8 @@ module ExchangeRate::Provided
       Provider::Registry.for_concept(:exchange_rates).get_provider(name.to_sym)
     end
 
-    # Like provider, but nil instead of an error when no provider or an unknown one is set
+    # Like provider, but nil instead of an error when an unknown one is set
     def configured_provider
-      return if configured_provider_name.blank?
-
       provider
     rescue Provider::Registry::Error
       nil
@@ -25,7 +23,7 @@ module ExchangeRate::Provided
     end
 
     def configured_provider_name
-      (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
+      Setting.exchange_rate_provider_from_env || Setting.exchange_rate_provider.presence || Setting::DEFAULT_EXCHANGE_RATE_PROVIDER
     end
 
     def fallback_provider?
