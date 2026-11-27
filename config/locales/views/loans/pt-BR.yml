@@ -3,21 +3,148 @@ pt-BR:
   loans:
     edit:
       edit: Editar %{account}
+      stale_rate_schedule: Este formulário está desatualizado. Recarregue o empréstimo e aplique suas alterações novamente. Nada foi salvo.
     form:
       interest_rate: Taxa de juros
       interest_rate_placeholder: '5,25'
       initial_balance: Saldo original do empréstimo
+      day_count_convention: Base de cálculo dos juros
+      day_count_convention_actual_365: Real/365
+      day_count_convention_actual_actual: Real/real
+      day_count_convention_hint: Como o seu credor mede cada período em relação ao ano. Real/365 cobra conforme o número de dias do mês e é o padrão nos financiamentos imobiliários do Reino Unido e da Austrália. 30/360 cobra um doze avos fixo, a base que o Sure sempre usou.
+      day_count_convention_thirty_360: 30/360 (um doze avos fixo)
       rate_type: Tipo de taxa
       term_months: Prazo (meses)
       term_months_placeholder: '360'
+      none: Nenhum
+      subtype_prompt: Selecionar tipo de empréstimo
+      subtype_none: Nenhum
+      rate_type_adjustable: Ajustável
+      rate_type_fixed: Fixa
+      rate_type_variable: Variável
+      rate_changes: Alterações de taxa
+      rate_changes_hint: Cada linha define a taxa que vale a partir da data de vigência até a próxima. Informar uma data já existente substitui essa linha em vez de adicionar outra.
+      rate_changes_empty: Nenhuma alteração de taxa registrada. O empréstimo segue a taxa de juros informada acima.
+      rate_change_effective_date: Data de vigência
+      rate_change_rate: Taxa
+      rate_change_add: Adicionar alteração de taxa
+      rate_change_remove: Remover
+      start_date: Data de contratação
+      start_date_hint: Data em que o valor do empréstimo foi liberado. O histórico de saldo de um novo empréstimo começa nesta data, e não na data do saldo inicial. Deixe em branco para usar a data do saldo inicial.
+      down_payment: Entrada
+      insurance_rate: Taxa do seguro
+      insurance_rate_placeholder: "0,36"
+      insurance_rate_hint: Taxa anual, cobrada mensalmente junto com a parcela. O seguro de capital fixo é cobrado sobre o saldo original; o decrescente, sobre o saldo devedor.
+      insurance_rate_type: Tipo de seguro
+      insurance_rate_type_decreasing_life: Decrescente
+      insurance_rate_type_level_term: Capital fixo
+      principal_only_transfers: Transferências vinculadas cobrem só a amortização
+      principal_only_transfers_hint: Ative quando você transfere apenas a amortização e registra os juros separadamente. Deixe desativado quando a transferência vinculada for a parcela completa.
     new:
       title: Inserir detalhes do empréstimo
     overview:
       interest_rate: Taxa de Juros
       monthly_payment: Pagamento Mensal
       not_applicable: N/A
-      original_principal: Principal Original
-      remaining_principal: Principal Restante
+      original_payoff_date: Data de Quitação Original
+      original_principal: Valor Original do Empréstimo
+      remaining_principal: Valor Restante do Empréstimo
       term: Prazo
       type: Tipo
       unknown: Desconhecido
+    subtypes:
+      auto:
+        long: Financiamento de veículo
+        short: Financiamento de veículo
+      business:
+        long: Empréstimo empresarial
+        short: Empréstimo empresarial
+      home_equity:
+        long: Empréstimo com garantia de imóvel
+        short: Garantia de imóvel
+      line_of_credit:
+        long: Linha de crédito
+        short: Linha de crédito
+      mortgage:
+        long: Financiamento imobiliário
+        short: Financiamento imobiliário
+      other:
+        long: Outro empréstimo
+        short: Outro empréstimo
+      student:
+        long: Empréstimo estudantil
+        short: Empréstimo estudantil
+    tabs:
+      extra_repayments:
+        amount_label: Pagamento extra
+        amount_placeholder: "0,00"
+        apply: Aplicar
+        baseline_not_cleared: Com a parcela atual, este empréstimo não é quitado até o vencimento original e ainda restariam %{balloon} a pagar, então não há data antecipada nem economia de juros para comparar. Com este valor extra, ele é quitado na data acima.
+        clear: Limpar
+        comparison_basis: Em comparação com pagar a parcela atual sem nenhum valor extra, a partir do saldo de hoje.
+        dated_note: Os valores extras semanais e quinzenais são contabilizados na parcela seguinte a cada pagamento, então a economia de juros mostrada pode estar subestimada, nunca superestimada.
+        extra_not_cleared: Mesmo com este valor extra, o empréstimo não é quitado até o vencimento original. Tente um valor maior.
+        frequencies:
+          fortnightly: Quinzenal
+          monthly: Mensal
+          weekly: Semanal
+        frequency_label: Frequência
+        interest_saved: Juros economizados
+        intro: Veja quanto antes o empréstimo é quitado, e quanto você economiza em juros, se pagar um valor extra toda semana, quinzena ou mês além das parcelas.
+        invalid_amount: Informe um valor igual ou maior que zero, usando números.
+        invalid_frequency: Escolha semanal, quinzenal ou mensal.
+        months_sooner:
+          zero: Quitado no mesmo mês
+          one: "%{count} mês antes"
+          other: "%{count} meses antes"
+        no_scheduled_repayments: Não restam parcelas previstas neste empréstimo, mas ainda há saldo devedor, então não há parcela à qual somar um valor extra.
+        not_applicable: Não há mais nada a pagar neste empréstimo, então não há pagamento extra para simular.
+        payoff_with_extra: Quitação com o extra
+        total_cost: Custo total a partir de hoje
+        total_cost_not_cleared: Não quitado até o vencimento original
+        total_cost_saved: "%{amount} a menos do que sem o extra"
+        variable_rate_notice: A taxa deste empréstimo muda ao longo do tempo. Estes valores aplicam as alterações de taxa já registradas; uma alteração que ainda não foi registrada mudará estes valores.
+      repayment_progress:
+        instalment: Parcela %{number} · %{date}
+        insurance: Seguro
+        interest: Juros
+        of_original: de %{amount}
+        principal: Amortização
+        repaid: Pago
+        total: Total
+      schedule:
+        date: Data
+        description: Projeção feita a partir do saldo original, da taxa e do prazo, começando em %{start_date}. Pagamentos extras não são considerados.
+        variable_rate_notice: A taxa deste empréstimo muda ao longo do tempo. O cronograma é recalculado a cada alteração registrada, mantendo a data de quitação original e ajustando o valor da parcela; uma alteração que ainda não foi registrada mudará estes valores.
+        opening_payment: Parcela Inicial
+        forecasted_payoff_date: Data prevista de quitação
+        forecasted_payoff_not_converged: Não é quitado no ritmo atual de pagamento
+        interest: Juros
+        monthly_payment: Parcela Mensal
+        not_applicable: N/D
+        number: Nº
+        payment: Parcela
+        principal: Amortização
+        remaining_balance: Saldo Devedor
+        total_cost: Custo Total
+        total_interest: Total de Juros
+      overview:
+        insurance_rate_only: "%{rate} ao ano"
+        interest_rate: Taxa de Juros
+        leverage: Alavancagem
+        leverage_band_conservative: Conservadora
+        leverage_band_high: Alta
+        leverage_band_moderate: Moderada
+        leverage_multiple: "%{ratio}x"
+        monthly_payment: Parcela Mensal
+        not_applicable: N/A
+        original_payoff_date: Data de Quitação Original
+        original_principal: Valor Original do Empréstimo
+        remaining_principal: Valor Restante do Empréstimo
+        total_cost: Custo total
+        total_cost_with_insurance: Custo total com seguro
+        total_insurance: Seguro
+        term: Prazo
+        type: Tipo
+        unknown: Desconhecido
+        edit_loan_details: Editar detalhes do empréstimo

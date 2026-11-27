@@ -6,16 +6,48 @@ pt-BR:
       subtitle: Insights completos sobre sua saúde financeira
       export: Exportar CSV
       print_report: Imprimir Relatório
+      tag_filter:
+        all: Todas as tags
+        selected:
+          one: "%{count} tag"
+          other: "%{count} tags"
+        search: Buscar tags
+        apply: Aplicar
+      section_aria: Seção %{title}. Pressione Enter ou Espaço para selecionar e reordenar e depois use as setas para mover.
+      sections_aria: Seções dos relatórios
+      built_at: Atualizado há %{time}
+      updating: atualizando em segundo plano
+      refresh: Atualizar
       periods:
         monthly: Mensal
         quarterly: Trimestral
-        ytd: Acumulado do Ano (YTD)
+        ytd: Anual
         last_6_months: Últimos 6 Meses
+        last_12_months: Últimos 12 meses
+        all_time: Todo o período
         custom: Período Personalizado
       date_range:
         from: De
         to: Até
       showing_period: "Exibindo dados de %{start} até %{end}"
+      previous_period: Período anterior
+      next_period: Próximo período
+      shortcut_hint: "%{action} (%{key})"
+      today: Hoje
+      period_label:
+        quarterly: T%{quarter} %{year}
+        ytd: Acum. %{year}
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
+        last_12_months: "%{start} – %{end}"
+        all_time: "%{start} – %{end}"
+      period_picker:
+        quarter: T%{quarter} %{year}
+        ytd: Acum. %{year}
+      previous_year: Ano anterior
+      next_year: Próximo ano
+      previous_decade: Década anterior
+      next_decade: Próxima década
     invalid_date_range: "A data final não pode ser anterior à data inicial. As datas foram trocadas."
     summary:
       total_income: Receita Total
@@ -41,6 +73,25 @@ pt-BR:
         over: Acima do Orçamento
     trends:
       title: Tendências e Insights
+      category_trend:
+        title: Tendências por categoria
+        subtitle: Totais mensais ou anuais das categorias selecionadas, já descontados os reembolsos.
+        filtered_by_tags: Filtrado por tags
+        select: Selecionar categorias
+        selected:
+          one: "%{count} categoria"
+          other: "%{count} categorias"
+        search: Buscar categorias
+        apply: Aplicar
+        clear: Limpar
+        month: Mês
+        year: Ano
+        granularity_aria: Granularidade da tendência
+        data_table: Mostrar tabela de dados
+        data_table_caption: Valores da tendência por período
+        data_table_period: Período
+        no_data: Escolha um período mais longo para ver uma tendência.
+        prompt: Selecione categorias para ver a tendência delas.
       monthly_breakdown: Detalhamento Mensal
       month: Mês
       income: Receita
@@ -68,9 +119,17 @@ pt-BR:
       description: Comece a controlar suas finanças adicionando transações ou conectando suas contas para ver relatórios completos
       add_transaction: Adicionar Transação
       add_account: Adicionar Conta
+    biggest_expenses:
+      title: Maiores despesas
+      one_time: Pontual
+      limit_aria: Número de despesas a exibir
+      table:
+        name: Nome
+        category: Categoria
+        amount: Valor
     transactions_breakdown:
-      title: Detalhamento de Transações
-      no_transactions: Nenhuma transação encontrada para o período e filtros selecionados
+      title: Detalhamento de Atividades
+      no_transactions: Nenhuma atividade encontrada para o período e filtros selecionados
       filters:
         title: Filtros
         category: Categoria
@@ -103,32 +162,61 @@ pt-BR:
         income: Receitas
         uncategorized: Sem Categoria
         entries:
-          one: "%{count} entrada"
-          other: "%{count} entradas"
+          one: "%{count} lançamento"
+          other: "%{count} lançamentos"
         percentage: "% do Total"
       pagination:
         showing:
-          one: Exibindo %{count} entrada
-          other: Exibindo %{count} entradas
+          one: Exibindo %{count} lançamento
+          other: Exibindo %{count} lançamentos
         previous: Anterior
         next: Próximo
     net_worth:
       title: Patrimônio líquido
       current_net_worth: Patrimônio líquido atual
-      period_change: Alteração de período
+      period_change: Variação no período
       assets_vs_liabilities: Ativos versus Passivos
       total_assets: Ativos
       total_liabilities: Passivos
       no_assets: Sem ativos
       no_liabilities: Sem passivos
+    spending_vs_normal:
+      title: Gastos em relação ao normal
+      summary_html: "%{total} em gastos neste período. O normal para um período desta duração é %{normal}, com base no intervalo de %{baseline_start} a %{baseline_end}."
+      summary_so_far_html: "%{total} em gastos até agora. O normal para esta quantidade de dias é %{normal}, com base no intervalo de %{baseline_start} a %{baseline_end}."
+      no_history_html: "%{total} em gastos neste período. Ainda não há histórico anterior suficiente para dizer o que é normal."
+      no_history_short: Ainda não há histórico anterior suficiente para comparar.
+      no_spending: Nenhum gasto neste período.
+      no_changes: Os gastos ficaram dentro do normal em todas as categorias.
+      treemap_title: Para onde foi
+      changes_title: O que mudou
+      direct: "%{category} (sem subcategoria)"
+      tooltip:
+        path: "%{parent} › %{category}"
+        total: "%{category}: %{amount}"
+        normal: "Normal: %{amount}"
+        more: "%{amount} acima do normal (%{percent})"
+        less: "%{amount} abaixo do normal (%{percent})"
+        more_no_percent: "%{amount} acima do normal"
+        less_no_percent: "%{amount} abaixo do normal"
+        no_normal: Sem histórico anterior para comparar
+        open: Selecione para ver estas transações
+      legend:
+        less: 50–100% a menos
+        slightly_less: 15–50% a menos
+        normal: Perto do normal
+        slightly_more: 15–50% a mais
+        more: 50–100% a mais
+        much_more: 100%+ a mais
     investment_performance:
       title: Desempenho de Investimentos
       portfolio_value: Valor do Portfólio
       total_return: Retorno Total
+      period_return: Retorno do período
       contributions: Contribuições do Período
       withdrawals: Saques do Período
-      top_holdings: Principais Aplicações
-      holding: Holding
+      top_holdings: Principais Posições
+      holding: Posição
       weight: Peso
       value: Valor
       return: Retorno
@@ -138,23 +226,29 @@ pt-BR:
       realized_gains: Ganhos Realizados
       total_gains: Ganhos Totais
       taxable_realized_note: Esses ganhos podem estar sujeitos a impostos
+      unconverted_note:
+        one: "%{count} ganho não está incluído: sem taxa de câmbio para %{currency}"
+        other: "%{count} ganhos não estão incluídos: sem taxa de câmbio para %{currency}"
       no_data: "-"
       view_details: Ver detalhes
       holdings_count:
-        one: "%{count} holding"
-        other: "%{count} holdings"
+        one: "%{count} posição"
+        other: "%{count} posições"
       sells_count:
         one: "%{count} venda"
         other: "%{count} vendas"
-      holdings: Holdings
-      sell_trades: Venda de Negócios
+      holdings: Posições
+      sell_trades: Negociações de venda
       and_more: "+%{count} mais"
     investment_flows:
       title: Fluxos de investimento
-      description: Acompanhe o fluxo de dinheiro que entra e sai de suas contas de investimento.
+      description: Acompanhe o fluxo de dinheiro que entra e sai de suas contas de investimento por meio de contribuições e saques.
       contributions: Contribuições
+      contributions_description: Dinheiro aplicado em investimentos
       withdrawals: Saques
+      withdrawals_description: Dinheiro resgatado de investimentos
       net_flow: Fluxo Líquido
+      net_flow_description: Variação líquida total
     google_sheets_instructions:
       title_no_key: "Chave de API Necessária"
       need_key: Para importar dados no Google Sheets, você precisa de uma chave de API.
@@ -203,11 +297,12 @@ pt-BR:
         title: Investimentos
         portfolio_value: Valor do Portfólio
         total_return: Retorno Total
+        period_return: Retorno do período
         contributions: Contribuições
         withdrawals: Saques
         this_period: este período
-        top_holdings: Principais Aplicações
-        holding: Holding
+        top_holdings: Principais Posições
+        holding: Posição
         weight: Peso
         value: Valor
         return: Retorno
@@ -220,3 +315,11 @@ pt-BR:
         amount: Quantia
         percent: "%"
         more_categories: "+ %{count} mais categorias"
+      biggest_expenses:
+        title: Maiores despesas
+        date: Data
+        name: Nome
+        category: Categoria
+        account: Conta
+        amount: Valor
+        one_time: Pontual

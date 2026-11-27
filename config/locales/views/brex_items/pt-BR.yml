@@ -98,6 +98,7 @@ pt-BR:
       connection_name_label: Nome da conexão
       connection_name_placeholder: Conta corrente empresarial
       default_connection_name: Conexão da Brex
+      disconnect: Desconectar
       disconnect_label: "Desconectar %{name}"
       disconnect_confirm: "Desconectar %{name}?"
       encryption_warning:
