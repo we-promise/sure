@@ -37,28 +37,25 @@ class JobsQueuedBeforeTheUpgradeTest < ActiveJob::TestCase
       assert_not @rule_run.pending?, "the rule run doesn't stay pending"
     end
 
-    test "#{job_class.name} from main fails its rule run once when the #{feature} run can't be queued" do
-      {
-        "couldn't be queued" => -> { false },
-        Errno::ECONNREFUSED.new.message => -> { raise Errno::ECONNREFUSED },
-        "a bug" => -> { raise ArgumentError, "a bug" }
-      }.each do |reason, refusal|
+    # Ai::GenerationRun.enqueue is an outbox: a step the queue refuses stays in the run for
+    # Ai::GenerationDeliveryJob, which gives the rule run up only after its last delivery.
+    test "#{job_class.name} from main leaves a #{feature} run the queue refuses for delivery" do
+      [ -> { false }, -> { raise Errno::ECONNREFUSED }, -> { raise ArgumentError, "a bug" } ].each do |refusal|
+        Ai::GenerationRun.where(family: @family).delete_all
         @rule_run.update!(status: "pending", pending_jobs_count: 2, error_message: nil)
         tries = 0
-        stub_enqueue = ->(*) { tries += 1; refusal.call }
 
-        with_generation_enqueue(stub_enqueue) do
+        with_generation_enqueue(->(*) { tries += 1; refusal.call }) do
           perform_enqueued_jobs(only: job_class) do
             job_class.perform_later(@family, transaction_ids: [ @transaction.id ], rule_run_id: @rule_run.id)
           end
         end
 
-        assert_equal 5, tries
+        assert_equal 1, tries, "the shim isn't retried: the run is already saved"
+        assert_equal @rule_run.id, Ai::GenerationRun.where(family: @family).sole.next_job.dig("args", "rule_run_id")
         @rule_run.reload
-        assert_equal "failed", @rule_run.status
-        assert_equal 1, @rule_run.pending_jobs_count, "the run's other job is still out"
-        assert_includes @rule_run.error_message, reason
-        assert_empty Ai::GenerationRun.where(family: @family)
+        assert @rule_run.pending?
+        assert_equal 2, @rule_run.pending_jobs_count
       end
     end
 
