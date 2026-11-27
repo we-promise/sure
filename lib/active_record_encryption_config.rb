@@ -77,7 +77,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 13
+  CURRENT_BACKFILL_VERSION = 14
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -123,6 +123,7 @@ module ActiveRecordEncryptionConfig
     kraken_items: [ "KrakenItem", %i[api_key api_secret raw_payload] ],
     mercury_items: [ "MercuryItem", %i[token raw_payload raw_institution_payload] ],
     monobank_items: [ "MonobankItem", %i[access_token raw_payload raw_institution_payload] ],
+    moomoo_items: [ "MoomooItem", %i[access_token refresh_token oauth_registration_access_token oauth_scope pending_oauth_client] ],
     onchain_wallet_items: [ "OnchainWalletItem", %i[etherscan_api_key] ],
     questrade_items: [ "QuestradeItem", %i[refresh_token raw_payload raw_institution_payload] ],
     redbark_items: [ "RedbarkItem", %i[api_key raw_payload raw_institution_payload] ],
@@ -146,6 +147,7 @@ module ActiveRecordEncryptionConfig
     coinstats_accounts: [ "CoinstatsAccount", %i[raw_payload raw_transactions_payload] ],
     mercury_accounts: [ "MercuryAccount", %i[raw_payload raw_transactions_payload] ],
     monobank_accounts: [ "MonobankAccount", %i[raw_payload raw_transactions_payload] ],
+    moomoo_accounts: [ "MoomooAccount", %i[raw_account_payload raw_funds_payload raw_positions_payload raw_fills_payload raw_orders_payload raw_cash_logs_payload] ],
     akahu_accounts: [ "AkahuAccount", %i[raw_payload raw_transactions_payload formatted_account] ],
     binance_accounts: [ "BinanceAccount", %i[raw_payload raw_transactions_payload] ],
     brex_accounts: [ "BrexAccount", %i[raw_payload raw_transactions_payload] ],

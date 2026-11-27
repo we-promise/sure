@@ -11,6 +11,7 @@ class Family < ApplicationRecord
   include UpConnectable
   include MonobankConnectable
   include Trading212Connectable
+  include MoomooConnectable
   include TradeRepublicConnectable
   include QuestradeConnectable
   include RedbarkConnectable
