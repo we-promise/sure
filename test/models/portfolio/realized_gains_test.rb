@@ -236,17 +236,18 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
     assert_equal few, many, "2 disposals and 6 must cost the same number of queries"
   end
 
-  # A holding with no stored cost basis reads its average cost from the buys
-  # behind it, which is two or more queries per holding unless the set is
-  # preloaded through Holding.preload_avg_costs.
-  test "the query count does not grow with disposals that have no stored cost basis" do
+  # A disposal whose snapshot stores its cost basis prices the sale from it
+  # and does not replay the buys behind it. One without a stored basis does
+  # replay them, a few queries per sale (Holding#avg_cost_before). The stored
+  # 110 differs from the buys' 100, so the gain shows which figure was used.
+  test "the query count does not grow with disposals whose stored cost basis has buys behind it" do
     seed = lambda do |count|
       @seeded ||= 0
       count.times do
         security = create_security
         date = @march + (@seeded += 1)
         buy_trade account: @account, date: @march - 30, qty: 5, price: 100, security: security
-        holding_snapshot account: @account, date: @march, cost_basis: nil, security: security
+        holding_snapshot account: @account, date: @march, cost_basis: 110, security: security
         sell_trade account: @account, date: date, qty: 1, price: 150, security: security
       end
     end
@@ -258,9 +259,9 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
     gains = realized
     many = capture_sql_queries { measure_fully(gains) }.size
 
-    assert_equal 6, gains.trade_count, "every disposal must measure from its buys, or this proves nothing"
-    assert_equal BigDecimal(300), gains.net
-    assert_equal few, many, "2 disposals and 6 without a stored basis must cost the same number of queries"
+    assert_equal 6, gains.trade_count, "every disposal must be measured, or this proves nothing"
+    assert_equal BigDecimal(240), gains.net, "the stored basis prices each sale, not the buys behind it"
+    assert_equal few, many, "2 disposals and 6 with a stored basis must cost the same number of queries"
   end
 
   # The test above prices every disposal in the account's currency, which

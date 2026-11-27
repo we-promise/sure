@@ -18,7 +18,9 @@ pt-BR:
         dashboard_title: Painel
         dashboard_subtitle: Personalize como o painel é exibido
         dashboard_two_column_title: Layout de duas colunas
-        dashboard_two_column_description: Exibe os widgets do painel em duas colunas em telas grandes. Quando desativado, os widgets ficam empilhados em uma única coluna.
+        dashboard_two_column_description: Exibe os widgets do painel em duas colunas em telas grandes, com controles de largura e altura no cabeçalho de cada widget. Quando desativado, os widgets ficam empilhados em uma única coluna.
+        dashboard_account_groups_title: Iniciar expandido por padrão
+        dashboard_account_groups_description: Estas seções de contas começarão expandidas no painel e na barra lateral de contas. Você ainda pode recolhê-las manualmente a qualquer momento.
         split_grouped_title: Agrupar transações divididas
         auto_generate_transaction_names_title: "Gerar nomes de transações automaticamente"
         auto_generate_transaction_names_description: "Quando o nome de uma transação inserida manualmente fica em branco, ele é preenchido a partir da categoria e do comerciante selecionados (ex.: \"Entretenimento - Netflix\"). O nome continua obrigatório se nenhum dos dois for selecionado. Vale para toda a família e apenas para novas transações."

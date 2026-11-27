@@ -40,6 +40,7 @@ class TradeRepublicItem::Importer
       capped_topics = upsert_account(data, domain_statuses: domain_statuses)
       trade_republic_item.update!(
         status: :good,
+        currency: trade_republic_item.currency,
         newest_event_id: timeline_cursor_for(data, domain_statuses),
         timeline_cursors: timeline_cursors_for(data, domain_statuses, capped_topics: capped_topics),
         session_blob: data["session_txt"].presence || trade_republic_item.session_blob
@@ -71,9 +72,16 @@ class TradeRepublicItem::Importer
         raise Provider::TradeRepublicClient::MalformedResponse,
           "Trade Republic response did not contain a brokerage account ID"
       end
+      # The account settings response does not always carry a currency, so
+      # fall back to the currency the cash topic reported, then the item's
+      # stored one, and finally the family currency. The provider-reported
+      # currency is remembered on the item so a later sync whose cash fetch
+      # failed cannot relabel accounts with the family currency.
       currency = account_info["currency"].presence ||
+                 data.dig("cash", "currency").presence ||
                  trade_republic_item.currency.presence ||
                  trade_republic_item.family.currency
+      trade_republic_item.currency = currency
       portfolio_account = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
 
       portfolio_capped = upsert_kind(
