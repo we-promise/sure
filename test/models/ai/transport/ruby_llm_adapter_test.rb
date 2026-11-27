@@ -34,5 +34,4 @@ class Ai::Transport::RubyLlmAdapterTest < ActiveSupport::TestCase
 
     assert_equal true, context.config.split_think_tags
   end
-
 end
