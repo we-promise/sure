@@ -396,7 +396,7 @@ es:
             dimensions_mismatch: Las dimensiones del vector de embeddings no coinciden con las configuradas
             extension_not_enabled: La extensión vector de PostgreSQL no está activada
             table_not_found: No se encuentra la tabla vector_store_chunks
-            render_missing_binary: El renderizador pdftoppm (poppler-utils) no está disponible en este contenedor
+            missing_binary: El renderizador pdftoppm (poppler-utils) no está disponible en este contenedor
             timeout: El servicio no respondió antes de agotar el tiempo de la comprobación
             no_credit: El servicio rechazó la petición porque la clave no tiene saldo
             unauthorized: El servicio rechazó la clave API

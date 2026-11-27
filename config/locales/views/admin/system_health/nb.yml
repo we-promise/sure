@@ -227,7 +227,7 @@ nb:
             dimensions_mismatch: Dimensjonene til embedding-vektoren samsvarer ikke med de konfigurerte dimensjonene
             extension_not_enabled: Vektorutvidelsen i PostgreSQL er ikke aktivert
             table_not_found: Tabellen vector_store_chunks ble ikke funnet
-            render_missing_binary: pdftoppm-rendereren (poppler-utils) er ikke tilgjengelig i denne containeren
+            missing_binary: pdftoppm-rendereren (poppler-utils) er ikke tilgjengelig i denne containeren
             timeout: Tjenesten svarte ikke innen tidsavbruddet for sjekken
             request_failed: Forespørselen til tjenesten mislyktes
             unsupported_provider: Leverandøren støtter ikke denne sjekken

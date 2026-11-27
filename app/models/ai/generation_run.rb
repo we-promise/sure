@@ -49,17 +49,18 @@ class Ai::GenerationRun < ApplicationRecord
 
   # Queues the step saved in next_job. Returns whether it was queued.
   def deliver
-    job = next_job.deep_symbolize_keys
-    Ai::GenerationJob.enqueue_step(feature.to_sym, job[:args], job[:applied], job[:answered_before])
+    Ai::GenerationJob.enqueue_step(*job_arguments)
   end
 
   # For Ai::GenerationDeliveryJob: queues an undelivered run's step again, or after MAX_DELIVERIES
   # of that step gives the run up, so its requester hears that the job couldn't be run.
   def redeliver
+    idle_since = updated_at
     if claim_delivery
+      reload
       DebugLogEntry.capture(category: "ai", level: "warn", message: "AI job delivered again: no job ran its step for an hour",
-                            source: self.class.name, family_id:, metadata: delivery_metadata)
-      reload.deliver
+                            source: self.class.name, family_id:, metadata: delivery_metadata(idle_since))
+      deliver
     else
       give_up_undelivered
     end
@@ -89,16 +90,21 @@ class Ai::GenerationRun < ApplicationRecord
         next unless self.class.undelivered.exists?(id:) && next_job["deliveries"].to_i >= MAX_DELIVERIES
 
         DebugLogEntry.capture(category: "ai", level: "error", message: "AI run given up: its job couldn't be run after #{MAX_DELIVERIES} deliveries",
-                              source: self.class.name, family_id:, metadata: delivery_metadata)
-        job = next_job.deep_symbolize_keys
-        Ai::GenerationJob.new(feature.to_sym, job[:args], job[:applied], job[:answered_before])
+                              source: self.class.name, family_id:, metadata: delivery_metadata(updated_at))
+        Ai::GenerationJob.new(*job_arguments)
                          .give_up(Ai::GenerationJob::Undelivered.new("the AI job couldn't be run after #{MAX_DELIVERIES} deliveries"))
       end
     rescue ActiveRecord::RecordNotFound
       # Ended while this waited for the lock.
     end
 
-    def delivery_metadata
-      { run_id: id, feature:, step:, deliveries: next_job&.dig("deliveries").to_i, idle_since: updated_at }
+    # The saved step's job, as Ai::GenerationJob#perform takes it.
+    def job_arguments
+      job = next_job.deep_symbolize_keys
+      [ feature.to_sym, job[:args], job[:applied], job[:answered_before] ]
+    end
+
+    def delivery_metadata(idle_since)
+      { run_id: id, feature:, step:, deliveries: next_job["deliveries"].to_i, idle_since: }
     end
 end

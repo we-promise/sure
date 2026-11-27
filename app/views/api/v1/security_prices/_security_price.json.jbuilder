@@ -6,6 +6,7 @@ json.price Money.new(security_price.price, security_price.currency).format
 json.price_amount format("%.4f", security_price.price.to_d)
 json.currency security_price.currency
 json.provisional security_price.provisional
+json.carried_forward security_price.carried_forward
 
 json.security do
   json.id security_price.security.id
