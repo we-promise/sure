@@ -32,6 +32,30 @@ class UI::Account::HealthStatusTest < ViewComponent::TestCase
     assert_no_selector ".translation_missing"
   end
 
+  test "links an admin to bank sync to reconnect a connection" do
+    item = trade_republic_items(:configured_item)
+    item.update!(session_expires_at: 1.minute.ago)
+    @account.account_providers.create!(provider: trade_republic_accounts(:main_account))
+
+    render_inline(UI::Account::HealthStatus.new(account: @account))
+
+    assert_text I18n.t("accounts.health_status.provider_reconnect.message", provider: item.institution_display_name)
+    assert_link I18n.t("accounts.health_status.provider_reconnect.link_bank_sync"),
+                href: Rails.application.routes.url_helpers.settings_providers_path
+    assert_no_selector ".translation_missing"
+  end
+
+  test "tells a member who can't reconnect to ask an admin" do
+    Current.session = users(:family_member).sessions.create!
+    trade_republic_items(:configured_item).update!(session_expires_at: 1.minute.ago)
+    @account.account_providers.create!(provider: trade_republic_accounts(:main_account))
+
+    render_inline(UI::Account::HealthStatus.new(account: @account))
+
+    assert_text I18n.t("accounts.health_status.provider_reconnect.hint_ask_admin")
+    assert_no_link I18n.t("accounts.health_status.provider_reconnect.link_bank_sync")
+  end
+
   test "formats each position's date and quantity the way the family sees them" do
     @account.family.update!(date_format: "%d.%m.%Y")
     @account.stubs(:negative_positions).returns([
