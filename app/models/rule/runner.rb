@@ -39,8 +39,7 @@ class Rule::Runner
     @rule_ids = rules.map(&:id).to_set
     @execution_type = execution_type
     @ignore_attribute_locks = ignore_attribute_locks
-    @claimed_ids = Hash.new { |hash, attribute| hash[attribute] = Set.new }
-    @stopped_ids = Set.new
+    @claims = Claims.new
     @errors = []
     @changed_now_count = 0
   end
@@ -57,7 +56,7 @@ class Rule::Runner
   end
 
   private
-    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :transaction_ids
+    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claims, :transaction_ids
 
     def run_rules
       rule_runs = []
@@ -76,29 +75,6 @@ class Rule::Runner
       rule_runs.compact
     end
 
-    def unstopped_scope(rule)
-      Rule.excluding_transaction_ids(rule.matching_scope(within_ids: transaction_ids), stopped_ids)
-    end
-
-    def record_claims(rule, matched_ids)
-      rule.actions.each do |action|
-        reserved_attributes(action).each { |attribute| claimed_ids[attribute].merge(matched_ids) }
-      end
-
-      stopped_ids.merge(matched_ids) if rule.stop_processing?
-    end
-
-    # An action that cannot be resolved (e.g. an unknown action_type from an
-    # import) sets nothing, so it claims nothing and must not abort the run.
-    def reserved_attributes(action)
-      return [] unless action.reserves_claimed_attributes?
-
-      action.claimed_attributes
-    rescue => e
-      Rails.logger.error("Rule::Runner could not read claims of action #{action.id}: #{e.class}: #{e.message}")
-      []
-    end
-
     def deferred_action_types
       transaction_ids ? [ Rule::ActionExecutor::SendEmailNotification.key ] : []
     end
@@ -109,7 +85,7 @@ class Rule::Runner
       rule_run = nil
 
       begin
-        scope = unstopped_scope(rule)
+        scope = claims.unstopped_scope(rule, within_ids: transaction_ids)
         matched_ids = scope.pluck(:id)
         return nil if transaction_ids && matched_ids.empty?
         # Nothing left to run, but stop_processing still holds (see ensure).
@@ -135,7 +111,7 @@ class Rule::Runner
           ignore_attribute_locks: ignore_attribute_locks,
           rule_run: rule_run,
           scope: rule.scope_for_transaction_ids(matched_ids),
-          claimed_ids: claimed_ids,
+          claimed_ids: claims.claimed_ids,
           skip_action_types: skip_action_types
         )
 
@@ -146,7 +122,7 @@ class Rule::Runner
       ensure
         # Claims hold even when the rule failed halfway, so a rule further down
         # never overwrites what this rule may already have set.
-        record_claims(rule, matched_ids)
+        claims.record(rule, matched_ids)
       end
 
       rule_run
