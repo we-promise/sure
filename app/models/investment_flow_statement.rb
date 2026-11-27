@@ -34,16 +34,19 @@ class InvestmentFlowStatement
     # Convert each entry into the family currency on its own date; entries whose
     # currency has no stored rate evaluate to NULL and are skipped by SUM rather
     # than counted at parity (see ExchangeRate.rate_sql).
-    rate = ExchangeRate.rate_sql(
-      from: "entries.currency",
-      to: ActiveRecord::Base.connection.quote(family.currency),
-      on: "entries.date"
-    )
-    converted_amount = "entries.amount * (#{rate})"
+    rate = ExchangeRate.rate_sql(from: "entries.currency", to: ":currency", on: "entries.date")
+    contributions_sql = Transaction.sanitize_sql_array([
+      "COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Contribution' THEN entries.amount * (#{rate}) ELSE 0 END)), 0)",
+      { currency: family.currency }
+    ])
+    withdrawals_sql = Transaction.sanitize_sql_array([
+      "COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Withdrawal' THEN entries.amount * (#{rate}) ELSE 0 END)), 0)",
+      { currency: family.currency }
+    ])
 
     contributions, withdrawals = scope.pick(
-      Arel.sql("COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Contribution' THEN #{converted_amount} ELSE 0 END)), 0)"),
-      Arel.sql("COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Withdrawal' THEN #{converted_amount} ELSE 0 END)), 0)")
+      Arel.sql(contributions_sql),
+      Arel.sql(withdrawals_sql)
     )
 
     PeriodTotals.new(
