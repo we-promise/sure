@@ -28,7 +28,7 @@ class Assistant::Responder
   end
 
   def respond(previous_response_id: nil)
-    response, response_has_text = request_response(previous_response_id: previous_response_id)
+    response, response_has_text = request_response(**opening_request(previous_response_id))
     any_response_has_text = response_has_text
     in_flight_function_results = []
     iteration = 0
@@ -41,6 +41,9 @@ class Assistant::Responder
       end
 
       function_tool_calls = function_tool_caller.fulfill_requests(response.function_requests)
+      # Stored with the calls, so a reply that fails before its follow-up
+      # knows which response is waiting for their results.
+      function_tool_calls.each { |tool_call| tool_call.provider_response_id = response.id }
       function_results = function_tool_calls.map(&:to_result)
       # Tag each result with its round; see .group_by_round.
       in_flight_function_results.concat(function_results.map { |result| result.merge(round: iteration) })
@@ -74,7 +77,7 @@ class Assistant::Responder
   private
     attr_reader :message, :instructions, :function_tool_caller, :llm
 
-    def request_response(function_results: [], previous_response_id: nil, tool_choice: nil)
+    def request_response(function_results: [], previous_response_id: nil, tool_choice: nil, prompt: message.content)
       response_has_text = false
 
       leading_whitespace = +""
@@ -97,6 +100,7 @@ class Assistant::Responder
       end
 
       response = get_llm_response(
+        prompt: prompt,
         streamer: streamer,
         function_results: function_results,
         previous_response_id: previous_response_id,
@@ -105,6 +109,36 @@ class Assistant::Responder
 
       response_has_text ||= response.messages.any? { |response_message| response_message.output_text.present? }
       [ response, response_has_text ]
+    end
+
+    # Stateless providers get the stored conversation every time, executed
+    # tool calls included (see #history_messages). The Responses API keeps
+    # the conversation server-side, and never got the results of tools run
+    # by the latest reply if it then failed: continue from the response that
+    # asked for them and hand them over, followed by the prompt unless the
+    # chain already has it (a Retry asks again for the same prompt).
+    def opening_request(previous_response_id)
+      unanswered_reply = latest_reply if provider_preserves_response_context?
+      # A chain another provider started (the chat switched models) cannot
+      # be continued here.
+      unanswered_reply = nil unless unanswered_reply && llm.supports_model?(unanswered_reply.ai_model)
+      unanswered_calls = unanswered_reply&.unanswered_tool_calls || []
+      return { previous_response_id: previous_response_id } if unanswered_calls.empty?
+
+      {
+        previous_response_id: unanswered_calls.first.provider_response_id,
+        function_results: unanswered_calls.map(&:to_result),
+        prompt: (message.content if message.created_at > unanswered_reply.created_at)
+      }
+    end
+
+    # The latest reply that finished or ran tools. A failed reply without tool
+    # calls (a retry that broke mid-answer) left nothing in the chain to
+    # continue from, so the search goes past it to the tools before it.
+    def latest_reply
+      history_messages.reverse.find do |history_message|
+        history_message.is_a?(AssistantMessage) && (history_message.complete? || history_message.tool_calls.any?)
+      end
     end
 
     def provider_preserves_response_context?
@@ -118,17 +152,17 @@ class Assistant::Responder
       DEFAULT_MAX_TOOL_CALL_ITERATIONS
     end
 
-    def get_llm_response(streamer:, function_results: [], previous_response_id: nil, tool_choice: nil)
+    def get_llm_response(prompt:, streamer:, function_results: [], previous_response_id: nil, tool_choice: nil)
       Usage.capture("ai_assistant_served_daily")
       response = llm.chat_response(
-        message.content,
+        prompt,
         model: message.ai_model,
         instructions: instructions,
         functions: function_tool_caller.function_definitions,
         function_results: function_results,
         tool_choice: tool_choice,
         messages: openai_messages_payload,
-        conversation_history: chat_message_records,
+        conversation_history: history_messages,
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: chat_session_id,
@@ -165,41 +199,46 @@ class Assistant::Responder
       @chat ||= message.chat
     end
 
-    # Memoized fetch — both `chat_message_records` and `openai_messages_payload`
-    # derive their shape from this one in-memory array so a single chat turn
-    # fires one history query instead of two.
-    def complete_chat_messages
-      return @complete_chat_messages if defined?(@complete_chat_messages)
-
-      @complete_chat_messages =
+    # The stored conversation every provider request replays, in order and
+    # ending with the turn being answered: the current prompt and the replies
+    # to it that failed. Only the reply being generated (pending) is left out;
+    # its tool rounds travel as in-flight function_results. Failed replies
+    # stay in: the tools they ran happened, and a model that does not see them
+    # would run them again. Their partial text does not
+    # (Message#replayed_content). Memoized so a turn fires one history query.
+    def history_messages
+      @history_messages ||=
         if chat&.messages
-          chat.messages
-              .where(type: [ "UserMessage", "AssistantMessage" ], status: "complete")
-              .includes(:tool_calls)
-              .ordered
-              .to_a
+          up_to_current_turn(
+            chat.messages
+                .where(type: [ "UserMessage", "AssistantMessage" ], status: [ "complete", "failed" ])
+                .includes(:tool_calls)
+                .ordered
+                .to_a
+          )
         else
           []
         end
     end
 
-    # Raw Message records preceding the current turn — providers that build
-    # their own native message shape (Anthropic) consume this directly so they
-    # do not have to round-trip through the OpenAI-shaped payload below.
-    def chat_message_records
-      complete_chat_messages.reject { |m| m.id == message.id }
+    # A prompt sent after this one gets its own reply. Replaying it here
+    # would answer it twice and leave this prompt without an answer.
+    def up_to_current_turn(messages)
+      position = messages.index(message)
+      later_prompt = position && messages.drop(position + 1).index { |chat_message| chat_message.is_a?(UserMessage) }
+      later_prompt ? messages.first(position + 1 + later_prompt) : messages
     end
 
     # Builds the OpenAI-shaped messages payload (role: "user" | "assistant" |
     # "tool"; tool_call_id pairing) consumed by Provider::Openai's generic
-    # chat path. Anthropic uses chat_message_records instead.
+    # chat path. Anthropic renders history_messages itself.
     def openai_messages_payload
       messages = []
-      complete_chat_messages.each do |chat_message|
+      history_messages.each do |chat_message|
         if chat_message.tool_calls.any?
           messages << {
             role: chat_message.role,
-            content: chat_message.content || "",
+            content: chat_message.replayed_content,
             tool_calls: chat_message.tool_calls.map(&:to_tool_call)
           }
 
@@ -221,8 +260,8 @@ class Assistant::Responder
             }
           end
 
-        elsif !chat_message.content.blank?
-          messages << { role: chat_message.role, content: chat_message.content || "" }
+        elsif chat_message.replayed_content.present?
+          messages << { role: chat_message.role, content: chat_message.replayed_content }
         end
       end
       messages

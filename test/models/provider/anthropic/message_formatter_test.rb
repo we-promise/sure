@@ -12,7 +12,7 @@ class Provider::Anthropic::MessageFormatterTest < ActiveSupport::TestCase
   end
 
   test "skips empty content from history" do
-    history = [ stub_user_message("") ]
+    history = [ stub_user_message(""), stub_user_message("next") ]
 
     messages = Provider::Anthropic::MessageFormatter.new(prompt: "next", conversation_history: history).build
 
@@ -22,7 +22,8 @@ class Provider::Anthropic::MessageFormatterTest < ActiveSupport::TestCase
   test "renders text-only assistant history with no tool calls" do
     history = [
       stub_user_message("first question"),
-      stub_assistant_message("first answer")
+      stub_assistant_message("first answer"),
+      stub_user_message("second question")
     ]
 
     messages = Provider::Anthropic::MessageFormatter.new(prompt: "second question", conversation_history: history).build
@@ -41,7 +42,7 @@ class Provider::Anthropic::MessageFormatterTest < ActiveSupport::TestCase
       result: { "amount" => 12345, "currency" => "USD" }
     )
     assistant = stub_assistant_message("Your net worth is $12,345.", tool_calls: [ tool_call ])
-    history = [ stub_user_message("net worth?"), assistant ]
+    history = [ stub_user_message("net worth?"), assistant, stub_user_message("anything else?") ]
 
     messages = Provider::Anthropic::MessageFormatter.new(prompt: "anything else?", conversation_history: history).build
 
@@ -59,6 +60,19 @@ class Provider::Anthropic::MessageFormatterTest < ActiveSupport::TestCase
     assert_equal({ "amount" => 12345, "currency" => "USD" }.to_json, messages[2][:content].first[:content])
 
     assert_equal({ role: "user", content: "anything else?" }, messages[3])
+  end
+
+  test "replays the tool calls of a failed reply without its partial text" do
+    tool_call = stub_tool_call(id: "toolu_1", name: "create_tag", arguments: { "name" => "Groceries" }, result: { "success" => true })
+    failed = stub_assistant_message("Half an ans", tool_calls: [ tool_call ])
+    failed.status = "failed"
+    history = [ stub_user_message("tag my groceries"), failed ]
+
+    messages = Provider::Anthropic::MessageFormatter.new(prompt: "tag my groceries", conversation_history: history).build
+
+    assert_equal [ "user", "assistant", "user" ], messages.map { |m| m[:role] }
+    assert_equal [ "tool_use" ], messages[1][:content].map { |b| b[:type] }
+    assert_equal "toolu_1", messages[2][:content].first[:tool_use_id]
   end
 
   test "renders in-flight function_results as assistant tool_use + user tool_result" do

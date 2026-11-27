@@ -1,6 +1,8 @@
 require "test_helper"
 
 class ChatTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @user = users(:family_admin)
     @assistant = mock
@@ -226,6 +228,121 @@ class ChatTest < ActiveSupport::TestCase
     end
 
     assert_equal "failed", pending.reload.status
+  end
+
+  test "handle_undelivered_response! keeps a blank pending bubble whose tools already ran" do
+    BackgroundJobHealth.stubs(:snapshot).returns({})
+    BackgroundJobHealth.stubs(:summary).returns("")
+
+    chat = chats(:two)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+    ToolCall::Function.create!(message: pending, provider_id: "fc_1", provider_call_id: "call_1", function_name: "create_tag",
+                               function_arguments: { name: "Groceries" }, function_result: { success: true })
+
+    assert_no_difference -> { ToolCall.count } do
+      assert chat.handle_undelivered_response!(pending)
+    end
+
+    assert_equal "failed", pending.reload.status
+  end
+
+  test "retry_last_message! asks again after a failed reply and keeps it" do
+    chat = chats(:two)
+    chat.messages.destroy_all
+    prompt = chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "gpt-4.1")
+    failed = chat.messages.where(type: "AssistantMessage").sole
+    failed.update!(status: :failed)
+    ToolCall::Function.create!(message: failed, provider_id: "fc_1", provider_call_id: "call_1", function_name: "create_tag",
+                               function_arguments: { name: "Groceries" }, function_result: { success: true })
+
+    reply = nil
+    assert_enqueued_with(job: AssistantResponseJob, args: ->(args) { args.first == prompt }) do
+      reply = chat.retry_last_message!
+    end
+
+    assert reply.pending?
+    assert_equal [ prompt, failed, reply ], chat.conversation_messages.ordered.to_a
+    assert_equal 1, failed.tool_calls.count
+  end
+
+  test "retry_last_message! asks again for the failed prompt when a new message lands meanwhile" do
+    chat = chats(:two)
+    chat.messages.destroy_all
+    prompt = chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "gpt-4.1")
+    chat.messages.where(type: "AssistantMessage").sole.update!(status: :failed)
+    clear_enqueued_jobs
+
+    # The new message commits right after Retry saw the failed reply as the last one.
+    concurrent = nil
+    AssistantMessage.any_instance.stubs(:failed?).with do
+      concurrent ||= chat.messages.create!(type: "UserMessage", content: "And my debts?", ai_model: "gpt-4.1")
+      true
+    end.returns(true)
+
+    chat.retry_last_message!
+
+    answered = enqueued_jobs.select { |job| job["job_class"] == "AssistantResponseJob" }.map { |job| job["arguments"].first["_aj_globalid"] }
+    assert_equal [ concurrent, prompt ].map { |message| message.to_global_id.to_s }.sort, answered.sort
+  end
+
+  test "a second retry still answers the original prompt after a retry that raced a new message failed" do
+    chat = chats(:two)
+    chat.messages.destroy_all
+    prompt = chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "gpt-4.1")
+    chat.messages.where(type: "AssistantMessage").sole.update!(status: :failed)
+
+    # A new message commits while the first Retry is running, before its reply is created.
+    concurrent = nil
+    AssistantMessage.any_instance.stubs(:failed?).with do
+      concurrent ||= chat.messages.create!(type: "UserMessage", content: "And my debts?", ai_model: "gpt-4.1")
+      true
+    end.returns(true)
+    retry_reply = chat.retry_last_message!
+    AssistantMessage.any_instance.unstub(:failed?)
+    chat.messages.where(type: "AssistantMessage").where.not(id: retry_reply.id).order(:created_at).last
+        .update!(content: "Your debts are...", status: :complete)
+    retry_reply.update!(content: "Half an ans", status: :failed)
+    assert_equal retry_reply, chat.conversation_messages.ordered.last
+    clear_enqueued_jobs
+
+    assert_enqueued_with(job: AssistantResponseJob, args: ->(args) { args.first == prompt }) do
+      chat.retry_last_message!
+    end
+  end
+
+  test "retry_last_message! asks again for the prompt before a failed reply that has no link to it" do
+    chat = chats(:two)
+    chat.messages.destroy_all
+    prompt = chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "gpt-4.1")
+    chat.messages.where(type: "AssistantMessage").sole.update_columns(status: "failed", prompt_message_id: nil)
+
+    assert_enqueued_with(job: AssistantResponseJob, args: ->(args) { args.first == prompt }) do
+      chat.retry_last_message!
+    end
+  end
+
+  test "retry_last_message! leaves a finished reply alone" do
+    chat = chats(:two)
+    chat.messages.destroy_all
+    chat.messages.create!(type: "UserMessage", content: "Hi", ai_model: "gpt-4.1")
+    chat.messages.where(type: "AssistantMessage").sole.update!(content: "Hello", status: :complete)
+
+    assert_no_enqueued_jobs(only: AssistantResponseJob) do
+      assert_nil chat.retry_last_message!
+    end
+  end
+
+  test "a failed last reply still needs a response, so a reload shows the error and Retry" do
+    chat = chats(:two)
+    chat.messages.destroy_all
+    chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "gpt-4.1")
+    reply = chat.messages.where(type: "AssistantMessage").sole
+
+    reply.update!(status: :failed)
+    assert chat.needs_assistant_response?
+
+    reply.update!(content: "Done.", status: :complete)
+    assert_not chat.needs_assistant_response?
   end
 
   test "handle_undelivered_response! ignores a pending bubble younger than the server timeout" do

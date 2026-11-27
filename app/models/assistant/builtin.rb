@@ -18,7 +18,7 @@ class Assistant::Builtin < Assistant::Base
   end
 
   def respond_to(message, assistant_message: nil)
-    assistant_message ||= AssistantMessage.new(chat: chat, content: "", ai_model: message.ai_model)
+    assistant_message ||= AssistantMessage.new(chat: chat, content: "", ai_model: message.ai_model, prompt_message: message)
 
     llm_provider = get_model_provider(message.ai_model)
     unless llm_provider
@@ -56,14 +56,7 @@ class Assistant::Builtin < Assistant::Base
 
     responder.respond(previous_response_id: latest_response_id)
   rescue => e
-    if assistant_message&.persisted?
-      if assistant_message.content.blank?
-        assistant_message.destroy
-      else
-        # Demote partially-streamed turns to `failed` so the responder's history builders (`#openai_messages_payload`, `#chat_message_records`) exclude them.
-        assistant_message.update_columns(status: "failed")
-      end
-    end
+    assistant_message.abandon! if assistant_message&.persisted?
     chat.add_error(e)
   end
 

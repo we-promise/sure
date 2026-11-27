@@ -290,7 +290,7 @@ RSpec.describe 'API V1 Chats', type: :request do
         schema '$ref' => '#/components/schemas/RetryResponse'
 
         before do
-          allow_any_instance_of(AssistantMessage).to receive(:valid?).and_return(true)
+          chat.messages.where(type: 'AssistantMessage').order(:created_at).last.update!(status: 'failed')
         end
 
         run_test!
@@ -304,7 +304,7 @@ RSpec.describe 'API V1 Chats', type: :request do
         run_test!
       end
 
-      response '422', 'no assistant message available' do
+      response '422', 'nothing to retry' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:chat) do

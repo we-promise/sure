@@ -1,7 +1,7 @@
 require "test_helper"
 
 class AssistantTest < ActiveSupport::TestCase
-  include ProviderTestHelper
+  include ActiveJob::TestHelper, ProviderTestHelper
 
   test "default registry includes the analytical read tools and gates preview reads" do
     default_classes = Assistant.function_classes
@@ -293,7 +293,7 @@ class AssistantTest < ActiveSupport::TestCase
     assert_equal 1, response.tool_calls.size
   end
 
-  test "cleans up the pending message when the tool-call limit is exceeded" do
+  test "keeps the tool calls that ran when the tool-call limit is exceeded" do
     @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
     Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("accounts").once
 
@@ -321,7 +321,8 @@ class AssistantTest < ActiveSupport::TestCase
       @assistant.respond_to(@message, assistant_message: pending)
     end
 
-    assert_not AssistantMessage.exists?(pending.id)
+    assert_equal "failed", pending.reload.status
+    assert_equal [ "get_accounts" ], pending.tool_calls.map(&:function_name)
     assert_includes @chat.reload.technical_error_message, "tool-call limit"
   end
 
@@ -689,6 +690,176 @@ class AssistantTest < ActiveSupport::TestCase
     assert_not tool_result_entry.key?(:name), "tool messages must not carry the deprecated `name` field"
   end
 
+  # A reply that failed after running tools. ScriptedModel plays a model that
+  # calls each planned tool round until it sees that round's results, so any
+  # request that leaves the stored results out makes it run the tools again.
+  %i[chat_completions anthropic responses].each do |api|
+    test "retry after a failed follow-up does not run the tool again (#{api})" do
+      model = use_scripted_model(api: api, plan: [ [ "create_tag" ] ], failures: { 2 => :error })
+      Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true })
+
+      perform_enqueued_jobs
+      failed = last_reply
+      assert_equal "failed", failed.status
+      assert_equal [ "create_tag" ], failed.tool_calls.map(&:function_name)
+
+      @chat.reload.retry_last_message!
+      perform_enqueued_jobs
+
+      assert_equal "Done.", last_reply.content
+      assert_equal "complete", last_reply.status
+      assert_equal [ "create_tag" ], failed.reload.tool_calls.map(&:function_name)
+      assert_nil @chat.reload.error
+      assert_sees_tool_result model.requests.last, "call_1_0", after: @message.content, prompt: nil
+    end
+
+    test "a new message after a failed follow-up does not run the tool again (#{api})" do
+      model = use_scripted_model(api: api, plan: [ [ "create_tag" ] ], failures: { 2 => :error })
+      Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true })
+
+      perform_enqueued_jobs
+      assert_equal "failed", last_reply.status
+
+      @chat.messages.create!(type: "UserMessage", content: "Did it work?", ai_model: "gpt-4.1")
+      perform_enqueued_jobs
+
+      assert_equal "Done.", last_reply.content
+      assert_sees_tool_result model.requests.last, "call_1_0", after: @message.content, prompt: "Did it work?"
+    end
+
+    test "retry after several tool rounds runs none of them again (#{api})" do
+      model = use_scripted_model(api: api, plan: [ [ "create_tag" ], [ "get_tags", "get_accounts" ] ], failures: { 3 => :error })
+      Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true })
+      Assistant::Function::GetTags.any_instance.expects(:call).once.returns({ tags: [] })
+      Assistant::Function::GetAccounts.any_instance.expects(:call).once.returns({ accounts: [] })
+
+      perform_enqueued_jobs
+      @chat.reload.retry_last_message!
+      perform_enqueued_jobs
+
+      assert_equal "Done.", last_reply.content
+      if api == :responses
+        assert_equal "resp_2", model.requests.last[:previous_response_id]
+        assert_equal %w[call_2_0 call_2_1], model.requests.last[:function_results].map { |result| result[:call_id] }
+      else
+        assert_equal %w[call_1_0 call_2_0 call_2_1], model.requests.last[:visible_call_ids]
+      end
+    end
+
+    test "retry after a stream that broke mid-answer does not run the tool again (#{api})" do
+      use_scripted_model(api: api, plan: [ [ "create_tag" ] ], failures: { 2 => :partial })
+      Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true })
+
+      perform_enqueued_jobs
+      assert_equal "Half an ans", last_reply.content
+      assert_equal "failed", last_reply.status
+
+      @chat.reload.retry_last_message!
+      perform_enqueued_jobs
+
+      assert_equal "Done.", last_reply.content
+    end
+
+    test "a second retry after one that broke mid-answer still does not run the tool again (#{api})" do
+      model = use_scripted_model(api: api, plan: [ [ "create_tag" ] ], failures: { 2 => :error, 3 => :partial })
+      Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true })
+
+      perform_enqueued_jobs
+      @chat.reload.retry_last_message!
+      perform_enqueued_jobs
+      assert_equal "Half an ans", last_reply.content
+      assert_equal "failed", last_reply.status
+
+      @chat.reload.retry_last_message!
+      perform_enqueued_jobs
+
+      assert_equal "Done.", last_reply.content
+      assert_sees_tool_result model.requests.last, "call_1_0", after: @message.content, prompt: nil
+    end
+  end
+
+  test "a new message after a failed follow-up does not run the tool again when the history is trimmed" do
+    model = use_scripted_model(api: :chat_completions, plan: [ [ "create_tag" ] ], failures: { 2 => :error }, history_tokens: 50)
+    Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true, tags: "groceries " * 400 })
+
+    perform_enqueued_jobs
+    @chat.messages.create!(type: "UserMessage", content: "Did it work?", ai_model: "gpt-4.1")
+    perform_enqueued_jobs
+
+    assert_equal "Done.", last_reply.content
+    assert_sees_tool_result model.requests.last, "call_1_0", after: @message.content, prompt: "Did it work?"
+  end
+
+  %i[chat_completions anthropic].each do |api|
+    test "a reply answers its own prompt when another message arrives before it runs (#{api})" do
+      model = use_scripted_model(api: api, plan: [])
+      @chat.messages.create!(type: "UserMessage", content: "And my debts?", ai_model: "gpt-4.1")
+
+      perform_enqueued_jobs
+
+      first_request, second_request = model.requests
+      assert_equal @message.content, first_request[:transcript].last
+      assert_equal "And my debts?", second_request[:transcript].last
+    end
+  end
+
+  test "a new message on the Responses API does not continue a chain another provider started" do
+    anthropic = ScriptedModel.new(api: :anthropic, plan: [ [ "create_tag" ] ], failures: { 2 => :error })
+    responses = ScriptedModel.new(api: :responses, plan: [])
+    Assistant::Builtin.any_instance.stubs(:get_model_provider).with("claude-sonnet-4-5").returns(anthropic)
+    Assistant::Builtin.any_instance.stubs(:get_model_provider).with("gpt-4.1").returns(responses)
+    Assistant::Function::CreateTag.any_instance.stubs(:call).returns({ success: true })
+
+    clear_enqueued_jobs
+    @chat.messages.where(type: "AssistantMessage").destroy_all
+    @chat.messages.create!(type: "UserMessage", content: "Tag my groceries", ai_model: "claude-sonnet-4-5")
+    perform_enqueued_jobs
+    assert_equal "failed", @chat.messages.where(type: "AssistantMessage").order(:created_at).last.status
+
+    @chat.messages.create!(type: "UserMessage", content: "Did it work?", ai_model: "gpt-4.1")
+    perform_enqueued_jobs
+
+    assert_equal "Done.", @chat.messages.where(type: "AssistantMessage").order(:created_at).last.content
+    assert_nil responses.requests.last[:previous_response_id]
+  end
+
+  test "a failed reply's partial text stays out of the history" do
+    model = use_scripted_model(api: :chat_completions, plan: [ [ "create_tag" ] ], failures: { 2 => :partial })
+    Assistant::Function::CreateTag.any_instance.stubs(:call).returns({ success: true })
+
+    perform_enqueued_jobs
+    @chat.reload.retry_last_message!
+    perform_enqueued_jobs
+
+    assert_not_includes model.requests.last[:messages].map { |entry| entry[:content] }, "Half an ans"
+  end
+
+  test "retry starts the turn over when it failed before any tool ran" do
+    model = use_scripted_model(api: :chat_completions, plan: [ [ "create_tag" ] ], failures: { 1 => :error })
+    Assistant::Function::CreateTag.any_instance.expects(:call).once.returns({ success: true })
+
+    perform_enqueued_jobs
+    assert_nil last_reply
+
+    @chat.reload.retry_last_message!
+    perform_enqueued_jobs
+
+    assert_equal "Done.", last_reply.content
+    assert_empty model.requests.second[:visible_call_ids]
+  end
+
+  test "retry after a stream that broke without tools asks again" do
+    use_scripted_model(api: :chat_completions, plan: [], failures: { 1 => :partial })
+
+    perform_enqueued_jobs
+    assert_equal "failed", last_reply.status
+
+    @chat.reload.retry_last_message!
+    perform_enqueued_jobs
+
+    assert_equal "Done.", last_reply.content
+  end
+
   private
 
     def mock_external_sse_response(sse_body)
@@ -768,5 +939,166 @@ class AssistantTest < ActiveSupport::TestCase
         chunks.each { |chunk| options[:streamer].call(chunk) }
         true
       end.returns(*responses)
+    end
+
+    def last_reply
+      @chat.messages.where(type: "AssistantMessage").where("created_at > ?", @message.created_at).order(:created_at).last
+    end
+
+    def use_scripted_model(**options)
+      ScriptedModel.new(**options).tap do |model|
+        Assistant::Builtin.any_instance.stubs(:get_model_provider).returns(model)
+      end
+    end
+
+    # The request shows the tool result, and shows it after the question that
+    # led to the call. `prompt` is what the Responses API gets as new input.
+    def assert_sees_tool_result(request, call_id, after:, prompt:)
+      if request[:api] == :responses
+        assert_equal "resp_1", request[:previous_response_id]
+        assert_equal [ call_id ], request[:function_results].map { |result| result[:call_id] }
+        prompt.nil? ? assert_nil(request[:prompt]) : assert_equal(prompt, request[:prompt])
+      else
+        assert_includes request[:visible_call_ids], call_id
+        transcript = request[:transcript]
+        assert_equal 1, transcript.count(after), "the question is sent once"
+        assert_operator transcript.index(after), :<, transcript.index("result:#{call_id}")
+        if prompt
+          assert_equal 1, transcript.count(prompt)
+          assert_operator transcript.index("result:#{call_id}"), :<, transcript.index(prompt)
+        end
+      end
+    end
+
+    # A model that calls the next planned tool round until the request shows a
+    # result of every earlier round, then answers "Done.". `api` picks what it
+    # reads, as the real APIs would:
+    # - :chat_completions, the OpenAI-shaped `messages`;
+    # - :anthropic, what Provider::Anthropic::MessageFormatter builds, checking
+    #   that every tool_result follows its tool_use;
+    # - :responses, the server-side chain: a request names a previous response
+    #   and must send exactly the outputs of the tools that response asked for.
+    # `failures` maps a request number to :error, or :partial (text, then error).
+    # `history_tokens` trims the OpenAI-shaped history to that budget.
+    class ScriptedModel
+      include ProviderTestHelper
+
+      attr_reader :requests
+
+      def initialize(api:, plan:, failures: {}, history_tokens: nil)
+        @api = api
+        @plan = plan
+        @failures = failures
+        @history_tokens = history_tokens
+        @requests = []
+        @rounds = []
+        @responses = {}
+      end
+
+      def supports_responses_endpoint?
+        @api == :responses
+      end
+
+      def supports_model?(model)
+        model.start_with?(@api == :anthropic ? "claude" : "gpt")
+      end
+
+      def chat_response(prompt, function_results:, previous_response_id:, streamer:, messages:, conversation_history:, **)
+        # As Provider::Openai#build_generic_messages trims the history of a small-context model.
+        messages = Assistant::HistoryTrimmer.new(messages, max_tokens: @history_tokens).call if @history_tokens
+        request = { api: @api, prompt: prompt, function_results: function_results, previous_response_id: previous_response_id,
+                    messages: messages }
+        @requests << request
+        number = @requests.size
+
+        rounds_done =
+          if @api == :responses
+            chain_rounds(function_results, previous_response_id)
+          else
+            transcript = @api == :anthropic ? anthropic_transcript(prompt, conversation_history, function_results) : openai_transcript(messages, function_results)
+            request[:transcript] = transcript
+            request[:visible_call_ids] = transcript.filter_map { |entry| entry.delete_prefix("result:") if entry.start_with?("result:") }
+            @rounds.take_while { |call_ids| (call_ids & request[:visible_call_ids]).any? }.size
+          end
+        return provider_error_response(StandardError.new("No tool output found for function call")) if rounds_done.nil?
+
+        case @failures[number]
+        when :error
+          return provider_error_response(StandardError.new("503 Service Unavailable"))
+        when :partial
+          streamer.call(text_chunk("Half an ans"))
+          return provider_error_response(StandardError.new("stream closed"))
+        end
+
+        id = "resp_#{number}"
+        if rounds_done < @plan.size
+          calls = @plan[rounds_done].each_with_index.map do |name, index|
+            Provider::LlmConcept::ChatFunctionRequest.new(id: "fc_#{number}_#{index}", call_id: "call_#{number}_#{index}",
+                                                          function_name: name, function_args: "{}")
+          end
+          @rounds[rounds_done] = calls.map(&:call_id)
+          @responses[id] = { done: rounds_done, call_ids: calls.map(&:call_id) }
+          respond(id, messages: [], function_requests: calls)
+        else
+          @responses[id] = { done: rounds_done, call_ids: [] }
+          streamer.call(text_chunk("Done."))
+          respond(id, messages: [ Provider::LlmConcept::ChatMessage.new(id: id, output_text: "Done.") ], function_requests: [])
+        end
+      end
+
+      private
+        # Tool rounds done in the chain the request continues, or nil for a
+        # request the Responses API would reject.
+        def chain_rounds(function_results, previous_response_id)
+          output_ids = function_results.map { |result| result[:call_id] }
+          previous = @responses[previous_response_id]
+          return (output_ids.empty? ? 0 : nil) if previous.nil?
+          return (output_ids.empty? ? previous[:done] : nil) if previous[:call_ids].empty?
+          return nil unless output_ids == previous[:call_ids]
+
+          previous[:done] + 1
+        end
+
+        # Flattens a request to user texts and "call:"/"result:" markers.
+        def openai_transcript(messages, function_results)
+          entries = messages.flat_map do |entry|
+            case entry[:role]
+            when "tool" then [ "result:#{entry[:tool_call_id]}" ]
+            when "assistant" then Array(entry[:tool_calls]).map { |call| "call:#{call[:id]}" }
+            else [ entry[:content] ]
+            end
+          end
+          entries + function_results.flat_map { |result| [ "call:#{result[:call_id]}", "result:#{result[:call_id]}" ] }
+        end
+
+        def anthropic_transcript(prompt, conversation_history, function_results)
+          built = Provider::Anthropic::MessageFormatter.new(prompt: prompt, conversation_history: conversation_history,
+                                                            function_results: function_results).build
+          asked = []
+          built.flat_map do |entry|
+            blocks = entry[:content].is_a?(String) ? [ { type: "text", text: entry[:content] } ] : entry[:content]
+            blocks.map do |block|
+              case block[:type]
+              when "tool_use"
+                asked << block[:id]
+                "call:#{block[:id]}"
+              when "tool_result"
+                raise "tool_result #{block[:tool_use_id]} without its tool_use" unless asked.include?(block[:tool_use_id])
+                "result:#{block[:tool_use_id]}"
+              else block[:text]
+              end
+            end
+          end
+        end
+
+        def text_chunk(text)
+          Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: text, usage: nil)
+        end
+
+        def respond(id, messages:, function_requests:)
+          provider_success_response(
+            Provider::LlmConcept::ChatResponse.new(id: id, model: "gpt-4.1", messages: messages, function_requests: function_requests)
+          )
+        end
     end
 end

@@ -7,14 +7,14 @@ class Assistant::HistoryTrimmer
   def call
     return [] if @messages.empty? || @max_tokens <= 0
 
-    kept = []
-    tokens = 0
+    groups = group_tool_pairs(@messages)
+    current = open_turn_start(groups)
+    kept = groups[current..].flatten(1)
+    tokens = Assistant::TokenEstimator.estimate(kept)
 
-    group_tool_pairs(@messages).reverse_each.with_index do |group, index|
+    groups[0...current].reverse_each do |group|
       group_tokens = Assistant::TokenEstimator.estimate(group)
-      # The newest group always survives: dropping it would discard the very
-      # message the model is being asked to answer.
-      break if index.positive? && tokens + group_tokens > @max_tokens
+      break if tokens + group_tokens > @max_tokens
 
       kept.unshift(*group)
       tokens += group_tokens
@@ -24,6 +24,25 @@ class Assistant::HistoryTrimmer
   end
 
   private
+
+    # The question being answered and everything after it always survive:
+    # dropping them would discard the very message the model is asked to
+    # answer. So do the tools that replies failing since the last finished
+    # one already ran, with the question that led to them: a model that does
+    # not see them runs them again. A failed reply is replayed without its
+    # text (Message#replayed_content), so an assistant entry with text is a
+    # reply that finished.
+    def open_turn_start(groups)
+      last_answer = groups.rindex { |group| finished_reply?(group.first) } || -1
+      unanswered_tools = ((last_answer + 1)...groups.size).find { |index| assistant_with_tool_calls?(groups[index].first) }
+      anchor = unanswered_tools || groups.size - 1
+
+      groups[0..anchor].rindex { |group| group.first[:role].to_s == "user" } || anchor
+    end
+
+    def finished_reply?(msg)
+      msg[:role].to_s == "assistant" && msg[:content].present?
+    end
 
     # Bundles each assistant message that has `tool_calls` with the
     # consecutive `role: "tool"` results that follow it, so the trimmer
