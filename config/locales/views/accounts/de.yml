@@ -52,6 +52,16 @@ de:
       enable_category_matcher_hint: Ist die Option an, wird die vom Anbieter vorgeschlagene Kategorie auf importierte Transaktionen angewendet. Schalte sie aus, damit neue Transaktionen ohne Kategorie bleiben.
       enable_category_matcher_label: Kategoriezuordnung aktivieren
       exclude_from_reports: Aus allen Berichten ausschließen
+      institution_domain_hint: "Wird verwendet, um das Symbol der Institution zu finden."
+      institution_domain_missing_logo_key_hint: "Wird verwendet, um das Symbol der Institution zu finden. Brandfetch-Logos sind nicht verfügbar, weil keine Brandfetch-Client-ID eingerichtet ist."
+      institution_domain_settings_link: "In den Self-Hosting-Einstellungen hinzufügen"
+      logo_label: "Symbol"
+      logo_hint: "Oder lade ein eigenes Bild hoch (PNG, JPEG, GIF, WebP oder ICO, bis 1 MB). Es ersetzt das Brandfetch-Logo."
+      cost_basis_method_label: "Methode für den Einstandspreis"
+      cost_basis_method_hint: "Legt fest, welchen gekauften Anteilen ein Verkauf zugeordnet wird. Eine Änderung berechnet frühere realisierte Gewinne und den durchschnittlichen Einstandspreis deines Bestands neu. Bei einem Verkauf von Anteilen mit unbekanntem Einstandspreis wird der Gewinn als unbekannt angezeigt."
+      cost_basis_methods:
+        average: "Durchschnittlicher Einstandspreis"
+        fifo: "Zuerst gekauft, zuerst verkauft (FIFO)"
     index:
       accounts: Konten
       manual_accounts:
@@ -59,6 +69,9 @@ de:
       new_account: Neues Konto
       sync: Alle synchronisieren
       cancel_sync: Sync abbrechen
+      financekit_accounts:
+        title: "Apple Wallet"
+        description: "Apple-Wallet-Verbindungen und ihre Synchronisierung verwaltest du in der Sure-App für iOS."
     sync_all:
       syncing: "Konten werden synchronisiert..."
     new:
@@ -127,6 +140,13 @@ de:
         include_in_reports: In Berichte aufnehmen
         sharing: Freigabe
         statements: Auszüge
+        reconcile_all:
+          cleared: "Alle als bestätigt markieren"
+          confirm_accept: "Alle als %{status} markieren"
+          confirm_body: "Damit änderst du den Abgleichsstatus jeder Transaktion dieses Kontos. Hochgeladene Kontoauszüge bleiben unverändert."
+          confirm_title: "Alle Transaktionen als %{status} markieren?"
+          reconciled: "Alle als abgeglichen markieren"
+          unreconciled: "Alle als nicht abgeglichen markieren"
       header:
         complete_setup: Setup abschließen
       limited_fx_history_warning: Wechselkurse liegen erst ab %{date} vor. Transaktionen davor rechnen mit Näherungswerten, was vorkommt, wenn der Kursanbieter nur einen begrenzten Verlauf liefert.
@@ -139,6 +159,7 @@ de:
         statements: Auszüge
     update:
       success: "%{type}-Konto aktualisiert"
+      logo_not_applied: "Das Konto wurde gespeichert, aber das gewählte Symbol konnte nicht heruntergeladen werden. Versuch es noch einmal oder lade ein eigenes hoch."
     sidebar:
       missing_data: Fehlende historische Daten
       missing_data_description: "%{product} verwendet Drittanbieter, um historische Wechselkurse, Wertpapierpreise und weitere Daten abzurufen. Diese Daten sind erforderlich, um genaue historische Kontostände zu berechnen."
@@ -157,6 +178,8 @@ de:
         start: Konten sortieren
         hint: Konten am Griff an ihre Stelle ziehen.
         done: Fertig
+      expand_all: "Alle ausklappen"
+      collapse_all: "Alle einklappen"
     types:
       depository: Bankkonto
       investment: Investment
@@ -194,6 +217,7 @@ de:
       warning_transactions_kept: Bestehende Buchungen und Salden bleiben erhalten
       warning_can_delete: Nach dem Trennen kannst du das Konto bei Bedarf löschen
       confirm_button: Bestätigen und trennen
+      warning_wallet_connection: "Alle Konten dieser Apple-Wallet-Verbindung werden getrennt. Ihre Transaktionen und Kontostände bleiben erhalten. Über die Sure-App für iOS kannst du sie mit einer neuen Wallet-Einrichtung wieder verbinden."
     unlink:
       success: "Konto erfolgreich getrennt. Es ist jetzt ein manuelles Konto."
       not_linked: "Konto ist mit keinem Provider verknüpft"
@@ -215,6 +239,50 @@ de:
       other_liability: Sonstige Verbindlichkeiten
       property: Immobilien
       vehicle: Fahrzeuge
+    reconciliation_indicator:
+      matched: "Alle Transaktionen abgeglichen"
+      needs_attention: "Transaktionen müssen abgeglichen werden"
+    reconcile_all:
+      success:
+        one: "%{count} Transaktion als %{status} markiert."
+        other: "%{count} Transaktionen als %{status} markiert."
+      invalid_status: "Wähle einen gültigen Abgleichsstatus."
+      not_manual_account: "Der Sammelabgleich ist nur für manuell erfasste Konten verfügbar."
+    scheduled_balance_tooltip:
+      description: "Dein Kontostand, sobald alle geplanten Transaktionen gebucht sind"
+      current: "Aktueller Kontostand"
+      scheduled: "Geplant"
+      projected: "Voraussichtlicher Kontostand"
+    logo_caption:
+      appstore: "Aus dem App Store"
+      brandfetch: "Von Brandfetch"
+      duckduckgo: "Von DuckDuckGo"
+      google: "Von Google"
+      googleplay: "Aus Google Play"
+      none: "Noch kein Symbol"
+      rustore: "Aus RuStore"
+      uploaded: "Von dir hochgeladen"
+      yandex: "Von Yandex"
+    logo_field:
+      current: "aktuell"
+      domain_needed: "Gib die Domain der Institution ein, etwa tbank.ru, um ein Symbol auszuwählen."
+      empty: "Für diese Domain wurden keine Symbole gefunden. Lade unten dein eigenes hoch."
+      pick: "Symbol auswählen"
+      pending: "Wird beim Speichern übernommen"
+      remove: "Entfernen"
+      removal: "Wird beim Speichern entfernt; das automatische Symbol kommt zurück"
+      searching: "Suche läuft …"
+    logo_options:
+      size: "%{size} px"
+      sources:
+        appstore: "App Store"
+        brandfetch: "Brandfetch"
+        duckduckgo: "DuckDuckGo"
+        google: "Google"
+        googleplay: "Google Play"
+        rustore: "RuStore"
+        yandex: "Yandex"
+      stored: "Gespeichertes Symbol"
 
   email_confirmations:
     new:

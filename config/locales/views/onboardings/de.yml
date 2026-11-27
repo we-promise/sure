@@ -5,7 +5,7 @@ de:
       sign_out: Abmelden
       setup: Setup
       preferences: Einstellungen
-      goals: Ziele
+      tools: Tools/KI
       start: Start
     logout:
       sign_out: Abmelden
@@ -38,17 +38,7 @@ de:
       currency: Währung
       date_format: Datumsformat
       submit: Abschließen
-    goals:
-      title: Was sind deine Ziele?
-      subtitle: Wähle ein oder mehrere Ziele aus, die du mit %{product_name} als dein persönliches Finanztool erreichen möchtest.
-      unified_accounts: Alle meine Konten an einem Ort sehen
-      cashflow: Cashflow und Ausgaben verstehen
-      budgeting: Finanzpläne und Budgets verwalten
-      partner: Finanzen gemeinsam mit Partner verwalten
-      investments: Investments verfolgen
-      ai_insights: KI nutzen um Einblicke zu erhalten
-      optimization: Konten analysieren und optimieren
-      reduce_stress: Finanziellen Stress reduzieren
+    tools:
       submit: Weiter
     trial:
       title: Sure 45 Tage kostenlos testen
