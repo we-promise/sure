@@ -11,6 +11,7 @@ require "test_helper"
 # `parallel/decisions-fast:free` decisions model; that's the JEV_MODEL to set when reproducing
 # the call through Sure's own env configuration.
 class AiOpenrouterJevLiveTest < ActiveSupport::TestCase
+  ai_capsule!
   KEY = "OPENROUTER_LIVE_API_KEY".freeze
   MODEL = "parallel/decisions-fast:free".freeze
 

@@ -103,7 +103,7 @@ namespace :evals do
     start_time = Time.current
 
     begin
-      result = runner.run
+      result = Ai::Capsule.outside { runner.run }
       duration = (Time.current - start_time).round(1)
 
       puts
@@ -168,7 +168,7 @@ namespace :evals do
       )
 
       runner = dataset.runner_class.new(eval_run)
-      runner.run
+      Ai::Capsule.outside { runner.run }
     end
 
     puts
@@ -325,7 +325,7 @@ namespace :evals do
       categories: [ { id: "1", name: "Food & Drink", is_subcategory: false, parent_id: nil } ],
       family: nil
     )
-    result = generation.call(plan: Ai::Plan.new(feature: :categorize, lane: :background, routes: [ route ]))
+    result = Ai::Capsule.outside { generation.call(plan: Ai::Plan.new(feature: :categorize, lane: :background, routes: [ route ])) }
 
     # A success can still hold no answer for the sample (skipped as too long for the model); an
     # explicit null category is an answer.
@@ -407,7 +407,7 @@ namespace :evals do
     )
 
     runner = dataset.runner_class.new(eval_run)
-    result = with_recorded_responses(dataset_name, model) { runner.run }
+    result = with_recorded_responses(dataset_name, model) { Ai::Capsule.outside { runner.run } }
     next if result.nil?
 
     current_accuracy = result.metrics["accuracy"] || 0
@@ -666,7 +666,7 @@ namespace :evals do
         )
 
         start_time = Time.current
-        result = runner.run(run_name: run_name)
+        result = Ai::Capsule.outside { runner.run(run_name: run_name) }
         duration = (Time.current - start_time).round(1)
 
         puts

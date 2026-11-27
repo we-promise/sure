@@ -3,6 +3,7 @@ require "test_helper"
 # What a PDF is: today's analysis instructions, the first batch only, and a
 # document type outside Import::DOCUMENT_TYPES coerced to nil.
 class Ai::Generations::ReadPdfTest < ActiveSupport::TestCase
+  ai_capsule!
   setup do
     use_ai_routes(extract_pdf: %w[gpu/qwen3-8b])
     @family = families(:dylan_family)

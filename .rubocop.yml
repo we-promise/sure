@@ -5,9 +5,22 @@ require:
   - ./lib/rubocop/cop/sure/sorted_list
   - ./lib/rubocop/cop/sure/no_ai_env
   - ./lib/rubocop/cop/sure/no_prompt_heredoc
+  - ./lib/rubocop/cop/sure/ai_outside_capsule
 
 Sure/SortedList:
   Enabled: true
+
+# Model calls run in AI jobs. Only the eval runner may opt out, from the command line; the cop
+# test keeps this allowlist to those paths and checks that each still needs the opt-out.
+Sure/AiOutsideCapsule:
+  Enabled: true
+  Include:
+    - "app/**/*.rb"
+    - "lib/**/*.rb"
+    - "lib/**/*.rake"
+  Exclude:
+    - "app/models/eval/**/*.rb"
+    - "lib/tasks/evals.rake"
 
 # AI configuration isn't read from ENV. Ai::LegacyEnvConfig reads the deprecated variables, and
 # migrations are history. The allowlist is code that still reads them, with the feature it serves.

@@ -1,6 +1,7 @@
 require "test_helper"
 
 class RecurringTransaction::SuggestionTest < ActiveSupport::TestCase
+  ai_capsule!
   include ActiveJob::TestHelper
 
   setup do

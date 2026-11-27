@@ -4,6 +4,7 @@ require "test_helper"
 # the capability check before anything is sent, the preset's PDF limit, and that a `.ai` event
 # names files without their bytes. Stubbed through WebMock.
 class AiTransportAttachmentsTest < ActiveSupport::TestCase
+  ai_capsule!
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
   CHAT_URL = "https://llm.example.test/v1/chat/completions".freeze
   RESPONSES_URL = "https://api.openai.example.test/v1/responses".freeze

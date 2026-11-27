@@ -1,6 +1,7 @@
 require "test_helper"
 
 class AiHealth::ProbeToolArgumentsTest < ActiveSupport::TestCase
+  ai_capsule!
   PROTOCOLS = %i[chat_completions responses anthropic].freeze
 
   setup do

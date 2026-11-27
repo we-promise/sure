@@ -5,6 +5,7 @@ require "test_helper"
 # the same endpoint and is neither a try, a down mark nor a failed request on the usage page; and
 # streamed chunks never reach the log.
 class AiTransportLocalStreamTest < ActiveSupport::TestCase
+  ai_capsule!
   LOCAL_URL = "http://gpu.local:8080/v1/chat/completions".freeze
   CLOUD_URL = "https://llm.example.test/v1/chat/completions".freeze
   SCHEMA = {

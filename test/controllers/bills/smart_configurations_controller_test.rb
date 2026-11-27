@@ -162,6 +162,15 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "a status probe answers with only the suggestion status" do
+    suggestion = start_pending_suggestion
+
+    get bill_smart_configuration_url(@series, suggestion, format: :json), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_equal({ "status" => "pending" }, response.parsed_body)
+  end
+
   private
 
     def raw(**overrides)

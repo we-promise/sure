@@ -1,6 +1,7 @@
 require "test_helper"
 
 class Ai::Instrumentation::UsageSubscriberTest < ActiveSupport::TestCase
+  ai_capsule!
   URL = "https://llm.example.test/v1/chat/completions".freeze
   OK = { id: "c1", model: "gpt-4.1-2025-04-14", choices: [ { index: 0, message: { role: "assistant", content: "OK" }, finish_reason: "stop" } ],
          usage: { prompt_tokens: 1_200, completion_tokens: 30, total_tokens: 1_230, prompt_tokens_details: { cached_tokens: 1_000 } } }.freeze

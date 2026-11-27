@@ -3,6 +3,7 @@ require "test_helper"
 # The chat and MCP tool reads a statement through Ai::PdfReading, with an
 # optional "Read as".
 class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
+  ai_capsule!
   include EntriesTestHelper
 
   setup do

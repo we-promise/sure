@@ -4,6 +4,7 @@ require "test_helper"
 # failover marks the smallest broken thing and moves down the list, escalation moves on without
 # a mark, and other refusals aren't retried.
 class AiEscalationTest < ActiveSupport::TestCase
+  ai_capsule!
   setup do
     @family = families(:dylan_family)
     @cache = ActiveSupport::Cache::MemoryStore.new

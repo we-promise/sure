@@ -6,6 +6,7 @@ require "test_helper"
 # AI_LIVE=1, both with LLAMA_CPP_API_KEY and EMBED_LIVE_BASE_URL set. With neither, it's skipped,
 # saying so. EMBED_LIVE_MODEL and EMBED_LIVE_DIMENSIONS change the model for live and recording runs.
 class AiEmbedLiveTest < ActiveSupport::TestCase
+  ai_capsule!
   KEY = "LLAMA_CPP_API_KEY".freeze
   BASE_URL = AiTestHelper::EMBED_URL
   MODEL = (AiTestHelper.live_or_recording? && ENV["EMBED_LIVE_MODEL"].presence) || "granite-embedding-small-english-r2"

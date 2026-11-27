@@ -8,6 +8,7 @@ require "test_helper"
 # Anthropic's three models check that every current Claude model, the ones that refuse a
 # forced tool included, accepts native structured output.
 class AiGenerateLiveTest < ActiveSupport::TestCase
+  ai_capsule!
   ROUTES = {
     "openai/gpt-4.1-mini" => { key: "OPENAI_ACCESS_TOKEN", protocol: :compatible, preset: :openai, responses_api: true },
     "anthropic/claude-haiku-4-5" => { key: "ANTHROPIC_API_KEY", protocol: :anthropic },

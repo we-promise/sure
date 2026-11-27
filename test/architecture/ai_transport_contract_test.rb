@@ -4,6 +4,7 @@ require "test_helper"
 # proxy, and that clients are built only by Ai::Transport::Http. Attachments, embed and ocr
 # have their own contract tests beside this one.
 class AiTransportContractTest < ActiveSupport::TestCase
+  ai_capsule!
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
 
   TRANSPORTS = {

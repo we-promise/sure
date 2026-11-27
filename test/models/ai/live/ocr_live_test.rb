@@ -6,6 +6,7 @@ require "test_helper"
 # test/vcr_cassettes/ai/{mistral,cohere,llama_cpp}/, recorded with RECORD_CASSETTES=1 and the key
 # set, or run live with AI_LIVE=1. With neither, each is skipped, saying so.
 class AiOcrLiveTest < ActiveSupport::TestCase
+  ai_capsule!
   SERVERS = {
     mistral: { key: "MISTRAL_LIVE_API_KEY", model: ENV.fetch("MISTRAL_LIVE_OCR_MODEL", "mistral-ocr-latest"), preset: :mistral },
     cohere: { key: "COHERE_LIVE_API_KEY", model: ENV.fetch("COHERE_LIVE_OCR_MODEL", "parse-v5.0"), preset: :cohere },

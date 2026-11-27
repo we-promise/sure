@@ -108,6 +108,7 @@ class Ai::Transport::Base
   # whole call, with its retries and JSON-mode fallbacks, has one time budget: the endpoint's
   # timeout, so a slow model can't multiply it.
   def generate(request)
+    Ai::Capsule.check!
     check_attachments!(request.model, request.attachments)
     Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family, budget: endpoint.timeout_seconds) do
       instrument("generate", model: request.model, request: request.to_event) { run_generate(request) }
@@ -117,6 +118,7 @@ class Ai::Transport::Base
   # Answers a JudgeRequest and returns a JudgeResponse, or raises an Ai::Error. The budget covers
   # every round of the fan-out: the endpoint's timeout per round of `parallel_requests`.
   def judge(request)
+    Ai::Capsule.check!
     rounds = (request.states.size.to_f / parallel_requests).ceil.clamp(1, nil)
     Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family,
                          budget: endpoint.timeout_seconds * rounds) do
@@ -131,6 +133,7 @@ class Ai::Transport::Base
   # Transcribes an OcrRequest's pages and returns an OcrResponse, or raises an Ai::Error. A
   # local OCR model takes ~45 s a page on CPU, so the budget is the timeout per page.
   def ocr(request)
+    Ai::Capsule.check!
     raise Ai::Error::Refused, "#{self.class.name} doesn't transcribe pages" unless ocr?
     raise Ai::Error::Refused, "#{request.model.name} isn't an OCR model" unless request.model.capable?(:ocr)
     raise Ai::Error::Refused, "OCR reads page images" unless request.pages.all?(&:image?)
@@ -151,6 +154,7 @@ class Ai::Transport::Base
   # Embeds an EmbedRequest's texts and returns an EmbedResponse, or raises an Ai::Error: one
   # vector per text, each of the model's dimensions when it has them.
   def embed(request)
+    Ai::Capsule.check!
     raise Ai::Error::Refused, "#{self.class.name} doesn't embed" unless embed?
 
     Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family, budget: endpoint.timeout_seconds) do
@@ -166,6 +170,7 @@ class Ai::Transport::Base
   #   :tools     -> true when the model called the test tool, false when it answered in text;
   #   :embedding -> the embedding's dimensions.
   def probe(model, check, timeout: endpoint.timeout_seconds)
+    Ai::Capsule.check!
     raise ArgumentError, "unknown probe check #{check.inspect}" unless PROBE_CHECKS.include?(check)
 
     Ai::CallContext.call(feature: :probe, model:, budget: timeout) do

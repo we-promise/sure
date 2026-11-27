@@ -1,6 +1,7 @@
 require "test_helper"
 
 class Ai::Generations::SuggestBillSetupTest < ActiveSupport::TestCase
+  ai_capsule!
   def generation(current_config: nil)
     Ai::Generations::SuggestBillSetup.new(charges: [ { date: "2026-10-01", amount: "15.99", name: "NETFLIX" } ],
                                           categories: %w[Entertainment], current_config:, family: nil)

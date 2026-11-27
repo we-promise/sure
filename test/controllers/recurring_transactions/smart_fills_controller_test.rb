@@ -246,6 +246,19 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_equal({ "error" => "ai_unavailable", "reason" => "not_configured" }, response.parsed_body)
   end
 
+  test "a status probe answers with only the suggestion status" do
+    stub_provider(raw(name: "Secret bill name", amount: 99.0, frequency: "weekly",
+                      rationale: "Private rationale"))
+    suggestion = start_suggestion
+
+    get recurring_transactions_smart_fill_url(suggestion, format: :json), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_equal({ "status" => "complete" }, response.parsed_body)
+    assert_no_match "Secret bill name", response.body
+    assert_no_match "Private rationale", response.body
+  end
+
   private
 
     def raw(**overrides)

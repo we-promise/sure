@@ -1,6 +1,7 @@
 require "test_helper"
 
 class Ai::EmbeddingsTest < ActiveSupport::TestCase
+  ai_capsule!
   # The request actually sent, as #5659 checked on main: the key saved in Settings reaches OpenAI's
   # own URL and never a separate embedding server, which gets its own token or no Authorization
   # header at all.

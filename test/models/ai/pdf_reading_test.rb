@@ -4,6 +4,7 @@ require "test_helper"
 # its tuning, the ways a route can't use, falling back on failed checks, flagging the best when
 # nothing passes, batches with no page limit, and OCR's two steps. Model calls through stub_ai.
 class Ai::PdfReadingTest < ActiveSupport::TestCase
+  ai_capsule!
   BAC_ROWS = [
     [ "2019-02-01", -24.5 ], [ "2019-02-01", -20.0 ], [ "2019-02-03", -30.0 ], [ "2019-02-04", 2575.0 ], [ "2019-02-11", 300.0 ],
     [ "2019-02-16", -50.0 ], [ "2019-02-17", -40.0 ], [ "2019-02-17", -78.34 ], [ "2019-02-18", 2575.0 ], [ "2019-02-18", -15.0 ],
