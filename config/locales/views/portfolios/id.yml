@@ -1,0 +1,36 @@
+---
+id:
+  portfolios:
+    empty_state:
+      add_account: Tambah rekening investasi
+      description: Rekening pialang, dana pensiun, dan kripto yang Anda sertakan dalam keuangan dan laporan Anda tercantum di sini beserta saldonya.
+      title: Tidak ada rekening investasi untuk ditampilkan
+    holdings:
+      columns:
+        account: Rekening
+        accounts: Rekening
+        avg_cost: Biaya rata-rata
+        cost_basis_per_share: Dasar biaya per saham
+        day_change: Hari
+        qty: Jml
+        security: Efek
+        unrealized: Laba/Rugi Belum Terealisasi
+        value: Nilai
+        weight: Bobot
+      day_change_partial: "%{covered} dari %{total} posisi"
+      label: Kepemilikan
+      missing_cost_basis: Tanpa dasar biaya
+      missing_cost_basis_hint: Setidaknya satu posisi tidak memiliki dasar biaya yang diketahui. Biaya rata-rata dan imbal hasil hanya mencakup posisi yang memilikinya.
+      no_cost_basis: tanpa dasar biaya
+      open_position: Buka
+      position_missing_cost_basis_hint: Posisi ini tidak memiliki dasar biaya yang diketahui, sehingga tidak memiliki biaya rata-rata dan dikecualikan dari imbal hasil baris.
+      positions_caption: Posisi pada %{ticker} berdasarkan rekening
+      toggle_positions: Tampilkan posisi pada %{ticker}
+    sections:
+      accounts: Rekening
+      holdings: Kepemilikan
+    show:
+      section_aria: "Bagian %{title}. Tekan Enter atau Spasi untuk mengambil guna mengurutkan ulang, lalu gunakan tombol panah untuk memindahkan."
+      sections_aria: Bagian portofolio
+      subtitle: Apa yang Anda miliki di seluruh rekening investasi Anda, dan nilai masing-masing rekening.
+      title: Portofolio
