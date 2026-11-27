@@ -56,6 +56,7 @@ class RulesController < ApplicationController
 
   def create
     @rule = Current.family.rules.build(rule_params)
+    return render :new, status: :unprocessable_entity if similar_rules_to_confirm?
 
     if save_rule
       redirect_to confirm_rule_path(@rule, reload_on_close: true)
@@ -90,6 +91,7 @@ class RulesController < ApplicationController
 
   def update
     @rule.assign_attributes(rule_params)
+    return render :edit, status: :unprocessable_entity if similar_rules_to_confirm?
 
     if save_rule
       flash_message = if @rule.notification_baseline_timed_out?
@@ -154,6 +156,21 @@ class RulesController < ApplicationController
   end
 
   private
+    # Advice, not a validation: the form lists the family's similar rules
+    # until the user saves anyway. Rules written elsewhere (the assistant,
+    # imports, Quick Categorize) are not checked. An invalid rule shows its
+    # errors first, and a rule the form cannot render is not checked. A
+    # request that submits only `active` (the rules list's switch) or
+    # `apply_immediately` changes no condition or action, so it is not
+    # checked either.
+    def similar_rules_to_confirm?
+      return false if params[:confirm_similar].present? || (rule_params.keys - %w[active apply_immediately]).empty? || !@rule.valid?
+      return false if invalid_selector?
+
+      @similar_rules = Rule::Health.new(Current.family).similar_to(@rule)
+      @similar_rules.any?
+    end
+
     # A group typed into the form may be created by another request at the
     # same moment; the save then rolls back, and saving again finds it.
     def save_rule
@@ -165,18 +182,20 @@ class RulesController < ApplicationController
     end
 
     def render_invalid_rule(template)
-      # A native select cannot preserve an invalid option on resubmission. An
-      # action marked for destruction is not validated, but is still rendered.
-      invalid_selector = @rule.errors[:resource_type].any? ||
-        @rule.actions.any? { |action| action.errors[:action_type].any? || !action.action_type.in?(Rule::Action::SUPPORTED_ACTION_TYPES) } ||
-        @rule.conditions.any? { |condition| invalid_condition_selector?(condition) }
-
-      if invalid_selector
+      if invalid_selector?
         render plain: @rule.errors.full_messages.to_sentence, status: :unprocessable_entity
         return
       end
 
       render template, status: :unprocessable_entity
+    end
+
+    # A native select cannot preserve an invalid option on resubmission. An
+    # action marked for destruction is not validated, but is still rendered.
+    def invalid_selector?
+      @rule.errors[:resource_type].any? ||
+        @rule.actions.any? { |action| action.errors[:action_type].any? || !action.action_type.in?(Rule::Action::SUPPORTED_ACTION_TYPES) } ||
+        @rule.conditions.any? { |condition| invalid_condition_selector?(condition) }
     end
 
     def invalid_condition_selector?(condition)

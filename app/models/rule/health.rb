@@ -23,6 +23,11 @@ class Rule::Health
   Conflict = Data.define(:rules, :attribute, :winner)
   Shadowed = Data.define(:rule, :reason, :by, :attributes, :match_count)
   Overlap = Data.define(:rule, :other, :attributes, :shared_count, :match_count, :same_text)
+  # wins: the rule runs before the one being saved and sets a field it sets
+  # or stops the rules below. wins and shared_count are nil when either rule
+  # is switched off, since it doesn't run on sync; shared_count is nil when a
+  # match query failed.
+  Similar = Data.define(:rule, :position, :wins, :shared_count)
 
   attr_reader :rules
 
@@ -91,23 +96,94 @@ class Rule::Health
 
   def match_nothing
     dry_run
-    rules.select { |rule| rule.active? && matches[rule.id]&.empty? && !@uncertain.include?(rule.id) }
+    rules.select { |rule| rule.active? && matches_of(rule)&.empty? && !@uncertain.include?(rule.id) }
   end
 
   # Rules whose matches could not be read, e.g. a pattern that timed out.
   def failed
-    rules.select { |rule| matches[rule.id].nil? }
+    rules.select { |rule| matches_of(rule).nil? }
   end
 
   def match_count(rule)
-    matches[rule.id]&.size
+    matches_of(rule)&.size
+  end
+
+  # The family's other rules that repeat `rule`, share its conditions, or
+  # name the same or contained text and set a field it sets. `rule` may be
+  # unsaved, or carry unsaved changes from a form. Only those rules' matches
+  # are queried, so the cost follows the few similar rules, not the family's
+  # rule count.
+  def similar_to(rule)
+    candidate_matches = nil
+    candidate_read = false
+
+    rules.filter_map do |other|
+      next if other.id == rule.id
+      next unless similar?(rule, other)
+      next Similar.new(rule: other, position: position(other), wins: nil, shared_count: nil) unless other.active? && runs?(rule)
+
+      unless candidate_read
+        candidate_matches = read_matches(unsaved_copy(rule))
+        candidate_read = true
+      end
+      shared = candidate_matches && matches_of(other)&.intersection(candidate_matches)&.size
+      competes = other.stop_processing? || (field_values(rule).keys & field_values(other).keys).any?
+      Similar.new(rule: other, position: position(other), wins: competes && runs_before?(other, rule), shared_count: shared)
+    end
   end
 
   private
     attr_reader :family
 
-    def matches
-      @matches ||= rules.to_h { |rule| [ rule.id, read_matches(rule) ] }
+    def matches_of(rule)
+      @matches ||= {}
+      @matches.fetch(rule.id) { @matches[rule.id] = read_matches(rule) }
+    end
+
+    # A new rule is saved inactive and switched on when the user confirms it.
+    def runs?(rule)
+      rule.new_record? || rule.active?
+    end
+
+    # Whether `other` runs before `rule` once `rule` is saved. A new rule goes
+    # last, and a rule joining or leaving a group goes right after that
+    # group's other rules (Rule::Layout#place_after_group!), so there the
+    # stored positions are compared with the place it will take.
+    def runs_before?(other, rule)
+      group = moving_group(rule)
+      return position(other) < position(rule) if group.nil? && rule.persisted?
+      return true if group.nil? || group.new_record?
+
+      anchor = [ group.position.to_i, rules.select { |r| r.rule_group_id == group.id && r.id != rule.id }.map(&:position).max.to_i ].max
+      other.position <= anchor
+    end
+
+    def moving_group(rule)
+      # A group typed into the form is built unsaved, so rule_group_id stays as it was.
+      return rule.rule_group if rule.new_record? || rule.rule_group&.new_record?
+      return unless rule.rule_group_id_changed?
+
+      rule.rule_group || family.rule_groups.find_by(id: rule.rule_group_id_was)
+    end
+
+    def similar?(rule, other)
+      return true if condition_key(rule) == condition_key(other)
+
+      (field_values(rule).keys & field_values(other).keys).any? && same_text?(rule, other)
+    end
+
+    # The rule as the form leaves it, without the conditions marked for
+    # destruction, which #matching_scope would otherwise still apply.
+    def unsaved_copy(rule)
+      copy = Rule.new(family_id: family.id, resource_type: rule.resource_type, effective_date: rule.effective_date)
+      rule.conditions.reject(&:marked_for_destruction?).each do |condition|
+        copy.conditions.build(condition.slice(:condition_type, :operator, :value)).tap do |built|
+          condition.sub_conditions.reject(&:marked_for_destruction?).each do |sub_condition|
+            built.sub_conditions.build(sub_condition.slice(:condition_type, :operator, :value))
+          end
+        end
+      end
+      copy
     end
 
     # In its own savepoint, so a failing query rolls back alone and the rest
@@ -130,7 +206,7 @@ class Rule::Health
       stopped_by = {}
 
       rules.select(&:active?).each do |rule|
-        matched = matches[rule.id]
+        matched = matches_of(rule)
         next if matched.nil?
 
         # The real run re-reads matches after the rules above apply, so a rule
@@ -201,12 +277,12 @@ class Rule::Health
       attributes = field_values(rule).keys & field_values(other).keys
       return if attributes.empty?
 
-      shared = matches[rule.id] & matches[other.id]
+      shared = matches_of(rule) & matches_of(other)
       same_text = same_text?(rule, other)
       return if shared.empty? && !same_text
 
       Overlap.new(rule: rule, other: other, attributes: attributes, shared_count: shared.size,
-        match_count: matches[rule.id].size, same_text: same_text)
+        match_count: matches_of(rule).size, same_text: same_text)
     end
 
     def listed_together?(rule, other)
@@ -261,12 +337,13 @@ class Rule::Health
       end
     end
 
-    # Conditions every match meets: those at the top level and in AND groups.
+    # Conditions every match meets: those at the top level and in AND groups,
+    # leaving out any the form marked for destruction.
     def required_conditions(rule)
-      rule.conditions.flat_map do |condition|
+      rule.conditions.reject(&:marked_for_destruction?).flat_map do |condition|
         next [ condition ] unless condition.compound?
 
-        condition.operator == "and" ? condition.sub_conditions.to_a : []
+        condition.operator == "and" ? condition.sub_conditions.reject(&:marked_for_destruction?) : []
       end
     end
 
@@ -290,13 +367,13 @@ class Rule::Health
     # merchant's name, its operator, and the merchant's id for a merchant
     # condition.
     def texts(rule)
-      @texts ||= {}
-      @texts[rule.id] ||= leaf_conditions(rule).filter_map do |condition|
+      @texts ||= {}.compare_by_identity
+      @texts[rule] ||= leaf_conditions(rule).filter_map do |condition|
         next unless TEXT_OPERATORS.include?(condition.operator)
 
         text = case condition.condition_type
         when "transaction_name" then condition.value
-        when "transaction_merchant" then merchant_names[condition.value.to_s]
+        when "transaction_merchant" then merchant_name(condition.value.to_s)
         end
         text = text.to_s.gsub(/\s+/, " ").strip.presence
         [ text, condition.operator, (condition.value.to_s if condition.condition_type == "transaction_merchant") ] if text
@@ -318,11 +395,16 @@ class Rule::Health
       end
     end
 
+    # A rule being saved can name a merchant none of the family's rules do.
+    def merchant_name(id)
+      merchant_names.fetch(id) { merchant_names[id] = (Merchant.where(id: id).pick(:name) if UuidFormat.valid?(id)) }
+    end
+
     # The fields a rule claims, with the value it sets each to.
     def field_values(rule)
-      @field_values ||= {}
-      @field_values[rule.id] ||= rule.actions.each_with_object({}) do |action, values|
-        next unless reserves_claims?(action)
+      @field_values ||= {}.compare_by_identity
+      @field_values[rule] ||= rule.actions.each_with_object({}) do |action, values|
+        next if action.marked_for_destruction? || !reserves_claims?(action)
 
         claimed_attributes(action).to_a.each { |attribute| values[attribute] = action.value.to_s }
       end
@@ -350,7 +432,7 @@ class Rule::Health
     # at the top level.
     def condition_signature(conditions)
       conditions.reject(&:marked_for_destruction?)
-        .flat_map { |condition| condition.compound? && condition.operator == "and" ? condition.sub_conditions.to_a : [ condition ] }
+        .flat_map { |condition| condition.compound? && condition.operator == "and" ? condition.sub_conditions.reject(&:marked_for_destruction?) : [ condition ] }
         .map do |condition|
           if condition.compound?
             [ "compound", condition.operator.to_s, condition_signature(condition.sub_conditions) ]
@@ -394,6 +476,7 @@ class Rule::Health
     end
 
     def leaf_conditions(rule)
-      rule.conditions.flat_map { |condition| condition.compound? ? condition.sub_conditions.to_a : [ condition ] }
+      rule.conditions.reject(&:marked_for_destruction?)
+        .flat_map { |condition| condition.compound? ? condition.sub_conditions.reject(&:marked_for_destruction?) : [ condition ] }
     end
 end

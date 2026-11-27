@@ -480,6 +480,318 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{edit_rule_path(first)}']", count: 0
   end
 
+  test "creating a rule identical to an existing one shows the similar rule instead of saving" do
+    existing = create_similar_rule("Woolworths", "woolworths", category: groceries)
+
+    assert_no_difference "Rule.count" do
+      post rules_url, params: similar_rule_params("woolworths", category: groceries)
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{existing.id}']", text: /Woolworths.*If transaction name like woolworths · Set transaction category to Similar groceries/m
+  end
+
+  test "save anyway creates the rule despite a similar one" do
+    create_similar_rule("Woolworths", "woolworths", category: groceries)
+
+    assert_difference "Rule.count", 1 do
+      post rules_url, params: similar_rule_params("woolworths", category: groceries).merge(confirm_similar: "1")
+    end
+
+    assert_redirected_to confirm_rule_url(Rule.order(:created_at).last, reload_on_close: true)
+  end
+
+  test "creating an unrelated rule saves it without a notice" do
+    create_similar_rule("Woolworths", "woolworths", category: groceries)
+
+    assert_difference "Rule.count", 1 do
+      post rules_url, params: similar_rule_params("hardware", category: dining)
+    end
+
+    assert_response :redirect
+  end
+
+  test "a rule with the same conditions but a different action is similar" do
+    existing = create_similar_rule("Woolworths", "woolworths", category: groceries)
+
+    assert_no_difference "Rule.count" do
+      post rules_url, params: similar_rule_params("woolworths", category: dining)
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{existing.id}']"
+
+    # Same conditions, and no field in common: only the conditions make it similar.
+    assert_no_difference "Rule.count" do
+      post rules_url, params: similar_rule_params("woolworths", tags: [ tags(:one) ])
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{existing.id}']"
+    assert_select "[data-similar-rule='#{existing.id}'] [data-similar-rule-wins]", count: 0
+  end
+
+  test "a similar rule does not win over a new rule placed above it in a group" do
+    group = @user.family.rule_groups.create!(name: "Shops")
+    create_similar_rule("Grouped", "hardware", category: dining).update!(rule_group: group)
+    below = create_similar_rule("Woolworths", "woolworths", category: groceries)
+    params = similar_rule_params("woolworths", category: groceries)
+
+    post rules_url, params: params
+
+    assert_select "[data-similar-rule='#{below.id}'] [data-similar-rule-wins]"
+
+    post rules_url, params: params.deep_merge(rule: { rule_group_id: group.id })
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{below.id}']"
+    assert_select "[data-similar-rule='#{below.id}'] [data-similar-rule-wins]", count: 0
+  end
+
+  test "editing a rule until it repeats another shows the other, and save anyway saves it" do
+    existing = create_similar_rule("Woolworths", "woolworths", category: groceries)
+    edited = create_similar_rule("Hardware", "hardware", category: dining)
+    params = edit_params(edited, "woolworths", category: groceries)
+
+    patch rule_url(edited), params: params
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{existing.id}']"
+    assert_equal "hardware", edited.conditions.first.reload.value
+
+    patch rule_url(edited), params: params.merge(confirm_similar: "1")
+
+    assert_redirected_to rules_url
+    assert_equal "woolworths", edited.conditions.first.reload.value
+  end
+
+  test "an inactive similar rule is marked inactive, with no winner and no shared count" do
+    create_transaction(name: "Woolworths")
+    existing = create_similar_rule("Woolworths", "woolworths", category: groceries, active: false)
+
+    post rules_url, params: similar_rule_params("woolworths", category: groceries)
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{existing.id}']", text: /inactive/ do
+      assert_select "[data-similar-rule-wins]", count: 0
+      assert_select "[data-similar-rule-shared]", count: 0
+    end
+
+    existing.update!(active: true)
+    post rules_url, params: similar_rule_params("woolworths", category: groceries)
+
+    assert_select "[data-similar-rule='#{existing.id}']" do
+      assert_select "[data-similar-rule-wins]"
+      assert_select "[data-similar-rule-shared]", text: /1 transaction/
+    end
+  end
+
+  test "on an edit a similar rule wins only when it runs before the edited rule" do
+    create_transaction(name: "Woolworths")
+    above = create_similar_rule("Woolworths", "woolworths", category: groceries)
+    edited = create_similar_rule("Woolworths dining", "woolworths", category: dining)
+    Rule::Layout.new(@user.family).reorder!(@user.family.rules.ordered.map { |rule| "rule:#{rule.id}" })
+
+    patch rule_url(edited), params: edit_params(edited, "woolworths", category: dining)
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{above.id}'] [data-similar-rule-wins]"
+
+    keys = @user.family.rules.ordered.map { |rule| "rule:#{rule.id}" }
+    keys.delete("rule:#{edited.id}")
+    keys.insert(keys.index("rule:#{above.id}"), "rule:#{edited.id}")
+    Rule::Layout.new(@user.family).reorder!(keys)
+
+    patch rule_url(edited), params: edit_params(edited, "woolworths", category: dining)
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{above.id}']"
+    assert_select "[data-similar-rule='#{above.id}'] [data-similar-rule-wins]", count: 0
+  end
+
+  test "a similar rule above that stops processing wins although it sets no field the new rule sets" do
+    create_transaction(name: "Woolworths")
+    stop = @user.family.rules.create!(name: "Stop", resource_type: "transaction", active: true, stop_processing: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "woolworths") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_tags", value: [ tags(:one).id ]) ])
+
+    post rules_url, params: similar_rule_params("woolworths", category: groceries)
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{stop.id}'] [data-similar-rule-wins]"
+  end
+
+  test "an inactive rule edited to repeat another shows it without a winner or shared count" do
+    create_transaction(name: "Woolworths")
+    existing = create_similar_rule("Woolworths", "woolworths", category: groceries)
+    edited = create_similar_rule("Hardware", "hardware", category: dining, active: false)
+
+    patch rule_url(edited), params: edit_params(edited, "woolworths", category: groceries)
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{existing.id}']" do
+      assert_select "[data-similar-rule-wins]", count: 0
+      assert_select "[data-similar-rule-shared]", count: 0
+    end
+  end
+
+  test "the rules list labels a rule's action as the similar-rule notice does" do
+    rule = create_similar_rule("Woolworths", "woolworths", category: groceries)
+
+    get rules_url
+
+    assert_select "##{ActionView::RecordIdentifier.dom_id(rule)}", text: /Set transaction category to Similar groceries/
+  end
+
+  test "switching a duplicate rule off from the list saves it" do
+    create_similar_rule("Woolworths", "woolworths", category: groceries)
+    duplicate = create_similar_rule("Woolworths again", "woolworths", category: groceries)
+
+    patch rule_url(duplicate), params: { rule: { active: "0" } }
+
+    assert_redirected_to rules_url
+    assert_not duplicate.reload.active?
+  end
+
+  test "turning on apply immediately alone saves a duplicate rule, but an edit that sends it is still checked" do
+    existing = create_similar_rule("Woolworths", "woolworths", category: groceries)
+    duplicate = create_similar_rule("Woolworths again", "woolworths", category: groceries)
+
+    patch rule_url(duplicate), params: { rule: { apply_immediately: "1" } }
+
+    assert_redirected_to rules_url
+    assert duplicate.reload.apply_immediately?
+
+    edited = create_similar_rule("Hardware", "hardware", category: dining)
+    params = edit_params(edited, "woolworths", category: groceries)
+    params[:rule][:apply_immediately] = "1"
+
+    patch rule_url(edited), params: params
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{existing.id}']"
+    assert_not edited.reload.apply_immediately?
+  end
+
+  test "the shared count is the transactions both rules match" do
+    create_transaction(name: "Woolworths")
+    create_transaction(name: "Woolworths Metro")
+    create_transaction(name: "Woolworths Metro Express")
+    create_transaction(name: "Metro Express")
+    existing = create_similar_rule("Woolworths", "woolworths", category: groceries)
+
+    either = { condition_type: "compound", operator: "or", sub_conditions_attributes: {
+      "0" => { condition_type: "transaction_name", operator: "like", value: "woolworths metro" },
+      "1" => { condition_type: "transaction_name", operator: "like", value: "metro express" }
+    } }
+    post rules_url, params: similar_rule_params(nil, category: dining, conditions: { "0" => either })
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{existing.id}'] [data-similar-rule-shared]", text: /2 transactions/
+  end
+
+  test "the similar-rule warning keeps a new group's conditions in the form" do
+    create_similar_rule("Woolworths", "woolworths", category: groceries)
+
+    post rules_url, params: similar_rule_params(nil, category: groceries, conditions: { "0" => woolworths_or_metro_group })
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule]"
+    assert_new_group_conditions_rendered
+  end
+
+  test "an invalid rule keeps a new group's conditions in the form" do
+    conditions = { "0" => woolworths_or_metro_group, "1" => { condition_type: "transaction_name", operator: "like", value: "" } }
+
+    assert_no_difference "Rule.count" do
+      post rules_url, params: similar_rule_params(nil, category: groceries, conditions: conditions)
+    end
+
+    assert_response :unprocessable_entity
+    assert_new_group_conditions_rendered
+  end
+
+  test "the similar-rule warning keeps a removed condition and action removed" do
+    create_similar_rule("Woolworths", "woolworths", category: groceries)
+    edited = @user.family.rules.create!(name: "Woolworths over 10", resource_type: "transaction", active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "woolworths"),
+                    Rule::Condition.new(condition_type: "transaction_amount", operator: ">", value: "10") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: groceries.id),
+                 Rule::Action.new(action_type: "set_transaction_tags", value: [ tags(:one).id ]) ])
+    amount, tag_action = edited.conditions.find_by(condition_type: "transaction_amount"), edited.actions.find_by(action_type: "set_transaction_tags")
+
+    patch rule_url(edited), params: { rule: {
+      conditions_attributes: { "1" => { id: amount.id, _destroy: "1" } },
+      actions_attributes: { "1" => { id: tag_action.id, _destroy: "1" } }
+    } }
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule]"
+    assert_select "li.hidden input[name$='[_destroy]'][value='true']", count: 2
+  end
+
+  test "removing an unsupported action while adding a similar one saves rather than erroring" do
+    create_similar_rule("Woolworths", "woolworths", category: groceries)
+    edited = create_similar_rule("Woolworths imported", "woolworths", category: dining)
+    unsupported = edited.actions.first
+    unsupported.update_column(:action_type, "unknown_action")
+
+    patch rule_url(edited), params: { rule: { actions_attributes: {
+      "0" => { id: unsupported.id, _destroy: "1" },
+      "1" => { action_type: "set_transaction_category", value: groceries.id }
+    } } }
+
+    assert_response :redirect
+    assert_equal [ [ "set_transaction_category", groceries.id ] ], edited.reload.actions.map { |action| [ action.action_type, action.value ] }
+  end
+
+  test "a similar rule wins over a rule moved into a new group, which runs after it" do
+    edited = create_similar_rule("Woolworths dining", "woolworths", category: dining)
+    below = create_similar_rule("Woolworths", "woolworths", category: groceries)
+    keys = @user.family.rules.ordered.map { |rule| "rule:#{rule.id}" } - [ "rule:#{edited.id}" ]
+    Rule::Layout.new(@user.family).reorder!(keys.insert(keys.index("rule:#{below.id}"), "rule:#{edited.id}"))
+    params = edit_params(edited, "woolworths", category: dining)
+
+    patch rule_url(edited), params: params
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{below.id}'] [data-similar-rule-wins]", count: 0
+
+    patch rule_url(edited), params: params.deep_merge(rule: { new_rule_group_name: "Fresh food" })
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{below.id}'] [data-similar-rule-wins]"
+  end
+
+  test "editing a rule without changes saves it without a notice" do
+    rule = create_similar_rule("Woolworths", "woolworths", category: groceries)
+
+    patch rule_url(rule), params: edit_params(rule, "woolworths", category: groceries)
+
+    assert_redirected_to rules_url
+  end
+
+  test "a narrower rule under a broader one that sets the same field shows the shared count" do
+    create_transaction(name: "Woolworths Metro")
+    create_transaction(name: "Woolworths")
+    existing = create_similar_rule("Woolworths", "woolworths", category: groceries)
+
+    post rules_url, params: similar_rule_params("woolworths metro", category: dining)
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{existing.id}'] [data-similar-rule-shared]", text: /1 transaction/
+  end
+
+  test "a narrower rule that shares no transactions and sets another field is not similar" do
+    create_similar_rule("Woolworths", "woolworths", category: groceries)
+
+    assert_difference "Rule.count", 1 do
+      post rules_url, params: similar_rule_params("woolworths metro", tags: [ tags(:one) ])
+    end
+
+    assert_response :redirect
+  end
+
   test "reorder saves the new order" do
     family = @user.family
     second = family.rules.create!(resource_type: "transaction",
@@ -1199,5 +1511,46 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
 
     def category_action(category)
       Rule::Action.new(action_type: "set_transaction_category", value: category.id)
+    end
+
+    def groceries
+      @groceries ||= @user.family.categories.create!(name: "Similar groceries")
+    end
+
+    def dining
+      @dining ||= @user.family.categories.create!(name: "Similar dining")
+    end
+
+    def create_similar_rule(name, value, category:, active: true)
+      @user.family.rules.create!(name: name, resource_type: "transaction", active: active,
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: value) ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: category.id) ])
+    end
+
+    def similar_rule_params(value, category: nil, tags: nil, conditions: nil)
+      actions = {}
+      actions["0"] = { action_type: "set_transaction_category", value: category.id } if category
+      actions["1"] = { action_type: "set_transaction_tags", value: tags.map(&:id) } if tags
+      { rule: { resource_type: "transaction",
+                conditions_attributes: conditions || { "0" => { condition_type: "transaction_name", operator: "like", value: value } },
+                actions_attributes: actions } }
+    end
+
+    def woolworths_or_metro_group
+      { condition_type: "compound", operator: "or", sub_conditions_attributes: {
+        "0" => { condition_type: "transaction_name", operator: "like", value: "woolworths" },
+        "1" => { condition_type: "transaction_name", operator: "like", value: "metro express" }
+      } }
+    end
+
+    def assert_new_group_conditions_rendered
+      assert_select "input[name='rule[conditions_attributes][0][sub_conditions_attributes][0][value]'][value='woolworths']"
+      assert_select "input[name='rule[conditions_attributes][0][sub_conditions_attributes][1][value]'][value='metro express']"
+      assert_select "[name^='rule[conditions_attributes][0][sub_conditions_attributes][2]']", count: 0
+    end
+
+    def edit_params(rule, value, category:)
+      { rule: { conditions_attributes: { "0" => { id: rule.conditions.first.id, condition_type: "transaction_name", operator: "like", value: value } },
+                actions_attributes: { "0" => { id: rule.actions.first.id, action_type: "set_transaction_category", value: category.id } } } }
     end
 end

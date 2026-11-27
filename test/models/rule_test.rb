@@ -114,6 +114,12 @@ class RuleTest < ActiveSupport::TestCase
     assert rule.valid?
   end
 
+  test "create_from_grouping still creates a rule identical to an existing one" do
+    assert_difference "Rule.count", 2 do
+      2.times { assert Rule.create_from_grouping(@family, "Whole Foods", @groceries_category) }
+    end
+  end
+
   test "create_from_grouping returns nil for a null byte" do
     assert_no_difference "Rule.count" do
       assert_nil Rule.create_from_grouping(@family, "bad\0name", @groceries_category)

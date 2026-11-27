@@ -2,6 +2,8 @@
 
 <% condition = form.object %>
 <% rule = condition.rule %>
+<%# Read before the template below builds a blank sub-condition onto the group. %>
+<% sub_conditions = condition.sub_conditions.to_a %>
 
 <li data-controller="rule--conditions" class="border border-secondary rounded-md p-4 space-y-3">
 
@@ -34,7 +36,7 @@
   </template>
 
   <ul data-rule--conditions-target="subConditionsList" class="space-y-3">
-    <%= form.fields_for :sub_conditions, condition.sub_conditions.select(&:persisted?) do |scf| %>
+    <%= form.fields_for :sub_conditions, sub_conditions do |scf| %>
       <%= render "rule/conditions/condition", form: scf, show_prefix: false %>
     <% end %>
   </ul>
