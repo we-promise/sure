@@ -1624,6 +1624,23 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "transactions export quotes every cell so a separator inside a category name cannot split it" do
+    category = @family.categories.create!(name: "Food;=1+1", color: "#000000")
+    @family.accounts.first.entries.create!(
+      name: "Payee", date: Date.current, amount: 25, currency: "USD",
+      entryable: Transaction.new(category: category, kind: "standard")
+    )
+
+    get export_transactions_reports_path(
+      format: :csv, period_type: :ytd,
+      start_date: Date.current.beginning_of_year, end_date: Date.current
+    )
+
+    assert_response :ok
+    assert_includes @response.body, %q("Food;=1+1")
+    assert_includes CSV.parse(@response.body).flatten, "Food;=1+1"
+  end
+
   # The card was gated on `investment_accounts`, which is visible accounts
   # only (draft and active), while its realised-gains half is measured over
   # every account included in reports, disabled ones too. A family whose only

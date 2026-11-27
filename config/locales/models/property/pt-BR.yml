@@ -1,0 +1,12 @@
+---
+pt-BR:
+  activerecord:
+    attributes:
+      property:
+        cost_tag: Tag de custo
+    errors:
+      models:
+        property:
+          attributes:
+            cost_tag:
+              other_family: deve ser uma das suas próprias tags

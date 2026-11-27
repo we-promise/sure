@@ -2,3 +2,31 @@
 pt-BR:
   provider_warnings:
     limited_investment_data: "Os dados de investimento deste provedor são limitados. Rótulos de atividade (Compra, Venda, Dividendo) não estão disponíveis, o que pode afetar a precisão do orçamento. Considere criar regras para excluir ou categorizar transações de investimento."
+    enable_banking_history_truncated:
+      one: "Enable Banking: não foi possível buscar o histórico completo de transações de %{count} conta, então transações mais antigas podem estar faltando"
+      other: "Enable Banking: não foi possível buscar o histórico completo de transações de %{count} contas, então transações mais antigas podem estar faltando"
+    lunchflow_accounts_failed:
+      one: "Importação do Lunchflow: %{count} conta não foi atualizada"
+      other: "Importação do Lunchflow: %{count} contas não foram atualizadas"
+    lunchflow_transactions_failed:
+      one: "Importação do Lunchflow: falha ao buscar transações de %{count} conta"
+      other: "Importação do Lunchflow: falha ao buscar transações de %{count} contas"
+    lunchflow_import_error: "Importação do Lunchflow: %{error}"
+    truelayer_accounts_failed:
+      one: "Importação do TrueLayer: %{count} conta não foi atualizada"
+      other: "Importação do TrueLayer: %{count} contas não foram atualizadas"
+    truelayer_transactions_failed:
+      one: "Importação do TrueLayer: falha ao buscar transações de %{count} conta"
+      other: "Importação do TrueLayer: falha ao buscar transações de %{count} contas"
+    truelayer_balances_failed:
+      one: "Importação do TrueLayer: falha ao buscar o saldo de %{count} conta"
+      other: "Importação do TrueLayer: falha ao buscar os saldos de %{count} contas"
+    truelayer_processing_failed:
+      one: "Importação do TrueLayer: não foi possível processar %{count} conta"
+      other: "Importação do TrueLayer: não foi possível processar %{count} contas"
+    truelayer_entries_failed:
+      one: "Importação do TrueLayer: não foi possível importar %{count} transação"
+      other: "Importação do TrueLayer: não foi possível importar %{count} transações"
+    truelayer_scheduling_failed:
+      one: "Importação do TrueLayer: não foi possível agendar a atualização de saldo de %{count} conta"
+      other: "Importação do TrueLayer: não foi possível agendar a atualização de saldo de %{count} contas"
