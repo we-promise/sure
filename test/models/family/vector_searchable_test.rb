@@ -66,6 +66,23 @@ class Family::VectorSearchableTest < ActiveSupport::TestCase
     assert_equal "a note", document.file.download
   end
 
+  test "upload_document_later keeps the bytes when the queue raises, and recovery retries the upload" do
+    file = uploaded_file(filename: "notes.txt", content_type: "text/plain", content: "a note")
+    IndexFamilyDocumentJob.expects(:perform_later).raises(Redis::CannotConnectError)
+
+    assert_equal false, @family.upload_document_later(file)
+
+    document = @family.family_documents.find_by!(filename: "notes.txt")
+    assert_equal "error", document.status
+    assert_equal "Redis::CannotConnectError", document.metadata["enqueue_error"]
+    assert_equal "a note", document.file.download
+
+    IndexFamilyDocumentJob.expects(:perform_later).with { |arg| arg.id == document.id }
+    FamilyDocument.requeue_index_polls
+    assert_equal "pending", document.reload.status
+    assert_nil document.metadata["enqueue_error"]
+  end
+
   test "upload_document_later fails and purges the staged file when the queue rejects the job" do
     file = uploaded_file(filename: "notes.txt", content_type: "text/plain", content: "a note")
     IndexFamilyDocumentJob.expects(:perform_later).returns(false)

@@ -91,7 +91,18 @@ module Family::VectorSearchable
     document.save!
     # A queue that refuses the job (ActiveJob::EnqueueError) returns false. The row is already
     # committed, so it must not stay pending with a file no job will ever index.
-    queued = IndexFamilyDocumentJob.perform_later(document)
+    queued = begin
+      IndexFamilyDocumentJob.perform_later(document)
+    rescue ActiveJob::EnqueueError
+      false
+    rescue StandardError => e
+      # Sidekiq/Redis can raise instead of returning false. Acceptance is then unknown: keep the
+      # bytes and mark the row so the scheduled recovery can retry the upload.
+      document.update!(status: "error", metadata: document.metadata.to_h.merge(
+        "error" => "indexing job enqueue failed: #{e.class}", "enqueue_error" => e.class.name
+      ))
+      return false
+    end
     return document unless queued == false
 
     document.mark_error!("indexing job could not be queued")

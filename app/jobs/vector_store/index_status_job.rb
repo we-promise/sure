@@ -36,7 +36,7 @@ class VectorStore::IndexStatusJob < ApplicationJob
       mark_error_if_processing(document, response.data[:error])
     else
       document.update!(status:)
-      document.purge_file_if_settled
+      purge_file(document)
     end
   end
 
@@ -47,7 +47,7 @@ class VectorStore::IndexStatusJob < ApplicationJob
       document.with_lock do
         document.mark_error!(message) if document.status == "processing"
       end
-      document.purge_file_if_settled
+      purge_file(document)
     end
 
     # A provider that is still processing after the poll cap is not a bad document. Keep the
@@ -61,7 +61,20 @@ class VectorStore::IndexStatusJob < ApplicationJob
           "error" => "indexing didn't finish", "indexing_timeout" => true
         ))
       end
+      purge_file(document)
+    end
+
+    # The status is already committed here: a failed purge must not repeat indexing or flip the
+    # settled row. A separate job retries the cleanup while the document keeps its result.
+    def purge_file(document)
       document.purge_file_if_settled
+    rescue StandardError => e
+      Rails.logger.warn("[VectorStore::IndexStatusJob] couldn't purge the file for document #{document.id}: #{e.class}")
+      begin
+        VectorStore::PurgeDocumentFileJob.set(wait: 1.minute).perform_later(document)
+      rescue StandardError => enqueue_error
+        Rails.logger.warn("[VectorStore::IndexStatusJob] couldn't queue a purge retry for document #{document.id}: #{enqueue_error.class}")
+      end
     end
 
     # A rejected requeue leaves the row processing; poll_index_later can recover it.

@@ -22,6 +22,16 @@ class IndexFamilyDocumentJobTest < ActiveJob::TestCase
     IndexFamilyDocumentJob.perform_now(@document)
   end
 
+  test "a redelivered job does not re-index a settled document" do
+    @document.update!(status: "ready", provider_file_id: "file-1")
+    @family.expects(:index_document).never
+    @document.file.expects(:purge)
+
+    IndexFamilyDocumentJob.perform_now(@document)
+
+    assert_equal "ready", @document.reload.status
+  end
+
   test "indexes inside a call context carrying the document id" do
     correlation_ids = []
     @family.expects(:index_document).with do |document, file_content:|

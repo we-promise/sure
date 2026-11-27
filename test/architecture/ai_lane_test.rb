@@ -14,6 +14,7 @@ class AiLaneTest < ActiveSupport::TestCase
       IndexAccountStatementJob.new => :embed,
       IndexFamilyDocumentJob.new => :embed,
       VectorStore::IndexStatusJob.new => :embed,
+      VectorStore::PurgeDocumentFileJob.new => :embed,
       VectorStore::RequeueIndexPollsJob.new => :embed,
       Ai::ShadowJob.new(:categorize) => :shadow_categorize
     }

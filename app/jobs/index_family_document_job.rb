@@ -3,8 +3,9 @@ class IndexFamilyDocumentJob < ApplicationJob
   queue_as { Ai::Routes.queue_for(:embed) }
 
   def perform(document)
-    family = document.family
-    index_document(document, family)
+    # Sidekiq can redeliver a finished job. A settled row has no bytes to send; indexing it again
+    # would turn a good result into an error once the attachment is gone. Cleanup stays safe.
+    index_document(document, document.family) if document.status == "pending"
     purge_file(document)
   end
 

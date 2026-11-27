@@ -30,6 +30,28 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
     VectorStore::IndexStatusJob.perform_now(@document)
   end
 
+  test "a failed purge queues a retry without repeating indexing or changing the status" do
+    @document.file.attach(io: StringIO.new("a note"), filename: "notes.txt", content_type: "text/plain")
+    expect_status("ready")
+    @document.stubs(:purge_file_if_settled).raises(StandardError, "storage down")
+
+    assert_enqueued_with(job: VectorStore::PurgeDocumentFileJob) do
+      VectorStore::IndexStatusJob.perform_now(@document)
+    end
+
+    assert_equal "ready", @document.reload.status
+    assert @document.file.attached?
+  end
+
+  test "the purge retry job cleans up a settled upload" do
+    @document.file.attach(io: StringIO.new("a note"), filename: "notes.txt", content_type: "text/plain")
+    @document.update!(status: "ready")
+
+    VectorStore::PurgeDocumentFileJob.perform_now(@document)
+
+    assert_not @document.reload.file.attached?
+  end
+
   test "a terminal indexing error purges its upload after the error write commits" do
     @document.file.attach(io: StringIO.new("a note"), filename: "notes.txt", content_type: "text/plain")
     expect_status("error", error: "bad file")

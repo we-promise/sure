@@ -50,7 +50,19 @@ class FamilyDocument < ApplicationRecord
 
   # Recovery for a copy still `processing` whose poll was lost (the queue was down when it was
   # created, or a requeue was rejected): polling again is harmless.
-  def self.requeue_index_polls = where(status: "processing").find_each(&:poll_index_later)
+  def self.requeue_index_polls
+    where(status: "processing").find_each(&:poll_index_later)
+    where.not("metadata->>'enqueue_error' IS NULL").find_each do |document|
+      document.with_lock do
+        next unless document.status.in?(%w[pending error]) && document.metadata.to_h["enqueue_error"].present?
+
+        # The upload was kept because the enqueue outcome was unknown. Retry it with those bytes;
+        # an accepted job that already settled the row is skipped by the indexing job itself.
+        document.update!(status: "pending", metadata: document.metadata.to_h.except("enqueue_error", "error"))
+        IndexFamilyDocumentJob.perform_later(document)
+      end
+    end
+  end
 
   def poll_index_later
     # A reread of the same document resumes a copy whose poll cap was reached while the provider
