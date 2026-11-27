@@ -107,4 +107,15 @@ class Security::FundClassificationFromEodhdTest < ActiveSupport::TestCase
       "MutualFund_Data" => { "Asset_Allocation" => { "Cash" => { "Net_%" => "100" } } })
     assert_equal [ "liquidity", "mutual_fund", nil, nil ], r
   end
+
+  # Cash stays at 5% so the allocation's total cannot be what flags the fund.
+  test "a short position in a grouped allocation list marks the fund leveraged or inverse" do
+    holdings = ->(other) { { "Asset_Allocation" => { "Holdings" => [
+      { "Type" => "US Stocks", "Net_%" => "95" }, { "Type" => "Cash", "Net_%" => "5" }, { "Type" => "Other", "Net_%" => other }
+    ] } } }
+    provider = Provider::Eodhd.new("test_api_key")
+
+    assert_equal true, provider.send(:fund_weights_from, holdings.call("-20"))[:leveraged_or_inverse]
+    assert_nil provider.send(:fund_weights_from, holdings.call("+0.5"))[:leveraged_or_inverse]
+  end
 end
