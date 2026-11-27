@@ -44,6 +44,12 @@ class SnaptradeAccount::ActivitiesProcessor
     "INTERNAL_ASSET_TRANSFER_IN" => { category: :trade, label: "Transfer", sign: :buy, zero_amount: :unconditional },
     "INTERNAL_ASSET_TRANSFER_OUT" => { category: :trade, label: "Transfer", sign: :sell, zero_amount: :unconditional },
 
+    # Account credits: cashback paid into an account, fee refunds, sign-up bonuses
+    # (Wealthsimple). SnapTrade signs them from the account side, positive when
+    # money comes in; without a rule that amount was stored as an expense.
+    "REIMBURSEMENT" => { category: :cash, label: "Other", cash_flow: :invert },
+    "PROMOTION" => { category: :cash, label: "Other", cash_flow: :invert },
+
     # Unit-dependent types:
     # When units are present and non-zero, treated as a trade preserving signed units.
     # When units are nil/zero, treated as a cash activity.
