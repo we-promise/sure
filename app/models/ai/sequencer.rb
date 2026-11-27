@@ -10,7 +10,9 @@ module Ai::Sequencer
   RESIZE_AFTER = 10.minutes
   PROPS_TIMEOUT = 2
 
-  Sized = Struct.new(:gate, :at)
+  # A host's gate, and the slots each of its servers (one per port) last reported.
+  Sized = Struct.new(:gate, :servers)
+  Server = Struct.new(:slots, :at)
   GATES = Concurrent::Map.new
 
   class << self
@@ -55,21 +57,30 @@ module Ai::Sequencer
     end
   end
 
-  # The gate of a local endpoint's host, shared by every endpoint on that host and port, or nil
-  # for a cloud endpoint, which has none. Sized by the host's slots, asked again after RESIZE_AFTER.
+  # The gate of a local endpoint's host, shared by every endpoint on that host, or nil for a cloud
+  # endpoint, which has none. Servers on one host's ports (a chat model and an embedding model, say)
+  # share its GPU, so they share one gate, as many places as the smallest of them has slots. Each
+  # server is asked for its slots when first seen and again after RESIZE_AFTER.
   def gate_for(endpoint)
     return unless endpoint.local?
 
-    key = host_key(endpoint)
-    # Asked outside the map's lock, which compute_if_absent would hold for every host meanwhile.
-    sized = GATES[key] || begin
-      fresh = Sized.new(Ai::Gate.new(slots(endpoint)), now)
-      GATES.put_if_absent(key, fresh) || fresh
+    sized = GATES[host_key(endpoint)]
+    server = sized&.servers&.[](server_key(endpoint))
+    return sized.gate if server && now - server.at <= RESIZE_AFTER
+
+    server.at = now if server # one thread asks again; the others keep the current size meanwhile
+    resize(endpoint, sized)
+  end
+
+  # Asked outside the map's lock, which compute_if_absent would hold for every host meanwhile.
+  def resize(endpoint, sized)
+    server = Server.new(slots(endpoint), now)
+    sized ||= begin
+      fresh = Sized.new(Ai::Gate.new(server.slots), Concurrent::Map.new)
+      GATES.put_if_absent(host_key(endpoint), fresh) || fresh
     end
-    if now - sized.at > RESIZE_AFTER
-      sized.at = now
-      sized.gate.size = slots(endpoint)
-    end
+    sized.servers[server_key(endpoint)] = server
+    sized.gate.size = sized.servers.values.map(&:slots).min
     sized.gate
   end
 
@@ -89,11 +100,17 @@ module Ai::Sequencer
     nil
   end
 
-  def host_key(endpoint)
-    uri = URI.parse(endpoint.base_url.to_s)
-    uri.host ? "#{uri.host}:#{uri.port}" : endpoint.name
+  def host_key(endpoint) = parsed_base_url(endpoint)&.host&.downcase || endpoint.name
+
+  def server_key(endpoint)
+    uri = parsed_base_url(endpoint)
+    uri&.host ? "#{uri.host.downcase}:#{uri.port}" : endpoint.name
+  end
+
+  def parsed_base_url(endpoint)
+    URI.parse(endpoint.base_url.to_s)
   rescue URI::InvalidURIError
-    endpoint.name
+    nil
   end
 
   # Tests start each case without the gates an earlier one sized.
