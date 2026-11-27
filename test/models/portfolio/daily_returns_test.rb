@@ -2118,15 +2118,20 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
   end
 
   # A position quoted in another currency converts from the HOLDING's
-  # currency, at the previous day's rate like every start-of-day flow.
-  test "a journal priced in a foreign currency converts at the previous day's rate" do
+  # currency into the account's at the holding's own date, as
+  # Balance::SyncCache values it: 5 x 100 x 1.2 moved the balance by 600, not
+  # by the previous day's 550.
+  test "a journal priced in a foreign currency converts at the holding's own date" do
     set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
     set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.2
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
-    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_550, market_flow: 550
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_600, market_flow: 600
     security_journal account: @account, date: @day_two, qty: 5, price: 100, currency: "EUR"
 
-    assert_equal BigDecimal("550"), daily_returns.rows.last.external_flow
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("600"), second.external_flow
+    assert_equal BigDecimal("0"), second.market
   end
 
   # The entry is in the account's currency, so the entry-level rate check sees
@@ -2510,6 +2515,126 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     third = daily_returns(end_date: day_three).rows.last
 
     assert third.contribution_rate_missing
+  end
+
+  # Balance::SyncCache converts a holding into the ACCOUNT's currency at the
+  # holding's own date; the series then takes the account's currency to the
+  # family's at the previous day's rate. A journal has to take the same two
+  # steps, or it moves the denominator by a different amount than the
+  # position moved the balance. Here 5 EUR-quoted units at 100 reach a GBP
+  # account as 400 (EUR->GBP 0.8 that day), and 400 GBP at the previous day's
+  # 1.25 is 500 USD. EUR->USD straight across at the previous day's 1.1 read
+  # 550, and the other 50 sat in `market` as a loss.
+  test "a journalled foreign position converts through the account's currency" do
+    gbp = create_portfolio_account(family: @family, currency: "GBP")
+    set_rate from: "EUR", to: "GBP", date: @day_two, rate: 0.8
+    set_rate from: "GBP", to: "USD", date: @day_one, rate: 1.25
+    set_rate from: "GBP", to: "USD", date: @day_two, rate: 1.5
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    lay_balance account: gbp, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: gbp, date: @day_two, opening: 1_000, closing: 1_400, market_flow: 400
+    security_journal account: gbp, date: @day_two, qty: 5, price: 100, currency: "EUR"
+
+    second = daily_returns(account_ids: [ gbp.id ]).rows.last
+
+    assert_equal BigDecimal("500"), second.external_flow
+    assert_equal BigDecimal("0"), second.market
+    assert_not second.rate_missing
+  end
+
+  # The balance carried the departing units at the previous row's price,
+  # converted at THAT row's date (EUR->GBP 0.9 on day zero), and the account
+  # currency then converts at the day before the journal like every other
+  # flow (GBP->USD 1.25 on day one), so the flow is 5 x 100 x 0.9 x 1.25 =
+  # 562.5. The journal day's own 0.8 would read 500, the prior row's
+  # GBP->USD 1.6 would read 720, and EUR->USD straight across 550.
+  test "an unpriced journal out of a foreign position converts the previous row through the account's currency" do
+    gbp = create_portfolio_account(family: @family, currency: "GBP")
+    day_zero = @day_one - 1.day
+    set_rate from: "EUR", to: "GBP", date: day_zero, rate: 0.9
+    set_rate from: "EUR", to: "GBP", date: @day_two, rate: 0.8
+    set_rate from: "GBP", to: "USD", date: day_zero, rate: 1.6
+    set_rate from: "GBP", to: "USD", date: @day_one, rate: 1.25
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    gbp.holdings.create!(security: security_under_test, date: day_zero, qty: 5, price: 100, amount: 500, currency: "EUR")
+    lay_balance account: gbp, date: @day_one, opening: 1_450, closing: 1_450
+    lay_balance account: gbp, date: @day_two, opening: 1_450, closing: 1_000, market_flow: -450
+    security_journal account: gbp, date: @day_two, qty: -5, price: 0, currency: "EUR"
+
+    second = daily_returns(account_ids: [ gbp.id ]).rows.last
+
+    assert_equal BigDecimal("-562.5"), second.external_flow
+    assert_equal BigDecimal("0"), second.market
+    assert_not second.suppressed
+  end
+
+  # A carry is valued from its first priced row, so the same two steps run
+  # from that row's date: 5 x 100 x 0.8 (EUR->GBP on day three) x 1.25
+  # (GBP->USD on day two) = 500, where EUR->USD on day two read 550 and the
+  # day before the journal itself (GBP->USD 1.4 on day one) 560.
+  test "a carried foreign journal converts through the account's currency" do
+    gbp = create_portfolio_account(family: @family, currency: "GBP")
+    day_three = @day_two + 1.day
+    set_rate from: "EUR", to: "GBP", date: day_three, rate: 0.8
+    set_rate from: "GBP", to: "USD", date: @day_one, rate: 1.4
+    set_rate from: "GBP", to: "USD", date: @day_two, rate: 1.25
+    set_rate from: "GBP", to: "USD", date: day_three, rate: 1.5
+    set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.1
+    lay_balance account: gbp, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: gbp, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: gbp, date: day_three, opening: 1_000, closing: 1_400, market_flow: 400
+    security_journal account: gbp, date: @day_two, qty: 5, price: 0, currency: "EUR"
+    gbp.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 100, amount: 500, currency: "EUR")
+
+    third = daily_returns(account_ids: [ gbp.id ], end_date: day_three).rows.last
+
+    assert_equal BigDecimal("500"), third.external_flow
+    assert_equal BigDecimal("0"), third.market
+    assert_not third.suppressed
+  end
+
+  # A rate to the family's currency does not stand in for the one into the
+  # account's: with no EUR->GBP there is no first step, whatever EUR->USD says.
+  test "a journalled foreign position with no rate into the account's currency is flagged" do
+    gbp = create_portfolio_account(family: @family, currency: "GBP")
+    set_rate from: "GBP", to: "USD", date: @day_one, rate: 1.25
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    lay_balance account: gbp, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: gbp, date: @day_two, opening: 1_000, closing: 1_400, market_flow: 400
+    security_journal account: gbp, date: @day_two, qty: 5, price: 100, currency: "EUR"
+
+    second = daily_returns(account_ids: [ gbp.id ]).rows.last
+
+    assert second.rate_missing
+    assert second.contribution_rate_missing
+    assert second.suppressed
+  end
+
+  # A position moved between two selected accounts is no contribution, but
+  # with no rate into the accounts' currency the move cannot be valued at all,
+  # so the day is short of a rate like any other: rate_missing makes
+  # Performance withhold the time-weighted figures too, not only the
+  # money-weighted ones. Once the rate exists, nothing is flagged.
+  test "an internal journal with no rate into its account's currency flags a missing rate, not contributions" do
+    source = create_portfolio_account(family: @family, currency: "GBP")
+    destination = create_portfolio_account(family: @family, currency: "GBP")
+    set_rate from: "GBP", to: "USD", date: @day_one, rate: 1.25
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    [ source, destination ].each { |account| lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000 }
+    lay_balance account: source, date: @day_two, opening: 1_000, closing: 560, market_flow: -440
+    lay_balance account: destination, date: @day_two, opening: 1_000, closing: 1_440, market_flow: 440
+    security_journal account: source, date: @day_two, qty: -5, price: 100, currency: "EUR"
+    security_journal account: destination, date: @day_two, qty: 5, price: 100, currency: "EUR"
+    ids = [ source.id, destination.id ]
+
+    second = daily_returns(account_ids: ids).rows.last
+
+    assert second.rate_missing, "the move has no rate into the accounts' currency"
+    assert_not second.contribution_rate_missing, "an internal move contributes nothing"
+
+    set_rate from: "EUR", to: "GBP", date: @day_two, rate: 0.88
+
+    assert_not daily_returns(account_ids: ids).rows.last.rate_missing, "a convertible internal move is not flagged"
   end
 
   private

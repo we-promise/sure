@@ -20,7 +20,10 @@
 # so every local component (flows, market, revaluations) is converted at the
 # PREVIOUS day's rate and the fx term is the closing local balance times the
 # rate change. That identity is what lets Portfolio::Drivers report a genuine
-# `unexplained` residual instead of defining one away.
+# `unexplained` residual instead of defining one away. A journal in another
+# currency takes one step first: into the account's currency at the rate of
+# the row it is valued from, as the balance carried it, and only then from
+# the account's currency at the previous day's rate like everything else.
 class Portfolio::DailyReturns
   # One day. `r` is nil until #returns computes it, so a caller reading rows
   # directly cannot mistake a raw component for a return.
@@ -534,8 +537,12 @@ class Portfolio::DailyReturns
             -- because the predicate compares `trades` columns, and a trade
             -- with no label makes it NULL; NOT NULL is NULL, which would
             -- drop the row from this check rather than keep it.
+            -- Every journal leg, internal ones included: a move between two
+            -- selected accounts that cannot be converted leaves the day
+            -- unvalued like any other, so the ratios are withheld for it.
+            -- contribution_rate_missing below stays external-only.
             COALESCE(BOOL_OR((#{entry_rate_missing_sql} AND #{fragment(:flow_class_sql)} IS NOT NULL)
-                             OR (#{journal_rate_missing_sql} AND #{external_flow_class_sql})), false) AS flow_rate_missing,
+                             OR #{journal_rate_missing_sql}), false) AS flow_rate_missing,
             COALESCE(BOOL_OR((#{entry_rate_missing_sql} OR #{journal_rate_missing_sql})
                              AND #{external_flow_class_sql}), false) AS contribution_rate_missing,
             -- The journal suppression condition, and it keys on the PRICE rather
@@ -613,10 +620,12 @@ class Portfolio::DailyReturns
             LIMIT 1
           ) journal_holdings ON TRUE
           -- Converted from the HOLDING's currency, which is the one its price
-          -- is quoted in, and at the previous day's rate for the same reason
-          -- every other start-of-day flow is.
+          -- is quoted in, in the two steps the balance takes: into the
+          -- account's currency at the holding's date, as Balance::SyncCache
+          -- converts a holding, then on at the previous day's rate (`fx`) for
+          -- the same reason every other start-of-day flow is.
           LEFT JOIN LATERAL (
-            SELECT #{rate_lookup('journal_holdings.currency', 'entries.date - 1')} AS rate
+            SELECT #{entry_rate_lookup('journal_holdings.currency', 'entries.date', to: 'entry_accounts.currency')} * fx.rate AS rate
           ) journal_fx ON TRUE
           -- The account's last row for the security BEFORE the entry's date:
           -- the price the balance carried the position at going into the day.
@@ -634,7 +643,7 @@ class Portfolio::DailyReturns
             LIMIT 1
           ) journal_prior ON TRUE
           LEFT JOIN LATERAL (
-            SELECT #{rate_lookup('journal_prior.currency', 'entries.date - 1')} AS rate
+            SELECT #{entry_rate_lookup('journal_prior.currency', 'journal_prior.date', to: 'entry_accounts.currency')} * fx.rate AS rate
           ) journal_prior_fx ON TRUE
           -- The splits between that row and the journal, which the prior
           -- price predates and the journal's quantity does not.
@@ -705,8 +714,8 @@ class Portfolio::DailyReturns
         -- rounded to the stored quantity scale.
         --
         -- Valued from the same holdings row the calculator read that day, in
-        -- its currency, at the previous day's rate like every start-of-day
-        -- flow.
+        -- its currency, converted in journal_fx's two steps from that row's
+        -- date.
         carried_journals AS (
           SELECT
             entries.account_id,
@@ -771,7 +780,8 @@ class Portfolio::DailyReturns
             LIMIT 1
           ) before_priced ON TRUE
           LEFT JOIN LATERAL (
-            SELECT #{rate_lookup('first_priced.currency', 'first_priced.date - 1')} AS rate
+            SELECT #{entry_rate_lookup('first_priced.currency', 'first_priced.date', to: 'entry_accounts.currency')}
+                   * #{rate_lookup('entry_accounts.currency', 'first_priced.date - 1')} AS rate
           ) carry_fx ON TRUE
           LEFT JOIN LATERAL (
             #{split_product_sql('entries.date')}
