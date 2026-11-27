@@ -86,7 +86,7 @@ class Portfolio::SectionRegistry
           key: "value_chart",
           title: "portfolios.sections.value_chart",
           partial: "portfolios/value_chart",
-          locals: shared_locals.merge(series: statement.value_series(period: period)),
+          locals: shared_locals.merge(series: (statement.value_series(period: period) unless value_unavailable?)),
           visible: true,
           collapsible: true
         },
@@ -113,16 +113,12 @@ class Portfolio::SectionRegistry
     # formats them.
     def kpis
       @kpis ||= begin
-        value_unconvertible = statement.portfolio_value_unconvertible_count
-        # When no account converts, the sum is a zero that reads as a balance.
-        no_value = value_unconvertible == statement.investment_accounts.size
-
         {
-          value: (statement.portfolio_value_money unless no_value),
-          value_unconvertible: value_unconvertible,
-          day_change: statement.day_change,
+          value: (statement.portfolio_value_money unless value_unavailable?),
+          value_unconvertible: statement.portfolio_value_unconvertible_count,
+          day_change: (statement.day_change unless value_unavailable?),
           day_change_coverage: statement.day_change_coverage,
-          unrealized: statement.unrealized_gains_trend,
+          unrealized: (statement.unrealized_gains_trend unless value_unavailable?),
           unrealized_missing_cost_basis: statement.unrealized_missing_cost_basis_count,
           period_return: statement.period_return_trend(period: period),
           period_return_unconvertible: statement.period_return_unconvertible_count(period: period),
@@ -130,6 +126,16 @@ class Portfolio::SectionRegistry
           income: statement.totals(period: period).total_income
         }
       end
+    end
+
+    # True when no investment account converts into the family currency.
+    # Every figure built from converted balances is then a zero that reads as
+    # a real one, so the value card, the value chart, the day change and the
+    # unrealised P&L all show "not enough data" instead.
+    def value_unavailable?
+      return @value_unavailable if defined?(@value_unavailable)
+
+      @value_unavailable = statement.portfolio_value_unconvertible_count == statement.investment_accounts.size
     end
 
     def holdings_rows

@@ -241,6 +241,55 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal ApplicationController.helpers.format_money(Money.new(0, @family.currency)), kpi_card_figure("value")
   end
 
+  test "the value chart shows no data when no account converts" do
+    InvestmentStatement.new(@family, user: @user).investment_accounts.each { |account| seed_end_balances(account) }
+    get portfolio_path(period: "last_30_days")
+    assert_response :success
+    assert_select "#portfolioValueChart", 1, "the fixture must chart in USD, or this proves nothing"
+    assert_no_match ApplicationController.helpers.format_money(Money.new(0, @family.currency)), css_select("#portfolio-value-chart").first.text
+
+    move_investments_to_currency_without_rate("JPY")
+    get portfolio_path(period: "last_30_days")
+    assert_response :success
+
+    chart = css_select("#portfolio-value-chart").first
+    assert chart, "the value chart section should render"
+    assert_no_match ApplicationController.helpers.format_money(Money.new(0, @family.currency)), chart.text
+    assert_select "#portfolioValueChart", 0
+    assert_includes chart.text, I18n.t("portfolios.value_chart.no_data")
+  end
+
+  test "the value chart still draws when only some accounts convert" do
+    InvestmentStatement.new(@family, user: @user).investment_accounts.each { |account| seed_end_balances(account) }
+    yen = @family.accounts.create!(name: "Yen broker", balance: 50_000, currency: "JPY", accountable: Investment.new, owner: @user)
+    seed_end_balances(yen)
+
+    get portfolio_path(period: "last_30_days")
+    assert_response :success
+
+    assert_select "#portfolioValueChart", 1
+    assert_includes kpi_card_hint("value"), I18n.t("portfolios.kpi_row.unconvertible_accounts", count: 1)
+    assert_equal kpi_card_figure("value"), css_select("#portfolio-value-chart p").first.text.squish
+  end
+
+  test "the day change and unrealised P&L cards show not enough data when no account converts" do
+    no_data = I18n.t("portfolios.kpi_row.no_data")
+    # A stored cost basis, as a synced broker keeps it, so the unrealised
+    # figure does not rest on USD trades the currency move would orphan.
+    Holding.where(account: InvestmentStatement.new(@family, user: @user).investment_accounts).update_all(cost_basis: 150)
+    get portfolio_path
+    assert_response :success
+    assert_not_equal no_data, kpi_card_figure("day_change"), "the fixture must have a day change, or this proves nothing"
+    assert_not_equal no_data, kpi_card_figure("unrealized_pnl"), "the fixture must have an unrealised P&L, or this proves nothing"
+
+    move_investments_to_currency_without_rate("JPY")
+    get portfolio_path
+    assert_response :success
+
+    assert_equal no_data, kpi_card_figure("day_change")
+    assert_equal no_data, kpi_card_figure("unrealized_pnl")
+  end
+
   test "the value chart is mounted with the statement's series" do
     seed_investment_balances
 
@@ -771,6 +820,25 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
           Holding.create!(account: account, security: security, date: 1.day.ago.to_date, qty: 10, price: 95, amount: 950, currency: "USD", **basis)
           Holding.create!(account: account, security: security, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD", **basis)
         end
+      end
+    end
+
+    # Every investment account, its balances and its holdings in a currency
+    # with no rate into the family's, so nothing on the page converts.
+    def move_investments_to_currency_without_rate(currency)
+      assert_nil ExchangeRate.find_by(from_currency: currency, to_currency: @family.currency), "the premise: #{currency} has no rate"
+      accounts = InvestmentStatement.new(@family, user: @user).investment_accounts
+      accounts.update_all(currency: currency)
+      Balance.where(account: accounts).update_all(currency: currency)
+      Holding.where(account: accounts).update_all(currency: currency)
+    end
+
+    # Two days of balances whose end_balance is the account's balance, as a
+    # sync stores them, so the chart's last point matches the value card.
+    def seed_end_balances(account)
+      [ 1.day.ago.to_date, Date.current ].each do |date|
+        account.balances.create!(date: date, balance: account.balance, cash_balance: account.balance,
+                                 start_cash_balance: account.balance, currency: account.currency)
       end
     end
 
