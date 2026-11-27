@@ -534,6 +534,23 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       "invested is a share of the Cash Flow node, which outflows size when they exceed income"
   end
 
+  test "dashboard sankey names the cash flow and surplus nodes in the user's locale" do
+    @user.update!(locale: "pt-BR")
+    income_category = @family.categories.create!(name: "Salary", color: "#33FF57")
+    create_transaction(account: @family.accounts.first, name: "Payday", amount: -10_000, category: income_category)
+
+    get root_path
+    assert_response :ok
+
+    chart = css_select("[data-controller='sankey-chart']").first
+    nodes = JSON.parse(chart["data-sankey-chart-data-value"]).fetch("nodes").index_by { |node| node.fetch("id") }
+
+    I18n.with_locale(:"pt-BR") do
+      assert_equal I18n.t("pages.dashboard.cashflow_preview.node_labels.cash_flow"), nodes.fetch("cash_flow_node").fetch("name")
+      assert_equal I18n.t("pages.dashboard.cashflow_preview.node_labels.surplus"), nodes.fetch("surplus_node").fetch("name")
+    end
+  end
+
   test "dashboard sankey nodes carry a stable filter_value, including opposite-direction subcategories" do
     parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
     subcategory = @family.categories.create!(name: "Rebate Program", parent: parent_category, color: "#33FF57")

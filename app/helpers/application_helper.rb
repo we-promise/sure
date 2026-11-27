@@ -183,7 +183,7 @@ module ApplicationHelper
     format_code = options[:format_code] || Current.family&.date_format
 
     if format_code.present?
-      date.strftime(format_code)
+      I18n.l(date, format: format_code)
     else
       I18n.l(date, format: format, **options)
     end

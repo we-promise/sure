@@ -408,7 +408,7 @@ class PagesController < ApplicationController
       # Central Cash Flow node, sized to whichever side is larger so a deficit
       # (outflows above income) still balances, as IncomeStatement::Sankey does
       capacity = [ total_income, (total_expense + total_invested).round(2) ].max
-      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", capacity, 100.0, "var(--color-success)")
+      cash_flow_idx = add_node.call("cash_flow_node", t("pages.dashboard.cashflow_preview.node_labels.cash_flow"), capacity, 100.0, "var(--color-success)")
 
       # Build netted subcategory data from raw totals
       net_subcategories_by_parent = build_net_subcategories(expense_totals, income_totals)
@@ -448,7 +448,7 @@ class PagesController < ApplicationController
       net = (total_income - total_expense - total_invested).round(2)
       if net.positive?
         percentage = total_income.zero? ? 0 : (net / total_income * 100).round(1)
-        idx = add_node.call("surplus_node", "Surplus", net, percentage, "var(--color-success)")
+        idx = add_node.call("surplus_node", t("pages.dashboard.cashflow_preview.node_labels.surplus"), net, percentage, "var(--color-success)")
         links << { source: cash_flow_idx, target: idx, value: net, color: "var(--color-success)", percentage: percentage }
       elsif net.negative?
         deficit = net.abs
