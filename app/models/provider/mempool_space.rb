@@ -6,7 +6,7 @@
 # Onchain::Snapshot both live in Onchain::BitcoinAdapter. Self-hosters can point
 # this at their own instance with MEMPOOL_SPACE_URL.
 class Provider::MempoolSpace
-  include HTTParty
+  include ProxiedHttparty
   include Provider::HttpTransport
   extend SslConfigurable
 

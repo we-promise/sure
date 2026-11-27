@@ -1,5 +1,5 @@
 class Provider::Lunchflow
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
 
   headers "User-Agent" => "Sure Finance Lunch Flow Client"

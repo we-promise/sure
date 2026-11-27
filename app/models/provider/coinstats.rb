@@ -1,7 +1,7 @@
 # API client for CoinStats cryptocurrency data provider.
 # Handles authentication and requests to the CoinStats OpenAPI.
 class Provider::Coinstats < Provider
-  include HTTParty
+  include ProxiedHttparty
   include Provider::RateLimitable
   extend SslConfigurable
 

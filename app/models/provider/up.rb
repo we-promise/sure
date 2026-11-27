@@ -1,5 +1,5 @@
 class Provider::Up
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
 
   DEFAULT_BASE_URL = "https://api.up.com.au/api/v1".freeze

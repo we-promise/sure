@@ -3,7 +3,7 @@
 # Keyless Cosmos Hub data source backed by a public Cosmos SDK REST (LCD)
 # endpoint. Self-hosters can point it at their own node with COSMOS_REST_URL.
 class Provider::CosmosRest
-  include HTTParty
+  include ProxiedHttparty
   include Provider::HttpTransport
   include Provider::RateLimitable
   extend SslConfigurable

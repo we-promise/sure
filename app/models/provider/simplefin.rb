@@ -5,7 +5,7 @@ class Provider::Simplefin
   # (default-on without overrides), then passes pending: to this client.
   # SIMPLEFIN_DEBUG_RAW=1 enables raw payload logging (default-off); environment
   # configuration lives in config/initializers/simplefin.rb.
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
 
   headers "User-Agent" => "Sure Finance SimpleFin Client"
@@ -42,10 +42,10 @@ class Provider::Simplefin
   # Connects to the address that ensure_allowed_url! checked instead of
   # resolving the host a second time, so DNS rebinding cannot swap in an
   # internal address. TLS (SNI, certificate) and the Host header still use
-  # the hostname. Through an HTTP proxy, https requests are pinned too
+  # the hostname. Through the resolved proxy, https requests are pinned too
   # (Net::HTTP sends CONNECT to the pinned address); plain http requests
   # skip the proxy (see guarded_request_options).
-  class PinnedConnectionAdapter < HTTParty::ConnectionAdapter
+  class PinnedConnectionAdapter < ProxiedHttparty::ConnectionAdapter
     def connection
       http = super
       pinned_address = options.dig(:connection_adapter_options, :ipaddr)

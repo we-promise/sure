@@ -4,7 +4,7 @@
 # for Asset Hub, where DOT balances live since the 2025 migration. Self-hosters
 # can point it at their own instance with POLKADOT_SIDECAR_URL.
 class Provider::PolkadotSidecar
-  include HTTParty
+  include ProxiedHttparty
   include Provider::HttpTransport
   extend SslConfigurable
 

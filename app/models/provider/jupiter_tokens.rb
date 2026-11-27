@@ -11,7 +11,7 @@
 # naming an unverified one would hand it the real asset's price and value dust at
 # thousands. An unverified or unknown mint keeps its placeholder instead.
 class Provider::JupiterTokens
-  include HTTParty
+  include ProxiedHttparty
   include Provider::HttpTransport
   extend SslConfigurable
 

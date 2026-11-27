@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Provider::Brex
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
   extend BaseUrlAllowlistable
 

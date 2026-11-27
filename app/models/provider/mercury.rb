@@ -1,5 +1,5 @@
 class Provider::Mercury
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
   extend BaseUrlAllowlistable
 

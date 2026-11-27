@@ -21,6 +21,15 @@ brand behind it (on-chain wallets) omits the domain and sets `logo_icon` instead
 Institution logos are a separate concept and belong on accounts through
 `Account#logo_url`, never on a provider.
 
+## Outbound proxy
+
+Provider syncs honour `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` the way the AI clients do (see
+[Outbound proxy](../hosting/ai.md#outbound-proxy)). An HTTParty client does
+`include ProxiedHttparty`, never `include HTTParty`; a plain `Net::HTTP` connection passes
+`*self.class.net_http_proxy_args(url)` from `extend ProxyConfigurable`.
+`test/architecture/outbound_proxy_contract_test.rb` fails on either one missing. Faraday clients
+still use Faraday's own lookup.
+
 ## Support diagnostics
 
 When a provider sync/import path encounters a recoverable error, suspicious partial

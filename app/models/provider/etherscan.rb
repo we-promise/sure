@@ -8,7 +8,7 @@
 # indexer and this class refuses to answer them.
 class Provider::Etherscan
   include Provider::EvmExplorer
-  include HTTParty
+  include ProxiedHttparty
   include Provider::HttpTransport
   extend SslConfigurable
 

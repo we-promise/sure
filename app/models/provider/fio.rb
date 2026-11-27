@@ -14,7 +14,7 @@
 # The token travels in the URL path, not a header. Nothing here may put a resolved URL
 # into an exception message, a log line or debug metadata.
 class Provider::Fio < Provider
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
 
   # Subclass so errors caught in this provider are raised as Provider::Fio::Error

@@ -10,7 +10,7 @@
 # per-family (the user brings their own token from https://api.monobank.ua/) rather than
 # a site-wide integration.
 class Provider::Monobank < Provider
-  include HTTParty
+  include ProxiedHttparty
   include Provider::RateLimitable
   extend SslConfigurable
 

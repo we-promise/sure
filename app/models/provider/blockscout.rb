@@ -9,7 +9,7 @@
 # BLOCKSCOUT_<CHAIN>_URL.
 class Provider::Blockscout
   include Provider::EvmExplorer
-  include HTTParty
+  include ProxiedHttparty
   include Provider::HttpTransport
   extend SslConfigurable
 

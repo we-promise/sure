@@ -1,7 +1,7 @@
 require "cgi"
 
 class Provider::EnableBanking
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
 
   BASE_URL = "https://api.enablebanking.com".freeze

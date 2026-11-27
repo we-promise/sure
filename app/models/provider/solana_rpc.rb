@@ -7,7 +7,7 @@
 # who outgrows the public endpoint's rate limit, can point this at their own node
 # with SOLANA_RPC_URL.
 class Provider::SolanaRpc
-  include HTTParty
+  include ProxiedHttparty
   include Provider::HttpTransport
   extend SslConfigurable
 

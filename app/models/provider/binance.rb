@@ -1,5 +1,5 @@
 class Provider::Binance
-  include HTTParty
+  include ProxiedHttparty
   extend SslConfigurable
 
   class Error < StandardError; end

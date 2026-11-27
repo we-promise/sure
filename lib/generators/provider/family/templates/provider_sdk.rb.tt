@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Provider::<%= class_name %>
-  include HTTParty
+  include ProxiedHttparty
 
   headers "User-Agent" => "Sure Finance <%= class_name %> Client"
   default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)

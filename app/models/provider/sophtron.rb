@@ -4,7 +4,7 @@
 # - V2 REST endpoints for customer provisioning.
 # - V1 RPC-style endpoints for institution connection, jobs, MFA, accounts, and transactions.
 class Provider::Sophtron < Provider
-  include HTTParty
+  include ProxiedHttparty
   extend BaseUrlAllowlistable
 
   DEFAULT_BASE_URL = "https://api.sophtron.com/api"
