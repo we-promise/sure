@@ -905,9 +905,11 @@ class Family < ApplicationRecord
     # holdings change through syncs, so the key moves on any sync activity,
     # not only completion: a sync that fails still lets a newly used currency
     # through. build_cache_key adds account changes, and the account ids keep
-    # members who see different accounts apart.
+    # members who see different accounts apart. Each move leaves the old key
+    # behind; the 24-hour expiry bounds how long such a key lives, not how
+    # many there are.
     def exchange_rate_currencies_cache_key(name, account_ids)
-      build_cache_key("#{name}_#{latest_sync_activity_at&.to_f}_#{Digest::MD5.hexdigest(account_ids.join(","))}")
+      build_cache_key("#{name}_#{latest_sync_activity_at&.to_f}_#{Digest::SHA256.hexdigest(account_ids.join(","))}")
     end
 
     def log_invalid_timezone_once
