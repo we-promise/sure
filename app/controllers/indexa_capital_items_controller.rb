@@ -241,7 +241,7 @@ class IndexaCapitalItemsController < ApplicationController
     end
 
     def indexa_capital_item_params
-      params.require(:indexa_capital_item).permit(
+      permitted = params.require(:indexa_capital_item).permit(
         :name,
         :sync_start_date,
         :api_token,
@@ -249,6 +249,21 @@ class IndexaCapitalItemsController < ApplicationController
         :document,
         :password
       )
+      if @indexa_capital_item&.persisted?
+        if permitted[:api_token].blank?
+          permitted.delete(:api_token)
+          # A stored token takes precedence over username/password, so a new
+          # password without a token clears it to make the switch take effect,
+          # but only once username, document and password will all be saved.
+          permitted[:api_token] = nil if permitted[:password].present? && switching_to_password_credentials?(permitted)
+        end
+        permitted.delete(:password) if permitted[:password].blank?
+      end
+      permitted
+    end
+
+    def switching_to_password_credentials?(permitted)
+      %i[username document password].all? { |field| permitted.fetch(field, @indexa_capital_item.public_send(field)).present? }
     end
 
     def link_indexa_capital_account(indexa_capital_account, accountable_type)
