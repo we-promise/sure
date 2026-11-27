@@ -192,6 +192,21 @@ class McpAiToolsTest < ActiveSupport::TestCase
     Ai::SharedState.delete(inflight) if inflight
   end
 
+  test "a polling failure after enqueue leaves the claim with the worker" do
+    fn_class = Assistant::Function::ImportBankStatement
+    arguments = { "pdf_import_id" => @pdf_import.id, "account_id" => @account.id }
+    inflight = Ai::ToolJob.inflight_key(fn_class.name, @user, arguments)
+    Ai::ToolJob.stubs(:wait_for).raises(StandardError, "redis down")
+
+    answer = Ai::ToolJob.run(fn_class, @user, arguments, timeout: 1)
+
+    assert_equal "The tool failed to run", answer["error"]
+    assert_enqueued_jobs 1, only: Ai::ToolJob
+    assert_not_nil Ai::SharedState.read(inflight), "a retry must still join the enqueued job"
+  ensure
+    Ai::SharedState.delete(inflight) if inflight
+  end
+
   test "a refused enqueue clears the claim and fails instead of polling" do
     fn_class = Assistant::Function::ImportBankStatement
     arguments = { "pdf_import_id" => @pdf_import.id, "account_id" => @account.id }
@@ -298,6 +313,34 @@ class McpAiToolsTest < ActiveSupport::TestCase
 
     assert_nil Ai::SharedState.claim(key, "first", expires_in: 1.minute)
     assert_equal "first", Ai::SharedState.claim(key, "second", expires_in: 1.minute)
+  end
+
+  test "a claim lost during the winner's cleanup is retried, not taken" do
+    key = "ai/tool_inflight/test-claim-race"
+    store = Ai::SharedState.store
+    writes = 0
+    reads = 0
+    flaky = Object.new
+    flaky.define_singleton_method(:write) do |write_key, value, expires_in:, unless_exist: false|
+      writes += 1
+      next false if writes == 1  # SET NX lost
+
+      store.write(write_key, value, expires_in:, unless_exist:)
+    end
+    flaky.define_singleton_method(:read) do |read_key|
+      reads += 1
+      next nil if reads == 1  # the winner finished between its write and our read
+
+      store.read(read_key)
+    end
+    flaky.define_singleton_method(:delete) { |delete_key| store.delete(delete_key) }
+    Ai::SharedState.store = flaky
+
+    assert_nil Ai::SharedState.claim(key, "retry", expires_in: 1.minute)
+    assert_equal "retry", Ai::SharedState.read(key)
+  ensure
+    store&.delete(key)
+    Ai::SharedState.store = store
   end
 
   test "the unique index allows imports without a source but no duplicates with one" do

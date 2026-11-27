@@ -57,6 +57,30 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert_equal 1, @user.family.imports.where(type: "TransactionImport", source_pdf_import_id: @import.id).count
   end
 
+  test "a retry repeats a failed check warning stored on the draft" do
+    stub_ai(:extract_pdf, returns: statement(closing: 1.0))
+    first = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+    assert_not first[:checks_passed]
+
+    second = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert second[:already_imported]
+    assert_not second[:checks_passed]
+    assert_match "failed its checks", second[:message]
+  end
+
+  test "a retry of a draft without stored checks keeps the plain answer" do
+    stub_ai(:extract_pdf, returns: statement)
+    first = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+    Import.find(first[:import_id]).update!(extraction_checks: nil)
+
+    second = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert second[:already_imported]
+    assert_nil second[:checks_passed]
+    assert_no_match "failed its checks", second[:message]
+  end
+
   test "the same statement for another account is an error, not the first account's import" do
     stub_ai(:extract_pdf, returns: statement)
     first = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)

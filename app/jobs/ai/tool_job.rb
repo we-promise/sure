@@ -47,6 +47,7 @@ class Ai::ToolJob < ApplicationJob
       return busy_result(fn_class) unless WAITING.try_acquire
 
       acquired = true
+      enqueued = false
       inflight = inflight_key(fn_class.name, user, arguments)
       job = new(fn_class.name, user, arguments)
       job.job_id = SecureRandom.uuid
@@ -65,13 +66,15 @@ class Ai::ToolJob < ApplicationJob
         release_claim(inflight, job.job_id)
         return tool_failure(fn_class)
       end
+      enqueued = true
 
       wait_for(job.job_id, fn_class, timeout)
     rescue StandardError => error
       # An enqueue failure is a tool failure, not a lost call the client can
-      # safely retry: the tool may never have run.
+      # safely retry: the tool may never have run. Once enqueued, the worker owns
+      # the claim: a polling error here must not let a retry start a second job.
       Rails.logger.error("[Ai::ToolJob] couldn't run #{fn_class.name}: #{error.class}")
-      release_claim(inflight, job&.job_id)
+      release_claim(inflight, job&.job_id) unless enqueued
       tool_failure(fn_class)
     ensure
       WAITING.release if acquired

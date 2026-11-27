@@ -119,6 +119,7 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
           return draft_exists(draft)
         end
 
+        # Stored on the draft so a retry whose response was lost can repeat the check warning.
         created = family.imports.create!(
           type: "TransactionImport",
           account: account,
@@ -131,7 +132,8 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
           category_col_label: "category",
           notes_col_label: "notes",
           date_format: "%Y-%m-%d",
-          signage_convention: "inflows_positive"
+          signage_convention: "inflows_positive",
+          extraction_checks: outcome.checks&.to_h
         )
 
         created.generate_rows_from_csv
@@ -279,13 +281,17 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       # only a plain waiting draft is something a retry can simply return.
       return draft_exists(derived) unless derived.pending? && derived.entries.none?
 
+      checks = if derived.extraction_checks.present?
+        Ai::Generations::ExtractBankStatement::Checks.from_h(derived.extraction_checks)
+      end
       {
         success: true,
         already_imported: true,
         import_id: derived.id,
         transaction_count: derived.rows_count,
+        checks_passed: checks&.passed?,
         message: "This statement was already imported (import #{derived.id}); returning the existing draft. " \
-                 "Review and publish it when ready."
+                 "#{checks ? check_note(checks) : ""}Review and publish it when ready."
       }
     end
 
