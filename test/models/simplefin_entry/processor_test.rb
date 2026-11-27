@@ -22,6 +22,88 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     )
   end
 
+  test "dividend security names do not act as tax or return qualifiers" do
+    [ "DIVIDEND RECEIVED FIDELITY TAX-FREE BOND FUND",
+      "DIVIDEND RECEIVED FIDELITY TOTAL-RETURN FUND",
+      "DIVIDEND RECEIVED FIDELITY TOTAL RETURN BOND FUND" ].each_with_index do |description, index|
+      [ "1.00", "-1.00" ].each_with_index do |raw_amount, sign|
+        tx = { id: "synthetic_dividend_fund_#{index}_#{sign}", amount: raw_amount,
+               description: description, currency: "USD", posted: Date.current.to_s }
+        SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+        entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
+        assert_equal BigDecimal("-1"), entry.amount
+        assert_equal "dividend", entry.transaction.extra.dig("simplefin", "amount_normalization")
+      end
+    end
+  end
+
+  test "dividend transaction qualifiers retain upstream signs" do
+    [ "DIVIDEND RECEIVED TAX", "DIVIDEND RECEIVED WITHHOLDING",
+      "DIVIDEND RECEIVED EXAMPLE FUND WITHHELD", "DIVIDEND RECEIVED EXAMPLE FUND NRA WITHHELD",
+      "DIVIDEND RECEIVED EXAMPLE FUND REVERSAL", "DIVIDEND RECEIVED RETURN OF CAPITAL",
+      "DIVIDEND RECEIVED TAXES", "DIVIDEND RECEIVED EXAMPLE FUND RETURN (CASH)",
+      "DIVIDEND RECEIVED TOTAL RETURN OF CAPITAL" ].each_with_index do |description, index|
+      [ "1.00", "-1.00" ].each_with_index do |raw_amount, sign|
+        tx = { id: "synthetic_dividend_qualifier_#{index}_#{sign}", amount: raw_amount,
+               description: description, currency: "USD", posted: Date.current.to_s }
+        SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+        entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
+        assert_equal(-BigDecimal(raw_amount), entry.amount)
+        assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+      end
+    end
+  end
+
+  test "user modified non Fidelity entries keep their name source fields" do
+    @simplefin_account.update!(org_data: { domain: "example.com" })
+    tx = { id: "synthetic_protected_name", amount: "-1.00", currency: "USD",
+           payee: "Old Payee", description: "Coffee", memo: "Original memo", posted: Date.current.to_s }
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+    entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
+    entry.update!(user_modified: true)
+    SimplefinEntry::Processor.new(tx.except(:memo).merge(payee: "New Payee", description: "Changed"), simplefin_account: @simplefin_account).process
+    entry.reload
+    assert_equal "Old Payee - Coffee", entry.name
+    assert_equal BigDecimal("1"), entry.amount
+    assert_equal({ "payee" => "Old Payee", "description" => "Coffee", "memo" => "Original memo" },
+      entry.transaction.extra.fetch("simplefin").slice("payee", "description", "memo"))
+    assert_not entry.transaction.extra.fetch("simplefin").key?("amount_normalization")
+  end
+
+  test "protected amounts keep their applied normalization marker or its absence" do
+    [ :absent, nil, "legacy_rule" ].each_with_index do |stored_marker, index|
+      tx = { id: "synthetic_protected_amount_#{index}", amount: "1.00", currency: "USD",
+             description: "DIRECT DEBIT", posted: Date.current.to_s }
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
+      sf = entry.transaction.extra.fetch("simplefin").except("amount_normalization")
+      sf["amount_normalization"] = stored_marker unless stored_marker == :absent
+      entry.transaction.update!(extra: entry.transaction.extra.merge("simplefin" => sf))
+      entry.update!(amount: BigDecimal("-1"), user_modified: true)
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      entry.reload
+      assert_equal BigDecimal("-1"), entry.amount
+      actual = entry.transaction.extra.fetch("simplefin")
+      assert_equal stored_marker != :absent, actual.key?("amount_normalization")
+      if stored_marker == :absent || stored_marker.nil?
+        assert_nil actual["amount_normalization"]
+      else
+        assert_equal stored_marker, actual["amount_normalization"]
+      end
+    end
+  end
+
+  test "adjust fee without an explicit rebate retains upstream direction" do
+    [ "1.00", "-1.00" ].each_with_index do |raw_amount, index|
+      tx = { id: "synthetic_adjust_fee_#{index}", amount: raw_amount, currency: "USD",
+             description: "ADJUST FEE CHARGED", posted: Date.current.to_s }
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
+      assert_equal(-BigDecimal(raw_amount), entry.amount)
+      assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
   test "persists extra metadata (raw payee/memo/description and provider extra)" do
     tx = {
       id: "tx_1",
@@ -427,7 +509,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       [ "check_paid", "CHECK PAID", :expense ],
       [ "wire_out", "WIRE TRANSFER TO BANK", :expense ],
       [ "cash_advance", "CASH ADVANCE", :expense ],
-      [ "fee", "ADJUST FEE CHARGED ATM SURCHARGE", :expense ],
+      [ "fee", "FEE CHARGED ATM SURCHARGE", :expense ],
       [ "interest", "INTEREST FULLY PAID", :income ],
       [ "cash_in_lieu", "IN LIEU OF FRX SHARE LEU PAYOUT EXAMPLE SECURITY", :income ]
     ]

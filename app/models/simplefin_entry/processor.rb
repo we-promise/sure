@@ -17,16 +17,19 @@ class SimplefinEntry::Processor
     wire_out: { direction: :expense, pattern: /\AWIRE\s+TRANSFER\s+TO\s+BANK\b/i },
     cash_advance: { direction: :expense, pattern: /\ACASH\s+ADVANCE\b/i },
     fee_rebate: { direction: :income, pattern: /\A(?:ADJUST\s+)?FEE\s+CHARGED\s+ATM\s+FEE\s+REBATE\b/i },
-    fee: { direction: :expense, pattern: /\A(?:ADJUST\s+)?FEE\s+CHARGED\b/i },
+    fee: { direction: :expense, pattern: /\AFEE\s+CHARGED\b/i },
     card_payment: { direction: :income, pattern: /\APAYMENT MADE BY ACCOUNT ENDING IN:\s*\d+\z/i },
     interest: { direction: :income, pattern: /\AINTEREST\s+FULLY\s+PAID\b/i },
     cash_in_lieu: { direction: :income, pattern: /\AIN\s+LIEU\s+OF\s+FRX\s+SHARE\s+LEU\s+PAYOUT\b/i },
     dividend: {
       direction: :income,
-      pattern: /\A(?:DIVIDEND\s+RECEIVED\b(?!.*\b(?:TAX|WITHHOLDING)\b)|DIVIDEND(?:\s+(?:PAYMENT|INCOME|CREDIT))?\z)/i
+      pattern: /\A(?:DIVIDEND\s+RECEIVED\b|DIVIDEND(?:\s+(?:PAYMENT|INCOME|CREDIT))?\z)/i
     }
   }.freeze
   AMBIGUOUS_AMOUNT_TERMS = /\b(?:REVERS|RETURN|REFUND)/i
+  # TAX-FREE and TOTAL RETURN can belong to a security name, not the action.
+  # Withheld tax, reversals and returns of capital are not ordinary dividends.
+  DIVIDEND_TRANSACTION_QUALIFIERS = /\b(?:TAX(?:ES)?(?![-\s]+FREE\b)|WITHHOLDING|WITHHELD)\b|\bRETURN\s+OF\s+CAPITAL\b/i
   # simplefin_transaction is the raw hash fetched from SimpleFin API and converted to JSONB
   # @param import_adapter [Account::ProviderImportAdapter, nil] Optional shared adapter for accumulating skipped entries
   def initialize(simplefin_transaction, simplefin_account:, import_adapter: nil)
@@ -68,7 +71,9 @@ class SimplefinEntry::Processor
       merchant: merchant,
       notes: notes,
       extra: extra_metadata,
-      replace_extra_namespaces: [ "simplefin" ]
+      replace_extra_namespaces: [ "simplefin" ],
+      name_extra_keys: { "simplefin" => %w[payee description memo] },
+      amount_extra_keys: { "simplefin" => [ "amount_normalization" ] }
     )
   end
 
@@ -203,10 +208,15 @@ class SimplefinEntry::Processor
     def find_amount_normalization_rule
       rules = institution_amount_normalization_rules
       return if rules.nil?
-      return if amount_descriptor_fields.any? { |value| value.match?(AMBIGUOUS_AMOUNT_TERMS) }
+      rules.find do |name, rule|
+        amount_descriptor_fields.any? do |value|
+          next false unless value.match?(rule.fetch(:pattern))
+          next false if name == :dividend && value.match?(DIVIDEND_TRANSACTION_QUALIFIERS)
 
-      rules.find do |_name, rule|
-        amount_descriptor_fields.any? { |value| value.match?(rule.fetch(:pattern)) }
+          # Exempt the specific fund-name compound, not arbitrary return language.
+          qualifier_text = name == :dividend ? value.gsub(/\bTOTAL[-\s]+RETURN\b/i, "") : value
+          !qualifier_text.match?(AMBIGUOUS_AMOUNT_TERMS)
+        end
       end
     end
 

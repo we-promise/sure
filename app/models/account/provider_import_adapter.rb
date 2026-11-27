@@ -33,8 +33,11 @@ class Account::ProviderImportAdapter
   # @param name_extra_keys [Hash{String=>Array<String>}] Keys, per namespace, that `name`
   #   was built from. When a protected entry keeps its name, these keep their stored values
   #   too, so the name and the data it came from cannot drift apart.
+  # @param amount_extra_keys [Hash{String=>Array<String>}] Applied amount provenance,
+  #   per namespace. When the amount is protected, preserve stored values or their
+  #   absence rather than claiming that the incoming normalization was applied.
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {})
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {}, amount_extra_keys: {})
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -97,6 +100,7 @@ class Account::ProviderImportAdapter
           if skip_reason == "user_modified" && !entry.import_locked?
             owned = extra.is_a?(Hash) ? extra.deep_stringify_keys.slice(*replace_extra_namespaces.map(&:to_s)) : nil
             owned = keep_name_sources(entry, owned, name_extra_keys)
+            owned = keep_amount_sources(entry, owned, amount_extra_keys)
             apply_provider_extra(entry, owned, replace_extra_namespaces)
           end
 
@@ -1175,6 +1179,25 @@ class Account::ProviderImportAdapter
         end
       end
 
+      owned
+    end
+
+    # Amount provenance differs from legacy name sources: an absent marker means
+    # no recorded normalization, not permission to attach a new applied-rule claim.
+    # Only callers opting in through amount_extra_keys use this preservation path.
+    def keep_amount_sources(entry, owned, amount_extra_keys)
+      return owned if owned.blank? || amount_extra_keys.blank?
+
+      stored = entry.transaction.extra || {}
+      amount_extra_keys.each do |namespace, keys|
+        ns = namespace.to_s
+        next unless owned[ns].is_a?(Hash)
+
+        Array(keys).map(&:to_s).each do |key|
+          owned[ns].delete(key)
+          owned[ns][key] = stored[ns][key] if stored[ns].is_a?(Hash) && stored[ns].key?(key)
+        end
+      end
       owned
     end
 

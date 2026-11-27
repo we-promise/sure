@@ -890,8 +890,10 @@ class SimplefinItem::Importer
             return a_trans > b_trans ? a : b
           end
 
-          # 5) Stable: keep 'a'
-          a
+          # 5) Equal quality: take the later snapshot. Existing rows are visited
+          # first, then the current response, so descriptor/memo corrections on a
+          # stable ID survive resync without overriding a better-ranked record.
+          b
         end
 
         build_key = lambda do |tx|

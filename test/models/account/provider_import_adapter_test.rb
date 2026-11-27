@@ -7,6 +7,34 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
   end
 
+  test "amount provenance preservation is opt in and leaves other providers unchanged" do
+    args = { external_id: "synthetic_other_provider_metadata", amount: 10, currency: "USD",
+             date: Date.current, name: "Original", source: "example",
+             extra: { "example" => { "applied_rule" => "old", "stale" => true } },
+             replace_extra_namespaces: [ "example" ] }
+    entry = @adapter.import_transaction(**args)
+    entry.update!(user_modified: true)
+    @adapter.import_transaction(**args.merge(amount: 99, name: "Incoming",
+      extra: { "example" => { "applied_rule" => "incoming" } }))
+    assert_equal 10, entry.reload.amount
+    assert_equal "Original", entry.name
+    assert_equal({ "applied_rule" => "incoming" }, entry.transaction.extra.fetch("example"))
+  end
+
+  test "unprotected amount provenance follows the current namespace snapshot" do
+    args = { external_id: "synthetic_unprotected_metadata", amount: 10, currency: "USD",
+             date: Date.current, name: "Original", source: "simplefin",
+             extra: { "simplefin" => { "amount_normalization" => "old", "stale" => true } },
+             replace_extra_namespaces: [ "simplefin" ],
+             amount_extra_keys: { "simplefin" => [ "amount_normalization" ] } }
+    entry = @adapter.import_transaction(**args)
+    @adapter.import_transaction(**args.merge(amount: -10, name: "Incoming",
+      extra: { "simplefin" => { "pending" => false } }))
+    assert_equal(-10, entry.reload.amount)
+    assert_equal "Incoming", entry.name
+    assert_equal({ "pending" => false }, entry.transaction.extra.fetch("simplefin"))
+  end
+
   test "imports transaction with all parameters" do
     category = categories(:income)
     merchant = ProviderMerchant.create!(
