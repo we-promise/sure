@@ -1,21 +1,22 @@
 require "sidekiq/fetch"
 
 # Sidekiq rebuilds the queue list on every fetch (at least every 2 s), so
-# dropping ai_low_priority holds those jobs in their queue, in order. A job
-# popped by a fetch that started before the hold goes back to the front of
-# its queue. Only a single-threaded AI capsule holds: with more threads, one
-# is free for the chat anyway.
+# dropping the held queues (ChatReservation::HELD_QUEUES) keeps those jobs in
+# their queues, in order. A job popped by a fetch that started before the hold
+# goes back to the front of its queue. Only a single-threaded ai capsule holds:
+# with more threads, one is free for the chat anyway. The ai_chat capsule polls
+# none of them.
 class ChatReservation::Fetch < Sidekiq::BasicFetch
-  LOW_QUEUE = "queue:ai_low_priority".freeze
+  HELD = ChatReservation::HELD_QUEUES.map { "queue:#{_1}" }.freeze
 
   def queues_cmd
     queues = super
-    holds?(queues) ? queues - [ LOW_QUEUE ] : queues
+    holds?(queues) ? queues - HELD : queues
   end
 
   def retrieve_work
     work = super
-    return work unless work&.queue == LOW_QUEUE && holds?([ LOW_QUEUE ])
+    return work unless HELD.include?(work&.queue) && holds?(HELD)
 
     work.requeue
     nil
@@ -23,6 +24,6 @@ class ChatReservation::Fetch < Sidekiq::BasicFetch
 
   private
     def holds?(queues)
-      queues.include?(LOW_QUEUE) && config.concurrency == 1 && ChatReservation.held?
+      queues.intersect?(HELD) && config.concurrency == 1 && ChatReservation.held?
     end
 end

@@ -5,7 +5,7 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
   teardown { Rails.cache.delete(BackgroundJobHealth::CACHE_KEY) }
 
   test "healthy when a worker polls the critical queue with low latency" do
-    stub_sidekiq(processes: [ { "queues" => [ "high_priority", "default", "ai_high_priority" ] } ], latency: 1.0)
+    stub_sidekiq(processes: [ { "queues" => [ "high_priority", "default", "ai_interactive" ] } ], latency: 1.0)
 
     assert BackgroundJobHealth.healthy?
     assert_equal 1, BackgroundJobHealth.snapshot[:workers]
@@ -24,7 +24,7 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
   end
 
   test "unhealthy when the critical queue is badly backed up" do
-    stub_sidekiq(processes: [ { "queues" => [ "high_priority", "ai_high_priority" ] } ], latency: 9_999)
+    stub_sidekiq(processes: [ { "queues" => [ "high_priority", "ai_interactive" ] } ], latency: 9_999)
 
     assert_not BackgroundJobHealth.healthy?
   end
@@ -35,14 +35,14 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
     assert_not BackgroundJobHealth.healthy?
   end
 
-  test "with one AI thread, a running ai_low_priority job is busy" do
-    stub_running("ai_low_priority")
+  test "with one AI thread, a running background job is busy" do
+    stub_running("ai_background")
 
     assert BackgroundJobHealth.ai_busy?
   end
 
   test "with one AI thread, a running chat is busy for the next one" do
-    stub_running("ai_high_priority")
+    stub_running("ai_interactive")
 
     assert BackgroundJobHealth.ai_busy?
   end
@@ -54,14 +54,14 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
   end
 
   test "the running-job check can be limited to some AI queues" do
-    stub_running("ai_high_priority")
+    stub_running("ai_interactive")
 
     assert BackgroundJobHealth.ai_job_running?
-    assert_not BackgroundJobHealth.ai_job_running?(queues: [ "ai_low_priority" ])
+    assert_not BackgroundJobHealth.ai_job_running?(queues: ChatReservation::HELD_QUEUES)
   end
 
-  test "with several AI threads, a running ai_low_priority job isn't busy" do
-    stub_running("ai_low_priority", one_ai_thread: false)
+  test "with several AI threads, a running background job isn't busy" do
+    stub_running("ai_background", one_ai_thread: false)
 
     assert_not BackgroundJobHealth.ai_busy?
   end
@@ -80,25 +80,26 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
     assert_not BackgroundJobHealth.one_ai_thread?
   end
 
-  test "a worker gets the label only for a one-thread capsule polling both AI queues" do
+  test "a worker gets the label only for a one-thread capsule polling the prompt and background queues" do
     config = Sidekiq::Config.new
-    ai = config.capsule("ai") { |capsule| capsule.queues = %w[ai_high_priority ai_low_priority] }
+    config.capsule("ai_chat") { |capsule| capsule.queues = %w[ai_interactive]; capsule.concurrency = 1 }
+    ai = config.capsule("ai") { |capsule| capsule.queues = %w[ai_high_priority ai_prompt ai_background ai_low_priority] }
 
     ai.concurrency = 1
-    assert BackgroundJobHealth.one_ai_thread_worker?(config)
+    assert BackgroundJobHealth.one_ai_thread_worker?(config), "the chat capsule's thread doesn't count"
 
     ai.concurrency = 2
     assert_not BackgroundJobHealth.one_ai_thread_worker?(config)
 
-    low_only = Sidekiq::Config.new
-    low_only.capsule("ai") { |capsule| capsule.queues = %w[ai_low_priority]; capsule.concurrency = 1 }
-    assert_not BackgroundJobHealth.one_ai_thread_worker?(low_only)
+    background_only = Sidekiq::Config.new
+    background_only.capsule("ai") { |capsule| capsule.queues = %w[ai_background]; capsule.concurrency = 1 }
+    assert_not BackgroundJobHealth.one_ai_thread_worker?(background_only)
   end
 
-  test "no label when another capsule in the worker also polls an AI queue" do
+  test "no label when another capsule in the worker also polls a prompt or background queue" do
     config = Sidekiq::Config.new
-    config.capsule("ai") { |capsule| capsule.queues = %w[ai_high_priority ai_low_priority]; capsule.concurrency = 1 }
-    config.default_capsule { |capsule| capsule.queues = %w[default ai_low_priority]; capsule.concurrency = 2 }
+    config.capsule("ai") { |capsule| capsule.queues = %w[ai_prompt ai_background]; capsule.concurrency = 1 }
+    config.default_capsule { |capsule| capsule.queues = %w[default ai_background]; capsule.concurrency = 2 }
 
     assert_not BackgroundJobHealth.one_ai_thread_worker?(config)
   end
@@ -128,7 +129,7 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
     end
 
     def ai_process(labelled:)
-      stub(queues: %w[default ai_high_priority ai_low_priority], labels: labelled ? [ BackgroundJobHealth::ONE_AI_THREAD_LABEL ] : [])
+      stub(queues: %w[default ai_interactive ai_prompt ai_background], labels: labelled ? [ BackgroundJobHealth::ONE_AI_THREAD_LABEL ] : [])
     end
 
     def stub_running(queue, one_ai_thread: true)

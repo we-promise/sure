@@ -143,28 +143,19 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     assert_equal 0, Ai::GenerationRun.count
   end
 
-  # Issue #2925: a website that arrived before Brandfetch was configured left the merchant
-  # without a logo, and the enhancer never selected it again.
-  test "backfills logos for merchants that already have a website, without calling the model" do
+  # Logos aren't AI: a merchant that already has a website but no logo (issue #2925) waits for
+  # the family sync's backfill, and a click queues only the AI run.
+  test "a click queues only the AI run, which never touches a logo" do
     merchant = provider_merchant("Amazon", website_url: "amazon.com")
     merchant.update_column(:logo_url, nil)
     requests = stub_websites({})
 
-    enhance
+    assert_enqueued_jobs(1) { ProviderMerchant::Enhancer.enhance_later(@family) }
+    assert_enqueued_with(job: Ai::GenerationJob)
+    perform_enqueued_jobs
 
     assert_empty requests
-    assert_equal "https://cdn.brandfetch.io/amazon.com/icon/fallback/lettermark/w/40/h/40?c=test_client_id", merchant.reload.logo_url
-  end
-
-  # A logo backfill failure is cosmetic and must not abort the run.
-  test "a logo backfill failure does not prevent enhancement" do
-    merchant = provider_merchant("Walmart")
-    ProviderMerchant.stubs(:backfill_logos).raises(StandardError, "boom")
-    stub_websites("Walmart" => "walmart.com")
-
-    enhance
-
-    assert_equal "walmart.com", merchant.reload.website_url
+    assert_nil merchant.reload.logo_url
   end
 
   test "keeps a provider-supplied logo when adding the website" do

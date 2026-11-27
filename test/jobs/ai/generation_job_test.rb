@@ -73,7 +73,7 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
 
     Ai::GenerationJob.perform_later(:detect_merchants, ai_run_args(:detect_merchants, ids: ID.values_at(*%w[a b c d e]), family: @family))
-    assert_equal "ai_low_priority", enqueued_jobs.first["queue_name"]
+    assert_equal "ai_background", enqueued_jobs.first["queue_name"]
     run_queue
 
     assert_equal [ [ :applied, @family.id, %w[a b] ], [ :applied, @family.id, %w[c d] ], [ :applied, @family.id, %w[e] ],
@@ -393,7 +393,7 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
 
     assert_nothing_raised do
       # A queued job carries its queue; a new one would ask the routes for the gone feature's.
-      Ai::GenerationJob.set(queue: "ai_low_priority").perform_now(:retirement_planner, { ids: ID.values_at(*%w[a]), family_id: @family.id })
+      Ai::GenerationJob.set(queue: "ai_background").perform_now(:retirement_planner, { ids: ID.values_at(*%w[a]), family_id: @family.id })
     end
   end
 

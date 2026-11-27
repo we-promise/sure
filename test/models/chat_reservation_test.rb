@@ -4,6 +4,8 @@ require "sidekiq/capsule"
 # Redis is stubbed: parallel test processes share one Redis, and other tests'
 # chat jobs set the same global key.
 class ChatReservationTest < ActiveSupport::TestCase
+  AI_CAPSULE = %w[ai_high_priority ai_prompt ai_background ai_low_priority].freeze
+
   test "with one AI thread, hold! reserves the AI thread for the TTL" do
     with_hold_redis do |redis|
       assert_equal 60, ChatReservation.hold!
@@ -46,14 +48,14 @@ class ChatReservationTest < ActiveSupport::TestCase
   test "the bubble says busy while a background AI job runs, ready while some wait, else nothing" do
     BackgroundJobHealth.expects(:one_ai_thread?).never
     ChatReservation.stubs(:chat_active?).returns(false)
-    BackgroundJobHealth.stubs(:ai_job_running?).with(queues: [ "ai_low_priority" ]).returns(false)
-    Sidekiq::Queue.stubs(:new).with("ai_low_priority").returns(stub(size: 0))
+    BackgroundJobHealth.stubs(:ai_job_running?).with(queues: ChatReservation::HELD_QUEUES).returns(false)
+    Sidekiq::Queue.stubs(:new).returns(stub(size: 0))
     assert_nil ChatReservation.bubble(60)
 
-    Sidekiq::Queue.stubs(:new).with("ai_low_priority").returns(stub(size: 2))
+    Sidekiq::Queue.stubs(:new).with("ai_background").returns(stub(size: 2))
     assert_equal({ seconds: 60, busy: false }, ChatReservation.bubble(60))
 
-    BackgroundJobHealth.stubs(:ai_job_running?).with(queues: [ "ai_low_priority" ]).returns(true)
+    BackgroundJobHealth.stubs(:ai_job_running?).with(queues: ChatReservation::HELD_QUEUES).returns(true)
     assert_equal({ seconds: 60, busy: true }, ChatReservation.bubble(60))
     assert_nil ChatReservation.bubble(nil)
   end
@@ -92,33 +94,33 @@ class ChatReservationTest < ActiveSupport::TestCase
     assert_equal :reply, ChatReservation.while_chat_runs { :reply }
   end
 
-  test "the AI capsule skips ai_low_priority while a reservation is held" do
-    fetch = fetch_for(%w[ai_high_priority ai_low_priority])
+  test "the ai capsule skips its prompt and background queues while a reservation is held" do
+    fetch = fetch_for(AI_CAPSULE)
 
     ChatReservation.stubs(:held?).returns(false)
-    assert_equal %w[queue:ai_high_priority queue:ai_low_priority], fetch.queues_cmd
+    assert_equal AI_CAPSULE.map { "queue:#{_1}" }, fetch.queues_cmd
 
     ChatReservation.stubs(:held?).returns(true)
-    assert_equal %w[queue:ai_high_priority], fetch.queues_cmd
+    assert_equal %w[queue:ai_high_priority], fetch.queues_cmd, "chats queued before the lanes still run"
   end
 
-  test "other capsules' queues are left alone" do
-    fetch = fetch_for(%w[high_priority default])
+  test "other capsules' queues are left alone, the ai_chat capsule's included" do
     ChatReservation.expects(:held?).never
 
-    assert_equal %w[queue:high_priority queue:default], fetch.queues_cmd
+    assert_equal %w[queue:high_priority queue:default], fetch_for(%w[high_priority default]).queues_cmd
+    assert_equal %w[queue:ai_interactive], fetch_for(%w[ai_interactive]).queues_cmd
   end
 
   test "an AI capsule with several threads ignores the reservation" do
-    fetch = fetch_for(%w[ai_high_priority ai_low_priority], concurrency: 2)
+    fetch = fetch_for(AI_CAPSULE, concurrency: 2)
     ChatReservation.stubs(:held?).returns(true)
 
-    assert_equal %w[queue:ai_high_priority queue:ai_low_priority], fetch.queues_cmd
+    assert_equal AI_CAPSULE.map { "queue:#{_1}" }, fetch.queues_cmd
   end
 
-  test "an ai_low_priority job popped after a hold started goes back to its queue" do
-    fetch = fetch_for(%w[ai_high_priority ai_low_priority])
-    work = Sidekiq::BasicFetch::UnitOfWork.new("queue:ai_low_priority", "{}", nil)
+  test "a background job popped after a hold started goes back to its queue" do
+    fetch = fetch_for(AI_CAPSULE)
+    work = Sidekiq::BasicFetch::UnitOfWork.new("queue:ai_background", "{}", nil)
     Sidekiq::BasicFetch.any_instance.stubs(:retrieve_work).returns(work)
 
     ChatReservation.stubs(:held?).returns(true)

@@ -18,9 +18,6 @@ class Ai::GenerationRun::Window
     @examined_ids = []
   end
 
-  # The first window of the run: nothing read yet and nothing left over.
-  def first? = @start.zero? && @pending.empty?
-
   # Yields chunks of ids, expecting the ones that match back. Returns the matching ids, at most
   # `size` from the table; pending ids are always examined, since there are never more than a batch.
   def take_matching

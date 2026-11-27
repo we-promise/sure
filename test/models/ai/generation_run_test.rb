@@ -52,8 +52,6 @@ class Ai::GenerationRunTest < ActiveSupport::TestCase
     run = start(@ids)
 
     assert_equal 2 + 7, run.window(cursor: 5, pending: @ids.first(2), size: 3).outstanding
-    assert run.window(cursor: 0, pending: [], size: 3).first?
-    assert_not run.window(cursor: 0, pending: @ids.first(1), size: 3).first?
   end
 
   test "enqueue saves the first job in the run and queues it once the run commits" do
