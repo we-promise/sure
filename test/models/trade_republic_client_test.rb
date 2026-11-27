@@ -830,6 +830,13 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "EUR", @client.send(:money_currency, payload)
   end
 
+  test "extracts cash from money payloads that report currencyId" do
+    payload = [ { "accountNumber" => "DE123", "currencyId" => "EUR", "amount" => "123.45" } ]
+
+    assert_equal "123.45", @client.send(:money_amount, payload).to_s
+    assert_equal "EUR", @client.send(:money_currency, payload)
+  end
+
   test "keeps positions when Trade Republic has no supported ticker price" do
     @client.define_singleton_method(:subscribe) do |_websocket, payload|
       raise Provider::TradeRepublicClient::ProviderUnavailable if payload[:id].end_with?(".LSX")

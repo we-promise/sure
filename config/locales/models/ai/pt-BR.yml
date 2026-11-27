@@ -1,0 +1,35 @@
+---
+pt-BR:
+  ai:
+    availability:
+      capability_missing:
+        admin: "%{feature} não está disponível: nenhum dos modelos de IA configurados consegue fazer isso. Verifique os modelos em Configurações → Auto-hospedagem."
+        member: "%{feature} não está disponível: nenhum dos modelos de IA configurados consegue fazer isso."
+      no_family_consent:
+        member: "%{feature} precisa que um administrador da família ative a IA. Ele pode ativá-la no assistente de IA."
+      not_configured:
+        admin: "%{feature} não está disponível: nenhum modelo de IA está configurado para isso. Adicione um em Configurações → Auto-hospedagem."
+        member: "%{feature} não está disponível: a IA não está configurada para isso nesta instância."
+      user_disabled:
+        member: "%{feature} precisa que a IA esteja ativada. Você pode ativá-la no assistente de IA."
+    consent_rows:
+      bill_setup: Contas a pagar
+      categorize: Categorias
+      chat: Chat
+      detect_merchants: Estabelecimentos
+      embed: Documentos
+      extract_pdf: Importação de PDF
+    sends:
+      bill_configuration: As configurações atuais da conta a pagar
+      category_names: Os nomes das suas categorias
+      chat_messages: Suas mensagens no chat
+      depends_on_vector_store: Seus documentos enviados, como arquivos inteiros para um armazenamento vetorial ou como trechos de texto para um modelo de embeddings
+      looked_up_financial_data: Os dados financeiros que o assistente consulta para responder
+      merchant_names: Nomes de estabelecimentos
+      provider_category_hints: Categorias sugeridas pelo seu banco
+      search_query: O texto da sua busca
+      stored_document_text: O texto dos extratos armazenados no seu cofre
+      transaction_amounts: Valores das transações
+      transaction_dates: Datas das transações
+      transaction_names: Nomes das transações
+      uploaded_document: O documento que você envia
