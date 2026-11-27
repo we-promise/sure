@@ -280,6 +280,17 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     end
   end
 
+  test "requests the full history window when syncing transactions" do
+    response = stub(added: [], modified: [], removed: [], has_more: false, next_cursor: "cursor")
+
+    @plaid.client.expects(:transactions_sync).with { |request|
+      request.options[:days_requested] == Provider::Plaid::MAX_HISTORY_DAYS &&
+        request.options[:include_original_description] == true
+    }.returns(response)
+
+    @plaid.get_transactions("access-token")
+  end
+
   test "verifies a webhook token against the JWK published for its kid" do
     provider, jwk, key, body = verified_webhook_setup
 
@@ -356,7 +367,7 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     def expect_transaction_page(cursor, pages)
       @plaid.client.expects(:transactions_sync).with do |request|
         request.access_token == "access-token" && request.cursor == cursor &&
-          request.count == 500 && request.options == { include_original_description: true }
+          request.count == 500 && request.options == { include_original_description: true, days_requested: Provider::Plaid::MAX_HISTORY_DAYS }
       end.in_sequence(pages)
     end
 
