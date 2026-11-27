@@ -5,6 +5,9 @@ if ENV["SENTRY_DSN"].present?
     config.breadcrumbs_logger = [ :active_support_logger, :http_logger ]
     config.enabled_environments = %w[production]
 
+    # Send what Rails.error reports: off by default in sentry-rails, so handled errors reached no one.
+    config.rails.register_error_subscriber = true
+
     # Enable sending logs to Sentry
     config.enable_logs = true
     # Patch Ruby logger to forward logs
