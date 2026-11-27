@@ -559,6 +559,17 @@ class Family < ApplicationRecord
     Transaction::BUDGET_EXCLUDED_KINDS + [ "investment_contribution" ]
   end
 
+  # The family's Fees category: an existing one under any locale's name (the
+  # oldest), so a new translation does not create a second Fees category;
+  # otherwise a new one in the current locale.
+  def fees_category
+    categories.fees.order(:created_at).first ||
+      categories.find_or_create_by!(name: I18n.t(Category::FEES_NAME_KEY))
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+    # Another process created it first
+    categories.find_by!(name: I18n.t(Category::FEES_NAME_KEY))
+  end
+
   def investment_contributions_category
     # Find ALL legacy categories (created under old request-locale behavior)
     legacy = categories.where(name: Category.all_investment_contributions_names).order(:created_at).to_a
