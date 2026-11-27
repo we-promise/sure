@@ -6,7 +6,8 @@
   <%= render "loans/rate_change_field",
              label: t("loans.form.rate_change_effective_date"), type: "date",
              name: "account[accountable_attributes][rate_changes][][effective_date]",
-             value: effective_date, disabled: disabled %>
+             value: effective_date, disabled: disabled,
+             attributes: { max: StyledFormBuilder::DATE_FIELD_MAX } %>
 
   <%= render "loans/rate_change_field",
              label: t("loans.form.rate_change_rate"), type: "number",

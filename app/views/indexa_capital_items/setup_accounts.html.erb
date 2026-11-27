@@ -66,6 +66,7 @@
                     <%= t("indexa_capital_items.setup_accounts.sync_start_date_label") %>
                   </label>
                   <input type="date"
+                         max="<%= StyledFormBuilder::DATE_FIELD_MAX %>"
                          id="sync_start_<%= indexa_capital_account.id %>"
                          name="sync_start_dates[<%= indexa_capital_account.id %>]"
                          value="<%= indexa_capital_account.sync_start_date %>"

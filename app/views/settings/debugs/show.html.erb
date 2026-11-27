@@ -21,11 +21,11 @@
       </div>
       <div>
         <%= f.label :start_date, t(".filters.start_date"), class: "block text-sm font-medium text-primary mb-1" %>
-        <%= f.date_field :start_date, value: @start_date || params[:start_date], class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+        <%= f.date_field :start_date, value: @start_date || params[:start_date], max: StyledFormBuilder::DATE_FIELD_MAX, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
       </div>
       <div>
         <%= f.label :end_date, t(".filters.end_date"), class: "block text-sm font-medium text-primary mb-1" %>
-        <%= f.date_field :end_date, value: @end_date || params[:end_date], class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
+        <%= f.date_field :end_date, value: @end_date || params[:end_date], max: StyledFormBuilder::DATE_FIELD_MAX, class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container-inset text-primary w-full" %>
       </div>
       <div>
         <%= f.label :family_id, t(".filters.family_id"), class: "block text-sm font-medium text-primary mb-1" %>
