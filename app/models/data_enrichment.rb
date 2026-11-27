@@ -25,6 +25,7 @@ class DataEnrichment < ApplicationRecord
     simplefin: "simplefin",
     snaptrade: "snaptrade",
     sophtron: "sophtron",
+    stashaway: "stashaway",
     synth: "synth",
     trade_republic: "trade_republic",
     truelayer: "truelayer",

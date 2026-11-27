@@ -1,0 +1,166 @@
+<% items.each do |item| %>
+  <% state = state_for(item) %>
+  <%= render DS::Disclosure.new(variant: :card, open: state != :connected) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-3 w-full">
+        <div class="flex items-center gap-3 min-w-0">
+          <%= render ProviderLogo.new(provider_key: :stashaway) %>
+          <div class="min-w-0">
+            <p class="font-medium text-primary truncate">
+              <%= item.institution_display_name %>
+              <span class="font-normal text-secondary">&middot; <%= item.email %></span>
+            </p>
+            <p class="text-xs text-secondary">
+              <% if item.syncing? %>
+                <%= translation("syncing") %>
+              <% elsif state == :connected %>
+                <%= item.sync_status_summary %>
+              <% elsif state == :code %>
+                <%= translation("awaiting_code") %>
+              <% else %>
+                <%= translation("sign_in_required") %>
+              <% end %>
+            </p>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="mt-4 space-y-4">
+      <div class="flex flex-wrap justify-end gap-2">
+        <% if state == :connected %>
+          <%= render DS::Button.new(
+                text: translation("sync"),
+                icon: "refresh-cw",
+                variant: :outline,
+                href: helpers.sync_stashaway_item_path(item, source: "panel"),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
+        <% end %>
+
+        <%= render DS::Button.new(
+              icon: "trash-2",
+              variant: :outline_destructive,
+              href: helpers.stashaway_item_path(item),
+              method: :delete,
+              confirm: translation("disconnect_confirm"),
+              aria_label: translation("disconnect")
+            ) %>
+      </div>
+
+      <% if item.password_saved? %>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="text-sm text-secondary"><%= translation("password_saved") %></p>
+          <%= render DS::Button.new(
+                text: translation("forget_password"),
+                variant: :ghost,
+                href: helpers.forget_password_stashaway_item_path(item),
+                method: :post
+              ) %>
+        </div>
+      <% end %>
+
+      <% if state == :code %>
+        <%= render DS::Alert.new(message: translation("code_notice"), variant: :info) %>
+
+        <%= helpers.styled_form_with url: helpers.verify_code_stashaway_item_path(item),
+                                     namespace: helpers.dom_id(item, :code),
+                                     scope: :stashaway_login,
+                                     method: :post,
+                                     data: { turbo: true },
+                                     class: "space-y-3" do |form| %>
+          <%= form.text_field :code,
+                              label: translation("code_label"),
+                              placeholder: translation("code_placeholder"),
+                              inputmode: "numeric",
+                              autocomplete: "one-time-code",
+                              required: true %>
+
+          <%= form.submit translation("verify_code") %>
+        <% end %>
+
+        <div class="flex flex-wrap justify-end gap-2">
+          <%= render DS::Button.new(
+                text: translation("resend_code"),
+                variant: :ghost,
+                href: helpers.resend_code_stashaway_item_path(item),
+                method: :post
+              ) %>
+          <%= render DS::Button.new(
+                text: translation("cancel_login"),
+                variant: :ghost,
+                href: helpers.cancel_login_stashaway_item_path(item),
+                method: :post
+              ) %>
+        </div>
+      <% elsif state == :sign_in %>
+        <%= render DS::Alert.new(
+              message: item.login_expired? ? translation("code_expired_notice") : translation("sign_in_notice"),
+              variant: :warning
+            ) %>
+
+        <%= helpers.styled_form_with url: helpers.login_stashaway_item_path(item),
+                                     namespace: helpers.dom_id(item, :login),
+                                     scope: :stashaway_login,
+                                     method: :post,
+                                     data: { turbo: true },
+                                     class: "space-y-3" do |form| %>
+          <%= form.password_field :password,
+                                  label: translation("password_label"),
+                                  autocomplete: "current-password",
+                                  required: true %>
+
+          <%= remember_password_field(form, checked: item.password_saved?) %>
+
+          <%= form.submit translation("sign_in") %>
+        <% end %>
+      <% elsif item.unlinked_accounts_count.positive? %>
+        <p class="text-sm text-secondary">
+          <%= translation("accounts_discovered", count: item.unlinked_accounts_count) %>
+          <%= render DS::Link.new(
+                text: translation("setup_accounts"),
+                icon: "plus",
+                variant: "primary",
+                href: helpers.setup_accounts_stashaway_item_path(item),
+                frame: :modal
+              ) %>
+        </p>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
+
+<% if items.any? %>
+  <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
+    <%= helpers.icon "plus", size: "sm" %>
+    <%= translation("add_connection") %>
+  </h3>
+<% end %>
+
+<%= helpers.styled_form_with url: helpers.stashaway_items_path,
+                             namespace: helpers.dom_id(new_item),
+                             scope: :stashaway_login,
+                             method: :post,
+                             data: { turbo: true },
+                             class: "space-y-3" do |form| %>
+  <%= form.select :region,
+                  options_for_select(region_options, new_item.region),
+                  { label: translation("region_label") } %>
+
+  <%= form.email_field :email,
+                       label: translation("email_label"),
+                       placeholder: translation("email_placeholder"),
+                       value: new_item.email,
+                       autocomplete: "username",
+                       required: true %>
+
+  <%= form.password_field :password,
+                          label: translation("password_label"),
+                          autocomplete: "current-password",
+                          required: true %>
+
+  <%= remember_password_field(form) %>
+
+  <%= form.submit translation("connect") %>
+<% end %>

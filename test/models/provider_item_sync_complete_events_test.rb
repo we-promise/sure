@@ -11,7 +11,7 @@ class ProviderItemSyncCompleteEventsTest < ActiveSupport::TestCase
   PROVIDERS = %w[
     binance_item coinspot_item fio_item ibkr_item indexa_capital_item kraken_item
     lunchflow_item mercury_item monobank_item plaid_item redbark_item
-    snaptrade_item trade_republic_item trading212_item wise_item
+    snaptrade_item stashaway_item trade_republic_item trading212_item wise_item
   ].freeze
 
   PROVIDERS.each do |provider|
