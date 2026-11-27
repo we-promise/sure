@@ -407,6 +407,31 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal category, transfer.outflow_transaction.category
   end
 
+  test "set_as_transfer_or_payment skips pending transfers and processes other matches" do
+    pending_inflow = create_transaction(account: accounts(:depository), amount: -100).transaction
+    pending_transfer = Transfer.create!(inflow_transaction: pending_inflow, outflow_transaction: @txn1, status: :pending)
+    target = accounts(:credit_card)
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_as_transfer_or_payment", value: target.id)
+    scope = @family.transactions.where(id: [ pending_inflow.id, @txn1.id, @txn3.id ])
+
+    assert_difference "Transfer.count", 1 do
+      assert_equal 1, action.apply(scope)
+    end
+
+    assert_predicate pending_transfer.reload, :pending?
+    [ pending_inflow, @txn1 ].each do |transaction|
+      assert_equal pending_transfer, transaction.reload.transfer
+      assert_equal "standard", transaction.kind
+    end
+
+    transfer = @txn3.reload.transfer
+    assert_predicate transfer, :confirmed?
+    assert_equal target, transfer.inflow_transaction.entry.account
+    assert_no_difference "Transfer.count" do
+      assert_equal 0, action.apply(scope)
+    end
+  end
+
   test "set_investment_activity_label ignores invalid values" do
     action = Rule::Action.new(
       rule: @transaction_rule,
