@@ -128,7 +128,7 @@ class Budget < ApplicationRecord
       budget_categories.create!(
         category: current_categories_by_id.fetch(category_id),
         budgeted_spending: 0,
-        currency: family.currency,
+        currency: currency,
         rollover_enabled: inherited_rollover.fetch(category_id, false)
       )
     end
@@ -157,7 +157,7 @@ class Budget < ApplicationRecord
   def uncategorized_budget_category
     budget_categories.uncategorized.tap do |bc|
       bc.budgeted_spending = [ available_to_allocate, 0 ].max
-      bc.currency = family.currency
+      bc.currency = currency
     end
   end
 
@@ -550,7 +550,7 @@ class Budget < ApplicationRecord
       0.to_d
     end
     def income_statement
-      @income_statement ||= family.income_statement(user: current_user, accounts: income_statement_accounts)
+      @income_statement ||= family.income_statement(user: current_user, accounts: income_statement_accounts, currency: currency)
     end
 
     # nil for the household budget (IncomeStatement falls back to whatever

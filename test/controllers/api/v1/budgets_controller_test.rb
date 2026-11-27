@@ -61,9 +61,47 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
       available_to_spend_cents
       available_to_allocate
       available_to_allocate_cents
+      uncategorized
     ].each do |derived_field|
       assert_not budget_response.key?(derived_field), "Expected budget index to omit #{derived_field}"
     end
+  end
+
+  test "uncategorized line retains the budget currency after the family changes currency" do
+    @family.update!(currency: "EUR")
+    get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
+    assert_response :success
+    data = JSON.parse(response.body)
+    assert_equal "USD", data.dig("uncategorized", "currency")
+    assert_equal data["available_to_allocate_cents"], data.dig("uncategorized", "budgeted_spending_cents")
+  end
+
+  test "historical budget actuals retain their currency with nonzero spending after a family currency change" do
+    date = @budget.start_date + 3.days
+    Entry.create!(account: accounts(:depository), entryable: Transaction.new,
+      name: "Historical uncategorized expense", date:, amount: 100, currency: "USD")
+    Entry.create!(account: accounts(:depository), entryable: Transaction.new(category: @budget_category.category),
+      name: "Historical category expense", date:, amount: 100, currency: "USD")
+    ExchangeRate.upsert_all([ { from_currency: "USD", to_currency: "EUR", date:, rate: BigDecimal("0.8") } ],
+      unique_by: %i[from_currency to_currency date])
+    @family.update!(currency: "EUR")
+
+    # Warm the family-currency cache first: budget snapshots must not reuse its EUR totals.
+    assert_equal BigDecimal("160"), @family.income_statement.expense_totals(period: @budget.period).total
+    get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
+    assert_response :success
+    data = JSON.parse(response.body)
+    assert_equal 20_000, data["actual_spending_cents"]
+    assert_equal "USD", data.dig("uncategorized", "currency")
+    assert_equal 10_000, data.dig("uncategorized", "actual_spending_cents")
+    assert_equal 240_000, data.dig("uncategorized", "available_to_spend_cents")
+
+    get api_v1_budget_categories_url, params: { budget_id: @budget.id, per_page: 100 }, headers: api_headers(@api_key)
+    assert_response :success
+    line = JSON.parse(response.body)["budget_categories"].find { |item| item["id"] == @budget_category.id }
+    assert_equal "USD", line["currency"]
+    assert_equal 10_000, line["actual_spending_cents"]
+    assert_equal 40_000, line["available_to_spend_cents"]
   end
 
   test "shows a budget" do
@@ -80,6 +118,52 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_kind_of Integer, response_data["actual_income_cents"]
     assert_kind_of Integer, response_data["available_to_spend_cents"]
     assert_kind_of Integer, response_data["available_to_allocate_cents"]
+  end
+
+  test "show includes the uncategorized line the web budget page synthesizes" do
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: Transaction.create!(category: nil),
+      date: @budget.start_date + 10.days,
+      name: "Uncategorized API spending",
+      amount: 75,
+      currency: "USD"
+    )
+
+    get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
+
+    assert_response :success
+    uncategorized = JSON.parse(response.body)["uncategorized"]
+    assert_equal BudgetCategory.uncategorized.id, uncategorized["id"]
+    assert_equal "USD", uncategorized["currency"]
+    # Budgeted with what is left after allocating to categories: 3,000 - 500.
+    assert_equal 250_000, uncategorized["budgeted_spending_cents"]
+    assert_equal 7_500, uncategorized["actual_spending_cents"]
+    assert_equal 242_500, uncategorized["available_to_spend_cents"]
+    assert_equal I18n.t(Category::UNCATEGORIZED_NAME_KEY), uncategorized.dig("category", "name")
+    assert_equal Category::UNCATEGORIZED_COLOR, uncategorized.dig("category", "color")
+    assert_equal "circle-dashed", uncategorized.dig("category", "lucide_icon")
+  end
+
+  test "show budgets nothing to the uncategorized line of an uninitialized budget" do
+    @budget.update!(budgeted_spending: nil)
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: Transaction.create!(category: nil),
+      date: @budget.start_date + 10.days,
+      name: "Uncategorized API spending",
+      amount: 40,
+      currency: "USD"
+    )
+
+    get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
+
+    assert_response :success
+    uncategorized = JSON.parse(response.body)["uncategorized"]
+    assert_equal false, JSON.parse(response.body)["initialized"]
+    assert_equal 0, uncategorized["budgeted_spending_cents"]
+    assert_equal 4_000, uncategorized["actual_spending_cents"]
+    assert_equal(-4_000, uncategorized["available_to_spend_cents"])
   end
 
   test "returns not found for another family's budget" do
