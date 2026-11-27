@@ -19,6 +19,7 @@ class LocalizeTest < ActionDispatch::IntegrationTest
     get preferences_onboarding_url, headers: { "Accept-Language" => "es-ES,es;q=0.9" }
     assert_response :success
     assert_select "h1", text: /Configura tus preferencias/i
+    assert_equal "es", users(:family_admin).reload.locale
   end
 
   test "falls back to family locale when Accept-Language is unsupported" do
