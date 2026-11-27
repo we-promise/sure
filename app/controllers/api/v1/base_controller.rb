@@ -332,6 +332,20 @@ class Api::V1::BaseController < ApplicationController
       Integer(raw.to_s.strip, 10, exception: false)
     end
 
+    # nil and a blank string mean the client left the number out. Anything
+    # else, a JSON false included, was sent and has to parse.
+    def numeric_param_given?(raw)
+      raw.is_a?(String) ? raw.present? : !raw.nil?
+    end
+
+    def malformed_decimal?(raw)
+      numeric_param_given?(raw) && parse_decimal(raw).nil?
+    end
+
+    def malformed_integer?(raw)
+      numeric_param_given?(raw) && parse_integer(raw).nil?
+    end
+
     def parse_date_param(key)
       Date.iso8601(params[key].to_s)
     rescue ArgumentError

@@ -324,6 +324,23 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
     end
   end
 
+  test "create refuses boolean JSON numbers and creates nothing" do
+    { "must be a valid number" => %i[amount expected_amount_min expected_amount_max expected_amount_avg],
+      "must be a valid integer" => %i[expected_day_of_month occurrence_count] }.each do |message, keys|
+      keys.product([ false, true ]).each do |key, value|
+        params = valid_recurring_transaction_params.deep_dup
+        params[:recurring_transaction][key] = value
+
+        assert_no_difference("@family.recurring_transactions.count", "#{key}=#{value}") do
+          post api_v1_recurring_transactions_url, params: params, headers: api_headers(@api_key), as: :json
+        end
+
+        assert_response :unprocessable_entity, "#{key}=#{value}"
+        assert_includes JSON.parse(response.body)["errors"], "#{key.to_s.humanize} #{message}"
+      end
+    end
+  end
+
   test "should return conflict when creating duplicate recurring transaction" do
     params = {
       recurring_transaction: {
@@ -371,6 +388,20 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
       end
 
       assert_response :unprocessable_entity, value
+      assert_includes JSON.parse(response.body)["errors"], "Expected day of month must be a valid integer"
+    end
+  end
+
+  test "update refuses a boolean JSON expected day of month" do
+    [ false, true ].each do |value|
+      assert_no_changes -> { @recurring_transaction.reload.expected_day_of_month }, value.inspect do
+        patch api_v1_recurring_transaction_url(@recurring_transaction),
+              params: { recurring_transaction: { expected_day_of_month: value } },
+              headers: api_headers(@api_key),
+              as: :json
+      end
+
+      assert_response :unprocessable_entity, value.inspect
       assert_includes JSON.parse(response.body)["errors"], "Expected day of month must be a valid integer"
     end
   end

@@ -69,6 +69,20 @@ class Api::V1::ImportSessionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "rejects boolean JSON expected chunk counts" do
+    [ false, true ].each do |expected_chunks|
+      assert_no_difference("ImportSession.count", expected_chunks.inspect) do
+        post api_v1_import_sessions_url,
+             params: { type: "SureImport", expected_chunks: expected_chunks },
+             headers: api_headers(@api_key),
+             as: :json
+      end
+
+      assert_response :unprocessable_entity, expected_chunks.inspect
+      assert_equal "expected_chunks must be a valid integer", JSON.parse(response.body)["message"], expected_chunks.inspect
+    end
+  end
+
   test "reads expected chunk counts in base 10" do
     post api_v1_import_sessions_url,
          params: { type: "SureImport", expected_chunks: "010" },
@@ -169,6 +183,22 @@ class Api::V1::ImportSessionsControllerTest < ActionDispatch::IntegrationTest
       body = JSON.parse(response.body)
       assert_equal "validation_failed", body["error"]
       assert_equal "sequence must be a valid integer", body["message"], sequence
+    end
+  end
+
+  test "rejects boolean JSON chunk sequence values" do
+    session = build_import_session
+
+    [ false, true ].each do |sequence|
+      assert_no_difference("session.imports.count", sequence.inspect) do
+        post chunks_api_v1_import_session_url(session),
+             params: { sequence: sequence, raw_file_content: build_ndjson(entity_records) },
+             headers: api_headers(@api_key),
+             as: :json
+      end
+
+      assert_response :unprocessable_entity, sequence.inspect
+      assert_equal "sequence must be a valid integer", JSON.parse(response.body)["message"], sequence.inspect
     end
   end
 

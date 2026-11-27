@@ -63,7 +63,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       return
     end
 
-    unless valuation_params[:amount].present?
+    unless numeric_param_given?(valuation_params[:amount])
       render json: {
         error: "validation_failed",
         message: "Amount is required",
@@ -150,8 +150,8 @@ class Api::V1::ValuationsController < Api::V1::BaseController
   end
 
   def update
-    if valuation_params[:date].present? || valuation_params[:amount].present?
-      unless valuation_params[:date].present? && valuation_params[:amount].present?
+    if valuation_params[:date].present? || numeric_param_given?(valuation_params[:amount])
+      unless valuation_params[:date].present? && numeric_param_given?(valuation_params[:amount])
         render json: {
           error: "validation_failed",
           message: "Both amount and date are required when updating reconciliation",

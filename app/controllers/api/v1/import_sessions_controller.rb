@@ -8,7 +8,7 @@ class Api::V1::ImportSessionsController < Api::V1::BaseController
   before_action :set_import_session, only: [ :show, :create_chunk, :publish ]
 
   def create
-    return render_validation_error("expected_chunks must be a valid integer") if malformed_integer_param?(:expected_chunks)
+    return render_validation_error("expected_chunks must be a valid integer") if malformed_integer?(params[:expected_chunks])
 
     @import_session = ImportSession.create_or_find_for!(
       family: current_resource_owner.family,
@@ -36,7 +36,7 @@ class Api::V1::ImportSessionsController < Api::V1::BaseController
   def create_chunk
     content, filename, content_type = sure_import_upload_attributes
     return unless content
-    return render_validation_error("sequence must be a valid integer") if malformed_integer_param?(:sequence)
+    return render_validation_error("sequence must be a valid integer") if malformed_integer?(params[:sequence])
 
     @import_session.attach_chunk!(
       sequence: sequence_param,
@@ -94,10 +94,6 @@ class Api::V1::ImportSessionsController < Api::V1::BaseController
       raise ActionController::ParameterMissing.new(:sequence) if params[:sequence].blank?
 
       parse_integer(params[:sequence])
-    end
-
-    def malformed_integer_param?(key)
-      params[key].present? && parse_integer(params[key]).nil?
     end
 
     def sure_import_upload_attributes

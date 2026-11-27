@@ -237,10 +237,10 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
     # Blank values fall through to the model's own validations.
     def validate_numeric_write_params(recurring_transaction, permitted)
       permitted.slice(*DECIMAL_PARAMS).each do |key, raw|
-        recurring_transaction.errors.add(key, "must be a valid number") if raw.present? && parse_decimal(raw).nil?
+        recurring_transaction.errors.add(key, "must be a valid number") if malformed_decimal?(raw)
       end
       permitted.slice(*INTEGER_PARAMS).each do |key, raw|
-        recurring_transaction.errors.add(key, "must be a valid integer") if raw.present? && parse_integer(raw).nil?
+        recurring_transaction.errors.add(key, "must be a valid integer") if malformed_integer?(raw)
       end
     end
 

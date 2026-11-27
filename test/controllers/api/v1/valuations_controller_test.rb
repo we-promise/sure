@@ -325,6 +325,21 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "update refuses a boolean JSON amount and leaves the valuation as it was" do
+    entry = @valuation.entry
+
+    [ false, true ].each do |amount|
+      assert_no_changes -> { [ entry.reload.amount, entry.notes ] }, amount.inspect do
+        patch api_v1_valuation_url(entry),
+              params: { valuation: { amount: amount, notes: "Changed" } },
+              headers: api_headers(@api_key),
+              as: :json
+      end
+
+      assert_response :unprocessable_entity, amount.inspect
+    end
+  end
+
   test "should update valuation notes only" do
     entry = @valuation.entry
     update_params = {

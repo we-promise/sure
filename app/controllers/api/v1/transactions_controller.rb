@@ -603,7 +603,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     # A blank amount is still 0, as it always was; anything else must parse.
     def malformed_amount?
-      transaction_params[:amount].present? && parse_decimal(transaction_params[:amount]).nil?
+      malformed_decimal?(transaction_params[:amount])
     end
 
     def calculate_signed_amount(amount = parse_decimal(transaction_params[:amount]) || 0)
