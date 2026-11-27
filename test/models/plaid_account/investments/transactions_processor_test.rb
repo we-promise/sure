@@ -362,6 +362,81 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_equal "Reinvestment", entry.trade.investment_activity_label
   end
 
+  test "a cash capital-gain distribution is labelled Dividend and classified as income" do
+    long_term = process_plaid_transaction(cash_row("ltcg_1", "long-term capital gain", "Long-term capital gain VTI"))
+    short_term = process_plaid_transaction(cash_row("stcg_1", "short-term capital gain", "Short-term capital gain VTI"))
+
+    assert_equal [ "Dividend", "Dividend" ], [ long_term, short_term ].map { |e| e.transaction.investment_activity_label }
+    assert_equal [ :income, :income ], [ long_term, short_term ].map { |e| classify(e) }
+  end
+
+  # Plaid documents its types in lowercase. A "Cash" row was always stored as
+  # a trade, and moving it to the cash path would collide with that entry.
+  test "a Cash-typed row already stored as a trade re-imports as the same trade" do
+    row = trade_row("cash_type_case_1", "Cash", "dividend")
+    @plaid_account.current_account.entries.create!(
+      name: row["name"], date: row["date"], amount: 12.5, currency: "USD", external_id: row["investment_transaction_id"], source: "plaid",
+      entryable: Trade.new(security: securities(:aapl), qty: 0.1, price: 125, currency: "USD")
+    )
+
+    assert_no_difference [ "Trade.count", "Transaction.count" ] do
+      assert_equal "Trade", process_plaid_transaction(row).entryable_type
+    end
+  end
+
+  test "only a lowercase cash type is routed as a cash transaction" do
+    assert_difference -> { Trade.count } => 0, -> { Transaction.count } => 1 do
+      process_plaid_transaction(cash_row("cash_type_case_2", "dividend", "Dividend AAPL"))
+    end
+
+    assert_difference -> { Trade.count } => 1, -> { Transaction.count } => 0 do
+      process_plaid_transaction(trade_row("cash_type_case_3", "Cash", "dividend"))
+    end
+  end
+
+  test "a dividend and its reversal net to zero income" do
+    dividend = process_plaid_transaction(cash_row("div_rev_1", "dividend", "Dividend AAPL"))
+    reversal = process_plaid_transaction(cash_row("div_rev_2", "dividend", "Dividend AAPL reversal").merge("amount" => 12.5))
+
+    assert_equal [ "Dividend", "Dividend" ], [ dividend, reversal ].map { |e| e.transaction.investment_activity_label }
+    assert_equal [ :income, :income ], [ dividend, reversal ].map { |e| classify(e) }
+    totals = InvestmentStatement::Totals.new(dividend.account.family, account_ids: [ dividend.account_id ], date_range: Date.current..Date.current).call
+    assert_equal 0, totals[:dividends]
+  end
+
+  test "re-syncing keeps a label the user set on a trade" do
+    entry = process_plaid_transaction(trade_row("drip_user_1", "buy", "dividend reinvestment"))
+    entry.trade.update!(investment_activity_label: "Buy")
+    entry.mark_user_modified!
+
+    assert_no_changes -> { entry.trade.reload.investment_activity_label } do
+      PlaidAccount::Investments::TransactionsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+    end
+  end
+
+  # The adapter labels by name only on an investment account.
+  test "a cash row with an unmapped subtype is labelled from its name" do
+    @plaid_account.current_account.update_columns(accountable_type: "Investment", accountable_id: Investment.create!.id)
+    entry = process_plaid_transaction(cash_row("misc_div_1", "miscellaneous", "Dividend AAPL"))
+
+    assert_equal "Dividend", entry.transaction.investment_activity_label
+  end
+
+  test "a cash withdrawal keeps the Other label whatever its name" do
+    @plaid_account.current_account.update_columns(accountable_type: "Investment", accountable_id: Investment.create!.id)
+    row = cash_row("cash_withdraw_1", "withdrawal", "401k withdrawal").merge("amount" => 50)
+    entry = process_plaid_transaction(row)
+
+    assert_equal [ "Other", "standard" ], [ entry.transaction.investment_activity_label, entry.transaction.kind ]
+  end
+
+  test "a cash row with an unmapped subtype and a 401k name keeps Other" do
+    @plaid_account.current_account.update_columns(accountable_type: "Investment", accountable_id: Investment.create!.id)
+    entry = process_plaid_transaction(cash_row("cash_distribution_1", "distribution", "401k distribution"))
+
+    assert_equal [ "Other", "standard" ], [ entry.transaction.investment_activity_label, entry.transaction.kind ]
+  end
+
   private
 
     def cash_row(id, subtype, name)

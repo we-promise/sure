@@ -7,7 +7,6 @@ class PlaidAccount::Investments::TransactionsProcessor
     "buy" => "Buy",
     "sell" => "Sell",
     "cancel" => "Other",
-    "cash" => "Other",
     "fee" => "Fee",
     "transfer" => "Transfer",
     "dividend" => "Dividend",
@@ -24,13 +23,21 @@ class PlaidAccount::Investments::TransactionsProcessor
   # Keyed by type because the same subtypes appear under other types where the
   # type's label is right: "fee" with subtype "interest" can be margin interest
   # charged, and "buy" with subtype "contribution" is still a buy. Those types
-  # have no entry here and fall back to PLAID_TYPE_TO_LABEL.
+  # have no entry here and fall back to PLAID_TYPE_TO_LABEL. Any other "cash"
+  # subtype gets no label, so the adapter labels it from its name; a cash
+  # contribution or withdrawal stays Other, since its name ("401k
+  # contribution") would label it a Contribution.
   PLAID_SUBTYPE_TO_LABEL = {
     "cash" => {
       "dividend" => "Dividend",
       "qualified dividend" => "Dividend",
       "non-qualified dividend" => "Dividend",
-      "interest" => "Interest"
+      # A fund's capital-gain distribution is income paid in cash, as a dividend is.
+      "long-term capital gain" => "Dividend",
+      "short-term capital gain" => "Dividend",
+      "interest" => "Interest",
+      "contribution" => "Other",
+      "withdrawal" => "Other"
     },
     "buy" => {
       "dividend reinvestment" => "Reinvestment"
@@ -112,8 +119,19 @@ class PlaidAccount::Investments::TransactionsProcessor
 
     def label_from_plaid_type(transaction)
       plaid_type = transaction["type"]&.downcase
-      PLAID_SUBTYPE_TO_LABEL.dig(plaid_type, transaction["subtype"]&.downcase) ||
-        PLAID_TYPE_TO_LABEL[plaid_type] || "Other"
+      subtype_label = PLAID_SUBTYPE_TO_LABEL.dig(plaid_type, transaction["subtype"]&.downcase)
+      return subtype_label if subtype_label
+      return unmapped_cash_label(transaction) if plaid_type == "cash"
+
+      PLAID_TYPE_TO_LABEL[plaid_type] || "Other"
+    end
+
+    # Left unlabelled so the adapter can label it from the name, except where
+    # that name reads as a contribution: Plaid sorts contributions into their
+    # own subtype, so a 401k-style name under any other cash subtype, such as
+    # a distribution, is not one.
+    def unmapped_cash_label(transaction)
+      "Other" if import_adapter.detect_activity_label(transaction["name"], transaction["amount"]) == "Contribution"
     end
 
     def transactions
