@@ -56,6 +56,7 @@
             ) %>
 
             <%= render DS::Menu.new do |menu| %>
+              <% sync_schedule_menu_item(menu, trading212_item) %>
               <% if unlinked_count > 0 %>
                 <% menu.with_item(
                   variant: "link",

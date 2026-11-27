@@ -1,0 +1,29 @@
+---
+pt-PT:
+  settings:
+    llm_usages:
+      show:
+        page_title: "Utilização e custos dos modelos de IA"
+        subtitle: "Acompanhe a utilização da IA e os custos previstos"
+        start_date: "Data de início"
+        end_date: "Data de fim"
+        filter: "Filtrar"
+        total_requests: "Total de Pedidos"
+        total_tokens: "Total de Tokens"
+        prompt: "pré-preenchimento"
+        completion: "conclusão"
+        total_cost: "Custo Total"
+        avg_cost_per_request: "Custo Médio/Pedido"
+        based_on_requests: "Com base em %{with_cost} de %{total} pedidos com dados de custo"
+        cost_by_operation: "Custo por Operação"
+        cost_by_model: "Custo por Modelo"
+        recent_usage: "Utilização Recente"
+        col_date: "Data"
+        col_operation: "Operação"
+        col_model: "Modelo"
+        col_tokens: "Tokens"
+        col_cost: "Custo"
+        failed: "Falhadas"
+        no_usage_data: "Não foram encontrados dados de utilização para o período selecionado"
+        cost_estimates_title: "Sobre as Estimativas de Custo"
+        cost_estimates_description: "Os custos são estimados com base nos preços publicados dos serviços, verificados pela última vez em %{date}. Os custos reais podem variar. O preço é por 1 milhão de tokens e varia consoante o modelo. Os modelos personalizados ou autoalojados mostrarão \"N/A\" e não estão incluídos nos totais de custo."

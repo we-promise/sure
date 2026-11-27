@@ -145,9 +145,30 @@ class Provider::TradeRepublicClient
   # Stored trades whose detail is still incomplete after a fetch; the backlog
   # retries the least recently attempted first.
   DETAIL_BACKFILL_ATTEMPTED_AT_KEY = "detail_backfill_attempted_at"
+  # Transfers and direct debits can carry a payment reference. The timeline
+  # list never includes it; only timelineDetailV2 does, as the text of a
+  # section of type "note". Card payments and the other cash movements have
+  # none, so they don't spend the detail budget.
+  CASH_NOTE_EVENT_TYPES = %w[
+    BANK_TRANSACTION_INCOMING
+    INCOMING_TRANSFER
+    INCOMING_TRANSFER_DELEGATION
+    PAYMENT_INBOUND
+    PAYMENT_INBOUND_SEPA_DIRECT_DEBIT
+    BANK_TRANSACTION_OUTGOING
+    BANK_TRANSACTION_OUTGOING_DIRECT_DEBIT
+    BANK_TRANSACTION_OUTGOING_SCHEDULED
+    OUTGOING_TRANSFER
+    OUTGOING_TRANSFER_DELEGATION
+    PAYMENT_OUTBOUND
+  ].freeze
+  NOTE_SECTION_TYPE = "note"
+  # Set once the detail of a transfer was read, with or without a note, so
+  # transfers without a note are not fetched again.
+  NOTE_CHECKED_AT_KEY = "note_checked_at"
   RETRY_MARKER_KEYS = [
     PRICE_BACKFILL_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY,
-    DETAIL_BACKFILL_ATTEMPTED_AT_KEY
+    DETAIL_BACKFILL_ATTEMPTED_AT_KEY, NOTE_CHECKED_AT_KEY
   ].freeze
   # Cap instrument lookups for sold / historical trade ISINs that are absent
   # from the current portfolio snapshot.
@@ -361,7 +382,7 @@ class Provider::TradeRepublicClient
     end
   end
 
-  def sync(session_txt:, known_newest_event_id: nil, timeline_cursors: {}, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {})
+  def sync(session_txt:, known_newest_event_id: nil, timeline_cursors: {}, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [], note_read_event_ids: [], symbol_lookup_isins: [], known_instrument_symbols: {})
     raise ConfigurationError, "session_txt is required" if session_txt.blank?
 
     interrupted_backfills = {}
@@ -372,6 +393,7 @@ class Provider::TradeRepublicClient
         timeline_cursors: timeline_cursors,
         timeline_max_pages: timeline_max_pages,
         enrich_events: enrich_events,
+        note_read_event_ids: note_read_event_ids,
         symbol_lookup_isins: symbol_lookup_isins,
         known_instrument_symbols: known_instrument_symbols,
         interrupted_backfills: interrupted_backfills
@@ -382,7 +404,7 @@ class Provider::TradeRepublicClient
     end
   end
 
-  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, timeline_cursors: {}, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {}, interrupted_backfills: {})
+  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, timeline_cursors: {}, enrich_events: [], note_read_event_ids: [], symbol_lookup_isins: [], known_instrument_symbols: {}, interrupted_backfills: {})
     session = new_session(session_blob: session_txt)
     account_response = session.get("/api/v2/auth/account")
     if [ 401, 403 ].include?(account_response.code.to_i) && !waf_error?(account_response)
@@ -449,6 +471,7 @@ class Provider::TradeRepublicClient
           known_newest_event_id: known_newest_event_id,
           max_pages: timeline_max_pages.to_i,
           enrich_events: enrich_events,
+          note_read_event_ids: note_read_event_ids,
           timeline_cursors: timeline_cursors,
           interrupted_backfills: interrupted_backfills
         )
@@ -555,6 +578,26 @@ class Provider::TradeRepublicClient
       !(detail.is_a?(Hash) && detail.stringify_keys["isin"].present?)
     end
 
+    # An importable transfer or direct debit whose detail was never read for
+    # its note.
+    def cash_note_pending?(event)
+      return false unless event.is_a?(Hash)
+      return false unless CASH_NOTE_EVENT_TYPES.include?(event.stringify_keys["eventType"].to_s)
+
+      Provider::TradeRepublicTimelineEvent.importable?(event.stringify_keys) && !cash_note_read?(event)
+    end
+
+    # A transfer or direct debit whose detail was read for its note, with or
+    # without a result.
+    def cash_note_read?(event)
+      return false unless event.is_a?(Hash)
+
+      item = event.stringify_keys
+      detail = item["detail"]
+      CASH_NOTE_EVENT_TYPES.include?(item["eventType"].to_s) &&
+        detail.is_a?(Hash) && detail.stringify_keys.values_at("note", NOTE_CHECKED_AT_KEY).any?(&:present?)
+    end
+
     # Complete trades (isin + quantity) without a price read from the detail:
     # the price is missing, or was derived from the rounded total, usually
     # because the trade was stored before its price rows were parsed.
@@ -577,10 +620,12 @@ class Provider::TradeRepublicClient
     # first, oldest first, then the least recently attempted, so events that
     # stay incomplete can't hold the budget on every sync. Price backfills
     # carry no detail attempt; trade_detail_needs_price_backfill? paces them.
+    # Transfers waiting only for their note come after everything else.
     def detail_backfill_sort_key(event)
-      return [ 0, "" ] unless event.is_a?(Hash)
+      return [ 0, 0, "" ] unless event.is_a?(Hash)
 
-      [ detail_time(event, DETAIL_BACKFILL_ATTEMPTED_AT_KEY).to_i, (event["timestamp"] || event[:timestamp]).to_s ]
+      note_only = cash_note_pending?(event) ? 1 : 0
+      [ note_only, detail_time(event, DETAIL_BACKFILL_ATTEMPTED_AT_KEY).to_i, (event["timestamp"] || event[:timestamp]).to_s ]
     end
 
     # Stored trades whose ISIN found no usable exchange symbol are retried at
@@ -1310,7 +1355,7 @@ class Provider::TradeRepublicClient
       nil
     end
 
-    def collect_all_timeline(websocket, known_newest_event_id:, max_pages:, enrich_events: [], timeline_cursors: {}, interrupted_backfills: {})
+    def collect_all_timeline(websocket, known_newest_event_id:, max_pages:, enrich_events: [], note_read_event_ids: [], timeline_cursors: {}, interrupted_backfills: {})
       timeline_cursors = (timeline_cursors || {}).to_h.stringify_keys
       topics = TIMELINE_TOPICS.index_with do |topic|
         state = timeline_cursors[topic].is_a?(Hash) ? timeline_cursors[topic].stringify_keys : {}
@@ -1329,7 +1374,8 @@ class Provider::TradeRepublicClient
       events, detail_warnings, detail_backfill_count = enrich_timeline_details(
         websocket,
         skeleton_events,
-        enrich_events: enrich_events
+        enrich_events: enrich_events,
+        note_read_event_ids: note_read_event_ids
       )
       # Backfilled stored events are older than this sync's pages and must not
       # pull the list cursor backwards.
@@ -1533,12 +1579,16 @@ class Provider::TradeRepublicClient
     # still consume budget so a bad event cannot starve the rest of the queue
     # forever within one sync. Stored dividends without their detail are
     # backfilled too.
-    def enrich_timeline_details(websocket, events, enrich_events: [])
+    def enrich_timeline_details(websocket, events, enrich_events: [], note_read_event_ids: [])
       warnings = []
       events = Array(events)
+      # The page holding the known newest event is read again as skeletons
+      # without markers; a transfer whose note was already read is not.
+      note_read_ids = Array(note_read_event_ids).to_set(&:to_s)
       new_candidates = events.select do |event|
         event["id"].present? &&
-          (self.class.incomplete_trade_detail_event?(event) || self.class.dividend_detail_missing?(event))
+          (self.class.incomplete_trade_detail_event?(event) || self.class.dividend_detail_missing?(event) ||
+            (self.class.cash_note_pending?(event) && !note_read_ids.include?(event["id"].to_s)))
       end
       new_ids = new_candidates.to_set { |event| event["id"].to_s }
       page_ids = events.filter_map { |event| event["id"].presence&.to_s }.to_set
@@ -1549,11 +1599,13 @@ class Provider::TradeRepublicClient
         next false if item["id"].blank?
         next false if new_ids.include?(item["id"].to_s)
 
-        # A dividend on this sync's pages is handled there: a new one is
-        # fetched above, and one that already has its details needs nothing.
+        # A dividend or transfer on this sync's pages is handled there: a new
+        # one is fetched above, and one that already has its details needs
+        # nothing.
         self.class.incomplete_trade_detail_event?(item) ||
           self.class.trade_detail_needs_price_backfill?(item) ||
-          (self.class.dividend_detail_missing?(item) && !page_ids.include?(item["id"].to_s))
+          ((self.class.dividend_detail_missing?(item) || self.class.cash_note_pending?(item)) &&
+            !page_ids.include?(item["id"].to_s))
       end
 
       budget = MAX_TIMELINE_DETAILS
@@ -1593,6 +1645,11 @@ class Provider::TradeRepublicClient
             item: item
           )
           detail = detail&.slice(*DIVIDEND_DETAIL_KEYS) if category.to_s == DIVIDEND_DETAIL_CATEGORY
+          # A transfer's imported amount stays the timeline amount; only the
+          # note comes from the detail.
+          if self.class.cash_note_pending?(item)
+            detail = (detail || {}).slice("note").merge(NOTE_CHECKED_AT_KEY => Time.current.iso8601)
+          end
           fetched = build_normalized_event(item, category: category, detail: detail)
         rescue TransientProviderError, Timeout, RateLimited
           raise
@@ -1605,7 +1662,8 @@ class Provider::TradeRepublicClient
           detail_backfill_count += 1 if detail_backfill_improved?(item, result)
           if self.class.trade_detail_price_unconfirmed?(result)
             fetched = with_price_backfill_attempt(result)
-          elsif self.class.incomplete_trade_detail_event?(result) || self.class.dividend_detail_missing?(result)
+          elsif self.class.incomplete_trade_detail_event?(result) || self.class.dividend_detail_missing?(result) ||
+              self.class.cash_note_pending?(result)
             fetched = with_detail_backfill_attempt(result)
           end
         end
@@ -1624,6 +1682,7 @@ class Provider::TradeRepublicClient
     end
 
     def detail_backfill_improved?(before, after)
+      return !self.class.cash_note_pending?(after) if self.class.cash_note_pending?(before)
       return self.class.trade_detail_complete?(after) if self.class.incomplete_trade_detail_event?(before)
 
       self.class.trade_detail_price_unconfirmed?(before) && !self.class.trade_detail_price_unconfirmed?(after)
@@ -1740,9 +1799,11 @@ class Provider::TradeRepublicClient
         gross = quantity.negative? ? amount.abs + deductions : amount.abs - deductions
         price = gross / quantity.abs if gross.positive?
       end
-      return nil if quantity.nil? && amount.nil?
+      note = find_note(raw)
+      return nil if quantity.nil? && amount.nil? && note.nil?
 
       {
+        "note" => note,
         "isin" => find_isin(item) || find_isin(raw) || find_logo_isin(raw),
         "name" => detail_name(item, raw),
         "quantity" => decimal_string(quantity),
@@ -1755,6 +1816,19 @@ class Provider::TradeRepublicClient
         "dividend_per_share" => decimal_string(dividend_per_share),
         "instrument_type" => (BOND_INSTRUMENT_TYPE if nominal)
       }.compact
+    end
+
+    # The payment reference: the text of the untitled section of type "note".
+    # Found by its type, so it does not depend on the app's language.
+    def find_note(raw)
+      note = nil
+      walk(raw) do |node|
+        next if note || !node.is_a?(Hash) || node["type"] != NOTE_SECTION_TYPE || !node["data"].is_a?(Hash)
+
+        text = node["data"]["text"]
+        note = text.strip.presence if text.is_a?(String)
+      end
+      note
     end
 
     def collect_sections(node, result = [], untitled_tables: false)

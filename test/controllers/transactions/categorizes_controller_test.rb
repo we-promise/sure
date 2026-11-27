@@ -63,6 +63,16 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_includes child_pill.text, categories(:subcategory).display_name_with_parent
   end
 
+  test "show renders the income type badge with a design-system tone" do
+    create_transaction(account: @account, name: "Payroll", amount: -500)
+
+    get transactions_categorize_url
+
+    assert_response :success
+    assert_select "span.rounded-full[style*='--color-green-50']", text: I18n.t("transactions.categorizes.show.type_income")
+    assert_no_match(/\bbg-green-100\b/, response.body)
+  end
+
   test "show renders full dates so multi-year lists are unambiguous" do
     create_transaction(account: @account, name: "Starbucks", date: Date.new(2024, 7, 8))
 

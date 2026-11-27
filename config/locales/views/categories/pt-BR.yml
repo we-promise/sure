@@ -21,8 +21,6 @@ pt-BR:
       categories_incomes: Categorias de receitas
       empty: Nenhuma categoria encontrada
       new: Nova categoria
-    menu:
-      loading: Carregando...
     new:
       new_category: Nova categoria
     update:

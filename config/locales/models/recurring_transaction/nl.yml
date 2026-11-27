@@ -1,0 +1,35 @@
+---
+nl:
+  recurring_transactions:
+    allocator:
+      missing_rate: "geen wisselkoers van %{from} naar %{to}; voer expliciet een bedrag in"
+      unmeasurable: "deze transactie heeft een toewijzing die niet naar %{currency} kan worden omgerekend, dus het resterende deel kan niet worden bepaald. Voeg een wisselkoers voor %{date} toe of verwijder eerst de bestaande betaling"
+      over_allocated: "toewijzing van %{amount} overschrijdt het resterende bedrag van %{capacity} %{currency} van de transactie"
+      entry_exhausted: "het volledige bedrag van deze transactie is al toegewezen aan andere te betalen posten"
+      already_allocated: "deze transactie is al aan deze vaste last toegewezen"
+      exceeds_remaining: "%{amount} overschrijdt de %{remaining} die in deze periode resteert"
+  activerecord:
+    attributes:
+      recurring_transaction:
+        payment_url: "Betaallink"
+        frequency_interval: "Herhalingsinterval"
+    errors:
+      models:
+        recurring_transaction:
+          merchant_or_name_required: "Handelaar of naam moet zijn ingevuld"
+          attributes:
+            payment_url:
+              invalid_scheme: "moet een geldig http://- of https://-adres zijn"
+            anchor_date:
+              required_for_intervals: "is verplicht als een regel elke 2 of meer perioden herhaalt"
+            bill_type:
+              transfer_shape_mismatch: "kan alleen overboeking zijn als er een doelaccount is ingesteld"
+            expected_amount_min:
+              greater_than_max: "mag niet groter zijn dan het verwachte maximumbedrag"
+            account:
+              required_for_transfer: "moet aanwezig zijn bij een terugkerende overboeking"
+              wrong_family: "moet bij dit huishouden horen"
+            destination_account:
+              same_as_source: "mag niet hetzelfde zijn als het bronaccount"
+              family_mismatch: "moet bij hetzelfde huishouden horen als het bronaccount"
+              wrong_family: "moet bij dit huishouden horen"

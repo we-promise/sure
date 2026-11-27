@@ -2,6 +2,11 @@
 # Expects the including class to expose an `account` reader.
 module Holding::TradeCalculatorHelpers
   private
+    # A book that keeps no lots (the tracker before lots) has none to give.
+    def lots_from(books)
+      books.filter_map { |security_id, book| [ security_id, book.ledger ] if book.respond_to?(:ledger) }.to_h
+    end
+
     # Converts a trade's price into the account's currency at the rate of the
     # day it was made, or nil when there is no rate for that day.
     def converted_trade_price(trade, date:)

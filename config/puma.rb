@@ -33,7 +33,8 @@ if rails_env == "production"
   # CPU cores are available. Make sure to set the `WEB_CONCURRENCY` environment
   # variable to match the number of processors.
   workers_count = Integer(ENV.fetch("WEB_CONCURRENCY") { 1 })
-  workers workers_count if workers_count > 1
+  # Always set: Puma defaults workers to WEB_CONCURRENCY, so 1 would otherwise start a one-worker cluster.
+  workers(workers_count > 1 ? workers_count : 0)
 
   preload_app!
 end

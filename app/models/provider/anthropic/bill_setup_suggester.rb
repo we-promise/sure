@@ -1,5 +1,6 @@
 class Provider::Anthropic::BillSetupSuggester
   include Provider::Anthropic::Concerns::UsageRecorder
+  include Provider::Anthropic::Concerns::StructuredOutput
 
   TOOL_NAME = "report_bill_setup".freeze
 
@@ -16,19 +17,21 @@ class Provider::Anthropic::BillSetupSuggester
   end
 
   def suggest
-    span = langfuse_trace&.span(name: "suggest_bill_setup_api_call", input: {
+    span = langfuse_trace&.generation(name: "suggest_bill_setup_api_call", model: model, input: {
       model: model,
       charges: charges,
       configure_mode: current_config.present?
     })
 
-    response = client.messages.create(
+    response = create_structured_message(
+      tool_name: TOOL_NAME,
+      operation: "suggest_bill_setup",
       model: model,
       max_tokens: max_tokens,
-      system_: instructions,
+      system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),
       messages: [ { role: "user", content: user_message } ],
       tools: [ output_tool ],
-      tool_choice: { type: "tool", name: TOOL_NAME, disable_parallel_tool_use: true }
+      tool_choice: Provider::Anthropic.structured_output_tool_choice(model, TOOL_NAME)
     )
 
     result = build_suggestion(extract_input(response))
@@ -127,10 +130,10 @@ class Provider::Anthropic::BillSetupSuggester
     end
 
     def extract_input(response)
-      tool_use = Array(response.content).find { |block| block_type(block) == :tool_use }
-      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME}" unless tool_use
+      tool_use = Array(response.content).find { |block| structured_block_type(block) == :tool_use }
+      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME} (stop_reason: #{response.stop_reason})" unless tool_use
 
-      input = block_input(tool_use)
+      input = structured_block_input(tool_use)
       input = JSON.parse(input) if input.is_a?(String)
       input.is_a?(Hash) ? input.stringify_keys : {}
     end
@@ -156,23 +159,5 @@ class Provider::Anthropic::BillSetupSuggester
       return nil if normalized.empty? || normalized.casecmp("null").zero?
 
       normalized
-    end
-
-    def block_type(block)
-      raw = block.respond_to?(:type) ? block.type : block[:type] || block["type"]
-      raw.to_s.to_sym
-    end
-
-    def block_input(block)
-      block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
-    end
-
-    def usage_hash(raw_usage)
-      return {} unless raw_usage
-      {
-        "input_tokens" => raw_usage.input_tokens.to_i,
-        "output_tokens" => raw_usage.output_tokens.to_i,
-        "total_tokens" => raw_usage.input_tokens.to_i + raw_usage.output_tokens.to_i
-      }
     end
 end

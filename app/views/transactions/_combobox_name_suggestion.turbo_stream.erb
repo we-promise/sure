@@ -1,0 +1,7 @@
+<%# locals: (combobox_name_suggestion:, combobox_display:, combobox_value:) %>
+<div class="flex items-center justify-between gap-2 w-full" data-category-id="<%= combobox_name_suggestion.category&.id %>">
+  <span class="truncate text-sm text-primary"><%= combobox_name_suggestion.name %></span>
+  <% if combobox_name_suggestion.category %>
+    <%= render partial: "categories/badge", formats: [ :html ], locals: { category: combobox_name_suggestion.category } %>
+  <% end %>
+</div>

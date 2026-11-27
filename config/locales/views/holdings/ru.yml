@@ -5,13 +5,12 @@ ru:
       brokerage_cash: Денежные средства на брокерском счёте
     cost_basis_cell:
       cancel: Отмена
-      or_per_share_label: 'Или введите за акцию:'
+      per_share_label: "За акцию"
       overwrite_confirm_body: Это заменит текущую стоимость приобретения %{current}.
       overwrite_confirm_title: Перезаписать стоимость приобретения?
-      per_share: за акцию
       save: Сохранить
       set: Установить
-      set_cost_basis_header: Установить стоимость приобретения для %{ticker} (%{qty} акций)
+      set_cost_basis_header: Установить стоимость приобретения для %{ticker}
       total_cost_basis_label: Общая стоимость приобретения
       unknown: "--"
     cost_basis_sources:

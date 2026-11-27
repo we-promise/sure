@@ -55,6 +55,10 @@ fr:
         invalid_binance_account: Compte Binance invalide
         only_manual: Seuls les comptes manuels peuvent être liés à Binance
       success: Compte Binance lié avec succès
+    select_accounts:
+      connection_unavailable: Cette connexion Binance n'est pas disponible. Choisissez-en une dans les paramètres des fournisseurs.
+      no_credentials_configured: Connectez Binance dans les paramètres des fournisseurs avant d'ajouter ses comptes.
+      select_connection: Choisissez une connexion Binance dans les paramètres des fournisseurs.
     select_existing_account:
       cancel: Annuler
       check_provider_health: Vérifiez que vos identifiants API Binance sont valides

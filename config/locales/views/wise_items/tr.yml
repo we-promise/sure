@@ -22,14 +22,18 @@ tr:
     entries:
       default_name: Wise işlemi
       fee_name: Wise ücreti
+      refund_name: Wise iadesi
     link_accounts:
       failed: Wise bakiyesi bağlanamadı. Lütfen tekrar deneyin.
       not_found: Wise bakiyesi bulunamadı.
       success: Wise bakiyesi hesaba başarıyla bağlandı.
     link_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı.
+      currency_mismatch: "Bu Wise bakiyesi %{balance_currency}, hesap ise %{account_currency} cinsinden. Hesabın para biriminde bir bakiye seçin."
       failed: Hesap bağlanamadı. Lütfen tekrar deneyin.
       not_found: Hesap veya Wise bakiyesi bulunamadı.
       success: "%{account_name} Wise ile başarıyla bağlandı"
+      unsupported_account_type: Wise bakiyeleri yalnızca nakit hesaplarına bağlanabilir.
     link_profiles:
       already_connected: Seçilen tüm profiller zaten bağlı.
       no_profiles_selected: Lütfen en az bir profil seçin.
@@ -53,7 +57,7 @@ tr:
       sync_start_date_label: İşlemleri şu tarihten itibaren içe aktar
       sync_start_date_help: Wise hesap özetleri bu tarihten itibaren içe aktarılır. Varsayılanı bırakırsanız bir yıla kadar geçmiş yüklenir.
       import_all_history_label: Tüm işlem geçmişini içe aktar
-      import_all_history_help: Yalnızca son bir yıl yerine tüm geçmiş Wise hesap özetlerini getirir.
+      import_all_history_help: Yalnızca son bir yıl yerine tüm Wise geçmişini (transferler, işlemler ve hesap özetleri) içe aktarır. Her bakiye bu durumda Wise'ın onu açtığı gün 0'dan başlar.
       disconnect: Bağlantıyı kes
       disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?
         Bu, tüm eşitlenmiş hesap verilerini kaldıracaktır."
@@ -69,7 +73,7 @@ tr:
         open_tokens: Settings → Connect and manage apps → Developer tools → API tokens bölümüne gidin
         sign_in_html: "%{link} adresini ziyaret edin ve hesabınıza giriş yapın"
       keep_token_placeholder: Mevcut token'ı korumak için boş bırakın
-      sandbox_note_html: Test için <strong>sandbox</strong> temel URL'sini (<code>https://api.sandbox.transferwise.tech</code>)
+      sandbox_note_html: Test için <strong>sandbox</strong> temel URL'sini (<code>https://api.wise-sandbox.com</code>)
         kullanın. Ortamınızda <code>WISE_BASE_URL</code> değerini ayarlayın.
       setup_accounts: Hesapları kur
       sync: Eşitle
@@ -147,6 +151,9 @@ tr:
       credentials_invalid: Geçersiz Wise API token'ı veya yetersiz izinler
       failed: Eşitleme başarısız oldu. Lütfen tekrar deneyin veya destek ile iletişime
         geçin.
+      fetch_failed:
+        one: "%{count} Wise isteği başarısız oldu. Sonraki eşitleme yeniden deneyecek."
+        other: "%{count} Wise isteği başarısız oldu. Sonraki eşitleme yeniden deneyecek."
       import_failed: Wise içe aktarma başarısız oldu.
       importing_accounts: Wise'dan hesaplar içe aktarılıyor...
       processing_transactions: İşlemler işleniyor...

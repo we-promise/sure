@@ -93,10 +93,15 @@ export default class extends Controller {
 
     this.selectedId = id;
     this.hiddenInputTarget.value = id;
-    this.hiddenInputTarget.dispatchEvent(new Event("change", { bubbles: true }));
 
     this.optionTargets.forEach((target) => this.updateOptionState(target, id));
     this.updateSelectionDisplay(option);
+
+    // Dispatched after updateSelectionDisplay above, not before -- listeners
+    // (e.g. the transaction name preview) read the selection text
+    // synchronously off this event, so firing early would hand them the
+    // previous selection's label.
+    this.hiddenInputTarget.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   updateOptionState(option, selectedId) {

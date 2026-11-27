@@ -11,10 +11,19 @@ import { Controller } from "@hotwired/stimulus";
 //   once the dialog closes — the first moment a refresh is actually safe.
 export default class extends Controller {
   static values = {
-    autoRefreshDelay: { type: Number, default: 2000 },
+    autoRefreshDelay: { type: Number, default: 500 },
   };
 
   connect() {
+    // A page fetch after the toast (e.g. the account page's refresh stream) already re-renders
+    // the page. Frame, form and prefetch fetches target their own element, so they don't count.
+    this._onFetch = (event) => {
+      const headers = event.detail.fetchOptions?.headers || {};
+      if (event.target === document.documentElement && !headers["Turbo-Frame"])
+        clearTimeout(this._timer);
+    };
+    document.addEventListener("turbo:before-fetch-request", this._onFetch);
+
     if (this.#dialogOpen()) {
       this.#deferUntilDialogCloses();
       return;
@@ -24,6 +33,7 @@ export default class extends Controller {
 
   disconnect() {
     clearTimeout(this._timer);
+    document.removeEventListener("turbo:before-fetch-request", this._onFetch);
     this.#removeDeferredDialogListener();
   }
 
@@ -111,6 +121,11 @@ export default class extends Controller {
   }
 
   #userIsInteracting() {
+    // A grabbed list item (sortable-list) is only saved when it is released;
+    // a morph would drop the move. Focus may have left it, so look it up in
+    // the whole document.
+    if (document.querySelector("[aria-grabbed='true']")) return true;
+
     const el = document.activeElement;
     if (!el || el === document.body || el === document.documentElement)
       return false;

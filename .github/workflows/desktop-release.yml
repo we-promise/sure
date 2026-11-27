@@ -23,17 +23,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(tr -d '[:space:]' < .sure-version)"
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-
-          if [ -z "$VERSION" ]; then
-            echo "::error::.sure-version is empty or unreadable"
-            exit 1
-          fi
-          if [ "$VERSION" != "$TAG_VERSION" ]; then
-            echo "::error::.sure-version ($VERSION) does not match release tag (v$TAG_VERSION)"
-            exit 1
-          fi
+          [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]] || exit 1
+          VERSION="${GITHUB_REF_NAME#v}"
+          printf '%s\n' "$VERSION" > .sure-version
           echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$' \
             || { echo "::error::invalid version '$VERSION'"; exit 1; }
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"

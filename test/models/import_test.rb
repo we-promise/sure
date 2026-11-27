@@ -1,6 +1,8 @@
 require "test_helper"
 
 class ImportTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")
@@ -8,6 +10,23 @@ class ImportTest < ActiveSupport::TestCase
     import.expects(:import!).never
 
     import.publish
+
+    assert_equal "complete", import.reload.status
+  end
+
+  test "publish schedules the catch-up sync for scheduled entries it created" do
+    import = imports(:transaction)
+    account = accounts(:depository)
+    import.define_singleton_method(:import!) do
+      account.entries.create!(
+        name: "Upcoming bill", date: 3.days.from_now.to_date, amount: 100, currency: "USD",
+        entryable: Transaction.new, import: self
+      )
+    end
+
+    assert_enqueued_jobs 1, only: EntryScheduledSyncJob do
+      import.publish
+    end
 
     assert_equal "complete", import.reload.status
   end

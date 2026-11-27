@@ -1,6 +1,12 @@
 inherit_gem:
   rubocop-rails-omakase: rubocop.yml
 
+require:
+  - ./lib/rubocop/cop/sure/sorted_list
+
+Sure/SortedList:
+  Enabled: true
+
 Layout/IndentationWidth:
   Enabled: true
 

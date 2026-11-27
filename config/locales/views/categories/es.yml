@@ -40,8 +40,6 @@ es:
       sources_label: Categorías a fusionar
       sources_hint: Las categorías seleccionadas se eliminarán después de que sus transacciones y líneas de presupuesto se muevan al destino. No selecciones el destino como origen.
       submit: Fusionar seleccionadas
-    menu:
-      loading: Cargando...
     new:
       new_category: Nueva categoría
     perform_merge:

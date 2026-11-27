@@ -74,6 +74,7 @@
           <% end %>
 
           <%= render DS::Menu.new do |menu| %>
+            <% sync_schedule_menu_item(menu, sophtron_item) %>
             <% if all_accounts_visible && connected_institution_options.many? %>
               <% connected_institution_options.each do |institution| %>
                 <% institution_manual_sync_required = sophtron_item.manual_sync_required_for_institution?(institution[:institution_key]) %>

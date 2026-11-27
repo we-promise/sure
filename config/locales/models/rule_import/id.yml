@@ -1,0 +1,9 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        rule_import:
+          unsupported_resource_type: "Jenis sumber daya tidak didukung: %{resource_type}"
+          invalid_json: "JSON tidak valid dalam kondisi atau tindakan: %{message}"
+          min_actions: "Aturan harus memiliki setidaknya satu tindakan"

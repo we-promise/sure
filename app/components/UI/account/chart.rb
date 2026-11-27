@@ -8,12 +8,14 @@ class UI::Account::Chart < ApplicationComponent
   # (title, hero figure, trend, period picker, Turbo frame) is unchanged. Every
   # other account type takes the branch it always took.
   # The page's reference date travels inside the payload (`today`), so the
-  # component takes no date of its own.
-  def initialize(account:, period: nil, view: nil, loan_chart: nil)
+  # component takes no date of its own. `extra_repayment` is the Extra
+  # repayments tab's Loan::ExtraRepayment, which the period picker keeps.
+  def initialize(account:, period: nil, view: nil, loan_chart: nil, extra_repayment: nil)
     @account = account
     @period = period
     @view = view
     @loan_chart = loan_chart
+    @extra_repayment = extra_repayment
   end
 
   def loan_chart?
@@ -31,11 +33,35 @@ class UI::Account::Chart < ApplicationComponent
   LOAN_SERIES_STYLES = {
     "actual" => { token: "--color-success", dashed: false },
     "scheduled" => { token: "--color-destructive", dashed: true },
-    "projected" => { token: "--color-success", dashed: true }
+    "projected" => { token: "--color-success", dashed: true },
+    "extra" => { token: "--color-info", dashed: true }
   }.freeze
 
   def loan_legend
     LOAN_SERIES_STYLES.select { |key, _| loan_chart[:visible].map(&:to_s).include?(key) }
+  end
+
+  # The shading under the scheduled line, by each repayment's share. Interest
+  # is hatched as well as tinted, so the two are told apart without colour.
+  LOAN_SHARE_STYLES = {
+    "interest_share" => { token: "--color-warning", hatched: true },
+    "principal_share" => { token: "--color-info", hatched: false }
+  }.freeze
+
+  def loan_share_legend
+    loan_chart[:visible].map(&:to_s).include?("scheduled") ? LOAN_SHARE_STYLES : {}
+  end
+
+  # The legend swatch matches the chart: hatched for interest, a solid tint
+  # for principal, each bordered in its own colour.
+  def loan_share_swatch_style(style)
+    colour = "var(#{style[:token]})"
+    fill = if style[:hatched]
+      "background: repeating-linear-gradient(45deg, #{colour} 0 1.5px, transparent 1.5px 4px);"
+    else
+      "background: #{colour}; opacity: 0.4;"
+    end
+    "border-color: #{colour}; #{fill}"
   end
 
   def loan_projected_payoff_date
@@ -179,6 +205,16 @@ class UI::Account::Chart < ApplicationComponent
   # (Loan::PayoffChart::WINDOW_KEYS); every other chart offers every period.
   def period_picker_options
     Loan::PayoffChart.window_options if loan_chart?
+  end
+
+  # What each period link carries besides the period. Picking one reloads
+  # the page, which rebuilds an applied extra only from its params, so the
+  # links keep it, and the tab it was applied from.
+  def period_picker_extra_params
+    return { chart_view: view } if account.supports_trades?
+    return {} unless @extra_repayment&.applied?
+
+    { tab: "extra_repayments", extra_payment: @extra_repayment.to_params }
   end
 
   # A saved period the loan chart does not offer shows the whole life, so its

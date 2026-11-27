@@ -1,0 +1,27 @@
+<%# locals: (key:, label:, hint:, settings:, disabled: false, indent: false, number_key: nil, number_attrs: {}) %>
+<%# One checkbox row of Settings → Classifier, inside a section's
+    auto-submitting form. The hidden "0" makes unchecking submit; a disabled
+    row (its parent option is off) submits nothing, so its value is kept.
+    number_key adds the row's own number (e.g. a grace period in days), its
+    min and max from Family::BayesSettings::RANGES. %>
+<div class="<%= class_names("flex flex-1 items-center justify-between gap-x-4 min-w-0", "pl-6" => indent) %>">
+  <label class="flex flex-1 items-start gap-2 cursor-pointer min-w-0">
+    <%= hidden_field_tag "bayes_settings[#{key}]", "0", id: nil, disabled: disabled %>
+    <%= check_box_tag "bayes_settings[#{key}]", "1", settings.public_send(key),
+                      id: nil, disabled: disabled,
+                      class: "checkbox checkbox--light mt-0.5",
+                      data: { auto_submit_form_target: "auto" } %>
+    <span class="min-w-0">
+      <span class="text-sm text-primary"><%= label %></span>
+      <span class="block text-xs text-secondary"><%= hint %></span>
+    </span>
+  </label>
+  <% if number_key %>
+    <% range = Family::BayesSettings::RANGES[number_key] %>
+    <%= number_field_tag "bayes_settings[#{number_key}]", settings.public_send(number_key),
+                         id: nil, disabled: disabled || !settings.public_send(key), autocomplete: "off",
+                         class: "rounded-lg border border-primary px-3 py-1.5 text-sm bg-container text-primary w-36 shrink-0",
+                         aria: { label: label },
+                         data: { auto_submit_form_target: "auto" }, min: range&.min, max: range&.max, **number_attrs %>
+  <% end %>
+</div>

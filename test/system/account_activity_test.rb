@@ -70,6 +70,38 @@ class AccountActivityTest < ApplicationSystemTestCase
     assert_operator page_scroll_width, :<=, viewport_width
   end
 
+  test "account activity filter menu has no account tab and can filter by category" do
+    visit account_url(@account, tab: "activity")
+
+    find("#activity-filters-button").click
+
+    within "#transaction-filters-menu" do
+      assert_no_selector "button[data-id='account_filter']"
+      assert_selector "button[data-id='category_filter']"
+
+      find("button[data-id='category_filter']").click
+      check categories(:food_and_drink).name, allow_label_click: true
+      click_button "Apply"
+    end
+
+    assert_selector "#account-activity-filters li", text: categories(:food_and_drink).name
+    assert_selector "##{dom_id(@transaction_entry)}"
+    assert_no_selector "##{dom_id(@valuation_entry)}"
+  end
+
+  test "clearing a filter badge on account activity removes just that filter" do
+    visit account_url(@account, tab: "activity", q: { categories: [ categories(:food_and_drink).filter_value ] })
+
+    assert_selector "#account-activity-filters li", text: categories(:food_and_drink).name
+
+    within "#account-activity-filters li", text: categories(:food_and_drink).name do
+      click_button
+    end
+
+    assert_no_selector "#account-activity-filters li"
+    assert_selector "##{dom_id(@valuation_entry)}"
+  end
+
   test "account activity keeps long category names from overlapping the amount on wide screens" do
     category = categories(:food_and_drink)
     category.update!(name: "Super Long Category Name That Should Stop Before The Amount On Wide Screens Too")

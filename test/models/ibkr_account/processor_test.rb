@@ -137,4 +137,13 @@ class IbkrAccount::ProcessorTest < ActiveSupport::TestCase
     IbkrAccount::Processor.new(@ibkr_account.reload).process
     assert_equal Date.current, @account.valuations.current_anchor.first.entry.date
   end
+
+  test "a failed move of the opening anchor is reported and the sync still completes" do
+    Account.any_instance.stubs(:ensure_opening_anchor_precedes_entries).raises(StandardError, "Opening balance date must be before the oldest entry")
+    Account.any_instance.expects(:broadcast_sync_complete).once
+
+    assert_difference -> { DebugLogEntry.where(source: "IbkrAccount::Processor", provider_key: "ibkr").count }, 1 do
+      IbkrAccount::Processor.new(@ibkr_account).process
+    end
+  end
 end

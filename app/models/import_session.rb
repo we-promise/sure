@@ -270,6 +270,7 @@ class ImportSession < ApplicationRecord
 
     update!(status: :complete, summary: aggregate_chunk_summaries, error_details: {})
     enqueue_family_sync
+    EntryScheduledSyncJob.schedule_for_entries(Entry.where(import_id: imports.select(:id)))
     Rails.logger.info("ImportSession publish completed import_session_id=#{id}")
   rescue => error
     update!(

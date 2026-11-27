@@ -107,6 +107,31 @@ class EnableBankingEntry::Processor
     line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b.*\d{1,2}[.\/]\d{1,2}\.?\s+\d{2}:\d{2}\z/i)
   end
 
+  # Prefer booking_date, fall back to value_date, then transaction_date.
+  # Timestamps are read in the family's timezone.
+  def self.transaction_date(raw_transaction_data, timezone)
+    data = raw_transaction_data.with_indifferent_access
+    date_value = data[:booking_date] || data[:value_date] || data[:transaction_date]
+
+    case date_value
+    when String
+      if date_value.include?("T") || date_value.include?(":")
+        Time.parse(date_value).in_time_zone(timezone).to_date
+      else
+        Date.parse(date_value)
+      end
+    when Integer, Float
+      Time.at(date_value).in_time_zone(timezone).to_date
+    when Time, DateTime
+      date_value.in_time_zone(timezone).to_date
+    when Date
+      date_value
+    else
+      Rails.logger.error("Enable Banking transaction has invalid date value: #{date_value.inspect}")
+      raise ArgumentError, "Invalid date format: #{date_value.inspect}"
+    end
+  end
+
   # True when the transaction represents an unfinalized card authorization hold
   # (missing provider identifiers, no legitimate counterparty name, and a masked
   # card descriptor in remittance or transaction code).
@@ -425,7 +450,12 @@ class EnableBankingEntry::Processor
       descriptive = lines.find { |line| !technical_remittance_line?(line) } || lines.first
       return descriptive if descriptive.blank?
 
-      matched_known_merchant_name(descriptive) || strip_payment_processor_prefix(descriptive)
+      cleaned = strip_payment_processor_prefix(descriptive)
+      # Keep a holder-only remittance whole, so a known merchant matching part
+      # of the name ("Jane" in "Jane Doe") is not picked out of it.
+      return cleaned if account_holder_name?(cleaned)
+
+      matched_known_merchant_name(descriptive) || cleaned
     end
 
     # The remittance lines describing who was paid, one per element, with any
@@ -461,7 +491,9 @@ class EnableBankingEntry::Processor
     # so e.g. "BILLA DANKT 0007114" resolves to "Billa", not "BILLA". Longest match
     # wins when multiple known names match (prefer the more specific one).
     def matched_known_merchant_name(line)
-      candidates = known_merchant_names.select { |name| name.length >= MIN_KNOWN_MERCHANT_MATCH_LENGTH }
+      candidates = known_merchant_names.select do |name|
+        name.length >= MIN_KNOWN_MERCHANT_MATCH_LENGTH && !account_holder_name?(name)
+      end
       # Lookaround instead of \b at both ends: \b only fires on a word/non-word
       # transition, so it silently fails to match right after a name that itself
       # ends in punctuation (e.g. "A+B (Café)" ends in ")" -- a non-word char next
@@ -476,6 +508,28 @@ class EnableBankingEntry::Processor
 
     def known_merchant_names
       @known_merchant_names ||= account&.family&.known_merchant_names || []
+    end
+
+    # Some banks end a card payment's remittance with the cardholder's name, and
+    # a transfer between the holder's own accounts can make that name a known
+    # merchant. The holder is never the payee, so their name is not matched.
+    def account_holder_name?(name)
+      account_holder_names.any? { |holder| holder.casecmp?(name) }
+    end
+
+    # The account holder as Enable Banking names the account, plus this
+    # transaction's own side: the debtor of a payment, the creditor of a credit.
+    def account_holder_names
+      @account_holder_names ||= begin
+        payload = enable_banking_account.raw_payload
+        own_side = credit_debit_indicator == "CRDT" ? :creditor : :debtor
+
+        [
+          payload.is_a?(Hash) ? (payload["name"] || payload[:name]) : nil,
+          self.class.party_name(data, own_side),
+          data[:"#{own_side}_name"]
+        ].filter_map { |value| value.to_s.strip.presence }
+      end
     end
 
     def identifierless_external_ids
@@ -579,6 +633,8 @@ class EnableBankingEntry::Processor
 
       remittance = primary_remittance_information
       return nil if remittance.blank?
+      # The remittance may be nothing but the holder's name, which never names the payee.
+      return nil if account_holder_name?(remittance)
 
       # Trust remittance-derived text as a merchant candidate when either the
       # counterparty was a technical CARD-* placeholder (existing Wise case), or
@@ -608,27 +664,9 @@ class EnableBankingEntry::Processor
     end
 
     def date
-      # Prefer booking_date, fall back to value_date, then transaction_date
-      date_value = data[:booking_date] || data[:value_date] || data[:transaction_date]
-
-      case date_value
-      when String
-        if date_value.include?("T") || date_value.include?(":")
-          Time.parse(date_value).in_time_zone(account&.family&.timezone).to_date
-        else
-          Date.parse(date_value)
-        end
-      when Integer, Float
-        Time.at(date_value).in_time_zone(account&.family&.timezone).to_date
-      when Time, DateTime
-        date_value.in_time_zone(account&.family&.timezone).to_date
-      when Date
-        date_value
-      else
-        Rails.logger.error("Enable Banking transaction has invalid date value: #{date_value.inspect}")
-        raise ArgumentError, "Invalid date format: #{date_value.inspect}"
-      end
+      self.class.transaction_date(data, account&.family&.timezone)
     rescue ArgumentError, TypeError => e
+      date_value = data[:booking_date] || data[:value_date] || data[:transaction_date]
       Rails.logger.error("Failed to parse Enable Banking transaction date '#{date_value}': #{e.message}")
       raise ArgumentError, "Unable to parse transaction date: #{date_value.inspect}"
     end

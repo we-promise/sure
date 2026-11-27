@@ -1,0 +1,118 @@
+<%# locals: (list_filter:, groups:) %>
+<%# Filters in the browser (rules_filter_controller), laid out like the
+    transactions filter: a popover with one tab per filter and the active
+    filters as badges below the search. The form only submits when Enter is
+    pressed in the search, which reloads the same view. %>
+<% filters = rule_filters(list_filter, groups) %>
+<% active_filters = filters.select { |filter| filter[:selected].present? } %>
+<%= form_with url: rules_path, method: :get, class: "flex flex-col gap-2 mb-4", role: "search" do |form| %>
+  <div class="flex gap-2">
+    <div class="grow min-w-0">
+      <%= render DS::SearchInput.new(
+        name: "q",
+        value: params[:q],
+        aria_label: t("rules.filters.search_label"),
+        placeholder: t("rules.filters.search_placeholder"),
+        data: { rules_filter_target: "input", filter_param: "q", action: "input->rules-filter#filter" }
+      ) %>
+    </div>
+
+    <%= render DS::Popover.new(variant: "button", no_padding: true) do |popover| %>
+      <% popover.with_button(
+        id: "rule-filters-button",
+        type: "button",
+        text: t("rules.filters.button"),
+        variant: "outline",
+        icon: "list-filter",
+        data: { rules_filter_target: "filterButton" }
+      ) %>
+
+      <% popover.with_custom_content do %>
+        <%= render DS::Tabs.new(
+          variant: :unstyled,
+          active_tab: (active_filters.first || filters.first)[:name].to_s,
+          active_btn_classes: "bg-surface text-primary",
+          inactive_btn_classes: "text-secondary hover:bg-container-inset"
+        ) do |tabs| %>
+          <div id="rule-filters-menu" class="flex flex-col md:flex-row h-[50vh] md:h-80 w-full md:w-135 overflow-hidden">
+            <%= tabs.with_nav(classes: "shrink-0 flex w-full md:w-44 flex-row md:flex-col items-start p-3 text-sm font-medium text-secondary border-b md:border-b-0 md:border-r border-secondary overflow-x-auto md:overflow-x-visible md:overflow-y-auto") do |nav| %>
+              <% filters.each do |filter| %>
+                <%= nav.with_btn(id: filter[:name].to_s, label: filter[:label], classes: "w-full px-3 py-2 flex gap-2 items-center rounded-md whitespace-nowrap") do %>
+                  <%= icon(filter[:icon]) %>
+                  <%= tag.span(filter[:label], class: "text-sm font-medium") %>
+                <% end %>
+              <% end %>
+            <% end %>
+
+            <div class="flex flex-col grow overflow-y-auto">
+              <div class="grow p-3 border-b border-secondary overflow-y-auto">
+                <% filters.each do |filter| %>
+                  <%= tabs.with_panel(tab_id: filter[:name].to_s) do %>
+                    <fieldset class="p-2 space-y-3">
+                      <legend class="sr-only"><%= filter[:label] %></legend>
+                      <% filter[:items].each do |item| %>
+                        <% id = "rule_filter_#{filter[:name]}_#{item[:value].presence || "all"}" %>
+                        <div class="flex items-center gap-3">
+                          <%# Enter on a radio would submit the form and reload the page. %>
+                          <%= radio_button_tag filter[:name], item[:value], item[:value] == filter[:selected],
+                            id: id,
+                            data: {
+                              rules_filter_target: "option",
+                              filter_param: filter[:name],
+                              filter_label: item[:label],
+                              action: "change->rules-filter#filter keydown.enter->rules-filter#ignoreEnter"
+                            } %>
+                          <%= label_tag id, item[:label], class: "text-sm text-primary" %>
+                        </div>
+                      <% end %>
+                    </fieldset>
+                  <% end %>
+                <% end %>
+              </div>
+
+              <div class="flex justify-between items-center gap-2 bg-container p-3 shrink-0">
+                <div>
+                  <%= render DS::Link.new(
+                    text: t("rules.filters.reset"),
+                    variant: "ghost",
+                    href: rules_path,
+                    class: "hidden",
+                    data: { rules_filter_target: "reset" }
+                  ) %>
+                </div>
+                <%= render DS::Button.new(
+                  text: t("rules.filters.done"),
+                  type: "button",
+                  data: { action: "DS--popover#close rules-filter#focusFilterButton" }
+                ) %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <%# Rendered from the URL, then kept in step by the controller. %>
+  <ul class="<%= class_names("flex items-center flex-wrap gap-2", "hidden" => active_filters.empty?) %>"
+      aria-label="<%= t("rules.filters.active_label") %>"
+      data-rules-filter-target="badges">
+    <% filters.each do |filter| %>
+      <% chosen = filter[:items].find { |item| item[:value] == filter[:selected] } if filter[:selected].present? %>
+      <%= tag.li class: ("hidden" unless chosen), data: { rules_filter_target: "badge", filter_param: filter[:name] } do %>
+        <div class="flex items-center gap-1 text-sm border border-secondary rounded-3xl py-1 pl-3 pr-1">
+          <span class="text-secondary"><%= filter[:label] %>:</span>
+          <span class="text-primary" data-badge-value><%= chosen&.dig(:label) %></span>
+          <%= render DS::Button.new(
+            variant: "icon",
+            icon: "x",
+            size: "sm",
+            type: "button",
+            aria_label: t("rules.filters.remove", filter: filter[:label]),
+            data: { action: "rules-filter#clearFilter", rules_filter_name_param: filter[:name] }
+          ) %>
+        </div>
+      <% end %>
+    <% end %>
+  </ul>
+<% end %>

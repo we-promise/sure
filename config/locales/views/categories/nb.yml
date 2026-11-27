@@ -21,8 +21,6 @@ nb:
       categories_incomes: Inntektskategorier
       empty: Ingen kategorier funnet
       new: Ny kategori
-    menu:
-      loading: Laster...
     new:
       new_category: Ny kategori
     update:

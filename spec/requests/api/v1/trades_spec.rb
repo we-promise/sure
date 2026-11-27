@@ -51,14 +51,6 @@ RSpec.describe 'API V1 Trades', type: :request do
     )
   end
 
-  let(:category) do
-    family.categories.create!(
-      name: 'Investments',
-      color: '#2196F3',
-      lucide_icon: 'trending-up'
-    )
-  end
-
   let!(:trade) do
     trade_record = Trade.new(
       security: security,
@@ -180,7 +172,6 @@ RSpec.describe 'API V1 Trades', type: :request do
               manual_ticker: { type: :string, description: 'Manual ticker for offline securities' },
               currency: { type: :string, description: 'Currency (defaults to account currency)' },
               investment_activity_label: { type: :string, description: 'Activity label (e.g. Buy, Sell)' },
-              category_id: { type: :string, format: :uuid, description: 'Category ID' },
               transfer_account_id: { type: :string, format: :uuid, description: 'Destination/source account ID for linked transfers. Must be an account the user can write to; otherwise the request returns 404.' }
             },
             required: %w[account_id date type]
@@ -531,8 +522,7 @@ RSpec.describe 'API V1 Trades', type: :request do
               name: { type: :string },
               notes: { type: :string },
               currency: { type: :string },
-              investment_activity_label: { type: :string },
-              category_id: { type: :string, format: :uuid }
+              investment_activity_label: { type: :string }
             }
           }
         }

@@ -59,7 +59,9 @@
       <% end %>
     </div>
 
-    <%= render "settings/hostings/jev_settings" %>
+    <% if local_assigns[:manages_instance_settings] %>
+      <%= render "settings/hostings/jev_settings" %>
+    <% end %>
 
     <%# Only meaningful for a provider that reports confidence — the LLM
         providers return a bare category name, so there is nothing to threshold

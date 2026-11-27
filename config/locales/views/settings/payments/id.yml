@@ -1,0 +1,24 @@
+---
+id:
+  settings:
+    payments:
+      show:
+        page_title: "Pembayaran"
+        subscription_subtitle: "Perbarui detail kartu kredit Anda"
+        subscription_title: "Kelola kontribusi"
+        currently_on_plan: "Saat ini menggunakan paket"
+        trialing: "Saat ini menggunakan demo terbuka %{product_name}"
+        trial_days_left:
+          one: "Data akan dihapus dalam %{count} hari"
+          other: "Data akan dihapus dalam %{count} hari"
+        not_contributing_prefix: "Saat ini Anda"
+        not_contributing_emphasis: "belum berkontribusi"
+        contributions_note: "Kontribusi untuk %{product_name} akan ditampilkan di sini."
+        manage: "Kelola"
+        choose_level: "Pilih tingkat"
+        payment_via_stripe: "Pembayaran melalui Stripe"
+  views:
+    settings:
+      payments:
+        renewal: "Kontribusi Anda berlanjut pada %{date}."
+        cancellation: "Kontribusi Anda berakhir pada %{date}."

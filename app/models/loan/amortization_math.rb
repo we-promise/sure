@@ -5,7 +5,82 @@ class Loan
   # re-amortisation part-way through sizes them from the balance then
   # outstanding over the periods still remaining. Two callers, one formula.
   module AmortizationMath
+    PERCENT = BigDecimal("100")
+    MONTHS_PER_YEAR = BigDecimal("12")
+    DAYS_PER_YEAR = BigDecimal("365")
+    DAYS_PER_LEAP_YEAR = BigDecimal("366")
+
     module_function
+
+    # `annual_percentage` is whatever the caller's rate source returned -- an
+    # Integer in tests, a BigDecimal from RateResolver -- so the coercion at
+    # this boundary stays. The two-step division is kept so results match the
+    # schedules this product has always produced.
+    def monthly_rate(annual_percentage)
+      (BigDecimal(annual_percentage.to_s) / PERCENT) / MONTHS_PER_YEAR
+    end
+
+    # How much of a year one period charges, under the loan's day-count
+    # convention.
+    #
+    # Under 30/360 a full scheduled period is a flat twelfth. A period cut
+    # short by a valuation is not a full month, so it charges its own 30/360
+    # days. `full_period` keeps the contracted schedule bit-identical while
+    # letting a partial period charge the days it actually covers.
+    def accrual_factor(annual_percentage:, period_start:, period_end:, day_count_convention:, full_period: true)
+      if period_end < period_start
+        raise ArgumentError, "period ends (#{period_end}) before it starts (#{period_start})"
+      end
+
+      rate = BigDecimal(annual_percentage.to_s) / PERCENT
+
+      if day_count_convention.to_sym == :thirty_360
+        return monthly_rate(annual_percentage) if full_period
+
+        return rate * thirty_360_year_fraction(period_start, period_end)
+      end
+
+      if day_count_convention.to_sym == :actual_365
+        return (rate * BigDecimal((period_end - period_start).to_i.to_s)) / DAYS_PER_YEAR
+      end
+
+      rate * actual_actual_year_fraction(period_start, period_end)
+    end
+
+    # US 30/360 day fraction for a part-month period. The month-end rules keep
+    # the common cases consistent: a 31st start counts as the 30th, and a 31st
+    # end does too when the start is already the 30th.
+    def thirty_360_year_fraction(period_start, period_end)
+      start_day = period_start.day
+      end_day = period_end.day
+      start_day = 30 if start_day == 31
+      end_day = 30 if end_day == 31 && start_day == 30
+
+      days = 360 * (period_end.year - period_start.year) +
+             30 * (period_end.month - period_start.month) +
+             (end_day - start_day)
+
+      BigDecimal(days.to_s) / 360
+    end
+
+    # actual/actual measures each calendar year's days against THAT year's own
+    # length, so a period crossing New Year is two fractions rather than one.
+    def actual_actual_year_fraction(period_start, period_end)
+      fraction = BigDecimal("0")
+      cursor = period_start
+
+      while cursor < period_end
+        next_year_start = Date.new(cursor.year + 1, 1, 1)
+        segment_end = [ next_year_start, period_end ].min
+        days = BigDecimal((segment_end - cursor).to_i.to_s)
+        denominator = Date.leap?(cursor.year) ? DAYS_PER_LEAP_YEAR : DAYS_PER_YEAR
+
+        fraction += days / denominator
+        cursor = segment_end
+      end
+
+      fraction
+    end
 
     # The level payment that amortises `balance` to zero over
     # `remaining_payments` periods at `monthly_rate` -- the standard annuity

@@ -131,6 +131,9 @@
     <% end %>
   <% end %>
 
+  <%# Above the ring: the headline figures are what a partial total misleads. %>
+  <%= render "goals/currency_warning", goal: @goal %>
+
   <%# Top row: ring panel (status, no elevation) + projection chart card %>
   <section class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-3">
     <div class="rounded-xl p-5 flex flex-col items-center justify-center text-center">

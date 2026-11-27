@@ -77,10 +77,22 @@ class Assistant::Responder
     def request_response(function_results: [], previous_response_id: nil, tool_choice: nil)
       response_has_text = false
 
+      leading_whitespace = +""
+
       streamer = proc do |chunk|
-        if chunk.type == "output_text" && chunk.data.present?
-          response_has_text = true
-          emit(:output_text, chunk.data)
+        # A whitespace-only chunk is real text (OpenAI streams the space before a number as its own chunk),
+        # but a message cannot be saved with whitespace-only content, so hold leading whitespace back
+        # until the first non-blank chunk arrives and emit it together with that chunk.
+        if chunk.type == "output_text" && !chunk.data.to_s.empty?
+          if response_has_text
+            emit(:output_text, chunk.data)
+          elsif chunk.data.blank?
+            leading_whitespace << chunk.data
+          else
+            response_has_text = true
+            emit(:output_text, leading_whitespace + chunk.data)
+            leading_whitespace = +""
+          end
         end
       end
 
@@ -107,6 +119,7 @@ class Assistant::Responder
     end
 
     def get_llm_response(streamer:, function_results: [], previous_response_id: nil, tool_choice: nil)
+      Usage.capture("ai_assistant_served_daily")
       response = llm.chat_response(
         message.content,
         model: message.ai_model,

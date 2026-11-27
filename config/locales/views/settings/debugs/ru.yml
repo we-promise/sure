@@ -1,0 +1,40 @@
+---
+ru:
+  settings:
+    debugs:
+      show:
+        context:
+          account: счёт=%{value}
+          account_provider: поставщик_счёта=%{value}
+          family: семья=%{value}
+          provider: поставщик=%{value}
+          user: пользователь=%{value}
+        empty: События отладки не найдены.
+        filters:
+          account_id: ID счёта
+          account_provider_id: ID поставщика счёта
+          all: Все
+          category: Категория
+          end_date: По
+          family_id: ID семьи
+          level: Уровень
+          provider: Поставщик
+          reset: Сброс
+          source: Источник
+          start_date: С
+          submit: Фильтр
+          user_id: ID пользователя
+        missing_value: "-"
+        page_title: Отладка
+        subtitle: Значимые операционные события для супер-администраторов. Новейшие
+          в начале.
+        table:
+          category: Категория
+          context: Контекст
+          level: Уровень
+          message: Сообщение
+          metadata: Метаданные
+          source: Источник
+          time: Время
+          view_metadata: Просмотр
+        title: Журнал событий отладки

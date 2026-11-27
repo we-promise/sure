@@ -250,6 +250,130 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
     assert_nil @account.entries.find_by(external_id: "ibkr_trade_fee_1001"), "the commission is not counted again beside it"
   end
 
+  # Each keeps IBKR's sign: negative there is money out, positive in Sure.
+  test "processor imports withholding tax, interest, fees and payments in lieu" do
+    set_cash_transactions(
+      cash_row("5001", "Withholding Tax", "-0.38", conid: "265598"),
+      cash_row("5002", "Withholding Tax", "0.10", conid: "265598"),
+      cash_row("5003", "Payment In Lieu Of Dividends", "1.20", conid: "265598"),
+      cash_row("5004", "Broker Interest Received", "1.00"),
+      cash_row("5005", "Broker Interest Paid", "-2.00"),
+      cash_row("5006", "Bond Interest Received", "3.00"),
+      cash_row("5007", "Bond Interest Paid", "-0.50"),
+      cash_row("5008", "Other Fees", "-10.00"),
+      cash_row("5009", "Commission Adjustments", "0.25"),
+      cash_row("5010", "Withholding Tax", "-0.20")
+    )
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    expected = {
+      "5001" => [ "Dividend", "0.38", "Withholding Tax for #{securities(:aapl).ticker}" ],
+      "5002" => [ "Dividend", "-0.10", "Withholding Tax for #{securities(:aapl).ticker}" ],
+      "5003" => [ "Dividend", "-1.20", "Payment In Lieu Of Dividends for #{securities(:aapl).ticker}" ],
+      "5004" => [ "Interest", "-1.00", "Broker Interest Received" ],
+      "5005" => [ "Interest", "2.00", "Broker Interest Paid" ],
+      "5006" => [ "Interest", "-3.00", "Bond Interest Received" ],
+      "5007" => [ "Interest", "0.50", "Bond Interest Paid" ],
+      "5008" => [ "Fee", "10.00", "Other Fees" ],
+      "5009" => [ "Fee", "-0.25", "Commission Adjustments" ],
+      "5010" => [ "Interest", "0.20", "Withholding Tax" ]
+    }
+
+    expected.each do |transaction_id, (label, amount, name)|
+      entry = @account.entries.find_by(external_id: "ibkr_cash_#{transaction_id}")
+      assert_not_nil entry, "cash transaction #{transaction_id} was not imported"
+      assert_equal label, entry.entryable.investment_activity_label, transaction_id
+      assert_equal BigDecimal(amount), entry.amount, transaction_id
+      assert_equal name, entry.name, transaction_id
+      assert_equal "USD", entry.currency, transaction_id
+    end
+
+    withholding = @account.entries.find_by(external_id: "ibkr_cash_5001").entryable
+    assert_equal securities(:aapl).id, withholding.extra["security_id"]
+    assert_equal "Withholding Tax", withholding.extra.dig("ibkr", "type")
+  end
+
+  # Trade Republic books dividends net of the tax withheld; IBKR reports the
+  # tax as a row of its own, which nets into the dividend through its label.
+  test "withholding tax reduces dividend income" do
+    set_cash_transactions(
+      cash_row("6101", "Dividends", "2.50", conid: "265598"),
+      cash_row("6102", "Withholding Tax", "-0.38", conid: "265598")
+    )
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    totals = InvestmentStatement::Totals.new(@family, account_ids: [ @account.id ], date_range: Date.current..Date.current).call
+    assert_equal BigDecimal("2.12"), totals[:dividends]
+  end
+
+  # IBKR cancels a dividend with a negative Dividends row and books it again,
+  # so the reversal is money out and the income nets to the rebooked amount.
+  test "a dividend reversal is booked as money out" do
+    set_cash_transactions(
+      cash_row("6001", "Dividends", "2.50", conid: "265598"),
+      cash_row("6002", "Dividends", "-2.50", conid: "265598"),
+      cash_row("6003", "Dividends", "2.40", conid: "265598")
+    )
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    amounts = %w[6001 6002 6003].map { |id| @account.entries.find_by(external_id: "ibkr_cash_#{id}").amount }
+    assert_equal [ BigDecimal("-2.5"), BigDecimal("2.5"), BigDecimal("-2.4") ], amounts
+
+    totals = InvestmentStatement::Totals.new(@family, account_ids: [ @account.id ], date_range: Date.current..Date.current).call
+    assert_equal BigDecimal("2.4"), totals[:dividends]
+  end
+
+  test "an unsupported cash transaction type is skipped" do
+    set_cash_transactions(cash_row("7001", "Price Adjustments", "-1.00"))
+
+    assert_nothing_raised { IbkrAccount::Processor.new(@ibkr_account).process }
+
+    assert_nil @account.entries.find_by(external_id: "ibkr_cash_7001")
+  end
+
+  # A skipped row with an amount is cash the account lost track of, so support
+  # needs to see it; one entry per run, not one per row.
+  test "skipped cash transaction types with an amount are captured for support" do
+    set_cash_transactions(
+      cash_row("7101", "Price Adjustments", "-1.00"),
+      cash_row("7102", "Price Adjustments", "-2.00"),
+      cash_row("7103", "Advisor Fees", "-3.00"),
+      cash_row("7104", "Something Else", "0")
+    )
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "ibkr").count }, 1 do
+      IbkrAccount::Processor.new(@ibkr_account).process
+    end
+
+    entry = DebugLogEntry.where(provider_key: "ibkr").last
+    assert_equal "warn", entry.level
+    assert_equal @family, entry.family
+    assert_equal @ibkr_account.account_provider, entry.account_provider
+    assert_equal({ "Price Adjustments" => 2, "Advisor Fees" => 1 }, entry.metadata["skipped_cash_transaction_types"])
+  end
+
+  # Tax withheld from a bond coupon carries the bond's conid, but it reduces
+  # the coupon's interest, not dividends.
+  test "withholding tax on a bond coupon reduces interest" do
+    set_cash_transactions(
+      cash_row("6201", "Bond Interest Received", "3.00", conid: "9001"),
+      cash_row("6202", "Withholding Tax", "-0.30", conid: "9001"),
+      cash_row("6203", "Withholding Tax", "-0.10", conid: "9002", asset_category: "BOND")
+    )
+
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    assert_equal "Interest", @account.entries.find_by(external_id: "ibkr_cash_6202").entryable.investment_activity_label
+    assert_equal "Interest", @account.entries.find_by(external_id: "ibkr_cash_6203").entryable.investment_activity_label
+
+    totals = InvestmentStatement::Totals.new(@family, account_ids: [ @account.id ], date_range: Date.current..Date.current).call
+    assert_equal BigDecimal("0"), totals[:dividends]
+    assert_equal BigDecimal("2.60"), totals[:interest]
+  end
+
   test "processor computes weighted provider cost basis for grouped lots" do
     @ibkr_account.update!(
       raw_holdings_payload: [
@@ -381,6 +505,25 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
   end
 
   private
+
+    def cash_row(transaction_id, type, amount, conid: nil, asset_category: nil)
+      {
+        "transaction_id" => transaction_id,
+        "type" => type,
+        "amount" => amount,
+        "currency" => "USD",
+        "fx_rate_to_base" => "1",
+        "report_date" => Date.current.to_s,
+        "conid" => conid,
+        "asset_category" => asset_category
+      }.compact
+    end
+
+    def set_cash_transactions(*rows)
+      payload = @ibkr_account.reload.raw_activities_payload.deep_dup
+      payload["cash_transactions"] = rows
+      @ibkr_account.update!(raw_activities_payload: payload)
+    end
 
     def set_commission_currency(trade_id, currency)
       payload = @ibkr_account.reload.raw_activities_payload.deep_dup

@@ -1,0 +1,8 @@
+<%# locals: (settings:) %>
+<%# How many of the newest transactions the classifier learns from and the
+    matcher copies from: one setting for both. %>
+<%= classifier_section_form do %>
+  <%= render "settings/classifiers/number", key: :max_training_transactions, settings: settings,
+        attrs: { step: 100 },
+        label: t(".max_training_transactions"), hint: t(".max_training_transactions_hint") %>
+<% end %>

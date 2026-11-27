@@ -7,6 +7,18 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "admin can override the insight dig in message" do
+    admin = users(:family_admin)
+    sign_in admin
+
+    get settings_ai_prompts_path
+    assert_select "textarea#family_ai_prompt_insight_dig_in"
+
+    patch settings_ai_prompts_path, params: { family: { ai_prompt_insight_dig_in: "Explain %{title}." } }
+
+    assert_equal "Explain %{title}.", admin.family.reload.ai_prompt(:insight_dig_in)
+  end
+
   test "non-admin member cannot view family AI prompts" do
     sign_in users(:family_member)
     get settings_ai_prompts_path

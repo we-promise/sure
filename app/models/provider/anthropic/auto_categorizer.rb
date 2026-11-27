@@ -1,5 +1,6 @@
 class Provider::Anthropic::AutoCategorizer
   include Provider::Anthropic::Concerns::UsageRecorder
+  include Provider::Anthropic::Concerns::StructuredOutput
 
   TOOL_NAME = "report_categorizations".freeze
 
@@ -15,19 +16,21 @@ class Provider::Anthropic::AutoCategorizer
   end
 
   def auto_categorize
-    span = langfuse_trace&.span(name: "auto_categorize_api_call", input: {
+    span = langfuse_trace&.generation(name: "auto_categorize_api_call", model: model, input: {
       model: model,
       transactions: transactions,
       user_categories: user_categories
     })
 
-    response = client.messages.create(
+    response = create_structured_message(
+      tool_name: TOOL_NAME,
+      operation: "auto_categorize",
       model: model,
       max_tokens: max_tokens,
-      system_: instructions,
+      system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),
       messages: [ { role: "user", content: user_message } ],
       tools: [ output_tool ],
-      tool_choice: { type: "tool", name: TOOL_NAME, disable_parallel_tool_use: true }
+      tool_choice: Provider::Anthropic.structured_output_tool_choice(model, TOOL_NAME)
     )
 
     categorizations = extract_categorizations(response)
@@ -135,10 +138,10 @@ class Provider::Anthropic::AutoCategorizer
     end
 
     def extract_categorizations(response)
-      tool_use = Array(response.content).find { |block| block_type(block) == :tool_use }
-      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME}" unless tool_use
+      tool_use = Array(response.content).find { |block| structured_block_type(block) == :tool_use }
+      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME} (stop_reason: #{response.stop_reason})" unless tool_use
 
-      input = block_input(tool_use)
+      input = structured_block_input(tool_use)
       input = JSON.parse(input) if input.is_a?(String)
       categorizations = input.is_a?(Hash) ? (input["categorizations"] || input[:categorizations]) : nil
 
@@ -163,23 +166,5 @@ class Provider::Anthropic::AutoCategorizer
 
       match = user_categories.find { |c| c[:name].to_s.casecmp(str).zero? }
       match ? match[:name] : str
-    end
-
-    def block_type(block)
-      raw = block.respond_to?(:type) ? block.type : block[:type] || block["type"]
-      raw.to_s.to_sym
-    end
-
-    def block_input(block)
-      block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
-    end
-
-    def usage_hash(raw_usage)
-      return {} unless raw_usage
-      {
-        "input_tokens" => raw_usage.input_tokens.to_i,
-        "output_tokens" => raw_usage.output_tokens.to_i,
-        "total_tokens" => raw_usage.input_tokens.to_i + raw_usage.output_tokens.to_i
-      }
     end
 end

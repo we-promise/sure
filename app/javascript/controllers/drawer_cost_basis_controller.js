@@ -1,34 +1,20 @@
 import { Controller } from "@hotwired/stimulus"
-import parseLocaleFloat from "utils/parse_locale_float"
 
-// Handles the inline cost basis editor in the holding drawer.
-// Shows/hides the form and handles bidirectional total <-> per-share conversion.
+// Shows/hides the inline cost basis editor in the holding drawer.
+// The total <-> per-share conversion lives in cost_basis_form_controller.
 export default class extends Controller {
-  static targets = ["form", "total", "perShare", "perShareValue"]
-  static values = { qty: Number }
+  static targets = ["form", "opener"]
 
+  // Opening moves focus into the editor, closing (pencil or Cancel) returns it
+  // to the pencil, so focus never drops to <body> with the hidden form.
   toggle(event) {
     event.preventDefault()
-    this.formTarget.classList.toggle("hidden")
-  }
+    const hidden = this.formTarget.classList.toggle("hidden")
 
-  // Called when user types in total cost basis field
-  updatePerShare() {
-    const total = parseLocaleFloat(this.totalTarget.value)
-    const qty = this.qtyValue || 1
-    const perShare = qty > 0 ? (total / qty).toFixed(2) : "0.00"
-    this.perShareValueTarget.textContent = perShare
-    if (this.hasPerShareTarget) {
-      this.perShareTarget.value = perShare
+    if (hidden) {
+      this.openerTarget.focus()
+    } else {
+      this.formTarget.querySelector("input:not([type='hidden'])")?.focus()
     }
-  }
-
-  // Called when user types in per-share field
-  updateTotal() {
-    const perShare = parseLocaleFloat(this.perShareTarget.value)
-    const qty = this.qtyValue || 1
-    const total = (perShare * qty).toFixed(2)
-    this.totalTarget.value = total
-    this.perShareValueTarget.textContent = perShare.toFixed(2)
   }
 }

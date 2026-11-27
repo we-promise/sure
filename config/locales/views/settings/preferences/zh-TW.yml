@@ -1,0 +1,50 @@
+---
+zh-TW:
+  settings:
+    preferences:
+      show:
+        country: 國家
+        currency: 幣別
+        date_format: 日期格式
+        general_subtitle: 設定您的偏好
+        general_title: 一般
+        default_period: 預設時段
+        default_account_order: 預設帳戶排序
+        language: 語言
+        language_auto: 瀏覽器語言
+        page_title: 偏好設定
+        timezone: 時區
+        month_start_day: 預算月份起始日
+        month_start_day_hint: 設定您的預算月份從哪一天開始（例如發薪日）
+        month_start_day_warning: 您的預算與月初至今計算將採用這個自訂的起始日，而不是每個月的 1 號。
+        translations_notice: 請注意，我們仍在進行各語言的翻譯工作。
+        currencies_title: '%{moniker}貨幣'
+        currencies_subtitle: 選擇哪些貨幣要出現在您%{moniker}的金額欄位中
+        base_currency_label: 基準貨幣
+        base_currency_badge: 基準貨幣
+        additional_currencies_label: 其他貨幣
+        no_additional_currencies: 未選擇任何項目
+        currencies_more: 另有 %{count} 種
+        manage_currencies: 管理貨幣
+        manage_currencies_subtitle: 取消勾選您從不使用的貨幣，或把清單縮減到只剩幾種。
+        select_all_currencies: 全選
+        select_base_only: 僅基準貨幣
+        currency_search_placeholder: 搜尋貨幣
+        no_matching_currencies: 找不到貨幣
+        selected_currencies_count:
+          one: 已選擇 %{count} 種
+          other: 已選擇 %{count} 種
+        save_currencies: 儲存貨幣
+        sharing_title: '%{moniker}共享'
+        sharing_subtitle: 控制帳戶在您%{moniker}中的共享方式
+        sharing_default_label: 新帳戶的預設共享方式
+        sharing_shared: 與所有成員共享
+        sharing_private: 預設保持私人
+        preview:
+          title: 啟用預覽功能
+          description: 加入標示為 preview 或 canary 的開發中功能。
+        theme_dark: 深色
+        theme_light: 淺色
+        theme_subtitle: 選擇您偏好的應用程式主題
+        theme_system: 系統設定
+        theme_title: 主題

@@ -92,17 +92,49 @@ Locales:
 
 A goal records a name, target amount, optional target date, color, optional
 icon, optional notes, currency, and an AASM `state` (`active` / `paused` /
-`completed` / `archived`). It links to depository accounts via the join
-table `goal_accounts`.
+`completed` / `archived`). It links cash, investment and crypto accounts via the
+join table `goal_accounts`.
 
-The goal's *progress* is the live balance of every linked account. There
-is no ledger of contributions. `Goal#current_balance` reads
-`linked_accounts.sum(:balance)` at request time.
+The goal's *progress* is its allocated share of linked accounts, converted to
+its currency at request time. `Goal#current_balance` preserves native account
+allocations and shared-pool limits before conversion. Investment- and
+crypto-backed goals default to contribution progress, excluding cumulative
+market gains from their backing; `market_value_money` separately shows the
+current market value. Market gains come from `balances.net_market_flows`,
+which is derived from holdings, so an account synced as a bare balance with
+no holdings (common for crypto wallets) has none: its contribution progress
+equals its balance and price moves still show up.
 
 A `GoalPledge` is an intent: amount, account, kind, status, expires_at.
 The status enum is `open` / `matched` / `cancelled` / `expired`. The kind
-enum is `transfer` / `manual_save`; kind is decided at create time from
-the selected account's connection state.
+enum is `transfer` / `manual_save`; kind is decided at create time by
+`Account#default_pledge_kind` (see "Connected vs manual accounts").
+
+## Currencies and account allocations
+
+A goal can link cash, investment and crypto accounts in different currencies.
+New goals use the family's display currency, matching the target field; an
+existing goal's currency remains locked. Target, progress, consumed amount and pledges use goal
+currency. Each `GoalAccount#allocated_amount` remains in its account's currency.
+Shared-pool allocation and pro-rata scaling happen before conversion, so goals
+with different currencies cannot double-count the same account.
+
+`Goal::CurrencyConverter` uses `ExchangeRate.find_or_fetch_rate` through `Money`,
+with a request-scoped rate cache shared by prepared goals. Current backing, pace
+and funding inflows use today's rate (pace is an estimate, and a rate per entry
+date would reach the provider on every render); consumption and pledge matches
+use the entry date. Budget
+cash reservations convert native earmarks directly to budget currency rather
+than going through an intermediate goal currency. Consumption converts the
+entered goal-currency amount back into native units before releasing an earmark.
+
+Unavailable rates never become 1:1 conversions. Read surfaces show the known
+subtotal and a missing-rate warning (`Goal#currency_conversion_incomplete?`
+runs the backing, pace and market-value conversions first, so the warning can
+render above them); writes that require conversion are refused,
+and pledge matches wait for a rate. Goal history charts opt into strict currency
+conversion and omit the saved line when it cannot be converted. Existing stored
+balances and transactions are unchanged; no migration is required.
 
 ## Status semantics
 
@@ -184,14 +216,16 @@ would otherwise touch `updated_at` on every matched pledge and reset the
 `account_providers` association rows, no `plaid_account_id`, and no
 `simplefin_account_id`. This mirrors the `Account.manual` query scope.
 
-`Goal#any_connected_account?` returns true when *any* linked account is
-not manual. It drives the modal-title copy: connected accounts get
-"I just transferred…", manual-only goals get "I just saved…"
+`Account#default_pledge_kind` is per-account: manual cash accounts get
+`manual_save`; connected accounts and every investment or crypto account
+(`balance_type == :investment`, manual or not) get `transfer`, because a
+positive valuation delta there is usually a market move, not a deposit. A
+goal with one manual and one connected linked account works correctly; the
+kind reflects the specific account the user picked, not the goal as a whole.
 
-`GoalPledgesController#kind_for_account(account)` is per-account:
-manual → `manual_save`, connected → `transfer`. A goal with one manual
-and one connected linked account works correctly; the kind reflects the
-specific account the user picked, not the goal as a whole.
+`Goal#pledge_action_label_key` picks the modal copy from the same method:
+"I just transferred…" when any linked account uses `transfer`, "I just
+saved…" otherwise.
 
 ## Color map
 
@@ -277,10 +311,9 @@ calls it. Things to watch:
 
 ## Gotchas
 
-The same depository account can fund two goals. Both will read the
-full balance and double-count progress toward their targets. This is a
-known limitation; an allocation primitive that splits the balance
-proportionally (or by explicit user weights) would be the way out.
+Accounts can fund multiple goals using fixed native-currency allocations.
+Whole-account links are exclusive while their goal remains active or paused;
+completed and archived goals release their reservation.
 
 `Goal#pace` includes paychecks, rent, debit-card spend — anything on
 the linked account. For a goal linked to primary checking, the metric

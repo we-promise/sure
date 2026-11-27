@@ -26,6 +26,18 @@ class DS::DialogTest < ViewComponent::TestCase
     assert_no_selector "dialog[data-turbo-temporary]"
   end
 
+  # Transaction, trade and other detail drawers put this button in their
+  # custom headers and have no other way out on a phone.
+  test "a responsive dialog's close button shows at every width" do
+    dialog = DS::Dialog.new(frame: "drawer", responsive: true)
+    render_inline(dialog) do
+      dialog.with_header(custom_header: true) { dialog.close_button }
+    end
+
+    close = page.find("button[data-action='DS--dialog#close']")
+    refute_includes close[:class].split, "hidden"
+  end
+
   test "a modal fetched into the modal frame is left out of Turbo's page cache" do
     vc_test_request.headers["Turbo-Frame"] = "modal"
     render_inline(DS::Dialog.new)

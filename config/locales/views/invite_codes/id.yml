@@ -1,0 +1,11 @@
+---
+id:
+  invite_codes:
+    create:
+      success: "Kode dibuat"
+    destroy:
+      success: "Kode dihapus"
+    index:
+      invite_code_description: Buat kode baru untuk melihatnya ditampilkan di sini. Kode
+        yang sudah digunakan tidak akan ditampilkan lagi.
+      no_invite_codes: Tidak ada kode untuk ditampilkan

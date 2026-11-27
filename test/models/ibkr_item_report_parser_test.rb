@@ -15,7 +15,9 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
     assert_equal 2, first_account[:equity_summary_in_base].size
     assert_equal 1, first_account[:open_positions].size
     assert_equal 2, first_account[:trades].size
-    assert_equal 2, first_account[:cash_transactions].size
+    assert_equal 3, first_account[:cash_transactions].size
+    assert_equal "Withholding Tax", first_account[:cash_transactions].last["type"]
+    assert_equal "-0.38", first_account[:cash_transactions].last["amount"]
 
     second_account = parsed[:accounts].second
     assert_equal "U7654321", second_account[:ibkr_account_id]

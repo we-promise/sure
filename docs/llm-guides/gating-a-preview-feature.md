@@ -142,7 +142,7 @@ The flag is per-user, not per-family. Two users in the same family can see diffe
 
 The gate does nothing for background jobs on its own — `PreviewGateable` reads `Current.user`, which a Sidekiq worker doesn't have. A cron job runs regardless of who has preview enabled. That's usually correct: data should keep flowing, so it's there when someone opts in. `SweepExpiredGoalPledgesJob` is the typical shape — it only walks pledges that opted-in users created, so it's naturally inert for everyone else and needs no gate.
 
-Gate the job when it does work that isn't free. Two cases: it sends something outward (notifications, emails — gate at the send site), or it *manufactures* data for every family rather than moving existing data around, burning compute or paid API calls per family. `GenerateInsightsJob` is the second case: seven generators over the income statement and balance sheet, plus optional LLM narration, for every family nightly.
+Gate the job when it does work that isn't free. Two cases: it sends something outward (notifications, emails — gate at the send site), or it *manufactures* data for every family rather than moving existing data around, burning compute or paid API calls per family. `GenerateInsightsJob` is the second case: seven generators over the income statement and balance sheet, for every family nightly.
 
 For a family-scoped job, roll the per-user flag up to the family:
 

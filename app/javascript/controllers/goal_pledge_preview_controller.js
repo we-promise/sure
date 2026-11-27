@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import evaluateAmountExpression from "utils/evaluate_amount_expression";
 
 // Live impact preview for the record-pledge modal. Reads current balance +
 // target amount from values and updates a preview sentence each keystroke.
@@ -67,9 +68,13 @@ export default class extends Controller {
     this.previewTarget.textContent = text;
   }
 
+  // amountInputTarget is the shared money field, so it can hold a comma
+  // decimal or expression ("12,50+4,30"); Number.parseFloat stops at the
+  // first comma/operator and silently truncates it (see
+  // money_field_controller.js).
   #amountValue() {
     if (!this.hasAmountInputTarget) return 0;
-    const parsed = Number.parseFloat(this.amountInputTarget.value);
+    const parsed = evaluateAmountExpression(this.amountInputTarget.value);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }
 

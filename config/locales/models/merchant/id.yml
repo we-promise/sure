@@ -1,0 +1,13 @@
+---
+id:
+  models:
+    merchant:
+      no_merchant: Tanpa merchant
+  activerecord:
+    errors:
+      models:
+        family_merchant:
+          attributes:
+            logo:
+              invalid_content_type: harus berupa gambar JPEG, PNG, atau WebP
+              invalid_file_size: ukuran file harus kurang dari %{max_megabytes}MB

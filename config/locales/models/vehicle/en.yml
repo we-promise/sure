@@ -1,0 +1,15 @@
+---
+en:
+  activerecord:
+    attributes:
+      # How the account form names the vehicle's field in its error messages.
+      account/accountable:
+        purchase_date: Purchase date
+      vehicle:
+        purchase_date: Purchase date
+    errors:
+      models:
+        vehicle:
+          attributes:
+            purchase_date:
+              must_precede_entries: must be before the account's oldest entry

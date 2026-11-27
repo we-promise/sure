@@ -31,8 +31,6 @@ de:
       new: Neue Kategorie
       delete_all: Alle löschen
       merge: Kategorien zusammenführen
-    menu:
-      loading: Wird geladen...
     new:
       new_category: Neue Kategorie
     update:

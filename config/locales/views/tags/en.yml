@@ -19,7 +19,6 @@ en:
       delete_all: Delete all
     menu:
       label: Edit tags
-      loading: Loading tags...
     new:
       new: New tag
     summary:

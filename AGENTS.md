@@ -7,6 +7,7 @@
 - Minitest tests mirror `app/` under `test/`; fixtures are in `test/fixtures/`. Migrations and schema are in `db/`, scripts in `bin/`, shared libraries in `lib/`.
 - Use `Current.user` and `Current.family`, never `current_user` or `current_family`. Preserve family tenancy and existing authorization boundaries.
 - Prefer built-in Rails patterns and established dependencies. New dependencies need a strong technical or business reason. Keep changes focused, readable and consistent with nearby code.
+- Keep comments focused on non-obvious intent, constraints, and current behavior—not implementation diaries or issue/PR history. Put that history in commits and PR descriptions. Update or remove stale comments when changing code.
 - Ruby uses two-space indentation, `snake_case` methods/variables and `CamelCase` classes. JavaScript uses `lowerCamelCase` variables/functions and `PascalCase` classes; follow Biome. Keep domain logic out of ERB.
 - Never commit secrets; use environment variables and `.env.local` for local configuration.
 - Do not start `rails server`, touch `tmp/restart.txt`, run `rails credentials`, or automatically run migrations. Setup and database commands in the [development guide](docs/llm-guides/development.md) are for explicitly requested environment work.

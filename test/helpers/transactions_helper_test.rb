@@ -8,6 +8,43 @@ class TransactionsHelperTest < ActionView::TestCase
     OpenStruct.new(extra: extra)
   end
 
+  test "reconcile filter is hidden unless manual reconciliation is enabled" do
+    Current.session = Session.create!(user: users(:family_admin))
+
+    assert_not_includes transaction_search_filters.map { |filter| filter[:key] }, "reconcile_status_filter"
+
+    Current.family.update!(manual_reconciliation: true)
+
+    assert_includes transaction_search_filters.map { |filter| filter[:key] }, "reconcile_status_filter"
+  end
+
+  test "can_reconcile_account? mirrors the write access the reconcile action requires" do
+    Current.session = Session.create!(user: users(:family_member))
+
+    assert can_reconcile_account?(accounts(:depository)),
+      "full_control share is write access"
+    assert_not can_reconcile_account?(accounts(:credit_card)),
+      "read_only share cannot reconcile"
+    assert_not can_reconcile_account?(accounts(:investment)),
+      "an account with no share at all cannot reconcile"
+  end
+
+  test "can_reconcile_account? lets the owner reconcile" do
+    Current.session = Session.create!(user: users(:family_admin))
+
+    assert can_reconcile_account?(accounts(:investment)), "owner can reconcile"
+  end
+
+  test "can_reconcile_account? does not treat annotate access as write access" do
+    share = account_shares(:credit_card_shared_with_member)
+    share.update!(permission: "read_write")
+
+    Current.session = Session.create!(user: users(:family_member))
+
+    assert_not can_reconcile_account?(accounts(:credit_card)),
+      "read_write is annotate access, and #reconcile requires write"
+  end
+
   test "extracts the named Plaid fields into their own section" do
     details = build_transaction_extra_details(transaction_with({
       "plaid" => {
@@ -132,6 +169,15 @@ class TransactionsHelperTest < ActionView::TestCase
     assert_equal [ { "name" => "Amazon" } ], JSON.parse(row[:value])
     assert_includes row[:value], "\n"
     refute_includes row[:value], "\\\""
+  end
+
+  # Regression: passing the raw operator straight to t() raised
+  # I18n::ArgumentError for nil/blank (an empty key) and resolved a whole
+  # translation subtree for a dotted value like "transactions.search".
+  test "falls back to the raw operator instead of translating unknown or blank values" do
+    assert_equal "", transaction_amount_operator_label(nil)
+    assert_equal "foo", transaction_amount_operator_label("foo")
+    assert_equal "transactions.search", transaction_amount_operator_label("transactions.search")
   end
 
   test "falls back to a raw JSON dump for providers with no structured rendering" do

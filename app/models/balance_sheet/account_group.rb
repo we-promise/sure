@@ -33,8 +33,10 @@ class BalanceSheet::AccountGroup
     accountable_type.to_s.underscore
   end
 
+  # Counts the same accounts as the classification total and net worth, so the
+  # group weights add up and the sidebar sparkline matches this figure.
   def total
-    accounts.reject { |a| a.respond_to?(:exclude_from_reports?) && a.exclude_from_reports? }.sum(&:converted_balance)
+    BalanceSheet::ClassificationGroup.counted_accounts(accounts).sum(&:converted_balance)
   end
 
   def weight

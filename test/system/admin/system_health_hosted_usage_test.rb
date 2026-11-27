@@ -17,10 +17,15 @@ class Admin::SystemHealthHostedUsageTest < ApplicationSystemTestCase
 
     visit admin_system_health_path
     assert_selector "turbo-frame#hosted_usage[loading='lazy']:not([complete])", visible: :all
-    click_button "Hosted usage"
+    click_button "Config"
+    assert_current_path admin_system_health_path(tab: "configuration")
+    assert_selector "[data-testid='configuration-health']"
+    assert_selector "turbo-frame#hosted_usage[loading='lazy']:not([complete])", visible: :all
+    click_button "Usage"
+    assert_no_selector "[data-testid='configuration-health']"
 
     assert_current_path admin_system_health_path(tab: "hosted_usage")
-    assert_selector "button[role='tab'][aria-selected='true']", text: "Hosted usage"
+    assert_selector "button[role='tab'][aria-selected='true']", text: "Usage"
     within "turbo-frame#hosted_usage" do
       assert_text "Recent trial households"
       assert_text(/Retained sign-in sessions/i)
@@ -31,7 +36,13 @@ class Admin::SystemHealthHostedUsageTest < ApplicationSystemTestCase
     end
     page.save_screenshot(Rails.root.join("tmp", "system-health-hosted-usage.png"))
 
-    page.current_window.resize_to(390, 844)
+    page.current_window.resize_to(375, 844)
+    tabs = all("button[role='tab']")
+    assert_equal 4, tabs.size
+    tabs.each do |tab|
+      assert tab.evaluate_script("this.scrollWidth <= this.clientWidth"), "Tab must fit"
+      assert tab.evaluate_script("this.getBoundingClientRect().height < 48"), "Tab label must stay on one line"
+    end
     within "turbo-frame#hosted_usage" do
       assert_selector "[role='region'][aria-label='Recent trial households'][tabindex='0']"
       assert_no_selector "form, button, a[data-turbo-method]"
@@ -55,8 +66,8 @@ class Admin::SystemHealthHostedUsageTest < ApplicationSystemTestCase
 
     visit admin_system_health_path(tab: "hosted_usage")
 
-    assert_selector "button[role='tab'][aria-selected='true']", text: "Background jobs"
-    assert_no_selector "button[role='tab']", text: "Hosted usage"
+    assert_selector "button[role='tab'][aria-selected='true']", text: "Jobs"
+    assert_no_selector "button[role='tab']", text: "Usage"
     assert_no_selector "turbo-frame#hosted_usage", visible: :all
   end
 

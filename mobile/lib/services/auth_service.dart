@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/auth_tokens.dart';
+import '../models/sso_provider.dart';
 import '../models/user.dart';
 import 'api_config.dart';
 import 'log_service.dart';
@@ -397,6 +398,27 @@ class AuthService {
         'success': false,
         'error': 'An unexpected error occurred',
       };
+    }
+  }
+
+  /// Returns the SSO providers configured on the server, or `null` when the
+  /// list can't be fetched (e.g. a server that predates the endpoint).
+  Future<List<SsoProvider>?> fetchSsoProviders() async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_providers');
+      final response = await http
+          .get(url, headers: ApiConfig.jsonHeaders())
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode != 200) return null;
+
+      final providers = jsonDecode(response.body)['providers'] as List;
+      return providers
+          .map((p) => SsoProvider.fromJson(p as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      _logAuthException('SSO providers fetch', e);
+      return null;
     }
   }
 

@@ -1,0 +1,156 @@
+---
+zh-CN:
+  settings:
+    classifiers:
+      account:
+        account_field: 将账户作为一个词元计入
+        account_field_hint: 交易所在的账户将作为依据之一。它绝不会单独做决策：交易仍需要已知词语或商户。
+      amount:
+        amount_by_direction: 区分资金流入或流出的方向
+        amount_by_direction_hint: 每个分类都会学习其资金流向，使同一商户的退款和消费保持分开。
+        amount_field: 计入金额
+        amount_field_hint: 在对数尺度上，将金额与同币种下各分类的常规金额进行比较。
+      category_training:
+        apply: 应用
+        categories: 分类
+        categories_all: 全部分类
+        categories_hint: 未勾选的分类及其子分类将排除在训练之外，因此贝叶斯绝不会选择它们。
+        categories_some: "%{count} / %{total} 个分类"
+        exclude_transfers: 排除转账
+        exclude_transfers_hint: 账户之间的转账和收付款。
+        search_categories: 搜索分类
+        skip_self_labels: 在确认或达到指定天数之前，不学习贝叶斯自身的猜测
+        skip_self_labels_hint: 已确认指您手动更改或锁定了它。错误的猜测不会被重新输入并强化；保持不变达到该天数的猜测将被视为已接受。
+      add_rule:
+        success: "%{name} 规则已添加到规则列表顶部。"
+      classifier:
+        apply: 应用
+        lock_results: 锁定分类器设置的分类
+        lock_results_hint: 阻止规则更改贝叶斯选择的分类，除非您在规则上点击“应用”。AI 绝不会更改贝叶斯的选择，无论是否锁定。
+        rule: 使用分类器进行分类
+        rule_hint: 分类分类器规则，在“规则”中与其同步开启和关闭。它会在每次同步后按照您的规则顺序对未分类交易进行分类；无法确定的交易将留给自动分类规则处理。
+        threshold: 阈值
+        threshold_hint: 贝叶斯采取行动的最低分数（0.05–0.99）。较低的阈值会分类更多交易，但错误也会增多。
+      clear_locks:
+        success: 正在清除贝叶斯锁定。这可能需要一点时间。
+      evaluation:
+        apply_best: 应用这些设置
+        best: 最佳发现
+        best_changes: "最佳发现（相比您的设置有改动）："
+        best_no_changes: 没有比您当前设置得分更高的方案。
+        buttons_hint: "“测试我的设置”将为您当前的设置评分。“寻找最佳设置”会在所显示月份之前的 %{tuning} 个月内进行搜索，因此找到的设置将在其未见过的月份上进行评分。它通过 ROC-AUC 进行评判：即无论阈值高低，各分类交易得分相对其他交易的排序表现，仅当整体得分更高且在这些 %{tuning} 个月中除一个月外均更高时才保留更改。它首先选择输入（商户词元、金额和账户的各种组合；然后将商户和账户与词语分开评分；接着将商户名称和备注作为词语处理），然后逐一尝试其他设置的单项更改，最后尝试评分设置。“默认值”为原始分类器的设置与您所选的分类；“恢复为默认”将切换至默认设置并进行测试。"
+        categories_heading: 分类分类器
+        change: "%{setting}: %{value}"
+        confusion: "%{actual} → %{predicted}"
+        confusions: "最常见错误：%{threshold} 阈值下的 %{column}"
+        current: 我的设置
+        defaults: 默认值
+        description: 每一列都会以最近 %{months} 个月的新交易进行评分，每个月都根据其之前的历史进行训练，然后与您的实际分类进行对比。测试不会更改任何交易的分类，分类器设置仅在您应用或重置时才会更改。
+        find_best: 寻找最佳设置
+        matcher_confusions: "最常见商户错误：%{similarity} 相似度下的 %{column}"
+        matcher_description: "匹配器在相同 %{months} 个月内补全的商户：%{count} 笔有商户的交易，每笔交易在其商户被隐藏的情况下与该月之前的历史进行匹配；正确匹配指其原本拥有的商户。每个截止值和商户数量都会进行评分；“最佳发现”是考虑错误代价后表现最好的设置，“应用”将应用该设置。测试不会实际补全商户。"
+        merchants_heading: 商户匹配器
+        no_confusions: 在此阈值下没有错误。
+        no_matcher_confusions: 在此相似度下没有商户错误。
+        no_uncategorized: 在此阈值下没有未分类的交易。
+        no_unfilled: 在此相似度下没有未补全商户的交易。
+        none: 尚未测试。
+        "off": "关"
+        "on": "开"
+        ran_at: 于 %{time}前评分，基于 %{count} 笔交易（%{months}）。
+        reset: 恢复为默认
+        reset_confirm: 将所有分类器设置恢复为默认值并进行测试？
+        right_wrong: 每个单元格代表 正确 / 错误。
+        run: 测试我的设置
+        running: 正在测试… 完成后此区域将自动更新。
+        short_history: 尚无足够的历史记录来微调分类分类器。这需要大约 %{months} 个月的已分类交易，因此“应用”暂时不会修改其设置。
+        similarity: 相似度
+        stale: 设置已更改，请重新测试以更新分数。
+        threshold: 阈值
+        trying: "正在尝试：%{changes}…"
+        uncategorized: "最常见未分类：%{threshold} 阈值下的 %{column}"
+        unfilled: "最常见未补全：%{similarity} 相似度下的 %{column}"
+        weight: 单次错误代价
+        weight_hint: "决定“应用”所保存的设置：即粗体显示的单元格，此处（正确数量减去每个错误代价乘以错误数）最高。分类采用“最佳发现”的阈值；匹配器则采用相应截止值、相似度及商户数量。"
+        weight_option:
+          one: 1 个正确答案
+          other: "%{count} 个正确答案"
+      matcher:
+        lock_similar_merchants: 锁定匹配器设置的商户
+        lock_similar_merchants_hint: 阻止规则、AI 和同步更改它们，除非您在规则上点击“应用”。其自身产生的锁定不算作已确认（参见商户匹配器调优）。
+        rule: 通过近似重复项补全缺失的商户
+        rule_hint: 商户匹配器规则，在“规则”中与其同步开启和关闭。按照您的规则顺序，没有商户的交易将获得其近似重复项（例如“NETFLIX.COM 8812”和“Netflix com”）共有的商户。转账会被排除在外。
+        similar_threshold: 相似度
+        similar_threshold_hint: 忽略数字和参考代码后，交易描述的最低相似度（0.5–0.99）。较低的数值会补全更多商户，但也伴随更多错误。自动微调的“应用”也会设置此项。
+      matcher_tuning:
+        similar_common_share: 截止值
+        similar_common_share_hint: 如果某个词语或 3 字母片段在据以复制的交易中所占比例超过此阈值（0.01–1），且至少出现在 50 笔交易中，则被视作过于通用而无法区分（例如“card”或“payment”），从而予以忽略。数值越高，计入的特征越多。自动微调的“应用”也会设置此项。
+        similar_min_neighbours: 一致的商户数
+        similar_min_neighbours_hint: 必须有多少个近似重复项具有该商户，且没有任何项具有其他商户。设为 1 时会直接复制单笔交易，哪怕是错误的。
+        similar_min_neighbours_option:
+          one: 1 个商户
+          other: "%{count} 个商户"
+        similar_skip_self: 在确认或达到指定天数之前，不复制匹配器自身的商户
+        similar_skip_self_hint: 已确认指您手动更改或锁定了它。错误的复制不会被扩散；保持不变达到该天数的商户将被视为已接受。
+      merchant:
+        merchant_field: 设置时将商户作为一个词元计入
+        merchant_field_hint: 按唯一标识计算，因此更名的商户仍能保留其历史记录。
+        merchant_name_words: 将商户名称作为词语计入
+        merchant_name_words_hint: 像描述一样读取，与原始方式一致，使相似名称能够共享依据。与下方的词元有所重叠。
+      run:
+        success: 贝叶斯正在对未分类交易进行分类。这可能需要一点时间。
+      scoring:
+        complement: 使用互补朴素贝叶斯 (Complement Naive Bayes)
+        complement_hint: 通过交易与其它分类的不匹配程度为每个分类评分，能更好地处理各分类规模差异极大的情况。关闭时为原始多项式分布。
+        prior: 计入各分类的使用频率
+        prior_hint: 偏向您使用最频繁的分类。关闭时平等待待所有分类，与原始方式一致。
+        separate_fields: 将商户和账户与词语分开评分
+        separate_fields_hint: 各自使用独立的分布，避免冗长描述占据过大权重。需要包含商户或账户；金额始终单独评分。
+        smoothing: 平滑值
+        smoothing_hint: 添加到每个频次中，避免未见过的词语完全排除某个分类（0.001–10）。默认值为 1；较低的数值更信任已见数据。
+      show:
+        add_rule_body: 您的规则中没有 %{name} 规则，因此无法开启。是否将其添加到规则列表顶部？
+        add_rule_cancel: 否
+        add_rule_confirm: 添加规则
+        add_rule_title: 添加 %{name} 规则？
+        account: 账户调优
+        amount: 金额调优
+        auto_tune: 自动调优
+        category_training: 分类分类器调优
+        clear_locks: 清除贝叶斯锁定
+        clear_locks_confirm_body: 解锁仍保持由贝叶斯锁定的分类以及匹配器锁定的商户，以便规则和 AI 可以再次更改它们。分类和商户本身将被保留。
+        clear_locks_confirm_button: 清除锁定
+        clear_locks_confirm_title: 清除贝叶斯锁定？
+        description: 贝叶斯分类分类器会从您已分类的交易中学习，并在任何 AI 提供商处理之前对新交易进行分类。对这些设置的更改将在下次分类运行时生效；已分类的交易将保留其分类。
+        matcher: 匹配器
+        matcher_description: 通过近似重复项补全缺失的商户，作为商户匹配器规则（在每次同步后）运行，也可在点击“运行”时执行。它会更改所存储的商户。
+        matcher_tuning: 商户匹配器调优
+        merchant: 商户调优
+        run: 运行
+        scoring: 评分
+        title: 分类器
+        training: 训练
+        words: 交易调优
+      training:
+        max_training_transactions: 训练交易数
+        max_training_transactions_hint: "要使用的最新交易数量（100–20,000）：包括分类器据以学习的已分类交易，以及匹配器据以复制的带有商户的交易。"
+      words:
+        bigrams: 包含词对
+        bigrams_hint: 相邻的词语也会作为整体计入，例如“card payment”。
+        binary: 排除重复词语
+        binary_hint: 每笔交易中每个词语仅计入一次。
+        drop_codes: 排除参考代码
+        drop_codes_hint: 字母与 2 个或更多数字混合的词语，例如 2k4l19。
+        drop_numbers: 排除数字
+        drop_numbers_hint: 描述中的门店编号、日期和金额。
+        include_notes: 包含备注
+        include_notes_hint: 读取名称的同时也读取备注。
+        keep_single_chars: 包含单字符词语
+        keep_single_chars_hint: 拆分后保留的单个字母和数字，例如 mcdonald's 中的“s”。
+        spread_filter: 排除所有分类普遍使用的词语
+        spread_filter_hint: 这些词语对确定分类毫无帮助。该数值表示某个分类的使用频率必须比平均份额高出多少。
+        word_split: 词语构成规则
+        word_split_ascii: a–z 和 0–9
+        word_split_hint: "所有其他字符用于分词。任意文字系统的字母均能保持词语完整（例如 Geschäft 或 Кофейня）；对于内部符号，由一个符号连接的字母也会保持为一个词，例如 mcdonald's、s/o 和 m&s（两端的符号如 *netflix 仍会被去除）。"
+        word_split_symbols: 字母、数字、内部符号
+        word_split_unicode: 字母和数字，支持任意文字

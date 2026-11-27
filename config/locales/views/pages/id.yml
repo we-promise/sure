@@ -1,0 +1,173 @@
+---
+id:
+  pages:
+    feedback:
+      title: Umpan balik
+      heading: Berikan umpan balik
+      description: Beri tahu kami jika Anda memiliki umpan balik khusus. Jangan ragu untuk menyertakan tautan ke video atau tangkapan layar.
+      feature_request: Tulis permintaan fitur
+      bug_report: Laporkan bug
+      discuss: "Diskusikan %{product} dengan pengguna lain"
+    intro:
+      not_authorized: "Pengantar hanya tersedia untuk pengguna tamu."
+      welcome: "Selamat datang!"
+      coming_soon: Pengalaman pengantar segera hadir
+      description: "Kami sedang membangun alur orientasi yang lebih lengkap untuk mempelajari tujuan, pencapaian, dan kebutuhan harian Anda. Untuk saat ini, buka bilah samping obrolan untuk memulai percakapan dengan Sure dan beri tahu kami posisi Anda dalam perjalanan finansial Anda."
+      start_chatting: Mulai mengobrol
+    redis_configuration_error:
+      page_title: Konfigurasi Redis Diperlukan - Sure
+      heading: Konfigurasi Redis Diperlukan
+      subheading: Instalasi Sure self-hosted Anda memerlukan Redis yang dikonfigurasi dengan benar.
+      why_required_title: Mengapa Redis diperlukan?
+      why_required_body: Sure menggunakan Redis untuk menjalankan tugas latar belakang Sidekiq seperti menyinkronkan data rekening, memproses impor, dan operasi latar belakang lainnya yang menjaga data keuangan Anda tetap mutakhir.
+      view_setup_guide: Lihat Panduan Penyiapan
+      setup_guide_hint: Ikuti panduan penyiapan Docker lengkap kami untuk mengonfigurasi Redis
+      refresh_hint: "Setelah Anda mengonfigurasi Redis, muat ulang halaman ini untuk melanjutkan."
+      refresh_page: Muat Ulang Halaman
+    changelog:
+      title: Yang baru
+    release_notes_unavailable:
+      name: Catatan rilis tidak tersedia
+      body_html: "<p>Tidak dapat mengambil catatan rilis terbaru saat ini. Silakan periksa kembali nanti atau kunjungi <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>halaman rilis GitHub</a> kami secara langsung.</p>"
+    privacy:
+      title: Kebijakan Privasi
+      heading: Kebijakan Privasi
+      placeholder: Konten kebijakan privasi akan ditampilkan di sini.
+    terms:
+      title: Ketentuan Layanan
+      heading: Ketentuan Layanan
+      placeholder: Konten ketentuan layanan akan ditampilkan di sini.
+    dashboard:
+      welcome: "Selamat datang kembali, %{name}"
+      subtitle: "Berikut perkembangan terbaru keuangan Anda"
+      new: "Baru"
+      sections_aria_label: "Bagian dasbor"
+      toggle_section: "Alihkan visibilitas bagian"
+      customize:
+        start: "Sesuaikan"
+        done: "Selesai"
+        hide: "Sembunyikan %{title}"
+        hidden_title: "Widget tersembunyi"
+        hidden_description: "Tambahkan kembali widget ke dasbor."
+        none_hidden: "Semua widget ditampilkan. Sembunyikan salah satu dengan tombol ikon mata."
+        all_hidden_title: "Semua widget disembunyikan"
+        all_hidden_description: "Sesuaikan dasbor untuk menambahkan kembali widget."
+      widget_size:
+        label: "Sesuaikan ukuran"
+        width_label: "Lebar"
+        half: "Setengah"
+        full: "Penuh"
+        height_label: "Tinggi"
+        compact: "Ringkas"
+        auto: "Otomatis"
+        tall: "Tinggi"
+      net_worth_chart:
+        data_not_available: Data tidak tersedia untuk periode yang dipilih
+        title: Kekayaan Bersih
+      no_account_empty_state:
+        new_account: Rekening baru
+        no_account_subtitle: Karena belum ada rekening yang ditambahkan, tidak ada data untuk ditampilkan. Tambahkan rekening pertama Anda untuk mulai melihat data dasbor.
+        no_account_title: Belum ada rekening
+      balance_sheet:
+        title: "Neraca"
+        no_items: "Belum ada %{name}"
+        add_accounts: "Tambahkan rekening %{name} Anda untuk melihat rincian lengkap"
+        no_asset: "Belum ada aset"
+        no_liability: "Belum ada liabilitas"
+        add_asset_accounts: "Tambahkan rekening aset Anda untuk melihat rincian lengkap"
+        add_liability_accounts: "Tambahkan rekening liabilitas Anda untuk melihat rincian lengkap"
+        name: "Nama"
+        weight: "Bobot"
+        value: "Nilai"
+        expand_all: "Perluas semua"
+        collapse_all: "Ciutkan semua"
+        classifications:
+          asset: "Aset"
+          liability: "Liabilitas"
+      insights_feed:
+        title: "Wawasan"
+      cashflow_preview:
+        opt_in_title: "Tampilkan grafik baru"
+        opt_in_description: "Bandingkan grafik Sankey eksperimental dengan grafik di atas. Anda dapat menonaktifkannya kapan saja."
+        node_labels:
+          cash_flow: "Arus Kas"
+          surplus: "Surplus"
+          deficit: "Defisit"
+          invested: "Diinvestasikan"
+        title: "Grafik Sankey baru"
+        preview: "Pratinjau"
+        preview_tooltip: "Ini akan menggantikan visualisasi di atas karena menggunakan API bersama yang baru dengan klien Swift seluler."
+        group_by_label: "Tampilkan arus berdasarkan"
+        group_by_category: "Kategori"
+        group_by_account: "Rekening"
+        feedback_prompt: "Bandingkan grafik ini dengan grafik asli di atas dan beri tahu kami jika terlihat berbeda selain dari pengurutannya."
+        positive: "Terlihat benar"
+        negative: "Ada yang tidak sesuai"
+        feedback_title: "Umpan balik grafik arus kas"
+        feedback_loading: "Memuat formulir umpan balik…"
+        feedback_unavailable: "Umpan balik tidak tersedia saat ini. Silakan coba lagi nanti."
+        feedback_thanks: "Terima kasih telah membantu meningkatkan grafik ini!"
+        feedback_privacy: "Tanggapan Anda dikirim ke PostHog. Jelaskan masalahnya tanpa menyertakan nomor rekening, saldo, atau detail keuangan pribadi lainnya."
+        feedback_submit: "Kirim umpan balik"
+        sort_label: "Urutkan arus"
+        sort_auto: "Otomatis"
+        sort_ascending: "Terkecil lebih dulu"
+        sort_descending: "Terbesar lebih dulu"
+      cashflow_sankey:
+        loading: "Memuat arus kas…"
+        load_error: "Arus kas tidak dapat dimuat. Silakan coba lagi."
+        retry: "Coba lagi"
+        title: "Arus Kas"
+        zoom_out: "Kembali ke arus kas penuh"
+        no_data_title: "Tidak ada data arus kas untuk periode waktu ini"
+        no_data_description: "Tambahkan transaksi untuk menampilkan data arus kas atau perluas periode waktu"
+        add_transaction: "Tambah transaksi"
+      no_accounts:
+        title: "Belum ada rekening"
+        description: "Tambahkan rekening untuk menampilkan data kekayaan bersih"
+        add_account: "Tambah rekening"
+      outflows_donut:
+        title: "Arus Keluar"
+        total_outflows: "Total Arus Keluar"
+        categories: "Kategori"
+        value: "Nilai"
+        weight: "Bobot"
+      investment_summary:
+        title: "Investasi"
+        total_return: "Total Imbal Hasil"
+        holding: "Kepemilikan"
+        weight: "Bobot"
+        value: "Nilai"
+        return: "Imbal Hasil"
+        period_activity: "Aktivitas %{period}"
+        contributions: "Setoran"
+        withdrawals: "Penarikan"
+        trades: "Transaksi efek"
+        no_investments: "Tidak ada rekening investasi"
+        add_investment: "Tambahkan rekening investasi untuk memantau portofolio Anda"
+      money_flow:
+        title: "Uang Masuk / Keluar"
+        date_range: "%{start_date} hingga %{end_date}"
+        month_picker_aria_label: "Pilih bulan"
+        filter_accounts: "Filter rekening (%{count})"
+        filter_accounts_all: "Semua rekening"
+        period_scope_hint: "Menampilkan bulan yang Anda pilih di sini — terpisah dari periode waktu dasbor di bagian atas."
+        search_accounts: "Cari rekening"
+        apply: "Terapkan"
+        balance: "Saldo transaksi"
+        chart_span: "%{count} bulan terakhir"
+        income: "Pemasukan"
+        expenses: "Pengeluaran"
+      spending_trend:
+        title: "Pengeluaran"
+        date_range: "%{start_date} hingga %{end_date}"
+        date_range_short: "%{start_date} - %{end_day}, %{year}"
+        date_range_short_single: "%{date}, %{year}"
+        month_picker_aria_label: "Pilih bulan"
+        filter_categories: "Filter kategori (%{count})"
+        filter_categories_all: "Semua kategori"
+        search_categories: "Cari kategori"
+        apply: "Terapkan"
+        period_scope_hint: "Menampilkan bulan yang Anda pilih di sini — terpisah dari periode waktu dasbor di bagian atas."
+        no_data: "Tidak ada data pengeluaran untuk bulan ini"
+        previous_comparison_days: "(1-%{end_day})"

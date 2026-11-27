@@ -319,6 +319,63 @@ XSAU:
 XJSE:
   name: Johannesburg
   country: ZA
+XNSA:
+  name: Nigeria
+  country: NG
+XGHA:
+  name: Ghana
+  country: GH
+XNAI:
+  name: Nairobi
+  country: KE
+XMSW:
+  name: Malawi
+  country: MW
+RSEX:
+  name: Rwanda
+  country: RW
+XCAI:
+  name: Egypt
+  country: EG
+XCAS:
+  name: Morocco
+  country: MA
+XDSX:
+  name: BVMAC (Central Africa)
+  country: CM
+XLUS:
+  name: Lusaka
+  country: ZM
+XUGA:
+  name: Uganda
+  country: UG
+XZIM:
+  name: Zimbabwe
+  country: ZW
+XMAU:
+  name: Mauritius
+  country: MU
+XSWA:
+  name: Eswatini
+  country: SZ
+XBVC:
+  name: Cape Verde
+  country: CV
+XALG:
+  name: Algeria
+  country: DZ
+XNAM:
+  name: Namibia
+  country: NA
+XBRV:
+  name: Ivory Coast
+  country: CI
+XDAR:
+  name: Tanzania
+  country: TZ
+XBOT:
+  name: Botswana
+  country: BW
 
 # Russia - Moscow Exchange (Operating MIC: MISX)
 MISX:

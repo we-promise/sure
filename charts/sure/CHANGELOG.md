@@ -3,15 +3,15 @@
 All notable changes to the Sure Helm chart will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and chart releases follow Sure’s [calendar versioning](../../docs/releases/versioning.md).
 
 ## [Unreleased]
 
 ### Changed
-- Add here
+- Pipelock's MCP listener now starts with Pipelock 3.2+, which refuses a non-loopback listener without auth. It defaults to `pipelock.mcpProxy.allowUnauthenticated: true`; rendering fails with a clear message if neither option is set.
 
 ### Added
-- Add here
+- `pipelock.mcpProxy.authTokenSecret`: require a Pipelock listener token from an existing Secret.
 
 ## [0.7.4] - 2026-08-31
 

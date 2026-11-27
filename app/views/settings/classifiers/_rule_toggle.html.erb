@@ -1,0 +1,9 @@
+<%# locals: (action_type:, active:, label:, hint:) %>
+<%# The switch of the matcher's or Bayes' rule (Family::CLASSIFIER_ACTION_TYPES),
+    on and off with that rule on the Rules page. Its own form: it saves the
+    rule, not the settings. %>
+<%= form_with url: rule_settings_classifier_path, method: :patch,
+              data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do %>
+  <%= hidden_field_tag :action_type, action_type, id: nil %>
+  <%= render "settings/classifiers/toggle", key: "#{action_type}_rule", name: "active", checked: active, label: label, hint: hint %>
+<% end %>

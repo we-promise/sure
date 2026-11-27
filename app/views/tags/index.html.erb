@@ -32,7 +32,10 @@
 
       <div class="bg-container rounded-lg shadow-border-xs">
         <div class="overflow-hidden rounded-lg">
-          <%= render partial: @tags, spacer_template: "shared/ruler" %>
+          <% @tags.each_with_index do |tag, index| %>
+            <%= render "shared/ruler" if index.positive? %>
+            <%= render "tags/tag", tag: tag, has_transactions: @tag_ids_with_transactions.key?(tag.id) %>
+          <% end %>
         </div>
       </div>
     </div>

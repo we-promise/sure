@@ -1,8 +1,15 @@
 ---
 zh-CN:
   chats:
+    ai_busy: 正在完成一项后台任务，完成后我会立即回复您的消息。
+    reservation:
+      ready_html: 我已暂停部分后台任务，以便立即处理您的消息。它们将在 %{countdown} 秒后恢复，请继续输入！
+      busy: 正在完成一项后台任务，完成后我将全力为您服务。请继续输入！
+    worker_unhealthy_warning: AI 回复目前可能无法送达 — 后台任务处理进程似乎已停止或发生积压。请检查您的 Sidekiq worker 是否正在运行。
+    new:
+      default_title: 新对话 %{timestamp}
     demo_banner_title: 演示模式已启用
-    demo_banner_message: 您正在通过 Cloudflare Workers AI 提供的额度使用 LLM。结果可能会有所不同，因为代码库是在 `gpt-4.1` 上测试的，而您的 token 不会被用于其他训练！🤖
+    demo_banner_message: "Vercel AI Gateway 免费提供 LLM token。由于我们经常更换模型权重进行测试，结果可能会有所不同。请查阅 Vercel 的文档，了解您的对话会被发送到哪里！🤖"
     thinking: 思考中……
     ai_greeting:
       greeting: "%{name}，你好！我是一个 AI/大语言模型，可以帮您处理财务问题。我可以访问网络和您的账户数据。"

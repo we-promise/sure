@@ -1,0 +1,35 @@
+---
+id:
+  recurring_transactions:
+    allocator:
+      missing_rate: "tidak ada nilai tukar dari %{from} ke %{to}; masukkan jumlah secara eksplisit"
+      unmeasurable: "transaksi ini memuat alokasi yang tidak dapat dikonversi ke %{currency}, sehingga sisanya tidak dapat dihitung. Tambahkan nilai tukar untuk %{date} atau hapus pembayaran yang ada terlebih dahulu"
+      over_allocated: "mengalokasikan %{amount} melebihi sisa kapasitas transaksi sebesar %{capacity} %{currency}"
+      entry_exhausted: "jumlah penuh dari transaksi ini sudah dialokasikan ke pembayaran lain yang jatuh tempo"
+      already_allocated: "transaksi ini sudah dialokasikan ke tagihan ini"
+      exceeds_remaining: "%{amount} melebihi sisa %{remaining} pada siklus ini"
+  activerecord:
+    attributes:
+      recurring_transaction:
+        payment_url: "Tautan pembayaran"
+        frequency_interval: "Interval pengulangan"
+    errors:
+      models:
+        recurring_transaction:
+          merchant_or_name_required: "Merchant atau nama harus ada"
+          attributes:
+            payment_url:
+              invalid_scheme: "harus berupa alamat http:// atau https:// yang valid"
+            anchor_date:
+              required_for_intervals: "wajib diisi ketika aturan berulang setiap 2 periode atau lebih"
+            bill_type:
+              transfer_shape_mismatch: "hanya dapat berupa transfer jika rekening tujuan telah ditentukan"
+            expected_amount_min:
+              greater_than_max: "tidak boleh lebih besar dari jumlah maksimum yang diperkirakan"
+            account:
+              required_for_transfer: "harus ada pada transfer berulang"
+              wrong_family: "harus milik keluarga ini"
+            destination_account:
+              same_as_source: "tidak boleh sama dengan rekening sumber"
+              family_mismatch: "harus milik keluarga yang sama dengan rekening sumber"
+              wrong_family: "harus milik keluarga ini"

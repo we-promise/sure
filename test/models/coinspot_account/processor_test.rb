@@ -68,13 +68,15 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal true, result[:success], result.inspect
 
     buy = @account.entries.find_by!(external_id: "coinspot_order_buy_BTC_2026-01-02_buy-1", source: "coinspot")
-    assert_equal(-100.to_d, buy.amount)
+    # Sure records a buy as cash leaving the account (positive) and a sell as
+    # cash arriving (negative), the same way the AUD withdrawal and deposit are.
+    assert_equal 100.to_d, buy.amount
     assert_equal 0.001.to_d, buy.trade.qty
     assert_equal 100_000.to_d, buy.trade.price
     assert_equal "Buy", buy.trade.investment_activity_label
 
     sell = @account.entries.find_by!(external_id: "coinspot_order_sell_BTC_2026-01-03_sell-1", source: "coinspot")
-    assert_equal 220.to_d, sell.amount
+    assert_equal(-220.to_d, sell.amount)
     assert_equal(-0.002.to_d, sell.trade.qty)
     assert_equal "Sell", sell.trade.investment_activity_label
 

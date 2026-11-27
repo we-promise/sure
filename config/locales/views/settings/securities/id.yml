@@ -1,0 +1,65 @@
+---
+id:
+  settings:
+    securities:
+      show:
+        disable_mfa: "Nonaktifkan 2FA"
+        disable_mfa_confirm: "Apakah Anda yakin ingin menonaktifkan autentikasi dua faktor? Ini akan membuat akun Anda kurang aman."
+        enable_mfa: "Aktifkan 2FA"
+        mfa_enabled_status_html: "Autentikasi dua faktor <span class=\"font-medium text-green-600\">aktif</span>"
+        mfa_enabled_description: "Akun Anda dilindungi dengan lapisan keamanan tambahan."
+        mfa_disabled_status_html: "Autentikasi dua faktor <span class=\"font-medium text-red-600\">nonaktif</span>"
+        mfa_disabled_description: "Aktifkan 2FA untuk menambahkan lapisan keamanan ekstra ke akun Anda."
+        mfa_description: "Tambahkan lapisan keamanan ekstra ke akun Anda dengan mewajibkan kode dari aplikasi autentikator saat masuk"
+        mfa_title: "Autentikasi Dua Faktor"
+        webauthn_add: "Tambah passkey atau kunci keamanan"
+        webauthn_added: "Ditambahkan %{date}"
+        webauthn_code_label: "Kode autentikator atau kode cadangan"
+        webauthn_code_placeholder: "Kode autentikator saat ini atau kode cadangan yang belum digunakan"
+        webauthn_description: "Gunakan passkey, Touch ID, Windows Hello, atau kunci keamanan perangkat keras sebagai faktor kedua saat masuk."
+        webauthn_empty: "Belum ada passkey atau kunci keamanan yang terdaftar."
+        webauthn_last_used: "Terakhir digunakan %{time_ago} yang lalu"
+        webauthn_name_label: "Nama kunci"
+        webauthn_name_placeholder: "Touch ID MacBook, YubiKey, dll."
+        webauthn_remove: "Hapus"
+        webauthn_remove_confirm: "Apakah Anda yakin ingin menghapus passkey atau kunci keamanan ini?"
+        webauthn_remove_confirm_body: "Anda perlu mendaftarkan ulang passkey atau kunci keamanan ini sebelum dapat digunakan untuk verifikasi masuk."
+        webauthn_title: "Passkey dan kunci keamanan"
+        webauthn_unsupported: "Peramban ini tidak mendukung passkey atau kunci keamanan."
+        page_title: "Keamanan"
+        encryption_warning:
+          title: "Kunci enkripsi tidak ditemukan"
+          intro: "Data sensitif (kunci API, token penyedia, rahasia MFA, dan PII) disimpan dalam kondisi tidak terenkripsi. Untuk mengaktifkan enkripsi, atur kunci berikut di variabel lingkungan atau kredensial Rails Anda:"
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: "Buat set kunci dengan: bin/rails db:encryption:init"
+        disable_mfa_password_label: "Konfirmasi dengan kata sandi Anda"
+        disable_mfa_password_placeholder: "Masukkan kata sandi Anda"
+        mfa_sso_only: "Autentikasi dua faktor dikelola melalui penyedia identitas Anda."
+        sso_title: "Akun Terhubung"
+        sso_subtitle: "Kelola koneksi akun single sign-on Anda"
+        sso_disconnect: "Putuskan"
+        sso_last_used: "Terakhir digunakan"
+        sso_never: "Belum pernah"
+        sso_no_email: "Tidak ada email"
+        sso_no_identities: "Tidak ada akun SSO yang terhubung"
+        sso_connect_hint: "Keluar dan masuk dengan penyedia SSO untuk menghubungkan akun."
+        sso_confirm_title: "Putuskan Akun?"
+        sso_confirm_body: "Apakah Anda yakin ingin memutuskan akun %{provider} Anda? Anda dapat menghubungkannya kembali nanti dengan masuk menggunakan penyedia tersebut."
+        sso_confirm_button: "Putuskan"
+        sso_warning_message: "Ini adalah satu-satunya metode masuk Anda. Sebaiknya atur kata sandi di pengaturan keamanan sebelum memutuskan koneksi, jika tidak Anda dapat terkunci dari akun Anda."
+        compromised_secret_warning:
+          title: "Kunci enkripsi sebenarnya tidak rahasia"
+          intro: "Kunci enkripsi instalasi ini diturunkan secara otomatis dari nilai SECRET_KEY_BASE yang sebelumnya dikirimkan sebagai default yang berfungsi di file contoh Docker Compose proyek ini. Siapa pun yang mengetahui nilai tersebut dapat menghitung kunci enkripsi yang sama, sehingga data ini sebenarnya tidak terlindungi."
+          generate: "JANGAN hanya mengatur SECRET_KEY_BASE baru dan menjalankan tugas backfill: jika ada data yang sudah dienkripsi dengan kunci yang bocor, backfill tidak dapat membedakan ciphertext tersebut dari plaintext asli dan akan mengenkripsi ulang di atasnya, sehingga data tidak dapat dipulihkan. Lakukan rotasi dengan aman saat aplikasi dihentikan: buat kunci baru dengan bin/rails db:encryption:init dan atur sebagai variabel ACTIVE_RECORD_ENCRYPTION_*, lalu jalankan bin/rails \"security:backfill_encryption[100,0]\" dengan SECRET_KEY_BASE ini di variabel lingkungan ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE hanya untuk perintah tersebut, agar data yang ada tetap dapat didekripsi dan dipindahkan ke kunci baru. Lihat panduan hosting Docker."
+          settings_secrets: "Kunci API dan token yang disimpan di pengaturan dienkripsi dengan kunci yang diturunkan dari SECRET_KEY_BASE itu sendiri, yang tidak dicakup oleh skema sebelumnya. Setelah mengubah SECRET_KEY_BASE, enkripsi ulang dengan bin/rails \"security:rotate_setting_secrets[0]\", dengan meneruskan nilai lama di variabel lingkungan OLD_SECRET_KEY_BASE (lihat panduan hosting Docker). Masukkan kembali kunci apa pun yang dilaporkan tidak dapat didekripsi."
+  webauthn_credentials:
+    code_already_used: "Kode tersebut sudah digunakan. Tunggu kode berikutnya dari aplikasi autentikator Anda."
+    default_name: "Kunci keamanan"
+    failure: "Tidak dapat menyimpan passkey atau kunci keamanan tersebut. Silakan coba lagi."
+    invalid_code: "Kode tersebut tidak valid. Masukkan kode saat ini dari aplikasi autentikator atau kode cadangan yang belum digunakan."
+    mfa_required: "Aktifkan autentikasi dua faktor sebelum menambahkan passkey atau kunci keamanan."
+    rate_limited: "Terlalu banyak percobaan. Harap tunggu satu menit dan coba lagi."
+    success: "Passkey atau kunci keamanan dihapus."

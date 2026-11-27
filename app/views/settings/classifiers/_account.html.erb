@@ -1,0 +1,4 @@
+<%# locals: (settings:) %>
+<%= classifier_section_form do %>
+  <%= render "settings/classifiers/option", key: :account_field, settings: settings, label: t(".account_field"), hint: t(".account_field_hint") %>
+<% end %>

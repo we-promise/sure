@@ -20,79 +20,104 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
     10.times { create_transaction(account: @account, name: "Safeway Groceries", category: @groceries) }
   end
 
-  test "bayes handles everything: LLM provider never touched" do
+  test "the rule's auto-categorize is the LLM only, even when Bayes would know" do
     train_two_categories
-    Provider::Registry.expects(:preferred_llm_provider).never
-
+    Provider::Registry.stubs(:preferred_llm_provider).returns(@llm_provider)
     txn = create_transaction(account: @account, name: "Starbucks Coffee").transaction
 
-    assert_difference [ "DataEnrichment.count", "DebugLogEntry.count" ], 1 do
-      assert_equal 1, @family.auto_categorize_transactions([ txn.id ])
-    end
-    assert_equal @coffee, txn.reload.category
-    assert_equal "bayes", txn.data_enrichments.find_by(attribute_name: "category_id").source
+    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: txn.id, category_name: @groceries.name)
+    ])).once
 
-    log_entry = DebugLogEntry.order(:created_at).last
-    assert_equal "auto_categorization", log_entry.category
-    assert_equal "info", log_entry.level
-    assert_equal "Bayesian categorization handled all transactions; skipped LLM categorization", log_entry.message
-    assert_equal "Family", log_entry.source
-    assert_equal @family, log_entry.family
-    assert_equal [ txn.id ], log_entry.metadata["requested_transaction_ids"]
-    assert_equal [ txn.id ], log_entry.metadata["categorized_transaction_ids"]
-    assert_equal 1, log_entry.metadata["modified_count"]
+    assert_equal 1, @family.auto_categorize_transactions([ txn.id ])
+    assert_equal @groceries, txn.reload.category
+    assert_ai_categorization_log(transaction_ids: [ txn.id ])
   end
 
-  test "bayes handles nothing: raises without LLM provider, same contract as today" do
-    # No training data → Bayes no-ops; no LLM provider configured → raises.
+  test "without a provider the LLM raises" do
     txn = create_transaction(account: @account, name: "Something new").transaction
 
     error = assert_raises(Family::AutoCategorizer::Error) do
       @family.auto_categorize_transactions([ txn.id ])
     end
     assert_equal "No LLM provider for auto-categorization", error.message
-    assert_nil txn.reload.category
   end
 
-  test "bayes handles nothing but LLM available: LLM gets all ids and count is unchanged" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(@llm_provider)
-
-    txn = create_transaction(account: @account, name: "Novel Shop").transaction
-    test_category = @family.categories.create!(name: "Test category")
-
-    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: txn.id, category_name: test_category.name)
-    ])).once
-
-    assert_difference [ "DataEnrichment.count", "DebugLogEntry.count" ], 1 do
-      assert_equal 1, @family.auto_categorize_transactions([ txn.id ])
-    end
-    assert_equal test_category, txn.reload.category
-
-    assert_ai_categorization_log(transaction_ids: [ txn.id ])
-  end
-
-  test "bayes handles some, LLM handles the rest: modified_count sums" do
+  test "Bayes categorizes the uncategorized, unlocked transactions and logs the count" do
     train_two_categories
-    Provider::Registry.stubs(:preferred_llm_provider).returns(@llm_provider)
+    Provider::Registry.expects(:preferred_llm_provider).never
+    coffee = create_transaction(account: @account, name: "Starbucks Coffee").transaction
+    novel = create_transaction(account: @account, name: "Novel Shop").transaction
+    locked = create_transaction(account: @account, name: "Starbucks Coffee").transaction
+    locked.lock_attr!(:category_id)
 
-    bayes_txn = create_transaction(account: @account, name: "Starbucks Coffee").transaction
-    llm_txn = create_transaction(account: @account, name: "Novel Shop").transaction
-    test_category = @family.categories.create!(name: "Test category")
+    assert_equal 1, @family.bayes_categorize_uncategorized
+    assert_equal @coffee, coffee.reload.category
+    assert_nil novel.reload.category
+    assert_nil locked.reload.category
 
-    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
-      AutoCategorization.new(transaction_id: llm_txn.id, category_name: test_category.name)
-    ])).once
+    log_entry = DebugLogEntry.order(:created_at).last
+    assert_equal "Bayesian categorization categorized 1 of 2 transactions", log_entry.message
+    assert_equal 1, log_entry.metadata["categorized_count"]
+  end
 
-    assert_difference "DataEnrichment.count", 2 do
-      assert_difference "DebugLogEntry.count", 1 do
-        assert_equal 2, @family.auto_categorize_transactions([ bayes_txn.id, llm_txn.id ])
+  test "Bayes leaves transfer legs uncategorized" do
+    train_two_categories
+    transfer = create_transaction(account: @account, name: "Starbucks Coffee", kind: "funds_movement").transaction
+
+    assert_equal 0, @family.bayes_categorize_uncategorized
+    assert_nil transfer.reload.category
+  end
+
+  test "clearing Bayes locks unlocks only what Bayes locked and still has its pick" do
+    train_two_categories
+    @family.update_bayes_settings!(lock_results: true)
+    kept = create_transaction(account: @account, name: "Starbucks Coffee").transaction
+    changed = create_transaction(account: @account, name: "Starbucks Coffee").transaction
+    @family.bayes_categorize_uncategorized
+    changed.update!(category: @groceries)
+    user_locked = create_transaction(account: @account, name: "Mine", category: @coffee).transaction
+    user_locked.lock_attr!(:category_id)
+
+    assert_equal 1, @family.clear_bayes_locks!
+
+    assert_not kept.reload.locked?(:category_id)
+    assert_equal @coffee, kept.category
+    assert_nil kept.data_enrichments.find_by(attribute_name: "category_id").metadata["locked_by_bayes"]
+    assert changed.reload.locked?(:category_id)
+    assert user_locked.reload.locked?(:category_id)
+  end
+
+  test "clearing Bayes locks also unlocks the merchants the matcher locked and still has" do
+    merchant = @family.merchants.create!(name: "Netflix")
+    other = @family.merchants.create!(name: "Hulu")
+    kept, changed = Array.new(2) do
+      create_transaction(account: @account, name: "Netflix com").transaction.tap do |transaction|
+        transaction.enrich_attribute(:merchant_id, merchant.id, source: "similar", metadata: { locked_by_similar: true })
+        transaction.lock_attr!(:merchant_id)
       end
     end
-    assert_equal @coffee, bayes_txn.reload.category
-    assert_equal test_category, llm_txn.reload.category
+    changed.update!(merchant: other)
 
-    assert_ai_categorization_log(transaction_ids: [ llm_txn.id ])
+    assert_equal 1, @family.clear_bayes_locks!
+
+    assert_not kept.reload.locked?(:merchant_id)
+    assert_equal merchant, kept.merchant
+    assert_nil kept.data_enrichments.find_by(attribute_name: "merchant_id").metadata["locked_by_similar"]
+    assert changed.reload.locked?(:merchant_id)
+  end
+
+  test "clearing Bayes locks is all or none" do
+    merchant = @family.merchants.create!(name: "Netflix")
+    transaction = create_transaction(account: @account, name: "Netflix com").transaction
+    transaction.enrich_attribute(:merchant_id, merchant.id, source: "similar", metadata: { locked_by_similar: true })
+    transaction.lock_attr!(:merchant_id)
+    ActiveRecord::Relation.any_instance.stubs(:touch_all).raises(ActiveRecord::StatementInvalid, "boom")
+
+    assert_raises(ActiveRecord::StatementInvalid) { @family.clear_bayes_locks! }
+
+    assert transaction.reload.locked?(:merchant_id)
+    assert transaction.data_enrichments.find_by(attribute_name: "merchant_id").metadata["locked_by_similar"]
   end
 
   private

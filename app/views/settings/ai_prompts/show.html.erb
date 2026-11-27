@@ -60,6 +60,17 @@
                  textarea_id: "family_ai_prompt_merchant" %>
     <% end %>
 
+    <%= render layout: "settings/ai_prompts/prompt_section",
+               locals: { icon_name: "lightbulb",
+                         title: t(".insight_dig_in.title"),
+                         subtitle: t(".insight_dig_in.subtitle"),
+                         open: @family.errors[:ai_prompt_insight_dig_in].present? } do %>
+      <%= render "settings/ai_prompts/prompt_field",
+                 form: form, family: @family,
+                 prompts: [ { key: :insight_dig_in, label: t(".insight_dig_in.label") } ],
+                 textarea_id: "family_ai_prompt_insight_dig_in" %>
+    <% end %>
+
     <div class="flex justify-end">
       <%= form.submit t(".save") %>
     </div>

@@ -1,0 +1,29 @@
+---
+id:
+  models:
+    category:
+      uncategorized: Tanpa Kategori
+      other_investments: Investasi Lainnya
+      investment_contributions: Kontribusi Investasi
+      defaults:
+        income: Pemasukan
+        food_and_drink: Makanan & Minuman
+        groceries: Kebutuhan Pokok
+        shopping: Belanja
+        transportation: Transportasi
+        travel: Perjalanan
+        entertainment: Hiburan
+        healthcare: Kesehatan
+        personal_care: Perawatan Pribadi
+        home_improvement: Renovasi Rumah
+        mortgage_rent: KPR / Sewa
+        utilities: Utilitas
+        subscriptions: Langganan
+        insurance: Asuransi
+        sports_and_fitness: Olahraga & Kebugaran
+        gifts_and_donations: Hadiah & Donasi
+        taxes: Pajak
+        loan_payments: Pembayaran Pinjaman
+        services: Layanan
+        fees: Biaya
+        savings_and_investments: Tabungan & Investasi

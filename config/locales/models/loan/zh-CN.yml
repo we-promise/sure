@@ -1,0 +1,8 @@
+---
+zh-CN:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: 利率变更行需要同时填写生效日期和利率。
+          rate_change_before_origination: 利率变更不能在贷款发放日之前生效。

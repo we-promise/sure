@@ -42,4 +42,10 @@
       </dd>
     </div>
   </dl>
+  <% if budget.missing_cash_currencies.any? %>
+    <div class="mt-3">
+      <%= render DS::Alert.new(variant: "warning",
+            message: t(".currency_warning", currencies: budget.missing_cash_currencies.to_a.to_sentence, currency: budget.currency)) %>
+    </div>
+  <% end %>
 </div>

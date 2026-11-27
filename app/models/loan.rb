@@ -149,6 +149,49 @@ class Loan < ApplicationRecord
     RateResolver.for(self).accrual_rate_for(as_of)
   end
 
+  # What a provider should write when it reports this variable loan's rate on
+  # `as_of`, or nil when there is nothing to write. Writes nothing itself, so
+  # the provider's own writer keeps locks, provenance and refusal handling.
+  #
+  # - A first sighting (no base rate yet) sets the base rate: a first reading
+  #   is not evidence that the rate moved on any particular day.
+  # - A rate equal to the one in force on `as_of` is not a change. A row
+  #   already dated `as_of` is the rate in force on `as_of`, so this also
+  #   covers a second sync on the same day.
+  # - Otherwise the change is a row dated `as_of`. The base rate stays, since
+  #   replacing it would re-price every period before the change.
+  # - A loan that is not variable gets nil; what a fixed loan does with a
+  #   reported rate is the caller's decision.
+  #
+  # Rounded to three places, the precision of `interest_rate`, so a reading a
+  # hair off the stored rate is not taken for a change on every sync.
+  #
+  # A rate outside 0..MAX_INTEREST_RATE gets nil. The form rejects one, and
+  # nothing checks a schedule written any other way, so a provider reporting
+  # -1% or 150% has sent something other than a rate. So has one that is not
+  # a number at all, which gets nil too rather than raising out of the sync.
+  # The bound is checked before rounding, which would otherwise carry -0.0004
+  # or 100.0004 onto 0 or 100.
+  def variable_rate_update_for(reported_rate, as_of:)
+    return nil if reported_rate.nil? || !variable_rate_type?
+
+    rate = begin
+      BigDecimal(reported_rate.to_s)
+    rescue ArgumentError, TypeError, FloatDomainError
+      nil
+    end
+    return nil unless rate&.finite? && rate.between?(0, MAX_INTEREST_RATE)
+
+    rate = rate.round(3)
+    return { interest_rate: rate } if interest_rate.blank?
+
+    in_force = current_variable_rate(as_of)
+    return nil if in_force.present? && BigDecimal(in_force.to_s) == rate
+
+    schedule = (variable_rate_schedule || {}).stringify_keys
+    { variable_rate_schedule: schedule.merge(as_of.to_date.iso8601 => rate.to_s("F")) }
+  end
+
   # Rows the form submitted that could not be parsed. Kept so the save can be
   # rejected and the form re-rendered with what the user actually typed --
   # dropping them silently loses a typo'd row between submit and redisplay,
@@ -239,10 +282,17 @@ class Loan < ApplicationRecord
     @amortization_schedule ||= AmortizationSchedule.for(self)
   end
 
+  # Mirrored from the engine so the model and the simulator cannot drift: the
+  # engine owns what the conventions mean, the model owns what a user may store.
+  DAY_COUNT_CONVENTIONS = Simulator::DAY_COUNT_CONVENTIONS.map(&:to_s).freeze
+  DEFAULT_DAY_COUNT_CONVENTION = Simulator::DEFAULT_DAY_COUNT_CONVENTION.to_s
+
   # The columns AmortizationSchedule.for reads from the loan itself. Assigning
   # any of them drops the memoised schedule, as reload does, so a read after the
   # change answers with the new terms rather than the ones it was built from.
-  SCHEDULE_INPUTS = %i[interest_rate term_months rate_type start_date variable_rate_schedule].freeze
+  SCHEDULE_INPUTS = %i[interest_rate term_months rate_type start_date variable_rate_schedule day_count_convention].freeze
+
+  validates :day_count_convention, inclusion: { in: DAY_COUNT_CONVENTIONS }
 
   SCHEDULE_INPUTS.each do |input|
     define_method(:"#{input}=") do |value|
@@ -261,6 +311,48 @@ class Loan < ApplicationRecord
       @insurance = nil
       super(value)
     end
+  end
+
+  # The balance replay reads these columns. A save without a sync leaves the
+  # stored rows on the old calculation until the next scheduled sync.
+  BALANCE_INPUTS = (SCHEDULE_INPUTS + INSURANCE_INPUTS + %i[initial_balance principal_only_transfers]).freeze
+
+  # `lock_saved_attributes!` saves the loan a second time in the same
+  # transaction. A commit condition that reads saved changes would see only
+  # that second save, so remember the input change until the commit runs.
+  after_update :remember_balance_input_change
+  after_update_commit :sync_balance_after_change, if: :balance_inputs_changed?
+  after_rollback :forget_balance_input_change
+
+  private def remember_balance_input_change
+    return unless BALANCE_INPUTS.any? { |input| saved_change_to_attribute?(input) }
+
+    @balance_inputs_changed = true
+  end
+
+  private def balance_inputs_changed?
+    @balance_inputs_changed == true
+  end
+
+  private def sync_balance_after_change
+    @balance_inputs_changed = false
+    return unless account
+
+    # A running sync cannot widen its window, so reusing it would keep the
+    # balance seeded from the old window. Mark it for a full sync after it
+    # finishes.
+    if (sync = account.syncs.visible.where(status: "syncing").first)
+      sync.update!(full_resync_requested: true)
+      # The sync can finish between the lookup and the update. Its own
+      # completion check may already have run, so queue the full sync here.
+      account.sync_later unless sync.reload.syncing?
+    else
+      account.sync_later
+    end
+  end
+
+  private def forget_balance_input_change
+    @balance_inputs_changed = false
   end
 
   def reload(*)
@@ -424,10 +516,11 @@ class Loan < ApplicationRecord
     LEVERAGE_BANDS.find { |_band, range| range.cover?(ratio) }&.first
   end
 
-  # Where the loan is heading from today's balance. Not memoised: `as_of`
-  # makes each call a different question.
-  def payoff_projection(as_of: Date.current)
-    PayoffProjection.new(self, as_of: as_of)
+  # Where the loan is heading from today's balance, optionally with an extra
+  # amount paid weekly, fortnightly or with every repayment. Not memoised:
+  # each argument makes each call a different question.
+  def payoff_projection(as_of: Date.current, extra: nil, extra_frequency: "monthly")
+    PayoffProjection.new(self, as_of: as_of, extra: extra, extra_frequency: extra_frequency)
   end
 
   # The date the loan was drawn down. Recorded explicitly when the borrower

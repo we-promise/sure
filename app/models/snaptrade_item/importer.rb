@@ -206,14 +206,37 @@ class SnaptradeItem::Importer
             "dispatching background fetch job (SnapTrade may still be syncing)"
           )
 
-          SnaptradeActivitiesFetchJob.set(wait: 10.seconds).perform_later(
-            snaptrade_account,
-            start_date: start_date
-          )
-
-          # Mark the account as having pending activities
-          # The background job will clear this flag when done
+          # Mark the account as having pending activities before queueing the
+          # job, so the job never runs unflagged if this write fails. The job
+          # clears the flag when done; SyncCleanerJob clears one left stuck.
           snaptrade_account.update!(activities_fetch_pending: true)
+
+          # A fetch that never queued has nothing to clear the flag, so it is
+          # cleared here. Active Job raises some enqueue failures and reports
+          # an adapter's EnqueueError by returning false.
+          begin
+            queued = SnaptradeActivitiesFetchJob.set(wait: 10.seconds).perform_later(
+              snaptrade_account,
+              start_date: start_date
+            )
+          rescue StandardError
+            snaptrade_account.update!(activities_fetch_pending: false)
+            raise
+          end
+
+          unless queued
+            snaptrade_account.update!(activities_fetch_pending: false)
+            DebugLogEntry.capture(
+              category: "provider_sync",
+              level: "error",
+              message: "Could not queue the background SnapTrade activities fetch",
+              source: self.class.name,
+              provider_key: "snaptrade",
+              family: snaptrade_item.family,
+              account_provider: snaptrade_account.account_provider,
+              metadata: { snaptrade_account_id: snaptrade_account.id, start_date: start_date.to_s }
+            )
+          end
         end
       end
 
@@ -304,7 +327,9 @@ class SnaptradeItem::Importer
         Rails.logger.error "SnaptradeItem::Importer - Failed to fetch activities: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
         register_error(e, context: "activities", account_id: snaptrade_account.id)
-        0
+        # nil, not 0: a fetch that failed is not SnapTrade still syncing, and
+        # must not queue the background job to repeat it.
+        nil
       end
     end
 

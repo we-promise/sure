@@ -8,6 +8,7 @@ class DS::Table::Column < DesignSystemComponent
   # @param header [String] the column heading
   # @param cell [Proc] renders the cell for a row, given the row and its index
   # @param sticky [Boolean] set by the table when its header row is sticky
+  # @param inset [Boolean] set by the table when it sits in an inset frame
   # @param align [Symbol] :left (default) or :right, for the header and the cells
   # @param numeric [Boolean] a column of figures: right-aligned, tabular digits,
   #   never wrapped mid-number. Implies align: :right.
@@ -15,10 +16,11 @@ class DS::Table::Column < DesignSystemComponent
   #   column that names each row
   # @param class [String, nil] extra classes for the body cells, e.g. "text-secondary"
   #   or "privacy-sensitive"
-  def initialize(header, cell:, sticky: false, align: :left, numeric: false, row_header: false, class: nil)
+  def initialize(header, cell:, sticky: false, inset: false, align: :left, numeric: false, row_header: false, class: nil)
     @header = header
     @cell = cell
     @sticky = sticky
+    @inset = inset
     @numeric = numeric
     # to_s first so a nil or unrecognized value falls back instead of raising.
     candidate = align.to_s.to_sym
@@ -36,7 +38,8 @@ class DS::Table::Column < DesignSystemComponent
       alignment_classes,
       # z-10 so a privacy-blurred amount, which paints in a layer of its own,
       # doesn't show through the header as it scrolls under it.
-      ("sticky top-0 z-10 bg-container" if @sticky)
+      ("sticky top-0 z-10" if @sticky),
+      @inset ? "bg-container-inset" : ("bg-container" if @sticky)
     )
   end
 

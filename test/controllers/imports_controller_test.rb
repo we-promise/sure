@@ -120,6 +120,43 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to import_upload_url(Import.all.ordered.first)
   end
 
+  test "dropping a Sure transactions.csv export presets the export sign convention" do
+    exported_csv = "#{Family::DataExporter::TRANSACTIONS_CSV_HEADERS.join(",")}\n2024-05-15,Checking Account,42.5,Grocery,,,,USD\n"
+
+    post imports_url, params: {
+      import: {
+        type: "TransactionImport",
+        import_file: Rack::Test::UploadedFile.new(StringIO.new(exported_csv), "text/csv", original_filename: "transactions.csv")
+      }
+    }
+
+    import = Import.all.ordered.first
+    assert_redirected_to import_configuration_url(import)
+    assert_equal "inflows_negative", import.signage_convention
+    assert_equal "%Y-%m-%d", import.date_format
+  end
+
+  test "dropping a CSV with non-ASCII characters presets by header and does not fail" do
+    header = Family::DataExporter::TRANSACTIONS_CSV_HEADERS.join(",")
+    [ "#{header}\n2024-05-15,Checking Account,42.5,Café,,,,USD\n", "\uFEFFdate,amount,name\n2024-05-15,5,Café\n" ].each do |csv|
+      file = Tempfile.new([ "upload", ".csv" ], binmode: true)
+      file.write(csv)
+      file.rewind
+
+      assert_difference "Import.count", 1 do
+        post imports_url, params: {
+          import: { type: "TransactionImport", import_file: Rack::Test::UploadedFile.new(file.path, "text/csv") }
+        }
+      end
+
+      import = Import.all.ordered.first
+      assert_redirected_to import_configuration_url(import)
+      assert_equal csv.start_with?(header) ? "inflows_negative" : "inflows_positive", import.signage_convention
+    ensure
+      file&.close!
+    end
+  end
+
   test "create with an empty request body redirects back with an alert" do
     assert_no_difference "Import.count" do
       post imports_url

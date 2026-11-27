@@ -1,0 +1,156 @@
+---
+en:
+  settings:
+    classifiers:
+      account:
+        account_field: Include the account as one token
+        account_field_hint: "Which account a transaction is in counts as evidence. It never decides alone: a transaction needs a known word or merchant."
+      amount:
+        amount_by_direction: Include the direction, money in or out
+        amount_by_direction_hint: Each category learns which way its money goes, and refunds and purchases at the same shop stay apart.
+        amount_field: Include the amount
+        amount_field_hint: Compares the amount with each category's usual amounts in the same currency, on a log scale.
+      category_training:
+        apply: Apply
+        categories: Categories
+        categories_all: All categories
+        categories_hint: Unchecked categories, with their subcategories, are left out of training, so Bayes never picks them.
+        categories_some: "%{count} of %{total} categories"
+        exclude_transfers: Exclude transfers
+        exclude_transfers_hint: Transfers and payments between your accounts.
+        search_categories: Search categories
+        skip_self_labels: Don't learn from Bayes' own guesses until confirmed or this many days old
+        skip_self_labels_hint: Confirmed means you changed or locked it. A wrong guess isn't fed back in and reinforced; one left alone that long counts as accepted.
+      add_rule:
+        success: The %{name} rule was added to the top of your rules.
+      classifier:
+        apply: Apply
+        lock_results: Lock the categories the classifier sets
+        lock_results_hint: Stops rules changing Bayes' picks, unless you click Apply on a rule. AI never changes Bayes' picks, locked or not.
+        rule: Categorize with the classifier
+        rule_hint: The Category classifier rule, on and off with it in Rules. It categorizes uncategorized transactions in your rule order, after each sync; what it isn't sure about is left for an Auto-categorize rule.
+        threshold: Threshold
+        threshold_hint: Lowest score Bayes acts on (0.05–0.99). Lower categorizes more, with more mistakes.
+      clear_locks:
+        success: Bayes' locks are being cleared. This may take a few moments.
+      evaluation:
+        apply_best: Apply these settings
+        best: Best found
+        best_changes: "Best found, changed from yours:"
+        best_no_changes: Nothing scored better than your settings.
+        buttons_hint: "Test my settings scores your settings. Find best settings searches the %{tuning} months before the ones shown, so what it finds is scored on months it didn't see. It judges by ROC-AUC: how well the scores rank each category's transactions above the rest, at any threshold, keeping a change only when it's higher overall and in all but one of those %{tuning} months alone. It first picks the inputs (every combination of the merchant token, amount and account; then scoring the merchant and account apart; then the merchant's name and the notes as words), then tries one change at a time to the other settings, and last to Scoring. Defaults are the original classifier's, with your choice of categories; Reset to defaults switches to them and tests them."
+        categories_heading: Category classifier
+        change: "%{setting}: %{value}"
+        confusion: "%{actual} → %{predicted}"
+        confusions: "Most common mistakes: %{column} at %{threshold}"
+        current: My settings
+        defaults: Defaults
+        description: Each column is scored on the last %{months} months as new transactions, each month trained on the history before it, then compared with your categories. Testing changes no transaction's category, and the classifier settings change only when you apply or reset.
+        find_best: Find best settings
+        matcher_confusions: "Most common merchant mistakes: %{column} at %{similarity}"
+        matcher_description: "Merchants the matcher fills on the same %{months} months: %{count} transactions with a merchant, each matched against the history before its month with its merchant hidden; right is the merchant it has. Every cutoff and number of merchants is scored; Best found is the one with the best cell for the cost of a mistake, which Apply sets. Testing fills in no merchants."
+        merchants_heading: Merchant matcher
+        no_confusions: No mistakes at this threshold.
+        no_matcher_confusions: No merchant mistakes at this similarity.
+        no_uncategorized: Nothing left uncategorized at this threshold.
+        no_unfilled: Nothing left without a merchant at this similarity.
+        none: Not tested yet.
+        "off": "off"
+        "on": "on"
+        ran_at: Scored %{time} ago on %{count} transactions (%{months}).
+        reset: Reset to defaults
+        reset_confirm: Reset every classifier setting to its default, and test them?
+        right_wrong: Each cell is right / wrong.
+        run: Test my settings
+        running: Testing… this section updates when it's done.
+        short_history: Not enough history to tune the category classifier yet. This needs about %{months} months of categorized transactions, so Apply leaves its settings alone for now.
+        similarity: Similarity
+        stale: The settings have changed since this test.
+        threshold: Threshold
+        trying: "Trying %{changes}…"
+        uncategorized: "Most common uncategorized: %{column} at %{threshold}"
+        unfilled: "Most common unfilled: %{column} at %{similarity}"
+        weight: A mistake costs
+        weight_hint: "Picks what Apply sets: the bold cells, where right answers minus this many per mistake is highest. Best found's threshold for categories; the cutoff, similarity and number of merchants for the matcher."
+        weight_option:
+          one: 1 right answer
+          other: "%{count} right answers"
+      matcher:
+        lock_similar_merchants: Lock the merchants the matcher sets
+        lock_similar_merchants_hint: Stops rules, AI and syncs changing them, unless you click Apply on a rule. Its own locks don't count as confirmed (Merchant matcher tuning).
+        rule: Fill in missing merchants from near-duplicates
+        rule_hint: "The Merchant matcher rule, on and off with it in Rules. In your rule order, a transaction without a merchant gets the one its near-duplicates, like \"NETFLIX.COM 8812\" and \"Netflix com\", all have. Transfers are left out."
+        similar_threshold: Similarity
+        similar_threshold_hint: Lowest similarity of the descriptions, ignoring numbers and reference codes (0.5–0.99). Lower fills more, with more mistakes. Auto-tune's Apply sets it too.
+      matcher_tuning:
+        similar_common_share: Cutoff
+        similar_common_share_hint: A word or 3-letter piece in more than this share of the transactions it copies from (0.01–1), and in at least 50 of them, is too common to tell them apart, like "card" or "payment", so it's ignored. Higher counts more of them. Auto-tune's Apply sets it too.
+        similar_min_neighbours: Merchants agreeing
+        similar_min_neighbours_hint: How many near-duplicates must have the merchant, with none having another. 1 copies a single transaction, mistakes too.
+        similar_min_neighbours_option:
+          one: 1 merchant
+          other: "%{count} merchants"
+        similar_skip_self: Don't copy from the matcher's own merchants until confirmed or this many days old
+        similar_skip_self_hint: Confirmed means you changed or locked it. A wrong copy isn't spread; one left alone that long counts as accepted.
+      merchant:
+        merchant_field: Include the merchant as one token, when set
+        merchant_field_hint: Counts by identity, so a renamed merchant keeps its history.
+        merchant_name_words: Include the merchant's name as words
+        merchant_name_words_hint: Read like the description, as the original does, so similar names share evidence. Overlaps with the token below.
+      run:
+        success: Bayes is categorizing uncategorized transactions. This may take a few moments.
+      scoring:
+        complement: Use complement naive Bayes
+        complement_hint: Scores each category by how badly the transaction fits the others, which copes better with categories of very different sizes. Off is the original multinomial.
+        prior: Include how often each category is used
+        prior_hint: Leans towards the categories you use most. Off treats every category alike, as the original does.
+        separate_fields: Score the merchant and account apart from the words
+        separate_fields_hint: Each gets its own distribution, so a long description doesn't outweigh them. Needs the merchant or the account included; the amount is always scored on its own.
+        smoothing: Smoothing
+        smoothing_hint: Added to every count so an unseen word doesn't rule a category out (0.001–10). 1 is the original's; lower trusts what's been seen more.
+      show:
+        add_rule_body: There's no %{name} rule in your rules, so there's nothing to turn on. Add it to the top of your rules?
+        add_rule_cancel: "No"
+        add_rule_confirm: Add rule
+        add_rule_title: Add the %{name} rule?
+        account: Account tuning
+        amount: Amount tuning
+        auto_tune: Auto-tune
+        category_training: Category classifier tuning
+        clear_locks: Clear Bayes locks
+        clear_locks_confirm_body: Unlocks the categories Bayes locked and the merchants the matcher locked that are still what they set, so rules and AI can change them again. The categories and merchants stay.
+        clear_locks_confirm_button: Clear locks
+        clear_locks_confirm_title: Clear Bayes locks?
+        description: The Bayes category classifier learns from your categorized transactions and categorizes new ones before any AI provider. Changes to these settings take effect from the next categorization run; transactions already categorized keep their categories.
+        matcher: Matcher
+        matcher_description: Fills in missing merchants from near-duplicates, as the Merchant matcher rule (after each sync) and on Run. It changes the merchants stored.
+        matcher_tuning: Merchant matcher tuning
+        merchant: Merchant tuning
+        run: Run
+        scoring: Scoring
+        title: Classifier
+        training: Training
+        words: Transaction tuning
+      training:
+        max_training_transactions: Training transactions
+        max_training_transactions_hint: "How many of the newest transactions to use (100–20,000): the categorized ones the classifier learns from, and the ones with a merchant the matcher copies from."
+      words:
+        bigrams: Include word pairs
+        bigrams_hint: "Neighbouring words also count together, like \"card payment\"."
+        binary: Exclude repeated words
+        binary_hint: Each word counts once per transaction.
+        drop_codes: Exclude reference codes
+        drop_codes_hint: Words mixing letters with 2 or more digits, like 2k4l19.
+        drop_numbers: Exclude numbers
+        drop_numbers_hint: Store numbers, dates and amounts in the description.
+        include_notes: Include notes
+        include_notes_hint: Reads the notes as well as the name.
+        keep_single_chars: Include one-character words
+        keep_single_chars_hint: "Single letters and digits left after splitting, like the \"s\" of mcdonald's."
+        spread_filter: Exclude words every category uses alike
+        spread_filter_hint: They say nothing about the category. The number is how far above an even share one category's use must be.
+        word_split: Words are made of
+        word_split_ascii: a–z and 0–9
+        word_split_hint: "Every other character splits words. Letters of any script keep words like Geschäft or Кофейня whole; with inner symbols, letters joined by one symbol stay one word too, like mcdonald's, s/o and m&s (a symbol at either end, as in *netflix, is still dropped)."
+        word_split_symbols: Letters, digits, inner symbols
+        word_split_unicode: Letters and digits, any script

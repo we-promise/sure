@@ -28,7 +28,7 @@
     <%= form.text_field :jev_endpoint,
                         label: t(".endpoint_label"),
                         placeholder: t(".endpoint_placeholder"),
-                        value: @jev_endpoint_input || Provider::Jev.effective_endpoint,
+                        value: @jev_endpoint_input || Provider::Jev.redacted_endpoint(Provider::Jev.effective_endpoint),
                         autocomplete: "off",
                         autocapitalize: "none",
                         spellcheck: "false",

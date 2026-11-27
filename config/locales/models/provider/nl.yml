@@ -1,0 +1,29 @@
+---
+nl:
+  providers:
+    truelayer:
+      description: "Koppel uw Britse bank via TrueLayer"
+    property_valuation:
+      not_configured: "Deze vastgoeddataprovider is niet geconfigureerd."
+      missing_fields: "Geef een naam en een volledig Amerikaans adres op (straat, plaats, staat en ZIP-code)."
+      missing_fields_gb: "Geef een naam, het adres en de postcode, en de UPRN van het vastgoed op."
+      preview_expired: "Dit vastgoedvoorbeeld is verlopen. Zoek het adres opnieuw op."
+      entry_name: "Waardering %{provider}"
+    rentcast:
+      errors:
+        no_valuation: "RentCast heeft geen waardeschatting voor dit adres teruggegeven."
+        not_found: "RentCast kon geen vastgoed vinden dat bij dit adres past."
+    realie:
+      errors:
+        no_property: "Realie heeft geen vastgoed voor dit adres teruggegeven."
+        no_valuation: "Realie heeft geen waardering voor dit vastgoed teruggegeven."
+        not_found: "Realie kon geen vastgoed vinden dat bij dit adres past."
+        location_mismatch: "Realie vond een vastgoedobject in een andere plaats of met een andere ZIP-code. Controleer het adres."
+    chimnie:
+      errors:
+        invalid_uprn: "Een UPRN is een getal van maximaal 12 cijfers. Controleer de UPRN en probeer het opnieuw."
+        no_estimate: "Chimnie heeft geen waardeschatting voor dit vastgoed."
+        not_found: "Chimnie kon geen vastgoed met deze UPRN vinden."
+        unsupported_property: "Chimnie waardeert alleen woningen; deze UPRN hoort bij commercieel vastgoed of vastgoed met gemengd gebruik."
+        unauthorized: "Chimnie heeft de API-sleutel geweigerd. Controleer de sleutel in Instellingen → Zelfhosting."
+        insufficient_balance: "Het saldo van uw Chimnie-account is te laag voor dit verzoek."

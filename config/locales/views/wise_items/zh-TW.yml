@@ -7,6 +7,7 @@ zh-TW:
     entries:
       default_name: Wise 交易
       fee_name: Wise 手續費
+      refund_name: Wise 退款
     activities:
       jar_deposit: 轉入 Jar
       jar_withdrawal: 從 Jar 轉出
@@ -54,6 +55,9 @@ zh-TW:
       account_sync_failed:
         one: '%{count} 個 Wise 帳戶同步無法排程。'
         other: '%{count} 個 Wise 帳戶同步無法排程。'
+      fetch_failed:
+        one: '%{count} 個 Wise 請求失敗，下次同步時會重試。'
+        other: '%{count} 個 Wise 請求失敗，下次同步時會重試。'
     provider_panel:
       add_connection: 新增 Wise 連線
       token_label: API 權杖 (API Token)
@@ -68,7 +72,7 @@ zh-TW:
       disconnect: 中斷連線
       disconnect_label: 中斷 %{name}
       disconnect_confirm: 確定要中斷 %{name} 的連線嗎？這會移除所有已同步的帳戶資料。
-      sandbox_note_html: 測試時請使用 <strong>sandbox</strong> 基礎網址（<code>https://api.sandbox.transferwise.tech</code>）。在環境變數中設定 <code>WISE_BASE_URL</code>。
+      sandbox_note_html: 測試時請使用 <strong>sandbox</strong> 基礎網址（<code>https://api.wise-sandbox.com</code>）。在環境變數中設定 <code>WISE_BASE_URL</code>。
       encryption_warning:
         title: 資料庫加密未設定
         message: 在正式環境加入 Wise Token 之前，請先設定 Active Record 加密金鑰。未加密時 Token 會以明文儲存。
@@ -138,6 +142,9 @@ zh-TW:
       failed: 無法連結 Wise 餘額。請再試一次。
     link_existing_account:
       not_found: 找不到帳戶或 Wise 餘額。
+      account_already_linked: 此帳戶已與供應商連結。
+      unsupported_account_type: Wise 餘額只能連結至現金/存款帳戶。
+      currency_mismatch: "此 Wise 餘額的幣別為 %{balance_currency}，但帳戶的幣別為 %{account_currency}。請選擇與帳戶幣別相同的餘額。"
       success: 已成功將 %{account_name} 與 Wise 連結
       failed: 無法連結帳戶。請再試一次。
     complete_account_setup:

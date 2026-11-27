@@ -1,0 +1,167 @@
+<%# locals: (account:, as_of: Date.current) %>
+
+<%# ONE reference date for every figure on this tab, the same one the Loan tab
+    takes, so a page read at the edge of a statement close does not show two
+    different cycles on two tabs. %>
+<% today = as_of %>
+<% card = account.credit_card %>
+
+<% if (summary = card.statement_summary(as_of: today, viewer: Current.user)) %>
+  <% due_for_last_balance = summary.due_date.present? && summary.due_date == summary.last_due_date %>
+  <% show_apr = card.apr.present? %>
+  <% summary_grid_class = show_apr ? "grid grid-cols-1 gap-2 sm:grid-cols-2 @3xl:grid-cols-3" : "grid grid-cols-1 gap-2 sm:grid-cols-2" %>
+
+  <div class="@container">
+    <div class="<%= summary_grid_class %>" data-testid="credit-card-summary-grid">
+      <%# The bill. This and the next card are a SPLIT of the balance in the page
+          header, not two more balances: the statement that closed is what you owe
+          now, and everything charged since belongs to the statement still
+          building. The two add back up to the debt, which is the one number the
+          header already gives; what the header cannot say is how much of it is
+          already a bill, and that is what this tab is for. %>
+      <%= summary_card title: t(".statement_balance") do %>
+        <%= summary.balance ? format_money(summary.balance) : t(".unknown") %>
+        <span class="mt-2 block space-y-1 text-sm text-secondary">
+          <% if summary.due_date && due_for_last_balance %>
+            <span class="block">
+              <%= t(".due_on", date: l(summary.due_date, format: :long)) %>
+            </span>
+            <span class="block <%= summary.status == :overdue ? "text-destructive" : "" %>">
+              <%= credit_card_due_countdown((summary.due_date - today).to_i) %>
+            </span>
+          <% end %>
+          <% if summary.remaining&.positive? && summary.balance && summary.remaining.amount < summary.balance.amount %>
+            <span class="block privacy-sensitive">
+              <%= t(".remaining_due", amount: format_money(summary.remaining)) %>
+            </span>
+          <% end %>
+          <% if summary.status == :paid %>
+            <span class="block text-success"><%= t(".status_paid") %></span>
+          <% elsif summary.status == :partial %>
+            <span class="block"><%= t(".status_partial") %></span>
+          <% end %>
+          <% if summary.scheduled_payment %>
+            <span class="block privacy-sensitive">
+              <%= t(".scheduled_payment",
+                    amount: format_money(summary.scheduled_payment.payment.amount_money),
+                    date: l(summary.scheduled_payment.due_date, format: :long)) %>
+            </span>
+          <% end %>
+        </span>
+      <% end %>
+
+      <%# A negative figure here is not a nonsense balance: paying the card down
+          by more than has been charged since the close leaves a credit that
+          reduces the next statement. Labelling it as such keeps the two cards
+          summing to the debt in the header instead of appearing to contradict it.
+
+          The credit is checked before the due date rather than after it. A due
+          date that has already rolled past the last statement belongs to the
+          statement still building, and when the cardholder holds a credit that
+          statement may not produce a bill at all -- quoting a due date there
+          would promise a payment the credit may well cancel. %>
+      <%= summary_card title: t(".since_last_statement") do %>
+        <%= summary.accrued ? format_money(summary.accrued) : t(".unknown") %>
+        <span class="mt-2 block space-y-1 text-sm text-secondary">
+          <% if summary.accrued&.negative? %>
+            <span class="block"><%= t(".credit_toward_next") %></span>
+          <% elsif summary.due_date && !due_for_last_balance %>
+            <span class="block">
+              <%= t(".due_on", date: l(summary.due_date, format: :long)) %>
+            </span>
+            <span class="block"><%= credit_card_due_countdown((summary.due_date - today).to_i) %></span>
+          <% elsif summary.next_close %>
+            <span class="block"><%= t(".closes_on", date: l(summary.next_close, format: :long)) %></span>
+          <% end %>
+          <% if summary.charges && summary.credits %>
+            <span class="flex items-center justify-between gap-4">
+              <span><%= t(".charges") %></span>
+              <span class="font-medium text-primary privacy-sensitive"><%= format_money(summary.charges) %></span>
+            </span>
+            <span class="flex items-center justify-between gap-4">
+              <span><%= t(".payments_credits") %></span>
+              <span class="font-medium text-primary privacy-sensitive"><%= format_money(summary.credits.abs) %></span>
+            </span>
+          <% end %>
+        </span>
+      <% end %>
+
+      <% if show_apr %>
+        <div class="col-span-full @3xl:col-span-1">
+          <%= summary_card title: t(".annual_percentage_rate") do %>
+            <%= number_to_percentage(card.apr, precision: 3) %>
+            <span class="mt-2 block space-y-1 text-sm text-secondary">
+              <span class="flex items-center justify-between gap-4">
+                <span><%= t(".monthly_rate_label") %></span>
+                <span class="font-medium text-primary"><%= number_to_percentage(summary.monthly_rate, precision: 3) %></span>
+              </span>
+              <span class="flex items-center justify-between gap-4">
+                <span><%= t(".estimated_interest_label") %></span>
+                <span class="font-medium text-primary">
+                  <%= summary.estimated_interest ? t(".per_month", amount: format_money(summary.estimated_interest)) : t(".unknown") %>
+                </span>
+              </span>
+              <span class="flex items-center justify-between gap-4">
+                <span><%= t(".balance_carried_label") %></span>
+                <span class="font-medium text-primary"><%= summary.remaining ? format_money(summary.remaining) : t(".unknown") %></span>
+              </span>
+            </span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# The minimum payment earns its place here only as this comparison. On its
+      own it is a number with nothing to be read against: a minimum is a share
+      of whatever the statement came to, so "Minimum Payment $100" beside a
+      balance the user cannot check it against is the one figure on this tab
+      that explains nothing. Set against the statement balance above it answers
+      the question the cardholder actually has, which is whether paying the
+      minimum clears the bill. %>
+  <% if card.minimum_payment_shortfall?(as_of: today) %>
+    <div class="mt-2">
+      <%= render DS::Alert.new(variant: :warning) do %>
+        <%= t(".above_minimum",
+              balance: format_money(summary.balance),
+              minimum: format_money(card.minimum_payment_money)) %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# A card whose cycle is configured but whose statement totals unknown is
+      saying something different from one that totals zero: the first has
+      entries we cannot add up in the card's own currency. Quoting $0.00 there
+      would be a wrong number presented as a right one. %>
+  <% if summary.accrued.nil? || summary.balance.nil? %>
+    <div class="mt-2">
+      <%= render DS::Alert.new(variant: :info) do %>
+        <%= t(".multi_currency_unavailable") %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="flex justify-center py-8">
+    <%= render DS::Link.new(
+      text: t(".edit_card_details"),
+      variant: "ghost",
+      href: edit_credit_card_path(account),
+      frame: :modal
+    ) %>
+  </div>
+<% else %>
+  <%= render DS::EmptyState.new(
+    icon: "calendar",
+    title: t(".no_cycle_title"),
+    description: t(".no_cycle_description")
+  ) %>
+
+  <div class="flex justify-center pb-8">
+    <%= render DS::Link.new(
+      text: t(".edit_card_details"),
+      variant: "secondary",
+      href: edit_credit_card_path(account),
+      frame: :modal
+    ) %>
+  </div>
+<% end %>

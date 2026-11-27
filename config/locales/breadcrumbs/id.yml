@@ -1,0 +1,95 @@
+---
+id:
+  breadcrumbs:
+    account_sharings: Berbagi rekening
+    account_statements: Brankas rekening koran
+    accounts: Rekening
+    ai_prompts: Prompt AI
+    api_key: Kunci API
+    api_keys: Kunci API
+    appearance: Tampilan
+    appearances: Tampilan
+    bank_sync: Sinkronisasi Bank
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Kategori anggaran
+    budgets: Anggaran
+    categories: Kategori
+    categorize: Kategorikan
+    changelog: Yang baru
+    chats: Obrolan
+    classifier: Pengklasifikasi
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Kartu kredit
+    cryptos: Kripto
+    dashboard: Dasbor
+    debug: Debug
+    debugs: Debug
+    depositories: Rekening kas
+    enable_banking_items: Enable Banking
+    exports: Ekspor
+    family_exports: Ekspor
+    family_merchants: Merchant
+    feedback: Umpan balik
+    guides: Panduan
+    holdings: Kepemilikan
+    home: Beranda
+    hostings: Self-Hosting
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Sesi penyamaran
+    imports: Impor
+    indexa_capital_items: Indexa Capital
+    intro: Pengantar
+    investments: Investasi
+    invitations: Undangan
+    invite_codes: Kode undangan
+    kraken_items: Kraken
+    llm_usage: Penggunaan LLM
+    llm_usages: Penggunaan LLM
+    loans: Pinjaman
+    lunchflow_items: Lunch Flow
+    mcp: Server MCP
+    merchants: Merchant
+    mercury_items: Mercury
+    messages: Pesan
+    mfa: Autentikasi dua faktor
+    monobank_items: Monobank
+    oidc_accounts: Akun SSO
+    onboardings: Onboarding
+    other_assets: Aset lainnya
+    other_liabilities: Liabilitas lainnya
+    payments: Pembayaran
+    pending_duplicate_merges: Tinjauan duplikat
+    plaid_items: Plaid
+    plan: Rencana
+    preferences: Preferensi
+    profile: Info Profil
+    profiles: Info Profil
+    properties: Properti
+    providers: Penyedia
+    recurring_transactions: Transaksi berulang
+    redbark_items: Redbark
+    registrations: Daftar
+    reports: Laporan
+    rules: Aturan
+    securities: Sekuritas
+    security: Keamanan
+    self_hosting: Self-Hosting
+    sessions: Masuk
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Pemisahan transaksi
+    sso_identities: Koneksi SSO
+    sso_providers: Penyedia SSO
+    subscriptions: Langganan
+    system_health: Kesehatan Sistem
+    tags: Tag
+    trades: Transaksi efek
+    transactions: Transaksi
+    transfer_matches: Pencocokan transfer
+    transfers: Transfer
+    users: Pengguna
+    valuations: Valuasi
+    vehicles: Kendaraan

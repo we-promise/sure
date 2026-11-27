@@ -281,6 +281,15 @@ class Api::V1::BaseController < ApplicationController
       render_validation_error(exception.message)
     end
 
+    # A strict YYYY-MM-DD date, or nil when the value is missing or invalid.
+    def parse_date(value)
+      return unless value.is_a?(String) && value.match?(/\A\d{4}-\d{2}-\d{2}\z/)
+      date = Date.iso8601(value)
+      date if date.year.positive?
+    rescue Date::Error
+      nil
+    end
+
     def parse_date_param(key)
       Date.iso8601(params[key].to_s)
     rescue ArgumentError

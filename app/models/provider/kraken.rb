@@ -68,6 +68,23 @@ class Provider::Kraken
     private_post("Ledgers", params)
   end
 
+  # Allocations to strategies listed by Earn/Strategies (bonded, flex,
+  # auto-earn) are already in BalanceEx; hybrid Earn such as the Bitcoin
+  # vault is not. cursor/next_cursor paginate.
+  def get_earn_allocations(cursor: nil)
+    params = { "hide_zero_allocations" => "true" }
+    params["cursor"] = cursor if cursor.present?
+
+    private_post("Earn/Allocations", params)
+  end
+
+  def get_earn_strategies(cursor: nil)
+    params = {}
+    params["cursor"] = cursor if cursor.present?
+
+    private_post("Earn/Strategies", params)
+  end
+
   def get_asset_info(asset: nil)
     params = {}
     params["asset"] = asset if asset.present?

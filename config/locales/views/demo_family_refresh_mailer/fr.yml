@@ -1,0 +1,15 @@
+---
+fr:
+  demo_family_refresh_mailer:
+    completed:
+      activity_heading: Activité sur cette période
+      families_label: Nouveaux comptes famille créés
+      family_heading: Précédente famille de démo
+      family_not_found: Introuvable
+      from_label: 'Du :'
+      id_label: 'ID :'
+      period_heading: Période couverte (UTC)
+      sessions_label: Sessions de connexion uniques pour la précédente famille de démo
+      subject: Actualisation de la famille de démo terminée
+      time_format: "%-d %b %Y à %H:%M:%S UTC"
+      to_label: 'Au :'

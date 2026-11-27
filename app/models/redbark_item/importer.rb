@@ -5,12 +5,16 @@ class RedbarkItem::Importer
   include RedbarkAccount::DataHelpers
   include CurrencyNormalizable
 
-  attr_reader :redbark_item, :redbark_provider, :sync
+  attr_reader :redbark_item, :redbark_provider, :sync, :fetched_at
 
-  def initialize(redbark_item, redbark_provider:, sync: nil)
+  # `fetched_at` stamps the account-details snapshot. It is injected rather
+  # than read here so that one sync's fetch and its processing share a clock;
+  # see RedbarkItem::Syncer.
+  def initialize(redbark_item, redbark_provider:, sync: nil, fetched_at: Time.current)
     @redbark_item = redbark_item
     @redbark_provider = redbark_provider
     @sync = sync
+    @fetched_at = fetched_at
   end
 
   def import
@@ -21,7 +25,10 @@ class RedbarkItem::Importer
 
     # Step 2: For linked accounts only, fetch transactions and balances.
     # Unlinked accounts just need basic info (name, institution) for the setup modal.
-    linked_accounts = redbark_item.linked_redbark_accounts.to_a
+    # `account_provider: :account` is preloaded because the loan filter in
+    # import_loan_account_details reads `current_account` for every linked
+    # account, which is a query each without it.
+    linked_accounts = redbark_item.linked_redbark_accounts.includes(account_provider: :account).to_a
 
     Rails.logger.info "RedbarkItem::Importer - Found #{linked_accounts.count} linked accounts to process"
 
@@ -30,6 +37,7 @@ class RedbarkItem::Importer
     end
 
     import_balances(linked_accounts)
+    import_loan_account_details(linked_accounts)
 
     # Store import stats on the item as the raw snapshot
     redbark_item.upsert_redbark_snapshot!(stats)
@@ -144,12 +152,18 @@ class RedbarkItem::Importer
 
         if transactions_data.any?
           transactions_hashes = transactions_data.map { |t| sdk_object_to_hash(t) }
-          merged = merge_transactions(
-            redbark_account.raw_transactions_payload || [],
-            transactions_hashes,
-            window_start: start_date
-          )
-          redbark_account.upsert_redbark_transactions_snapshot!(merged)
+          stored = redbark_account.raw_transactions_payload || []
+
+          RedbarkAccount.transaction do
+            dropped_stored_ids, kept_ids_by_alias = apply_reissued_ids(redbark_account, stored, transactions_hashes, start_date)
+
+            merged = merge_transactions(
+              stored.reject { |t| dropped_stored_ids.include?(transaction_key(t)) },
+              fold_aliases(transactions_hashes, kept_ids_by_alias, dropped_stored_ids),
+              window_start: start_date
+            )
+            redbark_account.upsert_redbark_transactions_snapshot!(merged)
+          end
           stats["transactions_found"] = stats.fetch("transactions_found", 0) + transactions_data.size
         end
       rescue Provider::Redbark::AuthenticationError
@@ -191,6 +205,74 @@ class RedbarkItem::Importer
       rescue => e
         capture_failure("Balances fetch failed; keeping previous balances", e)
         register_error(e, context: "balances")
+      end
+    end
+
+    # Loans only, and only when there are any: `account-details` is the one
+    # endpoint that reports a rate (we-promise/sure#3891), and for every other account type it
+    # would be a request per sync for something nothing reads.
+    #
+    # A failure here leaves the payload untouched and the sync green, exactly as
+    # a failed balances fetch does. The processor treats "never fetched" and
+    # "fetch failed" alike, because for a rate they mean the same thing:
+    # nothing was reported.
+    def import_loan_account_details(linked_accounts)
+      eligible_accounts = balance_eligible_accounts(linked_accounts).select do |redbark_account|
+        redbark_account.current_account&.accountable_type == "Loan"
+      end
+      account_ids = eligible_accounts.map(&:redbark_account_id).compact
+      return if account_ids.empty?
+
+      begin
+        details_by_id = fetch_account_details_with_fallback(account_ids)
+                          .index_by { |detail| detail[:accountId].to_s }
+
+        eligible_accounts.each do |redbark_account|
+          detail = details_by_id[redbark_account.redbark_account_id]
+          # An account the provider has no detail for is omitted from `data`
+          # rather than erroring, so leave the last payload in place -- and
+          # leave the stamp alone with it, so the processor knows the snapshot
+          # is not from this sync.
+          next if detail.blank?
+
+          redbark_account.update!(
+            raw_account_details_payload: detail,
+            account_details_fetched_at: fetched_at
+          )
+          stats["account_details_updated"] = stats.fetch("account_details_updated", 0) + 1
+        end
+      rescue Provider::Redbark::AuthenticationError
+        raise
+      rescue => e
+        capture_failure("Account details fetch failed; keeping previous details", e)
+        register_error(e, context: "account_details")
+      end
+    end
+
+    # The batch is rejected whole when one id is stale or of the wrong
+    # category, exactly as the balances batch is, so one bad account must not
+    # cost every other loan its rate. Mirrors fetch_balances_with_fallback.
+    def fetch_account_details_with_fallback(account_ids)
+      stats["api_requests"] = stats.fetch("api_requests", 0) + 1
+      redbark_provider.get_account_details(account_ids: account_ids)
+    rescue Provider::Redbark::AuthenticationError
+      raise
+    rescue Provider::Redbark::Error => e
+      raise unless %i[not_found bad_request].include?(e.error_type)
+      raise if account_ids.size <= 1
+
+      capture_failure("Batched account details call rejected; retrying per account", e)
+
+      account_ids.flat_map do |account_id|
+        begin
+          stats["api_requests"] = stats.fetch("api_requests", 0) + 1
+          redbark_provider.get_account_details(account_ids: [ account_id ])
+        rescue Provider::Redbark::AuthenticationError
+          raise
+        rescue Provider::Redbark::Error => account_error
+          capture_failure("Account details fetch failed for account; keeping previous details", account_error, account_id: account_id)
+          []
+        end
       end
     end
 
@@ -250,10 +332,16 @@ class RedbarkItem::Importer
         # through the API's row ceiling on busy accounts.
         (redbark_item.last_synced_at - 7.days).to_date
       elsif redbark_account.sync_start_date.present?
-        redbark_account.sync_start_date
+        # The stored date was validated against the rolling lookback window
+        # when it was set, but time passes between then and this first real
+        # fetch (a delayed initial sync, a long-stuck job). Clamp to today's
+        # window so an expired date doesn't get sent to Redbark and rejected
+        # outright -- the user still gets as much history as is still
+        # available, instead of nothing.
+        [ redbark_account.sync_start_date, RedbarkAccount::MAX_SYNC_START_DATE_LOOKBACK_DAYS.days.ago.to_date ].max
       else
-        # First sync for this account: pull a 90 day history
-        90.days.ago.to_date
+        # First sync for this account: pull the default history window
+        RedbarkAccount::DEFAULT_INITIAL_HISTORY_DAYS.days.ago.to_date
       end
     end
 
@@ -273,6 +361,96 @@ class RedbarkItem::Importer
       end
       new_transactions.each { |t| by_id[transaction_key(t)] = t }
       by_id.values
+    end
+
+    # Points existing entries at the ids a bank re-issued (see
+    # RedbarkAccount::TransactionIdReissue). Returns the stored ids to leave
+    # out of the snapshot, so the processor can't import the old row as a
+    # second entry, and { generated id => kept id } for fold_aliases.
+    #
+    # A re-key moves only external_id: a protected entry keeps everything
+    # else, and an unprotected one is refreshed from the new row by the
+    # processor as usual. A generated id is recorded as an alias on the entry
+    # it duplicates, which keeps its id for when the bank restores it; with no
+    # such entry it is handled like any other new id.
+    def apply_reissued_ids(redbark_account, stored, fetched, window_start)
+      entries = redbark_account.current_account&.entries&.where(source: "redbark")
+      return [ Set.new, {} ] if entries.nil?
+
+      kept_ids_by_alias = entries.where(entryable_type: "Transaction")
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+        .where("transactions.extra -> 'redbark' -> 'alias_ids' IS NOT NULL")
+        .pluck(:external_id, Arel.sql("transactions.extra -> 'redbark' -> 'alias_ids'"))
+        .each_with_object({}) do |(external_id, alias_ids), map|
+          Array(alias_ids).each { |alias_id| map[alias_id.to_s] = external_id.delete_prefix("redbark_") }
+        end
+
+      result = RedbarkAccount::TransactionIdReissue.new(
+        stored: stored, fetched: fetched, window_start: window_start, known_alias_ids: kept_ids_by_alias.keys
+      ).call
+
+      dropped_stored_ids = Set.new
+
+      result.aliases.each do |kept_id, generated_id|
+        entry = entries.find_by(external_id: "redbark_#{kept_id}", entryable_type: "Transaction")
+
+        if entry
+          record_alias(entry.entryable, generated_id)
+          kept_ids_by_alias[generated_id] = kept_id
+        else
+          dropped_stored_ids << kept_id
+        end
+      end
+
+      result.re_keys.each do |old_id, new_id|
+        dropped_stored_ids << old_id
+
+        if entries.exists?(external_id: "redbark_#{new_id}")
+          DebugLogEntry.capture(
+            category: "provider_sync",
+            level: "warn",
+            message: "Redbark re-issued a transaction id that already has an entry; left both entries as they are",
+            source: self.class.name,
+            provider_key: "redbark",
+            family: redbark_item.family,
+            account_provider: redbark_account.account_provider,
+            metadata: { redbark_account_id: redbark_account.id, old_id: old_id, new_id: new_id }
+          )
+          next
+        end
+
+        entries.where(external_id: "redbark_#{old_id}")
+          .update_all(external_id: "redbark_#{new_id}", updated_at: Time.current)
+      end
+
+      [ dropped_stored_ids, kept_ids_by_alias ]
+    end
+
+    # A generated id stands in for its kept id. While it is the only row of
+    # the two served, its payload is the current one, so it goes into the
+    # snapshot under the kept id and the processor refreshes the kept entry
+    # from it. It is dropped once the kept id is served again, or when the
+    # kept row left the snapshot this sync (re-keyed away).
+    def fold_aliases(fetched, kept_ids_by_alias, dropped_stored_ids)
+      fetched_ids = fetched.map { |t| transaction_key(t) }.to_set
+
+      fetched.filter_map do |t|
+        kept_id = kept_ids_by_alias[transaction_key(t)]
+        next t unless kept_id
+        next if fetched_ids.include?(kept_id) || dropped_stored_ids.include?(kept_id)
+
+        t.merge(t.key?(:id) ? { id: kept_id } : { "id" => kept_id })
+      end
+    end
+
+    def record_alias(transaction, generated_id)
+      extra = (transaction.extra || {}).deep_dup
+      redbark = extra["redbark"] || {}
+      alias_ids = Array(redbark["alias_ids"])
+      return if alias_ids.include?(generated_id)
+
+      extra["redbark"] = redbark.merge("alias_ids" => alias_ids + [ generated_id ])
+      transaction.update_columns(extra: extra)
     end
 
     def within_window?(transaction, window_start)

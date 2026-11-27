@@ -51,9 +51,12 @@ class Insight::Generators::MaintainedGoalDepletedGenerator < Insight::Generator
     #
     # Ordered by shortfall so a tight MAX_INSIGHTS spends itself on the reserves
     # furthest from their floor, and stays stable between nightly runs.
+    #
+    # A reserve whose foreign balance has no exchange rate reads as short only
+    # because that balance is left out. The goal page says so; this feed cannot.
     def depleted_reserves
       Goal.prepared_for(family, scope: family.goals.where(kind: "maintained", state: "active"))
-          .select { |goal| goal.status == :depleted }
+          .select { |goal| goal.status == :depleted && !goal.currency_conversion_incomplete? }
           .sort_by { |goal| -goal.remaining_amount.to_d }
     end
 end

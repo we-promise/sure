@@ -3,15 +3,13 @@ ca:
   invitations:
     accept_choice:
       create_account: Crea un compte nou
+      existing_account_hint: "Ja tens un compte? Els comptes existents no es poden unir a una altra llar mitjançant una invitació."
       joined_household: T'has unit a la llar.
       message: "%{inviter} t'ha convidat a unir-te com a %{role}."
-      sign_in_existing: Ja tinc un compte
       title: Uneix-te a %{family}
     create:
-      existing_user_added: S'ha afegit l'usuari a la teva llar.
       failure: No s'ha pogut enviar la invitació
       success: Invitació enviada correctament
-      existing_user_has_family_data: Aquest usuari ja té una llar amb comptes. Ha d'eliminar o transferir aquests comptes abans d'unir-se a la teva.
     destroy:
       failure: Hi ha hagut un problema en eliminar la invitació.
       not_authorized: No estàs autoritzat/da a gestionar invitacions.

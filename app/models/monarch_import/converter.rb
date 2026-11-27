@@ -1,0 +1,339 @@
+# Converts Monarch's exports into the records Family::DataImporter imports,
+# following the person's choice for each account.
+#
+# A new account gets the Monarch history as an opening balance plus balance
+# valuations wherever its transactions don't explain Monarch's balance. An
+# existing Sure account gets the same, computed on top of the entries it
+# already has, and its opening balance moves to the start of the Monarch
+# history when it falls inside it.
+#
+# Existing categories and merchants with the same names are reused with their
+# current look: the records carry it, because DataImporter rewrites both from
+# the record.
+class MonarchImport::Converter
+  TRANSFER_CATEGORY_KINDS = {
+    "Transfer" => "funds_movement",
+    "Credit Card Payment" => "cc_payment"
+  }.freeze
+  RECORD_ORDER = %w[Account Category Tag Merchant Transaction Valuation].freeze
+  # Imported transactions keep their Monarch ID in extra under this key, so a
+  # later import into the same account can recognise them. It stays out of
+  # external_id: provider sync only claims entries without one, so a bank
+  # connection linked later matches these entries instead of duplicating them.
+  EXTRA_KEY = "monarch".freeze
+  # How the Monarch to Sure API tool's import sessions identify transactions.
+  SESSION_SOURCE_PREFIX = "sure_import_session:".freeze
+  SESSION_EXTERNAL_ID_PREFIX = "Transaction:monarch-transaction:".freeze
+  LIABILITY_TYPES = %w[CreditCard Loan OtherLiability].freeze
+  # Sure's balance calculator ignores transactions in these accounts (see
+  # Balance::BaseCalculator), so only valuations set their balance.
+  VALUATION_ONLY_TYPES = %w[Property Vehicle OtherAsset OtherLiability].freeze
+
+  # What the person picked for one Monarch account. name is Monarch's, and
+  # account_name what a new Sure account is called. target is an existing
+  # manual Account to import into, or nil to create one. current_balance is
+  # today's balance as Sure shows it, with amounts owed positive.
+  Choice = Data.define(:name, :type, :closed, :include, :transactions, :current_balance, :target, :account_name) do
+    def initialize(account_name: nil, **attributes)
+      super(account_name: account_name || attributes[:name], **attributes)
+    end
+
+    def liability?
+      LIABILITY_TYPES.include?(type)
+    end
+
+    def transactions_move_balance?
+      !VALUATION_ONLY_TYPES.include?(type)
+    end
+  end
+
+  # An existing account's opening balance, moved to the start of the history.
+  OpeningBalanceMove = Data.define(:account, :entry, :date, :balance)
+
+  Result = Data.define(:records, :stats, :opening_balance_moves, :conflicts, :overlapping_transactions)
+
+  def self.source_id(name)
+    "monarch-account:#{name}"
+  end
+
+  def initialize(exports:, choices:, family:, include_pending: false, today: nil)
+    @exports = exports
+    @choices = choices.index_by(&:name)
+    @family = family
+    @include_pending = include_pending
+    @today = today || default_today
+  end
+
+  def result
+    @result ||= convert
+  end
+
+  private
+    attr_reader :exports, :family, :today
+
+    def convert
+      unknown = exports.account_names - @choices.keys
+      raise ArgumentError, "No choice for #{unknown.join(', ')}" if unknown.any?
+
+      @records = RECORD_ORDER.index_with { [] }
+      @stats = Hash.new(0)
+      @categories = {}
+      @tags = {}
+      @merchants = {}
+      @opening_balance_moves = []
+      @conflicts = {}
+      @overlapping_transactions = {}
+
+      flows = convert_transactions
+      exports.account_names.each { |name| convert_account(@choices[name], flows.fetch(name, {})) }
+      convert_categories_tags_and_merchants
+
+      RECORD_ORDER.each { |type| @stats[type] = @records[type].size }
+      Result.new(
+        records: RECORD_ORDER.flat_map { |type| @records[type] },
+        stats: @stats.to_h,
+        opening_balance_moves: @opening_balance_moves,
+        conflicts: @conflicts,
+        overlapping_transactions: @overlapping_transactions
+      )
+    end
+
+    # Adds the transaction records and returns each account's daily flows.
+    def convert_transactions
+      flows = Hash.new { |hash, name| hash[name] = Hash.new(BigDecimal("0")) }
+
+      exports.transactions_for(include_pending: @include_pending).each do |row|
+        choice = @choices[row[:account]]
+        skipped = if !choice.include then "excluded_account"
+        elsif !choice.transactions then "balances_only"
+        elsif row[:amount].nil? then "no_amount"
+        end
+        next @stats["transactions_skipped_#{skipped}"] += 1 if skipped
+        next @stats["transactions_skipped_already_in_sure"] += 1 if already_in_sure?(choice.target, row)
+
+        flows[row[:account]][row[:date]] += row[:amount] if choice.transactions_move_balance?
+
+        kind = TRANSFER_CATEGORY_KINDS.fetch(row[:category], "standard")
+        data = {
+          "id" => "monarch-transaction:#{row[:id]}",
+          "account_id" => self.class.source_id(row[:account]),
+          "date" => row[:date].iso8601,
+          # Sure records outflows as positive amounts; Monarch as negative.
+          "amount" => money(-row[:amount]),
+          "name" => row[:merchant].presence || row[:original_statement].presence || "Imported transaction",
+          "notes" => row[:notes].presence,
+          "kind" => kind,
+          "extra" => { EXTRA_KEY => { "transaction_id" => row[:id] } },
+          # Like the CSV importer: a provider that later claims the entry links
+          # to it without overwriting what was imported.
+          "import_locked" => true
+        }
+        if row[:category].present? && kind == "standard"
+          data["category_id"] = @categories[row[:category]] ||= "monarch-category:#{row[:category]}"
+        end
+        if row[:merchant].present?
+          data["merchant_id"] = @merchants[row[:merchant]] ||= "monarch-merchant:#{row[:merchant]}"
+        end
+        tag_ids = row[:tags].map { |tag| @tags[tag] ||= "monarch-tag:#{tag}" }
+        data["tag_ids"] = tag_ids if tag_ids.any?
+
+        @records["Transaction"] << record("Transaction", data)
+      end
+
+      flows
+    end
+
+    # Whether an existing account already holds this Monarch transaction:
+    # first by its Monarch ID from an earlier import (natively or through the
+    # API tool), then by Sure's own duplicate matcher (same date, amount and
+    # currency). Entries with a Monarch ID only match by it, and each other
+    # entry matches at most one row, so two genuine identical purchases stay
+    # two. A skipped row is already in the account's balance, so it adds no
+    # flow.
+    def already_in_sure?(account, row)
+      return false if account.nil?
+
+      return true if imported_monarch_ids(account).key?(row[:id])
+
+      duplicate = Account::ProviderImportAdapter.new(account).find_duplicate_transaction(
+        date: row[:date], amount: -row[:amount], currency: account.currency,
+        exclude_entry_ids: claimed_entry_ids(account)
+      )
+      claimed_entry_ids(account) << duplicate.id if duplicate
+      duplicate.present?
+    end
+
+    def claimed_entry_ids(account)
+      @claimed_entry_ids ||= {}
+      @claimed_entry_ids[account.id] ||= imported_monarch_ids(account).values
+    end
+
+    # { Monarch transaction ID => entry ID } for the account's entries.
+    def imported_monarch_ids(account)
+      @imported_monarch_ids ||= {}
+      @imported_monarch_ids[account.id] ||= load_imported_monarch_ids(account)
+    end
+
+    def load_imported_monarch_ids(account)
+      native = Transaction.joins(:entry).where(entries: { account_id: account.id })
+        .where("transactions.extra -> ? ->> 'transaction_id' IS NOT NULL", EXTRA_KEY)
+        .pluck(Arel.sql(ActiveRecord::Base.sanitize_sql([ "transactions.extra -> ? ->> 'transaction_id'", EXTRA_KEY ])), "entries.id")
+      tool = session_entries(account.entries).pluck(:external_id, :id).map { |external_id, id| [ external_id.delete_prefix(SESSION_EXTERNAL_ID_PREFIX), id ] }
+      (native + tool).to_h
+    end
+
+    # Entries the API tool imported. Both the source and the ID prefix must
+    # match, since any API client can choose an external ID.
+    def session_entries(scope)
+      scope.where("entries.source LIKE ?", "#{ActiveRecord::Base.sanitize_sql_like(SESSION_SOURCE_PREFIX)}%")
+        .where("entries.external_id LIKE ?", "#{ActiveRecord::Base.sanitize_sql_like(SESSION_EXTERNAL_ID_PREFIX)}%")
+    end
+
+    def monarch_id_of(entry)
+      if entry.source.to_s.start_with?(SESSION_SOURCE_PREFIX) && entry.external_id.to_s.start_with?(SESSION_EXTERNAL_ID_PREFIX)
+        entry.external_id.delete_prefix(SESSION_EXTERNAL_ID_PREFIX)
+      else
+        entry.entryable.try(:extra).to_h.dig(EXTRA_KEY, "transaction_id")
+      end
+    end
+
+    def convert_account(choice, flows)
+      return unless choice.include
+
+      sign = choice.liability? ? -1 : 1 # Sure stores amounts owed as positive
+      history = exports.balances.fetch(choice.name, {})
+      current_balance = choice.current_balance && choice.current_balance * sign
+
+      if choice.target
+        convert_into_existing(choice, history, flows, sign, current_balance)
+      else
+        balance_history = MonarchImport::BalanceHistory.new(history: history, flows: flows, closed: choice.closed)
+        anchors = anchors_for(balance_history, choice, current_balance)
+        # Later valuations are imported, but the balance is today's.
+        balance = balance_history.replay(anchors, through: today).select { |date, _| date <= today }.values.last
+        @records["Account"] << record("Account", {
+          "id" => self.class.source_id(choice.name),
+          "name" => choice.account_name,
+          "accountable_type" => choice.type,
+          "accountable" => {},
+          "subtype" => nil,
+          "balance" => money((balance || 0) * sign),
+          "status" => choice.closed ? "disabled" : "active",
+          # The opening balance and history come from the valuations.
+          "skip_opening_balance_import" => true
+        })
+        add_valuations(choice, anchors, sign, first_kind: "opening_anchor")
+      end
+    end
+
+    def convert_into_existing(choice, history, flows, sign, current_balance)
+      account = choice.target
+      entries = account.entries.excluding_pending.excluding_split_parents.includes(:entryable).to_a
+      opening = entries.find { |entry| entry.valuation? && entry.entryable.opening_anchor? }
+      others = entries.reject(&:valuation?)
+
+      # Balances come from the entries Sure's calculator uses, in the
+      # account's currency.
+      calculated_valuations, calculated_others = Balance::SyncCache.new(account).entries.partition(&:valuation?)
+      # The calculator takes a day's first valuation.
+      existing_valuations = calculated_valuations.each_with_object({}) { |entry, values| values[entry.date] ||= entry.amount * sign }
+      existing_flows = Hash.new(BigDecimal("0"))
+      if choice.transactions_move_balance?
+        calculated_others.each { |entry| existing_flows[entry.date] -= entry.amount }
+      end
+
+      monarch_dates = history.keys + flows.keys
+      start_date, end_date = monarch_dates.minmax
+      if start_date
+        claimed = claimed_entry_ids(account)
+        @overlapping_transactions[choice.name] = others.count do |entry|
+          entry.date.between?(start_date, end_date) && !claimed.include?(entry.id) && monarch_id_of(entry).nil?
+        end
+      end
+
+      # The opening balance can move to the start of the history when it falls
+      # inside it and nothing else in the account comes earlier.
+      if opening && start_date && opening.date >= start_date
+        movable_valuations = existing_valuations.except(opening.date)
+        balance_history = MonarchImport::BalanceHistory.new(history: history, flows: flows, closed: choice.closed,
+          existing_valuations: movable_valuations, existing_flows: existing_flows)
+        anchors = anchors_for(balance_history, choice, current_balance)
+        opening_date, opening_balance = anchors.first
+        if opening_date && (entries - [ opening ]).none? { |entry| entry.date <= opening_date }
+          @opening_balance_moves << OpeningBalanceMove.new(account: account, entry: opening, date: opening_date, balance: opening_balance * sign)
+          @conflicts[choice.name] = balance_history.conflicts if balance_history.conflicts.any?
+          return add_valuations(choice, anchors.drop(1), sign, first_kind: "reconciliation")
+        end
+      end
+
+      balance_history = MonarchImport::BalanceHistory.new(history: history, flows: flows, closed: choice.closed,
+        existing_valuations: existing_valuations, existing_flows: existing_flows)
+      anchors = anchors_for(balance_history, choice, current_balance)
+      @conflicts[choice.name] = balance_history.conflicts if balance_history.conflicts.any?
+      add_valuations(choice, anchors, sign, first_kind: "reconciliation")
+    end
+
+    # The family's date, but never later than the server's: Sure leaves entries
+    # dated after Date.current out of the balance until that day arrives.
+    def default_today
+      [ Time.current.in_time_zone(family.resolved_time_zone).to_date, Date.current ].min
+    end
+
+    def anchors_for(balance_history, choice, current_balance)
+      return balance_history.anchors if current_balance.nil? || choice.closed
+
+      balance_history.anchors_with_current_balance(today, current_balance)
+    end
+
+    def add_valuations(choice, anchors, sign, first_kind:)
+      anchors.each_with_index do |(date, balance), index|
+        opening = index.zero? && first_kind == "opening_anchor"
+        @records["Valuation"] << record("Valuation", {
+          "id" => "monarch-valuation:#{choice.name}:#{date.iso8601}",
+          "account_id" => self.class.source_id(choice.name),
+          "date" => date.iso8601,
+          "amount" => money(balance * sign),
+          "kind" => opening ? "opening_anchor" : "reconciliation",
+          "name" => opening ? "Opening balance" : "Balance from Monarch"
+        })
+      end
+    end
+
+    def convert_categories_tags_and_merchants
+      existing_categories = family.categories.where(name: @categories.keys).index_by(&:name)
+      @stats["categories_reusing_existing"] = 0
+      @categories.sort.each do |name, id|
+        data = { "id" => id, "name" => name }
+        if (category = existing_categories[name])
+          data.merge!("color" => category.color, "lucide_icon" => category.lucide_icon,
+            "classification_unused" => category.classification_unused)
+          @stats["categories_reusing_existing"] += 1
+        end
+        @records["Category"] << record("Category", data)
+      end
+
+      @tags.sort.each { |name, id| @records["Tag"] << record("Tag", { "id" => id, "name" => name }) }
+
+      existing_merchants = family.merchants.where(name: @merchants.keys).index_by(&:name)
+      @merchants.sort.each do |name, id|
+        data = { "id" => id, "name" => name }
+        if (merchant = existing_merchants[name])
+          data.merge!("color" => merchant.color, "logo_url" => merchant.logo_url)
+          @stats["merchants_reusing_existing"] += 1
+        end
+        @records["Merchant"] << record("Merchant", data)
+      end
+    end
+
+    def record(type, data)
+      { "type" => type, "data" => data }
+    end
+
+    # Two decimals, rounding half to even like the Monarch to Sure tool, and
+    # never "-0.00".
+    def money(value)
+      rounded = value.to_d.round(2, BigDecimal::ROUND_HALF_EVEN)
+      whole, fraction = rounded.abs.to_s("F").split(".")
+      "#{'-' if rounded.negative?}#{whole}.#{fraction.to_s.ljust(2, '0')}"
+    end
+end

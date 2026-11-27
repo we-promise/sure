@@ -9,7 +9,8 @@ fr:
       safe_to_spend: Combien puis-je dépenser sans risque cette période ?
       subscriptions_up: Quels abonnements ont augmenté cette année ?
     all:
-      any_status: Tous les statuts
+      current_bills: Factures en cours
+      dismissed_hidden_description: Les factures terminées sont masquées.
       any_type: Tous les types
       col_actions: Actions
       col_amount: Montant
@@ -85,6 +86,7 @@ fr:
       renews_chip: Renouvellement le %{date}
       rule_aliases: Correspond aussi à %{names}
       rule_amount_range: de %{min} à %{max}
+      rule_detected: Correspond aux transactions nommées %{name}
       rule_learned_tolerance: Les montants situés à %{percent} près du montant habituel correspondent à cette facture
       rule_named: "%{name}"
       rules: Comment cette facture est reconnue
@@ -190,6 +192,7 @@ fr:
       exact_amount: Montant exact
       name_matches: Le nom correspond
       same_merchant: Même marchand
+      same_transfer: Transfert vers le même compte
     month_pulse:
       bill_count:
         one: 1 facture
@@ -232,6 +235,12 @@ fr:
       bridge_amount: "· %{amount} à payer"
       bridge_label: Avant votre prochaine paie
       bridge_split: À payer avant le %{date}, couvert par les %{cash} présents sur vos comptes.
+      bridge_left: "%{amount} restants après les factures"
+      bridge_show_more:
+        one: Afficher 1 de plus
+        other: "Afficher %{count} de plus"
+      bridge_allocation_aria: "Sur les %{cash} de vos comptes, %{due} sont à payer avant votre prochaine paie et il reste %{left}."
+      item_overdue: En retard
       due_this_period: À payer cette période
       empty:
         action: Ajouter un revenu

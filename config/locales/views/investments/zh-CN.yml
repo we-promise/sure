@@ -14,6 +14,9 @@ zh-CN:
       brokerage:
         short: 券商
         long: 券商账户
+      cash_management:
+        short: CMA
+        long: 现金管理账户
       401k:
         short: 401(k)
         long: 401(k)
@@ -113,6 +116,9 @@ zh-CN:
       life_insurance:
         short: 人寿保险
         long: 人寿保险
+      epf:
+        short: EPF
+        long: 雇员公积金
       ppf:
         short: PPF
         long: 公共公积金
@@ -185,5 +191,7 @@ zh-CN:
     value_tooltip:
       cash: 现金
       holdings: 持仓
+      projected: 预计余额
+      scheduled: 已计划
       total: 投资组合余额
       total_value_tooltip: 投资组合总余额是券商现金（可用于交易）与当前持仓市值之和。

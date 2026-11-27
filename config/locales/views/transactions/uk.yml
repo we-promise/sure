@@ -34,6 +34,7 @@ uk:
       date: Дата
       description: Опис
       description_placeholder: Опишіть транзакцію
+      description_placeholder_optional: "Залиште порожнім, щоб використати назву категорії/продавця, або спершу виберіть одне з них"
       expense: Витрата
       income: Дохід
       merchant_label: Продавець

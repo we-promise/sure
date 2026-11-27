@@ -218,6 +218,14 @@ uk:
       bridge_label: До наступної зарплати
       bridge_amount: · %{amount} до сплати
       bridge_split: Сплатити до %{date}; покривається коштами на ваших рахунках (%{cash}).
+      bridge_left: "%{amount} залишиться після платежів"
+      bridge_show_more:
+        one: "Показати ще %{count}"
+        few: "Показати ще %{count}"
+        many: "Показати ще %{count}"
+        other: "Показати ще %{count}"
+      bridge_allocation_aria: "З %{cash} на ваших рахунках %{due} треба сплатити до наступної зарплати, залишається %{left}."
+      item_overdue: Прострочено
       shortfall_label: Бракує до наступної зарплати
       shortfall_amount: · %{amount}
       shortfall_split: До %{date} треба сплатити %{obligations}, а на ваших рахунках %{cash}.
@@ -238,7 +246,8 @@ uk:
       empty_month: Цього місяця платежів немає.
     all:
       search_placeholder: Шукати платежі
-      any_status: Будь-який статус
+      current_bills: Поточні платежі
+      dismissed_hidden_description: Завершені платежі приховані.
       status_filters:
         overdue: Прострочені
         due: Незабаром до сплати

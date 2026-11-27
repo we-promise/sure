@@ -388,4 +388,16 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     converted_entry = converted_entries.first
     assert_equal 150.0, converted_entry.amount
   end
+
+  test "start_date leaves out entries dated before it" do
+    @account.entries.create!(date: 3.days.ago.to_date, name: "Before", amount: 10, currency: "USD", entryable: Transaction.new)
+    @account.entries.create!(date: 3.days.ago.to_date, name: "Before value", amount: 900, currency: "USD", entryable: Valuation.new)
+    @account.entries.create!(date: 1.day.ago.to_date, name: "Inside", amount: 20, currency: "USD", entryable: Transaction.new)
+
+    sync_cache = Balance::SyncCache.new(@account, start_date: 2.days.ago.to_date)
+
+    assert_empty sync_cache.get_entries(3.days.ago.to_date)
+    assert_nil sync_cache.get_valuation(3.days.ago.to_date)
+    assert_equal [ "Inside" ], sync_cache.get_entries(1.day.ago.to_date).map(&:name)
+  end
 end

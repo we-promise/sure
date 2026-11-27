@@ -14,7 +14,7 @@ class OidcAccountsController < ApplicationController
     end
 
     @email = @pending_auth["email"]
-    @user_exists = User.exists?(email: @email) if @email.present?
+    @user_exists = User.find_by_email_with_legacy_fallback(@email).present? if @email.present?
 
     # Check for a pending invitation for this email
     @pending_invitation = Invitation.pending.find_by(email: @email) if @email.present?
@@ -33,7 +33,7 @@ class OidcAccountsController < ApplicationController
     end
 
     # Verify user's password to confirm identity
-    user = User.authenticate_by(email: params[:email], password: params[:password])
+    user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
     if user&.active?
       linked = user.transaction do
@@ -68,16 +68,11 @@ class OidcAccountsController < ApplicationController
         session[:mfa_user_id] = user.id
         redirect_to verify_mfa_path
       else
-        notice = if accept_pending_invitation_for(user)
-          t("invitations.accept_choice.joined_household")
-        else
-          t("sessions.openid_connect.account_linked", provider: @pending_auth["provider"])
-        end
-        redirect_to root_path, notice: notice
+        redirect_to root_path, notice: t("sessions.openid_connect.account_linked", provider: @pending_auth["provider"])
       end
     else
       @email = params[:email]
-      @user_exists = User.exists?(email: @email) if @email.present?
+      @user_exists = User.find_by_email_with_legacy_fallback(@email).present? if @email.present?
       flash.now[:alert] = "Invalid email or password"
       render :link, status: :unprocessable_entity
     end
@@ -167,7 +162,7 @@ class OidcAccountsController < ApplicationController
         invitation&.update!(accepted_at: Time.current)
 
         # Joining an existing family via invitation must honor the family's
-        # default sharing policy, matching Invitation#accept_for. Without this a
+        # default sharing policy, matching token registration. Without this a
         # JIT SSO invitee lands in the family but sees none of its accounts.
         @user.family.auto_share_existing_accounts_with(@user) if invitation.present?
 
@@ -202,13 +197,7 @@ class OidcAccountsController < ApplicationController
       # Clear pending auth from session
       session.delete(:pending_oidc_auth)
 
-      notice = if invitation.present?
-        t("invitations.accept_choice.joined_household")
-      elsif accept_pending_invitation_for(@user)
-        t("invitations.accept_choice.joined_household")
-      else
-        t(".account_created")
-      end
+      notice = invitation.present? ? t("invitations.accept_choice.joined_household") : t(".account_created")
       redirect_to root_path, notice: notice
     else
       render :new_user, status: :unprocessable_entity

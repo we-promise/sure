@@ -1,6 +1,6 @@
 <%# locals: (account:, url:) %>
 
-<%= render "accounts/form", account: account, url: url do |form| %>
+<%= render "accounts/form", account: account, url: url, logo: false do |form| %>
   <%= form.select :subtype,
                  Property.subtype_options_for_select,
                  { label: true, prompt: t("properties.form.subtype_prompt"), include_blank: t("properties.form.none") } %>

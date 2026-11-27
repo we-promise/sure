@@ -1,0 +1,42 @@
+---
+id:
+  layouts:
+    application:
+      insights: Wawasan
+      privacy_mode: Beralih mode privasi
+      resize_left_sidebar: Ubah ukuran bilah samping rekening
+      resize_right_sidebar: Ubah ukuran bilah samping asisten
+      skip_to_main: Lewati ke konten utama
+      release_highlight:
+        title: Yang baru
+        done: Mengerti
+      nav:
+        assistant: Asisten
+        bills: Tagihan
+        budgets: Anggaran
+        home: Beranda
+        plan: Rencana
+        reports: Laporan
+        goals: Target
+        transactions: Transaksi
+    auth:
+      existing_account: Sudah punya akun?
+      no_account: Baru di %{product_name}?
+      sign_in: Masuk
+      sign_up: Buat akun
+    shared:
+      footer:
+        privacy_policy: Kebijakan Privasi
+        terms_of_service: Ketentuan Layanan
+      confirm_dialog:
+        are_you_sure: Apakah Anda yakin?
+        cannot_be_undone: Tindakan ini tidak dapat dibatalkan.
+        confirm: Konfirmasi
+      notification_tray:
+        download_complete: Unduhan selesai
+        download_failed: Unduhan gagal. Silakan coba lagi.
+        download_location: File berada di folder Unduhan Anda.
+    trial:
+      open_demo: Buka demo
+      data_deleted_in_days: Data akan dihapus dalam %{days} hari
+      contribute: Berkontribusi

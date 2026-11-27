@@ -274,10 +274,11 @@ class SureImport < Import
       )
     end
 
-    # Category/Tag/Merchant rows matched to an existing family record by name are
-    # "updated", not created, so they add nothing to the readback delta.
+    # Category/Tag/Merchant rows matched to an existing family record by name, and Budget/
+    # BudgetCategory rows merged into the family's untouched default budget, are "updated",
+    # not created, so they add nothing to the readback delta.
     def reused_counts_from(summary)
-      %w[categories tags merchants].index_with { |key| (summary || {}).dig(key, "updated").to_i }
+      %w[categories tags merchants budgets budget_categories].index_with { |key| (summary || {}).dig(key, "updated").to_i }
     end
 
     # A ProviderMerchant row with no shared match yet becomes a FamilyMerchant

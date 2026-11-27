@@ -1,19 +1,27 @@
 ---
 nl:
   invitations:
+    accept_choice:
+      create_account: "Nieuw account aanmaken"
+      existing_account_hint: "Heeft u al een account? Bestaande accounts kunnen niet via een uitnodiging lid worden van een ander huishouden."
+      joined_household: "U bent lid geworden van het huishouden."
+      message: "%{inviter} heeft u uitgenodigd om lid te worden als %{role}."
+      title: "Lid worden van %{family}"
     create:
-      failure: Kon uitnodiging niet verzenden
-      success: Uitnodiging succesvol verzonden
+      failure: "Kon uitnodiging niet verzenden"
+      own_email: "U kunt uzelf niet uitnodigen."
+      success: "Uitnodiging succesvol verzonden"
     destroy:
-      failure: Er was een probleem met het verwijderen van de uitnodiging.
-      not_authorized: U bent niet gemachtigd om uitnodigingen te beheren.
-      success: Uitnodiging is succesvol verwijderd.
+      failure: "Er was een probleem met het verwijderen van de uitnodiging."
+      not_authorized: "U bent niet gemachtigd om uitnodigingen te beheren."
+      success: "Uitnodiging is succesvol verwijderd."
     new:
-      email_label: E-mailadres
-      email_placeholder: Voer e-mailadres in
-      role_admin: Administrator
-      role_label: Rol
-      role_member: Lid
-      submit: Verstuur uitnodiging
-      subtitle: Verstuur een uitnodiging om lid te worden van uw familieaccount op %{product_name}
-      title: Nodig iemand uit
+      email_label: "E-mailadres"
+      email_placeholder: "Voer e-mailadres in"
+      role_admin: "Administrator"
+      role_guest: "Gast"
+      role_label: "Rol"
+      role_member: "Lid"
+      submit: "Verstuur uitnodiging"
+      subtitle: "Verstuur een uitnodiging om lid te worden van uw %{moniker} op %{product_name}"
+      title: "Nodig iemand uit"

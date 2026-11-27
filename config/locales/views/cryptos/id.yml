@@ -1,0 +1,20 @@
+---
+id:
+  cryptos:
+    edit:
+      edit: Edit %{account}
+    form:
+      subtype_label: Jenis akun
+      subtype_prompt: Pilih jenis akun
+      subtype_none: Tidak ada
+      tax_treatment_label: Perlakuan Pajak
+      tax_treatment_hint: Sebagian besar mata uang kripto disimpan dalam akun kena pajak. Pilih opsi lain jika disimpan dalam akun dengan keuntungan pajak.
+    new:
+      title: Masukkan saldo akun
+    subtypes:
+      wallet:
+        short: Dompet
+        long: Dompet Kripto
+      exchange:
+        short: Bursa
+        long: Bursa Kripto

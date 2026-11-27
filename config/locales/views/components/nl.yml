@@ -1,61 +1,196 @@
 ---
 nl:
+  UI:
+    period_picker:
+      aria_label: "Periode: %{period}"
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: "Selectie omschakelen"
+      balance_reconciliation:
+        labels:
+          adjustments: "Correcties"
+          buys: "Aankopen"
+          change_in_brokerage_cash: "Verandering in contant geld bij broker"
+          change_in_holdings_market: "Verandering in posities (marktkoersbewegingen)"
+          change_in_holdings_trades: "Verandering in posities (aan-/verkopen)"
+          charges: "Afschrijvingen"
+          end_balance: "Eindsaldo"
+          end_principal: "Eindhoofdsom"
+          end_value: "Eindwaarde"
+          final_balance: "Slotsaldo"
+          final_principal: "Slothoofdsom"
+          final_value: "Slotwaarde"
+          market_changes: "Marktveranderingen"
+          net_cash_flow: "Netto cashflow"
+          net_principal_change: "Netto verandering hoofdsom"
+          net_value_change: "Netto waardeverandering"
+          payments: "Betalingen"
+          sells: "Verkopen"
+          start_balance: "Beginsaldo"
+          start_principal: "Beginhoofdsom"
+          start_value: "Beginwaarde"
+        tooltips:
+          adjustments: "Handmatige afstemmingen of andere correcties"
+          adjustments_asset: "Handmatige waardecorrecties of taxaties"
+          buys: "Crypto-aankopen gedurende de dag"
+          change_in_brokerage_cash: "Netto verandering in contant geld door stortingen, opnames en transacties"
+          change_in_holdings_market: "Verandering in de waarde van posities door marktkoersbewegingen"
+          change_in_holdings_trades: "Effect op posities van het kopen en verkopen van effecten"
+          charges: "Nieuwe afschrijvingen gedurende de dag"
+          end_balance: "Het berekende saldo na alle transacties"
+          end_balance_investment: "Het berekende saldo na alle activiteit"
+          end_principal: "De berekende hoofdsom na alle transacties"
+          end_value: "De berekende waarde na alle wijzigingen"
+          final_balance: "Het uiteindelijke accountsaldo voor de dag"
+          final_balance_credit: "Het uiteindelijke verschuldigde saldo voor de dag"
+          final_balance_crypto: "De uiteindelijke waarde van de cryptoposities voor de dag"
+          final_balance_investment: "De uiteindelijke portefeuillewaarde voor de dag"
+          final_principal: "De uiteindelijke hoofdsom voor de dag"
+          final_value: "De uiteindelijke waarde van de bezitting voor de dag"
+          market_changes: "Waardeveranderingen door marktkoersbewegingen"
+          net_cash_flow: "Netto verandering in saldo door alle transacties gedurende de dag"
+          net_principal_change: "Aflossingen en nieuwe leningen gedurende de dag"
+          net_value_change: "Alle waardeveranderingen, inclusief verbeteringen en afschrijving"
+          payments: "Betalingen op de kaart gedurende de dag"
+          sells: "Cryptoverkopen gedurende de dag"
+          start_balance: "Het accountsaldo aan het begin van deze dag"
+          start_balance_credit: "Het verschuldigde saldo aan het begin van deze dag"
+          start_balance_crypto: "De waarde van de cryptoposities aan het begin van deze dag"
+          start_balance_investment: "De totale portefeuillewaarde aan het begin van deze dag"
+          start_principal: "De hoofdsom aan het begin van deze dag"
+          start_value: "De waarde van de bezitting aan het begin van deze dag"
+      chart:
+        loan:
+          actual: "Geregistreerd saldo"
+          scheduled: "Oorspronkelijk schema"
+          projected: "Prognose vanaf vandaag"
+          today: "Vandaag"
+          interactive_chart: "interactieve grafiek"
+          no_payoff: "niet bij de huidige aflossing"
+          aria_description: "Grafiek van het leningsaldo. Geregistreerd saldo %{current_balance}. Oorspronkelijk geplande afbetaling %{scheduled_payoff_date}. Verwachte afbetaling vanaf het saldo van vandaag %{projected_payoff_date}."
+          aria_extra_payoff: "Verwachte afbetaling met de extra aflossing %{date}."
+          extra: "Met extra aflossing"
+          aria_actual_history_starts: "Geschiedenis van het geregistreerde saldo begint op %{date}."
+          aria_interest_share: "Over de aflossingen van het eerste jaar is ongeveer %{first}% van het betaalde bedrag rente; over die van het laatste jaar ongeveer %{last}%."
+          aria_interest_share_overall: "Over alle aflossingen is ongeveer %{share}% van het betaalde bedrag rente."
+          aria_composition: "De tooltip bij elke geplande betaling splitst deze op in %{principal} en %{interest}."
+          interest_share: "Aandeel rente"
+          principal_share: "Aandeel hoofdsom"
+          projected_payoff: "Verwachte afbetaling"
+          months_saved:
+            one: "%{count} maand eerder dan gepland"
+            other: "%{count} maanden eerder dan gepland"
+          on_schedule: "Volgens schema"
+          interest_saved: "Bespaarde rente"
+          not_converged: "Bij de huidige aflossing is dit saldo niet afbetaald op de oorspronkelijke einddatum; er zou nog %{balloon} verschuldigd zijn."
+          projection_basis: "Vergelijkt het geregistreerde saldo van vandaag met het saldo volgens het schema op dezelfde dag. Een betaling die vóór de geplande datum is geboekt, telt tot die datum als voorsprong; een die erna is geboekt, als achterstand."
+          legend: "Grafiekreeksen"
+          since_start: "sinds de start van de lening"
+        no_data_available: "Geen gegevens beschikbaar"
+        title:
+          balance: "Saldo"
+          cash_value: "Geldsaldo"
+          debt_balance: "Schuldsaldo"
+          estimated_property_value: "Geschatte waarde vastgoed"
+          estimated_vehicle_value: "Geschatte waarde voertuig"
+          holdings_value: "Waarde posities"
+          loan_remaining_balance: "Resterend saldo"
+          remaining_principal_balance: "Resterende hoofdsom"
+          total_account_value: "Totale accountwaarde"
+          total_gains: "Totale winst"
+        views:
+          cash: "Contant geld"
+          gains: "Winst / ROI"
+          holdings: "Posities"
+          total_value: "Totale waarde"
+        vs_available_history: "t.o.v. beschikbare geschiedenis"
+      activity_date:
+        balance_tooltip: "Het saldo aan het eind van de dag, na alle transacties en correcties"
+        no_balance_data: "Geen saldogegevens beschikbaar voor deze datum"
+  ds:
+    alert:
+      variants:
+        info: "Info"
+        success: "Gelukt"
+        warning: "Waarschuwing"
+        error: "Fout"
+        destructive: "Fout"
+    pill:
+      aria_label: "%{label}"
+      default_label: "Preview"
+    dialog:
+      close: "Sluiten"
+    popover:
+      avatar_default_label: "Menu openen"
+    tooltip:
+      trigger_label: "Meer info"
+    link:
+      opens_in_new_tab: "(opent in nieuw tabblad)"
+    icon_picker:
+      no_matching_icons: "Geen overeenkomende pictogrammen"
+      search_placeholder: "Pictogrammen zoeken..."
   provider_sync_summary:
-    title: Synchronisatie samenvatting
+    title: "Synchronisatieoverzicht"
     last_sync: "Laatste sync: %{time_ago} geleden"
     accounts:
-      title: Accounts
+      title: "Accounts"
       total: "Totaal: %{count}"
       linked: "Gekoppeld: %{count}"
       unlinked: "Niet gekoppeld: %{count}"
       institutions: "Instellingen: %{count}"
     transactions:
-      title: Transacties
+      title: "Transacties"
       seen: "Gezien: %{count}"
       imported: "Geïmporteerd: %{count}"
       updated: "Bijgewerkt: %{count}"
       skipped: "Overgeslagen: %{count}"
+      fetching: "Ophalen bij broker..."
       protected:
         one: "%{count} item beschermd (niet overschreven)"
         other: "%{count} items beschermd (niet overschreven)"
-      view_protected: Beschermde items bekijken
+      view_protected: "Beschermde items bekijken"
     skip_reasons:
-      excluded: Uitgesloten
-      user_modified: Gebruiker aangepast
-      import_locked: CSV import
-      protected: Beschermd
+      excluded: "Uitgesloten"
+      user_modified: "Gebruiker aangepast"
+      import_locked: "CSV-import"
+      protected: "Beschermd"
     holdings:
-      title: Bezittingen
+      title: "Posities"
       found: "Gevonden: %{count}"
       processed: "Verwerkt: %{count}"
+    trades:
+      title: "Handelstransacties"
+      imported: "Geïmporteerd: %{count}"
+      skipped: "Overgeslagen: %{count}"
+      fetching: "Activiteiten ophalen bij broker..."
     health:
-      title: Status
-      view_error_details: Foutdetails bekijken
+      title: "Status"
+      view_error_details: "Foutdetails bekijken"
       rate_limited: "Snelheidslimiet bereikt %{time_ago} geleden"
-      recently: recent
+      recently: "recent"
       errors: "Fouten: %{count}"
       pending_reconciled:
-        one: "%{count} dubbele pending transactie afgestemd"
-        other: "%{count} dubbele pending transacties afgestemd"
-      view_reconciled: Afgestemde transacties bekijken
+        one: "%{count} dubbele transactie in behandeling afgestemd"
+        other: "%{count} dubbele transacties in behandeling afgestemd"
+      view_reconciled: "Afgestemde transacties bekijken"
       duplicate_suggestions:
         one: "%{count} mogelijk duplicaat moet worden beoordeeld"
         other: "%{count} mogelijke duplicaten moeten worden beoordeeld"
-      view_duplicate_suggestions: Voorgestelde duplicaten bekijken
+      view_duplicate_suggestions: "Voorgestelde duplicaten bekijken"
       stale_pending:
-        one: "%{count} verlopen pending transactie (uitgesloten van budgetten)"
-        other: "%{count} verlopen pending transacties (uitgesloten van budgetten)"
-      view_stale_pending: Betrokken accounts bekijken
+        one: "%{count} verlopen transactie in behandeling (uitgesloten van budgetten)"
+        other: "%{count} verlopen transacties in behandeling (uitgesloten van budgetten)"
+      view_stale_pending: "Betrokken accounts bekijken"
       stale_pending_count:
         one: "%{count} transactie"
         other: "%{count} transacties"
       stale_unmatched:
-        one: "%{count} pending transactie moet handmatig worden beoordeeld"
-        other: "%{count} pending transacties moeten handmatig worden beoordeeld"
-      view_stale_unmatched: Transacties bekijken die beoordeling nodig hebben
+        one: "%{count} transactie in behandeling moet handmatig worden beoordeeld"
+        other: "%{count} transacties in behandeling moeten handmatig worden beoordeeld"
+      view_stale_unmatched: "Transacties bekijken die beoordeling nodig hebben"
       stale_unmatched_count:
         one: "%{count} transactie"
         other: "%{count} transacties"
       data_warnings: "Datawaarschuwingen: %{count}"
       notices: "Mededelingen: %{count}"
-      view_data_quality: Datakwaliteit details bekijken
+      view_data_quality: "Details datakwaliteit bekijken"

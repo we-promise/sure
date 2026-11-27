@@ -1,0 +1,50 @@
+---
+es:
+  settings:
+    preferences:
+      show:
+        country: País
+        currency: Moneda
+        date_format: Formato de fecha
+        general_subtitle: Configura tus preferencias
+        general_title: General
+        default_period: Periodo Predeterminado
+        default_account_order: Orden Predeterminado de Cuentas
+        language: Idioma
+        language_auto: Idioma del navegador
+        page_title: Preferencias
+        timezone: Zona horaria
+        month_start_day: El mes de presupuesto comienza el
+        month_start_day_hint: Establece cuándo empieza tu mes financiero (ej. el día de cobro)
+        month_start_day_warning: Tus presupuestos y cálculos del mes en curso utilizarán este día personalizado en lugar del día 1 de cada mes.
+        translations_notice: Ten en cuenta que todavía estamos trabajando en las traducciones a varios idiomas.
+        currencies_title: Divisas de %{moniker}
+        currencies_subtitle: Elige qué divisas aparecen en los campos de dinero de tu %{moniker}
+        base_currency_label: Divisa base
+        base_currency_badge: Divisa base
+        additional_currencies_label: Divisas adicionales
+        no_additional_currencies: Ninguna seleccionada
+        currencies_more: +%{count} más
+        manage_currencies: Gestionar divisas
+        manage_currencies_subtitle: Deselecciona las divisas que nunca uses o reduce la lista a unas pocas.
+        select_all_currencies: Seleccionar todas
+        select_base_only: Solo divisa base
+        currency_search_placeholder: Buscar divisas
+        no_matching_currencies: No se han encontrado divisas
+        selected_currencies_count:
+          one: '%{count} seleccionada'
+          other: '%{count} seleccionadas'
+        save_currencies: Guardar divisas
+        sharing_title: Compartición de %{moniker}
+        sharing_subtitle: Controla cómo se comparten las cuentas en tu %{moniker}
+        sharing_default_label: Compartición predeterminada para cuentas nuevas
+        sharing_shared: Compartir con todos los miembros
+        sharing_private: Mantener privadas por defecto
+        preview:
+          title: Habilitar funciones experimentales
+          description: Activa las funciones en desarrollo etiquetadas como experimentales o canary.
+        theme_dark: Oscuro
+        theme_light: Claro
+        theme_subtitle: Elige un tema preferido para la aplicación
+        theme_system: Sistema
+        theme_title: Tema

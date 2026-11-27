@@ -4,6 +4,7 @@ en:
     over_allocation: That would allocate more than the transaction's amount
     missing_rate: No exchange rate available; enter the amount explicitly
     already_allocated: That transaction is already applied to this bill
+    entry_exhausted: That transaction's full amount is already applied to other payments due
     invalid: The payment could not be recorded
     create:
       success: Payment applied

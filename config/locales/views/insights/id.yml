@@ -1,0 +1,114 @@
+---
+id:
+  insights:
+    notification:
+      title: Wawasan keuangan baru
+      body: Buka Sure untuk melihat wawasan AI terbaru Anda.
+    index:
+      title: Wawasan
+      subtitle: Perkembangan terkini di seluruh keuangan Anda, diperbarui setiap malam.
+      refresh: Periksa wawasan baru
+      empty:
+        title: Belum ada wawasan
+        description: Wawasan akan muncul di sini setelah terdapat cukup aktivitas di rekening Anda. Wawasan diperbarui secara otomatis setiap malam.
+    refresh:
+      queued: Kami sedang membuat wawasan baru. Silakan periksa kembali dalam satu menit.
+      checking: Memeriksa…
+    card:
+      acknowledged: "Wawasan ditutup"
+      acknowledge: Mengerti
+      acknowledge_title: Sembunyikan ini sampai angka berubah
+      new: Baru
+      dig_in: Pelajari lebih lanjut bersama AI
+    dig_in:
+      prompt: |-
+        Bantu saya mendalami wawasan ini.
+
+        Wawasan: %{title}
+        Temuan Sure: %{body}
+        Periode: %{period}
+        Data:
+        %{facts}
+
+        Apa penyebabnya, dan adakah tindakan yang sebaiknya saya ambil?
+    feed:
+      view_all: Lihat semua wawasan
+      header: Terbaru
+      header_new: Baru
+      acknowledge_aria: "Mengerti: %{title}"
+    types:
+      spending_anomaly: Pengeluaran
+      cash_flow_warning: Arus kas
+      net_worth_milestone: Kekayaan bersih
+      subscription_audit: Langganan
+      savings_rate_change: Tingkat tabungan
+      idle_cash: Kas menganggur
+      budget_at_risk: Anggaran
+      budget_on_track: Anggaran
+      maintained_goal_depleted: Dana cadangan
+    meta:
+      next_n_days:
+        one: Hari berikutnya
+        other: "%{count} hari ke depan"
+      last_n_days:
+        one: Hari terakhir
+        other: "%{count} hari terakhir"
+      date_range: "%{from} hingga %{to}"
+    figures:
+      vs_previous: vs bulan sebelumnya
+      today: hari ini
+      on_pace: sesuai perkiraan
+      of_budget: dari anggaran
+      need_attention: perlu perhatian
+      days_overdue:
+        one: terlambat %{count} hari
+        other: terlambat %{count} hari
+      idle_days:
+        one: menganggur %{count} hari
+        other: menganggur %{count} hari
+    actions:
+      spending_anomaly: Lihat transaksi %{category}
+      cash_flow_warning: Tinjau transaksi berulang
+      net_worth_milestone: Lihat laporan kekayaan bersih
+      subscription_audit: Tinjau transaksi berulang
+      savings_rate_change: Lihat transaksi bulan tersebut
+      idle_cash: Buka rekening
+      budget: Lihat anggaran
+      maintained_goal_depleted: Lihat dana cadangan
+    titles:
+      spending_anomaly:
+        above: "Pengeluaran %{category} cenderung meningkat"
+        below: "Pengeluaran %{category} cenderung menurun"
+      cash_flow_warning:
+        low: Saldo kas Anda mungkin menipis
+        negative: Saldo kas Anda mungkin menjadi negatif
+      net_worth_milestone: "Pencapaian kekayaan bersih: %{milestone}"
+      maintained_goal_depleted: "%{goal} turun di bawah target batasnya"
+      subscription_audit: "Apakah %{name} masih aktif?"
+      savings_rate_change:
+        up: Tingkat tabungan Anda meningkat pada %{month}
+        down: Tingkat tabungan Anda menurun pada %{month}
+      idle_cash: Kas menganggur di %{account}
+      budget_at_risk:
+        one: Satu kategori perlu perhatian dalam anggaran Anda
+        other: "%{count} kategori perlu perhatian dalam anggaran Anda"
+      budget_on_track: Anggaran Anda berjalan sesuai rencana
+    templates:
+      spending_anomaly:
+        above: Anda diperkirakan akan menghabiskan %{projected_spend} untuk %{category} bulan ini, sekitar %{deviation_pct}% lebih banyak dari rata-rata bulanan terbaru sebesar %{baseline_spend}.
+        below: Anda diperkirakan akan menghabiskan %{projected_spend} untuk %{category} bulan ini, sekitar %{deviation_pct}% lebih sedikit dari rata-rata bulanan terbaru sebesar %{baseline_spend}.
+      cash_flow_warning:
+        low: Berdasarkan transaksi berulang mendatang dan pengeluaran umum Anda, saldo kas Anda bisa turun menjadi %{projected_low} sekitar %{projected_low_date}.
+        negative: Berdasarkan transaksi berulang mendatang dan pengeluaran umum Anda, saldo kas Anda bisa turun hingga %{projected_low} sekitar %{projected_low_date}.
+      net_worth_milestone: Kekayaan bersih Anda melampaui %{milestone} dan kini mencapai %{net_worth}.
+      maintained_goal_depleted: "%{goal} saat ini memiliki %{saved} dari %{target} yang seharusnya dipertahankan. Kurang %{missing} dari target."
+      subscription_audit: "%{name} (%{amount}) belum muncul sejak jatuh tempo pada %{expected_on}. Langganan mungkin telah dibatalkan, atau tanggal tagihan telah bergeser."
+      savings_rate_change:
+        up: Anda menabung %{current_rate}% dari pendapatan Anda pada %{month}, naik %{change_pp} poin persentase dari %{previous_rate}% pada bulan sebelumnya.
+        down: Anda menabung %{current_rate}% dari pendapatan Anda pada %{month}, turun %{change_pp} poin persentase dari %{previous_rate}% pada bulan sebelumnya.
+        down_negative: "Pengeluaran Anda melebihi pendapatan pada %{month}: tingkat tabungan Anda turun menjadi %{current_rate}%, dari %{previous_rate}% pada bulan sebelumnya."
+      idle_cash: "%{account} memiliki saldo %{balance} tanpa aktivitas dalam %{idle_days} hari terakhir."
+      budget_at_risk:
+        over: "%{categories} melebihi anggaran bulan ini. Anda telah menggunakan %{budget_spent_pct}% dari total anggaran sejauh ini."
+        near: "%{categories} mendekati batas anggaran bulan ini. Anda telah menggunakan %{budget_spent_pct}% dari total anggaran sejauh ini."
+      budget_on_track: Anda telah membelanjakan %{spent} dari anggaran %{budgeted} (%{budget_spent_pct}%) dan semuanya masih dalam batas yang ditentukan.

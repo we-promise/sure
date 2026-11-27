@@ -35,7 +35,9 @@ module Api
         end
 
         # Validate password
-        password_errors = validate_password(params[:user][:password])
+        # user_signup_params requires the `user` key; a missing payload raises
+        # ParameterMissing, which BaseController renders as a 400.
+        password_errors = validate_password(user_signup_params[:password])
         if password_errors.any?
           render json: { errors: password_errors }, status: :unprocessable_entity
           return
@@ -82,14 +84,14 @@ module Api
       end
 
       def login
-        user = User.find_by(email: params[:email])
+        user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
         unless local_login_permitted_for?(user)
           render json: { error: "Local login is disabled. Please use SSO." }, status: :forbidden
           return
         end
 
-        if user&.authenticate(params[:password])
+        if user
           unless user.active?
             render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
             return
@@ -143,6 +145,29 @@ module Api
         end
       end
 
+      # Lists the providers GET /auth/mobile/:provider accepts, so clients can
+      # render one button per provider. Only display fields are exposed; the
+      # provider config also carries client secrets. Labels fall back the same
+      # way as the web sign-in page.
+      def sso_providers
+        providers = Rails.configuration.x.auth.sso_providers.map do |provider|
+          name = provider[:name].to_s
+          strategy = provider[:strategy].to_s
+          id = provider[:id].to_s
+          default_label = if id == "google" || strategy == "google_oauth2"
+            I18n.t("sessions.new.google_auth_connect")
+          elsif id.present?
+            I18n.t("sessions.new.#{id}", default: name.titleize)
+          else
+            name.titleize
+          end
+
+          { name: name, strategy: strategy, label: provider[:label].presence || default_label }
+        end
+
+        render json: { providers: providers }
+      end
+
       def sso_exchange
         code = sso_exchange_params
 
@@ -188,7 +213,7 @@ module Api
         cached = validate_linking_code(linking_code)
         return unless cached
 
-        user = User.authenticate_by(email: params[:email], password: params[:password])
+        user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
         unless user
           render json: { error: "Invalid email or password" }, status: :unauthorized
@@ -301,7 +326,7 @@ module Api
             invitation&.update!(accepted_at: Time.current)
 
             # Joining an existing family via invitation must honor the family's
-            # default sharing policy, matching Invitation#accept_for, so a mobile
+            # default sharing policy, matching token registration, so a mobile
             # SSO invitee sees the accounts the family shares by default.
             user.family.auto_share_existing_accounts_with(user) if invitation.present?
 

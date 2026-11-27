@@ -7,9 +7,7 @@
     everywhere else. The other half and the AI review live in the overflow
     menu, so the header carries one action instead of a toolbar of three.
     Laid out the way Transactions lays out New transaction: the menu first,
-    the primary action last, and a round + in its place on a phone. A display
-    class makes DS::Link drop its own inline-flex row, so the button brings
-    items-center gap-1 back or its + touches the label. %>
+    the primary action last, and a round + in its place on a phone. %>
 <% income_first = active == "paycheck" %>
 <% add_text = income_first ? t("bills.index.add_income") : t("bills.index.add_bill") %>
 <% add_href = income_first ? new_recurring_transaction_path(income: true) : new_recurring_transaction_path %>
@@ -45,7 +43,7 @@
           variant: "primary",
           href: add_href,
           frame: :modal,
-          class: "hidden md:inline-flex items-center gap-1"
+          class: "hidden md:inline-flex"
         ) %>
     <%= render DS::Link.new(
           icon: "plus",

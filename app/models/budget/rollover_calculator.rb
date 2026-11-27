@@ -29,11 +29,16 @@ class Budget::RolloverCalculator
   # may have changed while we waited for it.
   def recompute!
     return if first_relevant_budget_date.nil?
+    return if Rails.cache.read(inputs_cache_key) == inputs_fingerprint
 
     BudgetCategory.transaction do
       lock_chain!
+      fingerprint = inputs_fingerprint
       from = first_relevant_budget_date
-      recompute_chain!(from) if from
+      wrote = from ? recompute_chain!(from) : false
+
+      # Only a pass that changed nothing proves the stored amounts match these inputs.
+      Rails.cache.write(inputs_cache_key, fingerprint) unless wrote
     end
   end
 
@@ -113,8 +118,35 @@ class Budget::RolloverCalculator
       if updates.any?
         BudgetCategory.upsert_all(updates, unique_by: :id, update_only: %w[rolled_over_amount updated_at])
       end
+
+      updates.any?
     end
 
+    def inputs_cache_key
+      "#{chain_key}:inputs"
+    end
+
+    # Only what the chain reads. Rows are digested, not versioned by max(updated_at), so a
+    # late-committing or update_all write still counts; family.updated_at moves with every sync.
+    def inputs_fingerprint
+      budgets = family.budgets.where(user_id: user&.id)
+      accounts = user ? family.accounts.where(owner_id: user.id) : family.accounts
+
+      [
+        digest_of(budgets),
+        digest_of(BudgetCategory.where(budget_id: budgets.select(:id))),
+        digest_of(accounts.select(:id, :owner_id, :status, :exclude_from_reports)),
+        digest_of(AccountShare.where(account_id: accounts.select(:id)).select(:id, :account_id, :user_id, :include_in_finances)),
+        family.tax_advantaged_account_ids.sort.join(","),
+        family.entries_cache_version,
+        ExchangeRate.where(to_currency: family.currency).maximum(:updated_at)&.to_f,
+        family.updated_at.to_f
+      ].join("|")
+    end
+
+    def digest_of(scope)
+      scope.klass.unscoped.from(scope, :rows).pick(Arel.sql("md5(string_agg(rows::text, '|' ORDER BY rows.id))"))
+    end
 
     # Earliest month this chain has anything to say about: rollover switched
     # on, or an amount left behind by a toggle that was switched off and

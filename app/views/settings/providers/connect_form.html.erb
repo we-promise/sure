@@ -8,9 +8,11 @@
       <div class="mb-4">
         <%= render DS::Alert.new(
               variant: :warning,
-              title: t("settings.providers.provider_setup_encryption_warning.title"),
-              message: t("settings.providers.provider_setup_encryption_warning.message")
-            ) %>
+              title: t("settings.providers.provider_setup_encryption_warning.title")
+            ) do %>
+          <p><%= t("settings.providers.provider_setup_encryption_warning.message") %></p>
+          <%= render "settings/encryption_migration_guide" %>
+        <% end %>
       </div>
     <% end %>
 

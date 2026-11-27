@@ -26,6 +26,9 @@ de:
       no_candidates: Keine passenden Transaktionen in zeitlicher Nähe gefunden.
       no_search_results: "Keine Treffer für „%{query}“."
       link_payment: Zahlung verknüpfen
+      amount_left: "%{amount} übrig"
+      used_up: Bereits verwendet
+      used_up_hint: Andere Rechnungen verwenden bereits den vollen Betrag dieser Transaktion.
       not_this_one: Nicht diese Transaktion
       cant_find: Transaktion nicht gefunden?
       manual_explainer: Erfasse eine tatsächlich erfolgte Zahlung, wenn hier keine passende Transaktion dabei ist.

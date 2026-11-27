@@ -126,4 +126,21 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
 
     @function.call("query" => "test", "max_results" => 50)
   end
+
+  test "returns the search failure when tracing finalization also fails" do
+    @user.family.update!(vector_store_id: "vs_test123")
+    adapter = mock
+    adapter.expects(:search).raises(StandardError, "Search unavailable")
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+    trace = mock
+    trace.expects(:end).with(output: { error: "Search unavailable" }, level: "ERROR").raises(StandardError, "Tracing unavailable")
+    @function.stubs(:create_langfuse_trace).returns(trace)
+    Rails.logger.expects(:warn).with("Langfuse trace finalization failed: StandardError: Tracing unavailable")
+
+    result = @function.call("query" => "tax return")
+
+    assert_equal false, result[:success]
+    assert_equal "search_failed", result[:error]
+    assert_equal "An error occurred while searching documents: Search unavailable", result[:message]
+  end
 end

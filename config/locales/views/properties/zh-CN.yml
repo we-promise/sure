@@ -3,6 +3,7 @@ zh-CN:
   properties:
     edit:
       edit: 编辑 %{account}
+      title: 手动输入房产
     form:
       address_line1: 街道地址
       address_line1_placeholder: 123 Main St
@@ -21,9 +22,38 @@ zh-CN:
       year_built: 建造年份
       year_built_placeholder: '2000'
       subtype_prompt: 选择房产类型
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+      chimnie: Chimnie
     new:
       title: 手动输入房产
       next: 下一步
+      avm_option: "通过 %{provider} 添加"
+      avm_title: "通过 %{provider} 添加房产"
+      avm_description: "输入房产名称及其地址。%{provider} 将为您查询房产详情并估算市值。"
+      avm_us_only: "%{provider} 仅支持位于美国的房产。"
+      avm_uk_only: "%{provider} 仅支持位于英国的住宅房产。"
+      avm_uprn_label: "UPRN"
+      avm_uprn_placeholder: "100023336956"
+      avm_uprn_help: "唯一房产参考编号（最多 12 位数字）可识别每一个英国地址。您可以在 GeoPlace 的 findmyaddress.co.uk 上查找或咨询当地议会。%{provider} 使用它来免费评估房产价值。"
+      avm_county_label: "郡/县（可选）"
+      avm_town_label: "城镇或城市"
+      avm_postcode_label: "邮政编码"
+      avm_submit: "查询房产"
+      avm_preview_title: "确认房产详情"
+      avm_preview_description: "以下是 %{provider} 找到的信息。在添加房产前请核对这些详情——此时尚未创建任何内容。"
+      avm_preview_no_record: "%{provider} 未能在此地址找到房产记录，因此显示的价值是根据周边区域估算得出的。继续前请仔细核对地址。"
+      avm_preview_back: "返回"
+      avm_preview_uprn: "UPRN"
+      avm_preview_range: "估值范围"
+      avm_preview_confidence: "置信度"
+      avm_confidence:
+        high: "高"
+        medium: "中"
+        low: "低"
+      avm_attribution_chimnie: "估值数据来自 Chimnie。包含 OS 数据 © 皇家版权及数据库权利，皇家邮政数据 © 皇家邮政版权及数据库权利，以及英国土地登记局数据 © 皇家版权及数据库权利，根据 Open Government Licence v3.0 授权。"
+      avm_preview_confirm: "添加房产"
     address:
       title: 手动输入房产
       address_line1_label: 地址行 1
@@ -71,6 +101,18 @@ zh-CN:
         unknown: 未知
         year_built: 建造年份
         edit_account_details: 编辑账户详情
+        refresh_valuation: "刷新估值"
+        valuation_source: "由 %{provider} 估值，最后更新于 %{date}"
+        link_valuation: "通过 %{provider} 自动更新估值"
+        link_valuation_description: "此房产估值仅手动更新。"
+    refresh_valuation:
+      queued: "估值刷新已开始。新估值很快就会显示。"
+      not_linked: "此房产未关联估值提供商。"
+      not_configured: "%{provider} 尚未配置。请在“设置”→“自托管”中添加其 API 密钥以刷新此估值。"
+    link_valuation:
+      linked: "已关联至 %{provider} 并更新了房产估值。"
+      link_failed: "%{provider} 无法为此房产估值，因此未予关联。请检查地址是否正确后重试。"
+      not_linkable: "此房产无法关联至该提供商。请检查其地址是否完整且位于受支持的国家/地区，并确认账户货币与提供商匹配。"
     subtypes:
       apartment:
         short: 公寓
@@ -87,3 +129,7 @@ zh-CN:
       agri_land:
         short: 农业用地
         long: 农业用地
+    form_tabs:
+      address: 地址
+      overview: 概览
+      value: 价值

@@ -1,0 +1,14 @@
+---
+en:
+  portfolios:
+    empty_state:
+      add_account: Add an investment account
+      description: Brokerage, retirement and crypto accounts you include in your finances and reports are listed here with their balance.
+      title: No investment accounts to show
+    sections:
+      accounts: Accounts
+    show:
+      section_aria: "%{title} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
+      sections_aria: Portfolio sections
+      subtitle: Your investment accounts and what each one is worth.
+      title: Portfolio

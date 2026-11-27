@@ -125,6 +125,34 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     assert_equal "GOOG", results.first.ticker
   end
 
+  test "search_provider invokes technical_failure for a provider that errors" do
+    bad_provider = mock("bad_provider")
+    bad_provider.stubs(:class).returns(Provider::YahooFinance)
+    bad_provider.expects(:search_securities).with("XMAW").raises(StandardError, "rate limited")
+
+    Security.stubs(:providers).returns([ bad_provider ])
+
+    failed_providers = []
+    results = Security.search_provider("XMAW", technical_failure: ->(provider) { failed_providers << provider })
+
+    assert_equal [], results
+    assert_equal [ bad_provider ], failed_providers
+  end
+
+  test "search_provider does not invoke technical_failure when a provider genuinely finds nothing" do
+    provider = mock("provider")
+    provider.stubs(:class).returns(Provider::TwelveData)
+    provider.expects(:search_securities).with("NOPE").returns(provider_success_response([]))
+
+    Security.stubs(:providers).returns([ provider ])
+
+    failure_called = false
+    results = Security.search_provider("NOPE", technical_failure: ->(_provider) { failure_called = true })
+
+    assert_equal [], results
+    refute failure_called
+  end
+
   # --- price_data_provider ---
 
   test "price_data_provider returns assigned provider" do
@@ -175,6 +203,49 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     assert_equal @security.ticker, entry.metadata["ticker"]
     assert_equal "metadata unavailable", entry.metadata["provider_error"]
     assert_equal "twelve_data", entry.provider_key
+  end
+
+  # --- find_or_fetch_price ---
+
+  test "find_or_fetch_price logs a debug entry when the provider fetch fails" do
+    provider = mock("provider")
+    provider.stubs(:fetch_security_price).returns(
+      provider_error_response(Provider::Error.new("the server responded with status 404"))
+    )
+    @security.stubs(:price_data_provider).returns(provider)
+
+    result = nil
+    assert_difference "DebugLogEntry.count", 1 do
+      result = @security.find_or_fetch_price(date: 5.days.ago.to_date)
+    end
+
+    assert_nil result
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "security_price_fetch", entry.category
+    assert_equal "warn", entry.level
+    assert_equal @security.id, entry.metadata["security_id"]
+    assert_equal "the server responded with status 404", entry.metadata["provider_error"]
+  end
+
+  test "find_or_fetch_price only logs once per security per day (deduped)" do
+    # Test env runs with a null cache store, which would make the dedupe a
+    # no-op and let this test pass vacuously — swap in a real one just for
+    # this test so the dedupe logic is actually exercised.
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    provider = mock("provider")
+    provider.stubs(:fetch_security_price).returns(
+      provider_error_response(Provider::Error.new("boom"))
+    ).twice
+    @security.stubs(:price_data_provider).returns(provider)
+
+    assert_difference "DebugLogEntry.count", 1 do
+      @security.find_or_fetch_price(date: 5.days.ago.to_date)
+      @security.find_or_fetch_price(date: 6.days.ago.to_date)
+    end
+  ensure
+    Rails.cache = original_cache
   end
 
   # --- provider_status ---

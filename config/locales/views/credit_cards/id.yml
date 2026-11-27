@@ -1,0 +1,84 @@
+---
+id:
+  credit_cards:
+    due:
+      in_days:
+        zero: Jatuh tempo hari ini
+        one: Jatuh tempo besok
+        other: "Jatuh tempo dalam %{count} hari"
+      overdue:
+        one: Jatuh tempo kemarin
+        other: "Terlambat %{count} hari"
+    edit:
+      edit: Edit %{account}
+    form:
+      annual_fee: Biaya tahunan
+      annual_fee_placeholder: '99'
+      apr: APR
+      apr_placeholder: '15.99'
+      available_credit: Kredit tersedia
+      available_credit_placeholder: '10000'
+      due_day: Tanggal jatuh tempo pembayaran
+      expiration_date: Tanggal kedaluwarsa
+      minimum_payment: Pembayaran minimum
+      minimum_payment_placeholder: '100'
+      statement_close_day: Tagihan ditutup pada
+      statement_cycle_description: Hari dalam sebulan saat tagihan Anda ditutup dan
+        hari saat pembayaran jatuh tempo. Dengan setelan ini, tab Ringkasan menampilkan
+        total tagihan terakhir dan jumlah yang terakumulasi menuju tagihan berikutnya.
+        Kartu yang terhubung mengisi data ini secara otomatis dan tetap mempertahankan
+        apa yang Anda atur manual.
+      sophtron_balance_sign_auto: Otomatis
+      sophtron_balance_sign_credit: Kredit (bank berutang kepada Anda)
+      sophtron_balance_sign_debt: Utang (Anda berutang kepada bank)
+      sophtron_balance_sign_description: Gunakan penimpaan hanya jika Sophtron melaporkan
+        tanda yang ambigu. Mode otomatis akan terus menegasikan saldo kartu kredit.
+      sophtron_balance_sign_label: Arti saldo Sophtron
+      simplefin_balance_sign_auto: Otomatis
+      simplefin_balance_sign_credit: Kredit (bank berutang kepada Anda)
+      simplefin_balance_sign_debt: Utang (Anda berutang kepada bank)
+      simplefin_balance_sign_description: Gunakan penimpaan hanya jika SimpleFIN melaporkan
+        tanda yang ambigu. Mode otomatis akan terus menggunakan riwayat transaksi dan
+        saldo penyedia.
+      simplefin_balance_sign_label: Arti saldo SimpleFIN
+      treat_balance_as_available_credit_description: Aktifkan jika bank Anda melaporkan
+        saldo kartu ini sebagai sisa kredit yang tersedia alih-alih jumlah utang. Utang
+        kemudian dihitung dari batas kredit yang dilaporkan bank Anda, atau dari kolom
+        Kredit tersedia jika bank Anda tidak menyediakannya.
+      treat_balance_as_available_credit_label: Saldo adalah kredit yang tersedia
+    tabs:
+      overview:
+        above_minimum: "Tagihan ini berjumlah %{balance}, di atas minimum %{minimum}.
+          Membayar hanya jumlah minimum akan menyisakan saldo pada kartu dengan bunga APR ini."
+        annual_percentage_rate: Tingkat Persentase Tahunan
+        apr: APR
+        balance_carried_label: Sisa saldo terutang
+        charges: Beban biaya
+        estimated_interest_label: Estimasi bunga
+        monthly_rate_label: Suku bunga bulanan
+        per_month: "%{amount}/bulan"
+        closes_on: "Tagihan berikutnya ditutup pada %{date}"
+        credit_toward_next: Kredit menuju tagihan berikutnya
+        due_on: "Jatuh tempo pada %{date}"
+        edit_card_details: Edit detail kartu
+        payments_credits: Pembayaran/Kredit
+        remaining_due: "Sisa tagihan %{amount}"
+        scheduled_payment: "Pembayaran terjadwal %{amount} pada %{date}"
+        since_last_statement: Sejak Tagihan Terakhir
+        statement_balance: Saldo Tagihan
+        status_paid: Lunas
+        status_partial: Dibayar sebagian
+        multi_currency_unavailable: Tagihan ini menjumlahkan entri yang dicatat dalam
+          lebih dari satu mata uang, yang tidak dapat ditotalkan tanpa nilai tukar untuk
+          masing-masing mata uang tersebut. Saldo dibiarkan kosong daripada menebak nilainya.
+        no_cycle_description: Tetapkan tanggal penutupan tagihan dan tanggal jatuh tempo
+          pembayaran, dan tab ini akan menampilkan jumlah tagihan terakhir serta apa yang
+          sedang terakumulasi menuju tagihan berikutnya. Kartu yang terhubung biasanya mengisi
+          data ini untuk Anda.
+        no_cycle_title: Belum ada siklus tagihan yang diatur
+        unknown: Tidak diketahui
+    new:
+      title: Masukkan detail kartu kredit
+    update:
+      sophtron_balance_sign_error: Tidak dapat menerapkan arti saldo Sophtron.
+        Setelan sebelumnya tetap dipertahankan. Silakan coba lagi.

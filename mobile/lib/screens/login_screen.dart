@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../models/sso_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_config.dart';
 import '../widgets/sure_button.dart';
@@ -14,20 +15,6 @@ class LoginScreen extends StatefulWidget {
   final VoidCallback? onGoToSettings;
 
   const LoginScreen({super.key, this.onGoToSettings});
-
-  void _openSettings(BuildContext context) {
-    if (onGoToSettings != null) {
-      onGoToSettings!();
-      return;
-    }
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (routeContext) => BackendConfigScreen(
-          onConfigSaved: () => Navigator.of(routeContext).pop(),
-        ),
-      ),
-    );
-  }
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -44,6 +31,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordFocus = FocusNode();
   bool _obscurePassword = true;
   late final TapGestureRecognizer _signUpTapRecognizer;
+  static const _legacyProviders = [
+    SsoProvider(name: 'google_oauth2', strategy: 'google_oauth2', label: ''),
+  ];
+  Future<List<SsoProvider>?>? _ssoProvidersFuture;
+  String? _ssoProvidersBaseUrl;
 
   @override
   void initState() {
@@ -53,6 +45,41 @@ class _LoginScreenState extends State<LoginScreen> {
           _emailFocus, _emailController, _emailPlaceholder));
     _passwordFocus.addListener(() => _clearPlaceholderOnFocus(
           _passwordFocus, _passwordController, _passwordPlaceholder));
+  }
+
+  Future<void> _openSettings() async {
+    if (widget.onGoToSettings != null) {
+      widget.onGoToSettings!();
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (routeContext) => BackendConfigScreen(
+          onConfigSaved: () => Navigator.of(routeContext).pop(),
+        ),
+      ),
+    );
+    // Rebuild so the backend URL card and SSO providers reflect the new server.
+    if (mounted) setState(() {});
+  }
+
+  /// Refetches when the backend URL changes (e.g. after editing settings).
+  Future<List<SsoProvider>?> _ssoProviders(AuthProvider authProvider) {
+    if (_ssoProvidersFuture == null ||
+        _ssoProvidersBaseUrl != ApiConfig.baseUrl) {
+      _ssoProvidersBaseUrl = ApiConfig.baseUrl;
+      // A failed fetch isn't cached, so the next rebuild (e.g. returning from
+      // settings) retries instead of keeping the Google fallback.
+      late final Future<List<SsoProvider>?> future;
+      future = authProvider.fetchSsoProviders().then((providers) {
+        if (providers == null && identical(_ssoProvidersFuture, future)) {
+          _ssoProvidersFuture = null;
+        }
+        return providers;
+      });
+      _ssoProvidersFuture = future;
+    }
+    return _ssoProvidersFuture!;
   }
 
   void _clearPlaceholderOnFocus(
@@ -347,45 +374,46 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
 
-                    const SizedBox(height: 16),
+                    FutureBuilder<List<SsoProvider>?>(
+                      future: _ssoProviders(
+                          Provider.of<AuthProvider>(context, listen: false)),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState != ConnectionState.done) {
+                          return const SizedBox.shrink();
+                        }
+                        // Servers without the providers endpoint only
+                        // supported Google on mobile.
+                        final providers = snapshot.data ?? _legacyProviders;
+                        if (providers.isEmpty) return const SizedBox.shrink();
 
-                    // Divider with "or"
-                    Row(
-                      children: [
-                        Expanded(
-                            child: Divider(color: colorScheme.outlineVariant)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            l.loginOrDivider,
-                            style:
-                                TextStyle(color: colorScheme.onSurfaceVariant),
-                          ),
-                        ),
-                        Expanded(
-                            child: Divider(color: colorScheme.outlineVariant)),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Google Sign-In button
-                    Consumer<AuthProvider>(
-                      builder: (context, authProvider, _) {
-                        return SureButton(
-                          label: l.loginSignInWithGoogle,
-                          variant: SureButtonVariant.outline,
-                          size: SureButtonSize.lg,
-                          fullWidth: true,
-                          leading: SvgPicture.asset(
-                            'assets/images/google_g_logo.svg',
-                            width: 18,
-                            height: 18,
-                          ),
-                          onPressed: authProvider.isLoading
-                              ? null
-                              : () =>
-                                  authProvider.startSsoLogin('google_oauth2'),
+                        return Column(
+                          children: [
+                            const SizedBox(height: 16),
+                            // Divider with "or"
+                            Row(
+                              children: [
+                                Expanded(
+                                    child: Divider(
+                                        color: colorScheme.outlineVariant)),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16),
+                                  child: Text(
+                                    l.loginOrDivider,
+                                    style: TextStyle(
+                                        color: colorScheme.onSurfaceVariant),
+                                  ),
+                                ),
+                                Expanded(
+                                    child: Divider(
+                                        color: colorScheme.outlineVariant)),
+                              ],
+                            ),
+                            for (final provider in providers) ...[
+                              const SizedBox(height: 16),
+                              _SsoButton(provider: provider),
+                            ],
+                          ],
                         );
                       },
                     ),
@@ -394,7 +422,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Backend URL info
                     InkWell(
-                      onTap: () => widget._openSettings(context),
+                      onTap: () => _openSettings(),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         padding: const EdgeInsets.all(12),
@@ -453,7 +481,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: IconButton(
                 icon: const Icon(Icons.settings_outlined),
                 tooltip: l.loginBackendSettingsTooltip,
-                onPressed: () => widget._openSettings(context),
+                onPressed: () => _openSettings(),
               ),
             ),
           ],
@@ -557,6 +585,37 @@ class _ApiKeyLoginDialogState extends State<ApiKeyLoginDialog> {
               : Text(l.loginApiKeySignIn),
         ),
       ],
+    );
+  }
+}
+
+class _SsoButton extends StatelessWidget {
+  final SsoProvider provider;
+
+  const _SsoButton({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        return SureButton(
+          label: provider.isGoogle ? l.loginSignInWithGoogle : provider.label,
+          variant: SureButtonVariant.outline,
+          size: SureButtonSize.lg,
+          fullWidth: true,
+          leading: provider.isGoogle
+              ? SvgPicture.asset(
+                  'assets/images/google_g_logo.svg',
+                  width: 18,
+                  height: 18,
+                )
+              : const Icon(Icons.login, size: 18),
+          onPressed: authProvider.isLoading
+              ? null
+              : () => authProvider.startSsoLogin(provider.name),
+        );
+      },
     );
   }
 }

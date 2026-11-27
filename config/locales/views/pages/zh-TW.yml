@@ -47,7 +47,6 @@ zh-TW:
       subtitle: 這是您目前的財務概況
       new: 新增帳戶
       sections_aria_label: 儀表板區塊
-      drag_to_reorder: 拖曳以重新排列區塊
       toggle_section: 切換區塊顯示狀態
       widget_size:
         label: 調整大小

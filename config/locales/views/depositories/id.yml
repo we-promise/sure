@@ -1,0 +1,29 @@
+---
+id:
+  depositories:
+    edit:
+      edit: Edit %{account}
+    form:
+      none: Tidak ada
+      subtype_prompt: Pilih tipe rekening
+    new:
+      title: Masukkan saldo rekening
+    subtypes:
+      cash:
+        long: Tunai
+        short: Tunai
+      cd:
+        long: Sertifikat Deposito
+        short: Deposito
+      checking:
+        long: Rekening Giro
+        short: Giro
+      hsa:
+        long: Rekening Tabungan Kesehatan
+        short: HSA
+      money_market:
+        long: Pasar Uang
+        short: Pasar Uang
+      savings:
+        long: Tabungan
+        short: Tabungan

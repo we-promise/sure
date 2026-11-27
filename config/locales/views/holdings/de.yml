@@ -24,10 +24,9 @@ de:
       provider: Vom Provider
     cost_basis_cell:
       unknown: "--"
-      set_cost_basis_header: "Einstandspreis für %{ticker} setzen (%{qty} Anteile)"
+      set_cost_basis_header: "Einstandspreis für %{ticker} setzen"
       total_cost_basis_label: Gesamter Einstandspreis
-      or_per_share_label: "Oder pro Anteil eingeben:"
-      per_share: pro Anteil
+      per_share_label: "Pro Anteil"
       cancel: Abbrechen
       save: Speichern
       overwrite_confirm_title: Einstandspreis überschreiben?

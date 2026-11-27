@@ -7,59 +7,11 @@ class InvitationTest < ActiveSupport::TestCase
     @inviter = @invitation.inviter
   end
 
-  test "accept_for adds user to family when email matches" do
-    user = users(:empty)
-    user.update_columns(family_id: families(:empty).id, role: "admin")
-    assert user.family_id != @family.id
+  test "cannot invite the inviter's own email" do
+    invitation = @family.invitations.build(email: @inviter.email.upcase, role: "member", inviter: @inviter)
 
-    invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
-    assert invitation.pending?
-    result = invitation.accept_for(user)
-
-    assert result
-    user.reload
-    assert_equal @family.id, user.family_id
-    assert_equal "member", user.role
-    invitation.reload
-    assert invitation.accepted_at.present?
-  end
-
-  test "accept_for returns false when user email does not match" do
-    user = users(:family_member)
-    assert user.email != @invitation.email
-
-    result = @invitation.accept_for(user)
-
-    assert_not result
-    user.reload
-    assert_equal families(:dylan_family).id, user.family_id
-    @invitation.reload
-    assert_nil @invitation.accepted_at
-  end
-
-  test "accept_for updates role when user already in family" do
-    user = users(:family_member)
-    user.update!(family_id: @family.id, role: "member")
-    invitation = @family.invitations.create!(email: user.email, role: "admin", inviter: @inviter)
-    original_family_id = user.family_id
-
-    result = invitation.accept_for(user)
-
-    assert result
-    user.reload
-    assert_equal original_family_id, user.family_id
-    assert_equal "admin", user.role
-    invitation.reload
-    assert invitation.accepted_at.present?
-  end
-
-  test "accept_for returns false when invitation not pending" do
-    @invitation.update!(accepted_at: 1.hour.ago)
-    user = users(:empty)
-
-    result = @invitation.accept_for(user)
-
-    assert_not result
+    assert_not invitation.valid?
+    assert invitation.errors.of_kind?(:email, :own_email)
   end
 
   test "cannot create invitation when email has pending invitation from another family" do
@@ -148,151 +100,9 @@ class InvitationTest < ActiveSupport::TestCase
     assert_includes invitation.errors[:email], "has already been invited to this family"
   end
 
-  test "accept_for refuses when invitee owns accounts that would be orphaned" do
-    owner = users(:empty)
-    owner_family = families(:empty)
-    owner.update_columns(family_id: owner_family.id, role: "admin")
-    account = owner_family.accounts.create!(
-      name: "Prior savings", balance: 100, currency: "USD",
-      accountable: Depository.new
-    )
-    account.update_columns(owner_id: owner.id)
+  test "an email that already belongs to an account can be invited like any other" do
+    invitation = @family.invitations.build(email: users(:empty).email, role: "member", inviter: @inviter)
 
-    invitation = @family.invitations.create!(email: owner.email, role: "member", inviter: @inviter)
-
-    result = invitation.accept_for(owner)
-
-    assert_not result, "accept_for must refuse to rehome a user away from accounts they own"
-    owner.reload
-    assert_equal owner_family.id, owner.family_id, "user.family_id must not be silently overwritten"
-    invitation.reload
-    assert_nil invitation.accepted_at, "invitation must remain pending so a new flow can recover"
-    assert owner_family.accounts.exists?, "original family's accounts must remain intact"
-  end
-
-  test "accept_for allows a member who owns no accounts to join another family" do
-    member = users(:empty)
-    other_owner = users(:sure_support_staff)
-    source_family = families(:empty)
-    member.update_columns(family_id: source_family.id, role: "member")
-    other_owner.update_columns(family_id: source_family.id, role: "admin")
-    account = source_family.accounts.create!(
-      name: "Shared savings", balance: 100, currency: "USD",
-      accountable: Depository.new
-    )
-    account.update_columns(owner_id: other_owner.id)
-
-    invitation = @family.invitations.create!(email: member.email, role: "member", inviter: @inviter)
-
-    result = invitation.accept_for(member)
-
-    assert result, "a non-owner member must be free to join another family"
-    member.reload
-    assert_equal @family.id, member.family_id
-  end
-
-  test "would_orphan_owned_accounts? is false when invitee owns no accounts" do
-    user = users(:empty)
-    user.update_columns(family_id: families(:empty).id, role: "admin")
-    invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
-
-    assert_not invitation.would_orphan_owned_accounts?(user)
-  end
-
-  test "would_orphan_owned_accounts? is false when same-family role change" do
-    user = users(:family_member)
-    user.update!(family_id: @family.id, role: "member")
-    invitation = @family.invitations.create!(email: user.email, role: "admin", inviter: @inviter)
-
-    assert_not invitation.would_orphan_owned_accounts?(user)
-  end
-
-  test "accept_for applies guest role defaults" do
-    user = users(:family_member)
-    user.update!(
-      family_id: @family.id,
-      role: "member",
-      ui_layout: "dashboard",
-      show_sidebar: true,
-      show_ai_sidebar: true,
-      ai_enabled: false
-    )
-    invitation = @family.invitations.create!(email: user.email, role: "guest", inviter: @inviter)
-
-    result = invitation.accept_for(user)
-
-    assert result
-    user.reload
-    assert_equal "guest", user.role
-    assert user.ui_layout_intro?
-    assert_not user.show_sidebar?
-    assert_not user.show_ai_sidebar?
-    assert user.ai_enabled?
-  end
-
-  test "accept_for auto-shares existing family accounts when family shares by default" do
-    @family.update!(default_account_sharing: "shared")
-    user = users(:empty)
-    user.update_columns(family_id: families(:empty).id, role: "admin")
-    invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
-
-    expected_ids = @family.accounts.where.not(owner_id: user.id).pluck(:id).sort
-    assert expected_ids.any?
-
-    assert invitation.accept_for(user)
-
-    assert_equal expected_ids, AccountShare.where(user: user).pluck(:account_id).sort
-  end
-
-  test "accept_for auto-shares read_only for guest invitations" do
-    @family.update!(default_account_sharing: "shared")
-    user = users(:empty)
-    user.update_columns(family_id: families(:empty).id, role: "admin")
-    invitation = @family.invitations.create!(email: user.email, role: "guest", inviter: @inviter)
-
-    expected_ids = @family.accounts.where.not(owner_id: user.id).pluck(:id).sort
-    assert expected_ids.any?
-
-    assert invitation.accept_for(user)
-
-    user.reload
-    shares = AccountShare.where(user: user)
-    assert_equal "guest", user.role
-    assert_equal expected_ids, shares.pluck(:account_id).sort
-    assert shares.all?(&:read_only?), "guest invitation shares must grant read_only"
-  end
-
-  test "accept_for does not auto-share when family sharing is private" do
-    @family.update!(default_account_sharing: "private")
-    user = users(:empty)
-    user.update_columns(family_id: families(:empty).id, role: "admin")
-    invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
-
-    assert_no_difference "AccountShare.count" do
-      assert invitation.accept_for(user)
-    end
-  end
-
-  test "accepting an invitation releases provider items left behind" do
-    # The item's owner is leaving the family but the item stays. Without
-    # releasing it, the orphaned owner fails ProviderItemOwnable's same-family
-    # validation on the next save and the connection becomes unsyncable.
-    user = users(:family_member)
-    old_family = user.family
-    item = PlaidItem.create!(
-      family: old_family, plaid_id: "item_invite_#{SecureRandom.hex(4)}",
-      access_token: "token", name: "Left Behind Bank", owner: user
-    )
-    new_family = Family.create!(name: "Invited Family")
-    invitation = Invitation.create!(
-      family: new_family, email: user.email, role: "member",
-      inviter: users(:family_admin)
-    )
-
-    assert invitation.accept_for(user)
-
-    assert_nil item.reload.owner_id
-    assert_equal old_family, item.family
-    assert item.valid?, "the left-behind item must still be savable"
+    assert invitation.valid?
   end
 end

@@ -32,6 +32,9 @@ fr:
       brokerage:
         long: Courtier
         short: Courtier
+      cash_management:
+        long: Compte de gestion de trésorerie
+        short: CMA
       corporate_bond:
         long: Obligation d'entreprise
         short: Obligation d'entreprise
@@ -185,6 +188,8 @@ fr:
     value_tooltip:
       cash: Liquidités
       holdings: Titres
+      projected: Solde prévisionnel
+      scheduled: Planifié
       total: Valeur totale du portefeuille
       total_value_tooltip: Le solde total du portefeuille correspond à la somme des
         liquidités (disponibles pour la négociation) et de la valeur marchande actuelle

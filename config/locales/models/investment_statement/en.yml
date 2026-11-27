@@ -1,0 +1,5 @@
+---
+en:
+  models:
+    investment_statement:
+      cash: Cash

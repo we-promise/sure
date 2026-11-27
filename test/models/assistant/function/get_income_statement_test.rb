@@ -85,6 +85,26 @@ class Assistant::Function::GetIncomeStatementTest < ActiveSupport::TestCase
     assert result[:net].present?
   end
 
+  test "account_ids results report the selected accounts' invested total when investing is not spending" do
+    @family.update!(investment_contributions_as_spending: false)
+    account = @family.accounts.visible.first
+    other = @family.accounts.visible.where.not(id: account.id).first
+    account.entries.create!(date: Date.current, amount: 250, currency: @family.currency, name: "To ISA",
+                            entryable: Transaction.new(kind: "investment_contribution"))
+    other.entries.create!(date: Date.current, amount: 900, currency: @family.currency, name: "To SIPP",
+                          entryable: Transaction.new(kind: "investment_contribution"))
+
+    result = @fn.call(@params.merge("account_ids" => [ account.id ]))
+
+    assert_equal @fn.send(:format_money, 250), result.dig(:invested, :total)
+  end
+
+  test "account_ids results omit invested while investing counts as spending" do
+    result = @fn.call(@params.merge("account_ids" => [ @family.accounts.visible.first.id ]))
+
+    assert_not result.key?(:invested)
+  end
+
   test "unknown account ids return a soft failure naming them" do
     bogus = SecureRandom.uuid
 

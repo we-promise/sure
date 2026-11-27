@@ -1,0 +1,8 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          own_parent: "Kategori '%{name}' tidak dapat menjadi induknya sendiri"
+          missing_columns: "Kolom wajib tidak ditemukan: %{columns}"

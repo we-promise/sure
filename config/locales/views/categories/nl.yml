@@ -2,33 +2,74 @@
 nl:
   categories:
     bootstrap:
-      success: Standaardcategorieën succesvol aangemaakt
+      success: "Standaardcategorieën succesvol aangemaakt"
+    locked: "Categorieën zijn vergrendeld. Ontgrendel ze om een nieuwe categorie toe te voegen."
+    toggle_lock:
+      locked: "Categorieën vergrendeld"
+      unlocked: "Categorieën ontgrendeld"
     category:
-      delete: Categorie verwijderen
-      edit: Categorie bewerken
+      delete: "Categorie verwijderen"
+      edit: "Categorie bewerken"
     create:
-      success: Categorie succesvol aangemaakt
+      success: "Categorie succesvol aangemaakt"
     destroy:
-      success: Categorie succesvol verwijderd
+      success: "Categorie succesvol verwijderd"
     edit:
-      edit: Categorie bewerken
+      edit: "Categorie bewerken"
     form:
-      placeholder: Categorienaam
+      placeholder: "Categorienaam"
+      name_label: "Naam"
+      unassigned: "(niet toegewezen)"
+      parent_category_label: "Bovenliggende categorie (optioneel)"
+      trigger_label: "Kleur en icoon kiezen"
+      color: "Kleur"
+      icon: "Pictogram"
+      auto_adjust: "automatisch aanpassen."
+      poor_contrast: "Slecht contrast, kies een donkerdere kleur of"
+    destroy_all:
+      success: "Alle categorieën verwijderd"
     index:
-      bootstrap: Gebruik standaardinstellingen (aanbevolen)
-      categories: Categorieën
-      categories_expenses: Uitgavencategorieën
-      categories_incomes: Inkomenscategorieën
-      empty: Geen categorieën gevonden
-      new: Nieuwe categorie
-    menu:
-      loading: Laden...
+      bootstrap: "Standaardcategorieën gebruiken (aanbevolen)"
+      categories: "Categorieën"
+      categories_expenses: "Uitgavencategorieën"
+      categories_incomes: "Inkomstencategorieën"
+      delete_all: "Alles verwijderen"
+      empty: "Geen categorieën gevonden"
+      lock_categories: "Aanmaken van categorieën vergrendelen"
+      locked_message: "Het aanmaken van categorieën is vergrendeld. Imports en banksynchronisaties kunnen nog steeds categorieën toevoegen."
+      merge: "Categorieën samenvoegen"
+      new: "Nieuwe categorie"
+      unlock_categories: "Aanmaken van categorieën ontgrendelen"
+    merge:
+      title: "Categorieën samenvoegen"
+      description: "Selecteer een doelcategorie en de categorieën die u erin wilt samenvoegen. Bijbehorende transacties en budgetregels worden naar het doel verplaatst."
+      target_label: "Samenvoegen in (doel)"
+      select_target: "Selecteer doelcategorie..."
+      sources_label: "Samen te voegen categorieën"
+      sources_hint: "Geselecteerde categorieën worden verwijderd nadat hun transacties en budgetregels naar het doel zijn verplaatst. Selecteer het doel niet als bron."
+      submit: "Geselecteerde samenvoegen"
     new:
-      new_category: Nieuwe categorie
+      new_category: "Nieuwe categorie"
+    perform_merge:
+      success:
+        one: "%{count} categorie succesvol samengevoegd"
+        other: "%{count} categorieën succesvol samengevoegd"
+      no_categories_selected: "Geen categorieën geselecteerd om samen te voegen"
+      target_not_found: "Doelcategorie niet gevonden"
+      invalid_categories: "Ongeldige categorieën geselecteerd"
+      target_selected_as_source: "Kies verschillende categorieën voor het doel en de bronnen."
     update:
-      success: Categorie succesvol bijgewerkt
+      success: "Categorie succesvol bijgewerkt"
+    virtual:
+      transfer: "Overboeking"
+      payment: "Betaling"
+      trade: "Handelstransactie"
   category:
     dropdowns:
       show:
-        bootstrap: Standaardcategorieën genereren
-        empty: Geen categorieën gevonden
+        bootstrap: "Standaardcategorieën genereren"
+        empty: "Geen categorieën gevonden"
+        match_transfer: "Overboeking/betaling koppelen"
+        one_time: "Eenmalige %{type}"
+        income: "inkomsten"
+        expense: "uitgave"

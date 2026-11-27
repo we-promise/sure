@@ -4,7 +4,7 @@ class ReleaseHighlightsSystemTest < ApplicationSystemTestCase
   setup do
     @user = users(:family_admin)
     @user.update!(preferences: { "last_seen_release_tag" => "v0.7.5" })
-    Sure.stubs(:version).returns(Semver.new("0.7.5-hotfix.1"))
+    Sure.stubs(:version).returns(Calver.new("0.7.5-hotfix.1"))
 
     Provider::Github.any_instance.stubs(:fetch_release_notes).with("v0.7.5-hotfix.1").returns(
       avatar: nil,

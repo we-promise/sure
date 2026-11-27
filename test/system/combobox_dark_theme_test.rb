@@ -40,8 +40,7 @@ class ComboboxDarkThemeTest < ApplicationSystemTestCase
     assert_hover_uses_theme_colors(dialog)
   end
 
-  # Above the breakpoint the results open in an inline dropdown, whose hovered
-  # result reads the same gem variable.
+  # Above the breakpoint the results open in an inline dropdown.
   test "desktop security dropdown uses theme colors in the dark theme" do
     visit new_trade_path(account_id: accounts(:investment).id)
     assert_selector "html[data-theme='dark']"
@@ -62,7 +61,11 @@ class ComboboxDarkThemeTest < ApplicationSystemTestCase
       option.call("Microsoft")
       option.call("Apple").hover
 
-      assert_equal token_color("--color-container-inset-hover"), computed(option.call("Apple"), "backgroundColor")
+      # Tailwind's hover rule applies only when the browser reports hover support.
+      supports_hover = page.evaluate_script("matchMedia('(hover: hover)').matches")
+      hover_token = supports_hover ? "--color-container-hover" : "--color-container-inset-hover"
+
+      assert_equal token_color(hover_token), computed(option.call("Apple"), "backgroundColor")
       assert_equal element_style("text-primary", "color"), computed(option.call("Apple"), "color")
       assert_equal token_color("--color-container"), computed(option.call("Microsoft"), "backgroundColor")
     end

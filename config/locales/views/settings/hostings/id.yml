@@ -1,0 +1,364 @@
+---
+id:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Atur cara pengguna baru mendaftar ke instans %{product} Anda.
+        email_confirmation_description: Jika diaktifkan, pengguna harus mengonfirmasi
+          alamat email mereka saat mengubahnya.
+        email_confirmation_title: Wajibkan konfirmasi email
+        default_family_title: Keluarga bawaan untuk pengguna baru
+        default_family_description: "Masukkan pengguna baru ke keluarga/grup ini hanya jika mereka tidak memiliki undangan."
+        default_family_none: Tidak ada (buat keluarga baru)
+        generate_tokens: Buat kode baru
+        generated_tokens: Kode yang dibuat
+        title: Pendaftaran Pengguna
+        states:
+          open: Terbuka
+          closed: Ditutup
+          invite_only: Khusus undangan
+      demo_refresh_settings:
+        description: "Perbarui ulang secara otomatis hanya keluarga demo yang dipilih. Semua data dan login di dalamnya akan dihapus. Keluarga lain tidak terpengaruh. Memerlukan worker yang berjalan dengan RAM minimal 2 GiB. Buat terlebih dahulu keluarga demo sementara menggunakan generator demo, lalu pilih di sini. Jangan pilih keluarga milik pengguna sungguhan."
+        none: Tidak ada keluarga demo yang dipilih
+        family_label: Keluarga demo sementara
+        save_family: Simpan keluarga demo
+        enabled_label: Aktifkan pembaruan harian keluarga demo
+      show:
+        demo_refresh: Pembaruan data demo
+        general: Pengaturan Umum
+        ai_assistant: Asisten AI
+        financial_data_providers: Penyedia Data Keuangan
+        property_valuation_providers: Penyedia Valuasi Properti
+        sync_settings: Pengaturan Sinkronisasi
+        invites: Kode Undangan
+        title: Self-Hosting
+        danger_zone: Zona Berbahaya
+        instance_settings_restricted: Kredensial penyedia, koneksi AI bersama, dan pengaturan sinkronisasi berlaku untuk setiap keluarga di instans ini, sehingga hanya super admin yang dapat mengubahnya. Pilihan asisten yang digunakan keluarga Anda tetap diatur per keluarga. Seseorang dengan akses ke server dapat mempromosikan pengguna menjadi super admin; panduan self-hosting Docker mencantumkan perintahnya di bagian catatan pembaruan.
+        clear_cache: Hapus cache data
+        clear_cache_warning: Menghapus cache data akan menghapus semua nilai tukar, harga sekuritas, saldo rekening, dan data lainnya. Tindakan ini tidak akan menghapus rekening, transaksi, kategori, atau data milik pengguna lainnya.
+        confirm_clear_cache:
+          title: Hapus cache data?
+          body: Yakin ingin menghapus cache data? Tindakan ini akan menghapus semua nilai tukar, harga sekuritas, saldo rekening, dan data lainnya. Tindakan ini tidak dapat dibatalkan.
+        reset_market_data: Atur ulang data pasar untuk semua keluarga
+        reset_market_data_warning: Menghapus nilai tukar dan harga sekuritas yang dapat dimuat ulang oleh penyedia Anda, mengimpornya kembali, lalu menyinkronkan setiap rekening. Total dalam mata uang asing mungkin ditampilkan tanpa konversi hingga proses impor selesai.
+        confirm_reset_market_data:
+          title: Atur ulang data pasar untuk semua keluarga?
+          body: Tindakan ini menghapus nilai tukar dan harga sekuritas yang dapat dimuat ulang oleh penyedia Anda untuk setiap keluarga di instans ini, lalu mengimpornya kembali. Hingga proses impor selesai, jumlah dalam mata uang asing mungkin ditampilkan tanpa konversi. Tindakan ini tidak dapat dibatalkan.
+      provider_selection:
+        exchange_rate_title: Penyedia Nilai Tukar
+        exchange_rate_description: Pilih satu penyedia untuk mengambil nilai tukar mata uang.
+        exchange_rate_provider_label: Penyedia Nilai Tukar
+        securities_title: Penyedia Sekuritas
+        securities_description: Aktifkan satu atau lebih penyedia untuk mengambil harga saham, ETF, dan reksa dana. Saat mencari, semua penyedia yang aktif akan ditanyakan dan hasilnya digabungkan.
+        env_configured_message: Pemilihan penyedia dinonaktifkan karena variabel lingkungan telah diatur. Untuk mengaktifkan pemilihan di sini, hapus variabel lingkungan tersebut dari konfigurasi Anda.
+        twelve_data_hint: memerlukan kunci API, 800 kredit/hari
+        yahoo_finance_hint: gratis, tanpa kunci API
+        requires_api_key: memerlukan kunci API
+        requires_api_key_eodhd: memerlukan kunci API, batas 20 panggilan/hari
+        requires_api_key_alpha_vantage: memerlukan kunci API, batas 25 panggilan/hari
+        mfapi_hint: gratis, tanpa kunci API -- khusus reksa dana India
+        binance_public_hint: gratis, tanpa kunci API -- khusus kripto (BTC, ETH, dll.)
+        moex_public_hint: gratis, tanpa kunci API -- saham, reksa dana & obligasi Rusia (MOEX), termasuk kurs RUB
+        tinkoff_invest_hint: memerlukan token baca-saja -- harga saham/reksa dana/obligasi Rusia + logo merek
+        requires_api_key_mansa: memerlukan kunci API, paket gratis 100 panggilan/hari -- bursa Afrika (NGX, JSE, NSE, GSE, BRVM, dan lainnya)
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+          tiingo: Tiingo
+          eodhd: EODHD
+          alpha_vantage: Alpha Vantage
+          mfapi: MFAPI.in
+          binance_public: Binance
+          moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
+          mansa: Mansa
+      assistant_settings:
+        title: Asisten AI
+        description: Pilih cara asisten obrolan merespons. Bawaan menggunakan penyedia LLM yang Anda konfigurasikan secara langsung. Eksternal mendelegasikan ke agen AI jarak jauh yang dapat memanggil balik alat keuangan Sure melalui MCP. Tidak ada di aplikasi menghapus obrolan dalam aplikasi dan tetap menyediakan MCP untuk agen Anda sendiri.
+        type_label: Jenis asisten
+        type_builtin: Bawaan (LLM langsung)
+        type_external: Eksternal (agen jarak jauh)
+        type_mcp_only: Tidak ada di aplikasi (hubungkan agen Anda sendiri melalui MCP)
+        mcp_only_help: Asisten dalam aplikasi dinonaktifkan untuk semua orang di keluarga ini. Pintasan AI Tagihan dan teks wawasan yang ditulis AI juga berhenti. MCP dan kategorisasi latar belakang tetap tersedia; hubungkan agen eksternal di Pengaturan > MCP.
+        external_status: Endpoint asisten eksternal
+        external_configured: Terkonfigurasi
+        external_not_configured: Belum terkonfigurasi. Masukkan URL dan token di bawah, atau atur variabel lingkungan EXTERNAL_ASSISTANT_URL dan EXTERNAL_ASSISTANT_TOKEN.
+        env_notice: "Jenis asisten dikunci ke '%{type}' melalui variabel lingkungan ASSISTANT_TYPE."
+        env_configured_external: Berhasil dikonfigurasi melalui variabel lingkungan.
+        url_label: URL Endpoint
+        url_placeholder: "https://your-agent-host/v1/chat"
+        url_help: URL lengkap ke endpoint API agen Anda. Penyedia agen Anda akan memberikan URL ini.
+        token_label: Token API
+        token_placeholder: Masukkan token dari penyedia agen Anda
+        token_help: Token autentikasi yang diberikan oleh agen eksternal Anda. Token ini dikirim sebagai Bearer token pada setiap permintaan.
+        agent_id_label: Agen (Wajib)
+        agent_id_placeholder: "main (bawaan)"
+        agent_id_help: Sure memuat daftar ini dari respons /v1/models endpoint. Agen yang dipilih mengontrol perutean; model di baliknya dikelola oleh layanan eksternal.
+        agent_discovery_configure_first: Simpan URL endpoint dan token API yang valid untuk memuat agen yang tersedia.
+        external_agent_required: Pilih agen eksternal sebelum menyimpan.
+        external_agent_invalid: Pilih agen yang dikembalikan oleh endpoint yang dikonfigurasi.
+        external_agent_reselect: Endpoint berubah dan agen yang dipilih sebelumnya tidak tersedia di sana. Pilih agen dari endpoint baru.
+        agent_discovery_error: "Tidak dapat memuat agen: %{error}"
+        external_info:
+          title: Konfigurasi AI eksternal
+          items:
+            - Masukkan URL endpoint lengkap yang kompatibel dengan OpenAI dan diakhiri dengan /v1/chat/completions.
+            - Sure mendeteksi agen yang tersedia dari /v1/models setelah endpoint dan token disimpan.
+            - Layanan eksternal memilih model di balik setiap agen; Sure hanya memilih rute agen.
+            - Kesalahan autentikasi, endpoint, atau agen dikembalikan oleh layanan eksternal. Periksa log layanan tersebut jika permintaan gagal.
+        disconnect_title: Koneksi eksternal
+        disconnect_description: Hapus koneksi asisten eksternal dan beralih kembali ke asisten bawaan.
+        disconnect_button: Putuskan koneksi
+        confirm_disconnect:
+          title: Putuskan koneksi asisten eksternal?
+          body: Tindakan ini akan menghapus URL, token, dan ID agen yang tersimpan, lalu beralih ke asisten bawaan. Anda dapat menghubungkannya kembali nanti dengan memasukkan kredensial baru.
+      brand_fetch_settings:
+        description: Masukkan Client ID yang diberikan oleh Brandfetch
+        env_configured_message: Anda berhasil mengonfigurasi Client ID Brandfetch melalui variabel lingkungan BRAND_FETCH_CLIENT_ID.
+        show_details: "(lihat detail)"
+        setup_step_1_html: 'Kunjungi <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> dan buat akun Brandfetch Developer gratis.'
+        setup_step_2_html: 'Buka halaman <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
+        setup_step_3: 'Ketuk ikon mata di bagian "Your Client ID" untuk menampilkan Client ID Anda dan tempel di bawah ini.'
+        label: Client ID
+        placeholder: Masukkan Client ID Anda di sini
+        title: Pengaturan Brandfetch
+        high_res_label: Aktifkan logo beresolusi tinggi
+        high_res_description: Jika diaktifkan, logo akan diambil pada resolusi 120x120 alih-alih 40x40. Ini menghasilkan gambar yang lebih tajam pada layar ber-DPI tinggi.
+      llm_provider_selector:
+        title: Penyedia AI
+        description: Pilih LLM mana yang menggerakkan obrolan AI, deteksi merchant, dan pemrosesan PDF. Kategorisasi transaksi dikonfigurasi secara terpisah di bawah ini.
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan LLM_PROVIDER.
+        provider_label: Penyedia LLM aktif
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Mengganti penyedia mulai berlaku pada obrolan berikutnya. Konfigurasikan kredensial penyedia aktif di bawah ini.
+        not_configured_hint: "Tambahkan kunci API %{provider} di bawah untuk mengaktifkannya."
+        data_retention_heading: Penanganan data
+        data_retention: Input API tidak digunakan untuk melatih model secara bawaan; API yang dihosting penyedia menyimpan data selama ~30 hari untuk kepercayaan & keamanan. Endpoint kustom atau self-hosted mengikuti kebijakan Anda sendiri.
+        max_items_per_call_label: Maks. Item Per Batch (Opsional)
+        max_items_per_call_help: "Batas atas untuk batch kategorisasi otomatis / deteksi merchant. Bawaan: 25. Pada penyedia yang kompatibel dengan OpenAI, batch yang lebih besar dipecah otomatis agar sesuai dengan jendela konteks."
+      anthropic_settings:
+        title: Anthropic (Claude)
+        description: Masukkan kunci API Anthropic Anda. Secara opsional, arahkan Base URL ke AWS Bedrock atau GCP Vertex.
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan.
+        access_token_label: Kunci API
+        access_token_placeholder: Masukkan kunci API Anthropic Anda
+        base_url_label: Base URL (Opsional)
+        base_url_placeholder: "https://api.anthropic.com (bawaan)"
+        model_label: Model Bawaan (Opsional)
+        model_placeholder: "claude-sonnet-4-6 (bawaan)"
+        model_help: Digunakan untuk obrolan dan pemrosesan PDF. Operasi batch (kategorisasi, deteksi merchant) menggunakan Haiku secara bawaan untuk efisiensi biaya.
+      categorization_provider_selector:
+        title: Kategorisasi Transaksi
+        preview_pill: Pratinjau
+        description: Pilih penyedia mana yang mengategorikan transaksi. Ini terpisah dari penyedia AI di atas yang menangani obrolan dan pemrosesan PDF.
+        env_notice: "Diatur ke %{type} melalui variabel lingkungan."
+        provider_label: Penyedia kategorisasi
+        provider_llm: Penyedia AI (OpenAI atau Anthropic)
+        provider_jev: Jev (TypeSafe)
+        provider_help: Penyedia AI membaca sekumpulan transaksi dan menuliskan kembali nama kategori. Jev memilih dari daftar kategori Anda dan mengembalikan tingkat keyakinan terkalibrasi untuk setiap transaksi.
+        jev_configured: Kunci API Jev terkonfigurasi.
+        jev_not_configured: Jev dipilih tetapi belum memiliki kunci API yang dikonfigurasi. Kategorisasi tetap menggunakan penyedia AI hingga Anda menambahkannya di bawah ini.
+        data_retention_heading: Berbagi data
+        data_retention_direct: Deskripsi transaksi, jumlah, dan nama kategori Anda dikirim ke TypeSafe untuk dikategorikan. Tinjau kebijakan retensi mereka sebelum mengaktifkan ini pada data nyata.
+        data_retention_proxied: Deskripsi transaksi, jumlah, dan nama kategori Anda dikirim ke %{host}, yang meneruskannya ke TypeSafe. Tinjau kebijakan retensi kedua penyedia sebelum mengaktifkan ini pada data nyata.
+        confidence_threshold_label: Tingkat keyakinan minimum (0–1)
+        confidence_threshold_help: Di bawah tingkat keyakinan ini, kategori tidak diterapkan dan transaksi dibiarkan belum terkategori sehingga proses berikutnya dapat mencoba lagi. Tidak ada yang dibuang. Atur ke 0 untuk menerapkan setiap jawaban.
+        confidence_threshold_env_notice: Dikunci oleh variabel lingkungan CATEGORIZATION_CONFIDENCE_THRESHOLD.
+        shadow_rate_label: Rasio perbandingan bayangan (0–1)
+        shadow_rate_help: Menjalankan penyedia yang TIDAK Anda pilih bersamaan dengan yang Anda pilih, lalu mencatat perbedaannya tanpa mengubah kategori apa pun. Ini menggandakan biaya API pada setiap proses kategorisasi yang diambil sampelnya. Atur ke 0 untuk menonaktifkannya.
+        shadow_rate_env_notice: Dikunci oleh variabel lingkungan CATEGORIZATION_SHADOW_RATE.
+      categorization_shadow_results:
+        shadow_results_heading: Perbandingan bayangan
+        shadow_results_empty: Belum ada perbandingan yang tercatat. Atur rasio perbandingan bayangan di atas 0 dan jalankan kategorisasi untuk mengumpulkannya.
+        shadow_results_summary: "%{agreement}%% kesesuaian di %{count} transaksi sampel."
+        shadow_disagreements_heading: Ketidaksepakatan terbaru
+        shadow_disagreement_row: "%{applied_provider} memilih %{applied_category}; %{shadow_provider} memilih %{shadow_category}."
+        shadow_disagreement_confidence: "(keyakinan %{confidence})"
+        shadow_no_disagreements: Kedua penyedia sepakat pada setiap transaksi sampel.
+        shadow_no_category: tanpa kategori
+      jev_settings:
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan.
+        api_key_label: Kunci API
+        api_key_placeholder: Masukkan kunci API TypeSafe Anda
+        endpoint_label: Endpoint (Opsional)
+        endpoint_placeholder: "https://api.typesafe.ai/v1/systemone (bawaan)"
+        model_label: Model (Opsional)
+        model_placeholder: "jev-latest (bawaan)"
+        model_help: Secara bawaan langsung ke TypeSafe. Untuk mengakses Jev melalui OpenRouter, atur endpoint ke https://openrouter.ai/api/alpha/decisions dan model ke ~typesafe/jev-latest.
+      openai_settings:
+        description: Masukkan token akses dan secara opsional konfigurasikan penyedia kustom yang kompatibel dengan OpenAI
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan.
+        access_token_label: Token Akses
+        access_token_placeholder: Masukkan token akses Anda di sini
+        uri_base_label: URL Dasar API (Opsional)
+        uri_base_placeholder: "https://api.openai.com/v1 (bawaan)"
+        uri_base_local_help: "Untuk model di komputer Anda sendiri, masukkan endpoint yang kompatibel dengan OpenAI, misalnya Ollama di http://localhost:11434/v1, atau http://ollama:11434/v1 jika Sure dan Ollama berjalan sebagai layanan Docker Compose."
+        model_label: Model (Opsional)
+        model_placeholder: "gpt-4.1 (bawaan)"
+        model_function_calling_help: "Asisten AI membaca data Anda melalui pemanggilan fungsi, jadi pilih model yang didokumentasikan penyedia Anda mendukung tools/function calling. Model tanpa fitur ini akan gagal pada obrolan dengan pesan kesalahan penyedia yang tidak jelas."
+        model_function_calling_link: Periksa model yang dikonfigurasi
+        model_required_help: "Wajib saat Anda mengatur URL dasar API: masukkan nama model yang digunakan server Anda, seperti llama3.1 untuk Ollama."
+        json_mode_label: Mode JSON
+        json_mode_auto: Otomatis (disarankan)
+        json_mode_strict: Ketat (terbaik untuk model thinking)
+        json_mode_none: Tidak ada (terbaik untuk model standar)
+        json_mode_json_object: Objek JSON
+        json_mode_help: "Mode Ketat paling cocok untuk model thinking (qwen-thinking, deepseek-reasoner). Mode Tidak ada paling cocok untuk model standar (llama, mistral, gpt-oss)."
+        budget_heading: Anggaran Token
+        budget_description: Berlaku untuk panggilan yang kompatibel dengan OpenAI (obrolan, kategorisasi otomatis, deteksi merchant, dan pemrosesan PDF). Nilai bawaan dibuat konservatif untuk model lokal berjendela konteks kecil. Naikkan untuk model cloud dengan jendela konteks lebih besar.
+        context_window_label: Jendela Konteks (Opsional)
+        context_window_help: "Total token yang akan diterima model. Bawaan: 2048 — naikkan ke 8192+ untuk OpenAI cloud atau model lokal berjendela konteks besar."
+        max_response_tokens_label: Token Respons Maks. (Opsional)
+        max_response_tokens_help: "Token yang dicadangkan untuk balasan model. Bawaan: 512. Turunkan untuk memberi lebih banyak ruang bagi riwayat yang lebih panjang."
+        timeout_heading: Batas Waktu
+        timeout_description: Mengatur berapa lama panggilan model yang kompatibel dengan OpenAI boleh berjalan sebelum Sure berhenti menunggu. Naikkan nilai ini jika Anda menjalankan model lokal pada perangkat keras yang lambat.
+        openai_request_timeout_label: Batas Waktu Permintaan dalam Detik (Opsional)
+        openai_request_timeout_help: "Bawaan: 60. Berlaku untuk setiap permintaan HTTP yang kompatibel dengan OpenAI, termasuk kategorisasi otomatis, deteksi merchant, obrolan, pemrosesan PDF, dan panggilan vector-store. OPENAI_REQUEST_TIMEOUT menimpa kolom ini."
+        ai_response_timeout_label: Batas Waktu Respons dalam Detik (Opsional)
+        ai_response_timeout_help: "Bawaan: 90. Hanya berlaku untuk watchdog seluruh giliran obrolan, jadi hitung ukurannya sebagai penjumlahan: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × batas waktu permintaan, ditambah waktu eksekusi alat dan antrean. AI_RESPONSE_TIMEOUT menimpa kolom ini."
+        ai_health_probe_timeout_label: Batas Waktu Pemeriksaan Kesehatan dalam Detik (Opsional)
+        ai_health_probe_timeout_help: "Bawaan: 5. Hanya berlaku untuk pemeriksaan AI langsung di bawah Pengaturan → Kesehatan sistem, bukan untuk panggilan AI nyata. Naikkan jika pemeriksaan PDF melaporkan batas waktu habis dengan model cloud. AI_HEALTH_PROBE_TIMEOUT menimpa kolom ini."
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance menyediakan akses gratis ke harga saham, nilai tukar, dan data keuangan tanpa memerlukan kunci API.
+        status_healthy: Yahoo Finance aktif dan berfungsi.
+        status_rate_limited: Yahoo Finance membatasi laju permintaan untuk sementara.
+        rate_limited_title: Batas laju Yahoo Finance tercapai.
+        rate_limited_message: Tidak perlu tindakan apa pun. Sure akan menghindari pemeriksaan kesehatan tambahan selama 30 menit. Operasi harga dan nilai tukar tetap berjalan secara mandiri.
+        status_unavailable: Yahoo Finance saat ini tidak tersedia.
+        unavailable_title: Tidak dapat memverifikasi Yahoo Finance.
+        unavailable_message: Yahoo Finance tidak dapat dijangkau atau mengembalikan respons tak terduga. Periksa koneksi internet Anda dan coba lagi nanti.
+        status_unknown: Status Yahoo Finance sedang diperiksa.
+      rentcast_settings:
+        title: RentCast
+        description: Masukkan kunci API RentCast Anda untuk mencari detail properti AS dan estimasi nilai saat menambahkan properti. Paket gratis dibatasi hingga 50 permintaan API per bulan, dibagi antara pencarian properti dan pembaruan valuasi harian. Pada paket berbayar, naikkan batasnya dengan variabel lingkungan RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan RENTCAST_API_KEY.
+        label: Kunci API
+        placeholder: Masukkan kunci API RentCast Anda di sini
+        usage: "%{used} dari %{limit} permintaan bulanan digunakan"
+      realie_settings:
+        title: Realie
+        description: Masukkan kunci API Realie Anda untuk mencari detail properti AS dan estimasi nilai saat menambahkan properti. Paket gratis dibatasi hingga 25 permintaan API per bulan, dibagi antara pencarian properti dan pembaruan valuasi harian. Pada paket berbayar, naikkan batasnya dengan variabel lingkungan REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan REALIE_API_KEY.
+        label: Kunci API
+        placeholder: Masukkan kunci API Realie Anda di sini
+        usage: "%{used} dari %{limit} permintaan bulanan digunakan"
+      chimnie_settings:
+        title: Chimnie
+        description: Masukkan kunci API Chimnie Anda untuk menilai properti residensial Inggris Raya berdasarkan UPRN-nya. Buat kunci gratis di dashboard.chimnie.com (pendaftaran memerlukan alamat email bisnis atau domain kustom; alamat Gmail, Outlook, dan sejenisnya tidak diterima). Valuasi UPRN gratis dan diperbarui setiap bulan; Sure membatasinya hingga 1.000 permintaan per bulan, yang dapat Anda ubah dengan variabel lingkungan CHIMNIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan CHIMNIE_API_KEY.
+        label: Kunci API
+        placeholder: Masukkan kunci API Chimnie Anda di sini
+        usage: "%{used} dari %{limit} permintaan bulanan digunakan"
+      tiingo_settings:
+        title: Tiingo
+        description: Masukkan token API yang diberikan oleh Tiingo. Paket gratis mendukung 50 simbol unik per jam dengan data historis 30+ tahun.
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan TIINGO_API_KEY.
+        label: Token API
+        placeholder: Masukkan token API Tiingo Anda di sini
+        show_details: "(lihat detail)"
+        step_1_html: 'Kunjungi <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> dan buat akun gratis.'
+        step_2_html: 'Buka halaman <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a>.'
+        step_3: Salin token API Anda dan tempel di bawah ini.
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: Masukkan token API T-Invest baca-saja. Digunakan untuk mengambil logo merek untuk sekuritas (termasuk reksa dana dan obligasi, meskipun harganya diambil dari MOEX) dan, jika diaktifkan di atas, harga untuk instrumen Rusia.
+        moex_only_notice: Tidak diaktifkan untuk harga di atas — T-Invest digunakan untuk mengambil logo merek bagi semua sekuritas Anda kapan pun token dikonfigurasi, terlepas dari kotak centang di atas.
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan TINKOFF_INVEST_API_KEY.
+        label: Token API
+        placeholder: Masukkan token API T-Invest Anda di sini
+        show_details: "(lihat detail)"
+        step_1: Buka T-Bank investments, lalu Pengaturan, lalu token API (memerlukan rekening pialang T-Bank yang aktif).
+        step_2: Buat token dengan akses baca-saja.
+        step_3: Salin token tersebut dan tempel di bawah ini.
+      eodhd_settings:
+        title: EODHD
+        description: Masukkan token API yang diberikan oleh EODHD. Mendukung ETF UE di LSE, XETRA, dan bursa internasional lainnya.
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan EODHD_API_KEY.
+        label: Token API
+        placeholder: Masukkan token API EODHD Anda di sini
+        show_details: "(lihat detail)"
+        step_1_html: 'Kunjungi <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> dan buat akun gratis.'
+        step_2_html: 'Buka <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> Anda untuk menemukan token API Anda.'
+        step_3: Salin token API Anda dan tempel di bawah ini.
+        rate_limit_warning: "Paket gratis EODHD dibatasi hingga 20 panggilan API per hari. Paling baik digunakan sebagai penyedia pelengkap untuk ETF UE yang tidak tersedia di penyedia lain."
+      mansa_settings:
+        title: Mansa
+        description: Masukkan kunci API dari Mansa API. Mendukung 20 bursa saham Afrika, termasuk NGX (Nigerian Exchange), JSE, NSE (Kenya), GSE (Ghana), dan BRVM -- beberapa di antaranya tidak dicakup oleh penyedia lain di sini.
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan MANSA_API_KEY.
+        label: Kunci API
+        placeholder: Masukkan kunci API Mansa Anda di sini
+        show_details: "(lihat detail)"
+        step_1_html: 'Kunjungi <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> dan klaim kunci API gratis Anda -- tanpa kartu.'
+        step_2: Salin kunci API Anda dan tempel di bawah ini.
+        rate_limit_warning: "Paket gratis Mansa dibatasi hingga 100 panggilan API per hari, dan hanya menyediakan kuotasi terkini -- harga historis memerlukan paket berbayar."
+      alpha_vantage_settings:
+        title: Alpha Vantage
+        description: Masukkan kunci API dari Alpha Vantage. Mendukung ETF UE di London Stock Exchange, XETRA, dan bursa lainnya.
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan ALPHA_VANTAGE_API_KEY.
+        label: Kunci API
+        placeholder: Masukkan kunci API Alpha Vantage Anda di sini
+        show_details: "(lihat detail)"
+        step_1_html: 'Kunjungi <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> dan klaim kunci API gratis Anda.'
+        step_2: Salin kunci API dan tempel di bawah ini.
+        rate_limit_warning: "Paket gratis Alpha Vantage dibatasi hingga 25 panggilan API per hari. Paling baik digunakan sebagai penyedia pelengkap untuk ETF UE yang tidak tersedia di penyedia lain."
+        no_health_check_note: "Pemeriksaan kesehatan koneksi tidak tersedia untuk penyedia ini karena batas laju yang ketat."
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} panggilan API harian digunakan (%{percentage})"
+        description: Masukkan kunci API yang diberikan oleh Twelve Data
+        env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan TWELVE_DATA_API_KEY.
+        label: Kunci API
+        placeholder: Masukkan kunci API Anda di sini
+        show_details: "(lihat detail)"
+        step_1_html: 'Kunjungi <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> dan buat akun Twelve Data Developer gratis.'
+        step_2_html: 'Buka halaman <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.'
+        step_3: Tampilkan Secret Key Anda dan tempel di bawah ini.
+        plan: "Paket %{plan}"
+        plan_upgrade_warning_title: Beberapa ticker memerlukan paket berbayar
+        plan_upgrade_warning_description: Ticker berikut di portofolio Anda tidak dapat menyinkronkan harga dengan paket Twelve Data Anda saat ini.
+        requires_plan: memerlukan paket %{plan}
+        view_pricing: Lihat harga Twelve Data
+        title: Twelve Data
+      update:
+        invalid_demo_family: Keluarga yang dipilih harus memiliki email demo yang dikonfigurasi.
+        select_demo_family: Pilih keluarga demo sementara terlebih dahulu.
+        failure: Nilai pengaturan tidak valid
+        success: Pengaturan diperbarui
+        invalid_onboarding_state: Status pendaftaran tidak valid
+        invalid_sync_time: Format waktu sinkronisasi tidak valid. Harap gunakan format HH:MM (misalnya, 02:30).
+        invalid_llm_budget: "%{field} harus berupa bilangan bulat ≥ %{minimum}."
+        invalid_anthropic_base_url: Base URL Anthropic harus berupa URL http(s).
+        anthropic_model_required_for_base_url: Model Anthropic wajib diisi jika Base URL kustom diatur.
+        invalid_jev_endpoint: Endpoint Jev harus berupa URL https. http biasa hanya diterima untuk localhost.
+        invalid_categorization_rate: "%{field} harus berupa angka antara 0 dan 1."
+        scheduler_sync_failed: Pengaturan disimpan, tetapi gagal memperbarui jadwal sinkronisasi. Silakan coba lagi atau periksa log server.
+      disconnect_external_assistant:
+        external_assistant_disconnected: Koneksi asisten eksternal diputus
+      clear_cache:
+        cache_cleared: Cache data telah dihapus. Proses ini mungkin memerlukan beberapa saat hingga selesai.
+      reset_market_data:
+        market_data_reset: Pengaturan ulang data pasar telah masuk antrean. Nilai tukar dan harga akan diimpor ulang, lalu semua rekening akan disinkronkan.
+        market_data_reset_already_queued: Pengaturan ulang data pasar sudah ada dalam antrean atau sedang berjalan.
+        market_data_reset_failed: Pengaturan ulang data pasar tidak dapat dimasukkan ke antrean. Tidak ada yang dihapus; silakan coba lagi.
+      not_authorized: Anda tidak berwenang melakukan tindakan ini
+      ensure_admin:
+        not_authorized: Anda tidak berwenang melakukan tindakan ini
+      ensure_super_admin_for_onboarding:
+        not_authorized: Anda tidak berwenang melakukan tindakan ini
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Pengaturan disimpan, tetapi gagal memperbarui jadwal sinkronisasi. Silakan coba lagi atau periksa log server.
+      sync_settings:
+        auto_sync_label: Aktifkan sinkronisasi otomatis
+        auto_sync_description: Jika diaktifkan, semua rekening akan disinkronkan secara otomatis setiap hari pada waktu yang ditentukan.
+        auto_sync_time_label: Waktu sinkronisasi (HH:MM)
+        auto_sync_time_description: Tentukan waktu dalam sehari saat sinkronisasi otomatis harus berjalan.
+        market_data_sync_label: Aktifkan impor data pasar harian
+        market_data_sync_description: Jika diaktifkan, harga sekuritas diimpor secara otomatis sekali sehari (Senin-Jumat) pada waktu yang ditentukan.
+        market_data_sync_time_label: Waktu impor data pasar (HH:MM)
+        market_data_sync_time_description: Tentukan waktu dalam sehari saat impor harga sekuritas harian harus berjalan — misalnya sesaat setelah bursa utama Anda tutup.
+        include_pending_label: Sertakan transaksi tertunda
+        include_pending_description: Jika diaktifkan, transaksi tertunda (belum kliring) akan diimpor dan direkonsiliasi secara otomatis saat sudah tercatat. Nonaktifkan jika bank Anda menyediakan data transaksi tertunda yang tidak akurat.
+        env_configured_message: Pengaturan ini dinonaktifkan karena variabel lingkungan penyedia (SIMPLEFIN_INCLUDE_PENDING atau PLAID_INCLUDE_PENDING) telah diatur. Hapus variabel tersebut untuk mengaktifkan pengaturan ini.

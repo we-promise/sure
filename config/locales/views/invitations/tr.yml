@@ -3,14 +3,11 @@ tr:
   invitations:
     accept_choice:
       create_account: Yeni hesap oluştur
+      existing_account_hint: "Zaten bir hesabınız mı var? Mevcut hesaplar davetiye ile başka bir haneye katılamaz."
       joined_household: Haneye katıldınız.
       message: "%{inviter} sizi %{role} olarak katılmaya davet etti."
-      sign_in_existing: Zaten bir hesabım var
       title: "%{family} hanesine katıl"
     create:
-      existing_user_added: Kullanıcı hanenize eklendi.
-      existing_user_has_family_data: Bu kullanıcının zaten hesapları olan bir hanesi
-        var. Sizinkine katılmadan önce bu hesapları kaldırması veya devretmesi gerekiyor.
       failure: Davetiye gönderilemedi
       success: Davetiye başarıyla gönderildi
     destroy:

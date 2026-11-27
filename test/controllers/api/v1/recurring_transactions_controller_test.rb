@@ -330,6 +330,28 @@ class Api::V1::RecurringTransactionsControllerTest < ActionDispatch::Integration
     assert_equal 16, response_data["expected_day_of_month"]
   end
 
+  # The API writes "active" onto any writable series, a detected one included.
+  test "should link a detected bill's past payments when activating it" do
+    paid_on = Date.current.beginning_of_month + 8.days - 2.months
+    suggestion = @family.recurring_transactions.create!(
+      account: @account, name: "CITY WATER", amount: 80, currency: "USD",
+      expected_day_of_month: 9, last_occurrence_date: paid_on,
+      next_expected_date: paid_on + 2.months, status: "suggested", manual: false
+    )
+    entry = @account.entries.create!(
+      date: paid_on, amount: 80, currency: "USD", name: "CITY WATER", entryable: Transaction.new
+    )
+
+    assert_difference -> { suggestion.recurring_occurrences.paid.where(due_on: paid_on).count }, 1 do
+      patch api_v1_recurring_transaction_url(suggestion),
+            params: { recurring_transaction: { status: "active" } },
+            headers: api_headers(@api_key)
+    end
+
+    assert_response :success
+    assert RecurringAllocation.where(entry_id: entry.id, state: "confirmed").exists?
+  end
+
   test "should update payment url and normalize a bare host" do
     patch api_v1_recurring_transaction_url(@recurring_transaction),
           params: { recurring_transaction: { payment_url: "pay.example.com/bill" } },

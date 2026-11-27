@@ -16,6 +16,7 @@ en:
         budgets: Budgets
         home: Home
         plan: Plan
+        portfolio: Portfolio
         reports: Reports
         goals: Goals
         transactions: Transactions
@@ -36,6 +37,7 @@ en:
         download_complete: Download complete
         download_failed: Download failed. Please try again.
         download_location: The file is in your Downloads folder.
+        order_save_failed: "Couldn't confirm that the new order was saved. Check your connection and reload the page to see the saved order."
     trial:
       open_demo: Open demo
       data_deleted_in_days: Data deleted in %{days} days

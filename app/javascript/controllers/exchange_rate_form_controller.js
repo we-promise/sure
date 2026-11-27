@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import evaluateAmountExpression from "utils/evaluate_amount_expression";
 
 export default class extends Controller {
   static targets = [
@@ -112,7 +113,12 @@ export default class extends Controller {
       return;
     }
 
-    const amount = Number.parseFloat(this.amountTarget.value);
+    // amountTarget is the shared money field, so it can hold a comma decimal
+    // or expression ("12,50+4,30"); Number.parseFloat stops at the first
+    // comma and silently truncates it. exchangeRateFieldTarget is a plain
+    // type="number" input, which the browser already normalizes to a dot
+    // decimal or empty string, so parseFloat is safe there.
+    const amount = evaluateAmountExpression(this.amountTarget.value);
     const rate = Number.parseFloat(this.exchangeRateFieldTarget.value);
 
     if (amount && rate && rate !== 0) {
@@ -136,7 +142,9 @@ export default class extends Controller {
       return;
     }
 
-    const amount = Number.parseFloat(this.amountTarget.value);
+    // Same reasoning as calculateConvertDestination above: amountTarget
+    // needs expression-aware parsing, destinationAmountTarget doesn't.
+    const amount = evaluateAmountExpression(this.amountTarget.value);
     const destAmount = Number.parseFloat(this.destinationAmountTarget.value);
 
     if (amount && destAmount && amount !== 0) {

@@ -2,6 +2,9 @@
 zh-CN:
   family_exports:
     access_denied: 访问被拒绝
+    cancel:
+      cancelled: 导出已标记为失败。您可以立即创建新的导出。
+      not_cancellable: 暂时无法将此导出标记为失败 — 其后台任务可能仍在运行。请在无活动一小时后重试。
     create:
       success: 导出已开始。您很快就能下载它。
     delete_confirmation: 确定要删除此导出吗？此操作无法撤销。
@@ -28,6 +31,8 @@ zh-CN:
         actions:
           delete: 删除
           download: 下载
+          mark_failed: 标记为失败
+          confirm_mark_failed: 此导出已长时间无活动，其后台任务可能已中断。是否将其标记为失败？您可以立即创建新的导出。
       empty: 暂无导出记录
     new:
       dialog_title: 导出你的数据

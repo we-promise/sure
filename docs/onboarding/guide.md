@@ -34,13 +34,14 @@ When you arrive at the main dashboard, showing **No accounts yet**, you're all s
 > **Note:** The next sections of this guide cover how to **manually add accounts and transactions** in Sure.<br />
 > If you'd rather connect a data provider, Sure supports many of them, including:
 >
-> - [**Plaid**](https://github.com/we-promise/sure/blob/main/docs/hosting/plaid.md) (US and EU)
+> - [**Plaid**](../providers/plaid.md) (US and EU)
 > - [**SimpleFIN**](https://beta-bridge.simplefin.org/)
 > - [**Lunch Flow**](https://www.lunchflow.app/)
 > - [**Enable Banking**](https://enablebanking.com/) (beta)
-> - [**Monobank**](https://github.com/we-promise/sure/blob/main/docs/hosting/monobank.md) (Ukrainian cards and jars)
-> - [**Fio banka**](https://github.com/we-promise/sure/blob/main/docs/hosting/fio.md) (Czech bank)
-> - [**Redbark**](https://github.com/we-promise/sure/blob/main/docs/hosting/redbark.md) (Australian banks)
+> - [**TrueLayer**](../providers/truelayer.md) (UK banks and cards, alpha)
+> - [**Monobank**](../providers/monobank.md) (Ukrainian cards and jars)
+> - [**Fio banka**](../providers/fio.md) (Czech bank)
+> - [**Redbark**](../providers/redbark.md) (Australian banks)
 > - [**Up**](https://up.com.au/) (Australian bank)
 > - [**Akahu**](https://www.akahu.nz/) (New Zealand banks)
 > - [**CoinStats**](https://coinstats.app/) (beta, crypto)

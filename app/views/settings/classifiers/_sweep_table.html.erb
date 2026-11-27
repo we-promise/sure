@@ -1,0 +1,21 @@
+<%# locals: (columns:, weight:, label: t("settings.classifiers.evaluation.threshold")) %>
+<%# columns: [[heading, report]]; label heads the first column, the value
+    each row is at. Each cell is right / wrong; each column's best row for the
+    cost of a mistake, weight, is bold. %>
+<% rows_by_threshold = columns.map { |_, report| report["sweep"].index_by { |row| row["threshold"] } } %>
+<% bolds = columns.map { |_, report| Family::BayesEvaluation.best_threshold(report["sweep"], weight) if report["sweep"].any? } %>
+<div class="space-y-1">
+  <%= render DS::Table.new(rows: rows_by_threshold.flat_map(&:keys).uniq.sort, inset: true, label: label) do |table| %>
+    <% table.with_column(label, numeric: true, row_header: true) { |threshold| threshold.to_s } %>
+    <% columns.each_with_index do |(heading, _), i| %>
+      <% table.with_column(heading, numeric: true) do |threshold| %>
+        <% if (cell = rows_by_threshold[i][threshold]) %>
+          <span class="<%= "font-medium" if threshold == bolds[i] %>"><%= cell["right"] %> / <span class="text-destructive"><%= cell["wrong"] %></span></span>
+        <% else %>
+          –
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+  <p class="text-xs text-secondary"><%= t("settings.classifiers.evaluation.right_wrong") %></p>
+</div>

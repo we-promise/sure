@@ -34,8 +34,24 @@ class Property < ApplicationRecord
     end
   end
 
+  SQFT_PER_SQM = 10.7639
+
   def area
     Measurement.new(area_value, area_unit) if area_value.present?
+  end
+
+  # Living area in whole square feet, the unit US valuation providers take;
+  # nil when no usable (positive) area is stored.
+  def area_in_sqft
+    return nil unless area_value.to_i.positive?
+
+    area_unit.to_s.strip.downcase == "sqm" ? (area_value * SQFT_PER_SQM).round : area_value
+  end
+
+  # Whether the user has set the living area, rather than it being the figure
+  # an AVM provider returned when the property was created.
+  def user_set_area?
+    locked?(:area_value) || locked?(:area_unit)
   end
 
   def purchase_price
@@ -44,6 +60,36 @@ class Property < ApplicationRecord
 
   def trend
     Trend.new(current: account.balance_money, previous: first_valuation_amount)
+  end
+
+  # Whether the overview should also show the trend in the family currency:
+  # the property is valued in another currency and has a purchase value.
+  def family_currency_trend_applicable?
+    account.currency != account.family.currency && first_valuation_entry.present?
+  end
+
+  # The trend measured in the family currency, so a currency move that hides
+  # or invents a gain shows up. The purchase value is converted at the rate on
+  # its own date and the current value at today's rate.
+  #
+  # Only stored exchange rates are used (no provider call while rendering),
+  # picked as ExchangeRate.find_stored_rate does: the latest on or before the
+  # date, else the earliest after it. Never 1:1; nil when no rate is stored.
+  def family_currency_trend
+    return nil unless family_currency_trend_applicable?
+
+    purchase = first_valuation_entry
+    family_currency = account.family.currency
+    previous = convert_with_stored_rate(purchase.amount_money, family_currency, purchase.date)
+    current = convert_with_stored_rate(account.balance_money, family_currency, Date.current)
+    return nil if previous.nil? || current.nil?
+
+    Trend.new(current: current, previous: previous)
+  end
+
+  def reload(*)
+    remove_instance_variable(:@first_valuation_entry) if defined?(@first_valuation_entry)
+    super
   end
 
   def balance_display_name
@@ -122,7 +168,24 @@ class Property < ApplicationRecord
   end
 
   private
+    # Read up to three times per overview render (the card check, the trend
+    # and its purchase value), so it is looked up once.
+    def first_valuation_entry
+      return @first_valuation_entry if defined?(@first_valuation_entry)
+
+      @first_valuation_entry = account.entries.valuations.order(:date).first
+    end
+
     def first_valuation_amount
-      account.entries.valuations.order(:date).first&.amount_money || account.balance_money
+      first_valuation_entry&.amount_money || account.balance_money
+    end
+
+    def convert_with_stored_rate(money, to_currency, date)
+      return money if money.currency.iso_code == to_currency
+
+      rate = ExchangeRate.find_stored_rate(from: money.currency.iso_code, to: to_currency, date: date)
+      return nil unless rate
+
+      money.exchange_to(to_currency, custom_rate: rate.rate)
     end
 end

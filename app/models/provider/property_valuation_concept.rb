@@ -57,6 +57,13 @@ module Provider::PropertyValuationConcept
       false
     end
 
+    # Whether lookups take the property's living area (passed as
+    # `square_footage:`) and value the property at that size instead of the
+    # provider's own record of it.
+    def accepts_square_footage?
+      false
+    end
+
     def required_address_fields
       %i[line1 locality region postal_code]
     end
@@ -79,8 +86,9 @@ module Provider::PropertyValuationConcept
     end
   end
 
-  # `external_id:` is only passed to providers that `requires_external_id?`.
-  def fetch_property_valuation(line1:, locality: nil, region: nil, postal_code: nil, external_id: nil)
+  # `external_id:` is only passed to providers that `requires_external_id?`,
+  # and `square_footage:` only to providers that `accepts_square_footage?`.
+  def fetch_property_valuation(line1:, locality: nil, region: nil, postal_code: nil, external_id: nil, square_footage: nil)
     raise NotImplementedError, "Subclasses must implement #fetch_property_valuation"
   end
 

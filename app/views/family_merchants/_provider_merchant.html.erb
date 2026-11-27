@@ -13,9 +13,7 @@
         </div>
       <% end %>
 
-      <p class="font-medium truncate">
-        <%= provider_merchant.name %>
-      </p>
+      <%= link_to provider_merchant.name, merchant_path(provider_merchant), class: "font-medium truncate hover:underline" %>
     </div>
   </td>
   <td class="py-3 px-4 text-sm text-secondary align-middle">

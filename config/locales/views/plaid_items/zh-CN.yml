@@ -1,11 +1,60 @@
 ---
 zh-CN:
   plaid_items:
+    auto_link_opener:
+      create_failed: 无法确认此连接是否已添加。在重试前，请刷新页面进行检查。
     create:
+      already_connected: 您已拥有此机构的连接，因此未添加此连接。
+      exchange_failed: 无法添加此连接。请重试，如果问题仍然存在，请查看服务器日志。
       success: 账户已成功关联，请等待账户同步完成。
+      token_expired: 此连接在添加前已过期。请重新连接该机构。
     destroy:
       success: 账户已计划删除。
+    duplicate_warning:
+      close: 关闭
+      confirm: 确认此连接
+      connected_by: 由 %{name} 连接
+      eu_no_add_accounts: Plaid 不支持向现有的 EU 连接添加账户。若要更改所连接的账户，请删除此连接并重新添加。
+      linked_on: 关联于 %{date}
+      manage_connection: 前往账户
+      mask: "****%{mask}"
+      no_accounts: 此连接尚未同步任何账户。
+      overlap:
+        all_connected:
+          one: 您尝试添加的账户已连接，因此再次添加只会产生重复项。
+          other: 您尝试添加的 %{count} 个账户均已连接，因此再次添加只会产生重复项。
+        different_login: 若要连接不同的 %{institution} 登录凭据，请再次选择“新增账户”，并通过 Plaid 使用该凭据登录。
+        more_accounts: 若要向此连接添加更多账户，请关闭此窗口并在 %{institution} 连接上选择“添加账户”。
+        others_connected:
+          one: Sure 已通过 %{name} 的连接关联了此账户，因此添加您的账户只会产生重复项。
+          other: Sure 已通过 %{name} 的连接关联了您尝试添加的账户，因此添加您的账户只会产生重复项。
+        others_connected_several:
+          one: Sure 已通过其他成员的连接关联了此账户，因此添加您的账户只会产生重复项。
+          other: Sure 已通过其他成员的连接关联了您尝试添加的账户，因此添加您的账户只会产生重复项。
+        none_connected: 您尝试添加的账户均未连接，因此这可能是另一个登录凭据。添加它仅会计为另一个 Plaid 连接。
+        some_connected:
+          connected:
+            one: 另一个账户已连接，因此添加此连接会产生重复项并计为另一个 Plaid 连接。
+            other: 另外 %{count} 个账户已连接，因此添加此连接会产生重复项并计为另一个 Plaid 连接。
+          unconnected:
+            one: "您尝试添加的 1 个账户尚未连接："
+            other: "您尝试添加的 %{count} 个账户尚未连接："
+        unknown:
+          one: 无法根据您现有的连接检查这些账户。如果它们是相同的账户，添加此连接会产生重复项并计为另一个 Plaid 连接。
+          other: 无法根据您现有的连接检查您尝试添加的账户。如果与现有账户重复，添加此连接会产生重复项并计为另一个 Plaid 连接。
+      title:
+        one: 您已拥有此机构的连接
+        other: 您已拥有此机构的 %{count} 个连接
+      title_all_connected: 您已创建过此连接
+      title_others_connected:
+        one: 此账户已连接
+        other: 您尝试添加的账户已连接
+      update_existing: 更新现有连接
+    errors:
+      link_token_generic: 暂时无法打开 Plaid。请重试；如果问题仍然存在，请查看服务器日志。
+      link_token_with_message: Plaid 无法打开连接：%{message}
     plaid_item:
+      add_accounts: 添加账户
       add_new: 新增连接
       confirm_accept: 确认删除
       confirm_body: 此操作将永久删除该组下的所有账户及相关数据。
@@ -13,25 +62,23 @@ zh-CN:
       connection_lost: 连接已断开
       connection_lost_description: 此连接已失效。您需要删除当前连接并重新添加才能继续同步数据。
       delete: 删除
+      deletion_in_progress: "（正在删除...）"
       error: 数据同步时发生错误
       no_accounts_description: 无法从该金融机构加载任何账户。
       no_accounts_title: 未找到账户
+      provider_name: Plaid
       requires_update: 重新连接
       status: 上次同步于 %{timestamp} 前
       status_never: 需要数据同步
       syncing: 同步中...
       update: 更新
-      deletion_in_progress: "（正在删除...）"
     select_existing_account:
       cancel: 取消
       description: 选择一个 Plaid 账户与您的现有账户关联
       link_account: 关联账户
-      title: 将 %{account_name} 关联到 Plaid
       no_available_accounts: 没有可关联的 Plaid 账户。请先连接新的 Plaid 账户。
-    errors:
-      link_token_generic: 暂时无法打开 Plaid。请重试；如果问题仍然存在，请查看服务器日志。
-      link_token_with_message: Plaid 无法打开连接：%{message}
+      title: 将 %{account_name} 关联到 Plaid
     link_existing_account:
-      invalid_account: 选择的 Plaid 账户无效。
       already_linked: 此 Plaid 账户已关联。
+      invalid_account: 选择的 Plaid 账户无效。
       success: 账户已成功关联到 Plaid。

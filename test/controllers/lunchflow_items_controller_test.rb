@@ -15,6 +15,27 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Renamed Lunch Flow", lunchflow_items(:one).reload.name
   end
 
+  test "update from the page saves the import start date" do
+    patch lunchflow_item_url(lunchflow_items(:one)),
+          params: { lunchflow_item: { sync_start_date: "2026-01-15" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "lunchflow-providers-panel"
+    assert_includes response.body, %(value="2026-01-15")
+    assert_equal Date.new(2026, 1, 15), lunchflow_items(:one).reload.sync_start_date.to_date
+  end
+
+  test "update from the page clears the import start date" do
+    lunchflow_items(:one).update!(sync_start_date: Date.new(2026, 1, 15))
+
+    patch lunchflow_item_url(lunchflow_items(:one)),
+          params: { lunchflow_item: { sync_start_date: "" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "lunchflow-providers-panel"
+    assert_nil lunchflow_items(:one).reload.sync_start_date
+  end
+
   test "invalid create from the page shows the error in the panel" do
     post lunchflow_items_url,
          params: { lunchflow_item: { name: "Second Lunch Flow", api_key: "" } },

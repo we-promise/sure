@@ -37,10 +37,7 @@ pl:
       delete_chat: Usuń czat
       edit_chat_title: Edytuj tytuł czatu
       start_new_chat: Rozpocznij nowy czat
-    demo_banner_message: "Używasz modelu LLM z kredytami udostępnionymi przez Cloudflare
-      Workers AI. Wyniki mogą się różnić, ponieważ kod aplikacji był głównie testowany
-      na `gpt-4.1`, ale Twoje tokeny nie są nigdzie dalej wykorzystywane do trenowania!
-      🤖"
+    demo_banner_message: "Darmowe tokeny LLM dzięki Vercel AI Gateway. Wyniki mogą się różnić, ponieważ często zmieniamy wagi modeli w celach testowych. Sprawdź dokumentację Vercel, aby dowiedzieć się, dokąd trafiają Twoje rozmowy! 🤖"
     demo_banner_title: Aktywny tryb demo
     destroy:
       notice: Czat został usunięty

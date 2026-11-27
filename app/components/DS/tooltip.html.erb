@@ -13,7 +13,7 @@
             class="inline-flex items-center cursor-default focus-ring rounded"
             aria-describedby="<%= tooltip_id %>"
             aria-label="<%= t("ds.tooltip.trigger_label", default: "More info") %>">
-      <%= helpers.icon icon_name, size: size, color: color %>
+      <%= trigger_content || helpers.icon(icon_name, size: size, color: color) %>
     </button>
   <% else %>
     <%# `as: :span` — used when the tooltip is rendered inside an
@@ -27,14 +27,26 @@
         wrapper should fill an icon-only link's hit target. %>
     <span class="inline-flex items-center"
           aria-describedby="<%= tooltip_id %>">
-      <%= helpers.icon icon_name, size: size, color: color %>
+      <%= trigger_content || helpers.icon(icon_name, size: size, color: color) %>
     </span>
   <% end %>
 
+  <%# `fixed` (with `strategy: "fixed"` in the controller) and `w-max` are both
+      load-bearing:
+
+      - `fixed` escapes ancestor `overflow: hidden`, which otherwise crops the
+        panel. The account page wraps the logo in such a row, and the default
+        `top` placement puts the panel outside its box. DS::Menu already uses
+        the fixed strategy for the same reason.
+      - `w-max` decouples the bubble from its trigger. An `absolute` panel's
+        shrink-to-fit width is bounded by its nearest *positioned* ancestor, so
+        on an icon-sized trigger the text collapsed to its longest word.
+
+      `max-w-[20rem]` on the content still wraps long copy. %>
   <div role="tooltip"
        id="<%= tooltip_id %>"
        data-DS--tooltip-target="tooltip"
-       class="<%= class_names("hidden absolute z-50", panel_classes) %>">
+       class="<%= class_names("hidden fixed z-50 w-max", panel_classes) %>">
     <%# `max-w-[20rem]` scales with the root font-size so AT users with
         a larger base font don't see the tooltip clipped. %>
     <div class="<%= content_classes %>">
