@@ -123,7 +123,8 @@ class GenerateInsightsJob < ApplicationJob
           # may quote figures from the old set, so it is rewritten, but the
           # signal itself did not change: read and dismissed state stay.
           existing.update!(title: generated.title, body: writer.write(generated), metadata: metadata,
-                           facts: facts, generated_at: Time.current)
+                           facts: facts, period_start: generated.period_start, period_end: generated.period_end,
+                           generated_at: Time.current)
           nil
         elsif existing.metadata != metadata
           # The numbers changed materially: refresh the prose and resurface the
@@ -148,6 +149,7 @@ class GenerateInsightsJob < ApplicationJob
           # numbers. Expiry was the system's doing, not the user's, so the
           # insight resurfaces, with the body filled from the current facts.
           existing.update!(title: generated.title, body: writer.write(generated), status: "active", facts: facts,
+                           period_start: generated.period_start, period_end: generated.period_end,
                            notification_version: existing.notification_version + 1, generated_at: Time.current, read_at: nil)
           existing
         else
@@ -163,7 +165,9 @@ class GenerateInsightsJob < ApplicationJob
           # current costs nothing — and a title naming a goal or a category
           # the user has since renamed is simply wrong on the page. Rename is
           # not a reason to resurface, so status and read state stay untouched.
-          existing.update!(title: generated.title, body: writer.write(generated), facts: facts, generated_at: Time.current)
+          existing.update!(title: generated.title, body: writer.write(generated), facts: facts,
+                           period_start: generated.period_start, period_end: generated.period_end,
+                           generated_at: Time.current)
           nil
         end
       rescue ActiveRecord::RecordNotUnique

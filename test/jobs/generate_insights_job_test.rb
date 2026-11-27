@@ -517,6 +517,76 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert insight.reload.expired?, "a hidden row whose condition cleared must not come back stale once access returns"
   end
 
+  test "a rolling insight's period follows the generator when its numbers do not change" do
+    stub_generated([ generated_insight(period_start: Date.new(2026, 7, 1), period_end: Date.new(2026, 7, 31)) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    insight.mark_read!
+    insight.acknowledge!
+    read_at = insight.read_at
+    acknowledged_at = insight.dismissed_at
+    notification_version = insight.notification_version
+
+    stub_generated([ generated_insight(period_start: Date.new(2026, 7, 2), period_end: Date.new(2026, 8, 1)) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert_equal [ Date.new(2026, 7, 2), Date.new(2026, 8, 1) ], [ insight.period_start, insight.period_end ]
+    assert insight.acknowledged?, "a moved period is not a material change"
+    assert_equal [ read_at, acknowledged_at, notification_version ],
+                 [ insight.read_at, insight.dismissed_at, insight.notification_version ]
+  end
+
+  test "an insight's period follows the generator when only the account scope changes" do
+    stub_generated([ generated_insight(period_start: Date.new(2026, 7, 1), period_end: Date.new(2026, 7, 31)) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    insight.mark_read!
+    read_at = insight.read_at
+    notification_version = insight.notification_version
+
+    stub_generated([ generated_insight(account_id: accounts(:connected).id,
+                                       period_start: Date.new(2026, 7, 2), period_end: Date.new(2026, 8, 1)) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert_equal [ Date.new(2026, 7, 2), Date.new(2026, 8, 1) ], [ insight.period_start, insight.period_end ]
+    assert insight.read?
+    assert_equal [ read_at, notification_version ], [ insight.read_at, insight.notification_version ]
+  end
+
+  test "an expired insight's period follows the generator when it resurfaces" do
+    stub_generated([ generated_insight(period_start: Date.new(2026, 7, 1), period_end: Date.new(2026, 7, 31)) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    stub_generated([], succeeded_types: [ "idle_cash" ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+    assert insight.reload.expired?
+
+    stub_generated([ generated_insight(period_start: Date.new(2026, 7, 2), period_end: Date.new(2026, 8, 1)) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert_equal [ Date.new(2026, 7, 2), Date.new(2026, 8, 1) ], [ insight.period_start, insight.period_end ]
+    assert insight.active?
+    assert_nil insight.read_at
+  end
+
+  test "a generator that stops reporting a period clears the stored one" do
+    stub_generated([ generated_insight(period_start: Date.new(2026, 7, 1), period_end: Date.new(2026, 7, 31)) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    assert_nil insight.period_start
+    assert_nil insight.period_end
+  end
+
   private
     def enable_preview_features(family)
       family.users.each { |user| set_preview_features(user, true) }
@@ -541,17 +611,18 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     # display_balance changes only the formatted facts, leaving metadata (the
     # material-change signal) untouched — mirrors a balance drifting slightly
     # between runs without crossing a bucket boundary.
-    def generated_insight(balance: 5000.0, display_balance: nil, priority: "low", title: "Idle cash in Test Checking")
+    def generated_insight(balance: 5000.0, display_balance: nil, priority: "low", title: "Idle cash in Test Checking",
+                          account_id: accounts(:depository).id, period_start: nil, period_end: nil)
       Insight::Generator::GeneratedInsight.new(
         insight_type: "idle_cash",
         priority: priority,
         title: title,
         template_key: "idle_cash",
         facts: { account: "Test Checking", balance: "$#{(display_balance || balance).to_i}", idle_days: 60 },
-        metadata: { account_id: accounts(:depository).id, balance: balance },
+        metadata: { account_id: account_id, balance: balance },
         currency: "USD",
-        period_start: nil,
-        period_end: nil,
+        period_start: period_start,
+        period_end: period_end,
         dedup_key: "idle_cash:test-account:2026-07"
       )
     end
