@@ -23,7 +23,7 @@
     <div class="grid grid-cols-1 @3xl:grid-cols-5 gap-6">
       <div class="@3xl:col-span-3 min-w-0">
         <h3 id="spending-treemap-title" class="text-sm font-medium text-secondary mb-2"><%= t("reports.spending_vs_normal.treemap_title") %></h3>
-        <div class="privacy-sensitive"
+        <div class="privacy-sensitive-chart"
              data-controller="spending-treemap"
              data-spending-treemap-tree-value="<%= tree.to_json %>"
              data-spending-treemap-labels-value="<%= {

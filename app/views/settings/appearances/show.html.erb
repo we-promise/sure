@@ -28,6 +28,30 @@
   </div>
 <% end %>
 
+<%= settings_section title: t(".privacy_title"), subtitle: t(".privacy_subtitle") do %>
+  <div>
+    <%= form_with url: settings_appearance_path, method: :patch,
+          class: "p-3",
+          data: { controller: "auto-submit-form privacy-mode-preference" } do |f| %>
+      <div class="flex items-center gap-4 justify-between">
+        <%# The visible text labels the switch (clicking it toggles too); the
+            title names it and the description describes it. %>
+        <label for="user_privacy_mode_blur_charts" class="text-sm space-y-1 cursor-pointer">
+          <span id="user_privacy_mode_blur_charts_title" class="block text-primary font-medium"><%= t(".privacy_blur_charts_title") %></span>
+          <span id="user_privacy_mode_blur_charts_description" class="block text-secondary"><%= t(".privacy_blur_charts_description") %></span>
+        </label>
+        <%= render DS::Toggle.new(
+              id: "user_privacy_mode_blur_charts",
+              name: "user[privacy_mode_blur_charts]",
+              checked: @user.privacy_mode_blur_charts?,
+              aria: { labelledby: "user_privacy_mode_blur_charts_title", describedby: "user_privacy_mode_blur_charts_description" },
+              data: { auto_submit_form_target: "auto", action: "change->privacy-mode-preference#apply" }
+        ) %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
 <%= settings_section title: t(".dashboard_title"), subtitle: t(".dashboard_subtitle") do %>
   <div>
     <%= styled_form_with model: @user, url: settings_appearance_path, method: :patch,

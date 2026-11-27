@@ -15,6 +15,7 @@ class Settings::AppearancesController < ApplicationController
       updated_prefs["show_split_grouped"] = params.dig(:user, :show_split_grouped) == "1" if params.dig(:user, :show_split_grouped)
       updated_prefs["dashboard_two_column"] = params.dig(:user, :dashboard_two_column) == "1" if params.dig(:user, :dashboard_two_column)
       updated_prefs["disable_modal_click_outside"] = params.dig(:user, :disable_modal_click_outside) == "1" if params.dig(:user, :disable_modal_click_outside)
+      updated_prefs["privacy_mode_blur_charts"] = params.dig(:user, :privacy_mode_blur_charts) == "1" if params.dig(:user, :privacy_mode_blur_charts)
       # "Always expand" account groups on the dashboard balance sheet. The form
       # posts one checkbox per accountable type; unchecked boxes are hidden
       # fields that submit an empty string, so when the checkboxes are in the

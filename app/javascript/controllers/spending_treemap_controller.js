@@ -132,15 +132,12 @@ export default class extends Controller {
       .attr("class", "group");
 
     // A group with one box would print its label twice.
+    const controller = this;
     groups
       .filter((d) => d.x1 - d.x0 > 48 && d.children.length > 1)
-      .append("text")
-      .attr("x", (d) => d.x0 + 4)
-      .attr("y", (d) => d.y0 + 14)
-      .attr("class", "text-primary fill-current text-xs font-medium")
-      .text((d) =>
-        this.#fit(`${d.data.name} ${d.data.total_label}`, d.x1 - d.x0 - 8, 7),
-      );
+      .each(function (d) {
+        controller.#drawGroupHeader(d3.select(this), d);
+      });
 
     const leaves = svg
       .selectAll("g.leaf")
@@ -186,7 +183,10 @@ export default class extends Controller {
       .append("text")
       .attr("x", (d) => d.x0 + 6)
       .attr("y", (d) => d.y0 + 30)
-      .attr("class", "text-xs text-primary fill-current pointer-events-none")
+      .attr(
+        "class",
+        "text-xs text-primary fill-current pointer-events-none privacy-sensitive",
+      )
       .text((d) => d.data.total_label);
   }
 
@@ -242,6 +242,43 @@ export default class extends Controller {
 
   #open(d) {
     if (d.data.href) window.Turbo.visit(d.data.href);
+  }
+
+  // Name and amount are separate texts, so Privacy Mode can blur the amount
+  // while the group stays identifiable. The amount is measured and the name
+  // gets the room it leaves; when the two do not fit inside the group
+  // together, the header shows the name alone.
+  #drawGroupHeader(group, d) {
+    const x = d.x0 + 4;
+    const y = d.y0 + 14;
+    const charWidth = 7;
+    const gap = 6;
+    const available = d.x1 - d.x0 - 8;
+    const headerClass = "text-primary fill-current text-xs font-medium";
+
+    const name = group
+      .append("text")
+      .attr("x", x)
+      .attr("y", y)
+      .attr("class", headerClass);
+    const amount = group
+      .append("text")
+      .attr("y", y)
+      .attr("class", `${headerClass} privacy-sensitive`)
+      .text(d.data.total_label);
+
+    const nameRoom = available - amount.node().getComputedTextLength() - gap;
+    if (nameRoom >= 2 * charWidth) {
+      name.text(this.#fit(d.data.name, nameRoom, charWidth));
+      const nameWidth = name.node().getComputedTextLength();
+      if (nameWidth <= nameRoom) {
+        amount.attr("x", x + nameWidth + gap);
+        return;
+      }
+    }
+
+    amount.remove();
+    name.text(this.#fit(d.data.name, available, charWidth));
   }
 
   // Truncate to roughly fit `width` pixels at `charWidth` px per character.

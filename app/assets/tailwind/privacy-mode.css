@@ -1,14 +1,28 @@
-/* Privacy Mode - blurs financial numbers when activated */
-html.privacy-mode .privacy-sensitive {
+/* Privacy Mode - blurs financial numbers when activated.
+   .privacy-sensitive marks an amount. .privacy-sensitive-chart marks a whole
+   chart; it blurs as one block unless the user chose, in Appearance settings,
+   to keep chart shapes visible (html.privacy-numbers-only), in which case only
+   the amounts inside it blur. */
+html.privacy-mode .privacy-sensitive,
+html.privacy-mode:not(.privacy-numbers-only) .privacy-sensitive-chart {
   filter: blur(8px);
   user-select: none;
   transition: filter 0.2s ease;
 }
 
-html.privacy-mode .privacy-sensitive:not(.privacy-sensitive-interactive) {
+/* Amounts inside SVG charts blur through the SVG filter the layout defines
+   (DS::PrivacyBlurFilter): WebKit does not reliably apply CSS filter
+   functions to SVG elements, an SVG filter it applies everywhere. */
+html.privacy-mode svg .privacy-sensitive {
+  filter: url("#privacy-mode-blur");
+}
+
+html.privacy-mode .privacy-sensitive:not(.privacy-sensitive-interactive),
+html.privacy-mode:not(.privacy-numbers-only) .privacy-sensitive-chart {
   pointer-events: none;
 }
 
-html:not(.privacy-mode) .privacy-sensitive {
+html:not(.privacy-mode) .privacy-sensitive,
+html:not(.privacy-mode) .privacy-sensitive-chart {
   transition: filter 0.2s ease;
 }

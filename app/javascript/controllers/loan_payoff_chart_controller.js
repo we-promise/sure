@@ -321,7 +321,9 @@ export default class extends Controller {
       .call(
         d3.axisLeft(y).ticks(4).tickFormat(d3.format("~s")).tickSizeOuter(0),
       )
-      .call(styleAxis);
+      .call(styleAxis)
+      // Balances: blurred on their own when Privacy Mode leaves chart shapes visible.
+      .call((g) => g.selectAll("text").classed("privacy-sensitive", true));
 
     // The shading draws under every line. The hatch lives in the same defs as
     // the clips, so its id is as unique as theirs.
