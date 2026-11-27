@@ -2,34 +2,46 @@
 http_interactions:
 - request:
     method: post
-    uri: <LLAMA_CPP_URL>/chat/completions
+    uri: "<LLAMA_CPP_URL>/chat/completions"
     body:
       encoding: UTF-8
-      string: '{"model":"qwen3.6-35b-a3b-mtp","messages":[{"role":"system","content":"You
-        are an assistant to a consumer personal finance app.  You will be provided
-        a list\nof the user''s transactions and a list of the user''s categories.  Your
-        job is to auto-categorize\neach transaction.\n\nClosely follow ALL the rules
-        below while auto-categorizing:\n\n- Return 1 result per transaction\n- Correlate
-        each transaction by ID (transaction_id)\n- Attempt to match the most specific
-        category possible (i.e. subcategory over parent category)\n- Any category
-        can be used for any transaction regardless of whether the transaction is income
-        or expense\n- If you don''t know the category, return \"null\"\n  - You should
-        always favor \"null\" over false positives\n  - Be slightly pessimistic.  Only
-        match a category if you''re 60%+ confident it is the correct one.\n- Each
-        transaction has varying metadata that can be used to determine the category\n  -
-        Note: \"hint\" comes from 3rd party aggregators and typically represents a
-        category name that\n    may or may not match any of the user-supplied categories\n"},{"role":"user","content":"Here
-        are the user''s available categories in JSON format:\n\n```json\n[{\"id\":\"11ddf4a8-779e-4834-8356-6ef4d767e7a8\",\"name\":\"Coffee
-        Shops\",\"is_subcategory\":false,\"parent_id\":null}]\n```\n\nUse the available
-        categories to auto-categorize the following transactions:\n\n```json\n[{\"id\":\"txn_1\",\"amount\":4.5,\"classification\":\"expense\",\"description\":\"STARBUCKS
-        1234 SEATTLE\",\"merchant\":null}]\n```\n"}],"stream":false,"max_completion_tokens":1024,"response_format":{"type":"json_schema","json_schema":{"name":"auto_categorize_personal_finance_transactions","schema":{"type":"object","properties":{"categorizations":{"type":"array","description":"An
+      string: '{"model":"qwen3.6-35b-a3b-mtp","messages":[{"role":"system","content":"Categorize
+        transactions into the given categories. Return JSON only. Do not explain your
+        reasoning.\n\nCRITICAL RULES:\n1. Match transaction_id exactly from input\n2.
+        Use EXACT category_name from the provided list, or \"null\" if unsure\n3.
+        Match expense transactions to expense categories only\n4. Match income transactions
+        to income categories only\n5. Return \"null\" if the description is generic/ambiguous
+        (e.g., \"POS DEBIT\", \"ACH WITHDRAWAL\", \"CHECK #1234\")\n6. Prefer MORE
+        SPECIFIC subcategories over general parent categories when available\n\nCATEGORY
+        HIERARCHY NOTES:\n- Use \"Restaurants\" for sit-down restaurants, \"Fast Food\"
+        for quick service chains\n- Use \"Coffee Shops\" for coffee places, \"Food
+        & Drink\" only when type is unclear\n- Use \"Shopping\" for general retail,
+        big-box stores, and online marketplaces\n- Use \"Groceries\" for dedicated
+        grocery stores ONLY\n- For income: use \"Salary\" for payroll/employer deposits,
+        \"Income\" for generic income sources\n\nOutput JSON format only (no markdown,
+        no explanation):\n{\"categorizations\": [{\"transaction_id\": \"...\", \"category_name\":
+        \"...\"}]}\n"},{"role":"user","content":"AVAILABLE CATEGORIES: Coffee Shops\n\nTRANSACTIONS
+        TO CATEGORIZE:\n- ID: txn_1, Amount: 4.5, Type: expense, Description: \"STARBUCKS
+        1234 SEATTLE\"\n\nCATEGORIZATION GUIDELINES:\n- Prefer specific subcategories
+        over general parent categories when confident\n- Food delivery services should
+        be categorized based on the underlying merchant type\n- Square payments (SQ
+        *) should be inferred from the merchant name after the prefix\n- Warehouse/club
+        stores should be categorized based on their primary purpose\n- Return \"null\"
+        for generic transactions (e.g., POS terminals, wire transfers, checks, ATM
+        withdrawals)\n\nIMPORTANT:\n- Use EXACT category names from the list above\n-
+        Return \"null\" (as a string) if you cannot confidently match a category\n-
+        Match expense transactions only to expense categories\n- Match income transactions
+        only to income categories\n- Do NOT include any explanation or reasoning -
+        only output JSON\n\nRespond with ONLY this JSON (no markdown code blocks,
+        no other text):\n{\"categorizations\": [{\"transaction_id\": \"...\", \"category_name\":
+        \"...\"}]}\n"}],"stream":true,"max_completion_tokens":1024,"response_format":{"type":"json_schema","json_schema":{"name":"auto_categorize_personal_finance_transactions","schema":{"type":"object","properties":{"categorizations":{"type":"array","description":"An
         array of auto-categorizations for each transaction","items":{"type":"object","properties":{"transaction_id":{"type":"string","description":"The
         internal ID of the original transaction","enum":["txn_1"]},"category_name":{"type":["string","null"],"description":"The
         matched category name of the transaction, or null if no match","enum":["Coffee
-        Shops","null",null]}},"required":["transaction_id","category_name"],"additionalProperties":false}}},"required":["categorizations"],"additionalProperties":false},"strict":true}}}'
+        Shops","null",null]}},"required":["transaction_id","category_name"],"additionalProperties":false}}},"required":["categorizations"],"additionalProperties":false},"strict":true}},"stream_options":{"include_usage":true}}'
     headers:
       User-Agent:
-      - Faraday v2.14.3
+      - Faraday v2.15.1
       Authorization:
       - Bearer <LLAMA_CPP_API_KEY>
       Content-Type:
@@ -45,20 +57,75 @@ http_interactions:
     headers:
       Access-Control-Allow-Origin:
       - ''
-      Content-Length:
-      - '799'
       Content-Type:
-      - application/json; charset=utf-8
+      - text/event-stream
       Server:
       - llama.cpp
       Via:
       - 1.1 Caddy
+      X-Accel-Buffering:
+      - 'no'
       Date:
-      - Fri, 06 Nov 2026 23:55:24 GMT
+      - Tue, 24 Nov 2026 10:36:34 GMT
+      Transfer-Encoding:
+      - chunked
     body:
       encoding: UTF-8
-      string: '{"choices":[{"finish_reason":"stop","index":0,"message":{"role":"assistant","content":"{\n  \"categorizations\":
-        [\n    {\n      \"transaction_id\": \"txn_1\",\n      \"category_name\": \"Coffee
-        Shops\"\n    }\n  ]\n}"}}],"created":1794009324,"model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion","usage":{"completion_tokens":42,"prompt_tokens":372,"total_tokens":414,"prompt_tokens_details":{"cached_tokens":0}},"id":"chatcmpl-lAbFhbtjGT9NaJUJ5bmQ5Cqjg062LRGr","timings":{"cache_n":0,"prompt_n":372,"prompt_ms":26799.509,"prompt_per_token_ms":72.04169086021506,"prompt_per_second":13.880851324552252,"predicted_n":42,"predicted_ms":3378.42,"predicted_per_token_ms":82.40048780487805,"predicted_per_second":12.135850486322008,"draft_n":21,"draft_n_accepted":20}}'
-  recorded_at: Fri, 06 Nov 2026 23:55:24 GMT
+      string: |+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"role":"assistant","content":null}}],"created":1795516594,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"{\""}}],"created":1795516594,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"c"}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"ategor"}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"izations"}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"\":"}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" [{\""}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"transaction"}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"_id"}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"\":"}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" \""}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"txn"}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"_"}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"1"}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"\","}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" \""}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"category"}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"_name"}}],"created":1795516595,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"\":"}}],"created":1795516596,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" \""}}],"created":1795516596,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"Coffee"}}],"created":1795516596,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" Shops"}}],"created":1795516596,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"\"}"}}],"created":1795516596,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"]}"}}],"created":1795516596,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[{"finish_reason":"stop","index":0,"delta":{}}],"created":1795516596,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk"}
+
+        data: {"choices":[],"created":1795516596,"id":"chatcmpl-qHyqaAyDwRnjZULfcRVGb6UMNqbPKczR","model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion.chunk","usage":{"completion_tokens":24,"prompt_tokens":511,"total_tokens":535,"prompt_tokens_details":{"cached_tokens":507}},"timings":{"cache_n":507,"prompt_n":4,"prompt_ms":141.517,"prompt_per_token_ms":35.37925,"prompt_per_second":28.265155423023383,"predicted_n":24,"predicted_ms":1617.641,"predicted_per_token_ms":70.33221739130435,"predicted_per_second":14.218235071934995,"draft_n":12,"draft_n_accepted":12}}
+
+        data: [DONE]
+
+  recorded_at: Tue, 24 Nov 2026 10:36:36 GMT
 recorded_with: VCR 6.3.1
+...

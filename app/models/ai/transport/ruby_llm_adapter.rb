@@ -7,6 +7,14 @@ module Ai::Transport::RubyLlmAdapter
   OPENROUTER_APP_URL = "https://sure.am".freeze
   RUBY_LLM_PATH = Gem.loaded_specs.fetch("ruby_llm").full_gem_path.freeze
   ARITY_ERROR = /wrong number of arguments|(?:missing|unknown) keywords?/
+  LOCAL_CONNECT_TIMEOUT = 10
+  # A generation on a local endpoint streams, though nothing reads the chunks: a server that's
+  # streaming stops work when an interrupt closes the connection (Ai::Gate), and RubyLLM still
+  # returns the whole message, usage included (it asks for usage whenever it streams). Each chunk
+  # resets the read timeout, so the call's budget is checked on each one instead: a generation
+  # still streaming when it runs out raises Timeout, which closes the connection, as a read
+  # timeout did before it streamed.
+  STREAMED = proc { |_chunk| Ai::CallContext.check_budget!(after: true) }
   # The assistant declares its tools strict in both OpenAI protocols (Assistant::Function#strict_mode?),
   # so the probe does too: a gateway that refuses strict tools fails the check, not the chat.
   STRICT_TOOL_OPTIONS = {
@@ -32,7 +40,11 @@ module Ai::Transport::RubyLlmAdapter
     # - max_retries 0: Sure retries itself (Ai::Transport::Base#attempt);
     # - the proxy and TLS settings from Ai::Transport::Http, for every provider;
     # - no upload of large files to a provider's Files API, where a statement would stay;
-    # - Sure's instrumenter, which every request passes (the attempt budget, each failed request's error);
+    # - Sure's instrumenter, which every request passes (a local host's gate, the attempt budget,
+    #   each failed request's error);
+    # - a connect timeout of at most LOCAL_CONNECT_TIMEOUT on a local endpoint: a request holds its
+    #   place at the gate while it connects, so a host that's off or firewalled mustn't hold it for
+    #   the whole request timeout (RubyLLM's connect_timeout is nil, the request timeout);
     # - split_think_tags: a Chat Completions model that opens with a think block sends its reasoning
     #   separately, so the content this parses is the answer (the other protocols split thinking themselves).
     def ruby_llm_context(timeout: endpoint.timeout_seconds)
@@ -45,7 +57,8 @@ module Ai::Transport::RubyLlmAdapter
         config.faraday_adapter = Ai::Transport::Http::ProxyNetHttp   # RubyLLM's config can't force a direct connection
         config.auto_upload_large_files = false
         config.split_think_tags = true
-        config.instrumenter = Ai::Transport::Instrumenter.new(config.instrumenter, map_error: method(:mapped_error), scrub: scrubber)
+        config.connect_timeout = [ timeout, LOCAL_CONNECT_TIMEOUT ].min if endpoint.local?
+        config.instrumenter = Ai::Transport::Instrumenter.new(config.instrumenter, map_error: method(:mapped_error), scrub: scrubber, endpoint:)
         configure_provider(config)
       end
     end
@@ -70,7 +83,7 @@ module Ai::Transport::RubyLlmAdapter
       chat.with_provider_options(options) if options.any?
       chat.add_message(role: :user, content: request.input, attachments: ruby_llm_attachments(request.attachments).presence)
 
-      message = mapping_errors { chat.generate }
+      message = mapping_errors { endpoint.local? ? chat.generate(&STREAMED) : chat.generate }
       [ message.content.to_s, Ai::Tokens.from_ruby_llm(message.tokens), message.finish_reason ]
     end
 
@@ -177,6 +190,7 @@ module Ai::Transport::RubyLlmAdapter
           # provider's own message is read: a diagnostic field elsewhere in the body can quote an
           # earlier "image input is not supported" and turn a retryable 503 into a refusal.
           Ai::Error.for_status((500..599).cover?(status) ? status : 500, error.message, body:)
+        when Ai::Gate::Interrupted then Ai::Error::Preempted   # a RubyLLM::CancelledError
         when RubyLLM::CancelledError then Ai::Error::Cancelled
         when RubyLLM::ModelNotFoundError then Ai::Error::ModelMissing   # not a RubyLLM::Error
         end

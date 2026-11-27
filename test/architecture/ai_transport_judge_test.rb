@@ -105,6 +105,44 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
     assert_not_includes seen.map(&:last), Thread.current
   end
 
+  test "a background batch to a local server waits for its place once it has begun, so its answers aren't lost" do
+    local = local_jev
+    gate = Ai::Sequencer.gate_for(local)
+    released = Queue.new
+    chat = nil
+    stub_local_jev do |nth|
+      next unless nth == 1
+
+      chat = Thread.new { gate.hold(:interactive) { released.pop(timeout: 5) } }
+      sleep 0.01 until gate.waiters.any?
+    end
+    batch = Thread.new { Ai::Sequencer.with_lane(:background) { judge_local(local, 3) } }
+    batch.report_on_exception = false
+    sleep 0.01 until !batch.alive? || (chat && gate.holders.any?(&:interactive?) && gate.waiters.any?)
+
+    released << true
+
+    assert_equal 3, batch.value.answers.size
+    assert_requested :post, "http://jev.local:8090/v1/systemone", times: 3
+  ensure
+    released << true
+    chat&.join(2)
+  end
+
+  test "a background batch that finds a local server busy before it begins raises Busy" do
+    local = local_jev
+    stub_local_jev
+    released = Queue.new
+    chat = Thread.new { Ai::Sequencer.gate_for(local).hold(:interactive) { released.pop(timeout: 5) } }
+    sleep 0.01 until Ai::Sequencer.gate_for(local).holders.any?
+
+    assert_raises(Ai::Error::Busy) { Ai::Sequencer.with_lane(:background) { judge_local(local, 3) } }
+    assert_not_requested :post, "http://jev.local:8090/v1/systemone"
+  ensure
+    released << true
+    chat.join(2)
+  end
+
   test "an endpoint can't be built with fewer than one request in flight" do
     error = assert_raises(ArgumentError) { jev_endpoint(parallel_requests: 0) }
     assert_match "parallel_requests must be at least 1", error.message
@@ -154,6 +192,24 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
   end
 
   private
+    def local_jev = jev_endpoint(preset: :jev_local, base_url: "http://jev.local:8090", location: :local)
+
+    # Answers every request to the local server, after the block has had its turn (1, 2, …).
+    def stub_local_jev
+      sent = Concurrent::AtomicFixnum.new
+      stub_request(:post, "http://jev.local:8090/v1/systemone").to_return(lambda do |_request|
+        nth = sent.increment
+        yield nth if block_given?
+        { status: 200, headers: JSON_HEADERS, body: answer("Salary", 0.8).to_json }
+      end)
+    end
+
+    def judge_local(endpoint, count)
+      request = Ai::Transport::Base::JudgeRequest.new(feature: :categorize, family: nil, model: ai_model(name: "jev-dev", endpoint:, capabilities: %i[judge]),
+                                                      states: (1..count).to_h { [ "txn_#{_1}", { description: "row #{_1}" } ] }, questions: QUESTIONS)
+      Ai::Transport::Jev.new(endpoint).judge(request)
+    end
+
     def jev_endpoint(**attributes)
       ai_endpoint(name: "jev", protocol: :jev, preset: :jev, base_url: "https://api.typesafe.ai", **attributes)
     end

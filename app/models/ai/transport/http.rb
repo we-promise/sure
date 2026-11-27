@@ -158,10 +158,18 @@ module Ai::Transport::Http
   #
   # It also drops the Authorization header RubyLLM builds from NO_KEY, the stand-in for an endpoint
   # without a key, since RubyLLM requires one: a server that checks the header rejects a fake one.
+  #
+  # A request holding a place at a local host's gate reports its connection to the gate, so an
+  # interactive request can interrupt it (Ai::Gate). Whatever the interrupted request then raises
+  # becomes Ai::Gate::Interrupted.
   class ProxyNetHttp < Faraday::Adapter::NetHttp
     def call(env)
       env.request_headers.delete("Authorization") if env.request_headers["Authorization"] == "Bearer #{NO_KEY}"
       super
+    rescue StandardError
+      raise unless Ai::Gate.holder&.preempted?
+
+      raise Ai::Gate::Interrupted, "an interactive request needed the model host"
     end
 
     def build_connection(env)
@@ -169,5 +177,7 @@ module Ai::Transport::Http
       env[:request][:proxy] = proxy && Faraday::ProxyOptions.from(proxy)
       super
     end
+
+    def net_http_connection(env) = Ai::Gate.watch(super)
   end
 end

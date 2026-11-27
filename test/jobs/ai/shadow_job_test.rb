@@ -88,6 +88,23 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
     assert_equal 0, Ai::Comparison.count
   end
 
+  test "a shadow that finds its model host busy is skipped, not tried again" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+    stub_ai do |request|
+      raise Ai::Error::Busy, "full" if request.is_a?(Ai::Transport::Base::JudgeRequest)
+
+      { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] }
+    end
+    categorize([ txn.id ])
+
+    perform_enqueued_jobs(only: Ai::ShadowJob)
+
+    assert_no_enqueued_jobs only: Ai::ShadowJob
+    assert_equal 0, Ai::Comparison.count
+  end
+
   test "the shadow's usage rows are its own, tagged shadow" do
     @family.update!(categorization_shadow_rate: 1.0)
     txn = create_transaction(account: @account, name: "Coffee shop").transaction

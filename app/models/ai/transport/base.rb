@@ -229,6 +229,9 @@ class Ai::Transport::Base
     # Sure retries, not RubyLLM: RubyLLM has no hook before a retry, so only here can a spent
     # balance (OpenAI's 429 insufficient_quota) stop retrying and the attempt budget, wait
     # included, be checked between tries.
+    #
+    # A request an interactive one interrupted (Ai::Gate) is sent again once the gate lets it back
+    # in. It isn't a try, and the instrumenter has already given back the time it ran.
     def attempt
       tries = 0
       begin
@@ -237,6 +240,9 @@ class Ai::Transport::Base
         result = yield
         Ai::CallContext.check_budget!(after: true)
         result
+      rescue Ai::Error::Preempted
+        tries -= 1
+        retry
       rescue *Ai::Error::RETRYABLE => error
         delay = retry_delay(tries)
         remaining = Ai::CallContext.current&.remaining

@@ -48,7 +48,7 @@ class AiLaneTest < ActiveSupport::TestCase
     end
 
     assert_equal({ "ai_interactive" => :interactive, "ai_prompt" => :prompt, "ai_background" => :background,
-                   "ai_high_priority" => :interactive, "ai_low_priority" => :background, "default" => nil }, lanes)
+                   "ai_high_priority" => :interactive, "ai_low_priority" => :prompt, "default" => nil }, lanes)
   end
 
   test "a call outside any lane counts as interactive, and with_lane nests" do

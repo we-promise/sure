@@ -36,6 +36,29 @@ class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
     assert_equal({ text: "echo [REDACTED]" }, log.find { _1.first == :end }.last[:output])
   end
 
+  test "a background call that found its model host busy is neither logged as a failure nor traced" do
+    local = ai_endpoint(base_url: "http://gpu.local:8080/v1", location: :local)
+    occupied, release = Queue.new, Queue.new
+    holder = Thread.new { Ai::Sequencer.gate_for(local).hold(:interactive) { occupied << true; release.pop } }
+    occupied.pop(timeout: 2)
+    request = Ai::Transport::Base::EmbedRequest.new(feature: :embed, family: nil, model: ai_model(endpoint: local, capabilities: %i[embedding]), texts: [ "a" ])
+    log = []
+    langfuse = Ai::Instrumentation::LangfuseSubscriber.new(client: FakeLangfuse.new(log))
+
+    events = capture_ai_events do
+      assert_no_difference "DebugLogEntry.count" do
+        assert_raises(Ai::Error::Busy) { Ai::Sequencer.with_lane(:background) { Ai::Transport.for(local).embed(request) } }
+      end
+    end
+    events.each { langfuse.call(_1) }
+
+    assert_equal [ "Ai::Error::Busy" ], events.map { _1.payload[:error] }
+    assert_empty log
+  ensure
+    release&.push(true)
+    holder&.join(2)
+  end
+
   test "a secret that contains another of the endpoint's secrets is masked whole" do
     scrubbed = Ai::Instrumentation::Redactor.scrub("tenant tenant-opaque-123-region-eu",
                                                    secrets: [ "tenant-opaque-123", "tenant-opaque-123-region-eu" ])

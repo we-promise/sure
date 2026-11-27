@@ -14,6 +14,10 @@
 # the first). A step whose job the queue refused, lost, or that died before committing is queued
 # again from there by Ai::GenerationDeliveryJob.
 #
+# A local model host too busy for a background step (Ai::Error::Busy) isn't a failure: the job
+# runs again in a few seconds (ApplicationJob), with no retry or delivery counted. The step stays
+# in next_job, and the run was touched as the job loaded it, so delivery doesn't step in.
+#
 # On a failure, the transport has already retried 429s and 5xxs and the generation
 # has failed over and escalated; what's left is retried later when it may pass, and discarded
 # when it can't. Any other error ends the run. Either way the requester hears once, so a RuleRun
@@ -68,7 +72,7 @@ class Ai::GenerationJob < ApplicationJob
     end
   rescue StepTaken
     Rails.logger.info("[Ai::GenerationJob] #{feature} step #{@step} was committed by another copy; stopping")
-  rescue *RETRIED, *DISCARDED, ActiveRecord::Deadlocked
+  rescue *RETRIED, *DISCARDED, ActiveRecord::Deadlocked, Ai::Error::Busy
     raise
   rescue StandardError => error
     # Anything else (a database error while applying, a bug) ends the run here: reported, and the

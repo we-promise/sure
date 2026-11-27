@@ -157,9 +157,13 @@ class Ai::Generation
     @logged_ids = Set.new
     @skipped = []
     @skipped_in_slice = Set.new
-    result = batch_key ? call_batched(routes, batches:, cancelled:, answered_before:) : call_single(routes, cancelled:)
+    result = Ai::Sequencer.cancellable(cancelled) do
+      batch_key ? call_batched(routes, batches:, cancelled:, answered_before:) : call_single(routes, cancelled:)
+    end
     Ai::Shadow.enqueue(self, result) if shadow && !shadow_run?
     result
+  rescue Ai::Error::Busy
+    raise   # not a failure: the job runs again later (ApplicationJob)
   rescue Ai::Error::Base => error
     Ai::Result.failure(error)
   end

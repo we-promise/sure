@@ -57,6 +57,16 @@ module Ai::CallContext
 
   def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
+  # Moves the current call's deadline `seconds` later, for time the call didn't spend on its own
+  # requests: waiting at a local host's gate, or a request an interactive one interrupted
+  # (Ai::Gate). Only in this fiber, like the call itself.
+  def extend_deadline(seconds)
+    call = current
+    return unless call&.deadline && seconds.positive?
+
+    Fiber[CALL_KEY] = call.with(deadline: call.deadline + seconds)
+  end
+
   # Raises Timeout when the current attempt's budget is spent: before a request is sent, or once
   # its answer arrives (`after:`), so a late answer isn't taken as a pass.
   def check_budget!(after: false)

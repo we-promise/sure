@@ -34,8 +34,10 @@ module Ai::Routes
   QUEUES = { interactive: "ai_interactive", prompt: "ai_prompt", background: "ai_background" }.freeze
 
   # The queues before lanes, which the `ai` capsule drains for one release, and the lane their jobs
-  # now run in. Remove a release after the lanes ship.
-  LEGACY_QUEUES = { "ai_high_priority" => :interactive, "ai_low_priority" => :background }.freeze
+  # now run in. ai_low_priority held prompt work too (PDF imports, indexing), which mustn't meet
+  # the background lane's Busy mid-import, so its jobs wait in the prompt lane. Remove a release
+  # after the lanes ship.
+  LEGACY_QUEUES = { "ai_high_priority" => :interactive, "ai_low_priority" => :prompt }.freeze
 
   module_function
 

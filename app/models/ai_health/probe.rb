@@ -257,6 +257,8 @@ class AiHealth
       def perform(component:, provider_key:, endpoint:, model:)
         yield
         Result.new(status: :passing, checked_at: Time.current, failure_code: nil, http_status: nil)
+      rescue Ai::Error::Busy
+        raise   # not a failing check: Ai::ProbeJob runs again once the host is free (ApplicationJob)
       rescue StandardError => error
         result = Result.new(
           status: :failing,
