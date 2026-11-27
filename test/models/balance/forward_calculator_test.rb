@@ -1022,6 +1022,73 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), row.non_cash_outflows
   end
 
+  test "an incremental sync of a replayed loan matches the full sync once the loan is paid off" do
+    account = create_loan_account(
+      initial_balance: 12_000,
+      term_months: 12,
+      entries: [
+        { type: "opening_anchor", date: Date.new(2026, 1, 1), balance: 12_000 },
+        { type: "transaction", date: Date.new(2026, 2, 1), amount: -12_120 },
+        { type: "transaction", date: Date.new(2026, 2, 2), amount: -100 }
+      ]
+    )
+    enable_preview_features_for_family!(account.family)
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    full = Balance::ForwardCalculator.new(account).calculate.find { |balance| balance.date == Date.new(2026, 2, 2) }
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: Date.new(2026, 2, 2))
+    incremental = calculator.calculate.find { |balance| balance.date == Date.new(2026, 2, 2) }
+
+    assert_equal BigDecimal("-100"), full.balance, "the extra payment is a credit once January's interest is paid"
+    assert_equal full.balance, incremental.balance, "the replay needs the payments before the window"
+    assert_not calculator.incremental?, "a replayed loan recalculates in full"
+  end
+
+  test "a replayable loan recalculates in full even once the preview is off" do
+    account = create_loan_account(
+      initial_balance: 12_000,
+      term_months: 12,
+      entries: [
+        { type: "opening_anchor", date: Date.new(2026, 1, 1), balance: 12_000 },
+        { type: "transaction", date: Date.new(2026, 2, 1), amount: -12_120 },
+        { type: "transaction", date: Date.new(2026, 2, 2), amount: -100 }
+      ]
+    )
+    enable_preview_features_for_family!(account.family)
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    account.family.users.update_all(preferences: {})
+    account.reload
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: Date.new(2026, 2, 2))
+    incremental = calculator.calculate.find { |balance| balance.date == Date.new(2026, 2, 2) }
+    full = Balance::ForwardCalculator.new(account).calculate.find { |balance| balance.date == Date.new(2026, 2, 2) }
+
+    assert_not account.family.preview_features_enabled?
+    assert_not calculator.incremental?, "the persisted prior day was replayed, so the window must not be read on its own"
+    assert_equal full.balance, incremental.balance
+  end
+
+  test "an incremental sync of a loan the replay does not walk stays incremental" do
+    account = create_loan_account(
+      initial_balance: 12_000,
+      term_months: 12,
+      start_date: Date.new(2025, 1, 1),
+      entries: [
+        { type: "opening_anchor", date: Date.new(2026, 1, 1), balance: 12_000 },
+        { type: "transaction", date: Date.new(2026, 2, 1), amount: -12_000 },
+        { type: "transaction", date: Date.new(2026, 2, 2), amount: -100 }
+      ]
+    )
+    enable_preview_features_for_family!(account.family)
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: Date.new(2026, 2, 2))
+    calculator.calculate
+
+    assert_not Loan::PrincipalPayments.applies_to?(account.loan), "its anchor is not its origination"
+    assert calculator.incremental?, "a loan the replay does not walk keeps the window"
+  end
+
   test "a loan payment is all principal when preview is off" do
     account = create_loan_account(
       initial_balance: 12_000,
