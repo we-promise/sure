@@ -114,7 +114,10 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
     end
 
     def historical_data(period, interval, classification: nil)
-      scope = user.accessible_accounts.visible
+      # Match the accounts behind `current`: the member's finances that are not
+      # excluded from reports. A shared account they leave out is absent from
+      # `current`, so it must not reappear in every history point.
+      scope = user.finance_accounts.visible.included_in_reports
       scope = scope.where(classification: classification) if classification.present?
 
       if period.start_date == Date.current

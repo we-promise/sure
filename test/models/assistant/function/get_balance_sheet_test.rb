@@ -48,4 +48,56 @@ class Assistant::Function::GetBalanceSheetTest < ActiveSupport::TestCase
 
     assert_equal "too_many_points", result[:error]
   end
+
+  test "history leaves out a shared account the member excludes from finances" do
+    account_shares(:depository_shared_with_member).update!(include_in_finances: false)
+
+    ids = captured_history_account_ids(users(:family_member))
+
+    assert_equal [ accounts(:credit_card).id ], ids[:net_worth]
+    assert_empty ids[:assets]
+    assert_equal [ accounts(:credit_card).id ], ids[:liabilities]
+  end
+
+  test "history keeps a shared account the member leaves in their finances" do
+    ids = captured_history_account_ids(users(:family_member))
+
+    assert_equal [ accounts(:credit_card).id, accounts(:depository).id ].sort, ids[:net_worth]
+    assert_equal [ accounts(:depository).id ], ids[:assets]
+    assert_equal [ accounts(:credit_card).id ], ids[:liabilities]
+  end
+
+  test "history leaves out an account excluded from reports" do
+    accounts(:credit_card).update!(exclude_from_reports: true)
+
+    ids = captured_history_account_ids(users(:family_member))
+
+    assert_equal [ accounts(:depository).id ], ids[:net_worth]
+    assert_equal [ accounts(:depository).id ], ids[:assets]
+    assert_empty ids[:liabilities]
+  end
+
+  test "history leaves out a disabled account, like the current totals" do
+    accounts(:depository).update!(status: "disabled")
+
+    ids = captured_history_account_ids(users(:family_member))
+
+    assert_equal [ accounts(:credit_card).id ], ids[:net_worth]
+    assert_empty ids[:assets]
+    assert_equal [ accounts(:credit_card).id ], ids[:liabilities]
+  end
+
+  private
+    def captured_history_account_ids(user)
+      calls = []
+      series = stub(start_date: 30.days.ago.to_date, end_date: Date.current, interval: "1 day", values: [])
+
+      Balance::ChartSeriesBuilder.stubs(:new).with { |kwargs| calls << kwargs[:account_ids].sort; true }
+        .returns(stub(balance_series: series))
+
+      Assistant::Function::GetBalanceSheet.new(user).call("period" => "last_30_days", "interval" => "1 day")
+
+      assert_equal 3, calls.size, "expected one history series each for net worth, assets and liabilities"
+      { net_worth: calls[0], assets: calls[1], liabilities: calls[2] }
+    end
 end
