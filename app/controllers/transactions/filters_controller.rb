@@ -15,7 +15,7 @@ class Transactions::FiltersController < ApplicationController
                 :amount_operator, :active_accounts_only,
                 accounts: [], account_ids: [],
                 categories: [], merchants: [], types: [], tags: [], status: [], ai_status: [],
-                attachment_status: []
+                attachment_status: [], reconcile_status: []
               )
               .to_h
               .compact_blank
