@@ -1,0 +1,7 @@
+id:
+  simplefin_items:
+    update:
+      success: "Koneksi SimpleFIN diperbarui."
+      errors:
+        blank_token: "Token akses SimpleFIN tidak ada. Silakan berikan token atau gunakan Tautkan Rekening yang Ada untuk melanjutkan."
+        update_failed: "Gagal memperbarui koneksi SimpleFIN: %{message}"

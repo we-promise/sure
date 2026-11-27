@@ -34,7 +34,11 @@ class AccountStatement < ApplicationRecord
   belongs_to :account, optional: true
   belongs_to :suggested_account, class_name: "Account", optional: true
 
-  has_many :pdf_imports, -> { where(type: "PdfImport").ordered }, class_name: "PdfImport", dependent: :restrict_with_error
+  # An import is as private as its statement, so a statement stays while any
+  # import carries it. The foreign key refuses the DELETE too, for an import
+  # committed after this check.
+  has_many :imports, dependent: :restrict_with_error
+  has_many :pdf_imports, -> { where(type: "PdfImport").ordered }, class_name: "PdfImport"
   has_one_attached :original_file, dependent: :purge_later
 
   enum :source, { manual_upload: "manual_upload" }, validate: true, default: "manual_upload"
@@ -79,6 +83,13 @@ class AccountStatement < ApplicationRecord
     )
   }
   scope :with_account, -> { where.not(account_id: nil) }
+  # viewable_by? in SQL, so lists filter before they paginate: a linked
+  # statement follows its account, an unlinked one is for statement managers.
+  scope :viewable_by, ->(user) {
+    family_statements = where(family_id: user.family_id)
+    linked = family_statements.where(account_id: user.accessible_accounts.select(:id))
+    statement_manager?(user) ? linked.or(family_statements.where(account_id: nil)) : linked
+  }
   scope :unmatched, -> { where(account_id: nil).where(review_status: "unmatched") }
   # Rejecting a suggestion leaves the statement accountless, so it stays in the inbox where it can be found and deleted.
   scope :inbox, -> { where(account_id: nil).where(review_status: %w[unmatched rejected]) }
