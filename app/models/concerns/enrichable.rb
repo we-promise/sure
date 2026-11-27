@@ -75,10 +75,9 @@ module Enrichable
           self[attr_key.to_s]
         end
 
-        # Normalize arrays for comparison (sort them)
         if current_value.is_a?(Array) && attr_value.is_a?(Array)
           current_values[attr_key] = current_value
-          current_value.sort == attr_value.sort
+          same_enrichable_array?(attr_key, current_value, attr_value)
         else
           current_values[attr_key] = current_value
           current_value == attr_value
@@ -131,7 +130,7 @@ module Enrichable
 
           old_value = current_values[attr]
           if old_value.is_a?(Array) && new_value.is_a?(Array) && current_value.is_a?(Array)
-            was_modified = true if old_value.sort != current_value.sort
+            was_modified = true unless same_enrichable_array?(attr, old_value, current_value)
           elsif old_value != current_value
             was_modified = true
           end
@@ -191,7 +190,9 @@ module Enrichable
       attrs_to_unlock = ai_enrichments.select do |enrichment|
         attr_name = enrichment.attribute_name
         current_value = respond_to?(attr_name) ? send(attr_name) : self[attr_name]
-        current_value.to_s == enrichment.value.to_s && enrichment.metadata&.dig("superseded") != true
+        set = current_value.is_a?(Array) && enrichment.value.is_a?(Array) && enrichable_set(attr_name, current_value)
+        same_value = set ? set == enrichable_set(attr_name, enrichment.value) : current_value.to_s == enrichment.value.to_s
+        same_value && enrichment.metadata&.dig("superseded") != true
       end.map(&:attribute_name).uniq
 
       # Batch unlock in a single update
@@ -245,5 +246,20 @@ module Enrichable
 
     def ignored_enrichable_attributes
       %w[id updated_at created_at]
+    end
+
+    # Whether two values of an array attribute hold the same: as sets where
+    # the model stores the attribute as one (enrichable_set), otherwise in any
+    # order.
+    def same_enrichable_array?(attr, a, b)
+      set = enrichable_set(attr, a)
+      set ? set == enrichable_set(attr, b) : a.sort == b.sort
+    end
+
+    # A model whose setter stores an array attribute as a set (tag_ids=)
+    # overrides this to return the values as that set, comparable with ==;
+    # nil means the attribute is not one.
+    def enrichable_set(_attr, _values)
+      nil
     end
 end
