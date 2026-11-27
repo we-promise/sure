@@ -182,6 +182,14 @@ class Security < ApplicationRecord
   def set_tags_for(family, tag_ids)
     # `with_lock` reloads the row, which an unsaved security does not have.
     raise ArgumentError, "save the security before tagging it" unless persisted?
+    # An omitted selection leaves the tags alone; an empty list clears them.
+    return if tag_ids.nil?
+    # Tag ids are uuids: anything that does not cast to one would match no
+    # tag and clear the family's tags, as an empty list does.
+    id_type = Tag.type_for_attribute(:id)
+    unless tag_ids.is_a?(Array) && tag_ids.all? { |id| id.is_a?(String) && (id.blank? || id_type.cast(id)) }
+      raise ArgumentError, "tag_ids must be a list of tag ids"
+    end
 
     mine = family.tags.select(:id)
 
@@ -194,11 +202,15 @@ class Security < ApplicationRecord
       # cover the tags, so without it a tag deleted between this read and the
       # insert below would fail the insert. A concurrent delete of a wanted
       # tag now waits for this write to commit.
-      wanted = family.tags.where(id: Array(tag_ids).reject(&:blank?)).lock("FOR SHARE").pluck(:id)
+      wanted = family.tags.where(id: tag_ids.reject(&:blank?)).lock("FOR SHARE").pluck(:id)
 
       taggings.where(tag_id: mine).where.not(tag_id: wanted).destroy_all
-      already = taggings.where(tag_id: wanted).pluck(:tag_id)
-      (wanted - already).each { |id| taggings.create!(tag_id: id) }
+      missing = wanted - taggings.where(tag_id: wanted).pluck(:tag_id)
+      if missing.any?
+        # The tag ids came from family.tags above, so no per-row validation is needed.
+        Tagging.insert_all!(missing.map { |id| { tag_id: id, taggable_type: "Security", taggable_id: self.id } })
+      end
+      taggings.reset
     end
   end
 
