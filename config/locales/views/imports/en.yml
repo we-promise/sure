@@ -647,7 +647,10 @@ en:
           needs_documents: The AI model set up here can't read a PDF file itself. Read it as text or images instead.
           needs_vision: The AI model set up here can't read page images. Read it as text instead.
           needs_ocr_route: No OCR model is set up on this instance.
-          too_large: This PDF is over what the AI provider accepts as one file. Read it as text or images instead.
+          too_large: This PDF is over what the AI provider accepts as one file. Split it into smaller files, or read it as text or images instead.
+          page_too_large: A page in this PDF is too large to read as an image. Save the PDF with a smaller page size and upload it again.
+          missing_binary: "This server can't turn PDF pages into images: pdftoppm (poppler-utils) isn't installed. Ask your administrator to install it."
+          render_failed: This server couldn't turn the PDF's pages into images. Try again, or ask your administrator to check the logs.
           unreadable: This file couldn't be opened as a PDF.
       read_as:
         label: Read PDFs as

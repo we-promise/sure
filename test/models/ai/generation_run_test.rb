@@ -77,6 +77,18 @@ class Ai::GenerationRunTest < ActiveSupport::TestCase
     assert Ai::GenerationRun.enqueue(:categorize, family: @family, ids: @ids)
 
     assert_equal 2, Ai::GenerationRun.where.not(next_job: nil).count
+    logged = DebugLogEntry.find_by!(category: "ai", level: "error", family: @family)
+    assert_equal [ "categorize", "Redis::CannotConnectError", "queue down" ], logged.metadata.values_at("feature", "error_class", "error_message")
+  end
+
+  test "a delivery is logged with when the run went idle, not when it was claimed" do
+    run = start(@ids)
+    run.update_columns(next_job: { args: { run_id: run.id, family_id: @family.id } }, updated_at: 2.hours.ago)
+    Ai::GenerationJob.stubs(:perform_later).returns(true)
+
+    Ai::GenerationRun.undelivered.sole.redeliver
+
+    assert_in_delta 2.hours.ago, Time.zone.parse(DebugLogEntry.find_by!(category: "ai", level: "warn").metadata["idle_since"]), 60
   end
 
   test "a run whose transaction rolls back leaves nothing to queue" do
