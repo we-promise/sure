@@ -65,7 +65,7 @@ class Holding < ApplicationRecord
   # basis cannot be determined (no trades and no provider cost_basis).
   def avg_cost
     # Use stored cost_basis if available (eliminates N+1 queries)
-    return Money.new(known_cost_basis, currency) if known_cost_basis
+    return stored_avg_cost if known_cost_basis
 
     # A caller that has many holdings can compute the fallback for all of
     # them in one query and hand each its answer (.preload_avg_costs), so a
@@ -76,7 +76,30 @@ class Holding < ApplicationRecord
     return @preloaded_avg_cost if defined?(@preloaded_avg_cost) && !changed?
 
     # Fallback to calculation for holdings without pre-computed cost_basis
-    calculate_avg_cost
+    replayed_avg_cost
+  end
+
+  # known_cost_basis as average cost per share, or nil when there is none to
+  # trust. Never queries, so a caller with a better fallback than replaying
+  # through this holding's date (Trade#realized_gain_loss) can skip that replay.
+  def stored_avg_cost
+    Money.new(known_cost_basis, currency) if known_cost_basis
+  end
+
+  # The weighted-average cost of the position immediately before `entry`,
+  # replayed from this security's trades as calculate_avg_cost does, or nil
+  # when it is unknown. Realized gain prices a sale at this figure: average
+  # cost does not move on a sale, but a sale that closes the position leaves
+  # a row with nothing held and no basis, so `avg_cost` has no figure to give.
+  #
+  # Trades count when they sort strictly before `entry` in Entry.chronological
+  # order, so a buy earlier the same day counts and the sale itself does not.
+  # A split with an ex-date on or before the sale's date counts, since a split
+  # applies at the open of its ex-date. Units a sale sells beyond the position
+  # are priced at the acquisitions that cover them (.shortfall_cover_cost),
+  # and the figure is the cost per unit across the whole sale.
+  def avg_cost_before(entry)
+    calculate_avg_cost(through: entry.date, before: entry)
   end
 
   # The avg-cost fallback for holdings in accounts that sell by fifo, by
@@ -123,147 +146,149 @@ class Holding < ApplicationRecord
     end
   end
 
-  # The rate a trade carries itself (extra["exchange_rate"], e.g. IBKR's
-  # fx_rate_to_base) comes before the table's, as in the calculators and
-  # Balance::SyncCache; a trade in the account's own currency converts at 1.
-  # Trade#exchange_rate= stores a number, but a row written to `extra`
-  # directly can hold the same rate as a string, which Trade's validation
-  # and Money#exchange_to both accept -- so a plain decimal string counts
-  # too. Anything else, an exponent or an absurd length included, is not
-  # cast, so it cannot overflow numeric and fail the query.
-  AVG_COST_TRADE_RATE_SQL = <<~SQL.squish.freeze
-    COALESCE(
-      CASE jsonb_typeof(trades.extra->'exchange_rate')
-        WHEN 'number' THEN (trades.extra->>'exchange_rate')::numeric
-        WHEN 'string' THEN CASE WHEN trades.extra->>'exchange_rate' ~ '^[[:space:]]*[+-]?([0-9]{1,20}([.][0-9]{0,20})?|[.][0-9]{1,20})[[:space:]]*$'
-                                THEN (trades.extra->>'exchange_rate')::numeric END
-      END,
-      exchange_rates.rate
-    )
-  SQL
-
-  # #calculate_avg_cost for every holding given, in one query: the same
-  # trades, rates, fees, internal-movement and lot rules (a user-costed lot
-  # counts at its cost; a clamped position has none), read through the same
-  # SQL (.avg_cost_rates_join, .avg_cost_totals_sql, .avg_cost_from_totals),
-  # so the batch cannot answer differently from the holding on its own.
-  # Holdings in accounts that sell by fifo read their open lots instead, all
-  # of them together through .fifo_avg_costs, in a few more queries. Holdings
-  # with a stored cost basis are skipped, since #avg_cost never reaches the
-  # fallback for them. So are holdings with unsaved changes, unsaved ones
-  # included: the query reads the stored row, which is not what they hold.
+  # #calculate_avg_cost for every holding given: the same trades, read through
+  # the same SQL (.avg_cost_row_sql), replayed by the same code
+  # (.replay_avg_cost), with the same lot rules (a clamped position has no
+  # cost; a fifo one reads its open lots, all of them together through
+  # .fifo_avg_costs), so the batch cannot answer differently from the
+  # holding on its own. The trades of every holding come back in one query and
+  # the splits in another, however many holdings there are. Holdings with a
+  # stored cost basis are skipped, since #avg_cost never reaches the fallback
+  # for them. So are holdings with unsaved changes, unsaved ones included: the
+  # query reads the stored row, which is not what they hold.
   def self.preload_avg_costs(holdings)
     pending = holdings.reject { |holding| holding.known_cost_basis || holding.changed? }
     return if pending.empty?
 
-    rows = Holding.where(id: pending.map(&:id))
-      .joins(:account)
-      .joins("JOIN entries ON entries.account_id = holdings.account_id AND entries.entryable_type = 'Trade' AND entries.date <= holdings.date")
-      .joins("JOIN trades ON trades.id = entries.entryable_id AND trades.security_id = holdings.security_id AND trades.qty > 0")
-      .joins(avg_cost_rates_join)
+    unit_cost, internal_movement = avg_cost_row_sql(holding_currency: "cur.currency", account_currency: "accounts.currency")
+    lot_joins = avg_cost_lot_joins_sql(holding_currency: "cur.currency", account_currency: "accounts.currency", holding_date: "cur.date")
+    rows = Holding.from("holdings cur")
       .joins(<<~SQL.squish)
-        LEFT JOIN holding_lots lots ON lots.account_id = entries.account_id
-          AND lots.source_entry_id = entries.id
-          AND lots.manual_total_cost IS NOT NULL
-          AND NOT EXISTS (
-            SELECT 1 FROM security_splits lot_splits
-            WHERE lot_splits.security_id = trades.security_id
-              AND lot_splits.ex_date > entries.date
-              AND lot_splits.ex_date <= holdings.date
-          )
+        JOIN accounts ON accounts.id = cur.account_id
+        JOIN entries ON entries.account_id = cur.account_id
+          AND entries.entryable_type = 'Trade'
+          AND entries.date <= cur.date
+        JOIN trades ON trades.id = entries.entryable_id AND trades.security_id = cur.security_id
+        LEFT JOIN exchange_rates ON (
+          exchange_rates.date = entries.date AND
+          exchange_rates.from_currency = trades.currency AND
+          exchange_rates.to_currency = cur.currency
+        )
       SQL
-      .group("holdings.id")
-      .pluck(
-        Arel.sql("holdings.id"),
-        Arel.sql(sanitize_sql_array([ "BOOL_OR(trades.investment_activity_label IN (?) AND lots.id IS NULL)", Trade::INTERNAL_MOVEMENT_LABELS ])),
-        Arel.sql(<<~SQL.squish),
-          BOOL_OR(EXISTS (
-            SELECT 1 FROM holding_lots clamped_lots
-            WHERE clamped_lots.account_id = holdings.account_id
-              AND clamped_lots.security_id = holdings.security_id
-              AND clamped_lots.clamped
-          ))
-        SQL
-        Arel.sql("BOOL_OR(accounts.cost_basis_method = 'fifo')"),
-        *avg_cost_totals_sql(lots: true)
-      )
-      .index_by(&:first)
+      .joins(lot_joins)
+      .where("cur.id IN (?)", pending.map(&:id))
+      .reorder(Arel.sql("cur.id, #{AVG_COST_REPLAY_ORDER}"))
+      .pluck(Arel.sql("cur.id"), Arel.sql("entries.date"), Arel.sql("trades.qty"), Arel.sql(unit_cost), Arel.sql(internal_movement),
+             Arel.sql("accounts.cost_basis_method = 'fifo'"), Arel.sql(<<~SQL.squish))
+               EXISTS (
+                 SELECT 1 FROM holding_lots clamped_lots
+                 WHERE clamped_lots.account_id = cur.account_id
+                   AND clamped_lots.security_id = cur.security_id
+                   AND clamped_lots.clamped
+               )
+             SQL
+      .group_by(&:first)
+
+    # A holding with no trades has nothing to replay, so its splits are not read.
+    traded = pending.select { |holding| rows.key?(holding.id) }
+    splits = traded.empty? ? {} : Security::Split.where(security_id: traded.map(&:security_id).uniq, ex_date: ..traded.map(&:date).max)
+      .order(:ex_date).to_a.group_by(&:security_id)
 
     # The account decides fifo. A holding with no row (no buy dated on or
     # before it, as with a provider row that predates its trade) still reads
     # its lots, so its account is looked up; nothing extra runs otherwise.
     unrowed = pending.reject { |holding| rows.key?(holding.id) }
     fifo_account_ids = unrowed.any? ? Account.where(id: unrowed.map(&:account_id).uniq, cost_basis_method: "fifo").pluck(:id).to_set : Set.new
-    lot_costs = fifo_avg_costs(pending.select { |holding| rows.key?(holding.id) ? rows[holding.id][3] : fifo_account_ids.include?(holding.account_id) })
+    lot_costs = fifo_avg_costs(pending.select { |holding| rows.key?(holding.id) ? rows[holding.id].first[5] : fifo_account_ids.include?(holding.account_id) })
 
     pending.each do |holding|
-      _id, internal_movement, clamped, _fifo, total_cost, total_qty, rate_missing = rows[holding.id]
-      value = if clamped
+      holding_rows = rows.fetch(holding.id, [])
+      value = if holding_rows.first&.last
         nil
       elsif lot_costs.key?(holding.id)
         lot_costs[holding.id]
-      elsif !internal_movement
-        avg_cost_from_totals(total_cost, total_qty, rate_missing, holding.currency)
+      else
+        trade_rows = holding_rows.map { |row| row[1..4] + [ true ] }
+        replay_avg_cost(trade_rows, splits.fetch(holding.security_id, []).select { |split| split.ex_date <= holding.date },
+                        qty: holding.qty, date: holding.date, through: holding.date, currency: holding.currency)
       end
       holding.preload_avg_cost(value)
     end
   end
 
-  # Joins each trade to the table's rate for its day into the account's
-  # currency: `currency`, one holding's account currency, bound as a value; or
-  # :joined for `accounts.currency`, in a query that joins each holding's
-  # account.
-  def self.avg_cost_rates_join(currency = :joined)
-    target = currency != :joined ? sanitize_sql_array([ "exchange_rates.to_currency = ?", currency ]) : "exchange_rates.to_currency = accounts.currency"
+  # The order the calculators replay trades in (Holding::PortfolioCache#trades):
+  # by date, then as entered, and a buy before a sale entered with it, as an
+  # import stamps a day's trades with one created_at; then by id.
+  AVG_COST_REPLAY_ORDER = "entries.date ASC, entries.created_at ASC, (trades.qty < 0) ASC, entries.id ASC".freeze
 
+  # The per-trade columns the replay reads, as SQL over `trades`, `entries` and
+  # an `exchange_rates` row joined for the trade's day into the holding's
+  # currency: the unit cost in the holding's currency, fee included on a
+  # purchase (Holding::TradeCalculatorHelpers#effective_trade_price), or NULL
+  # when a foreign trade has no usable rate; and whether it is an internal
+  # movement. `holding_currency` and `account_currency` are SQL expressions.
+  # The query also joins .avg_cost_lot_joins_sql: a trade whose lot the user
+  # has costed counts at that cost, a transfer in included, so it is no
+  # internal movement here.
+  #
+  # The rate a trade carries itself (extra["exchange_rate"], e.g. IBKR's
+  # fx_rate_to_base) comes before the table's, as in the calculators and
+  # Balance::SyncCache, but it is into the account's currency, so it only
+  # applies to a holding in that currency; one a provider holds in another
+  # currency converts at the table's rate alone. A rate written to `extra`
+  # directly can be a plain decimal string, which Trade's validation and
+  # Money#exchange_to both accept, so that counts too; anything else, an
+  # exponent or an absurd length included, is not cast. A number is held to 20
+  # integer digits by size, so multiplying it by the price cannot overflow the
+  # query. A rate of zero or less converts nothing, so it counts as missing.
+  def self.avg_cost_row_sql(holding_currency:, account_currency:)
+    own_rate = <<~SQL.squish
+      CASE jsonb_typeof(trades.extra->'exchange_rate')
+        WHEN 'number' THEN CASE WHEN abs((trades.extra->>'exchange_rate')::numeric) < 1e20
+                                THEN (trades.extra->>'exchange_rate')::numeric END
+        WHEN 'string' THEN CASE WHEN trades.extra->>'exchange_rate' ~ '^[[:space:]]*[+-]?([0-9]{1,20}([.][0-9]{0,20})?|[.][0-9]{1,20})[[:space:]]*$'
+                                THEN (trades.extra->>'exchange_rate')::numeric END
+      END
+    SQL
+    rate = "CASE WHEN #{holding_currency} = #{account_currency} THEN COALESCE(#{own_rate}, exchange_rates.rate) ELSE exchange_rates.rate END"
+    factor = "CASE WHEN trades.currency <> #{holding_currency} THEN CASE WHEN #{rate} > 0 THEN #{rate} END ELSE 1 END"
+    lot_factor = "CASE WHEN #{holding_currency} = #{account_currency} THEN 1 WHEN lot_rates.rate > 0 THEN lot_rates.rate END"
+    unit_cost = <<~SQL.squish
+      CASE
+        WHEN lots.id IS NOT NULL THEN lots.manual_total_cost / trades.qty * #{lot_factor}
+        WHEN trades.qty > 0 THEN (trades.price + COALESCE(trades.fee, 0) / trades.qty) * #{factor}
+      END
+    SQL
+    internal_movement = sanitize_sql_array([ "COALESCE(trades.investment_activity_label IN (?), FALSE) AND lots.id IS NULL", Trade::INTERNAL_MOVEMENT_LABELS ])
+
+    [ unit_cost, internal_movement ]
+  end
+
+  # The joins .avg_cost_row_sql reads a costed lot through: `lots`, the lot an
+  # acquisition opened when the user has set what it cost, and `lot_rates`,
+  # the rate on the acquisition's day from the account's currency, which the
+  # cost is in, into the holding's. A cost basis is what was paid then, so a
+  # lot in a holding of another currency converts at that day's rate, and is
+  # unknown without one. A cost set on a lot that a split has restated since
+  # its acquisition is not used. All three arguments are SQL expressions.
+  def self.avg_cost_lot_joins_sql(holding_currency:, account_currency:, holding_date:)
     <<~SQL.squish
-      LEFT JOIN exchange_rates ON (
-        exchange_rates.date = entries.date AND
-        exchange_rates.from_currency = trades.currency AND
-        #{target}
+      LEFT JOIN holding_lots lots ON lots.account_id = entries.account_id
+        AND lots.source_entry_id = entries.id
+        AND lots.manual_total_cost IS NOT NULL
+        AND trades.qty > 0
+        AND NOT EXISTS (
+          SELECT 1 FROM security_splits lot_splits
+          WHERE lot_splits.security_id = trades.security_id
+            AND lot_splits.ex_date > entries.date
+            AND lot_splits.ex_date <= #{holding_date}
+        )
+      LEFT JOIN exchange_rates lot_rates ON (
+        lot_rates.date = entries.date AND
+        lot_rates.from_currency = #{account_currency} AND
+        lot_rates.to_currency = #{holding_currency}
       )
     SQL
-  end
-
-  # Total cost with fees in the account's currency, total quantity, and
-  # whether any foreign purchase lacks a usable rate. `currency` as in
-  # .avg_cost_rates_join.
-  #
-  # A foreign purchase with no usable rate for its day has a cost nothing
-  # here knows, so the position's is unknown too, as with an internal
-  # movement -- counting it at 1:1 would state a figure that looks measured
-  # and is not. A rate of zero or less converts nothing, so it counts as
-  # missing, as it does in Money#exchange_to. Checked in the same query as
-  # the totals rather than in another round trip.
-  #
-  # `lots: true` is for a query that LEFT JOINs the costed holding_lots as
-  # `lots`: a trade whose lot the user has costed counts at that cost, which
-  # is already in the account's currency, so it needs no rate.
-  def self.avg_cost_totals_sql(currency = :joined, lots: false)
-    foreign = currency != :joined ? sanitize_sql_array([ "trades.currency <> ?", currency ]) : "trades.currency <> accounts.currency"
-    rate = AVG_COST_TRADE_RATE_SQL
-    cost = "(trades.price * trades.qty + trades.fee) * CASE WHEN #{foreign} THEN #{rate} ELSE 1 END"
-    missing = "#{foreign} AND (#{rate} IS NULL OR #{rate} <= 0)"
-
-    if lots
-      cost = "CASE WHEN lots.id IS NOT NULL THEN lots.manual_total_cost ELSE #{cost} END"
-      missing = "lots.id IS NULL AND #{missing}"
-    end
-
-    [
-      Arel.sql("SUM(#{cost})"),
-      Arel.sql("SUM(trades.qty)"),
-      Arel.sql("BOOL_OR(#{missing})")
-    ]
-  end
-
-  # nil when there are no purchases -- cost basis is genuinely unknown, not
-  # the market price -- or when a rate is missing.
-  def self.avg_cost_from_totals(total_cost, total_qty, rate_missing, currency)
-    return nil if rate_missing
-    return nil unless total_qty && total_qty > 0
-
-    Money.new(total_cost / total_qty, currency)
   end
 
   # Replacing the cost replaces the #trend derived from it.
@@ -499,8 +524,125 @@ class Holding < ApplicationRecord
     I18n.t("holdings.cost_basis_sources.#{cost_basis_source}")
   end
 
+  # The replay #calculate_avg_cost and .preload_avg_costs share: walks `rows`
+  # ([date, qty, unit cost, internal movement?, replayed?], oldest first in
+  # AVG_COST_REPLAY_ORDER) and `splits` (ex-date order) as the calculators do,
+  # starting from the position the rows do not explain, and returns the
+  # average cost in `currency`, or nil when it is unknown. With `sale_qty`,
+  # the units sold by the first row not replayed, the figure is that sale's
+  # cost per unit: the average for the units held and the covering
+  # acquisitions' cost for the rest.
+  def self.replay_avg_cost(rows, all_splits, qty:, date:, through:, currency:, sale_qty: nil)
+    book = Holding::LotBook.new
+    transferred = false
+    position = opening_position(rows, all_splits, qty: qty, date: date)
+    # The opening position and each transfer in are lots of unknown cost, as
+    # the calculators book them, so a sale from them relieves units the book
+    # holds rather than leaving a shortfall the next buy would fill.
+    book.add_unknown(position)
+    splits, later_splits = all_splits.partition { |split| split.ex_date <= through }
+
+    apply_splits = lambda do |up_to|
+      while splits.any? && splits.first.ex_date <= up_to
+        ratio = splits.shift.ratio
+        book.split(ratio)
+        position = Security::Split.scale(position, ratio)
+      end
+    end
+
+    rows.each do |trade_date, trade_qty, unit_cost, internal_movement, replayed|
+      break unless replayed
+
+      apply_splits.call(trade_date)
+      previous_position = position
+
+      # Units moved in were acquired at a price nothing here knows -- a coin
+      # bought at 30k and moved in at 60k would report no gain -- so they
+      # make the whole position's cost unknown. Units moved out are relieved
+      # at the running average, like a sell.
+      if internal_movement && trade_qty.positive?
+        transferred = true
+        book.add_unknown(trade_qty)
+      else
+        book.apply(unit_cost, trade_qty)
+      end
+
+      position += trade_qty
+      # Only a genuine downward crossing through zero clears the mark, as in
+      # the calculators: a position that was never positive held no units.
+      transferred = false if previous_position.positive? && position <= 0
+    end
+    apply_splits.call(through)
+
+    average = book.average_cost unless transferred
+    held = [ sale_qty, book.open_qty ].min if sale_qty
+    if held && held < sale_qty
+      return nil if held.positive? && average.nil?
+
+      cover = shortfall_cover_cost(rows.drop_while { |row| row[4] }.drop(1), later_splits,
+                                   ahead: book.shortfall, short: sale_qty - held)
+      return nil unless cover
+
+      average = ((average || 0) * held + cover) / sale_qty
+    end
+    return nil unless average
+
+    # Rounded to the scale `cost_basis` is stored at, so the figure is the one
+    # the next materialization writes, not one a per-unit fee leaves at
+    # 214.99999... when the stored basis reads 215. A cost too small for that
+    # scale keeps its precision rather than rounding to a free position.
+    rounded = average.round(columns_hash["cost_basis"].scale)
+    Money.new(rounded.zero? && !average.zero? ? average : rounded, currency)
+  end
+
+  # What `short` units sold beyond the position cost, priced as
+  # Holding::LotBook prices a fifo sale's shortfall (#add_lot and #cover): the
+  # acquisitions in `rows`, those after the sale, fill the oldest shortfall
+  # first, `ahead` being what earlier sales left uncovered, each at its own
+  # cost. nil when an acquisition that covers it has no known cost (a transfer
+  # in, a buy with no rate), when a split comes first (#split: a cover after
+  # it is in other shares), or when the rows never cover it all.
+  def self.shortfall_cover_cost(rows, splits, ahead:, short:)
+    cost = BigDecimal("0")
+    rows.each do |trade_date, trade_qty, unit_cost, internal_movement|
+      return nil if splits.any? { |split| split.ex_date <= trade_date }
+      next unless trade_qty.positive?
+
+      ahead_filled = [ trade_qty, ahead ].min
+      ahead -= ahead_filled
+      filled = [ trade_qty - ahead_filled, short ].min
+      next unless filled.positive?
+      return nil if internal_movement || unit_cost.nil?
+
+      cost += filled * unit_cost
+      short -= filled
+      return cost if short.zero?
+    end
+    nil
+  end
+
+  # The position held before the first of `rows`: this holding's quantity
+  # with every trade and split up to its date undone, latest first. A split
+  # applies at the open of its ex-date, so it is undone after that day's
+  # trades.
+  def self.opening_position(rows, splits, qty:, date:)
+    position = qty.to_d
+    pending = splits.select { |split| split.ex_date <= date }
+
+    rows.reverse_each do |trade_date, trade_qty|
+      next if trade_date > date
+
+      position = Security::Split.unscale(position, pending.pop.ratio) while pending.any? && pending.last.ex_date > trade_date
+      position -= trade_qty
+    end
+    pending.reverse_each { |split| position = Security::Split.unscale(position, split.ratio) }
+
+    position
+  end
+
   private
     def forget_derived_answers
+      remove_instance_variable(:@replayed_avg_cost) if defined?(@replayed_avg_cost)
       remove_instance_variable(:@preloaded_avg_cost) if defined?(@preloaded_avg_cost)
       remove_instance_variable(:@trend) if defined?(@trend)
       remove_instance_variable(:@day_change) if defined?(@day_change)
@@ -526,56 +668,90 @@ class Holding < ApplicationRecord
         previous: start_amount
     end
 
-    # Calculates weighted average cost from buy trades.
-    # Returns nil if no trades exist (cost basis is unknown).
-    def calculate_avg_cost
-      # Fewer units than the trades bought (see Holding::ReverseCalculator), so
-      # no figure drawn from those trades is the position's.
+    # calculate_avg_cost through this holding's date, once per instance, nil
+    # included: a page asks a holding for its average cost several times, and
+    # each answer would replay the whole history. Only this default cut-off is
+    # kept; avg_cost_before replays to its own.
+    def replayed_avg_cost
+      return @replayed_avg_cost if defined?(@replayed_avg_cost)
+
+      @replayed_avg_cost = calculate_avg_cost
+    end
+
+    # The weighted-average cost of the position on this holding's date, worked
+    # out from the trades the way the holding calculators work it out
+    # (Holding::ForwardCalculator#apply_trades), so a holding with no stored
+    # basis shows the figure the next materialization would store: sells are
+    # relieved at the running average, a split rescales the position at the
+    # open of its ex-date, and a transfer in makes the cost unknown until the
+    # position is closed. Returns nil when the cost is unknown.
+    #
+    # `through` is the last day replayed, the holding's own date by default.
+    # `before`, an entry on that day, stops the replay just short of it
+    # (avg_cost_before).
+    #
+    # The replay starts from the position the trades do not explain, as
+    # Holding::ReverseCalculator#precompute_cost_basis seeds it from the
+    # provider's snapshot: a reverse-synced account can hold shares from
+    # before its first imported trade, and a sale that empties the imported
+    # trades then leaves those still held, so a transfer among them stays
+    # unknown. This holding's quantity, walked back through the trades and
+    # splits up to its date, is that opening position; for a forward-synced
+    # or manual account it is zero.
+    #
+    # Two lot rules come first. A clamped position holds fewer units than the
+    # trades bought (see Holding::ReverseCalculator), so no figure drawn from
+    # those trades is its cost. A fifo position holds its open lots
+    # (.fifo_avg_costs), which are the position as it stands, so they say
+    # nothing about the cost just before an earlier sale, and the trades'
+    # pooled average is the average method's figure, not fifo's.
+    def calculate_avg_cost(through: date, before: nil)
       return nil if HoldingLot.where(account_id: account_id, security_id: security_id, clamped: true).exists?
-      return self.class.fifo_avg_costs([ self ])[id] if account.cost_basis_fifo?
+      return before ? nil : self.class.fifo_avg_costs([ self ])[id] if account.cost_basis_fifo?
 
-      trades = account.trades
-        .with_entry
-        .joins(self.class.avg_cost_rates_join(account.currency))
-        .where(security_id: security.id)
-        .where("trades.qty > 0 AND entries.date <= ?", date)
+      splits = Security::Split.where(security_id: security_id).order(:ex_date)
+      splits = splits.where(ex_date: ..[ through, date ].max) unless before
+      sale_qty = -before.entryable.qty if before && before.entryable.try(:qty).to_d.negative?
+      self.class.replay_avg_cost(avg_cost_trade_rows(through: through, before: before), splits.to_a,
+                                 qty: qty, date: date, through: through, currency: currency, sale_qty: sale_qty)
+    end
 
-      # A trade whose lot the user has costed counts at that cost, a
-      # transfer-in included. The cost is already in the account's currency.
-      # This fallback divides by the trades' own quantities, which a later split
-      # does not restate, so a cost set on a lot split since is not used here.
-      trades = trades.joins(self.class.sanitize_sql_array([ <<~SQL.squish, date ]))
-        LEFT JOIN holding_lots lots ON lots.account_id = entries.account_id
-          AND lots.source_entry_id = entries.id
-          AND lots.manual_total_cost IS NOT NULL
-          AND NOT EXISTS (
-            SELECT 1 FROM security_splits lot_splits
-            WHERE lot_splits.security_id = trades.security_id
-              AND lot_splits.ex_date > entries.date
-              AND lot_splits.ex_date <= ?
-          )
-      SQL
+    # This security's trades up to this holding's date and up to the replay's
+    # cutoff -- `through`, or strictly before the entry `before` in the same
+    # order -- oldest first in AVG_COST_REPLAY_ORDER, as
+    # [date, qty, unit cost, internal movement?, replayed?] (see
+    # .avg_cost_row_sql). Both sets are a prefix of that order, so the replayed
+    # rows lead and one query serves the walk back to the opening position and
+    # the replay. With `before`, the trades after it come too, since what
+    # covers a sale beyond the position comes later.
+    def avg_cost_trade_rows(through:, before:)
+      quoted = { holding_currency: self.class.connection.quote(currency), account_currency: self.class.connection.quote(account.currency) }
+      unit_cost, internal_movement = self.class.avg_cost_row_sql(**quoted)
+      lot_joins = self.class.avg_cost_lot_joins_sql(**quoted, holding_date: self.class.connection.quote(date))
 
-      # An internal movement is not a purchase: securities moved in from elsewhere were
-      # acquired at a price nothing here knows, so treating the day they
-      # arrived as their cost states a number that looks authoritative and is
-      # wrong — a coin bought at 30k and moved in at 60k would report no gain.
-      #
-      # One internal movement makes the whole position unknown, rather than just its own
-      # row. Averaging the purchases alone and applying that to every unit is
-      # the same fabrication in a quieter form: buy one at 30k, receive one, and
-      # the position would report 30k a unit for two units it did not cost that.
-      return nil if trades.where(investment_activity_label: Trade::INTERNAL_MOVEMENT_LABELS, lots: { id: nil }).exists?
-
-      # IS DISTINCT FROM, because `!=` is NULL for an unlabelled row and would
-      # drop the ordinary purchases that carry no label at all.
-      trades = trades.where(
-        "trades.investment_activity_label NOT IN (?) OR trades.investment_activity_label IS NULL OR lots.id IS NOT NULL",
-        Trade::INTERNAL_MOVEMENT_LABELS
+      cutoff = ActiveRecord::Base.sanitize_sql_array(
+        if before
+          # A row comparison, so it sorts exactly as AVG_COST_REPLAY_ORDER does.
+          [ "(entries.date, entries.created_at, (trades.qty < 0), entries.id) < (?, ?, ?, ?)",
+            before.date, before.created_at, before.entryable.try(:qty).to_d.negative?, before.id ]
+        else
+          [ "entries.date <= ?", through ]
+        end
       )
 
-      total_cost, total_qty, rate_missing = trades.pick(*self.class.avg_cost_totals_sql(account.currency, lots: true))
-
-      self.class.avg_cost_from_totals(total_cost, total_qty, rate_missing, currency)
+      account.trades
+        .with_entry
+        .joins(ActiveRecord::Base.sanitize_sql_array([
+          "LEFT JOIN exchange_rates ON (
+            exchange_rates.date = entries.date AND
+            exchange_rates.from_currency = trades.currency AND
+            exchange_rates.to_currency = ?
+          )", currency
+        ]))
+        .joins(lot_joins)
+        .where(security_id: security_id)
+        .then { |trades| before ? trades : trades.where("(#{cutoff}) OR entries.date <= ?", date) }
+        .reorder(Arel.sql(AVG_COST_REPLAY_ORDER))
+        .pluck(Arel.sql("entries.date"), Arel.sql("trades.qty"), Arel.sql(unit_cost), Arel.sql(internal_movement), Arel.sql("COALESCE(#{cutoff}, FALSE)"))
     end
 end

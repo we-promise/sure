@@ -2,22 +2,22 @@
 pt-BR:
   entries:
     create:
-      success: Entrada criada
+      success: Lançamento criado
     destroy:
-      success: Entrada excluída
+      success: Lançamento excluído
     empty:
-      description: Tente adicionar uma entrada, editando filtros ou refinando sua busca
-      title: Nenhuma entrada encontrada
+      description: Tente adicionar um lançamento, editando filtros ou refinando sua busca
+      title: Nenhum lançamento encontrado
     loading:
-      loading: Carregando entradas...
+      loading: Carregando lançamentos...
     update:
-      success: Entrada atualizada
+      success: Lançamento atualizado
     unlock:
-      success: Entrada desbloqueada. Ela poderá ser atualizada na próxima sincronização.
+      success: Lançamento desbloqueado. Ele poderá ser atualizado na próxima sincronização.
     protection:
       tooltip: Protegido contra sincronização
       title: Protegido contra sincronização
-      description: As suas edições nesta entrada não serão sobrescritas pela sincronização do provedor.
+      description: As suas edições neste lançamento não serão sobrescritas pela sincronização do provedor.
       locked_fields_label: "Campos bloqueados:"
       unlock_button: Permitir sincronização para atualizar
-      unlock_confirm: Permitir que a sincronização atualize esta entrada? Suas alterações poderão ser sobrescritas na próxima sincronização.
+      unlock_confirm: Permitir que a sincronização atualize este lançamento? Suas alterações poderão ser sobrescritas na próxima sincronização.
