@@ -91,6 +91,12 @@ class WiseItem < ApplicationRecord
     WiseItem::InterbalanceLinker.new(self).link!
   end
 
+  # Gives each card refund the category of the purchase it refunds, so the
+  # pair nets out in reports (see WiseItem::RefundCategorizer).
+  def categorize_card_refunds!
+    WiseItem::RefundCategorizer.new(self).categorize!
+  end
+
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     return [] if accounts.empty?
 
