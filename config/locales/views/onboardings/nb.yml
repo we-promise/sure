@@ -5,7 +5,7 @@ nb:
       sign_out: Logg ut
       setup: Oppsett
       preferences: Innstillinger
-      goals: Mål
+      tools: Verktøy/AI
       start: Start
     logout:
       sign_out: Logg ut
@@ -38,17 +38,48 @@ nb:
       currency: Valuta
       date_format: Datoformat
       submit: Fullfør
-    goals:
-      title: Hva bringer deg hit?
-      subtitle: Velg ett eller flere mål du har med %{product_name} som ditt personlige økonomiverktøy.
-      unified_accounts: Se alle kontoene mine på ett sted
-      cashflow: Forstå kontantstrøm og utgifter
-      budgeting: Administrere økonomiplaner og budsjetter
-      partner: Administrere økonomi med en partner
-      investments: Følge investeringer
-      ai_insights: La AI hjelpe meg å forstå økonomien min
-      optimization: Analysere og optimalisere kontoer
-      reduce_stress: Redusere økonomisk stress eller angst
+    tools:
+      title: Føl deg som hjemme.
+      subtitle: Noen få valg for å gjøre %{product_name} til ditt.
+      starting_point:
+        eyebrow: Utgangspunktet ditt
+        title: Hva har du brukt hittil?
+        description: Velg verktøyene du bruker til å styre husholdningens økonomi.
+        select: Velg verktøyene dine
+        other_placeholder: Annet verktøy (valgfritt)
+        hint: Velg alle som passer. Dette hjelper oss å foreslå et utgangspunkt, uten å forutsette at import støttes.
+        tools:
+          nothing_yet: Ingen ennå
+          other: Annet
+      ai:
+        eyebrow: Din AI-preferanse
+        title: Hvordan vil du bruke %{product_name}?
+        description: Du bestemmer. Velg det som passer deg.
+        default: Standard
+        modes:
+          none:
+            title: Ingen AI
+            description: Styr økonomien din uten den innebygde assistenten.
+          builtin:
+            title: Innebygd AI
+            description: Slå på den innebygde assistenten, med AI-leverandøren til denne instansen.
+          external:
+            title: Bruk din egen AI-agent
+            description: Bruk din egen assistent, koblet til med ditt samtykke.
+        panels:
+          admin_on: Som administrator gir du dermed også husholdningens samtykke til AI-funksjoner som kjører i bakgrunnen, som kategorisering.
+          admin_off: Som administrator trekker du dermed også tilbake samtykket ditt til AI-funksjoner som kjører i bakgrunnen, som kategorisering. De forblir bare på hvis en annen administrator har slått på AI.
+          none:
+            title: Assistenten din forblir av.
+            body: Dette slår av den innebygde assistenten for kontoen din.
+          builtin:
+            title: Assistenten din slås på.
+            body: Dette slår på den innebygde assistenten for kontoen din. Hvilken AI-leverandør den bruker, og om den er tilgjengelig, avhenger fortsatt av AI-innstillingene til denne instansen.
+            not_configured: Ingen AI-leverandør er satt opp på denne instansen ennå. En administrator kan legge til en under Innstillinger → Selvhosting.
+            unavailable: Husholdningens nåværende AI-innstillinger kjører ikke den innebygde assistenten, så den svarer ikke før en administrator endrer dem.
+          external:
+            title: Koble til agenten din når du er klar.
+            body: Dette holder AI slått på for kontoen din. Når husholdningen din er satt opp for ekstern chat, bruker samtalene den eksterne assistenten din i stedet for den innebygde assistenten i %{product_name}, i det samme chatgrensesnittet. %{product_name} håndterer fortsatt import, kategorisering og andre prosesser som hovedregister for dataene dine. Agenten din kan samhandle med den via MCP eller sure-cli; for å koble den til, gå til Innstillinger → MCP. Dette valget setter ikke opp chattjenesten og oppretter, endrer eller fjerner ingen tilkobling.
       submit: Neste
     trial:
       title: Prøv Sure i 45 dager
