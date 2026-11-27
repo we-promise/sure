@@ -5,7 +5,7 @@ es:
       sign_out: Cerrar sesión
       setup: Configuración
       preferences: Preferencias
-      goals: Objetivos
+      tools: Herramientas/IA
       start: Inicio
     logout:
       sign_out: Cerrar sesión
@@ -38,17 +38,7 @@ es:
       currency: Moneda
       date_format: Formato de fecha
       submit: Completar
-    goals:
-      title: ¿Qué te trae por aquí?
-      subtitle: Selecciona uno o más objetivos que tienes con %{product_name} como tu herramienta de finanzas personales.
-      unified_accounts: Ver todas mis cuentas en un solo lugar
-      cashflow: Entender el flujo de caja y los gastos
-      budgeting: Gestionar planes financieros y presupuestos
-      partner: Gestionar finanzas con mi pareja
-      investments: Seguir las inversiones
-      ai_insights: Dejar que la IA me ayude a entender mis finanzas
-      optimization: Analizar y optimizar cuentas
-      reduce_stress: Reducir el estrés financiero o la ansiedad
+    tools:
       submit: Siguiente
     trial:
       title: Prueba Sure durante 45 días
