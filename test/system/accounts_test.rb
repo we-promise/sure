@@ -105,6 +105,40 @@ class AccountsTest < ApplicationSystemTestCase
     end
   end
 
+  test "can create gift card account" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    visit root_url
+    open_new_account_modal
+
+    assert_account_created "GiftCard" do
+      select "Digital", from: "Format"
+      fill_in "Card number or code", with: "CODE-1234"
+    end
+
+    gift_card = Account.order(:created_at).last.gift_card
+    assert_equal "digital", gift_card.card_format
+    assert_equal "CODE-1234", gift_card.card_number
+  end
+
+  test "a gift card's PIN is masked until revealed" do
+    account = @user.family.accounts.create!(
+      name: "Bookstore", balance: 50, currency: "USD", owner: @user,
+      accountable: GiftCard.new(card_number: "ABCD-EFGH-4821", pin: "9876")
+    )
+
+    visit account_path(account, tab: "overview")
+    find("summary", text: "Card details").click
+    assert_text "ABCD-EFGH-4821"
+    assert_text GiftCard::MASK
+    assert_no_text "9876"
+
+    click_on "Show"
+    assert_text "9876"
+
+    click_on "Hide"
+    assert_no_text "9876"
+  end
+
   test "can create other asset account" do
     assert_account_created("OtherAsset")
   end

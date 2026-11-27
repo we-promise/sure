@@ -19,7 +19,8 @@ class PropertiesController < ApplicationController
         balance: 0,
         status: "draft",
         owner: Current.user,
-        currency: property_params[:currency].presence || Current.family.currency
+        currency: property_params[:currency].presence || Current.family.currency,
+        accountable_type: "Property"
       )
     )
     # Details typed into the manual wizard are user-set, so a later AVM link
@@ -31,7 +32,7 @@ class PropertiesController < ApplicationController
   end
 
   def update
-    if @account.update(property_params)
+    if @account.update(property_params.except(:accountable_type))
       @account.accountable.lock_saved_attributes!
       @success_message = "Property details updated successfully."
 

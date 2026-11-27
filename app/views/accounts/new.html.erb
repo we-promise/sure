@@ -9,6 +9,9 @@
       <%= render "account_type", accountable: Crypto.new %>
       <%= render "account_type", accountable: Property.new %>
       <%= render "account_type", accountable: Vehicle.new %>
+      <% if preview_features_enabled? %>
+        <%= render "account_type", accountable: GiftCard.new, preview: true %>
+      <% end %>
     <% end %>
 
     <% unless params[:classification] == "asset" %>
