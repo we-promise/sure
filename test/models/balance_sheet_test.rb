@@ -236,6 +236,33 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal %w[apple Banana cherry], names
   end
 
+  # The sidebar reads names through NameSortKey, so an accented or spelled-out
+  # letter sits with its letter rather than after "z".
+  test "sorts an accented name with its letter" do
+    user = users(:empty)
+    user.update!(default_account_order: "name_asc")
+    %w[Zulu écu Æble Bravo].each do |name|
+      create_account(name: name, balance: 0, accountable: Depository.new, owner: user)
+    end
+
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+
+    assert_equal %w[Æble Bravo écu Zulu], names
+  end
+
+  # The column allows NULL although the model validates presence; such a
+  # balance sorts as 0 rather than failing the page.
+  test "sorts an account with no balance as zero" do
+    user = users(:empty)
+    user.update!(default_account_order: "balance_asc")
+    create_account(name: "Small", balance: 1, accountable: Depository.new, owner: user)
+    create_account(name: "Empty", balance: 100, accountable: Depository.new, owner: user).update_column(:balance, nil)
+
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+
+    assert_equal %w[Empty Small], names
+  end
+
   test "sorts accounts by balance converted to the family currency" do
     user = users(:empty)
     user.update!(default_account_order: "balance_desc")

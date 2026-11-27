@@ -32,5 +32,5 @@ zh-CN:
     show:
       section_aria: "%{title} 分区。按 Enter 或空格键抓取以重新排序，然后使用方向键移动。"
       sections_aria: 投资组合分区
-      subtitle: 您的投资账户及各自价值。
+      subtitle: 您在各投资账户中的持仓，以及每个账户的价值。
       title: 投资组合
