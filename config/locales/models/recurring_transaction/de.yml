@@ -28,6 +28,11 @@ de:
         payment_url: "Zahlungslink"
         bank_reference: "Verwendungszweck"
         frequency_interval: "Wiederholungsintervall"
+        anchor_date: "Startdatum"
+        bill_type: "Rechnungsart"
+        expected_amount_min: "Erwarteter Mindestbetrag"
+        account: "Konto"
+        destination_account: "Zielkonto"
   recurring_transactions:
     allocator:
       missing_rate: "kein Wechselkurs von %{from} nach %{to}; gib einen Betrag ausdrücklich ein"
