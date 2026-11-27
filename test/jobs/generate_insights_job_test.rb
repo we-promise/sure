@@ -575,6 +575,19 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_nil insight.read_at
   end
 
+  test "get_insights returns the period the generator last reported" do
+    stub_generated([ generated_insight(period_start: Date.new(2026, 7, 1), period_end: Date.new(2026, 7, 31)) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    stub_generated([ generated_insight(period_start: Date.new(2026, 7, 2), period_end: Date.new(2026, 8, 1)) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    row = Assistant::Function::GetInsights.new(users(:family_admin)).call[:insights]
+      .find { |insight| insight[:metadata]["account_id"] == accounts(:depository).id }
+
+    assert_equal [ Date.new(2026, 7, 2), Date.new(2026, 8, 1) ], [ row[:period_start], row[:period_end] ]
+  end
+
   test "a generator that stops reporting a period clears the stored one" do
     stub_generated([ generated_insight(period_start: Date.new(2026, 7, 1), period_end: Date.new(2026, 7, 31)) ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
