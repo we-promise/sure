@@ -59,10 +59,7 @@ class Balance::BaseCalculator
     def loan_principal_payments
       return @loan_principal_payments if defined?(@loan_principal_payments)
 
-      @loan_principal_payments = if account.loan? &&
-          account.loan.amortizable? &&
-          account.has_opening_anchor? &&
-          account.family.preview_features_enabled?
+      @loan_principal_payments = if account.loan? && account.loan.principal_replay_active?
         sync_cache.loan_principal_payments(account.loan)
       end
     end

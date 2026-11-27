@@ -28,12 +28,13 @@
     <% end %>
   <% end %>
 
-  <%# A fixed loan's contracted repayment. A variable loan has no single one, so
-      the card quotes the repayment in force today -- the next scheduled payment,
-      sized at every rate change recorded before it -- and N/A only when there
-      is no schedule or it has run out. %>
+  <%# A fixed loan's contracted repayment. A variable loan, or one with a
+      recorded term change, has no single one, so the card quotes the repayment
+      in force today -- the next scheduled payment, sized at every change
+      recorded before it -- and N/A only when there is no schedule or it has
+      run out. %>
   <%= summary_card title: t(".monthly_payment") do %>
-    <% if account.loan.variable_rate_type? %>
+    <% if account.loan.repayment_varies? %>
       <% payment_in_force = account.loan.amortization_schedule&.payment_in_force(today) %>
       <%= payment_in_force ? format_money(payment_in_force) : t(".not_applicable") %>
     <% elsif account.loan.monthly_payment.present? %>
@@ -57,8 +58,10 @@
 
   <%# When the contract's last payment falls due. A variable loan keeps this
       date through its rate changes -- the schedule resizes the repayment
-      instead -- so it is the loan's original payoff date either way. %>
-  <%= summary_card title: t(".original_payoff_date") do %>
+      instead -- so it is the loan's original payoff date. A term change can
+      move it: an extra repayment with the payment held ends the loan sooner.
+      The card then says it is the schedule's date, not the original one. %>
+  <%= summary_card title: account.loan.term_changes? ? t(".scheduled_payoff_date") : t(".original_payoff_date") do %>
     <% original_payoff_date = account.loan.amortization_schedule&.payoff_date %>
     <%= original_payoff_date ? l(original_payoff_date, format: :long) : t(".unknown") %>
   <% end %>

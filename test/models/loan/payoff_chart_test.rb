@@ -344,6 +344,23 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
     assert_equal %i[actual scheduled projected principal interest interest_share principal_share today interactive_chart], payload[:labels].keys
   end
 
+  # The line is the schedule, which follows the recorded term changes, so it is
+  # no longer the original one.
+  test "a loan with term changes does not call its schedule the original one" do
+    loan = on_contract_loan
+    original = Loan::PayoffChart.new(loan, as_of: @today, period: @all_time).payload
+    assert_equal "Original schedule", original[:labels][:scheduled]
+    assert_includes original[:aria_description], "Original scheduled payoff"
+
+    loan.update!(term_change_rows: [ { effective_date: "2026-06-10", extra_repayment: "20000" } ])
+    loan = Loan.find(loan.id)
+    revised = Loan::PayoffChart.new(loan, as_of: @today, period: @all_time).payload
+
+    assert_equal "Current schedule", revised[:labels][:scheduled]
+    assert_not_includes revised[:aria_description], "Original"
+    assert_includes revised[:aria_description], "Scheduled payoff #{I18n.l(loan.amortization_schedule.payoff_date, format: :long)}"
+  end
+
   test "an extra projection draws its own line, named in the legend and the description" do
     loan = on_contract_loan
     projection = loan.payoff_projection(as_of: @today)

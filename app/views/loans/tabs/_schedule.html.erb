@@ -21,7 +21,8 @@
     <% end %>
 
     <%= summary_card title: t(".total_cost") do %>
-      <%= format_money schedule.total_paid %>
+      <% total_paid = schedule.total_paid %>
+      <%= total_paid ? format_money(total_paid) : t(".unknown") %>
     <% end %>
 
     <%# When the loan will actually be paid off: the projection from today's
@@ -40,7 +41,11 @@
   </div>
 
   <p class="text-sm text-secondary">
-    <%= t(".description", start_date: l(account.loan.origination_date, format: :long)) %>
+    <% if account.loan.term_changes? %>
+      <%= t(".description_with_term_changes", start_date: l(account.loan.origination_date, format: :long)) %>
+    <% else %>
+      <%= t(".description", start_date: l(account.loan.origination_date, format: :long)) %>
+    <% end %>
   </p>
 
   <% if account.loan.variable_rate_type? %>
@@ -58,6 +63,13 @@
     <% table.with_column(t(".payment"), numeric: true, class: "privacy-sensitive") { |payment| format_money(payment.payment) } %>
     <% table.with_column(t(".principal"), numeric: true, class: "privacy-sensitive") { |payment| format_money(payment.principal) } %>
     <% table.with_column(t(".interest"), numeric: true, class: "text-secondary privacy-sensitive") { |payment| format_money(payment.interest) } %>
-    <% table.with_column(t(".remaining_balance"), numeric: true, class: "privacy-sensitive") { |payment| format_money(payment.ending_balance) } %>
+    <%# A row where a term change moved the balance says by how much, so the
+        step in the column is explained where it happens. %>
+    <% table.with_column(t(".remaining_balance"), numeric: true, class: "privacy-sensitive") do |payment| %>
+      <%= format_money(payment.ending_balance) %>
+      <% if (adjustment = schedule.balance_adjustment_for(payment)) %>
+        <span class="block text-xs text-secondary"><%= t(".term_change", amount: format_money(adjustment)) %></span>
+      <% end %>
+    <% end %>
   <% end %>
 </div>
