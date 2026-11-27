@@ -103,6 +103,9 @@ class TransfersController < ApplicationController
     return unless require_account_permission!(inflow_account, redirect_path: transactions_url)
 
     Transfer.transaction do
+      # The transfer row before any leg, the order unlinking, confirm! and
+      # Entry#unsplit! take them in, so an edit racing an unlink cannot deadlock.
+      Transfer.lock.find(@transfer.id)
       update_transfer_status
       update_transfer_fees_and_amount
       update_transfer_details
@@ -420,7 +423,9 @@ class TransfersController < ApplicationController
       current_destination_fee = @transfer.derived_destination_fee_amount
       source_fee_changed = new_source_fee.present? && new_source_fee.to_d != current_source_fee
       dest_fee_changed = new_destination_fee.present? && new_destination_fee.to_d != current_destination_fee
-      amount_changed = new_amount.present? && new_amount.to_d != @transfer.amount.to_d
+      # A split part's amount belongs to the split: changing it here would make
+      # the parts stop adding up to the parent.
+      amount_changed = new_amount.present? && new_amount.to_d != @transfer.amount.to_d && !split_part_leg?
 
       return unless amount_changed || source_fee_changed || dest_fee_changed
 
@@ -457,6 +462,10 @@ class TransfersController < ApplicationController
       end
 
       @transfer.save!
+    end
+
+    def split_part_leg?
+      [ @transfer.outflow_transaction, @transfer.inflow_transaction ].any? { |transaction| transaction.entry.split_child? }
     end
 
     def update_fee_transaction(account:, old_fee:, new_fee:, name:)
