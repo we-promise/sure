@@ -109,7 +109,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
     def series_for(accounts, favorable_direction:, period:)
       Balance::ChartSeriesBuilder.new(
         account_ids: accounts.map(&:id),
-        account_active_until_dates: disabled_account_active_until_dates(accounts),
+        account_active_until_dates: BalanceSheet::HistoricalAccountScope.active_until_dates(accounts),
         currency: family.currency,
         period: period,
         interval: INTERVAL,
@@ -119,15 +119,6 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
 
     def historical_accounts
       @historical_accounts ||= BalanceSheet::HistoricalAccountScope.new(family, user: user).relation.to_a
-    end
-
-    def disabled_account_active_until_dates(accounts)
-      accounts.each_with_object({}) do |account, dates|
-        next unless account.disabled?
-
-        disabled_on = (account.disabled_at || account.updated_at).to_date
-        dates[account.id] = disabled_on - 1.day
-      end
     end
 
     def cache_key(period)
