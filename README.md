@@ -31,62 +31,68 @@ Fixes found in review land as commits on https://github.com/we-promise/sure/pull
 
 ### Milestone 1 - December 2026
 
+Merged on this branch:
+
 - https://github.com/we-promise/sure/pull/4773 2a. Transports and instrumentation.
 - https://github.com/we-promise/sure/pull/4774 2b. Routing and consent.
 - https://github.com/we-promise/sure/pull/4775 2c. Generations.
-- https://github.com/we-promise/sure/pull/5209 CI: refuse provider HTTP outside live tests. 
-- https://github.com/we-promise/sure/pull/4765 2d. Jev and shadow runs. 
-- https://github.com/we-promise/sure/pull/3422 bridge the statement vault to search and let tools read a file. 
-- https://github.com/we-promise/sure/pull/4771 2e. PDF import and document search. merged on branch
+- https://github.com/we-promise/sure/pull/5209 CI: refuse provider HTTP outside live tests.
+- https://github.com/we-promise/sure/pull/4765 2d. Jev and shadow runs.
+- https://github.com/we-promise/sure/pull/3422 Bridge the statement vault to search and let tools read a file.
+- https://github.com/we-promise/sure/pull/4771 2e. PDF import and document search.
 - https://github.com/we-promise/sure/pull/4892 2f. ruby_llm 2.2.3, Jev via OpenRouter, review fixes.
-- https://github.com/we-promise/sure/stack/5504 stack
-  - https://github.com/we-promise/sure/pull/5501 3a. Capsule, shared state and probes off the web thread.
-  - https://github.com/we-promise/sure/pull/5502 Tidying 3a and dead code from 2a-2f; review fixes.
-  - https://github.com/we-promise/sure/pull/5503 Trimming tests to a few comprehensive AI tests per layer.
-  - https://github.com/we-promise/sure/pull/5521 Windowing: fixing 2c's O(N²) runs, a #5077 performance bug
-  - https://github.com/we-promise/sure/pull/5550 2c follow-up: recorded evals that run, set-aside prompt overrides on the family
-  - https://github.com/we-promise/sure/pull/5608 Fix #5077 follow-ups: credentials, rule-run accounting, JSON mode, eval errors
-  - https://github.com/we-promise/sure/pull/5663 Send nullable enums to Anthropic as anyOf (on #5608).
-  - https://github.com/we-promise/sure/pull/5769 Fixes before the landing: down-mark lockouts, jobs queued on main (on #5608).
 
-Issue https://github.com/we-promise/sure/issues/5077 tracks follow-up work deferred from these PRs.
+The rest is one stack, https://github.com/we-promise/sure/stack/5504. Each PR targets the one below it and shows only its own changes; merge from the bottom up. Features are frozen: only bugfixes go into these PRs now.
 
----
+1. https://github.com/we-promise/sure/pull/5501 3a. Capsule, shared state and probes off the web thread.
+2. https://github.com/we-promise/sure/pull/5502 Tidying 3a and dead code from 2a-2f; review fixes.
+3. https://github.com/we-promise/sure/pull/5503 Trimming tests to a few comprehensive AI tests per layer.
+4. https://github.com/we-promise/sure/pull/5521 Windowing: fixing 2c's O(N²) runs, a #5077 performance bug.
+5. https://github.com/we-promise/sure/pull/5550 2c follow-up: recorded evals that run, set-aside prompt overrides on the family.
+6. https://github.com/we-promise/sure/pull/5608 Fix #5077 follow-ups: credentials, rule-run accounting, JSON mode, eval errors.
+7. https://github.com/we-promise/sure/pull/5769 Fixes before the landing: down-mark lockouts, jobs queued on main.
+8. https://github.com/we-promise/sure/pull/5744 Count a mixed rule's ordinary changes as modified.
+9. https://github.com/we-promise/sure/pull/5745 Outbox: record each AI job and deliver it again when lost.
+10. https://github.com/we-promise/sure/pull/5756 4a. Lanes: a queue per AI lane, and chat threads of its own.
+11. https://github.com/we-promise/sure/pull/5758 4b. Gate: one per local model host, with lanes and interrupts.
+12. https://github.com/we-promise/sure/pull/5784 4c. Typing hold and visible waiting: chat at the gate, and what it waits for.
+13. https://github.com/we-promise/sure/pull/5892 Documents in a job (was #5824).
+14. https://github.com/we-promise/sure/pull/5893 Stop a PDF import (was #5825).
+15. https://github.com/we-promise/sure/pull/5894 MCP tools in a job (was #5826).
+16. https://github.com/we-promise/sure/pull/5895 Bill suggestions and Stop (was #5827).
+17. https://github.com/we-promise/sure/pull/5896 Probe suggestion status before catching up a waiting frame (was #5870), with #5857's capsule-only checks merged in.
 
-### Waiting on #5769
+[Plan for 8-12](https://github.com/josh-sanders/sure/blob/proposal/v0.8-ai-workflow-reviews/docs/proposals/v0.8/stack-sequencer-off-the-web-thread.md). Issue https://github.com/we-promise/sure/issues/5077 tracks follow-up work deferred from these PRs.
 
+Other contributors' PRs on these branches, left to their authors:
 
-- https://github.com/we-promise/sure/pull/4425 Propose a transaction split from an attached receipt.
-- https://github.com/we-promise/sure/pull/4844 Run Anthropic AI features on a Claude subscription
-
-- https://github.com/we-promise/sure/stack/5748 stack, on #5608 [Plan](https://github.com/josh-sanders/sure/blob/proposal/v0.8-ai-workflow-reviews/docs/proposals/v0.8/stack-sequencer-off-the-web-thread.md): one stack, then one PR per feature, each under 2,000 lines.
-  - https://github.com/we-promise/sure/pull/5744 Count a mixed rule's ordinary changes as modified.
-  - https://github.com/we-promise/sure/pull/5745 Outbox: record each AI job and deliver it again when lost.
-  - https://github.com/we-promise/sure/pull/5756 4a. Lanes: a queue per AI lane, and chat threads of its own.
-  - https://github.com/we-promise/sure/pull/5758 4b. Gate: one per local model host, with lanes and interrupts.
-  - https://github.com/we-promise/sure/pull/5784 4c. Typing hold and visible waiting: chat at the gate, and what it waits for.
-
----
-
-### Waiting on #5784
-
-- https://github.com/we-promise/sure/pull/5827 Bill suggestions and Stop.
-  - https://github.com/we-promise/sure/pull/5870 Probe suggestion status before catching up a waiting frame (draft, stacked on #5827).
-- https://github.com/we-promise/sure/pull/5825 Stopping a PDF import.
-- https://github.com/we-promise/sure/pull/5824 Documents in a job.
-- https://github.com/we-promise/sure/pull/5826 MCP tools in a job.
-
-- Receipt scanning: https://github.com/we-promise/sure/pull/5703
-- Receipt scanning, web UI: https://github.com/we-promise/sure/pull/5794
-- Receipt scanning, mobile app: https://github.com/we-promise/sure/pull/5795
-- Purchases from forwarded order emails: https://github.com/we-promise/sure/pull/5704
-- Purchases, web UI: https://github.com/we-promise/sure/pull/5796
+- On this branch: https://github.com/we-promise/sure/pull/4425 Propose a transaction split from an attached receipt (draft).
+- On #5608: https://github.com/we-promise/sure/pull/5663 Send nullable enums to Anthropic as anyOf.
+- On #5784: receipt scanning https://github.com/we-promise/sure/pull/5703, web UI https://github.com/we-promise/sure/pull/5794, mobile app https://github.com/we-promise/sure/pull/5795; purchases from forwarded order emails https://github.com/we-promise/sure/pull/5704, web UI https://github.com/we-promise/sure/pull/5796.
+- On `main`, parked: https://github.com/we-promise/sure/pull/4844 Run Anthropic AI features on a Claude subscription (draft).
 
 ---
 
-### Waiting on #5824, #5826, #5827
+### Release notes (draft)
 
-- https://github.com/we-promise/sure/pull/5857 Capsule-only check (enforcement), once #5784, #5824, #5826 and #5827 have landed. #5825 may land before or after: it fences work already running in `ProcessPdfJob` and does not move a transport call off a web thread.
+For the release that merges this branch into `main`.
+
+**What this is.** An interim release of the AI plumbing: the new internals (transports, routing and consent, generations, lanes, the local model gate, the outbox) behind the AI configuration you already have. It is not the completed redesign. Settings stored in the database, the AI settings pages, allowed endpoints, own keys and the member switch (redesign PRs 7-9) and the full chat rework (PR 6) come in later releases.
+
+**Configuration is unchanged.** The existing AI environment variables and settings still configure everything; `Ai::LegacyEnvConfig` reads them (redesign §4.5). See [docs/hosting/ai.md](docs/hosting/ai.md).
+
+**Upgrading**
+
+- **Jobs already queued keep running.** `AutoCategorizeJob`, `AutoDetectMerchantsJob`, `EnhanceProviderMerchantsJob` and `WorkerAiHealthCheckJob` stay for one release and hand their work to the new jobs, and the `ai` capsule drains the old `ai_high_priority` and `ai_low_priority` queues for one release. Both go in the release after this one.
+- **A custom `sidekiq.yml` needs the new queues** (`ai_interactive`, `ai_prompt`, `ai_background`) and the `ai_chat` capsule; copy the shipped file. A worker started with an old file leaves chats unanswered, and System health says no worker is processing the AI queues.
+- **Threads and the database pool.** Each worker that runs AI work gets `RAILS_AI_MAX_THREADS` more threads (default `1`), for chat. They hold a database connection only for each query, so the pool sized by `RAILS_MAX_THREADS` doesn't usually need to grow. `RAILS_MAX_THREADS` must be greater than `RAILS_AI_MAX_THREADS`.
+- **`RAILS_AI_MAX_THREADS=0` means that worker runs no AI work at all.** Use it on every worker but one when several share one local model host. At least one worker needs it at `1` or more, or AI jobs wait in their queues and System health reports it.
+- **One gate per local model host.** Sure sends a local model host at most as many AI requests at once as it has slots. The gate is keyed by host name, whatever the port, and sized by the server with the fewest slots on that host, so a chat server and an embedding server on one machine share it instead of each filling the GPU.
+- **Consent.** An AI run for a family without AI consent now fails, rather than being skipped.
+- **Migrations.** 17 new migrations, including moving the statement links on `family_documents` into its metadata and dropping `family_documents.account_statement_id`. Back up before upgrading.
+- **Development databases that ran the AI branches before 2026-11-28** need two version fixes, because the branch renumbered migrations: `UPDATE schema_migrations SET version = '20261124120200' WHERE version = '20261124120000';` only if the database ran this branch's statement-link move (a database that only ran `main` needs nothing), and `DELETE FROM schema_migrations WHERE version = '20261126120000';` (those indexes are now created with their table).
+
+**Not in this release** (tracked in #5077): planning each AI job's lane from its plan rather than its queue; the rest of chat and PDF-import cancellation; enforcing capsule-only AI calls in production; probing every route and model in use, and the gate, lane and down-mark diagnostics on the admin page; and the remaining instrumentation (failover and escalation fields, the `llm_usages.operation` backfill).
 
 ---
 
