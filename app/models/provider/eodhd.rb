@@ -501,9 +501,7 @@ class Provider::Eodhd < Provider
 
     # Every net percentage in the allocation, mapped or not ("Other" counts too).
     def fund_net_allocations(section, value_keys)
-      return [] unless section.is_a?(Hash)
-
-      section.values.filter_map do |row|
+      fund_rows(section).filter_map do |_, row|
         next unless row.is_a?(Hash)
 
         value_keys.lazy.map { |key| row[key] }.find(&:present?)&.to_f
@@ -512,30 +510,8 @@ class Provider::Eodhd < Provider
 
     # Sums each entry's percentage into its mapped bucket. With no mapping the
     # provider's own label is the bucket (sectors are free text).
-    #
-    # Rows come in three shapes: keyed by label (ETF_Data), a list under a
-    # group, or indexed ("0", "1") either at the top level or under a group
-    # (MutualFund_Data). An indexed or listed row names itself in Name or Type.
     def sum_fund_weights(section, mapping, value_keys)
-      entries =
-        case section
-        when Hash
-          section.flat_map do |label, value|
-            if value.is_a?(Array)
-              named_fund_rows(value)
-            elsif value.is_a?(Hash) && value.values.any? { |child| child.is_a?(Hash) }
-              named_fund_rows(value.values)
-            elsif value.is_a?(Hash) && label.to_s.match?(/\A\d+\z/)
-              named_fund_rows([ value ])
-            else
-              [ [ label, value ] ]
-            end
-          end
-        else
-          []
-        end
-
-      entries.each_with_object(Hash.new(0.0)) do |(label, row), totals|
+      fund_rows(section).each_with_object(Hash.new(0.0)) do |(label, row), totals|
         next unless row.is_a?(Hash)
 
         bucket = mapping ? mapping[label] : label.presence
@@ -544,6 +520,26 @@ class Provider::Eodhd < Provider
 
         totals[bucket] += percent.to_f
       end.to_h
+    end
+
+    # A section's rows as [label, row] pairs. Rows come in three shapes: keyed
+    # by label (ETF_Data), a list under a group, or indexed ("0", "1") either
+    # at the top level or under a group (MutualFund_Data). An indexed or
+    # listed row names itself in Name or Type.
+    def fund_rows(section)
+      return [] unless section.is_a?(Hash)
+
+      section.flat_map do |label, value|
+        if value.is_a?(Array)
+          named_fund_rows(value)
+        elsif value.is_a?(Hash) && value.values.any? { |child| child.is_a?(Hash) }
+          named_fund_rows(value.values)
+        elsif value.is_a?(Hash) && label.to_s.match?(/\A\d+\z/)
+          named_fund_rows([ value ])
+        else
+          [ [ label, value ] ]
+        end
+      end
     end
 
     def named_fund_rows(rows)
