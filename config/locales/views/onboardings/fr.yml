@@ -1,21 +1,8 @@
 ---
 fr:
   onboardings:
-    goals:
-      ai_insights: Laisser l'IA m'aider à comprendre mes finances
-      budgeting: Gérer les plans financiers et les budgets
-      cashflow: Comprendre les flux de trésorerie et les dépenses
-      investments: Suivre les investissements
-      optimization: Analyser et optimiser les comptes
-      partner: Gérer les finances avec un partenaire
-      reduce_stress: Réduire le stress financier ou l'anxiété
-      submit: Suivant
-      subtitle: Sélectionnez un ou plusieurs objectifs que vous souhaitez atteindre
-        avec %{product_name} comme outil de finances personnelles.
-      title: Qu'est-ce qui vous amène ici ?
-      unified_accounts: Voir tous mes comptes en un seul endroit
     header:
-      goals: Objectifs
+      tools: Outils/IA
       preferences: Préférences
       setup: Configuration
       sign_out: Se déconnecter
@@ -53,6 +40,49 @@ fr:
       submit: Continuer
       subtitle: Commençons par compléter votre profil.
       title: Configurons votre compte
+    tools:
+      title: Faites comme chez vous.
+      subtitle: Quelques choix pour faire de %{product_name} le vôtre.
+      starting_point:
+        eyebrow: Votre point de départ
+        title: Qu'utilisiez-vous jusqu'ici ?
+        description: Choisissez les outils que vous utilisez pour gérer les finances de votre foyer.
+        select: Sélectionnez vos outils
+        other_placeholder: Autre outil (facultatif)
+        hint: Sélectionnez tout ce qui s'applique. Cela nous aide à vous suggérer un point de départ, sans présumer de la compatibilité d'import.
+        tools:
+          nothing_yet: Aucun pour l'instant
+          other: Autre
+      ai:
+        eyebrow: Votre préférence IA
+        title: Comment souhaitez-vous utiliser %{product_name} ?
+        description: C'est vous qui décidez. Choisissez ce qui vous convient.
+        default: Par défaut
+        modes:
+          none:
+            title: Sans IA
+            description: Gérez vos finances sans l'assistant intégré.
+          builtin:
+            title: IA intégrée
+            description: Activez l'assistant intégré, avec le fournisseur d'IA de cette instance.
+          external:
+            title: Utiliser votre propre agent IA
+            description: Utilisez votre propre assistant, connecté avec votre autorisation.
+        panels:
+          admin_on: En tant qu'administrateur, vous donnez aussi le consentement de votre foyer pour les fonctionnalités d'IA exécutées en arrière-plan, comme la catégorisation.
+          admin_off: En tant qu'administrateur, vous retirez aussi votre consentement pour les fonctionnalités d'IA exécutées en arrière-plan, comme la catégorisation. Elles restent actives uniquement si un autre administrateur a activé l'IA.
+          none:
+            title: Votre assistant reste désactivé.
+            body: L'assistant intégré est désactivé pour votre compte.
+          builtin:
+            title: Votre assistant est activé.
+            body: L'assistant intégré est activé pour votre compte. Le fournisseur d'IA utilisé, et sa disponibilité, dépendent toujours des paramètres d'IA de cette instance.
+            not_configured: Aucun fournisseur d'IA n'est encore configuré sur cette instance. Un administrateur peut en ajouter un dans Paramètres → Auto-hébergement.
+            unavailable: 'Les paramètres d''IA actuels de votre foyer ne permettent pas d''exécuter l''assistant intégré : il ne répondra pas tant qu''un administrateur ne les aura pas modifiés.'
+          external:
+            title: Connectez votre agent quand vous serez prêt.
+            body: L'IA reste activée pour votre compte. Lorsque votre foyer est configuré pour le chat externe, les conversations utilisent votre assistant externe au lieu de l'assistant intégré de %{product_name}, dans la même interface de chat. %{product_name} continue de gérer les importations, la catégorisation et les autres processus en tant que source de référence de vos données. Votre agent peut interagir avec lui via MCP ou sure-cli ; pour le connecter, allez dans Paramètres → MCP. Ce choix ne configure pas le service de chat et ne crée, ne modifie ni ne supprime aucune connexion.
+      submit: Suivant
     trial:
       continue_trial: Continuer l'essai
       data_deletion: Les données seront supprimées ensuite
