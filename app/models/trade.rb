@@ -111,6 +111,25 @@ class Trade < ApplicationRecord
     INTERNAL_MOVEMENT_LABELS.include?(investment_activity_label)
   end
 
+  # A position moved in or out without cash: a Transfer trade with a quantity.
+  # Whether its amount is zero is the entry's to say. Kraken prices a transfer
+  # with no price for its day at today's spot price and flags it, so such a
+  # trade says nothing of what the position was worth that day.
+  def cashless_transfer?
+    investment_activity_label == TRANSFER_LABEL && qty.to_d.nonzero? && !extra&.dig("kraken", "price_missing")
+  end
+
+  # The value of such a position at its quantity times its own price, the
+  # market value per share its provider gave, in `to_currency` and signed by
+  # the quantity. nil when it has no price, or when no rate converts it.
+  def priced_transfer_value(to_currency, date:)
+    return nil unless cashless_transfer? && price.to_d.positive?
+
+    Money.new(qty * price, currency).exchange_to(to_currency, date: date, custom_rate: exchange_rate).amount
+  rescue Money::ConversionError
+    nil
+  end
+
   # The acquisitions this sale can name as the lot it sold from: buys and
   # transfers-in of its security, in its account, that the replay applies
   # before it (an earlier date, or the same date and entered no later: a

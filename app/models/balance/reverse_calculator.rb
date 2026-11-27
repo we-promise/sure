@@ -16,7 +16,9 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
       # balance on their own dates; use_opening_anchor_for_date? still keys off
       # the anchor's real date, so the anchor's own treatment is unchanged.
       account.current_anchor_date.downto(calculation_start_date).map do |date|
-        flows = flows_for_date(date)
+        # The opening anchor sets the day's start to its end, so its flows
+        # explain no change, and a transfer's value would only break end_balance.
+        flows = flows_for_date(date, transfers: !use_opening_anchor_for_date?(date))
         valuation = sync_cache.get_valuation(date)
         cash_adjustments = 0
         non_cash_adjustments = 0
