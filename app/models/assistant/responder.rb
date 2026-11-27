@@ -16,11 +16,13 @@ class Assistant::Responder
     function_results.chunk_while { |a, b| a[:round] == b[:round] }.to_a
   end
 
-  def initialize(message:, instructions:, function_tool_caller:, llm:)
+  # reply: the id the reply has at its model host's gate (AssistantMessage#gate_id).
+  def initialize(message:, instructions:, function_tool_caller:, llm:, reply: nil)
     @message = message
     @instructions = instructions
     @function_tool_caller = function_tool_caller
     @llm = llm
+    @reply = reply
   end
 
   def on(event_name, &block)
@@ -72,7 +74,7 @@ class Assistant::Responder
   end
 
   private
-    attr_reader :message, :instructions, :function_tool_caller, :llm
+    attr_reader :message, :instructions, :function_tool_caller, :llm, :reply
 
     def request_response(function_results: [], previous_response_id: nil, tool_choice: nil)
       response_has_text = false
@@ -120,21 +122,23 @@ class Assistant::Responder
 
     def get_llm_response(streamer:, function_results: [], previous_response_id: nil, tool_choice: nil)
       Usage.capture("ai_assistant_served_daily")
-      response = llm.chat_response(
-        message.content,
-        model: message.ai_model,
-        instructions: instructions,
-        functions: function_tool_caller.function_definitions,
-        function_results: function_results,
-        tool_choice: tool_choice,
-        messages: openai_messages_payload,
-        conversation_history: chat_message_records,
-        streamer: streamer,
-        previous_response_id: previous_response_id,
-        session_id: chat_session_id,
-        user_identifier: chat_user_identifier,
-        family: message.chat&.user&.family
-      )
+      response = Ai::Sequencer.hold_for_chat(chat_endpoint, user: chat&.user, reply:, on_place: ->(waited) { emit(:request, waited) }) do
+        llm.chat_response(
+          message.content,
+          model: message.ai_model,
+          instructions: instructions,
+          functions: function_tool_caller.function_definitions,
+          function_results: function_results,
+          tool_choice: tool_choice,
+          messages: openai_messages_payload,
+          conversation_history: chat_message_records,
+          streamer: streamer,
+          previous_response_id: previous_response_id,
+          session_id: chat_session_id,
+          user_identifier: chat_user_identifier,
+          family: message.chat&.user&.family
+        )
+      end
 
       unless response.success?
         raise response.error
@@ -163,6 +167,12 @@ class Assistant::Responder
 
     def chat
       @chat ||= message.chat
+    end
+
+    def chat_endpoint
+      return @chat_endpoint if defined?(@chat_endpoint)
+
+      @chat_endpoint = Ai::Sequencer.chat_endpoint(chat&.user)
     end
 
     # Memoized fetch — both `chat_message_records` and `openai_messages_payload`

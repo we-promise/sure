@@ -42,7 +42,7 @@ class ChatTest < ActiveSupport::TestCase
 
   test "a response queued before the assistant was turned off never reaches a provider" do
     chat = @user.chats.start!("Test prompt", model: "gpt-4.1")
-    user_message = chat.messages.find_by!(type: "UserMessage")
+    user_message = UserMessage.find(chat.messages.find_by!(type: "UserMessage").id)   # with no family loaded, as the job gets it
     pending = chat.messages.find_by!(type: "AssistantMessage", status: "pending")
 
     @user.family.update!(assistant_type: "mcp_only")
@@ -53,39 +53,52 @@ class ChatTest < ActiveSupport::TestCase
     assert_not Message.exists?(pending.id)
   end
 
-  test "the pending bubble says busy while the AI lane is busy, then Thinking when the job starts" do
+  test "a pending bubble says its reply waits in line" do
+    use_ai_routes(chat: %w[gpu/qwen3-8b])
     chat = chats(:one)
-    user_message = chat.messages.where(type: "UserMessage").first
-    BackgroundJobHealth.stubs(:ai_busy?).returns(true)
-    Chat.any_instance.expects(:broadcast_update).with { |opts| opts[:html] == I18n.t("chats.ai_busy") }
+    pending = AssistantMessage.create!(chat:, content: "", ai_model: "qwen3-8b", status: :pending)
+    publish_gate(holders: [ interactive("chat:other") ])
+    assert_equal I18n.t("chats.waiting_in_line"), chat.pending_status(pending)
 
-    chat.ask_assistant_later(user_message)
+    publish_gate(holders: [ interactive("chat:other") ], waiters: [ interactive("bill:1") ])
+    assert_equal I18n.t("chats.waiting_in_line"), chat.pending_status(pending)
+    assert_includes ApplicationController.render(partial: "assistant_messages/assistant_message", locals: { assistant_message: pending }), I18n.t("chats.waiting_in_line")
 
-    pending = chat.messages.find_by!(type: "AssistantMessage", status: "pending")
-    Chat.any_instance.expects(:broadcast_update).with { |opts| opts[:target] == ActionView::RecordIdentifier.dom_id(pending, :status) && opts[:html] == I18n.t("chats.thinking") }
+    Chat.any_instance.expects(:broadcast_update).with(target: ActionView::RecordIdentifier.dom_id(pending, :status), html: I18n.t("chats.waiting_in_line"))
     Assistant.stubs(:for_chat).returns(stub(respond_to: nil))
-
-    chat.ask_assistant(user_message, assistant_message: pending)
+    chat.ask_assistant(chat.messages.where(type: "UserMessage").first, assistant_message: pending)
+    assert_equal I18n.t("chats.thinking"), chat.pending_status(pending), "its tools run, so no request of its own waits"
   end
 
-  test "a finished reply holds the reservation and refreshes the bubble" do
+  test "a second message in a chat waits for the first one's reply" do
+    use_ai_routes(chat: %w[gpu/qwen3-8b])
     chat = chats(:one)
-    user_message = chat.messages.where(type: "UserMessage").first
-    UserMessage.any_instance.expects(:request_response).with(assistant_message: nil)
-    ChatReservation.expects(:hold!).returns(60)
-    ChatReservation.expects(:bubble).with(60).returns(seconds: 60, busy: false)
-    Turbo::StreamsChannel.expects(:broadcast_update_to).with(chat, targets: ChatReservation::TARGETS, partial: "chats/reservation", locals: { bubble: { seconds: 60, busy: false } })
+    first, second = late_reply(chat), late_reply(chat)
+    first.started!
+    publish_gate(holders: [ interactive(first.gate_id) ])
 
-    AssistantResponseJob.perform_now(user_message)
+    assert_equal I18n.t("chats.thinking"), chat.pending_status(first)
+    assert_equal I18n.t("chats.waiting_in_line"), chat.pending_status(second)
+    BackgroundJobHealth.stubs(:reply_queued?).with(second).returns(true)
+    assert_not chat.handle_undelivered_response!(second)
   end
 
-  test "a failed hold doesn't fail a finished reply" do
-    user_message = chats(:one).messages.where(type: "UserMessage").first
-    UserMessage.any_instance.expects(:request_response).with(assistant_message: nil)
-    ChatReservation.stubs(:while_chat_runs).yields
-    ChatReservation.expects(:hold!).raises(RedisClient::ConnectionError)
+  test "a pending bubble says Thinking when its request would interrupt, or when the model isn't local" do
+    use_ai_routes(chat: %w[gpu/qwen3-8b])
+    chat = chats(:one)
+    pending = AssistantMessage.create!(chat:, content: "", ai_model: "qwen3-8b", status: :pending)
+    assert_equal I18n.t("chats.thinking"), chat.pending_status(pending), "no gate is in use"
 
-    assert_nothing_raised { AssistantResponseJob.perform_now(user_message) }
+    publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ])
+    assert_equal I18n.t("chats.thinking"), chat.pending_status(pending)
+
+    started = late_reply(chat, started: 4.minutes.ago)
+    publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ], waiters: [ interactive(started.gate_id) ])
+    assert_equal I18n.t("chats.thinking"), chat.pending_status(started), "it's being interrupted"
+
+    publish_gate(holders: [ interactive("chat:other") ])
+    use_ai_routes(chat: %w[openai/gpt-4.1-mini])
+    assert_equal I18n.t("chats.thinking"), chat.pending_status(pending)
   end
 
   test "creates with default model when model is nil" do
@@ -204,7 +217,7 @@ class ChatTest < ActiveSupport::TestCase
     BackgroundJobHealth.stubs(:summary).returns("workers=0")
 
     chat = chats(:two)
-    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: (sent = 5.minutes.ago), updated_at: sent)
 
     assert_difference -> { DebugLogEntry.count } => 1, -> { Message.count } => -1 do
       assert chat.handle_undelivered_response!(pending)
@@ -219,7 +232,7 @@ class ChatTest < ActiveSupport::TestCase
     BackgroundJobHealth.stubs(:summary).returns("")
 
     chat = chats(:two)
-    pending = chat.messages.create!(type: "AssistantMessage", content: "partial answer", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "partial answer", ai_model: "gpt-4.1", status: :pending, created_at: (sent = 5.minutes.ago), updated_at: sent)
 
     assert_no_difference -> { Message.count } do
       assert chat.handle_undelivered_response!(pending)
@@ -237,6 +250,89 @@ class ChatTest < ActiveSupport::TestCase
     end
 
     assert fresh.reload.pending?
+  end
+
+  test "handle_undelivered_response! never gives up on a reply whose job is still queued, whatever its model" do
+    chat = chats(:two)
+    pending = late_reply(chat)
+    BackgroundJobHealth.stubs(:reply_queued?).with(pending).returns(true)
+
+    [ %w[gpu/qwen3-8b], %w[openai/gpt-4.1-mini] ].each do |routes|
+      use_ai_routes(chat: routes)
+      Chat.any_instance.expects(:broadcast_update).with { |opts| opts[:html] == I18n.t("chats.waiting_in_line") }
+      assert_no_difference [ "DebugLogEntry.count", "Message.count" ] do
+        assert_not chat.handle_undelivered_response!(pending)
+      end
+    end
+  end
+
+  test "a reply that took too long says so; one whose job was lost says the worker may be down" do
+    chat = chats(:two)
+
+    chat.handle_undelivered_response!(late_reply(chat, started: 4.minutes.ago))
+    assert_equal I18n.t("chat.errors.timed_out"), chat.presentable_error_message
+    assert_equal "Assistant response not delivered in time", DebugLogEntry.order(:created_at).last.message
+
+    chat.handle_undelivered_response!(late_reply(chat))
+    assert_equal I18n.t("chat.errors.no_response"), chat.presentable_error_message
+    assert_match "worker likely down", DebugLogEntry.order(:created_at).last.message
+  end
+
+  test "handle_undelivered_response! never gives up on a reply waiting at the gate" do
+    use_ai_routes(chat: %w[gpu/qwen3-8b])
+    chat = chats(:two)
+    pending = late_reply(chat, started: 4.minutes.ago)
+    publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ], waiters: [ interactive(pending.gate_id) ])
+
+    assert_not chat.handle_undelivered_response!(pending)
+  end
+
+  test "handle_undelivered_response! gives up on a late reply that isn't waiting" do
+    use_ai_routes(chat: %w[gpu/qwen3-8b])
+    chat = chats(:two)
+
+    publish_gate(holders: [ Ai::Gate::Holder.new(lane: :background) ])
+    assert chat.handle_undelivered_response!(late_reply(chat)), "its request would interrupt that one"
+
+    running = late_reply(chat, started: 4.minutes.ago)
+    publish_gate(holders: [ interactive(running.gate_id) ], waiters: [ interactive("reply:another") ])
+    assert chat.handle_undelivered_response!(running), "its own request runs"
+
+    publish_gate(waiters: [ interactive((waiting = late_reply(chat, started: 4.minutes.ago)).gate_id) ])
+    travel Ai::Gate::State::TTL + 1.second
+    assert chat.handle_undelivered_response!(waiting), "the dead worker's gate has lapsed"
+  end
+
+  test "a reply's time starts again when its job starts" do
+    chat = chats(:two)
+    pending = late_reply(chat)
+    Assistant.stubs(:for_chat).returns(stub(respond_to: nil))
+
+    chat.ask_assistant(chat.messages.where(type: "UserMessage").first, assistant_message: pending)
+    assert_not chat.handle_undelivered_response!(pending.reload)
+
+    travel Chat.response_timeout
+    assert chat.handle_undelivered_response!(pending.reload)
+  end
+
+  test "handle_undelivered_response! gives up on a late running reply while the chat's next one waits behind it" do
+    use_ai_routes(chat: %w[gpu/qwen3-8b])
+    chat = chats(:two)
+    running, waiting = late_reply(chat, started: 4.minutes.ago), late_reply(chat, started: 4.minutes.ago)
+    publish_gate(holders: [ interactive(running.gate_id) ], waiters: [ interactive(waiting.gate_id) ])
+
+    assert_not chat.handle_undelivered_response!(waiting)
+    assert chat.handle_undelivered_response!(running)
+  end
+
+  test "a reply's time starts later by what its request waited for its place" do
+    chat = chats(:two)
+    reply = late_reply(chat, started: Chat.response_timeout.ago - 5.seconds)
+    reply.waited!(30)
+
+    assert_not chat.handle_undelivered_response!(reply.reload)
+    travel 31.seconds
+    assert chat.handle_undelivered_response!(reply.reload)
   end
 
   test "handle_undelivered_response! is a no-op for non-pending messages" do
@@ -295,7 +391,7 @@ class ChatTest < ActiveSupport::TestCase
 
   test "handle_undelivered_response! respects a raised timeout" do
     chat = chats(:two)
-    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: (sent = 5.minutes.ago), updated_at: sent)
 
     with_setting_timeout(600) do
       assert_no_difference [ "DebugLogEntry.count", "Message.count" ] do
@@ -305,4 +401,16 @@ class ChatTest < ActiveSupport::TestCase
 
     assert pending.reload.pending?
   end
+
+  private
+    def late_reply(chat, started: nil)
+      created_at = 5.minutes.ago
+      chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "qwen3-8b", status: :pending, created_at:, updated_at: started || created_at)
+    end
+
+    def publish_gate(holders: [], waiters: [])
+      Ai::Gate::State.write("gpu.local", holders:, waiters:, interruptions: 0, put_off: false)
+    end
+
+    def interactive(job) = Ai::Gate::Holder.new(lane: :interactive, job:)
 end

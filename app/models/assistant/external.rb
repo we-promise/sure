@@ -80,11 +80,10 @@ class Assistant::External < Assistant::Base
     client = build_client
     messages = build_conversation_messages
 
-    model = client.chat(
-      messages: messages,
-      user: "sure-family-#{chat.user.family_id}"
-    ) do |text|
-      assistant_message.append_text!(text)
+    model = Ai::Sequencer.external_chat(chat.user) do
+      client.chat(messages: messages, user: "sure-family-#{chat.user.family_id}") do |text|
+        assistant_message.append_text!(text)
+      end
     end
 
     if assistant_message.content.blank?

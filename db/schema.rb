@@ -209,8 +209,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.datetime "updated_at", null: false
     t.integer "step", default: 0, null: false
     t.jsonb "next_job"
-    t.index ["updated_at"], name: "index_ai_generation_runs_on_updated_at"
     t.index ["family_id"], name: "index_ai_generation_runs_on_family_id"
+    t.index ["updated_at"], name: "index_ai_generation_runs_on_updated_at"
   end
 
   create_table "akahu_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -649,21 +649,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.string "account_id"
     t.string "account_status"
     t.string "account_type"
-    t.decimal "anchor_pending_total", precision: 19, scale: 4
     t.boolean "balance_evidence_verified", default: false, null: false
     t.boolean "balance_verified", default: false, null: false
     t.datetime "created_at", null: false
     t.decimal "credit_limit", precision: 19, scale: 4
     t.string "currency"
     t.decimal "current_balance", precision: 19, scale: 4
-    t.datetime "early_fetched_at"
     t.uuid "enable_banking_item_id", null: false
     t.string "iban"
     t.jsonb "identification_hashes", default: []
     t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
     t.string "name"
-    t.decimal "pending_total", precision: 19, scale: 4
     t.string "product"
     t.string "provider"
     t.jsonb "raw_payload"
@@ -671,6 +668,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.boolean "treat_balance_as_available_credit", default: false, null: false
     t.string "uid"
     t.datetime "updated_at", null: false
+    t.decimal "pending_total", precision: 19, scale: 4
+    t.decimal "anchor_pending_total", precision: 19, scale: 4
+    t.datetime "early_fetched_at"
     t.index ["account_id"], name: "index_enable_banking_accounts_on_account_id"
     t.index ["enable_banking_item_id"], name: "index_enable_banking_accounts_on_enable_banking_item_id"
     t.index ["identification_hashes"], name: "index_enable_banking_accounts_on_identification_hashes", using: :gin
@@ -689,7 +689,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.string "country_code"
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
-    t.datetime "full_history_fetch_requested_at"
     t.string "institution_color"
     t.string "institution_domain"
     t.string "institution_id"
@@ -708,6 +707,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.string "status", default: "good"
     t.date "sync_start_date"
     t.datetime "updated_at", null: false
+    t.datetime "full_history_fetch_requested_at"
     t.index ["family_id"], name: "index_enable_banking_items_on_family_id"
     t.index ["requested_consent_valid_until"], name: "index_enable_banking_items_on_requested_consent_for_stale_ip", where: "((last_psu_ip IS NOT NULL) AND (session_expires_at IS NULL))"
     t.index ["session_expires_at"], name: "index_enable_banking_items_on_session_expires_at_for_stale_ip", where: "(last_psu_ip IS NOT NULL)"
@@ -749,8 +749,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "(((entryable_type)::text = 'Transaction'::text) AND (excluded = false))"
     t.index ["date"], name: "index_entries_on_date"
-    t.index ["entryable_type"], name: "index_entries_on_entryable_type"
     t.index ["entryable_type", "entryable_id"], name: "index_entries_on_entryable_type_and_entryable_id"
+    t.index ["entryable_type"], name: "index_entries_on_entryable_type"
     t.index ["import_id"], name: "index_entries_on_import_id"
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
@@ -1525,7 +1525,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.datetime "generated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.string "insight_type", null: false
     t.jsonb "metadata", default: {}, null: false
-    t.integer "notification_version", default: 1, null: false
     t.date "period_end"
     t.date "period_start"
     t.string "priority", default: "medium", null: false
@@ -1533,6 +1532,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.string "status", default: "active", null: false
     t.string "title", null: false
     t.datetime "updated_at", null: false
+    t.integer "notification_version", default: 1, null: false
     t.index ["family_id", "dedup_key"], name: "index_insights_on_family_id_and_dedup_key", unique: true
     t.index ["family_id", "generated_at"], name: "index_insights_on_family_id_and_generated_at"
     t.index ["family_id", "status"], name: "index_insights_on_family_id_and_status"
@@ -1964,11 +1964,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
   end
 
   create_table "page_cache_entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.integer "bytes", null: false
-    t.datetime "created_at", null: false
     t.uuid "family_id", null: false
-    t.datetime "last_used_at", null: false
     t.string "page_key", null: false
+    t.integer "bytes", null: false
+    t.datetime "last_used_at", null: false
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_page_cache_entries_on_family_id"
     t.index ["last_used_at"], name: "index_page_cache_entries_on_last_used_at"
@@ -2024,12 +2024,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.string "avm_external_id"
     t.date "avm_last_synced_on"
     t.string "avm_provider"
-    t.uuid "cost_tag_id"
     t.datetime "created_at", null: false
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
     t.datetime "updated_at", null: false
     t.integer "year_built"
+    t.uuid "cost_tag_id"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
     t.index ["cost_tag_id"], name: "index_properties_on_cost_tag_id"
     t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text, 'chimnie'::character varying::text, 'terrascoutx'::character varying::text]))", name: "properties_avm_provider_check"
@@ -2045,15 +2045,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
   end
 
   create_table "push_deliveries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.datetime "attempted_at"
-    t.datetime "created_at", null: false
-    t.datetime "enqueued_at"
+    t.string "subscription_type", null: false
+    t.uuid "subscription_id", null: false
     t.uuid "insight_id"
     t.integer "insight_version"
-    t.integer "provider_attempts", default: 0, null: false
     t.string "status", default: "pending", null: false
-    t.uuid "subscription_id", null: false
-    t.string "subscription_type", null: false
+    t.datetime "enqueued_at"
+    t.datetime "attempted_at"
+    t.integer "provider_attempts", default: 0, null: false
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["insight_id"], name: "index_push_deliveries_on_insight_id"
     t.index ["status", "updated_at"], name: "index_push_deliveries_on_status_and_updated_at"
@@ -2362,7 +2362,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.text "error_message"
     t.datetime "executed_at", null: false
     t.string "execution_type", null: false
-    t.integer "job_transactions_modified", default: 0, null: false
     t.integer "pending_jobs_count", default: 0, null: false
     t.uuid "rule_id", null: false
     t.string "rule_name"
@@ -2372,12 +2371,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.integer "transactions_processed", default: 0, null: false
     t.integer "transactions_queued", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.integer "job_transactions_modified", default: 0, null: false
     t.index ["executed_at"], name: "index_rule_runs_on_executed_at"
     t.index ["rule_id", "executed_at"], name: "index_rule_runs_on_rule_id_and_executed_at"
   end
 
   create_table "rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.boolean "active", default: false, null: false
+    t.boolean "apply_immediately", default: false, null: false
     t.datetime "created_at", null: false
     t.date "effective_date"
     t.uuid "family_id", null: false
@@ -2387,7 +2388,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.uuid "rule_group_id"
     t.boolean "stop_processing", default: false, null: false
     t.datetime "updated_at", null: false
-    t.boolean "apply_immediately", default: false, null: false
     t.index ["family_id", "position"], name: "index_rules_on_family_id_and_position"
     t.index ["rule_group_id"], name: "index_rules_on_rule_group_id"
   end
@@ -2730,11 +2730,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
   create_table "sso_identity_blocks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "identity_label", null: false
-    t.text "legacy_digest_key"
     t.string "provider", null: false
-    t.string "uid"
     t.string "uid_digest"
     t.datetime "updated_at", null: false
+    t.string "uid"
+    t.text "legacy_digest_key"
     t.index ["provider", "uid"], name: "index_sso_identity_blocks_on_provider_and_uid", unique: true, where: "(uid IS NOT NULL)"
     t.index ["provider", "uid_digest"], name: "index_sso_identity_blocks_on_provider_and_uid_digest", unique: true
   end
@@ -3127,15 +3127,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
   end
 
   create_table "web_push_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.text "auth", null: false
-    t.datetime "created_at", null: false
+    t.uuid "user_id", null: false
+    t.uuid "session_id", null: false
     t.text "endpoint", null: false
     t.string "endpoint_digest", null: false
-    t.datetime "last_test_requested_at"
     t.text "p256dh", null: false
-    t.uuid "session_id", null: false
+    t.text "auth", null: false
+    t.datetime "last_test_requested_at"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.uuid "user_id", null: false
     t.index ["endpoint_digest"], name: "index_web_push_subscriptions_on_endpoint_digest", unique: true
     t.index ["session_id"], name: "index_web_push_subscriptions_on_session_id"
     t.index ["user_id"], name: "index_web_push_subscriptions_on_user_id"

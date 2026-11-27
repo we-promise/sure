@@ -125,7 +125,6 @@ class Chat < ApplicationRecord
   def ask_assistant_later(message)
     clear_error
     pending = messages.create!(type: "AssistantMessage", content: "", ai_model: message.ai_model, status: :pending)
-    broadcast_pending_status(pending, busy: true) if BackgroundJobHealth.ai_busy?
     AssistantResponseJob.perform_later(message, pending)
   end
 
@@ -137,24 +136,27 @@ class Chat < ApplicationRecord
       return
     end
 
-    broadcast_pending_status(assistant_message) if assistant_message
+    if assistant_message
+      broadcast_pending_status(assistant_message)
+      assistant_message.started!
+    end
     assistant.respond_to(message, assistant_message: assistant_message)
   end
 
-  # Not broadcast_update: it adds `chat` to the locals and drops a nil bubble.
-  def hold_reservation
-    Turbo::StreamsChannel.broadcast_update_to self, targets: ChatReservation::TARGETS, partial: "chats/reservation",
-                                              locals: { bubble: ChatReservation.bubble(ChatReservation.hold!) }
-  rescue => e
-    Rails.logger.warn("ChatReservation hold failed: #{e.class}: #{e.message}")
+  # What a pending bubble says: whether other interactive requests are ahead of the reply at its
+  # local model host. Broadcast when its job starts, and as each of its requests does.
+  def pending_status(assistant_message)
+    gate = model_gate
+    in_line = gate && (assistant_message.started? ? gate.behind_interactive?(assistant_message.gate_id) : gate.interactive?)
+    I18n.t(in_line ? "chats.waiting_in_line" : "chats.thinking")
   end
 
-  # The pending bubble says "busy" while the response waits behind another AI
-  # job, and "Thinking" once its job starts.
-  def broadcast_pending_status(assistant_message, busy: false)
-    broadcast_update target: ActionView::RecordIdentifier.dom_id(assistant_message, :status),
-                     html: I18n.t(busy ? "chats.ai_busy" : "chats.thinking")
+  def broadcast_pending_status(assistant_message, status = pending_status(assistant_message))
+    broadcast_update target: ActionView::RecordIdentifier.dom_id(assistant_message, :status), html: status
   end
+
+  # The id its tools' AI requests carry (Ai::CallContext.job).
+  def correlation_id = "chat:#{id}"
 
   # How long a pending "Thinking…" bubble may wait before the browser watchdog
   # reports it as undelivered. Configurable because a local model on slow
@@ -207,13 +209,19 @@ class Chat < ApplicationRecord
   # Driven by an untrusted client watchdog, so the state change is gated behind a
   # row lock + a server-side age check: we re-read the row under lock and only act
   # if it is *still* pending and has genuinely waited past the timeout, so we never
-  # race a worker that is finishing a legitimate (slow) response.
+  # race a worker that is finishing a legitimate (slow) response. A reply still in
+  # line isn't undelivered: its bubble says so, and the watchdog asks again.
   def handle_undelivered_response!(assistant_message)
     return false unless assistant_message.is_a?(AssistantMessage)
 
+    if assistant_message.pending? && in_line?(assistant_message)
+      broadcast_pending_status(assistant_message, I18n.t("chats.waiting_in_line"))
+      return false
+    end
+
     resolved = assistant_message.with_lock do
       next false unless assistant_message.pending?
-      next false if assistant_message.created_at > self.class.undelivered_response_timeout.ago
+      next false if assistant_message.updated_at > self.class.undelivered_response_timeout.ago
 
       if assistant_message.content.blank?
         assistant_message.destroy!
@@ -234,12 +242,27 @@ class Chat < ApplicationRecord
 
   private
 
+    def model_gate = BackgroundJobHealth.model_gate(Ai::Sequencer.chat_endpoint(user))
+
+    # Its job is queued, or its request waits for a place at its local model host's gate.
+    def in_line?(assistant_message)
+      return BackgroundJobHealth.reply_queued?(assistant_message) unless assistant_message.started?
+
+      model_gate&.waiting?(assistant_message.gate_id) || false
+    end
+
+    # A reply whose job started took too long; one whose job never did was lost, or no worker runs it.
     def undelivered_error_payload(assistant_message)
+      reason = if assistant_message.started?
+        "AssistantResponseJob started and didn't answer within #{self.class.response_timeout.inspect}"
+      else
+        "The background worker did not process AssistantResponseJob"
+      end
+
       {
-        message: I18n.t("chat.errors.no_response"),
-        technical_message: "Assistant response was never delivered. The background worker did not process " \
-          "AssistantResponseJob for message ##{assistant_message.id} (model #{assistant_message.ai_model}). " \
-          "#{BackgroundJobHealth.summary}",
+        message: I18n.t(assistant_message.started? ? "chat.errors.timed_out" : "chat.errors.no_response"),
+        technical_message: "Assistant response was never delivered. #{reason} " \
+          "for message ##{assistant_message.id} (model #{assistant_message.ai_model}). #{BackgroundJobHealth.summary}",
         type: "DeliveryTimeout"
       }
     end
@@ -248,7 +271,7 @@ class Chat < ApplicationRecord
       DebugLogEntry.capture(
         category: "assistant",
         level: "error",
-        message: "Assistant response not delivered — background worker likely down or not polling the AI queues",
+        message: assistant_message.started? ? "Assistant response not delivered in time" : "Assistant response not delivered — background worker likely down or not polling the AI queues",
         source: "chat.delivery_timeout",
         metadata: {
           chat_id: id,

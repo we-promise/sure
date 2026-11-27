@@ -4,7 +4,6 @@ id:
     demo_banner_title: "Mode Demo Aktif"
     demo_banner_message: "Token LLM gratis disediakan oleh Vercel AI Gateway. Hasil dapat bervariasi karena kami sering mengubah bobot model untuk keperluan pengujian. Silakan lihat dokumentasi Vercel untuk mengetahui alur percakapan Anda! 🤖"
     thinking: "Sedang berpikir ..."
-    ai_busy: "Sedang menyelesaikan tugas latar belakang, setelah itu saya akan langsung menanggapi pesan Anda."
     reservation:
       ready_html: "Saya telah menunda beberapa tugas latar belakang agar dapat langsung memproses pesan Anda. Tugas akan dilanjutkan kembali dalam %{countdown} dtk, silakan lanjutkan mengetik!"
       busy: "Sedang menyelesaikan tugas latar belakang, setelah itu saya siap membantu Anda. Lanjutkan mengetik!"

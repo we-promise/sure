@@ -53,9 +53,6 @@ module Ai::Routes
   # The lane a job on `queue` runs in, or nil off the AI queues.
   def lane_for_queue(queue) = QUEUES.key(queue.to_s) || LEGACY_QUEUES[queue.to_s]
 
-  # Every queue that holds `lane`'s jobs, the legacy one included.
-  def queues_for_lane(lane) = ai_queues.select { lane_for_queue(_1) == lane }
-
   # The feature whose route and needs this one uses: a shadow's primary, or search's `embed`.
   def source_of(feature) = fetch(feature).values_at(:shadow_of, :route_of).compact.first || feature.to_sym
 

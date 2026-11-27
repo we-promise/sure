@@ -238,8 +238,20 @@ flowchart LR
   transport's `attempt` sends it again as `Ai::Error::Preempted`: not a try, a down mark or a
   failover. Local generations stream so the server stops when the socket closes, and check the
   call's budget on each chunk. Time waiting at the gate, and an interrupted request's run, are
-  added to the call's deadline. Cloud endpoints have no gate. Tests: `ai_gate_test`,
+  added to the call's deadline. Cloud endpoints have no gate. Today's chat holds a place itself
+  around each request (`Ai::Sequencer.hold_for_chat`, until chat moves to the transports), never
+  around a turn, so a tool's own AI call to that host doesn't wait for its turn (`ai_nested_call_test`). Tests: `ai_gate_test`,
   `gate_interrupt_test` (real sockets, direct and through a proxy), `ai_transport_local_stream_test`.
+- **The typing hold is at the gate.** Typing in the chat box holds the local host of chat's route
+  (`Ai::Sequencer.chat_endpoint`, `ChatReservation`): no new prompt or background request starts
+  there for 60 seconds. A prompt request waits, a background one raises `Busy`, and the chat
+  message ends the hold. An external assistant's own calls pass no gate, so typing to it and its
+  whole turn (`Ai::Sequencer.external_chat`) hold new background requests off every local host.
+- **The web reads the gate, never a worker's queues.** A worker publishes each gate in use
+  (`Ai::Gate::State`: holders, waiters, interruptions, put-off work) to `Ai::SharedState` on every
+  change and on its heartbeat. `BackgroundJobHealth.model_gate` reads it, for a pending chat's
+  "Waiting in line", its watchdog and the typing bubble. Only Sidekiq publishes, and one worker should
+  serve a local host: two would overwrite each other.
 - **No prompt heredocs.** `Sure/NoPromptHeredoc` flags heredocs over ten lines in
   `app/models/ai/**` and controllers.
 - **Prompts change only with evals.** `test/architecture/ai_prompts_test.rb` renders each prompt

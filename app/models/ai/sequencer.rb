@@ -76,7 +76,7 @@ module Ai::Sequencer
   def resize(endpoint, sized)
     server = Server.new(slots(endpoint), now)
     sized ||= begin
-      fresh = Sized.new(Ai::Gate.new(server.slots), Concurrent::Map.new)
+      fresh = Sized.new(Ai::Gate.new(server.slots, host: host_key(endpoint)), Concurrent::Map.new)
       GATES.put_if_absent(host_key(endpoint), fresh) || fresh
     end
     sized.servers[server_key(endpoint)] = server
@@ -112,6 +112,51 @@ module Ai::Sequencer
   rescue URI::InvalidURIError
     nil
   end
+
+  # The local endpoint a user's chat route uses, whose gate chat takes and whose host the typing
+  # hold keeps free. Nil for a cloud model, an external assistant (it calls its own models) or no chat.
+  def chat_endpoint(user)
+    endpoint = chat_route(user)&.endpoint
+    endpoint if endpoint&.local? && !endpoint.agent?
+  end
+
+  def external_chat?(user) = chat_route(user)&.agent? || false
+
+  def chat_route(user) = user && Ai.plan(:chat, family: user.family, user:)&.route
+
+  def local_endpoints = Ai::Config.current.endpoints.select { _1.local? && !_1.agent? }
+
+  # Runs an external assistant's turn with no new background request starting on this worker's local
+  # hosts, one of which may serve the assistant's own models: its calls don't pass a gate. The
+  # message has been sent, so it ends the typing hold. The turn holds no place, so a tool it calls
+  # in Sure never waits for it.
+  def external_chat(user)
+    gates = local_endpoints.filter_map { gate_for(_1) }.uniq
+    gates.each(&:hold_off_background)
+    ChatReservation.release(local_endpoints, user:)
+    yield
+  ensure
+    gates&.each(&:let_background_in)
+  end
+
+  # Temporary, until chat's requests pass Ai::Transport::Instrumenter like every other one's: runs a
+  # chat request holding a place at its model host's gate. The message has been sent, so it ends
+  # the typing hold. Around one request, never a turn, so a tool's own AI call can have the place.
+  # `on_place` gets the seconds the request waited for it; the reply counts as waiting until it returns.
+  def hold_for_chat(endpoint, user:, reply:, on_place:)
+    if endpoint.nil?
+      on_place.call(0)
+      return yield
+    end
+
+    gate_for(endpoint).hold(:interactive, feature: "chat", job: reply, on_place:) do
+      ChatReservation.release([ endpoint ], user:)
+      yield
+    end
+  end
+
+  # Refreshes the published state of each gate in use before it expires (Ai::Gate::State::TTL).
+  def publish_gates = GATES.each_value { |sized| sized.gate.publish if sized.gate.in_use? }
 
   # Tests start each case without the gates an earlier one sized.
   def forget_gates = GATES.clear

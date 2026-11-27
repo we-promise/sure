@@ -112,6 +112,73 @@ class AiGateTest < ActiveSupport::TestCase
     assert_raises(Ai::Error::Busy) { gate.hold(:background) { flunk "it shouldn't run" } }
   end
 
+  test "the typing hold refuses new background requests, whatever is free" do
+    gate = Ai::Gate.new(2, host: "gpu.local")
+    hold_for_typing
+
+    assert_raises(Ai::Error::Busy) { gate.hold(:background) { flunk "it shouldn't run" } }
+    assert_empty gate.waiters
+  end
+
+  test "under the typing hold a prompt request waits, until the hold lapses" do
+    gate = Ai::Gate.new(1, host: "gpu.local")
+    hold_for_typing
+    prompt = occupy(gate, :prompt, admitted: false)
+    assert_not prompt.admitted?(timeout: 0.2), "the hold should keep it off a free host"
+
+    travel ChatReservation::TTL + 1.second
+    assert prompt.admitted?
+  end
+
+  test "under the typing hold a prompt request waits, until the message ends the hold" do
+    gate = Ai::Gate.new(1, host: "gpu.local")
+    hold_for_typing
+    prompt = occupy(gate, :prompt, admitted: false)
+
+    assert_equal :sent, gate.hold(:interactive) { :sent }
+    ChatReservation.release([ @local ], user: users(:family_admin))
+    assert prompt.admitted?
+  end
+
+  test "the typing hold interrupts nothing, and never keeps an interactive request off" do
+    gate = Ai::Gate.new(1, host: "gpu.local")
+    running = occupy(gate, :background)
+    hold_for_typing
+    assert_not_predicate running.holder, :preempted?
+
+    running.release
+    assert_equal :ran, gate.hold(:interactive) { :ran }
+  end
+
+  test "while an external assistant answers, no new background request starts, and prompt and interactive ones do" do
+    gate = Ai::Gate.new(2, host: "gpu.local")
+    running = occupy(gate, :background)
+
+    2.times { gate.hold_off_background }
+    assert_not_predicate running.holder, :preempted?
+    running.release
+    assert_raises(Ai::Error::Busy) { gate.hold(:background) { flunk "it shouldn't run" } }
+    assert_equal :ran, gate.hold(:prompt) { :ran }
+    assert_equal :ran, gate.hold(:interactive) { :ran }
+
+    gate.let_background_in
+    assert_raises(Ai::Error::Busy, "another external chat still runs") { gate.hold(:background) { flunk "it shouldn't run" } }
+    gate.let_background_in
+    assert_equal :ran, gate.hold(:background) { :ran }
+  end
+
+  test "the typing hold is per host" do
+    hold_for_typing
+
+    assert_equal :ran, Ai::Gate.new(1, host: "other.local").hold(:background) { :ran }
+  end
+
+  test "a typing hold that can't be read doesn't keep a request off" do
+    ChatReservation.stubs(:held?).raises(RedisClient::ConnectionError)
+
+    assert_equal :ran, Ai::Gate.new(1, host: "gpu.local").hold(:background) { :ran }
+  end
+
   test "with two or more places, one is kept for interactive requests" do
     gate = Ai::Gate.new(2)
     occupy(gate, :background)
@@ -339,6 +406,11 @@ class AiGateTest < ActiveSupport::TestCase
   end
 
   private
+    def hold_for_typing
+      @local = ai_endpoint(base_url: "http://gpu.local:8080/v1", location: :local)
+      assert_equal 60, ChatReservation.new([ @local ], lanes: %i[prompt background], user: users(:family_admin)).hold!
+    end
+
     def occupy(gate, lane, admitted: true)
       waiting = gate.waiters.count { _1.lane == lane }
       Occupant.new(gate, lane).tap do |occupant|

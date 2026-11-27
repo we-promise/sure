@@ -5,6 +5,23 @@ class AssistantMessage < Message
     "assistant"
   end
 
+  # Marks that the reply's job runs, where the watchdog's time starts (Chat#handle_undelivered_response!).
+  # Nothing else updates a pending reply.
+  def started!
+    update_columns(updated_at: Time.current)
+  end
+
+  def started? = updated_at > created_at
+
+  # The time one of its requests waited for its model host isn't the reply's, so the watchdog's time
+  # starts that much later.
+  def waited!(seconds)
+    update_columns(updated_at: updated_at + seconds) if persisted? && seconds.positive?
+  end
+
+  # What its requests are known by at a local model host's gate: one chat can have two replies at once.
+  def gate_id = "reply:#{id}"
+
   # Appends streamed (or, for non-streaming providers, whole) response text.
   #
   # Returns false without saving if the bubble is no longer awaiting a response.

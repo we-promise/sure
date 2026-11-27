@@ -9,10 +9,17 @@
 # - background: never waits. With no place free, or anyone waiting, it raises Ai::Error::Busy,
 #   and its job comes back later.
 #
+# While someone types in the chat box (ChatReservation), no new prompt or background request
+# starts on chat's host: the prompt request waits, and the background one raises Busy. While an
+# external assistant answers (Ai::Sequencer.external_chat), no new background request starts.
+#
 # With two or more places, one is kept for interactive requests. A gate lives in one worker's
-# memory (Ai::Sequencer.gate_for), so a worker that dies takes its places with it.
+# memory (Ai::Sequencer.gate_for), so a worker that dies takes its places with it. The worker
+# publishes it for the web to read (Ai::Gate::State).
 class Ai::Gate
   RANKS = { interactive: 0, prompt: 1, background: 2 }.freeze
+  # Seconds between a waiting prompt request's checks whether the typing hold is over.
+  HOLD_CHECK = 1
 
   # Raised in the interrupted request's adapter (Ai::Transport::Http::ProxyNetHttp). A
   # RubyLLM::CancelledError, so RubyLLM records that request's usage as cancelled, not failed;
@@ -23,21 +30,27 @@ class Ai::Gate
   # socket, never RubyLLM's Faraday connection, which every thread shares. `shutdown` wakes a
   # read blocked in another thread, and the sending thread closes the socket as it unwinds.
   class Holder
-    attr_reader :lane, :feature, :arrival, :since
+    attr_reader :lane, :feature, :job, :arrival, :since
 
-    def initialize(lane:, feature: nil, arrival: 0)
+    # job: what the request is for: the correlation id of its job (Ai::CallContext.job), or a chat reply.
+    # starting: published as waiting until it has started (Ai::Gate#hold's on_place).
+    def initialize(lane:, feature: nil, job: nil, arrival: 0, starting: false)
       raise ArgumentError, "unknown lane: #{lane.inspect}" unless RANKS.key?(lane)
 
       @lane = lane
       @feature = feature
+      @job = job
       @arrival = arrival
       @lock = Mutex.new
       @preempted = false
+      @starting = starting
     end
 
     def interactive? = lane == :interactive
     def rank = RANKS.fetch(lane)
     def preempted? = @preempted
+    def starting? = @starting
+    def started! = @starting = false
 
     def admitted!
       @since = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -100,13 +113,19 @@ class Ai::Gate
 
   attr_reader :size
 
-  def initialize(size)
+  # host: the key it's published under (Ai::Sequencer.host_key); a gate without one isn't.
+  def initialize(size, host: nil)
     @size = Integer(size)
+    @host = host
     @monitor = Monitor.new
+    @publishing = Mutex.new
     @changed = @monitor.new_cond
     @holders = []
     @waiters = []
     @arrivals = 0
+    @interruptions = 0
+    @put_off = false
+    @external_chats = 0
   end
 
   def size=(size)
@@ -121,43 +140,107 @@ class Ai::Gate
 
   def holders = @monitor.synchronize { @holders.dup }
   def waiters = @monitor.synchronize { @waiters.dup }
+  def in_use? = @monitor.synchronize { @holders.any? || @waiters.any? }
+
+  def hold_off_background = @monitor.synchronize { @external_chats += 1 }
+  def let_background_in = @monitor.synchronize { @external_chats -= 1 }
+
+  # Writes the gate's state for the web, never under the gate's lock and never failing the request.
+  # Only a worker's, which its heartbeat keeps current: a web process's would overwrite it.
+  def publish
+    return unless @host && Sidekiq.server?
+
+    # The state is taken in turn, so the last one written is the latest.
+    @publishing.synchronize { State.write(@host, **@monitor.synchronize { state }) }
+  rescue StandardError => e
+    Rails.logger.warn("[Ai::Gate] state of #{@host} not published: #{e.class}: #{e.message}")
+  end
 
   # Runs the block holding a place and yields the seconds it waited for one. Raises
   # Ai::Error::Busy for a background request that would wait, and Ai::Error::Cancelled when
-  # `cancelled` answers true once a place is free, before the request is sent.
-  def hold(lane, feature: nil, cancelled: nil)
+  # `cancelled` answers true once a place is free, before the request is sent. `on_place`, if given,
+  # is called with those seconds first, and the request is published as waiting until it returns.
+  def hold(lane, feature: nil, job: Ai::CallContext.correlation_id, cancelled: nil, on_place: nil)
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    holder = enter(lane, feature)
+    holder = enter(lane, feature, job, starting: on_place.present?)
     begin
       raise Ai::Error::Cancelled, "cancelled while waiting for the model host" if cancelled&.call
 
-      self.class.holding(holder) { yield Process.clock_gettime(Process::CLOCK_MONOTONIC) - started }
+      self.class.holding(holder) do
+        waited = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+        if on_place
+          on_place.call(waited)
+          start(holder)
+        end
+        yield waited
+      end
     ensure
       leave(holder)
     end
   end
 
   private
-    def enter(lane, feature)
-      @monitor.synchronize do
-        holder = Holder.new(lane:, feature:, arrival: @arrivals += 1)
-        raise Ai::Error::Busy, "the local model host is busy" if holder.lane == :background && !(@waiters.empty? && room_for?(holder))
+    def enter(lane, feature, job, starting:)
+      holder = join(lane, feature, job, starting)
+      begin
+        publish
+        publish until admitted?(holder, held: held?(holder))
+      ensure
+        left_the_line(holder)
+        publish
+      end
+      holder
+    end
 
+    def join(lane, feature, job, starting)
+      @monitor.synchronize do
+        holder = Holder.new(lane:, feature:, job:, arrival: @arrivals += 1, starting:)
         @waiters << holder
         @waiters.sort_by! { [ _1.rank, _1.arrival ] }
-        begin
-          until @waiters.first.equal?(holder) && room_for?(holder)
-            interrupt_for_interactive
-            @changed.wait
-          end
-          @holders << holder
-          holder.admitted!
-        ensure
-          @waiters.delete(holder)
-          @changed.broadcast
-        end
         holder
       end
+    end
+
+    # Whether the typing hold keeps the request off the host. Read before the gate's lock is taken,
+    # so a slow Redis never keeps other requests from it.
+    def held?(holder)
+      !holder.interactive? && @host && ChatReservation.held?(@host, holder.lane)
+    rescue StandardError => e
+      Rails.logger.warn("[Ai::Gate] typing hold of #{@host} not read: #{e.class}: #{e.message}")
+      false
+    end
+
+    # Gives the request its place if it's next, there's room and no hold keeps it off. Otherwise it
+    # waits for the gate to change before it answers; a background request raises Busy instead.
+    def admitted?(holder, held:)
+      @monitor.synchronize do
+        held ||= holder.lane == :background && @external_chats.positive?
+        if !held && @waiters.first.equal?(holder) && room_for?(holder)
+          @waiters.delete(holder)
+          @holders << holder
+          @put_off = false unless holder.interactive?
+          holder.admitted!
+          next true
+        end
+        @put_off = true if held
+        raise Ai::Error::Busy, "the local model host is busy" if holder.lane == :background
+
+        interrupt_for_interactive
+        @changed.wait(held ? HOLD_CHECK : nil)
+        false
+      end
+    end
+
+    def left_the_line(holder)
+      @monitor.synchronize do
+        @waiters.delete(holder)
+        @changed.broadcast
+      end
+    end
+
+    def start(holder)
+      @monitor.synchronize { holder.started! }
+      publish
     end
 
     def leave(holder)
@@ -165,6 +248,12 @@ class Ai::Gate
         @holders.delete(holder)
         @changed.broadcast
       end
+      publish
+    end
+
+    def state
+      starting, running = @holders.partition(&:starting?)
+      { holders: running, waiters: starting + @waiters, interruptions: @interruptions, put_off: @put_off }
     end
 
     def room_for?(holder)
@@ -182,6 +271,9 @@ class Ai::Gate
       @holders.reject { _1.interactive? || _1.preempted? }
               .sort_by { [ -_1.rank, -_1.since ] }
               .first(wanted)
-              .each(&:interrupt)
+              .each do |holder|
+                @interruptions += 1
+                holder.interrupt
+              end
     end
 end

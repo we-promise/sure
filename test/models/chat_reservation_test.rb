@@ -1,174 +1,105 @@
 require "test_helper"
-require "sidekiq/capsule"
 
-# Redis is stubbed: parallel test processes share one Redis, and other tests'
-# chat jobs set the same global key.
 class ChatReservationTest < ActiveSupport::TestCase
-  AI_CAPSULE = %w[ai_high_priority ai_prompt ai_background ai_low_priority].freeze
+  setup do
+    @endpoint = ai_endpoint(base_url: "http://gpu.local:8080/v1", location: :local)
+    @host = "gpu.local"
+    @reservation = ChatReservation.new([ @endpoint ], lanes: %i[prompt background], user: users(:family_admin))
+  end
 
-  test "with one AI thread, hold! reserves the AI thread for the TTL" do
-    with_hold_redis do |redis|
-      assert_equal 60, ChatReservation.hold!
-      assert redis.key?(ChatReservation::KEY)
-    end
+  test "hold! holds chat's host for the TTL" do
+    assert_equal 60, @reservation.hold!
+    assert ChatReservation.held?(@host, :background)
+    assert_not ChatReservation.held?("other.local", :background), "another machine has its own gate"
+
+    travel 61.seconds
+    assert_not ChatReservation.held?(@host, :background)
+  end
+
+  test "without a local host for chat, nothing is held" do
+    Ai::SharedState.expects(:write).never
+
+    assert_nil ChatReservation.new([], lanes: %i[background], user: users(:family_admin)).hold!
+  end
+
+  test "a built-in chat holds both lanes of its own host, an external one background requests off every local host" do
+    use_ai_routes(chat: %w[gpu/qwen3-8b agent/openclaw/main])
+    user = users(:family_admin)
+    user.family.update!(assistant_type: "builtin")
+    ChatReservation.for(user).hold!
+    assert_equal [ true, true, false ], held([ "gpu.local", :prompt ], [ "gpu.local", :background ], [ "embed.local", :background ])
+
+    ChatReservation.release(Ai::Sequencer.local_endpoints, user: users(:family_admin))
+    user.family.update!(assistant_type: "external")
+    assert_equal 60, ChatReservation.for(user).hold!
+    assert_equal [ false, true, true ], held([ "gpu.local", :prompt ], [ "gpu.local", :background ], [ "embed.local", :background ])
+  end
+
+  test "a message ends its own user's hold, and the last to type on a host has its hold" do
+    mine, theirs = [ users(:family_admin), users(:family_member) ].map { ChatReservation.new([ @endpoint ], lanes: %i[prompt background], user: _1) }
+    mine.hold!
+    theirs.hold!
+
+    ChatReservation.release([ @endpoint ], user: users(:family_admin))
+    assert ChatReservation.held?(@host, :prompt)
+    ChatReservation.release([ @endpoint ], user: users(:family_member))
+    assert_not ChatReservation.held?(@host, :prompt)
   end
 
   test "back-to-back holds stop at the cap and resume a TTL later" do
-    with_hold_redis do |redis|
-      travel_to Time.zone.parse("2026-10-23 09:00:00")
-      29.times { ChatReservation.hold!; travel 30.seconds }
-      travel_to Time.zone.parse("2026-10-23 09:14:30")
-      assert_equal 30, ChatReservation.hold!
+    travel_to Time.zone.parse("2026-10-23 09:00:00")
+    29.times { @reservation.hold!; travel 30.seconds }
+    travel_to Time.zone.parse("2026-10-23 09:14:30")
+    assert_equal 30, @reservation.hold!
 
-      travel_to Time.zone.parse("2026-10-23 09:15:00")
-      assert_nil ChatReservation.hold!
-      assert_not redis.key?(ChatReservation::KEY)
+    travel_to Time.zone.parse("2026-10-23 09:15:00")
+    assert_nil @reservation.hold!
+    assert_not ChatReservation.held?(@host, :background)
 
-      travel_to Time.zone.parse("2026-10-23 09:16:00")
-      assert_equal 60, ChatReservation.hold!
-    end
+    travel_to Time.zone.parse("2026-10-23 09:16:00")
+    assert_equal 60, @reservation.hold!
   end
 
-  test "a hold that lapsed starts a new cap" do
-    with_hold_redis do
-      travel_to Time.zone.parse("2026-10-23 09:00:00")
-      ChatReservation.hold!
-      travel_to Time.zone.parse("2026-10-23 09:14:50")
-      assert_equal 60, ChatReservation.hold!
-    end
+  test "a hold that lapsed, or that a message ended, starts a new cap" do
+    travel_to Time.zone.parse("2026-10-23 09:00:00")
+    @reservation.hold!
+    travel_to Time.zone.parse("2026-10-23 09:14:50")
+    assert_equal 60, @reservation.hold!
+
+    ChatReservation.release([ @endpoint ], user: users(:family_admin))
+    assert_not ChatReservation.held?(@host, :background)
+    travel_to Time.zone.parse("2026-10-23 09:29:40")
+    assert_equal 60, @reservation.hold!
   end
 
-  test "with several AI threads, hold! reserves nothing" do
-    BackgroundJobHealth.stubs(:one_ai_thread?).returns(false)
-    Sidekiq.expects(:redis).never
+  test "the bubble says busy while other AI work runs on the host, ready while some is put off, else nothing" do
+    assert_nil @reservation.bubble(60), "no worker's gate is in use"
 
-    assert_nil ChatReservation.hold!
+    publish(holders: [ holder(:background) ])
+    assert_equal({ seconds: 60, busy: true }, @reservation.bubble(60))
+    assert_nil @reservation.bubble(nil), "nothing is held"
+
+    publish(put_off: true)
+    assert_equal({ seconds: 60, busy: false }, @reservation.bubble(60))
+
+    publish
+    assert_nil @reservation.bubble(60)
   end
 
-  test "the bubble says busy while a background AI job runs, ready while some wait, else nothing" do
-    BackgroundJobHealth.expects(:one_ai_thread?).never
-    ChatReservation.stubs(:chat_active?).returns(false)
-    BackgroundJobHealth.stubs(:ai_job_running?).with(queues: ChatReservation::HELD_QUEUES).returns(false)
-    Sidekiq::Queue.stubs(:new).returns(stub(size: 0))
-    assert_nil ChatReservation.bubble(60)
+  test "no bubble while a chat request runs or waits" do
+    publish(holders: [ holder(:interactive) ], put_off: true)
+    assert_nil @reservation.bubble(60)
 
-    Sidekiq::Queue.stubs(:new).with("ai_background").returns(stub(size: 2))
-    assert_equal({ seconds: 60, busy: false }, ChatReservation.bubble(60))
-
-    BackgroundJobHealth.stubs(:ai_job_running?).with(queues: ChatReservation::HELD_QUEUES).returns(true)
-    assert_equal({ seconds: 60, busy: true }, ChatReservation.bubble(60))
-    assert_nil ChatReservation.bubble(nil)
-  end
-
-  test "no bubble while a chat is queued or running" do
-    ChatReservation.stubs(:chat_active?).returns(true)
-    BackgroundJobHealth.stubs(:ai_job_running?).returns(true)
-
-    assert_nil ChatReservation.bubble(60)
-  end
-
-  test "a running chat counts as active until its job ends, even if it raises" do
-    conn = mock
-    conn.expects(:call).with("SET", ChatReservation::CHAT_KEY, "1", "EX", Chat.response_timeout.to_i)
-    conn.expects(:call).with("DEL", ChatReservation::CHAT_KEY)
-    Sidekiq.stubs(:redis).yields(conn)
-
-    assert_raises(RuntimeError) { ChatReservation.while_chat_runs { raise "boom" } }
-  end
-
-  test "a Redis error while setting the chat flag doesn't skip the reply" do
-    conn = mock
-    conn.stubs(:call).with("SET", ChatReservation::CHAT_KEY, "1", "EX", Chat.response_timeout.to_i).raises(RedisClient::ConnectionError)
-    conn.stubs(:call).with("DEL", ChatReservation::CHAT_KEY)
-    Sidekiq.stubs(:redis).yields(conn)
-
-    assert_equal :reply, ChatReservation.while_chat_runs { :reply }
-  end
-
-  test "a reply isn't failed by a Redis error while clearing the chat flag" do
-    conn = mock
-    conn.stubs(:call).with("SET", ChatReservation::CHAT_KEY, "1", "EX", Chat.response_timeout.to_i)
-    conn.stubs(:call).with("DEL", ChatReservation::CHAT_KEY).raises(RedisClient::ConnectionError)
-    Sidekiq.stubs(:redis).yields(conn)
-
-    assert_equal :reply, ChatReservation.while_chat_runs { :reply }
-  end
-
-  test "the ai capsule skips its prompt and background queues while a reservation is held" do
-    fetch = fetch_for(AI_CAPSULE)
-
-    ChatReservation.stubs(:held?).returns(false)
-    assert_equal AI_CAPSULE.map { "queue:#{_1}" }, fetch.queues_cmd
-
-    ChatReservation.stubs(:held?).returns(true)
-    assert_equal %w[queue:ai_high_priority], fetch.queues_cmd, "chats queued before the lanes still run"
-  end
-
-  test "other capsules' queues are left alone, the ai_chat capsule's included" do
-    ChatReservation.expects(:held?).never
-
-    assert_equal %w[queue:high_priority queue:default], fetch_for(%w[high_priority default]).queues_cmd
-    assert_equal %w[queue:ai_interactive], fetch_for(%w[ai_interactive]).queues_cmd
-  end
-
-  test "an AI capsule with several threads ignores the reservation" do
-    fetch = fetch_for(AI_CAPSULE, concurrency: 2)
-    ChatReservation.stubs(:held?).returns(true)
-
-    assert_equal AI_CAPSULE.map { "queue:#{_1}" }, fetch.queues_cmd
-  end
-
-  test "a background job popped after a hold started goes back to its queue" do
-    fetch = fetch_for(AI_CAPSULE)
-    work = Sidekiq::BasicFetch::UnitOfWork.new("queue:ai_background", "{}", nil)
-    Sidekiq::BasicFetch.any_instance.stubs(:retrieve_work).returns(work)
-
-    ChatReservation.stubs(:held?).returns(true)
-    work.expects(:requeue)
-    assert_nil fetch.retrieve_work
-
-    ChatReservation.stubs(:held?).returns(false)
-    work.expects(:requeue).never
-    assert_equal work, fetch.retrieve_work
+    publish(holders: [ holder(:background) ], waiters: [ holder(:interactive) ])
+    assert_nil @reservation.bubble(60)
   end
 
   private
-    # Redis with expiring keys, enough for hold!.
-    class FakeRedis
-      def initialize
-        @data = {}
-      end
+    def held(*pairs) = pairs.map { |host, lane| ChatReservation.held?(host, lane) }
 
-      def key?(key)
-        expire(key)
-        @data.key?(key)
-      end
-
-      def call(command, key, *args)
-        expire(key)
-        case command
-        when "GET" then @data.dig(key, :value)
-        when "EXISTS" then @data.key?(key) ? 1 : 0
-        when "SET" then @data[key] = { value: args[0].to_s, expires_at: Time.current + args[2].to_i }
-        end
-      end
-
-      private
-        def expire(key)
-          @data.delete(key) if @data.key?(key) && @data[key][:expires_at] <= Time.current
-        end
+    def publish(holders: [], waiters: [], put_off: false)
+      Ai::Gate::State.write(@host, holders:, waiters:, interruptions: 0, put_off:)
     end
 
-    def with_hold_redis
-      redis = FakeRedis.new
-      BackgroundJobHealth.stubs(:one_ai_thread?).returns(true)
-      Sidekiq.stub(:redis, ->(&block) { block.call(redis) }) { yield redis }
-    end
-
-    def fetch_for(queues, concurrency: 1)
-      capsule = Sidekiq::Capsule.new("test", Sidekiq.default_configuration)
-      capsule.queues = queues
-      capsule.concurrency = concurrency
-      ChatReservation::Fetch.new(capsule)
-    end
+    def holder(lane) = Ai::Gate::Holder.new(lane:)
 end

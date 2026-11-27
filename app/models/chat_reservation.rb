@@ -1,74 +1,74 @@
-# Chat has its own thread, but with one thread for the other AI work a chat's
-# model call can wait for a background job's on a local model. Focusing or
-# typing in the chat box, and each finished reply, hold new prompt and
-# background jobs back for TTL. Back-to-back holds stop CAP after the first one
-# and resume TTL later, so those jobs get a turn.
-module ChatReservation
-  # Every AI queue but the interactive ones, which chat runs on.
-  HELD_QUEUES = (Ai::Routes.ai_queues - Ai::Routes.queues_for_lane(:interactive)).freeze
-  KEY = "chat_reservation".freeze
-  STARTED_KEY = "chat_reservation:started".freeze
-  CHAT_KEY = "chat_reservation:chat_running".freeze
+# Focusing or typing in the chat box keeps the local model hosts free for the message: for TTL, no
+# new request of the held lanes starts there (Ai::Gate), so a long prompt read rarely starts just
+# before the message is sent. Back-to-back holds stop CAP after the first one and resume TTL later,
+# so that work gets a turn. The message ends the hold of the person who typed it.
+#
+# A built-in chat holds its model's host, if that's local. An external assistant calls its own
+# models, which may be on any of the local hosts, so it holds new background requests off them all;
+# prompt requests still start, since the assistant's own tools may need them.
+class ChatReservation
   TARGETS = ".chat-reservation".freeze
   TTL = 60.seconds
   CAP = 15.minutes
 
-  # Returns the seconds held, or nil when nothing is held: several AI threads
-  # leave one free anyway, or the cap was reached.
-  def self.hold!
-    return unless BackgroundJobHealth.one_ai_thread?
+  class << self
+    def for(user)
+      endpoint = Ai::Sequencer.chat_endpoint(user)
+      return new([ endpoint ], lanes: %i[prompt background], user:) if endpoint
 
-    Sidekiq.redis do |conn|
+      new(Ai::Sequencer.external_chat?(user) ? Ai::Sequencer.local_endpoints : [], lanes: %i[background], user:)
+    end
+
+    def held?(host, lane) = Ai::SharedState.read(key(host, lane)).present?
+
+    # Ends the user's own holds: the last to type on a host has its hold. Never fails the message: a
+    # hold left standing lapses by itself.
+    def release(endpoints, user:)
+      keys = endpoints.map { Ai::Sequencer.host_key(_1) }.uniq.product(%i[prompt background]).map { key(*_1) }
+      keys.each { |key| Ai::SharedState.delete(key) if Ai::SharedState.read(key) == user&.id }
+    rescue StandardError => e
+      Rails.logger.warn("ChatReservation not released: #{e.class}: #{e.message}")
+    end
+
+    def key(host, lane) = "ai/hold/#{host}/#{lane}"
+  end
+
+  def initialize(endpoints, lanes:, user:)
+    @endpoints = endpoints.uniq { Ai::Sequencer.host_key(_1) }
+    @lanes = lanes
+    @user = user
+  end
+
+  # Returns the seconds held, or nil when nothing is: no local host, or the cap was reached.
+  def hold! = @endpoints.filter_map { hold_host(Ai::Sequencer.host_key(_1)) }.max
+
+  # Nothing while a chat request runs or waits: its own bubble covers that. Otherwise busy while
+  # other AI work runs on a host, ready while some is put off. seconds comes from hold!.
+  def bubble(seconds)
+    return if seconds.nil?
+
+    gates = @endpoints.filter_map { BackgroundJobHealth.model_gate(_1) }
+    return if gates.any?(&:interactive?)
+
+    busy = gates.any? { _1.holders.any? }
+    { seconds:, busy: } if busy || gates.any?(&:put_off?)
+  end
+
+  private
+    def hold_host(host)
       now = Time.current.to_i
-      started = conn.call("GET", STARTED_KEY)&.to_i
-      if started.nil? || (now - started < CAP && conn.call("EXISTS", KEY).zero?)
+      started = Ai::SharedState.read(started_key(host))
+      if started.nil? || (now - started < CAP && !self.class.held?(host, :background))
         started = now
-        conn.call("SET", STARTED_KEY, now, "EX", (CAP + TTL).to_i)
+        Ai::SharedState.write(started_key(host), now, expires_in: CAP + TTL)
       end
 
       seconds = [ TTL.to_i, started + CAP.to_i - now ].min
-      next unless seconds.positive?
+      return unless seconds.positive?
 
-      conn.call("SET", KEY, "1", "EX", seconds)
+      @lanes.each { |lane| Ai::SharedState.write(self.class.key(host, lane), @user.id, expires_in: seconds) }
       seconds
     end
-  end
 
-  # Marks a chat job as running, interim replies included. Expires with the
-  # chat's response timeout in case the worker dies mid-job.
-  def self.while_chat_runs
-    begin
-      Sidekiq.redis { |conn| conn.call("SET", CHAT_KEY, "1", "EX", Chat.response_timeout.to_i) }
-    rescue => e
-      Rails.logger.warn("ChatReservation chat flag not set: #{e.class}: #{e.message}")
-    end
-    yield
-  ensure
-    begin
-      Sidekiq.redis { |conn| conn.call("DEL", CHAT_KEY) }
-    rescue => e
-      Rails.logger.warn("ChatReservation chat flag not cleared: #{e.class}: #{e.message}")
-    end
-  end
-
-  def self.held?
-    Sidekiq.redis { |conn| conn.call("EXISTS", KEY) } == 1
-  end
-
-  def self.chat_active?
-    Sidekiq.redis { |conn| conn.call("EXISTS", CHAT_KEY) } == 1 || waiting?(Ai::Routes.queues_for_lane(:interactive))
-  end
-
-  # Nothing while a chat is queued or running: its own bubble covers that.
-  # Otherwise busy while a background AI job runs, ready while some wait.
-  # seconds comes from hold!, which has already checked for one AI thread.
-  def self.bubble(seconds)
-    return if seconds.nil? || chat_active?
-
-    busy = BackgroundJobHealth.ai_job_running?(queues: HELD_QUEUES)
-    { seconds: seconds, busy: busy } if busy || waiting?(HELD_QUEUES)
-  end
-
-  def self.waiting?(queues) = queues.any? { Sidekiq::Queue.new(_1).size.positive? }
-  private_class_method :waiting?
+    def started_key(host) = "ai/hold/#{host}/started"
 end

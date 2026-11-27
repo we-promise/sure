@@ -11,12 +11,6 @@ class BackgroundJobHealth
   # Syncs and imports run here; chat runs on the interactive lane's queue.
   CRITICAL_QUEUE = "high_priority".freeze
   CHAT_QUEUE = Ai::Routes.queue_for(:chat)
-  AI_QUEUES = Ai::Routes.ai_queues
-  # A worker whose ai capsule has one thread for the prompt and background
-  # queues adds this label to its Sidekiq process at startup
-  # (config/initializers/sidekiq.rb), so web processes read the worker's
-  # capsule instead of their own RAILS_AI_MAX_THREADS.
-  ONE_AI_THREAD_LABEL = "one-ai-thread".freeze
   LATENCY_WARN_SECONDS = 60
 
   CACHE_KEY = "background_job_health".freeze
@@ -38,33 +32,20 @@ class BackgroundJobHealth
       current
     end
 
-    # Only when a single worker process polls the AI queues: with several, a
-    # chat can reach a model while another runs background AI jobs.
-    def one_ai_thread?
-      ai_processes = Sidekiq::ProcessSet.new(false).select { |process| process.queues.intersect?(AI_QUEUES) }
-      ai_processes.one? && ai_processes.first.labels.include?(ONE_AI_THREAD_LABEL)
+    # The gate of an AI endpoint's local model host, as its worker last published it
+    # (Ai::Gate::State), or nil: a cloud endpoint, or a host no worker's gate is in use for.
+    def model_gate(endpoint)
+      Ai::Gate::State.read(Ai::Sequencer.host_key(endpoint)) if endpoint&.local?
     rescue => e
-      Rails.logger.warn("BackgroundJobHealth AI thread check failed: #{e.class}: #{e.message}")
-      false
+      Rails.logger.warn("BackgroundJobHealth model gate check failed: #{e.class}: #{e.message}")
+      nil
     end
 
-    # One thread runs every prompt and background job, so a chat's model call
-    # can wait behind it on a local model (ChatReservation holds them back).
-    def one_ai_thread_worker?(config)
-      capsules = config.capsules.values.select { |capsule| capsule.queues.intersect?(ChatReservation::HELD_QUEUES) }
-      lanes = Ai::Routes::QUEUES.values_at(:prompt, :background)
-      capsules.one? && capsules.first.concurrency == 1 && (lanes - capsules.first.queues).empty?
-    end
-
-    # With one AI thread, a chat sent now waits for any running AI job.
-    def ai_busy?
-      one_ai_thread? && ai_job_running?
-    end
-
-    def ai_job_running?(queues: AI_QUEUES)
-      Sidekiq::WorkSet.new.any? { |_process, _thread, work| queues.include?(work.queue) }
+    # Whether a reply's job still waits in the chat queue, which a worker polls: it's in line, not lost.
+    def reply_queued?(assistant_message)
+      current[:polls_chat_queue] == true && Sidekiq::Queue.new(CHAT_QUEUE).any? { _1.args.to_s.include?(assistant_message.id) }
     rescue => e
-      Rails.logger.warn("BackgroundJobHealth busy check failed: #{e.class}: #{e.message}")
+      Rails.logger.warn("BackgroundJobHealth reply check failed: #{e.class}: #{e.message}")
       false
     end
 
