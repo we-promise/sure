@@ -939,6 +939,47 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal(-89.99, recurring_transaction.expected_amount_avg.to_f)
   end
 
+  test "restoring an active bill does not reconstruct its history" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "acct-1", name: "Main Checking", balance: "5000", currency: "USD", accountable_type: "Depository" } },
+      {
+        type: "RecurringTransaction",
+        data: {
+          id: "recurring-1", account_id: "acct-1", name: "CITY WATER", amount: "80", currency: "USD",
+          expected_day_of_month: 9, last_occurrence_date: Date.current.to_s,
+          next_expected_date: (Date.current + 1.month).to_s, status: "active", manual: true
+        }
+      }
+    ])
+    RecurringTransaction::HistoryBackfiller.any_instance.expects(:run!).never
+    BackfillRecurringHistoryJob.expects(:perform_later).never
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    restored = @family.recurring_transactions.find_by!(name: "CITY WATER")
+    assert_equal "active", restored.status
+    assert_nil restored.declared_on, "an export without a declaration date restores without one"
+  end
+
+  test "restoring a bill keeps the declaration date its export carries" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "acct-1", name: "Main Checking", balance: "5000", currency: "USD", accountable_type: "Depository" } },
+      {
+        type: "RecurringTransaction",
+        data: {
+          id: "recurring-1", account_id: "acct-1", name: "CITY WATER", amount: "80", currency: "USD",
+          expected_day_of_month: 9, last_occurrence_date: Date.current.to_s,
+          next_expected_date: (Date.current + 1.month).to_s, status: "active", manual: true,
+          declared_on: "2026-08-01"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal Date.new(2026, 8, 1), @family.recurring_transactions.find_by!(name: "CITY WATER").declared_on
+  end
+
   test "round trips recurring transaction export semantics" do
     source_family = Family.create!(name: "Recurring Source", currency: "USD")
     source_account = source_family.accounts.create!(
@@ -1000,6 +1041,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal Date.parse("2024-01-14"), restored_provider.last_occurrence_date
     assert_equal Date.parse("2024-02-14"), restored_provider.next_expected_date
     assert_equal "active", restored_provider.status
+    assert_equal source_family.recurring_transactions.find_by!(merchant: source_merchant).declared_on, restored_provider.declared_on
+    assert_not_nil restored_provider.declared_on
     assert_equal 6, restored_provider.occurrence_count
     assert_equal true, restored_provider.manual
     assert_equal(-95.0, restored_provider.expected_amount_min.to_f)

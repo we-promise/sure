@@ -76,12 +76,24 @@ class RecurringTransaction < ApplicationRecord
   # post-commit regeneration consumes it.
   attr_accessor :rules_rewritten
 
+  # Set by the data importer while it restores a series from an export. A
+  # restore brings its own occurrences and allocations.
+  attr_accessor :restoring_from_export
+
+  # A bill declared by hand is born active, so it never makes the activation
+  # transition below. Its history is queued, not rebuilt in the request: every
+  # route that creates a bill (forms, the API, the assistant) stays fast. Queued
+  # ahead of generation, so a generation failure still leaves the history to
+  # come. A restore brings its own occurrences and allocations.
+  before_create :record_declaration_day, if: :declared_active?
+  after_commit :reconstruct_history_on_declaration, on: :create, if: :declared_active?
   after_commit :generate_occurrences, on: :create
   # Ahead of regeneration: activation changes status, so both run, and with
   # load_defaults 7.1+ these run in the order defined. An exception in one
   # stops the rest, so a failed regeneration must not cost the bill its
   # history; reconstruct_history! generates the upcoming rows itself.
   after_commit :reconstruct_history_on_activation, on: :update, if: :activated_from_suggestion?
+  after_commit :reconstruct_history_on_resume, on: :update, if: :resumed_declared_bill?
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
   before_save :preserve_detected_name, if: -> { name_changed? && name_was.present? && matcher_hints.to_h["detected_name"].blank? }
   after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
@@ -262,18 +274,21 @@ class RecurringTransaction < ApplicationRecord
     errors.add(:payment_url, :invalid_scheme) unless self.class.valid_payment_url?(payment_url)
   end
 
+  # A declaration's history pass has already generated, unless the family lock
+  # sent it to the job.
   def generate_occurrences
     OccurrenceGenerator.new(self).generate!
   end
 
   # Links what a bill already paid before it was a bill. Every route that
   # confirms a detection -- the review strip, the pause toggle, the API and
-  # the assistant's update_bill -- lands here through the status change.
+  # the assistant's update_bill -- lands here through the status change, and
+  # every route that creates a bill already active lands here on create.
   # Generation is scoped to this series; the matcher pass inside stays
   # family-wide on purpose (exact-tier, idempotent, and scoping it would need
   # a parallel Matcher entry point). Returns false only when another pipeline
   # holds the family lock.
-  def reconstruct_history!
+  def reconstruct_history!(as_of: Date.current)
     return true if family.recurring_transactions_disabled?
 
     Pipeline.with_family_lock(family_id) do
@@ -289,7 +304,8 @@ class RecurringTransaction < ApplicationRecord
       HistoryBackfiller.new(
         family,
         months: Pipeline::FIRST_RUN_BACKFILL_MONTHS,
-        series_scope: series_scope
+        series_scope: series_scope,
+        as_of: as_of
       ).run!
     end
   end
@@ -298,7 +314,18 @@ class RecurringTransaction < ApplicationRecord
   # assigns every field and saves once, so by now the series reads active
   # whichever route it took.
   def activated_from_suggestion?
-    saved_change_to_status?(from: "suggested", to: "active")
+    saved_change_to_status?(from: "suggested", to: "active") && !restoring_from_export
+  end
+
+  # A declared bill paused before its history job ran was skipped by the job,
+  # and nothing else rebuilds it. Resuming queues it again; the backfill is
+  # re-runnable, so a bill that already has its history is unchanged.
+  def resumed_declared_bill?
+    saved_change_to_status?(from: "paused", to: "active") && declared_on.present? && !restoring_from_export
+  end
+
+  def declared_active?
+    active? && !restoring_from_export
   end
 
   # Skipping under a held lock used to leave the bill without history for
@@ -307,12 +334,47 @@ class RecurringTransaction < ApplicationRecord
   # The activation has committed by now, so a failure here must not fail the
   # caller's own write (a toggle, an API update, the assistant's update_bill).
   # It is reported and handed to the job, which retries; the backfill is
-  # re-runnable by construction.
+  # re-runnable by construction. The job carries today's date, so a run that
+  # waited reconstructs the same history an immediate one would have.
   def reconstruct_history_on_activation
-    BackfillRecurringHistoryJob.perform_later(id) unless reconstruct_history!
+    as_of = Date.current
+    BackfillRecurringHistoryJob.perform_later(id, as_of) unless reconstruct_history!(as_of: as_of)
   rescue StandardError => e
     Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
-    BackfillRecurringHistoryJob.perform_later(id)
+    BackfillRecurringHistoryJob.perform_later(id, as_of)
+  end
+
+  # Always through the job, as of the declaration day. declared_on, recorded
+  # on create, lets every backfill prune what the schedule placed before the
+  # bill existed.
+  #
+  # The bill has committed, so a queue failure must not stop generation or
+  # fail the caller's create. The history is rebuilt in the request instead,
+  # as activation does. If the family lock is held as well, the history
+  # waits for the next backfill (the identify button or the rake task).
+  def reconstruct_history_on_declaration
+    BackfillRecurringHistoryJob.perform_later(id, Date.current)
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
+    reconstruct_declared_history_now
+  end
+
+  def reconstruct_history_on_resume
+    BackfillRecurringHistoryJob.perform_later(id, Date.current)
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
+  end
+
+  def reconstruct_declared_history_now
+    reconstruct_history!
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
+  end
+
+  # A confirmed detection is not a declaration: its past was observed, so it
+  # keeps no declared_on.
+  def record_declaration_day
+    self.declared_on ||= Date.current
   end
 
   # Regenerating rebuilds only scheduled, allocation-free, not-yet-due rows;
