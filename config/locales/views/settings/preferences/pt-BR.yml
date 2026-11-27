@@ -3,22 +3,68 @@ pt-BR:
   settings:
     preferences:
       show:
+        show_balance_updates: Atualizações de saldo sincronizadas
+        show_balance_updates_hint: Sempre listar, na atividade das contas vinculadas, os saldos diários que a sincronização bancária registra
         country: País
         currency: Moeda
         date_format: Formato de data
         general_subtitle: Configure suas preferências
         general_title: Geral
+        transactions_title: Transações
+        transactions_subtitle: Configure como as transações funcionam
+        manual_reconciliation: Conciliação manual
+        manual_reconciliation_hint: Mostrar os controles de conciliação em contas inseridas manualmente. Contas com sincronização bancária usam a conciliação por extrato.
         default_period: Período Padrão
         default_account_order: Ordem de conta padrão
+        default_account_order_hint: Com a opção Manual, arraste as contas na barra lateral para definir a ordem.
         language: Idioma
         language_auto: Idioma do navegador
         page_title: Preferências
         timezone: Fuso horário
+        translations_notice: "Observação: ainda estamos trabalhando nas traduções para vários idiomas."
+        rule_suggestions: Sugestões de regras
+        rule_suggestions_hint: Oferecer a criação de uma regra depois que você alterar a categoria de uma transação
+        budget_title: Orçamento
+        budget_subtitle: Configure como seus orçamentos funcionam
         month_start_day: O mês do orçamento começa em
         month_start_day_hint: Defina quando começa o seu mês de orçamento (por exemplo, no dia do pagamento).
         month_start_day_warning: Seus orçamentos e cálculos MTD usarão essa data de início personalizada em vez do dia 1º de cada mês.
+        investment_contributions_as_spending: Contar investimentos como gastos
+        investment_contributions_as_spending_hint: Dinheiro transferido para contas de investimento conta como gasto nos orçamentos, nos relatórios e no gráfico de fluxo de caixa. Desative para mostrá-lo como investido.
+        personal_budgets: Orçamentos pessoais
+        personal_budgets_hint: Ative orçamentos individuais para cada membro da família.
+        household_budget_enabled: Orçamento da casa
+        household_budget_enabled_hint: Mantenha um orçamento compartilhado da casa junto com os orçamentos pessoais. Desative para usar apenas orçamentos pessoais.
+        budget_sharing_title: Compartilhamento de orçamento
+        budget_sharing_subtitle: Permita que outros membros vejam ou editem seu orçamento pessoal
+        budget_sharing_no_members: Não há outros membros na sua conta %{moniker} para compartilhar
+        budget_sharing_permission_label: Acesso de %{name}
+        budget_sharing_permissions:
+          none: Sem acesso
+          read_only: Somente visualização
+          read_write: Pode editar
+        currencies_title: Moedas (%{moniker})
+        currencies_subtitle: Escolha quais moedas aparecem nos campos de valor da sua conta %{moniker}
+        base_currency_label: Moeda base
+        base_currency_badge: Moeda base
+        additional_currencies_label: Moedas adicionais
+        no_additional_currencies: Nenhuma selecionada
+        currencies_more: +%{count} mais
+        manage_currencies: Gerenciar moedas
+        manage_currencies_subtitle: Desmarque as moedas que você nunca usa ou reduza a lista a apenas algumas.
+        select_all_currencies: Selecionar todas
+        select_base_only: Somente moeda base
+        currency_search_placeholder: Buscar moedas
+        no_matching_currencies: Nenhuma moeda encontrada
+        selected_currencies_count:
+          one: "%{count} selecionada"
+          other: "%{count} selecionadas"
+        save_currencies: Salvar moedas
         sharing_title: "Compartilhamento %{moniker}"
-        sharing_subtitle: "Controle como as contas são compartilhadas no seu %{moniker}"
+        sharing_subtitle: "Controle como as contas são compartilhadas na sua conta %{moniker}"
         sharing_default_label: Compartilhamento padrão para novas contas
         sharing_shared: Compartilhar com todos os membros
         sharing_private: Manter privado por padrão
+        preview:
+          title: Ativar recursos em prévia
+          description: Participe dos recursos em desenvolvimento marcados como prévia ou canary.

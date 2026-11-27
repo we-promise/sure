@@ -25,6 +25,10 @@ ro:
       from: De la
       to: Către
       date: Data
+      days_apart:
+        one: "%{count} zi diferență"
+        few: "%{count} zile diferență"
+        other: "%{count} de zile diferență"
       actions: Acțiuni
       separator: "·"
     bulk_actions:
