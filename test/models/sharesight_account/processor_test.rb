@@ -87,6 +87,8 @@ class SharesightAccount::ProcessorTest < ActiveSupport::TestCase
   end
 
   test "imports held units at Sharesight's price in each instrument's currency" do
+    # OLD was held until yesterday, so today's zero row is written to close it out.
+    seed_holding("OLD", qty: 50, price: 40, date: Date.current - 1)
     process
 
     holdings = @account.holdings.where(date: Date.current).includes(:security).to_h do |holding|
@@ -95,9 +97,101 @@ class SharesightAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal({
       "VAS" => [ BigDecimal("100"), BigDecimal("105"), "AUD" ],
       "AAPL" => [ BigDecimal("10"), BigDecimal("290"), "USD" ],
+      # Fully sold: a zero-quantity row for today, so the position drops out
+      # of current holdings instead of lingering on the previous day's row.
+      "OLD" => [ BigDecimal("0"), BigDecimal("40"), "AUD" ],
       "BTC" => [ BigDecimal("0.25"), BigDecimal("116367.4"), "AUD" ]
     }, holdings)
     assert_equal "XNAS", @account.holdings.joins(:security).find_by(securities: { ticker: "AAPL" }).security.exchange_operating_mic
+  end
+
+  test "a fully sold holding leaves current holdings" do
+    seed_holding("OLD", qty: 50, price: 40, date: Date.current - 1)
+    # Only the sold holding in the payload: without the zero row, no
+    # holdings are written for today, so current holdings would fall back
+    # to yesterday's row and still list OLD.
+    sold_holding = HOLDINGS.find { |holding| holding.dig("instrument", "code") == "OLD" }
+    @sharesight_account.update!(raw_holdings_payload: [ sold_holding ])
+    process
+
+    assert_not_includes @account.reload.current_holdings.map { |holding| holding.security.ticker }, "OLD"
+  end
+
+  test "a holding sold long ago gains no new zero row on the next sync" do
+    # The sale was already closed out by an earlier sync's zero row.
+    seed_holding("OLD", qty: 0, price: 40, date: Date.current - 1)
+    process
+
+    old_rows = @account.holdings.where(security: Security.find_by!(ticker: "OLD"))
+    assert_equal 1, old_rows.count
+    assert_nil old_rows.find_by(date: Date.current)
+  end
+
+  test "a holding already sold before the first sync writes no zero row" do
+    process
+
+    assert_empty @account.holdings.where(security: Security.find_by!(ticker: "OLD"))
+  end
+
+  test "a holding sold between two syncs on the same day is zeroed instead of keeping its morning quantity" do
+    morning = HOLDINGS.map do |holding|
+      holding.dig("instrument", "code") == "OLD" ? holding.merge("quantity" => 10.0, "value" => 400.0) : holding
+    end
+    @sharesight_account.update!(raw_holdings_payload: morning)
+    process
+
+    sold = @account.holdings.find_by!(date: Date.current, security: Security.find_by!(ticker: "OLD"))
+    assert_equal BigDecimal("10"), sold.qty
+
+    @sharesight_account.update!(raw_holdings_payload: HOLDINGS)
+    process
+
+    assert_equal BigDecimal("0"), sold.reload.qty
+    assert_not_includes @account.reload.current_holdings.map { |holding| holding.security.ticker }, "OLD"
+  end
+
+  test "a sold holding is closed even if it was held in another currency" do
+    # With no instrument price, a held USD position is priced from its value in AUD.
+    aapl = HOLDINGS.find { |holding| holding.dig("instrument", "code") == "AAPL" }.merge("instrument_price" => nil)
+    travel_to(1.day.ago) do
+      @sharesight_account.update!(raw_holdings_payload: [ aapl.merge("quantity" => 10.0, "value" => 4500.0) ])
+      process
+    end
+    assert_equal [ "AUD" ], @account.holdings.pluck(:currency)
+
+    @sharesight_account.update!(raw_holdings_payload: [ aapl.merge("quantity" => 0.0, "value" => 0.0) ])
+    process
+
+    assert_empty @account.reload.current_holdings
+  end
+
+  test "a remapped holding is closed when it's sold" do
+    sold = HOLDINGS.find { |holding| holding.dig("instrument", "code") == "OLD" }
+    travel_to(1.day.ago) do
+      @sharesight_account.update!(raw_holdings_payload: [ sold.merge("quantity" => 10.0, "value" => 400.0) ])
+      process
+    end
+    held = @account.holdings.find_by!(security: Security.find_by!(ticker: "OLD"))
+    held.remap_security!(Security.create!(ticker: "OLDX", exchange_operating_mic: "XASX"))
+
+    @sharesight_account.update!(raw_holdings_payload: [ sold ])
+    process
+
+    assert_empty @account.reload.current_holdings
+  end
+
+  test "a holding missing from the last snapshot gets no zero row" do
+    # OLD's last row is older than the last snapshot, so current holdings already leaves it out.
+    seed_holding("OLD", qty: 50, price: 40, date: Date.current - 30)
+    seed_holding("VAS", qty: 100, price: 105, date: Date.current - 1)
+    sold = HOLDINGS.find { |holding| holding.dig("instrument", "code") == "OLD" }
+    vas = HOLDINGS.find { |holding| holding.dig("instrument", "code") == "VAS" }
+    @sharesight_account.update!(raw_holdings_payload: [ sold, vas.merge("limited" => true) ])
+
+    process
+
+    assert_nil @account.holdings.find_by(date: Date.current)
+    assert_equal [ "VAS" ], @account.reload.current_holdings.map { |holding| holding.security.ticker }
   end
 
   test "books buys, sells and opening balances, skipping splits" do
@@ -281,6 +375,16 @@ class SharesightAccount::ProcessorTest < ActiveSupport::TestCase
 
     def process
       SharesightAccount::Processor.new(@sharesight_account.reload).process
+    end
+
+    # A Sharesight holding row as an earlier sync left it, so the zero-row
+    # gate has something to look at.
+    def seed_holding(ticker, qty:, price:, date:)
+      @account.holdings.create!(
+        security: Security.find_by!(ticker: ticker),
+        qty: qty, price: price, amount: qty * price, currency: "AUD",
+        date: date, account_provider_id: @sharesight_account.account_provider&.id
+      )
     end
 
     def trade(external_id)

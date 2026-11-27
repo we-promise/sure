@@ -222,7 +222,7 @@ uk:
             dimensions_mismatch: Розмірність вектора ембедингу не відповідає налаштованій
             extension_not_enabled: Розширення vector для PostgreSQL не ввімкнено
             table_not_found: Таблицю vector_store_chunks не знайдено
-            render_missing_binary: Рендерер pdftoppm (poppler-utils) недоступний у цьому контейнері
+            missing_binary: Рендерер pdftoppm (poppler-utils) недоступний у цьому контейнері
             timeout: Сервіс не відповів до спливу тайм-ауту перевірки
             request_failed: Запит до сервісу не вдався
             unsupported_provider: Постачальник не підтримує цю перевірку

@@ -396,7 +396,7 @@ nl:
             dimensions_mismatch: "De dimensies van de embeddingvector komen niet overeen met de geconfigureerde dimensies"
             extension_not_enabled: "De PostgreSQL-extensie vector is niet ingeschakeld"
             table_not_found: "De tabel vector_store_chunks is niet gevonden"
-            render_missing_binary: "De pdftoppm-renderer (poppler-utils) is niet beschikbaar in deze container"
+            missing_binary: "De pdftoppm-renderer (poppler-utils) is niet beschikbaar in deze container"
             timeout: "De dienst reageerde niet binnen de time-out van de controle"
             request_failed: "Het verzoek aan de dienst is mislukt"
             unsupported_provider: "De provider ondersteunt deze controle niet"

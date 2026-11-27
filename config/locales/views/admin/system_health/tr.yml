@@ -222,7 +222,7 @@ tr:
             dimensions_mismatch: Embedding vektör boyutları yapılandırılan boyutlarla eşleşmiyor
             extension_not_enabled: PostgreSQL vector uzantısı etkin değil
             table_not_found: vector_store_chunks tablosu bulunamadı
-            render_missing_binary: pdftoppm işleyicisi (poppler-utils) bu container'da mevcut değil
+            missing_binary: pdftoppm işleyicisi (poppler-utils) bu container'da mevcut değil
             timeout: Hizmet, kontrol zaman aşımından önce yanıt vermedi
             request_failed: Hizmet isteği başarısız oldu
             unsupported_provider: Sağlayıcı bu kontrolü desteklemiyor
