@@ -78,8 +78,21 @@ class SnaptradeAccount::ActivitiesProcessor
     "REBATE" => { category: :cash, label: "Other", cash_flow: :inflow },
     "RETURN_OF_CAPITAL" => { category: :cash, label: "Dividend", cash_flow: :inflow },
     "DISTRIBUTION" => { category: :cash, label: "Dividend", cash_flow: :inflow },
-    "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow }
+    "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+
+    # Card accounts (SnapTrade's LOC category) sign these from the account's
+    # perspective: purchases negative, refunds and payments positive.
+    "POSDEBIT" => { category: :cash, label: "Other", cash_flow: :outflow },
+    "POSCREDIT" => { category: :cash, label: "Other", cash_flow: :inflow },
+    "PAYMENT" => { category: :cash, label: "Other", cash_flow: :invert },
+
+    # Card activities (Wealthsimple). Direction comes from the description, see normalize_card_activity.
+    "CREDIT_CARD" => { category: :cash, label: "Other", cash_flow: :card },
+    "PREPAID_CARD" => { category: :cash, label: "Other", cash_flow: :card }
   }.freeze
+
+  # "CREDIT_CARD PURCHASE: <merchant>", "CREDIT_CARD REFUND: <merchant>", "CREDIT_CARD PAYMENT"
+  CARD_DESCRIPTION = /\A(?:CREDIT_CARD|PREPAID_CARD)\s+(PURCHASE|PAYMENT|REFUND)\b:?\s*(.*)\z/m
 
   SNAPTRADE_TYPE_TO_LABEL = ACTIVITY_RULES.transform_values { |r| r[:label] }.freeze
 
@@ -541,7 +554,11 @@ class SnaptradeAccount::ActivitiesProcessor
       description = data[:description] || data["description"] || build_description(activity_type, symbol)
 
       # Normalize amount sign for certain activity types
-      amount = normalize_cash_amount(amount, activity_type)
+      if ACTIVITY_RULES.dig(activity_type, :cash_flow) == :card
+        amount, description = normalize_card_activity(amount, description, activity_type)
+      else
+        amount = normalize_cash_amount(amount, activity_type)
+      end
 
       # Extract currency - handle both nested object and string
       currency_data = data[:currency] || data["currency"]
@@ -564,9 +581,17 @@ class SnaptradeAccount::ActivitiesProcessor
         date: activity_date,
         name: description,
         source: "snaptrade",
+        kind: card_payment_kind(activity_type),
         investment_activity_label: label_from_type(activity_type)
       )
       @transactions_count += 1 if result
+    end
+
+    # A card PAYMENT is money arriving from another account. Unpaired, a
+    # standard inflow would count as income; this is the kind the card leg of a
+    # matched payment takes, so pairing it later changes nothing.
+    def card_payment_kind(activity_type)
+      "funds_movement" if activity_type&.upcase == "PAYMENT" && account.accountable_type == "CreditCard"
     end
 
     # The cash a row names: its amount, or its net amount when the amount is
@@ -615,6 +640,27 @@ class SnaptradeAccount::ActivitiesProcessor
         -amount
       else
         amount
+      end
+    end
+
+    # Returns [ amount in Sure's convention (positive = money out), name ].
+    #
+    # Wealthsimple card rows name their direction in the description and are
+    # signed from the account's side (a purchase is negative), so the sign is
+    # taken from the description, and the name is the merchant without the
+    # "CREDIT_CARD PURCHASE:" prefix. Older rows were a bare "CREDIT_CARD" with
+    # a positive amount for every charge; those keep their sign. A bare
+    # PREPAID_CARD (debit card on a cash account) is signed like the newer rows.
+    def normalize_card_activity(amount, description, activity_type)
+      match = CARD_DESCRIPTION.match(description.to_s.strip)
+
+      if match
+        signed = match[1] == "PURCHASE" ? amount.abs : -amount.abs
+        [ signed, match[2].to_s.strip.presence || description ]
+      elsif activity_type == "PREPAID_CARD"
+        [ -amount, description ]
+      else
+        [ amount, description ]
       end
     end
 

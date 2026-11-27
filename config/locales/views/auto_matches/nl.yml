@@ -23,6 +23,9 @@ nl:
       from: Van
       to: Naar
       date: Datum
+      days_apart:
+        one: "%{count} dag ertussen"
+        other: "%{count} dagen ertussen"
       actions: Acties
       separator: "·"
     bulk_actions:
