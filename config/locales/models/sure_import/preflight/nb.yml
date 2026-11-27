@@ -1,0 +1,9 @@
+---
+nb:
+  sure_import:
+    preflight:
+      missing_reference: Linje %{line} %{type} refererer til manglende %{field} %{value}.
+      skipped_missing_reference: Linje %{line} %{type} refererer til manglende %{field} %{value}. Den blir hoppet over under importen.
+      skipped_missing_merchant_reference: "Linje %{line} %{type} viser til en forhandler (%{value}) som ikke er med i denne eksporten. Dette kan skje med en eksport som ble tatt før forhandlere tildelt av leverandører ble tatt med i Sure-eksporter. Den importeres uten den forhandleren."
+      skipped_unnamed_recurring: "Linje %{line} %{type} har ikke noe navn og viser til en forhandler (%{value}) som ikke er med i denne eksporten. Den hoppes over under importen."
+      provider_merchant_diff: "Linje %{line} ProviderMerchant %{name} finnes allerede med en annen %{fields}. Den eksisterende forhandleren beholdes."

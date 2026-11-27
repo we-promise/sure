@@ -100,6 +100,17 @@ tr:
       title: Bağlamak için bir sağlayıcı seçin
     set_default:
       depository_only: Yalnızca nakit ve kredi kartı hesapları varsayılan olarak ayarlanabilir.
+    health_status:
+      negative_positions:
+        detail: "%{name} (%{ticker}): %{date} tarihinden beri sıfırın altında, en düşük %{qty}"
+        hint: "Muhtemelen bir alım veya transfer eksik. Ekleyin ya da pozisyonu sıfırın altına düşüren işlemleri düzeltin."
+        link: "Varlıkları incele"
+        message: "Bazı pozisyonlar sıfırın altına düştü"
+      sync_failed:
+        message: "Son senkronizasyon başarısız oldu"
+      sync_hint: "Buradaki rakamlar güncel olmayabilir. Güncellemek için yeniden senkronize edin."
+      sync_stale:
+        message: "Son senkronizasyon tamamlanmadı"
     show:
       activity:
         amount: Tutar
