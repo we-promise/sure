@@ -54,6 +54,18 @@ class BalanceSheet::NetWorthSeriesBuilderTest < ActiveSupport::TestCase
     assert_not_equal k0, k2
   end
 
+  test "passes the zero-balance cutoff to the chart" do
+    @asset_account.balances.destroy_all
+    create_balance(account: @asset_account, date: 10.days.ago.to_date, balance: 1000)
+    create_balance(account: @asset_account, date: 5.days.ago.to_date, balance: 0)
+
+    Balance::ChartSeriesBuilder.expects(:new)
+      .with { |args| args[:account_active_until_dates][@asset_account.id] == 5.days.ago.to_date }
+      .returns(stub(balance_series: :series))
+
+    assert_equal :series, builder.net_worth_series
+  end
+
   private
     def builder
       BalanceSheet::NetWorthSeriesBuilder.new(@family)

@@ -12,7 +12,7 @@ class BalanceSheet::NetWorthSeriesBuilder
     Rails.cache.fetch(cache_key(period)) do
       builder = Balance::ChartSeriesBuilder.new(
         account_ids: historical_account_ids,
-        account_active_until_dates: disabled_account_active_until_dates,
+        account_active_until_dates: account_active_until_dates,
         currency: family.currency,
         period: period,
         favorable_direction: "up"
@@ -37,13 +37,8 @@ class BalanceSheet::NetWorthSeriesBuilder
       @historical_account_ids ||= historical_accounts.map(&:id)
     end
 
-    def disabled_account_active_until_dates
-      @disabled_account_active_until_dates ||= historical_accounts.each_with_object({}) do |account, dates|
-        next unless account.disabled?
-
-        disabled_on = (account.disabled_at || account.updated_at).to_date
-        dates[account.id] = disabled_on - 1.day
-      end
+    def account_active_until_dates
+      @account_active_until_dates ||= BalanceSheet::AccountActiveUntilDates.new(historical_accounts).to_h
     end
 
     def historical_account_scope
