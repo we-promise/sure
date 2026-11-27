@@ -132,7 +132,7 @@ de:
       stop_processing_label: Danach keine weiteren Regeln anwenden
       then: DANN
       apply_immediately_label: Sofort bei neuen und geänderten Transaktionen anwenden
-      apply_immediately_description: Läuft direkt, nachdem eine Transaktion von Hand, per Mehrfachbearbeitung, beim Kategorisieren, über die API oder vom Assistenten angelegt oder bearbeitet wurde, und weiterhin nachts.
+      apply_immediately_description: Läuft direkt, nachdem eine Transaktion von Hand, per Mehrfachbearbeitung, beim Kategorisieren, über die API, vom Assistenten oder bei einer Synchronisierung mit einem Anbieter angelegt oder bearbeitet wurde, und weiterhin nachts.
     index:
       ai_cost_warning: Regelaktionen mit KI kosten Geld. Filtere so eng wie möglich, damit keine unnötigen Kosten entstehen.
       delete_all_rules: Alle Regeln löschen
@@ -205,7 +205,7 @@ de:
       stop_processing: Stopp
       stop_processing_hint: Weiter unten stehende Regeln ändern die Transaktionen nicht mehr, die diese Regel trifft.
       apply_immediately: Sofort
-      apply_immediately_hint: Läuft auch direkt, nachdem eine Transaktion von Hand, per Mehrfachbearbeitung, beim Kategorisieren, über die API oder vom Assistenten angelegt oder bearbeitet wurde, zusammen mit den aktiven Regeln darüber.
+      apply_immediately_hint: Läuft auch direkt, nachdem eine Transaktion von Hand, per Mehrfachbearbeitung, beim Kategorisieren, über die API, vom Assistenten oder bei einer Synchronisierung mit einem Anbieter angelegt oder bearbeitet wurde, zusammen mit den aktiven Regeln darüber.
       then: DANN
     update:
       success: Regel aktualisiert

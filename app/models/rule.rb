@@ -326,9 +326,10 @@ class Rule < ApplicationRecord
   end
 
   # Runs the "apply immediately" rules for transactions a person just created
-  # or changed (web, bulk edit, API, assistant). Families without such rules
-  # enqueue nothing. Best-effort: the change is already saved and the nightly
-  # run applies the rules anyway, so a failed enqueue must not fail the request.
+  # or changed (web, bulk edit, API, assistant) or a provider sync imported or
+  # updated. Families without such rules enqueue nothing. Best-effort: the
+  # change is already saved and the nightly run applies the rules anyway, so a
+  # failed enqueue must not fail the request.
   # Callers inside a database transaction call this after it, so the enqueue
   # is not deferred to an after-commit callback outside this rescue.
   def self.apply_immediately_later(family, transaction_ids)

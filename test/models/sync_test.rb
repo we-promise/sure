@@ -2,6 +2,7 @@ require "test_helper"
 
 class SyncTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
+  include EntriesTestHelper
 
   test "does not run if not in a valid state" do
     syncable = accounts(:depository)
@@ -133,25 +134,73 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "completed", family_sync.reload.status
   end
 
-  test "a standalone provider sync applies the family's rules when it completes" do
-    plaid_item = plaid_items(:one)
-    sync = Sync.create!(syncable: plaid_item)
+  test "a standalone provider sync hands the transactions it changed to the apply-immediately rules" do
+    family = families(:dylan_family)
+    family.rules.first.update!(active: true, apply_immediately: true)
+    age_family_transactions(family)
 
-    plaid_item.expects(:perform_sync).with(sync).once
-    # Finalization reloads the sync (lock!), so post-sync runs on a fresh instance
-    PlaidItem.any_instance.expects(:perform_post_sync).once
-    PlaidItem.any_instance.stubs(:broadcast_sync_complete)
+    old_transaction = entries(:transaction)
+    sync = Sync.create!(syncable: plaid_items(:one))
+    Sync.create!(syncable: accounts(:depository), parent: sync, status: :completed)
 
-    assert_enqueued_with(job: ApplyRulesJob, args: [ plaid_item.family ]) do
+    # What the provider import creates or changes while the sync runs
+    imported, recategorized, other_account = travel_to(1.minute.from_now) do
+      [
+        create_transaction(account: accounts(:depository), name: "Imported"),
+        entries(:transfer_out).tap { |entry| entry.entryable.update_columns(updated_at: Time.current) },
+        create_transaction(account: accounts(:credit_card), name: "Not part of this sync")
+      ]
+    end
+
+    expect_standalone_provider_sync(sync)
+
+    jobs = capture_enqueued_jobs(ApplyImmediateRulesJob) { sync.perform }
+
+    assert_equal 1, jobs.size
+    transaction_ids = jobs.first[:args].last["transaction_ids"]
+    assert_equal [ imported.entryable_id, recategorized.entryable_id ].sort, transaction_ids.sort
+    assert_not_includes transaction_ids, old_transaction.entryable_id
+    assert_not_includes transaction_ids, other_account.entryable_id
+    assert_no_enqueued_jobs(only: ApplyRulesJob)
+  end
+
+  test "a standalone provider sync that changed no transactions runs no rules" do
+    family = families(:dylan_family)
+    family.rules.first.update!(active: true, apply_immediately: true)
+    age_family_transactions(family)
+
+    sync = Sync.create!(syncable: plaid_items(:one))
+    Sync.create!(syncable: accounts(:depository), parent: sync, status: :completed)
+    expect_standalone_provider_sync(sync)
+
+    assert_no_enqueued_jobs(only: [ ApplyImmediateRulesJob, ApplyRulesJob ]) do
+      sync.perform
+    end
+  end
+
+  test "a standalone provider sync leaves rules without apply immediately to the nightly run" do
+    family = families(:dylan_family)
+    family.rules.update_all(active: true, apply_immediately: false)
+    age_family_transactions(family)
+
+    sync = Sync.create!(syncable: plaid_items(:one))
+    Sync.create!(syncable: accounts(:depository), parent: sync, status: :completed)
+    travel_to(1.minute.from_now) { create_transaction(account: accounts(:depository), name: "Imported") }
+    expect_standalone_provider_sync(sync)
+
+    assert_no_enqueued_jobs(only: [ ApplyImmediateRulesJob, ApplyRulesJob ]) do
       sync.perform
     end
   end
 
   test "a provider sync inside a family sync leaves the rules to the family" do
     family = families(:dylan_family)
+    family.rules.first.update!(active: true, apply_immediately: true)
     plaid_item = plaid_items(:one)
     family_sync = Sync.create!(syncable: family, status: :syncing)
     plaid_item_sync = Sync.create!(syncable: plaid_item, parent: family_sync)
+    Sync.create!(syncable: accounts(:depository), parent: plaid_item_sync, status: :completed)
+    travel_to(1.minute.from_now) { create_transaction(account: accounts(:depository), name: "Imported") }
 
     plaid_item.expects(:perform_sync).with(plaid_item_sync).once
     PlaidItem.any_instance.stubs(:perform_post_sync)
@@ -159,20 +208,22 @@ class SyncTest < ActiveSupport::TestCase
     PlaidItem.any_instance.stubs(:broadcast_sync_complete)
     Family.any_instance.stubs(:broadcast_sync_complete)
 
-    assert_no_enqueued_jobs(only: ApplyRulesJob) do
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob) do
       plaid_item_sync.perform
     end
   end
 
   test "a standalone account sync does not apply the rules" do
+    families(:dylan_family).rules.first.update!(active: true, apply_immediately: true)
     account = accounts(:depository)
     sync = Sync.create!(syncable: account)
+    travel_to(1.minute.from_now) { create_transaction(account: account, name: "Edited") }
 
     account.expects(:perform_sync).with(sync).once
     Account.any_instance.stubs(:perform_post_sync)
     Account.any_instance.stubs(:broadcast_sync_complete)
 
-    assert_no_enqueued_jobs(only: ApplyRulesJob) do
+    assert_no_enqueued_jobs(only: [ ApplyImmediateRulesJob, ApplyRulesJob ]) do
       sync.perform
     end
   end
@@ -621,4 +672,25 @@ class SyncTest < ActiveSupport::TestCase
       sync.mark_stale!
     end
   end
+
+  private
+    def expect_standalone_provider_sync(sync)
+      sync.syncable.expects(:perform_sync).with(sync).once
+      # Finalization reloads the sync (lock!), so post-sync runs on a fresh instance
+      PlaidItem.any_instance.stubs(:perform_post_sync)
+      PlaidItem.any_instance.stubs(:broadcast_sync_complete)
+    end
+
+    # Transactions the sync did not touch, such as a long-uncategorized manual one
+    def age_family_transactions(family)
+      entries = Entry.joins(:account).where(accounts: { family_id: family.id })
+      entries.update_all(updated_at: 200.days.ago)
+      Transaction.where(id: entries.where(entryable_type: "Transaction").select(:entryable_id)).update_all(updated_at: 200.days.ago)
+    end
+
+    def capture_enqueued_jobs(job_class)
+      before = enqueued_jobs.size
+      yield
+      enqueued_jobs.drop(before).select { |job| job[:job] == job_class }
+    end
 end
