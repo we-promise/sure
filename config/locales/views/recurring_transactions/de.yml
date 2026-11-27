@@ -127,8 +127,16 @@ de:
       covered_income_confirm: "Einkommen hinzufügen"
       covered_income_create_anyway: "Trotzdem ein separates Einkommen hinzufügen"
     smart_fills:
+      stop: "Stopp"
       create:
         failed: "Der Buchungsverlauf lässt sich gerade nicht analysieren. Das Formular behält die Werte der Transaktion."
+        waiting: "Der Buchungsverlauf dieser Zahlung wird gelesen, um die Rechnungsdaten vorzuschlagen."
+        worker_unhealthy: "Der Hintergrundworker für KI-Aufgaben ist möglicherweise ausgefallen oder überlastet."
+      result:
+        failed: "Der Buchungsverlauf dieser Zahlung lässt sich gerade nicht analysieren. Die Werte der Transaktion sind noch da."
+        stopped: "Gestoppt. Das Modell kann diese Anfrage noch abschließen; hier ändert sich nichts."
+        no_changes: "Die Analyse ist abgeschlossen, ohne Änderungen für diese Zahlung vorzuschlagen."
+        access_revoked: "Diese Transaktion ist nicht mehr verfügbar, daher kann ihr Vorschlag nicht angezeigt werden."
     pick_entry:
       title: "Transaktion als Ausgangspunkt suchen"
       income_title: "Zahlungseingang als Ausgangspunkt suchen"

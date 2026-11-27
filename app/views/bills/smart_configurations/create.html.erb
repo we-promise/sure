@@ -1,0 +1,13 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title", name: @series.display_name)) %>
+  <% dialog.with_body do %>
+    <% if @suggestion.pending? %>
+      <%= render "shared/ai_suggestion_waiting", suggestion: @suggestion,
+            waiting_key: "bills.smart_configurations.create.waiting",
+            worker_key: "bills.smart_configurations.create.worker_unhealthy",
+            stop_key: "bills.smart_configurations.show.stop" %>
+    <% else %>
+      <%= render "bills/smart_configurations/result", suggestion: @suggestion, series: @series, detection: @detection %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -1,6 +1,8 @@
 ---
 de:
   shared:
+    ai_suggestion_failure:
+      generation_failed: Die Analyse konnte nicht abgeschlossen werden. Deine Einträge bleiben unverändert.
     confirm_modal:
       accept: Bestätigen
       body_html: "<p>Diese Entscheidung kann nicht rückgängig gemacht werden</p>"

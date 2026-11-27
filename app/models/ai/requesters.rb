@@ -3,6 +3,7 @@
 # declares the key it's listed under.
 module Ai::Requesters
   CLASSES = {
+    bill_setup: "RecurringTransaction::Suggestion",
     categorize: "Family::AutoCategorizer",
     detect_merchants: "Family::AutoMerchantDetector",
     enhance_merchants: "ProviderMerchant::Enhancer"

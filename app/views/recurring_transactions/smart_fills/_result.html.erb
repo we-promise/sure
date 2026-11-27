@@ -1,0 +1,33 @@
+<%# locals: (suggestion:, recurring_transaction:, covering_series: nil, source_entry: nil, entry_access_revoked: false) %>
+<% if entry_access_revoked %>
+  <%# The answer belongs to evidence this user can no longer read. %>
+  <%= render DS::Alert.new(variant: :info, live: :polite) do %>
+    <p><%= t(".access_revoked") %></p>
+  <% end %>
+<% elsif suggestion.complete? && suggestion.proposal&.any_proposal? %>
+  <%= render DS::Alert.new(variant: :success, live: :polite) do %>
+    <p><%= t("recurring_transactions.new.smart_fill_applied") %></p>
+    <% if suggestion.proposal.rationale.present? %>
+      <p class="text-xs text-secondary"><%= suggestion.proposal.rationale %></p>
+    <% end %>
+  <% end %>
+  <%= render "recurring_transactions/covered_warning", series: covering_series,
+        recurring_transaction:, source_entry: %>
+<% elsif suggestion.complete? %>
+  <%= render DS::Alert.new(variant: :info, live: :polite) do %>
+    <p><%= t(".no_changes") %></p>
+  <% end %>
+  <%= render "recurring_transactions/covered_warning", series: covering_series,
+        recurring_transaction:, source_entry: %>
+<% else %>
+  <%# No usable answer: keep the plain, prefilled form so the user can carry on
+      without losing the transaction this dialog was opened from. %>
+  <%= render DS::Alert.new(variant: :error, live: :polite) do %>
+    <p><%= suggestion.failed? ? t(".failed") : t(".stopped") %></p>
+    <% if suggestion.failed? && suggestion.error.present? %>
+      <p class="text-xs"><%= ai_failure_message(suggestion) %></p>
+    <% end %>
+  <% end %>
+  <%= render "recurring_transactions/covered_warning", series: covering_series,
+        recurring_transaction:, source_entry: %>
+<% end %>

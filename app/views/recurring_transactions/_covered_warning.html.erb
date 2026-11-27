@@ -1,0 +1,46 @@
+<%# locals: (series:, recurring_transaction:, source_entry: nil, allow_duplicate: false) %>
+<%# Shared by the plain dialog and the AI suggestion's result: a transaction
+    already tracked by a bill must not create a second one by accident. %>
+<% if series %>
+  <%# A suggestion is that bill, found by detection and not yet confirmed.
+      Confirming it links this payment; a separate bill would become the
+      duplicate the moment the suggestion was confirmed. %>
+  <%# Income is stored negative, so an inflow's covering series is income
+      and the warning names it as such. %>
+  <% prefix = "recurring_transactions.new" %>
+  <% suggested = series.suggested? %>
+  <% covered = series.amount.negative? ? "#{prefix}.covered_income" : "#{prefix}.covered" %>
+  <div class="mb-5">
+    <%= render DS::Alert.new(title: t(suggested ? "#{covered}_suggested_title" : "#{covered}_title"), variant: :warning, live: :polite) do %>
+      <p><%= t(suggested ? "#{covered}_suggested_body" : "#{covered}_body", name: series.display_name) %></p>
+      <div class="flex flex-wrap items-center gap-3">
+        <% if suggested && series_writable?(series) %>
+          <%= render DS::Link.new(
+                text: t("#{covered}_confirm"),
+                variant: "primary",
+                href: confirm_recurring_transaction_path(series),
+                method: :post,
+                frame: "_top"
+              ) %>
+        <% end %>
+        <%= render DS::Link.new(
+              text: t("#{covered}_open"),
+              variant: :default,
+              href: bill_path(series),
+              frame: "_top"
+            ) %>
+      </div>
+    <% end %>
+  </div>
+
+  <%= render DS::Disclosure.new(title: t("#{covered}_create_anyway"), align: "left") do %>
+    <div class="pt-2">
+      <%= render "recurring_transactions/form", recurring_transaction:, sibling_count: 0,
+                 source_entry_id: source_entry&.id, allow_duplicate: true, form_frame: :modal %>
+    </div>
+  <% end %>
+<% else %>
+  <%# A failed save after "anyway" keeps that choice for the resubmit. %>
+  <%= render "recurring_transactions/form", recurring_transaction:, sibling_count: 0,
+             source_entry_id: source_entry&.id, allow_duplicate:, form_frame: :modal %>
+<% end %>

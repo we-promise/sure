@@ -1,10 +1,11 @@
-<%# locals: (recurring_transaction:, sibling_count: 0, source_entry_id: nil, allow_duplicate: false) %>
+<%# locals: (recurring_transaction:, sibling_count: 0, source_entry_id: nil, allow_duplicate: false, form_frame: nil) %>
 
 <%# Income mode reshapes the dialog: a paycheck has a source and a payday,
     not a biller portal and an autopay toggle. %>
 <% income = recurring_transaction.is_income.present? || recurring_transaction.typed_income? %>
 
-<%= styled_form_with model: recurring_transaction, class: "space-y-4" do |f| %>
+<%= styled_form_with model: recurring_transaction, class: "space-y-4",
+      data: (form_frame ? { turbo_frame: form_frame } : {}) do |f| %>
   <section class="space-y-4">
     <% if recurring_transaction.errors.any? %>
       <%= render "shared/form_errors", model: recurring_transaction %>
