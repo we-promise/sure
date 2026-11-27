@@ -77,13 +77,8 @@
         <%= render DS::Table.new(rows: investment_metrics[:top_holdings], inset: true, label: t("reports.investment_performance.top_holdings"), row_class: ->(_holding) { "text-secondary" }) do |table| %>
           <% table.with_column(t("reports.investment_performance.holding")) do |holding| %>
             <div class="flex items-center gap-3">
-              <% if (logo = holding.security.display_logo_url).present? %>
-                <img src="<%= Setting.transform_brand_fetch_url(logo) %>" alt="<%= holding.ticker %>" class="w-6 h-6 rounded-full">
-              <% else %>
-                <div class="w-8 h-8 rounded-full bg-container-inset flex items-center justify-center text-xs font-medium text-secondary">
-                  <%= holding.ticker[0..1] %>
-                </div>
-              <% end %>
+              <%= render DS::Logo.new(src: Setting.transform_brand_fetch_url(holding.security.display_logo_url),
+                    name: holding.ticker, text_length: 2, size: :sm) %>
               <div>
                 <p class="font-medium text-primary"><%= holding.ticker %></p>
                 <p class="text-xs text-secondary"><%= truncate(holding.name, length: 25) %></p>

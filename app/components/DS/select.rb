@@ -79,11 +79,7 @@ module DS
     # picked.
     def logo_markup(item)
       url = logo_for(item)
-      content = if url
-        helpers.image_tag(url, class: "w-6 h-6 rounded-full border border-secondary", loading: "lazy")
-      else
-        render(DS::FilledIcon.new(variant: :text, text: item[:label], size: "sm", rounded: true))
-      end
+      content = render(DS::Logo.new(src: url, name: item[:label], size: :sm))
 
       tag.span(content, class: "shrink-0", data: { select_logo: true })
     end
