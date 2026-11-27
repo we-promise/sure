@@ -71,6 +71,7 @@ Issue https://github.com/we-promise/sure/issues/5077 tracks follow-up work defer
 ### Waiting on #5784
 
 - https://github.com/we-promise/sure/pull/5827 Bill suggestions and Stop.
+  - https://github.com/we-promise/sure/pull/5870 Probe suggestion status before catching up a waiting frame (draft, stacked on #5827).
 - https://github.com/we-promise/sure/pull/5825 Stopping a PDF import.
 - https://github.com/we-promise/sure/pull/5824 Documents in a job.
 - https://github.com/we-promise/sure/pull/5826 MCP tools in a job.
