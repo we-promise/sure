@@ -24,6 +24,9 @@ class Transfer < ApplicationRecord
   # order confirm! and Entry#unsplit! take them in, so an unlink and a confirm
   # or unsplit do not deadlock each other.
   before_destroy :lock_row, prepend: true
+  # A principal-only loan replays a linked payment as principal and an unlinked
+  # one as a full instalment, so its balance changes when the link goes.
+  after_destroy_commit :sync_principal_only_loan_legs_later
 
   class << self
     # The outflow leg's kind for a transfer into this account. Transfer::Creator,
@@ -231,6 +234,10 @@ class Transfer < ApplicationRecord
     fee_transactions.each { |t| t.entry&.sync_account_later }
   end
 
+  def principal_only_loan_transfer?
+    [ from_account, to_account ].compact.any? { |account| principal_only_loan?(account) }
+  end
+
   def to_account
     inflow_transaction&.entry&.account
   end
@@ -291,6 +298,21 @@ class Transfer < ApplicationRecord
         rescue NoMethodError
           next
         end
+      end
+    end
+
+    def principal_only_loan?(account)
+      account.loan? && account.loan.amortizable? && account.loan.principal_only_transfers?
+    end
+
+    # Only the loan's balance depends on the link. Skips a leg whose entry went
+    # with this transfer.
+    def sync_principal_only_loan_legs_later
+      [ inflow_transaction, outflow_transaction ].each do |transaction|
+        entry = transaction&.entry
+        next unless entry && Entry.exists?(entry.id) && principal_only_loan?(entry.account)
+
+        entry.sync_account_later
       end
     end
 
