@@ -6,6 +6,8 @@ class SimplefinAccount::Transactions::Processor
     @skipped_entries = []
   end
 
+  # Returns true when every transaction in the payload was imported, false
+  # when any of them raised.
   def process
     transactions = simplefin_account.raw_transactions_payload.to_a
     acct = simplefin_account.current_account
@@ -13,7 +15,7 @@ class SimplefinAccount::Transactions::Processor
 
     if transactions.empty?
       Rails.logger.info "SimplefinAccount::Transactions::Processor - No transactions in raw_transactions_payload for simplefin_account #{simplefin_account.id} (#{simplefin_account.name}) - #{acct_info}"
-      return
+      return true
     end
 
     Rails.logger.info "SimplefinAccount::Transactions::Processor - Processing #{transactions.count} transactions for simplefin_account #{simplefin_account.id} (#{simplefin_account.name}) - #{acct_info}"
@@ -48,6 +50,8 @@ class SimplefinAccount::Transactions::Processor
     @skipped_entries = adapter&.skipped_entries || []
 
     Rails.logger.info "SimplefinAccount::Transactions::Processor - Completed for simplefin_account #{simplefin_account.id}: #{processed_count} processed, #{error_count} errors, #{@skipped_entries.size} skipped (protected)"
+
+    error_count.zero?
   end
 
   private

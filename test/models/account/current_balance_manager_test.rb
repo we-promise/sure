@@ -566,6 +566,39 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     end
   end
 
+  # The same-day anchor is updated in place rather than rotated, so it must take
+  # the account's new currency along with the new reading.
+  test "a same-day anchor updated after a currency change takes the new currency" do
+    manager = Account::CurrentBalanceManager.new(@linked_account)
+    assert manager.set_current_balance(1000).success?
+    anchor_id = @linked_account.valuations.current_anchor.first.id
+
+    @linked_account.update!(currency: "EUR")
+
+    assert_no_difference -> { @linked_account.valuations.count } do
+      result = Account::CurrentBalanceManager.new(@linked_account).set_current_balance(900)
+      assert result.success?
+      assert result.changes_made?
+    end
+
+    anchor = @linked_account.valuations.current_anchor.first
+    assert_equal anchor_id, anchor.id
+    assert_equal 900, anchor.entry.amount
+    assert_equal "EUR", anchor.entry.currency
+  end
+
+  test "a currency change alone updates a same-day anchor" do
+    manager = Account::CurrentBalanceManager.new(@linked_account)
+    assert manager.set_current_balance(1000).success?
+
+    @linked_account.update!(currency: "EUR")
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).changes_made?,
+      "a currency change alone is a change"
+
+    assert_not Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).changes_made?
+    assert_equal "EUR", @linked_account.valuations.current_anchor.first.entry.currency
+  end
+
   test "preserves a stale-currency anchor even when every flow matches the new currency" do
     day_one = Date.current
     assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?

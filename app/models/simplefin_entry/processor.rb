@@ -86,7 +86,7 @@ class SimplefinEntry::Processor
 
       # FX metadata: when tx currency differs from account currency
       tx_currency = parse_currency(data[:currency])
-      acct_currency = account.currency
+      acct_currency = account_currency
       if tx_currency.present? && acct_currency.present? && tx_currency != acct_currency
         sf["fx_from"] = tx_currency
         # Prefer transacted_at for fx date, fallback to posted
@@ -154,7 +154,15 @@ class SimplefinEntry::Processor
     end
 
     def currency
-      parse_currency(data[:currency]) || account.currency
+      parse_currency(data[:currency]) || account_currency
+    end
+
+    # The currency SimpleFIN reports for the account in this snapshot.
+    # SimplefinAccount::Processor writes it to the account only after the
+    # transactions are imported, so until then account.currency can still hold
+    # the previous one.
+    def account_currency
+      simplefin_account.currency.presence || account.currency
     end
 
     def log_invalid_currency(currency_value)
