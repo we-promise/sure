@@ -69,7 +69,7 @@
       href: account_path(account),
       method: :delete,
       icon: "trash-2",
-      confirm: CustomConfirm.for_resource_deletion("account", high_severity: true),
+      confirm: CustomConfirm.for_noun_deletion("account", high_severity: true),
       data: { turbo_frame: :_top }
     ) %>
   <% end %>

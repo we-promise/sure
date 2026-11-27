@@ -28,7 +28,7 @@
             <%= button_to account_statement_path(@statement),
                           method: :delete,
                           class: "inline-flex items-center gap-2 text-sm font-medium text-destructive",
-                          data: { turbo_confirm: CustomConfirm.for_resource_deletion("statement") } do %>
+                          data: { turbo_confirm: CustomConfirm.for_noun_deletion("statement") } do %>
               <%= icon("trash-2", size: "sm", color: "destructive") %>
               <%= t(".delete") %>
             <% end %>
