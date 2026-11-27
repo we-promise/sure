@@ -49,6 +49,10 @@ default: &default
       client_id: <%= ENV["OIDC_CLIENT_ID"] %>
       client_secret: <%= ENV["OIDC_CLIENT_SECRET"] %>
       redirect_uri: <%= ENV["OIDC_REDIRECT_URI"] %>
+      settings:
+        # Skip the email_verified check for this provider. Only safe when users
+        # cannot set or change their own email (see docs/hosting/oidc.md 6.7).
+        treat_email_as_verified: <%= ENV.fetch("OIDC_TREAT_EMAIL_AS_VERIFIED", "false") %>
 
     # Optional Google OAuth provider. Requires the omniauth-google-oauth2 gem
     # and GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET env vars.

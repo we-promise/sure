@@ -34,13 +34,14 @@ class ProviderLoader
       Rails.cache.delete(CACHE_KEY)
     end
 
+    # Whether providers come from the database (and so can change at runtime)
+    def use_database_providers?
+      return false if Rails.env.test?
+
+      FeatureFlags.db_sso_providers?
+    end
+
     private
-      def use_database_providers?
-        return false if Rails.env.test?
-
-        FeatureFlags.db_sso_providers?
-      end
-
       def load_from_database
         begin
           providers = SsoProvider.enabled.order(:name).map(&:to_omniauth_config)

@@ -132,7 +132,7 @@ module Admin
           :scopes,
           :prompt,
           settings: [
-            :default_role, :scopes, :prompt,
+            :default_role, :scopes, :prompt, :treat_email_as_verified,
             # SAML settings
             :idp_metadata_url, :idp_sso_url, :idp_slo_url,
             :idp_certificate, :idp_cert_fingerprint, :name_id_format,
