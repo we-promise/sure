@@ -2,6 +2,7 @@
 
 class ProviderConnectionStatus
   PROVIDERS = [
+    { key: "saxo", type: "SaxoItem", association: :saxo_items, accounts: :saxo_accounts },
     { key: "financekit", type: "FinancekitItem", association: :financekit_items, accounts: :financekit_account_lineages },
     { key: "akahu", type: "AkahuItem", association: :akahu_items, accounts: :akahu_accounts },
     { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },
@@ -32,9 +33,16 @@ class ProviderConnectionStatus
     { key: "wise", type: "WiseItem", association: :wise_items, accounts: :wise_accounts }
   ].freeze
 
+  # Providers that only users with Preview features enabled may see or use.
+  PREVIEW_PROVIDER_KEYS = %w[saxo].freeze
+
   class << self
-    def for_family(family)
-      PROVIDERS.flat_map do |provider|
+    def hidden_provider_keys(preview_enabled:)
+      preview_enabled ? [] : PREVIEW_PROVIDER_KEYS
+    end
+
+    def for_family(family, except: [])
+      PROVIDERS.reject { |provider| except.include?(provider[:key]) }.flat_map do |provider|
         relation = family.public_send(provider[:association])
         items = relation.includes(association_includes_for(relation, provider)).ordered.to_a
         sync_contexts = sync_contexts_for(provider[:type], items)

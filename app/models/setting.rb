@@ -11,6 +11,8 @@ class Setting < RailsSettings::Base
   end
 
   # Third-party API keys
+  field :saxo_app_key, type: :string, default: ENV["SAXO_APP_KEY"]
+  field :saxo_app_secret, type: :string, default: ENV["SAXO_APP_SECRET"]
   field :twelve_data_api_key, type: :string, default: ENV["TWELVE_DATA_API_KEY"]
   field :openai_access_token, type: :string, default: ENV["OPENAI_ACCESS_TOKEN"]
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
@@ -138,6 +140,8 @@ class Setting < RailsSettings::Base
   # encryption was enabled) the raw value is returned as-is.
   module EncryptedSettingFields
     ENCRYPTED_FIELDS = %i[
+      saxo_app_key
+      saxo_app_secret
       twelve_data_api_key
       tiingo_api_key
       eodhd_api_key

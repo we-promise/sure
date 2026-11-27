@@ -263,6 +263,23 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     assert_equal payload, item.reload.raw_payload
   end
 
+  test "backfill keeps a plaintext JSON payload in a text column structured" do
+    item = families(:dylan_family).saxo_items.create!
+    account = item.saxo_accounts.create!(account_id: "backfill-saxo", name: "PEA", currency: "EUR")
+    payload = { "AccountId" => "backfill-saxo", "Currency" => "EUR" }
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE saxo_accounts SET raw_payload = ? WHERE id = ?", payload.to_json, account.id ]))
+    # Once the legacy fallback is off, reading plaintext raises and the task
+    # takes its raw-value path.
+    SaxoAccount.any_instance.stubs(:raw_payload).raises(ActiveRecord::Encryption::Errors::Decryption)
+
+    output = run_backfill(dry_run: false)
+
+    SaxoAccount.any_instance.unstub(:raw_payload)
+    assert_equal 0, output.dig("results", "saxo_accounts", "failed_count")
+    assert_equal payload, account.reload.raw_payload
+  end
+
   test "a clean non-dry-run completion marks the backfill flag complete" do
     Setting.encryption_backfill_completed_version = 0
 
@@ -386,7 +403,8 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     10 => "0bcaa72ed675acde5d5ae2ce72305bf73375c0faa5580fe80e3985e88aa4f9e4",
     11 => "e706a4aba7b25ef1ec3d9dacbd6ca489e4abe577b54875ac377a48138890b450",
     12 => "4122d5a8520c242fb5bad505511319806da13ed45996b47df2cb2ee34a4c041f",
-    13 => "72593348d2ae17c23317f826de2e65b983356766c09fa3bcf92af01c26d54aa0"
+    13 => "72593348d2ae17c23317f826de2e65b983356766c09fa3bcf92af01c26d54aa0",
+    14 => "7c8167bff1435bcda7beb8e8602646c615de9bb3765b00a0fb93fc15786cf100"
   }.freeze
 
   test "backfill manifest changes come with a CURRENT_BACKFILL_VERSION bump" do
@@ -511,8 +529,13 @@ class SecurityBackfillTest < ActiveSupport::TestCase
       JSON.parse(output.lines.last)
     end
 
+    # A text column serialized with the JSON coder holds JSON too.
     def json_column?(model, field)
-      %i[json jsonb].include?(model.columns_hash[field.to_s].type)
+      return true if %i[json jsonb].include?(model.columns_hash[field.to_s].type)
+
+      type = model.type_for_attribute(field.to_s)
+      type = type.cast_type if type.is_a?(ActiveRecord::Encryption::EncryptedAttributeType)
+      type.is_a?(ActiveRecord::Type::Serialized) && type.coder.is_a?(ActiveRecord::Coders::JSON)
     end
 
     # Writes plaintext into every encrypted column with raw SQL: into a
