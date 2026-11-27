@@ -117,6 +117,26 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes Setting.enabled_securities_providers, "twelve_data"
   end
 
+  test "enable_crypto_prices refreshes every account's market data" do
+    Rails.configuration.stubs(:app_mode).returns(ActiveSupport::StringInquirer.new("self_hosted"))
+    Setting.securities_providers = "twelve_data"
+
+    MarketDataRefreshJob.expects(:perform_later).once
+
+    post enable_crypto_prices_onchain_wallet_items_url
+  end
+
+  test "enable_crypto_prices does not refresh when the crypto provider is already enabled" do
+    Rails.configuration.stubs(:app_mode).returns(ActiveSupport::StringInquirer.new("self_hosted"))
+    Onchain::SecurityResolver.enable_price_provider!
+
+    MarketDataRefreshJob.expects(:perform_later).never
+
+    post enable_crypto_prices_onchain_wallet_items_url
+
+    assert_response :redirect
+  end
+
   test "enable_crypto_prices is refused on a managed instance where the operator decides" do
     Setting.securities_providers = "twelve_data"
 

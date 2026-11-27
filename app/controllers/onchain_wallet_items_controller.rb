@@ -41,7 +41,12 @@ class OnchainWalletItemsController < ApplicationController
       return redirect_back_or_to settings_providers_path, alert: t(".not_self_hosted")
     end
 
-    Onchain::SecurityResolver.enable_price_provider!
+    unless Onchain::SecurityResolver.price_provider_enabled?
+      Onchain::SecurityResolver.enable_price_provider!
+      # The setting is instance-wide: crypto holdings in every family become
+      # priceable, and their stored balances need rebuilding to show it.
+      MarketDataRefreshJob.refresh_later(source: self.class.name, family: Current.family, user: Current.user)
+    end
 
     redirect_back_or_to settings_providers_path, notice: t(".success")
   end
