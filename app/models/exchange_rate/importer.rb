@@ -112,6 +112,9 @@ class ExchangeRate::Importer
         provider_name: current_provider_name
       )
     end
+  ensure
+    # Rows already written stay written, so on every way out.
+    refresh_balances
   end
 
   private
@@ -123,16 +126,39 @@ class ExchangeRate::Importer
       total_upsert_count = 0
 
       rows.each_slice(batch_size) do |batch|
-        upserted_ids = ExchangeRate.upsert_all(
+        # xmax is 0 only on a row the upsert inserted rather than updated.
+        upserted = ExchangeRate.upsert_all(
           batch,
           unique_by: %i[from_currency to_currency date],
-          returning: [ "id" ]
+          returning: Arel.sql("from_currency, to_currency, date, created_at, (xmax = 0) AS inserted")
         )
 
-        total_upsert_count += upserted_ids.count
+        upserted.each do |row|
+          next unless ActiveModel::Type::Boolean.new.cast(row["inserted"])
+
+          inserted_rates << {
+            from: row["from_currency"], to: row["to_currency"], date: row["date"].to_date,
+            stored_at: ExchangeRate.type_for_attribute(:created_at).deserialize(row["created_at"])
+          }
+        end
+
+        total_upsert_count += upserted.count
       end
 
       total_upsert_count
+    end
+
+    def inserted_rates
+      @inserted_rates ||= []
+    end
+
+    # A rate stored where there was none is one a balance had to do without
+    # (ExchangeRate::BalanceRefresh). An updated row was already usable: the
+    # table refuses a rate that is not positive.
+    def refresh_balances
+      return if inserted_rates.empty?
+
+      ExchangeRate::BalanceRefresh.enqueue(inserted_rates, source: "ExchangeRate::Importer", provider: current_provider_name)
     end
 
     def start_rate_value
@@ -218,9 +244,14 @@ class ExchangeRate::Importer
           end_date: end_date
         )
 
-        if provider_response.success?
+        if provider_response.success? && provider_response.data.present?
+          ExchangeRatePair.record_direct_quote(from: from, to: to, provider_name: current_provider_name)
           Rails.logger.debug("Fetched #{provider_response.data.size} rates from #{exchange_rate_provider.class.name} for #{from}/#{to} between #{provider_fetch_start_date} and #{end_date}")
           provider_response.data.index_by(&:date)
+        elsif (crossed = usd_cross_rates(provider_response.error)).any?
+          crossed.index_by(&:date)
+        elsif provider_response.success?
+          {} # No rates at all; import_provider_rates logs that.
         else
           message = "#{exchange_rate_provider.class.name} could not fetch exchange rate pair from: #{from} to: #{to} between: #{effective_start_date} and: #{Date.current}.  Provider error: #{provider_response.error.message}"
           Rails.logger.warn(message)
@@ -228,6 +259,12 @@ class ExchangeRate::Importer
           {}
         end
       end
+    end
+
+    # The provider has no such pair, but it may still quote both USD legs.
+    def usd_cross_rates(error)
+      ExchangeRate::UsdCross.new(exchange_rate_provider)
+        .rates(from: from, to: to, start_date: provider_fetch_start_date, end_date: end_date, error: error)
     end
 
     def backfill_inverse_rates_if_needed
