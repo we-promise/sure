@@ -102,6 +102,18 @@
           <p class="text-xs text-secondary" data-testid="extra-dated-note"><%= t(".dated_note") %></p>
         <% end %>
       <% end %>
+
+      <%# The revised schedule: the repayments with the extra, numbered and
+          dated as the Schedule tab has them, ending where the loan is paid
+          off. Only for an extra that clears the loan: one that does not has
+          no payoff date to end at. Every row is after as_of, so none is
+          shaded as past. %>
+      <% if extra_projection.converged? %>
+        <p class="text-sm text-secondary"><%= t(".revised_schedule_intro") %></p>
+        <%= render "loans/tabs/payments_table", payments: extra_projection.revised_schedule,
+                   label: t(".revised_schedule"), as_of: extra_projection.as_of, extra: true,
+                   data: { testid: "revised-schedule" } %>
+      <% end %>
     <% end %>
 
     <% if account.loan.variable_rate_type? %>

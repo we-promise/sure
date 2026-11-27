@@ -1,0 +1,22 @@
+<%# locals: (payments:, label:, as_of:, extra: false, **opts) %>
+
+<%# A loan's repayments as a table: the Schedule tab's, and the Extra
+    repayments tab's revised schedule, which adds each period's extra beside
+    the repayment it rides on. Rows on or before `as_of` are shaded as past. %>
+<%= render DS::Table.new(
+      rows: payments,
+      sticky_header: true,
+      label: label,
+      row_class: ->(payment) { "bg-container-inset" if payment.date <= as_of },
+      **opts
+    ) do |table| %>
+  <% table.with_column(t("loans.tabs.schedule.number"), class: "text-secondary tabular-nums") { |payment| payment.number.to_s } %>
+  <% table.with_column(t("loans.tabs.schedule.date")) { |payment| l(payment.date, format: :long) } %>
+  <% table.with_column(t("loans.tabs.schedule.payment"), numeric: true, class: "privacy-sensitive") { |payment| format_money(payment.payment) } %>
+  <% if extra %>
+    <% table.with_column(t("loans.tabs.extra_repayments.extra"), numeric: true, class: "privacy-sensitive") { |payment| format_money(payment.extra) } %>
+  <% end %>
+  <% table.with_column(t("loans.tabs.schedule.principal"), numeric: true, class: "privacy-sensitive") { |payment| format_money(payment.principal) } %>
+  <% table.with_column(t("loans.tabs.schedule.interest"), numeric: true, class: "text-secondary privacy-sensitive") { |payment| format_money(payment.interest) } %>
+  <% table.with_column(t("loans.tabs.schedule.remaining_balance"), numeric: true, class: "privacy-sensitive") { |payment| format_money(payment.ending_balance) } %>
+<% end %>
