@@ -774,6 +774,24 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Rent", outflow.reload.notes
   end
 
+  test "update refuses a currency change on a transfer leg and accepts its own currency" do
+    transfer = create_transfer_between_accounts
+    outflow = transfer.outflow_transaction.entry
+
+    put api_v1_transaction_url(transfer.outflow_transaction), params: { transaction: { currency: "EUR" } }, headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_equal "A transfer's currency cannot be changed through one of its transactions", JSON.parse(response.body)["message"]
+    assert_equal "USD", outflow.reload.currency
+
+    put api_v1_transaction_url(transfer.outflow_transaction), params: { transaction: { currency: "NOPE", amount: 120 } }, headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_equal "Unknown currency: NOPE", JSON.parse(response.body)["message"]
+
+    put api_v1_transaction_url(transfer.outflow_transaction), params: { transaction: { currency: "usd", notes: "Rent" } }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal [ "USD", "Rent" ], [ outflow.reload.currency, outflow.notes ]
+  end
+
   test "create and update refuse a nature outside the documented values" do
     entry = create_transaction(account: @account, amount: 40, name: "Bad nature")
 
@@ -817,6 +835,128 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
           headers: api_headers(@api_key)
     end
     assert_response :success
+  end
+
+  test "update changes the currency and syncs the account" do
+    entry = create_transaction(account: @account, amount: 25, currency: "USD", name: "Paid abroad")
+
+    assert_enqueued_with(job: SyncJob) do
+      patch api_v1_transaction_url(entry.transaction),
+            params: { transaction: { currency: "EUR" } },
+            headers: api_headers(@api_key)
+    end
+    assert_response :success
+
+    assert_equal "EUR", JSON.parse(response.body)["currency"]
+    assert_equal "EUR", entry.reload.currency
+    assert_equal 25, entry.amount
+  end
+
+  test "update normalizes the currency code" do
+    entry = create_transaction(account: @account, amount: 25, currency: "USD")
+
+    patch api_v1_transaction_url(entry.transaction),
+          params: { transaction: { currency: " eur " } },
+          headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal "EUR", entry.reload.currency
+  end
+
+  test "update with an unknown currency is refused and changes nothing" do
+    entry = create_transaction(account: @account, amount: 25, currency: "USD", name: "Kept")
+
+    patch api_v1_transaction_url(entry.transaction),
+          params: { transaction: { currency: "XYZ", name: "Renamed" } },
+          headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+
+    body = JSON.parse(response.body)
+    assert_equal "validation_failed", body["error"]
+    assert_equal "Unknown currency: XYZ", body["message"]
+    entry.reload
+    assert_equal "USD", entry.currency
+    assert_equal "Kept", entry.name
+  end
+
+  test "create with an unknown currency is refused and creates nothing" do
+    assert_no_difference "Entry.count" do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Bad code", amount: 5, date: Date.current, currency: "XYZ", nature: "expense" } },
+           headers: api_headers(@api_key)
+    end
+    assert_response :unprocessable_entity
+    assert_equal "Unknown currency: XYZ", JSON.parse(response.body)["message"]
+  end
+
+  test "update refuses a currency change on a split parent" do
+    parent = create_transaction(account: @account, amount: 100, currency: "USD", name: "Split parent")
+    parent.split!([ { name: "One", amount: 60 }, { name: "Two", amount: 40 } ])
+
+    patch api_v1_transaction_url(parent.transaction),
+          params: { transaction: { currency: "EUR" } },
+          headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_match "Use the split editor", JSON.parse(response.body)["message"]
+
+    patch api_v1_transaction_url(parent.transaction),
+          params: { transaction: { currency: "XYZ" } },
+          headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_equal "Unknown currency: XYZ", JSON.parse(response.body)["message"]
+
+    assert_equal "USD", parent.reload.currency
+    assert parent.child_entries.all? { |child| child.currency == "USD" }
+
+    patch api_v1_transaction_url(parent.transaction),
+          params: { transaction: { currency: "usd", notes: "Same currency re-sent" } },
+          headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal "Same currency re-sent", parent.reload.notes
+  end
+
+  # The split lands after the unlocked split-parent check and before the write,
+  # as a split committed by another request in that gap would.
+  test "update re-checks for a split under the split lock before changing amount, date, nature or currency" do
+    [ { amount: 120 }, { date: 2.days.ago.to_date.iso8601 }, { nature: "income" }, { currency: "EUR" } ].each do |change|
+      entry = create_transaction(account: @account, amount: 100, currency: "USD", name: "Racing split")
+      before = entry.attributes.slice("amount", "date", "currency")
+      split_in_the_gap(entry)
+
+      patch api_v1_transaction_url(entry.transaction), params: { transaction: change }, headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, change.inspect
+      assert_match "Use the split editor", JSON.parse(response.body)["message"], change.inspect
+      assert_equal before, entry.reload.attributes.slice("amount", "date", "currency"), change.inspect
+      assert_equal 2, entry.child_entries.count, change.inspect
+    end
+  end
+
+  test "update of other fields does not take the split lock" do
+    entry = create_transaction(account: @account, amount: 100, currency: "USD", name: "Racing split")
+    Entry.any_instance.expects(:lock_for_split!).never
+
+    patch api_v1_transaction_url(entry.transaction), params: { transaction: { notes: "Just notes", currency: "usd" } }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal "Just notes", entry.reload.notes
+  end
+
+  test "update accepts the current currency on a split parent stored in lower case" do
+    parent = create_transaction(account: @account, amount: 100, currency: "USD", name: "Split parent")
+    parent.split!([ { name: "One", amount: 60 }, { name: "Two", amount: 40 } ])
+    parent.update_column(:currency, "usd")
+
+    patch api_v1_transaction_url(parent.transaction),
+          params: { transaction: { currency: "usd", notes: "Echoed currency" } },
+          headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal "Echoed currency", parent.reload.notes
+
+    patch api_v1_transaction_url(parent.transaction),
+          params: { transaction: { currency: "EUR" } },
+          headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
   end
 
   test "should protect transaction from provider sync when updated with user_modified true" do
@@ -1543,12 +1683,13 @@ end
     assert_response :success
     assert_equal "annotated", entry.reload.notes
 
-    [ { amount: 999 }, { name: "Renamed" }, { date: 3.days.ago.to_date }, { notes: "x", amount: 999 } ].each do |attrs|
+    [ { amount: 999 }, { name: "Renamed" }, { date: 3.days.ago.to_date }, { currency: "EUR" }, { notes: "x", amount: 999 } ].each do |attrs|
       patch api_v1_transaction_url(entry.transaction), params: { transaction: attrs }, headers: api_headers(key)
       assert_response :forbidden, "expected #{attrs.keys} to be refused"
     end
     assert_equal "annotated", entry.reload.notes
     assert_equal 42, entry.amount
+    assert_equal "USD", entry.currency
 
     assert_no_difference "Entry.count" do
       delete api_v1_transaction_url(entry.transaction), headers: api_headers(key)
@@ -1988,6 +2129,17 @@ end
 
       ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
       queries
+    end
+
+    # Splits the entry, through its own record as another request would, the
+    # first time the update reads its rule snapshot: after the unlocked
+    # split-parent check, before the write.
+    def split_in_the_gap(entry)
+      split = false
+      Entry.any_instance.stubs(:rule_input_snapshot).with do
+        Entry.find(entry.id).split!([ { name: "One", amount: 60 }, { name: "Two", amount: 40 } ]) unless split
+        split = true
+      end.returns(nil)
     end
 
     def create_transfer_between_accounts
