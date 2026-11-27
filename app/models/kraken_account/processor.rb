@@ -219,10 +219,9 @@ class KrakenAccount::Processor
     # buy shows the quote asset leaving as a negative amount; here money out is
     # positive.
     #
-    # Rounded to what `entries.amount` stores: a crypto-quoted pair's ledger
-    # carries more decimals than the column, and unrounded it would never equal
-    # the stored figure, sending every unchanged trade down the update path on
-    # every sync.
+    # Rounded to what `entries.amount` stores: unrounded, a ledger amount with
+    # more decimals than the column would never equal the stored figure,
+    # sending every unchanged trade down the update path on every sync.
     def ledger_cash_for(txid, quote_symbol)
       return nil if quote_symbol.blank?
 

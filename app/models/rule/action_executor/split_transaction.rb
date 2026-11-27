@@ -3,8 +3,6 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
   # amount off the top, a percentage split takes a share of whatever's left after all fixed
   # splits are subtracted. Fixed splits are always resolved first, regardless of row order.
   TYPES = [ "fixed", "percentage" ].freeze
-  # entries.amount is decimal(19,4).
-  AMOUNT_SCALE = 4
   REFERENCE_ERRORS = { category: :split_category_invalid, merchant: :split_merchant_invalid, tag: :split_tags_invalid }.freeze
   MIN_SPLITS = 2
   MAX_SPLITS = 20
@@ -140,7 +138,7 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
 
         # A fixed share with more decimals than the amount columns hold would
         # be stored rounded, and the children would no longer sum to the parent.
-        if share.nil? || share <= 0 || (type == "fixed" && share.round(AMOUNT_SCALE) != share)
+        if share.nil? || share <= 0 || (type == "fixed" && share.round(amount_scale) != share)
           errors << [ :split_share_invalid, { index: position } ]
         elsif type == "percentage"
           has_percentage = true
@@ -194,10 +192,10 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
     end
 
     # Digits a percentage share is rounded to: the currency's minor unit (0 for JPY, 3 for KWD),
-    # capped at the 4 decimals entries.amount stores (crypto currencies list 8), so children that
-    # sum to the parent in memory still do once saved. Unknown codes fall back to cents.
+    # capped at the decimals entries.amount stores, so children that sum to the parent in memory
+    # still do once saved. Unknown codes fall back to cents.
     def amount_precision(currency)
-      [ Money::Currency.new(currency).default_precision, AMOUNT_SCALE ].min
+      [ Money::Currency.new(currency).default_precision, amount_scale ].min
     rescue Money::Currency::UnknownCurrencyError
       2
     end
@@ -298,6 +296,10 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
     end
 
     private
+      def amount_scale
+        Entry.columns_hash["amount"].scale
+      end
+
       def parse_config_strict(value)
         return nil if value.blank?
 

@@ -182,10 +182,10 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 50.to_d, buy.amount
   end
 
-  # `entries.amount` keeps four decimals and a ledger can carry eight. Compared
-  # unrounded, the stored figure would never match, and every sync would take
-  # the update path for a trade that has not changed.
-  test "rounds ledger cash to the stored precision and leaves it alone afterwards" do
+  # Compared unrounded to the stored figure, a ledger amount with more decimals
+  # than `entries.amount` would never match, and every sync would take the
+  # update path for a trade that has not changed.
+  test "keeps ledger cash at the stored precision and leaves it alone afterwards" do
     set_ledgers(
       "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000000"),
       "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00123456", fee: "0.00000000")
@@ -193,7 +193,7 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
     KrakenAccount::Processor.new(@kraken_account).process
 
     buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
-    assert_equal 50.0012.to_d, buy.amount
+    assert_equal BigDecimal("50.00123456"), buy.amount
 
     Entry.any_instance.expects(:update!).never
     KrakenAccount::Processor.new(@kraken_account).process

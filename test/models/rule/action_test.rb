@@ -544,7 +544,7 @@ class Rule::ActionTest < ActiveSupport::TestCase
       rule: @transaction_rule,
       action_type: "split_transaction",
       value: {
-        splits: [ { type: "fixed", name: "A", share: "10.12345" }, { type: "percentage", name: "B", share: "100" } ]
+        splits: [ { type: "fixed", name: "A", share: "10.#{"1" * 19}" }, { type: "percentage", name: "B", share: "100" } ]
       }.to_json
     )
 
