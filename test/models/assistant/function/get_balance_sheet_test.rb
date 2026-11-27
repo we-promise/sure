@@ -77,6 +77,14 @@ class Assistant::Function::GetBalanceSheetTest < ActiveSupport::TestCase
     assert_empty ids[:liabilities]
   end
 
+  test "current also leaves out an account excluded from reports" do
+    accounts(:credit_card).update!(exclude_from_reports: true)
+
+    result = Assistant::Function::GetBalanceSheet.new(users(:family_member)).call("period" => "last_30_days")
+
+    assert_equal "$0.00", result[:liabilities][:current]
+  end
+
   test "history leaves out a disabled account, like the current totals" do
     accounts(:depository).update!(status: "disabled")
 
