@@ -4,6 +4,7 @@ class Settings::McpControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
     sign_in @user
+    MobileDevice.instance_variable_set(:@shared_oauth_application, nil)
   end
 
   test "shows MCP settings page" do
@@ -65,6 +66,19 @@ class Settings::McpControllerTest < ActionDispatch::IntegrationTest
       resource_owner_id: @user.id,
       mobile_device_id: mobile_device.id,
       scopes: "read",
+      expires_in: 1.year
+    )
+
+    get settings_mcp_path
+    assert_response :success
+    assert_select "li", text: /Sure Mobile/, count: 0
+  end
+
+  test "does not show a mobile app token refreshed without its device" do
+    Doorkeeper::AccessToken.create!(
+      application: MobileDevice.shared_oauth_application,
+      resource_owner_id: @user.id,
+      scopes: "read_write",
       expires_in: 1.year
     )
 

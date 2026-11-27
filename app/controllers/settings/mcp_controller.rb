@@ -9,7 +9,8 @@ class Settings::McpController < ApplicationController
     ]
     @mcp_url = "#{configured_base_url}/mcp"
     @connected_tokens = Doorkeeper::AccessToken
-      .where(resource_owner_id: Current.user.id, revoked_at: nil, mobile_device_id: nil)
+      .where(resource_owner_id: Current.user.id, revoked_at: nil)
+      .where.not(id: MobileDevice.oauth_access_tokens.select(:id))
       .includes(:application)
       .order(created_at: :desc)
       .to_a
