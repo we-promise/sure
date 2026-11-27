@@ -641,6 +641,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
     t.jsonb "identification_hashes", default: []
     t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
+    t.boolean "invert_transaction_signs", default: false, null: false
     t.string "name"
     t.decimal "pending_total", precision: 19, scale: 4
     t.string "product"
