@@ -119,7 +119,7 @@ class AiNestedCallTest < ActiveSupport::TestCase
 
     AssistantResponseJob.perform_now(@message, @reply)
 
-    assert ChatReservation.held?("gpu.local:8080", :prompt)
+    assert ChatReservation.held?("gpu.local", :prompt)
   end
 
   test "a chat request ends the typing hold on its host" do
@@ -128,7 +128,7 @@ class AiNestedCallTest < ActiveSupport::TestCase
 
     AssistantResponseJob.perform_now(@message, @reply)
 
-    assert_not ChatReservation.held?("gpu.local:8080", :background)
+    assert_not ChatReservation.held?("gpu.local", :background)
   end
 
   test "a chat request interrupts the background request its host is running" do
