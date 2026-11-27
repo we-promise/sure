@@ -255,18 +255,15 @@ class Trade < ApplicationRecord
       ) AS basis
     SQL
 
-    # A sale is measured against its holding's average cost, which for a
-    # position without a stored basis is two or more queries each.
-    Holding.preload_avg_costs(holdings)
-
     by_entry = holdings.index_by { |holding| holding["basis_for_entry_id"] }
     trades.each { |trade| trade.preloaded_holdings = Array(by_entry[trade.entry.id]) }
   end
 
-  # Everything #realized_gain_loss reads, for a whole set of sales, in a fixed
-  # number of queries however many there are: each sale's basis snapshot and
-  # their average-cost fallback, the lots each fifo sale consumed, and the
-  # proceeds-to-basis rates. Snapshots go first, because the rate preload
+  # What #realized_gain_loss reads, for a whole set of sales, in a fixed
+  # number of queries however many there are: each sale's basis snapshot, the
+  # lots each fifo sale consumed, and the proceeds-to-basis rates. A sale
+  # whose snapshot stores no cost basis still replays its trades on its own
+  # (Holding#avg_cost_before). Snapshots go first, because the rate preload
   # keys on the currency the position is carried in.
   def self.preload_realized_gains(trades)
     return if trades.empty?
