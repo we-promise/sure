@@ -1,7 +1,7 @@
 module AccountsHelper
-  def summary_card(title:, &block)
+  def summary_card(title:, footer: nil, &block)
     content = capture(&block)
-    render "accounts/summary_card", title: title, content: content
+    render "accounts/summary_card", title: title, content: content, footer: footer
   end
 
   def sync_path_for(account)
@@ -97,7 +97,7 @@ module AccountsHelper
       .pick(Arel.sql("count(*)"), Arel.sql("max(account_providers.updated_at)"))
 
     [
-      family.build_cache_key("account_sidebar_tabs_v10", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v12", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
       providers_version,

@@ -1,0 +1,23 @@
+---
+nb:
+  rule_groups:
+    new:
+      title: "Ny regelgruppe"
+    edit:
+      title: "Gi nytt navn til gruppen «%{name}»"
+    form:
+      name_label: "Navn"
+      name_placeholder: "f.eks. Dagligvarer"
+      hint: "Grupper ordner bare regellisten. Reglene kjøres fortsatt ovenfra og ned."
+    create:
+      success: "Gruppen er opprettet"
+    update:
+      success: "Gruppen har fått nytt navn"
+    destroy:
+      success: "Gruppen er slettet. Reglene i den blir liggende uten gruppe."
+    activation:
+      activated: "Alle regler i «%{name}» er på"
+      deactivated: "Alle regler i «%{name}» er av"
+      partially_switched:
+        one: "%{count} regel kunne ikke slås av eller på. Åpne den for å se hvorfor."
+        other: "%{count} regler kunne ikke slås av eller på. Åpne dem for å se hvorfor."

@@ -41,11 +41,12 @@ class ReportsCategoryTrendTest < ApplicationSystemTestCase
       click_button I18n.t("reports.trends.category_trend.select")
       find("label", text: categories(:food_and_drink).display_name).click
       click_button I18n.t("reports.trends.category_trend.apply")
-
-      assert_selector "[data-controller='multi-series-chart'] svg"
     end
 
+    # Apply performs a Turbo visit that replaces the section, so re-find it in
+    # the new document instead of asserting through the stale section node.
     assert_current_path(/trend_category_ids/)
+    assert_selector "section[data-section-key='trends_insights'] [data-controller='multi-series-chart'] svg"
   end
 
   test "a monthly trend spanning two years labels both years" do
