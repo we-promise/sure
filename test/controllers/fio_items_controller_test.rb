@@ -251,6 +251,26 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Depository", selected_option["value"]
   end
 
+  # A provider that can link to an existing account runs the shared checks
+  # (see ProviderLinkAuthorizationCoverageTest).
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_fio_items_url,
+    link_url: :link_existing_account_fio_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Checking", balance: 0, currency: "CZK",
+                               accountable: Depository.new)
+    },
+    provider_account: -> {
+      @fio_item.fio_accounts.create!(
+        fio_account_id: SecureRandom.hex(6), name: "Fio Checking", bank_id: "2010",
+        currency: "CZK", current_balance: 100
+      )
+    },
+    provider_param: :fio_account_id,
+    params: -> { { fio_item_id: @fio_item.id } }
+  )
+
   test "select accounts leaves the Add Account modal for Settings at the top level" do
     FioItem.any_instance.stubs(:credentials_configured?).returns(false)
 

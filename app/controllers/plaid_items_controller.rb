@@ -86,12 +86,9 @@ class PlaidItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
-    @region = params[:region] || "us"
+    return unless require_linkable_account!(@account)
 
-    # A non-admin reaches this action now, so the target account needs its own
-    # check -- family membership alone is not authorisation to attach a feed to
-    # someone else's account.
-    return if !Current.user.admin? && !require_account_permission!(@account)
+    @region = params[:region] || "us"
 
     # Get all Plaid accounts from this family's Plaid items for the specified region
     # that are not yet linked to any account. A member only sees the items they
@@ -111,6 +108,8 @@ class PlaidItemsController < ApplicationController
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     plaid_account = PlaidAccount.find(params[:plaid_account_id])
 
     # Verify the Plaid account belongs to this family's Plaid items, and that
@@ -121,8 +120,6 @@ class PlaidItemsController < ApplicationController
       redirect_to account_path(@account), alert: t(".invalid_account")
       return
     end
-
-    return if !Current.user.admin? && !require_account_permission!(@account)
 
     # Verify the Plaid account is not already linked
     if plaid_account.account_provider.present? || plaid_account.account.present?

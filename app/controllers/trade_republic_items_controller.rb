@@ -353,6 +353,8 @@ class TradeRepublicItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     @available_trade_republic_accounts = Current.family.trade_republic_items
       .active
       .includes(trade_republic_accounts: { account_provider: :account })
@@ -375,6 +377,8 @@ class TradeRepublicItemsController < ApplicationController
       redirect_to settings_providers_path, alert: t(".not_found")
       return
     end
+
+    return unless require_linkable_account!(account)
 
     unless tr_account.linkable_to?(account) &&
         account.account_providers.none? &&
@@ -445,6 +449,7 @@ class TradeRepublicItemsController < ApplicationController
     end
 
     linkable_accounts = Current.family.accounts
+      .writable_by(Current.user)
       .visible
       .where(accountable_type: %w[Investment Depository Crypto])
       .left_joins(:account_providers)

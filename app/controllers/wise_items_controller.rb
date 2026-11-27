@@ -214,6 +214,8 @@ class WiseItemsController < ApplicationController
       redirect_to accounts_path, alert: t("wise_items.select_existing_account.not_found") and return
     end
 
+    return unless require_linkable_account!(@account)
+
     # Only a balance in the account's currency can be linked to it
     # (#existing_account_link_refusal).
     @available_accounts = @wise_item.wise_accounts.unlinked.where(currency: @account.currency)
@@ -228,6 +230,8 @@ class WiseItemsController < ApplicationController
     unless account && wise_account
       redirect_to accounts_path, alert: t("wise_items.link_existing_account.not_found") and return
     end
+
+    return unless require_linkable_account!(account)
 
     if (refusal = existing_account_link_refusal(account, wise_account))
       redirect_to safe_return_to_path || accounts_path, alert: refusal and return
