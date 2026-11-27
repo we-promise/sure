@@ -1,0 +1,35 @@
+---
+pt-BR:
+  providers:
+    truelayer:
+      description: Conecte-se ao seu banco do Reino Unido pelo TrueLayer
+    property_valuation:
+      not_configured: Este provedor de dados de imóveis não está configurado.
+      missing_fields: Informe um nome e um endereço completo nos EUA (rua, cidade, estado e ZIP code).
+      missing_fields_gb: Informe um nome, o endereço com o postcode e o UPRN do imóvel.
+      preview_expired: A prévia deste imóvel expirou — pesquise o endereço novamente.
+      entry_name: Avaliação %{provider}
+    rentcast:
+      errors:
+        no_valuation: O RentCast não retornou uma estimativa de valor para este endereço.
+        not_found: O RentCast não encontrou nenhum imóvel correspondente a este endereço.
+    realie:
+      errors:
+        no_property: O Realie não retornou nenhum imóvel para este endereço.
+        no_valuation: O Realie não retornou uma avaliação para este imóvel.
+        not_found: O Realie não encontrou nenhum imóvel correspondente a este endereço.
+        location_mismatch: O Realie encontrou um imóvel em outra cidade ou ZIP code. Confira o endereço.
+    chimnie:
+      errors:
+        invalid_uprn: O UPRN é um número de até 12 dígitos. Verifique o UPRN e tente novamente.
+        no_estimate: O Chimnie não tem uma estimativa de valor para este imóvel.
+        not_found: O Chimnie não encontrou nenhum imóvel com este UPRN.
+        unsupported_property: O Chimnie só avalia imóveis residenciais; este UPRN pertence a um imóvel comercial ou de uso misto.
+        unauthorized: O Chimnie rejeitou a chave de API. Verifique a chave em Configurações → Auto-hospedagem.
+        insufficient_balance: O saldo da sua conta Chimnie é insuficiente para esta requisição.
+    terrascoutx:
+      errors:
+        no_property: O TerraScoutX não encontrou nenhum imóvel correspondente a este endereço.
+        no_valuation: O TerraScoutX não retornou um valor para este imóvel.
+        location_mismatch: O TerraScoutX encontrou um imóvel com outro número ou ZIP code. Confira o endereço.
+        insecure_url: TERRASCOUTX_URL deve usar https://.

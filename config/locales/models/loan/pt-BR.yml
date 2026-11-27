@@ -1,0 +1,9 @@
+---
+pt-BR:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: As linhas de alteração de taxa precisam de uma data de vigência e de uma taxa.
+          invalid_rate_schedule_snapshot: Não foi possível comparar as alterações de taxa com o cronograma salvo. Recarregue o empréstimo e aplique suas alterações novamente.
+          rate_change_before_origination: Uma alteração de taxa não pode entrar em vigor antes da contratação do empréstimo.

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Provider::AlphaVantageTest < ActiveSupport::TestCase
+  include ProviderTestHelper
+
   OVERVIEW_URL = "https://www.alphavantage.co/query".freeze
 
   setup do
@@ -62,5 +64,46 @@ class Provider::AlphaVantageTest < ActiveSupport::TestCase
     # past the limit (25 -> 26) and refused before it
     assert_requested :get, OVERVIEW_URL, query: hash_including("function" => "OVERVIEW"), times: 1
     assert_equal 26, store.read("alpha_vantage:daily:#{Date.current}")
+  end
+
+  test "client sets explicit open and read timeouts" do
+    provider = Provider::AlphaVantage.new("test_api_key")
+    options = provider.send(:client).options
+
+    assert_equal 5, options.open_timeout
+    assert_equal 20, options.timeout
+  end
+
+  test "a timed-out request returns a failed response with the provider's Error" do
+    provider = Provider::AlphaVantage.new("test_api_key")
+    provider.stubs(:throttle_request)
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    search = stub_request(:get, "https://www.alphavantage.co/query")
+      .with(query: hash_including("function" => "SYMBOL_SEARCH")).to_timeout
+    errors = capture_transformed_errors(provider)
+
+    response = provider.search_securities("TEST")
+
+    assert_not response.success?
+    assert_instance_of Provider::AlphaVantage::Error, response.error
+    assert_requested search, times: 4
+    assert_kind_of Faraday::ConnectionFailed, errors.last
+    assert_kind_of Net::OpenTimeout, errors.last.wrapped_exception
+  end
+
+  test "a read timeout is retried and returns a failed response with the provider's Error" do
+    provider = Provider::AlphaVantage.new("test_api_key")
+    provider.stubs(:throttle_request)
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    search = stub_request(:get, "https://www.alphavantage.co/query")
+      .with(query: hash_including("function" => "SYMBOL_SEARCH")).to_raise(Net::ReadTimeout)
+    errors = capture_transformed_errors(provider)
+
+    response = provider.search_securities("TEST")
+
+    assert_not response.success?
+    assert_instance_of Provider::AlphaVantage::Error, response.error
+    assert_requested search, times: 4
+    assert_kind_of Faraday::TimeoutError, errors.last
   end
 end

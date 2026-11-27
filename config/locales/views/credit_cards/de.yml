@@ -15,5 +15,62 @@ de:
       minimum_payment_placeholder: '100'
       treat_balance_as_available_credit_description: Aktivier das, wenn deine Bank den Saldo dieser Karte als noch verfügbaren Kreditrahmen meldet statt als offenen Betrag. Die Schuld ergibt sich dann aus dem gemeldeten Kreditrahmen oder, falls deine Bank keinen liefert, aus dem Feld „Verfügbarer Kreditrahmen“.
       treat_balance_as_available_credit_label: Saldo ist verfügbarer Kreditrahmen
+      due_day: "Fälligkeitstag der Zahlung"
+      statement_close_day: "Abrechnung schließt am"
+      statement_cycle_description: "Der Tag im Monat, an dem deine Abrechnung schließt, und der Tag, an dem die Zahlung fällig ist. Sind beide gesetzt, zeigt der Tab „Übersicht“, worauf sich deine letzte Abrechnung belief und was sich bis zur nächsten aufbaut. Eine verbundene Karte füllt diese Felder automatisch aus und behält, was du von Hand gesetzt hast."
+      sophtron_balance_sign_auto: "Automatisch"
+      sophtron_balance_sign_credit: "Guthaben (die Bank schuldet dir)"
+      sophtron_balance_sign_debt: "Schuld (du schuldest der Bank)"
+      sophtron_balance_sign_description: "Nutze eine Vorgabe nur, wenn Sophtron ein mehrdeutiges Vorzeichen meldet. „Automatisch“ kehrt Salden und Transaktionen von Kreditkarten weiterhin um. Eine Vorgabe korrigiert beim nächsten Sync auch die Vorzeichen der Transaktionen dieser Karte."
+      sophtron_balance_sign_label: "Bedeutung des Sophtron-Saldos"
+      simplefin_balance_sign_auto: "Automatisch"
+      simplefin_balance_sign_credit: "Guthaben (die Bank schuldet dir)"
+      simplefin_balance_sign_debt: "Schuld (du schuldest der Bank)"
+      simplefin_balance_sign_description: "Nutze eine Vorgabe nur, wenn SimpleFIN ein mehrdeutiges Vorzeichen meldet. „Automatisch“ nutzt weiterhin den Transaktionsverlauf und den Saldo des Anbieters."
+      simplefin_balance_sign_label: "Bedeutung des SimpleFIN-Saldos"
     new:
       title: Kreditkartendaten eingeben
+    due:
+      in_days:
+        zero: "Heute fällig"
+        one: "Morgen fällig"
+        other: "Fällig in %{count} Tagen"
+      overdue:
+        one: "Gestern fällig"
+        other: "%{count} Tage überfällig"
+    tabs:
+      overview:
+        above_minimum: "Diese Abrechnung belief sich auf %{balance} und liegt über der Mindestzahlung von %{minimum}. Zahlst du nur die Mindestzahlung, bleibt der Rest zu diesem Jahreszins auf der Karte."
+        annual_percentage_rate: "Effektiver Jahreszins"
+        apr: "Jahreszins"
+        balance_carried_label: "Übertragener Saldo"
+        balance_updates: "Saldo-Aktualisierungen"
+        charges: "Belastungen"
+        estimated_interest_label: "Geschätzte Zinsen"
+        monthly_rate_label: "Monatlicher Zinssatz"
+        per_month: "%{amount}/Monat"
+        closes_on_days:
+          zero: "Abrechnung schließt am %{date} (heute)"
+          one: "Abrechnung schließt am %{date} (1 Tag)"
+          other: "Abrechnung schließt am %{date} (%{count} Tage)"
+        due_overdue_days:
+          one: "Fällig am %{date} (1 Tag überfällig)"
+          other: "Fällig am %{date} (%{count} Tage überfällig)"
+        due_on_days:
+          zero: "Fällig am %{date} (heute)"
+          one: "Fällig am %{date} (1 Tag)"
+          other: "Fällig am %{date} (%{count} Tage)"
+        credit_toward_next: "Guthaben für die nächste Abrechnung"
+        edit_card_details: "Kartendaten bearbeiten"
+        payments_applied: "Verrechnete Zahlungen"
+        scheduled_payment: "Geplante Zahlung von %{amount} am %{date}"
+        since_last_statement: "Seit der letzten Abrechnung"
+        statement_balance: "Abrechnungssaldo"
+        status_paid: "Bezahlt"
+        status_partial: "Teilweise bezahlt"
+        multi_currency_unavailable: "Diese Abrechnung enthält Buchungen in mehr als einer Währung. Ohne einen Kurs für jede davon lässt sie sich hier nicht summieren. Die Salden bleiben deshalb leer, statt geschätzt zu werden."
+        no_cycle_description: "Lege den Tag fest, an dem deine Abrechnung schließt, und den Tag, an dem die Zahlung fällig ist. Dann zeigt dieser Tab, worauf sich deine letzte Abrechnung belief und was sich bis zur nächsten aufbaut. Eine verbundene Karte füllt das meist für dich aus."
+        no_cycle_title: "Kein Abrechnungszeitraum festgelegt"
+        unknown: "Unbekannt"
+    update:
+      sophtron_balance_sign_error: "Die Bedeutung des Sophtron-Saldos konnte nicht übernommen werden. Deine bisherige Einstellung bleibt erhalten. Bitte versuch es noch einmal."

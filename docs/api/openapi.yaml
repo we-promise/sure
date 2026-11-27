@@ -668,6 +668,7 @@ components:
       - classification
       - account_type
       - status
+      - exclude_from_reports
       - created_at
       - updated_at
       properties:
@@ -703,6 +704,10 @@ components:
           - draft
           - disabled
           - pending_deletion
+        exclude_from_reports:
+          type: boolean
+          readOnly: true
+          description: Whether this account is excluded from financial reports
         institution_name:
           type: string
           nullable: true
@@ -793,6 +798,7 @@ components:
       - start_date
       - end_date
       - name
+      - owner
       - currency
       - initialized
       - current
@@ -810,6 +816,21 @@ components:
           format: date
         name:
           type: string
+        owner:
+          type: object
+          nullable: true
+          description: 'Null for the household budget. For a personal budget, the
+            family member it belongs to: the caller, or a member who shared their
+            budget with the caller.'
+          required:
+          - id
+          - name
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
         currency:
           type: string
         initialized:
@@ -845,6 +866,7 @@ components:
       - start_date
       - end_date
       - name
+      - owner
       - currency
       - initialized
       - current
@@ -862,6 +884,21 @@ components:
           format: date
         name:
           type: string
+        owner:
+          type: object
+          nullable: true
+          description: 'Null for the household budget. For a personal budget, the
+            family member it belongs to: the caller, or a member who shared their
+            budget with the caller.'
+          required:
+          - id
+          - name
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
         currency:
           type: string
         initialized:
@@ -1948,6 +1985,33 @@ components:
           type: boolean
           description: Whether the transaction has been split; its amount is then
             carried by its split children.
+        investment_activity_label:
+          type: string
+          nullable: true
+          description: Investment activity of a brokerage cash row, such as Dividend,
+            Interest or Fee
+        provider_type:
+          type: string
+          nullable: true
+          description: The importing provider's type for the row, such as IBKR's "Withholding
+            Tax", when one is recorded. For CoinSpot, Sure sets it from the kind of
+            movement.
+        security_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Sure security the row relates to (for example the one that
+            paid a dividend), when the importer recorded it. GET /api/v1/securities/{id}
+            finds it only if an account holds or has traded it.
+        exchange_rate:
+          type: number
+          nullable: true
+          description: Rate from the transaction's currency to the account's currency
+            stored on it. Null when none is stored or the transaction is in the account's
+            currency.
+        amount_currency:
+          type: string
+          description: Currency of the amount, always the same as currency on a transaction.
         account:
           "$ref": "#/components/schemas/Account"
         category:
@@ -2195,46 +2259,6 @@ components:
       properties:
         message:
           type: string
-    TransactionResponse:
-      type: object
-      required:
-      - id
-      - date
-      - amount
-      - currency
-      - name
-      - entryable_type
-      - account
-      properties:
-        id:
-          type: string
-          format: uuid
-        date:
-          type: string
-          format: date
-        amount:
-          type: string
-        currency:
-          type: string
-        name:
-          type: string
-        entryable_type:
-          type: string
-        account:
-          type: object
-          required:
-          - id
-          - name
-          - account_type
-          properties:
-            id:
-              type: string
-              format: uuid
-            name:
-              type: string
-            account_type:
-              type: string
-              nullable: true
     ImportConfiguration:
       type: object
       properties:
@@ -3232,6 +3256,28 @@ components:
         investment_activity_label:
           type: string
           nullable: true
+        fee:
+          type: string
+          description: Fee charged on the trade, formatted like price
+        fee_decimal:
+          type: string
+          description: Fee as the exact stored, unrounded, locale-independent decimal
+            string. A purchase fee adds to the cost and a sale fee comes off the proceeds
+        exchange_rate:
+          type: number
+          nullable: true
+          description: Rate to the account's currency stored on the trade, such as
+            one reported by the provider. The cost basis applies it to price and fee,
+            from currency; the cash balance applies it to amount, from amount_currency.
+            The two match unless an edit changed only the amount's currency. It was
+            recorded for currency; when amount_currency differs, the cash balance
+            reuses it unchanged. Null when none is stored or both currencies are the
+            account's.
+        amount_currency:
+          type: string
+          description: Currency of the trade's amount (the entry's), which the cash
+            balance converts from with exchange_rate. It can differ from currency,
+            the trade's own.
         lot_source_trade_id:
           type: string
           format: uuid
@@ -3473,6 +3519,7 @@ components:
       - price_amount
       - currency
       - provisional
+      - carried_forward
       - security
       - created_at
       - updated_at
@@ -3493,6 +3540,11 @@ components:
           type: string
         provisional:
           type: boolean
+        carried_forward:
+          type: boolean
+          description: 'The price repeats an earlier one: no quote was available for
+            this date. A non-provisional price stored before this field was added
+            reads false even when it repeats an earlier one'
         security:
           type: object
           required:
@@ -5325,7 +5377,16 @@ paths:
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                oneOf:
+                - type: object
+                  required:
+                  - errors
+                  properties:
+                    errors:
+                      type: array
+                      items:
+                        type: string
+                - "$ref": "#/components/schemas/ErrorResponse"
         '403':
           description: 'registration refused: the instance is closed to new registrations,
             or an invite code is required or invalid'
@@ -5652,7 +5713,8 @@ paths:
       - Auth
       description: Authenticates with email/password and links the SSO identity from
         a previously issued linking code. Creates an OidcIdentity, logs the link via
-        SsoAuditLog, and issues mobile OAuth tokens.
+        SsoAuditLog, and issues mobile OAuth tokens. The provider must remain enabled
+        and its trusted issuer must still match the linking code.
       parameters: []
       responses:
         '200':
@@ -5706,7 +5768,7 @@ paths:
                 - "$ref": "#/components/schemas/ErrorResponse"
                 - "$ref": "#/components/schemas/MfaRequiredResponse"
         '403':
-          description: SSO identity removed by an administrator
+          description: SSO identity removed, provider disabled, or issuer changed
           content:
             application/json:
               schema:
@@ -5739,9 +5801,10 @@ paths:
       - Auth
       description: Creates a new user and family from a previously issued linking
         code. Links the SSO identity via OidcIdentity, logs the JIT account creation
-        via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have
-        allow_account_creation enabled. The first user on a fresh instance is assigned
-        the super_admin role; later family creators are assigned an admin-capable
+        via SsoAuditLog, and issues mobile OAuth tokens. The provider must remain
+        enabled and its trusted issuer must match the linking code. The linking code
+        must have allow_account_creation enabled. The first user on a fresh instance
+        is assigned the super_admin role; later family creators are assigned an admin-capable
         role.
       parameters: []
       responses:
@@ -5794,7 +5857,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: SSO identity removed or account creation disabled
+          description: SSO identity removed, provider disabled, issuer changed, or
+            account creation disabled
           content:
             application/json:
               schema:
@@ -7758,6 +7822,8 @@ paths:
   "/api/v1/holdings":
     get:
       summary: List holdings
+      description: Holdings are ordered by date, then by holding ID for rows on the
+        same date.
       tags:
       - Holdings
       security:
@@ -8131,7 +8197,9 @@ paths:
   "/api/v1/imports":
     get:
       summary: List imports
-      description: List all imports for the user's family with pagination and filtering.
+      description: List the family's imports the user can view, with pagination and
+        filtering. An import made from an account statement is as private as that
+        statement, so it is left out for users who cannot view the statement.
       tags:
       - Imports
       security:
@@ -8206,7 +8274,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ImportResponse"
         '403':
-          description: guest users cannot import family configuration
+          description: guest users cannot import family configuration, or the account
+            is shared without write access
           content:
             application/json:
               schema:
@@ -8259,7 +8328,8 @@ paths:
                 account_id:
                   type: string
                   format: uuid
-                  description: Account ID to import into
+                  description: Account ID to import into. Must be an account the API
+                    user can write to
                 publish:
                   type: string
                   description: Set to "true" to automatically queue for processing
@@ -8372,7 +8442,8 @@ paths:
                 account_id:
                   type: string
                   format: uuid
-                  description: Account ID to import into
+                  description: Account ID to import into. Must be an account the API
+                    user can write to
                 publish:
                   type: string
                   description: Set to "true" to automatically queue for processing
@@ -8467,6 +8538,7 @@ paths:
       summary: Retrieve an import
       description: Retrieve detailed information about a specific import, including
         configuration, row statistics, and SureImport readback verification when available.
+        An import made from an account statement the user cannot view returns 404.
       tags:
       - Imports
       security:
@@ -8479,7 +8551,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ImportResponse"
         '404':
-          description: import not found
+          description: import not found, or made from a statement the user cannot
+            view
           content:
             application/json:
               schema:
@@ -8495,7 +8568,8 @@ paths:
     get:
       summary: List import row diagnostics
       description: List sanitized import rows with validation errors and mapping resolution
-        state.
+        state. An import made from an account statement the user cannot view returns
+        404.
       tags:
       - Imports
       security:
@@ -8533,7 +8607,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: import not found
+          description: import not found, or made from a statement the user cannot
+            view
           content:
             application/json:
               schema:
@@ -8570,6 +8645,12 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: missing or invalid content
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: account is shared with the user without write access
           content:
             application/json:
               schema:
@@ -8612,7 +8693,8 @@ paths:
                 account_id:
                   type: string
                   format: uuid
-                  description: Account ID used for account-scoped CSV import validation
+                  description: Account ID used for account-scoped CSV import validation.
+                    Must be an account the API user can write to
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -8725,7 +8807,8 @@ paths:
                 account_id:
                   type: string
                   format: uuid
-                  description: Account ID used for account-scoped CSV import validation
+                  description: Account ID used for account-scoped CSV import validation.
+                    Must be an account the API user can write to
                 date_col_label:
                   type: string
                   description: CSV imports only. Header name for the date column
@@ -9850,6 +9933,13 @@ paths:
           or false.
         schema:
           type: boolean
+      - name: carried_forward
+        in: query
+        required: false
+        description: Filter by whether the price repeats an earlier one rather than
+          being a quote for its date. When supplied, must be true or false.
+        schema:
+          type: boolean
       responses:
         '200':
           description: security prices listed
@@ -10077,6 +10167,9 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Split"
+        '422':
+          description: a part of the split is linked as a transfer; remove that transfer
+            first
       requestBody:
         content:
           application/json:
@@ -10092,6 +10185,9 @@ paths:
       responses:
         '204':
           description: split removed
+        '422':
+          description: a part of the split is linked as a transfer; remove that transfer
+            first
         '404':
           description: transaction is not split
   "/api/v1/syncs":
@@ -10412,11 +10508,16 @@ paths:
       parameters: []
       responses:
         '201':
-          description: trade created
+          description: 'created: a Trade for trade types, a Transaction for a deposit
+            or withdrawal without transfer_account_id, or a TransferDecision for a
+            deposit or withdrawal with transfer_account_id'
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/TransactionResponse"
+                oneOf:
+                - "$ref": "#/components/schemas/Trade"
+                - "$ref": "#/components/schemas/Transaction"
+                - "$ref": "#/components/schemas/TransferDecision"
         '403':
           description: forbidden - api key missing read_write scope
           content:
@@ -10470,6 +10571,7 @@ paths:
                         interest, fee)
                     fee:
                       type: number
+                      minimum: 0
                       description: Optional fee (buy/sell/sweep_in/sweep_out/reinvestment)
                     type:
                       type: string
@@ -10569,13 +10671,21 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - api key missing read_write scope
+          description: forbidden - api key missing read_write scope, or the account
+            is shared with you without write access
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: trade not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: qty or price is not a positive number, or nature is not inflow
+            or outflow
           content:
             application/json:
               schema:
@@ -10594,8 +10704,13 @@ paths:
                       format: date
                     qty:
                       type: number
+                      description: Positive quantity. Sending qty, price, type or
+                        nature recomputes the entry amount as signed qty * price +
+                        fee, where qty is negative on a sell; what the request leaves
+                        out is taken from the trade.
                     price:
                       type: number
+                      description: Positive price per unit
                     type:
                       type: string
                       enum:
@@ -10604,11 +10719,13 @@ paths:
                       - sweep_in
                       - sweep_out
                       - reinvestment
+                      description: Side of the trade; takes precedence over nature
                     nature:
                       type: string
                       enum:
                       - inflow
                       - outflow
+                      description: inflow is a sell, outflow a buy
                     name:
                       type: string
                     notes:
@@ -10638,7 +10755,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - api key missing read_write scope
+          description: forbidden - api key missing read_write scope, or the account
+            is shared with you without write access
           content:
             application/json:
               schema:
@@ -10926,8 +11044,9 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: validation error - malformed tag_ids, or a tag, category or
-            merchant id the family cannot use
+          description: validation error - unknown nature, an amount or nature change
+            on a transfer, malformed tag_ids, or a tag, category or merchant id the
+            family cannot use
           content:
             application/json:
               schema:
@@ -10969,6 +11088,8 @@ paths:
                       - expense
                       - inflow
                       - outflow
+                      description: Sign of the amount. Without amount, applies to
+                        the stored amount.
                     tag_ids:
                       type: array
                       items:
@@ -11002,6 +11123,13 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: the transaction is split and a part is linked as a transfer;
+            remove that transfer first
           content:
             application/json:
               schema:
@@ -11389,6 +11517,12 @@ paths:
                 "$ref": "#/components/schemas/Valuation"
         '422':
           description: validation error - only one of amount/date provided
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: account is shared with you without write access
           content:
             application/json:
               schema:

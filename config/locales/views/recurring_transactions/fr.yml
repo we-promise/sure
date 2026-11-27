@@ -79,6 +79,9 @@ fr:
       income_name_placeholder: Employeur, client, activité annexe
       income_notes_hint: Tout ce qu'il vaut la peine de retenir sur ce revenu.
       income_notes_placeholder: Virement automatique, réparti sur deux comptes
+      income_once_hint: Arrive une seule fois, à cette date, sans se répéter. Marquez la transaction comme ponctuelle pour l'exclure de vos moyennes.
+      income_once_new_hint: Arrive une seule fois, à la date ci-dessus, sans se répéter. Marquez la transaction comme ponctuelle pour l'exclure de vos moyennes.
+      income_once_on_label: Le
       installment_count_hint: Le plan se termine après ce nombre de paiements et affiche sa progression jusque-là.
       installment_count_label: Nombre de paiements
       more_options: Plus d'options
@@ -87,6 +90,9 @@ fr:
       notes_hint: Tout ce que vous voulez avoir sous les yeux au moment de payer. Affiché sur la facture.
       notes_label: Remarques
       notes_placeholder: Contrat 4821, débité sur l'Amex
+      once_hint: Échéance unique, à cette date. Elle ne se répétera pas. Marquez la transaction comme ponctuelle pour l'exclure de vos moyennes.
+      once_new_hint: Échéance unique, à la date ci-dessus. Elle ne se répétera pas. Marquez la transaction comme ponctuelle pour l'exclure de vos moyennes.
+      once_on_label: Échéance le
       payment_url_hint: L'adresse où vous allez pour régler cette facture. S'ouvre dans un nouvel onglet depuis vos listes de récurrences et d'échéances à venir.
       payment_url_label: Lien de paiement
       payment_url_placeholder: banque.example.com/payer
@@ -103,6 +109,8 @@ fr:
       every_n_years: Tous les %{interval} ans, le %{day} %{month}
       last_day: dernier jour
       monthly: Chaque mois, le %{day}
+      once: Une fois
+      once_on: Une fois, le %{date}
       quarterly: Chaque trimestre, le %{day}
       semiannual: Tous les 6 mois, le %{day}
       semimonthly: Deux fois par mois, le %{first} et le %{second}
@@ -113,6 +121,7 @@ fr:
       custom: Échéancier personnalisé
       interval: Intervalle personnalisé
       monthly: Mensuelle
+      once: Une fois
       quarterly: Trimestrielle
       semiannual: Tous les 6 mois
       semimonthly: Deux fois par mois
@@ -232,6 +241,7 @@ fr:
       la transaction récurrente
     upcoming: Transactions récurrentes à venir
     update:
+      once_date_locked: 'Ce paiement est déjà enregistré : sa date ne peut donc pas être déplacée.'
       success: Facture mise à jour
       success_with_siblings:
         one: Facture mise à jour, et le lien de paiement a été copié sur 1 autre facture

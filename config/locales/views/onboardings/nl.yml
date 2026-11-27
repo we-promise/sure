@@ -5,7 +5,7 @@ nl:
       sign_out: "Uitloggen"
       setup: "Instellen"
       preferences: "Voorkeuren"
-      goals: "Doelen"
+      tools: Tools/AI
       start: "Start"
     logout:
       sign_out: "Uitloggen"
@@ -38,18 +38,49 @@ nl:
       currency: "Valuta"
       date_format: "Datumformaat"
       submit: "Voltooien"
-    goals:
-      title: "Wat brengt u hier?"
-      subtitle: "Selecteer een of meer doelen die u hebt met %{product_name} als uw persoonlijke financiële tool."
-      unified_accounts: "Al mijn rekeningen op één plek zien"
-      cashflow: "Cashflow en uitgaven begrijpen"
-      budgeting: "Financiële plannen en budgetten beheren"
-      partner: "Financiën samen met een partner beheren"
-      investments: "Beleggingen volgen"
-      ai_insights: "AI laten helpen om mijn financiën te begrijpen"
-      optimization: "Rekeningen analyseren en optimaliseren"
-      reduce_stress: "Financiële stress of angst verminderen"
-      submit: "Volgende"
+    tools:
+      title: Voel u thuis.
+      subtitle: Een paar keuzes om %{product_name} helemaal van u te maken.
+      starting_point:
+        eyebrow: Uw startpunt
+        title: Wat gebruikte u tot nu toe?
+        description: Kies de tools die u gebruikt om de financiën van uw huishouden te beheren.
+        select: Selecteer uw tools
+        other_placeholder: Andere tool (optioneel)
+        hint: Kies alles wat van toepassing is. Zo kunnen we een startpunt voorstellen; we gaan er niet van uit dat importeren mogelijk is.
+        tools:
+          nothing_yet: Nog niets
+          other: Anders
+      ai:
+        eyebrow: Uw AI-voorkeur
+        title: Hoe wilt u %{product_name} gebruiken?
+        description: U heeft de controle. Kies wat bij u past.
+        default: Standaard
+        modes:
+          none:
+            title: Geen AI
+            description: Beheer uw financiën zonder de ingebouwde assistent.
+          builtin:
+            title: Ingebouwde AI
+            description: Schakel de ingebouwde assistent in, met de AI-provider van deze instantie.
+          external:
+            title: Gebruik uw eigen AI-agent
+            description: Gebruik uw eigen assistent, gekoppeld met uw toestemming.
+        panels:
+          admin_on: Als beheerder geeft u hiermee ook de toestemming van uw huishouden voor AI-functies die op de achtergrond draaien, zoals categoriseren.
+          admin_off: Als beheerder trekt u hiermee ook uw toestemming in voor AI-functies die op de achtergrond draaien, zoals categoriseren. Ze blijven alleen aan als een andere beheerder AI heeft ingeschakeld.
+          none:
+            title: Uw assistent blijft uitgeschakeld.
+            body: Hiermee wordt de ingebouwde assistent voor uw account uitgeschakeld.
+          builtin:
+            title: Uw assistent wordt ingeschakeld.
+            body: Hiermee wordt de ingebouwde assistent voor uw account ingeschakeld. Welke AI-provider hij gebruikt en of hij beschikbaar is, hangt nog steeds af van de AI-instellingen van deze instantie.
+            not_configured: Er is nog geen AI-provider ingesteld op deze instantie. Een beheerder kan er een toevoegen via Instellingen → Zelfhosting.
+            unavailable: Met de huidige AI-instellingen van uw huishouden draait de ingebouwde assistent niet. Hij antwoordt pas als een beheerder ze wijzigt.
+          external:
+            title: Koppel uw agent wanneer u er klaar voor bent.
+            body: Hiermee blijft AI ingeschakeld voor uw account. Als uw huishouden is ingesteld voor externe chat, gebruiken gesprekken uw externe assistent in plaats van de ingebouwde assistent van %{product_name}, in dezelfde chatomgeving. %{product_name} blijft importeren, categoriseren en de andere processen afhandelen als centrale registratie van uw gegevens. Uw agent kan er via MCP of sure-cli mee werken; koppel hem via Instellingen → MCP. Deze keuze stelt de chatdienst niet in en maakt geen koppeling aan, wijzigt er geen en verwijdert er geen.
+      submit: Volgende
     trial:
       title: "Probeer Sure 45 dagen"
       data_deletion: "Gegevens worden daarna verwijderd"
