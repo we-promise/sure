@@ -207,6 +207,19 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#{match} [role=tooltip]", text: /#{Regexp.escape(accounts(:credit_card).name)}/
   end
 
+  test "show presents a pending match's other side" do
+    outflow = create_transaction(account: accounts(:depository), name: "Drawer match outflow", amount: 140, date: Date.current)
+    inflow = create_transaction(account: accounts(:investment), name: "Drawer match inflow", amount: -140, date: Date.current)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get transaction_url(outflow), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "a[href=?]", entry_path(inflow), text: "Drawer match inflow"
+    assert_select "form[action=?]", transfer_path(transfer, transfer: { status: "confirmed" })
+    assert_select "form[action=?]", transfer_path(transfer, transfer: { status: "rejected" })
+  end
+
   test "index points an unmatched transaction with a counterpart to the transfer matcher" do
     outflow = create_transaction(account: accounts(:depository), name: "Hint outflow", amount: 500, date: Date.current)
     inflow = create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)

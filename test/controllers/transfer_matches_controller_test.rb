@@ -76,6 +76,114 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_empty single_lookup_ids & option_account_ids
   end
 
+  test "new shows a pending match's other side instead of looking for candidates" do
+    outflow = create_transaction(amount: 250, account: accounts(:depository), name: "Pending match outflow")
+    inflow = create_transaction(amount: -250, account: accounts(:investment), name: "Pending match inflow", date: 1.day.ago.to_date)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get new_transaction_transfer_match_path(outflow)
+
+    assert_response :success
+    assert_select "dialog a[href=?]", account_path(accounts(:investment)), text: accounts(:investment).name
+    assert_select "dialog dd", text: I18n.l(inflow.date, format: :long)
+    assert_select "dialog dd", text: "Pending match inflow"
+    assert_select "dialog dd.privacy-sensitive", text: "$250.00"
+    assert_select "dialog form[action=?]", transfer_path(transfer, transfer: { status: "confirmed" })
+    assert_select "dialog form[action=?]", transfer_path(transfer, transfer: { status: "rejected" })
+    assert_select "dialog input[name='transfer_match[method]']", count: 0
+    assert_select "dialog p", text: I18n.t("transfer_matches.matching_fields.no_matching_transactions"), count: 0
+  end
+
+  test "new shows a pending match's amount the same from either leg" do
+    outflow = create_transaction(amount: 250, account: accounts(:depository), name: "Either leg outflow")
+    inflow = create_transaction(amount: -250, account: accounts(:investment), name: "Either leg inflow")
+    Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get new_transaction_transfer_match_path(outflow)
+    assert_select "dialog dd", text: "Either leg inflow"
+    assert_select "dialog dd.privacy-sensitive", text: "$250.00"
+
+    get new_transaction_transfer_match_path(inflow)
+    assert_select "dialog dd", text: "Either leg outflow"
+    assert_select "dialog dd.privacy-sensitive", text: "$250.00"
+  end
+
+  test "new offers only rejecting a pending match whose other side the user cannot write to" do
+    sign_in users(:family_member)
+    # family_member has full control of depository and read-only access to credit_card.
+    outflow = create_transaction(amount: 90, account: accounts(:depository), name: "Read-only match outflow")
+    inflow = create_transaction(amount: -90, account: accounts(:credit_card), name: "Read-only match inflow")
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get new_transaction_transfer_match_path(outflow)
+
+    assert_response :success
+    assert_select "dialog dd", text: "Read-only match inflow"
+    assert_select "dialog form[action=?]", transfer_path(transfer, transfer: { status: "rejected" })
+    assert_select "dialog form[action=?]", transfer_path(transfer, transfer: { status: "confirmed" }), count: 0
+  end
+
+  test "new offers no rejection when a fee of the pending match sits on an account the user cannot write to" do
+    sign_in users(:family_member)
+    # family_member has full control of depository and read-only access to credit_card.
+    outflow = create_transaction(amount: 90, account: accounts(:depository), name: "Fee match outflow")
+    inflow = create_transaction(amount: -90, account: accounts(:investment), name: "Fee match inflow")
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+    create_transaction(amount: 2, account: accounts(:credit_card), name: "Fee match fee").transaction.update!(transfer: transfer)
+
+    get new_transaction_transfer_match_path(outflow)
+
+    assert_response :success
+    assert_select "dialog form[action=?]", transfer_path(transfer, transfer: { status: "rejected" }), count: 0
+    assert_select "dialog form[action=?]", transfer_path(transfer, transfer: { status: "confirmed" }), count: 0
+  end
+
+  test "new answers not found for a pending match's leg in an account the user cannot see" do
+    sign_in users(:family_member)
+    # family_member cannot see investment.
+    outflow = create_transaction(amount: 90, account: accounts(:depository))
+    inflow = create_transaction(amount: -90, account: accounts(:investment))
+    Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get new_transaction_transfer_match_path(inflow)
+
+    assert_response :not_found
+  end
+
+  test "the pending match's confirm and reject buttons settle the match" do
+    outflow = create_transaction(amount: 250, account: accounts(:depository))
+    inflow = create_transaction(amount: -250, account: accounts(:investment))
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get new_transaction_transfer_match_path(outflow)
+    confirm_action = css_select("dialog form[action]").map { |form| form["action"] }.find { |action| action.include?("confirmed") }
+    patch confirm_action
+    assert transfer.reload.confirmed?
+
+    transfer.update!(status: "pending")
+    get new_transaction_transfer_match_path(outflow)
+    reject_action = css_select("dialog form[action]").map { |form| form["action"] }.find { |action| action.include?("rejected") }
+    patch reject_action
+    assert_raises(ActiveRecord::RecordNotFound) { transfer.reload }
+    assert RejectedTransfer.exists?(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction)
+  end
+
+  test "new does not name a pending match's other side in an account the user cannot see" do
+    sign_in users(:family_member)
+    # family_member cannot see investment.
+    outflow = create_transaction(amount: 90, account: accounts(:depository), name: "Hidden match outflow")
+    inflow = create_transaction(amount: -90, account: accounts(:investment), name: "Hidden match inflow")
+    Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get new_transaction_transfer_match_path(outflow)
+
+    assert_response :success
+    assert_select "dialog p", text: I18n.t("transactions.transfer_match.auto_matched_tooltip_hidden")
+    assert_select "dialog dl", count: 0
+    assert_select "dialog a[href=?]", account_path(accounts(:investment)), count: 0
+    assert_not_includes response.body, "Hidden match inflow"
+  end
+
   test "matches existing transaction and creates transfer" do
     inflow_transaction = create_transaction(amount: 100, account: accounts(:depository))
     outflow_transaction = create_transaction(amount: -100, account: accounts(:investment))
