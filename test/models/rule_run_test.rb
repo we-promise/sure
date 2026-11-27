@@ -217,15 +217,92 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run.complete_job!(modified_count: 1)
   end
 
+  # A mixed rule's run already holds its other actions' changes, which
+  # ApplyImmediateRulesJob has offered.
+  test "an immediate mixed run whose AI job changed nothing offers no result again" do
+    rule_run = create_rule_run(transactions_modified: 2)
+    rule_run.update!(execution_type: "immediate")
+
+    RuleRun.expects(:offer_immediate_result).never
+    rule_run.complete_job!
+  end
+
+  test "an immediate mixed run whose AI job fails without changes offers no result again" do
+    rule_run = create_rule_run(transactions_modified: 2)
+    rule_run.update!(execution_type: "immediate")
+
+    RuleRun.expects(:offer_immediate_result).never
+    rule_run.fail_job!(error: StandardError.new("provider down"), source: "test")
+  end
+
+  test "an immediate mixed run offers what its AI jobs changed" do
+    rule_run = create_rule_run(pending_jobs_count: 2, transactions_modified: 2)
+    rule_run.update!(execution_type: "immediate")
+
+    RuleRun.expects(:offer_immediate_result).with(@rule.family).once
+    rule_run.ai_handled!(handled: 1, modified: 1)
+    rule_run.complete_job!
+    rule_run.fail_job!(error: StandardError.new("provider down"), source: "test")
+
+    rule_run.reload
+    assert_equal 1, rule_run.job_transactions_modified
+    assert_equal 3, rule_run.transactions_modified
+  end
+
+  test "complete_job never records more modified than the run matched" do
+    rule_run = create_rule_run(transactions_modified: 19)
+
+    rule_run.complete_job!(modified_count: 5)
+
+    assert_equal 20, rule_run.reload.transactions_modified
+    assert_equal 5, rule_run.job_transactions_modified
+  end
+
+  test "ai_handled never records more modified than the run matched" do
+    rule_run = create_rule_run(transactions_modified: 19)
+
+    rule_run.ai_handled!(handled: 5, modified: 5)
+
+    assert_equal 20, rule_run.reload.transactions_modified
+    assert_equal 5, rule_run.job_transactions_modified
+  end
+
+  test "a run blocks nothing while its AI jobs are pending" do
+    rule_run = create_rule_run(transactions_modified: 2)
+
+    assert_equal 0, rule_run.transactions_blocked
+
+    rule_run.ai_handled!(handled: 3, modified: 3)
+    assert_equal 0, rule_run.reload.transactions_blocked
+
+    rule_run.complete_job!
+
+    assert_equal 15, rule_run.reload.transactions_blocked
+  end
+
+  test "a failed run blocks nothing while its other AI jobs are pending" do
+    rule_run = create_rule_run(pending_jobs_count: 2, transactions_modified: 2)
+
+    rule_run.fail_job!(error: StandardError.new("provider down"), source: "test")
+
+    assert_equal "failed", rule_run.reload.status
+    assert_equal 0, rule_run.transactions_blocked
+
+    rule_run.ai_handled!(handled: 3, modified: 3)
+    rule_run.complete_job!
+
+    assert_equal 15, rule_run.reload.transactions_blocked
+  end
+
   private
-    def create_rule_run(status: "pending", pending_jobs_count: 1)
+    def create_rule_run(status: "pending", pending_jobs_count: 1, transactions_modified: 0)
       @rule.rule_runs.create!(
         rule_name: @rule.name,
         execution_type: "manual",
         status: status,
         transactions_queued: 20,
         transactions_processed: 20,
-        transactions_modified: 0,
+        transactions_modified: transactions_modified,
         pending_jobs_count: pending_jobs_count,
         executed_at: Time.current
       )

@@ -2362,6 +2362,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120200) do
     t.text "error_message"
     t.datetime "executed_at", null: false
     t.string "execution_type", null: false
+    t.integer "job_transactions_modified", default: 0, null: false
     t.integer "pending_jobs_count", default: 0, null: false
     t.uuid "rule_id", null: false
     t.string "rule_name"
