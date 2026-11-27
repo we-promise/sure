@@ -724,6 +724,24 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-stream[target='#{dom_id(entry, :mark_recurring)}'] button[disabled]", text: /Mark as Recurring/
   end
 
+  test "turbo_stream update replaces the provenance frame after a category change" do
+    transaction = @entry.entryable
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          category_id: categories(:subcategory).id
+        }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[target='#{dom_id(@entry, :category_provenance)}'] [data-testid='category-provenance']"
+  end
+
   test "transaction count represents filtered total" do
     family = families(:empty)
     sign_in users(:empty)
@@ -2541,6 +2559,42 @@ end
     assert_select "##{dom_id(outflow, "category_menu_desktop")} [data-ds--popover-frame-id-value='category_dropdown']"
   end
 
+  test "deleting a split is refused while a part is linked as a transfer" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
+    part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      delete transaction_url(parent)
+    end
+
+    assert_equal I18n.t("account.entries.destroy.part_transferred"), flash[:alert]
+  end
+
+  test "update keeps a split part's amount, currency and kind" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
+    part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+    part.transaction.update!(kind: "loan_payment")
+
+    patch transaction_url(part), params: {
+      entry: {
+        amount: "75",
+        currency: "EUR",
+        nature: "outflow",
+        notes: "Principal part",
+        entryable_type: "Transaction",
+        entryable_attributes: { id: part.entryable_id, kind: "standard" }
+      }
+    }
+
+    part.reload
+    assert_equal 60, part.amount
+    assert_equal "USD", part.currency
+    assert_equal "loan_payment", part.transaction.kind
+    assert_equal "Principal part", part.notes
+  end
+
   test "update drops a category sent for a matched transfer's inflow leg" do
     outflow = Transaction.create!(kind: "investment_contribution")
     Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
@@ -2698,6 +2752,38 @@ end
     assert_response :success
     assert_equal category.id, @entry.reload.entryable.category_id
     assert_not_includes response.body, "action_type=set_transaction_category"
+  end
+
+  test "transaction drawer shows auto-categorization provenance" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "[data-testid='category-provenance']"
+    assert_match(/Assigned &quot;Income&quot; by AI .* ago\./, response.body)
+  end
+
+  test "transaction drawer labels bayes provenance as Bayes" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "bayes")
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "[data-testid='category-provenance'] span[title=?]", "Bayes"
+    assert_match(/Assigned &quot;Income&quot; by the local Bayes classifier .* ago\./, response.body)
+  end
+
+  test "transaction drawer shows history for a category returned to a superseded claim" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    @entry.entryable.update!(category: categories(:subcategory))
+    @entry.entryable.update!(category: categories(:income))
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "[data-testid='category-provenance'] span[title=?]", "AI history"
+    assert_includes response.body, "The category was changed afterwards."
   end
 
   private
