@@ -190,6 +190,15 @@ module TransactionsHelper
     ]
   end
 
+  # Name of the category an automatic assignment recorded — falls back to a
+  # generic label when that category has since been deleted.
+  def category_provenance_category_name(transaction, provenance)
+    return transaction.category&.name if provenance.current?
+
+    Current.family.categories.find_by(id: provenance.category_id)&.name ||
+      t("transactions.category_provenance.deleted_category")
+  end
+
   # Whether the current user may annotate (e.g. re-tag) entries on this
   # account. Memoized per request so list rows don't query per row.
   def can_annotate_account?(account)
