@@ -2,10 +2,11 @@
 
 require "test_helper"
 
+RakeTaskTestHelper.load_task("sure:simplefin:prune_pending", "simplefin_prune_pending")
+
 class SimplefinPrunePendingTest < ActiveSupport::TestCase
   setup do
-    Rails.application.load_tasks unless Rake::Task.task_defined?("sure:simplefin:prune_pending")
-    Rake::Task["sure:simplefin:prune_pending"].reenable
+    RakeTaskTestHelper.prepare("sure:simplefin:prune_pending")
 
     @family = families(:dylan_family)
     @account = accounts(:depository)

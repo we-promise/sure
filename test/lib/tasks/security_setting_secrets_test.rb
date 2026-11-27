@@ -3,13 +3,14 @@
 require "test_helper"
 require "rake"
 
+RakeTaskTestHelper.load_task("security:rotate_setting_secrets", "security_setting_secrets")
+
 class SecuritySettingSecretsTaskTest < ActiveSupport::TestCase
   OLD_SECRET_KEY_BASE = "old-secret-key-base-#{"e" * 64}"
 
   setup do
-    Rails.application.load_tasks unless Rake::Task.task_defined?("security:rotate_setting_secrets")
+    RakeTaskTestHelper.prepare("security:rotate_setting_secrets")
     @task = Rake::Task["security:rotate_setting_secrets"]
-    @task.reenable
   end
 
   teardown do

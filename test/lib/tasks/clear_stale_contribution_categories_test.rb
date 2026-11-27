@@ -1,9 +1,10 @@
 require "test_helper"
 
+RakeTaskTestHelper.load_task("data_migration:clear_stale_contribution_categories", "data_migration")
+
 class ClearStaleContributionCategoriesTaskTest < ActiveSupport::TestCase
   setup do
-    Rails.application.load_tasks unless Rake::Task.task_defined?("data_migration:clear_stale_contribution_categories")
-    Rake::Task["data_migration:clear_stale_contribution_categories"].reenable
+    RakeTaskTestHelper.prepare("data_migration:clear_stale_contribution_categories")
     @family = families(:dylan_family)
     @stale = stale_leg(accounts(:depository))
   end
