@@ -657,6 +657,24 @@ class EntryTest < ActiveSupport::TestCase
       account.entries.excluding_balance_updates.pluck(:id).sort
   end
 
+  # Displacement in auto-matching locks transactions before entries; unlock
+  # takes them in the same order, so the two cannot deadlock on one leg.
+  test "unlocking for sync locks the transaction before writing the entry" do
+    entry = create_transaction(account: accounts(:depository), amount: 50)
+    entry.update!(user_modified: true)
+
+    statements = []
+    callback = ->(*, payload) { statements << payload[:sql] }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { entry.unlock_for_sync! }
+
+    lock_at = statements.index { |sql| sql.include?("FOR UPDATE") && sql.match?(/FROM "?transactions"?/) }
+    write_at = statements.index { |sql| sql.match?(/\AUPDATE "entries"/) }
+    assert lock_at, "expected the transaction row to be locked: #{statements.inspect}"
+    assert write_at, "expected the entry to be written"
+    assert_operator lock_at, :<, write_at
+    assert_not entry.reload.user_modified?
+  end
+
   private
     def create_pending(account, date:, amount:)
       create_transaction(
