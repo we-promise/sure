@@ -4,8 +4,9 @@ class LoansController < ApplicationController
   permitted_accountable_attributes(
     :id, :subtype, :rate_type, :interest_rate, :term_months, :initial_balance, :start_date,
     :down_payment, :insurance_rate, :insurance_rate_type, :day_count_convention,
-    :principal_only_transfers, :rate_schedule_snapshot,
-    { rate_changes: [ :effective_date, :rate ] }
+    :principal_only_transfers, :rate_schedule_snapshot, :term_changes_snapshot,
+    { rate_changes: [ :effective_date, :rate ] },
+    { term_change_rows: [ :effective_date, :extra_repayment, :balance, :payment, :term_end_date ] }
   )
 
   def update

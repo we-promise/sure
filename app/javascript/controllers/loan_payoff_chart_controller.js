@@ -425,6 +425,59 @@ export default class extends Controller {
         .style("opacity", 0.4);
     }
 
+    // The day the loan's current terms stop being fixed, with the balance the
+    // projection leaves owing on it. Labelled, unlike the today line: nothing
+    // else on the chart says what this date is.
+    const termEnd = data.term_end && parseDate(data.term_end.date);
+    if (termEnd && termEnd >= domainStart && termEnd <= domainEnd) {
+      const termEndX = x(termEnd);
+      // The balance only moves on payment dates, and the projected line runs
+      // smoothly between them. The dot sits on that line, between the two
+      // payments around the date, so it does not hang beside it.
+      const projected = series.find((s) => s.key === "projected")?.points || [];
+      const after = projected.findIndex((p) => p.date >= termEnd);
+      let termEndBalance = data.term_end.balance;
+      if (after > 0) {
+        const [from, to] = [projected[after - 1], projected[after]];
+        const share = (termEnd - from.date) / (to.date - from.date);
+        termEndBalance = from.balance + (to.balance - from.balance) * share;
+      }
+      const marker = svg.append("g").attr("data-loan-chart-term-end", "");
+      marker
+        .append("line")
+        .attr("x1", termEndX)
+        .attr("x2", termEndX)
+        .attr("y1", margin.top)
+        .attr("y2", height - margin.bottom)
+        .style("stroke", "currentColor")
+        .style("stroke-dasharray", "6 3")
+        .style("opacity", 0.5);
+      marker
+        .append("circle")
+        .attr("cx", termEndX)
+        .attr("cy", y(termEndBalance))
+        .attr("r", 4)
+        .style("fill", "var(--color-container)")
+        .style("stroke", "currentColor")
+        .style("stroke-width", 1.5);
+      // The label sits beside the line, on the side with room for it.
+      const labelLeft = termEndX > (margin.left + width - margin.right) / 2;
+      marker
+        .append("text")
+        .attr("x", termEndX + (labelLeft ? -6 : 6))
+        .attr("y", margin.top + 10)
+        .attr("text-anchor", labelLeft ? "end" : "start")
+        .style("fill", "currentColor")
+        .style("fill-opacity", 0.7)
+        .style("font-size", "11px")
+        // An opaque halo in the card's colour keeps the label readable over
+        // a line.
+        .style("paint-order", "stroke")
+        .style("stroke", "var(--color-container)")
+        .style("stroke-width", 3)
+        .text(data.labels?.term_end || "");
+    }
+
     this._installInteraction(svg, {
       x,
       series,

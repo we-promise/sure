@@ -41,13 +41,18 @@ class Loan
     )
 
     def self.for(loan, entries:)
-      account = loan&.account
-      return nil unless loan&.amortizable? && account&.manual?
-      return nil unless account.has_opening_anchor? && account.opening_anchor_balance.to_d.positive?
-      return nil unless loan.initial_balance.present? && loan.initial_balance.to_d.positive?
-      return nil unless anchor_matches_origination?(loan, account)
+      new(loan, entries: entries) if applies_to?(loan)
+    end
 
-      new(loan, entries: entries)
+    # Whether the loan's ledger can be replayed at all. Whether it is, is the
+    # family's choice: see Loan#principal_replay_active?.
+    def self.applies_to?(loan)
+      account = loan&.account
+      return false unless loan&.amortizable? && account&.manual?
+      return false unless account.has_opening_anchor? && account.opening_anchor_balance.to_d.positive?
+      return false unless loan.initial_balance.present? && loan.initial_balance.to_d.positive?
+
+      anchor_matches_origination?(loan, account)
     end
 
     def self.anchor_matches_origination?(loan, account)

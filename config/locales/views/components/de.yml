@@ -129,6 +129,7 @@ de:
         loan:
           actual: "Erfasster Saldo"
           aria_description: "Kreditsaldo-Diagramm. Erfasster Saldo %{current_balance}. Ursprünglich geplante Tilgung %{scheduled_payoff_date}. Voraussichtliche Tilgung ab dem heutigen Saldo %{projected_payoff_date}."
+          aria_description_with_term_changes: "Kreditsaldo-Diagramm. Erfasster Saldo %{current_balance}. Geplante Tilgung %{scheduled_payoff_date}. Voraussichtliche Tilgung ab dem heutigen Saldo %{projected_payoff_date}."
           aria_extra_payoff: "Voraussichtliche Tilgung mit der Sondertilgung %{date}."
           extra: "Mit Sondertilgung"
           aria_actual_history_starts: "Die erfasste Saldenhistorie beginnt am %{date}."
@@ -150,8 +151,11 @@ de:
           projected_payoff: "Voraussichtliche Tilgung"
           projection_basis: "Vergleicht den heute erfassten Saldo mit dem Saldo laut Tilgungsplan am selben Tag. Eine vor ihrem Fälligkeitstermin gebuchte Zahlung erscheint bis zu diesem Termin als Vorsprung, eine danach gebuchte als Rückstand."
           scheduled: "Ursprünglicher Tilgungsplan"
+          scheduled_with_term_changes: "Aktueller Tilgungsplan"
           since_start: "seit Kreditbeginn"
           today: "Heute"
+          term_end: "Ende der Zinsbindung"
+          aria_term_end: "Die Zinsbindung endet am %{date}, mit einem voraussichtlichen Saldo von %{balance}."
         no_data_available: Keine Daten vorhanden
         title:
           balance: Saldo

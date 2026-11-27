@@ -1,0 +1,45 @@
+<%# locals: (row:) %>
+
+<%# One term change: its date, then what it changes. Blank fields are left
+    alone, so a row can record an extra repayment, a confirmed balance, a new
+    payment, a repayment together with the payment that followed it, or only
+    the day a fixed period ends. The effective date has no upper bound: a
+    payment the lender has announced is dated ahead. %>
+<%# Any step: a stored amount can carry more decimals than the currency, and
+    a step it does not fit would block the whole form in the browser. %>
+<% amount_attributes = { step: "any", min: "0" } %>
+<div class="space-y-2 rounded-lg bg-container-inset p-2" data-term-change-row>
+  <div class="flex items-center gap-2">
+    <%= render "loans/rate_change_field",
+               label: t("loans.form.term_change_effective_date"), type: "date",
+               name: "account[accountable_attributes][term_change_rows][][effective_date]",
+               value: row[:effective_date] %>
+
+    <%= render "loans/rate_change_field",
+               label: t("loans.form.term_change_term_end_date"), type: "date",
+               name: "account[accountable_attributes][term_change_rows][][term_end_date]",
+               value: row[:term_end_date] %>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <%= render "loans/rate_change_field",
+               label: t("loans.form.term_change_payment"), type: "number",
+               name: "account[accountable_attributes][term_change_rows][][payment]",
+               value: row[:payment], attributes: amount_attributes %>
+
+    <%= render "loans/rate_change_field",
+               label: t("loans.form.term_change_extra_repayment"), type: "number",
+               name: "account[accountable_attributes][term_change_rows][][extra_repayment]",
+               value: row[:extra_repayment], attributes: amount_attributes.merge(min: "0.0001") %>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <%= render "loans/rate_change_field",
+               label: t("loans.form.term_change_balance"), type: "number",
+               name: "account[accountable_attributes][term_change_rows][][balance]",
+               value: row[:balance], attributes: amount_attributes %>
+
+    <%= render DS::Button.new(text: t("loans.form.term_change_remove"), variant: "ghost", type: "button", class: "shrink-0",
+                              data: { action: "loan-term-changes#remove" }) %>
+  </div>
+</div>

@@ -1,4 +1,4 @@
-<%# locals: (account:, as_of: Date.current) %>
+<%# locals: (account:, as_of: Date.current, projection: nil) %>
 
 <%# ONE reference date for every figure on this tab, supplied by the caller
     where it has one (the account page passes the same date to the Schedule
@@ -28,12 +28,13 @@
     <% end %>
   <% end %>
 
-  <%# A fixed loan's contracted repayment. A variable loan has no single one, so
-      the card quotes the repayment in force today -- the next scheduled payment,
-      sized at every rate change recorded before it -- and N/A only when there
-      is no schedule or it has run out. %>
+  <%# A fixed loan's contracted repayment. A variable loan, or one with a
+      recorded term change, has no single one, so the card quotes the repayment
+      in force today -- the next scheduled payment, sized at every change
+      recorded before it -- and N/A only when there is no schedule or it has
+      run out. %>
   <%= summary_card title: t(".monthly_payment") do %>
-    <% if account.loan.variable_rate_type? %>
+    <% if account.loan.repayment_varies? %>
       <% payment_in_force = account.loan.amortization_schedule&.payment_in_force(today) %>
       <%= payment_in_force ? format_money(payment_in_force) : t(".not_applicable") %>
     <% elsif account.loan.monthly_payment.present? %>
@@ -57,14 +58,27 @@
 
   <%# When the contract's last payment falls due. A variable loan keeps this
       date through its rate changes -- the schedule resizes the repayment
-      instead -- so it is the loan's original payoff date either way. %>
-  <%= summary_card title: t(".original_payoff_date") do %>
+      instead -- so it is the loan's original payoff date. A term change can
+      move it: an extra repayment with the payment held ends the loan sooner.
+      The card then says it is the schedule's date, not the original one. %>
+  <%= summary_card title: account.loan.term_changes? ? t(".scheduled_payoff_date") : t(".original_payoff_date") do %>
     <% original_payoff_date = account.loan.amortization_schedule&.payoff_date %>
     <%= original_payoff_date ? l(original_payoff_date, format: :long) : t(".unknown") %>
   <% end %>
 
   <%= summary_card title: t(".type") do %>
     <%= account.loan.rate_type&.titleize || t(".unknown") %>
+  <% end %>
+
+  <%# Only for a loan with a recorded end of its fixed period that is still
+      ahead. The balance is the projection's, from today's balance on the
+      contract's repayments, so it is an estimate and the card says so. %>
+  <% term_end = account.loan.current_term_end(as_of: today, projection: projection) %>
+  <% if term_end %>
+    <%= summary_card title: t(".balance_at_term_end") do %>
+      <%= format_money(term_end.balance) %>
+      <span class="block text-xs text-secondary mt-1"><%= t(".balance_at_term_end_estimate", date: l(term_end.date, format: :long)) %></span>
+    <% end %>
   <% end %>
 
   <%# What the loan costs in total: the Schedule tab's "Total Cost" (principal

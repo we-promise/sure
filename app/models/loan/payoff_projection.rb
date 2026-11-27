@@ -42,16 +42,13 @@ class Loan
     end
 
     # False when there is nothing to project: no schedule, nothing left to owe,
-    # no payments remaining, or no repayment to hold.
-    #
-    # `&&` binds tighter than `||`, so the trailing `|| false` applies to the
-    # whole chain. It turns the nil that `contracted_payment&.positive?` gives for
-    # a missing payment into false, so callers always get a boolean.
+    # or no repayment ahead. A payment of zero in the next period, a payment
+    # holiday on an interest-free loan, still projects when a later payment
+    # repays the loan.
     def applicable?
       schedule.present? &&
         current_balance.amount.positive? &&
-        remaining_payment_dates.any? &&
-        contracted_payment&.positive? || false
+        remaining_scheduled_payments.any? { |payment| payment.payment.amount.positive? }
     end
 
     # True when nothing is owed. Only one of the reasons applicable? can be
@@ -82,6 +79,22 @@ class Loan
 
     def total_interest
       Money.new(simulation&.total_interest || 0, currency)
+    end
+
+    # What the projection leaves owing on `date`: the balance after the last
+    # repayment on or before it, one due that day included, or today's
+    # balance when none falls that early. A settled loan owes what it owes
+    # today. Nil when a balance is owed and there is nothing to project it
+    # with, when the account has no balance yet (which #current_balance reads
+    # as zero), and for a date before `as_of`, which a projection does not
+    # cover.
+    def balance_on(date)
+      return nil if schedule.nil? || date < as_of || loan.account.balance.nil?
+      return current_balance if settled?
+      return nil unless applicable?
+
+      row = payments.reverse_each.find { |payment| payment[:payment_date] <= date }
+      row ? Money.new(row[:ending_balance], currency) : current_balance
     end
 
     # False when the contracted repayment does not clear the balance by the
@@ -170,13 +183,6 @@ class Loan
         @remaining_payment_dates ||= remaining_scheduled_payments.map(&:date)
       end
 
-      # The repayment in force: the next scheduled payment's amount. For a
-      # re-amortising loan that is the figure the current rate produced, which
-      # is what the borrower is actually paying.
-      def contracted_payment
-        @contracted_payment ||= remaining_scheduled_payments.first&.payment&.amount
-      end
-
       # What the contract asks for in the projection's period `index`: the
       # schedule's row for the same date. The two walks share their dates, so a
       # recorded rate change re-sizes this exactly where the schedule re-sizes
@@ -215,8 +221,14 @@ class Loan
         date < first ? 0 : ((date - first).to_i / interval) + 1
       end
 
+      # Less the current period's interest an extra repayment already paid
+      # (see #current_period_interest), so a borrower on contract saves nothing.
       def remaining_contracted_interest
-        remaining_scheduled_payments.sum(BigDecimal("0")) { |payment| payment.interest.amount }
+        contracted = remaining_scheduled_payments.sum(BigDecimal("0")) { |payment| payment.interest.amount }
+        return contracted unless balance_change_in_current_period? && transfers_pay_interest_first?
+
+        row = remaining_scheduled_payments.first
+        contracted - [ repaid_after_charge(row), row.interest.amount ].min
       end
 
       # The date the period containing `as_of` opened: the last scheduled
@@ -228,6 +240,63 @@ class Loan
       # quoted interest they will never pay.
       def current_period_start
         schedule.payments.reverse_each.find { |payment| payment.date <= as_of }&.date || schedule.start_date
+      end
+
+      # What the period containing `as_of` still charges, when a term change
+      # that moved the balance is dated in that period. Nil otherwise, and the
+      # simulator charges a full period on today's balance.
+      #
+      # The schedule sized that row's payment on its own charge: from the date
+      # of a confirmed balance, or on the balance before an extra repayment.
+      # A full period on today's balance is a different amount, and against a
+      # payment sized to the cent the difference reads as a loan that is not
+      # paid off. So the first period charges today's balance the way the
+      # schedule's row charged its own.
+      #
+      # An extra repayment made after the period's charge is no longer in
+      # today's balance. Where the ledger replay governs the balance, that
+      # transfer paid the period's interest first, so the interest is charged
+      # on today's balance and the repayment taken off it. Otherwise the whole
+      # transfer came off the balance and the interest is still to pay, so it
+      # is charged on the balance before the repayment.
+      #
+      # One limit: on an insured loan the replay also takes the instalment's
+      # premium out of that transfer, so until the payment date today's
+      # balance is higher by the premium than this assumes.
+      def current_period_interest
+        return @current_period_interest if defined?(@current_period_interest)
+
+        row = remaining_scheduled_payments.first
+        factor = schedule.interest_factor_for(row) if row && balance_change_in_current_period?
+
+        @current_period_interest =
+          if factor.nil?
+            nil
+          elsif transfers_pay_interest_first?
+            [ current_balance.amount * factor - repaid_after_charge(row), BigDecimal("0") ].max.round(currency_precision)
+          else
+            ((current_balance.amount + repaid_after_charge(row)) * factor).round(currency_precision)
+          end
+      end
+
+      def repaid_after_charge(row)
+        schedule.repaid_after_charge_for(row)&.amount || BigDecimal("0")
+      end
+
+      def transfers_pay_interest_first?
+        return @transfers_pay_interest_first if defined?(@transfers_pay_interest_first)
+
+        @transfers_pay_interest_first = !loan.principal_only_transfers? && loan.principal_replay_active?
+      end
+
+      # A change of the payment alone leaves the period's charge as it was.
+      def balance_change_in_current_period?
+        return @balance_change_in_current_period if defined?(@balance_change_in_current_period)
+
+        opened = current_period_start
+        @balance_change_in_current_period = loan.active_term_changes.any? do |change|
+          (change.extra_repayment || change.balance) && change.effective_date > opened && change.effective_date <= as_of
+        end
       end
 
       def simulation
@@ -249,6 +318,7 @@ class Loan
           # schedule's does.
           payment_amount: method(:scheduled_payment_for),
           payment_strategy: :scheduled,
+          first_period_interest: current_period_interest,
           currency_precision: currency_precision,
           # A projection that cannot clear the balance must SAY so. Settling the
           # final payment regardless would manufacture a payoff date for a loan

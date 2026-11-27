@@ -25,7 +25,13 @@ class Assistant::Function::GetAccounts < Assistant::Function
         every change recorded to take effect by that payment, so it can reflect
         a change `interest_rate` does not show yet. It is absent once every
         scheduled payment is past. A change the user has not recorded is not
-        reflected in either field.
+        reflected in either field. A loan with a recorded term change (an extra
+        repayment, a confirmed balance or a new payment) reports its
+        `monthly_payment` the same way as a variable-rate loan.
+
+        `fixed_until` is the recorded day a loan's current terms stop being
+        fixed, such as the end of a fixed-rate period. It is absent when the
+        user has not recorded one or that day has passed.
 
         Note on `terms.available_credit`: providers disagree on its meaning
         (some report the credit limit, others the remaining credit), so confirm
@@ -63,9 +69,12 @@ class Assistant::Function::GetAccounts < Assistant::Function
     period = series_period(params)
     as_of_date = Date.current
 
+    accounts = accounts_scope(include_series).to_a
+    preload_loan_term_changes(accounts)
+
     {
       as_of_date: as_of_date,
-      accounts: accounts_scope(include_series).map do |account|
+      accounts: accounts.map do |account|
         payload = {
           id: account.id,
           name: account.name,
@@ -100,6 +109,14 @@ class Assistant::Function::GetAccounts < Assistant::Function
       user.accessible_accounts.visible.includes(:account_providers, :accountable)
     end
 
+    # A loan's terms read its term changes. `accountable` is polymorphic, so
+    # they cannot ride on the scope's own includes; one query here covers
+    # every loan.
+    def preload_loan_term_changes(accounts)
+      loans = accounts.filter_map { |account| account.accountable if account.accountable.is_a?(Loan) }
+      ActiveRecord::Associations::Preloader.new(records: loans, associations: :term_changes).call
+    end
+
     # The accountable record holds the only borrowing terms Sure stores, and
     # this tool used to drop the delegated record entirely, so an assistant
     # asked "what is my loan costing me" had nothing to answer with even though
@@ -130,6 +147,7 @@ class Assistant::Function::GetAccounts < Assistant::Function
         base_interest_rate: (loan.interest_rate if loan.interest_rate != interest_rate),
         rate_type: loan.rate_type,
         term_months: loan.term_months,
+        fixed_until: loan.current_term_end_date(as_of: as_of_date),
         monthly_payment: monthly_payment&.amount,
         monthly_payment_formatted: monthly_payment&.format,
         original_balance: original_balance&.amount,
@@ -137,13 +155,14 @@ class Assistant::Function::GetAccounts < Assistant::Function
       }.compact
     end
 
-    # Loan#monthly_payment stays nil for a variable loan, which has no single
-    # contracted repayment. It always has the next one, though, sized at every
-    # change recorded before it, and that is what the Overview tab quotes. Nil
-    # when there is no schedule or it has run out, so the key is omitted rather
-    # than reported as zero.
+    # Loan#monthly_payment stays nil for a variable loan and for one with a
+    # recorded term change, which have no single contracted repayment. They
+    # always have the next one, though, sized at every change recorded before
+    # it, and that is what the Overview tab quotes. Nil when there is no
+    # schedule or it has run out, so the key is omitted rather than reported as
+    # zero.
     def payment_in_force(loan, as_of_date)
-      return loan.monthly_payment unless loan.variable_rate_type?
+      return loan.monthly_payment unless loan.repayment_varies?
 
       loan.amortization_schedule&.payment_in_force(as_of_date)
     end
