@@ -724,6 +724,24 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-stream[target='#{dom_id(entry, :mark_recurring)}'] button[disabled]", text: /Mark as Recurring/
   end
 
+  test "turbo_stream update replaces the provenance frame after a category change" do
+    transaction = @entry.entryable
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          category_id: categories(:subcategory).id
+        }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[target='#{dom_id(@entry, :category_provenance)}'] [data-testid='category-provenance']"
+  end
+
   test "transaction count represents filtered total" do
     family = families(:empty)
     sign_in users(:empty)
@@ -2734,6 +2752,38 @@ end
     assert_response :success
     assert_equal category.id, @entry.reload.entryable.category_id
     assert_not_includes response.body, "action_type=set_transaction_category"
+  end
+
+  test "transaction drawer shows auto-categorization provenance" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "[data-testid='category-provenance']"
+    assert_match(/Assigned &quot;Income&quot; by AI .* ago\./, response.body)
+  end
+
+  test "transaction drawer labels bayes provenance as Bayes" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "bayes")
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "[data-testid='category-provenance'] span[title=?]", "Bayes"
+    assert_match(/Assigned &quot;Income&quot; by the local Bayes classifier .* ago\./, response.body)
+  end
+
+  test "transaction drawer shows history for a category returned to a superseded claim" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    @entry.entryable.update!(category: categories(:subcategory))
+    @entry.entryable.update!(category: categories(:income))
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "[data-testid='category-provenance'] span[title=?]", "AI history"
+    assert_includes response.body, "The category was changed afterwards."
   end
 
   private
