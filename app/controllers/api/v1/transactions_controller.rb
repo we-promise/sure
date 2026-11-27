@@ -97,7 +97,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
-    account = family.accounts.writable_by(current_resource_owner).find(account_id_param)
+    account = family.accounts.accessible_by(current_resource_owner).find(account_id_param)
+    return unless require_api_account_permission!(account, :write)
 
     if idempotency_key_requested? && (existing_entry = existing_idempotent_entry(account))
       return render_existing_idempotent_entry(existing_entry)
@@ -134,6 +135,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     else
       raise
     end
+  rescue ActiveRecord::RecordNotFound => e
+    handle_not_found(e)
   rescue => e
     Rails.logger.error "TransactionsController#create error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
