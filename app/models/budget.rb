@@ -178,6 +178,11 @@ class Budget < ApplicationRecord
     scope
   end
 
+  # Drill-down rows use the same eligibility and account scope as the totals.
+  def reportable_transactions
+    income_statement.reportable_transactions(period:)
+  end
+
   # --- Cash on hand, next to the plan ---
   #
   # DELIBERATELY OUTSIDE the allocation arithmetic. `budgeted_spending`,

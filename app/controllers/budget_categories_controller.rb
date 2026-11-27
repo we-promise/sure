@@ -19,8 +19,7 @@ class BudgetCategoriesController < ApplicationController
     # category -- even though the aggregate ignores it. See issue #1059.
     # A family that does not count investing as spending also leaves out
     # investment contributions (Family#analytics_excluded_kinds).
-    @recent_transactions = @budget.transactions
-                                  .where.not(transactions: { kind: Current.family.analytics_excluded_kinds })
+    @recent_transactions = @budget.reportable_transactions
 
     if params[:id] == BudgetCategory.uncategorized.id
       @budget_category = @budget.uncategorized_budget_category

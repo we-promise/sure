@@ -3,12 +3,6 @@
 class Api::V1::RulesController < Api::V1::BaseController
   include Pagy::Backend
 
-  BOOLEAN_FILTERS = {
-    "true" => true,
-    "1" => true,
-    "false" => false,
-    "0" => false
-  }.freeze
   RESOURCE_TYPES = %w[transaction].freeze
 
   before_action :ensure_read_scope
@@ -23,10 +17,8 @@ class Api::V1::RulesController < Api::V1::BaseController
       .order(:created_at, :id)
 
     rules_query = rules_query.where(resource_type: params[:resource_type]) if params[:resource_type].present?
-    if params[:active].present?
-      active = parse_boolean_filter(params[:active])
-      return if performed?
-
+    if params.key?(:active)
+      active = boolean_filter_param(:active)
       rules_query = rules_query.where(active: active)
     end
 
@@ -53,14 +45,6 @@ class Api::V1::RulesController < Api::V1::BaseController
 
     def ensure_read_scope
       authorize_scope!(:read)
-    end
-
-    def parse_boolean_filter(value)
-      normalized = value.to_s.downcase
-      return BOOLEAN_FILTERS[normalized] if BOOLEAN_FILTERS.key?(normalized)
-
-      render_validation_error("active must be one of: true, false, 1, 0")
-      nil
     end
 
     def invalid_resource_type_filter?
