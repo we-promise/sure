@@ -31,8 +31,10 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
     # they aren't counted twice when we spread the remainder across the horizon.
     # Income is not part of the expense median, so it only adds on its date.
     # A bill snoozed out of the horizon will not be paid in it either, so it
-    # leaves the baseline although it is not applied on any date.
-    recurring_expense_total = later_flows.sum { |flow| [ -flow.amount, 0.to_d ].max } + snoozed_out_expense_total
+    # leaves the baseline although it is not applied on any date. An overdue
+    # bill snoozed into the horizon is applied on its new date but stays in the
+    # baseline: the median does not hold it.
+    recurring_expense_total = later_flows.select(&:in_median).sum { |flow| -flow.amount } + snoozed_out_expense_total
     other_daily_spend = [ median_monthly_expense - recurring_expense_total, 0.to_d ].max / HORIZON_DAYS
 
     balance = starting_balance + today_flows.sum { |flow| [ flow.amount, 0.to_d ].max }
@@ -108,7 +110,10 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
     # (IdentifyRecurringTransactionsJob) — it doesn't clear out ones already
     # identified, so this keeps using that last-known set rather than silently
     # degrading to the flatter median-only baseline.
-    Flow = Data.define(:date, :amount)
+    # in_median: the occurrence was originally due inside the horizon, so the
+    # monthly expense median already holds it. An overdue bill snoozed into
+    # the horizon belongs to an earlier month and is spent on top of it.
+    Flow = Data.define(:date, :amount, :in_median)
 
     # Occurrence rows instead of one projected entry per series: a weekly
     # bill contributes every hit inside the horizon (the single-projection
@@ -132,9 +137,9 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
         if series.amount.negative?
           next unless cash_account_ids.include?(series.account_id)
 
-          Flow.new(date: occurrence.effective_due_on, amount: remaining)
+          Flow.new(date: occurrence.effective_due_on, amount: remaining, in_median: false)
         else
-          Flow.new(date: occurrence.effective_due_on, amount: -remaining)
+          Flow.new(date: occurrence.effective_due_on, amount: -remaining, in_median: occurrence.due_on >= Date.current)
         end
       end
     end

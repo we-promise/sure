@@ -83,7 +83,7 @@ class Insight::Generators::CashFlowWarningGeneratorTest < ActiveSupport::TestCas
     schedule("Salary", -3_000, Date.current + 5)
 
     # Without the salary the 30-day baseline alone takes 1,500 to -1,000; with
-    # it the low point is about 1,083, the day before it arrives.
+    # it the low point is about 1,167, the day before it arrives.
     assert_empty generate
   end
 
@@ -146,6 +146,24 @@ class Insight::Generators::CashFlowWarningGeneratorTest < ActiveSupport::TestCas
     assert_equal 1, insights.size
     assert_equal I18n.l(Date.current + 4), insights.first.facts[:projected_low_date]
     assert_equal Money.new(200, "USD").format, insights.first.facts[:projected_low]
+  end
+
+  # The overdue occurrence belongs to last month; only next month's (day 25)
+  # is part of the median, so only that one leaves the spending baseline.
+  test "an overdue bill snoozed into the horizon is spent on top of the median" do
+    clear_schedule
+    IncomeStatement.any_instance.stubs(:median_expense).returns(1_200)
+    accounts(:depository).update_columns(balance: 1_500)
+    series = schedule("Rent", 600, Date.current + 25).recurring_transaction
+    series.recurring_occurrences.create!(
+      family: @family, original_due_on: Date.current - 5, due_on: Date.current - 5, currency: "USD"
+    ).snooze!(Date.current + 4)
+
+    insight = generate.first
+
+    # 1,500 - 600 (overdue) - 600 (next) - 600 (rest of the median) = -300.
+    assert_equal "cash_flow_warning.negative", insight.template_key
+    assert_equal Money.new(-300, "USD").format, insight.facts[:projected_low]
   end
 
   test "an overdue bill that was not snoozed is left out" do
