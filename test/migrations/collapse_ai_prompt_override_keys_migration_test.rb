@@ -41,7 +41,6 @@ class CollapseAiPromptOverrideKeysMigrationTest < ActiveSupport::TestCase
 
     entry = dropped.sole
     assert_equal({ "key" => "categorize_transactions", "text" => "OpenAI version" }, entry.metadata)
-    assert_equal [ { key: "categorize_transactions", text: "OpenAI version" } ], @family.dropped_ai_prompt_overrides
   end
 
   test "the chosen provider without a key falls back to the one with a key, as the calls do" do

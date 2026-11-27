@@ -52,7 +52,7 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
     assert_equal "gpt-4.1", requests.first.model.name
     assert_equal "openai", requests.first.model.endpoint.name
     assert_includes requests.first.instructions, "You are an assistant to a consumer personal finance app."
-    assert_equal [ "Fast Food", nil ], result.results.order(:created_at).map { _1.actual_output["category_name"] }
+    assert_equal [ "Fast Food", nil ], [ sample1, sample2 ].map { |sample| result.results.find_by!(sample:).actual_output["category_name"] }
 
     assert_equal "completed", result.status
     assert_equal 2, result.results.count

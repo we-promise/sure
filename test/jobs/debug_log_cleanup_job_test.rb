@@ -45,24 +45,6 @@ class DebugLogCleanupJobTest < ActiveJob::TestCase
     end
   end
 
-  test "keeps a set-aside prompt override past the retention period, until the admin saves" do
-    override = DebugLogEntry.create!(category: Family::AiPromptable::DROPPED_CATEGORY, level: "warn", message: "set aside",
-                                     source: "Test", family: families(:dylan_family), created_at: 200.days.ago, updated_at: 200.days.ago)
-
-    DebugLogCleanupJob.perform_now
-
-    assert DebugLogEntry.exists?(override.id)
-  end
-
-  test "a set-aside prompt override whose family was deleted expires with the rest" do
-    orphan = DebugLogEntry.create!(category: Family::AiPromptable::DROPPED_CATEGORY, level: "warn", message: "set aside",
-                                   source: "Test", family: nil, created_at: 200.days.ago, updated_at: 200.days.ago)
-
-    DebugLogCleanupJob.perform_now
-
-    assert_not DebugLogEntry.exists?(orphan.id)
-  end
-
   test "uses configured retention days" do
     Rails.application.config.x.debug_log.retention_days = 30
 

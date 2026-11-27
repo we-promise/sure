@@ -1,0 +1,680 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.kilo.ai/api/gateway/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"anthropic/claude-haiku-5.5","messages":[{"role":"system","content":"Detect
+        business names and websites from transaction descriptions. Return JSON only.\n\nRules:\n1.
+        Match transaction_id exactly from input\n2. Return business_name and business_url
+        for known businesses\n3. Return \"null\" for both if uncertain or generic
+        (e.g. \"Paycheck\", \"Local diner\")\n4. Don''t include \"www.\" in URLs (use
+        \"amazon.com\" not \"www.amazon.com\")\n5. Favor \"null\" over guessing -
+        only return values if 80%+ confident\n\nExample output format:\n{\"merchants\":
+        [{\"transaction_id\": \"txn_001\", \"business_name\": \"Amazon\", \"business_url\":
+        \"amazon.com\"}]}\n"},{"role":"user","content":"USER''S KNOWN MERCHANTS: McDonald''s,
+        Starbucks, Amazon, Netflix, Uber, Spotify, Target, Costco, Apple, Google\n\nTRANSACTIONS
+        TO ANALYZE:\n- ID: 004ed900-356f-5a36-b16f-90404293493f, Description: \"POS
+        DEBIT 12345\"\n- ID: 008a3b53-a18d-51b2-a8ca-c1174f3edf44, Description: \"APPLE
+        STORE #R123\"\n- ID: 046b44d6-5d4c-549f-a9a0-e61afae04974, Description: \"EQUINOX
+        MEMBERSHIP\"\n- ID: 04a950b7-7b06-5cbb-92c9-40904f3c9d76, Description: \"WHOLE
+        FOODS MKT #10234\"\n- ID: 05abfe9b-c304-5823-8303-f3dff2dac065, Description:
+        \"DISNEY PLUS\"\n- ID: 075edfd4-94ee-5641-8c6b-2649225d37d8, Description:
+        \"OLIVE GARDEN #456\"\n- ID: 0de43af5-ed37-5f6f-91ea-59b59f4aacde, Description:
+        \"NETFLIX.COM\"\n- ID: 0eada96b-e634-5ccf-8d62-95642693c211, Description:
+        \"STUBHUB INC\"\n- ID: 12b63aca-3309-5460-aa85-6afc51661a22, Description:
+        \"PENDING AUTHORIZATION\"\n- ID: 12e7b02e-00b8-5f03-bfe3-d7261acd0087, Description:
+        \"GRUBHUB*THAI KITCHEN\"\n- ID: 156fa152-92cb-5b54-99ed-d90a83ee801d, Description:
+        \"HILTON HOTELS\"\n- ID: 15ea7e75-c532-5c75-be29-e89865bdb1a0, Description:
+        \"SPOTIFY USA\"\n- ID: 176ec0f6-c755-55fc-b80f-24584feaf2c5, Description:
+        \"STEAMPOWERED.COM\"\n- ID: 19d3ca4b-7f0f-526d-865d-164cd3ffccfe, Description:
+        \"STARBUCKS STORE #9876\"\n- ID: 1b55423f-5e3e-5f40-afa8-c640f4a21d9e, Description:
+        \"SAM''S CLUB #8765\"\n- ID: 1c780da6-2565-5960-b3da-e78e6e82e170, Description:
+        \"WAYFAIR*PURCHASE\"\n- ID: 1f1327aa-14cc-50dc-85c9-7a39f4cfc5be, Description:
+        \"PUBLIX SUPER MARKET\"\n- ID: 20409c45-e021-5f39-be6f-2c533c5b7171, Description:
+        \"LYFT *RIDE SAT 7PM\"\n- ID: 220af846-e6b5-5a4d-8ba0-3b1856e9cab7, Description:
+        \"ZELLE TO JOHN DOE\"\n- ID: 25261c25-fc50-5b7d-8554-ac911e9b6c15, Description:
+        \"TARGET #1234\"\n- ID: 25c3e53a-694d-5c23-8d7d-207a5d0128ea, Description:
+        \"ORANGETHEORY FITNESS\"\n- ID: 27fb1547-14f1-5c77-a5a8-1324e49c4cf3, Description:
+        \"AT&T WIRELESS\"\n- ID: 281d430e-3b6c-5606-83a0-77158ca7a7cd, Description:
+        \"PARAMOUNT+ ESSENTIAL\"\n- ID: 2b8933ee-ff18-5d99-b3e8-325442f2da3c, Description:
+        \"SQ *DOWNTOWN CAFE\"\n- ID: 2c73c725-90ce-5a67-bbfd-b991ecb6a890, Description:
+        \"HULU LLC\"\n\nEXAMPLES of correct merchant detection:\n- \"AMAZON.COM*1A2B3C\"
+        → business_name: \"Amazon\", business_url: \"amazon.com\"\n- \"STARBUCKS STORE
+        #9876\" → business_name: \"Starbucks\", business_url: \"starbucks.com\"\n-
+        \"NETFLIX.COM\" → business_name: \"Netflix\", business_url: \"netflix.com\"\n-
+        \"UBER *TRIP\" → business_name: \"Uber\", business_url: \"uber.com\"\n- \"ACH
+        WITHDRAWAL\" → business_name: \"null\", business_url: \"null\" (generic)\n-
+        \"LOCAL DINER\" → business_name: \"null\", business_url: \"null\" (generic/unknown)\n-
+        \"POS DEBIT 12345\" → business_name: \"null\", business_url: \"null\" (generic)\n\nIMPORTANT:\n-
+        Return \"null\" (as a string) for BOTH name and URL if you cannot confidently
+        identify the business\n- Don''t include \"www.\" in URLs\n- Generic descriptions
+        like \"Paycheck\", \"Transfer\", \"ATM\" should return \"null\"\n\nRespond
+        with ONLY this JSON format (no other text):\n{\"merchants\": [{\"transaction_id\":
+        \"...\", \"business_name\": \"...\", \"business_url\": \"...\"}]}\n"}],"stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"auto_detect_personal_finance_merchants","schema":{"type":"object","properties":{"merchants":{"type":"array","description":"An
+        array of auto-detected merchant businesses for each transaction","items":{"type":"object","properties":{"transaction_id":{"type":"string","description":"The
+        internal ID of the original transaction","enum":["004ed900-356f-5a36-b16f-90404293493f","008a3b53-a18d-51b2-a8ca-c1174f3edf44","046b44d6-5d4c-549f-a9a0-e61afae04974","04a950b7-7b06-5cbb-92c9-40904f3c9d76","05abfe9b-c304-5823-8303-f3dff2dac065","075edfd4-94ee-5641-8c6b-2649225d37d8","0de43af5-ed37-5f6f-91ea-59b59f4aacde","0eada96b-e634-5ccf-8d62-95642693c211","12b63aca-3309-5460-aa85-6afc51661a22","12e7b02e-00b8-5f03-bfe3-d7261acd0087","156fa152-92cb-5b54-99ed-d90a83ee801d","15ea7e75-c532-5c75-be29-e89865bdb1a0","176ec0f6-c755-55fc-b80f-24584feaf2c5","19d3ca4b-7f0f-526d-865d-164cd3ffccfe","1b55423f-5e3e-5f40-afa8-c640f4a21d9e","1c780da6-2565-5960-b3da-e78e6e82e170","1f1327aa-14cc-50dc-85c9-7a39f4cfc5be","20409c45-e021-5f39-be6f-2c533c5b7171","220af846-e6b5-5a4d-8ba0-3b1856e9cab7","25261c25-fc50-5b7d-8554-ac911e9b6c15","25c3e53a-694d-5c23-8d7d-207a5d0128ea","27fb1547-14f1-5c77-a5a8-1324e49c4cf3","281d430e-3b6c-5606-83a0-77158ca7a7cd","2b8933ee-ff18-5d99-b3e8-325442f2da3c","2c73c725-90ce-5a67-bbfd-b991ecb6a890"]},"business_name":{"type":["string","null"],"description":"The
+        detected business name of the transaction, or `null` if uncertain"},"business_url":{"type":["string","null"],"description":"The
+        URL of the detected business, or `null` if uncertain"}},"required":["transaction_id","business_name","business_url"],"additionalProperties":false}}},"required":["merchants"],"additionalProperties":false},"strict":true}}}'
+    headers:
+      X-Kilocode-Organizationid:
+      - "<OPENAI_COMPATIBLE_X_KILOCODE_ORGANIZATIONID>"
+      User-Agent:
+      - Faraday v2.15.1
+      Authorization:
+      - Bearer <OPENAI_ACCESS_TOKEN>
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Cache-Control:
+      - no-cache, no-transform
+      Content-Security-Policy-Report-Only:
+      - 'default-src ''self''; base-uri ''self''; object-src ''none''; frame-ancestors
+        ''self''; form-action ''self''; script-src ''self'' ''unsafe-inline'' ''wasm-unsafe-eval''
+        https://www.googletagmanager.com https://utt.impactcdn.com https://login.kilo.ai
+        https://login-test.kilo.ai https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://widget.usepylon.com https://assets.churnkey.co;
+        connect-src ''self'' https://auth.kilo.ai https://us.i.posthog.com https://us-assets.i.posthog.com
+        https://api.stripe.com https://r.stripe.com https://m.stripe.com https://checkout.stripe.com
+        https://utt.impactcdn.com https://cdn.jsdelivr.net https://unpkg.com https://widget.usepylon.com
+        https://assets.churnkey.co https://api.churnkey.co https://*.churnkey.co https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com
+        wss://cloud-agent-next.kilosessions.ai wss://ingest.kilosessions.ai; img-src
+        ''self'' data: blob: https://lh3.googleusercontent.com https://avatars.githubusercontent.com
+        https://secure.gravatar.com https://gravatar.com https://media.licdn.com https://cdn.discordapp.com
+        https://gitlab.com https://*.stripe.com https://www.googletagmanager.com https://utt.impactcdn.com
+        https://widget.usepylon.com https://assets.churnkey.co https://*.churnkey.co
+        https://www.gravatar.com https://openrouter.ai https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com;
+        style-src ''self'' ''unsafe-inline''; font-src ''self'' data:; frame-src ''self''
+        https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://www.youtube.com https://widget.usepylon.com
+        https://assets.churnkey.co https://*.churnkey.co; worker-src ''self'' blob:;
+        media-src ''self'' blob:; manifest-src ''self'''
+      Content-Type:
+      - application/json
+      Cross-Origin-Embedder-Policy-Report-Only:
+      - require-corp
+      Cross-Origin-Opener-Policy:
+      - same-origin
+      Cross-Origin-Resource-Policy:
+      - same-origin
+      Date:
+      - Sun, 22 Nov 2026 07:29:43 GMT
+      Permissions-Policy:
+      - geolocation=(self), camera=(), microphone=()
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Server:
+      - Vercel
+      Set-Cookie:
+      - _vcrr_29a0f54ab1d200c5=dpl_Dd7o1pJ8NFj88Mzcw7txWejkcHNT|0.2317; Path=/; Secure;
+        HttpOnly; SameSite=None
+      - _vcrr_99197b56da7577df=dpl_4FNvQgM2PZYvS4uuJbYL421KeGn8|0.8835; Path=/; Secure;
+        HttpOnly; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Matched-Path:
+      - "/api/v1/[...path]"
+      X-Vercel-Cache:
+      - MISS
+      X-Vercel-Id:
+      - syd1:syd1:syd1::sfo1::p8h57-1795332583339-73ab6184c148
+      X-Xss-Protection:
+      - '0'
+      Transfer-Encoding:
+      - chunked
+    body:
+      encoding: ASCII-8BIT
+      string: '{"id":"gen_01M812JCFXFZY9TGXRDKJGFFB7","object":"chat.completion","created":1795332597,"model":"anthropic/claude-haiku-5.5","choices":[{"index":0,"message":{"role":"assistant","content":"{\"merchants\":
+        [{\"transaction_id\": \"004ed900-356f-5a36-b16f-90404293493f\", \"business_name\":
+        null, \"business_url\": null}, {\"transaction_id\": \"008a3b53-a18d-51b2-a8ca-c1174f3edf44\",
+        \"business_name\": \"Apple\", \"business_url\": \"apple.com\"}, {\"transaction_id\":
+        \"046b44d6-5d4c-549f-a9a0-e61afae04974\", \"business_name\": \"Equinox\",
+        \"business_url\": \"equinox.com\"}, {\"transaction_id\": \"04a950b7-7b06-5cbb-92c9-40904f3c9d76\",
+        \"business_name\": \"Whole Foods Market\", \"business_url\": \"wholefoodsmarket.com\"},
+        {\"transaction_id\": \"05abfe9b-c304-5823-8303-f3dff2dac065\", \"business_name\":
+        \"Disney+\", \"business_url\": \"disneyplus.com\"}, {\"transaction_id\": \"075edfd4-94ee-5641-8c6b-2649225d37d8\",
+        \"business_name\": \"Olive Garden\", \"business_url\": \"olivegarden.com\"},
+        {\"transaction_id\": \"0de43af5-ed37-5f6f-91ea-59b59f4aacde\", \"business_name\":
+        \"Netflix\", \"business_url\": \"netflix.com\"}, {\"transaction_id\": \"0eada96b-e634-5ccf-8d62-95642693c211\",
+        \"business_name\": \"StubHub\", \"business_url\": \"stubhub.com\"}, {\"transaction_id\":
+        \"12b63aca-3309-5460-aa85-6afc51661a22\", \"business_name\": null, \"business_url\":
+        null}, {\"transaction_id\": \"12e7b02e-00b8-5f03-bfe3-d7261acd0087\", \"business_name\":
+        \"Grubhub\", \"business_url\": \"grubhub.com\"}, {\"transaction_id\": \"156fa152-92cb-5b54-99ed-d90a83ee801d\",
+        \"business_name\": \"Hilton\", \"business_url\": \"hilton.com\"}, {\"transaction_id\":
+        \"15ea7e75-c532-5c75-be29-e89865bdb1a0\", \"business_name\": \"Spotify\",
+        \"business_url\": \"spotify.com\"}, {\"transaction_id\": \"176ec0f6-c755-55fc-b80f-24584feaf2c5\",
+        \"business_name\": \"Steam\", \"business_url\": \"steampowered.com\"}, {\"transaction_id\":
+        \"19d3ca4b-7f0f-526d-865d-164cd3ffccfe\", \"business_name\": \"Starbucks\",
+        \"business_url\": \"starbucks.com\"}, {\"transaction_id\": \"1b55423f-5e3e-5f40-afa8-c640f4a21d9e\",
+        \"business_name\": \"Sam''s Club\", \"business_url\": \"samsclub.com\"}, {\"transaction_id\":
+        \"1c780da6-2565-5960-b3da-e78e6e82e170\", \"business_name\": \"Wayfair\",
+        \"business_url\": \"wayfair.com\"}, {\"transaction_id\": \"1f1327aa-14cc-50dc-85c9-7a39f4cfc5be\",
+        \"business_name\": \"Publix\", \"business_url\": \"publix.com\"}, {\"transaction_id\":
+        \"20409c45-e021-5f39-be6f-2c533c5b7171\", \"business_name\": \"Lyft\", \"business_url\":
+        \"lyft.com\"}, {\"transaction_id\": \"220af846-e6b5-5a4d-8ba0-3b1856e9cab7\",
+        \"business_name\": null, \"business_url\": null}, {\"transaction_id\": \"25261c25-fc50-5b7d-8554-ac911e9b6c15\",
+        \"business_name\": \"Target\", \"business_url\": \"target.com\"}, {\"transaction_id\":
+        \"25c3e53a-694d-5c23-8d7d-207a5d0128ea\", \"business_name\": \"Orangetheory
+        Fitness\", \"business_url\": \"orangetheory.com\"}, {\"transaction_id\": \"27fb1547-14f1-5c77-a5a8-1324e49c4cf3\",
+        \"business_name\": \"AT&T\", \"business_url\": \"att.com\"}, {\"transaction_id\":
+        \"281d430e-3b6c-5606-83a0-77158ca7a7cd\", \"business_name\": \"Paramount+\",
+        \"business_url\": \"paramountplus.com\"}, {\"transaction_id\": \"2b8933ee-ff18-5d99-b3e8-325442f2da3c\",
+        \"business_name\": null, \"business_url\": null}, {\"transaction_id\": \"2c73c725-90ce-5a67-bbfd-b991ecb6a890\",
+        \"business_name\": \"Hulu\", \"business_url\": \"hulu.com\"}]}","reasoning_details":[{"type":"reasoning.text","text":"","signature":"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","format":"anthropic-claude-v1","index":0}]},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":3161,"completion_tokens":2597,"total_tokens":5758,"cost":0.001694,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0.001693525,"upstream_inference_prompt_cost":0,"upstream_inference_completions_cost":0},"completion_tokens_details":{"reasoning_tokens":1077,"image_tokens":0},"cache_creation_input_tokens":3157},"system_fingerprint":"fp_0a2a9z8d23","generationId":"gen_01M812JCFXFZY9TGXRDKJGFFB7"}'
+  recorded_at: Sun, 22 Nov 2026 07:29:57 GMT
+- request:
+    method: post
+    uri: https://api.kilo.ai/api/gateway/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"anthropic/claude-haiku-5.5","messages":[{"role":"system","content":"Detect
+        business names and websites from transaction descriptions. Return JSON only.\n\nRules:\n1.
+        Match transaction_id exactly from input\n2. Return business_name and business_url
+        for known businesses\n3. Return \"null\" for both if uncertain or generic
+        (e.g. \"Paycheck\", \"Local diner\")\n4. Don''t include \"www.\" in URLs (use
+        \"amazon.com\" not \"www.amazon.com\")\n5. Favor \"null\" over guessing -
+        only return values if 80%+ confident\n\nExample output format:\n{\"merchants\":
+        [{\"transaction_id\": \"txn_001\", \"business_name\": \"Amazon\", \"business_url\":
+        \"amazon.com\"}]}\n"},{"role":"user","content":"USER''S KNOWN MERCHANTS: McDonald''s,
+        Starbucks, Amazon, Netflix, Uber, Spotify, Target, Costco, Apple, Google\n\nTRANSACTIONS
+        TO ANALYZE:\n- ID: 2d634bc9-ba84-563e-a4dd-7db66416955d, Description: \"SHELL
+        OIL 573849234\"\n- ID: 2f32dafe-1eae-570e-90ab-65cfe6698fe7, Description:
+        \"VENMO *PIZZA PLACE\"\n- ID: 33bc92f6-1af5-5466-aec6-b625e5ce967a, Description:
+        \"DELTA AIR LINES\"\n- ID: 351b0e29-de2a-5eb3-931a-7662c6ae0109, Description:
+        \"MCDONALD''S #12345 SPRINGFIELD IL\"\n- ID: 3bfaa116-0b18-53fe-95f7-54c1edb326cb,
+        Description: \"APPLE.COM/BILL\"\n- ID: 3d3f3835-e6cc-5d6b-8b50-5abcdfbfab2c,
+        Description: \"YOUTUBE PREMIUM\"\n- ID: 468c8908-461b-5c42-8477-fc5dee40b445,
+        Description: \"COSTCO.COM\"\n- ID: 4a2f09c2-0e44-510a-a5b0-3d9b34afd1c9, Description:
+        \"AIRBNB *HMQT5J6QQJ\"\n- ID: 4a4f05b4-d9bf-5578-ba98-c241e433485e, Description:
+        \"ACH WITHDRAWAL\"\n- ID: 4d3d5caa-02bf-5123-be6a-3cd736d76259, Description:
+        \"BURGER KING #456\"\n- ID: 50928aab-da37-5ba8-9bea-730e19ccf13c, Description:
+        \"PLANET FITNESS MONTHLY\"\n- ID: 58b147fb-d86b-54e7-b9d4-dc202ec499e9, Description:
+        \"SUBWAY #12345\"\n- ID: 59eeaead-6359-5581-8a4e-2e01d3a65ccd, Description:
+        \"P.F. CHANGS #234\"\n- ID: 615984c3-4ef9-50ac-b950-c9df82521fa8, Description:
+        \"IKEA US EAST LLC\"\n- ID: 625e51a5-b3a2-51c6-94cf-0c9759a0e1eb, Description:
+        \"ATM WITHDRAWAL 12345\"\n- ID: 631de1b9-b9c6-57d9-9802-c84de4e18c09, Description:
+        \"COSTCO WHSE #5678\"\n- ID: 6326909c-9a46-5b26-a9c0-957ce39515e1, Description:
+        \"ONLINE TRANSFER TO CHK 1234\"\n- ID: 6362e100-3de4-57f6-832c-985a561f3966,
+        Description: \"SERVICE CHARGE\"\n- ID: 658cd900-3003-5c6d-8d1b-ee0242cfcf20,
+        Description: \"AMAZON PRIME*1A2B3C\"\n- ID: 6a787922-ba9b-508d-be70-299412290ccd,
+        Description: \"DOORDASH*CHIPOTLE\"\n- ID: 6edcee98-8f05-5e37-b19b-04b0dac11c5e,
+        Description: \"RUTH''S CHRIS STEAK\"\n- ID: 71b32b1b-c508-5876-834b-8bb2e6e06664,
+        Description: \"UBEREATS *UBER EATS\"\n- ID: 71f61961-2eaf-55fa-8dff-5cc58b7feb12,
+        Description: \"VERIZON WIRELESS\"\n- ID: 757f1f05-67d4-5bd1-92ce-0005f86d313a,
+        Description: \"GOOGLE *STORAGE\"\n- ID: 770eaabe-4045-552c-ad7e-1d99e15f6f3e,
+        Description: \"UBER *TRIP HELP.UBER.COM\"\n\nEXAMPLES of correct merchant
+        detection:\n- \"AMAZON.COM*1A2B3C\" → business_name: \"Amazon\", business_url:
+        \"amazon.com\"\n- \"STARBUCKS STORE #9876\" → business_name: \"Starbucks\",
+        business_url: \"starbucks.com\"\n- \"NETFLIX.COM\" → business_name: \"Netflix\",
+        business_url: \"netflix.com\"\n- \"UBER *TRIP\" → business_name: \"Uber\",
+        business_url: \"uber.com\"\n- \"ACH WITHDRAWAL\" → business_name: \"null\",
+        business_url: \"null\" (generic)\n- \"LOCAL DINER\" → business_name: \"null\",
+        business_url: \"null\" (generic/unknown)\n- \"POS DEBIT 12345\" → business_name:
+        \"null\", business_url: \"null\" (generic)\n\nIMPORTANT:\n- Return \"null\"
+        (as a string) for BOTH name and URL if you cannot confidently identify the
+        business\n- Don''t include \"www.\" in URLs\n- Generic descriptions like \"Paycheck\",
+        \"Transfer\", \"ATM\" should return \"null\"\n\nRespond with ONLY this JSON
+        format (no other text):\n{\"merchants\": [{\"transaction_id\": \"...\", \"business_name\":
+        \"...\", \"business_url\": \"...\"}]}\n"}],"stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"auto_detect_personal_finance_merchants","schema":{"type":"object","properties":{"merchants":{"type":"array","description":"An
+        array of auto-detected merchant businesses for each transaction","items":{"type":"object","properties":{"transaction_id":{"type":"string","description":"The
+        internal ID of the original transaction","enum":["2d634bc9-ba84-563e-a4dd-7db66416955d","2f32dafe-1eae-570e-90ab-65cfe6698fe7","33bc92f6-1af5-5466-aec6-b625e5ce967a","351b0e29-de2a-5eb3-931a-7662c6ae0109","3bfaa116-0b18-53fe-95f7-54c1edb326cb","3d3f3835-e6cc-5d6b-8b50-5abcdfbfab2c","468c8908-461b-5c42-8477-fc5dee40b445","4a2f09c2-0e44-510a-a5b0-3d9b34afd1c9","4a4f05b4-d9bf-5578-ba98-c241e433485e","4d3d5caa-02bf-5123-be6a-3cd736d76259","50928aab-da37-5ba8-9bea-730e19ccf13c","58b147fb-d86b-54e7-b9d4-dc202ec499e9","59eeaead-6359-5581-8a4e-2e01d3a65ccd","615984c3-4ef9-50ac-b950-c9df82521fa8","625e51a5-b3a2-51c6-94cf-0c9759a0e1eb","631de1b9-b9c6-57d9-9802-c84de4e18c09","6326909c-9a46-5b26-a9c0-957ce39515e1","6362e100-3de4-57f6-832c-985a561f3966","658cd900-3003-5c6d-8d1b-ee0242cfcf20","6a787922-ba9b-508d-be70-299412290ccd","6edcee98-8f05-5e37-b19b-04b0dac11c5e","71b32b1b-c508-5876-834b-8bb2e6e06664","71f61961-2eaf-55fa-8dff-5cc58b7feb12","757f1f05-67d4-5bd1-92ce-0005f86d313a","770eaabe-4045-552c-ad7e-1d99e15f6f3e"]},"business_name":{"type":["string","null"],"description":"The
+        detected business name of the transaction, or `null` if uncertain"},"business_url":{"type":["string","null"],"description":"The
+        URL of the detected business, or `null` if uncertain"}},"required":["transaction_id","business_name","business_url"],"additionalProperties":false}}},"required":["merchants"],"additionalProperties":false},"strict":true}}}'
+    headers:
+      X-Kilocode-Organizationid:
+      - "<OPENAI_COMPATIBLE_X_KILOCODE_ORGANIZATIONID>"
+      User-Agent:
+      - Faraday v2.15.1
+      Authorization:
+      - Bearer <OPENAI_ACCESS_TOKEN>
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Cache-Control:
+      - no-cache, no-transform
+      Content-Security-Policy-Report-Only:
+      - 'default-src ''self''; base-uri ''self''; object-src ''none''; frame-ancestors
+        ''self''; form-action ''self''; script-src ''self'' ''unsafe-inline'' ''wasm-unsafe-eval''
+        https://www.googletagmanager.com https://utt.impactcdn.com https://login.kilo.ai
+        https://login-test.kilo.ai https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://widget.usepylon.com https://assets.churnkey.co;
+        connect-src ''self'' https://auth.kilo.ai https://us.i.posthog.com https://us-assets.i.posthog.com
+        https://api.stripe.com https://r.stripe.com https://m.stripe.com https://checkout.stripe.com
+        https://utt.impactcdn.com https://cdn.jsdelivr.net https://unpkg.com https://widget.usepylon.com
+        https://assets.churnkey.co https://api.churnkey.co https://*.churnkey.co https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com
+        wss://cloud-agent-next.kilosessions.ai wss://ingest.kilosessions.ai; img-src
+        ''self'' data: blob: https://lh3.googleusercontent.com https://avatars.githubusercontent.com
+        https://secure.gravatar.com https://gravatar.com https://media.licdn.com https://cdn.discordapp.com
+        https://gitlab.com https://*.stripe.com https://www.googletagmanager.com https://utt.impactcdn.com
+        https://widget.usepylon.com https://assets.churnkey.co https://*.churnkey.co
+        https://www.gravatar.com https://openrouter.ai https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com;
+        style-src ''self'' ''unsafe-inline''; font-src ''self'' data:; frame-src ''self''
+        https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://www.youtube.com https://widget.usepylon.com
+        https://assets.churnkey.co https://*.churnkey.co; worker-src ''self'' blob:;
+        media-src ''self'' blob:; manifest-src ''self'''
+      Content-Type:
+      - application/json
+      Cross-Origin-Embedder-Policy-Report-Only:
+      - require-corp
+      Cross-Origin-Opener-Policy:
+      - same-origin
+      Cross-Origin-Resource-Policy:
+      - same-origin
+      Date:
+      - Sun, 22 Nov 2026 07:30:00 GMT
+      Permissions-Policy:
+      - geolocation=(self), camera=(), microphone=()
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Server:
+      - Vercel
+      Set-Cookie:
+      - _vcrr_29a0f54ab1d200c5=dpl_Dd7o1pJ8NFj88Mzcw7txWejkcHNT|0.2317; Path=/; Secure;
+        HttpOnly; SameSite=None
+      - _vcrr_99197b56da7577df=dpl_4FNvQgM2PZYvS4uuJbYL421KeGn8|0.8835; Path=/; Secure;
+        HttpOnly; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Matched-Path:
+      - "/api/v1/[...path]"
+      X-Vercel-Cache:
+      - MISS
+      X-Vercel-Id:
+      - syd1:syd1:syd1::sfo1::b9bfq-1795332600840-3480aa739814
+      X-Xss-Protection:
+      - '0'
+      Transfer-Encoding:
+      - chunked
+    body:
+      encoding: ASCII-8BIT
+      string: '{"id":"gen_01M812JXJG8D6XH4VBXJGFYBAC","object":"chat.completion","created":1795332613,"model":"anthropic/claude-haiku-5.5","choices":[{"index":0,"message":{"role":"assistant","content":"{\"merchants\":
+        [{\"transaction_id\": \"2d634bc9-ba84-563e-a4dd-7db66416955d\", \"business_name\":
+        \"Shell\", \"business_url\": \"shell.com\"}, {\"transaction_id\": \"2f32dafe-1eae-570e-90ab-65cfe6698fe7\",
+        \"business_name\": null, \"business_url\": null}, {\"transaction_id\": \"33bc92f6-1af5-5466-aec6-b625e5ce967a\",
+        \"business_name\": \"Delta Air Lines\", \"business_url\": \"delta.com\"},
+        {\"transaction_id\": \"351b0e29-de2a-5eb3-931a-7662c6ae0109\", \"business_name\":
+        \"McDonald''s\", \"business_url\": \"mcdonalds.com\"}, {\"transaction_id\":
+        \"3bfaa116-0b18-53fe-95f7-54c1edb326cb\", \"business_name\": \"Apple\", \"business_url\":
+        \"apple.com\"}, {\"transaction_id\": \"3d3f3835-e6cc-5d6b-8b50-5abcdfbfab2c\",
+        \"business_name\": \"YouTube\", \"business_url\": \"youtube.com\"}, {\"transaction_id\":
+        \"468c8908-461b-5c42-8477-fc5dee40b445\", \"business_name\": \"Costco\", \"business_url\":
+        \"costco.com\"}, {\"transaction_id\": \"4a2f09c2-0e44-510a-a5b0-3d9b34afd1c9\",
+        \"business_name\": \"Airbnb\", \"business_url\": \"airbnb.com\"}, {\"transaction_id\":
+        \"4a4f05b4-d9bf-5578-ba98-c241e433485e\", \"business_name\": null, \"business_url\":
+        null}, {\"transaction_id\": \"4d3d5caa-02bf-5123-be6a-3cd736d76259\", \"business_name\":
+        \"Burger King\", \"business_url\": \"burgerking.com\"}, {\"transaction_id\":
+        \"50928aab-da37-5ba8-9bea-730e19ccf13c\", \"business_name\": \"Planet Fitness\",
+        \"business_url\": \"planetfitness.com\"}, {\"transaction_id\": \"58b147fb-d86b-54e7-b9d4-dc202ec499e9\",
+        \"business_name\": \"Subway\", \"business_url\": \"subway.com\"}, {\"transaction_id\":
+        \"59eeaead-6359-5581-8a4e-2e01d3a65ccd\", \"business_name\": \"P.F. Chang''s\",
+        \"business_url\": \"pfchangs.com\"}, {\"transaction_id\": \"615984c3-4ef9-50ac-b950-c9df82521fa8\",
+        \"business_name\": \"IKEA\", \"business_url\": \"ikea.com\"}, {\"transaction_id\":
+        \"625e51a5-b3a2-51c6-94cf-0c9759a0e1eb\", \"business_name\": null, \"business_url\":
+        null}, {\"transaction_id\": \"631de1b9-b9c6-57d9-9802-c84de4e18c09\", \"business_name\":
+        \"Costco\", \"business_url\": \"costco.com\"}, {\"transaction_id\": \"6326909c-9a46-5b26-a9c0-957ce39515e1\",
+        \"business_name\": null, \"business_url\": null}, {\"transaction_id\": \"6362e100-3de4-57f6-832c-985a561f3966\",
+        \"business_name\": null, \"business_url\": null}, {\"transaction_id\": \"658cd900-3003-5c6d-8d1b-ee0242cfcf20\",
+        \"business_name\": \"Amazon\", \"business_url\": \"amazon.com\"}, {\"transaction_id\":
+        \"6a787922-ba9b-508d-be70-299412290ccd\", \"business_name\": \"Chipotle\",
+        \"business_url\": \"chipotle.com\"}, {\"transaction_id\": \"6edcee98-8f05-5e37-b19b-04b0dac11c5e\",
+        \"business_name\": \"Ruth''s Chris Steak House\", \"business_url\": \"ruthschris.com\"},
+        {\"transaction_id\": \"71b32b1b-c508-5876-834b-8bb2e6e06664\", \"business_name\":
+        \"Uber Eats\", \"business_url\": \"ubereats.com\"}, {\"transaction_id\": \"71f61961-2eaf-55fa-8dff-5cc58b7feb12\",
+        \"business_name\": \"Verizon\", \"business_url\": \"verizon.com\"}, {\"transaction_id\":
+        \"757f1f05-67d4-5bd1-92ce-0005f86d313a\", \"business_name\": \"Google\", \"business_url\":
+        \"google.com\"}, {\"transaction_id\": \"770eaabe-4045-552c-ad7e-1d99e15f6f3e\",
+        \"business_name\": \"Uber\", \"business_url\": \"uber.com\"}]}","reasoning_details":[{"type":"reasoning.text","text":"","signature":"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","format":"anthropic-claude-v1","index":0}]},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":3201,"completion_tokens":2258,"total_tokens":5459,"cost":0.001529,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0.001529025,"upstream_inference_prompt_cost":0,"upstream_inference_completions_cost":0},"completion_tokens_details":{"reasoning_tokens":749,"image_tokens":0},"cache_creation_input_tokens":3197},"system_fingerprint":"fp_mga16l1n99","generationId":"gen_01M812JXJG8D6XH4VBXJGFYBAC"}'
+  recorded_at: Sun, 22 Nov 2026 07:30:14 GMT
+- request:
+    method: post
+    uri: https://api.kilo.ai/api/gateway/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"anthropic/claude-haiku-5.5","messages":[{"role":"system","content":"Detect
+        business names and websites from transaction descriptions. Return JSON only.\n\nRules:\n1.
+        Match transaction_id exactly from input\n2. Return business_name and business_url
+        for known businesses\n3. Return \"null\" for both if uncertain or generic
+        (e.g. \"Paycheck\", \"Local diner\")\n4. Don''t include \"www.\" in URLs (use
+        \"amazon.com\" not \"www.amazon.com\")\n5. Favor \"null\" over guessing -
+        only return values if 80%+ confident\n\nExample output format:\n{\"merchants\":
+        [{\"transaction_id\": \"txn_001\", \"business_name\": \"Amazon\", \"business_url\":
+        \"amazon.com\"}]}\n"},{"role":"user","content":"USER''S KNOWN MERCHANTS: McDonald''s,
+        Starbucks, Amazon, Netflix, Uber, Spotify, Target, Costco, Apple, Google\n\nTRANSACTIONS
+        TO ANALYZE:\n- ID: 7b856f62-edbe-5598-ba11-de59a8d80f9f, Description: \"TRADER
+        JOE''S #567\"\n- ID: 7f87e3fc-51ce-5b4e-a515-57c1d485a89f, Description: \"CVS/PHARMACY
+        #4567\"\n- ID: 83fe51c1-b9e8-5195-b077-2f386d255abc, Description: \"SOUTHWEST
+        AIRLINES\"\n- ID: 872de5ba-43c6-5490-a607-5d7f2a4e2dc2, Description: \"TACO
+        BELL #789\"\n- ID: 87430e29-b03c-5285-b07a-2fb519633e8a, Description: \"RITE
+        AID #1234\"\n- ID: 8798ff71-6f8d-5ed8-9c58-f706167cc455, Description: \"PAYPAL
+        *JOHNSMITH\"\n- ID: 8a9ed9e4-6be4-5456-975c-72a32370478b, Description: \"TICKETMASTER
+        *EVENT\"\n- ID: 8c6fb686-8aaf-5dbd-b4a4-8ce7b91e96de, Description: \"WENDYS
+        #456\"\n- ID: 8d5b2444-7458-5ecd-a756-c89ffdd1a7a0, Description: \"KROGER
+        #456\"\n- ID: 8d6d0805-8acc-5a06-9e00-96b753db11d1, Description: \"ETSY.COM\"\n-
+        ID: 8de9e5b1-ed70-53e1-9048-1474ac42e6ab, Description: \"ZARA USA INC\"\n-
+        ID: 8f1d2cc3-e9ff-5f49-a56b-af84c1cac316, Description: \"MICROSOFT*OFFICE
+        365\"\n- ID: 9001cf8c-befb-5db9-afde-fb8ea3fcc0c2, Description: \"HBO MAX\"\n-
+        ID: 91807da1-32ab-58b6-881c-07209f624fe9, Description: \"PEETS COFFEE #456\"\n-
+        ID: 92ba6c5b-3d35-5ef8-8022-f480c368dfbf, Description: \"WIRE TRANSFER OUT\"\n-
+        ID: 980be8a2-b2ac-5529-a002-57feb2d621e8, Description: \"AMC THEATRES #1234\"\n-
+        ID: 9de905ef-7206-5a46-9eb2-22a76e83cfd7, Description: \"AMAZON.COM*1A2B3C4D
+        AMZN.COM/BILL\"\n- ID: a10d3a4c-90e2-5872-be11-cbdaff7c9743, Description:
+        \"WALGREENS #12345\"\n- ID: a6e08b03-0894-517d-8445-e61cea7fbd4e, Description:
+        \"BP#1234567\"\n- ID: a7e469ac-914e-502f-bb3e-03d813c219f8, Description: \"HERTZ
+        RENT-A-CAR\"\n- ID: ac058dd7-3b98-56d9-af97-db5140b5ad9e, Description: \"CHECK
+        #1234\"\n- ID: acef61a3-d15b-5321-b21b-d2fe57a49389, Description: \"BEST BUY
+        00000456\"\n- ID: af49aa46-a170-541e-af49-cbd82bdddfaf, Description: \"HYATT
+        REGENCY\"\n- ID: b000bb6f-150a-5235-b1d5-d242f9209470, Description: \"APPLE.COM/BILL
+        ONE\"\n- ID: b1c94ac8-de1c-57e9-8256-40cd450a4b2d, Description: \"UNITED AIRLINES
+        0162345678\"\n\nEXAMPLES of correct merchant detection:\n- \"AMAZON.COM*1A2B3C\"
+        → business_name: \"Amazon\", business_url: \"amazon.com\"\n- \"STARBUCKS STORE
+        #9876\" → business_name: \"Starbucks\", business_url: \"starbucks.com\"\n-
+        \"NETFLIX.COM\" → business_name: \"Netflix\", business_url: \"netflix.com\"\n-
+        \"UBER *TRIP\" → business_name: \"Uber\", business_url: \"uber.com\"\n- \"ACH
+        WITHDRAWAL\" → business_name: \"null\", business_url: \"null\" (generic)\n-
+        \"LOCAL DINER\" → business_name: \"null\", business_url: \"null\" (generic/unknown)\n-
+        \"POS DEBIT 12345\" → business_name: \"null\", business_url: \"null\" (generic)\n\nIMPORTANT:\n-
+        Return \"null\" (as a string) for BOTH name and URL if you cannot confidently
+        identify the business\n- Don''t include \"www.\" in URLs\n- Generic descriptions
+        like \"Paycheck\", \"Transfer\", \"ATM\" should return \"null\"\n\nRespond
+        with ONLY this JSON format (no other text):\n{\"merchants\": [{\"transaction_id\":
+        \"...\", \"business_name\": \"...\", \"business_url\": \"...\"}]}\n"}],"stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"auto_detect_personal_finance_merchants","schema":{"type":"object","properties":{"merchants":{"type":"array","description":"An
+        array of auto-detected merchant businesses for each transaction","items":{"type":"object","properties":{"transaction_id":{"type":"string","description":"The
+        internal ID of the original transaction","enum":["7b856f62-edbe-5598-ba11-de59a8d80f9f","7f87e3fc-51ce-5b4e-a515-57c1d485a89f","83fe51c1-b9e8-5195-b077-2f386d255abc","872de5ba-43c6-5490-a607-5d7f2a4e2dc2","87430e29-b03c-5285-b07a-2fb519633e8a","8798ff71-6f8d-5ed8-9c58-f706167cc455","8a9ed9e4-6be4-5456-975c-72a32370478b","8c6fb686-8aaf-5dbd-b4a4-8ce7b91e96de","8d5b2444-7458-5ecd-a756-c89ffdd1a7a0","8d6d0805-8acc-5a06-9e00-96b753db11d1","8de9e5b1-ed70-53e1-9048-1474ac42e6ab","8f1d2cc3-e9ff-5f49-a56b-af84c1cac316","9001cf8c-befb-5db9-afde-fb8ea3fcc0c2","91807da1-32ab-58b6-881c-07209f624fe9","92ba6c5b-3d35-5ef8-8022-f480c368dfbf","980be8a2-b2ac-5529-a002-57feb2d621e8","9de905ef-7206-5a46-9eb2-22a76e83cfd7","a10d3a4c-90e2-5872-be11-cbdaff7c9743","a6e08b03-0894-517d-8445-e61cea7fbd4e","a7e469ac-914e-502f-bb3e-03d813c219f8","ac058dd7-3b98-56d9-af97-db5140b5ad9e","acef61a3-d15b-5321-b21b-d2fe57a49389","af49aa46-a170-541e-af49-cbd82bdddfaf","b000bb6f-150a-5235-b1d5-d242f9209470","b1c94ac8-de1c-57e9-8256-40cd450a4b2d"]},"business_name":{"type":["string","null"],"description":"The
+        detected business name of the transaction, or `null` if uncertain"},"business_url":{"type":["string","null"],"description":"The
+        URL of the detected business, or `null` if uncertain"}},"required":["transaction_id","business_name","business_url"],"additionalProperties":false}}},"required":["merchants"],"additionalProperties":false},"strict":true}}}'
+    headers:
+      X-Kilocode-Organizationid:
+      - "<OPENAI_COMPATIBLE_X_KILOCODE_ORGANIZATIONID>"
+      User-Agent:
+      - Faraday v2.15.1
+      Authorization:
+      - Bearer <OPENAI_ACCESS_TOKEN>
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Cache-Control:
+      - no-cache, no-transform
+      Content-Security-Policy-Report-Only:
+      - 'default-src ''self''; base-uri ''self''; object-src ''none''; frame-ancestors
+        ''self''; form-action ''self''; script-src ''self'' ''unsafe-inline'' ''wasm-unsafe-eval''
+        https://www.googletagmanager.com https://utt.impactcdn.com https://login.kilo.ai
+        https://login-test.kilo.ai https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://widget.usepylon.com https://assets.churnkey.co;
+        connect-src ''self'' https://auth.kilo.ai https://us.i.posthog.com https://us-assets.i.posthog.com
+        https://api.stripe.com https://r.stripe.com https://m.stripe.com https://checkout.stripe.com
+        https://utt.impactcdn.com https://cdn.jsdelivr.net https://unpkg.com https://widget.usepylon.com
+        https://assets.churnkey.co https://api.churnkey.co https://*.churnkey.co https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com
+        wss://cloud-agent-next.kilosessions.ai wss://ingest.kilosessions.ai; img-src
+        ''self'' data: blob: https://lh3.googleusercontent.com https://avatars.githubusercontent.com
+        https://secure.gravatar.com https://gravatar.com https://media.licdn.com https://cdn.discordapp.com
+        https://gitlab.com https://*.stripe.com https://www.googletagmanager.com https://utt.impactcdn.com
+        https://widget.usepylon.com https://assets.churnkey.co https://*.churnkey.co
+        https://www.gravatar.com https://openrouter.ai https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com;
+        style-src ''self'' ''unsafe-inline''; font-src ''self'' data:; frame-src ''self''
+        https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://www.youtube.com https://widget.usepylon.com
+        https://assets.churnkey.co https://*.churnkey.co; worker-src ''self'' blob:;
+        media-src ''self'' blob:; manifest-src ''self'''
+      Content-Type:
+      - application/json
+      Cross-Origin-Embedder-Policy-Report-Only:
+      - require-corp
+      Cross-Origin-Opener-Policy:
+      - same-origin
+      Cross-Origin-Resource-Policy:
+      - same-origin
+      Date:
+      - Sun, 22 Nov 2026 07:30:14 GMT
+      Permissions-Policy:
+      - geolocation=(self), camera=(), microphone=()
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Server:
+      - Vercel
+      Set-Cookie:
+      - _vcrr_29a0f54ab1d200c5=dpl_Dd7o1pJ8NFj88Mzcw7txWejkcHNT|0.2317; Path=/; Secure;
+        HttpOnly; SameSite=None
+      - _vcrr_99197b56da7577df=dpl_4FNvQgM2PZYvS4uuJbYL421KeGn8|0.8835; Path=/; Secure;
+        HttpOnly; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Matched-Path:
+      - "/api/v1/[...path]"
+      X-Vercel-Cache:
+      - MISS
+      X-Vercel-Id:
+      - syd1:syd1:syd1::sfo1::pqwt7-1795332614341-ecfc093cb4d0
+      X-Xss-Protection:
+      - '0'
+      Transfer-Encoding:
+      - chunked
+    body:
+      encoding: ASCII-8BIT
+      string: '{"id":"gen_01M812KAKV8RGZNZ85F4BA11A2","object":"chat.completion","created":1795332628,"model":"anthropic/claude-haiku-5.5","choices":[{"index":0,"message":{"role":"assistant","content":"{\"merchants\":
+        [{\"transaction_id\": \"7b856f62-edbe-5598-ba11-de59a8d80f9f\", \"business_name\":
+        \"Trader Joe''s\", \"business_url\": \"traderjoes.com\"}, {\"transaction_id\":
+        \"7f87e3fc-51ce-5b4e-a515-57c1d485a89f\", \"business_name\": \"CVS Pharmacy\",
+        \"business_url\": \"cvs.com\"}, {\"transaction_id\": \"83fe51c1-b9e8-5195-b077-2f386d255abc\",
+        \"business_name\": \"Southwest Airlines\", \"business_url\": \"southwest.com\"},
+        {\"transaction_id\": \"872de5ba-43c6-5490-a607-5d7f2a4e2dc2\", \"business_name\":
+        \"Taco Bell\", \"business_url\": \"tacobell.com\"}, {\"transaction_id\": \"87430e29-b03c-5285-b07a-2fb519633e8a\",
+        \"business_name\": \"Rite Aid\", \"business_url\": \"riteaid.com\"}, {\"transaction_id\":
+        \"8798ff71-6f8d-5ed8-9c58-f706167cc455\", \"business_name\": null, \"business_url\":
+        null}, {\"transaction_id\": \"8a9ed9e4-6be4-5456-975c-72a32370478b\", \"business_name\":
+        \"Ticketmaster\", \"business_url\": \"ticketmaster.com\"}, {\"transaction_id\":
+        \"8c6fb686-8aaf-5dbd-b4a4-8ce7b91e96de\", \"business_name\": \"Wendy''s\",
+        \"business_url\": \"wendys.com\"}, {\"transaction_id\": \"8d5b2444-7458-5ecd-a756-c89ffdd1a7a0\",
+        \"business_name\": \"Kroger\", \"business_url\": \"kroger.com\"}, {\"transaction_id\":
+        \"8d6d0805-8acc-5a06-9e00-96b753db11d1\", \"business_name\": \"Etsy\", \"business_url\":
+        \"etsy.com\"}, {\"transaction_id\": \"8de9e5b1-ed70-53e1-9048-1474ac42e6ab\",
+        \"business_name\": \"Zara\", \"business_url\": \"zara.com\"}, {\"transaction_id\":
+        \"8f1d2cc3-e9ff-5f49-a56b-af84c1cac316\", \"business_name\": \"Microsoft Office
+        365\", \"business_url\": \"microsoft.com\"}, {\"transaction_id\": \"9001cf8c-befb-5db9-afde-fb8ea3fcc0c2\",
+        \"business_name\": \"HBO Max\", \"business_url\": \"max.com\"}, {\"transaction_id\":
+        \"91807da1-32ab-58b6-881c-07209f624fe9\", \"business_name\": \"Peet''s Coffee\",
+        \"business_url\": \"peets.com\"}, {\"transaction_id\": \"92ba6c5b-3d35-5ef8-8022-f480c368dfbf\",
+        \"business_name\": null, \"business_url\": null}, {\"transaction_id\": \"980be8a2-b2ac-5529-a002-57feb2d621e8\",
+        \"business_name\": \"AMC Theatres\", \"business_url\": \"amctheatres.com\"},
+        {\"transaction_id\": \"9de905ef-7206-5a46-9eb2-22a76e83cfd7\", \"business_name\":
+        \"Amazon\", \"business_url\": \"amazon.com\"}, {\"transaction_id\": \"a10d3a4c-90e2-5872-be11-cbdaff7c9743\",
+        \"business_name\": \"Walgreens\", \"business_url\": \"walgreens.com\"}, {\"transaction_id\":
+        \"a6e08b03-0894-517d-8445-e61cea7fbd4e\", \"business_name\": \"BP\", \"business_url\":
+        \"bp.com\"}, {\"transaction_id\": \"a7e469ac-914e-502f-bb3e-03d813c219f8\",
+        \"business_name\": \"Hertz\", \"business_url\": \"hertz.com\"}, {\"transaction_id\":
+        \"ac058dd7-3b98-56d9-af97-db5140b5ad9e\", \"business_name\": null, \"business_url\":
+        null}, {\"transaction_id\": \"acef61a3-d15b-5321-b21b-d2fe57a49389\", \"business_name\":
+        \"Best Buy\", \"business_url\": \"bestbuy.com\"}, {\"transaction_id\": \"af49aa46-a170-541e-af49-cbd82bdddfaf\",
+        \"business_name\": \"Hyatt\", \"business_url\": \"hyatt.com\"}, {\"transaction_id\":
+        \"b000bb6f-150a-5235-b1d5-d242f9209470\", \"business_name\": \"Apple\", \"business_url\":
+        \"apple.com\"}, {\"transaction_id\": \"b1c94ac8-de1c-57e9-8256-40cd450a4b2d\",
+        \"business_name\": \"United Airlines\", \"business_url\": \"united.com\"}]}","reasoning_details":[{"type":"reasoning.text","text":"","signature":"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","format":"anthropic-claude-v1","index":0}]},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":3161,"completion_tokens":2404,"total_tokens":5565,"cost":0.001597,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0.001597025,"upstream_inference_prompt_cost":0,"upstream_inference_completions_cost":0},"completion_tokens_details":{"reasoning_tokens":846,"image_tokens":0},"cache_creation_input_tokens":3157},"system_fingerprint":"fp_7u6c83nylj","generationId":"gen_01M812KAKV8RGZNZ85F4BA11A2"}'
+  recorded_at: Sun, 22 Nov 2026 07:30:28 GMT
+- request:
+    method: post
+    uri: https://api.kilo.ai/api/gateway/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"anthropic/claude-haiku-5.5","messages":[{"role":"system","content":"Detect
+        business names and websites from transaction descriptions. Return JSON only.\n\nRules:\n1.
+        Match transaction_id exactly from input\n2. Return business_name and business_url
+        for known businesses\n3. Return \"null\" for both if uncertain or generic
+        (e.g. \"Paycheck\", \"Local diner\")\n4. Don''t include \"www.\" in URLs (use
+        \"amazon.com\" not \"www.amazon.com\")\n5. Favor \"null\" over guessing -
+        only return values if 80%+ confident\n\nExample output format:\n{\"merchants\":
+        [{\"transaction_id\": \"txn_001\", \"business_name\": \"Amazon\", \"business_url\":
+        \"amazon.com\"}]}\n"},{"role":"user","content":"USER''S KNOWN MERCHANTS: McDonald''s,
+        Starbucks, Amazon, Netflix, Uber, Spotify, Target, Costco, Apple, Google\n\nTRANSACTIONS
+        TO ANALYZE:\n- ID: b56e1dbf-4239-5060-abfa-f07a0a3c666e, Description: \"PANERA
+        BREAD #567\"\n- ID: b5e90a6d-dd5b-5e0e-a1d5-12bc771f15c5, Description: \"CHEESECAKE
+        FACTORY\"\n- ID: b66d61e6-cd29-5297-9e69-883f82869b83, Description: \"MARRIOTT
+        HOTELS NYC\"\n- ID: bba10638-290c-59c8-a82d-1cc2e00f4f55, Description: \"VOID
+        TRANSACTION\"\n- ID: c37c3301-6d58-59ab-8e4c-d91cf9995af5, Description: \"7-ELEVEN
+        #34567\"\n- ID: c737dff1-10f1-5140-8560-e5ec35ff6b9e, Description: \"LA FITNESS
+        CLUB\"\n- ID: d015e320-65c7-5c7b-922b-68e39e1ad289, Description: \"MISC SERVICES
+        LLC\"\n- ID: e4fb276b-1bcf-5dac-afa3-a8c49ef91f94, Description: \"CHIPOTLE
+        ONLINE\"\n- ID: ec60f15f-1920-5e45-b6c3-134928812179, Description: \"XFINITY
+        INTERNET\"\n- ID: ee915277-3411-543c-93f7-5d525c55c1c8, Description: \"INSTACART*SAFEWAY\"\n-
+        ID: f71bf98a-7885-585f-b9b4-22002308a244, Description: \"DUNKIN #12345\"\n-
+        ID: f939a45c-05b6-53d4-9d7d-157691b32f9c, Description: \"EXXONMOBIL 12345\"\n-
+        ID: fa3168f8-7347-534d-8c7d-58ebbb2fe1f1, Description: \"CHEVRON STATION #1234\"\n-
+        ID: fb129ec2-e7e3-5af1-a431-9e99e3b5e3fb, Description: \"WALMART SUPERCENTER
+        #1234\"\n- ID: fb91f23e-061f-57d5-b725-d8ef1f8d276c, Description: \"H&M HENNES
+        MAURITZ\"\n\nEXAMPLES of correct merchant detection:\n- \"AMAZON.COM*1A2B3C\"
+        → business_name: \"Amazon\", business_url: \"amazon.com\"\n- \"STARBUCKS STORE
+        #9876\" → business_name: \"Starbucks\", business_url: \"starbucks.com\"\n-
+        \"NETFLIX.COM\" → business_name: \"Netflix\", business_url: \"netflix.com\"\n-
+        \"UBER *TRIP\" → business_name: \"Uber\", business_url: \"uber.com\"\n- \"ACH
+        WITHDRAWAL\" → business_name: \"null\", business_url: \"null\" (generic)\n-
+        \"LOCAL DINER\" → business_name: \"null\", business_url: \"null\" (generic/unknown)\n-
+        \"POS DEBIT 12345\" → business_name: \"null\", business_url: \"null\" (generic)\n\nIMPORTANT:\n-
+        Return \"null\" (as a string) for BOTH name and URL if you cannot confidently
+        identify the business\n- Don''t include \"www.\" in URLs\n- Generic descriptions
+        like \"Paycheck\", \"Transfer\", \"ATM\" should return \"null\"\n\nRespond
+        with ONLY this JSON format (no other text):\n{\"merchants\": [{\"transaction_id\":
+        \"...\", \"business_name\": \"...\", \"business_url\": \"...\"}]}\n"}],"stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"auto_detect_personal_finance_merchants","schema":{"type":"object","properties":{"merchants":{"type":"array","description":"An
+        array of auto-detected merchant businesses for each transaction","items":{"type":"object","properties":{"transaction_id":{"type":"string","description":"The
+        internal ID of the original transaction","enum":["b56e1dbf-4239-5060-abfa-f07a0a3c666e","b5e90a6d-dd5b-5e0e-a1d5-12bc771f15c5","b66d61e6-cd29-5297-9e69-883f82869b83","bba10638-290c-59c8-a82d-1cc2e00f4f55","c37c3301-6d58-59ab-8e4c-d91cf9995af5","c737dff1-10f1-5140-8560-e5ec35ff6b9e","d015e320-65c7-5c7b-922b-68e39e1ad289","e4fb276b-1bcf-5dac-afa3-a8c49ef91f94","ec60f15f-1920-5e45-b6c3-134928812179","ee915277-3411-543c-93f7-5d525c55c1c8","f71bf98a-7885-585f-b9b4-22002308a244","f939a45c-05b6-53d4-9d7d-157691b32f9c","fa3168f8-7347-534d-8c7d-58ebbb2fe1f1","fb129ec2-e7e3-5af1-a431-9e99e3b5e3fb","fb91f23e-061f-57d5-b725-d8ef1f8d276c"]},"business_name":{"type":["string","null"],"description":"The
+        detected business name of the transaction, or `null` if uncertain"},"business_url":{"type":["string","null"],"description":"The
+        URL of the detected business, or `null` if uncertain"}},"required":["transaction_id","business_name","business_url"],"additionalProperties":false}}},"required":["merchants"],"additionalProperties":false},"strict":true}}}'
+    headers:
+      X-Kilocode-Organizationid:
+      - "<OPENAI_COMPATIBLE_X_KILOCODE_ORGANIZATIONID>"
+      User-Agent:
+      - Faraday v2.15.1
+      Authorization:
+      - Bearer <OPENAI_ACCESS_TOKEN>
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Cache-Control:
+      - no-cache, no-transform
+      Content-Security-Policy-Report-Only:
+      - 'default-src ''self''; base-uri ''self''; object-src ''none''; frame-ancestors
+        ''self''; form-action ''self''; script-src ''self'' ''unsafe-inline'' ''wasm-unsafe-eval''
+        https://www.googletagmanager.com https://utt.impactcdn.com https://login.kilo.ai
+        https://login-test.kilo.ai https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://widget.usepylon.com https://assets.churnkey.co;
+        connect-src ''self'' https://auth.kilo.ai https://us.i.posthog.com https://us-assets.i.posthog.com
+        https://api.stripe.com https://r.stripe.com https://m.stripe.com https://checkout.stripe.com
+        https://utt.impactcdn.com https://cdn.jsdelivr.net https://unpkg.com https://widget.usepylon.com
+        https://assets.churnkey.co https://api.churnkey.co https://*.churnkey.co https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com
+        wss://cloud-agent-next.kilosessions.ai wss://ingest.kilosessions.ai; img-src
+        ''self'' data: blob: https://lh3.googleusercontent.com https://avatars.githubusercontent.com
+        https://secure.gravatar.com https://gravatar.com https://media.licdn.com https://cdn.discordapp.com
+        https://gitlab.com https://*.stripe.com https://www.googletagmanager.com https://utt.impactcdn.com
+        https://widget.usepylon.com https://assets.churnkey.co https://*.churnkey.co
+        https://www.gravatar.com https://openrouter.ai https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com;
+        style-src ''self'' ''unsafe-inline''; font-src ''self'' data:; frame-src ''self''
+        https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://www.youtube.com https://widget.usepylon.com
+        https://assets.churnkey.co https://*.churnkey.co; worker-src ''self'' blob:;
+        media-src ''self'' blob:; manifest-src ''self'''
+      Content-Type:
+      - application/json
+      Cross-Origin-Embedder-Policy-Report-Only:
+      - require-corp
+      Cross-Origin-Opener-Policy:
+      - same-origin
+      Cross-Origin-Resource-Policy:
+      - same-origin
+      Date:
+      - Sun, 22 Nov 2026 07:30:28 GMT
+      Permissions-Policy:
+      - geolocation=(self), camera=(), microphone=()
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Server:
+      - Vercel
+      Set-Cookie:
+      - _vcrr_99197b56da7577df=dpl_4FNvQgM2PZYvS4uuJbYL421KeGn8|0.8835; Path=/; Secure;
+        HttpOnly; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Matched-Path:
+      - "/api/v1/[...path]"
+      X-Vercel-Cache:
+      - MISS
+      X-Vercel-Id:
+      - syd1:syd1:syd1::sfo1::mtbfs-1795332628927-6cf1c5f409a8
+      X-Xss-Protection:
+      - '0'
+      Transfer-Encoding:
+      - chunked
+    body:
+      encoding: ASCII-8BIT
+      string: '{"id":"gen_01M812KS3NPECMWTF76NBDMH8T","object":"chat.completion","created":1795332638,"model":"anthropic/claude-haiku-5.5","choices":[{"index":0,"message":{"role":"assistant","content":"{\"merchants\":
+        [{\"transaction_id\": \"b56e1dbf-4239-5060-abfa-f07a0a3c666e\", \"business_name\":
+        \"Panera Bread\", \"business_url\": \"panerabread.com\"}, {\"transaction_id\":
+        \"b5e90a6d-dd5b-5e0e-a1d5-12bc771f15c5\", \"business_name\": \"The Cheesecake
+        Factory\", \"business_url\": \"thecheesecakefactory.com\"}, {\"transaction_id\":
+        \"b66d61e6-cd29-5297-9e69-883f82869b83\", \"business_name\": \"Marriott\",
+        \"business_url\": \"marriott.com\"}, {\"transaction_id\": \"bba10638-290c-59c8-a82d-1cc2e00f4f55\",
+        \"business_name\": null, \"business_url\": null}, {\"transaction_id\": \"c37c3301-6d58-59ab-8e4c-d91cf9995af5\",
+        \"business_name\": \"7-Eleven\", \"business_url\": \"7-eleven.com\"}, {\"transaction_id\":
+        \"c737dff1-10f1-5140-8560-e5ec35ff6b9e\", \"business_name\": \"LA Fitness\",
+        \"business_url\": \"lafitness.com\"}, {\"transaction_id\": \"d015e320-65c7-5c7b-922b-68e39e1ad289\",
+        \"business_name\": null, \"business_url\": null}, {\"transaction_id\": \"e4fb276b-1bcf-5dac-afa3-a8c49ef91f94\",
+        \"business_name\": \"Chipotle\", \"business_url\": \"chipotle.com\"}, {\"transaction_id\":
+        \"ec60f15f-1920-5e45-b6c3-134928812179\", \"business_name\": \"Xfinity\",
+        \"business_url\": \"xfinity.com\"}, {\"transaction_id\": \"ee915277-3411-543c-93f7-5d525c55c1c8\",
+        \"business_name\": \"Instacart\", \"business_url\": \"instacart.com\"}, {\"transaction_id\":
+        \"f71bf98a-7885-585f-b9b4-22002308a244\", \"business_name\": \"Dunkin''\",
+        \"business_url\": \"dunkindonuts.com\"}, {\"transaction_id\": \"f939a45c-05b6-53d4-9d7d-157691b32f9c\",
+        \"business_name\": \"ExxonMobil\", \"business_url\": \"exxonmobil.com\"},
+        {\"transaction_id\": \"fa3168f8-7347-534d-8c7d-58ebbb2fe1f1\", \"business_name\":
+        \"Chevron\", \"business_url\": \"chevron.com\"}, {\"transaction_id\": \"fb129ec2-e7e3-5af1-a431-9e99e3b5e3fb\",
+        \"business_name\": \"Walmart\", \"business_url\": \"walmart.com\"}, {\"transaction_id\":
+        \"fb91f23e-061f-57d5-b725-d8ef1f8d276c\", \"business_name\": \"H&M\", \"business_url\":
+        \"hm.com\"}]}","reasoning_details":[{"type":"reasoning.text","text":"","signature":"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","format":"anthropic-claude-v1","index":0}]},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":2362,"completion_tokens":1560,"total_tokens":3922,"cost":0.001075,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0.00107515,"upstream_inference_prompt_cost":0,"upstream_inference_completions_cost":0},"completion_tokens_details":{"reasoning_tokens":611,"image_tokens":0},"cache_creation_input_tokens":2358},"system_fingerprint":"fp_bu0oyoeude","generationId":"gen_01M812KS3NPECMWTF76NBDMH8T"}'
+  recorded_at: Sun, 22 Nov 2026 07:30:38 GMT
+recorded_with: VCR 6.3.1

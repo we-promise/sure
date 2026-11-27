@@ -31,8 +31,7 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
 
   test "an override the key collapse set aside shows until the next save" do
     admin = users(:family_admin)
-    DebugLogEntry.create!(category: Family::AiPromptable::DROPPED_CATEGORY, level: "warn", message: "dropped", source: "test",
-                          family: admin.family, metadata: { key: "categorize_transactions", text: "My Claude prompt" })
+    admin.family.update!(ai_prompt_overrides: { "dropped" => { "categorize_transactions" => "My Claude prompt" } })
     sign_in admin
 
     get settings_ai_prompts_path

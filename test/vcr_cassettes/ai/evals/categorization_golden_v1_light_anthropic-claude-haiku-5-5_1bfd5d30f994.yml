@@ -1,0 +1,332 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.kilo.ai/api/gateway/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"anthropic/claude-haiku-5.5","messages":[{"role":"system","content":"Categorize
+        transactions into the given categories. Return JSON only. Do not explain your
+        reasoning.\n\nCRITICAL RULES:\n1. Match transaction_id exactly from input\n2.
+        Use EXACT category_name from the provided list, or \"null\" if unsure\n3.
+        Match expense transactions to expense categories only\n4. Match income transactions
+        to income categories only\n5. Return \"null\" if the description is generic/ambiguous
+        (e.g., \"POS DEBIT\", \"ACH WITHDRAWAL\", \"CHECK #1234\")\n6. Prefer MORE
+        SPECIFIC subcategories over general parent categories when available\n\nCATEGORY
+        HIERARCHY NOTES:\n- Use \"Restaurants\" for sit-down restaurants, \"Fast Food\"
+        for quick service chains\n- Use \"Coffee Shops\" for coffee places, \"Food
+        & Drink\" only when type is unclear\n- Use \"Shopping\" for general retail,
+        big-box stores, and online marketplaces\n- Use \"Groceries\" for dedicated
+        grocery stores ONLY\n- For income: use \"Salary\" for payroll/employer deposits,
+        \"Income\" for generic income sources\n\nOutput JSON format only (no markdown,
+        no explanation):\n{\"categorizations\": [{\"transaction_id\": \"...\", \"category_name\":
+        \"...\"}]}\n"},{"role":"user","content":"AVAILABLE CATEGORIES: Income, Salary,
+        Food & Drink, Restaurants, Fast Food, Groceries, Coffee Shops, Shopping, Clothing,
+        Electronics, Transportation, Gas & Fuel, Rideshare, Public Transit, Entertainment,
+        Streaming Services, Utilities, Housing, Rent, Health & Wellness, Pharmacy,
+        Gym & Fitness, Travel, Flights, Hotels, Subscriptions, Personal Care, Gifts
+        & Donations\n\nTRANSACTIONS TO CATEGORIZE:\n- ID: 057442a3-1fa7-590b-9950-064d9c3e74e4,
+        Amount: 89.0, Type: expense, Description: \"TICKETMASTER *EVENT\"\n- ID: 098163df-b9a4-5d3b-afb0-1778b33f1d74,
+        Amount: 234.0, Type: expense, Description: \"AIRBNB *HMQT5J6QQJ\"\n- ID: 0e3dfea8-1cca-5b26-82e3-59fe4206ceea,
+        Amount: 14.99, Type: expense, Description: \"AMAZON PRIME*1A2B3C\"\n- ID:
+        0ef8f57f-fed2-5a4e-974d-2187b0634125, Amount: 15.0, Type: expense, Description:
+        \"POS DEBIT 12345\"\n- ID: 103b9047-a027-58f4-824a-571f31401a71, Amount: 45.67,
+        Type: expense, Description: \"TXN*89234*AUTH\"\n- ID: 13c4a301-2b12-5fd9-b8dc-0b229d1f01e2,
+        Amount: 12.5, Type: expense, Description: \"7-ELEVEN #34567\"\n- ID: 181211e1-6aa4-55e3-8b8f-0c3e9694dfd6,
+        Amount: 127.0, Type: expense, Description: \"MTA *METROCARD\"\n- ID: 1b7aae8b-5db8-5345-83c9-54095bd3d670,
+        Amount: 4.5, Type: expense, Description: \"COSTA COFFEE LTD\"\n- ID: 1fe13daa-9eac-59fd-87ca-3f4627304dc9,
+        Amount: 45.0, Type: expense, Description: \"SUPERCUTS #1234\"\n- ID: 22fc4880-ebeb-5ffe-99b5-c86a83b15ff8,
+        Amount: 189.0, Type: expense, Description: \"MARRIOTT HOTELS NYC\"\n- ID:
+        2310fa91-c82d-5f91-a7e0-d378603fe0b7, Amount: 45.0, Type: expense, Description:
+        \"SHELL OIL 573849234\"\n- ID: 25fb095a-a53d-5db6-a97e-e8532ca87f40, Amount:
+        5.75, Type: expense, Description: \"STARBUCKS STORE #9876\"\n- ID: 27d22a96-a2c9-58aa-99e9-da48622364d0,
+        Amount: 89.99, Type: expense, Description: \"RYANAIR DAC\"\n- ID: 36304d14-09ab-570f-a0ca-6d68422837fe,
+        Amount: 156.0, Type: expense, Description: \"BRITISH GAS SERVICES\"\n- ID:
+        3bc6c288-1a81-5421-b977-e1695f613073, Amount: 3500.0, Type: income, Description:
+        \"ACME CORP PAYROLL\"\n- ID: 4a037bf1-edbc-5a79-8a5d-05a03601a806, Amount:
+        34.5, Type: expense, Description: \"PANERA BREAD #567\"\n- ID: 51d26615-10b6-5718-9f13-6ec2d986119a,
+        Amount: 89.99, Type: expense, Description: \"AMAZON.COM*1A2B3C4D\"\n- ID:
+        56f4d3e3-1352-5c8f-a0d9-be3c2bf19924, Amount: 10.99, Type: expense, Description:
+        \"SPOTIFY USA\"\n- ID: 5a3e4346-7bfa-573b-b125-9062dcb52409, Amount: 200.0,
+        Type: expense, Description: \"ATM WITHDRAWAL 12345\"\n- ID: 681bfd51-94d9-5d3c-96a6-4a191ba07e92,
+        Amount: 79.99, Type: expense, Description: \"ZARA ESPANA SA\"\n- ID: 69df39ee-cffe-572c-95e1-a11f969439e7,
+        Amount: 156.5, Type: expense, Description: \"TFL TRAVEL LONDON\"\n- ID: 7795991b-ab3f-5255-acb9-e46d10ee35a8,
+        Amount: 50.0, Type: expense, Description: \"RED CROSS DONATION\"\n- ID: 79001bf7-ce75-57a5-a810-fd50af44fb9a,
+        Amount: 24.99, Type: expense, Description: \"CVS/PHARMACY #4567\"\n- ID: 8609b744-7702-56eb-b847-a0e586873a70,
+        Amount: 67.5, Type: expense, Description: \"OLIVE GARDEN #456\"\n- ID: 8667241e-7f4c-5b3d-ab1a-6819400b6542,
+        Amount: 78.9, Type: expense, Description: \"LIDL DIENSTLEISTUNG\"\n\nCATEGORIZATION
+        GUIDELINES:\n- Prefer specific subcategories over general parent categories
+        when confident\n- Food delivery services should be categorized based on the
+        underlying merchant type\n- Square payments (SQ *) should be inferred from
+        the merchant name after the prefix\n- Warehouse/club stores should be categorized
+        based on their primary purpose\n- Return \"null\" for generic transactions
+        (e.g., POS terminals, wire transfers, checks, ATM withdrawals)\n\nIMPORTANT:\n-
+        Use EXACT category names from the list above\n- Return \"null\" (as a string)
+        if you cannot confidently match a category\n- Match expense transactions only
+        to expense categories\n- Match income transactions only to income categories\n-
+        Do NOT include any explanation or reasoning - only output JSON\n\nRespond
+        with ONLY this JSON (no markdown code blocks, no other text):\n{\"categorizations\":
+        [{\"transaction_id\": \"...\", \"category_name\": \"...\"}]}\n"}],"stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"auto_categorize_personal_finance_transactions","schema":{"type":"object","properties":{"categorizations":{"type":"array","description":"An
+        array of auto-categorizations for each transaction","items":{"type":"object","properties":{"transaction_id":{"type":"string","description":"The
+        internal ID of the original transaction","enum":["057442a3-1fa7-590b-9950-064d9c3e74e4","098163df-b9a4-5d3b-afb0-1778b33f1d74","0e3dfea8-1cca-5b26-82e3-59fe4206ceea","0ef8f57f-fed2-5a4e-974d-2187b0634125","103b9047-a027-58f4-824a-571f31401a71","13c4a301-2b12-5fd9-b8dc-0b229d1f01e2","181211e1-6aa4-55e3-8b8f-0c3e9694dfd6","1b7aae8b-5db8-5345-83c9-54095bd3d670","1fe13daa-9eac-59fd-87ca-3f4627304dc9","22fc4880-ebeb-5ffe-99b5-c86a83b15ff8","2310fa91-c82d-5f91-a7e0-d378603fe0b7","25fb095a-a53d-5db6-a97e-e8532ca87f40","27d22a96-a2c9-58aa-99e9-da48622364d0","36304d14-09ab-570f-a0ca-6d68422837fe","3bc6c288-1a81-5421-b977-e1695f613073","4a037bf1-edbc-5a79-8a5d-05a03601a806","51d26615-10b6-5718-9f13-6ec2d986119a","56f4d3e3-1352-5c8f-a0d9-be3c2bf19924","5a3e4346-7bfa-573b-b125-9062dcb52409","681bfd51-94d9-5d3c-96a6-4a191ba07e92","69df39ee-cffe-572c-95e1-a11f969439e7","7795991b-ab3f-5255-acb9-e46d10ee35a8","79001bf7-ce75-57a5-a810-fd50af44fb9a","8609b744-7702-56eb-b847-a0e586873a70","8667241e-7f4c-5b3d-ab1a-6819400b6542"]},"category_name":{"type":["string","null"],"description":"The
+        matched category name of the transaction, or null if no match","enum":["Income","Salary","Food
+        & Drink","Restaurants","Fast Food","Groceries","Coffee Shops","Shopping","Clothing","Electronics","Transportation","Gas
+        & Fuel","Rideshare","Public Transit","Entertainment","Streaming Services","Utilities","Housing","Rent","Health
+        & Wellness","Pharmacy","Gym & Fitness","Travel","Flights","Hotels","Subscriptions","Personal
+        Care","Gifts & Donations","null",null]}},"required":["transaction_id","category_name"],"additionalProperties":false}}},"required":["categorizations"],"additionalProperties":false},"strict":true}}}'
+    headers:
+      X-Kilocode-Organizationid:
+      - "<OPENAI_COMPATIBLE_X_KILOCODE_ORGANIZATIONID>"
+      User-Agent:
+      - Faraday v2.15.1
+      Authorization:
+      - Bearer <OPENAI_ACCESS_TOKEN>
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Cache-Control:
+      - no-cache, no-transform
+      Content-Security-Policy-Report-Only:
+      - 'default-src ''self''; base-uri ''self''; object-src ''none''; frame-ancestors
+        ''self''; form-action ''self''; script-src ''self'' ''unsafe-inline'' ''wasm-unsafe-eval''
+        https://www.googletagmanager.com https://utt.impactcdn.com https://login.kilo.ai
+        https://login-test.kilo.ai https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://widget.usepylon.com https://assets.churnkey.co;
+        connect-src ''self'' https://auth.kilo.ai https://us.i.posthog.com https://us-assets.i.posthog.com
+        https://api.stripe.com https://r.stripe.com https://m.stripe.com https://checkout.stripe.com
+        https://utt.impactcdn.com https://cdn.jsdelivr.net https://unpkg.com https://widget.usepylon.com
+        https://assets.churnkey.co https://api.churnkey.co https://*.churnkey.co https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com
+        wss://cloud-agent-next.kilosessions.ai wss://ingest.kilosessions.ai; img-src
+        ''self'' data: blob: https://lh3.googleusercontent.com https://avatars.githubusercontent.com
+        https://secure.gravatar.com https://gravatar.com https://media.licdn.com https://cdn.discordapp.com
+        https://gitlab.com https://*.stripe.com https://www.googletagmanager.com https://utt.impactcdn.com
+        https://widget.usepylon.com https://assets.churnkey.co https://*.churnkey.co
+        https://www.gravatar.com https://openrouter.ai https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com;
+        style-src ''self'' ''unsafe-inline''; font-src ''self'' data:; frame-src ''self''
+        https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://www.youtube.com https://widget.usepylon.com
+        https://assets.churnkey.co https://*.churnkey.co; worker-src ''self'' blob:;
+        media-src ''self'' blob:; manifest-src ''self'''
+      Content-Type:
+      - application/json
+      Cross-Origin-Embedder-Policy-Report-Only:
+      - require-corp
+      Cross-Origin-Opener-Policy:
+      - same-origin
+      Cross-Origin-Resource-Policy:
+      - same-origin
+      Date:
+      - Sun, 22 Nov 2026 07:29:06 GMT
+      Permissions-Policy:
+      - geolocation=(self), camera=(), microphone=()
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Server:
+      - Vercel
+      Set-Cookie:
+      - _vcrr_29a0f54ab1d200c5=dpl_Dd7o1pJ8NFj88Mzcw7txWejkcHNT|0.2317; Path=/; Secure;
+        HttpOnly; SameSite=None
+      - _vcrr_99197b56da7577df=dpl_4FNvQgM2PZYvS4uuJbYL421KeGn8|0.8835; Path=/; Secure;
+        HttpOnly; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Matched-Path:
+      - "/api/v1/[...path]"
+      X-Vercel-Cache:
+      - MISS
+      X-Vercel-Id:
+      - syd1:syd1:syd1::sfo1::nnm2d-1795332546453-45b301938ff9
+      X-Xss-Protection:
+      - '0'
+      Transfer-Encoding:
+      - chunked
+    body:
+      encoding: ASCII-8BIT
+      string: '{"id":"gen_01M812H925SQW01M60AWSRCM7F","object":"chat.completion","created":1795332553,"model":"anthropic/claude-haiku-5.5","choices":[{"index":0,"message":{"role":"assistant","content":"{\"categorizations\":[{\"transaction_id\":\"057442a3-1fa7-590b-9950-064d9c3e74e4\",\"category_name\":\"Entertainment\"},{\"transaction_id\":\"098163df-b9a4-5d3b-afb0-1778b33f1d74\",\"category_name\":\"Hotels\"},{\"transaction_id\":\"0e3dfea8-1cca-5b26-82e3-59fe4206ceea\",\"category_name\":\"Streaming
+        Services\"},{\"transaction_id\":\"0ef8f57f-fed2-5a4e-974d-2187b0634125\",\"category_name\":\"null\"},{\"transaction_id\":\"103b9047-a027-58f4-824a-571f31401a71\",\"category_name\":\"null\"},{\"transaction_id\":\"13c4a301-2b12-5fd9-b8dc-0b229d1f01e2\",\"category_name\":\"Groceries\"},{\"transaction_id\":\"181211e1-6aa4-55e3-8b8f-0c3e9694dfd6\",\"category_name\":\"Public
+        Transit\"},{\"transaction_id\":\"1b7aae8b-5db8-5345-83c9-54095bd3d670\",\"category_name\":\"Coffee
+        Shops\"},{\"transaction_id\":\"1fe13daa-9eac-59fd-87ca-3f4627304dc9\",\"category_name\":\"Personal
+        Care\"},{\"transaction_id\":\"22fc4880-ebeb-5ffe-99b5-c86a83b15ff8\",\"category_name\":\"Hotels\"},{\"transaction_id\":\"2310fa91-c82d-5f91-a7e0-d378603fe0b7\",\"category_name\":\"Gas
+        & Fuel\"},{\"transaction_id\":\"25fb095a-a53d-5db6-a97e-e8532ca87f40\",\"category_name\":\"Coffee
+        Shops\"},{\"transaction_id\":\"27d22a96-a2c9-58aa-99e9-da48622364d0\",\"category_name\":\"Flights\"},{\"transaction_id\":\"36304d14-09ab-570f-a0ca-6d68422837fe\",\"category_name\":\"Utilities\"},{\"transaction_id\":\"3bc6c288-1a81-5421-b977-e1695f613073\",\"category_name\":\"Salary\"},{\"transaction_id\":\"4a037bf1-edbc-5a79-8a5d-05a03601a806\",\"category_name\":\"Fast
+        Food\"},{\"transaction_id\":\"51d26615-10b6-5718-9f13-6ec2d986119a\",\"category_name\":\"Shopping\"},{\"transaction_id\":\"56f4d3e3-1352-5c8f-a0d9-be3c2bf19924\",\"category_name\":\"Streaming
+        Services\"},{\"transaction_id\":\"5a3e4346-7bfa-573b-b125-9062dcb52409\",\"category_name\":\"null\"},{\"transaction_id\":\"681bfd51-94d9-5d3c-96a6-4a191ba07e92\",\"category_name\":\"Clothing\"},{\"transaction_id\":\"69df39ee-cffe-572c-95e1-a11f969439e7\",\"category_name\":\"Public
+        Transit\"},{\"transaction_id\":\"7795991b-ab3f-5255-acb9-e46d10ee35a8\",\"category_name\":\"Gifts
+        & Donations\"},{\"transaction_id\":\"79001bf7-ce75-57a5-a810-fd50af44fb9a\",\"category_name\":\"Pharmacy\"},{\"transaction_id\":\"8609b744-7702-56eb-b847-a0e586873a70\",\"category_name\":\"Restaurants\"},{\"transaction_id\":\"8667241e-7f4c-5b3d-ab1a-6819400b6542\",\"category_name\":\"Groceries\"}]}"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":4107,"completion_tokens":1272,"total_tokens":5379,"cost":0.001149,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0.001149,"upstream_inference_prompt_cost":0,"upstream_inference_completions_cost":0},"completion_tokens_details":{"reasoning_tokens":0,"image_tokens":0},"cache_creation_input_tokens":4093},"system_fingerprint":"fp_tv05emr5ui","generationId":"gen_01M812H925SQW01M60AWSRCM7F"}'
+  recorded_at: Sun, 22 Nov 2026 07:29:13 GMT
+- request:
+    method: post
+    uri: https://api.kilo.ai/api/gateway/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"anthropic/claude-haiku-5.5","messages":[{"role":"system","content":"Categorize
+        transactions into the given categories. Return JSON only. Do not explain your
+        reasoning.\n\nCRITICAL RULES:\n1. Match transaction_id exactly from input\n2.
+        Use EXACT category_name from the provided list, or \"null\" if unsure\n3.
+        Match expense transactions to expense categories only\n4. Match income transactions
+        to income categories only\n5. Return \"null\" if the description is generic/ambiguous
+        (e.g., \"POS DEBIT\", \"ACH WITHDRAWAL\", \"CHECK #1234\")\n6. Prefer MORE
+        SPECIFIC subcategories over general parent categories when available\n\nCATEGORY
+        HIERARCHY NOTES:\n- Use \"Restaurants\" for sit-down restaurants, \"Fast Food\"
+        for quick service chains\n- Use \"Coffee Shops\" for coffee places, \"Food
+        & Drink\" only when type is unclear\n- Use \"Shopping\" for general retail,
+        big-box stores, and online marketplaces\n- Use \"Groceries\" for dedicated
+        grocery stores ONLY\n- For income: use \"Salary\" for payroll/employer deposits,
+        \"Income\" for generic income sources\n\nOutput JSON format only (no markdown,
+        no explanation):\n{\"categorizations\": [{\"transaction_id\": \"...\", \"category_name\":
+        \"...\"}]}\n"},{"role":"user","content":"AVAILABLE CATEGORIES: Income, Salary,
+        Food & Drink, Restaurants, Fast Food, Groceries, Coffee Shops, Shopping, Clothing,
+        Electronics, Transportation, Gas & Fuel, Rideshare, Public Transit, Entertainment,
+        Streaming Services, Utilities, Housing, Rent, Health & Wellness, Pharmacy,
+        Gym & Fitness, Travel, Flights, Hotels, Subscriptions, Personal Care, Gifts
+        & Donations\n\nTRANSACTIONS TO CATEGORIZE:\n- ID: 8c71f07f-1728-5deb-a981-1ef9ed909e3a,
+        Amount: 500.0, Type: income, Description: \"VENMO CASHOUT\"\n- ID: 8fbbf026-26dc-585d-b9ad-422f5d137e9b,
+        Amount: 78.0, Type: expense, Description: \"PAYPAL *JOHNSMITH\"\n- ID: 95eda51e-31d8-540d-9239-54442c6aff65,
+        Amount: 100.0, Type: expense, Description: \"ACH WITHDRAWAL\"\n- ID: 975bf40a-8f7d-5515-b553-87073d8e6e1c,
+        Amount: 12.99, Type: expense, Description: \"MCDONALD''S #12345\"\n- ID: a309bb10-a599-51bb-af98-86a3571da59a,
+        Amount: 345.0, Type: expense, Description: \"UNITED AIRLINES 0162345678\"\n-
+        ID: a45c8ec3-7759-5b51-b4fe-a5f77074ad2a, Amount: 87.5, Type: expense, Description:
+        \"TESCO STORES LTD\"\n- ID: a59fed93-b472-5d76-ad15-89b83eff9cd5, Amount:
+        2100.0, Type: expense, Description: \"AVALON APARTMENTS RENT\"\n- ID: ae6e164c-7893-51a7-bf69-e7a79106ceda,
+        Amount: 9.99, Type: expense, Description: \"APPLE.COM/BILL\"\n- ID: b8fd15c6-56dd-5900-87af-09fefae72a5e,
+        Amount: 89.0, Type: expense, Description: \"AT&T WIRELESS\"\n- ID: bb4bf191-4df9-5938-8377-37f88479d34e,
+        Amount: 15.99, Type: expense, Description: \"HBO MAX\"\n- ID: bc3eb2e8-3082-5fec-909d-bf357fb110cf,
+        Amount: 299.99, Type: expense, Description: \"BEST BUY 00000456\"\n- ID: bf00a23b-6475-5455-84fd-2a8e9baa39e4,
+        Amount: 75.0, Type: expense, Description: \"BP OIL UK LTD\"\n- ID: c33bb0d8-f4d6-541f-9d4b-67e854b9f62b,
+        Amount: 14.5, Type: expense, Description: \"CHIPOTLE MEXICAN GRILL\"\n- ID:
+        ccf9024b-907e-5abf-95b5-b45f6e3584f3, Amount: 350.0, Type: expense, Description:
+        \"CHECK #1234\"\n- ID: d17452c8-58af-56b3-8879-4d4c4d8252c9, Amount: 156.0,
+        Type: expense, Description: \"MARKS & SPENCER PLC\"\n- ID: d2b5f79e-e779-513b-8b49-f1e77044f523,
+        Amount: 156.32, Type: expense, Description: \"WHOLE FOODS MKT #10234\"\n-
+        ID: da89d17b-958a-573d-9d91-0aa40daf7527, Amount: 32.5, Type: expense, Description:
+        \"DELIVEROO UK LTD\"\n- ID: e04861f9-2d4f-5eff-aad8-c1503504c90a, Amount:
+        15.99, Type: expense, Description: \"NETFLIX.COM\"\n- ID: e0f2ac4a-de7b-5d95-a481-3c4ffac10ed1,
+        Amount: 78.5, Type: expense, Description: \"WAGAMAMA LTD LONDON\"\n- ID: e9180758-0bf1-5127-8b3a-4a2edd9fd25d,
+        Amount: 23.5, Type: expense, Description: \"UBER *TRIP HELP.UBER.COM\"\n-
+        ID: f0454d87-14da-5df7-92c4-47dbdb0a4504, Amount: 234.56, Type: expense, Description:
+        \"COSTCO WHSE #1234\"\n- ID: f094516d-2ca0-583b-85bc-10042c92a3bf, Amount:
+        39.99, Type: expense, Description: \"PLANET FITNESS MONTHLY\"\n- ID: f3e4078b-f973-5b32-9899-d9f85ca7c957,
+        Amount: 45.0, Type: expense, Description: \"DOORDASH*CHIPOTLE\"\n- ID: f5f0f4c1-a965-5abd-8629-406a925df85f,
+        Amount: 156.78, Type: expense, Description: \"TARGET #1234\"\n- ID: fc4cf163-c95e-5f74-9580-1f9c89437a31,
+        Amount: 125.0, Type: expense, Description: \"CON EDISON PAYMENT\"\n\nCATEGORIZATION
+        GUIDELINES:\n- Prefer specific subcategories over general parent categories
+        when confident\n- Food delivery services should be categorized based on the
+        underlying merchant type\n- Square payments (SQ *) should be inferred from
+        the merchant name after the prefix\n- Warehouse/club stores should be categorized
+        based on their primary purpose\n- Return \"null\" for generic transactions
+        (e.g., POS terminals, wire transfers, checks, ATM withdrawals)\n\nIMPORTANT:\n-
+        Use EXACT category names from the list above\n- Return \"null\" (as a string)
+        if you cannot confidently match a category\n- Match expense transactions only
+        to expense categories\n- Match income transactions only to income categories\n-
+        Do NOT include any explanation or reasoning - only output JSON\n\nRespond
+        with ONLY this JSON (no markdown code blocks, no other text):\n{\"categorizations\":
+        [{\"transaction_id\": \"...\", \"category_name\": \"...\"}]}\n"}],"stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"auto_categorize_personal_finance_transactions","schema":{"type":"object","properties":{"categorizations":{"type":"array","description":"An
+        array of auto-categorizations for each transaction","items":{"type":"object","properties":{"transaction_id":{"type":"string","description":"The
+        internal ID of the original transaction","enum":["8c71f07f-1728-5deb-a981-1ef9ed909e3a","8fbbf026-26dc-585d-b9ad-422f5d137e9b","95eda51e-31d8-540d-9239-54442c6aff65","975bf40a-8f7d-5515-b553-87073d8e6e1c","a309bb10-a599-51bb-af98-86a3571da59a","a45c8ec3-7759-5b51-b4fe-a5f77074ad2a","a59fed93-b472-5d76-ad15-89b83eff9cd5","ae6e164c-7893-51a7-bf69-e7a79106ceda","b8fd15c6-56dd-5900-87af-09fefae72a5e","bb4bf191-4df9-5938-8377-37f88479d34e","bc3eb2e8-3082-5fec-909d-bf357fb110cf","bf00a23b-6475-5455-84fd-2a8e9baa39e4","c33bb0d8-f4d6-541f-9d4b-67e854b9f62b","ccf9024b-907e-5abf-95b5-b45f6e3584f3","d17452c8-58af-56b3-8879-4d4c4d8252c9","d2b5f79e-e779-513b-8b49-f1e77044f523","da89d17b-958a-573d-9d91-0aa40daf7527","e04861f9-2d4f-5eff-aad8-c1503504c90a","e0f2ac4a-de7b-5d95-a481-3c4ffac10ed1","e9180758-0bf1-5127-8b3a-4a2edd9fd25d","f0454d87-14da-5df7-92c4-47dbdb0a4504","f094516d-2ca0-583b-85bc-10042c92a3bf","f3e4078b-f973-5b32-9899-d9f85ca7c957","f5f0f4c1-a965-5abd-8629-406a925df85f","fc4cf163-c95e-5f74-9580-1f9c89437a31"]},"category_name":{"type":["string","null"],"description":"The
+        matched category name of the transaction, or null if no match","enum":["Income","Salary","Food
+        & Drink","Restaurants","Fast Food","Groceries","Coffee Shops","Shopping","Clothing","Electronics","Transportation","Gas
+        & Fuel","Rideshare","Public Transit","Entertainment","Streaming Services","Utilities","Housing","Rent","Health
+        & Wellness","Pharmacy","Gym & Fitness","Travel","Flights","Hotels","Subscriptions","Personal
+        Care","Gifts & Donations","null",null]}},"required":["transaction_id","category_name"],"additionalProperties":false}}},"required":["categorizations"],"additionalProperties":false},"strict":true}}}'
+    headers:
+      X-Kilocode-Organizationid:
+      - "<OPENAI_COMPATIBLE_X_KILOCODE_ORGANIZATIONID>"
+      User-Agent:
+      - Faraday v2.15.1
+      Authorization:
+      - Bearer <OPENAI_ACCESS_TOKEN>
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Cache-Control:
+      - no-cache, no-transform
+      Content-Security-Policy-Report-Only:
+      - 'default-src ''self''; base-uri ''self''; object-src ''none''; frame-ancestors
+        ''self''; form-action ''self''; script-src ''self'' ''unsafe-inline'' ''wasm-unsafe-eval''
+        https://www.googletagmanager.com https://utt.impactcdn.com https://login.kilo.ai
+        https://login-test.kilo.ai https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://widget.usepylon.com https://assets.churnkey.co;
+        connect-src ''self'' https://auth.kilo.ai https://us.i.posthog.com https://us-assets.i.posthog.com
+        https://api.stripe.com https://r.stripe.com https://m.stripe.com https://checkout.stripe.com
+        https://utt.impactcdn.com https://cdn.jsdelivr.net https://unpkg.com https://widget.usepylon.com
+        https://assets.churnkey.co https://api.churnkey.co https://*.churnkey.co https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com
+        wss://cloud-agent-next.kilosessions.ai wss://ingest.kilosessions.ai; img-src
+        ''self'' data: blob: https://lh3.googleusercontent.com https://avatars.githubusercontent.com
+        https://secure.gravatar.com https://gravatar.com https://media.licdn.com https://cdn.discordapp.com
+        https://gitlab.com https://*.stripe.com https://www.googletagmanager.com https://utt.impactcdn.com
+        https://widget.usepylon.com https://assets.churnkey.co https://*.churnkey.co
+        https://www.gravatar.com https://openrouter.ai https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com;
+        style-src ''self'' ''unsafe-inline''; font-src ''self'' data:; frame-src ''self''
+        https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://www.youtube.com https://widget.usepylon.com
+        https://assets.churnkey.co https://*.churnkey.co; worker-src ''self'' blob:;
+        media-src ''self'' blob:; manifest-src ''self'''
+      Content-Type:
+      - application/json
+      Cross-Origin-Embedder-Policy-Report-Only:
+      - require-corp
+      Cross-Origin-Opener-Policy:
+      - same-origin
+      Cross-Origin-Resource-Policy:
+      - same-origin
+      Date:
+      - Sun, 22 Nov 2026 07:29:14 GMT
+      Permissions-Policy:
+      - geolocation=(self), camera=(), microphone=()
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Server:
+      - Vercel
+      Set-Cookie:
+      - _vcrr_29a0f54ab1d200c5=dpl_Dd7o1pJ8NFj88Mzcw7txWejkcHNT|0.2317; Path=/; Secure;
+        HttpOnly; SameSite=None
+      - _vcrr_99197b56da7577df=dpl_4FNvQgM2PZYvS4uuJbYL421KeGn8|0.8835; Path=/; Secure;
+        HttpOnly; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Matched-Path:
+      - "/api/v1/[...path]"
+      X-Vercel-Cache:
+      - MISS
+      X-Vercel-Id:
+      - syd1:syd1:syd1::sfo1::q2r27-1795332554031-d6fb5019bd48
+      X-Xss-Protection:
+      - '0'
+      Transfer-Encoding:
+      - chunked
+    body:
+      encoding: ASCII-8BIT
+      string: '{"id":"gen_01M812HFYT3D8F47W27XXZPA3B","object":"chat.completion","created":1795332560,"model":"anthropic/claude-haiku-5.5","choices":[{"index":0,"message":{"role":"assistant","content":"{\"categorizations\":[{\"transaction_id\":\"8c71f07f-1728-5deb-a981-1ef9ed909e3a\",\"category_name\":\"Income\"},{\"transaction_id\":\"8fbbf026-26dc-585d-b9ad-422f5d137e9b\",\"category_name\":\"null\"},{\"transaction_id\":\"95eda51e-31d8-540d-9239-54442c6aff65\",\"category_name\":\"null\"},{\"transaction_id\":\"975bf40a-8f7d-5515-b553-87073d8e6e1c\",\"category_name\":\"Fast
+        Food\"},{\"transaction_id\":\"a309bb10-a599-51bb-af98-86a3571da59a\",\"category_name\":\"Flights\"},{\"transaction_id\":\"a45c8ec3-7759-5b51-b4fe-a5f77074ad2a\",\"category_name\":\"Groceries\"},{\"transaction_id\":\"a59fed93-b472-5d76-ad15-89b83eff9cd5\",\"category_name\":\"Rent\"},{\"transaction_id\":\"ae6e164c-7893-51a7-bf69-e7a79106ceda\",\"category_name\":\"Subscriptions\"},{\"transaction_id\":\"b8fd15c6-56dd-5900-87af-09fefae72a5e\",\"category_name\":\"Utilities\"},{\"transaction_id\":\"bb4bf191-4df9-5938-8377-37f88479d34e\",\"category_name\":\"Streaming
+        Services\"},{\"transaction_id\":\"bc3eb2e8-3082-5fec-909d-bf357fb110cf\",\"category_name\":\"Electronics\"},{\"transaction_id\":\"bf00a23b-6475-5455-84fd-2a8e9baa39e4\",\"category_name\":\"Gas
+        & Fuel\"},{\"transaction_id\":\"c33bb0d8-f4d6-541f-9d4b-67e854b9f62b\",\"category_name\":\"Fast
+        Food\"},{\"transaction_id\":\"ccf9024b-907e-5abf-95b5-b45f6e3584f3\",\"category_name\":\"null\"},{\"transaction_id\":\"d17452c8-58af-56b3-8879-4d4c4d8252c9\",\"category_name\":\"Clothing\"},{\"transaction_id\":\"d2b5f79e-e779-513b-8b49-f1e77044f523\",\"category_name\":\"Groceries\"},{\"transaction_id\":\"da89d17b-958a-573d-9d91-0aa40daf7527\",\"category_name\":\"Food
+        & Drink\"},{\"transaction_id\":\"e04861f9-2d4f-5eff-aad8-c1503504c90a\",\"category_name\":\"Streaming
+        Services\"},{\"transaction_id\":\"e0f2ac4a-de7b-5d95-a481-3c4ffac10ed1\",\"category_name\":\"Restaurants\"},{\"transaction_id\":\"e9180758-0bf1-5127-8b3a-4a2edd9fd25d\",\"category_name\":\"Rideshare\"},{\"transaction_id\":\"f0454d87-14da-5df7-92c4-47dbdb0a4504\",\"category_name\":\"Groceries\"},{\"transaction_id\":\"f094516d-2ca0-583b-85bc-10042c92a3bf\",\"category_name\":\"Gym
+        & Fitness\"},{\"transaction_id\":\"f3e4078b-f973-5b32-9899-d9f85ca7c957\",\"category_name\":\"Restaurants\"},{\"transaction_id\":\"f5f0f4c1-a965-5abd-8629-406a925df85f\",\"category_name\":\"Shopping\"},{\"transaction_id\":\"fc4cf163-c95e-5f74-9580-1f9c89437a31\",\"category_name\":\"Utilities\"}]}"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":4094,"completion_tokens":1224,"total_tokens":5318,"cost":0.001123,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0.001123,"upstream_inference_prompt_cost":0,"upstream_inference_completions_cost":0},"completion_tokens_details":{"reasoning_tokens":0,"image_tokens":0},"cache_creation_input_tokens":4080},"system_fingerprint":"fp_qtjbe8w8r1","generationId":"gen_01M812HFYT3D8F47W27XXZPA3B"}'
+  recorded_at: Sun, 22 Nov 2026 07:29:20 GMT
+recorded_with: VCR 6.3.1
