@@ -1,25 +1,23 @@
 import { Controller } from "@hotwired/stimulus";
 
 // A job can answer before the browser subscribes to the suggestion's stream.
-// The cable source marks itself `connected` when it subscribes: navigate the
-// waiting frame to #show once on that transition, so the stored result is read
-// in a request with a valid token. The flag lives in session storage because
-// the frame is replaced by the response, which may still be a waiting frame.
+// The cable source marks itself `connected` when it subscribes: ask #show for the
+// stored status then, and navigate only once the answer is final. A still-pending
+// answer is replayed by the broadcast, so the waiting frame stays put. Asking the
+// server means a reopened dialog never trusts a stale one-shot navigation flag.
 export default class extends Controller {
   static targets = ["source", "frame"];
-  static values = { url: String, key: String };
+  static values = { url: String };
 
   connect() {
-    this.navigate = this.navigate.bind(this);
-
-    if (this.navigated) return;
+    this.catchUp = this.catchUp.bind(this);
 
     if (this.sourceTarget.hasAttribute("connected")) {
-      this.navigate();
+      this.catchUp();
       return;
     }
 
-    this.observer = new MutationObserver(this.navigate);
+    this.observer = new MutationObserver(this.catchUp);
     this.observer.observe(this.sourceTarget, {
       attributes: true,
       attributeFilter: ["connected"],
@@ -30,27 +28,21 @@ export default class extends Controller {
     this.observer?.disconnect();
   }
 
-  navigate() {
-    if (this.navigated) return;
+  async catchUp() {
+    if (!this.sourceTarget.hasAttribute("connected")) return;
 
-    this.markNavigated();
     this.observer?.disconnect();
-    this.frameTarget.src = this.urlValue;
-  }
-
-  get navigated() {
     try {
-      return sessionStorage.getItem(this.keyValue) === "1";
-    } catch {
-      return false;
-    }
-  }
+      const response = await fetch(this.urlValue, {
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) return;
 
-  markNavigated() {
-    try {
-      sessionStorage.setItem(this.keyValue, "1");
+      const { status } = await response.json();
+      if (["complete", "failed", "cancelled"].includes(status))
+        this.frameTarget.src = this.urlValue;
     } catch {
-      // A browser with storage disabled still gets one navigation per controller.
+      // A failed probe is harmless: the broadcast, or a later open, still delivers the answer.
     }
   }
 }

@@ -22,7 +22,12 @@ class Bills::SmartConfigurationsController < ApplicationController
   end
 
   def show
-    render layout: dialog_layout
+    respond_to do |format|
+      # The waiting frame probes status so it can navigate only once the answer is
+      # final; it never reads the stored proposal from this response.
+      format.json { render json: { status: @suggestion.status } }
+      format.html { render layout: dialog_layout }
+    end
   end
 
   # A Stop that races a finished answer changes nothing; the browser reloads

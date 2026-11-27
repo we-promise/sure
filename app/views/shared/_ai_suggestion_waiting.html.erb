@@ -1,11 +1,10 @@
 <%# locals: (suggestion:, waiting_key:, worker_key:, stop_key:) %>
 <%# The job's broadcast replaces this frame with one whose src is #show, so
     the browser fetches the result in a request with a valid token. The
-    Stimulus controller navigates to #show once as the cable subscribes, in case
-    the broadcast arrived before the subscription did. %>
+    Stimulus controller asks #show for the status as the cable subscribes, in
+    case the broadcast arrived before the subscription did. %>
 <div data-controller="ai-suggestion"
      data-ai-suggestion-url-value="<%= suggestion.location %>"
-     data-ai-suggestion-key-value="<%= "ai-suggestion-navigated:#{suggestion.id}" %>"
      class="mb-5">
   <%= turbo_stream_from suggestion, data: { ai_suggestion_target: "source" } %>
   <%= turbo_frame_tag suggestion, data: { ai_suggestion_target: "frame" } do %>
