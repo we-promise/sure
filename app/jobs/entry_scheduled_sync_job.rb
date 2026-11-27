@@ -19,13 +19,13 @@ class EntryScheduledSyncJob < ApplicationJob
     # "Future" is judged in the family's zone: entries are scheduled from jobs
     # running in the app's zone, where Date.current may already be the
     # entry's date even though it is still tomorrow for the family.
-    Time.use_zone(entry.account.family.resolved_time_zone) do
+    entry.account.family.with_time_zone do
       return unless entry.scheduled?
 
       # A few minutes past midnight on the entry's date, so Date.current has
       # definitively rolled over (avoids clock-skew edge cases) by run time.
       # Midnight in the family's zone, as Sync#perform judges the date there.
-      run_at = entry.date.in_time_zone(entry.account.family.resolved_time_zone) + 5.minutes
+      run_at = entry.date.in_time_zone + 5.minutes
       set(wait_until: run_at).perform_later(entry.id, entry.account_id)
     end
   end
