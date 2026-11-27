@@ -229,6 +229,21 @@ class Portfolio::DriversTest < ActiveSupport::TestCase
     refute drivers_with_residual(BigDecimal("0.015")).reconciles?
   end
 
+  # One unit of the series' currency when that is coarser than a cent: JPY has
+  # no minor unit, so a 0.3 JPY residual is dust there. A currency with three
+  # decimals keeps the cent, so the dust it accumulates still reconciles.
+  test "reconciles allows a residual below the currency's smallest unit" do
+    assert drivers_with_residual(BigDecimal("0.3"), currency: "JPY").reconciles?
+    assert drivers_with_residual(BigDecimal("1"), currency: "JPY").reconciles?, "the boundary itself reconciles"
+    refute drivers_with_residual(BigDecimal("1.5"), currency: "JPY").reconciles?
+    refute drivers_with_residual(BigDecimal("0.3"), currency: "USD").reconciles?, "a cent is still the bound for USD"
+    assert drivers_with_residual(BigDecimal("0.05"), currency: "MGA").reconciles?, "MGA has one decimal, so its unit is 0.1"
+    refute drivers_with_residual(BigDecimal("0.15"), currency: "MGA").reconciles?
+
+    assert drivers_with_residual(BigDecimal("0.004"), currency: "KWD").reconciles?
+    refute drivers_with_residual(BigDecimal("0.015"), currency: "KWD").reconciles?
+  end
+
   # A commission recorded on a trade (`trades.fee`) and folded into its entry
   # amount -- the manual trade form, SnapTrade and IBKR all write it so -- is
   # booked by Balance::BaseCalculator as a market loss. It is a fee, so it
@@ -404,12 +419,12 @@ class Portfolio::DriversTest < ActiveSupport::TestCase
       )
     end
 
-    def drivers_with_residual(residual)
+    def drivers_with_residual(residual, currency: "USD")
       row = Portfolio::DailyReturns::Row.new(
         date: @day_one, value_open: BigDecimal("1000"), value_close: BigDecimal("1000") + residual,
         external_flow: 0, composition_flow: 0, income: 0, fees: 0, market: 0,
         revaluations: 0, fx_effect: 0, rate_missing: false, suppressed: false
       )
-      Portfolio::Drivers.new(Struct.new(:rows).new([ row ]))
+      Portfolio::Drivers.new(Struct.new(:rows, :currency).new([ row ], currency))
     end
 end
