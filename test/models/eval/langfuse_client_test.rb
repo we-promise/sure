@@ -2,6 +2,8 @@ require "test_helper"
 require "ostruct"
 
 class Eval::LangfuseClientTest < ActiveSupport::TestCase
+  include NetHttpCaptureHelper
+
   test "writes experiment context and attaches scores to the root observation" do
     exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
     tracing = LangfuseTracing.new(public_key: "pk-test", secret_key: "sk-test", host: "https://langfuse.test",
@@ -126,7 +128,29 @@ class Eval::LangfuseClientTest < ActiveSupport::TestCase
     refute callback.call(false, store_ctx), "Non-CRL cert errors should not be bypassed"
   end
 
+  test "requests go through HTTPS_PROXY when HTTP_PROXY is unset" do
+    stub_request(:get, "https://langfuse.test/api/public/dataset-items").with(query: hash_including({})).to_return(status: 200, body: "{}")
+    calls, connection = capture_net_http_new("langfuse.test", 443)
+
+    with_proxy_env(https: PROXY) { langfuse_client.get_dataset_items(dataset_name: "eval_chat") }
+
+    assert_equal [ [ "langfuse.test", 443, "proxy.internal", 8888, nil, nil ] ], calls
+    assert connection.use_ssl?
+  end
+
+  test "NO_PROXY=* sends requests direct" do
+    stub_request(:get, "https://langfuse.test/api/public/dataset-items").with(query: hash_including({})).to_return(status: 200, body: "{}")
+    calls, = capture_net_http_new("langfuse.test", 443)
+
+    with_proxy_env(https: PROXY, http: PROXY, no_proxy: "*") { langfuse_client.get_dataset_items(dataset_name: "eval_chat") }
+
+    assert_equal [ [ "langfuse.test", 443, nil, nil, nil, nil ] ], calls
+  end
+
   private
+    def langfuse_client
+      Eval::Langfuse::Client.new(public_key: "pk-test", secret_key: "sk-test", host: "https://langfuse.test")
+    end
 
     # Reconstructs the same lambda used in Eval::Langfuse::Client#execute_request
     # for isolated testing without needing a real Net::HTTP connection.

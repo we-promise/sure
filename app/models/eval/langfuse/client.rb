@@ -1,5 +1,6 @@
 class Eval::Langfuse::Client
   extend SslConfigurable
+  extend ProxyConfigurable
 
   BASE_URLS = {
     us: "https://us.cloud.langfuse.com/api/public",
@@ -179,7 +180,7 @@ class Eval::Langfuse::Client
     def execute_request(uri, request, retries: 3)
       request.basic_auth(@public_key, @secret_key)
 
-      http = Net::HTTP.new(uri.host, uri.port)
+      http = Net::HTTP.new(uri.host, uri.port, *self.class.net_http_proxy_args(uri.to_s))
       http.use_ssl = true
       http.read_timeout = 30
       http.open_timeout = 10
