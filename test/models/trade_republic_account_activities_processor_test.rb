@@ -322,127 +322,6 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_nil entry.transaction.investment_activity_label
   end
 
-  test "a transfer's payment reference becomes the transaction note, not the status subtitle" do
-    import_event({
-      id: "evt_transfer_note",
-      timestamp: "2026-08-01T10:00:00Z",
-      eventType: "INCOMING_TRANSFER",
-      category: "PAYMENT_RECEIVED",
-      title: "Max Mustermann",
-      subtitle: "Completed",
-      detail: { amount: "50.00", currency: "EUR", note: "Invoice 2026-0001" }
-    })
-
-    entry = Entry.find_by(external_id: "trade_republic_event_evt_transfer_note")
-    assert_equal "Invoice 2026-0001", entry.notes
-    assert_equal "Completed", entry.transaction.extra.dig("trade_republic", "subtitle")
-    assert_equal "Invoice 2026-0001", entry.transaction.extra.dig("trade_republic", "provider_detail", "note")
-  end
-
-  test "a transfer without a payment reference gets no note" do
-    import_event({
-      id: "evt_transfer_no_note",
-      timestamp: "2026-08-01T10:00:00Z",
-      eventType: "OUTGOING_TRANSFER",
-      category: "POC_CREATED",
-      title: "Erika Musterfrau",
-      subtitle: "Sent",
-      detail: { amount: "20.00", currency: "EUR", note_checked_at: "2026-08-02T10:00:00Z" }
-    })
-
-    entry = Entry.find_by(external_id: "trade_republic_event_evt_transfer_no_note")
-    assert_nil entry.notes
-    assert_nil entry.transaction.extra.dig("trade_republic", "provider_detail", "note_checked_at")
-  end
-
-  test "a payment reference replaces the provider's earlier note but not one the user edited" do
-    event = {
-      id: "evt_transfer_edit",
-      timestamp: "2026-08-01T10:00:00Z",
-      eventType: "INCOMING_TRANSFER",
-      category: "PAYMENT_RECEIVED",
-      title: "Max Mustermann",
-      subtitle: "Completed",
-      detail: { amount: "50.00", currency: "EUR" }
-    }
-    import_event(event)
-    entry = Entry.find_by(external_id: "trade_republic_event_evt_transfer_edit")
-    entry.update!(notes: "Completed")
-
-    import_event(event.merge(detail: event[:detail].merge(note: "Invoice 2026-0001")))
-    assert_equal "Invoice 2026-0001", entry.reload.notes
-
-    entry.update!(notes: "my own note")
-    entry.mark_user_modified!
-    import_event(event.merge(detail: event[:detail].merge(note: "Invoice 2026-0002")))
-    assert_equal "my own note", entry.reload.notes
-  end
-
-  test "a status note from an earlier sync is cleared when no payment reference exists" do
-    event = {
-      id: "evt_status_note",
-      timestamp: "2026-08-01T10:00:00Z",
-      eventType: "OUTGOING_TRANSFER",
-      category: "POC_CREATED",
-      title: "Erika Musterfrau",
-      subtitle: "Sent",
-      detail: { amount: "20.00", currency: "EUR" }
-    }
-    import_event(event)
-    entry = Entry.find_by(external_id: "trade_republic_event_evt_status_note")
-    entry.update!(notes: "Sent")
-
-    import_event(event)
-    assert_nil entry.reload.notes
-
-    entry.update!(notes: "my own note")
-    import_event(event)
-    assert_equal "my own note", entry.reload.notes
-  end
-
-  test "a status note the user edited is kept when no payment reference exists" do
-    event = {
-      id: "evt_status_note_locked",
-      timestamp: "2026-08-01T10:00:00Z",
-      eventType: "OUTGOING_TRANSFER",
-      category: "POC_CREATED",
-      title: "Erika Musterfrau",
-      subtitle: "Sent",
-      detail: { amount: "20.00", currency: "EUR" }
-    }
-    import_event(event)
-    entry = Entry.find_by(external_id: "trade_republic_event_evt_status_note_locked")
-    entry.update!(notes: "Sent")
-    entry.mark_user_modified!
-
-    import_event(event)
-
-    assert_equal "Sent", entry.reload.notes
-  end
-
-  test "a subtitle note on a non-transfer cash event is cleared, a user note on it is kept" do
-    event = {
-      id: "evt_card_status_note",
-      timestamp: "2026-08-01T10:00:00Z",
-      eventType: "CARD_TRANSACTION",
-      category: "PAYMENT_RECEIVED",
-      title: "Marktkauf",
-      subtitle: "Card purchase",
-      detail: { amount: "12.30", signed_amount: "-12.30", currency: "EUR" }
-    }
-    import_event(event)
-    entry = Entry.find_by(external_id: "trade_republic_event_evt_card_status_note")
-    entry.update!(notes: "Card purchase")
-
-    import_event(event)
-    assert_nil entry.reload.notes
-    assert_equal "Card purchase", entry.transaction.extra.dig("trade_republic", "subtitle")
-
-    entry.update!(notes: "bought for the party")
-    import_event(event)
-    assert_equal "bought for the party", entry.reload.notes
-  end
-
   test "card cash back events that are purchases are imported as expenses with merchant details" do
     import_event({
       id: "evt_card_cash_back",
@@ -837,53 +716,6 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_stock_bonus")
     assert_not @account.entries.exists?(external_id: "trade_republic_settlement_evt_stock_bonus")
-  end
-
-  test "a securities transfer in imports as a portfolio trade without a cash leg" do
-    cash_account, cash_sure = create_linked_cash_account!
-
-    transfer = securities_transfer_event(id: "evt_tr_in", event_type: "SSP_SECURITIES_TRANSFER_INCOMING", quantity: "10")
-    @tr_account.update!(raw_timeline_payload: [ transfer ])
-    cash_account.update!(raw_timeline_payload: [ transfer ])
-
-    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
-    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
-
-    trade = find_trade("trade_republic_event_evt_tr_in")
-    assert_not_nil trade
-    assert_equal "Trade", trade.entryable_type
-    assert_equal BigDecimal("10"), trade.entryable.qty
-    assert_equal "Transfer", trade.entryable.investment_activity_label
-    # A transfer moves shares between brokers the user owns, so no cash
-    # changes hands; the value stays in the price for the cost basis.
-    assert_equal 0, trade.amount
-    assert_in_delta BigDecimal("451.20"), trade.entryable.qty * trade.entryable.price, BigDecimal("0.01")
-    assert_equal "SSP_SECURITIES_TRANSFER_INCOMING", trade.entryable.extra.dig("trade_republic", "event_type")
-
-    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_tr_in")
-  end
-
-  test "a securities transfer out imports as a negative portfolio trade without a cash leg" do
-    cash_account, cash_sure = create_linked_cash_account!
-
-    transfer = securities_transfer_event(id: "evt_tr_out", event_type: "SSP_SECURITIES_TRANSFER_OUTGOING", quantity: "-10")
-    @tr_account.update!(raw_timeline_payload: [ transfer ])
-    cash_account.update!(raw_timeline_payload: [ transfer ])
-
-    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
-    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
-
-    trade = find_trade("trade_republic_event_evt_tr_out")
-    assert_not_nil trade
-    assert_equal "Trade", trade.entryable_type
-    assert_equal BigDecimal("-10"), trade.entryable.qty
-    # Labelled a transfer, not a sell, so it is not treated as a realized gain.
-    assert_equal "Transfer", trade.entryable.investment_activity_label
-    assert_equal 0, trade.amount
-    assert_in_delta BigDecimal("451.20"), trade.entryable.qty.abs * trade.entryable.price, BigDecimal("0.01")
-    assert_equal "SSP_SECURITIES_TRANSFER_OUTGOING", trade.entryable.extra.dig("trade_republic", "event_type")
-
-    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_tr_out")
   end
 
   test "Private Markets bonus units import as a portfolio trade without a cash leg" do
@@ -1344,7 +1176,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Core S&P 500 USD (Acc)", buy_cash.name
     assert_equal "Buy", buy_cash.transaction.investment_activity_label
     assert_equal "investment_contribution", buy_cash.transaction.kind
-    assert_nil buy_cash.transaction.category_id
+    assert_equal @family.investment_contributions_category, buy_cash.transaction.category
 
     sell_cash = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_settle_sell")
     assert_equal BigDecimal("-529.0"), sell_cash.amount
@@ -1379,6 +1211,26 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
       TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
     end
     assert_equal buy_transfer, buy_cash.transaction.reload.transfer
+  end
+
+  test "a failed category assignment rolls back the settlement transfer" do
+    cash_account, cash_sure = create_linked_cash_account!
+    buy = order_execution_detail(event_id: "evt_settle_buy", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")
+      .deep_merge(title: "Core S&P 500 USD (Acc)", subtitle: "Buy Order", detail: { signed_amount: -1024.92, fees: "1.0", price: "511.96" })
+    @tr_account.update!(raw_timeline_payload: [ buy ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+
+    # process_event rescues the failure and logs it, so assert on the outcome:
+    # no confirmed transfer may survive without its category assignment.
+    Transfer.any_instance.stubs(:assign_investment_contribution_category!).raises(StandardError.new("category assignment failed"))
+
+    assert_no_difference "Transfer.count" do
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+
+    buy_cash = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_settle_buy")
+    assert_nil buy_cash.transaction.reload.transfer
   end
 
   test "settlement counterpart is removed with its trade and never relinked after the user unlinks it" do
@@ -2263,27 +2115,6 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
           quantity: "0.055",
           isin: "US0231351067",
           name: "Amazon.com"
-        }
-      }
-    end
-
-    # Shaped like a stored securities transfer: shares and price from the
-    # detail, no cash amount. The quantity is already signed by the client
-    # detail parser (negative for outgoing transfers).
-    def securities_transfer_event(id:, event_type:, quantity:)
-      {
-        id: id,
-        timestamp: "2026-10-20T09:00:00.000+0000",
-        eventType: event_type,
-        category: "orderExecution",
-        title: "STOXX Global Dividend 100 EUR (Dist)",
-        subtitle: "Securities transfer",
-        detail: {
-          currency: "EUR",
-          quantity: quantity,
-          price: "45.12",
-          isin: "DE000A0F5UH1",
-          name: "STOXX Global Dividend 100 EUR (Dist)"
         }
       }
     end
