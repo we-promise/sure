@@ -174,7 +174,10 @@ hu:
       uk: Egyesült Királyság
       ca: Kanada
       au: Ausztrália
-      eu: Európa
+      fr: Franciaország
+      de: Németország
+      ch: Svájc
+      se: Svédország
       in: India
       generic: Általános
     confirm_unlink:

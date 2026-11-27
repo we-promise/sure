@@ -179,7 +179,10 @@ pl:
     subtype_regions:
       au: Australia
       ca: Kanada
-      eu: Europa
+      fr: Francja
+      de: Niemcy
+      ch: Szwajcaria
+      se: Szwecja
       generic: Ogólne
       in: Indie
       uk: Wielka Brytania

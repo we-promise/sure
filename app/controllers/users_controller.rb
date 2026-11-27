@@ -122,6 +122,7 @@ class UsersController < ApplicationController
         family_attrs.push(:personal_budgets, :household_budget_enabled, :investment_contributions_as_spending, :manual_reconciliation) # Needed for updating existing family
         family_attrs.push(:moniker, :default_account_sharing)
         family_attrs << { enabled_currencies: [] }
+        family_attrs.push(:follow_country_for_investment_subtypes, { investment_subtype_regions: [] })
       end
 
       params.require(:user).permit(
@@ -144,12 +145,13 @@ class UsersController < ApplicationController
       moniker_changed = family_attrs[:moniker].present? && family_attrs[:moniker] != Current.family.moniker
       sharing_changed = family_attrs[:default_account_sharing].present? && family_attrs[:default_account_sharing] != Current.family.default_account_sharing
       enabled_currencies_changed = family_attrs.key?(:enabled_currencies)
+      investment_subtype_regions_changed = family_attrs.key?(:investment_subtype_regions) || family_attrs.key?(:follow_country_for_investment_subtypes)
       personal_budgets_changed = family_attrs.key?(:personal_budgets)
       household_budget_enabled_changed = family_attrs.key?(:household_budget_enabled)
       investment_contributions_as_spending_changed = family_attrs.key?(:investment_contributions_as_spending)
       manual_reconciliation_changed = family_attrs.key?(:manual_reconciliation)
 
-      moniker_changed || sharing_changed || enabled_currencies_changed || personal_budgets_changed || household_budget_enabled_changed ||
+      moniker_changed || sharing_changed || enabled_currencies_changed || investment_subtype_regions_changed || personal_budgets_changed || household_budget_enabled_changed ||
         investment_contributions_as_spending_changed || manual_reconciliation_changed
     end
 

@@ -8,7 +8,6 @@ class Investment < ApplicationRecord
   # - tax_advantaged: Special tax benefits with conditions
   SUBTYPES = {
     # === United States ===
-    "brokerage" => { short: "Brokerage", long: "Brokerage", region: "us", tax_treatment: :taxable },
     "cash_management" => { short: "CMA", long: "Cash Management Account", region: "us", tax_treatment: :taxable },
     "401k" => { short: "401(k)", long: "401(k)", region: "us", tax_treatment: :tax_deferred },
     "roth_401k" => { short: "Roth 401(k)", long: "Roth 401(k)", region: "us", tax_treatment: :tax_exempt },
@@ -50,11 +49,25 @@ class Investment < ApplicationRecord
     "super" => { short: "Super", long: "Superannuation", region: "au", tax_treatment: :tax_deferred },
     "smsf" => { short: "SMSF", long: "Self-Managed Super Fund", region: "au", tax_treatment: :tax_deferred },
 
-    # === Europe ===
-    "assurance_vie" => { short: "AV", long: "Assurance Vie", region: "eu", tax_treatment: :tax_advantaged },
-    "pea" => { short: "PEA", long: "Plan d'Épargne en Actions", region: "eu", tax_treatment: :tax_advantaged },
-    "pillar_3a" => { short: "Pillar 3a", long: "Private Pension (Pillar 3a)", region: "eu", tax_treatment: :tax_deferred },
-    "riester" => { short: "Riester", long: "Riester-Rente", region: "eu", tax_treatment: :tax_deferred },
+    # === France ===
+    "assurance_vie" => { short: "AV", long: "Assurance Vie", region: "fr", tax_treatment: :tax_advantaged },
+    "pea" => { short: "PEA", long: "Plan d'Épargne en Actions", region: "fr", tax_treatment: :tax_advantaged },
+
+    # === Germany ===
+    "riester" => { short: "Riester", long: "Riester-Rente", region: "de", tax_treatment: :tax_deferred },
+
+    # === Switzerland ===
+    "pillar_3a" => { short: "Pillar 3a", long: "Private Pension (Pillar 3a)", region: "ch", tax_treatment: :tax_deferred },
+
+    # === Sweden ===
+    # ISK and KF replace capital gains tax with a yearly flat-rate tax on the account value.
+    "isk" => { short: "ISK", long: "Investeringssparkonto", region: "se", tax_treatment: :tax_advantaged },
+    "kapitalforsakring" => { short: "KF", long: "Kapitalförsäkring", region: "se", tax_treatment: :tax_advantaged },
+    "aktie_och_fondkonto" => { short: "AF-konto", long: "Aktie- och fondkonto", region: "se", tax_treatment: :taxable },
+    "tjanstepension" => { short: "Tjänstepension", long: "Tjänstepension", region: "se", tax_treatment: :tax_deferred },
+    "premiepension" => { short: "PPM", long: "Premiepension", region: "se", tax_treatment: :tax_deferred },
+    "ips" => { short: "IPS", long: "Individuellt pensionssparande", region: "se", tax_treatment: :tax_deferred },
+    "pensionsforsakring" => { short: "Pensionsförsäkring", long: "Pensionsförsäkring", region: "se", tax_treatment: :tax_deferred },
 
     # === India ===
     # Pensions & insurance
@@ -87,6 +100,7 @@ class Investment < ApplicationRecord
     "sgb" => { short: "SGB", long: "Sovereign Gold Bond", region: "in", tax_treatment: :tax_advantaged },
 
     # === Generic (available everywhere) ===
+    "brokerage" => { short: "Brokerage", long: "Brokerage", region: nil, tax_treatment: :taxable },
     "pension" => { short: "Pension", long: "Pension", region: nil, tax_treatment: :tax_deferred },
     "retirement" => { short: "Retirement", long: "Retirement Account", region: nil, tax_treatment: :tax_deferred },
     "mutual_fund" => { short: "Mutual Fund", long: "Mutual Fund", region: nil, tax_treatment: :taxable },
@@ -95,6 +109,8 @@ class Investment < ApplicationRecord
     "trust" => { short: "Trust", long: "Trust", region: nil, tax_treatment: :taxable },
     "other" => { short: "Other", long: "Other Investment", region: nil, tax_treatment: :taxable }
   }.freeze
+
+  REGIONS = %w[us uk ca au fr de ch se in].freeze
 
   def tax_treatment
     SUBTYPES.dig(subtype, :tax_treatment) || :taxable
@@ -117,35 +133,35 @@ class Investment < ApplicationRecord
       I18n.t("accounts.subtype_regions.#{region || 'generic'}")
     end
 
-    # Maps currency codes to regions for prioritizing user's likely region
-    CURRENCY_REGION_MAP = {
-      "USD" => "us",
-      "GBP" => "uk",
-      "CAD" => "ca",
-      "AUD" => "au",
-      "EUR" => "eu",
-      "CHF" => "eu",
-      "INR" => "in"
-    }.freeze
-
-    # Returns subtypes grouped by region for use with grouped_options_for_select
-    # Optionally accepts currency to prioritize user's region first
-    def subtypes_grouped_for_select(currency: nil)
-      user_region = CURRENCY_REGION_MAP[currency]
+    # Returns subtypes grouped by region for grouped_options_for_select: the
+    # family's home region first, then General, then the remaining regions.
+    # `regions` limits which country groups appear (General always does), and
+    # `selected` keeps an existing account's group visible when filtered out.
+    def subtypes_grouped_for_select(country: nil, regions: REGIONS, selected: nil)
+      visible = Array(regions) | [ SUBTYPES.dig(selected, :region) ].compact
       grouped = SUBTYPES.group_by { |_, v| v[:region] }
 
-      # Build region order: user's region first (if known), then Generic, then others
-      other_regions = %w[us uk ca au eu in] - [ user_region ].compact
-      region_order = if user_region
-        [ user_region, nil, *other_regions ].uniq
-      else
-        [ nil, *other_regions ].uniq
-      end
-
-      region_order.filter_map do |region|
+      [ region_for_country(country), nil, *REGIONS ].uniq.filter_map do |region|
         next unless grouped[region]
+        next unless region.nil? || visible.include?(region)
+
         [ region_label_for(region), grouped[region].map { |k, _v| [ long_subtype_label_for(k), k ] } ]
       end
+    end
+
+    # Regions are lowercase ISO 3166 alpha-2 codes (families.country values),
+    # except the United Kingdom, which keeps its historical "uk" key.
+    def region_for_country(country)
+      code = country.to_s.downcase
+      code = "uk" if code == "gb"
+      code if REGIONS.include?(code)
+    end
+
+    # Regions shown when a family has not picked its own: its home region, or
+    # every region when its country has no dedicated account types.
+    def default_regions_for_country(country)
+      region = region_for_country(country)
+      region ? [ region ] : REGIONS
     end
   end
 end

@@ -194,7 +194,10 @@ id:
       uk: Inggris Raya
       ca: Kanada
       au: Australia
-      eu: Eropa
+      fr: Prancis
+      de: Jerman
+      ch: Swiss
+      se: Swedia
       in: India
       generic: Umum
     confirm_unlink:
