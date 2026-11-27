@@ -169,7 +169,7 @@ fr:
             model_not_available: Le modèle configuré n'a pas été renvoyé par le fournisseur
             no_credit: Le service a refusé la requête, car le solde de la clé est épuisé
             no_tool_call: Le modèle a répondu sans appeler l'outil de vérification
-            render_missing_binary: Le moteur de rendu pdftoppm (poppler-utils) n'est pas disponible dans ce conteneur
+            missing_binary: Le moteur de rendu pdftoppm (poppler-utils) n'est pas disponible dans ce conteneur
             request_failed: La requête au service a échoué
             table_not_found: La table vector_store_chunks est introuvable
             timeout: Le service n'a pas répondu avant l'expiration du délai de vérification

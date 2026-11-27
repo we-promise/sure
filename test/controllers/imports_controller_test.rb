@@ -29,7 +29,10 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_select "turbo-frame#modal"
-    assert_select "form[data-turbo-frame=_top] input[type=file][onchange='this.form.requestSubmit()']", count: 2
+    # The file inputs submit through the auto-submit-form controller rather
+    # than an inline onchange handler, which the Content Security Policy blocks.
+    assert_select "form[data-turbo-frame=_top][data-controller~=auto-submit-form] input[type=file][data-auto-submit-form-target=auto]", count: 2
+    assert_select "input[type=file][onchange]", count: 0
   end
 
   # DS::Button with an href renders button_to, which POSTs unless given a
@@ -185,9 +188,8 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     use_ai_routes
 
     family_document = family_documents(:tax_return)
-    Family.any_instance.expects(:upload_document).with do |file_content:, filename:, **|
-      assert_not_empty file_content
-      assert_equal "valid.csv", filename
+    Family.any_instance.expects(:upload_document_later).with do |file|
+      assert_equal "valid.csv", file.original_filename
       true
     end.returns(family_document)
 
@@ -202,6 +204,25 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_import_url
     assert_equal I18n.t("imports.create.document_uploaded"), flash[:notice]
+  end
+
+  test "does not report success when the document indexing job is rejected" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.csv .pdf])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
+    Family.any_instance.expects(:upload_document_later).returns(false)
+
+    post imports_url, params: {
+      import: {
+        type: "DocumentImport",
+        import_file: file_fixture_upload("imports/valid.csv", "text/csv")
+      }
+    }
+
+    assert_redirected_to new_import_url
+    assert_nil flash[:notice]
+    assert_equal I18n.t("imports.create.document_upload_failed"), flash[:alert]
   end
 
   test "summary renders the import outcome for a pdf import" do
@@ -223,7 +244,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     VectorStore::Registry.stubs(:adapter).returns(adapter)
     use_ai_routes
 
-    @user.family.expects(:upload_document).never
+    @user.family.expects(:upload_document_later).never
 
     assert_difference "Import.count", 1 do
       assert_difference "AccountStatement.count", 1 do
@@ -548,6 +569,51 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "import pages hide a statement backed pdf import for an inaccessible statement" do
+    statement = AccountStatement.create_from_upload!(
+      family: @user.family,
+      account: accounts(:investment),
+      file: uploaded_file(
+        filename: "statement.pdf",
+        content_type: "application/pdf",
+        content: file_fixture("imports/sample_bank_statement.pdf").binread
+      )
+    )
+    pdf_import = PdfImport.create_from_statement!(statement: statement)
+    row = pdf_import.rows.create!(source_row_number: 1, date: "01-15-2024", amount: "-42.00", currency: "USD", name: "Statement line")
+
+    sign_in users(:family_member)
+
+    get imports_url
+    assert_response :success
+    assert_select "#" + dom_id(pdf_import), count: 0
+    assert_select "#" + dom_id(imports(:transaction)), count: 1
+
+    get new_import_url
+    assert_response :success
+    assert_select "a[href='#{import_path(pdf_import)}']", count: 0
+
+    [
+      import_row_path(pdf_import, row),
+      import_clean_path(pdf_import),
+      import_confirm_path(pdf_import),
+      import_upload_path(pdf_import),
+      import_configuration_path(pdf_import),
+      import_qif_category_selection_path(pdf_import)
+    ].each do |path|
+      get path
+      assert_response :not_found, path
+    end
+
+    patch import_row_path(pdf_import, row), params: { import_row: { name: "Changed" } }
+    assert_response :not_found
+    mapping = Import::CategoryMapping.create!(import: pdf_import, key: "Groceries")
+    patch import_mapping_path(pdf_import, mapping), params: { import_mapping: { mappable_id: categories(:food_and_drink).id } }
+    assert_response :not_found
+    assert_equal "Statement line", row.reload.name
+    assert_nil mapping.reload.mappable
+  end
+
   test "read only shared user cannot publish statement backed pdf import" do
     account = accounts(:credit_card)
     statement = AccountStatement.create_from_upload!(
@@ -583,7 +649,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
   test "a document upload by a user with AI off sends nothing to the vector store" do
     use_ai_routes
     @user.update!(ai_enabled: false)
-    Family.any_instance.expects(:upload_document).never
+    Family.any_instance.expects(:upload_document_later).never
 
     post imports_url, params: { import: { type: "DocumentImport", import_file: file_fixture_upload("imports/valid.csv", "text/csv") } }
 
@@ -620,6 +686,21 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_import_url
     assert_equal I18n.t("imports.create.invalid_document_file_type"), flash[:alert]
+  end
+
+  test "rejects an oversized document before queueing its indexing job" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
+    file = uploaded_file(filename: "notes.txt", content_type: "text/plain", content: "x")
+    File.truncate(file.tempfile.path, Import::MAX_PDF_SIZE + 1)
+    Family.any_instance.expects(:upload_document_later).never
+
+    post imports_url, params: { import: { type: "DocumentImport", import_file: file } }
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.document_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte), flash[:alert]
   end
 
   test "publishes import" do

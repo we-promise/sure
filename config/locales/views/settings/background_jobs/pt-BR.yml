@@ -1,0 +1,46 @@
+---
+pt-BR:
+  settings:
+    background_jobs:
+      show:
+        page_title: Tarefas em segundo plano
+        title: Status dos workers
+        subtitle: "Estado do Sidekiq em tempo real: processos de worker, tamanho das filas e conjuntos de retry/dead."
+        redis_unreachable: O estado do Sidekiq está indisponível (Redis inacessível). Não é possível saber se as tarefas estão ativas, por isso as ações estão desativadas.
+        operations_title: Operações em andamento
+        operations_subtitle: Sincronizações, importações e exportações de todas as famílias que ainda não atingiram um status final. Operações ociosas há mais de 30 minutos sem nenhuma tarefa visível são consideradas perdidas e podem ser marcadas como tal.
+        empty: Nenhuma operação em andamento.
+        missing_value: "-"
+        stats:
+          workers: Workers
+          busy: Ocupados
+          enqueued: Na fila
+          retries: Novas tentativas
+          scheduled: Agendadas
+          dead: Descartadas
+          queue_label: "%{name}: %{size} · latência de %{latency}s"
+        table:
+          type: Operação
+          family: Família
+          status: Status
+          last_activity: Última atividade
+          liveness: Atividade
+          action: Ação
+      operation:
+        ago: há %{time}
+        sync_label: Sincronização · %{type}
+        running: Em execução
+        queued: Na fila
+        recent: Recente
+        unknown: Desconhecido
+        stuck: Travada — considerada perdida
+        confirm: Marcar esta operação como perdida? O registro será movido para um status final para que possa ser tentado novamente. Os dados em si não são alterados.
+        missing_value: "-"
+        actions:
+          mark_stale: Marcar como expirada
+          mark_failed: Marcar como falha
+          release_claim: Liberar bloqueio
+      cancel:
+        cancelled: "%{type} marcado como perdido."
+        not_cancellable: Esta operação não pode ser alterada agora — a tarefa ainda pode estar na fila ou em execução. Tente novamente quando ela estiver ociosa há 30 minutos.
+        cancelled_error: Marcada como falha por um administrador — a tarefa em segundo plano foi considerada perdida.

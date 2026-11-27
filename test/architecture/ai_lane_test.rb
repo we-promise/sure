@@ -12,7 +12,9 @@ class AiLaneTest < ActiveSupport::TestCase
       AssistantResponseJob.new => :chat,
       ProcessPdfJob.new => :extract_pdf,
       IndexAccountStatementJob.new => :embed,
+      IndexFamilyDocumentJob.new => :embed,
       VectorStore::IndexStatusJob.new => :embed,
+      VectorStore::PurgeDocumentFileJob.new => :embed,
       VectorStore::RequeueIndexPollsJob.new => :embed,
       Ai::ShadowJob.new(:categorize) => :shadow_categorize
     }

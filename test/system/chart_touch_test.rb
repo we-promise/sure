@@ -306,9 +306,8 @@ class ChartTouchTest < ApplicationSystemTestCase
     assert_nil URI.parse(page.current_url).query
   end
 
-  test "a vertical swipe on the chart scrolls the page and hides the tooltip" do
-    page.driver.browser.manage.window.resize_to(1400, 700)
-    center_chart_in_window(height: 700)
+  test "a vertical swipe on the chart scrolls the page and shows no tooltip" do
+    center_chart_in_layout
     before = scroll_offsets
     start = chart_point(0.5)
 
@@ -318,8 +317,10 @@ class ChartTouchTest < ApplicationSystemTestCase
 
     assert_equal "pan-y pinch-zoom", page.evaluate_script(%(getComputedStyle(document.querySelector("#{CHART} svg")).touchAction)),
       "the chart takes horizontal slides and leaves vertical scrolling and pinch zoom to the browser"
-    assert_not_equal before, scroll_offsets, "the page did not scroll"
-    assert_not tooltip_visible?, "the tooltip stayed after the page scrolled"
+    page.document.synchronize(5) do
+      raise Capybara::ExpectationNotMet, "the page did not scroll" if scroll_offsets == before
+    end
+    assert_not tooltip_visible?, "a vertical swipe showed the tooltip"
     assert_no_selector "#{CHART} .touch-selection", visible: :all
     assert_equal "/", URI.parse(page.current_url).path
   end
@@ -400,20 +401,19 @@ class ChartTouchTest < ApplicationSystemTestCase
       page.evaluate_script(%(document.querySelector("#{CHART} > .chart-tooltip").style.opacity)) == "1"
     end
 
-    # Scrolls the chart to the middle of a window resized to `height`. The new
-    # size can reach the page after resize_to returns: centred before it does,
-    # the chart sits where the middle of the taller window was, below the
-    # bottom of the shorter one, and a touch there lands off screen. So it
-    # centres again until the chart is on screen at the new size.
-    def center_chart_in_window(height:)
+    # Scrolls the chart to the middle of the page's scrolling area. The layout
+    # takes its height from --app-height, which viewport_controller.js sets
+    # only when the window's resize event arrives, after the window has its
+    # new size. Centred before then, the chart is brought into view by
+    # scrolling the document rather than the page's scrolling area, and drops
+    # back below the fold once the layout catches up. So it waits for the
+    # layout to have the window's height first.
+    def center_chart_in_layout
       page.document.synchronize(5) do
-        page.execute_script(%(document.querySelector("#{CHART}").scrollIntoView({ block: "center" })))
-        box = chart_box
-        inner = page.evaluate_script("innerHeight")
-        unless inner < height && box["top"] >= 0 && box["top"] + box["height"] <= inner
-          raise Capybara::ExpectationNotMet, "the chart is not on screen in the #{height}px window"
-        end
+        laid_out = page.evaluate_script(%(document.documentElement.style.getPropertyValue("--app-height") === `${innerHeight}px`))
+        raise Capybara::ExpectationNotMet, "the layout does not have the window's height yet" unless laid_out
       end
+      page.execute_script(%(document.querySelector("#{CHART}").scrollIntoView({ block: "center" })))
     end
 
     # Every scrollable box's offset, since the page scrolls inside the layout.
