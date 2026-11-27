@@ -2,13 +2,15 @@ class TradeRepublicRepairJob < ApplicationJob
   queue_as :low_priority
 
   def perform(trade_republic_item)
-    repaired = false
+    attempted = false
     trade_republic_item.trade_republic_accounts.includes(account_provider: :account).each do |provider_account|
       next unless provider_account.usable_account.present?
 
       begin
+        # Set before processing: the processor commits its writes and then
+        # broadcasts, so a raise here can follow committed changes.
+        attempted = true
         TradeRepublicAccount::Processor.new(provider_account).process
-        repaired = true
       rescue => e
         DebugLogEntry.capture(
           category: "sync",
@@ -25,6 +27,6 @@ class TradeRepublicRepairJob < ApplicationJob
 
     # A repair rewrites entries and holdings outside a sync, and the cached
     # exchange rate note currencies key on this column.
-    trade_republic_item.family.touch(:latest_sync_activity_at) if repaired
+    trade_republic_item.family.touch(:latest_sync_activity_at) if attempted
   end
 end
