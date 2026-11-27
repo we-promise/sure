@@ -3,7 +3,18 @@ de:
   depositories:
     edit:
       edit: "%{account} bearbeiten"
+    fixed_return:
+      interest_entry_name: Zinsen
     form:
+      fixed_return_frequency: Zinszahlung
+      fixed_return_hint: Bei Konten mit einem festen Zinssatz, den kein Bank-Feed liefert, kann Sure die Zinsen selbst gutschreiben. Lassen Sie den Zinssatz leer, um dies zu deaktivieren.
+      fixed_return_rate: Zinssatz
+      fixed_return_rate_placeholder: '3,25'
+      fixed_return_start_date: Zinsbeginn
+      frequencies:
+        annually: Jährlich
+        monthly: Monatlich
+        quarterly: Vierteljährlich
       none: Keine
       subtype_prompt: Kontotyp auswählen
     new:
