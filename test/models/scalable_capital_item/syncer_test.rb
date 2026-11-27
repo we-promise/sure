@@ -16,7 +16,9 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
                            country_code: "DE", exchange_operating_mic: "XETR")
     unrelated = Security.new(ticker: "WRONG", search_isin: "US0378331005", search_currency: "EUR",
                              country_code: "DE", exchange_operating_mic: "XETR")
-    Security.expects(:search_provider).with(isin, country_code: "DE", technical_failure: kind_of(Proc)).once.returns([ unrelated, correct ])
+    Security.expects(:search_provider)
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc), exclude_providers: [ Provider::ScalableCapitalMarketData::KEY ])
+      .once.returns([ unrelated, correct ])
 
     stub_snapshot
     run_sync
@@ -97,6 +99,109 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     assert_equal "IE00B4L5Y983", security.ticker
     assert_equal provider_key, security.price_provider
     refute_predicate security, :offline?
+  end
+
+  test "enabling Scalable pricing reactivates a mapped ISIN absent from the incremental feed" do
+    isin = position.fetch("isin")
+    stub_snapshot
+    run_sync
+
+    security = Security.find(@item.reload.security_ids.fetch(isin))
+    broker = @item.scalable_capital_accounts.brokerage.sole.account
+    assert_predicate security, :offline?
+    assert_nil security.offline_reason
+    assert_nil security.price_provider
+    protected = Security.create!(ticker: "US0378331005", offline: true, offline_reason: "health_check_failed")
+    assigned = Security.create!(ticker: "DE0007164600", offline: true, price_provider: "yahoo_finance")
+    @item.update!(security_ids: @item.security_ids.merge(protected.ticker => protected.id, assigned.ticker => assigned.id))
+
+    key = Provider::ScalableCapitalMarketData::KEY
+    Setting.stubs(:enabled_securities_providers).returns([ key ])
+    travel 1.day
+    stub_snapshot(positions: [], securities_value: "0")
+    stub_broker_history
+    Security.expects(:search_provider).never
+    @client.expects(:trade).never
+
+    run_sync
+
+    assert_equal security.id, @item.reload.security_ids.fetch(isin)
+    assert_equal [ security.id ], broker.trades.distinct.pluck(:security_id)
+    assert_equal [ security.id ], broker.holdings.distinct.pluck(:security_id)
+    refute_predicate security.reload, :offline?
+    assert_equal key, security.price_provider
+    assert_equal "health_check_failed", protected.reload.offline_reason
+    assert_equal "yahoo_finance", assigned.reload.price_provider
+    assert_predicate assigned, :offline?
+  end
+
+  test "a legacy exchange listing keeps its ID and prices when Scalable resolves the canonical listing" do
+    isin = position.fetch("isin")
+    legacy = Security.create!(ticker: "EUNL", exchange_operating_mic: "XETR")
+    legacy.update_column(:exchange_operating_mic, "GER")
+    price = legacy.prices.create!(currency: "EUR", date: Date.current - 1, price: 89)
+    listing = Security.new(ticker: "EUNL", exchange_operating_mic: "XETR", search_isin: isin)
+    Security.stubs(:search_provider).returns([ listing ])
+    stub_snapshot
+
+    assert_no_difference -> { Security.where(ticker: "EUNL").count } do
+      run_sync
+    end
+
+    assert_equal "XETR", legacy.reload.exchange_operating_mic
+    assert_equal legacy.id, @item.reload.security_ids.fetch(isin)
+    assert_equal price.id, legacy.prices.sole.id
+  end
+
+  test "uses the canonical exchange listing if a legacy alias also exists" do
+    isin = position.fetch("isin")
+    legacy = Security.create!(ticker: "EUNL", exchange_operating_mic: "XETR")
+    legacy.update_column(:exchange_operating_mic, "GER")
+    canonical = Security.create!(ticker: "EUNL", exchange_operating_mic: "XETR")
+    Security.stubs(:search_provider).returns([ Security.new(ticker: "EUNL", exchange_operating_mic: "GER", search_isin: isin) ])
+    stub_snapshot
+
+    run_sync
+
+    assert_equal canonical.id, @item.reload.security_ids.fetch(isin)
+    assert_equal "GER", legacy.reload.exchange_operating_mic
+  end
+
+  test "listing searches release the CLI and stale imports retry from the latest committed checkpoint" do
+    stub_snapshot
+    event = cash_event("overlap", "DEPOSIT", amount: "10", at: 1.minute.ago)
+    stub_broker_history(*broker_events, event)
+    overlapping_sync_started = false
+    Security.stubs(:search_provider).with do |isin, _options|
+      assert_equal position.fetch("isin"), isin
+      ScalableCapitalItem.with_connection do |connection|
+        key = ScalableCapitalItem::CLI_LOCK_KEY
+        refute connection.select_value(<<~SQL.squish), "the CLI lock must be released during market-data lookup"
+          SELECT EXISTS (SELECT 1 FROM pg_locks
+            WHERE locktype = 'advisory' AND pid = pg_backend_pid()
+              AND classid = #{key >> 32} AND objid = #{key & 0xffffffff})
+        SQL
+      end
+      unless overlapping_sync_started
+        overlapping_sync_started = true
+        travel 1.hour
+        stub_broker_history(*broker_events, event.merge("amount" => "25"))
+        overlapping_item = ScalableCapitalItem.find(@item.id)
+        ScalableCapitalItem::Syncer.new(overlapping_item, client: @client).perform_sync(overlapping_item.syncs.create!)
+        checkpoint = overlapping_item.reload.broker_synced_through
+        travel 1.second
+        @client.expects(:broker_transactions).with("portfolio", since: checkpoint - 1.second, before: Time.current).yields(broker({}), [])
+      end
+      true
+    end.returns([])
+
+    run_sync
+
+    assert overlapping_sync_started
+    assert_equal Time.current, @item.reload.broker_synced_through
+    assert_equal 2, @item.scalable_capital_accounts.brokerage.sole.account.trades.count
+    cash = @item.scalable_capital_accounts.cash.sole.account
+    assert_equal(-25.to_d, cash.entries.where(external_id: "overlap").sole.amount)
   end
 
   test "imports the CLI's filled SINGLE trades and only books a final IPO allocation" do
@@ -360,7 +465,8 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     listing.search_currency = "EUR"
     listing.price_provider = "yahoo_finance"
     Security.expects(:search_provider)
-      .with(isin, country_code: "DE", technical_failure: kind_of(Proc)).once.returns([ listing ])
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc), exclude_providers: [ Provider::ScalableCapitalMarketData::KEY ])
+      .once.returns([ listing ])
     travel 1.day
     stub_snapshot
     @client.expects(:trade).never
@@ -393,7 +499,8 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
                                offline: true, offline_reason: "health_check_failed")
     listing.search_isin = isin
     Security.expects(:search_provider)
-      .with(isin, country_code: "DE", technical_failure: kind_of(Proc)).once.returns([ listing ])
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc), exclude_providers: [ Provider::ScalableCapitalMarketData::KEY ])
+      .once.returns([ listing ])
     stub_snapshot
     run_sync
 
@@ -410,7 +517,8 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
     placeholder = Security.find(@item.reload.security_ids.fetch(isin))
     listing = Security.new(ticker: "EUNL", name: "Example ETF", search_isin: isin, exchange_operating_mic: "XETR")
     Security.expects(:search_provider)
-      .with(isin, country_code: "DE", technical_failure: kind_of(Proc)).once.returns([ listing ])
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc), exclude_providers: [ Provider::ScalableCapitalMarketData::KEY ])
+      .once.returns([ listing ])
     travel 1.day
     stub_snapshot(positions: [], securities_value: "0")
     @client.expects(:trade).never
@@ -429,7 +537,8 @@ class ScalableCapitalItem::SyncerTest < ActiveSupport::TestCase
 
     placeholder = Security.find(@item.reload.security_ids.fetch(isin))
     Security.expects(:search_provider)
-      .with(isin, country_code: "DE", technical_failure: kind_of(Proc)).once.returns([])
+      .with(isin, country_code: "DE", technical_failure: kind_of(Proc), exclude_providers: [ Provider::ScalableCapitalMarketData::KEY ])
+      .once.returns([])
     travel 1.day
     stub_snapshot
     run_sync

@@ -1575,13 +1575,42 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       get settings_hosting_url
       assert_response :success
-      assert_select "input[name='setting[securities_providers][]'][value=?]", key
+      assert_select "input[type='checkbox'][name='setting[scalable_capital_market_data_enabled]'][value='1']"
+      assert_select "input[type='hidden'][name='setting[scalable_capital_market_data_enabled]'][value='0']"
       assert_select "select[name='setting[exchange_rate_provider]'] option[value=?]", key, count: 0
 
-      patch settings_hosting_url, params: { setting: { securities_providers: [ "yahoo_finance", key ] } }
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "yahoo_finance" ], scalable_capital_market_data_enabled: "1" } }
 
       assert_redirected_to settings_hosting_url
       assert_includes Setting.enabled_securities_providers, key
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "keeps Scalable selected after a failed settings save and until explicitly disabled" do
+    ScalableCapitalItem.stubs(:configured_family_id).returns(users(:family_admin).family_id)
+    key = Provider::ScalableCapitalMarketData::KEY
+    Setting.securities_providers = "yahoo_finance,#{key}"
+    security = Security.create!(ticker: "IE00B4L5Y983", price_provider: key)
+
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { llm_context_window: "0" } }
+
+      assert_response :unprocessable_entity
+      assert_select "input[type='checkbox'][name='setting[scalable_capital_market_data_enabled]'][checked]"
+
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "binance_public" ] } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal [ "binance_public", key ], Setting.enabled_securities_providers
+      refute_predicate security.reload, :offline?
+
+      patch settings_hosting_url, params: { setting: { scalable_capital_market_data_enabled: "0" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal [ "binance_public" ], Setting.enabled_securities_providers
+      assert_equal "provider_disabled", security.reload.offline_reason
     end
   ensure
     Setting.securities_providers = ""
@@ -1592,7 +1621,13 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     key = Provider::ScalableCapitalMarketData::KEY
 
     with_self_hosting do
-      patch settings_hosting_url, params: { setting: { securities_providers: [ "yahoo_finance", key ] } }
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "yahoo_finance", key ], scalable_capital_market_data_enabled: "1" } }
+
+      assert_redirected_to settings_hosting_url
+      refute_includes Setting.enabled_securities_providers, key
+
+      Setting.securities_providers = ""
+      patch settings_hosting_url, params: { setting: { securities_provider: key } }
 
       assert_redirected_to settings_hosting_url
       refute_includes Setting.enabled_securities_providers, key

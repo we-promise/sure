@@ -90,18 +90,20 @@ class Security::HealthChecker
     end
 
     def latest_provider_price
-      return nil unless provider.present?
+      price_provider = provider
+      return nil unless price_provider.present?
       return true if skip_health_check? # treat as healthy — quota too precious
 
-      response = provider.fetch_security_price(
-        symbol: security.ticker,
-        exchange_operating_mic: security.exchange_operating_mic,
-        date: Date.current
-      )
+      args = { symbol: security.ticker, exchange_operating_mic: security.exchange_operating_mic, date: Date.current }
+      response = if price_provider.is_a?(Provider::ScalableCapitalMarketData)
+        price_provider.fetch_security_health_price(**args)
+      else
+        price_provider.fetch_security_price(**args)
+      end
 
       return nil unless response.success?
 
-      response.data.price
+      response.data&.price
     end
 
     # On success, reset any failure counters and ensure it is "online"

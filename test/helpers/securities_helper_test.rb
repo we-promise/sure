@@ -34,4 +34,18 @@ class SecuritiesHelperTest < ActionView::TestCase
 
     assert_nil current_price_with_quote(@security, "EUR")
   end
+
+  test "shows the last completed Scalable price with its actual date" do
+    security = Security.create!(ticker: "IE00B4L5Y983", price_provider: Provider::ScalableCapitalMarketData::KEY)
+    security.stubs(:current_price).returns(nil)
+    close_date = Date.current - 3
+    security.prices.create!(date: close_date, price: 84, currency: "EUR")
+    security.prices.create!(date: Date.current - 2, price: 85, currency: "EUR", carried_forward: true)
+    security.prices.create!(date: Date.current - 1, price: 86, currency: "EUR", provisional: true)
+
+    html = current_price_with_quote(security, "USD")
+
+    assert_includes html, Money.new(84, "EUR").format
+    assert_includes html, I18n.l(close_date, format: :long)
+  end
 end

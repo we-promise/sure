@@ -53,7 +53,54 @@ class Provider::ScalableCapitalMarketDataTest < ActiveSupport::TestCase
     response = @provider.fetch_security_price(symbol: ISIN, exchange_operating_mic: nil, date: Date.current)
     assert_predicate response, :success?
     assert_equal 84.12345678.to_d, response.data.price
-    assert_nil @provider.fetch_security_price(symbol: ISIN, exchange_operating_mic: nil, date: Date.current).data
+    missing = @provider.fetch_security_price(symbol: ISIN, exchange_operating_mic: nil, date: Date.current)
+    refute_predicate missing, :success?
+    assert_equal :no_price, missing.error.failure_code
+  end
+
+  test "missing quotes and historical dates are safe through the price cache" do
+    security = Security.create!(ticker: ISIN, price_provider: Provider::ScalableCapitalMarketData::KEY)
+    security.stubs(:price_data_provider).returns(@provider)
+    security.prices.create!(date: Date.current, price: 10, currency: "EUR", provisional: true, carried_forward: true)
+    @client.expects(:security_quote).with("portfolio", ISIN).returns(broker_result({ "isin" => ISIN, "quote_is_outdated" => true }))
+    @client.expects(:security_candlesticks).with(ISIN, "one_month").returns(candlesticks([]))
+
+    assert_no_difference -> { security.prices.count } do
+      assert_nil security.find_or_fetch_price
+      assert_nil security.find_or_fetch_price(date: Date.current - 1)
+    end
+    assert_predicate security.prices.sole, :carried_forward?
+  end
+
+  test "a live quote replaces a carried-forward price and remains provisional until a close arrives" do
+    security = Security.create!(ticker: ISIN, price_provider: Provider::ScalableCapitalMarketData::KEY)
+    security.stubs(:price_data_provider).returns(@provider)
+    price = security.prices.create!(date: Date.current, price: 10, currency: "EUR", provisional: true, carried_forward: true)
+    @client.expects(:security_quote).with("portfolio", ISIN).returns(broker_result(
+      "isin" => ISIN, "quote_is_outdated" => false, "quote_timestamp_utc" => 1.minute.ago.iso8601,
+      "quote_mid_price" => "84", "quote_currency" => "EUR"
+    ))
+
+    assert_equal 84.to_d, security.find_or_fetch_price.price
+    assert_equal 84.to_d, price.reload.price
+    assert_predicate price, :provisional?
+    refute_predicate price, :carried_forward?
+  end
+
+  test "a recent closing price keeps health checks healthy without a current quote" do
+    security = Security.create!(ticker: ISIN, price_provider: Provider::ScalableCapitalMarketData::KEY, failed_fetch_count: 5)
+    security.stubs(:price_data_provider).returns(@provider)
+    travel_to Time.utc(2026, 11, 29, 12)
+    @client.expects(:security_quote).with("portfolio", ISIN).returns(broker_result({ "isin" => ISIN, "quote_is_outdated" => true }))
+    @client.expects(:security_candlesticks).with(ISIN, "one_month").returns(candlesticks([
+      candle("2026-11-27T08:00:00Z", "2026-11-27T17:00:00Z", "85.12")
+    ]))
+
+    Security::HealthChecker.new(security).run_check
+
+    refute_predicate security.reload, :offline?
+    assert_equal 0, security.failed_fetch_count
+    assert_empty security.prices
   end
 
   test "uses the last completed candle per Berlin date and skips multi-day bars" do
@@ -86,6 +133,10 @@ class Provider::ScalableCapitalMarketDataTest < ActiveSupport::TestCase
 
     def broker_result(result)
       { "account_id" => "person", "portfolio_id" => "portfolio", "result" => result }
+    end
+
+    def candlesticks(rows)
+      { "isin" => ISIN, "source" => "consolidated", "currency" => "EUR", "candlesticks" => rows }
     end
 
     def candle(start, finish, close)

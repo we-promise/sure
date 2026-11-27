@@ -54,14 +54,23 @@ class Provider::ScalableCapitalMarketData < Provider
   def fetch_security_price(symbol:, exchange_operating_mic:, date:)
     with_provider_response do
       validate_security!(symbol, exchange_operating_mic)
-      next historical_prices(symbol, date, date).first if date < Date.current
-      next if date > Date.current
 
-      data = quote(symbol)
-      time = timestamp(data["quote_timestamp_utc"])
-      if data["quote_is_outdated"] == false && time && time.in_time_zone(ZONE).to_date == date && time <= Time.current
-        price(symbol, date, data["quote_mid_price"], currency(data["quote_currency"]))
+      result = if date < Date.current
+        historical_prices(symbol, date, date).first
+      elsif date == Date.current
+        current_quote(symbol, date)
       end
+      result || raise(Error.new("No Scalable price for the requested date", failure_code: :no_price))
+    end
+  end
+
+  def fetch_security_health_price(symbol:, exchange_operating_mic:, date:)
+    response = fetch_security_price(symbol: symbol, exchange_operating_mic: exchange_operating_mic, date: date)
+    return response unless response.error&.failure_code == :no_price
+
+    with_provider_response do
+      historical_prices(symbol, date - 7, date).last ||
+        raise(Error.new("No recent Scalable closing price", failure_code: :no_price))
     end
   end
 
@@ -102,6 +111,14 @@ class Provider::ScalableCapitalMarketData < Provider
       raise Error, "Scalable returned a different security" unless data["isin"] == isin
 
       data
+    end
+
+    def current_quote(isin, date)
+      data = quote(isin)
+      time = timestamp(data["quote_timestamp_utc"])
+      return unless data["quote_is_outdated"] == false && time && time.in_time_zone(ZONE).to_date == date && time <= Time.current
+
+      price(isin, date, data["quote_mid_price"], currency(data["quote_currency"]))
     end
 
     def historical_prices(isin, start_date, end_date)

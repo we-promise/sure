@@ -3,6 +3,12 @@ class ScalableCapitalItem::Syncer
 
   SOURCE = "scalable_capital"
   CURRENCY = Provider::ScalableCapital::Snapshot::CURRENCY
+  SNAPSHOT_STATE_FIELDS = %w[
+    family_id owner_id broker_account_id portfolio_id savings_id selected_sources
+    broker_synced_through savings_synced_through broker_history_version security_ids
+  ].freeze
+  MAX_SNAPSHOT_ATTEMPTS = 2
+  StaleSnapshot = Class.new(StandardError)
 
   def initialize(item, client: Provider::ScalableCapital.new)
     @item = item
@@ -12,26 +18,15 @@ class ScalableCapitalItem::Syncer
   def perform_sync(sync)
     raise Provider::ScalableCapital::Error, "Scalable Capital is disabled for this household" unless @item.configured?
 
-    ScalableCapitalItem.with_cli_lock do
-      @item.reload
-      snapshots, checkpoints, skipped = read_snapshots
-      next if sync.cancel_requested?
+    accounts, skipped = import_latest_snapshot(sync)
+    return unless accounts
 
-      # Price-provider lookups run before the ledger transaction.
-      securities = ScalableCapitalItem::Securities.new(@item, snapshots)
-      accounts = @item.with_lock do
-        result = import_snapshots(snapshots, securities)
-        @item.update!(checkpoints.merge(security_ids: securities.mapping, status: :good))
-        result
-      end
-
-      accounts.each { |account| account.sync_later(parent_sync: sync) }
-      account_ids = accounts.map(&:id)
-      collect_transaction_stats(sync, account_ids: account_ids, source: SOURCE)
-      collect_trades_stats(sync, account_ids: account_ids, source: SOURCE)
-      collect_health_stats(sync)
-      report_skipped(skipped) if skipped.positive?
-    end
+    accounts.each { |account| account.sync_later(parent_sync: sync) }
+    account_ids = accounts.map(&:id)
+    collect_transaction_stats(sync, account_ids: account_ids, source: SOURCE)
+    collect_trades_stats(sync, account_ids: account_ids, source: SOURCE)
+    collect_health_stats(sync)
+    report_skipped(skipped) if skipped.positive?
   rescue Provider::ScalableCapital::AuthenticationError => error
     @item.update!(status: :requires_update)
     report_failure(sync, error, error.message)
@@ -50,6 +45,40 @@ class ScalableCapitalItem::Syncer
   end
 
   private
+
+    def import_latest_snapshot(sync)
+      attempts = 0
+
+      begin
+        attempts += 1
+        return if sync.cancel_requested?
+
+        state, (snapshots, checkpoints, skipped) = ScalableCapitalItem.with_cli_lock do
+          @item.reload
+          [ snapshot_state, read_snapshots ]
+        end
+        return if sync.cancel_requested?
+
+        securities = ScalableCapitalItem::Securities.new(@item, snapshots)
+        accounts = @item.with_lock do
+          next if sync.cancel_requested?
+          raise StaleSnapshot unless snapshot_state == state
+
+          result = import_snapshots(snapshots, securities)
+          @item.update!(checkpoints.merge(security_ids: securities.mapping, status: :good))
+          result
+        end
+        [ accounts, skipped ]
+      rescue StaleSnapshot
+        retry if attempts < MAX_SNAPSHOT_ATTEMPTS
+
+        raise Provider::ScalableCapital::Error, "Scalable Capital changed during sync. Try again."
+      end
+    end
+
+    def snapshot_state
+      @item.attributes.slice(*SNAPSHOT_STATE_FIELDS)
+    end
 
     def read_snapshots
       return read_legacy_snapshots if @item.selected_sources.blank?

@@ -4,6 +4,7 @@ en:
     self_hostable:
       redis_configured: "Redis is now configured properly! You can now setup your Sure application."
   shared:
+    last_close_as_of: "(close on %{date})"
     preview: Preview
     exchange_rate_notes:
       missing:

@@ -265,7 +265,7 @@ module Security::Provided
   def find_or_fetch_price(date: Date.current, cache: true)
     price = prices.find_by(date: date)
 
-    return price if price.present?
+    return price if price && (price_provider != Provider::ScalableCapitalMarketData::KEY || !scalable_cached_price_gap?(price))
 
     # Don't fetch prices for offline securities (e.g., custom tickers from SimpleFIN)
     return nil if offline?
@@ -285,13 +285,38 @@ module Security::Provided
     end
 
     price = response.data
-    Security::Price.find_or_create_by!(
-      security_id: self.id,
-      date: price.date,
-      currency: price.currency
-    ) { |record| record.price = price.price } if cache
+    cache_fetched_price(price, scalable: provider.is_a?(Provider::ScalableCapitalMarketData)) if cache
     price
   end
+
+  def last_completed_scalable_price
+    return unless price_provider == Provider::ScalableCapitalMarketData::KEY
+
+    prices.where(date: ...Date.current, provisional: false, carried_forward: false)
+          .order(date: :desc).first
+  end
+
+  def cache_fetched_price(price, scalable:)
+    # The live mid-quote can be replaced by a completed close during price import.
+    provisional = scalable && price.date == Date.current
+    record = Security::Price.find_or_create_by!(security_id: id, date: price.date, currency: price.currency) do |row|
+      row.price = price.price
+      row.provisional = provisional
+    end
+    return unless scalable && scalable_cached_price_gap?(record)
+
+    record.with_lock do
+      next unless scalable_cached_price_gap?(record)
+
+      record.update!(price: price.price, provisional: provisional, carried_forward: false)
+    end
+  end
+
+  def scalable_cached_price_gap?(price)
+    price.carried_forward? || (price.provisional? && price.date < Date.current)
+  end
+
+  private :cache_fetched_price, :scalable_cached_price_gap?
 
   # Throttled so a page with many holdings missing today's price doesn't
   # flood the debug log with one entry per request — at most one per
