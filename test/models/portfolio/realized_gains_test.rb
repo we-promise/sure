@@ -236,6 +236,23 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
     assert_equal few, many, "2 disposals and 6 must cost the same number of queries"
   end
 
+  # A snapshot with no stored basis prices its sale from the buys before it:
+  # six securities, each bought at 100 and one share sold at 150, is 50 a
+  # sale, so 300. The per-sale replay is not batched (we-promise/sure#5872).
+  test "disposals with no stored cost basis are priced from the buys behind them" do
+    6.times do |i|
+      security = create_security
+      buy_trade account: @account, date: @march - 30, qty: 5, price: 100, security: security
+      holding_snapshot account: @account, date: @march, cost_basis: nil, security: security
+      sell_trade account: @account, date: @march + i + 1, qty: 1, price: 150, security: security
+    end
+
+    gains = realized
+
+    assert_equal 6, gains.trade_count, "every disposal must be measured from its buys"
+    assert_equal BigDecimal(300), gains.net
+  end
+
   # A disposal whose snapshot stores its cost basis prices the sale from it
   # and does not replay the buys behind it. One without a stored basis does
   # replay them, a few queries per sale (Holding#avg_cost_before). The stored
