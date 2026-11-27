@@ -156,7 +156,7 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
   # rather than converted at parity, and the card has to say so: a partial
   # figure that does not announce itself reads as a whole one.
   test "the period return card says how many accounts it left out" do
-    hint = I18n.t("portfolios.kpi_row.period_return_unconvertible", count: 2)
+    hint = I18n.t("portfolios.kpi_row.unconvertible_accounts", count: 2)
 
     get portfolio_path(period: "last_30_days")
     assert_response :success
@@ -167,6 +167,78 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "[data-section-key=kpis] p", text: "#{Period.last_30_days.comparison_label} · #{hint}"
+  end
+
+  test "the day change card says how many positions it covers" do
+    get portfolio_path
+    assert_response :success
+    assert_nil kpi_card_hint("day_change"), "every fixture position must have a previous snapshot, or this proves nothing"
+
+    security = Security.create!(ticker: "HALF", name: "Half covered")
+    second_broker = @family.accounts.create!(name: "Second broker", balance: 900, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    Holding.create!(account: accounts(:investment), security: security, date: 1.day.ago.to_date, qty: 1, price: 100, amount: 100, currency: "USD")
+    Holding.create!(account: accounts(:investment), security: security, date: Date.current, qty: 1, price: 120, amount: 120, currency: "USD")
+    Holding.create!(account: second_broker, security: security, date: Date.current, qty: 9, price: 100, amount: 900, currency: "USD")
+
+    get portfolio_path
+    assert_response :success
+
+    # AAPL and HALF in the first account have a previous snapshot; HALF in the
+    # second broker does not.
+    assert_equal I18n.t("portfolios.kpi_row.day_change_partial", covered: 2, total: 3), kpi_card_hint("day_change")
+  end
+
+  test "the unrealised P&L card says how many positions have no cost basis" do
+    get portfolio_path
+    assert_response :success
+    assert_nil kpi_card_hint("unrealized_pnl"), "every fixture position must have a cost basis, or this proves nothing"
+
+    Holding.create!(account: accounts(:investment), security: Security.create!(ticker: "NOBASIS", name: "Without basis"),
+                    date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    # Cash has no cost basis by nature, so it is not a gap.
+    Holding.create!(account: accounts(:investment), security: Security.create!(ticker: "CASHX", name: "Cash", kind: "cash"),
+                    date: Date.current, qty: 5, price: 1, amount: 5, currency: "USD")
+
+    get portfolio_path
+    assert_response :success
+
+    assert_equal I18n.t("portfolios.kpi_row.unrealized_missing_cost_basis", count: 1), kpi_card_hint("unrealized_pnl")
+  end
+
+  test "the value card shows not enough data when no account converts" do
+    accounts = InvestmentStatement.new(@family, user: @user).investment_accounts
+    assert_nil ExchangeRate.find_by(from_currency: "EUR", to_currency: "USD"), "the premise: EUR has no rate into USD"
+    accounts.update_all(currency: "EUR")
+
+    get portfolio_path
+    assert_response :success
+
+    assert_equal I18n.t("portfolios.kpi_row.no_data"), kpi_card_figure("value")
+    assert_includes kpi_card_hint("value"), I18n.t("portfolios.kpi_row.unconvertible_accounts", count: accounts.size)
+  end
+
+  test "the value card says how many accounts it left out" do
+    get portfolio_path
+    assert_response :success
+    value = kpi_card_figure("value")
+    as_of = I18n.t("portfolios.kpi_row.as_of", date: I18n.l(Date.current, format: :long))
+    assert_equal as_of, kpi_card_hint("value")
+
+    @family.accounts.create!(name: "Euro broker", balance: 500, currency: "EUR", accountable: Investment.new, owner: @user)
+    get portfolio_path
+    assert_response :success
+
+    assert_equal value, kpi_card_figure("value"), "the convertible accounts' value must stand"
+    assert_equal "#{as_of} · #{I18n.t("portfolios.kpi_row.unconvertible_accounts", count: 1)}", kpi_card_hint("value")
+  end
+
+  test "the value card still prints a genuine zero" do
+    InvestmentStatement.new(@family, user: @user).investment_accounts.update_all(balance: 0)
+
+    get portfolio_path
+    assert_response :success
+
+    assert_equal ApplicationController.helpers.format_money(Money.new(0, @family.currency)), kpi_card_figure("value")
   end
 
   test "the value chart is mounted with the statement's series" do
@@ -876,6 +948,23 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
       provider = LunchflowAccount.create!(lunchflow_item: lunchflow_items(:one), account_id: "lf_portfolio_#{index}",
                                           name: account.name, currency: "USD")
       AccountProvider.create!(account: account, provider: provider)
+    end
+
+    # The KPI card labelled with portfolios.kpi_row.<label_key>: its first
+    # paragraph is the figure, a second one the hint.
+    def kpi_card(label_key)
+      label = I18n.t("portfolios.kpi_row.#{label_key}")
+      card = css_select("[data-section-key=kpis] span").find { |span| span.text.strip == label }&.ancestors("div")&.[](1)
+      assert card, "no KPI card labelled #{label}"
+      card
+    end
+
+    def kpi_card_figure(label_key)
+      kpi_card(label_key).css("p")[0].text.squish
+    end
+
+    def kpi_card_hint(label_key)
+      kpi_card(label_key).css("p")[1]&.text&.squish
     end
 
     def provider_queries(&block)

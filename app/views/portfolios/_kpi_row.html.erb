@@ -8,19 +8,21 @@
         icon: "briefcase",
         label: t("portfolios.kpi_row.value"),
         money: kpis[:value],
-        hint: t("portfolios.kpi_row.as_of", date: l(as_of, format: :long)) %>
+        hint: kpi_hint(t("portfolios.kpi_row.as_of", date: l(as_of, format: :long)), kpis[:value_unconvertible]) %>
 
   <%= render "portfolios/kpi_card",
         icon: "activity",
         label: t("portfolios.kpi_row.day_change"),
         money: nil,
-        trend: kpis[:day_change] %>
+        trend: kpis[:day_change],
+        hint: kpi_day_change_hint(kpis[:day_change_coverage]) %>
 
   <%= render "portfolios/kpi_card",
         icon: "trending-up",
         label: t("portfolios.kpi_row.unrealized_pnl"),
         money: nil,
-        trend: kpis[:unrealized] %>
+        trend: kpis[:unrealized],
+        hint: kpi_unrealized_hint(kpis[:unrealized_missing_cost_basis]) %>
 
   <%# An account whose currency has no rate to the family currency is left
       out of this figure rather than converted at parity, so the hint says how
@@ -31,7 +33,7 @@
         label: t("portfolios.kpi_row.period_return"),
         money: nil,
         trend: kpis[:period_return],
-        hint: kpi_period_return_hint(period, kpis[:period_return_unconvertible]) %>
+        hint: kpi_hint(period.comparison_label, kpis[:period_return_unconvertible]) %>
 
   <%= render "portfolios/kpi_card",
         icon: "wallet",

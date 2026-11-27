@@ -136,15 +136,24 @@ class Portfolio::SectionRegistry
     # The six KPI figures, read from the statement here so the partial only
     # formats them.
     def kpis
-      @kpis ||= {
-        value: statement.portfolio_value_money,
-        day_change: statement.day_change,
-        unrealized: statement.unrealized_gains_trend,
-        period_return: statement.period_return_trend(period: period),
-        period_return_unconvertible: statement.period_return_unconvertible_count(period: period),
-        net_contributions: statement.net_contributions(period: period),
-        income: statement.totals(period: period).total_income
-      }
+      @kpis ||= begin
+        value_unconvertible = statement.portfolio_value_unconvertible_count
+        # When no account converts, the sum is a zero that reads as a balance.
+        no_value = value_unconvertible == statement.investment_accounts.size
+
+        {
+          value: (statement.portfolio_value_money unless no_value),
+          value_unconvertible: value_unconvertible,
+          day_change: statement.day_change,
+          day_change_coverage: statement.day_change_coverage,
+          unrealized: statement.unrealized_gains_trend,
+          unrealized_missing_cost_basis: statement.unrealized_missing_cost_basis_count,
+          period_return: statement.period_return_trend(period: period),
+          period_return_unconvertible: statement.period_return_unconvertible_count(period: period),
+          net_contributions: statement.net_contributions(period: period),
+          income: statement.totals(period: period).total_income
+        }
+      end
     end
 
     # One Portfolio::Performance for the request, so the six figures below and

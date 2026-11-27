@@ -32,14 +32,18 @@ de:
     kpi_row:
       as_of: Stand %{date}
       day_change: Tagesveränderung
+      day_change_partial: "%{covered} von %{total} Positionen"
       income: Erträge
       income_hint: Dividenden und Zinsen
       net_contributions: Nettoeinzahlungen
       no_data: Nicht genug Daten
       period_return: Rendite im Zeitraum
-      period_return_unconvertible:
+      unconvertible_accounts:
         one: 1 Konto ohne Wechselkurs ausgeschlossen
         other: "%{count} Konten ohne Wechselkurs ausgeschlossen"
+      unrealized_missing_cost_basis:
+        one: 1 Position ohne Kostenbasis ausgeschlossen
+        other: "%{count} Positionen ohne Kostenbasis ausgeschlossen"
       unrealized_pnl: Nicht realisiertes Ergebnis
       value: Wert
     performance:

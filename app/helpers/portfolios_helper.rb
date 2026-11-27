@@ -30,13 +30,22 @@ module PortfoliosHelper
     end
   end
 
-  # The period-return card's hint. Ordinarily just the comparison label; when
-  # an account has been withheld for want of an exchange rate, it also says so,
-  # because a partial figure that does not announce itself reads as a whole one.
-  def kpi_period_return_hint(period, unconvertible_count)
-    return period.comparison_label if unconvertible_count.to_i.zero?
+  # A KPI card's hint. Ordinarily just `label`; when an account has been
+  # withheld for want of an exchange rate, it also says so, because a partial
+  # figure that does not announce itself reads as a whole one.
+  def kpi_hint(label, unconvertible_count)
+    return label if unconvertible_count.to_i.zero?
 
-    "#{period.comparison_label} · " \
-      "#{t('portfolios.kpi_row.period_return_unconvertible', count: unconvertible_count)}"
+    "#{label} · #{t('portfolios.kpi_row.unconvertible_accounts', count: unconvertible_count)}"
+  end
+
+  # The day change card's hint, only when some positions are left out of it.
+  def kpi_day_change_hint((covered, total))
+    t("portfolios.kpi_row.day_change_partial", covered: covered, total: total) if covered < total
+  end
+
+  # The unrealised P&L card's hint, only when a position has no cost basis.
+  def kpi_unrealized_hint(missing_cost_basis_count)
+    t("portfolios.kpi_row.unrealized_missing_cost_basis", count: missing_cost_basis_count) if missing_cost_basis_count.positive?
   end
 end
