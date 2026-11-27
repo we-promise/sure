@@ -1,0 +1,147 @@
+---
+pt-BR:
+  providers:
+    sharesight:
+      name: Sharesight
+      connection_description: Conecte suas carteiras da Sharesight por meio da API
+      institution_name: Sharesight
+  sharesight_accounts:
+    settings_fields:
+      title: Dinheiro e dividendos da Sharesight
+      description: Escolha onde ficam o dinheiro e os dividendos desta carteira, para que o Sure não os conte duas vezes.
+      cash_mode: Dinheiro
+      cash_modes:
+        broker: Fica na corretora
+        settlement: Liquidado por outra conta
+        untracked: Não acompanhado (somente ações)
+      cash_mode_help: Com outra conta ou sem acompanhar o dinheiro, esta conta mostra somente as ações. O dinheiro de cada negociação é compensado por uma transferência, vinculada à conta pela qual ela foi liquidada.
+      settlement_account: Conta de liquidação
+      settlement_starts_on: Liquida nessa conta a partir de
+      settlement_window_days: Dias que o banco pode levar para exibir a transação
+      settlement_help: Cada compra e venda, e cada dividendo pago nessa conta, é associado pelo valor a uma transação dessa conta e vinculado como transferência. Em uma conta manual, o Sure lança a transação. Antes da data de início, o dinheiro ficava na corretora.
+      choose_account: Escolha uma conta
+      no_account: Nenhuma
+      funding_account: Conta de aportes
+      funding_match_terms: Texto das transações de aporte
+      funding_match_terms_placeholder: CMC Share Transfer, CMC Markets
+      funding_help: Aportes e resgates na conta de aportes cujo nome ou observações contenham algum destes termos (separados por vírgula) são espelhados aqui e vinculados como transferências.
+      cash_anchor_amount: Dinheiro na corretora
+      cash_anchor_on: Na data
+      cash_anchor_help: "Para o dinheiro que a Sharesight não enxerga: o saldo nessa data, atualizado com tudo o que foi lançado aqui desde então. Atualize-o sempre que consultar a corretora."
+      dividend_mode: Dividendos e distribuições
+      dividend_modes:
+        with_cash: Onde estiver o dinheiro
+        other_account: Pagos em outra conta
+        skip: Não importar (outra conexão já os mostra)
+      dividend_mode_help: Os pagos em outra conta continuam contando como receita aqui e depois são vinculados ao depósito na conta em que foram pagos.
+      dividend_account: Pagos em
+      sync_start_date: Importar movimentações a partir de
+      sync_start_date_help: Negociações e dividendos mais antigos ficam de fora, e os que já foram importados são removidos.
+    errors:
+      settlement_account_missing: Escolha a conta pela qual a carteira é liquidada.
+      dividend_account_missing: Escolha a conta em que os dividendos são pagos.
+      cash_anchor_incomplete: Informe o dinheiro na corretora e a data em que você o consultou.
+      invalid_date:
+        settlement_starts_on: A data a partir da qual a liquidação ocorre nessa conta não é válida.
+        cash_anchor_on: A data em que você consultou o dinheiro na corretora não é válida.
+        sync_start_date: A data a partir da qual importar as movimentações não é válida.
+      account_not_in_family: "%{name} não é uma das suas contas."
+      account_is_portfolio: "%{name} é a própria conta desta carteira."
+    notices:
+      unsettled_debit: Ainda não há um débito de %{amount} em %{account} referente a %{description} em %{date}.
+      unsettled_credit: Ainda não há um crédito de %{amount} em %{account} referente a %{description} em %{date}.
+      units_drift: "%{account}: a Sharesight registra %{held} %{ticker}, mas as negociações somam %{traded}."
+  sharesight_items:
+    defaults:
+      name: Sharesight
+      portfolio_name: Carteira Sharesight %{id}
+    sharesight_item:
+      deletion_in_progress: Exclusão em andamento
+      syncing: Sincronizando
+      requires_update: O cliente de API precisa de atenção
+      error: Erro
+      synced: Sincronizado há %{time}. %{summary}.
+      never_synced: Nunca sincronizado.
+      setup_accounts: Configurar carteiras
+      delete: Excluir
+      accounts_need_setup: As carteiras precisam de configuração
+      accounts_need_setup_description: Suas carteiras da Sharesight precisam ser vinculadas a contas do Sure.
+      no_accounts_discovered: Nenhuma carteira da Sharesight encontrada ainda.
+      no_accounts_discovered_description: Sincronize depois de salvar o cliente de API para encontrar suas carteiras.
+    setup_accounts:
+      page_title: Configurar carteiras da Sharesight
+      dialog_title: Configure suas carteiras da Sharesight
+      subtitle: Vincule suas carteiras da Sharesight a contas de investimento.
+      info_box:
+        title: Importação pela API da Sharesight
+        items:
+          item_1: Posições atuais com preços e quantidades, e o valor da carteira
+          item_2: Compras, vendas, saldos iniciais, devoluções de capital e dividendos, inclusive os reinvestidos
+          item_3: Depósitos, saques, juros e tarifas de qualquer conta de caixa da Sharesight
+      status:
+        fetching_accounts: Buscando carteiras na Sharesight...
+        no_accounts_found_title: Nenhuma carteira encontrada.
+        no_accounts_found_description: O Sure não encontrou nenhuma carteira da Sharesight. Verifique se o seu cliente de API é válido.
+      available_accounts:
+        title: Carteiras disponíveis
+        account_type_investment: Investimento
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "ID da carteira: %{account_id}"
+      link_existing:
+        description: Ou vincule uma carteira encontrada a uma conta de investimento manual existente.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Selecione uma conta...
+      linked_accounts:
+        title: Já vinculadas
+        linked_to_html: "Vinculada a: %{account}"
+      buttons:
+        refresh: Atualizar
+        cancel: Cancelar
+        back_to_settings: Voltar para as configurações
+        create_selected_accounts: Criar contas selecionadas
+        link: Vincular
+        done: Concluído
+    sync:
+      status:
+        checking_credentials: Verificando as credenciais da Sharesight...
+        importing_portfolios: Importando carteiras da Sharesight...
+        checking_configuration: Verificando a configuração das carteiras...
+        accounts_need_setup:
+          one: 1 carteira da Sharesight precisa de configuração...
+          other: "%{count} carteiras da Sharesight precisam de configuração..."
+        processing_activity: Processando posições e movimentações...
+        calculating_balances: Calculando saldos...
+    sync_status:
+      no_accounts: Nenhuma carteira da Sharesight encontrada ainda
+      all_linked:
+        one: 1 carteira vinculada
+        other: "%{count} carteiras vinculadas"
+      partial: "%{linked} vinculadas, %{unlinked} precisam de configuração"
+    select_existing_account:
+      title: Vincular carteira da Sharesight
+      no_accounts_available: Ainda não há carteiras da Sharesight sem vínculo disponíveis.
+      run_sync_hint: Sincronize em Configurações > Provedores depois de salvar o cliente de API.
+      wait_for_sync: Aguarde o fim da sincronização que busca as carteiras.
+      balance: Saldo
+      link: Vincular
+      cancel: Cancelar
+    create:
+      success: Sharesight configurada com sucesso.
+    update:
+      success: Configuração da Sharesight atualizada com sucesso.
+    destroy:
+      success: A exclusão da conexão com a Sharesight foi agendada.
+    select_accounts:
+      not_configured: A Sharesight não está configurada.
+    link_existing_account:
+      not_found: Conta ou carteira da Sharesight não encontrada.
+      only_manual_investment: Somente contas de investimento manuais podem ser vinculadas à Sharesight.
+      already_linked: Esta carteira da Sharesight já está vinculada.
+      success: Carteira da Sharesight vinculada com sucesso.
+      failed: Não foi possível vincular a carteira da Sharesight.
+    complete_account_setup:
+      success:
+        one: "%{count} conta da Sharesight criada com sucesso."
+        other: "%{count} contas da Sharesight criadas com sucesso."
+      none_selected: Nenhuma carteira foi selecionada.
+      none_created: Nenhuma conta foi criada.
