@@ -20,6 +20,9 @@
   <% end %>
 
   <% dialog.with_body do %>
+    <%# Rows take at least the total's decimals, so an imported JPY 80.4 can be
+        split into amounts that add up to it. %>
+    <% total_precision = [ money_field_value(@entry.amount, currency: @entry.currency).last, 4 ].min %>
     <%= form_with(
           url: transaction_split_path(@entry),
           scope: :split,
@@ -36,6 +39,8 @@
       <div data-split-transaction-target="rowsContainer" class="space-y-3">
         <%= render "splits/row",
                    index: 0,
+                   currency: @entry.currency,
+                   min_precision: total_precision,
                    name: @entry.name,
                    categories: @categories,
                    merchants: @merchants,
@@ -46,6 +51,8 @@
       <template data-split-transaction-target="rowTemplate">
         <%= render "splits/row",
                    index: "ROW_IDX_PLACEHOLDER",
+                   currency: @entry.currency,
+                   min_precision: total_precision,
                    categories: @categories,
                    merchants: @merchants,
                    tags: @tags %>

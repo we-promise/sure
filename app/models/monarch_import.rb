@@ -81,7 +81,7 @@ class MonarchImport < Import
     return if balance.nil?
 
     balance = -balance if MonarchImport::Converter::LIABILITY_TYPES.include?(mapping.target&.accountable_type || mapping.type)
-    ActiveSupport::NumberHelper.number_to_rounded(balance, precision: 2)
+    balance.round(2)
   end
 
   # Saves the person's choices, keyed by mapping ID. target_id picks one of
@@ -99,7 +99,7 @@ class MonarchImport < Import
         next if choice.nil?
 
         balance = choice[:current_balance].to_s.strip
-        balance = nil if balance.empty? || balance == shown_balances[mapping.id]
+        balance = nil if balance.empty? || same_amount?(balance, shown_balances[mapping.id])
         name = choice[:name].to_s.strip
         mapping.update!(
           mappable: choice[:target_id].presence && target_accounts.find(choice[:target_id]),
@@ -363,5 +363,11 @@ class MonarchImport < Import
           account.update!(disabled_at: change["previous_disabled_at"]) if change["previous_disabled_at"]
         end
       end
+    end
+
+    def same_amount?(text, shown)
+      shown.present? && BigDecimal(text) == shown
+    rescue ArgumentError
+      false
     end
 end

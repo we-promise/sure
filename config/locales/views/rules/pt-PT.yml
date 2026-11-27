@@ -102,6 +102,8 @@ pt-PT:
         equal_to: Igual a
   rule:
     conditions:
+      amount_value:
+        label: Montante
       condition_group:
         and_prefix: e
         match: corresponder

@@ -1,4 +1,4 @@
-<%# locals: (index:, categories:, merchants:, tags:, name: nil, amount: nil, category_id: nil, merchant_id: nil, tag_ids: [], removable: true) %>
+<%# locals: (index:, currency:, categories:, merchants:, tags:, name: nil, amount: nil, category_id: nil, merchant_id: nil, tag_ids: [], removable: true, min_precision: nil) %>
 
 <%# Styled builder fields and DS pickers, the same controls as the transaction form. %>
 <div class="p-3 rounded-lg border border-secondary bg-container space-y-2" data-split-transaction-target="row">
@@ -13,15 +13,22 @@
             container_class: "w-full md:flex-1 min-w-0",
             data: { split_transaction_target: "nameInput" } %>
 
-      <%= row.number_field :amount,
-            value: amount,
+      <%# A saved amount keeps its decimals (an old JPY 40.4 is not shown as 40),
+          capped at the 4 the entries table stores so the rows still add up. %>
+      <% amount_value, amount_precision = money_field_value(amount, currency: currency, min_precision: min_precision) %>
+      <% amount_precision = [ amount_precision, 4 ].min %>
+      <%= row.money_field :amount,
+            value: amount_value,
+            precision: amount_precision,
+            step: amount_precision.zero? ? "1" : "0.#{"0" * (amount_precision - 1)}1",
             label: t("splits.new.amount_label"),
             placeholder: "0.00",
-            step: "0.01",
             required: true,
+            hide_currency: true,
             autocomplete: "off",
-            container_class: "flex-1 md:flex-none md:w-32",
-            data: { split_transaction_target: "amountInput", action: "input->split-transaction#updateRemaining" } %>
+            currency_value_override: currency,
+            container_class: "flex-1 md:flex-none md:w-40",
+            amount_data: { split_transaction_target: "amountInput", action: "input->split-transaction#updateRemaining" } %>
 
       <% if removable %>
         <%= icon "x",

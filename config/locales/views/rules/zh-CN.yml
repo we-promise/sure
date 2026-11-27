@@ -213,6 +213,8 @@ zh-CN:
         less_than_or_equal_to: 小于或等于
   rule:
     conditions:
+      amount_value:
+        label: 金额
       condition_group:
         and_prefix: 并且
         match: 匹配

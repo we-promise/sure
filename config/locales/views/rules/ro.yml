@@ -23,3 +23,7 @@ ro:
         pending: În Așteptare
         success: Succes
         failed: Eșuat
+  rule:
+    conditions:
+      amount_value:
+        label: Sumă

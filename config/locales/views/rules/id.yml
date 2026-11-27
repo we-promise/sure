@@ -207,6 +207,8 @@ id:
         less_than_or_equal_to: Lebih kecil atau sama dengan
   rule:
     conditions:
+      amount_value:
+        label: Jumlah
       condition_group:
         and_prefix: dan
         match: cocok

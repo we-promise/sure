@@ -25,12 +25,18 @@
 
     <%= form.select :operator, condition.operators, { container_class: "w-full" }, data: { rule__conditions_target: "operatorSelect", action: "rule--conditions#handleOperatorChange" } %>
 
+    <%# The amount field for a condition switched to an amount filter in the
+        browser (rule--conditions#handleConditionTypeChange). %>
+    <template data-rule--conditions-target="amountValueTemplate">
+      <%= render "rule/conditions/amount_value", form: form, condition: condition %>
+    </template>
+
     <div data-rule--conditions-target="filterValue" class="col-span-2 w-full">
       <% if condition.filter.type == "select" %>
         <%= form.select :value, condition.options, {} %>
       <% else %>
         <% if condition.filter.type == "number" %>
-          <%= form.number_field :value, placeholder: "10", step: 0.01 %>
+          <%= render "rule/conditions/amount_value", form: form, condition: condition %>
         <% else %>
           <%= form.text_field :value, placeholder: t(".value_placeholder") %>
         <% end %>

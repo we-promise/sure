@@ -16,6 +16,13 @@ export default class extends ExchangeRateFormController {
     return true;
   }
 
+  currencySources() {
+    return {
+      source: this.hasFromAccountTarget ? this.accountCurrenciesValue[this.fromAccountTarget.value] : undefined,
+      destination: this.hasToAccountTarget ? this.accountCurrenciesValue[this.toAccountTarget.value] : undefined
+    };
+  }
+
   getExchangeRateContext() {
     if (!this.hasRequiredExchangeRateTargets()) {
       return null;

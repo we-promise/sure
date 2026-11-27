@@ -38,7 +38,13 @@
                                      placeholder: t(".funding_match_terms_placeholder") %>
       <p class="text-xs text-secondary"><%= t(".funding_help") %></p>
 
-      <%= sharesight_form.number_field :cash_anchor_amount, label: t(".cash_anchor_amount"), step: "any" %>
+      <% cash_anchor, cash_anchor_precision = money_field_value(sharesight_account.cash_anchor_amount, currency: account.currency) %>
+      <%= sharesight_form.money_field :cash_anchor_amount,
+                                      label: t(".cash_anchor_amount"),
+                                      value: cash_anchor,
+                                      precision: cash_anchor_precision,
+                                      hide_currency: true,
+                                      currency_value_override: account.currency %>
       <%= sharesight_form.date_field :cash_anchor_on, label: t(".cash_anchor_on") %>
       <p class="text-xs text-secondary"><%= t(".cash_anchor_help") %></p>
     </div>

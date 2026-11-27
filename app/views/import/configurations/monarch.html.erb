@@ -33,7 +33,9 @@
   </div>
 
   <%= styled_form_with url: import_configuration_path(@import), method: :patch, class: "space-y-4",
-        data: { turbo: false, controller: "checkbox-group", action: "change->checkbox-group#sync" } do |form| %>
+        data: { turbo: false, controller: "checkbox-group account-currency-source", action: "change->checkbox-group#sync",
+                account_currency_source_currencies_value: @target_account_currencies.to_json,
+                account_currency_source_fallback_value: @import.family.currency } do |form| %>
     <%= render DS::Table.new(rows: @import.ordered_account_mappings, label: t(".table_label")) do |table| %>
       <% table.with_column(tag.span(master_toggle.call("include", t(".import_column")), class: "inline-flex items-center gap-2")) do |mapping| %>
         <%= render DS::Toggle.new(id: dom_id(mapping, :include), name: "accounts[#{mapping.id}][include]",
@@ -60,7 +62,8 @@
         <div class="form-field min-w-44">
           <%= form.select "accounts[#{mapping.id}][target_id]", target_options,
                 { selected: mapping.mappable_id.to_s, label: false },
-                { id: dom_id(mapping, :target), aria: { label: t(".destination_label", name: mapping.key) } } %>
+                { id: dom_id(mapping, :target), aria: { label: t(".destination_label", name: mapping.key) },
+                  data: { action: "account-currency-source#follow", currency_input: "##{dom_id(mapping, :balance_currency)}" } } %>
         </div>
       <% end %>
 
@@ -101,12 +104,22 @@
       <% end %>
 
       <% table.with_column(t(".balance_column"), numeric: true) do |mapping| %>
-        <div class="form-field w-32 ml-auto">
-          <%= form.text_field "accounts[#{mapping.id}][current_balance]",
-                value: mapping.current_balance.presence || @import.suggested_current_balance(mapping),
-                label: false, inputmode: "decimal", class: "form-field__input text-right tabular-nums",
-                id: dom_id(mapping, :current_balance), aria: { label: t(".balance_label", name: mapping.key) } %>
-        </div>
+        <% balance = mapping.current_balance_amount || @import.suggested_current_balance(mapping) %>
+        <%# An existing target keeps its own currency (the import does not convert),
+            and the field follows the Destination picker through this unnamed input,
+            keeping the saved balance's decimals on top of each currency's own. %>
+        <% balance_currency = @target_account_currencies[mapping.mappable_id] || @import.family.currency %>
+        <%= tag.input type: "hidden", id: dom_id(mapping, :balance_currency), value: balance_currency %>
+        <%= form.money_field "accounts[#{mapping.id}][current_balance]",
+              value: balance,
+              label: t(".balance_label", name: mapping.key),
+              label_class: "sr-only",
+              min_precision: amount_decimals(balance),
+              container_class: "w-36 ml-auto",
+              input_class: "text-right tabular-nums",
+              hide_currency: true,
+              currency_value_override: balance_currency,
+              currency_source: "##{dom_id(mapping, :balance_currency)}" %>
       <% end %>
     <% end %>
 

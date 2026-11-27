@@ -2,6 +2,8 @@
 tr:
   rule:
     conditions:
+      amount_value:
+        label: Tutar
       condition_group:
         add_condition: Koşul ekle
         all: tümü

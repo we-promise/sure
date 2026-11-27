@@ -154,6 +154,8 @@ nl:
         less_than_or_equal_to: "Kleiner dan of gelijk aan"
   rule:
     conditions:
+      amount_value:
+        label: Bedrag
       condition_group:
         and_prefix: "en"
         match: "voldoet aan"

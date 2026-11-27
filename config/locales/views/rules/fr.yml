@@ -2,6 +2,8 @@
 fr:
   rule:
     conditions:
+      amount_value:
+        label: Montant
       condition:
         value_placeholder: Saisissez une valeur
       condition_group:

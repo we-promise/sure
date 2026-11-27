@@ -1,0 +1,16 @@
+<%# locals: (form:, condition:) %>
+
+<%# Built without the condition object, so a text condition's value is never
+    read as an amount (the template copy is rendered for every condition). %>
+<%# Compared with amounts in every account currency, so decimals stay allowed. %>
+<% amount, precision = money_field_value(condition.filter.type == "number" ? condition.value : nil, min_precision: 2) %>
+<%= fields form.object_name, builder: StyledFormBuilder do |value_form| %>
+  <%= value_form.money_field :value,
+        value: amount,
+        label: t("rule.conditions.amount_value.label"),
+        label_class: "sr-only",
+        precision: precision,
+        placeholder: "10",
+        hide_currency: true,
+        currency_value_override: Current.family.currency %>
+<% end %>

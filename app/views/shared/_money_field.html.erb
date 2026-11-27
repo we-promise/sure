@@ -9,8 +9,12 @@
    # A text input has no native min/max constraint, so the bounds the old
    # number_field enforced (the caller's, or these defaults) are handed to
    # money_field_controller, which checks the evaluated amount against them.
+   # min_precision: decimals kept whatever currency the field follows.
+   display_precision = options[:precision].presence || [ currency.default_precision, options[:min_precision].to_i ].max
    amount_min = options[:min] || -99999999999999
-   amount_max = options[:max] || 99999999999999 %>
+   amount_max = options[:max] || 99999999999999
+   label_options = { class: class_names("form-field__label", options[:label_class]) }
+   label_options[:for] = options[:id] if options[:id] %>
 
 <div class="form-field group/money-field <%= options[:container_class] %>"
      data-controller="money-field"
@@ -18,6 +22,7 @@
      data-money-field-delimiter-value="<%= currency.delimiter %>"
      data-money-field-separator-currency-value="<%= currency.iso_code %>"
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
+     <% if options[:min_precision].present? %> data-money-field-min-precision-value="<%= options[:min_precision] %>"<% end %>
      <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>
      <% if options[:currency_source].present? %> data-money-field-currency-source-value="<%= options[:currency_source] %>" data-action="change@document->money-field#followCurrencySource"<% end %>
      data-money-field-min-value="<%= amount_min %>"
@@ -27,7 +32,7 @@
      data-money-field-max-message-value="<%= t(".above_max", max: amount_max) %>">
   <% if options[:label_tooltip] %>
     <div class="form-field__header">
-      <%= form.label amount_method, class: class_names("form-field__label", options[:label_class]) do %>
+      <%= form.label amount_method, label_options do %>
         <%= options[:label] || t(".label") %>
         <% if options[:required] %>
           <span class="text-destructive ml-0.5">*</span>
@@ -46,7 +51,7 @@
 
   <div class="form-field__body">
     <% unless options[:label_tooltip] %>
-      <%= form.label amount_method, class: class_names("form-field__label", options[:label_class]) do %>
+      <%= form.label amount_method, label_options do %>
         <%= options[:label] || t(".label") %>
         <% if options[:required] %>
           <span class="text-destructive ml-0.5">*</span>
@@ -56,7 +61,8 @@
 
     <div class="flex items-center gap-1">
       <div class="flex items-center grow gap-1">
-        <span class="text-subdued text-sm" data-money-field-target="symbol">
+        <%# hide_symbol: a field that holds a percentage as well as an amount. %>
+        <span class="<%= class_names("text-subdued text-sm", hidden: options[:hide_symbol]) %>" data-money-field-target="symbol">
           <%= currency.symbol %>
         </span>
 
@@ -66,10 +72,10 @@
           placeholder: options[:placeholder] || "100",
           inputmode: "decimal",
           value: if options[:value]
-            sprintf("%.#{options[:precision].presence || currency.default_precision}f", options[:value])
+            sprintf("%.#{display_precision}f", options[:value])
           elsif form.object && form.object.respond_to?(amount_method)
             val = form.object.public_send(amount_method)
-            sprintf("%.#{options[:precision].presence || currency.default_precision}f", val) if val.present?
+            sprintf("%.#{display_precision}f", val) if val.present?
           end,
           step: options[:step] || currency.step,
           disabled: options[:disabled],
@@ -81,7 +87,7 @@
           }.compact),
           required: options[:required],
           aria: options[:aria],
-          **options.slice(:name) %>
+          **options.slice(:name, :title, :id, :autocomplete) %>
       </div>
 
       <% unless options[:hide_currency] %>

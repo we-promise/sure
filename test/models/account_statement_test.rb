@@ -301,6 +301,25 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_includes statement.errors[:currency], "is invalid"
   end
 
+  test "an unknown currency falls back to the saved one, then the account's or family's" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: nil,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    statement.update_column(:currency, nil)
+
+    statement.currency = "NOPE"
+    assert_equal @family.currency.upcase, statement.known_statement_currency
+
+    statement.account = @account
+    assert_equal @account.currency.upcase, statement.known_statement_currency
+
+    statement.update_column(:currency, "EUR")
+    statement.currency = "NOPE"
+    assert_equal "EUR", statement.known_statement_currency
+  end
+
   test "rejects unsupported file extension even when mime type is broadly allowed" do
     assert_raises(AccountStatement::InvalidUploadError) do
       AccountStatement.create_from_upload!(

@@ -213,6 +213,8 @@ nb:
       delete_confirm_body: "Reglene blir stående der de er, uten gruppe. Ingen regler slettes."
   rule:
     conditions:
+      amount_value:
+        label: Beløp
       condition_group:
         and_prefix: og
         match: oppfyll

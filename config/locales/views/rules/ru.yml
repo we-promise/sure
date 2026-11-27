@@ -2,6 +2,8 @@
 ru:
   rule:
     conditions:
+      amount_value:
+        label: Сумма
       condition_group:
         add_condition: Добавить условие
         all: все

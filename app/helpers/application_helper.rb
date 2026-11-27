@@ -1,4 +1,6 @@
 module ApplicationHelper
+  MONEY_FIELD_MAX_EXPONENT = 20
+
   include Pagy::Frontend
 
   # Whether an AI feature (a key in Ai::Routes::MATRIX) can run for the current family and user,
@@ -218,6 +220,43 @@ module ApplicationHelper
               .transform_values { |item| calculate_total(item, money_method, negate) }
               .map { |_currency, money| format_money(money) }
               .join(separator)
+  end
+
+  # A saved or typed amount kept as text (a rule's split share or amount
+  # condition, a search filter) as a number for a money field, or nil when it
+  # is blank or not a number, and the decimals to show it with: at least the
+  # currency's, more when the value has them, so saving unchanged keeps it.
+  def money_field_value(raw, currency: Current.family.currency, min_precision: nil)
+    min_precision = [ Money::Currency.new(currency).default_precision, min_precision.to_i ].max
+    amount = BigDecimal(raw.to_s)
+    # An exponent far outside any amount ("1e-1000000000") is not one, and
+    # writing it out in plain notation would take a string of that length.
+    return [ nil, min_precision ] unless amount.finite? && amount.exponent.abs <= MONEY_FIELD_MAX_EXPONENT
+
+    [ amount, [ amount_decimals(amount), min_precision ].max ]
+  rescue ArgumentError, TypeError
+    [ nil, min_precision ]
+  end
+
+  # The decimals a saved amount has (70.1234 has 4, 1500 has 0), counted from
+  # its significant digits and exponent and capped, so a stray "1e-15" cannot
+  # ask a field for 15 decimals. 0 for anything that is not a finite number.
+  def amount_decimals(value)
+    amount = value.is_a?(BigDecimal) ? value : BigDecimal(value.to_s)
+    return 0 unless amount.finite? && amount.exponent.abs <= MONEY_FIELD_MAX_EXPONENT
+
+    _sign, digits, _base, exponent = amount.split
+    (digits.sub(/0+\z/, "").length - exponent).clamp(0, 10)
+  rescue ArgumentError, TypeError
+    0
+  end
+
+  # The decimals a money field needs to show a saved amount unchanged, or nil
+  # when the currency's own are enough, so the field keeps following the
+  # currency picker for ordinary amounts.
+  def saved_amount_precision(value, currency:)
+    _amount, precision = money_field_value(value, currency: currency)
+    precision if precision > Money::Currency.new(currency).default_precision
   end
 
   def currency_picker_options_for_family(family = Current.family, extra: [])

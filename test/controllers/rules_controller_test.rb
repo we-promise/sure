@@ -13,6 +13,16 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "the amount condition takes decimals in a whole-number family currency" do
+    @user.family.update!(currency: "JPY")
+
+    get new_rule_url(resource_type: "transaction")
+
+    assert_response :success
+    # Compared with amounts in every account currency, so "12.50" must be valid.
+    assert_select "[data-controller='money-field'][data-money-field-precision-value='2']:has(input[name$='[value]'])"
+  end
+
   test "should get new with pre-filled name and action" do
     category = categories(:food_and_drink)
     get new_rule_url(

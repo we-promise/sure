@@ -11,6 +11,7 @@ class Rule::Condition < ApplicationRecord
   has_many :sub_conditions, -> { order(:created_at, :id) }, class_name: "Rule::Condition", foreign_key: :parent_id, dependent: :destroy, inverse_of: :parent
 
   before_validation :normalize_legacy_condition_type
+  before_validation :keep_stored_amount_text
 
   validates :condition_type, presence: true, inclusion: { in: SUPPORTED_CONDITION_TYPES, allow_blank: true },
     if: -> { condition_type.to_s.valid_encoding? }
@@ -109,6 +110,21 @@ class Rule::Condition < ApplicationRecord
   end
 
   private
+    # The amount field submits the stored "100" back as "100.00". The same
+    # number is not an edit, so the stored text stays and the rule's match
+    # criteria (and its notification baseline) are left alone.
+    def keep_stored_amount_text
+      return unless persisted? && condition_type == "transaction_amount" && will_save_change_to_value?
+
+      self.value = value_in_database if same_number?(value, value_in_database)
+    end
+
+    def same_number?(a, b)
+      BigDecimal(a.to_s) == BigDecimal(b.to_s)
+    rescue ArgumentError, TypeError
+      false
+    end
+
     # A blank value is already reported by the presence validation, and one the
     # database will not store (a null byte, malformed UTF-8) by
     # DatabaseTextValidator. Neither can be probed: the driver refuses to send it.

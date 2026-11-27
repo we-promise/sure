@@ -2,6 +2,8 @@
 ca:
   rule:
     conditions:
+      amount_value:
+        label: Import
       condition_group:
         add_condition: Afegeix condició
         all: totes

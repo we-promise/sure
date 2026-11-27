@@ -311,6 +311,21 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_select "button", text: I18n.t("account_statements.show.unlink"), count: 0
   end
 
+  test "statement balances keep their decimals in a whole-number currency" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "jpy_statement.csv", content_type: "text/csv")
+    )
+    statement.update_columns(currency: "JPY", opening_balance: BigDecimal("100.25"), closing_balance: BigDecimal("1500"))
+
+    get account_statement_url(statement)
+
+    assert_response :success
+    assert_select "input[name='account_statement[opening_balance]'][value='100.25']"
+    assert_select "input[name='account_statement[closing_balance]'][value='1500']"
+  end
+
   test "metadata form does not expose account select for managers" do
     statement = AccountStatement.create_from_upload!(
       family: @account.family,
@@ -425,6 +440,22 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
       assert_select "a[href=?]", account_statement_path(statement)
       assert_select "span", text: I18n.t("account_statements.status.rejected")
     end
+  end
+
+  test "an unknown currency redraws the form with its error" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+
+    statement.update_column(:currency, "EUR")
+
+    patch account_statement_url(statement), params: { account_statement: { currency: "ZZZ", closing_balance: "12.50" } }
+
+    assert_response :unprocessable_entity
+    assert_select "select[name='account_statement[currency]'] option[selected][value='EUR']"
+    assert_select "[data-controller~='money-field'][data-money-field-separator-currency-value='EUR'] input[name='account_statement[closing_balance]']"
   end
 
   test "updates metadata" do

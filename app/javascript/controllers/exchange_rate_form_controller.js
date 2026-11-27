@@ -1,7 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
-import evaluateAmountExpression, {
-  precisionFromStep,
-} from "utils/evaluate_amount_expression";
+import submittedAmount from "utils/submitted_amount";
 
 export default class extends Controller {
   static targets = [
@@ -11,7 +9,9 @@ export default class extends Controller {
     "exchangeRateContainer",
     "exchangeRateField",
     "convertDestinationDisplay",
-    "calculateRateDisplay"
+    "calculateRateDisplay",
+    "sourceCurrency",
+    "destinationCurrency"
   ];
 
   static values = {
@@ -24,6 +24,14 @@ export default class extends Controller {
     this.destinationCurrency = null;
     this.activeTab = "convert";
 
+    // A money field reformats its text when its currency lookup lands, which
+    // fires no "input", so the derived rate or destination is worked out again.
+    this.recalculateAmounts = () => this.onAmountInputChange();
+    this.element.addEventListener(
+      "money-field:reformatted",
+      this.recalculateAmounts,
+    );
+
     if (!this.hasRequiredExchangeRateTargets()) {
       return;
     }
@@ -31,11 +39,20 @@ export default class extends Controller {
     this.checkCurrencyDifference();
   }
 
+  disconnect() {
+    this.element.removeEventListener(
+      "money-field:reformatted",
+      this.recalculateAmounts,
+    );
+  }
+
   hasRequiredExchangeRateTargets() {
     return this.hasDateTarget;
   }
 
   checkCurrencyDifference() {
+    this.syncCurrencySources();
+
     const context = this.getExchangeRateContext();
 
     if (!context) {
@@ -120,9 +137,7 @@ export default class extends Controller {
     // comma and silently truncates it. exchangeRateFieldTarget is a plain
     // type="number" input, which the browser already normalizes to a dot
     // decimal or empty string, so parseFloat is safe there.
-    const amount = evaluateAmountExpression(this.amountTarget.value, {
-      precision: precisionFromStep(this.amountTarget.step),
-    });
+    const amount = submittedAmount(this.application, this.amountTarget);
     const rate = Number.parseFloat(this.exchangeRateFieldTarget.value);
 
     if (amount && rate && rate !== 0) {
@@ -146,12 +161,9 @@ export default class extends Controller {
       return;
     }
 
-    // Same reasoning as calculateConvertDestination above: amountTarget
-    // needs expression-aware parsing, destinationAmountTarget doesn't.
-    const amount = evaluateAmountExpression(this.amountTarget.value, {
-      precision: precisionFromStep(this.amountTarget.step),
-    });
-    const destAmount = Number.parseFloat(this.destinationAmountTarget.value);
+    // Both amounts are money fields (see calculateConvertDestination above).
+    const amount = submittedAmount(this.application, this.amountTarget);
+    const destAmount = submittedAmount(this.application, this.destinationAmountTarget);
 
     if (amount && destAmount && amount !== 0) {
       const rate = destAmount / amount;
@@ -188,7 +200,7 @@ export default class extends Controller {
 
   clearCalculateRateFields() {
     if (this.hasDestinationAmountTarget) {
-      this.destinationAmountTarget.value = "";
+      this.#clearDestinationAmount();
     }
     if (this.hasCalculateRateDisplayTarget) {
       this.calculateRateDisplayTarget.textContent = "-";
@@ -295,11 +307,39 @@ export default class extends Controller {
       this.calculateRateDisplayTarget.textContent = "-";
     }
     if (this.hasDestinationAmountTarget) {
-      this.destinationAmountTarget.value = "";
+      this.#clearDestinationAmount();
     }
 
     this.sourceCurrency = null;
     this.destinationCurrency = null;
+  }
+
+  // The destination amount is a money field, which tracks its validity on
+  // "input"; a stale invalid text would otherwise block submit while hidden.
+  #clearDestinationAmount() {
+    this.destinationAmountTarget.value = "";
+    this.destinationAmountTarget.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  // Money fields whose currency follows an account picker read it from these
+  // hidden inputs (money_field's currency_source), so a change is announced
+  // with a "change" event. Subclasses return the currencies they know.
+  syncCurrencySources() {
+    const { source, destination } = this.currencySources();
+
+    this.#setCurrencySource(this.hasSourceCurrencyTarget ? this.sourceCurrencyTarget : null, source);
+    this.#setCurrencySource(this.hasDestinationCurrencyTarget ? this.destinationCurrencyTarget : null, destination);
+  }
+
+  currencySources() {
+    return {};
+  }
+
+  #setCurrencySource(input, currency) {
+    if (!input || !currency || input.value === currency) return;
+
+    input.value = currency;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   getExchangeRateContext() {

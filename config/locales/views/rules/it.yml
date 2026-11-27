@@ -102,6 +102,8 @@ it:
         equal_to: Uguale a
   rule:
     conditions:
+      amount_value:
+        label: Importo
       condition_group:
         and_prefix: e
         match: corrispondono

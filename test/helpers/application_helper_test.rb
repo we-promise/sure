@@ -234,4 +234,46 @@ class ApplicationHelperTest < ActionView::TestCase
   ensure
     singleton_class.send(:remove_method, :lucide_icon) if singleton_class.method_defined?(:lucide_icon)
   end
+
+  test "#money_field_value reads a numeric text and keeps its decimals" do
+    assert_equal [ BigDecimal("12.5"), 2 ], money_field_value("12.5", currency: "USD")
+    assert_equal [ BigDecimal("70.1234"), 4 ], money_field_value("70.1234", currency: "USD")
+    assert_equal [ BigDecimal("1500"), 0 ], money_field_value("1500", currency: "JPY")
+  end
+
+  test "#money_field_value treats min_precision as a floor and caps long decimals" do
+    assert_equal 2, money_field_value("5", currency: "JPY", min_precision: 2).last
+    assert_equal 3, money_field_value("1.234", currency: "KWD", min_precision: 2).last
+    assert_equal 10, money_field_value("1e-15", currency: "USD").last
+  end
+
+  test "#money_field_value rejects an exponent no amount has" do
+    assert_equal [ nil, 2 ], money_field_value("1e-1000000000", currency: "USD")
+    assert_equal [ nil, 2 ], money_field_value("1e1000000000", currency: "USD")
+    assert_equal [ nil, 2 ], money_field_value("1e-150", currency: "USD")
+  end
+
+  test "#amount_decimals counts a saved amount's decimals" do
+    assert_equal 4, amount_decimals(BigDecimal("70.1234"))
+    assert_equal 0, amount_decimals(BigDecimal("1500"))
+    assert_equal 1, amount_decimals("123.40")
+    assert_equal 10, amount_decimals("1e-15")
+    assert_equal 0, amount_decimals("1e-1000000000")
+    assert_equal 0, amount_decimals(nil)
+  end
+
+  test "#saved_amount_precision asks for more decimals only when a saved amount has them" do
+    assert_equal 2, saved_amount_precision(BigDecimal("100.25"), currency: "JPY")
+    assert_equal 3, saved_amount_precision(BigDecimal("123.456"), currency: "USD")
+    assert_nil saved_amount_precision(BigDecimal("100.25"), currency: "USD")
+    assert_nil saved_amount_precision(BigDecimal("1500"), currency: "JPY")
+    assert_nil saved_amount_precision(nil, currency: "USD")
+  end
+
+  test "#money_field_value is nil for blank or non-numeric text" do
+    assert_equal [ nil, 2 ], money_field_value(nil, currency: "USD")
+    assert_equal [ nil, 2 ], money_field_value("", currency: "USD")
+    assert_equal [ nil, 2 ], money_field_value("starbucks", currency: "USD")
+    assert_equal [ nil, 2 ], money_field_value("12,50", currency: "USD")
+  end
 end
