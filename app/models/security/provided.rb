@@ -757,7 +757,8 @@ module Security::Provided
   # and never anything at all on a locked security. Only a provider that
   # classifies may claim the classification: an instrument type from one that
   # does not (Twelve Data) would stamp `provider` as the source and keep a
-  # capable provider from ever being asked.
+  # capable provider from ever being asked. A fund's wrapper and its cleared
+  # listing region claim nothing, so they come from any provider.
   def log_refused_classification(provider, messages)
     DebugLogEntry.capture(
       category: "security_metadata_fetch",
@@ -794,9 +795,9 @@ module Security::Provided
     attrs[:sector] = provided_sector if provided_sector.present? && sector.blank?
     attrs[:industry] = data.industry if data.industry.present? && industry.blank?
 
-    return attrs unless classifies && classification_source.in?([ nil, "default" ])
+    return attrs unless classification_source.in?([ nil, "default" ])
 
-    if mapped_class.present?
+    if classifies && mapped_class.present?
       attrs[:asset_class] = mapped_class
       attrs[:asset_sub_class] = mapped_sub_class
       attrs[:classification_source] = "provider"
@@ -829,7 +830,7 @@ module Security::Provided
   end
 
   # Nil when the fund is leveraged or inverse, or its weights are not plain
-  # long holdings (a short position, or a class above 100%): its holdings
+  # long holdings (a short position, or classes above 100%): its holdings
   # then say little about its exposure. Cash alone never decides the class:
   # a commodity-futures ETF holds mostly T-bills as collateral. A money
   # market fund is classified from its category instead.
@@ -839,6 +840,7 @@ module Security::Provided
     classes = weights[:asset_class] || {}
     tolerance = FUND_WEIGHT_TOLERANCE
     return nil if classes.values.any? { |percent| percent < -tolerance || percent > 100 + tolerance }
+    return nil if classes.values.sum > 100 + tolerance
 
     weights[:category_asset_class].presence || dominant_fund_weight(classes.except("liquidity"))
   end

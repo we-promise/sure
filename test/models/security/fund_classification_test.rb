@@ -58,6 +58,24 @@ class Security::FundClassificationTest < ActiveSupport::TestCase
     assert_nil @security.reload.region, "the listing region was put back on a later save"
   end
 
+  # MFAPI, Twelve Data, Alpha Vantage and Tinkoff name the wrapper but give no
+  # classification.
+  test "a fund priced by a provider that does not classify still gets its sub-class and loses its listing region" do
+    import(info(kind: "ETF"), classifies: false)
+
+    assert_equal "etf", @security.reload.asset_sub_class
+    assert_nil @security.region
+    assert_nil @security.classification_source
+    assert_nil @security.asset_class
+  end
+
+  test "a stock priced by a provider that does not classify keeps its listing region and gets no class" do
+    import(info(kind: "Common Stock"), classifies: false)
+
+    assert_equal [ "europe", nil, nil, nil ],
+      [ @security.reload.region, @security.asset_class, @security.asset_sub_class, @security.classification_source ]
+  end
+
   # A fund's region may have come from its holdings even when it equals its
   # old listing's, and nothing records which, so a country correction leaves
   # it alone.
@@ -140,6 +158,19 @@ class Security::FundClassificationTest < ActiveSupport::TestCase
     )))
 
     assert_nil @security.reload.asset_class
+  end
+
+  test "a fund whose classes add up to well over 100% is left unclassified" do
+    import(info(kind: "ETF", fund_weights: { asset_class: { "equity" => 95.0, "fixed_income" => 65.0 } }))
+
+    assert_nil @security.reload.asset_class
+    assert_equal "etf", @security.asset_sub_class
+  end
+
+  test "a fund whose classes add up to within the tolerance of 100% is still classified" do
+    import(info(kind: "ETF", fund_weights: { asset_class: { "equity" => 99.0, "liquidity" => 11.0 } }))
+
+    assert_equal "equity", @security.reload.asset_class
   end
 
   test "weights that are not plain long holdings leave a fund unclassified" do
@@ -231,8 +262,8 @@ class Security::FundClassificationTest < ActiveSupport::TestCase
       )
     end
 
-    def import(data, security: @security)
-      provider = capable_provider("provider")
+    def import(data, security: @security, classifies: true)
+      provider = capable_provider("provider", classification: classifies)
       provider.stubs(:class).returns(Provider::TwelveData)
       provider.stubs(:fetch_security_info).returns(provider_success_response(data))
       security.stubs(:price_data_provider).returns(provider)
