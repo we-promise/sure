@@ -18,14 +18,10 @@ class PushSubscription::Delivery
     end
 
     record_failure(status)
-    if status == 410
-      @subscription.invalidate_if_unchanged!(response)
-      :unregistered
-    else
-      # BadDeviceToken can mean the environment is wrong. Preserve the record
-      # for diagnosis and renewal rather than deleting every 400 response.
-      :rejected
-    end
+    # :gone leaves removing the subscription to the caller. BadDeviceToken can
+    # mean the environment is wrong, so other errors preserve the record for
+    # diagnosis and renewal.
+    status == 410 && @subscription.unregistered_by?(response) ? :gone : :rejected
   rescue Apns::Client::UnavailableError
     :skipped
   rescue Apns::Client::ConfigurationError

@@ -196,9 +196,14 @@ class Api::V1::SplitsController < Api::V1::BaseController
 
         # Round before the range check: 999999999999999.99995 is under the
         # limit as sent and at it once rounded.
-        amount = BigDecimal(s[:amount].to_s)
-        amount = amount.round(AMOUNT_SCALE) if amount.finite?
-        unless amount.finite? && amount.abs < AMOUNT_LIMIT
+        amount = parse_decimal(s[:amount])
+        if amount.nil?
+          render_unprocessable("each split requires a numeric amount")
+          return nil
+        end
+
+        amount = amount.round(AMOUNT_SCALE)
+        unless amount.abs < AMOUNT_LIMIT
           render_unprocessable("split amount is out of range")
           return nil
         end
@@ -214,9 +219,6 @@ class Api::V1::SplitsController < Api::V1::BaseController
           **split_references.scope(**references)
         }
       end
-    rescue ArgumentError, TypeError
-      render_unprocessable("each split requires a numeric amount")
-      nil
     end
 
     # Transaction's belongs_to :category and :merchant are unscoped, so a known UUID from another
