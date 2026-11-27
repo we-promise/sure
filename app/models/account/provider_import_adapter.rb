@@ -65,7 +65,7 @@ class Account::ProviderImportAdapter
       # excluded rather than being re-excluded on every sync.
       if entry.persisted? && !incoming_pending && entry.auto_excluded_pending? &&
           (entry.user_modified? || !entry.import_locked?)
-        entry.update!(excluded: false) # also drops the mark (Entry callback)
+        entry.update!(excluded: false) # also drops the record (Entry callback)
       end
 
       # === PROTECTION CHECK: Skip entries that should not be overwritten ===

@@ -41,6 +41,18 @@ class SimplefinPendingRestoreTest < ActiveSupport::TestCase
     assert_not entry.reload.excluded
   end
 
+  test "restoring forgets why the sync excluded the entry" do
+    entry = excluded_entry("simplefin" => { "pending" => true })
+    Entry.record_auto_exclusions([ [ entry.id, "simplefin" ] ], reason: "stale_pending", days: 8)
+
+    restore
+
+    assert_not entry.reload.excluded
+    assert_empty entry.data_enrichments.sync_exclusion
+    entry.update!(excluded: true)
+    assert_nil entry.auto_exclusion, "a later manual exclusion is not credited to the sync"
+  end
+
   test "keeps an excluded entry that has a posted match" do
     entry = excluded_entry("simplefin" => { "pending" => true })
     companion(entry, {})
@@ -48,6 +60,25 @@ class SimplefinPendingRestoreTest < ActiveSupport::TestCase
     restore
 
     assert entry.reload.excluded
+  end
+
+  test "keeps an entry whose posted match arrives after the scan" do
+    entry = excluded_entry("simplefin" => { "pending" => true })
+    Entry.record_auto_exclusions([ [ entry.id, "simplefin" ] ], reason: "stale_pending", days: 8)
+    post_match = -> { companion(entry, {}) }
+    # The restore transaction opens after the scan; the sync posts the match just before it.
+    Entry.define_singleton_method(:transaction) do |*args, **options, &block|
+      singleton_class.remove_method(:transaction)
+      post_match.call
+      super(*args, **options, &block)
+    end
+
+    restore
+
+    assert entry.reload.excluded
+    assert_equal "stale_pending", entry.auto_exclusion.metadata["reason"]
+  ensure
+    Entry.singleton_class.remove_method(:transaction) if Entry.singleton_class.method_defined?(:transaction, false)
   end
 
   test "leaves entries flagged pending by other providers alone" do

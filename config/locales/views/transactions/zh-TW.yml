@@ -74,6 +74,10 @@ zh-TW:
       attachments: 附件
       exclude: 排除
       exclude_description: 被排除的交易不會納入預算計算與報表。
+      auto_excluded_title: "已自動排除"
+      auto_excluded_stale_pending: "%{date}，銀行同步排除了這筆待處理交易，因為它在 %{days} 天內仍未入帳。"
+      auto_excluded_posted_match: "%{date}，銀行同步排除了這筆待處理交易，因為它的已入帳版本以另一筆交易匯入。"
+      auto_excluded_other: "%{date}，銀行同步排除了這筆交易。"
       activity_type: 活動類型
       activity_type_description: 投資活動的類型（買入、賣出、股息等）。系統會自動判斷，您也可以手動設定。
       one_time_title: 一次性%{type}
