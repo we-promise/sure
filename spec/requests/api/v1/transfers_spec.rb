@@ -37,14 +37,15 @@ RSpec.describe 'API V1 Transfers', type: :request do
       user: user,
       name: 'No Read Docs Key',
       key: key,
+      display_key: key,
       scopes: [],
       source: 'mobile'
     ).tap { |api_key| api_key.save!(validate: false) }
   end
 
   let(:'X-Api-Key') { api_key.plain_key }
-  let(:checking) { family.accounts.create!(name: 'Checking', balance: 1000, currency: 'USD', accountable: Depository.create!) }
-  let(:savings) { family.accounts.create!(name: 'Savings', balance: 2500, currency: 'USD', accountable: Depository.create!) }
+  let(:checking) { family.accounts.create!(owner: user, name: 'Checking', balance: 1000, currency: 'USD', accountable: Depository.create!) }
+  let(:savings) { family.accounts.create!(owner: user, name: 'Savings', balance: 2500, currency: 'USD', accountable: Depository.create!) }
   let!(:outflow_entry) do
     checking.entries.create!(
       date: Date.current,

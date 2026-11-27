@@ -1,0 +1,19 @@
+---
+fr:
+  sync_schedules:
+    menu_item: Fréquence de synchronisation
+    intervals:
+      minutes: Toutes les %{count} minutes
+      hours:
+        one: Toutes les heures
+        other: Toutes les %{count} heures
+    edit:
+      title: Fréquence de synchronisation
+      description: Chaque connexion se synchronise avec la synchronisation de la famille, une fois par jour pour la plupart des fournisseurs. Choisissez un intervalle pour synchroniser aussi %{name} séparément au cours de la journée.
+      interval_label: Synchroniser
+      no_schedule: Synchronisation habituelle uniquement
+      hint: Les synchronisations fréquentes sont décomptées des limites de requêtes du fournisseur, et certains fournisseurs facturent chaque requête.
+      save: Enregistrer
+    update:
+      updated: Fréquence de synchronisation enregistrée.
+      cleared: Fréquence de synchronisation supprimée. La connexion revient à sa synchronisation habituelle.
