@@ -298,7 +298,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - missing required fields, malformed tag_ids, an unknown currency, or a tag, category or merchant id the family cannot use' do
+      response '422', 'validation error - missing required fields, an amount that is not a number, malformed tag_ids, an unknown currency, or a tag, category or merchant id the family cannot use' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -308,6 +308,14 @@ RSpec.describe 'API V1 Transactions', type: :request do
             }
           }
         end
+
+        run_test!
+      end
+
+      response '422', 'validation error - missing required fields, an amount that is not a number, malformed tag_ids, an unknown currency, or a tag, category or merchant id the family cannot use' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { transaction: { account_id: account.id, name: 'Coffee', date: Date.current.to_s, amount: '12abc' } } }
 
         run_test!
       end
@@ -416,10 +424,18 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - unknown nature, an unknown currency, an amount, nature or currency change on a transfer, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
+      response '422', 'validation error - an amount that is not a number, unknown nature, an unknown currency, an amount, nature or currency change on a transfer, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { transaction: { tag_ids: [ SecureRandom.uuid ] } } }
+
+        run_test!
+      end
+
+      response '422', 'validation error - an amount that is not a number, unknown nature, an unknown currency, an amount, nature or currency change on a transfer, malformed tag_ids, or a tag, category or merchant id the family cannot use' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { transaction: { amount: 'abc' } } }
 
         run_test!
       end

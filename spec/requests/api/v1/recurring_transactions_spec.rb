@@ -265,6 +265,26 @@ RSpec.describe 'API V1 Recurring Transactions', type: :request do
 
         run_test!
       end
+
+      response '422', 'validation error - negative occurrence count, or an amount, day or count that is not a number' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            recurring_transaction: {
+              account_id: account.id,
+              name: 'Gym Membership',
+              amount: '49.99abc',
+              currency: 'USD',
+              expected_day_of_month: '1.5',
+              last_occurrence_date: '2026-04-01',
+              next_expected_date: '2026-05-01'
+            }
+          }
+        end
+
+        run_test!
+      end
     end
   end
 

@@ -240,6 +240,14 @@ RSpec.describe 'API V1 Valuations', type: :request do
         run_test!
       end
 
+      response '422', 'validation error - missing field, or an amount that is not a number' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { valuation: { account_id: account.id, amount: '12abc', date: Date.current.to_s } } }
+
+        run_test!
+      end
+
       response '404', 'account not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
@@ -344,6 +352,14 @@ RSpec.describe 'API V1 Valuations', type: :request do
             }
           }
         end
+
+        run_test!
+      end
+
+      response '422', 'validation error - only one of amount/date provided, or an amount that is not a number' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { valuation: { amount: 'abc', date: (Date.current - 1.day).to_s } } }
 
         run_test!
       end

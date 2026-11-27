@@ -713,6 +713,44 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert response_data["errors"].any? { |error| error.match?(/Date/) }
   end
 
+  test "create refuses an amount that is not a number and creates nothing" do
+    [ "abc", "12abc", "Infinity", "NaN" ].each do |amount|
+      assert_no_difference("@account.entries.count", amount) do
+        post api_v1_transactions_url,
+             params: { transaction: { account_id: @account.id, name: "Bad amount", amount: amount, date: Date.current, nature: "expense" } },
+             headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity, amount
+      body = JSON.parse(response.body)
+      assert_equal "validation_failed", body["error"]
+      assert_equal "amount must be a valid number", body["message"], amount
+    end
+  end
+
+  test "create refuses a boolean JSON amount and creates nothing" do
+    [ false, true ].each do |amount|
+      assert_no_difference("@account.entries.count", amount.inspect) do
+        post api_v1_transactions_url,
+             params: { transaction: { account_id: @account.id, name: "Bad amount", amount: amount, date: Date.current, nature: "expense" } },
+             headers: api_headers(@api_key),
+             as: :json
+      end
+
+      assert_response :unprocessable_entity, amount.inspect
+      assert_equal "amount must be a valid number", JSON.parse(response.body)["message"], amount.inspect
+    end
+  end
+
+  test "create keeps every digit of a decimal string amount" do
+    post api_v1_transactions_url,
+         params: { transaction: { account_id: @account.id, name: "Exact", amount: "1234567890123.4567", date: Date.current } },
+         headers: api_headers(@api_key)
+
+    assert_response :created
+    assert_equal BigDecimal("1234567890123.4567"), Transaction.find(JSON.parse(response.body)["id"]).entry.amount
+  end
+
   test "should reject create without API key" do
     post api_v1_transactions_url, params: { transaction: { name: "Test" } }
     assert_response :unauthorized
@@ -1037,6 +1075,33 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
         params: { transaction: { name: "Test" } },
         headers: api_headers(@api_key)
     assert_response :not_found
+  end
+
+  test "update refuses an amount that is not a number and changes nothing" do
+    [ "abc", "12abc", "Infinity" ].each do |amount|
+      assert_no_changes -> { @transaction.entry.reload.amount }, amount do
+        put api_v1_transaction_url(@transaction),
+            params: { transaction: { amount: amount } },
+            headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity, amount
+      assert_equal "amount must be a valid number", JSON.parse(response.body)["message"], amount
+    end
+  end
+
+  test "update refuses a boolean JSON amount and changes nothing" do
+    [ false, true ].each do |amount|
+      assert_no_changes -> { @transaction.entry.reload.amount }, amount.inspect do
+        patch api_v1_transaction_url(@transaction),
+              params: { transaction: { amount: amount } },
+              headers: api_headers(@api_key),
+              as: :json
+      end
+
+      assert_response :unprocessable_entity, amount.inspect
+      assert_equal "amount must be a valid number", JSON.parse(response.body)["message"], amount.inspect
+    end
   end
 
   test "should reject update without API key" do

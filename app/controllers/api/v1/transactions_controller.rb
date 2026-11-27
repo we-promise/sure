@@ -108,6 +108,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     return render_validation_error("Unknown tag id") if unknown_tag_ids?
     return render_validation_error("Unknown category id") if unknown_category_id?
     return render_validation_error("Unknown merchant id") if unknown_merchant_id?
+    return render_validation_error("amount must be a valid number") if malformed_amount?
     return render_unknown_currency if unknown_currency?
 
     @entry = account.entries.new(entry_params_for_create)
@@ -156,6 +157,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     return render_split_parent_change if split_financial_fields_changed? && @entry.split_parent?
 
     return render_validation_error(INVALID_NATURE_MESSAGE) if invalid_nature?
+    return render_validation_error("amount must be a valid number") if malformed_amount?
     # The web UI hides amount, nature and currency on a transfer: one leg alone
     # cannot change them without breaking Transfer#transfer_has_opposite_amounts.
     if @entry.transaction.transfer
@@ -596,10 +598,15 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     def transfer_amount_changed?
       amount = entry_params_for_update[:amount]
-      amount.present? && amount.to_d != @entry.amount
+      amount.present? && amount != @entry.amount
     end
 
-    def calculate_signed_amount(amount = transaction_params[:amount].to_f)
+    # A blank amount is still 0, as it always was; anything else must parse.
+    def malformed_amount?
+      malformed_decimal?(transaction_params[:amount])
+    end
+
+    def calculate_signed_amount(amount = parse_decimal(transaction_params[:amount]) || 0)
       nature = transaction_params[:nature]
 
       case nature.to_s.downcase

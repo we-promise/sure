@@ -63,7 +63,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       return
     end
 
-    unless valuation_params[:amount].present?
+    unless numeric_param_given?(valuation_params[:amount])
       render json: {
         error: "validation_failed",
         message: "Amount is required",
@@ -81,6 +81,9 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       return
     end
 
+    amount = parse_decimal(valuation_params[:amount])
+    return render_validation_error("amount must be a valid number") if amount.nil?
+
     account = current_resource_owner.family.accounts.writable_by(current_resource_owner).find(valuation_account_id)
     requested_upsert = upsert_requested?
     existing_write = false
@@ -94,7 +97,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
       # upsert=true only affects response status; reconciliation owns write behavior.
       result = account.create_reconciliation(
-        balance: valuation_params[:amount],
+        balance: amount,
         date: valuation_params[:date]
       )
 
@@ -147,8 +150,8 @@ class Api::V1::ValuationsController < Api::V1::BaseController
   end
 
   def update
-    if valuation_params[:date].present? || valuation_params[:amount].present?
-      unless valuation_params[:date].present? && valuation_params[:amount].present?
+    if valuation_params[:date].present? || numeric_param_given?(valuation_params[:amount])
+      unless valuation_params[:date].present? && numeric_param_given?(valuation_params[:amount])
         render json: {
           error: "validation_failed",
           message: "Both amount and date are required when updating reconciliation",
@@ -157,6 +160,9 @@ class Api::V1::ValuationsController < Api::V1::BaseController
         return
       end
 
+      amount = parse_decimal(valuation_params[:amount])
+      return render_validation_error("amount must be a valid number") if amount.nil?
+
       update_success = false
       error_payload = nil
       updated_entry = nil
@@ -164,7 +170,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       ActiveRecord::Base.transaction do
         result = @entry.account.update_reconciliation(
           @entry,
-          balance: valuation_params[:amount],
+          balance: amount,
           date: valuation_params[:date]
         )
 
