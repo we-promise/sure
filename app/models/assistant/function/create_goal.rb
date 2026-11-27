@@ -90,7 +90,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
       )
     end
 
-    available = family.accounts.where(accountable_type: "Depository").visible.where(name: linked_account_names)
+    available = linkable_accounts.where(name: linked_account_names)
     missing = linked_account_names - available.pluck(:name).uniq
     if missing.any?
       return error(
@@ -189,6 +189,13 @@ class Assistant::Function::CreateGoal < Assistant::Function
       nil
     end
 
+    # The accounts the web's goal form offers this user: owned or shared with
+    # them. Another member's private account is never named, even as a
+    # duplicate, so neither the list nor an ambiguity error reveals it.
+    def linkable_accounts
+      user.accessible_accounts.where(accountable_type: "Depository").visible
+    end
+
     # Says what is left, not just what exists. A goal that claims an account in
     # full is exclusive, so an account already claimed can only be joined with
     # an explicit earmark — and the assistant has no way to know that unless
@@ -196,7 +203,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
     def depository_account_payload
       claimed = whole_account_claimed_ids
 
-      family.accounts.where(accountable_type: "Depository").visible.map do |account|
+      linkable_accounts.map do |account|
         {
           name: account.name,
           currency: account.currency,

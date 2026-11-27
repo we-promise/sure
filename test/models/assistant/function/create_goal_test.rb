@@ -147,4 +147,66 @@ class Assistant::Function::CreateGoalTest < ActiveSupport::TestCase
     assert listed[:claimed_in_full]
     assert listed.key?(:free_to_earmark)
   end
+
+  # A member works from the accounts they own or were shared, as on the web's
+  # goal form; another member's private account is neither listed nor linkable.
+  test "a member is not shown another member's private account" do
+    member = users(:family_member)
+    hidden = accounts(:connected)
+    assert_not member.accessible_accounts.exists?(hidden.id)
+
+    result = Assistant::Function::CreateGoal.new(member).call("name" => "X", "target_amount" => 100, "linked_account_names" => [])
+    listed = result[:available_accounts].map { |a| a[:name] }
+
+    assert_includes listed, accounts(:depository).name
+    assert_not_includes listed, hidden.name
+  end
+
+  test "a member cannot link another member's private account" do
+    member = users(:family_member)
+    hidden = accounts(:connected)
+
+    assert_no_difference -> { Goal.count } do
+      result = Assistant::Function::CreateGoal.new(member).call(
+        "name" => "X", "target_amount" => 100,
+        "linked_account_names" => [ hidden.name ],
+        "earmarks" => { hidden.name => 50 }
+      )
+
+      assert_equal "unknown_accounts", result[:error]
+      assert_equal [ hidden.name ], result[:unknown_names]
+      assert_not_includes result[:available_accounts].map { |a| a[:name] }, hidden.name
+    end
+  end
+
+  # A private account with the same name must not turn the member's own
+  # account ambiguous, which would tell them it exists.
+  test "a private account sharing a name with the member's own is not counted" do
+    member = users(:family_member)
+    own = Account.create!(family: @family, owner: member, accountable: Depository.new,
+                          name: accounts(:connected).name, currency: "USD", balance: 300)
+
+    result = Assistant::Function::CreateGoal.new(member).call(
+      "name" => "Mine", "target_amount" => 100, "linked_account_names" => [ own.name ]
+    )
+
+    assert result[:success], result.inspect
+    assert_equal [ own.id ], Goal.find(result[:goal_id]).linked_accounts.pluck(:id)
+  end
+
+  # As on the web's goal form: a link earmarks part of the balance and writes
+  # nothing to the account, so a read-only share is enough.
+  test "a member can link an account shared with them read-only" do
+    member = users(:family_member)
+    shared = Account.create!(family: @family, owner: @user, accountable: Depository.new,
+                             name: "Shared Pot", currency: "USD", balance: 1_000)
+    shared.account_shares.create!(user: member, permission: "read_only")
+
+    result = Assistant::Function::CreateGoal.new(member).call(
+      "name" => "Shared", "target_amount" => 100, "linked_account_names" => [ shared.name ]
+    )
+
+    assert result[:success], result.inspect
+    assert_equal [ shared.id ], Goal.find(result[:goal_id]).linked_accounts.pluck(:id)
+  end
 end
