@@ -122,11 +122,20 @@ class McpController < ApplicationController
         return nil
       end
 
-      fn = fn_class.new(mcp_user)
       Usage.capture("mcp_call_served_daily")
-      result = fn.call(arguments)
 
-      { content: [ { type: "text", text: result.to_json } ] }
+      # A tool with an AI feature runs in the worker. One with no route keeps
+      # its own fallback (search_family_files' metadata search) on this thread.
+      if fn_class.ai_feature && Ai.available?(fn_class.ai_feature, family: mcp_user.family, user: mcp_user)
+        result = Ai::ToolJob.run(fn_class, mcp_user, arguments, timeout: Ai::ToolJob.timeout_for(fn_class))
+      else
+        result = fn_class.new(mcp_user).call(arguments)
+      end
+
+      tool_error = result.delete("tool_error") if result.is_a?(Hash)
+      envelope = { content: [ { type: "text", text: result.to_json } ] }
+      envelope[:isError] = true if tool_error
+      envelope
     rescue => e
       Rails.logger.error "MCP tools/call error: #{e.class}: #{e.message}"
 
@@ -169,8 +178,8 @@ class McpController < ApplicationController
 
       user = User.find_by_email_with_legacy_fallback(ENV["MCP_USER_EMAIL"])
 
-      unless user
-        Rails.logger.warn "[MCP] MCP_USER_EMAIL does not match any user — check environment configuration"
+      unless user&.active?
+        Rails.logger.warn "[MCP] MCP_USER_EMAIL does not match an active user — check environment configuration"
         return false
       end
 

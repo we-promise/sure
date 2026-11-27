@@ -95,6 +95,8 @@ class Import < ApplicationRecord
   belongs_to :account, optional: true
   belongs_to :account_statement, optional: true
   belongs_to :import_session, optional: true
+  # A tool's derived import keeps its source so a retry returns the same draft.
+  belongs_to :source_import, class_name: "Import", optional: true
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
@@ -103,11 +105,19 @@ class Import < ApplicationRecord
 
   scope :ordered, -> { order(created_at: :desc) }
   scope :ordered_by_sequence, -> { order(:sequence, :created_at) }
+  # The imports +user+ may view. A statement-backed import is as private as its
+  # statement; any other import is visible to the whole family.
+  scope :viewable_by, ->(user) {
+    family_imports = where(family_id: user.family_id)
+    family_imports.where(account_statement_id: nil)
+      .or(family_imports.where(account_statement_id: AccountStatement.viewable_by(user).select(:id)))
+  }
 
   enum :status, {
     pending: "pending",
     complete: "complete",
     importing: "importing",
+    cancelled: "cancelled",
     reverting: "reverting",
     revert_failed: "revert_failed",
     failed: "failed"
@@ -202,12 +212,19 @@ class Import < ApplicationRecord
 
     def parse_csv_str(csv_str, col_sep: ",")
       CSV.parse(
-        (csv_str || "").strip,
+        normalize_line_endings(csv_str).strip,
         headers: true,
         col_sep: col_sep,
         converters: [ ->(str) { str&.strip } ],
         liberal_parsing: true
       )
+    end
+
+    # Ruby's CSV auto-detects the row separator from the first newline it sees
+    # (ignoring quotes), so files mixing LF and CRLF (e.g. a quoted multi-line
+    # header followed by CRLF rows) fail to parse. Normalize to LF first.
+    def normalize_line_endings(csv_str)
+      (csv_str || "").gsub(/\r\n?/, "\n")
     end
 
     # Attempts to identify the best-matching date format from a list of candidates
@@ -565,10 +582,9 @@ class Import < ApplicationRecord
     FAMILY_CONFIG_TYPES.include?(type)
   end
 
-  # A statement-backed import is as private as its statement; any other import
-  # is visible to the whole family.
+  # The viewable_by scope's rule for a single import.
   def viewable_by?(user)
-    account_statement.blank? || account_statement.viewable_by?(user)
+    user.present? && self.class.viewable_by(user).exists?(id)
   end
 
   # Guests may view family configuration but not change it, so they may only

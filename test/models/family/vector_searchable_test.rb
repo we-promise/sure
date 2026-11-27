@@ -53,6 +53,81 @@ class Family::VectorSearchableTest < ActiveSupport::TestCase
     assert_equal [ 3, 6 ], limits, "the pool widens past the restricted candidates"
   end
 
+  test "upload_document_later keeps the upload on a pending row and queues its indexing job" do
+    file = uploaded_file(filename: "notes.txt", content_type: "text/plain", content: "a note")
+
+    document = nil
+    assert_enqueued_with(job: IndexFamilyDocumentJob) { document = @family.upload_document_later(file) }
+
+    assert document.persisted?
+    assert_equal "notes.txt", document.filename
+    assert_equal "pending", document.status
+    assert document.file.attached?
+    assert_equal "a note", document.file.download
+  end
+
+  test "upload_document_later keeps the bytes when the queue raises, and recovery retries the upload" do
+    file = uploaded_file(filename: "notes.txt", content_type: "text/plain", content: "a note")
+    IndexFamilyDocumentJob.expects(:perform_later).raises(Redis::CannotConnectError)
+
+    assert_equal false, @family.upload_document_later(file)
+
+    document = @family.family_documents.find_by!(filename: "notes.txt")
+    assert_equal "error", document.status
+    assert_equal "Redis::CannotConnectError", document.metadata["enqueue_error"]
+    assert_equal "a note", document.file.download
+
+    IndexFamilyDocumentJob.expects(:perform_later).with { |arg| arg.id == document.id }
+    FamilyDocument.requeue_index_polls
+    assert_equal "pending", document.reload.status
+    # The marker stays until the job runs: after-commit enqueueing means a rejected retry must
+    # still be selectable by the next recovery pass.
+    assert_equal "Redis::CannotConnectError", document.metadata["enqueue_error"]
+    assert_equal "a note", document.file.download
+  end
+
+  test "recovery keeps the marker and the bytes when the retry enqueue fails" do
+    document = @family.family_documents.create!(filename: "notes.txt", status: "error",
+      metadata: { "enqueue_error" => "Redis::CannotConnectError", "error" => "indexing job enqueue failed" })
+    document.file.attach(io: StringIO.new("a note"), filename: "notes.txt", content_type: "text/plain")
+
+    # The retry is enqueued after the recovery transaction commits, so the queue can reject it
+    # while the row is already pending.
+    IndexFamilyDocumentJob.expects(:perform_later).raises(Redis::CannotConnectError)
+    assert_nothing_raised { FamilyDocument.requeue_index_polls }
+
+    assert_equal "pending", document.reload.status
+    assert_equal "Redis::CannotConnectError", document.metadata["enqueue_error"]
+    assert_equal "a note", document.file.download
+  end
+
+  test "upload_document_later fails and purges the staged file when the queue rejects the job" do
+    file = uploaded_file(filename: "notes.txt", content_type: "text/plain", content: "a note")
+    IndexFamilyDocumentJob.expects(:perform_later).returns(false)
+
+    result = @family.upload_document_later(file)
+
+    document = @family.family_documents.find_by!(filename: "notes.txt")
+    assert_equal false, result
+    assert_equal "error", document.status
+    assert_match(/could not be queued/, document.metadata["error"])
+    assert_not document.file.attached?
+  end
+
+  test "indexing a pending row records processing and queues its poll after the write" do
+    document = @family.family_documents.create!(filename: "notes.txt", status: "pending")
+    adapter = stub("adapter")
+    adapter.expects(:upload_file).with do |store_id:, file_content:, filename:, family:|
+      store_id == "vs_test" && file_content == "x" && filename == "notes.txt" && family == @family
+    end.returns(VectorStore::Response.new(success?: true, data: { file_id: "file-1", status: "processing" }, error: nil))
+    @family.stubs(:vector_store_adapter).returns(adapter)
+    @family.stubs(:ensure_vector_store!).returns("vs_test")
+
+    assert_enqueued_with(job: VectorStore::IndexStatusJob) { @family.index_document(document, file_content: "x") }
+    assert_equal "processing", document.reload.status
+    assert_equal "file-1", document.provider_file_id
+  end
+
   test "a rejected poll enqueue leaves the committed row processing with its file" do
     adapter = stub("adapter")
     adapter.stubs(:upload_file).returns(

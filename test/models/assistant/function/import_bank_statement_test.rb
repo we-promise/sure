@@ -26,6 +26,7 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     draft = @user.family.imports.find(result[:import_id])
     assert_equal "TransactionImport", draft.type
     assert_equal @import.id, draft.source_pdf_import_id
+    assert_equal @import.id, draft.source_import_id
     assert_equal [ "application/pdf" ], requests.sole.attachments.map(&:content_type)
   end
 
@@ -41,21 +42,72 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert_equal "PDF import not found", result[:error]
   end
 
-  test "a second extraction for the same statement does not leave another live draft" do
-    stub_ai(:extract_pdf, returns: statement)
+  test "a retry returns the derived import without extracting again" do
+    requests = stub_ai(:extract_pdf, returns: statement)
 
     first = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
     assert first[:success], first[:message]
+    assert_nil first[:already_imported]
     second = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
 
-    assert_not second[:success]
-    assert_equal "draft_already_exists", second[:error]
+    assert second[:success]
+    assert second[:already_imported]
     assert_equal first[:import_id], second[:import_id]
-    assert_match(/delete draft import/i, second[:message])
-    assert_match(/write access/i, second[:message])
-    assert_match(/delete draft import/i, second[:available_actions].sole)
-    assert_match(/draft_already_exists/, Assistant::Function::ImportBankStatement.description)
+    assert_equal 1, requests.size, "the retry must not call the model"
     assert_equal 1, @user.family.imports.where(type: "TransactionImport", source_pdf_import_id: @import.id).count
+  end
+
+  test "a retry repeats a failed check warning stored on the draft" do
+    stub_ai(:extract_pdf, returns: statement(closing: 1.0))
+    first = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+    assert_not first[:checks_passed]
+
+    second = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert second[:already_imported]
+    assert_not second[:checks_passed]
+    assert_match "failed its checks", second[:message]
+  end
+
+  test "a retry of a draft without stored checks keeps the plain answer" do
+    stub_ai(:extract_pdf, returns: statement)
+    first = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+    Import.find(first[:import_id]).update!(extraction_checks: nil)
+
+    second = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert second[:already_imported]
+    assert_nil second[:checks_passed]
+    assert_no_match "failed its checks", second[:message]
+  end
+
+  test "the same statement for another account is an error, not the first account's import" do
+    stub_ai(:extract_pdf, returns: statement)
+    first = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+    draft = Import.find(first[:import_id])
+
+    result = @fn.call("pdf_import_id" => @import.id, "account_id" => accounts(:credit_card).id)
+
+    assert_not result[:success]
+    assert_equal "account_mismatch", result[:error]
+    assert_equal draft.id, result[:import_id]
+    assert_equal draft.id, @import.reload.derived_import.id, "the first account still owns the draft"
+  end
+
+  test "a legacy draft without a source import still blocks another extraction" do
+    Ai::PdfReading.any_instance.expects(:extract).never
+    legacy = @user.family.imports.create!(
+      type: "TransactionImport", account: @account, source_pdf_import_id: @import.id, status: :pending
+    )
+
+    result = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert_not result[:success]
+    assert_equal "draft_already_exists", result[:error]
+    assert_equal legacy.id, result[:import_id]
+    assert_match(/delete draft import/i, result[:message])
+    assert_match(/write access/i, result[:message])
+    assert_match(/draft_already_exists/, Assistant::Function::ImportBankStatement.description)
   end
 
   test "a failed revert that restored entries still blocks another draft" do
@@ -243,18 +295,8 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
   # the statement is neither sent to the model nor summarised back.
   test "an import of a statement the user cannot view is not found" do
     member = users(:family_member)
-    statement = AccountStatement.create_from_upload!(
-      family: member.family,
-      account: accounts(:investment),
-      file: uploaded_file(
-        filename: "statement.pdf",
-        content_type: "application/pdf",
-        content: file_fixture("imports/sample_bank_statement.pdf").binread
-      )
-    )
-    pdf_import = PdfImport.create_from_statement!(statement: statement)
-    pdf_import.update!(document_type: "bank_statement")
-    assert_not statement.viewable_by?(member)
+    pdf_import = statement_import_on(accounts(:investment))
+    assert_not pdf_import.account_statement.viewable_by?(member)
     use_ai_routes
     Ai::PdfReading.any_instance.expects(:extract).never
 
@@ -265,11 +307,59 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert_equal "PDF import not found", result[:error]
   end
 
+  # The web lets only those who can manage a statement act on its import, so
+  # the tool does not turn a statement someone can only read into an import.
+  test "an import of a statement the user can only read is refused before any extraction" do
+    member = users(:family_member)
+    pdf_import = statement_import_on(accounts(:credit_card))
+    assert pdf_import.account_statement.viewable_by?(member)
+    assert_not pdf_import.account_statement.manageable_by?(member)
+    use_ai_routes
+    Ai::PdfReading.any_instance.expects(:extract).never
+
+    assert_no_difference -> { Import.count } do
+      result = Assistant::Function::ImportBankStatement.new(member).call(
+        "pdf_import_id" => pdf_import.id, "account_id" => accounts(:depository).id
+      )
+
+      assert_equal "statement_not_manageable", result[:error]
+    end
+  end
+
+  # The transactions come from the statement, so the import made from them is
+  # as private as the statement.
+  test "the import made from a statement keeps that statement's privacy" do
+    pdf_import = statement_import_on(accounts(:investment))
+    use_ai_routes
+    stub_ai(:extract_pdf, returns: statement)
+
+    result = @fn.call("pdf_import_id" => pdf_import.id, "account_id" => accounts(:depository).id)
+
+    assert result[:success], result.inspect
+    import = Import.find(result[:import_id])
+    assert_equal pdf_import.account_statement, import.account_statement
+    assert import.viewable_by?(@user)
+    assert_not import.viewable_by?(users(:family_member)), "another member can read a private statement's transactions"
+  end
+
   private
     def statement(opening: 44_079.83, closing: 44_079.83 - 24.5 + 2575.0)
       { bank_name: "YourBank", account_holder: nil, account_number: nil, currency: "GBP", opening_balance: opening, closing_balance: closing,
         statement_period: { start_date: "2019-02-01", end_date: "2019-03-01" },
         transactions: [ { date: "2019-02-01", description: "Card payment", amount: -24.5, reference: nil, category: nil },
                         { date: "2019-02-04", description: "Pay", amount: 2575.0, reference: nil, category: nil } ] }
+    end
+
+    def statement_import_on(account)
+      statement = AccountStatement.create_from_upload!(
+        family: account.family,
+        account: account,
+        file: uploaded_file(
+          filename: "statement.pdf",
+          content_type: "application/pdf",
+          content: file_fixture("imports/sample_bank_statement.pdf").binread
+        )
+      )
+      PdfImport.create_from_statement!(statement: statement).tap { |import| import.update!(document_type: "bank_statement") }
     end
 end

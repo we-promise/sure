@@ -836,6 +836,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.date "first_provider_rate_on"
     t.string "from_currency", null: false
     t.string "provider_name"
+    t.boolean "quoted_directly", default: false, null: false
     t.string "to_currency", null: false
     t.datetime "updated_at", null: false
     t.index ["from_currency", "to_currency"], name: "index_exchange_rate_pairs_on_pair_unique", unique: true
@@ -1439,6 +1440,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.integer "rows_to_skip", default: 0, null: false
     t.integer "sequence"
     t.string "signage_convention", default: "inflows_positive"
+    t.uuid "source_import_id"
     t.uuid "source_pdf_import_id"
     t.string "status"
     t.jsonb "summary", default: {}, null: false
@@ -1452,6 +1454,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.index ["import_session_id", "client_chunk_id"], name: "idx_imports_on_session_client_chunk", unique: true, where: "((import_session_id IS NOT NULL) AND (client_chunk_id IS NOT NULL))"
     t.index ["import_session_id", "sequence"], name: "idx_imports_on_session_sequence", unique: true, where: "((import_session_id IS NOT NULL) AND (sequence IS NOT NULL))"
     t.index ["import_session_id"], name: "index_imports_on_import_session_id"
+    t.index ["source_import_id"], name: "idx_imports_source_import_unique", unique: true, where: "(source_import_id IS NOT NULL)"
     t.check_constraint "checksum IS NULL OR length(checksum::text) = 64", name: "chk_imports_checksum_sha256_length"
     t.check_constraint "client_chunk_id IS NULL OR btrim(client_chunk_id::text) <> ''::text", name: "chk_imports_client_chunk_id_present"
     t.check_constraint "import_session_id IS NULL OR checksum IS NOT NULL", name: "chk_imports_session_checksum_present"
@@ -2465,6 +2468,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.boolean "carried_forward", default: false, null: false
     t.datetime "created_at", null: false
     t.string "currency", default: "USD", null: false
     t.date "date", null: false
@@ -2613,6 +2617,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.string "account_number"
     t.string "account_status"
     t.string "account_type"
+    t.boolean "activities_fetch_failed", default: false, null: false
     t.boolean "activities_fetch_pending", default: false
     t.string "brokerage_name"
     t.decimal "cash_balance", precision: 19, scale: 4
@@ -2622,6 +2627,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
     t.jsonb "institution_metadata"
     t.datetime "last_activities_sync"
     t.datetime "last_holdings_sync"
+    t.datetime "liability_signs_fixed_at"
     t.string "name"
     t.string "provider"
     t.jsonb "raw_activities_payload", default: []
@@ -3322,9 +3328,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_120000) do
   add_foreign_key "import_sessions", "families"
   add_foreign_key "import_source_mappings", "families"
   add_foreign_key "import_source_mappings", "import_sessions", column: ["import_session_id", "family_id"], primary_key: ["id", "family_id"], name: "fk_import_source_mappings_session_family", on_delete: :cascade
-  add_foreign_key "imports", "account_statements", on_delete: :nullify
+  add_foreign_key "imports", "account_statements"
   add_foreign_key "imports", "families"
   add_foreign_key "imports", "import_sessions", column: ["import_session_id", "family_id"], primary_key: ["id", "family_id"], name: "fk_imports_session_family", on_delete: :cascade
+  add_foreign_key "imports", "imports", column: "source_import_id", on_delete: :nullify
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"
   add_foreign_key "insights", "families"

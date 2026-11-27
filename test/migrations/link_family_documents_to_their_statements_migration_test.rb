@@ -1,6 +1,6 @@
 require "test_helper"
 require Rails.root.join("db/migrate/20261123220100_link_family_documents_to_their_statements")
-require Rails.root.join("db/migrate/20261124120000_move_family_document_statement_links_into_metadata")
+require Rails.root.join("db/migrate/20261124120200_move_family_document_statement_links_into_metadata")
 
 # Main's link (#5701), then the AI plumbing's move of that link into metadata. The test schema has
 # no account_statement_id column, so each test runs the move's `down` to get it back.

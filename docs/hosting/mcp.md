@@ -52,7 +52,7 @@ openssl rand -base64 32
 
 ### Choosing the user for static-token auth
 
-The `MCP_USER_EMAIL` must match an existing Sure user's email address. The AI assistant will have access to all financial data for that user's family.
+The `MCP_USER_EMAIL` must match the email address of an existing, active Sure user. The AI assistant will have access to all financial data for that user's family.
 
 > [!CAUTION]
 > The AI assistant can call the MCP tools available to the specified user. This includes reading financial data and write-capable tools such as statement import, goal/category/tag changes, transaction updates, and budget updates. Only set this for users you trust with your AI provider.
@@ -164,8 +164,13 @@ At the time of writing, `tools/list` includes:
 | `preview_rule` | Match count and a sample of matching transactions for a saved rule or an unsaved definition, without changing anything |
 | `create_rule` / `update_rule` | Save a rule definition. Rules are always saved inactive, and changing an active rule's conditions or actions deactivates it. AI-backed actions are not available |
 | `apply_rule` | Activate a rule and apply it. Requires the `preview_token` from `preview_rule`, `create_rule` or `update_rule` (never `get_rules`; it expires after 30 minutes) and refuses if the rule or its matches have changed; keeps hand-set values unless `override_locked: true` |
-| `import_bank_statement` | Import bank statement data |
+| `import_bank_statement` | Import bank statement data. Idempotent per `pdf_import_id`: a repeated call returns the existing import with `already_imported: true` instead of extracting again, and returns an error if that import belongs to a different account |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
+
+When their AI feature is available, both AI-backed tools run in a worker. If no
+worker polls that queue, or too many calls are already waiting, they answer
+`isError` with a "busy, try again" message; `import_bank_statement` says to call
+again with the same `pdf_import_id` when its extraction is still running.
 
 ### Preview Tools
 
@@ -443,15 +448,16 @@ MCP does not depend on the in-app assistant. To use only your own agent, set the
 
 - The OAuth flow completed successfully and the client is sending the issued bearer token
 - The static token matches `MCP_API_TOKEN`
-- If you are using the static-token flow, `MCP_USER_EMAIL` matches an existing Sure user
+- If you are using the static-token flow, `MCP_USER_EMAIL` matches an existing, active Sure user
 
 ### Static token works, but the user still gets rejected
 
 **Symptom:** Requests return HTTP 401 even though the bearer token matches `MCP_API_TOKEN`
 
-**Fix:** The `MCP_USER_EMAIL` probably does not match an existing user. Check that:
+**Fix:** The `MCP_USER_EMAIL` probably does not match an existing, active user. Check that:
 - The email is correct
 - The user exists in the database
+- The user is active (deactivated users are rejected)
 - There are no typos or extra spaces
 
 ### Pipelock connection refused

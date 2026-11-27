@@ -222,7 +222,7 @@ ca:
             dimensions_mismatch: Les dimensions del vector d'embedding no coincideixen amb les configurades
             extension_not_enabled: L'extensió vector de PostgreSQL no està activada
             table_not_found: No s'ha trobat la taula vector_store_chunks
-            render_missing_binary: El renderitzador pdftoppm (poppler-utils) no està disponible en aquest contenidor
+            missing_binary: El renderitzador pdftoppm (poppler-utils) no està disponible en aquest contenidor
             timeout: El servei no ha respost abans que s'esgotés el temps d'espera de la comprovació
             request_failed: La petició al servei ha fallat
             unsupported_provider: El proveïdor no admet aquesta comprovació

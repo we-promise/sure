@@ -50,7 +50,32 @@ class FamilyDocument < ApplicationRecord
 
   # Recovery for a copy still `processing` whose poll was lost (the queue was down when it was
   # created, or a requeue was rejected): polling again is harmless.
-  def self.requeue_index_polls = where(status: "processing").find_each(&:poll_index_later)
+  def self.requeue_index_polls
+    where(status: "processing").find_each(&:poll_index_later)
+    where.not("metadata->>'enqueue_error' IS NULL").find_each do |document|
+      document.with_lock do
+        next unless document.status.in?(%w[pending error]) && document.metadata.to_h["enqueue_error"].present?
+
+        # The upload was kept because the enqueue outcome was unknown. Retry it with those bytes;
+        # an accepted job that already settled the row is skipped by the indexing job itself.
+        # Keep the marker until the job runs: enqueueing is deferred until this transaction
+        # commits, so a rejected retry would leave a pending row nothing selects again.
+        document.update!(status: "pending") unless document.status == "pending"
+        begin
+          IndexFamilyDocumentJob.perform_later(document)
+        rescue StandardError => e
+          DebugLogEntry.capture(
+            category: "documents",
+            level: "warn",
+            message: "Couldn't queue a recovery index job for an uploaded document: #{e.class}",
+            source: "FamilyDocument.requeue_index_polls",
+            family: document.family,
+            metadata: { family_document_id: document.id }
+          )
+        end
+      end
+    end
+  end
 
   def poll_index_later
     # A reread of the same document resumes a copy whose poll cap was reached while the provider
@@ -80,6 +105,21 @@ class FamilyDocument < ApplicationRecord
 
   def mark_error!(error_message = nil)
     update!(status: "error", metadata: (metadata || {}).merge("error" => error_message))
+  end
+
+  # A retry before the terminal status commits must still find the bytes; a poll keeps them until
+  # the store reports a settled status. An uncertain enqueue keeps them until the retry actually
+  # indexes, so an accepted job must not purge them out from under that retry.
+  def purge_file_if_settled
+    return false if metadata.to_h["enqueue_error"].present?
+    return false unless file.attached? && status.in?(%w[ready unreadable error])
+
+    # Active Storage destroys the blob record before it deletes the stored file. If that delete
+    # raises, a retry would reload without an attachment and never remove the bytes. Delete the
+    # bytes first (service.delete is idempotent), then the records, so either failure is retryable.
+    file.blob.service.delete(file.blob.key)
+    file.purge
+    true
   end
 
   def supported_extension?

@@ -5,7 +5,7 @@ de:
       sign_out: Abmelden
       setup: Setup
       preferences: Einstellungen
-      goals: Ziele
+      tools: Tools/KI
       start: Start
     logout:
       sign_out: Abmelden
@@ -38,17 +38,62 @@ de:
       currency: Währung
       date_format: Datumsformat
       submit: Abschließen
-    goals:
-      title: Was sind deine Ziele?
-      subtitle: Wähle ein oder mehrere Ziele aus, die du mit %{product_name} als dein persönliches Finanztool erreichen möchtest.
-      unified_accounts: Alle meine Konten an einem Ort sehen
-      cashflow: Cashflow und Ausgaben verstehen
-      budgeting: Finanzpläne und Budgets verwalten
-      partner: Finanzen gemeinsam mit Partner verwalten
-      investments: Investments verfolgen
-      ai_insights: KI nutzen um Einblicke zu erhalten
-      optimization: Konten analysieren und optimieren
-      reduce_stress: Finanziellen Stress reduzieren
+    tools:
+      title: "Fühl dich wie zu Hause."
+      subtitle: "Ein paar Entscheidungen, damit %{product_name} zu dir passt."
+      starting_point:
+        eyebrow: "Dein Ausgangspunkt"
+        title: "Was hast du bisher genutzt?"
+        description: "Wähle die Tools, mit denen du die Finanzen deines Haushalts verwaltest."
+        select: "Tools auswählen"
+        other_placeholder: "Anderes Tool (optional)"
+        hint: "Wähle alle zutreffenden aus. Das hilft uns, einen Ausgangspunkt vorzuschlagen; es heißt nicht, dass ein Import möglich ist."
+        tools:
+          nothing_yet: "Noch nichts"
+          actual_budget: "Actual Budget"
+          banktivity: "Banktivity"
+          copilot_money: "Copilot Money"
+          firefly_iii: "Firefly III"
+          gnucash: "GnuCash"
+          lunch_money: "Lunch Money"
+          maybe: "Maybe"
+          monarch_money: "Monarch Money"
+          money_manager_ex: "Money Manager Ex"
+          moneywiz: "MoneyWiz"
+          pocketsmith: "PocketSmith"
+          quicken_classic: "Quicken Classic"
+          quicken_simplifi: "Quicken Simplifi"
+          ynab: "YNAB"
+          other: "Anderes"
+      ai:
+        eyebrow: "Deine KI-Einstellung"
+        title: "Wie möchtest du %{product_name} nutzen?"
+        description: "Du entscheidest. Wähle, was zu dir passt."
+        default: "Standard"
+        modes:
+          none:
+            title: "Ohne KI"
+            description: "Verwalte deine Finanzen ohne den Assistenten in der App."
+          builtin:
+            title: "Integrierte KI"
+            description: "Schalte den Assistenten in der App ein; er nutzt den KI-Anbieter dieser Instanz."
+          external:
+            title: "Eigenen KI-Agenten verwenden"
+            description: "Nutze deinen eigenen Assistenten, verbunden mit deiner Erlaubnis."
+        panels:
+          admin_on: "Als Admin erteilst du damit auch die Zustimmung deines Haushalts für KI-Funktionen, die im Hintergrund laufen, etwa die Kategorisierung."
+          admin_off: "Als Admin ziehst du damit auch deine Zustimmung für KI-Funktionen zurück, die im Hintergrund laufen, etwa die Kategorisierung. Sie bleiben nur an, wenn ein anderer Admin KI eingeschaltet hat."
+          none:
+            title: "Dein Assistent bleibt aus."
+            body: "Damit wird der Assistent in der App für dein Konto ausgeschaltet."
+          builtin:
+            title: "Dein Assistent wird eingeschaltet."
+            body: "Damit wird der Assistent in der App für dein Konto eingeschaltet. Welchen KI-Anbieter er nutzt und ob er verfügbar ist, hängt weiterhin von den KI-Einstellungen dieser Instanz ab."
+            not_configured: "Auf dieser Instanz ist noch kein KI-Anbieter eingerichtet. Ein Admin kann ihn unter Einstellungen → Self-Hosting hinzufügen."
+            unavailable: "Mit den aktuellen KI-Einstellungen deines Haushalts läuft der Assistent in der App nicht. Er antwortet erst, wenn ein Admin sie ändert."
+          external:
+            title: "Verbinde deinen Agenten, wenn du so weit bist."
+            body: "Damit bleibt KI für dein Konto aktiviert. Ist dein Haushalt für externen Chat eingerichtet, laufen Unterhaltungen über deinen eingerichteten externen Assistenten statt über den integrierten Assistenten von %{product_name}, in derselben Chat-Oberfläche. %{product_name} übernimmt weiterhin Importe, Kategorisierung und die übrigen Abläufe als führendes System. Dein Agent kann über MCP oder sure-cli darauf zugreifen; zum Verbinden siehe Einstellungen → MCP. Diese Auswahl richtet weder das Chat-Backend ein, noch legt sie eine Verbindung an, ändert oder entfernt sie."
       submit: Weiter
     trial:
       title: Sure 45 Tage kostenlos testen

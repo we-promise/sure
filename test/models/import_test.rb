@@ -59,6 +59,26 @@ class ImportTest < ActiveSupport::TestCase
     assert import.reload.reverting?, "a second claim must not take over a revert in flight"
   end
 
+  test "parse_csv_str handles a quoted multi-line header followed by CRLF rows" do
+    csv = Import.parse_csv_str("\"Date\nPosted\",Amount\r\n2024-01-01,5\r\n2024-01-02,6\r\n")
+
+    assert_equal [ "Date\nPosted", "Amount" ], csv.headers
+    assert_equal [ "5", "6" ], csv.map { |row| row["Amount"] }
+  end
+
+  test "parse_csv_str handles mixed LF and CRLF line endings" do
+    csv = Import.parse_csv_str("date,amount\n2024-01-01,5\r\n2024-01-02,6\r\n")
+
+    assert_equal [ "date", "amount" ], csv.headers
+    assert_equal [ "5", "6" ], csv.map { |row| row["amount"] }
+  end
+
+  test "parse_csv_str handles CR-only line endings" do
+    csv = Import.parse_csv_str("date,amount\r2024-01-01,5\r")
+
+    assert_equal [ "5" ], csv.map { |row| row["amount"] }
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")
@@ -192,6 +212,20 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal "importing", stuck_pdf.reload.status
   end
 
+  test "clean leaves cancelled imports alone" do
+    cancelled = imports(:transaction)
+    cancelled.update_columns(status: "cancelled", updated_at: 7.hours.ago)
+    cancelled_pdf = imports(:pdf)
+    cancelled_pdf.update_columns(status: "cancelled", updated_at: 7.hours.ago)
+
+    Import.clean
+    PdfImport.clean
+
+    assert_equal "cancelled", cancelled.reload.status
+    assert_equal "cancelled", cancelled_pdf.reload.status
+    assert_not cancelled.presumed_lost?
+  end
+
   test "clean leaves session-owned chunks to ImportSession.clean" do
     family = families(:dylan_family)
     session = family.import_sessions.create!(status: "importing")
@@ -279,9 +313,13 @@ class ImportTest < ActiveSupport::TestCase
   test "force_fail! refuses terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete", updated_at: 2.hours.ago)
+    cancelled = imports(:pdf)
+    cancelled.update_columns(status: "cancelled", updated_at: 2.hours.ago)
 
     assert_not import.force_fail!
     assert_equal "complete", import.reload.status
+    assert_not cancelled.force_fail!
+    assert_equal "cancelled", cancelled.reload.status
   end
 
   test "force_fail! releases a lost PdfImport claim back to pending" do
@@ -397,15 +435,53 @@ class ImportTest < ActiveSupport::TestCase
     member = users(:family_member)
     assert TransactionImport.create!(family: member.family).viewable_by?(member)
 
-    statement = AccountStatement.create_from_upload!(
-      family: member.family,
-      account: accounts(:investment),
-      file: uploaded_file(filename: "statement.pdf", content_type: "application/pdf",
-                          content: file_fixture("imports/sample_bank_statement.pdf").binread)
-    )
-    pdf_import = PdfImport.create_from_statement!(statement: statement)
+    pdf_import = PdfImport.create_from_statement!(statement: statement_on(accounts(:investment)))
 
     assert pdf_import.viewable_by?(users(:family_admin))
     assert_not pdf_import.viewable_by?(member)
+    assert_not pdf_import.viewable_by?(nil)
   end
+
+  test "viewable_by hides an import whose statement the user cannot view" do
+    family = families(:dylan_family)
+    guest = family.users.create!(first_name: "Guest", last_name: "Viewer", email: "guest-#{SecureRandom.hex(4)}@example.com",
+                                 password: "password", role: "guest", onboarded_at: Time.current)
+    plain = TransactionImport.create!(family: family)
+    plain_on_private_account = TransactionImport.create!(family: family, account: accounts(:investment))
+    on_private_account = PdfImport.create_from_statement!(statement: statement_on(accounts(:investment)))
+    on_shared_account = PdfImport.create_from_statement!(statement: statement_on(accounts(:depository)))
+    unlinked = PdfImport.create_from_statement!(statement: statement_on(nil))
+    other_family = TransactionImport.create!(family: families(:empty))
+    all = [ plain, plain_on_private_account, on_private_account, on_shared_account, unlinked, other_family ]
+
+    visible = ->(user) { Import.viewable_by(user).where(id: all.map(&:id)).pluck(:id).sort }
+
+    assert_equal [ plain, plain_on_private_account, on_private_account, on_shared_account, unlinked ].map(&:id).sort, visible.(users(:family_admin))
+    assert_equal [ plain, plain_on_private_account, on_shared_account, unlinked ].map(&:id).sort, visible.(users(:family_member))
+    assert_equal [ plain, plain_on_private_account ].map(&:id).sort, visible.(guest)
+    assert_equal [ other_family.id ], visible.(users(:empty))
+  end
+
+  test "a statement cannot be deleted while an import carries it, so the import stays private" do
+    member = users(:family_member)
+    statement = statement_on(accounts(:investment))
+    pdf_import = PdfImport.create_from_statement!(statement: statement)
+    transaction_import = TransactionImport.create!(family: statement.family, account: accounts(:investment), account_statement: statement)
+    pdf_import.destroy!
+
+    assert_not statement.reload.destroy
+    assert AccountStatement.exists?(statement.id)
+    assert_equal statement.id, transaction_import.reload.account_statement_id
+    assert_not Import.viewable_by(member).exists?(transaction_import.id)
+  end
+
+  private
+    def statement_on(account)
+      AccountStatement.create_from_upload!(
+        family: families(:dylan_family),
+        account: account,
+        file: uploaded_file(filename: "statement-#{SecureRandom.hex(4)}.pdf", content_type: "application/pdf",
+                            content: file_fixture("imports/sample_bank_statement.pdf").binread + SecureRandom.hex(8))
+      )
+    end
 end
