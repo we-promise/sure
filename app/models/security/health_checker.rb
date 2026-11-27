@@ -15,6 +15,7 @@ class Security::HealthChecker
   MAX_CONSECUTIVE_FAILURES = 5
   HEALTH_CHECK_INTERVAL = 7.days
   DAILY_BATCH_SIZE = 1000
+  LOOKBACK_DAYS = 10
 
   class << self
     def check_all
@@ -90,20 +91,22 @@ class Security::HealthChecker
     end
 
     def latest_provider_price
-      price_provider = provider
-      return nil unless price_provider.present?
+      return nil unless provider.present?
       return true if skip_health_check? # treat as healthy — quota too precious
 
-      args = { symbol: security.ticker, exchange_operating_mic: security.exchange_operating_mic, date: Date.current }
-      response = if price_provider.is_a?(Provider::ScalableCapitalMarketData)
-        price_provider.fetch_security_health_price(**args)
-      else
-        price_provider.fetch_security_price(**args)
-      end
+      response = provider.fetch_security_prices(
+        symbol: security.ticker,
+        exchange_operating_mic: security.exchange_operating_mic,
+        start_date: Date.current - LOOKBACK_DAYS,
+        end_date: Date.current
+      )
 
       return nil unless response.success?
 
-      response.data&.price
+      latest = Array(response.data)
+                 .select { |price| price.price.present? && price.price.to_f > 0 }
+                 .max_by(&:date)
+      latest&.price
     end
 
     # On success, reset any failure counters and ensure it is "online"

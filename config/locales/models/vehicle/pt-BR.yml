@@ -1,0 +1,14 @@
+---
+pt-BR:
+  activerecord:
+    attributes:
+      account/accountable:
+        purchase_date: Data de compra
+      vehicle:
+        purchase_date: Data de compra
+    errors:
+      models:
+        vehicle:
+          attributes:
+            purchase_date:
+              must_precede_entries: deve ser anterior ao lançamento mais antigo da conta

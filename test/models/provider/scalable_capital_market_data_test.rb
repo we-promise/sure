@@ -87,11 +87,11 @@ class Provider::ScalableCapitalMarketDataTest < ActiveSupport::TestCase
     refute_predicate price, :carried_forward?
   end
 
-  test "a recent closing price keeps health checks healthy without a current quote" do
+  test "health checks use a recent Scalable close on a non-trading day" do
     security = Security.create!(ticker: ISIN, price_provider: Provider::ScalableCapitalMarketData::KEY, failed_fetch_count: 5)
     security.stubs(:price_data_provider).returns(@provider)
     travel_to Time.utc(2026, 11, 29, 12)
-    @client.expects(:security_quote).with("portfolio", ISIN).returns(broker_result({ "isin" => ISIN, "quote_is_outdated" => true }))
+    @client.expects(:security_quote).never
     @client.expects(:security_candlesticks).with(ISIN, "one_month").returns(candlesticks([
       candle("2026-11-27T08:00:00Z", "2026-11-27T17:00:00Z", "85.12")
     ]))

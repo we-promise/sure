@@ -64,16 +64,6 @@ class Provider::ScalableCapitalMarketData < Provider
     end
   end
 
-  def fetch_security_health_price(symbol:, exchange_operating_mic:, date:)
-    response = fetch_security_price(symbol: symbol, exchange_operating_mic: exchange_operating_mic, date: date)
-    return response unless response.error&.failure_code == :no_price
-
-    with_provider_response do
-      historical_prices(symbol, date - 7, date).last ||
-        raise(Error.new("No recent Scalable closing price", failure_code: :no_price))
-    end
-  end
-
   def fetch_security_prices(symbol:, exchange_operating_mic:, start_date:, end_date:)
     with_provider_response do
       validate_security!(symbol, exchange_operating_mic)
