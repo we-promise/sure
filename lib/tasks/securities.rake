@@ -1,9 +1,23 @@
 # frozen_string_literal: true
 
 namespace :securities do
+  # What a merge moved, and the rule it applied where holdings collided.
+  merge_summary = lambda do |counts|
+    "#{counts[:holdings_moved]} holdings moved, #{counts[:holdings_removed]} colliding holdings removed " \
+      "(the more recently written row is kept), #{counts[:trades]} trades, #{counts[:lots]} lots, " \
+      "#{counts[:references]} references"
+  end
+
+  # Rows that point at a security without being its own: lot origins and
+  # provider securities of remapped holdings. A merge re-points them too.
+  reference_count = lambda do |security_ids|
+    HoldingLot.where(origin_security_id: security_ids).count + Holding.where(provider_security_id: security_ids).count
+  end
+
   desc "De-duplicate securities based on ticker + exchange_operating_mic"
   task :deduplicate, [ :dry_run ] => :environment do |_t, args|
     dry_run = args[:dry_run].present?
+    account_ids = Set.new
     puts "Starting securities de-duplication... #{dry_run ? '(DRY RUN)' : ''}"
 
     # First handle securities without exchange_operating_mic
@@ -26,25 +40,22 @@ namespace :securities do
         holdings_count = Holding.where(security_id: security.id).count
         trades_count = Trade.where(security_id: security.id).count
         prices_count = Security::Price.where(security_id: security.id).count
+        lots_count = HoldingLot.where(security_id: security.id).count
+        references_count = reference_count.call(security.id)
 
         puts "  Would update:"
         puts "    - #{holdings_count} holdings"
         puts "    - #{trades_count} trades"
         puts "    - #{prices_count} prices"
+        puts "    - #{lots_count} lots"
+        puts "    - #{references_count} references"
 
         unless dry_run
           begin
-            ActiveRecord::Base.transaction do
-              # Update all references to point to the canonical security
-              Holding.where(security_id: security.id).update_all(security_id: canonical.id)
-              Trade.where(security_id: security.id).update_all(security_id: canonical.id)
-              Security::Price.where(security_id: security.id).update_all(security_id: canonical.id)
-              security.move_taggings_to!(canonical)
-
-              # Delete the duplicate
-              security.destroy!
-            end
-            puts "  ✓ Successfully merged and removed duplicate"
+            # Moves everything that references the duplicate, lots and splits
+            # included, and deletes it. The affected accounts sync at the end.
+            counts = Security::Merger.merge_group!([ security ], into: canonical, account_ids: account_ids)
+            puts "  ✓ Successfully merged and removed duplicate: #{merge_summary.call(counts)}"
           rescue => e
             puts "  ✗ Error processing #{security.ticker}: #{e.message}"
           end
@@ -64,6 +75,8 @@ namespace :securities do
     total_holdings = 0
     total_trades = 0
     total_prices = 0
+    total_lots = 0
+    total_references = 0
 
     duplicates.each do |ticker, exchange_operating_mic|
       securities = Security.where(ticker: ticker, exchange_operating_mic: exchange_operating_mic)
@@ -80,29 +93,27 @@ namespace :securities do
       holdings_count = Holding.where(security_id: duplicates).count
       trades_count = Trade.where(security_id: duplicates).count
       prices_count = Security::Price.where(security_id: duplicates).count
+      lots_count = HoldingLot.where(security_id: duplicates).count
+      references_count = reference_count.call(duplicates.map(&:id))
 
       total_holdings += holdings_count
       total_trades += trades_count
       total_prices += prices_count
+      total_lots += lots_count
+      total_references += references_count
 
       puts "  Would update:"
       puts "    - #{holdings_count} holdings"
       puts "    - #{trades_count} trades"
       puts "    - #{prices_count} prices"
+      puts "    - #{lots_count} lots"
+      puts "    - #{references_count} references"
 
       unless dry_run
         begin
-          ActiveRecord::Base.transaction do
-            # Update all references to point to the canonical security
-            Holding.where(security_id: duplicates).update_all(security_id: canonical.id)
-            Trade.where(security_id: duplicates).update_all(security_id: canonical.id)
-            Security::Price.where(security_id: duplicates).update_all(security_id: canonical.id)
-            duplicates.each { |duplicate| duplicate.move_taggings_to!(canonical) }
-
-            # Delete the duplicates
-            duplicates.each(&:destroy!)
-          end
-          puts "  ✓ Successfully merged and removed duplicates"
+          # The whole group in one transaction: it merges whole or not at all.
+          counts = Security::Merger.merge_group!(duplicates, into: canonical, account_ids: account_ids)
+          puts "  ✓ Successfully merged and removed duplicates: #{merge_summary.call(counts)}"
         rescue => e
           puts "  ✗ Error processing #{ticker}: #{e.message}"
         end
@@ -115,8 +126,14 @@ namespace :securities do
     puts "    - #{total_holdings} holdings"
     puts "    - #{total_trades} trades"
     puts "    - #{total_prices} prices"
+    puts "    - #{total_lots} lots"
+    puts "    - #{total_references} references"
     puts "  Mode: #{dry_run ? 'Dry run (no changes made)' : 'Live run (changes applied)'}"
     puts "\nDe-duplication complete!"
+  ensure
+    # After the last merge, so no sync runs against a half-merged set, and
+    # also when the task stops partway, so committed merges are synced.
+    Security::Merger.sync_accounts(account_ids)
   end
 
   desc "Relabel Warsaw (XWAR/WAR) security_prices wrongly stored as USD to PLN. Args: dry_run (default true)"

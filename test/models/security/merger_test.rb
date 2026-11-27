@@ -102,6 +102,109 @@ class Security::MergerTest < ActiveSupport::TestCase
     assert_equal @listed, Security::Merger.new(from: stale, into: @listed).merge!
   end
 
+  test "counts what it moved and can leave the syncs to its caller" do
+    create_holding(@placeholder, date: 2.days.ago.to_date, qty: 1)
+    collided = create_holding(@placeholder, date: 1.day.ago.to_date, qty: 1)
+    create_holding(@listed, date: 1.day.ago.to_date, qty: 2).update_columns(updated_at: 1.hour.ago)
+    create_trade(@placeholder, account: @account, qty: 1, date: 3.days.ago.to_date, price: 10)
+    HoldingLot.create!(account: @account, security: @placeholder, qty: 2, currency: "USD")
+    other = Security.create!(ticker: "MRGO", exchange_operating_mic: "XNAS")
+    HoldingLot.create!(account: @account, security: other, origin_security: @placeholder, qty: 1, currency: "USD")
+    Account.any_instance.expects(:sync_later).never
+
+    merger = Security::Merger.new(from: @placeholder, into: @listed)
+    merger.merge!(sync: false)
+
+    assert_equal({ holdings_moved: 2, holdings_removed: 1, trades: 1, lots: 1, references: 1 }, merger.counts)
+    assert_equal [ @account.id ], merger.account_ids
+    assert_equal @listed.id, collided.reload.security_id
+  end
+
+  # Another row of the same ticker and MIC still exists while a group is
+  # merged, so the keeper's name is written without re-validating the ticker.
+  test "a keeper with no name takes the duplicate's while another duplicate remains" do
+    ActiveRecord::Base.connection.execute("DROP INDEX index_securities_on_ticker_and_exchange_operating_mic_unique")
+    keeper = Security.new(ticker: "MRGZ", exchange_operating_mic: "XNAS").tap { |s| s.save!(validate: false) }
+    named = Security.new(ticker: "MRGZ", exchange_operating_mic: "XNAS", name: "Merge Z").tap { |s| s.save!(validate: false) }
+    Security.new(ticker: "mrgz", exchange_operating_mic: "XNAS").save!(validate: false)
+
+    Security::Merger.new(from: named, into: keeper).merge!
+
+    assert_not Security.exists?(named.id)
+    assert_equal "Merge Z", keeper.reload.name
+  end
+
+  test "a group merges whole or not at all, and leaves the syncs to its caller" do
+    second = Security.create!(ticker: "MRGX", exchange_operating_mic: "XNYS")
+    first_holding = create_holding(@placeholder, date: 1.day.ago.to_date, qty: 1)
+    create_holding(second, date: 2.days.ago.to_date, qty: 1)
+    account_ids = Set.new
+
+    Account.any_instance.expects(:sync_later).never
+    counts = Security::Merger.merge_group!([ @placeholder, second ], into: @listed, account_ids: account_ids)
+    assert_equal 2, counts[:holdings_moved]
+    assert_equal Set[@account.id], account_ids
+
+    third = Security.create!(ticker: "MRGW", offline: true)
+    fourth = Security.create!(ticker: "MRGV", offline: true)
+    third_holding = create_holding(third, date: 2.days.ago.to_date, qty: 1)
+    Security::Merger.any_instance.stubs(:move_taggings!).returns(nil).then.raises(RuntimeError, "boom")
+
+    rolled_back_ids = Set.new
+
+    assert_raises(RuntimeError) { Security::Merger.merge_group!([ third, fourth ], into: @listed, account_ids: rolled_back_ids) }
+    assert Security.exists?(third.id), "the first merge is rolled back"
+    assert_equal third.id, third_holding.reload.security_id
+    assert_equal @listed.id, first_holding.reload.security_id
+    assert_empty rolled_back_ids, "a rolled-back group adds no accounts to sync"
+  end
+
+  test "a group keeps the most recently written holding when two sources collide" do
+    Account.any_instance.stubs(:sync_later)
+
+    [ %i[older newer], %i[newer older] ].each do |order|
+      sources = {
+        older: Security.create!(ticker: "MRGA", offline: true),
+        newer: Security.create!(ticker: "MRGB", offline: true)
+      }
+      create_holding(sources[:older], date: 1.day.ago.to_date, qty: 1).update_columns(updated_at: 2.days.ago)
+      create_holding(sources[:newer], date: 1.day.ago.to_date, qty: 2).update_columns(updated_at: 1.hour.ago)
+
+      Security::Merger.merge_group!(sources.values_at(*order), into: @listed, account_ids: Set.new)
+
+      assert_equal [ 2 ], @account.holdings.where(security: @listed).pluck(:qty).map(&:to_i), "merged #{order.join(' then ')}"
+      @account.holdings.where(security: @listed).delete_all
+    end
+  end
+
+  test "moved and repointed holdings keep their original write time" do
+    other = Security.create!(ticker: "MRGY", exchange_operating_mic: "XNAS")
+    written_at = 3.days.ago.change(usec: 0)
+    moved = create_holding(@placeholder, date: 2.days.ago.to_date, qty: 1)
+    remapped_to_listed = create_holding(@listed, date: Date.current, qty: 1, provider_security: @placeholder, security_locked: true)
+    remapped_elsewhere = create_holding(other, date: Date.current, qty: 1, provider_security: @placeholder, security_locked: true)
+    [ moved, remapped_to_listed, remapped_elsewhere ].each { |holding| holding.update_columns(updated_at: written_at) }
+
+    Security::Merger.new(from: @placeholder, into: @listed).merge!
+
+    assert_equal @listed.id, moved.reload.security_id
+    assert_nil remapped_to_listed.reload.provider_security_id
+    assert_equal @listed.id, remapped_elsewhere.reload.provider_security_id
+    assert_equal [ written_at ] * 3, [ moved, remapped_to_listed, remapped_elsewhere ].map(&:updated_at)
+  end
+
+  test "keeps every family's tags, and one tagging where the target already has the tag" do
+    other_tag = families(:empty).tags.create!(name: "Another household's scheme")
+    Tagging.create!(tag: tags(:one), taggable: @listed)
+    Tagging.create!(tag: tags(:one), taggable: @placeholder)
+    Tagging.create!(tag: other_tag, taggable: @placeholder)
+
+    Security::Merger.new(from: @placeholder, into: @listed).merge!
+
+    assert_equal [ tags(:one).id, other_tag.id ].sort, Tagging.where(taggable: @listed).pluck(:tag_id).sort
+    assert_equal [ other_tag ], @listed.tags_for(families(:empty)).to_a
+  end
+
   private
     def create_holding(security, date:, qty:, **attributes)
       @account.holdings.create!(security: security, date: date, qty: qty, price: 10, amount: qty * 10, currency: "USD", **attributes)

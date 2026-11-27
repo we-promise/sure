@@ -145,27 +145,6 @@ class Security < ApplicationRecord
     family.tags.where(id: taggings.select(:tag_id))
   end
 
-  # Moves this security's taggings onto `canonical` when the two are merged.
-  # A tag `canonical` already carries stays here and goes with this
-  # security's destroy!, as the unique index on taggings allows only one.
-  def move_taggings_to!(canonical)
-    transaction do
-      # The same row lock set_tags_for takes, on both securities in a stable
-      # order, so a concurrent tag edit on either waits for the move.
-      Security.where(id: [ id, canonical.id ]).order(:id).lock.load
-
-      taggings.where(<<~SQL, canonical.id).update_all(taggable_id: canonical.id)
-        NOT EXISTS (
-          SELECT 1 FROM taggings carried
-          WHERE carried.taggable_type = 'Security'
-            AND carried.taggable_id = ?
-            AND carried.tag_id = taggings.tag_id
-        )
-      SQL
-      taggings.reset
-    end
-  end
-
   # Replaces only `family`'s tags on this security.
   #
   # A wholesale replace would delete other families' taggings on the same

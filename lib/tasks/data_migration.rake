@@ -28,8 +28,11 @@ namespace :data_migration do
   # This task:
   #   1. Finds each duplicate group
   #   2. Chooses the earliest-created row as the keeper
-  #   3. Re-points holdings and trades to the keeper
-  #   4. Destroys the duplicate (which also removes its prices)
+  #   3. Merges the group into the keeper with Security::Merger, in one
+  #      transaction: holdings (a colliding row keeps the more recently
+  #      written one), trades, lots, prices, splits and tags move, the
+  #      duplicates are deleted
+  #   4. Syncs each affected account once, after the last group
   task migrate_duplicate_securities: :environment do
     puts "==> Scanning for duplicate securities…"
 
@@ -42,6 +45,7 @@ namespace :data_migration do
       .to_a
 
     puts "Found #{duplicate_sets.size} duplicate groups."
+    account_ids = Set.new
 
     duplicate_sets.each_with_index do |set, idx|
       # Fetch duplicates ordered by creation; the first row becomes keeper
@@ -61,56 +65,23 @@ namespace :data_migration do
       next if dup_ids.empty?
 
       begin
-        ActiveRecord::Base.transaction do
-          # --------------------------------------------------------------
-          # HOLDINGS
-          # --------------------------------------------------------------
-          holdings_moved   = 0
-          holdings_deleted = 0
+        # The whole group in one transaction: it merges whole or not at all.
+        counts = Security::Merger.merge_group!(duplicates.to_a, into: keeper, account_ids: account_ids)
 
-          dup_ids.each do |dup_id|
-            Holding.where(security_id: dup_id).find_each(batch_size: 1_000) do |holding|
-              # Will this holding collide with an existing keeper row?
-              conflict_exists = Holding.where(
-                account_id: holding.account_id,
-                security_id: keeper.id,
-                date:        holding.date,
-                currency:    holding.currency
-              ).exists?
-
-              if conflict_exists
-                holding.destroy!
-                holdings_deleted += 1
-              else
-                holding.update!(security_id: keeper.id)
-                holdings_moved += 1
-              end
-            end
-          end
-
-          # --------------------------------------------------------------
-          # TRADES — no uniqueness constraints -> bulk update is fine
-          # --------------------------------------------------------------
-          trades_moved = Trade.where(security_id: dup_ids).update_all(security_id: keeper.id)
-
-          # Ensure no rows remain pointing at duplicates before deletion
-          raise "Leftover holdings detected" if Holding.where(security_id: dup_ids).exists?
-          raise "Leftover trades detected"   if Trade.where(security_id: dup_ids).exists?
-
-          duplicates.each(&:destroy!)   # destroys its security_prices via dependent: :destroy
-
-          # Log inside the transaction so counters are in-scope
-          total_holdings = holdings_moved + holdings_deleted
-          puts "[#{idx + 1}/#{duplicate_sets.size}] Merged #{dup_ids.join(', ')} → #{keeper.id} " \
-               "(#{total_holdings} holdings → #{holdings_moved} moved, #{holdings_deleted} removed, " \
-               "#{trades_moved} trades)"
-        end
+        puts "[#{idx + 1}/#{duplicate_sets.size}] Merged #{dup_ids.join(', ')} → #{keeper.id} " \
+             "(#{counts[:holdings_moved]} holdings moved, #{counts[:holdings_removed]} colliding holdings removed, " \
+             "the more recently written row kept; #{counts[:trades]} trades, #{counts[:lots]} lots, " \
+             "#{counts[:references]} references)"
       rescue => e
         puts "ERROR migrating #{dup_ids.join(', ')}: #{e.message}"
       end
     end
 
     puts "✅  Duplicate security migration complete."
+  ensure
+    # After the last group, so no sync runs against a half-merged set, and
+    # also when the task stops partway, so committed groups are synced.
+    Security::Merger.sync_accounts(account_ids)
   end
 
   desc "Migrate account valuation anchors"
