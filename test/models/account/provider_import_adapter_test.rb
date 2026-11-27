@@ -33,6 +33,57 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal(-10, entry.reload.amount)
     assert_equal "Incoming", entry.name
     assert_equal({ "pending" => false }, entry.transaction.extra.fetch("simplefin"))
+    @adapter.import_transaction(**args.merge(amount: 25, currency: "EUR",
+      extra: { "simplefin" => { "amount_normalization" => "current" } }))
+    assert_equal 25, entry.reload.amount
+    assert_equal "EUR", entry.currency
+    assert_equal({ "amount_normalization" => "current" }, entry.transaction.extra.fetch("simplefin"))
+  end
+
+  test "attribute locked amounts keep opted in provenance without user modified" do
+    [ :amount, :currency ].each do |attribute|
+      [ :absent, nil, "legacy_rule" ].each_with_index do |marker, index|
+        snapshot = { "pending" => false, "stale" => true }
+        snapshot["amount_normalization"] = marker unless marker == :absent
+        args = { external_id: "synthetic_locked_#{attribute}_#{index}", amount: -25, currency: "USD",
+                 date: Date.current, name: "Original", source: "simplefin",
+                 extra: { "simplefin" => snapshot, "unrelated" => { "keep" => true } },
+                 replace_extra_namespaces: [ "simplefin" ],
+                 amount_extra_keys: { "simplefin" => [ "amount_normalization" ] } }
+        entry = @adapter.import_transaction(**args)
+        entry.lock_attr!(attribute)
+        assert_not entry.reload.user_modified?
+
+        incoming = { simplefin: { pending: false, amount_normalization: "direct_debit" } }
+        original_incoming = incoming.deep_dup
+        @adapter.import_transaction(**args.merge(amount: 25, currency: "EUR", name: "Incoming", extra: incoming))
+
+        entry.reload
+        assert_not entry.user_modified?
+        assert_equal(-25, entry.amount)
+        assert_equal "USD", entry.currency
+        assert_equal "Incoming", entry.name
+        expected = { "pending" => false }
+        expected["amount_normalization"] = marker unless marker == :absent
+        assert_equal expected, entry.transaction.extra.fetch("simplefin")
+        assert_equal({ "keep" => true }, entry.transaction.extra.fetch("unrelated"))
+        assert_equal original_incoming, incoming
+      end
+    end
+  end
+
+  test "attribute locks do not opt other providers into provenance preservation" do
+    args = { external_id: "synthetic_locked_other_provider", amount: -25, currency: "USD",
+             date: Date.current, name: "Original", source: "example",
+             extra: { "example" => { "applied_rule" => "old" } },
+             replace_extra_namespaces: [ "example" ] }
+    entry = @adapter.import_transaction(**args)
+    entry.lock_attr!(:amount)
+    @adapter.import_transaction(**args.merge(amount: 25, currency: "EUR",
+      extra: { "example" => { "applied_rule" => "incoming" } }))
+    assert_equal(-25, entry.reload.amount)
+    assert_equal "USD", entry.currency
+    assert_equal({ "applied_rule" => "incoming" }, entry.transaction.extra.fetch("example"))
   end
 
   test "imports transaction with all parameters" do

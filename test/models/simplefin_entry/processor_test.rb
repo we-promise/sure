@@ -24,6 +24,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
 
   test "dividend security names do not act as tax or return qualifiers" do
     [ "DIVIDEND RECEIVED FIDELITY TAX-FREE BOND FUND",
+      "DIVIDEND RECEIVED FIDELITY TAX-EXEMPT MONEY MARKET",
       "DIVIDEND RECEIVED FIDELITY TOTAL-RETURN FUND",
       "DIVIDEND RECEIVED FIDELITY TOTAL RETURN BOND FUND" ].each_with_index do |description, index|
       [ "1.00", "-1.00" ].each_with_index do |raw_amount, sign|
@@ -41,7 +42,8 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     [ "DIVIDEND RECEIVED TAX", "DIVIDEND RECEIVED WITHHOLDING",
       "DIVIDEND RECEIVED EXAMPLE FUND WITHHELD", "DIVIDEND RECEIVED EXAMPLE FUND NRA WITHHELD",
       "DIVIDEND RECEIVED EXAMPLE FUND REVERSAL", "DIVIDEND RECEIVED RETURN OF CAPITAL",
-      "DIVIDEND RECEIVED TAXES", "DIVIDEND RECEIVED EXAMPLE FUND RETURN (CASH)",
+      "DIVIDEND RECEIVED TAXES", "DIVIDEND RECEIVED FIDELITY TAX-EXEMPT MONEY MARKET WITHHELD",
+      "DIVIDEND RECEIVED EXAMPLE FUND RETURN (CASH)",
       "DIVIDEND RECEIVED TOTAL RETURN OF CAPITAL" ].each_with_index do |description, index|
       [ "1.00", "-1.00" ].each_with_index do |raw_amount, sign|
         tx = { id: "synthetic_dividend_qualifier_#{index}_#{sign}", amount: raw_amount,
@@ -453,21 +455,18 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
 
 
 
-  test "normalizes Fidelity card payments to negative Sure inflows" do
-    [ "2303.00", "-2303.00" ].each_with_index do |raw_amount, index|
-      tx = {
-        id: "tx_card_payment_#{index}",
-        amount: raw_amount,
-        currency: "USD",
-        description: "PAYMENT MADE BY ACCOUNT ENDING IN:9923",
-        posted: Date.current.to_s
-      }
-
-      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
-
-      entry = @account.entries.find_by!(external_id: "simplefin_tx_card_payment_#{index}", source: "simplefin")
-      assert_equal BigDecimal("-2303.00"), entry.amount
-      assert_equal "card_payment", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  test "unattributed fee and card payment descriptors retain upstream signs" do
+    # Synthetic counterexamples, not observed Fidelity provider rows.
+    [ "FEE CHARGED ATM SURCHARGE", "FEE CHARGED WIRE FEE REBATE",
+      "FEE CHARGED ADVISORY FEE CREDIT", "PAYMENT MADE BY ACCOUNT ENDING IN:9923" ].each_with_index do |description, index|
+      [ "1.00", "-1.00" ].each_with_index do |raw_amount, sign|
+        tx = { id: "synthetic_unattributed_#{index}_#{sign}", amount: raw_amount, currency: "USD",
+               description: description, posted: Date.current.to_s }
+        SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+        entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
+        assert_equal(-BigDecimal(raw_amount), entry.amount)
+        assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+      end
     end
   end
 
@@ -509,7 +508,6 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       [ "check_paid", "CHECK PAID", :expense ],
       [ "wire_out", "WIRE TRANSFER TO BANK", :expense ],
       [ "cash_advance", "CASH ADVANCE", :expense ],
-      [ "fee", "FEE CHARGED ATM SURCHARGE", :expense ],
       [ "interest", "INTEREST FULLY PAID", :income ],
       [ "cash_in_lieu", "IN LIEU OF FRX SHARE LEU PAYOUT EXAMPLE SECURITY", :income ]
     ]

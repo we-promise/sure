@@ -17,8 +17,6 @@ class SimplefinEntry::Processor
     wire_out: { direction: :expense, pattern: /\AWIRE\s+TRANSFER\s+TO\s+BANK\b/i },
     cash_advance: { direction: :expense, pattern: /\ACASH\s+ADVANCE\b/i },
     fee_rebate: { direction: :income, pattern: /\A(?:ADJUST\s+)?FEE\s+CHARGED\s+ATM\s+FEE\s+REBATE\b/i },
-    fee: { direction: :expense, pattern: /\AFEE\s+CHARGED\b/i },
-    card_payment: { direction: :income, pattern: /\APAYMENT MADE BY ACCOUNT ENDING IN:\s*\d+\z/i },
     interest: { direction: :income, pattern: /\AINTEREST\s+FULLY\s+PAID\b/i },
     cash_in_lieu: { direction: :income, pattern: /\AIN\s+LIEU\s+OF\s+FRX\s+SHARE\s+LEU\s+PAYOUT\b/i },
     dividend: {
@@ -27,9 +25,9 @@ class SimplefinEntry::Processor
     }
   }.freeze
   AMBIGUOUS_AMOUNT_TERMS = /\b(?:REVERS|RETURN|REFUND)/i
-  # TAX-FREE and TOTAL RETURN can belong to a security name, not the action.
+  # TAX-FREE, TAX-EXEMPT and TOTAL RETURN can be security names, not actions.
   # Withheld tax, reversals and returns of capital are not ordinary dividends.
-  DIVIDEND_TRANSACTION_QUALIFIERS = /\b(?:TAX(?:ES)?(?![-\s]+FREE\b)|WITHHOLDING|WITHHELD)\b|\bRETURN\s+OF\s+CAPITAL\b/i
+  DIVIDEND_TRANSACTION_QUALIFIERS = /\b(?:TAX(?:ES)?(?![-\s]+(?:FREE|EXEMPT)\b)|WITHHOLDING|WITHHELD)\b|\bRETURN\s+OF\s+CAPITAL\b/i
   # simplefin_transaction is the raw hash fetched from SimpleFin API and converted to JSONB
   # @param import_adapter [Account::ProviderImportAdapter, nil] Optional shared adapter for accumulating skipped entries
   def initialize(simplefin_transaction, simplefin_account:, import_adapter: nil)

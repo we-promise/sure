@@ -207,9 +207,10 @@ class Account::ProviderImportAdapter
       # Respect that lock the way enrich_attribute does for name and category.
       # Amount and currency only make sense together, so a lock on either keeps both.
       financial_attributes = { amount: amount, currency: currency, date: effective_date }
+      amount_locked = entry.persisted? && (entry.locked?(:amount) || entry.locked?(:currency))
       if entry.persisted?
         financial_attributes.delete(:date) if entry.locked?(:date)
-        financial_attributes.except!(:amount, :currency) if entry.locked?(:amount) || entry.locked?(:currency)
+        financial_attributes.except!(:amount, :currency) if amount_locked
       end
       entry.assign_attributes(financial_attributes)
 
@@ -230,6 +231,11 @@ class Account::ProviderImportAdapter
       end
 
       # Persist extra provider metadata on the transaction (non-enriched; always merged)
+      # An attribute lock protects the amount/currency even without user_modified.
+      # Its applied-rule provenance must describe the retained amount, not this sync.
+      if amount_locked && extra.is_a?(Hash) && amount_extra_keys.present?
+        extra = keep_amount_sources(entry, extra.deep_stringify_keys, amount_extra_keys)
+      end
       apply_provider_extra(entry, extra, replace_extra_namespaces)
 
       # Auto-detect investment activity labels for investment accounts

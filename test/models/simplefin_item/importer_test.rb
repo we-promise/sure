@@ -166,7 +166,7 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     payload = { id: sfa.account_id, name: sfa.name, type: "checking", balance: 100,
                 currency: "USD", org: { domain: "fidelity.com" }, transactions: [ tx ] }
     @importer.send(:import_account, payload)
-    SimplefinEntry::Processor.new(sfa.reload.raw_transactions_payload.fetch(0), simplefin_account: sfa).process
+    SimplefinAccount::Transactions::Processor.new(sfa.reload).process
     entry = account.entries.find_by!(source: "simplefin", external_id: "simplefin_#{tx[:id]}")
     assert_equal BigDecimal("1"), entry.amount
 
@@ -176,7 +176,7 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
       raw = sfa.reload.raw_transactions_payload
       assert_equal 1, raw.size
       assert_equal corrected[:description], raw.first.fetch("description")
-      SimplefinEntry::Processor.new(raw.first, simplefin_account: sfa).process
+      SimplefinAccount::Transactions::Processor.new(sfa).process
       assert_equal BigDecimal("-1"), entry.reload.amount
       assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
       assert_equal 1, account.entries.where(source: "simplefin", external_id: entry.external_id).count
