@@ -55,9 +55,9 @@ AI work runs in the Sidekiq `worker`, in its own capsule ("lane"), so a slow mod
 - **One AI thread suits a model that serves one request at a time,** such as a local model on CPU: a chat turn's calls then run back to back, keeping the model's prompt cache warm. If your provider serves requests in parallel (hosted APIs, or a local server with several slots), raise `RAILS_AI_MAX_THREADS`, and `RAILS_MAX_THREADS` by the same amount so the default lane keeps its threads.
 - **The worker must load `config/sidekiq.yml`,** as `bundle exec sidekiq` does by default. A worker started with its own queue list (`sidekiq -q …`, a custom Helm `worker.command`) doesn't get the AI lane. If no worker polls `ai_high_priority` and `ai_low_priority`, **System health** (`/admin/system_health`) and the site-wide banner report "No worker is processing the AI queues", and the chat page warns that responses may not be delivered. Keep `-C config/sidekiq.yml`; adding `-q ai_high_priority -q ai_low_priority` also works, but AI jobs then share that worker's threads, and the chat reservation doesn't hold them, since a chat can usually take another thread.
 - **System health:** AI backlog doesn't count towards "queue backed up" (a large merchant-detection run can queue for hours), but "Oldest job age" still includes it. Check the queue table or `/sidekiq` to see which queue is waiting.
-- **Upgrading:** AI jobs moved from `high_priority` (chat), `medium_priority` and `scheduled` to the AI queues. Chat jobs already queued under the old queue names still run once, in the default lane; the background AI jobs changed class too, so drain them first (see below).
+- **Upgrading:** AI jobs moved from `high_priority` (chat), `medium_priority` and `scheduled` to the AI queues. Chat jobs already queued under the old queue names still run once, in the default lane; the background AI jobs changed class too, and their old classes still run them for one release (see below).
 - **Large batches:** Sure doesn't limit `LLM_MAX_ITEMS_PER_CALL`. A batch is cut to fit the context window (`LLM_CONTEXT_WINDOW` minus the reply limit and the prompt itself), and a batch that still overflows, or whose answer stops at the reply limit, is halved and sent again. On OpenAI's own API and on Anthropic the window counts only when `LLM_CONTEXT_WINDOW` is set, so their batches are capped by `LLM_MAX_ITEMS_PER_CALL` alone; raise `ANTHROPIC_MAX_TOKENS` (default `4096`) with the batch size so fewer answers get cut.
-- **Upgrading:** every background AI feature now runs as `Ai::GenerationJob`, and the old job classes (`AutoCategorizeJob`, `AutoDetectMerchantsJob`, `EnhanceProviderMerchantsJob`) are gone. Before upgrading, let every queue that can hold one drain: `ai_high_priority` and `ai_low_priority`, and `medium_priority` and `scheduled` if you're upgrading from a version that queued AI work there, including their retries. A job still queued under an old class ends up in Sidekiq's dead set, and a rule run waiting on it stays pending.
+- **Upgrading:** every background AI feature now runs as `Ai::GenerationJob`. The old job classes (`AutoCategorizeJob`, `AutoDetectMerchantsJob`, `EnhanceProviderMerchantsJob`, and `WorkerAiHealthCheckJob` for the worker check) stay for one release, so a job already queued under one, in whichever queue and including its retries, still runs and hands its work to the new job, and a rule run waiting on it still finishes. They're removed in the next release, so upgrade through this one rather than skipping it.
 
 ## Quickstart: OpenAI Token
 
@@ -1669,7 +1669,12 @@ Sure reads an uploaded PDF in one of four ways, then checks what the model retur
 
 - **PDF import runs only on a model with PDF support, as before:** OpenAI's vision models,
   Claude, and a custom OpenAI-compatible server unless `OPENAI_SUPPORTS_PDF_PROCESSING=false`,
-  which turns PDF import off.
+  which turns PDF import off, text PDFs included.
+- **A custom server whose model takes no images needs no setting.** PDFs with a text layer import as
+  text. A scan is refused and fails with the reason. System health shows the PDF vision check as not
+  supported when it recognizes the refusal (llama.cpp's and Ollama's "image input is not supported"),
+  and as failing when the server words it differently. Set `OPENAI_SUPPORTS_PDF_PROCESSING=false`
+  only to turn PDF import off.
 - **Auto, the default, tries them in that order**, skipping a way the model can't do. A scan
   with no text layer is never sent as empty text. The next statement for the same account and
   model starts from the way that last passed.

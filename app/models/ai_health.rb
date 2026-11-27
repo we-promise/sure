@@ -247,6 +247,7 @@ class AiHealth
       return :unavailable unless llm_configured?
       return :unsupported unless capable
       return :not_checked if probe.not_checked?
+      return :unsupported if probe.failure_code == :images_refused
 
       probe.passing? ? :supported : :failing
     end

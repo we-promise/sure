@@ -396,7 +396,7 @@ id:
             dimensions_mismatch: Dimensi vektor embedding tidak cocok dengan dimensi yang dikonfigurasi
             extension_not_enabled: Ekstensi vektor PostgreSQL belum diaktifkan
             table_not_found: Tabel vector_store_chunks tidak ditemukan
-            render_missing_binary: Perender pdftoppm (poppler-utils) tidak tersedia di kontainer ini
+            missing_binary: Perender pdftoppm (poppler-utils) tidak tersedia di kontainer ini
             timeout: Layanan tidak merespons sebelum batas waktu pemeriksaan
             request_failed: Permintaan layanan gagal
             unsupported_provider: Penyedia tidak mendukung pemeriksaan ini
