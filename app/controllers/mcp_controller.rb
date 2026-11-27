@@ -85,7 +85,7 @@ class McpController < ApplicationController
     def handle_initialize(params)
       @mcp_protocol_version = negotiated_protocol_version(params)
       @mcp_session_id = SecureRandom.uuid
-      Rails.cache.write(mcp_session_cache_key(@mcp_session_id), mcp_user.id, expires_in: MCP_SESSION_TTL)
+      write_mcp_session(@mcp_session_id)
 
       {
         protocolVersion: @mcp_protocol_version,
@@ -227,8 +227,16 @@ class McpController < ApplicationController
       PROTOCOL_VERSION
     end
 
+    # Sliding expiry: each use restarts the TTL, so only an idle session expires.
     def valid_mcp_session?(session_id)
-      Rails.cache.read(mcp_session_cache_key(session_id)) == mcp_user.id
+      return false unless Rails.cache.read(mcp_session_cache_key(session_id)) == mcp_user.id
+
+      write_mcp_session(session_id)
+      true
+    end
+
+    def write_mcp_session(session_id)
+      Rails.cache.write(mcp_session_cache_key(session_id), mcp_user.id, expires_in: MCP_SESSION_TTL)
     end
 
     def mcp_session_cache_key(session_id)

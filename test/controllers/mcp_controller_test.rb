@@ -503,6 +503,27 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an active MCP session stays valid past its original TTL" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+        headers = mcp_headers(@token).merge("Mcp-Session-Id" => session_id)
+
+        travel 20.hours
+        post "/mcp", params: jsonrpc_request("tools/list").to_json, headers: headers
+        assert_response :ok
+
+        travel 20.hours
+        post "/mcp", params: jsonrpc_request("tools/list").to_json, headers: headers
+        assert_response :ok
+
+        travel McpController::MCP_SESSION_TTL + 1.minute
+        post "/mcp", params: jsonrpc_request("tools/list").to_json, headers: headers
+        assert_response :not_found
+      end
+    end
+  end
+
   test "tools/list rejects an invalid MCP session id" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("tools/list", {}, id: 25).to_json,
