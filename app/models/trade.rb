@@ -141,7 +141,7 @@ class Trade < ApplicationRecord
 
   def unrealized_gain_loss
     return nil unless qty.positive?
-    current_price = security.current_price
+    current_price = security.current_price_in(currency)
     return nil if current_price.nil?
 
     current_value = current_price * qty.abs
@@ -407,10 +407,20 @@ class Trade < ApplicationRecord
       Money.new(disposals.sum(BigDecimal("0")) { |disposal| disposal.qty * disposal.unit_cost }, disposals.first.currency)
     end
 
-    # The position's average on the sale's day, applied to the units sold.
+    # The position's average cost just before the sale, applied to the units
+    # sold. A sale that closes the position leaves a snapshot with nothing held
+    # and no basis, so the cost has to come from the trades before the sale.
+    # Average cost does not move on a sale, so where the snapshot has a figure
+    # it is the same one. Where it has none, the replay up to the sale is the
+    # figure, and also the right one when trades fall between the snapshot's
+    # date and the sale, so the history is replayed once rather than through
+    # the snapshot's date first.
     def snapshot_cost
       holding = basis_holding
-      holding.avg_cost * qty.abs if holding&.avg_cost
+      return unless holding
+
+      avg_cost = holding.stored_avg_cost || holding.avg_cost_before(entry)
+      avg_cost * qty.abs if avg_cost
     end
 
     def calculate_realized_gain_loss
