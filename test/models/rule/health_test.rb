@@ -151,6 +151,205 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_empty health.shadowed
   end
 
+  test "a rule that sets a field on some matches a rule above also sets is an overlap" do
+    above = create_rule(name_condition("like", "woolworths"), category: @groceries)
+    below = create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ name_condition("like", "metro"), name_condition("like", "hardware") ]),
+      category: @dining
+    )
+
+    overlap = health.overlaps.sole
+    assert_equal [ below, above ], [ overlap.rule, overlap.other ]
+    assert_equal [ 1, 2 ], [ overlap.shared_count, overlap.match_count ]
+    assert_equal [ :category_id ], overlap.attributes
+    assert_empty health.shadowed
+  end
+
+  test "rules that set different fields on shared transactions do not overlap" do
+    create_rule(name_condition("like", "woolworths"), category: @groceries)
+    create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ name_condition("like", "metro"), name_condition("like", "hardware") ]),
+      tags: [ @tag ]
+    )
+
+    assert_empty health.overlaps
+  end
+
+  test "rules whose text is the same or contained overlap even without shared transactions" do
+    above = create_rule(name_condition("like", "uber"), category: @groceries)
+    below = create_rule(name_condition("=", "UBER EATS"), category: @dining)
+
+    overlap = health.overlaps.sole
+    assert_equal [ below, above ], [ overlap.rule, overlap.other ]
+    assert overlap.same_text
+    assert_equal 0, overlap.shared_count
+  end
+
+  test "equals conditions whose text differs only in case are not the same text" do
+    create_rule(name_condition("=", "Uber"), category: @groceries)
+    create_rule(name_condition("=", "uber"), category: @dining)
+
+    assert_empty health.overlaps
+  end
+
+  test "equals conditions whose text only contains the other are not the same text" do
+    create_rule(name_condition("=", "Uber"), category: @groceries)
+    create_rule(name_condition("=", "Uber Eats"), category: @dining)
+
+    assert_empty health.overlaps
+  end
+
+  test "equals text that an ends with condition would not match is not the same text" do
+    create_rule(name_condition("=", "Uber Eats"), category: @groceries)
+    create_rule(name_condition("ends_with", "Uber"), category: @dining)
+
+    assert_empty health.overlaps
+  end
+
+  test "equals text is the same text as a starts with condition only when it starts with it" do
+    above = create_rule(name_condition("starts_with", "uber"), category: @groceries)
+    below = create_rule(name_condition("=", "Uber Eats zz"), category: @dining)
+    create_rule(name_condition("=", "Zz Uber"), category: @dining)
+
+    assert_equal [ [ below, above, true ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.same_text ] }
+  end
+
+  test "contains conditions whose text differs in case are still the same text" do
+    above = create_rule(name_condition("like", "UBER"), category: @groceries)
+    below = create_rule(name_condition("starts_with", "uber eats zz"), category: @dining)
+
+    assert_equal [ [ below, above, true ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.same_text ] }
+  end
+
+  test "merchant conditions compare the merchant, not its name" do
+    uber = @family.merchants.create!(name: "Uber")
+    uber_eats = @family.merchants.create!(name: "Uber Eats")
+    synced_uber = ProviderMerchant.create!(name: "Uber", source: "plaid")
+    [ uber, uber_eats, synced_uber ].each do |merchant|
+      create_rule(Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: merchant.id), category: @groceries)
+    end
+
+    assert_empty health.overlaps
+  end
+
+  test "contained text with contradicting amount conditions is not an overlap" do
+    create_rule(name_condition("like", "uber"), amount_condition(">", "100"), category: @groceries)
+    create_rule(name_condition("like", "uber"), amount_condition("<", "10"), category: @dining)
+
+    assert_empty health.overlaps
+  end
+
+  test "contained text inside an OR group is still the same text" do
+    above = create_rule(name_condition("like", "uber"), category: @groceries)
+    below = create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ name_condition("like", "uber eats zz"), name_condition("like", "deliveroo") ]),
+      category: @dining
+    )
+
+    overlap = health.overlaps.sole
+    assert_equal [ below, above, true ], [ overlap.rule, overlap.other, overlap.same_text ]
+  end
+
+  test "a merchant condition is compared by the merchant's name" do
+    merchant = @family.merchants.create!(name: "Uber Eats")
+    above = create_rule(Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: merchant.id), category: @groceries)
+    below = create_rule(name_condition("like", "uber"), category: @dining)
+
+    assert_equal [ [ below, above ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other ] }
+
+    merchant.update!(name: "Deliveroo")
+
+    assert_empty health.overlaps
+  end
+
+  test "rules that share name text but require different merchants do not overlap" do
+    uber = @family.merchants.create!(name: "Uber")
+    deliveroo = @family.merchants.create!(name: "Deliveroo")
+    above = create_rule(merchant_condition(uber), name_condition("like", "uber"), category: @groceries)
+    create_rule(merchant_condition(deliveroo), name_condition("like", "uber"), category: @dining)
+    same_merchant = create_rule(merchant_condition(uber), name_condition("like", "uber eats"), category: @dining)
+
+    assert_equal [ [ same_merchant, above, true ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.same_text ] }
+  end
+
+  test "different merchants inside OR groups do not keep text alternatives apart" do
+    uber = @family.merchants.create!(name: "Uber")
+    deliveroo = @family.merchants.create!(name: "Deliveroo")
+    above = create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ merchant_condition(uber), name_condition("like", "uber") ]),
+      category: @groceries
+    )
+    below = create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ merchant_condition(deliveroo), name_condition("like", "uber eats zz") ]),
+      category: @dining
+    )
+
+    assert_equal [ [ below, above, true ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.same_text ] }
+  end
+
+  test "required name conditions that cannot all hold are not an overlap" do
+    create_rule(name_condition("starts_with", "uber"), name_condition("ends_with", "taxi"), category: @groceries)
+    create_rule(name_condition("starts_with", "uber"), name_condition("ends_with", "eats"), category: @dining)
+
+    assert_empty health.overlaps
+
+    @family.rules.destroy_all
+    create_rule(name_condition("starts_with", "uber"), name_condition("like", "eats"), category: @groceries)
+    create_rule(name_condition("starts_with", "deliveroo"), name_condition("like", "eats"), category: @dining)
+
+    assert_empty health.overlaps
+
+    @family.rules.destroy_all
+    create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "and", sub_conditions: [ name_condition("=", "Uber Eats"), name_condition("like", "uber") ]),
+      category: @groceries
+    )
+    create_rule(name_condition("=", "Uber Taxi"), name_condition("like", "uber"), category: @dining)
+
+    assert_empty health.overlaps
+
+    @family.rules.destroy_all
+    above = create_rule(name_condition("starts_with", "uber"), name_condition("ends_with", "eats"), category: @groceries)
+    below = create_rule(name_condition("starts_with", "uber zz"), name_condition("ends_with", "eats"), category: @dining)
+
+    assert_equal [ [ below, above, true ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.same_text ] }
+  end
+
+  test "prefixes that cannot both hold are not an overlap" do
+    above = create_rule(name_condition("starts_with", "uber"), category: @groceries)
+    create_rule(name_condition("starts_with", "eats uber"), category: @dining)
+    longer = create_rule(name_condition("starts_with", "uber zz"), category: @dining)
+
+    assert_equal [ [ longer, above, true ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.same_text ] }
+
+    @family.rules.destroy_all
+    above = create_rule(name_condition("ends_with", "eats"), category: @groceries)
+    create_rule(name_condition("ends_with", "eats uber"), category: @dining)
+    longer = create_rule(name_condition("ends_with", "zz eats"), category: @dining)
+
+    assert_equal [ [ longer, above, true ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.same_text ] }
+  end
+
+  test "a shadowed rule is not named as the other rule of an overlap" do
+    above = create_rule(name_condition("like", "woolworths"), category: @groceries)
+    shadowed = create_rule(name_condition("like", "metro"), category: @dining)
+    below = create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ name_condition("like", "metro"), name_condition("like", "hardware") ]),
+      category: @dining
+    )
+
+    report = health
+    assert_equal [ shadowed ], report.shadowed.map(&:rule)
+    assert_equal [ [ below, above ] ], report.overlaps.map { |overlap| [ overlap.rule, overlap.other ] }
+  end
+
+  test "rules with contained text that set different fields do not overlap" do
+    create_rule(name_condition("like", "uber"), category: @groceries)
+    create_rule(name_condition("=", "UBER EATS"), tags: [ @tag ])
+
+    assert_empty health.overlaps
+  end
+
   test "a rule whose conditions read a field a rule above changes gets no shadowed or match-nothing verdict" do
     create_transaction(account: @account, name: "Uber ride", amount: 77)
     rename = create_rule(name_condition("like", "uber ride"), name: "Taxi")
@@ -292,6 +491,16 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_equal [ nothing ], report.match_nothing
   end
 
+  test "a rule below with the same conditions that sets the same value and does more is an overlap" do
+    above = create_rule(name_condition("like", "woolworths"), category: @groceries)
+    below = create_rule(name_condition("like", "woolworths"), category: @groceries, tags: [ @tag ])
+
+    report = health
+    assert_empty report.duplicates
+    assert_empty report.conflicts
+    assert_equal [ [ below, above, 2 ] ], report.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.shared_count ] }
+  end
+
   test "a rule with an action that cannot be resolved is not reported as shadowed" do
     create_rule(name_condition("like", "woolworths"), category: @groceries)
     broken = create_rule(name_condition("like", "metro"), category: @dining)
@@ -345,6 +554,10 @@ class Rule::HealthTest < ActiveSupport::TestCase
 
     def detail_condition(operator, value)
       Rule::Condition.new(condition_type: "transaction_additional_detail", operator: operator, value: value)
+    end
+
+    def merchant_condition(merchant)
+      Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: merchant.id)
     end
 
     def details_condition(operator, value)

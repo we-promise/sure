@@ -8,6 +8,9 @@ class Rule::Health
   # exactly as written: folding it would make `\d` and `\D` look alike.
   CASE_INSENSITIVE_OPERATORS = %w[like not_like starts_with ends_with].freeze
 
+  # Conditions whose text a match must contain, compared for overlaps.
+  TEXT_OPERATORS = %w[like = starts_with ends_with].freeze
+
   # The field each condition type reads that a rule's action can change.
   CONDITION_FIELDS = {
     "transaction_name" => :name,
@@ -19,6 +22,7 @@ class Rule::Health
 
   Conflict = Data.define(:rules, :attribute, :winner)
   Shadowed = Data.define(:rule, :reason, :by, :attributes, :match_count)
+  Overlap = Data.define(:rule, :other, :attributes, :shared_count, :match_count, :same_text)
 
   attr_reader :rules
 
@@ -66,6 +70,23 @@ class Rule::Health
   def shadowed
     dry_run
     @shadowed
+  end
+
+  # Active rules below another that sets the same field on transactions both
+  # match, or whose conditions name the same or contained text and are
+  # otherwise the same. Pairs already listed as duplicates or conflicts, and
+  # shadowed rules, are left out.
+  def overlaps
+    @overlaps ||= begin
+      skipped = shadowed.map { |entry| entry.rule.id }.to_set
+      active = rules.select(&:active?).reject { |rule| failed.include?(rule) }
+
+      active.each_with_index.flat_map do |rule, index|
+        next [] if skipped.include?(rule.id)
+
+        active.first(index).reject { |other| skipped.include?(other.id) }.filter_map { |other| overlap(rule, other) }
+      end
+    end
   end
 
   def match_nothing
@@ -171,6 +192,129 @@ class Rule::Health
         by = attributes.flat_map { |attribute| unstopped.filter_map { |id| claimed_by[attribute][id] } }.uniq
         Shadowed.new(rule: rule, reason: :claimed, by: by.sort_by { |r| position(r) }, attributes: attributes,
           match_count: unstopped.size)
+      end
+    end
+
+    def overlap(rule, other)
+      return if listed_together?(rule, other)
+
+      attributes = field_values(rule).keys & field_values(other).keys
+      return if attributes.empty?
+
+      shared = matches[rule.id] & matches[other.id]
+      same_text = same_text?(rule, other)
+      return if shared.empty? && !same_text
+
+      Overlap.new(rule: rule, other: other, attributes: attributes, shared_count: shared.size,
+        match_count: matches[rule.id].size, same_text: same_text)
+    end
+
+    def listed_together?(rule, other)
+      (duplicates + conflicts.map(&:rules)).any? { |group| group.include?(rule) && group.include?(other) }
+    end
+
+    # Only when nothing else separates them: their other conditions are the
+    # same, they don't require different merchants, and the names they
+    # require can all hold at once.
+    def same_text?(rule, other)
+      return false unless conditions_besides_text(rule) == conditions_besides_text(other)
+
+      merchant_ids, other_merchant_ids = merchant_ids(rule), merchant_ids(other)
+      return false if merchant_ids.any? && other_merchant_ids.any? && merchant_ids != other_merchant_ids
+      return false if contradicting_names?(rule, other)
+
+      texts(rule).any? { |text| texts(other).any? { |other_text| same_or_contained?(text, other_text) } }
+    end
+
+    # `=` is exact and compares case, so its text only overlaps a condition it
+    # would itself match. A merchant `=` compares the merchant, not its name.
+    def same_or_contained?((text, operator, merchant_id), (other_text, other_operator, other_merchant_id))
+      return merchant_id == other_merchant_id if merchant_id && other_merchant_id
+      return text == other_text if operator == "=" && other_operator == "="
+      return matches_text?(text, other_text, other_operator) if operator == "="
+      return matches_text?(other_text, text, operator) if other_operator == "="
+
+      text, other_text = text.downcase, other_text.downcase
+      if operator == "starts_with" && other_operator == "starts_with"
+        text.start_with?(other_text) || other_text.start_with?(text)
+      elsif operator == "ends_with" && other_operator == "ends_with"
+        text.end_with?(other_text) || other_text.end_with?(text)
+      else
+        text.include?(other_text) || other_text.include?(text)
+      end
+    end
+
+    # Two different exact names, or two prefixes (or suffixes) neither of
+    # which extends the other.
+    def contradicting_names?(rule, other)
+      names = ->(r) { required_conditions(r).select { |condition| condition.condition_type == "transaction_name" } }
+      names.(rule).product(names.(other)).any? do |condition, other_condition|
+        next false unless condition.operator == other_condition.operator
+
+        text, other_text = [ condition, other_condition ].map { |c| c.value.to_s.gsub(/\s+/, " ").strip }
+        case condition.operator
+        when "=" then text != other_text
+        when "starts_with" then !text.downcase.start_with?(other_text.downcase) && !other_text.downcase.start_with?(text.downcase)
+        when "ends_with" then !text.downcase.end_with?(other_text.downcase) && !other_text.downcase.end_with?(text.downcase)
+        else false
+        end
+      end
+    end
+
+    # Conditions every match meets: those at the top level and in AND groups.
+    def required_conditions(rule)
+      rule.conditions.flat_map do |condition|
+        next [ condition ] unless condition.compound?
+
+        condition.operator == "and" ? condition.sub_conditions.to_a : []
+      end
+    end
+
+    def merchant_ids(rule)
+      required_conditions(rule).select { |condition| condition.condition_type == "transaction_merchant" && condition.operator == "=" }
+        .map { |condition| condition.value.to_s }.to_set
+    end
+
+    # Whether an exact value passes a contains, starts with or ends with
+    # condition, which all ignore case.
+    def matches_text?(value, text, operator)
+      value, text = value.downcase, text.downcase
+      case operator
+      when "starts_with" then value.start_with?(text)
+      when "ends_with" then value.end_with?(text)
+      else value.include?(text)
+      end
+    end
+
+    # The text a match must contain, with a merchant condition read as its
+    # merchant's name, its operator, and the merchant's id for a merchant
+    # condition.
+    def texts(rule)
+      @texts ||= {}
+      @texts[rule.id] ||= leaf_conditions(rule).filter_map do |condition|
+        next unless TEXT_OPERATORS.include?(condition.operator)
+
+        text = case condition.condition_type
+        when "transaction_name" then condition.value
+        when "transaction_merchant" then merchant_names[condition.value.to_s]
+        end
+        text = text.to_s.gsub(/\s+/, " ").strip.presence
+        [ text, condition.operator, (condition.value.to_s if condition.condition_type == "transaction_merchant") ] if text
+      end
+    end
+
+    # The conditions other than the compared text, with groups flattened.
+    def conditions_besides_text(rule)
+      condition_signature(leaf_conditions(rule).reject do |condition|
+        %w[transaction_name transaction_merchant].include?(condition.condition_type) && TEXT_OPERATORS.include?(condition.operator)
+      end)
+    end
+
+    def merchant_names
+      @merchant_names ||= begin
+        ids = rules.flat_map { |rule| leaf_conditions(rule) }
+          .select { |condition| condition.condition_type == "transaction_merchant" }.map(&:value).compact_blank.uniq
+        Merchant.where(id: ids.select { |id| UuidFormat.valid?(id) }).pluck(:id, :name).to_h { |id, name| [ id.to_s, name ] }
       end
     end
 
