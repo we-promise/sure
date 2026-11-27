@@ -1,15 +1,19 @@
 class Transfer::Creator
   # Raised when the submitted idempotency key already belongs to an entry,
   # but that entry's transfer doesn't match the current request (different
-  # destination/amount/date) — i.e. a stale key from a cached form rather
-  # than a genuine double-submit. See #find_existing_transfer.
+  # destination/amount/date/tags) — i.e. a stale key from a cached form, or a
+  # key reused for a different API request, rather than a genuine
+  # double-submit. See #find_existing_transfer.
   StaleIdempotencyKeyError = Class.new(StandardError)
 
+  # date may be nil: a new transfer is then made today, and a retry of a keyed
+  # request matches the transfer made on whichever day the first one was.
   def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, idempotency_key: nil)
     @family = family
     @source_account = family.accounts.find(source_account_id) # early throw if not found
     @destination_account = family.accounts.find(destination_account_id) # early throw if not found
-    @date = date
+    @requested_date = date
+    @date = date || Date.current
     @amount = amount.to_d
     @source_fee_amount = source_fee_amount.to_d
     @destination_fee_amount = destination_fee_amount.to_d
@@ -35,7 +39,7 @@ class Transfer::Creator
     # by the time this one runs. Return the existing transfer instead of
     # creating a second, identical one.
     if idempotency_key && (existing_transfer = find_existing_transfer)
-      return existing_transfer
+      return replayed(existing_transfer)
     end
 
     transfer = Transfer.new(
@@ -63,12 +67,13 @@ class Transfer::Creator
       apply_tags!(transfer) if tag_ids.any?
     end
 
-    transfer.sync_account_later
-
     # After commit, including a caller's own transaction, so a reconcile
     # error can never roll back the transfer. Only the inflow can resolve a
-    # transfer pledge.
+    # transfer pledge. Queued before the sync is scheduled, so an error
+    # scheduling the sync cannot skip it once the transfer is saved.
     GoalPledge::Reconciler.run_after_commit(transfer.inflow_transaction.entry)
+
+    transfer.sync_account_later
 
     transfer
   rescue ActiveRecord::RecordNotUnique
@@ -89,11 +94,11 @@ class Transfer::Creator
     existing_transfer = idempotency_key && find_existing_transfer
     raise StaleIdempotencyKeyError unless existing_transfer
 
-    existing_transfer
+    replayed(existing_transfer)
   end
 
   private
-    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids, :idempotency_key
+    attr_reader :family, :source_account, :destination_account, :date, :requested_date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids, :idempotency_key
 
     # Scoped to source_account + idempotency_key so it only ever finds a
     # transfer this same key could plausibly refer to, but the key alone
@@ -115,27 +120,43 @@ class Transfer::Creator
     # exchange_rate or fee would otherwise be reported as "success" while
     # silently keeping the old inflow amount and fee entries.
     #
-    # inflow_converted_amount re-applies the current request's exchange_rate
-    # (or re-fetches the rate for the same date, which is cached/stable) to
+    # inflow_converted_amount re-applies the request's exchange_rate to
     # compare against what's actually persisted, rather than trying to
     # recover the original request's exchange_rate from stored state (it
     # isn't persisted anywhere - only its effect on the inflow amount is).
-    # A rate that's no longer available on retry means this isn't a
-    # same-request retry either, so treat that as a mismatch too and let the
-    # normal create path surface the real Money::ConversionError.
+    # Between two currencies, a request that names no rate asked for whatever
+    # rate the lookup gave at the time, which is not stored either, and the
+    # rates can change before a retry (a later import adds the exact day), so
+    # the inflow is not compared then. That also lets such a retry replay a
+    # transfer made with an explicit rate: omitted means "as it was", the same
+    # as an omitted date. Accounts, date, outflow amount, fees and tags still
+    # have to match.
     def matches_request?(transfer)
       outflow_entry = transfer.outflow_transaction.entry
       inflow_entry = transfer.inflow_transaction.entry
+      matching_date = requested_date || outflow_entry.date
 
       outflow_entry.account_id == source_account.id &&
         inflow_entry.account_id == destination_account.id &&
-        outflow_entry.date == date &&
+        outflow_entry.date == matching_date &&
         outflow_entry.amount == amount &&
-        inflow_entry.amount == inflow_converted_amount * -1 &&
+        # The stored amount is rounded to numeric(19, 4); the converted amount is not.
+        (rate_looked_up? || inflow_entry.amount == inflow_converted_amount(matching_date).round(4) * -1) &&
         transfer.derived_source_fee_amount == source_fee_amount &&
-        transfer.derived_destination_fee_amount == destination_fee_amount
-    rescue Money::ConversionError
-      false
+        transfer.derived_destination_fee_amount == destination_fee_amount &&
+        transfer.outflow_transaction.tag_ids.sort == requested_tag_ids.sort
+    end
+
+    # The first request may have saved the transfer and then failed to schedule
+    # the sync (a queue outage), so a retry schedules it again; sync_later
+    # reuses a sync that is already waiting.
+    def replayed(transfer)
+      transfer.sync_account_later
+      transfer
+    end
+
+    def rate_looked_up?
+      exchange_rate.nil? && source_account.currency != destination_account.currency
     end
 
     # Every leg gets a role-specific suffix except the outflow (find_existing_transfer
@@ -155,8 +176,12 @@ class Transfer::Creator
       { idempotency_key: key }
     end
 
+    def requested_tag_ids
+      @requested_tag_ids ||= tag_ids.empty? ? [] : family.tags.where(id: tag_ids).pluck(:id)
+    end
+
     def apply_tags!(transfer)
-      resolved_ids = family.tags.where(id: tag_ids).pluck(:id)
+      resolved_ids = requested_tag_ids
       return if resolved_ids.empty?
 
       [ transfer.outflow_transaction, transfer.inflow_transaction ].each do |transaction|
@@ -189,7 +214,7 @@ class Transfer::Creator
     def inflow_transaction
       name = "#{name_prefix} from #{source_account.name}"
 
-      net_inflow = inflow_converted_amount
+      net_inflow = inflow_converted_amount(date)
 
       Transaction.new(
         kind: "funds_movement",
@@ -238,11 +263,11 @@ class Transfer::Creator
       family.categories.find_or_create_by!(name: I18n.t("models.category.defaults.fees"))
     end
 
-    def inflow_converted_amount
+    def inflow_converted_amount(on)
       Money.new(amount.abs, source_account.currency)
            .exchange_to(
              destination_account.currency,
-             date: date,
+             date: on,
              custom_rate: exchange_rate
            ).amount
     end

@@ -449,6 +449,40 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_nil pledge.matched_transaction_id
   end
 
+  test "a failure to schedule the account sync still reconciles the pledge of the saved transfer" do
+    pledge = goal_pledges(:open_transfer)
+    source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
+    Transfer.any_instance.stubs(:sync_account_later).raises(StandardError, "queue is down")
+
+    assert_difference "Transfer.count", 1 do
+      assert_raises(StandardError) do
+        Transfer::Creator.new(
+          family: @family, source_account_id: source.id, destination_account_id: pledge.account_id,
+          date: Date.current, amount: 200
+        ).create
+      end
+    end
+
+    assert_equal "matched", pledge.reload.status
+  end
+
+  test "a retry of a saved transfer schedules the account sync again" do
+    source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
+    attributes = {
+      family: @family, source_account_id: source.id, destination_account_id: @destination_account.id,
+      date: @date, amount: @amount, idempotency_key: SecureRandom.uuid
+    }
+    Transfer.any_instance.stubs(:sync_account_later).raises(StandardError, "queue is down")
+    assert_raises(StandardError) { Transfer::Creator.new(**attributes).create }
+
+    Transfer.any_instance.unstub(:sync_account_later)
+    Transfer.any_instance.expects(:sync_account_later).once
+
+    assert_no_difference "Transfer.count" do
+      Transfer::Creator.new(**attributes).create
+    end
+  end
+
   test "a reconcile failure does not undo the transfer" do
     pledge = goal_pledges(:open_transfer)
     source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
@@ -464,5 +498,99 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
 
     assert transfer.persisted?
     assert_equal "open", pledge.reload.status
+  end
+
+  test "an identical retry returns the same transfer when the converted amount has more than 4 decimals" do
+    euro_account = @family.accounts.create!(name: "Euro", balance: 0, currency: "EUR", accountable: Depository.new)
+    attributes = {
+      family: @family, source_account_id: @source_account.id, destination_account_id: euro_account.id,
+      date: @date, amount: 1, exchange_rate: "0.333333", idempotency_key: SecureRandom.uuid
+    }
+
+    first = Transfer::Creator.new(**attributes).create
+
+    assert_no_difference "Transfer.count" do
+      assert_equal first, Transfer::Creator.new(**attributes).create
+    end
+  end
+
+  test "a retry that names no exchange_rate matches even after a newer rate was imported" do
+    euro_account = @family.accounts.create!(name: "Euro", balance: 0, currency: "EUR", accountable: Depository.new)
+    rate = ExchangeRate.create!(from_currency: @source_account.currency, to_currency: "EUR", date: @date, rate: 0.9)
+    attributes = {
+      family: @family, source_account_id: @source_account.id, destination_account_id: euro_account.id,
+      date: @date, amount: @amount, idempotency_key: SecureRandom.uuid
+    }
+
+    first = Transfer::Creator.new(**attributes).create
+    rate.update!(rate: 1.0)
+
+    assert_no_difference "Transfer.count" do
+      assert_equal first, Transfer::Creator.new(**attributes).create
+    end
+  end
+
+  test "a retry that names a different exchange_rate is a stale key even after a newer rate was imported" do
+    euro_account = @family.accounts.create!(name: "Euro", balance: 0, currency: "EUR", accountable: Depository.new)
+    attributes = {
+      family: @family, source_account_id: @source_account.id, destination_account_id: euro_account.id,
+      date: @date, amount: @amount, idempotency_key: SecureRandom.uuid
+    }
+
+    Transfer::Creator.new(**attributes, exchange_rate: "0.9").create
+
+    assert_raises(Transfer::Creator::StaleIdempotencyKeyError) do
+      Transfer::Creator.new(**attributes, exchange_rate: "1.0").create
+    end
+  end
+
+  test "a retry that names no exchange_rate replays a transfer made with an explicit one" do
+    euro_account = @family.accounts.create!(name: "Euro", balance: 0, currency: "EUR", accountable: Depository.new)
+    attributes = {
+      family: @family, source_account_id: @source_account.id, destination_account_id: euro_account.id,
+      date: @date, amount: @amount, idempotency_key: SecureRandom.uuid
+    }
+
+    first = Transfer::Creator.new(**attributes, exchange_rate: "0.9").create
+
+    assert_no_difference "Transfer.count" do
+      assert_equal first, Transfer::Creator.new(**attributes).create
+    end
+  end
+
+  test "a retry with different tags is a stale key, not a replay" do
+    other_depository = @family.accounts.create!(name: "Savings", balance: 1000, currency: "USD", accountable: Depository.new)
+    attributes = {
+      family: @family, source_account_id: @source_account.id, destination_account_id: other_depository.id,
+      date: @date, amount: @amount, idempotency_key: SecureRandom.uuid
+    }
+
+    Transfer::Creator.new(**attributes, tag_ids: [ tags(:one).id ]).create
+
+    assert_raises(Transfer::Creator::StaleIdempotencyKeyError) do
+      Transfer::Creator.new(**attributes, tag_ids: [ tags(:two).id ]).create
+    end
+  end
+
+  test "a keyed retry that leaves the date out matches the transfer made on an earlier day" do
+    other_depository = @family.accounts.create!(name: "Savings", balance: 1000, currency: "USD", accountable: Depository.new)
+    attributes = {
+      family: @family, source_account_id: @source_account.id, destination_account_id: other_depository.id,
+      amount: @amount, idempotency_key: SecureRandom.uuid
+    }
+
+    first = Transfer::Creator.new(**attributes, date: nil).create
+    assert_equal Date.current, first.outflow_transaction.entry.date
+
+    travel_to 1.day.from_now do
+      assert_no_difference "Transfer.count" do
+        assert_equal first, Transfer::Creator.new(**attributes, date: nil).create
+      end
+
+      # A date that was asked for must still agree with the stored one.
+      assert_raises(Transfer::Creator::StaleIdempotencyKeyError) do
+        Transfer::Creator.new(**attributes, date: Date.current).create
+      end
+    end
   end
 end
