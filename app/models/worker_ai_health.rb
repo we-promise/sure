@@ -31,6 +31,9 @@ class WorkerAiHealth
   # so a churning fleet (deploys, autoscaling) can't grow this without limit.
   MAX_RESULTS = 5
 
+  # A model that takes no images still reads PDFs as text, so the worker isn't failing.
+  NOT_FAILURES = %i[images_refused].freeze
+
   # One worker process's configuration fingerprint and probe outcomes. Only
   # non-secret fields: redacted endpoints (AiHealth already redacts these),
   # model/adapter names, and probe statuses -- never a raw credential.
@@ -61,7 +64,7 @@ class WorkerAiHealth
         vector_store_status: ai_health.vector_store_status,
         failure_codes: [ ai_health.llm_probe, ai_health.function_calling_probe, ai_health.pdf_text_extraction_probe,
                          ai_health.pdf_vision_processing_probe, ai_health.vector_store_probe, ai_health.embedding_probe ]
-                         .filter_map(&:failure_code).uniq
+                         .filter_map(&:failure_code).uniq - NOT_FAILURES
       )
     end
 

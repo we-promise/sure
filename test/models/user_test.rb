@@ -16,6 +16,118 @@ class UserTest < ActiveSupport::TestCase
     clear_performed_jobs
   end
 
+  test "onboarding answers keep only known tools and make nothing yet exclusive" do
+    user = users(:family_admin)
+
+    user.save_onboarding_tools_and_ai(tools: %w[ynab made_up], other_tool: "Ignored", ai_mode: "builtin")
+    assert_equal [ "ynab" ], user.onboarding_tools
+    assert_nil user.onboarding_other_tool
+
+    user.save_onboarding_tools_and_ai(tools: %w[nothing_yet ynab other], other_tool: "Sheets", ai_mode: "none")
+    assert_equal [ "nothing_yet" ], user.reload.onboarding_tools
+    assert_nil user.onboarding_other_tool
+  end
+
+  test "onboarding keeps the other tool only when other is chosen, trimmed and capped" do
+    user = users(:family_admin)
+
+    user.save_onboarding_tools_and_ai(tools: %w[other], other_tool: "  #{"x" * 100}  ", ai_mode: "none")
+    assert_equal "x" * User::ONBOARDING_OTHER_TOOL_MAX_LENGTH, user.reload.onboarding_other_tool
+  end
+
+  test "onboarding AI mode drives ai_enabled and falls back to no AI" do
+    user = users(:family_admin)
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "builtin")
+    assert user.reload.ai_enabled
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "made_up")
+    assert_equal "none", user.reload.onboarding_ai_mode
+    assert_not user.ai_enabled
+  end
+
+  test "without a saved answer the AI choice reflects the current switch" do
+    user = users(:family_admin)
+
+    user.update!(ai_enabled: true)
+    assert_equal "builtin", user.onboarding_ai_mode
+
+    user.update!(ai_enabled: false)
+    assert_equal "none", user.onboarding_ai_mode
+  end
+
+  test "a saved AI answer gives way when the switch changed since" do
+    user = users(:family_admin)
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "builtin")
+
+    user.update!(ai_enabled: false)
+    assert_equal "none", user.onboarding_ai_mode
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external")
+    assert user.reload.ai_enabled
+    assert_equal "external", user.onboarding_ai_mode
+
+    user.update!(ai_enabled: false)
+    assert_equal "none", user.onboarding_ai_mode
+  end
+
+  test "an untouched AI choice leaves a switch changed after the page rendered" do
+    user = users(:family_admin)
+    user.update!(ai_enabled: false)
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "builtin", rendered_ai_mode: "builtin")
+    assert_not user.reload.ai_enabled
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "builtin", rendered_ai_mode: "none")
+    assert user.reload.ai_enabled
+  end
+
+  test "external onboarding enables admin consent without changing the household backend" do
+    user = users(:family_admin)
+    user.family.users.where(role: %w[admin super_admin]).update_all(ai_enabled: false)
+    user.reload
+    original_type = user.family.assistant_type
+    assert_not user.family.ai_consented?
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external", rendered_ai_mode: "none")
+
+    assert user.reload.ai_enabled
+    assert_equal "external", user.onboarding_ai_mode
+    assert user.family.ai_consented?
+    assert_equal original_type, user.family.reload.assistant_type
+  end
+
+  test "untouched external onboarding preserves a later opt out and explicit selection enables AI" do
+    user = users(:family_admin)
+    user.update!(ai_enabled: false)
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external", rendered_ai_mode: "external")
+    assert_not user.reload.ai_enabled
+    assert_equal "none", user.onboarding_ai_mode
+
+    user.save_onboarding_tools_and_ai(tools: [], other_tool: nil, ai_mode: "external", rendered_ai_mode: "none")
+    assert user.reload.ai_enabled
+    assert_equal "external", user.onboarding_ai_mode
+  end
+
+  test "guests keep AI on and aren't asked about it" do
+    guest = users(:intro_user)
+
+    guest.save_onboarding_tools_and_ai(tools: %w[ynab], other_tool: nil, ai_mode: "none")
+    guest.reload
+    assert guest.ai_enabled
+    assert_nil guest.preferences["onboarding_ai_mode"]
+    assert_equal [ "ynab" ], guest.onboarding_tools
+  end
+
+  test "onboarding answers don't touch other preferences" do
+    user = users(:family_admin)
+    user.update_show_balance_updates(false)
+
+    user.save_onboarding_tools_and_ai(tools: %w[ynab], other_tool: nil, ai_mode: "none")
+    assert_not user.reload.show_balance_updates?
+  end
+
   test "should be valid" do
     assert @user.valid?, @user.errors.full_messages.to_sentence
   end

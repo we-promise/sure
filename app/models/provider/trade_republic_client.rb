@@ -1342,6 +1342,8 @@ class Provider::TradeRepublicClient
       case value
       when Hash
         return value["currency"] if value["currency"].present?
+        # The cash topic reports its currency as currencyId, not currency.
+        return value["currencyId"] if value["currencyId"].present?
         value.each_value do |child|
           currency = money_currency(child)
           return currency if currency.present?
