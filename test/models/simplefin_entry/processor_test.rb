@@ -525,7 +525,12 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
       entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
       assert_equal(fidelity ? BigDecimal("1") : BigDecimal("-1"), entry.amount)
-      assert_equal(fidelity ? "direct_debit" : nil, entry.transaction.extra.dig("simplefin", "amount_normalization"))
+      normalization = entry.transaction.extra.dig("simplefin", "amount_normalization")
+      if fidelity
+        assert_equal "direct_debit", normalization
+      else
+        assert_nil normalization
+      end
     end
   end
 
@@ -558,7 +563,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     cases = {
       "nil" => nil,
       "empty" => {},
-      "no_name" => { "domain" => "fidelity.com" },
+      "no_name" => { "domain" => "example.com" },
       "non_string_name" => { "name" => 123 },
       "json_string" => "Fidelity Investments",
       "json_array" => [ "Fidelity Investments" ]
