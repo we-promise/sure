@@ -540,6 +540,24 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "another user cannot take over an MCP session id" do
+    other_user = users(:family_member)
+    app = Doorkeeper::Application.create!(name: "Test MCP Client #{SecureRandom.hex(4)}", redirect_uri: "https://claude.ai/callback", confidential: false)
+    other_token = Doorkeeper::AccessToken.create!(application: app, resource_owner_id: other_user.id, scopes: "read_write", expires_in: 1.year) # pipelock:ignore
+
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+
+        post "/mcp", params: jsonrpc_request("tools/list").to_json,
+             headers: mcp_headers(other_token.token).merge("Mcp-Session-Id" => session_id)
+
+        assert_response :not_found
+        assert_equal @user.id, Rails.cache.read("mcp:session:#{session_id}")
+      end
+    end
+  end
+
   test "tools/list rejects unsupported MCP protocol version headers" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("tools/list", {}, id: 26).to_json,
