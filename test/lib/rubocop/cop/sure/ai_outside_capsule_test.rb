@@ -6,7 +6,8 @@ class RuboCop::Cop::Sure::AiOutsideCapsuleTest < ActiveSupport::TestCase
   ALLOWED = [ "app/models/eval/**/*.rb", "lib/tasks/evals.rake" ].freeze
 
   test "flags an opt-out outside evals" do
-    [ "Ai::Capsule.outside { generation.call }", "::Ai::Capsule.outside { generation.call }" ].each do |source|
+    [ "Ai::Capsule.outside { generation.call }", "Ai::Capsule&.outside { generation.call }",
+      "::Ai::Capsule.outside { generation.call }" ].each do |source|
       assert_equal 1, offenses(source).size, source
     end
     assert_includes offenses("Ai::Capsule.outside { }").first.message, "ai-pipeline.md"

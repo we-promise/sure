@@ -100,6 +100,23 @@ class AiCompletionHookTest < ActiveJob::TestCase
     end
   end
 
+  test "a replayed step requeues the next one without reporting its batch twice" do
+    stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+    start_run(:detect_merchants)
+    first_step = enqueued_jobs.shift
+
+    ActiveJob::Base.execute(first_step.stringify_keys)
+    assert_equal [ [ :detect_merchants, :applied, 2 ] ], Requester.log
+
+    # Sidekiq can redeliver a step after its successor was already queued.
+    ActiveJob::Base.execute(first_step.stringify_keys)
+    run_queue
+
+    assert_equal [ [ :detect_merchants, :applied, 2 ], [ :detect_merchants, :applied, 1 ],
+                   [ :detect_merchants, :finished, 3 ] ], Requester.log
+    assert_equal 0, Ai::GenerationRun.count
+  end
+
   test "an outbox-redelivered run still reports ai_finished once" do
     stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
     start_run(:detect_merchants)

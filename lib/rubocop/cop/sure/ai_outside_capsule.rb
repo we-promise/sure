@@ -20,12 +20,13 @@ module RuboCop
               "See docs/llm-guides/ai-pipeline.md."
 
         def_node_matcher :outside_call, <<~PATTERN
-          (send (const (const {nil? cbase} :Ai) :Capsule) :outside ...)
+          ({send csend} (const (const {nil? cbase} :Ai) :Capsule) :outside ...)
         PATTERN
 
         def on_send(node)
           add_offense(node) if outside_call(node)
         end
+        alias on_csend on_send
       end
     end
   end
