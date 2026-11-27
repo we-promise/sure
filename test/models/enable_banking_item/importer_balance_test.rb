@@ -407,6 +407,74 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal BigDecimal("150.00"), @enable_banking_account.reload.current_balance
   end
 
+  test "fetch_and_update_balance prefers a newer opening booked balance over a same-day available one when replacing a stale closing booked balance" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        clbd("1000.00", reference_date: "2026-11-26"),
+        {
+          balance_type: "ITAV",
+          reference_date: "2026-11-27",
+          balance_amount: { amount: "6000.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "OPBD",
+          reference_date: "2026-11-27",
+          balance_amount: { amount: "1100.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("1100.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance keeps a stale closing booked balance on a credit card over a newer available balance" do
+    link_account(CreditCard.create!)
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        clbd("100.00", reference_date: "2026-11-25"),
+        {
+          balance_type: "ITAV",
+          reference_date: "2026-11-27",
+          balance_amount: { amount: "900.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("100.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance replaces a stale closing booked balance on a credit card with a newer expected balance" do
+    link_account(CreditCard.create!)
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        clbd("100.00", reference_date: "2026-11-25"),
+        {
+          balance_type: "ITAV",
+          reference_date: "2026-11-27",
+          balance_amount: { amount: "900.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "XPCD",
+          reference_date: "2026-11-26",
+          balance_amount: { amount: "120.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("120.00"), @enable_banking_account.reload.current_balance
+  end
+
   test "fetch_and_update_balance treats a descriptive-spelling closing booked balance as stale too" do
     @mock_provider.stubs(:get_account_balances).returns(
       balances: [
