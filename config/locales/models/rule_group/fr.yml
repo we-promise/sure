@@ -1,0 +1,10 @@
+---
+fr:
+  activerecord:
+    models:
+      rule_group:
+        one: Groupe
+        other: Groupes
+    attributes:
+      rule_group:
+        name: Nom

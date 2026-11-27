@@ -16,7 +16,10 @@ fr:
       delete: Supprimer
       edit: Modifier
     form:
+      logo_hint: Remplace le logo du site web. JPEG, PNG ou WebP, jusqu'à %{max_megabytes} Mo.
+      logo_label: Logo
       name_placeholder: Nom du marchand
+      remove_logo_label: Supprimer le logo téléversé
       website_hint: Saisissez le site web du marchand pour afficher automatiquement son logo
       iban_placeholder: "IBAN (facultatif)"
       iban_set_placeholder: "%{masked} — IBAN enregistré, saisissez une nouvelle valeur pour le remplacer"
@@ -83,3 +86,12 @@ fr:
     update:
       converted_success: Marchand converti et mis à jour avec succès
       success: Marchand mis à jour avec succès
+  merchants:
+    show:
+      average_transaction: Transaction moyenne
+      edit: Modifier le marchand
+      first_transaction: Première transaction
+      last_transaction: Dernière transaction
+      summary: Résumé
+      total_spending: Dépenses totales
+      total_transactions: Total des transactions

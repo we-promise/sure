@@ -458,7 +458,10 @@ class Family::BayesEvaluation
       test_transactions(categorizer, start).map do |transaction|
         probabilities = categorizer.probabilities(transaction)
         category_id, confidence = probabilities.max_by { |_, probability| probability }
-        [ confidence, category_id == transaction.category_id, transaction.category_id, category_id, probabilities.presence || uniform ]
+        # A category the classifier would never pick is no answer, as in production;
+        # its scores still count towards the AUC.
+        category_id, confidence = nil, nil if category_id && !categorizer.pickable?(category_id)
+        [ confidence, category_id.present? && category_id == transaction.category_id, transaction.category_id, category_id, probabilities.presence || uniform ]
       end
     end
 
