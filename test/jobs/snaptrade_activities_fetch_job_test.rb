@@ -76,4 +76,36 @@ class SnaptradeActivitiesFetchJobTest < ActiveJob::TestCase
     assert_not @snaptrade_account.reload.activities_fetch_pending?
     assert_nil @snaptrade_account.last_activities_sync
   end
+
+  test "activities imported after the sync reach the cached exchange rate notes" do
+    stub_provider
+    family = @snaptrade_account.snaptrade_item.family
+    account = family.accounts.create!(name: "Brokerage", balance: 0, currency: family.currency, accountable: Investment.new)
+    @snaptrade_account.ensure_account_provider!(account)
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    assert_not_includes family.currencies_without_exchange_rate, "SEK"
+    @provider.expects(:get_account_activities).returns([
+      { "id" => "div_sek", "type" => "DIVIDEND", "amount" => 12.5, "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "SEK" } }
+    ])
+
+    SnaptradeActivitiesFetchJob.perform_now(@snaptrade_account, start_date: 1.year.ago.to_date)
+
+    assert account.entries.where(currency: "SEK").exists?
+    assert_includes Family.find(family.id).currencies_without_exchange_rate, "SEK"
+  end
+
+  test "activities for an unlinked account leave sync activity alone" do
+    stub_provider
+    family = @snaptrade_account.snaptrade_item.family
+    @provider.expects(:get_account_activities).returns([
+      { "id" => "div_sek", "type" => "DIVIDEND", "amount" => 12.5, "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "SEK" } }
+    ])
+
+    assert_no_changes -> { family.reload.latest_sync_activity_at } do
+      SnaptradeActivitiesFetchJob.perform_now(@snaptrade_account, start_date: 1.year.ago.to_date)
+    end
+    assert_not @snaptrade_account.reload.activities_fetch_pending?
+  end
 end

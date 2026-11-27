@@ -174,6 +174,9 @@ class SnaptradeActivitiesFetchJob < ApplicationJob
 
       processor = SnaptradeAccount::ActivitiesProcessor.new(snaptrade_account)
       result = processor.process
+      # This fetch is the tail of a sync, and the cached exchange rate note
+      # currencies key on this column.
+      account.family.touch(:latest_sync_activity_at)
 
       # Clear the pending flag since activities have been processed
       snaptrade_account.update!(activities_fetch_pending: false)

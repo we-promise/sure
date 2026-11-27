@@ -47,6 +47,9 @@ class QuestradeActivitiesFetchJob < ApplicationJob
         merged = merge_activities(existing_activities, activities)
         @questrade_account.upsert_activities_snapshot!(merged)
         QuestradeAccount::ActivitiesProcessor.new(@questrade_account).process
+        # This fetch is the tail of a sync, and the cached exchange rate note
+        # currencies key on this column.
+        @questrade_account.current_account.family.touch(:latest_sync_activity_at)
       end
 
       # Always record the fetch as completed (even for legitimately empty
