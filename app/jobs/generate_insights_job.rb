@@ -101,19 +101,25 @@ class GenerateInsightsJob < ApplicationJob
         facts = normalize_json(generated.facts)
         existing = family.insights.find_by(dedup_key: generated.dedup_key)
 
+        # Every branch writes these fields. Keeping them in one hash means a
+        # column added to the insight record cannot be missed by one path.
+        generated_attributes = {
+          title: generated.title,
+          body: writer.write(generated),
+          facts: facts,
+          period_start: generated.period_start,
+          period_end: generated.period_end,
+          generated_at: Time.current
+        }
+
         if existing.nil?
           family.insights.create!(
+            **generated_attributes,
             insight_type: generated.insight_type,
             priority: generated.priority,
             status: "active",
-            title: generated.title,
-            body: writer.write(generated),
             metadata: metadata,
-            facts: facts,
             currency: generated.currency,
-            period_start: generated.period_start,
-            period_end: generated.period_end,
-            generated_at: Time.current,
             dedup_key: generated.dedup_key
           )
         elsif !existing.expired? && existing.metadata != metadata &&
@@ -122,24 +128,17 @@ class GenerateInsightsJob < ApplicationJob
           # revoked, or a row written before these keys existed). The prose
           # may quote figures from the old set, so it is rewritten, but the
           # signal itself did not change: read and dismissed state stay.
-          existing.update!(title: generated.title, body: writer.write(generated), metadata: metadata,
-                           facts: facts, period_start: generated.period_start, period_end: generated.period_end,
-                           generated_at: Time.current)
+          existing.update!(**generated_attributes, metadata: metadata)
           nil
         elsif existing.metadata != metadata
           # The numbers changed materially: refresh the prose and resurface the
           # insight even if the user had read or dismissed the stale version.
           existing.update!(
+            **generated_attributes,
             priority: generated.priority,
             status: "active",
-            title: generated.title,
-            body: writer.write(generated),
             metadata: metadata,
-            facts: facts,
             notification_version: existing.notification_version + 1,
-            period_start: generated.period_start,
-            period_end: generated.period_end,
-            generated_at: Time.current,
             read_at: nil,
             dismissed_at: nil
           )
@@ -148,9 +147,12 @@ class GenerateInsightsJob < ApplicationJob
           # The condition cleared earlier and has now returned with the same
           # numbers. Expiry was the system's doing, not the user's, so the
           # insight resurfaces, with the body filled from the current facts.
-          existing.update!(title: generated.title, body: writer.write(generated), status: "active", facts: facts,
-                           period_start: generated.period_start, period_end: generated.period_end,
-                           notification_version: existing.notification_version + 1, generated_at: Time.current, read_at: nil)
+          existing.update!(
+            **generated_attributes,
+            status: "active",
+            notification_version: existing.notification_version + 1,
+            read_at: nil
+          )
           existing
         else
           # Same signal, same numbers: don't undo the user's read/dismissed
@@ -165,9 +167,7 @@ class GenerateInsightsJob < ApplicationJob
           # current costs nothing — and a title naming a goal or a category
           # the user has since renamed is simply wrong on the page. Rename is
           # not a reason to resurface, so status and read state stay untouched.
-          existing.update!(title: generated.title, body: writer.write(generated), facts: facts,
-                           period_start: generated.period_start, period_end: generated.period_end,
-                           generated_at: Time.current)
+          existing.update!(**generated_attributes)
           nil
         end
       rescue ActiveRecord::RecordNotUnique
