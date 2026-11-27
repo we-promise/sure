@@ -1,0 +1,47 @@
+<div id="tricount-providers-panel" class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium"><%= t("tricount_items.panel.setup_instructions") %></p>
+    <ol>
+      <li><%= t("tricount_items.panel.step_1") %></li>
+      <li><%= t("tricount_items.panel.step_2") %></li>
+      <li><%= t("tricount_items.panel.step_3") %></li>
+    </ol>
+    <p><%= t("tricount_items.panel.how_it_works") %></p>
+    <p><%= t("tricount_items.panel.unofficial_api") %></p>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <% tricount_item = Current.family.tricount_items.active.first || Current.family.tricount_items.build %>
+  <% is_new_record = tricount_item.new_record? %>
+
+  <%= styled_form_with model: tricount_item,
+                       url: is_new_record ? tricount_items_path : tricount_item_path(tricount_item),
+                       scope: :tricount_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_area :sharing_links,
+                       value: "",
+                       rows: 3,
+                       autocomplete: "off",
+                       label: t("tricount_items.panel.fields.sharing_links.label"),
+                       placeholder: t("tricount_items.panel.fields.sharing_links.placeholder") %>
+    <p class="text-xs text-secondary"><%= t("tricount_items.panel.fields.sharing_links.description") %></p>
+
+    <%= form.submit is_new_record ? t("tricount_items.panel.save_button") : t("tricount_items.panel.update_button") %>
+  <% end %>
+
+  <div class="flex items-center gap-2">
+    <% if tricount_item.persisted? && tricount_item.sharing_token_list.any? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("tricount_items.panel.status_configured", count: tricount_item.sharing_token_list.size) %></p>
+    <% else %>
+      <div class="w-2 h-2 bg-subdued rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("tricount_items.panel.status_not_configured") %></p>
+    <% end %>
+  </div>
+</div>

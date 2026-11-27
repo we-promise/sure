@@ -1,0 +1,77 @@
+<% content_for :title, t("tricount_items.select_existing_account.title") %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("tricount_items.select_existing_account.header")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "link", class: "text-primary" %>
+      <span class="text-primary"><%= t("tricount_items.select_existing_account.subtitle", account_name: @account.name) %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <% if @tricount_accounts.blank? %>
+      <div class="text-center py-8">
+        <%= icon "alert-circle", class: "text-warning mx-auto mb-4", size: "lg" %>
+        <p class="text-secondary"><%= t("tricount_items.select_existing_account.no_accounts") %></p>
+        <p class="text-sm text-secondary mt-2"><%= t("tricount_items.select_existing_account.connect_hint") %></p>
+        <div class="mt-4 flex justify-center">
+          <%= render DS::Link.new(
+            text: t("tricount_items.select_existing_account.settings_link"),
+            variant: "primary",
+            href: settings_providers_path,
+            frame: "_top"
+          ) %>
+        </div>
+      </div>
+    <% else %>
+      <div class="space-y-4">
+        <%= render DS::Note.new do %>
+          <p><span class="font-medium text-primary"><%= t("tricount_items.select_existing_account.linking_to") %></span> <%= @account.name %></p>
+        <% end %>
+
+        <% @tricount_accounts.each do |tricount_account| %>
+          <%= form_with url: link_existing_account_tricount_items_path,
+                        method: :post,
+                        local: true,
+                        namespace: dom_id(tricount_account, :existing),
+                        data: { turbo_frame: "_top" },
+                        class: "border border-primary rounded-lg p-4 hover:bg-surface transition-colors" do |form| %>
+            <%= hidden_field_tag :account_id, @account.id %>
+            <%= hidden_field_tag :tricount_account_id, tricount_account.id %>
+
+            <div class="flex items-end justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <h4 class="font-medium text-primary truncate"><%= tricount_account.name %></h4>
+                <div class="mt-2">
+                  <%= render DS::Select.new(
+                    form: form,
+                    method: :member_uuid,
+                    items: tricount_account.members.map { |member| { label: member.name, value: member.uuid } },
+                    selected: tricount_account.member_uuid,
+                    placeholder: t("tricount_items.setup_accounts.member_prompt"),
+                    label: t("tricount_items.setup_accounts.member_label"),
+                    scoped_ids: true
+                  ) %>
+                </div>
+              </div>
+              <%= render DS::Button.new(
+                text: t("tricount_items.select_existing_account.link_button"),
+                variant: "primary",
+                type: "submit"
+              ) %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="mt-6">
+        <%= render DS::Link.new(
+          text: t("tricount_items.select_existing_account.cancel_button"),
+          variant: "secondary",
+          href: account_path(@account),
+          frame: "_top"
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

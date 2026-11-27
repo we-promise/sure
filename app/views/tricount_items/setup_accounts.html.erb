@@ -1,0 +1,97 @@
+<% content_for :title, t("tricount_items.setup_accounts.title") %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("tricount_items.setup_accounts.title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "users", class: "text-primary" %>
+      <span class="text-primary"><%= t("tricount_items.setup_accounts.subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= form_with url: complete_account_setup_tricount_item_path(@tricount_item),
+                  method: :post,
+                  local: true,
+                  id: "tricount-setup-form",
+                  data: {
+                    controller: "loading-button",
+                    action: "submit->loading-button#showLoading",
+                    loading_button_loading_text_value: t("tricount_items.setup_accounts.creating"),
+                    turbo_frame: "_top"
+                  },
+                  class: "space-y-6" do |form| %>
+
+      <%= render DS::Note.new do %>
+        <p><%= t("tricount_items.setup_accounts.instructions") %></p>
+      <% end %>
+
+      <% if @unlinked_accounts.empty? %>
+        <div class="text-center py-8">
+          <%= icon "loader", class: "text-secondary mx-auto mb-4", size: "lg" %>
+          <p class="text-secondary"><%= t("tricount_items.setup_accounts.waiting_for_sync") %></p>
+          <div class="mt-4 flex justify-center">
+            <%= render DS::Link.new(
+              text: t("tricount_items.setup_accounts.refresh"),
+              variant: "secondary",
+              icon: "refresh-cw",
+              href: setup_accounts_tricount_item_path(@tricount_item),
+              frame: "_top"
+            ) %>
+          </div>
+        </div>
+      <% else %>
+        <div class="space-y-3 max-h-96 overflow-y-auto">
+          <% @unlinked_accounts.each do |tricount_account| %>
+            <div class="p-3 border border-primary rounded-lg space-y-3">
+              <%= tag.label for: dom_id(tricount_account, :import), class: "flex items-center gap-3 cursor-pointer" do %>
+                <%= hidden_field_tag "accounts[#{tricount_account.id}][import]", "0", id: nil %>
+                <%= check_box_tag "accounts[#{tricount_account.id}][import]", "1", true, id: dom_id(tricount_account, :import), class: "checkbox checkbox--dark" %>
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium text-primary truncate"><%= tricount_account.name %></p>
+                  <p class="text-xs text-secondary">
+                    <%= t("tricount_items.setup_accounts.details", count: tricount_account.active_entry_count, currency: tricount_account.currency) %>
+                  </p>
+                </div>
+              <% end %>
+
+              <%= render DS::Select.new(
+                form: form,
+                method: "accounts[#{tricount_account.id}][member_uuid]",
+                items: tricount_account.members.map { |member| { label: member.name, value: member.uuid } },
+                selected: tricount_account.member_uuid,
+                placeholder: t("tricount_items.setup_accounts.member_prompt"),
+                label: t("tricount_items.setup_accounts.member_label"),
+                scoped_ids: true
+              ) %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% if @unlinked_accounts.any? %>
+        <%= tag.label for: "tricount-prefix-account-names", class: "flex items-center gap-3 cursor-pointer" do %>
+          <%= hidden_field_tag :prefix_account_names, "0", id: nil %>
+          <%= check_box_tag :prefix_account_names, "1", @tricount_item.prefix_account_names?, id: "tricount-prefix-account-names", class: "checkbox checkbox--dark" %>
+          <span class="text-sm text-primary"><%= t("tricount_items.setup_accounts.prefix_account_names") %></span>
+        <% end %>
+      <% end %>
+
+      <div class="flex justify-end gap-2">
+        <%= render DS::Link.new(
+          text: t("tricount_items.setup_accounts.cancel"),
+          variant: "secondary",
+          href: accounts_path,
+          frame: "_top"
+        ) %>
+        <%= render DS::Button.new(
+          text: t("tricount_items.setup_accounts.import_selected"),
+          variant: "primary",
+          icon: "plus",
+          type: "submit",
+          disabled: @unlinked_accounts.empty?,
+          data: { loading_button_target: "button" }
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

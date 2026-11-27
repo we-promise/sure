@@ -1,0 +1,30 @@
+<%# locals: (index:, step:, amount: nil, removable: true) %>
+
+<%# A part of a Tricount payment: the transaction split dialog's row (splits/row)
+    with only its amount, since a part is a transfer leg named after the payment. %>
+<div class="p-3 rounded-lg border border-secondary bg-container" data-split-transaction-target="row">
+  <%= fields "split[splits][#{index}]", builder: StyledFormBuilder do |row| %>
+    <div class="flex items-center gap-2">
+      <%= row.number_field :amount,
+            value: amount,
+            label: t("splits.new.amount_label"),
+            placeholder: "0.00",
+            step: step,
+            min: 0,
+            required: true,
+            autocomplete: "off",
+            container_class: "flex-1 min-w-0",
+            data: { split_transaction_target: "amountInput", action: "input->split-transaction#updateRemaining" } %>
+
+      <% if removable %>
+        <%= icon "x",
+                  size: "sm",
+                  as_button: true,
+                  aria: { label: t("splits.new.remove_row") },
+                  data: { action: "click->split-transaction#removeRow" } %>
+      <% else %>
+        <div class="w-8 shrink-0"></div>
+      <% end %>
+    </div>
+  <% end %>
+</div>
