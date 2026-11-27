@@ -12,9 +12,9 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
   test "registers the built-in sections with their partials and locals" do
     sections = registry.sections
 
-    assert_equal %w[kpis value_chart holdings accounts], Portfolio::SectionRegistry::KEYS
+    assert_equal %w[kpis performance index_chart value_chart holdings accounts], Portfolio::SectionRegistry::KEYS
     assert_equal Portfolio::SectionRegistry::KEYS, sections.map { |s| s[:key] }
-    assert_equal %w[portfolios/kpi_row portfolios/value_chart portfolios/holdings portfolios/accounts], sections.map { |s| s[:partial] }
+    assert_equal %w[portfolios/kpi_row portfolios/performance portfolios/index_chart portfolios/value_chart portfolios/holdings portfolios/accounts], sections.map { |s| s[:partial] }
     assert sections.all? { |s| s[:collapsible] }
 
     # Every partial gets its locals passed in: none of them reaches for
@@ -25,6 +25,120 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     end
   end
 
+  # The six return figures come from ONE Portfolio::Performance for the request.
+  # Six independently-derived figures could each re-read the period, which is
+  # the class of defect the "one as_of, passed down" rule on this class exists
+  # to prevent.
+  test "the performance section reads every figure from one computation" do
+    perf = Portfolio::Performance.new(family: @family, account_ids: [], period: @period)
+    @statement.expects(:performance).with(period: @period).returns(perf).once
+
+    section = registry.sections.find { |s| s[:key] == "performance" }
+
+    assert_equal "portfolios/performance", section[:partial]
+    assert_same perf, section[:locals][:performance]
+    assert_equal %i[twr annualized_twr mwr annualized_mwr volatility max_drawdown].sort,
+                 section[:locals][:returns].keys.sort
+  end
+
+  # nil is an outcome, not a gap: a figure whose rate is missing is
+  # suppressed, as is one for an account with fewer than two balance days, and
+  # the money-weighted return is withheld from a valuation-only scope. Passing nil through
+  # rather than defaulting is what lets the card say "no data" instead of
+  # printing a zero return that nobody earned.
+  test "the performance section passes a withheld figure through as nil" do
+    perf = Portfolio::Performance.new(family: @family, account_ids: [], period: @period)
+    perf.stubs(:time_weighted_return).returns(BigDecimal("0.21"))
+    perf.stubs(:money_weighted_return).returns(nil)
+    @statement.stubs(:performance).returns(perf)
+
+    returns = registry.sections.find { |s| s[:key] == "performance" }[:locals][:returns]
+
+    assert_equal BigDecimal("0.21"), returns[:twr]
+    assert_nil returns[:mwr], "a withheld figure must not be defaulted to zero"
+  end
+
+  # The index is a level, not an amount: 121.34 means the portfolio returned
+  # 21.34%. Series passes a non-Money value through untouched, which is what
+  # lets the same chart controller draw it -- and is also what would let a
+  # Money slip in unnoticed, so the payload is asserted rather than assumed.
+  test "the index chart series carries rebased levels, not money" do
+    perf = Portfolio::Performance.new(family: @family, account_ids: [], period: @period)
+    perf.stubs(:index_series).returns([
+      [ Date.new(2026, 3, 1), BigDecimal("100") ],
+      [ Date.new(2026, 3, 2), BigDecimal("110") ],
+      [ Date.new(2026, 3, 3), BigDecimal("121.34") ]
+    ])
+    @statement.stubs(:performance).returns(perf)
+
+    section = registry.sections.find { |s| s[:key] == "index_chart" }
+
+    assert section[:visible]
+    values = section[:locals][:series].values
+    assert_equal 4, values.size, "the three levels after the base of 100"
+    assert_equal BigDecimal("121.34"), values.last.value
+    assert_not values.any? { |v| v.value.is_a?(Money) }, "an index level is not money"
+
+    # Rounded before it reaches the wire. A chained level is a division result,
+    # and nothing downstream rounds it: the hover would otherwise read
+    # 112.30000000000000000000000000000311.
+    # Built the way Portfolio::Performance builds it -- chained DIVISION
+    # results, not a literal -- because that is what produces the long value.
+    # Verified: this is 112.30000000000000000000000000000311, 32 places.
+    r1 = (BigDecimal(1037) / BigDecimal(1000)) - 1
+    r2 = (BigDecimal(1123) / BigDecimal(1037)) - 1
+    chained = BigDecimal(100) * (1 + r1) * (1 + r2)
+    assert_operator chained.to_s.split(".").last.length, :>, 4,
+                    "the fixture must actually be long, or this test proves nothing"
+
+    long = Portfolio::Performance.new(family: @family, account_ids: [], period: @period)
+    long.stubs(:index_series).returns([
+      [ Date.new(2026, 3, 1), BigDecimal("100") ],
+      [ Date.new(2026, 3, 2), chained ]
+    ])
+    @statement.stubs(:performance).returns(long)
+
+    serialised = registry.sections.find { |s| s[:key] == "index_chart" }[:locals][:series].to_json
+    assert_no_match(/\d+\.\d{4,}/, serialised,
+                    "a level reaches the tooltip with two decimals, not thirty")
+  end
+
+  # Performance#index_series starts at the level after the first day's return,
+  # 100 * (1 + r1). The chart starts from the base itself, on the day before,
+  # so the first day's move is drawn and the tooltip measures it from 100.
+  test "the index chart starts from a base of 100 the day before its first return" do
+    perf = Portfolio::Performance.new(family: @family, account_ids: [], period: @period)
+    perf.stubs(:index_series).returns([
+      [ Date.new(2026, 3, 2), BigDecimal("104.5") ],
+      [ Date.new(2026, 3, 3), BigDecimal("102.25") ]
+    ])
+    @statement.stubs(:performance).returns(perf)
+
+    series = registry.sections.find { |s| s[:key] == "index_chart" }[:locals][:series]
+
+    assert_equal [ Date.new(2026, 3, 1), Date.new(2026, 3, 2), Date.new(2026, 3, 3) ], series.values.map(&:date)
+    assert_equal [ 100, BigDecimal("104.5"), BigDecimal("102.25") ], series.values.map(&:value)
+    base, first_day = series.values.first(2)
+    assert_equal "flat", base.trend.direction, "nothing precedes the base"
+    assert_equal 100, base.trend.current, "the tooltip reads the base's level from its trend"
+    assert_equal 100, first_day.trend.previous
+    assert_in_delta 4.5, first_day.trend.percent, 0.001, "the first day's return is measured from the base"
+  end
+
+  # from_raw_values demands two points, and a period with one day or none has
+  # no line to draw. An empty chart says nothing the performance cards above
+  # have not already said, so the section hides rather than drawing a blank box.
+  test "the index chart section hides when there is no line to draw" do
+    perf = Portfolio::Performance.new(family: @family, account_ids: [], period: @period)
+    perf.stubs(:index_series).returns([ [ Date.new(2026, 3, 1), BigDecimal("100") ] ])
+    @statement.stubs(:performance).returns(perf)
+
+    section = registry.sections.find { |s| s[:key] == "index_chart" }
+
+    assert_not section[:visible]
+    assert_nil section[:locals][:series]
+  end
+
   test "the accounts section is visible only when the family has investment accounts" do
     assert registry.sections.find { |s| s[:key] == "accounts" }[:visible]
 
@@ -33,14 +147,14 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     assert_not empty.find { |s| s[:key] == "accounts" }[:visible]
   end
 
-  # The KPI row and the value chart speak for themselves when empty: each says
-  # there is not enough data rather than disappearing. (The controller shows
-  # the whole-page empty state anyway.)
-  test "the KPI row and the value chart stay visible for a family with no data" do
+  # The KPI row, the performance cards and the value chart speak for
+  # themselves when empty: each says there is not enough data rather than
+  # disappearing. (The controller shows the whole-page empty state anyway.)
+  test "the KPI row, the performance cards and the value chart stay visible for a family with no data" do
     empty_statement = InvestmentStatement.new(families(:empty), user: nil)
     empty = Portfolio::SectionRegistry.new(statement: empty_statement, period: @period, as_of: @as_of, user: @user).sections
 
-    assert_equal %w[kpis value_chart], empty.select { |s| s[:visible] }.map { |s| s[:key] }
+    assert_equal %w[kpis performance value_chart], empty.select { |s| s[:visible] }.map { |s| s[:key] }
   end
 
   # Every period-dependent figure reads the registry's period. A custom range
@@ -144,7 +258,7 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
   test "orders sections by the user's saved order, appending anything it omits" do
     @user.update_section_preferences("portfolio", order: %w[stub])
 
-    assert_equal %w[stub kpis value_chart holdings accounts], registry(extra_sections: [ stub_section ]).sections.map { |s| s[:key] }
+    assert_equal %w[stub kpis performance index_chart value_chart holdings accounts], registry(extra_sections: [ stub_section ]).sections.map { |s| s[:key] }
   end
 
   test "a saved order that repeats a key renders that section once" do
@@ -152,19 +266,19 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
 
     keys = registry(extra_sections: [ stub_section ]).sections.map { |s| s[:key] }
 
-    assert_equal %w[stub accounts kpis value_chart holdings], keys
+    assert_equal %w[stub accounts kpis performance index_chart value_chart holdings], keys
   end
 
   test "ignores keys in the saved order that no longer exist" do
     @user.update_section_preferences("portfolio", order: %w[gone accounts])
 
-    assert_equal %w[accounts kpis value_chart holdings], registry.sections.map { |s| s[:key] }
+    assert_equal %w[accounts kpis performance index_chart value_chart holdings], registry.sections.map { |s| s[:key] }
   end
 
   test "appends extra sections after the built-ins" do
     sections = registry(extra_sections: [ stub_section ]).sections
 
-    assert_equal %w[kpis value_chart holdings accounts stub], sections.map { |s| s[:key] }
+    assert_equal %w[kpis performance index_chart value_chart holdings accounts stub], sections.map { |s| s[:key] }
   end
 
   # A family whose investment accounts hold nothing has no rows to list, so

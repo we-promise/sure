@@ -99,4 +99,38 @@ class PortfoliosTest < ApplicationSystemTestCase
     assert_selector "turbo-frame#portfolio_sections section[data-section-key='value_chart']"
     assert_equal "last_5_years", @user.reload.default_period
   end
+
+  # The index chart reuses the time-series chart controller as it is: the
+  # levels are plain numbers, not Money, and the controller must still draw
+  # them as a line.
+  # The tooltip's arrow compares each point's level with the one before. The
+  # levels are plain numbers, not Money, so a comparison that reads `.amount`
+  # sees nothing and draws the flat icon on every point of a rising line.
+  test "the index chart's tooltip shows a rising level as a rise" do
+    Portfolio::Performance.any_instance.stubs(:index_series).returns([
+      [ 2.days.ago.to_date, BigDecimal("101") ],
+      [ 1.day.ago.to_date, BigDecimal("102") ],
+      [ Date.current, BigDecimal("103") ]
+    ])
+
+    visit portfolio_path
+    find("#portfolioIndexChart svg").hover
+
+    within("#portfolioIndexChart") do
+      assert_selector ".lucide-arrow-up-right", visible: :all
+      assert_no_selector ".lucide-minus", visible: :all
+    end
+  end
+
+  test "the index chart draws its levels as a line" do
+    Portfolio::Performance.any_instance.stubs(:index_series).returns([
+      [ 2.days.ago.to_date, BigDecimal("100") ],
+      [ 1.day.ago.to_date, BigDecimal("104.5") ],
+      [ Date.current, BigDecimal("102.25") ]
+    ])
+
+    visit portfolio_path
+
+    assert_selector "#portfolioIndexChart svg path[d]"
+  end
 end

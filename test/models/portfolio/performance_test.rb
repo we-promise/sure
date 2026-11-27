@@ -490,6 +490,44 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_nil result.mwr
   end
 
+  # The chained figure removes only the flows it knows about. A valuation-tracked
+  # account has none on record, so a deposit into it moves its stated value and
+  # chains as return: the aggregate cannot be called time-weighted once any
+  # account in it is valuation tracked.
+  test "flows are known only when no account in the scope is valuation tracked" do
+    build_textbook_case
+    valued = build_valuation_tracked_account
+
+    assert performance.flows_known?, "every account records its flows"
+    refute performance(account_ids: [ @account.id, valued.id ]).flows_known?,
+           "one valuation-tracked account makes the scope's flows unknown"
+    refute performance(account_ids: [ valued.id ]).flows_known?
+  end
+
+  # An account with no balances in the period has nothing chained, so it cannot
+  # turn the label either.
+  test "an account with no balances in the period does not make the flows unknown" do
+    build_textbook_case
+    empty = create_portfolio_account(family: @family)
+
+    assert performance(account_ids: [ @account.id, empty.id ]).flows_known?
+  end
+
+  # An account with one balance day is not valuation tracked -- ReturnScope
+  # cannot classify it -- but it still feeds the chained figures (its arrival
+  # is a composition flow), and one day does not show whether its flows are
+  # on record. Its flows are not known, so the scope's are not either.
+  test "an account with one balance day beside a trade-tracked one makes the flows unknown" do
+    build_textbook_case
+    one_row = create_portfolio_account(family: @family)
+    lay_balance account: one_row, date: @day_two, opening: 500, closing: 550, market_flow: 50
+
+    assert performance.flows_known?, "the trade-tracked account alone records its flows"
+    mixed = performance(account_ids: [ @account.id, one_row.id ])
+    assert_not_nil mixed.twr, "the one-day account does not withhold the chained figure"
+    refute mixed.flows_known?, "so the chained figure is not labelled time-weighted"
+  end
+
   # The rule must not overreach: an account with no balances in the period
   # contributes nothing, so it cannot make the scope's flows unknown.
   test "an account with no balances in the period does not withhold mwr" do
@@ -924,6 +962,20 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     refute_equal "v10", Portfolio::Performance::CACHE_VERSION, "v10 entries predate income by security, so their income has no by_security"
     refute_equal "v11", Portfolio::Performance::CACHE_VERSION, "v11 entries converted a foreign journal in one step"
     refute_equal "v12", Portfolio::Performance::CACHE_VERSION, "v12 entries read a transfer leg with a pending counterpart as internal"
+    refute_equal "v14", Portfolio::Performance::CACHE_VERSION, "v14 entries were cached without flows_known"
+    refute_equal "v15", Portfolio::Performance::CACHE_VERSION, "v15 entries counted a one-day account's flows as known"
+  end
+
+  test "the cached metrics carry whether the flows are known" do
+    build_textbook_case
+    valued = build_valuation_tracked_account
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    refute performance(account_ids: [ @account.id, valued.id ]).flows_known?, "the cold read computes it"
+
+    warm = performance(account_ids: [ @account.id, valued.id ])
+    warm.expects(:compute).never
+    refute warm.flows_known?, "the warm read is served from the cache with the flag intact"
   end
 
   # End to end, with nothing set by hand between the layers. Every other

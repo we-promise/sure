@@ -18,7 +18,7 @@
 class Portfolio::Performance
   # Bumped whenever the meaning of a cached figure changes, so warm caches stop
   # serving the old interpretation under the same name.
-  CACHE_VERSION = "v14".freeze
+  CACHE_VERSION = "v16".freeze
 
   # The balance rows are calendar daily, so the series includes weekends and
   # holidays as structural zeros. Annualising that by the trading-day convention
@@ -117,9 +117,9 @@ class Portfolio::Performance
 
   # [[date, index], ...] rebased on a base of 100, where the FIRST point is the
   # level after the first return (100 * (1 + r1)), not the base itself. This is the
-  # flow-adjusted series a chart plots: it removes the effect of deposits, so it
-  # can be laid beside a benchmark without the shapes disagreeing purely
-  # because money went in.
+  # flow-adjusted series a chart plots: it removes the effect of the deposits on
+  # record (all of them only when #flows_known?), so it can be laid beside a
+  # benchmark without the shapes disagreeing purely because money went in.
   def index_series
     metrics[:index_series]
   end
@@ -151,6 +151,17 @@ class Portfolio::Performance
     @income ||= Rails.cache.fetch("#{cache_key}_income") do
       ActiveRecord::Base.uncached { income_metrics(build_daily_returns) }
     end
+  end
+
+  # True when every account holding a balance in the period is trade tracked,
+  # so every external flow is on record and the chained figures remove them: a
+  # time-weighted return. False when any account's flows are unknown -- a
+  # valuation-tracked account's deposits move its stated value and chain as
+  # return, and an account with one balance day still chains that day while
+  # one day cannot show its flows are on record -- so the same figures are a
+  # change in value, and the UI must not call them time-weighted.
+  def flows_known?
+    metrics[:flows_known]
   end
 
   # True when a currency pair had no rate anywhere in the period, in which
@@ -289,6 +300,8 @@ class Portfolio::Performance
         max_drawdown: withhold_time_weighted ? nil : drawdown(returns),
         index_series: withhold_time_weighted ? [] : rebased_index(returns),
         drivers: drivers.to_h,
+        # The rule #money_weighted_supported? applies to each account.
+        flows_known: return_scopes.values.all? { |scope| scope.balance_days.zero? || scope.supports_money_weighted_return? },
         rate_missing: rate_missing,
         suppressed_dates: rows.select(&:suppressed).map(&:date),
         day_count: rows.size
@@ -370,10 +383,11 @@ class Portfolio::Performance
     end
 
     # Eligibility for every account in the scope, resolved once per instance.
-    # Both #money_weighted_supported? and #time_weighted_supported? read it, and
-    # both run inside the uncached compute behind Rails.cache.fetch, so a
-    # cache miss costs the account load plus three resolution queries, once,
-    # rather than that load plus up to three queries per account, twice.
+    # #money_weighted_supported?, #time_weighted_supported? and the
+    # `flows_known` figure all read it, inside the uncached compute behind
+    # Rails.cache.fetch, so a cache miss costs the account load plus three
+    # resolution queries, once, rather than that load plus up to three queries
+    # per account for each reader.
     #
     # Resolved over the same cut-offs DailyReturns applies, as it resolved
     # them: a row after an account's cut-off is not in the series, so it cannot

@@ -75,7 +75,7 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h1", text: I18n.t("portfolios.show.title")
     assert_select "turbo-frame#portfolio_sections"
-    assert_equal %w[kpis value_chart holdings accounts], css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_equal %w[kpis performance value_chart holdings accounts], css_select("[data-section-key]").map { |node| node["data-section-key"] }
   end
 
   test "the period picker reflects the requested period" do
@@ -411,6 +411,232 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_operator week, :<, month
   end
 
+  # A return is a rate, not an amount. The card takes `money:` and `trend:` as
+  # well, and both format with a currency symbol, so the failure this guards
+  # against is a 21% return rendering as $0.21 -- plausible-looking, and wrong
+  # by two orders of magnitude and a unit.
+  test "a return renders as a percentage, not as money" do
+    Portfolio::Performance.any_instance.stubs(:time_weighted_return).returns(BigDecimal("0.2134"))
+    Portfolio::Performance.any_instance.stubs(:rate_missing?).returns(false)
+    Portfolio::Performance.any_instance.stubs(:suppressed_dates).returns([])
+
+    get portfolio_path
+
+    assert_response :success
+    assert_select "#portfolio-performance" do
+      assert_select "p", text: /21\.34%/
+    end
+    assert_no_match(/\$0\.21/, response.body, "a rate must not be formatted as currency")
+  end
+
+  # The money-weighted return is solved per unit of the PERIOD'S SPAN, not as a
+  # holding-period figure. Capital that arrives part-way through is therefore
+  # expressed over the whole period: money invested for half of a ten-day
+  # period and gaining 10% reports about 21% (1.1 ** (10/5) - 1), where TWR
+  # reports 10%.
+  #
+  # The UI must not label that a holding-period return. This
+  # is the card copy most likely to produce a "my broker says something
+  # different" report, so the wording is pinned rather than left to drift, in
+  # both locales -- a German reader gets the same warning or none at all.
+  test "the money-weighted card says it is a period figure, in every locale" do
+    Portfolio::Performance.any_instance.stubs(:money_weighted_return).returns(BigDecimal("0.21"))
+    Portfolio::Performance.any_instance.stubs(:rate_missing?).returns(false)
+    Portfolio::Performance.any_instance.stubs(:suppressed_dates).returns([])
+
+    get portfolio_path
+
+    assert_response :success
+    # A fragment, not the whole hint: it carries an apostrophe and an em dash,
+    # which render HTML-escaped and would never match the raw string.
+    assert_match(/Money-weighted, over the period/, response.body)
+
+    %i[en de].each do |locale|
+      label = I18n.t("portfolios.performance.mwr", locale: locale)
+      hint = I18n.t("portfolios.performance.mwr_hint", locale: locale)
+
+      assert_match(/period|Zeitraum/i, label,
+                   "#{locale} label must say the figure is over the period, not a holding-period return")
+      assert_match(/when money was invested|wann Geld angelegt wurde/i, hint,
+                   "#{locale} hint must say the figure reflects when money was invested")
+    end
+  end
+
+  # Flows that change sign more than once can fit more than one rate, and the
+  # figure is one of them. Both money-weighted cards say so when the solve
+  # flags it, and neither does otherwise.
+  test "both money-weighted cards say when the rate may be one of several" do
+    Portfolio::Performance.any_instance.stubs(:money_weighted_return).returns(BigDecimal("0.21"))
+    Portfolio::Performance.any_instance.stubs(:annualized_money_weighted_return).returns(BigDecimal("0.4"))
+    Portfolio::Performance.any_instance.stubs(:rate_missing?).returns(false)
+    Portfolio::Performance.any_instance.stubs(:suppressed_dates).returns([])
+    note = I18n.t("portfolios.performance.mwr_ambiguous_hint")
+    mwr_labels = [ I18n.t("portfolios.performance.mwr"), I18n.t("portfolios.performance.annualized_mwr") ]
+    noted_cards = lambda do
+      css_select("#portfolio-performance .grid > div").select { |card| card.text.include?(note) }.map { |card| card.at_css("span").text.strip }
+    end
+
+    Portfolio::Performance.any_instance.stubs(:money_weighted_return_ambiguous?).returns(false)
+    get portfolio_path
+    assert_empty noted_cards.call, "an unambiguous rate carries no note"
+
+    Portfolio::Performance.any_instance.stubs(:money_weighted_return_ambiguous?).returns(true)
+    get portfolio_path
+    assert_equal mwr_labels, noted_cards.call
+
+    %i[en de].each do |locale|
+      assert_match(/more than one|mehrere/i, I18n.t("portfolios.performance.mwr_ambiguous_hint", locale: locale), locale)
+    end
+  end
+
+  # "Left out" is true of the chained TWR and of nothing else on this section. A
+  # suppressed day keeps its place in the series: volatility counts it as an
+  # observation of zero, and its flows stay in the money-weighted series. Three
+  # of the six figures on the card are computed from a day the banner told the
+  # reader was omitted, so the wording is pinned in both locales rather than left
+  # to drift back.
+  test "the suppressed-days banner says a day was counted as zero, in every locale" do
+    Portfolio::Performance.any_instance.stubs(:rate_missing?).returns(false)
+    Portfolio::Performance.any_instance.stubs(:suppressed_dates).returns([ Date.current ])
+
+    get portfolio_path
+    assert_response :success
+
+    assert_match(/counted as a zero return/, response.body)
+
+    %i[en de].each do |locale|
+      %i[one other].each do |count|
+        line = I18n.t("portfolios.performance.suppressed_days.#{count}", locale: locale)
+
+        assert_match(/zero return|Nullrendite/i, line,
+                     "#{locale}.#{count} must say the day was counted as zero")
+        assert_no_match(/left out|ausgelassen/i, line,
+                        "#{locale}.#{count} must not say the day was omitted: it is still in the series")
+      end
+    end
+  end
+
+  # Every figure may be withheld: a missing rate, too short a history, or a
+  # valuation-only scope. The section still renders and says so, where a
+  # vanishing section reads as "this page does not do that".
+  test "the performance section states that figures are withheld rather than vanishing" do
+    Portfolio::Performance.any_instance.stubs(:time_weighted_return).returns(nil)
+    Portfolio::Performance.any_instance.stubs(:annualized_time_weighted_return).returns(nil)
+    Portfolio::Performance.any_instance.stubs(:money_weighted_return).returns(nil)
+    Portfolio::Performance.any_instance.stubs(:annualized_money_weighted_return).returns(nil)
+    Portfolio::Performance.any_instance.stubs(:volatility).returns(nil)
+    Portfolio::Performance.any_instance.stubs(:max_drawdown).returns(nil)
+    Portfolio::Performance.any_instance.stubs(:rate_missing?).returns(true)
+    Portfolio::Performance.any_instance.stubs(:suppressed_dates).returns([])
+
+    get portfolio_path
+
+    assert_response :success
+    assert_select "[data-section-key=?]", "performance", count: 1
+    assert_match I18n.t("portfolios.performance.rate_missing"), response.body
+    assert_match I18n.t("portfolios.kpi_row.no_data"), response.body
+  end
+
+  # Six cards of the same shape, each a rate: distinct figures per card, so a
+  # card that printed its neighbour's would show.
+  test "each return card prints its own figure" do
+    {
+      time_weighted_return: "0.1", annualized_time_weighted_return: "0.2", money_weighted_return: "0.3",
+      annualized_money_weighted_return: "0.4", volatility: "0.05", max_drawdown: "0.06"
+    }.each { |method, rate| Portfolio::Performance.any_instance.stubs(method).returns(BigDecimal(rate)) }
+    Portfolio::Performance.any_instance.stubs(:rate_missing?).returns(false)
+    Portfolio::Performance.any_instance.stubs(:suppressed_dates).returns([])
+
+    get portfolio_path
+
+    assert_response :success
+    cards = css_select("#portfolio-performance .grid > div").to_h do |card|
+      [ card.at_css("span").text.strip, card.at_css("p").text.strip ]
+    end
+    expected = { twr: "10.00%", annualized_twr: "20.00%", mwr: "30.00%", annualized_mwr: "40.00%",
+                 volatility: "5.00%", max_drawdown: "6.00%" }
+    assert_equal expected.transform_keys { |key| I18n.t("portfolios.performance.#{key}") }, cards
+  end
+
+  # A time-weighted return removes external flows by definition. With any
+  # valuation-tracked account in the scope its deposits are unknown and chain
+  # as return, so the cards and the chart caption must not claim they were
+  # removed. Asserted both ways from the same page, so a label that never
+  # changes fails one side.
+  test "the return cards and index caption say time-weighted only when every account's flows are known" do
+    Portfolio::Performance.any_instance.stubs(:rate_missing?).returns(false)
+    Portfolio::Performance.any_instance.stubs(:suppressed_dates).returns([])
+    Portfolio::Performance.any_instance.stubs(:index_series).returns([
+      [ 1.day.ago.to_date, BigDecimal("100") ], [ Date.current, BigDecimal("150") ]
+    ])
+    removed = /effect of (your contributions|money you paid in or took out) removed/
+
+    Portfolio::Performance.any_instance.stubs(:flows_known?).returns(true)
+    get portfolio_path
+    assert_response :success
+    labels = css_select("#portfolio-performance .grid > div span").map { |span| span.text.strip }
+    assert_includes labels, I18n.t("portfolios.performance.twr")
+    assert_includes labels, I18n.t("portfolios.performance.annualized_twr")
+    assert_select "#portfolio-index-chart p", text: I18n.t("portfolios.index_chart.explainer")
+    assert_match removed, response.body
+
+    Portfolio::Performance.any_instance.stubs(:flows_known?).returns(false)
+    get portfolio_path
+    assert_response :success
+    labels = css_select("#portfolio-performance .grid > div span").map { |span| span.text.strip }
+    assert_includes labels, I18n.t("portfolios.performance.value_return")
+    assert_includes labels, I18n.t("portfolios.performance.annualized_value_return")
+    assert_not_includes labels, I18n.t("portfolios.performance.twr")
+    assert_not_includes labels, I18n.t("portfolios.performance.annualized_twr")
+    assert_select "#portfolio-index-chart p", text: I18n.t("portfolios.index_chart.explainer_value_return")
+    assert_no_match removed, response.body, "nothing on the page may say deposits were removed"
+    assert_match(/not removed/, response.body)
+  end
+
+  # The same claim, in both locales: the value-return copy says the flows are
+  # NOT removed, and never that they were.
+  test "the value-return copy says deposits are not removed, in every locale" do
+    %i[en de].each do |locale|
+      [
+        I18n.t("portfolios.performance.value_return_hint", locale: locale),
+        I18n.t("portfolios.index_chart.explainer_value_return", locale: locale)
+      ].each do |copy|
+        assert_match(/not removed|nicht herausgerechnet/i, copy, "#{locale}: #{copy}")
+        assert_no_match(/time-weighted|zeitgewichtet/i, copy, "#{locale}: #{copy}")
+      end
+      assert_no_match(/time-weighted|zeitgewichtet/i, I18n.t("portfolios.performance.value_return", locale: locale))
+      assert_no_match(/time-weighted|zeitgewichtet/i, I18n.t("portfolios.performance.annualized_value_return", locale: locale))
+    end
+  end
+
+  # The index chart is mounted with the levels the registry built, and only
+  # when there is a line to draw.
+  test "the index chart is mounted with the rebased levels" do
+    Portfolio::Performance.any_instance.stubs(:index_series).returns([
+      [ 2.days.ago.to_date, BigDecimal("100") ],
+      [ 1.day.ago.to_date, BigDecimal("104.5") ],
+      [ Date.current, BigDecimal("102.25") ]
+    ])
+
+    get portfolio_path
+
+    assert_response :success
+    chart = css_select("#portfolioIndexChart").first
+    assert chart, "the index chart should be mounted"
+    values = JSON.parse(chart["data-time-series-chart-data-value"])["values"]
+    assert_equal [ "100.0", "100.0", "104.5", "102.25" ], values.map { |v| v["value"].to_s }, "the base of 100, then the levels"
+  end
+
+  test "the index chart section is absent when there is no line to draw" do
+    Portfolio::Performance.any_instance.stubs(:index_series).returns([ [ Date.current, BigDecimal("100") ] ])
+
+    get portfolio_path
+
+    assert_response :success
+    assert_select "[data-section-key=?]", "index_chart", count: 0
+    assert_select "#portfolioIndexChart", count: 0
+  end
+
   test "renders sections in the saved order, collapsed where the user left them" do
     @user.update_section_preferences("portfolio", order: %w[value_chart kpis], collapsed: { "kpis" => true })
 
@@ -418,8 +644,11 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     # The saved order places the chart first; sections it does not mention
-    # follow in declaration order.
-    assert_equal %w[value_chart kpis holdings accounts], css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    # follow in declaration order. `index_chart` is absent on purpose: no
+    # account holds a balance on two days of the period, so there is no
+    # time-weighted return to draw, rather than a flat line of 100s chained
+    # from calendar rows of zeros.
+    assert_equal %w[value_chart kpis performance holdings accounts], css_select("[data-section-key]").map { |node| node["data-section-key"] }
     assert_select "[data-section-key=kpis][data-reports-section-collapsed-value=?]", "true"
     assert_select "[data-section-key=value_chart][data-reports-section-collapsed-value=?]", "false"
   end
@@ -461,11 +690,11 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_nil @user.reload.preferences["reports_section_order"]
   end
 
-  # `performance` is a key not in Portfolio::SectionRegistry::KEYS, and is
+  # `drivers` is a key not in Portfolio::SectionRegistry::KEYS, and is
   # dropped like any other unknown key.
   test "drops section keys the registry does not know, in both shapes" do
     patch update_preferences_portfolio_path,
-      params: { preferences: { portfolio_section_order: %w[kpis performance nonsense value_chart accounts], portfolio_collapsed_sections: { kpis: true, performance: true, nonsense: true } } },
+      params: { preferences: { portfolio_section_order: %w[kpis drivers nonsense value_chart accounts], portfolio_collapsed_sections: { kpis: true, drivers: true, nonsense: true } } },
       as: :json
 
     assert_response :ok
@@ -486,7 +715,7 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "holdings" => true }, @user.preferences["portfolio_collapsed_sections"])
 
     get portfolio_path
-    assert_equal %w[accounts holdings kpis value_chart], css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_equal %w[accounts holdings kpis performance value_chart], css_select("[data-section-key]").map { |node| node["data-section-key"] }
     assert_select "[data-section-key=holdings][data-reports-section-collapsed-value=?]", "true"
   end
 
@@ -813,7 +1042,8 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     # Measured: 42 queries for this page (layout included) with the holdings
     # and accounts sections, 10 accounts and 60 holdings, none of them per
     # holding; 68 with the KPI row and the value chart, which read the
-    # family-wide figures and series once each. The ceiling is that figure plus a little headroom, not a
+    # family-wide figures and series once each; 75 with the performance and
+    # index chart sections, which share one Portfolio::Performance. The ceiling is that figure plus a little headroom, not a
     # guess; the assertion below is the one that matters.
     assert_operator baseline.size, :<=, PORTFOLIO_QUERY_CEILING, "GET /portfolio issued #{baseline.size} queries"
 
@@ -824,7 +1054,7 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal baseline.size, grown.size, "adding 20 holdings changed the query count:\n#{(grown - baseline).join("\n")}"
   end
 
-  PORTFOLIO_QUERY_CEILING = 72
+  PORTFOLIO_QUERY_CEILING = 78
 
   private
     def enable_preview(user)
