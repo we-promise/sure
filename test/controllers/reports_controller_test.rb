@@ -2135,9 +2135,28 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     get reports_path(period_type: :last_6_months, trend_category_ids: [ category.id ])
 
     assert_response :ok
-    assert_select "details table caption", text: I18n.t("reports.trends.category_trend.data_table_caption")
     assert_select "details table th[scope='col']", text: "Trend table"
     assert_select "details table th[scope='row']", minimum: 6
+  end
+
+  test "keyboard users can scroll the trend data table" do
+    category = @family.categories.create!(name: "Trend table", color: "#787878")
+    create_transaction(account: accounts(:depository), name: "Table spend", amount: 40,
+                       category: category, date: Date.current)
+
+    enable_preview!
+    get reports_path(period_type: :last_6_months, trend_category_ids: [ category.id ])
+
+    assert_response :ok
+    label = I18n.t("reports.trends.category_trend.data_table_caption")
+    assert_select "details [role=region][tabindex='0'][aria-label=?]", label do
+      assert_select "thead th[scope='col']", count: 2 do |headers|
+        assert_equal [ I18n.t("reports.trends.category_trend.data_table_period"), "Trend table" ],
+                     headers.map { |header| header.text.strip }
+      end
+      assert_select "tbody tr", minimum: 6
+      assert_select "tbody tr th[scope='row'] + td.privacy-sensitive", text: "$40.00"
+    end
   end
 
   test "the amount sort link keeps the trend selection and granularity" do
