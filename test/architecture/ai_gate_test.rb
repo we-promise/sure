@@ -113,7 +113,7 @@ class AiGateTest < ActiveSupport::TestCase
   end
 
   test "the typing hold refuses new background requests, whatever is free" do
-    gate = Ai::Gate.new(2, host: "gpu.local:8080")
+    gate = Ai::Gate.new(2, host: "gpu.local")
     hold_for_typing
 
     assert_raises(Ai::Error::Busy) { gate.hold(:background) { flunk "it shouldn't run" } }
@@ -121,7 +121,7 @@ class AiGateTest < ActiveSupport::TestCase
   end
 
   test "under the typing hold a prompt request waits, until the hold lapses" do
-    gate = Ai::Gate.new(1, host: "gpu.local:8080")
+    gate = Ai::Gate.new(1, host: "gpu.local")
     hold_for_typing
     prompt = occupy(gate, :prompt, admitted: false)
     assert_not prompt.admitted?(timeout: 0.2), "the hold should keep it off a free host"
@@ -131,7 +131,7 @@ class AiGateTest < ActiveSupport::TestCase
   end
 
   test "under the typing hold a prompt request waits, until the message ends the hold" do
-    gate = Ai::Gate.new(1, host: "gpu.local:8080")
+    gate = Ai::Gate.new(1, host: "gpu.local")
     hold_for_typing
     prompt = occupy(gate, :prompt, admitted: false)
 
@@ -141,7 +141,7 @@ class AiGateTest < ActiveSupport::TestCase
   end
 
   test "the typing hold interrupts nothing, and never keeps an interactive request off" do
-    gate = Ai::Gate.new(1, host: "gpu.local:8080")
+    gate = Ai::Gate.new(1, host: "gpu.local")
     running = occupy(gate, :background)
     hold_for_typing
     assert_not_predicate running.holder, :preempted?
@@ -151,7 +151,7 @@ class AiGateTest < ActiveSupport::TestCase
   end
 
   test "while an external assistant answers, no new background request starts, and prompt and interactive ones do" do
-    gate = Ai::Gate.new(2, host: "gpu.local:8080")
+    gate = Ai::Gate.new(2, host: "gpu.local")
     running = occupy(gate, :background)
 
     2.times { gate.hold_off_background }
@@ -170,13 +170,13 @@ class AiGateTest < ActiveSupport::TestCase
   test "the typing hold is per host" do
     hold_for_typing
 
-    assert_equal :ran, Ai::Gate.new(1, host: "gpu.local:8081").hold(:background) { :ran }
+    assert_equal :ran, Ai::Gate.new(1, host: "other.local").hold(:background) { :ran }
   end
 
   test "a typing hold that can't be read doesn't keep a request off" do
     ChatReservation.stubs(:held?).raises(RedisClient::ConnectionError)
 
-    assert_equal :ran, Ai::Gate.new(1, host: "gpu.local:8080").hold(:background) { :ran }
+    assert_equal :ran, Ai::Gate.new(1, host: "gpu.local").hold(:background) { :ran }
   end
 
   test "with two or more places, one is kept for interactive requests" do
@@ -232,13 +232,24 @@ class AiGateTest < ActiveSupport::TestCase
     assert_nil Ai::Sequencer.gate_for(cloud)
   end
 
-  test "endpoints on one host and port share its gate" do
+  test "endpoints on one host share its gate, whichever port they use" do
     gpu = ai_endpoint(name: "gpu", base_url: "http://gpu.local:8080/v1", location: :local)
     sibling = gpu.with(name: "gpu_large")
     embed = gpu.with(name: "embed", base_url: "http://gpu.local:8081/v1")
+    other = gpu.with(name: "other", base_url: "http://other.local:8080/v1")
 
     assert_same Ai::Sequencer.gate_for(gpu), Ai::Sequencer.gate_for(sibling)
-    assert_not_same Ai::Sequencer.gate_for(gpu), Ai::Sequencer.gate_for(embed)
+    assert_same Ai::Sequencer.gate_for(gpu), Ai::Sequencer.gate_for(embed)
+    assert_not_same Ai::Sequencer.gate_for(gpu), Ai::Sequencer.gate_for(other)
+  end
+
+  test "a host's gate has as many places as its smallest server has slots" do
+    chat = ai_endpoint(name: "chat", base_url: "http://gpu.local:8080/v1", location: :local, parallel_requests: 4)
+    embed = ai_endpoint(name: "embed", base_url: "http://gpu.local:8081/v1", location: :local, parallel_requests: 2)
+
+    assert_equal 4, Ai::Sequencer.gate_for(chat).size
+    assert_equal 2, Ai::Sequencer.gate_for(embed).size
+    assert_equal 2, Ai::Sequencer.gate_for(chat).size
   end
 
   test "a request holds its place in the lane of the job that sent it" do
