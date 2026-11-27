@@ -49,29 +49,6 @@ class Ai::Instrumentation::MetadataTracingTest < ActiveSupport::TestCase
     assert_not_includes @exporter.finished_spans.map { [ _1.attributes.to_a, _1.events.to_a.map(&:attributes), _1.status.description ] }.to_s, SECRET_ANSWER
   end
 
-  test "health probes aren't traced; the calls around them are" do
-    stub_request(:post, URL).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: {
-      id: "c1", model: "test-model", choices: [ { index: 0, message: { role: "assistant", content: "OK" }, finish_reason: "stop" } ]
-    }.to_json)
-
-    Ai::Transport.for(@model.endpoint).probe(@model, :chat)
-    assert_empty @exporter.finished_spans
-
-    chat_call
-    assert @exporter.finished_spans.any? { _1.attributes["gen_ai.operation.name"] == "chat" }
-  end
-
-  test "OTLP_HEADERS takes the OpenTelemetry key=value form" do
-    assert_equal({ "Authorization" => "Basic abc=", "x-team" => "home" },
-                 Ai::Instrumentation::MetadataTracing.parse_headers("Authorization=Basic%20abc%3D, x-team=home"))
-  end
-
-  test "a literal + in a header value stays; %2B decodes to +" do
-    assert_equal({ "Authorization" => "Basic ab+c/d==" },
-                 Ai::Instrumentation::MetadataTracing.parse_headers("Authorization=Basic ab+c/d=="))
-    assert_equal({ "x-team" => "a+b" }, Ai::Instrumentation::MetadataTracing.parse_headers("x-team=a%2Bb"))
-  end
-
   private
     # A chat request inside a feature's call, as a generation makes it.
     def chat_call

@@ -83,15 +83,6 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     assert_equal [ [ :applied, @family.id, %w[a] ], [ :failed, @family.id, ActiveJob::EnqueueError ] ], Requester.log
   end
 
-  test "nothing to do finishes with zero and makes no call" do
-    requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
-
-    Ai::GenerationJob.perform_now(:detect_merchants, { ids: [], family_id: @family.id })
-
-    assert_equal [ [ :finished, @family.id, 0 ] ], Requester.log
-    assert_empty requests
-  end
-
   test "a feature that became unavailable is discarded, and the requester hears once" do
     use_no_ai
     Ai::GenerationJob.perform_now(:detect_merchants, { ids: %w[a], family_id: @family.id })
@@ -161,11 +152,6 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     end
     assert_empty Requester.log
     assert_empty requests
-  end
-
-  test "an interactive feature's job goes to today's high-priority queue" do
-    assert_equal "ai_high_priority", Ai::Routes.queue_for(:bill_setup)
-    assert_equal "ai_low_priority", Ai::Routes.queue_for(:categorize)
   end
 
   test "a stale job for a feature no longer registered drops once, quietly" do

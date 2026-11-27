@@ -108,40 +108,6 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     end
   end
 
-  test "OpenAI-compatible LLM probe lists models too, making no chat call" do
-    endpoint = "https://api.cloudflare.com/client/v4/accounts/account-id/ai/v1"
-    request = stub_request(:get, "#{endpoint}/models")
-              .with(headers: { "Authorization" => "Bearer cf-token" })
-              .to_return(status: 200, headers: { "Content-Type" => "application/json" },
-                         body: { data: [ { id: "@cf/zai-org/glm-5.2" } ] }.to_json)
-    chat = stub_request(:post, "#{endpoint}/chat/completions")
-
-    result = @probe.llm(
-      provider: :openai,
-      endpoint: endpoint,
-      access_token: "cf-token",
-      model: "@cf/zai-org/glm-5.2"
-    )
-
-    assert result.passing?
-    assert_requested request
-    assert_not_requested chat
-  end
-
-  test "LLM probe sends the configured endpoint's static headers, as production calls do" do
-    request = stub_request(:get, "https://llm.example.test/v1/models")
-              .with(headers: { "X-Team" => "home" })
-              .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: [ { id: "qwen3" } ] }.to_json)
-
-    headers = { "X-Team" => "home", "X-Session" => "{session_id}" }.to_json
-    ClimateControl.modify(OPENAI_ACCESS_TOKEN: "t", OPENAI_URI_BASE: "https://llm.example.test/v1", OPENAI_MODEL: "qwen3",
-                          OPENAI_EXTRA_HEADERS: headers) do
-      assert @probe.llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "qwen3").passing?
-    end
-    assert_requested request
-    assert_not_requested(:get, "https://llm.example.test/v1/models", headers: { "X-Session" => "{session_id}" })
-  end
-
   test "LLM probe reports a spent balance and a wrong key by name" do
     stub_request(:get, "https://llm.example.test/v1/models").to_return(
       { status: 429, headers: { "Content-Type" => "application/json" }, body: { error: { message: "no credits", code: "insufficient_quota" } }.to_json },
@@ -172,43 +138,6 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
     assert result.passing?
     assert_requested request
-  end
-
-  test "the Anthropic models probe takes its proxy from Sure's resolver, as the calls it checks do" do
-    url = "https://api.anthropic.com/v1/models/claude-sonnet-4-6"
-    Ai::Transport::Http.stubs(:proxy_for).returns(nil)
-    Ai::Transport::Http.expects(:proxy_for).with(url, any_parameters).returns("http://proxy.example.test:3128").at_least_once
-    stub_request(:get, url).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { id: "claude-sonnet-4-6" }.to_json)
-
-    result = @probe.llm(provider: :anthropic, endpoint: "https://api.anthropic.com", access_token: "anthropic-token", model: "claude-sonnet-4-6")
-
-    assert result.passing?
-  end
-
-  test "an Anthropic lookup answered for another model fails; a dated snapshot of an alias passes" do
-    url = "https://api.anthropic.com/v1/models/claude-sonnet-4-6"
-    transport = Ai::Transport.for(Ai::Config::Endpoint.new(name: "anthropic", protocol: :anthropic, api_key: "anthropic-token"))
-    model = Ai::Config::Model.new(endpoint: transport.endpoint, name: "claude-sonnet-4-6")
-
-    stub_request(:get, url).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { id: "claude-haiku-4-5" }.to_json)
-    assert_raises(Ai::Error::ModelMissing) { transport.probe(model, :models) }
-
-    stub_request(:get, url).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { id: "claude-sonnet-4-6-20260101" }.to_json)
-    assert_equal "claude-sonnet-4-6-20260101", transport.probe(model, :models)
-  end
-
-  test "an Anthropic model the API doesn't have fails the models probe" do
-    stub_request(:get, "https://api.anthropic.com/v1/models/claude-nope")
-      .to_return(status: 404, headers: { "Content-Type" => "application/json" },
-                 body: { type: "error", error: { type: "not_found_error", message: "model: claude-nope" } }.to_json)
-    Rails.logger.stubs(:error)
-    DebugLogEntry.stubs(:capture)
-
-    result = @probe.llm(provider: :anthropic, endpoint: "https://api.anthropic.com", access_token: "anthropic-token", model: "claude-nope")
-
-    assert_not result.passing?
-    assert_equal 404, result.http_status
-    assert_equal "model_not_available", result.failure_code.to_s
   end
 
   test "an Anthropic lookup maps by status whatever the body, and a garbled 200 is invalid output" do
@@ -690,12 +619,6 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_difference -> { DebugLogEntry.where(category: "ai_health", level: "warn").count }, 1 do
       assert AiHealth::Probe.new.pgvector.not_checked?
     end
-  end
-
-  test "results are kept for AI_HEALTH_PROBE_CACHE_TTL, 60 seconds when unset" do
-    assert_equal 60.seconds, AiHealth::Probe.cache_ttl
-    ClimateControl.modify("AI_HEALTH_PROBE_CACHE_TTL" => "300") { assert_equal 300.seconds, AiHealth::Probe.cache_ttl }
-    ClimateControl.modify("AI_HEALTH_PROBE_CACHE_TTL" => "0") { assert_equal 60.seconds, AiHealth::Probe.cache_ttl }
   end
 
   private

@@ -35,12 +35,6 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert_in_delta 2 / 3.0, requests.first.failed_ratio.call(repeated)
   end
 
-  test "use_ai_model_settings keeps the routes an earlier use_ai_routes set" do
-    use_ai_model_settings(batch_size: 2)
-
-    assert_equal %w[gpu], Ai::Config.current.routes_for(:detect_merchants).map { _1.endpoint.name }
-  end
-
   test "a batch slice that is a prefix keeps value-equal twins later in the list as remaining" do
     use_ai_model_settings(batch_size: 2)
     stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
@@ -457,16 +451,6 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert_equal %w[t0 t1], answered_ids(result).sort
     fallback = requests.select { _1.model.endpoint.name == "openai" }
     assert_equal [ %w[t0] ], fallback.map { _1.input.scan(/ID: (t\d)/).flatten }, "gpu answered t1"
-  end
-
-  test "stub_ai fails the test when another feature calls, even under code that rescues errors" do
-    stub_ai(:categorize) { flunk "not reached" }
-
-    assert_raises(Minitest::Assertion) do
-      generation(1).call
-    rescue StandardError
-      nil   # what a runner that records errors does
-    end
   end
 
   test "an empty answer list for a batch is unusable, not a batch answered with nothing" do

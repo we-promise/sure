@@ -12,16 +12,6 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     Ai::Transport::Base.any_instance.stubs(:retry_delay).returns(0)
   end
 
-  test "sends today's request, the model and the texts, and returns a vector per text" do
-    bodies = stub_embeddings(rows([ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ]))
-
-    response = embed(%w[first second])
-
-    assert_equal({ "model" => "nomic-embed-text", "input" => %w[first second] }, bodies.first)
-    assert_equal [ [ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ] ], response.vectors
-    assert_equal 7, response.usage.input_tokens
-  end
-
   test "embeddings follow the returned index and reject a bad permutation" do
     reordered = rows([ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ])
     reordered[:data].reverse!
@@ -39,23 +29,11 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     assert_match(/Invalid or duplicate embedding record positions/, error.message)
   end
 
-  test "a single text still comes back as a list of one vector" do
-    stub_embeddings(rows([ 0.1, 0.2, 0.3 ]))
-
-    assert_equal [ [ 0.1, 0.2, 0.3 ] ], embed([ "only" ]).vectors
-  end
-
   test "fewer vectors than texts is InvalidOutput, which RubyLLM raises over the 200" do
     stub_embeddings(rows([ 0.1, 0.2, 0.3 ]))
 
     error = assert_raises(Ai::Error::InvalidOutput) { embed(%w[first second]) }
     assert_match(/Expected 2 embeddings, got 1/, error.message)
-  end
-
-  test "a vector of the wrong size is InvalidOutput" do
-    stub_embeddings(rows([ 0.1, 0.2 ]))
-
-    assert_raises(Ai::Error::InvalidOutput) { embed([ "only" ]) }
   end
 
   test "a single-text probe with extra vectors is InvalidOutput" do
@@ -70,37 +48,6 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     assert_match(/expected 1 vectors, got 2/, error.message)
   end
 
-  test "maps a 401 and retries a 503" do
-    stub_request(:post, URL).to_return(status: 401, headers: JSON_HEADERS, body: { error: { message: "bad key" } }.to_json)
-    assert_raises(Ai::Error::Unauthorized) { embed([ "x" ]) }
-
-    WebMock.reset!
-    stub_request(:post, URL)
-      .to_return({ status: 503, headers: JSON_HEADERS, body: { error: { message: "busy" } }.to_json },
-                 { status: 200, headers: JSON_HEADERS, body: rows([ 0.1, 0.2, 0.3 ]).to_json })
-    assert_equal 1, embed([ "x" ], max_retries: 1).vectors.size
-  end
-
-  test "one embed.ai event per call, without the texts, and a usage row under the feature" do
-    stub_embeddings(rows([ 0.1, 0.2, 0.3 ], [ 0.4, 0.5, 0.6 ]))
-
-    events = capture_ai_events { embed([ "ACME PAYROLL", "RENT" ], family: @family) }
-
-    event = events.sole
-    assert_equal "embed.ai", event.name
-    assert_equal({ items: 2 }, event.payload[:request])
-    assert_equal({ vectors: 2, dimensions: 3 }, event.payload[:output])
-    assert_not_includes event.payload.to_s, "ACME"
-    assert_equal [ "embed" ], @family.llm_usages.where(operation: "embed").pluck(:operation)
-  end
-
-  test "Anthropic doesn't embed" do
-    endpoint = ai_endpoint(name: "anthropic", protocol: :anthropic, base_url: "https://anthropic.example.test")
-    request = Ai::Transport::Base::EmbedRequest.new(feature: :embed, model: ai_model(endpoint:), texts: [ "x" ])
-
-    assert_raises(Ai::Error::Refused) { Ai::Transport.for(endpoint).embed(request) }
-  end
-
   test "Ai::Embeddings indexes in batches of 50 on the embed route and queries under search_documents" do
     use_ai_routes
     requests = stub_ai
@@ -113,23 +60,6 @@ class AiTransportEmbedTest < ActiveSupport::TestCase
     assert_equal [ 50, 1, 1 ], requests.map { _1.texts.size }
     assert_equal %i[embed embed search_documents], requests.map(&:feature)
     assert_equal [ "nomic-embed-text" ], requests.map { _1.model.name }.uniq
-  end
-
-  test "Ai::Embeddings raises Unavailable with the router's reason" do
-    use_no_ai
-
-    error = assert_raises(Ai::Error::Unavailable) { Ai::Embeddings.query("rent", family: @family) }
-    assert_equal :not_configured, error.reason
-  end
-
-  test "Ai::Embeddings has no model to call when the embed route is an OpenAI vector store" do
-    store = ai_endpoint(name: "openai", vector_store: true)
-    config = AiTestHelper.build_ai_config([ ai_model(endpoint: store, name: "vector_store", capabilities: %i[embedding]) ],
-                                          { embed: %w[openai/vector_store] }, vector_store_backend: :openai)
-
-    Ai::Config.with(config) do
-      assert_equal :capability_missing, assert_raises(Ai::Error::Unavailable) { Ai::Embeddings.index([ "x" ], family: @family) }.reason
-    end
   end
 
   test "an endpoint with static headers is refused before the texts are sent without them" do

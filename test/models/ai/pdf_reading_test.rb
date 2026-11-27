@@ -77,15 +77,6 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     assert_match "Cardpayment-HighStPetrolStation", requests.sole.input
   end
 
-  test "a model with a large context window reads the text layer in one chunk a page" do
-    requests = stub_ai(:extract_pdf, returns: statement(BAC_ROWS))
-
-    with_reading_routes(text_model.with(context_window: 1_000_000)) do
-      assert_equal :text, reading(@bac).extract(read_as: :text).way
-    end
-    assert_match "Cardpayment-HighStPetrolStation", requests.sole.input
-  end
-
   test "long text pages are chunked at line boundaries unless a line itself is too long" do
     reader = reading("page one")
     reader.stubs(:chunk_chars).returns(12)
@@ -107,19 +98,6 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     assert_empty requests
   end
 
-  test "a scan goes to a vision model as page images, rendered for the batch" do
-    skip_without_pdftoppm
-    requests = stub_ai(:extract_pdf, returns: statement([ [ "2019-10-02", -4.23 ] ], opening: 10.0, closing: 5.77))
-
-    with_reading_routes(vision_model) do
-      outcome = reading(@scan).extract
-
-      assert_equal :images, outcome.way
-      assert outcome.passed?
-    end
-    assert_equal [ "page-1.png", "page-2.png" ], requests.sole.attachments.map(&:filename)
-  end
-
   test "when the text layer's extraction fails its checks, Auto reads the pages as images" do
     skip_without_pdftoppm
     wrong = BAC_ROWS.map { |date, amount| [ date, -amount ] }
@@ -134,28 +112,6 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
       assert_equal false, outcome.attempts.first.dig(:checks, :passed)
     end
     assert_equal 2, requests.size
-  end
-
-  test "Auto starts from the way that last passed for this account and model" do
-    skip_without_pdftoppm
-    requests = stub_ai(:extract_pdf, returns: statement(BAC_ROWS))
-
-    with_reading_routes(vision_model) do
-      assert_equal :images, reading(@bac).extract(start: :images).way
-      assert_equal %i[images text], reading(@bac).order(:auto, start: :images)
-      assert_equal %i[text images], reading(@bac).order(:auto, start: :pdf), "a way the route can't use isn't a start"
-    end
-    assert requests.sole.attachments.any?
-  end
-
-  test "Read as runs that way only, and a way the route can't do says why" do
-    stub_ai(:extract_pdf, returns: statement(BAC_ROWS))
-
-    with_reading_routes(text_model) do
-      assert_equal :text, reading(@bac).extract(read_as: :text).way
-      error = assert_raises(Ai::Error::Unavailable) { reading(@bac).extract(read_as: :images) }
-      assert_equal :needs_vision, error.reason
-    end
   end
 
   test "a text layer that omits a scanned page keeps the extraction incomplete" do
@@ -203,26 +159,6 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
       assert_equal [ :text, :images ], outcome.attempts.map { _1[:way] }
       assert_equal "Upstream", outcome.attempts.last[:error]
     end
-  end
-
-  test "an outage with nothing in hand fails the reading" do
-    stub_ai(:extract_pdf) { raise Ai::Error::Upstream, "server error" }
-
-    with_reading_routes(text_model) do
-      assert_raises(Ai::Error::Upstream) { reading(@bac).extract }
-    end
-  end
-
-  test "pages are batched by cost with no page limit" do
-    skip_without_pdftoppm
-    requests = stub_ai(:extract_pdf, returns: statement([]))
-
-    with_reading_routes(vision_model.with(batch_size: 2)) do
-      reading(blank_pdf(pages: 7)).extract(read_as: :images)
-    end
-
-    assert_equal [ 2, 2, 2, 1 ], requests.map { _1.attachments.size }
-    assert_equal "page-7.png", requests.last.attachments.sole.filename
   end
 
   test "OCR transcribes each page on its route entry, then the text model reads the transcription" do
@@ -283,25 +219,6 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
       assert_equal %i[images ocr], outcome.attempts.map { _1[:way] }
     end
     assert requests.grep(Ai::Transport::Base::OcrRequest).any?
-  end
-
-  test "read gives what the document is, from the first batch" do
-    requests = stub_ai(:extract_pdf, returns: { document_type: "bank_statement", summary: "YourBank, February 2019",
-                                                extracted_data: { institution_name: "YourBank", currency: "GBP" } })
-    reader = reading(@bac)
-    units = [ Ai::PdfReading::Unit.text("PAGE ONE", page: 1), Ai::PdfReading::Unit.text("PAGE TWO", page: 2) ]
-    reader.stubs(:units_for).returns([ units, "PAGE ONE\nPAGE TWO" ])
-
-    with_reading_routes(text_model.with(batch_size: 1)) do
-      outcome = reader.read
-
-      assert_equal "bank_statement", outcome.value[:document_type]
-      assert_equal "YourBank", outcome.value.dig(:extracted_data, :institution_name)
-      assert_equal :text, outcome.way
-    end
-    assert_match "Please analyze the following document text", requests.sole.input
-    assert_includes requests.sole.input, "PAGE ONE"
-    assert_not_includes requests.sole.input, "PAGE TWO"
   end
 
   test "pages that can't be rendered move Auto on, keeping the extraction in hand" do

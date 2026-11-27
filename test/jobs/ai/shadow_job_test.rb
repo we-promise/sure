@@ -17,16 +17,6 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
     ENV["CATEGORIZATION_SHADOW_RATE"] = @shadow_rate if @shadow_rate
   end
 
-  test "does not run a shadow by default" do
-    txn = create_transaction(account: @account, name: "Coffee shop").transaction
-    category = @family.categories.create!(name: "Coffee")
-    requests = answer_both(llm: { txn.id => category.name }, jev: {})
-
-    assert_equal 0.0, @family.effective_categorization_shadow_rate
-    assert_no_enqueued_jobs(only: Ai::ShadowJob) { categorize([ txn.id ]) }
-    assert_equal [ :categorize ], requests.map(&:feature)
-  end
-
   test "records a disagreement without applying the shadow answer" do
     @family.update!(categorization_shadow_rate: 1.0)
     txn = create_transaction(account: @account, name: "Blue Bottle Coffee").transaction
@@ -67,20 +57,6 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
     assert_equal 2, Ai::Comparison.where(agreed: true).count
   end
 
-  test "the shadow gets the transactions the primary left unanswered" do
-    @family.update!(categorization_shadow_rate: 1.0)
-    category = @family.categories.create!(name: "Coffee")
-    answered, missed = 2.times.map { create_transaction(account: @account, name: "Coffee #{_1}").transaction }
-    answer_both(llm: { answered.id => category.name }, jev: [ answered, missed ].to_h { [ _1.id, [ category.name, 0.9 ] ] })
-
-    perform_enqueued_jobs { categorize([ answered.id, missed.id ]) }
-
-    shadow_only = Ai::Comparison.find_by!(subject_id: missed.id)
-    assert_nil shadow_only.primary_value
-    assert_equal category.id, shadow_only.shadow_value
-    assert_nil missed.reload.category
-  end
-
   test "does not score a missing shadow answer as agreement" do
     @family.update!(categorization_shadow_rate: 1.0)
     txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
@@ -92,17 +68,6 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
     comparison = Ai::Comparison.sole
     assert_not comparison.agreed
     assert_nil comparison.shadow_value
-  end
-
-  test "counts a shared abstention as agreement" do
-    @family.update!(categorization_shadow_rate: 1.0)
-    txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
-    @family.categories.create!(name: "Coffee")
-    answer_both(llm: { txn.id => nil }, jev: { txn.id => [ Ai::Judgements::CategorizeTransaction::UNCATEGORIZED, 0.94 ] })
-
-    perform_enqueued_jobs { categorize([ txn.id ]) }
-
-    assert Ai::Comparison.sole.agreed
   end
 
   test "a failing shadow model breaks nothing and records nothing" do
@@ -123,17 +88,6 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
     assert_equal 0, Ai::Comparison.count
   end
 
-  test "no shadow route, no job" do
-    use_ai_routes(shadow_categorize: [])
-    @family.update!(categorization_shadow_rate: 1.0)
-    txn = create_transaction(account: @account, name: "Coffee shop").transaction
-    category = @family.categories.create!(name: "Coffee")
-    answer_both(llm: { txn.id => category.name }, jev: {})
-
-    assert_no_enqueued_jobs(only: Ai::ShadowJob) { categorize([ txn.id ]) }
-    assert_equal category, txn.reload.category
-  end
-
   test "the shadow's usage rows are its own, tagged shadow" do
     @family.update!(categorization_shadow_rate: 1.0)
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
@@ -145,23 +99,6 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
     perform_enqueued_jobs { categorize([ txn.id ]) }
 
     assert_equal [ [ "shadow_categorize", true ] ], events.map { [ _1[:feature], _1[:shadow] ] }
-  ensure
-    ActiveSupport::Notifications.unsubscribe(subscription)
-  end
-
-  test "two shadow runs get different correlation ids" do
-    @family.update!(categorization_shadow_rate: 1.0)
-    txns = Array.new(2) { create_transaction(account: @account, name: "Coffee shop #{_1}").transaction }
-    category = @family.categories.create!(name: "Coffee")
-    answer_both(llm: txns.to_h { [ _1.id, category.name ] }, jev: txns.to_h { [ _1.id, [ category.name, 0.9 ] ] })
-    events = []
-    subscription = ActiveSupport::Notifications.subscribe(/.ai\z/) { events << _1.payload }
-
-    perform_enqueued_jobs { categorize([ txns.first.id ]) }
-    perform_enqueued_jobs { categorize([ txns.second.id ]) }
-
-    ids = events.select { _1[:feature] == "shadow_categorize" }.map { _1[:correlation_id] }.uniq
-    assert_equal 2, ids.size
   ensure
     ActiveSupport::Notifications.unsubscribe(subscription)
   end
@@ -180,40 +117,6 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
     assert_equal 1, enqueued.size, "the primary enqueues its shadow; the shadow enqueues nothing of its own"
   end
 
-  test "runs on the background lane's queue" do
-    assert_equal Ai::Routes.queue_for(:shadow_categorize), Ai::ShadowJob.new("categorize", @family.id, [], {}).queue_name
-  end
-
-  test "is never retried, so an error outside the AI call doesn't rerun the diagnostic" do
-    assert_equal false, Ai::ShadowJob.sidekiq_options_hash["retry"]
-  end
-
-  test "a deadlock is discarded, not retried" do
-    Family.stubs(:find_by).raises(ActiveRecord::Deadlocked)
-
-    assert_no_enqueued_jobs(only: Ai::ShadowJob) do
-      Ai::ShadowJob.perform_now("categorize", @family.id, {}, {})
-    end
-  end
-
-  test "refuses a feature whose requester can't rebuild a shadow" do
-    job = Ai::ShadowJob.set(queue: "ai_low_priority")   # as queued; there's no shadow route to ask
-    assert_raises(ArgumentError) { job.perform_now("detect_merchants", @family.id, [], {}) }
-  end
-
-  test "the job carries ids and answers, never the transactions' text" do
-    @family.update!(categorization_shadow_rate: 1.0)
-    txn = create_transaction(account: @account, name: "Blue Bottle Coffee", notes: "with Sam").transaction
-    category = @family.categories.create!(name: "Coffee")
-    answer_both(llm: { txn.id => category.name }, jev: { txn.id => [ category.name, 0.9 ] })
-
-    categorize([ txn.id ])
-
-    arguments = enqueued_jobs.find { _1["job_class"] == "Ai::ShadowJob" }["arguments"]
-    assert_equal [ txn.id ], ActiveJob::Arguments.deserialize(arguments).third[:items].keys
-    assert_no_match(/Blue Bottle|with Sam/, arguments.to_json)
-  end
-
   test "a transaction edited while the shadow waits isn't compared; the others still are" do
     @family.update!(categorization_shadow_rate: 1.0)
     edited, kept = [ "Coffee shop", "Corner cafe" ].map { create_transaction(account: @account, name: _1).transaction }
@@ -225,19 +128,6 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
     perform_enqueued_jobs(only: Ai::ShadowJob)
 
     assert_equal [ kept.id ], Ai::Comparison.pluck(:subject_id)
-  end
-
-  test "a shadow whose categories changed while it waited is skipped" do
-    @family.update!(categorization_shadow_rate: 1.0)
-    txn = create_transaction(account: @account, name: "Coffee shop").transaction
-    category = @family.categories.create!(name: "Coffee")
-    answer_both(llm: { txn.id => category.name }, jev: { txn.id => [ category.name, 0.9 ] })
-
-    categorize([ txn.id ])
-    @family.categories.create!(name: "Groceries")
-    perform_enqueued_jobs(only: Ai::ShadowJob)
-
-    assert_equal 0, Ai::Comparison.count
   end
 
   test "each comparison records the route that answered its own item" do

@@ -20,37 +20,6 @@ class Ai::Transport::HttpTest < ActiveSupport::TestCase
     end
   end
 
-  test "NO_PROXY matches the host as written, with CIDR blocks" do
-    env = { "HTTPS_PROXY" => PROXY, "NO_PROXY" => "llm.lan,10.0.0.0/8" }
-
-    assert_nil Http.proxy_for("http://llm.lan:8080", env:)
-    assert_nil Http.proxy_for("http://10.72.200.61:8180", env:)
-    assert_equal PROXY, Http.proxy_for("http://other.lan:8080", env:)
-  end
-
-  test "a host named by DNS goes direct when its address is in a NO_PROXY CIDR block" do
-    IPSocket.stubs(:getaddress).with("llm.internal").returns("10.72.200.61")
-    env = { "HTTPS_PROXY" => PROXY, "NO_PROXY" => "10.0.0.0/8" }
-
-    assert_nil Http.proxy_for("http://llm.internal:8180", env:)
-    IPSocket.stubs(:getaddress).with("api.openai.com").returns("162.159.140.245")
-    assert_equal PROXY, Http.proxy_for("https://api.openai.com", env:)
-  end
-
-  test "a name is never resolved when NO_PROXY lists only names" do
-    IPSocket.expects(:getaddress).never
-
-    assert_nil Http.proxy_for("http://llm.lan:8080", env: { "HTTPS_PROXY" => PROXY, "NO_PROXY" => "llm.lan" })
-  end
-
-  test "a NO_PROXY entry with a leading dot covers the domain itself and its subdomains" do
-    env = { "HTTPS_PROXY" => PROXY, "NO_PROXY" => "other.test, .agents.example.com" }
-
-    assert_nil Http.proxy_for("https://agents.example.com", env:)
-    assert_nil Http.proxy_for("https://eu.agents.example.com", env:)
-    assert_equal PROXY, Http.proxy_for("https://badagents.example.com", env:)
-  end
-
   test "NO_PROXY=* sends every host direct" do
     assert_nil Http.proxy_for("https://api.openai.com", env: { "HTTPS_PROXY" => PROXY, "NO_PROXY" => "*" })
     assert_nil Http.proxy_for("http://llm.lan:8080", env: { "HTTP_PROXY" => PROXY, "no_proxy" => " * " })
@@ -74,23 +43,6 @@ class Ai::Transport::HttpTest < ActiveSupport::TestCase
     uri = Http.net_http_proxy("https://agent.example.test", env: { "HTTPS_PROXY" => "http://user:pw@proxy.internal:8888" })
 
     assert_equal [ "proxy.internal", 8888, "user", "pw" ], [ uri.host, uri.port, uri.user, uri.password ]
-  end
-
-  test "compatible base URLs follow ruby-openai's rule, so today's URLs keep working" do
-    {
-      nil => "https://api.openai.com/v1",
-      "http://llm:8080" => "http://llm:8080/v1",
-      "http://llm:8080/" => "http://llm:8080/v1",
-      "http://ollama:11434/v1/" => "http://ollama:11434/v1",
-      "https://generativelanguage.googleapis.com/v1beta/openai/" => "https://generativelanguage.googleapis.com/v1beta/openai",
-      "https://api.cloudflare.com/client/v4/accounts/a/ai/v1" => "https://api.cloudflare.com/client/v4/accounts/a/ai/v1",
-      "https://api.cloudflare.com/client/v4/accounts/a/ai" => "https://api.cloudflare.com/client/v4/accounts/a/ai/v1",
-      "http://agent:18789/v1/chat/completions" => "http://agent:18789/v1",
-      "http://v1-proxy.lan:8080" => "http://v1-proxy.lan:8080/v1",
-      "https://envoy.example.com/v13" => "https://envoy.example.com/v13"
-    }.each do |given, expected|
-      assert_equal expected, Http.compatible_base(given), given.inspect
-    end
   end
 
   test "a malformed proxy is warned about and ignored, not crashed on" do

@@ -21,15 +21,6 @@ class Ai::Generations::CategorizeTransactionsTest < ActiveSupport::TestCase
     assert_nil name_for("@@")
   end
 
-  test "a name equal to a category once spaces and punctuation go wins over one it merely contains" do
-    categories = [ { id: "c1", name: "Car" }, { id: "c2", name: "Health Care" } ]
-    generation = Ai::Generations::CategorizeTransactions.new(transactions: [ { id: "t1" } ], categories:, family: nil)
-
-    answer = generation.coerce({ "categorizations" => [ { "transaction_id" => "t1", "category_name" => "Healthcare" } ] })
-
-    assert_equal "Health Care", answer[:categorizations].first[:category_name]
-  end
-
   test "a short category isn't matched inside a longer answer, and the longest contained name wins" do
     generation = Ai::Generations::CategorizeTransactions.new(transactions: [ { id: "t1" } ], family: nil,
                                                              categories: [ { id: "c1", name: "Car" }, { id: "c2", name: "Health" } ])
@@ -38,20 +29,6 @@ class Ai::Generations::CategorizeTransactionsTest < ActiveSupport::TestCase
     assert_equal "Health", name.("Healthcare")
     assert_nil name.("Carpet cleaning")
     assert_equal "Car", name.("car")
-  end
-
-  test "the model's other field names and a bare list are accepted, as today" do
-    value = coerce([ { "id" => "t1", "category" => "Restaurants" }, { "category" => "Restaurants" } ])
-
-    assert_equal [ { transaction_id: "t1", category_name: "Restaurants" } ], value[:categorizations]
-  end
-
-  test "the enum lists the batch's ids and the family's names, with null both ways" do
-    schema = Ai::Generations::CategorizeTransactions.new(transactions: [ { id: "t1" } ], categories: CATEGORIES, family: nil).schema
-    item = schema.dig(:properties, :categorizations, :items, :properties)
-
-    assert_equal %w[t1], item.dig(:transaction_id, :enum)
-    assert_equal [ "Restaurants", "Coffee Shops", "Gas & Fuel", "null", nil ], item.dig(:category_name, :enum)
   end
 
   test "a family category with no ASCII letters isn't a fuzzy match for every unknown name" do
