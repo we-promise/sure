@@ -69,7 +69,7 @@ class AiAgreementTest < ActionDispatch::IntegrationTest
         provider = Assistant::Builtin.new(@user.chats.new).get_model_provider(Chat.default_model)
         url = provider.is_a?(Provider::Anthropic) ? provider.instance_variable_get(:@base_url) : provider.instance_variable_get(:@uri_base)
         expected = url.presence && URI.parse(url).then { "#{_1.host}:#{_1.port}" }
-        actual = route.endpoint.base_url && Ai::Sequencer.host_key(route.endpoint)
+        actual = route.endpoint.base_url && Ai::Sequencer.server_key(route.endpoint)
 
         if expected
           with_host << id
