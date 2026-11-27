@@ -3,7 +3,7 @@
 <%= render "accounts/form", account: account, url: url do |form| %>
   <%= form.select :subtype,
                  Depository.subtype_options_for_select,
-                 { label: true, prompt: t("depositories.form.subtype_prompt"), include_blank: t("depositories.form.none") } %>
+                 { label: Depository.human_attribute_name(:subtype), prompt: t("depositories.form.subtype_prompt"), include_blank: t("depositories.form.none") } %>
 
   <%= render "shared/ruler", classes: "my-4" %>
 

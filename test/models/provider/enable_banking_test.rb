@@ -1,6 +1,7 @@
 require "test_helper"
 require "ostruct"
 require "openssl"
+require "base64"
 
 class Provider::EnableBankingTest < ActiveSupport::TestCase
   setup do
@@ -454,6 +455,28 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_equal "longest", requested_queries.first[:strategy]
     assert_not requested_queries.first.key?(:date_from)
     assert_not requested_queries.second.key?(:strategy)
+  end
+
+  # Checked with OpenSSL rather than the jwt gem that signs it, so a gem bump
+  # cannot pass by agreeing with itself.
+  test "signs requests with an RS256 JWT for the application" do
+    key = OpenSSL::PKey::RSA.new(2048)
+    provider = Provider::EnableBanking.new(application_id: "test_app_id", client_certificate: key.to_pem)
+    authorization = nil
+    Provider::EnableBanking.expects(:get).with do |_url, options|
+      authorization = options[:headers]["Authorization"]
+      true
+    end.returns(OpenStruct.new(code: 200, body: { aspsps: [] }.to_json))
+
+    freeze_time do
+      provider.get_aspsps(country: "FI")
+
+      header, payload, signature = authorization.delete_prefix("Bearer ").split(".")
+      assert key.public_key.verify("SHA256", Base64.urlsafe_decode64(signature), "#{header}.#{payload}")
+      assert_equal({ "typ" => "JWT", "alg" => "RS256", "kid" => "test_app_id" }, JSON.parse(Base64.urlsafe_decode64(header)))
+      claims = JSON.parse(Base64.urlsafe_decode64(payload))
+      assert_equal({ "iss" => "enablebanking.com", "aud" => "api.enablebanking.com", "iat" => Time.current.to_i, "exp" => Time.current.to_i + 3600 }, claims)
+    end
   end
 
   # The settings panel asks for the application's private key. Setups that

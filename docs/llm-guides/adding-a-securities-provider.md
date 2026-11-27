@@ -37,6 +37,9 @@ class Provider::YourProvider < Provider
   # Include if your provider has rate limits
   include RateLimitable
 
+  # Provides faraday_ssl_options, which every provider's client passes as ssl:
+  extend SslConfigurable
+
   # Custom error classes
   Error = Class.new(Provider::Error)
   RateLimitError = Class.new(Error)
@@ -126,7 +129,7 @@ class Provider::YourProvider < Provider
     365
   end
 
-  # Optional: health check for admin UI
+  # Optional: health check. Nothing displays this yet.
   def healthy?
     with_provider_response do
       response = client.get("#{base_url}/status")
@@ -134,7 +137,10 @@ class Provider::YourProvider < Provider
     end
   end
 
-  # Optional: usage stats for admin UI
+  # Optional: usage stats. Only Twelve Data's is displayed (Settings → Self-hosting) so far.
+  # A counter written with `Rails.cache.increment` must be read back with
+  # `Rails.cache.read(key, raw: true)`; a plain `read` returns nil on RedisCacheStore
+  # (see `Provider::TwelveData#throttle_request`).
   def usage
     with_provider_response do
       Provider::UsageData.new(
@@ -153,7 +159,14 @@ class Provider::YourProvider < Provider
     end
 
     def client
-      @client ||= Faraday.new do |conn|
+      @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |conn|
+        conn.request :retry, {
+          max: 3,
+          interval: 1.0,
+          interval_randomness: 0.5,
+          backoff_factor: 2,
+          exceptions: Faraday::Retry::Middleware::DEFAULT_EXCEPTIONS + [ Faraday::ConnectionFailed ]
+        }
         conn.headers["Authorization"] = "Bearer #{@api_key}"
         conn.response :raise_error
       end
@@ -179,7 +192,7 @@ end
 All methods must return these exact types (wrapped in `with_provider_response`):
 
 ```ruby
-SecurityConcept::Security    = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code, :currency)
+SecurityConcept::Security    = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code, :currency, :isin) # :currency and :isin are optional (default nil)
 SecurityConcept::SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic)
 SecurityConcept::Price       = Data.define(:symbol, :date, :price, :currency, :exchange_operating_mic)
 ```
@@ -272,21 +285,21 @@ end
 
 Edit `app/models/provider/registry.rb`:
 
-**Add to `available_providers`** (around line 144):
+**Add to `available_providers`** (a private method on `Provider::Registry`):
 
 ```ruby
 def available_providers
   case concept
   when :exchange_rates
-    %i[twelve_data yahoo_finance]
+    %i[twelve_data yahoo_finance moex_public frankfurter]
   when :securities
-    %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi your_provider]
+    %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest mansa your_provider]
   # ...
   end
 end
 ```
 
-**Add the factory method** (private section, around line 85):
+**Add the factory method** (in the `private` section of `class << self`, next to the other provider factories):
 
 ```ruby
 def your_provider
@@ -308,13 +321,13 @@ end
 
 Edit `app/models/setting.rb`:
 
-**Add the API key field** (around line 40):
+**Add the API key field** (next to the other `*_api_key` fields):
 
 ```ruby
 field :your_provider_api_key, type: :string, default: ENV["YOUR_PROVIDER_API_KEY"]
 ```
 
-**Add to encrypted fields** (in `EncryptedSettingFields`, around line 55):
+**Add to encrypted fields** (`ENCRYPTED_FIELDS` in `EncryptedSettingFields`):
 
 ```ruby
 ENCRYPTED_FIELDS = %i[
@@ -323,8 +336,7 @@ ENCRYPTED_FIELDS = %i[
   eodhd_api_key
   alpha_vantage_api_key
   your_provider_api_key    # ← add here
-  openai_access_token
-  external_assistant_token
+  # ... other existing entries
 ]
 ```
 
@@ -346,9 +358,23 @@ Edit `app/controllers/settings/hostings_controller.rb`:
 update_encrypted_setting(:your_provider_api_key)
 ```
 
-### Hostings View
+**In `hosting_params`** — permit the key. `update_encrypted_setting` returns early unless `hosting_params.key?(param_key)`, and `hosting_params` permits a fixed list, so a key that is not on it is dropped silently on save:
 
-Edit the settings view to add your provider's checkbox and API key field. Follow the existing pattern for Tiingo/EODHD (checkbox in the provider selection list, API key input shown when enabled).
+```ruby
+params.require(:setting).permit(..., :alpha_vantage_api_key, :your_provider_api_key, ...)
+```
+
+### Hostings Views
+
+- `app/views/settings/hostings/_provider_selection.html.erb`: add a row for your provider to the checkbox list.
+- `app/views/settings/hostings/_your_provider_settings.html.erb`: add the API key partial. Copy `_alpha_vantage_settings.html.erb`.
+- `app/views/settings/hostings/show.html.erb`: render the partial inside the financial data providers section. Without this the provider's settings section never appears:
+
+```erb
+<% if @show_your_provider_settings %>
+  <%= render "settings/hostings/your_provider_settings" %>
+<% end %>
+```
 
 ## Step 5: Add Translations
 
@@ -383,7 +409,7 @@ your_provider_settings:
   env_configured_message: "The YOUR_PROVIDER_API_KEY environment variable is set."
 ```
 
-Also add a display name in `config/locales/en.yml` under `securities.providers`:
+Also add a display name in `config/locales/views/securities/en.yml` under `securities.providers`:
 
 ```yaml
 securities:
@@ -443,7 +469,7 @@ security.prices.count
 When a user types in the securities combobox:
 
 1. `SecuritiesController#index` calls `Security.search_provider(query)` (`app/models/security/provided.rb`)
-2. `search_provider` queries **all enabled providers concurrently** using `Concurrent::Promises` with an 8-second timeout per provider
+2. `search_provider` queries **all enabled providers concurrently** using `Concurrent::Promises` and one shared 8-second deadline (`PROVIDER_SEARCH_TIMEOUT`). A provider that has not answered by then is skipped, but its future is not cancelled
 3. Results are deduplicated (key: `ticker|exchange|provider`) and ranked by relevance
 4. Each result's `ComboboxOption#id` is `"TICKER|EXCHANGE|PROVIDER"` (e.g., `"AAPL|XNAS|your_provider"`)
 5. When the user selects one, `price_provider` is stored on the Security record
@@ -486,6 +512,10 @@ security.price_provider present?
   - [ ] `field :your_provider_api_key`
   - [ ] Added to `ENCRYPTED_FIELDS`
 - [ ] Settings UI in hostings controller/view
+  - [ ] `@show_your_provider_settings` in `show` and `update_encrypted_setting` in `update`
+  - [ ] Permitted in `hosting_params`
+  - [ ] Checkbox row in `_provider_selection.html.erb`
+  - [ ] `_your_provider_settings.html.erb` partial, rendered from `show.html.erb`
 - [ ] Translations in `config/locales/`
   - [ ] Provider name in `provider_selection.providers`
   - [ ] Provider name in `securities.providers` (for combobox display)

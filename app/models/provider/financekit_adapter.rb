@@ -6,8 +6,25 @@ class Provider::FinancekitAdapter < Provider::Base
     %w[Depository CreditCard]
   end
 
+  # Wallet accounts report "Apple" (or an Apple product name) as the institution.
+  # Matched exactly, not by prefix: "Apple Bank" is a different institution.
+  # Anything not listed gets no domain rather than a guess.
+  APPLE_INSTITUTION_NAMES = [ "apple", "apple inc", "apple card", "apple cash", "apple wallet" ].freeze
+  APPLE_DOMAIN = "apple.com".freeze
+
   def provider_name
     "financekit"
+  end
+
+  # The mapping row keeps the name the device sent; the Account never receives it.
+  # Read at display time, so accounts created before this existed pick it up too.
+  def institution_name
+    latest_mapping&.institution_name.to_s.strip.presence
+  end
+
+  def institution_domain
+    normalized = institution_name.to_s.downcase.delete(".").squish
+    APPLE_DOMAIN if APPLE_INSTITUTION_NAMES.include?(normalized)
   end
 
   def item
@@ -23,4 +40,10 @@ class Provider::FinancekitAdapter < Provider::Base
       last_accepted_at: item.last_accepted_at, last_imported_at: item.last_imported_at,
       last_downstream_at: item.last_downstream_at, repair_required: item.status == "repair_required")
   end
+
+  private
+
+    def latest_mapping
+      provider_account.financekit_accounts.order(created_at: :desc, mapping_version: :desc).first
+    end
 end

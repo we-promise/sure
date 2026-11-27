@@ -26,7 +26,8 @@
     <%= form.text_field :api_token,
                         label: t("indexa_capital_items.panel.fields.api_token.label"),
                         placeholder: is_new_record ? t("indexa_capital_items.panel.fields.api_token.placeholder_new") : t("indexa_capital_items.panel.fields.api_token.placeholder_update"),
-                        type: :password %>
+                        type: :password,
+                        value: nil %>
     <p class="text-xs text-secondary px-1 -mt-1"><%= t("indexa_capital_items.panel.fields.api_token.description") %></p>
 
     <%= render DS::Disclosure.new(variant: :inline) do |disclosure| %>
@@ -49,7 +50,8 @@
         <%= form.text_field :password,
                             label: t("indexa_capital_items.panel.fields.password.label"),
                             placeholder: is_new_record ? t("indexa_capital_items.panel.fields.password.placeholder_new") : t("indexa_capital_items.panel.fields.password.placeholder_update"),
-                            type: :password %>
+                            type: :password,
+                            value: nil %>
       </div>
     <% end %>
 
