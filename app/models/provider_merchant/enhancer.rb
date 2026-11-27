@@ -5,34 +5,22 @@ class ProviderMerchant::Enhancer
   include Ai::Requester
   ai_feature :enhance_merchants
 
-  # Held from the click until the run finishes or gives up, so a second click doesn't queue the
-  # same merchants again. Each batch renews it, so a long run keeps it; one that dies without
-  # giving up frees it after this long.
-  LOCK_TTL = 10.minutes
-
-  def self.lock_key(family) = "enhance_provider_merchants:#{family.id}"
-
   # The family's provider merchants without a website: the ones a run asks the AI about.
   def self.unenhanced(family) = family.assigned_merchants.where(type: "ProviderMerchant").where(website_url: [ nil, "" ])
 
-  # Queues a run over the merchants that lack a website now, unless one is already going. Returns
-  # false when one is.
+  # Queues a run over the merchants that lack a website now, unless the family's last run is still
+  # going, so a second click doesn't queue the same merchants again. The run is the lease: it ends
+  # when the run ends, gives up, or is swept, and lasts while the run waits for delivery. Under the
+  # family's row lock, so two clicks at once start one run. Returns false when one is going.
   def self.enhance_later(family)
-    return false unless Rails.cache.write(lock_key(family), true, expires_in: LOCK_TTL, unless_exist: true)
+    family.with_lock do
+      next false if Ai::GenerationRun.exists?(family:, feature: ai_feature)
 
-    # A run that never starts must not hold the lock until it expires.
-    queued = false
-    begin
-      queued = Ai::GenerationRun.enqueue(:enhance_merchants, family:, ids: unenhanced(family).pluck(:id))
-    rescue StandardError
-      # A queue adapter raises its own errors (Redis down); the caller handles one kind.
-      raise ActiveJob::EnqueueError, "the merchant enhancement couldn't be queued"
-    ensure
-      Rails.cache.delete(lock_key(family)) unless queued
+      Ai::GenerationRun.enqueue(ai_feature, family:, ids: unenhanced(family).pluck(:id))
     end
-    raise ActiveJob::EnqueueError, "the merchant enhancement couldn't be queued" unless queued
-
-    true
+  rescue ActiveRecord::ActiveRecordError
+    # The caller handles one kind of failure to start the run.
+    raise ActiveJob::EnqueueError, "the merchant enhancement couldn't be queued"
   end
 
   def self.from_ai_job(window:, family_id:) = new(Family.find(family_id), window:)
@@ -44,7 +32,6 @@ class ProviderMerchant::Enhancer
   end
 
   def ai_generation
-    hold_lock
     # The run's first job backfills logos before any AI: generating a logo from a known website
     # needs no model, and merchants that already have a website are never sent (issue #2925).
     @family.backfill_provider_merchant_logos if @window.nil? || @window.first?
@@ -81,15 +68,12 @@ class ProviderMerchant::Enhancer
     end
 
     Rails.logger.info("Enhanced #{enhanced} merchants, deduplicated #{deduplicated} for family #{@family.id}")
-    hold_lock   # the next batch may wait in the queue
     enhanced
   end
 
-  # Called inside the job's transaction that ends the run: the lock goes once that commits.
-  def ai_finished(_count) = release_lock_after_commit
+  def ai_finished(_count) = nil
 
   def ai_failed(error)
-    release_lock_after_commit
     DebugLogEntry.capture(
       category: "merchant_enhancement", level: "error", message: "AI merchant enhancement failed",
       source: self.class.name, family: @family,
@@ -107,13 +91,6 @@ class ProviderMerchant::Enhancer
       @family.assigned_merchants.where(type: "ProviderMerchant", id: ids).where.not(website_url: [ nil, "" ]).each do |merchant|
         merchant.with_lock { deduplicate_by_website(merchant, merchant.website_url) }
       end
-    end
-
-    def hold_lock = Rails.cache.write(self.class.lock_key(@family), true, expires_in: LOCK_TTL)
-
-    def release_lock_after_commit
-      key = self.class.lock_key(@family)
-      ActiveRecord.after_all_transactions_commit { Rails.cache.delete(key) }
     end
 
     def deduplicate_by_website(target_merchant, website_url)

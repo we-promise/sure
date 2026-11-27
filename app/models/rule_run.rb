@@ -44,16 +44,9 @@ class RuleRun < ApplicationRecord
   end
 
   # Before an AI job is queued: one more job is pending and `count` more transactions wait for an
-  # answer. Atomic and ahead of the queue, so a job that finishes at once finds itself counted.
+  # answer. Atomic, and in the transaction that saves the job's run (Rule::ActionExecutor.queue_all),
+  # so a job that finishes at once finds itself counted.
   def await_ai!(count) = self.class.update_counters(id, pending_jobs_count: 1, transactions_awaiting_ai: count)
-
-  # The AI job await_ai! counted was never queued: neither it nor its transactions are waited for.
-  def release_ai_job!(count)
-    save_locked do
-      self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
-      self.transactions_awaiting_ai = [ transactions_awaiting_ai - count, 0 ].max
-    end
-  end
 
   # An AI job is done with `handled` of its transactions (applied, skipped or given up on), and
   # `modified` of them changed. Called per batch, so a client can watch the run count down.

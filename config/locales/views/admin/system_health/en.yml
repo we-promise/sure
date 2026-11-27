@@ -242,6 +242,7 @@ en:
           retries: Retries
           failed: Failed
           processed_total: Processed total
+          undelivered_ai_runs: AI runs awaiting redelivery
           queue: Queue
           size: Size
           latency: Latency

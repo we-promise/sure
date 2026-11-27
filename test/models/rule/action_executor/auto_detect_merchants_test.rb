@@ -33,30 +33,23 @@ class Rule::ActionExecutor::AutoDetectMerchantsTest < ActiveSupport::TestCase
     assert_equal [ 1, 5 ], rule_run.reload.values_at(:pending_jobs_count, :transactions_awaiting_ai)
   end
 
-  test "a job that can't be queued stops the run waiting for its transactions" do
+  test "a job the queue refuses, or raises on, stays counted with its run saved for delivery" do
     3.times { |i| create_transaction(account: @account, name: "Coffee #{i}") }
     rule_run = RuleRun.create!(rule: @rule, execution_type: "manual", status: "pending", transactions_queued: 3, executed_at: Time.current)
-    Ai::GenerationJob.stubs(:perform_later).returns(false)
+    Ai::GenerationJob.stubs(:perform_later).returns(false).then.raises(RedisClient::CannotConnectError)
 
-    assert_raises(ActiveJob::EnqueueError) { @executor.execute(@account.transactions, rule_run:) }
-    assert_equal 0, rule_run.reload.transactions_awaiting_ai
+    2.times { assert_equal({ async: true }, @executor.execute(@account.transactions, rule_run:)) }
+
+    assert_equal [ 2, 6 ], rule_run.reload.values_at(:pending_jobs_count, :transactions_awaiting_ai)
+    assert_equal 2, Ai::GenerationRun.where.not(next_job: nil).count
   end
 
-  test "a job whose enqueue raises stops the run waiting for its transactions" do
+  test "a run that can't be saved leaves no count to give back" do
     3.times { |i| create_transaction(account: @account, name: "Coffee #{i}") }
     rule_run = RuleRun.create!(rule: @rule, execution_type: "manual", status: "pending", transactions_queued: 3, executed_at: Time.current)
-    Ai::GenerationJob.stubs(:perform_later).raises(RedisClient::CannotConnectError)
+    Ai::GenerationRun.stubs(:start!).raises(ActiveRecord::StatementInvalid, "connection lost")
 
-    assert_raises(RedisClient::CannotConnectError) { @executor.execute(@account.transactions, rule_run:) }
-    assert_equal 0, rule_run.reload.transactions_awaiting_ai
-  end
-
-  test "a release that fails while the enqueue fails keeps the enqueue error" do
-    create_transaction(account: @account, name: "Coffee")
-    rule_run = RuleRun.create!(rule: @rule, execution_type: "manual", status: "pending", transactions_queued: 1, executed_at: Time.current)
-    Ai::GenerationJob.stubs(:perform_later).raises(RedisClient::CannotConnectError)
-    RuleRun.any_instance.expects(:release_ai_job!).raises(ActiveRecord::StatementInvalid, "connection lost")
-
-    assert_raises(RedisClient::CannotConnectError) { @executor.execute(@account.transactions, rule_run:) }
+    assert_raises(ActiveRecord::StatementInvalid) { @executor.execute(@account.transactions, rule_run:) }
+    assert_equal [ 0, 0 ], rule_run.reload.values_at(:pending_jobs_count, :transactions_awaiting_ai)
   end
 end

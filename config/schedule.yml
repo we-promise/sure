@@ -46,6 +46,13 @@ recover_push_deliveries:
   queue: "scheduled"
   description: "Re-enqueues push deliveries whose enqueue failed or whose claim was abandoned"
 
+deliver_ai_generations:
+  cron: "*/15 * * * *"
+  class: "Ai::GenerationDeliveryJob"
+  active_job: true
+  queue: "scheduled"
+  description: "Re-enqueues AI generation steps whose job was refused, lost or died before it committed"
+
 sync_scheduled_items:
   cron: "*/15 * * * *" # SyncSchedule::TICK
   class: "SyncScheduledItemsJob"

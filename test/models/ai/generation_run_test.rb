@@ -56,21 +56,63 @@ class Ai::GenerationRunTest < ActiveSupport::TestCase
     assert_not run.window(cursor: 0, pending: @ids.first(1), size: 3).first?
   end
 
-  test "enqueue queues the first job and deletes the run when the job can't be queued" do
-    run_args = nil
-    assert_enqueued_jobs 1, only: Ai::GenerationJob do
-      Ai::GenerationRun.enqueue(:categorize, family: @family, ids: @ids, rule_run_id: nil)
-      run_args = ActiveJob::Arguments.deserialize(enqueued_jobs.last["arguments"]).second
-    end
-    assert_equal({ cursor: 0, pending: [], step: 0, family_id: @family.id }, run_args.except(:run_id))
+  test "enqueue saves the first job in the run and queues it once the run commits" do
+    queued_with_run = nil
+    Ai::GenerationJob.stubs(:perform_later).with { queued_with_run = Ai::GenerationRun.exists?; true }.returns(true)
 
+    Ai::GenerationRun.transaction do
+      assert Ai::GenerationRun.enqueue(:categorize, family: @family, ids: @ids, rule_run_id: nil)
+      assert_nil queued_with_run, "nothing is queued before the commit"
+    end
+
+    run = Ai::GenerationRun.sole
+    assert queued_with_run
+    assert_equal({ "args" => { "run_id" => run.id, "cursor" => 0, "pending" => [], "step" => 0, "family_id" => @family.id },
+                   "applied" => 0, "answered_before" => false }, run.next_job)
+  end
+
+  test "a first job the queue refuses, or raises on, stays saved in the run" do
     Ai::GenerationJob.stubs(:perform_later).returns(false)
-    assert_not Ai::GenerationRun.enqueue(:categorize, family: @family, ids: @ids)
+    assert Ai::GenerationRun.enqueue(:categorize, family: @family, ids: @ids)
 
     Ai::GenerationJob.stubs(:perform_later).raises(Redis::CannotConnectError, "queue down")
-    assert_raises(Redis::CannotConnectError) { Ai::GenerationRun.enqueue(:categorize, family: @family, ids: @ids) }
+    assert Ai::GenerationRun.enqueue(:categorize, family: @family, ids: @ids)
 
-    assert_equal [ run_args[:run_id] ], Ai::GenerationRun.pluck(:id)
+    assert_equal 2, Ai::GenerationRun.where.not(next_job: nil).count
+    logged = DebugLogEntry.find_by!(category: "ai", level: "error", family: @family)
+    assert_equal [ "categorize", "Redis::CannotConnectError", "queue down" ], logged.metadata.values_at("feature", "error_class", "error_message")
+  end
+
+  test "a delivery is logged with when the run went idle, not when it was claimed" do
+    run = start(@ids)
+    run.update_columns(next_job: { args: { run_id: run.id, family_id: @family.id } }, updated_at: 2.hours.ago)
+    Ai::GenerationJob.stubs(:perform_later).returns(true)
+
+    Ai::GenerationRun.undelivered.sole.redeliver
+
+    assert_in_delta 2.hours.ago, Time.zone.parse(DebugLogEntry.find_by!(category: "ai", level: "warn").metadata["idle_since"]), 60
+  end
+
+  test "a run whose transaction rolls back leaves nothing to queue" do
+    Ai::GenerationJob.expects(:perform_later).never
+
+    Ai::GenerationRun.transaction do
+      Ai::GenerationRun.enqueue(:categorize, family: @family, ids: @ids)
+      raise ActiveRecord::Rollback
+    end
+
+    assert_equal 0, Ai::GenerationRun.count
+  end
+
+  test "a run is undelivered once its saved step has gone an hour without a job touching it" do
+    fresh = start(@ids)
+    fresh.update_columns(next_job: { args: {} })
+    idle = start(@ids)
+    idle.update_columns(next_job: { args: {} }, updated_at: 61.minutes.ago)
+    finished_step = start(@ids)
+    finished_step.update_columns(updated_at: 2.hours.ago)
+
+    assert_equal [ idle.id ], Ai::GenerationRun.undelivered.pluck(:id)
   end
 
   test "sweep deletes runs no job has touched in a week, however old the rest are" do

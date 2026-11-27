@@ -178,7 +178,7 @@ flowchart LR
    rendered text; shared parts go in `app/prompts/shared/_<name>.txt.erb`.
 4. Make a domain class its requester (`include Ai::Requester`, `ai_feature :key`,
    `from_ai_job`, `ai_generation`, `apply_ai`, `ai_finished`, `ai_failed`) and list it in
-   `Ai::Requesters`. Enqueue `Ai::GenerationJob.perform_later(:key, { ids:, family_id: })`.
+   `Ai::Requesters`. Start it with `Ai::GenerationRun.enqueue(:key, family:, ids:)`.
 5. Add `test/models/ai/generations/<name>_test.rb`; `ai_routing_matrix_test` and
    `ai_schemas_test` check the rest.
 
@@ -205,9 +205,15 @@ flowchart LR
   that passes (a timeout, an outage) retries the job, and one that needs a fix (a bad key, no
   credit, a missing model) ends the run on it, so the requester hears why.
 - **Rule runs get one job per AI action.** The rule action counts the transactions onto
-  `RuleRun#transactions_awaiting_ai` and queues one `Ai::GenerationJob` with every id; the
+  `RuleRun#transactions_awaiting_ai` and starts one `Ai::GenerationRun` with every id; the
   requester reports each batch (`RuleRun#ai_handled!`) and completes the run once.
   `GET /api/v1/rule_runs/:id/progress` lets a client watch the count reach 0.
+- **Runs are an outbox.** A run keeps its next step's job in `next_job` from the transaction that
+  creates the run (with the rule run's count) or commits the step before, until the step
+  commits; the job is queued after that commit. A step the queue refused or lost, or whose job
+  died, is queued again by `Ai::GenerationDeliveryJob` once no job has touched the run for an
+  hour, at most three times; then the requester hears `Ai::GenerationJob::Undelivered`. Nothing
+  counted is ever given back, and the step claims make a second copy harmless.
 - **No prompt heredocs.** `Sure/NoPromptHeredoc` flags heredocs over ten lines in
   `app/models/ai/**` and controllers.
 - **Prompts change only with evals.** `test/architecture/ai_prompts_test.rb` renders each prompt
