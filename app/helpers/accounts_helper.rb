@@ -37,6 +37,33 @@ module AccountsHelper
     match && match[1]
   end
 
+  # The same for an institution bundle's page, `/institution_groups/<slug>`.
+  # The rows of an account group's sidebar list: with manual ordering its
+  # accounts one by one (reordering works on single rows), otherwise its
+  # entries, where several accounts at one institution become one.
+  def sidebar_group_entries(account_group, sortable:)
+    return account_group.accounts if sortable
+
+    account_group.sidebar_entries(order: Current.user&.account_order, institution_groups: Current.family.institution_group_settings)
+  end
+
+  # Whether a group starts open: as the caller asks, else when it holds the
+  # page being viewed (an account's or an institution's), or the user keeps
+  # the group expanded.
+  def sidebar_group_open?(account_group, entries, open: nil)
+    return open unless open.nil?
+
+    active_slug = sidebar_active_institution_group_slug
+    entries.any? { |entry| entry.is_a?(BalanceSheet::AccountGroup::InstitutionBundle) && entry.slug == active_slug } ||
+      account_group.accounts.any? { |account| page_active?(account_path(account)) } ||
+      Current.user.always_expanded_account_group?(account_group.key)
+  end
+
+  def sidebar_active_institution_group_slug
+    match = request.path.match(%r{\A/institution_groups/([\w-]+)})
+    match && match[1]
+  end
+
   # The id of the permanent wrapper around a sidebar sparkline frame. On a
   # Turbo visit, an element marked data-turbo-permanent is carried over to the
   # new page when that page has one with the same id, so the chart already
@@ -93,20 +120,31 @@ module AccountsHelper
       end
 
     # Linking or unlinking a provider doesn't touch the account, but changes its sparkline versions.
-    providers_version = AccountProvider.where(account_id: family.accounts.select(:id))
-      .pick(Arel.sql("count(*)"), Arel.sql("max(account_providers.updated_at)"))
+    # The name, icon and currency saved for an institution's bundle ride along in the same query
+    # (this key is computed on every page with a sidebar).
+    groups = family.institution_groups
+    *providers_version, groups_count, groups_at = AccountProvider.where(account_id: family.accounts.select(:id))
+      .pick(
+        Arel.sql("count(*)"),
+        Arel.sql("max(account_providers.updated_at)"),
+        Arel.sql("(#{groups.select(Arel.sql('count(*)')).to_sql})"),
+        Arel.sql("(#{groups.select(Arel.sql('max(institution_groups.updated_at)')).to_sql})")
+      )
+    institution_groups_version = [ groups_count, groups_at ]
 
     [
-      family.build_cache_key("account_sidebar_tabs_v12", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v13", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
       providers_version,
+      institution_groups_version,
       active_tab,
       mobile,
       I18n.locale,
       # Sparkline URLs carry a version that rolls over with the 30-day window.
       Date.current,
       sidebar_active_account_id,
+      sidebar_active_institution_group_slug,
       # Fold the per-user "start expanded by default" preference into the key
       # so toggling it in Settings busts the 12h fragment cache immediately
       # (this partial renders with skip_digest: true, so the template digest

@@ -1,4 +1,4 @@
-<%# locals: (account:, size: "md", color: nil, url: account.logo_url, reconciliation_indicator: nil) %>
+<%# locals: (account:, size: "md", color: nil, url: account.logo_url, name: account.name, reconciliation_indicator: nil) %>
 
 <% size_classes = {
   "sm" => "w-6 h-6",
@@ -10,7 +10,7 @@
 <% initials = {
   variant: :text,
   hex_color: color || account.accountable&.color,
-  text: account.name.to_s,
+  text: name.to_s,
   size: size,
   rounded: true
 } %>

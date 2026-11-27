@@ -1,0 +1,38 @@
+<div class="space-y-4 pb-5 lg:pb-32">
+  <%= render "institution_groups/header", bundle: @bundle %>
+
+  <%# The shared notes explain totals in the family's currency. In another
+      currency the bundle says which of its accounts' currencies have no rate
+      into it, as its total leaves them out. %>
+  <% if @bundle.currency == Current.family.currency %>
+    <%= render "shared/exchange_rate_notes", family: Current.family, accounts: Current.family.accounts.where(id: @bundle.accounts.map(&:id)) %>
+  <% else %>
+    <% missing_rates = @bundle.currencies_without_rate %>
+    <% stale_rates = @bundle.stale_rate_dates %>
+    <% if missing_rates.any? %>
+      <div data-testid="missing-exchange-rates">
+        <%= render DS::Alert.new(
+          variant: :warning,
+          message: t("shared.exchange_rate_notes.missing", count: missing_rates.size, currencies: missing_rates.sort.to_sentence, currency: @bundle.currency)
+        ) %>
+      </div>
+    <% end %>
+    <% if stale_rates.any? %>
+      <div data-testid="stale-exchange-rates">
+        <%= render DS::Alert.new(
+          variant: :info,
+          message: t("shared.exchange_rate_notes.stale",
+                     count: stale_rates.size,
+                     currency: @bundle.currency,
+                     rates: stale_rates.sort.map { |from, date| t("shared.exchange_rate_notes.stale_rate", from: from, date: l(date, format: :long)) }.to_sentence)
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%= render "institution_groups/chart", bundle: @bundle, series: @series, period: @chart_period %>
+
+  <%= render "institution_groups/accounts", bundle: @bundle, reconciliation_indicators: @reconciliation_indicators %>
+
+  <%= render "institution_groups/activity", bundle: @bundle, entries: @entries, pagy: @pagy, range: @activity_range %>
+</div>

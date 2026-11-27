@@ -1,0 +1,30 @@
+<%# locals: (bundle:, series:, period:) %>
+<%= render DS::Card.new(padding: :none, class: "space-y-2") do %>
+  <div class="flex justify-between flex-col-reverse lg:flex-row gap-2 px-4 pt-4 mb-2">
+    <div class="space-y-2 w-full">
+      <%= tag.p t(".title"), class: "text-sm font-medium text-secondary" %>
+      <%= render "shared/trend_change", trend: series.trend,
+            comparison_label: series.start_date.present? && series.start_date > period.start_date ? t("UI.account.chart.vs_available_history") : period.comparison_label %>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <%= render UI::PeriodPicker.new(selected: period, url: institution_group_path(bundle)) %>
+    </div>
+  </div>
+
+  <div class="h-64 pb-4">
+    <% if series.any? %>
+      <%# Selectable: a range dragged on the chart reloads the page with it,
+          and the activity below follows. %>
+      <div id="institution-group-chart"
+           class="w-full h-full privacy-sensitive"
+           data-controller="time-series-chart"
+           data-time-series-chart-selectable-value="true"
+           data-time-series-chart-data-value="<%= series.to_json %>"></div>
+    <% else %>
+      <div class="w-full h-full flex items-center justify-center">
+        <p class="text-secondary text-sm"><%= t("UI.account.chart.no_data_available") %></p>
+      </div>
+    <% end %>
+  </div>
+<% end %>
