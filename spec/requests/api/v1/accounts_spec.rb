@@ -109,6 +109,118 @@ RSpec.describe 'API V1 Accounts', type: :request do
     end
   end
 
+  path '/api/v1/accounts' do
+    post 'Create an account' do
+      tags 'Accounts'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      description 'Creates an account owned by the API key\'s user and records its opening balance. ' \
+                  'Requires the read_write scope. For a loan, send `accountable_attributes.initial_balance` ' \
+                  '(original principal) and `start_date` to anchor the opening balance on the day it was drawn; ' \
+                  '`balance` is the current amount owed. Send each value as the type its field has: text as a string, ' \
+                  'numbers as numbers or numeric strings, dates as `YYYY-MM-DD` and flags as true or false. ' \
+                  'A value of the wrong type, or a number with more decimal places than the field keeps, is rejected with a ' \
+                  '422 instead of being converted or rounded; null or an empty string means the field was not sent. ' \
+                  'A number with more than 15 digits has to be sent as a string, because a JSON number cannot carry it exactly.'
+      parameter name: :body, in: :body, required: true, schema: {
+        type: :object,
+        properties: {
+          account: {
+            type: :object,
+            properties: {
+              name: { type: :string, description: 'Account name (required)' },
+              accountable_type: {
+                type: :string,
+                enum: Accountable::TYPES.map(&:underscore) + Accountable::TYPES,
+                description: 'Account type (required). CamelCase names such as CreditCard are also accepted.'
+              },
+              balance: {
+                oneOf: [ { type: :number }, { type: :string } ],
+                description: 'Current balance (required), as a number or a numeric string. For liabilities, the amount owed.'
+              },
+              currency: { type: :string, nullable: true, description: 'ISO 4217 code. Defaults to the family currency.' },
+              subtype: { type: :string, nullable: true, description: 'Account subtype. Must be one of the subtypes of the accountable_type, otherwise the request is rejected.' },
+              opening_balance_date: {
+                type: :string, format: :date, nullable: true,
+                description: 'Date of the opening balance. Defaults to two years ago; a loan\'s start_date takes precedence.'
+              },
+              institution_name: { type: :string, nullable: true },
+              institution_domain: { type: :string, nullable: true },
+              notes: { type: :string, nullable: true },
+              exclude_from_reports: { type: :boolean, nullable: true },
+              accountable_attributes: {
+                type: :object, nullable: true,
+                description: 'Type-specific attributes, the same ones the web form accepts (for a loan: ' \
+                             'initial_balance, start_date, interest_rate, rate_type, term_months, ...). ' \
+                             'Must be an object. A `subtype` here must match the one on the account, if both are sent.',
+                additionalProperties: true
+              }
+            },
+            required: %w[name accountable_type balance]
+          }
+        },
+        required: %w[account]
+      }
+
+      let(:body) do
+        {
+          account: {
+            name: 'Car Lease',
+            accountable_type: 'loan',
+            balance: 48_000.00,
+            currency: 'USD',
+            accountable_attributes: {
+              initial_balance: 51_000.00,
+              start_date: '2026-06-03',
+              interest_rate: 6.5,
+              rate_type: 'fixed',
+              term_months: 36
+            }
+          }
+        }
+      end
+
+      response '201', 'account created' do
+        schema '$ref' => '#/components/schemas/AccountDetail'
+
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { nil }
+
+        run_test!
+      end
+
+      response '400', 'missing account parameter' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { {} }
+
+        run_test!
+      end
+
+      response '403', 'insufficient scope, or the key belongs to a guest' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
+
+        run_test!
+      end
+
+      response '422', 'validation error' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { account: { name: 'No type', balance: 1 } } }
+
+        run_test!
+      end
+    end
+  end
+
   path '/api/v1/accounts/{id}' do
     parameter name: :id, in: :path, required: true, description: 'Account ID',
               schema: { type: :string, format: :uuid }

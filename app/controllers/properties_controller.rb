@@ -1,6 +1,8 @@
 class PropertiesController < ApplicationController
   include AccountableResource, StreamExtensions
 
+  permitted_accountable_attributes :id, :subtype, :year_built, :area_unit, :area_value, :cost_tag_id
+
   before_action :set_property, only: [ :balances, :address, :update_balances, :update_address, :refresh_valuation, :link_valuation ]
   before_action :require_property_write_permission!, only: [ :update_balances, :update_address, :refresh_valuation, :link_valuation ]
 
@@ -325,7 +327,7 @@ class PropertiesController < ApplicationController
               :institution_name,
               :institution_domain,
               :notes,
-              accountable_attributes: [ :id, :subtype, :year_built, :area_unit, :area_value, :cost_tag_id ]
+              accountable_attributes: self.class.permitted_accountable_attributes
             )
     end
 

@@ -5279,6 +5279,137 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/AccountCollection"
+    post:
+      summary: Create an account
+      tags:
+      - Accounts
+      security:
+      - apiKeyAuth: []
+      description: 'Creates an account owned by the API key''s user and records its
+        opening balance. Requires the read_write scope. For a loan, send `accountable_attributes.initial_balance`
+        (original principal) and `start_date` to anchor the opening balance on the
+        day it was drawn; `balance` is the current amount owed. Send each value as
+        the type its field has: text as a string, numbers as numbers or numeric strings,
+        dates as `YYYY-MM-DD` and flags as true or false. A value of the wrong type,
+        or a number with more decimal places than the field keeps, is rejected with
+        a 422 instead of being converted or rounded; null or an empty string means
+        the field was not sent. A number with more than 15 digits has to be sent as
+        a string, because a JSON number cannot carry it exactly.'
+      parameters: []
+      responses:
+        '201':
+          description: account created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountDetail"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '400':
+          description: missing account parameter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope, or the key belongs to a guest
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Account name (required)
+                    accountable_type:
+                      type: string
+                      enum:
+                      - depository
+                      - investment
+                      - crypto
+                      - property
+                      - vehicle
+                      - other_asset
+                      - credit_card
+                      - loan
+                      - other_liability
+                      - Depository
+                      - Investment
+                      - Crypto
+                      - Property
+                      - Vehicle
+                      - OtherAsset
+                      - CreditCard
+                      - Loan
+                      - OtherLiability
+                      description: Account type (required). CamelCase names such as
+                        CreditCard are also accepted.
+                    balance:
+                      oneOf:
+                      - type: number
+                      - type: string
+                      description: Current balance (required), as a number or a numeric
+                        string. For liabilities, the amount owed.
+                    currency:
+                      type: string
+                      nullable: true
+                      description: ISO 4217 code. Defaults to the family currency.
+                    subtype:
+                      type: string
+                      nullable: true
+                      description: Account subtype. Must be one of the subtypes of
+                        the accountable_type, otherwise the request is rejected.
+                    opening_balance_date:
+                      type: string
+                      format: date
+                      nullable: true
+                      description: Date of the opening balance. Defaults to two years
+                        ago; a loan's start_date takes precedence.
+                    institution_name:
+                      type: string
+                      nullable: true
+                    institution_domain:
+                      type: string
+                      nullable: true
+                    notes:
+                      type: string
+                      nullable: true
+                    exclude_from_reports:
+                      type: boolean
+                      nullable: true
+                    accountable_attributes:
+                      type: object
+                      nullable: true
+                      description: 'Type-specific attributes, the same ones the web
+                        form accepts (for a loan: initial_balance, start_date, interest_rate,
+                        rate_type, term_months, ...). Must be an object. A `subtype`
+                        here must match the one on the account, if both are sent.'
+                      additionalProperties: true
+                  required:
+                  - name
+                  - accountable_type
+                  - balance
+              required:
+              - account
+        required: true
   "/api/v1/accounts/{id}":
     parameters:
     - name: id
