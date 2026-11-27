@@ -52,8 +52,8 @@ class Rule::ActionExecutor::AutoDetectMerchants < Rule::ActionExecutor
       jobs_count += 1
     end
 
-    # The jobs report what they changed via rule_run.complete_job!, leaving out
-    # the transactions the rule's other actions already changed. Rule#apply
+    # The jobs report the ids they changed via rule_run.complete_job!, leaving
+    # out the transactions the rule's other actions already changed. Rule#apply
     # collects them in async_jobs so the run records them before they enqueue.
     {
       async: true,

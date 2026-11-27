@@ -50,13 +50,16 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     ])
     @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
 
+    modified_transaction_ids = Set.new
     modified_count = Family::AutoMerchantDetector.new(
       @family,
       transaction_ids: [ excluded.id, counted.id ],
-      exclude_transaction_ids: [ excluded.id ]
+      exclude_transaction_ids: [ excluded.id ],
+      modified_transaction_ids: modified_transaction_ids
     ).auto_detect
 
     assert_equal 1, modified_count
+    assert_equal [ counted.id ], modified_transaction_ids.to_a
     assert_equal "McDonalds", excluded.reload.merchant.name
     assert_equal "Chipotle", counted.reload.merchant.name
   end

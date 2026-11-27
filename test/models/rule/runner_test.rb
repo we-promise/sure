@@ -374,6 +374,145 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal 1, rule_run.pending_jobs_count
   end
 
+  test "does not wait for jobs the adapter refuses to enqueue" do
+    rule = @family.rules.create!(
+      name: "Categorize with AI",
+      resource_type: "transaction",
+      active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "o") ],
+      actions: [ Rule::Action.new(action_type: "auto_categorize") ]
+    )
+
+    Provider::LlmConcept.stubs(:max_items_per_call).returns(1)
+    calls = 0
+    Family.any_instance.stubs(:auto_categorize_transactions_later).with do |_transactions, **_options|
+      calls += 1
+      if calls == 1
+        rule.rule_runs.sole.complete_job!(modified_count: 0)
+        true
+      else
+        false
+      end
+    end
+
+    rule_run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual").run.sole.reload
+
+    assert_equal 2, calls
+    assert_equal "failed", rule_run.status
+    assert_equal 0, rule_run.pending_jobs_count
+  end
+
+  test "offers what a completed AI job changed when an enqueue failure drains the run" do
+    rule = @family.rules.create!(
+      name: "Categorize with AI",
+      resource_type: "transaction",
+      active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "o") ],
+      actions: [ Rule::Action.new(action_type: "auto_categorize") ]
+    )
+
+    Provider::LlmConcept.stubs(:max_items_per_call).returns(1)
+    calls = 0
+    Family.any_instance.stubs(:auto_categorize_transactions_later).with do |_transactions, **_options|
+      calls += 1
+      if calls == 1
+        rule.rule_runs.sole.complete_job!(modified_count: 1, already_modified_count: 0)
+        true
+      else
+        raise "queue unavailable"
+      end
+    end
+
+    RuleRun.expects(:offer_immediate_result).with(@family).once
+
+    rule_run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "immediate").run.sole.reload
+
+    assert_equal 2, calls
+    assert_equal "failed", rule_run.status
+    assert_equal 0, rule_run.pending_jobs_count
+    assert_equal 1, rule_run.transactions_modified
+  end
+
+  test "does not offer when an enqueue failure drains a run whose jobs changed nothing" do
+    rule = @family.rules.create!(
+      name: "Tag and categorize with AI",
+      resource_type: "transaction",
+      active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "o") ],
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_tags", value: [ @tag_a.id ]),
+        Rule::Action.new(action_type: "auto_categorize")
+      ]
+    )
+    # Already tagged, so the tag action only changes @other.
+    @whole_foods.update!(tag_ids: [ @tag_a.id ])
+
+    Provider::LlmConcept.stubs(:max_items_per_call).returns(1)
+    calls = 0
+    Family.any_instance.stubs(:auto_categorize_transactions_later).with do |_transactions, **_options|
+      calls += 1
+      if calls == 1
+        rule.rule_runs.sole.complete_job!(modified_count: 0)
+        true
+      else
+        raise "queue unavailable"
+      end
+    end
+
+    RuleRun.expects(:offer_immediate_result).never
+
+    rule_run = Rule::Runner.new(@family, rules: [ rule ], execution_type: "immediate").run.sole.reload
+
+    assert_equal 2, calls
+    assert_equal "failed", rule_run.status
+    assert_equal 0, rule_run.pending_jobs_count
+    # Only the tag action changed something, and ApplyImmediateRulesJob offers
+    # that; the jobs added nothing for the cleanup to offer.
+    assert_equal 1, rule_run.transactions_modified
+  end
+
+  test "a rule counts a transaction once when two AI actions change it" do
+    rule = @family.rules.create!(
+      name: "Categorize and detect merchants with AI",
+      resource_type: "transaction",
+      active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "o") ],
+      actions: [
+        Rule::Action.new(action_type: "auto_categorize"),
+        Rule::Action.new(action_type: "auto_detect_merchants")
+      ]
+    )
+
+    llm_provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(llm_provider)
+    llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      Provider::LlmConcept::AutoCategorization.new(transaction_id: @whole_foods.id, category_name: @groceries.name),
+      Provider::LlmConcept::AutoCategorization.new(transaction_id: @other.id, category_name: @dining.name)
+    ])).once
+    llm_provider.expects(:auto_detect_merchants).returns(provider_success_response([
+      Provider::LlmConcept::AutoDetectedMerchant.new(transaction_id: @whole_foods.id, business_name: "Whole Foods", business_url: "wholefoods.example"),
+      Provider::LlmConcept::AutoDetectedMerchant.new(transaction_id: @other.id, business_name: "Hardware Store", business_url: "hardware.example")
+    ])).once
+
+    runner = Rule::Runner.new(@family, rules: [ rule ], execution_type: "manual")
+    perform_enqueued_jobs(only: [ AutoCategorizeJob, AutoDetectMerchantsJob ]) { runner.run }
+
+    rule_run = rule.rule_runs.sole.reload
+
+    assert_equal 2, rule_run.transactions_processed
+    assert_equal 2, rule_run.transactions_modified
+    assert_equal 0, rule_run.transactions_blocked
+    assert_equal "success", rule_run.status
+    assert_equal 0, rule_run.pending_jobs_count
+
+    @whole_foods.reload
+    @other.reload
+    assert_equal @groceries, @whole_foods.category
+    assert_equal @dining, @other.category
+    assert @whole_foods.merchant.present?
+    assert @other.merchant.present?
+  end
+
   test "applying a single rule sees the changes the rules above make" do
     create_rule("Rename", "Whole Foods", name: "Supermarket")
     middle = create_rule("Middle", "Supermarket", category: @groceries)

@@ -95,6 +95,46 @@ class RuleRunTest < ActiveSupport::TestCase
     assert_equal 1, rule_run.transactions_modified
   end
 
+  test "complete_job counts a transaction once when several jobs change it" do
+    rule_run = create_rule_run(pending_jobs_count: 2)
+    transaction_id = SecureRandom.uuid
+
+    rule_run.complete_job!(modified_count: 1, modified_transaction_ids: [ transaction_id ])
+    rule_run.complete_job!(modified_count: 1, modified_transaction_ids: [ transaction_id ])
+
+    rule_run.reload
+    assert_equal 1, rule_run.transactions_modified
+    assert_equal [ transaction_id ], rule_run.modified_transaction_ids
+  end
+
+  test "complete_job still counts changes beyond the ids a job tracked" do
+    rule_run = create_rule_run
+    transaction_id = SecureRandom.uuid
+
+    rule_run.complete_job!(modified_count: 3, modified_transaction_ids: [ transaction_id ])
+
+    rule_run.reload
+    assert_equal 3, rule_run.transactions_modified
+    assert_equal [ transaction_id ], rule_run.modified_transaction_ids
+  end
+
+  test "complete_job does not count a transaction the rule's other actions changed" do
+    rule_run = create_rule_run(pending_jobs_count: 2)
+    changed_by_rule = SecureRandom.uuid
+    changed_by_job = SecureRandom.uuid
+    rule_run.update!(transactions_modified: 1, modified_transaction_ids: [ changed_by_rule ])
+
+    rule_run.complete_job!(
+      modified_count: 2,
+      modified_transaction_ids: [ changed_by_rule, changed_by_job ]
+    )
+    rule_run.complete_job!(modified_count: 0)
+
+    rule_run.reload
+    assert_equal 2, rule_run.transactions_modified
+    assert_equal [ changed_by_rule, changed_by_job ], rule_run.modified_transaction_ids
+  end
+
   test "an immediate run offers its result once its last job changed something" do
     rule_run = create_rule_run(pending_jobs_count: 2)
     rule_run.update!(execution_type: "immediate")

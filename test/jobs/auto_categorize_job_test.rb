@@ -35,7 +35,9 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     error = RuntimeError.new("Fixed prompt tokens exceed context budget")
     transaction_ids = [ SecureRandom.uuid ]
 
-    @family.stubs(:auto_categorize_transactions).with(transaction_ids, exclude_transaction_ids: []).raises(error)
+    @family.stubs(:auto_categorize_transactions)
+      .with(transaction_ids, exclude_transaction_ids: [], modified_transaction_ids: instance_of(Set))
+      .raises(error)
 
     assert_difference "DebugLogEntry.count", 1 do
       assert_raises(RuntimeError) do

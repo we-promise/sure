@@ -148,7 +148,7 @@ class Rule::Runner
         # finishes first cannot mark the run successful while others still run.
         rule_run.update!(**counts)
 
-        enqueue_async_jobs(rule_run, async_jobs)
+        enqueue_async_jobs(rule_run, async_jobs, already_modified_count: counts[:transactions_modified].to_i)
       rescue => e
         rule_run = record_failure(rule, rule_run, e, executed_at: executed_at, queued: matched_ids.size)
       ensure
@@ -163,16 +163,21 @@ class Rule::Runner
     # The run already stores the queued job count, so enqueue only after that.
     # When an enqueue fails, the jobs after it never start: drop them from the
     # pending count before the failure is recorded, or the run would wait for
-    # jobs that do not exist.
-    def enqueue_async_jobs(rule_run, async_jobs)
+    # jobs that do not exist. A job that did start may already have changed
+    # transactions, so if this drains the run, offer its result.
+    def enqueue_async_jobs(rule_run, async_jobs, already_modified_count: 0)
       async_jobs.each_with_index do |enqueue, index|
         begin
-          enqueue.call
+          enqueued = enqueue.call
+          raise "AI job was not enqueued" if enqueued == false
         rescue => e
           never_enqueued = async_jobs.size - index
+          drained = false
           rule_run.with_lock do
             rule_run.update!(pending_jobs_count: [ rule_run.pending_jobs_count - never_enqueued, 0 ].max)
+            drained = rule_run.pending_jobs_count.zero?
           end
+          rule_run.offer_results(already_modified_count: already_modified_count) if drained
           raise e
         end
       end
@@ -181,7 +186,13 @@ class Rule::Runner
     def run_counts(result, queued:, rule:)
       if result.is_a?(Hash) && result[:async]
         # The async jobs add their own changes via RuleRun#complete_job!.
-        { status: "pending", transactions_processed: queued, transactions_modified: result[:modified_count] || 0, pending_jobs_count: result[:jobs_count] || 0 }
+        {
+          status: "pending",
+          transactions_processed: queued,
+          transactions_modified: result[:modified_count] || 0,
+          modified_transaction_ids: result[:modified_transaction_ids] || [],
+          pending_jobs_count: result[:jobs_count] || 0
+        }
       elsif result.is_a?(Integer)
         { status: "success", transactions_processed: queued, transactions_modified: result }
       else

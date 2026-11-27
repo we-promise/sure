@@ -48,13 +48,16 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
       AutoCategorization.new(transaction_id: counted.id, category_name: category.name)
     ])).once
 
+    modified_transaction_ids = Set.new
     modified_count = Family::AutoCategorizer.new(
       @family,
       transaction_ids: [ excluded.id, counted.id ],
-      exclude_transaction_ids: [ excluded.id ]
+      exclude_transaction_ids: [ excluded.id ],
+      modified_transaction_ids: modified_transaction_ids
     ).auto_categorize
 
     assert_equal 1, modified_count
+    assert_equal [ counted.id ], modified_transaction_ids.to_a
     assert_equal category, excluded.reload.category
     assert_equal category, counted.reload.category
   end

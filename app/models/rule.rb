@@ -295,9 +295,11 @@ class Rule < ApplicationRecord
   # are added as before.
   #
   # Async (AI) actions run last, so their jobs can leave out the transactions
-  # the other actions already changed when they report their own changes
-  # (RuleRun#complete_job!). modified_count is therefore only what the run
-  # changed itself; the jobs' changes are added once they finish.
+  # the other actions already changed. Each job also reports the ids it did
+  # change, and RuleRun#complete_job! records each one once, so two AI actions
+  # that change the same transaction still count it once. modified_count is
+  # therefore only what the run changed itself; the jobs' changes are added
+  # once they finish.
   def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {}, skip_action_types: [], async_jobs: nil)
     modified_transaction_ids = Set.new
     untracked_modified_count = 0
@@ -372,7 +374,14 @@ class Rule < ApplicationRecord
 
     if has_async
       async_jobs.each(&:call) if enqueue_async_jobs
-      { modified_count: total_modified, async: true, jobs_count: total_async_jobs }
+      # The run stores the ids the other actions changed, so complete_job! can
+      # leave them out even if a job reports one of them.
+      {
+        modified_count: total_modified,
+        modified_transaction_ids: modified_transaction_ids.to_a,
+        async: true,
+        jobs_count: total_async_jobs
+      }
     else
       total_modified
     end

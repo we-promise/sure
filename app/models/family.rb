@@ -437,8 +437,13 @@ class Family < ApplicationRecord
 
   # The LLM only: Bayes is its own rule (Category classifier), so what it
   # categorized is no longer uncategorized here.
-  def auto_categorize_transactions(transaction_ids, exclude_transaction_ids: [])
-    AutoCategorizer.new(self, transaction_ids: transaction_ids, exclude_transaction_ids: exclude_transaction_ids).auto_categorize
+  def auto_categorize_transactions(transaction_ids, exclude_transaction_ids: [], modified_transaction_ids: nil)
+    AutoCategorizer.new(
+      self,
+      transaction_ids: transaction_ids,
+      exclude_transaction_ids: exclude_transaction_ids,
+      modified_transaction_ids: modified_transaction_ids
+    ).auto_categorize
   end
 
   # Runs Bayes over the uncategorized transactions in scope the user hasn't
@@ -542,8 +547,13 @@ class Family < ApplicationRecord
     )
   end
 
-  def auto_detect_transaction_merchants(transaction_ids, exclude_transaction_ids: [])
-    AutoMerchantDetector.new(self, transaction_ids: transaction_ids, exclude_transaction_ids: exclude_transaction_ids).auto_detect
+  def auto_detect_transaction_merchants(transaction_ids, exclude_transaction_ids: [], modified_transaction_ids: nil)
+    AutoMerchantDetector.new(
+      self,
+      transaction_ids: transaction_ids,
+      exclude_transaction_ids: exclude_transaction_ids,
+      modified_transaction_ids: modified_transaction_ids
+    ).auto_detect
   end
 
   # Memoized per user: the layout renders the account sidebar on every page

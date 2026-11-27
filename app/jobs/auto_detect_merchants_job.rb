@@ -3,10 +3,19 @@ class AutoDetectMerchantsJob < ApplicationJob
 
   def perform(family, transaction_ids: [], rule_run_id: nil, exclude_transaction_ids: [], already_modified_count: 0)
     rule_run = RuleRun.find_by(id: rule_run_id) if rule_run_id.present?
-    modified_count = Ai.available?(:detect_merchants, family:) ? family.auto_detect_transaction_merchants(transaction_ids, exclude_transaction_ids: exclude_transaction_ids) : 0
+    modified_transaction_ids = Set.new
+    modified_count = Ai.available?(:detect_merchants, family:) ? family.auto_detect_transaction_merchants(
+      transaction_ids,
+      exclude_transaction_ids: exclude_transaction_ids,
+      modified_transaction_ids: modified_transaction_ids
+    ) : 0
 
-    # If this job was part of a rule run, report back the modified count
-    rule_run&.complete_job!(modified_count: modified_count, already_modified_count: already_modified_count)
+    # If this job was part of a rule run, report back what it changed
+    rule_run&.complete_job!(
+      modified_count: modified_count,
+      modified_transaction_ids: modified_transaction_ids,
+      already_modified_count: already_modified_count
+    )
   rescue => error
     rule_run&.fail_job!(
       error: error,
