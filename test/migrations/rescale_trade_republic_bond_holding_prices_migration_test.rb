@@ -3,7 +3,11 @@
 require "test_helper"
 require Rails.root.join("db/migrate/20261008090000_rescale_trade_republic_bond_holding_prices")
 
+require Rails.root.join("db/migrate/20261123210000_refresh_trade_republic_balances_after_bond_rescale")
+
 class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   BOND_ISIN = "IT0005377152"
   STOCK_ISIN = "US0378331005"
   INTEREST_ISIN = "LU0000000001"
@@ -30,7 +34,10 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     @tr_account.reload
   end
 
-  teardown { Account.reset_column_information }
+  teardown do
+    Account.reset_column_information
+    TradeRepublicItem.reset_column_information
+  end
 
   test "rescales holdings before the account logo selection column exists" do
     holding = create_snapshot(BOND_ISIN, Date.current, qty: "2677.95", price: "84.04", cost_basis: "0.93")
@@ -40,13 +47,31 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     Account.connection.remove_column(:accounts, :logo_selection)
     Account.reset_column_information
 
-    assert_difference -> { @item.syncs.count }, 1 do
+    assert_no_difference -> { @item.syncs.count } do
       run_migration
     end
 
     assert_equal BigDecimal("0.8404"), holding.reload.price
     assert_equal BigDecimal("2250.5492"), holding.amount
     assert_equal "0.8404", @tr_account.reload.raw_positions_payload.first["price"]
+  end
+
+  test "does not schedule a sync before later Trade Republic item columns exist" do
+    holding = create_snapshot(BOND_ISIN, Date.current, qty: "2677.95", price: "84.04", cost_basis: "0.93")
+
+    # Upgrades from before these migrations run this one first. PostgreSQL
+    # restores the columns when the test transaction rolls back.
+    connection = TradeRepublicItem.connection
+    %i[timeline_cursors device_id session_expires_at].each do |column|
+      connection.remove_column(:trade_republic_items, column)
+    end
+    TradeRepublicItem.reset_column_information
+
+    assert_no_difference -> { Sync.where(syncable: @item).count } do
+      run_migration
+    end
+
+    assert_equal BigDecimal("0.8404"), holding.reload.price
   end
 
   test "rescales bond snapshots stored at percent of par" do
@@ -117,14 +142,75 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     assert_equal "84.04", @tr_account.reload.raw_positions_payload.first["price"]
   end
 
-  test "schedules a sync only for items with rescaled holdings" do
+  test "leaves sync scheduling to the later migration even when rerun" do
     create_snapshot(BOND_ISIN, Date.current, qty: "2677.95", price: "84.04", cost_basis: "0.93")
 
-    assert_difference -> { @item.syncs.count }, 1 do
+    assert_no_difference -> { @item.syncs.count } do
       run_migration
     end
     assert_no_difference -> { @item.syncs.count } do
       run_migration
+    end
+  end
+
+  test "refreshes corrected portfolios only after the item schema migrations" do
+    connection = TradeRepublicItem.connection
+    %i[device_id session_expires_at].each do |column|
+      connection.remove_column(:trade_republic_items, column)
+    end
+    TradeRepublicItem.reset_column_information
+
+    assert_no_enqueued_jobs only: SyncJob do
+      run_migration
+    end
+    assert_equal "0.8404", @tr_account.reload.raw_positions_payload.first["price"]
+
+    connection.add_column(:trade_republic_items, :device_id, :uuid, default: -> { "gen_random_uuid()" }, null: false)
+    connection.add_column(:trade_republic_items, :session_expires_at, :datetime)
+    # Deliberately keep the migration process's stale model cache.
+    assert_enqueued_jobs 1, only: SyncJob do
+      run_refresh
+    end
+    assert @item.reload.ready_for_sync?
+    assert @item.device_id.present?
+    assert_no_difference -> { @item.syncs.count } do
+      run_refresh
+    end
+  end
+
+  test "refresh continues after an item cannot enqueue its sync" do
+    failed_item = mock("item whose queue is unavailable")
+    failed_item.stubs(:id).returns(@item.id)
+    failed_item.expects(:sync_later).raises(RuntimeError, "queue down")
+    next_item = mock("next eligible item")
+    next_item.expects(:sync_later).once
+    items = mock("eligible linked items")
+    items.expects(:find_each).multiple_yields([ failed_item ], [ next_item ])
+    TradeRepublicItem.stubs(:syncable).returns(items)
+    items.stubs(:where).returns(items)
+
+    migration = RefreshTradeRepublicBalancesAfterBondRescale.new
+    migration.expects(:say).with(regexp_matches(/Could not schedule a sync.*queue down/))
+    migration.up
+  end
+
+  test "refresh skips expired and disconnected items and unlinked portfolios" do
+    @item.update_columns(session_expires_at: 1.hour.ago)
+    assert_no_enqueued_jobs only: SyncJob do
+      run_refresh
+    end
+    @item.update_columns(session_expires_at: nil, status: "requires_update")
+    assert_no_enqueued_jobs only: SyncJob do
+      run_refresh
+    end
+    @item.update_columns(status: "good", scheduled_for_deletion: true)
+    assert_no_enqueued_jobs only: SyncJob do
+      run_refresh
+    end
+    @item.update_columns(scheduled_for_deletion: false)
+    @tr_account.account_provider.destroy!
+    assert_no_enqueued_jobs only: SyncJob do
+      run_refresh
     end
   end
 
@@ -145,9 +231,44 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
       }.merge(attributes))
     end
 
+    def run_refresh
+      ActiveRecord::Migration.suppress_messages do
+        RefreshTradeRepublicBalancesAfterBondRescale.new.up
+      end
+    end
+
     def run_migration
       ActiveRecord::Migration.suppress_messages do
         RescaleTradeRepublicBondHoldingPrices.new.up
       end
     end
+end
+
+# Exercise the real after-commit enqueue boundary without a fixture transaction.
+class TradeRepublicBalanceRefreshEnqueueTest < ActiveSupport::TestCase
+  self.use_transactional_tests = false
+  self.fixture_table_names = []
+
+  Item = Struct.new(:id) do
+    def sync_later
+      ActiveRecord::Base.transaction { SyncJob.perform_later(id) }
+    end
+  end
+
+  test "an after-commit queue failure does not abort the migration or skip later items" do
+    items = mock("eligible linked items")
+    TradeRepublicItem.stubs(:syncable).returns(items)
+    items.stubs(:where).returns(items)
+    items.expects(:find_each).multiple_yields([ Item.new("failed") ], [ Item.new("next") ])
+    SyncJob.queue_adapter.expects(:enqueue).with { |job| job.arguments == [ "failed" ] }.raises(RuntimeError, "queue down")
+    SyncJob.queue_adapter.expects(:enqueue).with { |job| job.arguments == [ "next" ] }.once
+
+    migration = RefreshTradeRepublicBalancesAfterBondRescale.new
+    migration.expects(:say).with(regexp_matches(/Could not schedule a sync.*queue down/))
+    # Use Rails' transaction wrapper, not just migration.up: the error otherwise
+    # happens after up has returned, outside its per-item rescue.
+    migrator = ActiveRecord::Migrator.allocate
+    migrator.stubs(:connection).returns(ActiveRecord::Base.connection)
+    migrator.send(:ddl_transaction, migration) { migration.up }
+  end
 end
