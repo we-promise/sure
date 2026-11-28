@@ -49,3 +49,27 @@ de:
         sharing_subtitle: Lege fest, wie Konten in deiner %{moniker} geteilt werden
         sharing_title: Freigaben der %{moniker}
         translations_notice: 'Bitte beachte: Wir arbeiten noch an den Übersetzungen für verschiedene Sprachen.'
+        transactions_title: Transaktionen
+        transactions_subtitle: Lege fest, wie sich Transaktionen verhalten
+        rule_suggestions: Regelvorschläge
+        rule_suggestions_hint: Nach einer Kategorieänderung an einer Transaktion anbieten, eine Regel anzulegen
+        show_balance_updates: Synchronisierte Saldenstände
+        show_balance_updates_hint: Die täglichen Salden, die die Banksynchronisierung erfasst, immer in den Aktivitäten verknüpfter Konten anzeigen
+        manual_reconciliation: Manueller Abgleich
+        manual_reconciliation_hint: Abgleich-Steuerelemente bei manuell geführten Konten anzeigen. Konten mit Banksynchronisierung nutzen stattdessen den Abgleich mit Kontoauszügen.
+        investment_contributions_as_spending: Investieren als Ausgabe zählen
+        investment_contributions_as_spending_hint: Geld, das auf Anlagekonten fließt, zählt in Budgets, Berichten und im Cashflow-Diagramm als Ausgabe. Schalte es aus, um es stattdessen als investiert anzuzeigen.
+        budget_title: Budget
+        budget_subtitle: Lege fest, wie sich deine Budgets verhalten
+        household_budget_enabled: Haushaltsbudget
+        household_budget_enabled_hint: Neben den persönlichen Budgets ein gemeinsames Haushaltsbudget führen. Schalte es aus, um nur persönliche Budgets zu nutzen.
+        personal_budgets: Persönliche Budgets
+        personal_budgets_hint: Eigene Budgets für jedes Familienmitglied aktivieren.
+        budget_sharing_title: Budgets teilen
+        budget_sharing_subtitle: Lass andere Mitglieder dein persönliches Budget ansehen oder bearbeiten
+        budget_sharing_no_members: Es gibt keine weiteren Mitglieder, mit denen du teilen kannst
+        budget_sharing_permission_label: "Zugriff für %{name}"
+        budget_sharing_permissions:
+          none: Kein Zugriff
+          read_only: Nur ansehen
+          read_write: Darf bearbeiten

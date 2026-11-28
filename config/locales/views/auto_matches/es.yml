@@ -23,6 +23,9 @@ es:
       from: Desde
       to: Hasta
       date: Fecha
+      days_apart:
+        one: "%{count} día de diferencia"
+        other: "%{count} días de diferencia"
       actions: Acciones
       separator: "·"
     bulk_actions:

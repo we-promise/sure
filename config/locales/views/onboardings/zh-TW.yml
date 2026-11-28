@@ -5,7 +5,7 @@ zh-TW:
       sign_out: 登出
       setup: 設定
       preferences: 偏好設定
-      goals: 目標
+      tools: 工具/AI
       start: 開始
     logout:
       sign_out: 登出
@@ -38,17 +38,48 @@ zh-TW:
       currency: 幣別
       date_format: 日期格式
       submit: 完成
-    goals:
-      title: 是什麼讓您來到這裡？
-      subtitle: 請選擇一個或多個您想用 %{product_name} 達成的理財目標。
-      unified_accounts: 在一個地方查看所有帳戶
-      cashflow: 了解現金流和支出
-      budgeting: 管理財務計畫和預算
-      partner: 與伴侶共同管理財務
-      investments: 追蹤投資
-      ai_insights: 讓 AI 幫助我了解我的財務狀況
-      optimization: 分析和最佳化帳戶
-      reduce_stress: 減輕財務壓力或焦慮
+    tools:
+      title: 歡迎，就當自己家吧。
+      subtitle: 做幾個選擇，讓 %{product_name} 更貼近您。
+      starting_point:
+        eyebrow: 您的起點
+        title: 您之前都用什麼？
+        description: 選擇您用來管理家庭財務的工具。
+        select: 選擇您的工具
+        other_placeholder: 其他工具（選填）
+        hint: 可複選。這能幫助我們建議適合的起點，並不代表支援從這些工具匯入。
+        tools:
+          nothing_yet: 還沒用過
+          other: 其他
+      ai:
+        eyebrow: 您的 AI 偏好
+        title: 您想如何使用 %{product_name}？
+        description: 一切由您決定，選擇最適合您的方式。
+        default: 預設
+        modes:
+          none:
+            title: 不使用 AI
+            description: 不透過應用程式內的助手管理財務。
+          builtin:
+            title: 內建 AI
+            description: 開啟應用程式內的助手，使用此執行個體的 AI 供應商。
+          external:
+            title: 使用您自己的 AI 代理程式
+            description: 使用您自己的助手，經您授權後連線。
+        panels:
+          admin_on: 身為管理員，這項選擇也代表您的家庭同意在背景執行的 AI 功能，例如分類。
+          admin_off: 身為管理員，這項選擇也會撤回您對在背景執行的 AI 功能（例如分類）的同意。只有在其他管理員已開啟 AI 時，這些功能才會維持開啟。
+          none:
+            title: 您的助手將維持關閉。
+            body: 這會為您的帳號關閉應用程式內的助手。
+          builtin:
+            title: 您的助手將會開啟。
+            body: 這會為您的帳號開啟應用程式內的助手。它使用哪個 AI 供應商、是否可以使用，仍取決於此執行個體的 AI 設定。
+            not_configured: 此執行個體尚未設定 AI 供應商。管理員可以在「設定 → 自行代管」中新增。
+            unavailable: 您家庭目前的 AI 設定不會執行應用程式內的助手，因此在管理員變更設定之前，它不會回應。
+          external:
+            title: 準備好後再連線您的代理程式。
+            body: 這會為您的帳號保持 AI 開啟。當您的家庭設定為外部聊天時，對話會在同一個聊天介面中使用您設定的外部助手，而不是 %{product_name} 的內建助手。%{product_name} 仍作為您資料的主要記錄系統，負責匯入、分類及其他流程。您的代理程式可以透過 MCP 或 sure-cli 與其互動；如需連線，請前往「設定 → MCP」。這項選擇不會設定聊天服務，也不會建立、變更或移除任何連線。
       submit: 下一步
     trial:
       title: 試用 Sure 45 天

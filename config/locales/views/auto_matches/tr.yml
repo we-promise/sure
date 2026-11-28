@@ -23,6 +23,9 @@ tr:
       from: Kimden
       to: Kime
       date: Tarih
+      days_apart:
+        one: "%{count} gün arayla"
+        other: "%{count} gün arayla"
       actions: İşlemler
       separator: "·"
     bulk_actions:
