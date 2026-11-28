@@ -96,6 +96,10 @@ pt-BR:
       institution_domain_hint: Usado para encontrar o ícone da instituição.
       institution_domain_missing_logo_key_hint: Usado para encontrar o ícone da instituição. Os logotipos do Brandfetch não estão disponíveis porque nenhum Client ID do Brandfetch está configurado.
       institution_domain_settings_link: Adicione um nas configurações de auto-hospedagem
+      iban_label: "IBAN"
+      iban_placeholder: "ex.: DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "%{masked} — IBAN salvo, digite um novo valor para substituí-lo"
+      iban_remove_label: "Remover IBAN"
       logo_label: Ícone
       logo_hint: Ou envie sua própria imagem PNG, JPEG, GIF, WebP ou ICO de até 1 MB. Ela substitui o logotipo do Brandfetch.
       notes_label: Observações

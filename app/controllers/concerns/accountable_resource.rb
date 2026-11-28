@@ -1,5 +1,6 @@
 module AccountableResource
   extend ActiveSupport::Concern
+  include WriteOnlyIbanParams
 
   included do
     include Periodable, StreamExtensions
@@ -40,10 +41,12 @@ module AccountableResource
     rescue Date::Error
       nil
     end || (Time.zone.today - 2.years)
+    create_params = account_params.except(:return_to, :opening_balance_date, :cost_basis_method)
+    create_params = resolve_write_only_iban(create_params, clear_flag: create_params[:remove_iban]).except(:remove_iban)
     Account.transaction do
       # A new account has no sales to restate, so it starts on the default method.
       @account = Current.family.accounts.create_and_sync(
-        account_params.except(:return_to, :opening_balance_date, :cost_basis_method).merge(owner: Current.user, logo_chosen: logo_chosen?),
+        create_params.merge(owner: Current.user, logo_chosen: logo_chosen?),
         opening_balance_date: opening_balance_date
       )
       @account.lock_saved_attributes!
@@ -86,6 +89,7 @@ module AccountableResource
     # other submitted fields. Keep them available for the 422 form without
     # persisting them.
     update_params = account_params.except(:return_to, :balance, :opening_balance_date, :cost_basis_method)
+    update_params = resolve_write_only_iban(update_params, clear_flag: update_params[:remove_iban]).except(:remove_iban)
     # Every account type posts through here; only one with trades has lots to
     # sell. Applied after the other fields, since the same form can change a
     # crypto account's subtype and with it whether the account trades.
@@ -207,7 +211,7 @@ module AccountableResource
     # `accountable`, and the form came back without any of the type's own
     # inputs, which is the opposite of what this rescue exists to do.
     def rebuilt_account_from_submission
-      attributes = account_params.except(:return_to, :opening_balance_date)
+      attributes = account_params.except(:return_to, :opening_balance_date, :remove_iban)
       attributes[:accountable_attributes] ||= {}
       Current.family.accounts.build(attributes)
     end
@@ -239,7 +243,7 @@ module AccountableResource
       params.require(:account).permit(
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
-        :institution_name, :institution_domain, :notes, :exclude_from_reports,
+        :institution_name, :institution_domain, :iban, :remove_iban, :notes, :exclude_from_reports,
         :enable_category_matcher, :cost_basis_method, :logo,
         accountable_attributes: self.class.permitted_accountable_attributes
       )

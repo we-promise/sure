@@ -96,6 +96,10 @@ fr:
       institution_domain_missing_logo_key_hint: Sert à trouver l'icône de l'établissement. Les logos Brandfetch ne sont pas disponibles, car aucun ID client Brandfetch n'est configuré.
       institution_domain_placeholder: ex., banquepopulaire.fr
       institution_domain_settings_link: En ajouter un dans les paramètres d'auto-hébergement
+      iban_label: "IBAN"
+      iban_placeholder: "ex., DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "%{masked} — IBAN enregistré, saisissez une nouvelle valeur pour le remplacer"
+      iban_remove_label: "Supprimer l'IBAN"
       institution_name_label: Nom de l'institution
       institution_name_placeholder: ex., Banque Populaire
       logo_hint: Ou téléversez votre propre image PNG, JPEG, GIF, WebP ou ICO, jusqu'à 1 Mo. Elle remplace le logo Brandfetch.

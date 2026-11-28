@@ -41,6 +41,10 @@ nb:
       institution_name_placeholder: f.eks. DNB
       institution_domain_label: Bankens domene
       institution_domain_placeholder: f.eks. dnb.no
+      iban_label: IBAN
+      iban_placeholder: f.eks. NO9386011117947 # pipelock:ignore IBAN
+      iban_set_placeholder: "%{masked} – IBAN er lagret, skriv inn en ny verdi for å erstatte den"
+      iban_remove_label: Fjern IBAN
       notes_label: Notater
       notes_placeholder: Lagre tilleggsinformasjon som kontonumre, IBAN, BIC, clearingnumre osv.
       exclude_from_reports: Utelat fra alle rapporter
