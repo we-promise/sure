@@ -138,6 +138,31 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("842.15"), card.reload.balance
   end
 
+  # A sync carries the card's published purchase rate onto
+  # a blank APR, so the processor must run the card details step.
+  test "processor fills a blank credit card APR from this sync's account details" do
+    card, ra = link(CreditCard, provider: "fiskil", balance: "-842.15")
+    as_of = Date.new(2026, 11, 20)
+    ra.update!(
+      raw_account_details_payload: { "lendingRates" => [ { "rateType" => "PURCHASE", "rate" => "0.1999" } ] },
+      account_details_fetched_at: as_of.in_time_zone
+    )
+
+    RedbarkAccount::Processor.new(ra.reload, as_of: as_of).process
+
+    assert_equal BigDecimal("19.99"), card.reload.accountable.apr
+  end
+
+  test "a card details failure does not skip the sync broadcast" do
+    card, ra = link(CreditCard, provider: "fiskil", balance: "-842.15")
+    as_of = Date.new(2026, 11, 20)
+    ra.update!(raw_account_details_payload: [ "unexpected" ], account_details_fetched_at: as_of.in_time_zone)
+    Account.any_instance.expects(:broadcast_sync_complete).once
+
+    assert_nothing_raised { RedbarkAccount::Processor.new(ra.reload, as_of: as_of).process }
+    assert_nil card.reload.accountable.apr
+  end
+
   # [Control — CDR loan] Fiskil home loan: -997672.00 stored as +997672.00.
   test "processor negates a fiskil (CDR) loan balance so the amount owed is stored positive" do
     loan, ra = link(Loan, provider: "fiskil", balance: "-997672.00")
@@ -370,6 +395,41 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
 
     assert result[:success]
     assert_equal 0, result[:total]
+  end
+
+  test "partial transaction import still records the provider reading without reusing the old anchor" do
+    Account.any_instance.stubs(:sync_later)
+    account, ra = link(Depository, provider: "fiskil", balance: "600")
+    day_one = Date.current - 1.day
+    ra.update!(raw_transactions_payload: [ { "id" => "tx_partial", "amount" => "-400.00", "date" => Date.current.to_s } ])
+
+    travel_to day_one do
+      account.entries.create!(
+        date: day_one,
+        name: "Late outflow",
+        amount: 400,
+        currency: @currency,
+        entryable: Transaction.new
+      )
+      account.set_current_balance(1000, schedule_sync: false)
+    end
+
+    RedbarkAccount::Transactions::Processor.any_instance.stubs(:process).returns(
+      { success: false, total: 1, imported: 0, skipped: 0, failed: 1, errors: [] }
+    )
+
+    RedbarkAccount::Processor.new(ra).process
+
+    assert_equal BigDecimal("600"), account.reload.balance
+    anchors = account.valuations.current_anchor
+    assert_equal 1, anchors.count
+    assert_equal BigDecimal("600"), anchors.first.entry.amount
+    assert_equal Date.current, anchors.first.entry.date
+
+    preserved = account.valuations.reconciliation.first
+    assert_not_nil preserved
+    assert_equal BigDecimal("1000"), preserved.entry.amount
+    assert_equal day_one, preserved.entry.date
   end
 
   private

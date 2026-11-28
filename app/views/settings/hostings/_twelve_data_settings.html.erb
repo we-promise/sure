@@ -47,7 +47,7 @@
         </p>
         <div class="w-52 h-1.5 bg-surface-inset rounded-2xl">
           <div class="h-full bg-green-500 rounded-2xl"
-               style="width: <%= [@twelve_data_usage.data.utilization, 2].max %>%;"></div>
+               style="width: <%= @twelve_data_usage.data.utilization.clamp(2, 100) %>%;"></div>
         </div>
       </div>
       <div class="bg-surface-inset rounded-md px-1.5 py-0.5 w-fit">

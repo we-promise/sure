@@ -72,7 +72,7 @@ class DatabaseHelper {
 
       return await openDatabase(
         path,
-        version: 3,
+        version: 4,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       );
@@ -118,6 +118,10 @@ class DatabaseHelper {
           merchant_name TEXT,
           tag_ids TEXT DEFAULT '[]',
           tag_names TEXT DEFAULT '[]',
+          amount_decimal TEXT,
+          kind TEXT,
+          excluded INTEGER,
+          split_parent INTEGER,
           sync_status TEXT NOT NULL,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
@@ -211,6 +215,24 @@ class DatabaseHelper {
       if (!columnNames.contains('tag_names')) {
         await db.execute(
             "ALTER TABLE transactions ADD COLUMN tag_names TEXT DEFAULT '[]'");
+      }
+    }
+    if (oldVersion < 4) {
+      // Exact amount, kind and split/excluded flags from the transactions
+      // index. Rows cached before this stay null until the next sync.
+      final columns = await db.rawQuery('PRAGMA table_info(transactions)');
+      final columnNames = columns.map((c) => c['name'] as String).toSet();
+      const added = {
+        'amount_decimal': 'TEXT',
+        'kind': 'TEXT',
+        'excluded': 'INTEGER',
+        'split_parent': 'INTEGER',
+      };
+      for (final column in added.entries) {
+        if (!columnNames.contains(column.key)) {
+          await db.execute(
+              'ALTER TABLE transactions ADD COLUMN ${column.key} ${column.value}');
+        }
       }
     }
   }

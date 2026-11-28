@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Assistant::Function::UpdateTransactionTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @user = users(:family_admin)
     @transaction = transactions(:one)
@@ -89,5 +91,25 @@ class Assistant::Function::UpdateTransactionTest < ActiveSupport::TestCase
     assert_equal false, rename_result[:success]
     assert_equal "not_authorized", rename_result[:error]
     assert_equal "Payment received from checking account", transaction.reload.entry.name
+  end
+
+  test "runs rules set to apply immediately on the changed transaction" do
+    @user.family.rules.create!(name: "Immediate", resource_type: "transaction", active: true, apply_immediately: true,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+
+    result = @function.call("id" => @transaction.id, "notes" => "Updated by assistant")
+
+    assert_equal true, result[:success]
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @transaction.id ] } ])
+  end
+
+  test "an update that changes nothing runs no immediate rules" do
+    @user.family.rules.create!(name: "Immediate", resource_type: "transaction", active: true, apply_immediately: true,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+
+    result = @function.call("id" => @transaction.id, "name" => @transaction.entry.name)
+
+    assert_equal true, result[:success]
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
   end
 end

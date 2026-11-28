@@ -5,7 +5,7 @@ pt-PT:
       sign_out: Terminar sessão
       setup: Configuração
       preferences: Preferências
-      goals: Objetivos
+      tools: Ferramentas/IA
       start: Iniciar
     logout:
       sign_out: Terminar sessão
@@ -38,17 +38,48 @@ pt-PT:
       currency: Moeda
       date_format: Formato de data
       submit: Concluir
-    goals:
-      title: O que o traz aqui?
-      subtitle: Selecione um ou mais objetivos que tem com a utilização do %{product_name} como a sua ferramenta de finanças pessoais.
-      unified_accounts: Ver todas as minhas contas num só lugar
-      cashflow: Compreender o fluxo de caixa e as despesas
-      budgeting: Gerir planos financeiros e orçamentos
-      partner: Gerir as finanças com um parceiro
-      investments: Acompanhar investimentos
-      ai_insights: Deixar a IA ajudar-me a compreender as minhas finanças
-      optimization: Analisar e otimizar contas
-      reduce_stress: Reduzir o stresse ou a ansiedade financeiros
+    tools:
+      title: Sinta-se em casa.
+      subtitle: Algumas escolhas para tornar o %{product_name} seu.
+      starting_point:
+        eyebrow: O seu ponto de partida
+        title: O que tem utilizado?
+        description: Escolha as ferramentas que utiliza para gerir as finanças do seu agregado familiar.
+        select: Selecione as suas ferramentas
+        other_placeholder: Outra ferramenta (opcional)
+        hint: Selecione todas as que se aplicam. Ajuda-nos a sugerir um ponto de partida, não significa que seja possível importar os dados.
+        tools:
+          nothing_yet: Nenhuma ainda
+          other: Outra
+      ai:
+        eyebrow: A sua preferência de IA
+        title: Como gostaria de utilizar o %{product_name}?
+        description: A decisão é sua. Escolha o que lhe fizer mais sentido.
+        default: Predefinido
+        modes:
+          none:
+            title: Sem IA
+            description: Faça a gestão das suas finanças sem o assistente da aplicação.
+          builtin:
+            title: IA incorporada
+            description: Ative o assistente da aplicação, com o fornecedor de IA desta instância.
+          external:
+            title: Utilize o seu próprio agente de IA
+            description: Utilize o seu próprio assistente, ligado com a sua permissão.
+        panels:
+          admin_on: Como administrador, isto também constitui o consentimento do seu agregado familiar para as funcionalidades de IA executadas em segundo plano, como a categorização.
+          admin_off: Como administrador, isto também retira o seu consentimento para as funcionalidades de IA executadas em segundo plano, como a categorização. Só se mantêm ativas se outro administrador tiver a IA ativada.
+          none:
+            title: O seu assistente mantém-se desativado.
+            body: Isto desativa o assistente da aplicação na sua conta.
+          builtin:
+            title: O seu assistente é ativado.
+            body: Isto ativa o assistente da aplicação na sua conta. O fornecedor de IA que utiliza, e se está disponível, continua a depender das definições de IA desta instância.
+            not_configured: Ainda não há nenhum fornecedor de IA configurado nesta instância. Um administrador pode adicionar um em Definições → Self-Hosting.
+            unavailable: As definições de IA atuais do seu agregado familiar não executam o assistente da aplicação, pelo que este não responderá até que um administrador as altere.
+          external:
+            title: Ligue o seu agente quando quiser.
+            body: Isto mantém a IA ativada na sua conta. Quando o seu agregado familiar estiver configurado para chat externo, as conversas usam o seu assistente externo em vez do assistente integrado do %{product_name}, na mesma interface de chat. O %{product_name} continua a tratar das importações, da categorização e dos restantes processos como registo principal dos seus dados. O seu agente pode interagir com ele através de MCP ou sure-cli; para o ligar, aceda a Definições → MCP. Esta escolha não configura o serviço de chat nem cria, altera ou remove nenhuma ligação.
       submit: Seguinte
     trial:
       title: Experimente o Sure durante 45 dias

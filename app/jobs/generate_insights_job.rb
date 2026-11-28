@@ -40,12 +40,11 @@ class GenerateInsightsJob < ApplicationJob
       # broadcast below too, not just the generation.
       return unless family.preview_features_enabled?
 
-      notifiable_insights = with_advisory_lock(family_id) do
+      with_advisory_lock(family_id) do
         I18n.with_locale(family.locale) do
           result = Insight::GeneratorRegistry.new(family).generate_all
-          created_or_resurfaced = upsert_insights(family, result.insights)
+          upsert_insights(family, result.insights)
           expire_stale_insights(family, result)
-          created_or_resurfaced
         end
       end
 
@@ -53,7 +52,6 @@ class GenerateInsightsJob < ApplicationJob
       # current state, so a subscribed /insights page (waiting on its manual
       # refresh) always gets its list and button restored.
       I18n.with_locale(family.locale) { broadcast_feed(family) }
-      Array(notifiable_insights).each { |insight| DeliverInsightNotificationJob.enqueue_for(insight) }
     end
 
     def broadcast_feed(family)
@@ -137,6 +135,7 @@ class GenerateInsightsJob < ApplicationJob
             body: writer.write(generated),
             metadata: metadata,
             facts: facts,
+            notification_version: existing.notification_version + 1,
             period_start: generated.period_start,
             period_end: generated.period_end,
             generated_at: Time.current,
@@ -149,7 +148,7 @@ class GenerateInsightsJob < ApplicationJob
           # numbers. Expiry was the system's doing, not the user's, so the
           # insight resurfaces, with the body filled from the current facts.
           existing.update!(title: generated.title, body: writer.write(generated), status: "active", facts: facts,
-                           generated_at: Time.current, read_at: nil)
+                           notification_version: existing.notification_version + 1, generated_at: Time.current, read_at: nil)
           existing
         else
           # Same signal, same numbers: don't undo the user's read/dismissed

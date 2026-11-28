@@ -1,8 +1,9 @@
 class Settings::WebauthnCredentialsController < ApplicationController
-  include WebauthnRelyingParty
+  include WebauthnRelyingParty, DemoMfaRestriction
 
   layout "settings"
 
+  before_action :require_mfa_enrollment_allowed, only: [ :options, :create ]
   before_action :ensure_mfa_enabled
 
   # Adding a passkey is confirmed with an MFA code; keep a stolen session from

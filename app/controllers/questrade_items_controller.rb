@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class QuestradeItemsController < ApplicationController
+  include SafeReturnPath
+
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   before_action :set_questrade_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
@@ -341,21 +343,5 @@ class QuestradeItemsController < ApplicationController
       end
 
       accountable_type.constantize
-    end
-
-    def safe_return_to_path
-      return nil if params[:return_to].blank?
-
-      return_to = params[:return_to].to_s
-
-      begin
-        uri = URI.parse(return_to)
-        return nil if uri.scheme.present?
-        return nil if uri.host.present?
-        return nil unless return_to.start_with?("/")
-        return_to
-      rescue URI::InvalidURIError
-        nil
-      end
     end
 end
