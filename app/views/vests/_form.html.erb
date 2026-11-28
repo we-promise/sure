@@ -37,6 +37,7 @@
       <p class="text-xs text-secondary"><%= t("vests.form.taxes_hint") %></p>
       <% form_model.tax_lines_for_form.each_with_index do |line, index| %>
         <%= form.fields_for :tax_lines, line, index: index do |tax| %>
+          <%= tax.hidden_field :id %>
           <div class="grid grid-cols-3 gap-2">
             <%= tax.text_field :name, label: t("vests.form.tax_name"), placeholder: t("vests.form.tax_name_placeholder") %>
             <%= tax.select :category_id, categories, { label: t("vests.form.tax_category"), include_blank: t("vests.form.no_category") } %>

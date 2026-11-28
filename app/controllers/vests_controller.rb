@@ -48,15 +48,12 @@ class VestsController < ApplicationController
   def destroy
     return unless require_account_permission!(@entry.account)
 
-    Entry.transaction do
-      @entry.vest_parts.each(&:destroy_unless_split_part_transferred!)
-      @entry.destroy!
-    end
+    @entry.destroy_unless_split_part_transferred!
     @entry.sync_account_later
 
     redirect_back_or_to account_path(@entry.account), notice: t(".success")
   rescue Entry::SplitPartTransferredError
-    redirect_back_or_to account_path(@entry.account), alert: t("account.entries.destroy.part_transferred")
+    redirect_back_or_to account_path(@entry.account), alert: t(".part_transferred")
   end
 
   private
@@ -71,7 +68,7 @@ class VestsController < ApplicationController
     def vest_params
       params.require(:vest).permit(
         :date, :ticker, :manual_ticker, :vested_qty, :units_withheld, :price, :income_category_id,
-        tax_lines: [ :name, :category_id, :amount ]
+        tax_lines: [ :id, :name, :category_id, :amount ]
       )
     end
 end

@@ -81,7 +81,7 @@ class Portfolio::FlowClassifier
     "Other" => nil
   }.freeze
 
-  # Every label the table knows, so a new Transaction::ACTIVITY_LABELS entry
+  # Every label the table knows, so a new Trade::ACTIVITY_LABELS entry
   # without a rule fails the test that compares the two.
   def self.labels_for(klass)
     LABEL_RULES.select { |_, rule| rule == klass }.keys.freeze

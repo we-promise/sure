@@ -10,8 +10,13 @@ class Trade < ApplicationRecord
   # provider, so it stays editable on a linked sale.
   belongs_to :lot_source_entry, class_name: "Entry", optional: true
 
-  # Use the same activity labels as Transaction
-  ACTIVITY_LABELS = Transaction::ACTIVITY_LABELS.dup.freeze
+  # Shares an employer paid as compensation (an RSU vest), at the price they
+  # vested at. Trade::VestForm records the pay itself as income beside it, and
+  # is the only way to set it, so it is in no label menu.
+  VEST_LABEL = "Vest".freeze
+
+  # The labels a transaction can have, and Vest.
+  ACTIVITY_LABELS = (Transaction::ACTIVITY_LABELS + [ VEST_LABEL ]).freeze
 
   # The labels that mean the asset went somewhere else you own rather than
   # being bought or sold.
@@ -35,10 +40,6 @@ class Trade < ApplicationRecord
   # calculations use INTERNAL_MOVEMENT_LABELS so API-created sweeps follow the
   # same ownership-preserving rule.
   TRANSFER_LABEL = "Transfer".freeze
-
-  # Shares an employer paid as compensation (an RSU vest), at the price they
-  # vested at. Trade::VestForm records the pay itself as income beside it.
-  VEST_LABEL = "Vest".freeze
 
   validates :qty, presence: true
   # Shares a stock plan kept back at a vest for its taxes. They never reach

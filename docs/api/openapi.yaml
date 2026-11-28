@@ -10684,8 +10684,9 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: qty or price is not a positive number, or nature is not inflow
-            or outflow
+          description: qty or price is not a positive number, nature is not inflow
+            or outflow, or the trade is a vest (a vest's qty, price, amount, date,
+            and label change only on its vest screen)
           content:
             application/json:
               schema:
@@ -10763,6 +10764,13 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: trade not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: a vest whose income or a tax is a leg of a transfer; remove
+            the transfer first
           content:
             application/json:
               schema:

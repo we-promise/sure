@@ -61,12 +61,15 @@ class VestsControllerTest < ActionDispatch::IntegrationTest
 
   test "saving the vest screen updates the shares, the income, and the taxes together" do
     vest = create_vest
+    part_ids = vest.vest_parts.pluck(:id).sort
+    tax_id = Trade::VestForm.parts_of(vest).last.first.id
 
-    patch vest_url(vest), params: { vest: vest_params(units_withheld: 40, tax_amount: 400) }
+    patch vest_url(vest), params: { vest: vest_params(units_withheld: 40, tax_amount: 400, tax_id: tax_id) }
 
     vest.reload
     assert_equal 60, vest.trade.qty
     assert_equal [ -1000, 400 ], vest.vest_parts.map(&:amount).sort
+    assert_equal part_ids, vest.vest_parts.pluck(:id).sort, "the same entries, updated in place"
   end
 
   test "deleting the vest deletes its income and taxes" do
@@ -79,12 +82,16 @@ class VestsControllerTest < ActionDispatch::IntegrationTest
 
   test "a vest whose income or tax is part of a transfer is not deleted" do
     vest = create_vest
-    Entry.any_instance.stubs(:destroy_unless_split_part_transferred!).raises(Entry::SplitPartTransferredError)
+    income = Trade::VestForm.parts_of(vest).first
+    outflow = accounts(:depository).entries.create!(name: "Pay", date: Date.current, amount: 1000, currency: "USD", entryable: Transaction.new)
+    # Transfers aren't matched to vest parts any more; this one stands for one
+    # recorded before that rule.
+    Transfer.new(inflow_transaction: income.transaction, outflow_transaction: outflow.transaction, status: "confirmed").save!(validate: false)
 
     assert_no_difference -> { @account.entries.count } do
       delete vest_url(vest)
     end
-    assert_equal I18n.t("account.entries.destroy.part_transferred"), flash[:alert]
+    assert_equal I18n.t("vests.destroy.part_transferred"), flash[:alert]
   end
 
   test "a trade that is not a vest has no vest screen" do
@@ -94,10 +101,10 @@ class VestsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
-    def vest_params(units_withheld: 30, tax_amount: 300)
+    def vest_params(units_withheld: 30, tax_amount: 300, tax_id: nil)
       {
         manual_ticker: "AAPL", date: Date.current, vested_qty: 100, units_withheld: units_withheld, price: 10,
-        tax_lines: { "0" => { name: "Federal", category_id: @federal.id, amount: tax_amount } }
+        tax_lines: { "0" => { id: tax_id, name: "Federal", category_id: @federal.id, amount: tax_amount } }
       }
     end
 

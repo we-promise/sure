@@ -1045,6 +1045,8 @@ class Family::DataImporter
         transaction.extra = transaction.extra.merge(data["extra"]) if data["extra"].is_a?(Hash)
 
         entry ||= Entry.new(entryable: transaction)
+        # The file holds the vest and its parts together, as Trade::VestForm does.
+        entry.vest_write = true
         entry.assign_attributes(
           account: account,
           date: Date.parse(data["date"].to_s),
@@ -1260,6 +1262,7 @@ class Family::DataImporter
         trade.units_withheld = (data["units_withheld"].presence&.to_d if trade.vest?)
 
         entry ||= Entry.new(entryable: trade)
+        entry.vest_write = true
         entry.assign_attributes(
           account: account,
           date: Date.parse(data["date"].to_s),
