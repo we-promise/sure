@@ -5,4 +5,5 @@ tr:
       models:
         loan:
           invalid_rate_change: Faiz oranı değişikliği satırlarında hem geçerlilik tarihi hem de oran bulunmalıdır.
+          invalid_rate_schedule_snapshot: Faiz oranı değişiklikleri kayıtlı takvimle karşılaştırılamadı. Krediyi yeniden yükleyin ve değişikliklerinizi tekrar uygulayın.
           rate_change_before_origination: Faiz oranı değişikliği, kredinin kullandırım tarihinden önce geçerli olamaz.

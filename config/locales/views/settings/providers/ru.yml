@@ -68,8 +68,8 @@ ru:
         application_id_placeholder_new: Введите ID приложения
         application_id_placeholder_update: Введите новый ID для обновления
         callback_url_instruction: Для URL обратного вызова используйте %{callback_url}.
-        client_certificate_label: Клиентский сертификат (с приватным ключом)
-        keep_client_certificate_hint: "Оставьте пустым, чтобы сохранить текущий сертификат"
+        client_certificate_label: Приватный ключ (.pem)
+        keep_client_certificate_hint: "Оставьте пустым, чтобы сохранить текущий приватный ключ"
         config_locked_message: Отключите все связанные банки перед изменением этих
           учётных данных.
         config_locked_title: Конфигурация заблокирована
@@ -88,8 +88,7 @@ ru:
         session_expired_reconnect: Сессия истекла - переподключитесь
         session_expires: 'Сессия истекает: %{date}'
         step_1_html: Перейдите на %{link} и получите ваши учётные данные разработчика.
-        step_2: Выберите вашу страну и вставьте ID приложения + клиентский сертификат
-          ниже.
+        step_2: Выберите вашу страну и вставьте ID приложения + приватный ключ ниже.
         step_3: Сохраните, затем используйте Добавить подключение, чтобы связать ваш
           банк.
         sync: Синхронизировать

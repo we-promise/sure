@@ -204,6 +204,10 @@ module Admin
 
           if @user.saved_change_to_password_digest?
             SecurityAuditLog.log_password_changed!(user: @user, request: request, actor: Current.true_user)
+            # A password set by an admin is usually account recovery, so every
+            # session the user had goes (CWE-613). The acting admin keeps
+            # theirs when changing their own password here.
+            @user.sessions.where.not(id: Current.session.id).destroy_all
           end
 
           true
