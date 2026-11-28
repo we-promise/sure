@@ -1,0 +1,10 @@
+---
+pt-BR:
+  activerecord:
+    models:
+      rule_group:
+        one: Grupo
+        other: Grupos
+    attributes:
+      rule_group:
+        name: Nome
