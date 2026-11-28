@@ -16,6 +16,7 @@ class Provider::PlaidAdapter < Provider::Base
 
   # Register this adapter with the factory for ALL PlaidAccount instances
   Provider::Factory.register("PlaidAccount", self)
+  declares_connection key: "plaid"
 
   def self.connection_item_class
     PlaidItem

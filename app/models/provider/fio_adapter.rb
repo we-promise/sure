@@ -5,6 +5,7 @@ class Provider::FioAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("FioAccount", self)
+  declares_connection key: "fio"
 
   # Fio's statement header carries no account type, so the user picks one during setup.
   # Current and savings accounts are Depository; a token issued for a mortgage, loan or

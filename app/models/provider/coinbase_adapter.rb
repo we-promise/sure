@@ -4,6 +4,7 @@ class Provider::CoinbaseAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("CoinbaseAccount", self)
+  declares_connection key: "coinbase"
 
   # Define which account types this provider supports
   def self.supported_account_types

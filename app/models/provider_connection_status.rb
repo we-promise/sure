@@ -1,36 +1,7 @@
 # frozen_string_literal: true
 
 class ProviderConnectionStatus
-  PROVIDERS = [
-    { key: "financekit", type: "FinancekitItem", association: :financekit_items, accounts: :financekit_account_lineages },
-    { key: "akahu", type: "AkahuItem", association: :akahu_items, accounts: :akahu_accounts },
-    { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },
-    { key: "monobank", type: "MonobankItem", association: :monobank_items, accounts: :monobank_accounts },
-    { key: "fio", type: "FioItem", association: :fio_items, accounts: :fio_accounts },
-    { key: "plaid", type: "PlaidItem", association: :plaid_items, accounts: :plaid_accounts },
-    { key: "simplefin", type: "SimplefinItem", association: :simplefin_items, accounts: :simplefin_accounts },
-    { key: "lunchflow", type: "LunchflowItem", association: :lunchflow_items, accounts: :lunchflow_accounts },
-    { key: "enable_banking", type: "EnableBankingItem", association: :enable_banking_items, accounts: :enable_banking_accounts },
-    { key: "truelayer", type: "TruelayerItem", association: :truelayer_items, accounts: :truelayer_accounts },
-    { key: "coinbase", type: "CoinbaseItem", association: :coinbase_items, accounts: :coinbase_accounts },
-    { key: "binance", type: "BinanceItem", association: :binance_items, accounts: :binance_accounts },
-    { key: "kraken", type: "KrakenItem", association: :kraken_items, accounts: :kraken_accounts },
-    { key: "coinspot", type: "CoinspotItem", association: :coinspot_items, accounts: :coinspot_accounts },
-    { key: "onchain_wallet", type: "OnchainWalletItem", association: :onchain_wallet_items, accounts: :onchain_wallet_accounts },
-    { key: "coinstats", type: "CoinstatsItem", association: :coinstats_items, accounts: :coinstats_accounts },
-    { key: "snaptrade", type: "SnaptradeItem", association: :snaptrade_items, accounts: :snaptrade_accounts, linked_accounts: :linked_accounts },
-    { key: "ibkr", type: "IbkrItem", association: :ibkr_items, accounts: :ibkr_accounts },
-    { key: "mercury", type: "MercuryItem", association: :mercury_items, accounts: :mercury_accounts },
-    { key: "brex", type: "BrexItem", association: :brex_items, accounts: :brex_accounts },
-    { key: "sophtron", type: "SophtronItem", association: :sophtron_items, accounts: :sophtron_accounts },
-    { key: "indexa_capital", type: "IndexaCapitalItem", association: :indexa_capital_items, accounts: :indexa_capital_accounts },
-    { key: "trading212", type: "Trading212Item", association: :trading212_items, accounts: :trading212_accounts },
-    { key: "trade_republic", type: "TradeRepublicItem", association: :trade_republic_items, accounts: :trade_republic_accounts },
-    { key: "questrade", type: "QuestradeItem", association: :questrade_items, accounts: :questrade_accounts },
-    { key: "sharesight", type: "SharesightItem", association: :sharesight_items, accounts: :sharesight_accounts },
-    { key: "redbark", type: "RedbarkItem", association: :redbark_items, accounts: :redbark_accounts },
-    { key: "wise", type: "WiseItem", association: :wise_items, accounts: :wise_accounts }
-  ].freeze
+  PROVIDERS = Provider::Factory.connection_declarations.freeze
 
   class << self
     def for_family(family)

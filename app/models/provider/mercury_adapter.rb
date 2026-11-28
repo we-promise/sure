@@ -4,6 +4,7 @@ class Provider::MercuryAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("MercuryAccount", self)
+  declares_connection key: "mercury"
 
   # Define which account types this provider supports
   # Mercury is primarily a business banking provider with checking/savings accounts

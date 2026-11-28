@@ -4,6 +4,7 @@ class Provider::<%= class_name %>Adapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("<%= class_name %>Account", self)
+  declares_connection key: "<%= file_name %>"
 
   # Define which account types this provider supports
   def self.supported_account_types

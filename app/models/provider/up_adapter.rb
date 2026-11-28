@@ -3,6 +3,7 @@ class Provider::UpAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("UpAccount", self)
+  declares_connection key: "up"
 
   # Sure accountable types that can be created from Up accounts.
   def self.supported_account_types
