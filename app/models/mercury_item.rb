@@ -1,5 +1,5 @@
-class MercuryItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
+class MercuryItem < ProviderItem
+  include Provided, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 

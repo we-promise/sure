@@ -1,4 +1,4 @@
-class MercuryAccount < ApplicationRecord
+class MercuryAccount < ProviderAccount
   include CurrencyNormalizable, Encryptable
 
   # Encrypt raw payloads if ActiveRecord encryption is configured
@@ -9,18 +9,10 @@ class MercuryAccount < ApplicationRecord
 
   belongs_to :mercury_item
 
-  # New association through account_providers
-  has_one :account_provider, as: :provider, dependent: :destroy
-  has_one :account, through: :account_provider, source: :account
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
   validates :account_id, uniqueness: { scope: :mercury_item_id }
-
-  # Helper to get account using account_providers system
-  def current_account
-    account
-  end
 
   def upsert_mercury_snapshot!(account_snapshot)
     # Convert to symbol keys or handle both string and symbol keys
