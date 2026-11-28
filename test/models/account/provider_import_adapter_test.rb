@@ -152,6 +152,21 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_nil broker_entry.transaction.category
   end
 
+  test "a deposit labelled as a contribution on a bank account stays a standard inflow" do
+    entry = @adapter.import_transaction(
+      external_id: "snaptrade_chequing_deposit_1",
+      amount: -1500.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Payroll deposit",
+      source: "snaptrade",
+      investment_activity_label: "Contribution"
+    )
+
+    assert_equal "standard", entry.transaction.kind
+    assert_nil entry.transaction.category
+  end
+
   test "re-importing a contribution the user turned into a plain transfer keeps that choice" do
     checking_entry = @adapter.import_transaction(
       external_id: "plaid_checking_to_broker",
@@ -615,6 +630,168 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       )
 
       assert_equal existing_merchant.id, merchant.id
+    end
+  end
+
+  test "never writes the counterparty iban onto a new provider merchant" do
+    assert_difference "ProviderMerchant.count", 1 do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "enable_banking_merchant_1",
+        name: "Landlord GmbH",
+        source: "enable_banking",
+        iban: "de89 3704 0044 0532 0130 00"
+      )
+
+      assert_instance_of ProviderMerchant, merchant
+      assert_nil merchant.reload.iban
+    end
+  end
+
+  test "never backfills the counterparty iban onto an existing provider merchant" do
+    existing_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "enable_banking_merchant_3",
+      name: "Landlord GmbH",
+      source: "enable_banking"
+    )
+
+    merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "enable_banking_merchant_3",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_equal existing_merchant.id, merchant.id
+    assert_nil existing_merchant.reload.iban
+  end
+
+  test "falls back to a family merchant matched by iban when no provider merchant matches the name" do
+    family_merchant = @family.merchants.create!(
+      name: "My Landlord",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_no_difference "ProviderMerchant.count" do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "enable_banking_merchant_new_name",
+        name: "Some Varying Provider Name",
+        source: "enable_banking",
+        iban: "de89 3704 0044 0532 0130 00"
+      )
+
+      assert_equal family_merchant.id, merchant.id
+    end
+  end
+
+  test "a family merchant matched by iban wins over a shared provider merchant with the same name" do
+    # The IBAN the family entered is its own statement; a same-named
+    # ProviderMerchant that any family may have imported must not beat it.
+    family_merchant = @family.merchants.create!(
+      name: "My Landlord",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+    ProviderMerchant.create!(
+      provider_merchant_id: "enable_banking_merchant_landlord",
+      name: "Landlord GmbH",
+      source: "enable_banking"
+    )
+
+    merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "enable_banking_merchant_landlord",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_equal family_merchant.id, merchant.id
+  end
+
+  test "an iban entered on two family merchants is resolved by the name" do
+    # Two people paying from one joint account share the IBAN; the family
+    # enters it on both merchants and the provider name picks between them.
+    @family.merchants.create!(name: "Alice Example", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    bob = @family.merchants.create!(name: "Bob Example", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "enable_banking_merchant_bob",
+      name: "BOB EXAMPLE",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_equal bob.id, merchant.id
+  end
+
+  test "does not match an iban the family entered on two merchants when the name matches neither" do
+    @family.merchants.create!(name: "Alice Example", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @family.merchants.create!(name: "Bob Example", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "enable_banking_merchant_joint",
+      name: "Joint Account",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_instance_of ProviderMerchant, merchant
+  end
+
+  test "does not match another family's merchant by iban" do
+    other_family_merchant = families(:empty).merchants.create!(
+      name: "Other Family Landlord",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "enable_banking_merchant_new_name",
+      name: "Some Provider Name",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_not_equal other_family_merchant.id, merchant.id
+    assert_instance_of ProviderMerchant, merchant
+    assert_nil merchant.iban
+  end
+
+  test "does not match a shared provider merchant by iban" do
+    # A shared ProviderMerchant may carry an iban that came from another
+    # family's data; it must not attract this family's transactions.
+    shared_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "old_hash",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_difference "ProviderMerchant.count", 1 do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "different_hash_because_remittance_text_changed",
+        name: "Different Remittance Text",
+        source: "enable_banking",
+        iban: "de89 3704 0044 0532 0130 00"
+      )
+
+      assert_not_equal shared_merchant.id, merchant.id
+    end
+  end
+
+  test "falls back to name-based lookup when no iban is provided" do
+    existing_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "enable_banking_merchant_2",
+      name: "Landlord GmbH",
+      source: "enable_banking"
+    )
+
+    assert_no_difference "ProviderMerchant.count" do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "enable_banking_merchant_2",
+        name: "Landlord GmbH",
+        source: "enable_banking"
+      )
+
+      assert_equal existing_merchant.id, merchant.id
+      assert_nil merchant.iban
     end
   end
 

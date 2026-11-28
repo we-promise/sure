@@ -1,6 +1,6 @@
 <%= render DS::Dialog.new do |dialog| %>
   <% dialog.with_header(title: t(".title")) %>
   <% dialog.with_body do %>
-    <%= render "form", family_merchant: @family_merchant %>
+    <%= render "form", family_merchant: @family_merchant, selected_color: @selected_color || @family_merchant.color %>
   <% end %>
 <% end %>

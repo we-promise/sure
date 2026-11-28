@@ -22,6 +22,32 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     assert entry.user_modified?, "converted transaction's entry must be flagged so provider sync won't revert it"
   end
 
+  test "convert_to_family_merchant_for does not inherit the shared merchant's iban" do
+    # A ProviderMerchant is shared across families, so an iban on it may come
+    # from another family's data and must not be copied into this family.
+    @provider_merchant.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    family_merchant = @provider_merchant.convert_to_family_merchant_for(@family)
+
+    assert_nil family_merchant.iban
+  end
+
+  test "convert_to_family_merchant_for uses the submitted iban override" do
+    @provider_merchant.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    family_merchant = @provider_merchant.convert_to_family_merchant_for(@family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    assert_equal "AT611904300234573201", family_merchant.iban # pipelock:ignore IBAN
+  end
+
+  test "convert_to_family_merchant_for preserves an explicitly cleared iban" do
+    @provider_merchant.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    family_merchant = @provider_merchant.convert_to_family_merchant_for(@family, iban: "")
+
+    assert_nil family_merchant.iban
+  end
+
   # Regression: issue #1977. Unlinking a synced merchant nulls merchant_id;
   # without the flag the next sync re-links it.
   test "unlink_from_family flags affected transactions as user_modified" do

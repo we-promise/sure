@@ -21,6 +21,10 @@ fr:
       name_placeholder: Nom du marchand
       remove_logo_label: Supprimer le logo téléversé
       website_hint: Saisissez le site web du marchand pour afficher automatiquement son logo
+      iban_placeholder: "IBAN (facultatif)"
+      iban_set_placeholder: "%{masked} — IBAN enregistré, saisissez une nouvelle valeur pour le remplacer"
+      iban_hint: "Les transactions importées depuis ce numéro de compte sont attribuées à ce marchand. Si plusieurs marchands partagent ce numéro, le nom décide"
+      iban_remove_label: "Supprimer l'IBAN"
       website_placeholder: 'Site web (ex. : starbucks.com)'
     index:
       empty: Aucun marchand pour l'instant

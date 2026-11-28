@@ -1,0 +1,44 @@
+---
+pt-BR:
+  settings:
+    llm_usages:
+      show:
+        page_title: Uso e custos de LLM
+        subtitle: Acompanhe seu uso de IA e os custos estimados
+        start_date: Data inicial
+        end_date: Data final
+        filter: Filtrar
+        total_calls: Total de chamadas
+        requests_in_calls:
+          one: "%{count} requisição, incluindo novas tentativas"
+          other: "%{count} requisições, incluindo novas tentativas"
+        total_tokens: Total de tokens
+        prompt: entrada
+        completion: saída
+        total_cost: Custo total
+        avg_cost_per_call: Custo médio/chamada
+        based_on_calls: Com base em %{with_cost} de %{total} chamadas com dados de custo
+        cost_by_operation: Custo por operação
+        cost_by_model: Custo por modelo
+        recent_usage: Uso recente
+        recent_usage_scope: Cada chamada mostra todas as suas requisições, mesmo as que estão fora das datas selecionadas, então o total dela pode ser diferente dos totais acima, que contam apenas as requisições do período.
+        col_date: Data
+        col_operation: Operação
+        col_model: Modelo
+        col_tokens: Tokens
+        col_cost: Custo
+        failed: Falhou
+        cancelled: Cancelada
+        no_usage_data: Nenhum dado de uso encontrado para o período selecionado
+        cost_estimates_title: Sobre as estimativas de custo
+        cost_estimates_description: Os custos são estimados com base nos preços publicados pelos provedores, verificados pela última vez em %{date}. Os custos reais podem variar. Os preços são por 1 milhão de tokens e variam conforme o modelo. Modelos personalizados ou auto-hospedados aparecerão como "N/A" e não são incluídos nos custos totais.
+      requests:
+        summary:
+          one: "%{count} requisição"
+          other: "%{count} requisições"
+        request: Requisição %{number}
+        tokens: "%{prompt}/%{completion} tokens"
+        status:
+          succeeded: Concluída
+          failed: Falhou
+          cancelled: Cancelada

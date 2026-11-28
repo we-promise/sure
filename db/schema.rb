@@ -703,7 +703,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_043917) do
     t.date "date"
     t.uuid "entryable_id"
     t.string "entryable_type"
-    t.boolean "excluded", default: false
+    t.boolean "excluded", default: false, null: false
     t.string "external_id"
     t.string "idempotency_key"
     t.uuid "import_id"
@@ -1682,6 +1682,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_043917) do
     t.string "color"
     t.datetime "created_at", null: false
     t.uuid "family_id"
+    t.string "iban"
     t.string "logo_url"
     t.string "name", null: false
     t.string "provider_merchant_id"
