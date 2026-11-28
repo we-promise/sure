@@ -178,6 +178,8 @@ class Trade::VestFormTest < ActiveSupport::TestCase
     assert_not tax.update(date: 1.day.ago.to_date)
     assert_not income.update(entryable_attributes: { id: income.entryable_id, investment_activity_label: "Other" })
     assert_not vest.update(entryable_attributes: { id: vest.entryable_id, investment_activity_label: "Buy" })
+    assert_not vest.trade.reload.update(fee: 5)
+    assert_not vest.trade.reload.update(security: securities(:msft))
     assert income.reload.update(notes: "from the paystub"), "notes and other details stay editable"
   end
 
@@ -228,7 +230,11 @@ class Trade::VestFormTest < ActiveSupport::TestCase
       "new lines without ids are fine"
   end
 
-  test "an ordinary trade can't be relabelled as a vest" do
+  test "an ordinary trade can't be relabelled as a vest, and a vest is only created on its screen" do
+    bare_vest = @account.entries.new(name: "Vest", date: Date.current, amount: 100, currency: "USD",
+                                     entryable: Trade.new(security: securities(:aapl), qty: 1, price: 100, currency: "USD", investment_activity_label: Trade::VEST_LABEL))
+    assert_not bare_vest.save, "a vest with no income or taxes"
+
     sell = @account.entries.create!(name: "Sell", date: Date.current, amount: -100, currency: "USD",
                                     entryable: Trade.new(security: securities(:aapl), qty: -1, price: 100, currency: "USD", investment_activity_label: "Sell"))
 

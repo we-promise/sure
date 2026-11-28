@@ -148,6 +148,17 @@ class TransactionsTradeConversionTest < ActionDispatch::IntegrationTest
     assert_not tax.reload.excluded?
   end
 
+  test "a transaction can't be converted into a vest" do
+    entry = create_transaction(account: accounts(:investment), amount: 100)
+
+    assert_no_difference "Trade.count" do
+      post create_trade_from_transaction_transaction_url(entry.transaction), params: {
+        security_id: securities(:aapl).id, qty: 1, price: 100, investment_activity_label: Trade::VEST_LABEL
+      }
+    end
+    assert_not entry.reload.excluded?
+  end
+
   test "invalid trade quantities leave the original transaction unchanged" do
     assert_no_difference "Trade.count" do
       post create_trade_from_transaction_transaction_url(@entry.transaction), params: {

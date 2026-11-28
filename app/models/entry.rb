@@ -95,7 +95,7 @@ class Entry < ApplicationRecord
 
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
-  validate :vest_written_together, on: :update
+  validate :vest_written_together
 
   # new_record? && import_id.blank? keeps this to genuinely new manual
   # entries -- excludes CSV imports (which have their own, separately
@@ -1178,7 +1178,7 @@ class Entry < ApplicationRecord
       return unless vest_entry_id_was.present? || (trade? && entryable.vest?)
       return if (changed & VEST_ENTRY_ATTRIBUTES).none?
 
-      errors.add(:base, "This entry is part of a vest. Edit it from the vest instead.")
+      errors.add(:base, new_record? ? "A vest is recorded on its own screen." : "This entry is part of a vest. Edit it from the vest instead.")
     end
 
     def split_child_date_matches_parent

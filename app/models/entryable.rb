@@ -9,7 +9,7 @@ module Entryable
 
   # A vest's trade columns and its parts' labels, which Trade::VestForm
   # writes with the vest (Entry#vest_write).
-  VEST_ATTRIBUTES = %w[qty price units_withheld investment_activity_label kind].freeze
+  VEST_ATTRIBUTES = %w[qty price fee currency security_id units_withheld investment_activity_label kind].freeze
 
   included do
     include Enrichable
