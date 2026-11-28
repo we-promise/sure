@@ -1,0 +1,9 @@
+---
+pt-BR:
+  sure_import:
+    preflight:
+      missing_reference: "Linha %{line}: %{type} referencia %{field} inexistente %{value}."
+      skipped_missing_reference: "Linha %{line}: %{type} referencia %{field} inexistente %{value}. Será ignorado durante a importação."
+      skipped_missing_merchant_reference: Linha %{line} %{type} faz referência a um estabelecimento (%{value}) que não está incluído nesta exportação. Isso pode acontecer com exportações feitas antes de os estabelecimentos atribuídos pelos provedores serem incluídos nas exportações do Sure. O registro será importado sem esse estabelecimento.
+      skipped_unnamed_recurring: Linha %{line} %{type} não tem nome e faz referência a um estabelecimento (%{value}) que não está incluído nesta exportação. Ela será ignorada na importação.
+      provider_merchant_diff: "Linha %{line}: o estabelecimento do provedor %{name} já existe com %{fields} diferente(s). O estabelecimento existente será mantido."

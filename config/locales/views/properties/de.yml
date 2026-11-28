@@ -50,6 +50,10 @@ de:
       avm_town_label: Stadt oder Gemeinde
       avm_postcode_label: Postleitzahl
       next: Weiter
+      avm_descriptions:
+        terrascoutx: "Gib der Immobilie einen Namen und trag ihre Adresse ein. %{provider} sucht die Objektdaten und den vom County festgesetzten Steuerwert aus der aktuellen Steuerliste heraus. Das ist keine aktuelle Marktschätzung."
+      avm_roll_value_notes:
+        terrascoutx: "%{provider} liefert den vom County festgesetzten Steuerwert aus der aktuellen Steuerliste. Das ist keine aktuelle Marktschätzung und kann deshalb vom möglichen Verkaufspreis abweichen."
     overview:
       living_area: Wohnfläche
       market_value: Marktwert
@@ -61,6 +65,7 @@ de:
       address: Adresse
       overview: Übersicht
       value: Wert
+      aria_label: "Immobiliendetails"
     address:
       address_line1_label: Adresszeile 1
       address_line1_placeholder: Hauptstraße 123
@@ -78,12 +83,14 @@ de:
       realie: Realie
       chimnie: Chimnie
       rentcast: RentCast
+      terrascoutx: "TerraScoutX"
     balances:
       market_value_label: Geschätzter Marktwert
       market_value_tooltip: Der geschätzte Marktwert deiner Immobilie. Anhaltspunkte liefern Portale wie ImmoScout24 oder Immowelt; ein exakter Wert ist das nie.
       next: Weiter
       save: Speichern
       title: Immobilie manuell erfassen
+      purchase_date_label: "Kaufdatum"
     overview_fields:
       area_label: Fläche (optional)
       area_placeholder: '120'
@@ -96,6 +103,11 @@ de:
       subtype_prompt: Typ wählen
       year_built_label: Baujahr (optional)
       year_built_placeholder: '1990'
+      notes_label: "Notizen"
+      notes_placeholder: "Grundbuch- oder Flurstücksnummer, Kaufvertrag, Notar usw."
+      cost_tag_label: "Kosten-Tag (optional)"
+      cost_tag_prompt: "Keiner"
+      cost_tag_hint: "Transaktionen mit diesem Tag, etwa Notarkosten und Steuern, zählen zu den Anschaffungskosten der Immobilie."
     subtypes:
       agri_land:
         long: Landwirtschaftliche Fläche
@@ -125,6 +137,17 @@ de:
         trend: Entwicklung
         unknown: Unbekannt
         year_built: Baujahr
+        trend_in_currency: "Entwicklung in %{currency}"
+        rate_unavailable: "Wechselkurs nicht verfügbar"
+        purchase_costs: "Kaufnebenkosten"
+        purchase_costs_in_currency: "Kaufnebenkosten in %{currency}"
+        cost_transactions:
+          one: "1 Transaktion mit dem Tag %{tag}"
+          other: "%{count} Transaktionen mit dem Tag %{tag}"
+        cost_basis: "Anschaffungskosten"
+        cost_basis_in_currency: "Anschaffungskosten in %{currency}"
+        gain_after_costs: "Gewinn nach Kosten"
+        gain_after_costs_in_currency: "Gewinn nach Kosten in %{currency}"
     refresh_valuation:
       queued: Die Bewertung wird aktualisiert. Der neue Wert erscheint in Kürze.
       not_linked: Diese Immobilie ist mit keinem Bewertungsanbieter verknüpft.
@@ -133,3 +156,6 @@ de:
       linked: "Mit %{provider} verknüpft und den Wert der Immobilie aktualisiert."
       link_failed: "%{provider} konnte diese Immobilie nicht bewerten, daher wurde sie nicht verknüpft. Prüf, ob die Adresse stimmt, und versuch es dann noch einmal."
       not_linkable: Diese Immobilie lässt sich nicht mit diesem Anbieter verknüpfen. Prüf, ob ihre Adresse vollständig ist und in einem unterstützten Land liegt und ob die Kontowährung zum Anbieter passt.
+    update_balances:
+      invalid_currency: "Wähl eine Währung aus der Liste."
+      invalid_purchase_date: "Gib ein Kaufdatum ein, das weder in der Zukunft liegt noch mehr als 30 Jahre zurückliegt."

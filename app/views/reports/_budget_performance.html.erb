@@ -63,13 +63,13 @@
             <div class="flex items-center gap-4">
               <div>
                 <span class="text-subdued"><%= t("reports.budget_performance.spent") %>:</span>
-                <span class="font-medium text-primary privacy-sensitive">
+                <span class="font-medium text-primary whitespace-nowrap privacy-sensitive">
                   <%= Money.new(budget_item[:actual], Current.family.currency).format %>
                 </span>
               </div>
               <div>
                 <span class="text-subdued"><%= t("reports.budget_performance.budgeted") %>:</span>
-                <span class="font-medium text-secondary privacy-sensitive">
+                <span class="font-medium text-secondary whitespace-nowrap privacy-sensitive">
                   <%= Money.new(budget_item[:budgeted], Current.family.currency).format %>
                 </span>
               </div>
@@ -78,12 +78,12 @@
             <div>
               <% if budget_item[:remaining] >= 0 %>
                 <span class="text-subdued"><%= t("reports.budget_performance.remaining") %>:</span>
-                <span class="font-medium text-success privacy-sensitive">
+                <span class="font-medium text-success whitespace-nowrap privacy-sensitive">
                   <%= Money.new(budget_item[:remaining], Current.family.currency).format %>
                 </span>
               <% else %>
                 <span class="text-subdued"><%= t("reports.budget_performance.over_by") %>:</span>
-                <span class="font-medium text-destructive privacy-sensitive">
+                <span class="font-medium text-destructive whitespace-nowrap privacy-sensitive">
                   <%= Money.new(budget_item[:remaining].abs, Current.family.currency).format %>
                 </span>
               <% end %>
@@ -96,8 +96,9 @@
             <% if days_remaining > 0 %>
               <div class="mt-3 pt-3 border-t border-tertiary">
                 <p class="text-xs text-subdued">
+                  <%# Non-breaking spaces keep a grouped amount like "1 234 kr" whole mid-sentence. %>
                   <%= t("reports.budget_performance.suggested_daily",
-                        amount: Money.new((budget_item[:remaining] / days_remaining), Current.family.currency).format,
+                        amount: Money.new((budget_item[:remaining] / days_remaining), Current.family.currency).format.gsub(" ", " "),
                         days: days_remaining) %>
                 </p>
               </div>
