@@ -1034,7 +1034,8 @@ class Family::DataImporter
         transaction.assign_attributes(
           category_id: new_category_id,
           merchant_id: new_merchant_id,
-          kind: data["kind"] || "standard"
+          kind: data["kind"] || "standard",
+          investment_activity_label: data["investment_activity_label"].presence_in(Transaction::ACTIVITY_LABELS)
         )
         # Source-system metadata, such as the ID that lets a later import from
         # that system recognise the transaction, kept out of external_id so
@@ -1246,11 +1247,14 @@ class Family::DataImporter
         created = trade.blank?
 
         trade ||= Trade.new
+        label = data["investment_activity_label"].presence_in(Trade::ACTIVITY_LABELS)
         trade.assign_attributes(
           security: security,
           qty: data["qty"].to_d,
           price: data["price"].to_d,
-          currency: data["currency"] || account.currency
+          currency: data["currency"] || account.currency,
+          investment_activity_label: label,
+          units_withheld: (data["units_withheld"].presence&.to_d if label == Trade::VEST_LABEL)
         )
 
         entry ||= Entry.new(entryable: trade)
@@ -1269,11 +1273,28 @@ class Family::DataImporter
         entry.save!
         imported[old_id] = entry
         import_lot_total_cost(entry, data["lot_total_cost"])
+        import_vest_parts(entry, data["vest_part_transaction_ids"])
         @created_entry_ids << entry.id if created
         increment_summary("Trade", created ? :created : :updated)
       end
 
       import_lot_sources(records, imported)
+    end
+
+    # A vest's income and taxes are Transactions the export writes ahead of
+    # it, in this file or an earlier chunk of the same session. Each must be
+    # in the vest's account.
+    def import_vest_parts(vest, transaction_ids)
+      return if transaction_ids.blank?
+      return invalid_record!("Trade", "vest_part_transaction_ids", transaction_ids) unless vest.trade.vest?
+
+      Array(transaction_ids).each do |old_id|
+        new_id = mapped_id(:transactions, old_id, record_type: "Trade", required: false)
+        part = vest.account.entries.find_by(entryable_type: "Transaction", entryable_id: new_id) if new_id
+        next invalid_record!("Trade", "vest_part_transaction_ids", old_id) unless part
+
+        part.update!(vest_entry: vest)
+      end
     end
 
     # The lot is rebuilt from its trade on the next sync, which keeps a cost

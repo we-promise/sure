@@ -1767,6 +1767,27 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 600, HoldingLot.find_by!(source_entry: trades.fetch(60)).manual_total_cost
   end
 
+  test "a vest round trip keeps its income and taxes linked, its withheld shares, and every label" do
+    ndjson = vest_export
+
+    [ ndjson, ndjson.split("\n") ].each do |file|
+      family = Family.create!(name: "Vest Target", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+      if file.is_a?(Array)
+        session = family.import_sessions.create!(expected_chunks: file.size)
+        file.each { |line| Family::DataImporter.new(family, line, import_session: session).import! }
+      else
+        Family::DataImporter.new(family, file).import!
+      end
+
+      vest = family.entries.find_by!(entryable_type: "Trade")
+      assert_equal Trade::VEST_LABEL, vest.trade.investment_activity_label
+      assert_equal 30, vest.trade.units_withheld
+      income, taxes = Trade::VestForm.parts_of(vest)
+      assert_equal(-1000, income.amount)
+      assert_equal [ 300 ], taxes.map(&:amount)
+    end
+  end
+
   # An import stamps entries in file order, so the file's order of a day's
   # trades becomes the order they replay in.
   test "a fifo round trip replays a day's trades in the order they were entered" do
@@ -4025,6 +4046,18 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       Holding::Materializer.new(account.reload, strategy: :forward).materialize_holdings
       HoldingLot.find_by!(source_entry: first_buy).set_manual_total_cost!(600)
       account.update!(cost_basis_method: switch_to) if switch_to
+
+      ndjson = nil
+      Zip::File.open_buffer(Family::DataExporter.new(source).generate_export) { |zip| ndjson = zip.read("all.ndjson") }
+      ndjson
+    end
+
+    def vest_export
+      source = Family.create!(name: "Vest Source", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+      account = source.accounts.create!(name: "Vest Round Trip", accountable: Investment.new, balance: 0, cash_balance: 0, currency: "USD")
+      form = Trade::VestForm.new(account: account, date: 2.days.ago.to_date, manual_ticker: "VRT#{SecureRandom.hex(3).upcase}",
+                                 qty: 70, units_withheld: 30, price: 10)
+      assert form.save, form.errors.full_messages.to_sentence
 
       ndjson = nil
       Zip::File.open_buffer(Family::DataExporter.new(source).generate_export) { |zip| ndjson = zip.read("all.ndjson") }
