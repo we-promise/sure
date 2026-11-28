@@ -10,3 +10,9 @@ nb:
         no_categories: Ingen kategorier funnet
         recent: Nylige
         search_placeholder: Søk
+        assign_error: "Kategorien ble opprettet, men kunne ikke tildeles. Velg Opprett igjen for å prøve på nytt."
+        back: "Tilbake"
+        choose_parent: "Opprett «%{name}» under:"
+        create: "Opprett «%{name}»"
+        create_as_subcategory: "Legg til som underkategori …"
+        create_error: "Kunne ikke opprette kategorien. Prøv igjen."

@@ -1,14 +1,36 @@
 ---
 pt-BR:
+  concerns:
+    self_hostable:
+      redis_configured: O Redis agora está configurado corretamente! Você já pode configurar sua aplicação Sure.
   shared:
+    preview: Prévia
+    exchange_rate_notes:
+      missing:
+        one: Ainda não há taxa de câmbio de %{currencies} para %{currency} salva, então alguns totais podem deixar de fora valores em %{currencies}.
+        other: Ainda não há taxas de câmbio de %{currencies} para %{currency} salvas, então alguns totais podem deixar de fora valores nessas moedas.
+      stale:
+        one: "A taxa de câmbio mais recente para %{currency} está desatualizada: %{rates}. Os totais de hoje a utilizam."
+        other: "As taxas de câmbio mais recentes para %{currency} estão desatualizadas: %{rates}. Os totais de hoje as utilizam."
+      stale_rate: "%{from} de %{date}"
     dot_separator: "·"
+    sync_toast:
+      message: Novos dados disponíveis
+      refresh: Atualizar
     confirm_modal:
       accept: Confirmar
       body_html: "<p>Você não poderá desfazer esta decisão</p>"
       cancel: Cancelar
       title: Tem certeza?
     money_field:
+      above_max: Insira um valor de no máximo %{max}.
+      below_min: Insira um valor de pelo menos %{min}.
+      invalid_amount: Insira um valor ou uma expressão válida.
       label: Valor
+      operator_add: Somar
+      operator_subtract: Subtrair
+      operator_multiply: Multiplicar
+      operator_divide: Dividir
     exchange_rate_tabs:
       calculate_rate_tab: Calcular taxa de câmbio
       convert_tab: Converter com taxa de câmbio
@@ -17,6 +39,16 @@ pt-BR:
       exchange_rate_help: Escolha como inserir o valor.
     syncing_notice:
       syncing: Sincronizando dados das contas...
+    require_admin: Apenas administradores podem realizar esta ação
+    require_non_guest: Convidados não podem realizar esta ação
+    require_connector_owner: Você só pode gerenciar as conexões que você adicionou
+    custom_confirm:
+      default_title: Tem certeza?
+      default_body: Esta ação não pode ser desfeita.
+      default_btn_text: Confirmar
+      resource_deletion_title: "Excluir: %{resource}?"
+      resource_deletion_body: Tem certeza de que deseja excluir este item (%{resource})? Esta ação não pode ser desfeita.
+      resource_deletion_btn_text: "Excluir: %{resource}"
     family_moniker:
       group_plural: Grupos
       group_singular: Grupo
@@ -24,3 +56,18 @@ pt-BR:
       singular: Família
     trend_change:
       no_change: "sem alteração"
+    cancel: Cancelar
+    transaction_tabs:
+      expense: Despesa
+      income: Receita
+      transfer: Transferência
+    sidekiq_health_banner:
+      title: Alguns dados podem estar desatualizados
+      body: Os jobs em segundo plano não estão sendo processados, por isso saldos, patrimônio líquido e sincronizações de contas podem estar desatualizados ou ausentes.
+      cta: Ver saúde do sistema
+      reasons:
+        redis_unreachable: A aplicação não consegue acessar o Redis. Verifique seu REDIS_URL e se o Redis está em execução.
+        no_worker_processes: Nenhum processo worker do Sidekiq está conectado. Inicie o contêiner do worker ou a unidade do systemd.
+        stale_heartbeat: O worker do Sidekiq não envia um sinal de atividade (heartbeat) há algum tempo. Ele pode estar travado ou ter falhado.
+        ai_queues_not_polled: Nenhum worker está processando as filas de IA (chat, detecção de estabelecimentos, categorização). Verifique se o worker carrega o config/sidekiq.yml.
+        queue_backed_up: O job mais antigo na fila está esperando além do tempo máximo de latência. O worker está ativo, mas não está dando conta da fila.

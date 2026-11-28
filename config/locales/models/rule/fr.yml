@@ -1,6 +1,10 @@
 ---
 fr:
   activerecord:
+    attributes:
+      rule:
+        new_rule_group_name: Nouveau groupe
+        rule_group: Groupe
     errors:
       models:
         rule:
@@ -32,5 +36,10 @@ fr:
               regex_too_complex: est trop complexe pour être exécutée en toute sécurité
               regex_too_long: est trop longue (%{count} caractères maximum)
   rule:
+    actions:
+      set_transaction_merchant:
+        not_accessible: Marchand d'un compte auquel vous n'avez pas accès
+        unassigned: "%{name} (n'est plus attribué)"
+        unavailable: Marchand plus disponible
     conditions:
       unsupported_label: Non pris en charge (%{type})
