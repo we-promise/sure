@@ -13,5 +13,64 @@ nb:
       expiration_date: Utløpsdato
       minimum_payment: Minimumsbetaling
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automatisk
+      simplefin_balance_sign_credit: Tilgodehavende (banken skylder deg)
+      simplefin_balance_sign_debt: Gjeld (du skylder banken)
+      simplefin_balance_sign_description: Bruk en overstyring bare når SimpleFIN rapporterer et tvetydig fortegn. Automatisk fortsetter å bruke transaksjonshistorikken og saldoen fra leverandøren.
+      simplefin_balance_sign_label: Betydning av SimpleFIN-saldo
+      treat_balance_as_available_credit_description: Slå på hvis banken din rapporterer saldoen på dette kortet som gjenværende tilgjengelig kreditt i stedet for skyldig beløp. Gjelden beregnes da ut fra kredittgrensen banken din rapporterer, eller fra feltet Tilgjengelig kreditt hvis banken ikke oppgir en.
+      treat_balance_as_available_credit_label: Saldoen er tilgjengelig kreditt
+      due_day: "Forfallsdag for betaling"
+      statement_close_day: "Kontoutskriften avsluttes"
+      statement_cycle_description: "Dagen i måneden kontoutskriften avsluttes, og dagen betalingen forfaller. Når disse er satt, viser Oversikt-fanen hva forrige kontoutskrift kom på, og hva som bygger seg opp mot den neste. Et tilkoblet kort fyller inn dette automatisk og beholder det du har satt manuelt."
+      sophtron_balance_sign_auto: "Automatisk"
+      sophtron_balance_sign_credit: "Tilgodehavende (banken skylder deg)"
+      sophtron_balance_sign_debt: "Gjeld (du skylder banken)"
+      sophtron_balance_sign_description: "Bruk en overstyring bare når Sophtron rapporterer et tvetydig fortegn. Automatisk fortsetter å snu fortegnet på saldoer og transaksjoner for kredittkort. En overstyring retter også fortegnene på transaksjonene for dette kortet ved neste synkronisering."
+      sophtron_balance_sign_label: "Betydning av Sophtron-saldo"
     new:
       title: Angi kredittkortdetaljer
+    due:
+      in_days:
+        zero: "Forfaller i dag"
+        one: "Forfaller i morgen"
+        other: "Forfaller om %{count} dager"
+      overdue:
+        one: "Forfalt i går"
+        other: "%{count} dager over forfall"
+    tabs:
+      overview:
+        above_minimum: "Denne kontoutskriften kom på %{balance}, over minimumsbeløpet på %{minimum}. Betaler du bare minimumsbeløpet, blir resten stående på kortet med denne effektive renten."
+        annual_percentage_rate: "Effektiv rente"
+        apr: "Effektiv rente"
+        balance_carried_label: "Overført saldo"
+        balance_updates: "Saldooppdateringer"
+        charges: "Kjøp"
+        estimated_interest_label: "Estimert rente"
+        monthly_rate_label: "Månedlig rente"
+        per_month: "%{amount}/måned"
+        closes_on_days:
+          zero: "Kontoutskriften avsluttes %{date} (i dag)"
+          one: "Kontoutskriften avsluttes %{date} (om %{count} dag)"
+          other: "Kontoutskriften avsluttes %{date} (om %{count} dager)"
+        due_overdue_days:
+          one: "Forfall %{date} (%{count} dag over forfall)"
+          other: "Forfall %{date} (%{count} dager over forfall)"
+        due_on_days:
+          zero: "Forfaller %{date} (i dag)"
+          one: "Forfaller %{date} (om %{count} dag)"
+          other: "Forfaller %{date} (om %{count} dager)"
+        credit_toward_next: "Tilgode til neste kontoutskrift"
+        edit_card_details: "Rediger kortdetaljer"
+        payments_applied: "Innbetalinger"
+        scheduled_payment: "Planlagt betaling %{amount} den %{date}"
+        since_last_statement: "Siden forrige kontoutskrift"
+        statement_balance: "Saldo på kontoutskriften"
+        status_paid: "Betalt"
+        status_partial: "Delvis betalt"
+        multi_currency_unavailable: "Denne kontoutskriften summerer oppføringer i mer enn én valuta, og de kan ikke summeres her uten en kurs for hver av dem. Saldoene står tomme i stedet for å bli gjettet."
+        no_cycle_description: "Angi dagen kontoutskriften avsluttes og dagen betalingen forfaller, så viser denne fanen hva forrige kontoutskrift kom på, og hva som bygger seg opp mot den neste. Et tilkoblet kort fyller vanligvis inn dette for deg."
+        no_cycle_title: "Ingen kontoutskriftsperiode er satt"
+        unknown: "Ukjent"
+    update:
+      sophtron_balance_sign_error: "Kunne ikke bruke Sophtron-saldobetydningen. Den forrige innstillingen ble beholdt. Prøv igjen."

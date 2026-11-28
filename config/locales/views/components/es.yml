@@ -60,6 +60,32 @@ es:
           start_principal: El saldo de capital al comienzo de este día
           start_value: El valor del activo al comienzo de este día
       chart:
+        loan:
+          actual: Saldo registrado
+          scheduled: Calendario original
+          projected: Previsión desde hoy
+          today: Hoy
+          interactive_chart: gráfico interactivo
+          no_payoff: no con la cuota actual
+          aria_description: 'Gráfico del saldo del préstamo. Saldo registrado: %{current_balance}. Liquidación prevista en el calendario original: %{scheduled_payoff_date}. Liquidación prevista según el saldo de hoy: %{projected_payoff_date}.'
+          aria_extra_payoff: 'Liquidación prevista con el pago adicional: %{date}.'
+          extra: Con pago adicional
+          aria_actual_history_starts: El historial de saldos registrados empieza el %{date}.
+          aria_interest_share: En las cuotas del primer año, alrededor del %{first}% de lo pagado son intereses; en las del último año, alrededor del %{last}%.
+          aria_interest_share_overall: En el conjunto de las cuotas, alrededor del %{share}% de lo pagado son intereses.
+          aria_composition: La información emergente de cada cuota programada la divide en %{principal} y %{interest}.
+          interest_share: Parte de intereses
+          principal_share: Parte de capital
+          projected_payoff: Liquidación prevista
+          months_saved:
+            one: "%{count} mes antes de lo previsto"
+            other: "%{count} meses antes de lo previsto"
+          on_schedule: Según lo previsto
+          interest_saved: Intereses ahorrados
+          not_converged: Con la cuota actual, este saldo no queda liquidado al vencimiento original; aún se deberían %{balloon}.
+          projection_basis: Compara el saldo registrado hoy con el saldo del calendario en la misma fecha. Un pago contabilizado antes de su fecha prevista aparece como adelantado hasta esa fecha; uno contabilizado después, como atrasado.
+          legend: Series del gráfico
+          since_start: desde el inicio del préstamo
         no_data_available: No hay datos disponibles
         title:
           balance: Saldo
@@ -68,16 +94,21 @@ es:
           estimated_property_value: Valor estimado del inmueble
           estimated_vehicle_value: Valor estimado del vehículo
           holdings_value: Valor de las posiciones
+          loan_remaining_balance: Saldo pendiente
           remaining_principal_balance: Capital pendiente
           total_account_value: Valor total de la cuenta
+          total_gains: Ganancias totales
         views:
           cash: Efectivo
+          gains: Ganancias / ROI
           holdings: Posiciones
           total_value: Valor total
         vs_available_history: vs. historial disponible
       activity_date:
         balance_tooltip: El saldo al final del día, tras todas las transacciones y ajustes
         no_balance_data: No hay datos de saldo disponibles para esta fecha
+        projected: Previsto
+        projected_balance_tooltip: 'Una estimación: saldo actual más los movimientos programados hasta esta fecha'
   ds:
     alert:
       variants:
@@ -97,6 +128,9 @@ es:
       trigger_label: Más información
     link:
       opens_in_new_tab: (se abre en una pestaña nueva)
+    icon_picker:
+      no_matching_icons: No hay iconos que coincidan
+      search_placeholder: Buscar iconos...
   provider_sync_summary:
     title: Resumen de sincronización
     last_sync: 'Última sincronización: hace %{time_ago}'
