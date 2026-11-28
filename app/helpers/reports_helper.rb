@@ -1,4 +1,39 @@
 module ReportsHelper
+  # Report links keep the report filters, the trend selection and the
+  # granularity. Without this, changing period or sort would drop them.
+  def report_view_path(**overrides)
+    base = trend_link_params.merge(
+      period_type: @period_type,
+      start_date: @start_date,
+      end_date: @end_date,
+      sort_by: params[:sort_by],
+      sort_direction: params[:sort_direction]
+    )
+
+    reports_path(base.merge(overrides).compact)
+  end
+
+  # Picker links only carry the period start; end_date would pin the end and
+  # fight the picker's own period.
+  def report_picker_view_path(**overrides)
+    base = trend_link_params.merge(period_type: @period_type, start_date: @start_date)
+
+    picker_reports_path(base.merge(overrides).compact)
+  end
+
+  # Preserve a granularity the user chose, even when it matches the range's
+  # automatic default. Without the explicit check, Year on a long range would
+  # be dropped and a later short-range link would fall back to Month.
+  def trend_granularity_param
+    @trend_granularity if %w[month year].include?(params[:trend_granularity])
+  end
+
+  def trend_link_params
+    base = { trend_category_ids: @category_selection&.selected_values.presence, **reports_filter_params }
+    base[:trend_granularity] = trend_granularity_param if trend_granularity_param.present?
+    base
+  end
+
   # Where a breakdown row links: its category's transactions in the period.
   # /transactions only lists Transaction rows, so trade-only rows (e.g. Other
   # Investments) link nowhere rather than to an empty list.

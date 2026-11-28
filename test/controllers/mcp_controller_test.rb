@@ -1,6 +1,8 @@
 require "test_helper"
 
 class McpControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   MCP_PROTOCOL_VERSION = "2025-06-18"
 
   setup do
@@ -51,43 +53,13 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "authenticates a token issued to a dynamically registered MCP client" do
-    post "/register",
-      params: {
-        client_name: "Claude",
-        redirect_uris: [ "https://claude.ai/callback" ],
-        grant_types: [ "authorization_code" ],
-        response_types: [ "code" ],
-        token_endpoint_auth_method: "none"
-      }.to_json,
-      headers: { "Content-Type" => "application/json" }
-
-    assert_response :created
-    app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
+    app = register_mcp_client
     assert_equal "read_write", app.scopes.to_s
 
-    sign_in(@user)
     verifier = SecureRandom.urlsafe_base64(64)
-    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+    code = authorize_mcp_client(app, verifier)
 
-    post "/oauth/authorize", params: {
-      client_id: app.uid,
-      redirect_uri: app.redirect_uri,
-      response_type: "code",
-      code_challenge: challenge,
-      code_challenge_method: "S256"
-    }
-
-    assert_response :redirect
-    code = Rack::Utils.parse_query(URI.parse(response.location).query)["code"]
-    assert code.present?, "Authorization response should contain a code"
-
-    post "/oauth/token", params: {
-      grant_type: "authorization_code",
-      client_id: app.uid,
-      redirect_uri: app.redirect_uri,
-      code: code,
-      code_verifier: verifier
-    }
+    post_authorization_code(app, code, code_verifier: verifier)
 
     assert_response :success
     token_response = JSON.parse(response.body)
@@ -98,6 +70,30 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     assert_mcp_initialize_response(JSON.parse(response.body)["result"])
+  end
+
+  test "refuses a dynamically registered MCP client's code exchanged with the wrong PKCE verifier" do
+    app = register_mcp_client
+    code = authorize_mcp_client(app, SecureRandom.urlsafe_base64(64))
+
+    assert_no_difference -> { Doorkeeper::AccessToken.count } do
+      post_authorization_code(app, code, code_verifier: SecureRandom.urlsafe_base64(64))
+    end
+
+    assert_response :bad_request
+    assert_equal "invalid_grant", JSON.parse(response.body)["error"]
+  end
+
+  test "refuses a dynamically registered MCP client's code exchanged without a PKCE verifier" do
+    app = register_mcp_client
+    code = authorize_mcp_client(app, SecureRandom.urlsafe_base64(64))
+
+    assert_no_difference -> { Doorkeeper::AccessToken.count } do
+      post_authorization_code(app, code)
+    end
+
+    assert_response :bad_request
+    assert_equal "invalid_request", JSON.parse(response.body)["error"]
   end
 
   test "rejects token with read-only scope" do
@@ -179,6 +175,22 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :ok
     end
+  end
+
+  test "env-var token is rejected for a deactivated user" do
+    inactive_user = users(:family_member)
+    inactive_user.update!(active: false)
+
+    with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => inactive_user.email) do # pipelock:ignore
+      Rails.logger.expects(:warn).with(regexp_matches(/MCP_USER_EMAIL/)).once
+
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :unauthorized
+    end
+  ensure
+    inactive_user&.update!(active: true)
   end
 
   test "returns 401 and warns when env-var token matches but MCP_USER_EMAIL finds no user" do
@@ -531,6 +543,22 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an external agent's document search sends nothing for a user who has AI off" do
+    use_ai_routes
+    @user.update!(ai_enabled: false)
+    @user.family.update!(vector_store_id: "vs_test123")
+    adapter = mock("vector_store_adapter")
+    adapter.expects(:search).never
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "search_family_files", arguments: { query: "tax return" } }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_equal "user_disabled", JSON.parse(JSON.parse(response.body)["result"]["content"][0]["text"])["reason"]
+    end
+  end
+
   test "tools/list includes preview tools for an opted-in user" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
 
@@ -543,6 +571,21 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
       Assistant::PREVIEW_FUNCTION_CLASSES.each do |fn_class|
         assert_includes tool_names, fn_class.name
+      end
+    end
+  end
+
+  test "tools/list omits rule write tools for a guest" do
+    with_guest_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+
+      assert_includes tool_names, "get_rules"
+      %w[create_rule update_rule apply_rule preview_rule].each do |name|
+        assert_not_includes tool_names, name
       end
     end
   end
@@ -561,6 +604,66 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       body = JSON.parse(response.body)
       assert_equal(-32602, body["error"]["code"])
       assert_includes body["error"]["message"], "list_account_statements"
+    end
+  end
+
+  test "tools/call creates a rule for an admin" do
+    with_mcp_env do
+      assert_difference "Rule.count", 1 do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "create_rule", arguments: rule_arguments }, id: 7).to_json,
+             headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      assert_nil JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "tools/call rejects create_rule for a guest" do
+    with_guest_mcp_env do
+      assert_no_difference "Rule.count" do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "create_rule", arguments: rule_arguments }, id: 7).to_json,
+             headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      assert_equal(-32602, JSON.parse(response.body)["error"]["code"])
+    end
+  end
+
+  test "tools/call rejects apply_rule for a guest" do
+    # The rule matches a transaction the guest can see, so the preview lists
+    # it and issues a token, and one in an account the guest cannot reach,
+    # whose category would change if the apply ran.
+    shared = accounts(:credit_card)
+    shared.account_shares.create!(user: family_guest, permission: "read_only")
+    hidden = accounts(:depository)
+    assert_not Account.accessible_by(family_guest).exists?(hidden.id)
+    create_transaction(account: shared, name: "Guest reach coffee")
+    hidden_entry = create_transaction(account: hidden, name: "Guest reach coffee", category: categories(:food_and_drink))
+    target = @user.family.categories.create!(name: "Guest rule target")
+
+    rule = @user.family.rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Guest reach coffee" } ],
+      actions_attributes: [ { action_type: "set_transaction_category", value: target.id } ]
+    )
+    # Preview tokens are bound to the user who previewed, so the guest needs its
+    # own. It is issued directly because MCP does not offer preview_rule to a
+    # guest.
+    token = Assistant::Function::PreviewRule.new(family_guest).call("rule_id" => rule.id)[:preview][:preview_token]
+    assert token, "a preview of a saved rule should issue a token"
+
+    with_guest_mcp_env do
+      perform_enqueued_jobs(only: RuleJob) do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "apply_rule", arguments: { rule_id: rule.id, preview_token: token } }, id: 8).to_json,
+             headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      assert_equal categories(:food_and_drink).id, hidden_entry.transaction.reload.category_id, "apply_rule recategorised a transaction the guest cannot reach"
+      assert_not rule.reload.active, "apply_rule activated the rule for a guest"
+      assert_equal(-32602, JSON.parse(response.body).dig("error", "code"))
     end
   end
 
@@ -791,6 +894,28 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools/call import_bank_statement offers and accepts only accounts the user can write to" do
+    use_ai_routes
+    @user = users(:family_member)
+    pdf_import = PdfImport.create!(family: @user.family, document_type: "bank_statement")
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "import_bank_statement", arguments: { pdf_import_id: pdf_import.id } }).to_json,
+           headers: mcp_headers(@token)
+      listed = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+      assert_equal "account_required", listed["error"]
+      assert_not_includes listed["available_accounts"].map { |a| a["id"] }, accounts(:connected).id
+
+      assert_no_difference "Import.count" do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "import_bank_statement", arguments: { pdf_import_id: pdf_import.id, account_id: accounts(:connected).id } }).to_json,
+             headers: mcp_headers(@token)
+      end
+      refused = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+      assert_equal "account_not_found", refused["error"]
+    end
+  end
+
   # -- JSON-RPC id preservation --
 
   test "preserves request id in successful response" do
@@ -821,12 +946,64 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, &block) # pipelock:ignore
     end
 
+    def with_guest_mcp_env(&block)
+      with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => family_guest.email, &block) # pipelock:ignore
+    end
+
+    def rule_arguments
+      {
+        conditions: [ { condition_type: "transaction_name", operator: "like", value: "zxq" } ],
+        actions: [ { action_type: "set_transaction_category", value: categories(:food_and_drink).id } ]
+      }
+    end
+
     def with_mcp_cache
       original_cache = Rails.cache
       Rails.cache = ActiveSupport::Cache::MemoryStore.new
       yield
     ensure
       Rails.cache = original_cache
+    end
+
+    def register_mcp_client
+      post "/register",
+        params: {
+          client_name: "Claude",
+          redirect_uris: [ "https://claude.ai/callback" ],
+          grant_types: [ "authorization_code" ],
+          response_types: [ "code" ],
+          token_endpoint_auth_method: "none"
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+
+      assert_response :created
+      Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
+    end
+
+    def authorize_mcp_client(app, verifier)
+      sign_in(@user)
+      post "/oauth/authorize", params: {
+        client_id: app.uid,
+        redirect_uri: app.redirect_uri,
+        response_type: "code",
+        code_challenge: Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false),
+        code_challenge_method: "S256"
+      }
+
+      assert_response :redirect
+      code = Rack::Utils.parse_query(URI.parse(response.location).query)["code"]
+      assert code.present?, "Authorization response should contain a code"
+      code
+    end
+
+    def post_authorization_code(app, code, code_verifier: nil)
+      post "/oauth/token", params: {
+        grant_type: "authorization_code",
+        client_id: app.uid,
+        redirect_uri: app.redirect_uri,
+        code: code,
+        code_verifier: code_verifier
+      }.compact
     end
 
     def mcp_headers(token)
