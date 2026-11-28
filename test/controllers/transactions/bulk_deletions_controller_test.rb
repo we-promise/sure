@@ -61,4 +61,16 @@ class Transactions::BulkDeletionsControllerTest < ActionDispatch::IntegrationTes
     assert_equal "1 transaction deleted", flash[:notice]
     assert_equal I18n.t("transactions.bulk_deletions.create.part_transferred", count: 1), flash[:alert]
   end
+
+  test "bulk delete keeps a vest's income and taxes and deletes the rest" do
+    form = Trade::VestForm.new(account: accounts(:investment), date: Date.current, manual_ticker: "AAPL", vested_qty: 100, units_withheld: 30, price: 10)
+    assert form.save, form.errors.full_messages.to_sentence
+    parts = form.entry.vest_parts.to_a
+
+    post transactions_bulk_deletion_url, params: { bulk_delete: { entry_ids: [ *parts.map(&:id), @entry.id ] } }
+
+    assert parts.all? { |part| Entry.exists?(part.id) }
+    assert_not Entry.exists?(@entry.id)
+    assert_equal I18n.t("transactions.bulk_deletions.create.vest_part", count: 2), flash[:alert]
+  end
 end

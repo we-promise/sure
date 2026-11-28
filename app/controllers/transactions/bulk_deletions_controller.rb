@@ -7,15 +7,22 @@ class Transactions::BulkDeletionsController < ApplicationController
                       .where(account_id: writable_account_ids)
                       .where(parent_entry_id: nil)
     kept = []
+    vest_parts = []
     destroyed = entries_scope.where(id: bulk_delete_params[:entry_ids]).filter_map do |entry|
       entry.destroy_unless_split_part_transferred!
     rescue Entry::SplitPartTransferredError
       kept << entry
       nil
+    rescue Entry::VestPartDeletionError
+      vest_parts << entry
+      nil
     end
     destroyed.map(&:account).uniq.each(&:sync_later)
 
-    flash[:alert] = t(".part_transferred", count: kept.size) if kept.any?
+    alerts = []
+    alerts << t(".part_transferred", count: kept.size) if kept.any?
+    alerts << t(".vest_part", count: vest_parts.size) if vest_parts.any?
+    flash[:alert] = alerts.join(" ") if alerts.any?
     redirect_back_or_to transactions_url, notice: "#{destroyed.count} transaction#{destroyed.count == 1 ? "" : "s"} deleted"
   end
 

@@ -1,0 +1,49 @@
+---
+en:
+  vests:
+    create:
+      success: Vest recorded
+    update:
+      success: Vest updated
+    destroy:
+      success: Vest deleted
+      part_transferred: The vest's income or a tax is linked as a transfer. Remove that transfer before you delete the vest.
+    new:
+      title: New vest
+    show:
+      title: "%{ticker} vest"
+      details: Details
+      settings: Settings
+      delete: Delete
+      delete_resource: vest
+      delete_title: Delete vest
+      delete_subtitle: Deletes the shares, the income, and the taxes recorded with it. This cannot be undone.
+    form:
+      ticker: Ticker symbol
+      date: Vest date
+      vested_qty: Shares vested
+      units_withheld: Shares withheld for taxes
+      price: Price per share at vest
+      income_category: Income category
+      no_category: No category
+      taxes: Taxes withheld
+      taxes_hint: One line per tax on your paystub. Left empty, the withheld shares' value is recorded as one line.
+      tax_name: Tax
+      tax_name_placeholder: Federal income tax
+      tax_category: Category
+      tax_amount: Amount
+      gross_pay: Gross pay
+      taxes_total: Taxes
+      cash_left: Cash left in the account
+      create: Add vest
+      save: Save
+      investment_account_required: Vests can only be added to an investment account
+      security_required: A ticker is required for a vest
+      tax_amount_required: Each tax line needs an amount
+      tax_amount_negative: A tax amount cannot be negative
+      tax_line_repeated: Each tax line can be saved only once
+      tax_transferred: A tax line you removed is linked as a transfer. Remove that transfer before you remove the line.
+      withheld_exceeds_vested: Shares withheld must be fewer than the shares vested
+    entries:
+      income: "%{ticker} vest income"
+      taxes_withheld: Taxes withheld

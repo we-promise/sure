@@ -15,6 +15,7 @@ class Transfer < ApplicationRecord
   validate :transfer_has_opposite_amounts
   validate :transfer_within_date_range
   validate :transfer_has_same_family
+  validate :transfer_legs_outside_vests
 
   # Runs on every destroy, including the cascade when one leg's transaction
   # (or its entry) is deleted, so the surviving leg never keeps a transfer kind
@@ -297,6 +298,12 @@ class Transfer < ApplicationRecord
     def transfer_has_different_accounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
       errors.add(:base, :different_accounts) if to_account == from_account
+    end
+
+    # A vest's income and taxes move with the vest (Trade::VestForm), which
+    # would leave the transfer's other leg behind.
+    def transfer_legs_outside_vests
+      errors.add(:base, :vest_part) if [ inflow_transaction, outflow_transaction ].any? { |txn| txn&.entry&.vest_entry_id? }
     end
 
     def transfer_has_same_family

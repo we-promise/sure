@@ -9,7 +9,10 @@ module EntryableResource
     helper_method :can_edit_entry?, :can_annotate_entry?
   end
 
+  # A vest's shares, income and taxes are edited together on its own screen.
   def show
+    vest = @entry.vest
+    redirect_to vest_path(vest) if vest
   end
 
   def new
@@ -39,6 +42,8 @@ module EntryableResource
     redirect_back_or_to account_path(@entry.account), notice: t("account.entries.destroy.success")
   rescue Entry::SplitPartTransferredError
     redirect_back_or_to account_path(@entry.account), alert: t("account.entries.destroy.part_transferred")
+  rescue Entry::VestPartDeletionError
+    redirect_back_or_to account_path(@entry.account), alert: t("account.entries.destroy.vest_part")
   end
 
   private

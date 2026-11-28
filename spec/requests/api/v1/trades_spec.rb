@@ -116,6 +116,14 @@ RSpec.describe 'API V1 Trades', type: :request do
     ).entryable
   end
 
+  # A vest, recorded with its income and taxes from the vest screen.
+  let(:vest) do
+    form = Trade::VestForm.new(account: account, date: Date.current, manual_ticker: 'VTI',
+                               vested_qty: 100, units_withheld: 30, price: 10)
+    raise form.errors.full_messages.to_sentence unless form.save
+    form.entry
+  end
+
   path '/api/v1/trades' do
     get 'List trades' do
       tags 'Trades'
@@ -679,7 +687,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '422', 'qty or price is not a positive number, or nature is not inflow or outflow' do
+      response '422', "qty or price is not a positive number, nature is not inflow or outflow, or the trade is a vest (a vest's qty, price, amount, date, and label change only on its vest screen)" do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { trade.id }
@@ -742,6 +750,20 @@ RSpec.describe 'API V1 Trades', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+
+      response '422', "a vest whose income or a tax is a leg of a transfer; remove the transfer first" do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) do
+          income = vest.vest_parts.find { |part| part.amount.negative? }
+          checking = Account.create!(family: family, owner: user, name: 'Checking', balance: 0, currency: 'USD', accountable: Depository.create!)
+          outflow = checking.entries.create!(name: 'Pay', date: Date.current, amount: 1000, currency: 'USD', entryable: Transaction.new)
+          Transfer.new(inflow_transaction: income.entryable, outflow_transaction: outflow.entryable, status: 'confirmed').save!(validate: false)
+          vest.trade.id
+        end
 
         run_test!
       end

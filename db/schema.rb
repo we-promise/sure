@@ -718,6 +718,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_120000) do
     t.string "source"
     t.datetime "updated_at", null: false
     t.boolean "user_modified", default: false, null: false
+    t.uuid "vest_entry_id"
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
     t.index ["account_id", "date", "entryable_id"], name: "index_entries_on_investment_totals_lookup", where: "(((entryable_type)::text = 'Trade'::text) AND (excluded = false))"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
@@ -734,6 +735,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_120000) do
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
     t.index ["reconciled_by_statement_id"], name: "index_entries_on_reconciled_by_statement", where: "(reconciled_by_statement_id IS NOT NULL)"
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
+    t.index ["vest_entry_id"], name: "index_entries_on_vest_entry_id"
     t.check_constraint "reconciled_by_statement_id IS NULL OR reconciled_at IS NOT NULL", name: "chk_entries_reconciled_at_present_when_statement_set"
     t.check_constraint "reconciled_status::text = ANY (ARRAY['unreconciled'::character varying::text, 'cleared'::character varying::text, 'reconciled'::character varying::text])", name: "chk_entries_reconciled_status"
   end
@@ -2862,6 +2864,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_120000) do
     t.decimal "price", precision: 19, scale: 10
     t.decimal "qty", precision: 34, scale: 18
     t.uuid "security_id", null: false
+    t.decimal "units_withheld", precision: 34, scale: 18
     t.datetime "updated_at", null: false
     t.index ["extra"], name: "index_trades_on_extra", using: :gin
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
@@ -3217,6 +3220,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_120000) do
   add_foreign_key "entries", "account_statements", column: "reconciled_by_statement_id", on_delete: :nullify
   add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "entries", column: "parent_entry_id", on_delete: :cascade
+  add_foreign_key "entries", "entries", column: "vest_entry_id", on_delete: :cascade
   add_foreign_key "entries", "imports"
   add_foreign_key "eval_results", "eval_runs"
   add_foreign_key "eval_results", "eval_samples"
