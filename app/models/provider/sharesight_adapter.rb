@@ -4,7 +4,8 @@ class Provider::SharesightAdapter < Provider::Base
 
   Provider::Factory.register("SharesightAccount", self)
   declares_connection key: "sharesight", name: "Sharesight", panel: true,
-                      metadata: { region: "Global", kinds: %w[Investment], maturity: :alpha, logo_text: "SS", logo_color: "#0d9488", domain: "sharesight.com" }
+                      metadata: { region: "Global", kinds: %w[Investment], maturity: :alpha, logo_text: "SS", logo_color: "#0d9488", domain: "sharesight.com" },
+                      lists: { settings_page: %i[active ordered], settings_panel: %i[active ordered] }
 
   def self.supported_account_types
     %w[Investment]

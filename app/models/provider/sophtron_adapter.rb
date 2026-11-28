@@ -5,7 +5,10 @@ class Provider::SophtronAdapter < Provider::Base
   # Register this adapter with the factory
   Provider::Factory.register("SophtronAccount", self)
   declares_connection key: "sophtron", name: "Sophtron", panel: true,
-                      metadata: { region: "US", kinds: %w[Bank Investment], maturity: :alpha, logo_text: "SO", logo_color: "#0d9488", domain: "sophtron.com" }
+                      metadata: { region: "US", kinds: %w[Bank Investment], maturity: :alpha, logo_text: "SO", logo_color: "#0d9488", domain: "sophtron.com" },
+                      lists: {
+                        settings_page: ->(items) { items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id) }
+                      }
 
   # Define which account types this provider supports
   def self.supported_account_types

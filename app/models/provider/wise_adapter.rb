@@ -6,7 +6,11 @@ class Provider::WiseAdapter < Provider::Base
 
   Provider::Factory.register("WiseAccount", self)
   declares_connection key: "wise", name: "Wise", panel: true,
-                      metadata: { region: "Global", kinds: %w[Bank], maturity: :beta, logo_text: "WI", logo_color: "#22c55e", domain: "wise.com" }
+                      metadata: { region: "Global", kinds: %w[Bank], maturity: :beta, logo_text: "WI", logo_color: "#22c55e", domain: "wise.com" },
+                      lists: {
+                        settings_page: %i[active ordered],
+                        settings_panel: ->(items) { items.active.ordered.includes(:syncs, :wise_accounts) }
+                      }
 
   def self.supported_account_types
     %w[Depository]
