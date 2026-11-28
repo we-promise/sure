@@ -61,8 +61,32 @@ class Family::DataExporter
       TEXT
     end
 
+    # Wraps a CSV writer so every row emitted is escaped against formula
+    # injection. Wrapping the writer rather than each call site means a column
+    # added later cannot go out unescaped by accident, which is exactly how the
+    # ticker and subtype columns were missed before.
+    class SanitizedCsv
+      def initialize(csv)
+        @csv = csv
+      end
+
+      def <<(row)
+        @csv << CsvSanitizer.sanitize_row(row)
+      end
+    end
+
+    private_constant :SanitizedCsv
+
+    def generate_sanitized_csv
+      # Every cell is quoted so a locale separator inside a value can never split
+      # it into a second, unescaped cell.
+      CSV.generate(force_quotes: true) do |csv|
+        yield SanitizedCsv.new(csv)
+      end
+    end
+
     def generate_accounts_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         csv << [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ]
 
         # Only export accounts belonging to this family
@@ -81,7 +105,7 @@ class Family::DataExporter
     end
 
     def generate_transactions_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         csv << TRANSACTIONS_CSV_HEADERS
 
         # Only export transactions from accounts belonging to this family
@@ -108,7 +132,7 @@ class Family::DataExporter
     end
 
     def generate_trades_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         csv << [ "date", "account_name", "ticker", "quantity", "price", "amount", "currency" ]
 
         # Only export trades from accounts belonging to this family
@@ -129,7 +153,7 @@ class Family::DataExporter
     end
 
     def generate_categories_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         csv << [ "name", "color", "parent_category", "lucide_icon" ]
 
         # Only export categories belonging to this family
@@ -145,7 +169,7 @@ class Family::DataExporter
     end
 
     def generate_merchants_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         # Headers match MerchantImport's expected columns so the export round-trips
         csv << [ "name", "color", "website_url" ]
 
@@ -161,7 +185,7 @@ class Family::DataExporter
     end
 
     def generate_rules_csv
-      CSV.generate do |csv|
+      generate_sanitized_csv do |csv|
         csv << [ "name", "resource_type", "active", "effective_date", "conditions", "actions", "group" ]
 
         # Only export rules belonging to this family, in run order so an
@@ -403,7 +427,7 @@ class Family::DataExporter
         :tags,
         entry: [
           :account,
-          { child_entries: { entryable: :tags } }
+          { child_entries: [ :account, { entryable: :tags } ] }
         ]
       ).find_each do |transaction|
         transaction_data = {
@@ -420,6 +444,13 @@ class Family::DataExporter
           merchant_id: transaction.merchant_id,
           tag_ids: transaction.tag_ids,
           kind: transaction.kind,
+          # Safe reads of what importers keep in extra; the payload itself is
+          # not exported.
+          investment_activity_label: transaction.investment_activity_label,
+          provider_type: transaction.provider_type,
+          security_id: transaction.serializable_security_id,
+          exchange_rate: transaction.numeric_exchange_rate,
+          amount_currency: transaction.entry.currency,
           created_at: transaction.created_at,
           updated_at: transaction.updated_at
         }
@@ -462,8 +493,18 @@ class Family::DataExporter
         }.to_json
       end
 
-      # Export trades with full data
-      @family.trades.includes(:security, entry: :account).find_each do |trade|
+      # Export trades with full data. Lots are rebuilt from trades on sync, so
+      # a trade carries only what the user set on its lot: the lot's total
+      # cost, and, on a sale, the trade whose lot it names to sell from. Trades
+      # go in the order Holding::PortfolioCache#trades replays them: by date,
+      # then as entered, buys before sales entered together. An import stamps
+      # entries in file order, so the file's order is the imported replay
+      # order, and a named lot, which replays before its sale, is always
+      # ahead of it, even when an import arrives in chunks.
+      lot_total_costs = HoldingLot.derived.joins(:account).where(accounts: { family_id: @family.id })
+        .where.not(manual_total_cost: nil).pluck(:source_entry_id, :manual_total_cost).to_h
+      @family.trades.includes(:security, :lot_source_entry, entry: :account)
+        .order(Arel.sql("entries.date ASC, entries.created_at ASC, CASE WHEN trades.qty < 0 THEN 1 ELSE 0 END ASC, entries.id ASC")).each do |trade|
         lines << {
           type: "Trade",
           data: {
@@ -479,6 +520,15 @@ class Family::DataExporter
             price: trade.price,
             amount: trade.entry.amount,
             currency: trade.currency,
+            fee: trade.fee,
+            investment_activity_label: trade.investment_activity_label,
+            exchange_rate: trade.numeric_exchange_rate,
+            # The cost basis applies exchange_rate from currency (the
+            # trade's), the cash balance from amount_currency (the entry's),
+            # which can differ from it.
+            amount_currency: trade.entry.currency,
+            lot_total_cost: lot_total_costs[trade.entry.id],
+            lot_source_trade_id: trade.lot_source_entry&.entryable_id,
             created_at: trade.created_at,
             updated_at: trade.updated_at
           }
@@ -587,6 +637,11 @@ class Family::DataExporter
           merchant_id: transaction.merchant_id,
           tag_ids: transaction.tag_ids,
           kind: transaction.kind,
+          investment_activity_label: transaction.investment_activity_label,
+          provider_type: transaction.provider_type,
+          security_id: transaction.serializable_security_id,
+          exchange_rate: transaction.numeric_exchange_rate,
+          amount_currency: child_entry.currency,
           created_at: transaction.created_at,
           updated_at: transaction.updated_at
         }
@@ -766,6 +821,7 @@ class Family::DataExporter
         effective_date: rule.effective_date&.iso8601,
         position: rule.position,
         stop_processing: rule.stop_processing,
+        apply_immediately: rule.apply_immediately,
         group: rule.rule_group&.name,
         conditions: rule.conditions.where(parent_id: nil).map { |condition| serialize_condition(condition) },
         actions: rule.actions.map { |action| serialize_action(action) }
@@ -864,9 +920,9 @@ class Family::DataExporter
         merchant = split_operand_record(:merchants, split["merchant_id"])
         tags = Array(split["tag_ids"]).filter_map { |id| split_operand_record(:tags, id) }
 
-        row["category"] = category.name if category
-        row["merchant"] = merchant.name if merchant
-        row["tags"] = tags.map(&:name) if tags.any?
+        row["category"] = operand_name(category.name) if category
+        row["merchant"] = operand_name(merchant.name) if merchant
+        row["tags"] = tags.map { |tag| operand_name(tag.name) } if tags.any?
         row
       end
 
@@ -884,7 +940,7 @@ class Family::DataExporter
     def resolve_multi_tag_operand(value)
       ids = value.to_s.split(",")
       records = ids.map { |id| resolve_rule_operand_record(:tags, id, fallback_to_name: true) }
-      names = records.each_with_index.map { |record, i| record&.name || ids[i] }
+      names = records.each_with_index.map { |record, i| record ? operand_name(record.name) : ids[i] }
       refs = records.compact.map { |record| rule_value_ref("Tag", record) }
 
       {
@@ -903,7 +959,7 @@ class Family::DataExporter
       record = relation && resolve_rule_operand_record(relation, value, fallback_to_name: fallback_to_name)
 
       {
-        value: record&.name || value,
+        value: record ? operand_name(record.name) : value,
         value_ref: record ? rule_value_ref(type, record) : nil
       }
     end
@@ -945,10 +1001,25 @@ class Family::DataExporter
     end
 
     def serialize_conditions_for_csv(conditions)
-      conditions.where(parent_id: nil).map { |c| serialize_condition(c) }.to_json
+      with_csv_operand_names { conditions.where(parent_id: nil).map { |c| serialize_condition(c) }.to_json }
     end
 
     def serialize_actions_for_csv(actions)
-      actions.map { |a| serialize_action(a) }.to_json
+      with_csv_operand_names { actions.map { |a| serialize_action(a) }.to_json }
+    end
+
+    # Category, merchant and tag names inside rule operands must read exactly like
+    # the same names in categories.csv, merchants.csv and transactions.csv (which
+    # are escaped), or an import creates a second record for the same name. Only
+    # the CSV path does this; all.ndjson and value_ref keep the raw names.
+    def with_csv_operand_names
+      @csv_operand_names = true
+      yield
+    ensure
+      @csv_operand_names = false
+    end
+
+    def operand_name(name)
+      @csv_operand_names ? CsvSanitizer.sanitize(name) : name
     end
 end

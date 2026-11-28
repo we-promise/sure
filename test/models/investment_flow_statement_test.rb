@@ -122,6 +122,40 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), InvestmentFlowStatement.new(family, user: member).period_totals(period: period).contributions
   end
 
+  test "period totals convert foreign currency flows to the family currency" do
+    @family.update!(currency: "GBP")
+    period = Period.custom(start_date: Date.new(2026, 3, 1), end_date: Date.new(2026, 3, 31))
+
+    ExchangeRate.create!(from_currency: "USD", to_currency: "GBP", date: Date.new(2026, 3, 5), rate: 0.8)
+    ExchangeRate.create!(from_currency: "SEK", to_currency: "GBP", date: Date.new(2026, 3, 1), rate: 0.075)
+
+    create_flow(label: "Contribution", amount: -100, date: Date.new(2026, 3, 5), currency: "GBP")
+    create_flow(label: "Contribution", amount: -100, date: Date.new(2026, 3, 5), currency: "USD")
+    create_flow(label: "Contribution", amount: -1000, date: Date.new(2026, 3, 10), currency: "SEK")
+    create_flow(label: "Withdrawal", amount: 50, date: Date.new(2026, 3, 5), currency: "USD")
+
+    totals = InvestmentFlowStatement.new(@family, user: @user).period_totals(period: period)
+
+    assert_equal Money.new(255, "GBP"), totals.contributions
+    assert_equal Money.new(40, "GBP"), totals.withdrawals
+    assert_equal Money.new(215, "GBP"), totals.net_flow
+  end
+
+  test "period totals omit foreign currency flows without a stored exchange rate" do
+    @family.update!(currency: "GBP")
+    period = Period.custom(start_date: Date.new(2026, 4, 1), end_date: Date.new(2026, 4, 30))
+
+    create_flow(label: "Contribution", amount: -100, date: Date.new(2026, 4, 5), currency: "GBP")
+    create_flow(label: "Contribution", amount: -10000, date: Date.new(2026, 4, 5), currency: "JPY")
+    create_flow(label: "Withdrawal", amount: 5000, date: Date.new(2026, 4, 5), currency: "JPY")
+
+    totals = InvestmentFlowStatement.new(@family, user: @user).period_totals(period: period)
+
+    assert_equal Money.new(100, "GBP"), totals.contributions
+    assert_equal Money.new(0, "GBP"), totals.withdrawals
+    assert_equal Money.new(100, "GBP"), totals.net_flow
+  end
+
   private
     def create_matched_contribution(family, from:, to:)
       inflow = to.entries.create!(
@@ -139,12 +173,12 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
       inflow
     end
 
-    def create_flow(label:, amount:, date:)
+    def create_flow(label:, amount:, date:, currency: "USD")
       @account.entries.create!(
         name: label,
         amount: amount,
         date: date,
-        currency: "USD",
+        currency: currency,
         entryable: Transaction.new(
           kind: "standard",
           investment_activity_label: label

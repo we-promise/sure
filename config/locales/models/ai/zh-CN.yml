@@ -1,0 +1,35 @@
+---
+zh-CN:
+  ai:
+    availability:
+      capability_missing:
+        admin: "%{feature} 不可用：已配置的 AI 模型均不支持此功能。请在“设置 → 自托管”中检查模型配置。"
+        member: "%{feature} 不可用：已配置的 AI 模型均不支持此功能。"
+      not_configured:
+        admin: "%{feature} 不可用：尚未为其配置 AI 模型。请在“设置 → 自托管”中添加模型。"
+        member: "%{feature} 不可用：此实例尚未为此功能配置 AI。"
+      user_disabled:
+        member: "%{feature} 需要开启 AI。您可以在 AI 助手中将其开启。"
+      no_family_consent:
+        member: "%{feature} 需要家庭管理员开启 AI。他们可以在 AI 助手中将其开启。"
+    consent_rows:
+      bill_setup: 账单
+      categorize: 分类
+      chat: 聊天
+      detect_merchants: 商户
+      embed: 文档
+      extract_pdf: PDF 导入
+    sends:
+      bill_configuration: 该账单的当前设置
+      category_names: 您的分类名称
+      chat_messages: 您的聊天消息
+      depends_on_vector_store: 您上传的文档（作为完整文件发送至向量存储，或作为文本分块发送至嵌入模型）
+      looked_up_financial_data: 助手为回答问题而查询的财务数据
+      merchant_names: 商户名称
+      provider_category_hints: 银行建议的分类
+      search_query: 您的搜索文本
+      stored_document_text: 您对账单库中存储的对账单文本
+      transaction_amounts: 交易金额
+      transaction_dates: 交易日期
+      transaction_names: 交易名称
+      uploaded_document: 您上传的文档

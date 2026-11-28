@@ -205,6 +205,24 @@ class InsightsHelperTest < ActionView::TestCase
     assert_nil insight_action(dangling)
   end
 
+  test "bank fees warn" do
+    assert_equal "warning", insight_icon_color(build_insight("bank_fees"))
+  end
+
+  test "bank fees lead with the total and link to that account's fees in the window" do
+    family = families(:dylan_family)
+    account = accounts(:depository)
+    family.categories.create!(name: "Fees", color: "#6b7280", lucide_icon: "receipt")
+    insight = build_insight("bank_fees",
+      metadata: { "account_id" => account.id },
+      facts: { "amount" => "$36.00", "count" => 3 },
+      period_start: Date.new(2026, 8, 18), period_end: Date.new(2026, 11, 16))
+
+    assert_equal [ "$36.00", "3 charges" ], insight_key_figure(insight)
+    assert_equal transactions_path(q: { account_ids: [ account.id ], categories: [ "Fees" ], status: [ "confirmed" ], types: [ "expense", "income" ], start_date: "2026-08-18", end_date: "2026-11-16" }),
+      insight_action(insight)[:href]
+  end
+
   test "an uncovered bill renders destructive" do
     assert_equal "destructive", insight_icon_color(build_insight("bill_not_covered", priority: "high"))
   end
@@ -280,6 +298,15 @@ class InsightsHelperTest < ActionView::TestCase
     Assistant::External.stubs(:configured?).returns(false)
 
     assert_not insight_dig_in_available?(insight)
+  end
+
+  test "fixed commitments ratio warns, leads with the ratio and links to recurring transactions" do
+    insight = build_insight("fixed_commitments_ratio", metadata: { "current_ratio" => 35.0, "previous_ratio" => 30.0 },
+                                                       facts: { "current_ratio" => "35.0" })
+
+    assert_equal :warning, insight_sentiment(insight)
+    assert_equal [ "35.0%", "of income" ], insight_key_figure(insight)
+    assert_equal recurring_transactions_path, insight_action(insight)[:href]
   end
 
   test "loan payment change reads its direction for sentiment and leads with the new payment" do
