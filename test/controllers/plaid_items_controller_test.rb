@@ -918,7 +918,7 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
   # give, so the warning names no one.
   test "create names no one when other members' connections share the accounts" do
     second_member = User.create!(family: families(:dylan_family), email: "second-member@example.com",
-                                 first_name: "Second", last_name: "Member", password: "password", role: :member)
+                                 first_name: "Second", last_name: "Member", password: "Password1!", role: :member)
     create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_member),
                       accounts: [ { name: "Joint Checking", mask: "4321" } ])
     create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: second_member,

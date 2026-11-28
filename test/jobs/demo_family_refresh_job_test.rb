@@ -13,7 +13,7 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
       first_name: "Demo",
       last_name: "Admin",
       email: @demo_email,
-      password: "password123",
+      password: "Password123!",
       role: :admin,
       onboarded_at: Time.current,
       ai_enabled: true,
@@ -26,7 +26,7 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
       first_name: "Super",
       last_name: "Admin",
       email: "super-admin@example.com",
-      password: "password123",
+      password: "Password123!",
       role: :super_admin,
       onboarded_at: Time.current,
       ai_enabled: true,
@@ -87,7 +87,7 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
   test "self-hosted refresh replaces only the explicitly selected demo family" do
     Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
     visitor = Family.create!(name: "Visitor")
-    visitor_user = visitor.users.create!(first_name: "Visitor", last_name: "Owner", email: "visitor@example.com", password: "password123", role: :admin)
+    visitor_user = visitor.users.create!(first_name: "Visitor", last_name: "Owner", email: "visitor@example.com", password: "Password123!", role: :admin)
     Setting.demo_family_refresh_family_id = @demo_family.id.to_s
     Setting.demo_family_refresh_enabled = true
 
@@ -95,7 +95,7 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     generator.expects(:generate_default_data!).with do |options|
       assert_equal({ skip_clear: true, email: @demo_email }, options)
       new_family = Family.create!(name: "Fresh Demo")
-      new_family.users.create!(first_name: "New", last_name: "Demo", email: @demo_email, password: "password123", role: :admin)
+      new_family.users.create!(first_name: "New", last_name: "Demo", email: @demo_email, password: "Password123!", role: :admin)
     end
     Demo::Generator.expects(:new).returns(generator)
 
@@ -125,7 +125,7 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     generator = mock
     generator.expects(:generate_default_data!).with(skip_clear: true, email: @demo_email) do
       new_family = Family.create!(name: "Replacement Demo")
-      new_family.users.create!(first_name: "New", last_name: "Demo", email: @demo_email, password: "password123", role: :admin)
+      new_family.users.create!(first_name: "New", last_name: "Demo", email: @demo_email, password: "Password123!", role: :admin)
     end
     Demo::Generator.expects(:new).returns(generator)
     Provider::Registry.expects(:get_provider).with(:stripe).never
@@ -188,7 +188,7 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
     Setting.demo_family_refresh_family_id = @demo_family.id.to_s
     Setting.demo_family_refresh_enabled = true
-    @demo_family.users.create!(first_name: "Instance", last_name: "Admin", email: "instance-admin@example.com", password: "password123", role: :super_admin)
+    @demo_family.users.create!(first_name: "Instance", last_name: "Admin", email: "instance-admin@example.com", password: "Password123!", role: :super_admin)
     Demo::Generator.expects(:new).never
 
     assert_no_enqueued_jobs { DemoFamilyRefreshJob.perform_now }

@@ -33,8 +33,8 @@ RSpec.describe 'API V1 Trades', type: :request do
   let(:user) do
     family.users.create!(
       email: 'api-user@example.com',
-      password: 'password123',
-      password_confirmation: 'password123'
+      password: 'Password123!',
+      password_confirmation: 'Password123!'
     )
   end
 
@@ -95,8 +95,8 @@ RSpec.describe 'API V1 Trades', type: :request do
   let(:read_only_trade) do
     owner = family.users.create!(
       email: 'api-owner@example.com',
-      password: 'password123',
-      password_confirmation: 'password123'
+      password: 'Password123!',
+      password_confirmation: 'Password123!'
     )
     shared_account = Account.create!(
       family: family,

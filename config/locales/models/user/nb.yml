@@ -19,5 +19,10 @@ nb:
               cannot_deactivate_admin_with_other_users: Administrator kan ikke deaktivere kontoen mens andre brukere er til stede. Vennligst slett alle medlemmer først.
               provider_item_has_other_accounts: Brukeren eier kontoer som er koblet til en leverandørtilkobling som også har kontoer eid av en annen bruker. Flytt disse kontoene eller koble dem fra før du endrer medlemskap i husholdningen/gruppen.
               cannot_remove_last_super_admin: Kan ikke fjerne den siste aktive superadministratoren. Gjør en annen bruker til superadministrator først.
+            password:
+              missing_case: må inneholde både store og små bokstaver
+              missing_number: må inneholde minst ett tall
+              missing_special: må inneholde minst ett spesialtegn
+              too_long: "er for langt (maks %{count} byte; bokstaver med aksent og emojier bruker mer enn én byte)"
             profile_image:
               invalid_file_size: filstørrelsen må være mindre enn %{max_megabytes} MB

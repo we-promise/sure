@@ -181,8 +181,8 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
       )
       share_user = family.users.create!(
         email: "#{safe_label}-#{SecureRandom.hex(4)}@example.com",
-        password: "password123",
-        password_confirmation: "password123",
+        password: "Password123!",
+        password_confirmation: "Password123!",
         role: :member
       )
       account_share = account.account_shares.create!(user: share_user)

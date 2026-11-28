@@ -100,7 +100,7 @@ class InactiveFamilyCleanerJobTest < ActiveJob::TestCase
     old_family = Family.create!(name: "Abandoned", created_at: 90.days.ago)
     old_family.users.create!(
       first_name: "Old", last_name: "User", email: "old-abandoned@example.com",
-      password: "password123", role: :admin, onboarded_at: 90.days.ago,
+      password: "Password123!", role: :admin, onboarded_at: 90.days.ago,
       ai_enabled: true, show_sidebar: true, show_ai_sidebar: true, ui_layout: :dashboard
     )
     # No subscription created
@@ -116,7 +116,7 @@ class InactiveFamilyCleanerJobTest < ActiveJob::TestCase
     recent_family = Family.create!(name: "New Family")
     recent_family.users.create!(
       first_name: "New", last_name: "User", email: "newuser-recent@example.com",
-      password: "password123", role: :admin, onboarded_at: 1.day.ago,
+      password: "Password123!", role: :admin, onboarded_at: 1.day.ago,
       ai_enabled: true, show_sidebar: true, show_ai_sidebar: true, ui_layout: :dashboard
     )
 

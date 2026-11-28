@@ -7,7 +7,7 @@ RSpec.describe "API V1 Insights", type: :request do
   let(:user) do
     family.users.create!(
       email: "insights-api@example.com",
-      password: "password123",
+      password: "Password123!",
       ai_enabled: true,
       preferences: { "preview_features_enabled" => true }
     )
@@ -35,7 +35,7 @@ RSpec.describe "API V1 Insights", type: :request do
         let(:user) do
           family.users.create!(
             email: "insights-disabled-api@example.com",
-            password: "password123",
+            password: "Password123!",
             ai_enabled: true,
             preferences: { "preview_features_enabled" => false }
           )

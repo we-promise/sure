@@ -198,6 +198,6 @@ class HostedUsageTest < ActiveSupport::TestCase
     end
 
     def create_user(family)
-      User.create!(family:, email: "usage-#{SecureRandom.uuid}@example.com", password: "testpassword123", role: :admin)
+      User.create!(family:, email: "usage-#{SecureRandom.uuid}@example.com", password: "TestPassword123!", role: :admin)
     end
 end

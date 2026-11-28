@@ -15,8 +15,8 @@ RSpec.describe 'API V1 Version', type: :request do
   let(:user) do
     family.users.create!(
       email: 'api-user@example.com',
-      password: 'password123',
-      password_confirmation: 'password123'
+      password: 'Password123!',
+      password_confirmation: 'Password123!'
     )
   end
 

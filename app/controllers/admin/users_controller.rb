@@ -68,14 +68,6 @@ module Admin
         return
       end
 
-      if password_change_requested?
-        errors = validate_password_criteria(user_params[:password])
-        if errors.any?
-          redirect_to admin_users_path, alert: errors.join(" ")
-          return
-        end
-      end
-
       if membership_change_requested?
         target_family = nil
 
@@ -235,15 +227,6 @@ module Admin
       # could not be used to sign in must not be set by an admin either.
       def password_change_allowed_for?(user)
         user.has_local_password? && AuthConfig.local_login_allowed_for?(user)
-      end
-
-      def validate_password_criteria(password)
-        errors = []
-        errors << t(".password_too_short") if password.length < 8
-        errors << t(".password_missing_case") unless password.match?(/[A-Z]/) && password.match?(/[a-z]/)
-        errors << t(".password_missing_number") unless password.match?(/\d/)
-        errors << t(".password_missing_special") unless password.match?(/[!@#$%^&*(),.?":{}|<>]/)
-        errors
       end
 
       def membership_change_requested?

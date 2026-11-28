@@ -92,10 +92,6 @@ nb:
         failure: Kunne ikke oppdatere brukerdetaljene (rolle eller medlemskap i husholdning/gruppe).
         family_required: Velg en eksisterende husholdning/gruppe, eller skriv inn et navn på en ny.
         password_and_family_conflict: Passord og medlemskap i husholdning/gruppe kan ikke oppdateres samtidig.
-        password_too_short: Passordet må være minst 8 tegn langt.
-        password_missing_case: Passordet må inneholde både store og små bokstaver.
-        password_missing_number: Passordet må inneholde minst ett tall.
-        password_missing_special: Passordet må inneholde minst ett spesialtegn.
         last_super_admin_error: Kan ikke nedgradere den siste superadministratoren i systemet.
         password_disabled: "Passord kan ikke angis, fordi brukere bare kan logge inn med SSO."
       destroy:

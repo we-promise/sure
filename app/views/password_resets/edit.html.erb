@@ -3,6 +3,10 @@
 %>
 
 <%= styled_form_with model: @user, url: password_reset_path(token: params[:token]), method: :patch, class: "space-y-4" do |form| %>
+  <% if @user.errors.any? %>
+    <%= render "shared/form_errors", model: @user %>
+  <% end %>
+
   <%= form.password_field :password, required: true, label: true %>
   <%= form.password_field :password_confirmation, required: true, label: true %>
 

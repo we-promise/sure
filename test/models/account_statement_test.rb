@@ -1224,7 +1224,7 @@ class AccountStatementTest < ActiveSupport::TestCase
 
   test "viewable_by lists exactly the statements viewable_by? accepts" do
     guest = @family.users.create!(first_name: "Guest", last_name: "Viewer", email: "guest-#{SecureRandom.hex(4)}@example.com",
-                                  password: "password", role: "guest", onboarded_at: Time.current)
+                                  password: "Password123!", role: "guest", onboarded_at: Time.current)
     accounts(:credit_card).share_with!(guest)
     statements = [ accounts(:investment), accounts(:depository), accounts(:credit_card), nil ].each_with_index.map do |account, index|
       create_statement(account: account, month: Date.new(2024, index + 1, 1), content: "viewable-#{index}")

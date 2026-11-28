@@ -280,7 +280,7 @@ class ImportTest < ActiveSupport::TestCase
   test "viewable_by hides an import whose statement the user cannot view" do
     family = families(:dylan_family)
     guest = family.users.create!(first_name: "Guest", last_name: "Viewer", email: "guest-#{SecureRandom.hex(4)}@example.com",
-                                 password: "password", role: "guest", onboarded_at: Time.current)
+                                 password: "Password123!", role: "guest", onboarded_at: Time.current)
     plain = TransactionImport.create!(family: family)
     plain_on_private_account = TransactionImport.create!(family: family, account: accounts(:investment))
     on_private_account = PdfImport.create_from_statement!(statement: statement_on(accounts(:investment)))

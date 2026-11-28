@@ -9,8 +9,8 @@ RSpec.describe "Api::V1::Financekit", type: :request do
     Family.create!(name: "FinanceKit API Family", currency: "USD", locale: "en", date_format: "%m-%d-%Y")
   end
   let(:user) do
-    family.users.create!(email: "financekit-api-#{SecureRandom.hex(8)}@example.com", password: "password123",
-      password_confirmation: "password123", role: "admin")
+    family.users.create!(email: "financekit-api-#{SecureRandom.hex(8)}@example.com", password: "Password123!",
+      password_confirmation: "Password123!", role: "admin")
   end
   let(:api_key) do
     key = ApiKey.generate_secure_key

@@ -148,7 +148,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
       email: "destination-member@example.com",
       first_name: "Destination",
       last_name: "Member",
-      password: "password",
+      password: "Password1!",
       role: :member
     )
     shared_account = Account.create!(family: target.family, owner: users(:family_admin), name: "Shared", balance: 50, currency: "USD", accountable: Depository.new)
@@ -488,7 +488,20 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to admin_users_url
-    assert_match(/at least 8 characters/i, flash[:alert])
+    assert_match(/too short \(minimum is 8 characters\)/i, flash[:alert])
+    assert_equal old_digest, target.reload.password_digest
+  end
+
+  test "update with a password longer than 72 bytes shows too long error" do
+    target = users(:family_member)
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: { role: target.role, password: "Aa1!" + "a" * 69 }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_match(/maximum is 72 bytes/, flash[:alert])
     assert_equal old_digest, target.reload.password_digest
   end
 
@@ -540,7 +553,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to admin_users_url
-    assert_match(/at least 8 characters/i, flash[:alert])
+    assert_match(/too short \(minimum is 8 characters\)/i, flash[:alert])
     assert_match(/uppercase and lowercase/i, flash[:alert])
     assert_match(/at least one number/i, flash[:alert])
     assert_match(/special character/i, flash[:alert])

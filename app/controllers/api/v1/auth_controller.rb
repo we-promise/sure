@@ -36,15 +36,6 @@ module Api
           return
         end
 
-        # Validate password
-        # user_signup_params requires the `user` key; a missing payload raises
-        # ParameterMissing, which BaseController renders as a 400.
-        password_errors = validate_password(user_signup_params[:password])
-        if password_errors.any?
-          render json: { errors: password_errors }, status: :unprocessable_entity
-          return
-        end
-
         # Validate device info
         unless valid_device_info?
           render json: { error: "Device information is required" }, status: :bad_request
@@ -456,22 +447,6 @@ module Api
 
         def user_signup_params
           params.require(:user).permit(:email, :password, :first_name, :last_name)
-        end
-
-        def validate_password(password)
-          errors = []
-
-          if password.blank?
-            errors << "Password can't be blank"
-            return errors
-          end
-
-          errors << "Password must be at least 8 characters" if password.length < 8
-          errors << "Password must include both uppercase and lowercase letters" unless password.match?(/[A-Z]/) && password.match?(/[a-z]/)
-          errors << "Password must include at least one number" unless password.match?(/\d/)
-          errors << "Password must include at least one special character" unless password.match?(/[!@#$%^&*(),.?":{}|<>]/)
-
-          errors
         end
 
         def valid_device_info?

@@ -344,7 +344,7 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
         first_name: "Demo",
         last_name: "Admin",
         email: email,
-        password: "password123",
+        password: "Password123!",
         role: :admin,
         onboarded_at: Time.current,
         ai_enabled: true,

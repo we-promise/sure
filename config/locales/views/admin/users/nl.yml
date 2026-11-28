@@ -93,10 +93,6 @@ nl:
         family_required: "Selecteer een bestaand huishouden/groep of voer een naam in voor een nieuw huishouden/groep."
         password_and_family_conflict: "Wachtwoord en lidmaatschap van huishouden/groep kunnen niet tegelijk worden bijgewerkt."
         password_disabled: "Een wachtwoord instellen is uitgeschakeld omdat gebruikers alleen via SSO kunnen inloggen."
-        password_too_short: "Wachtwoord moet minimaal 8 tekens lang zijn."
-        password_missing_case: "Wachtwoord moet zowel hoofdletters als kleine letters bevatten."
-        password_missing_number: "Wachtwoord moet ten minste één cijfer bevatten."
-        password_missing_special: "Wachtwoord moet ten minste één speciaal teken bevatten."
         last_super_admin_error: "Kan de laatste superbeheerder in het systeem niet degraderen."
         success: "Gebruikersrol succesvol bijgewerkt."
       destroy:

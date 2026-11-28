@@ -6,7 +6,6 @@ class RegistrationsController < ApplicationController
   before_action :ensure_signup_open, if: :self_hosted?
   before_action :set_user, only: :create
   before_action :set_invitation
-  before_action :validate_password_requirements, only: :create
 
   def new
     @user = User.new(email: @invitation&.email)
@@ -88,31 +87,6 @@ class RegistrationsController < ApplicationController
       end
 
       success
-    end
-
-    def validate_password_requirements
-      password = user_params[:password]
-      return if password.blank? # Let Rails built-in validations handle blank passwords
-
-      if password.length < 8
-        @user.errors.add(:password, "must be at least 8 characters")
-      end
-
-      unless password.match?(/[A-Z]/) && password.match?(/[a-z]/)
-        @user.errors.add(:password, "must include both uppercase and lowercase letters")
-      end
-
-      unless password.match?(/\d/)
-        @user.errors.add(:password, "must include at least one number")
-      end
-
-      unless password.match?(/[!@#$%^&*(),.?":{}|<>]/)
-        @user.errors.add(:password, "must include at least one special character")
-      end
-
-      if @user.errors.present?
-        render :new, status: :unprocessable_entity
-      end
     end
 
     def ensure_signup_open
