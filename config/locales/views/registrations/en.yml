@@ -9,6 +9,7 @@ en:
         create: Continue
   registrations:
     closed: Signups are currently closed.
+    disabled: Local account creation is disabled. Please use single sign-on.
     create:
       failure: There was a problem signing up.
       invalid_invite_code: Invalid invite code, please try again.

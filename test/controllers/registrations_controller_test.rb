@@ -6,6 +6,28 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "new redirects to sign in when local signup is disabled" do
+    AuthConfig.stubs(:local_signup_enabled?).returns(false)
+
+    get new_registration_url
+
+    assert_redirected_to new_session_path
+    assert_equal "Local account creation is disabled. Please use single sign-on.", flash[:alert]
+  end
+
+  test "create does not create a user when local signup is disabled" do
+    AuthConfig.stubs(:local_signup_enabled?).returns(false)
+
+    assert_no_difference "User.count" do
+      post registration_url, params: { user: {
+        email: "sso-only@example.com",
+        password: "Password1!" } }
+    end
+
+    assert_redirected_to new_session_path
+    assert_equal "Local account creation is disabled. Please use single sign-on.", flash[:alert]
+  end
+
   test "create redirects to correct URL" do
     post registration_url, params: { user: {
       email: "john@example.com",

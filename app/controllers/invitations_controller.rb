@@ -82,6 +82,10 @@ class InvitationsController < ApplicationController
     @invitation = Invitation.find_by!(token: params[:id])
 
     if @invitation.pending?
+      # This page can start SSO without passing through SessionsController#new,
+      # so clear app handoff state left by an abandoned mobile/desktop flow.
+      session.delete(:mobile_sso)
+      session.delete(:desktop_sso)
       render :accept_choice, layout: "auth"
     else
       raise ActiveRecord::RecordNotFound

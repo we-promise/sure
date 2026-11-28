@@ -1,0 +1,25 @@
+<%# locals: (providers:, empty_message: nil) %>
+
+<% if providers.any? %>
+  <div class="space-y-3">
+    <% providers.each do |provider| %>
+      <% display = AuthConfig.sso_provider_display(provider) %>
+
+      <%# Google keeps its official multi-color mark and wording via the custom icon. %>
+      <%= render DS::Button.new(
+            href: "/auth/#{display[:name]}",
+            method: :post,
+            variant: :outline,
+            size: :md,
+            full_width: true,
+            icon: display[:is_google] ? "google-icon" : provider[:icon].presence,
+            icon_custom: display[:is_google],
+            text: display[:label],
+            class: "gap-2",
+            form: { data: { turbo: false } }
+          ) %>
+    <% end %>
+  </div>
+<% elsif empty_message.present? %>
+  <%= render DS::Alert.new(message: empty_message, variant: :warning) %>
+<% end %>

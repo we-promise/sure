@@ -111,6 +111,7 @@ production:
 - `AUTH_LOCAL_LOGIN_ENABLED` (default: `true`)
   - When `true`, the login page shows the email/password form and "Forgot password" link.
   - When `false`, local login is disabled for all users unless the admin override flag is enabled.
+  - When `false`, local signup is also disabled: the registration form and `POST /api/v1/auth/signup` are refused, and invitation links offer SSO instead of account creation.
   - When `false`, password reset via Sure is also disabled (users must reset via the IdP).
 
 - `AUTH_LOCAL_ADMIN_OVERRIDE_ENABLED` (default: `false`)
@@ -229,6 +230,7 @@ Behavior:
 
 - Email/password form and "Forgot password" link are hidden.
 - `POST /sessions` with local credentials is blocked and redirected with a message.
+- Local signup is disabled: the registration form and `POST /api/v1/auth/signup` are refused, and invitation links offer SSO instead of account creation.
 - Password reset routes are disabled (redirect to the login page with an IdP message).
 
 ### 4.3 SSO‑only with emergency admin override

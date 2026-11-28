@@ -15,6 +15,11 @@ module Api
         with: :render_invalid_sso_linking_code
 
       def signup
+        unless AuthConfig.local_signup_enabled?
+          render json: { error: "Local account creation is disabled. Please use SSO." }, status: :forbidden
+          return
+        end
+
         # RegistrationsController refuses to register a user while the instance
         # is closed. That gate is declared `if: :self_hosted?`, but
         # onboarding_state only ever reaches "closed" on a self-hosted
@@ -159,18 +164,8 @@ module Api
       # way as the web sign-in page.
       def sso_providers
         providers = AuthConfig.sso_providers.map do |provider|
-          name = provider[:name].to_s
-          strategy = provider[:strategy].to_s
-          id = provider[:id].to_s
-          default_label = if id == "google" || strategy == "google_oauth2"
-            I18n.t("sessions.new.google_auth_connect")
-          elsif id.present?
-            I18n.t("sessions.new.#{id}", default: name.titleize)
-          else
-            name.titleize
-          end
-
-          { name: name, strategy: strategy, label: provider[:label].presence || default_label }
+          display = AuthConfig.sso_provider_display(provider)
+          { name: display[:name], strategy: provider[:strategy].to_s, label: display[:label] }
         end
 
         render json: { providers: providers }
