@@ -15,6 +15,9 @@ pt-BR:
       amount_label: Valor
       category_label: Categoria
       uncategorized: "(sem categoria)"
+      merchant_label: Estabelecimento
+      no_merchant: (estabelecimento da transação)
+      tags_label: Tags
       original_name: "Nome:"
       original_date: "Data:"
       original_amount: "Valor"
@@ -38,6 +41,7 @@ pt-BR:
       description: Modifique os lançamentos divididos desta transação.
       submit: Atualizar divisão
       not_split: Esta transação não está dividida.
+      part_transferred: Uma parte desta divisão está vinculada como transferência. Remova essa transferência antes de editar ou desfazer a divisão.
     update:
       success: Divisão atualizada com sucesso
     child:
