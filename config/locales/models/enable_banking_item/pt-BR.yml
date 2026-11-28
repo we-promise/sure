@@ -1,0 +1,6 @@
+---
+pt-BR:
+  activerecord:
+    attributes:
+      enable_banking_item:
+        client_certificate: Chave privada

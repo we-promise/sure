@@ -4,8 +4,8 @@ require "tmpdir"
 require "yaml"
 
 class MobileReleaseWorkflowTest < ActiveSupport::TestCase
-  test "Android preserves alpha identity while iOS uses the numeric version" do
-    %w[2026.10.31-alpha 2026.10.31].each do |version|
+  test "Android preserves prerelease identity while iOS uses the numeric version" do
+    %w[2026.10.31-alpha 2026.10.31-rc.1 2026.10.31].each do |version|
       { "build-android" => version, "build-ios" => "2026.10.31" }.each do |job, name|
         result = resolve("flutter-build", job, ref: "v#{version}")
         assert_equal "#{version}\n", result[:metadata]
@@ -46,10 +46,10 @@ class MobileReleaseWorkflowTest < ActiveSupport::TestCase
   end
 
   test "automatic TestFlight accepts only canonical calendar tags" do
-    %w[v2026.10.31 v2026.10.31-alpha v2028.2.29-alpha].each do |ref|
+    %w[v2026.10.31 v2026.10.31-alpha v2028.2.29-alpha v2026.11.30-rc.1 v2026.11.30-rc.10].each do |ref|
       assert eligible?("push", "refs/tags/#{ref}"), ref
     end
-    %w[v0.7.7-alpha.2 v2026.10.31-beta v2026.10.31-rc.1 v2026.10.31-alpha.2
+    %w[v0.7.7-alpha.2 v2026.10.31-beta v2026.10.31-rc.01 v2026.10.31-rc v2026.10.31-alpha.2
       v2026.02.1 v2026.2.29 v2026.4.31 v2026.13.1 vgarbage].each do |ref|
       assert_not eligible?("push", "refs/tags/#{ref}"), ref
     end
