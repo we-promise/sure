@@ -464,7 +464,10 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal baseline.size, grown.size, "adding 20 holdings changed the query count:\n#{(grown - baseline).join("\n")}"
   end
 
-  PORTFOLIO_QUERY_CEILING = 50
+  # One more than before for the physical cash fixture account: preloading the
+  # polymorphic accountable issues one query per accountable type, which does
+  # not depend on holdings.
+  PORTFOLIO_QUERY_CEILING = 51
 
   private
     def enable_preview(user)
