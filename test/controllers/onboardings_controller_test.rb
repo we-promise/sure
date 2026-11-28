@@ -264,6 +264,22 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an external agent set up in Settings needs only a URL and token" do
+    @family.update!(assistant_type: "external")
+    url = "http://localhost:18789/v1/chat"
+
+    with_self_hosting do
+      # No model is set: it falls back to openclaw/main, as for installs from before model selection.
+      with_ai_configuration(settings: { external_assistant_url: url, external_assistant_token: "test-token" }) do
+        assert_builtin_warnings not_configured: false, unavailable: false
+      end
+
+      with_ai_configuration(settings: { external_assistant_url: url }) do
+        assert_builtin_warnings not_configured: false, unavailable: true
+      end
+    end
+  end
+
   test "built-in AI on a managed instance shows no warning without self-hosted keys" do
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
 
