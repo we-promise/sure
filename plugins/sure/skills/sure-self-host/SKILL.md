@@ -10,13 +10,21 @@ description: >-
 
 # Self-hosting Sure
 
-References: `docs/hosting/docker.md`, `docs/hosting/encryption.md`,
-`docs/hosting/ai.md`, `docs/hosting/pipelock.md`.
+References:
+[docs/hosting/docker.md](https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md),
+[docs/hosting/encryption.md](https://github.com/we-promise/sure/blob/main/docs/hosting/encryption.md),
+[docs/hosting/ai.md](https://github.com/we-promise/sure/blob/main/docs/hosting/ai.md),
+[docs/hosting/pipelock.md](https://github.com/we-promise/sure/blob/main/docs/hosting/pipelock.md).
 
 ## Install
 
+Use a new empty directory (do not overwrite an existing `.env` —
+losing `SECRET_KEY_BASE` can make encrypted data unreadable):
+
 ```bash
 mkdir -p ~/docker-apps/sure && cd ~/docker-apps/sure
+# Refuse if this directory already has compose or env files
+[ ! -e compose.yml ] && [ ! -e .env ] || { echo "Directory already has Sure files; use a new path or stop."; exit 1; }
 curl --fail -sSL -o compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
 curl --fail -sSL -o .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
 openssl rand -hex 64          # -> SECRET_KEY_BASE
@@ -62,10 +70,16 @@ Run `docker compose up -d` after editing `compose.yml` or `.env`.
 
 ## AI features
 
-`compose.example.ai.yml` adds Pipelock (always on, scans inbound MCP and
-controls outbound traffic) and optional Ollama + Open WebUI:
+`compose.example.ai.yml` adds Pipelock (always on). Outbound control
+applies only to clients that honor the proxy settings, and the default
+setup cannot inspect encrypted HTTPS bodies. Pipelock scans inbound MCP
+on port 8889 only; port 3000 reaches `/mcp` directly and bypasses that
+scanning. Clients that need Pipelock scanning must connect to port 8889.
+Optional Ollama + Open WebUI are also included:
 
 ```bash
+curl --fail -sSL -o compose.ai.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.ai.yml
+curl --fail -sSL -o pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
 docker compose -f compose.ai.yml up -d
 docker compose -f compose.ai.yml --profile local-ai up -d
 ```

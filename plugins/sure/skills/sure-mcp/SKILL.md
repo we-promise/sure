@@ -10,7 +10,8 @@ description: >-
 
 # Sure over MCP
 
-Reference: `docs/hosting/mcp.md`.
+Reference:
+[docs/hosting/mcp.md](https://github.com/we-promise/sure/blob/main/docs/hosting/mcp.md).
 
 ## Connect
 
@@ -46,10 +47,15 @@ Treat `tools/list` as the source of truth. Main groups:
    and `get_accounts` instead of guessing.
 2. Use `dry_run: true` where supported (`set_opening_balance`,
    transfer tools) and show the user the result.
-3. Rules: `preview_rule` (or `create_rule`/`update_rule`) returns a
-   `preview_token`; `apply_rule` needs it within 30 minutes and refuses if
-   matches changed. Rules are saved inactive until applied. Hand-set
-   values are kept unless `override_locked: true`.
+3. Rules: `preview_rule` on a saved rule (or `create_rule` /
+   `update_rule`) returns a `preview_token`; an unsaved definition must
+   be saved first. No token when matches exist but none are shown
+   (`sample_size` 0, or all matches in accounts you cannot see).
+   `apply_rule` needs the token within 30 minutes and refuses if the
+   rule definition or match count differs from the preview. New rules
+   and definition updates are saved inactive until applied; renaming an
+   active rule alone leaves it active. Hand-set values are kept unless
+   `override_locked: true`.
 4. Confirm with the user before deletes, budget changes, imports or
    applying rules. This is their financial data.
 5. Notifications (no `id`) get `202` and a `tools/call` sent that way does

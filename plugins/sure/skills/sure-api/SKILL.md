@@ -10,8 +10,11 @@ description: >-
 
 # Sure REST API
 
-References: `docs/api/openapi.yaml`, `docs/api/transactions.md` and the
-other files in `docs/api/`.
+References:
+[docs/api/openapi.yaml](https://github.com/we-promise/sure/blob/main/docs/api/openapi.yaml),
+[docs/api/transactions.md](https://github.com/we-promise/sure/blob/main/docs/api/transactions.md)
+and the other files in
+[docs/api/](https://github.com/we-promise/sure/tree/main/docs/api/).
 
 ## Auth
 
@@ -45,7 +48,9 @@ before writes or deletes.
 `accounts`, `balances`, `balance_sheet`, `cash_flow`, `budgets`,
 `budget_categories`, `categories`, `holdings`, `imports`,
 `import_sessions`, `account_statements`, `family_exports`, `chats` and
-more; see `docs/api/openapi.yaml` for schemas and the per-resource docs.
+more; see
+[docs/api/openapi.yaml](https://github.com/we-promise/sure/blob/main/docs/api/openapi.yaml)
+for schemas and the per-resource docs.
 
 ## Changing the API
 
