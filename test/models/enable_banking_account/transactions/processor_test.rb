@@ -283,6 +283,41 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal [ "enable_banking_T" ], @account.entries.where(source: "enable_banking").pluck(:external_id)
   end
 
+  test "an identifierless copy settles the pending entry its identified row names, not a more recent one of the same amount" do
+    pending_entry = create_transaction(
+      account:     @account,
+      name:        "Card authorisation",
+      date:        3.days.ago.to_date,
+      amount:      25,
+      currency:    "EUR",
+      external_id: "enable_banking_B",
+      source:      "enable_banking"
+    )
+    pending_entry.transaction.update!(extra: { "enable_banking" => { "pending" => true } })
+    other_pending = create_transaction(
+      account:     @account,
+      name:        "Another authorisation",
+      date:        2.days.ago.to_date,
+      amount:      25,
+      currency:    "EUR",
+      external_id: "enable_banking_P",
+      source:      "enable_banking"
+    )
+    other_pending.transaction.update!(extra: { "enable_banking" => { "pending" => true } })
+
+    identifierless = raw_identifierless_transaction(amount: "25.00")
+    identified = identifierless.merge(transaction_id: "T", entry_reference: "B")
+    @enable_banking_account.update!(raw_transactions_payload: [ identifierless, identified ])
+
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal "enable_banking_T", pending_entry.reload.external_id
+    assert_not pending_entry.transaction.reload.pending?
+    assert_equal "enable_banking_P", other_pending.reload.external_id
+    assert other_pending.transaction.reload.pending?
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+  end
+
   test "an unrelated identifierless row of the same amount does not take a pending entry before its settling row" do
     pending_entry = create_transaction(
       account:     @account,
