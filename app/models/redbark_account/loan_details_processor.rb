@@ -76,8 +76,8 @@ class RedbarkAccount::LoanDetailsProcessor
     # The headline rate first, because it is the bank's own answer to "what is
     # this loan's rate". `lendingRates[]` is a product description: it can carry
     # several rate types, and `tiers` can split one of those into bands, so a
-    # single figure cannot be pulled from it unless exactly one candidate
-    # survives.
+    # single figure can be pulled from it only when the candidates agree, and
+    # tiered ones only when a band reaches the loan's balance.
     def reported_rate
       return @reported_rate if defined?(@reported_rate)
 
@@ -95,18 +95,63 @@ class RedbarkAccount::LoanDetailsProcessor
         return nil
       end
 
-      candidates = rates.select { |entry| entry.is_a?(Hash) && entry[:rateType].to_s.casecmp("VARIABLE").zero? }
-      # A tiered rate is several rates wearing one entry: which band applies
-      # depends on the balance, and the payload does not say which one the
-      # account sits in.
-      candidates = candidates.reject { |entry| Array(entry[:tiers]).any? }
+      variable = rates.select { |entry| entry.is_a?(Hash) && entry[:rateType].to_s.casecmp("VARIABLE").zero? }
+      # An untiered entry applies at any balance, so it is the answer whenever
+      # one is reported. Tiered entries are read only in its absence.
+      untiered, tiered = variable.partition { |entry| Array(entry[:tiers]).empty? }
+      candidates = untiered.any? ? untiered : tiered
+      return nil if candidates.empty?
 
-      if candidates.size > 1
-        capture("Redbark reported several variable rates; recording none", candidate_count: candidates.size)
+      # Compared as stored, so two figures that round to the same percentage
+      # are one rate. A candidate with no usable rate may be the one that
+      # applies, so it makes the answer unknown rather than dropping out.
+      # `to_percentage` is silent on a blank value, which for the headline rate
+      # is the usual case, so a blank candidate is logged here.
+      if candidates.any? { |entry| entry[:rate].blank? }
+        capture("Redbark reported a variable rate with no value; recording none")
         return nil
       end
 
-      to_percentage(candidates.first&.dig(:rate))
+      percentages = candidates.map { |entry| to_percentage(entry[:rate]) }
+      return nil if percentages.any?(&:nil?)
+
+      distinct = percentages.uniq
+      if distinct.size > 1
+        capture("Redbark reported several variable rates; recording none", rates: distinct.map(&:to_s))
+        return nil
+      end
+
+      # Which balance band applies is not reported, which matters only when no
+      # band reaches the loan's balance: then the rate that applies is missing.
+      if untiered.empty? && candidates.none? { |entry| band_holds_balance?(entry) }
+        capture("Redbark reported a tiered rate whose bands miss the loan's balance; recording none",
+                rate: distinct.first.to_s)
+        return nil
+      end
+
+      distinct.first
+    end
+
+    # A tier is read as a dollar band: an absent or blank minimum is zero and an
+    # absent or blank maximum is open. A tier in any other unit, or with bounds
+    # that do not parse, is not taken to hold the balance.
+    def band_holds_balance?(entry)
+      tiers = Array(entry[:tiers])
+      balance = account.balance&.abs
+      return false if balance.nil?
+
+      tiers.any? do |tier|
+        next false unless tier.is_a?(Hash)
+
+        unit = tier[:unitOfMeasure].to_s
+        next false unless unit.blank? || unit.casecmp("DOLLAR").zero?
+
+        minimum = BigDecimal((tier[:minimumValue].presence || 0).to_s)
+        maximum = tier[:maximumValue].presence && BigDecimal(tier[:maximumValue].to_s)
+        balance >= minimum && (maximum.nil? || balance <= maximum)
+      rescue ArgumentError, TypeError
+        false
+      end
     end
 
     # The API reports fractions: "0.0675" is 6.75%. The schedule and
