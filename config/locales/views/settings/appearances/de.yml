@@ -23,3 +23,5 @@ de:
         theme_title: Design
         transactions_subtitle: Lege fest, wie Transaktionen angezeigt werden
         transactions_title: Transaktionen
+        dashboard_account_groups_title: "Standardmäßig ausgeklappt"
+        dashboard_account_groups_description: "Diese Kontobereiche sind auf dem Dashboard und in der Kontoseitenleiste zunächst ausgeklappt. Du kannst sie jederzeit von Hand einklappen."

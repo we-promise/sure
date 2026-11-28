@@ -50,5 +50,8 @@ de:
       total: Gesamt
       transfer_amount: Überweisungsbetrag
       uncategorized: Nicht kategorisiert
+      investment_contribution_subtitle: "Diese Überweisung in Budgets und Berichten als Ausgabe zählen. Schalte das aus, wenn das Depot- oder Kryptokonto das Geld nur in eine andere Währung umtauscht."
+      investment_contribution_title: "Einzahlung als Investition"
+      transaction: "Transaktion"
     update:
       success: Überweisung aktualisiert

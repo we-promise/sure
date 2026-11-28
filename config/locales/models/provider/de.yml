@@ -5,6 +5,8 @@ de:
       missing_fields: Gib einen Namen und eine vollständige US-Adresse an (Straße, Stadt, Bundesstaat und ZIP-Code).
       not_configured: Dieser Anbieter für Immobiliendaten ist nicht eingerichtet.
       preview_expired: Diese Objektvorschau ist abgelaufen – such die Adresse noch einmal.
+      missing_fields_gb: "Gib bitte einen Namen, Straße und Postleitzahl sowie die UPRN der Immobilie an."
+      entry_name: "Bewertung durch %{provider}"
     realie:
       errors:
         location_mismatch: Realie hat eine Immobilie in einer anderen Stadt oder mit anderer Postleitzahl gefunden. Prüf die Adresse noch einmal.
@@ -15,3 +17,19 @@ de:
       errors:
         no_valuation: RentCast hat für diese Adresse keine Wertschätzung geliefert.
         not_found: RentCast hat unter dieser Adresse keine Immobilie gefunden.
+    truelayer:
+      description: "Verbinde deine britische Bank über TrueLayer"
+    chimnie:
+      errors:
+        invalid_uprn: "Eine UPRN ist eine Zahl mit bis zu 12 Ziffern. Prüfe die UPRN und versuche es erneut."
+        no_estimate: "Chimnie hat für diese Immobilie keine Wertschätzung."
+        not_found: "Chimnie hat keine Immobilie mit dieser UPRN gefunden."
+        unsupported_property: "Chimnie bewertet nur Wohnimmobilien; diese UPRN gehört zu einer Gewerbe- oder Mischimmobilie."
+        unauthorized: "Chimnie hat den API-Schlüssel abgelehnt. Prüfe den Schlüssel unter Einstellungen → Self-Hosting."
+        insufficient_balance: "Das Guthaben deines Chimnie-Kontos reicht für diese Anfrage nicht aus."
+    terrascoutx:
+      errors:
+        no_property: "TerraScoutX hat keine Immobilie zu dieser Adresse gefunden."
+        no_valuation: "TerraScoutX hat für diese Immobilie keinen Wert geliefert."
+        location_mismatch: "TerraScoutX hat eine Immobilie mit anderer Hausnummer oder Postleitzahl gefunden. Prüfe die Adresse bitte noch einmal."
+        insecure_url: "TERRASCOUTX_URL muss https:// verwenden."

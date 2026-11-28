@@ -48,3 +48,8 @@ de:
       choose: Foto hochladen
       choose_label: (optional)
       change: Foto ändern
+    settings_search:
+      aria_label: "Einstellungen durchsuchen"
+      no_results: "Keine Einstellungen passen zu deiner Suche."
+      placeholder: "Einstellungen durchsuchen"
+      results_label: "Passende Einstellungen"

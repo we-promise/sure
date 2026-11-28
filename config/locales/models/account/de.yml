@@ -9,6 +9,7 @@ de:
         family_id: "%{moniker}"
         name: Name
         subtype: Untertyp
+        logo: "Logo"
       depository:
         subtype: Kontotyp
       investment:
@@ -25,6 +26,15 @@ de:
       account/other_liability: Sonstige Verbindlichkeit
       account/property: Immobilie
       account/vehicle: Fahrzeug
+    errors:
+      models:
+        account:
+          attributes:
+            logo:
+              invalid_content_type: "muss ein PNG-, JPEG-, GIF-, WebP- oder ICO-Bild sein"
+              too_large: "darf höchstens %{max_size} MB groß sein"
+            base:
+              cost_tag_other_family: "Der Kosten-Tag muss einer deiner eigenen Tags sein."
   account_order:
     balance_asc:
       label: Saldo (aufsteigend)

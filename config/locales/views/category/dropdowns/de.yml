@@ -10,3 +10,9 @@ de:
         no_categories: Keine Kategorien gefunden
         recent: Zuletzt verwendet
         search_placeholder: Suchen
+        assign_error: "Die Kategorie wurde erstellt, konnte aber nicht zugewiesen werden. Wähl erneut „Erstellen“, um es noch einmal zu versuchen."
+        back: "Zurück"
+        choose_parent: "„%{name}“ erstellen unter:"
+        create: "„%{name}“ erstellen"
+        create_as_subcategory: "Als Unterkategorie hinzufügen…"
+        create_error: "Die Kategorie konnte nicht erstellt werden. Bitte versuche es erneut."

@@ -293,6 +293,8 @@ de:
         qif_account_required: Wähl ein Konto für den QIF-Import aus
         monarch_uploaded: Monarch-Exporte hochgeladen.
         monarch_balances_required: Wähl den Monarch-Export der Kontostände aus.
+      sample_csv:
+        unavailable: "Für diesen Importtyp gibt es keine Beispiel-CSV."
   imports:
     date_format:
       heading: Datumsformat

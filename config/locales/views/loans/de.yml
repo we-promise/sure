@@ -3,6 +3,7 @@ de:
   loans:
     edit:
       edit: "%{account} bearbeiten"
+      stale_rate_schedule: "Dieses Formular ist veraltet. Lade den Kredit neu und nimm deine Änderungen noch einmal vor. Es wurde nichts gespeichert."
     form:
       interest_rate: Zinssatz
       interest_rate_placeholder: '5,25'

@@ -244,3 +244,7 @@ de:
       long: "%A, %d. %B %Y, %H:%M Uhr"
       short: "%d. %b, %H:%M Uhr"
     pm: nachmittags
+  mcp:
+    errors:
+      invalid_session_id: "Ungültige MCP-Session-ID"
+      unsupported_protocol_version: "Nicht unterstützte MCP-Protokollversion: %{version}"

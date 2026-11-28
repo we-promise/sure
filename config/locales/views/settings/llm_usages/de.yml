@@ -27,3 +27,18 @@ de:
         avg_cost_per_call: "Ø Kosten/Aufruf"
         based_on_calls: "Grundlage sind %{with_cost} von %{total} Aufrufen mit Kostendaten"
         total_tokens: Tokens gesamt
+        requests_in_calls:
+          one: "%{count} Anfrage, Wiederholungen eingeschlossen"
+          other: "%{count} Anfragen, Wiederholungen eingeschlossen"
+        recent_usage_scope: "Jeder Aufruf zeigt alle seine Anfragen, auch solche außerhalb des gewählten Zeitraums. Seine Summe kann deshalb von den Summen oben abweichen, die nur Anfragen im Zeitraum zählen."
+        cancelled: "Abgebrochen"
+      requests:
+        summary:
+          one: "%{count} Anfrage"
+          other: "%{count} Anfragen"
+        request: "Anfrage %{number}"
+        tokens: "%{prompt}/%{completion} Tokens"
+        status:
+          succeeded: "Erfolgreich"
+          failed: "Fehlgeschlagen"
+          cancelled: "Abgebrochen"

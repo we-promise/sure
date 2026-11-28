@@ -182,8 +182,16 @@ de:
       tax_free_bond:
         long: Steuerfreie Anleihe
         short: Steuerfreie Anleihe
+      cash_management:
+        short: "CMA"
+        long: "Cash-Management-Konto"
+      epf:
+        short: "EPF"
+        long: "Employees' Provident Fund"
     value_tooltip:
       cash: Bargeld
       holdings: Positionen
       total: Portfoliostand
       total_value_tooltip: Der gesamte Portfoliostand setzt sich aus dem verfügbaren Depotguthaben zum Handel und dem aktuellen Marktwert deiner Positionen zusammen
+      projected: "Voraussichtlicher Kontostand"
+      scheduled: "Geplant"

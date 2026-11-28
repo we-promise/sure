@@ -12,9 +12,11 @@ de:
       code_already_used: Dieser Code wurde bereits verwendet. Bitte gib den nächsten Code aus deiner Authentifizierungs-App ein.
       invalid_code: Ungültiger Bestätigungscode Bitte versuche es erneut
       setup_failed: Beim Aktivieren der Zwei-Faktor-Authentifizierung ist ein Fehler aufgetreten. Bitte versuche es erneut.
+      invalid_password: "Falsches Passwort. Bitte versuche es erneut."
     disable:
       failure: Beim Deaktivieren der Zwei-Faktor-Authentifizierung ist ein Fehler aufgetreten. Bitte versuche es erneut.
       success: Zwei-Faktor-Authentifizierung wurde deaktiviert
+      invalid_password: "Falsches Passwort. Bitte versuche es erneut."
     new:
       code_label: Bestätigungscode
       code_placeholder: 6-stelligen Code eingeben
@@ -28,6 +30,8 @@ de:
       verify_button: Code überprüfen und 2FA aktivieren
       verify_description: Gib den 6-stelligen Code aus deiner Authenticator-App ein
       verify_title: 2. Bestätigungscode eingeben
+      password_label: "Mit deinem Passwort bestätigen"
+      password_placeholder: "Passwort eingeben"
     verify:
       description: Gib den Code aus deiner Authenticator-App ein um fortzufahren
       page_title: Zwei-Faktor-Authentifizierung überprüfen
@@ -36,9 +40,12 @@ de:
       or: oder
       webauthn_button: Passkey oder Sicherheitsschlüssel nutzen
       webauthn_unsupported: Dieser Browser unterstützt keine Passkeys oder Sicherheitsschlüssel.
+      verifying: "Wird geprüft …"
     verify_code:
       invalid_code: Ungültiger Authentifizierungscode Bitte versuche es erneut
     verify_webauthn:
       invalid_credential: Dieser Passkey oder Sicherheitsschlüssel ließ sich nicht prüfen. Versuch es noch einmal.
     webauthn_options:
       unavailable: Für dieses Konto sind keine Passkeys oder Sicherheitsschlüssel hinterlegt.
+    demo_family_restricted: "Für die gemeinsame Demo-Familie lässt sich die Zwei-Faktor-Authentifizierung nicht einrichten, damit der Demo-Zugang für alle offen bleibt."
+    local_password_required: "Für die Zwei-Faktor-Authentifizierung brauchst du ein lokales Passwort. Deines wird über deinen Identitätsanbieter verwaltet."

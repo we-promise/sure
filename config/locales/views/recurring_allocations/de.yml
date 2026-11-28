@@ -13,3 +13,5 @@ de:
       success: Zahlung der Rechnung zugeordnet
     reject:
       success: Vorschlag abgelehnt. Diese Transaktion wird für diese Rechnung nicht mehr vorgeschlagen.
+    split_counterpart_allocated: "Diese Transaktion ist aufgeteilt, und die ursprüngliche Buchung oder einer ihrer Teile ist schon einer Rechnung zugeordnet"
+    entry_exhausted: "Der volle Betrag dieser Transaktion ist schon anderen fälligen Zahlungen zugeordnet"
