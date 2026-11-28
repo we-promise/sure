@@ -371,9 +371,9 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     refute_includes account.read_attribute_before_type_cast(:iban).to_s, "CZ-PLAINTEXT-IBAN"
   end
 
-  # #5800: an API key created before encryption was turned on has to keep
-  # working once the backfill is done and the plaintext fallback is off. It
-  # still authenticates, and revoking it reads display_key without raising.
+  # An API key created before encryption was turned on has to keep working
+  # once the backfill is done and the plaintext fallback is off. It still
+  # authenticates, and revoking it reads display_key without raising.
   test "backfills a plaintext API key so it still authenticates and can be revoked" do
     api_key = api_keys(:active_key)
     ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
