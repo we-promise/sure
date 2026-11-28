@@ -25,3 +25,27 @@ de:
       submit: Einladung senden
       subtitle: Lad jemanden in dein %{moniker}-Konto auf %{product_name} ein
       title: Jemanden einladen
+    bulk_create:
+      download: "Bericht herunterladen"
+      errors:
+        email_not_queued: "Einladung gespeichert, aber die E-Mail konnte nicht in die Warteschlange gestellt werden. Entferne die Einladung und versuch es noch einmal."
+        processing_failed: "Die Einladung konnte nicht verarbeitet werden. Prüf vor einem neuen Versuch, ob es schon eine offene Einladung gibt."
+      invalid_role: "Mehrere Einladungen auf einmal gehen nur an Mitglieder und Gäste."
+      invite_more: "Weitere einladen"
+      no_emails: "Gib mindestens eine E-Mail-Adresse ein."
+      status:
+        invalid: "Einladung fehlgeschlagen"
+        link_only: "Bereit zum Teilen"
+        sent: "Einladung gesendet"
+      summary: "%{sent} gesendet, %{link_only} bereit zum Teilen, %{invalid} fehlgeschlagen."
+      title: "Ergebnis der Einladungen"
+      too_many: "Du kannst bis zu %{max} Personen auf einmal einladen. Bitte schick weniger Einladungen."
+    bulk_new:
+      emails_label: "E-Mail-Adressen"
+      emails_placeholder: "E-Mail-Adressen eingeben, getrennt durch Kommas oder Zeilenumbrüche"
+      role_guest: "Gast"
+      role_label: "Rolle"
+      role_member: "Mitglied"
+      submit: "Einladungen senden"
+      subtitle: "Lad mehrere Personen in dein %{moniker}-Konto auf %{product_name} ein"
+      title: "Mehrere Personen einladen"

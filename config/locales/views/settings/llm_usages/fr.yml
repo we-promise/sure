@@ -15,15 +15,30 @@ fr:
         cost_estimates_title: À propos des estimations de coûts
         end_date: Date de fin
         failed: Échec
+        cancelled: Annulé
         filter: Filtrer
         no_usage_data: Aucune donnée d'utilisation trouvée pour la période sélectionnée
         page_title: Utilisation et coûts du LLM
         prompt: invite
         recent_usage: Utilisation récente
+        recent_usage_scope: 'Chaque appel affiche toutes ses requêtes, même celles hors des dates sélectionnées : son total peut donc différer des totaux ci-dessus, qui ne comptent que les requêtes de la période.'
         start_date: Date de début
         subtitle: Suivez votre utilisation de l'IA et les coûts estimés
         total_cost: Coût total
         total_calls: "Total des appels"
+        requests_in_calls:
+          one: "%{count} requête, nouvelles tentatives comprises"
+          other: "%{count} requêtes, nouvelles tentatives comprises"
         avg_cost_per_call: "Coût moyen/appel"
         based_on_calls: "Basé sur %{with_cost} appels sur %{total} avec données de coût"
         total_tokens: Total jetons
+      requests:
+        summary:
+          one: "%{count} requête"
+          other: "%{count} requêtes"
+        request: Requête %{number}
+        tokens: "%{prompt}/%{completion} jetons"
+        status:
+          succeeded: Réussie
+          failed: Échouée
+          cancelled: Annulée

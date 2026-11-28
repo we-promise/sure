@@ -12,15 +12,15 @@ class SettingsHelperTest < ActionView::TestCase
     assert_equal({ status: :off }, provider_summary("snaptrade"))
   end
 
-  test "provider_summary for snaptrade is off when no item has completed OAuth" do
-    item = OpenStruct.new(oauth_configured?: false)
+  test "provider_summary for snaptrade is off when no item is authorized" do
+    item = OpenStruct.new(credentials_configured?: false)
     @snaptrade_items = [ item ]
 
     assert_equal({ status: :off }, provider_summary("snaptrade"))
   end
 
-  test "provider_summary for snaptrade reports sync-based status once an item is oauth configured" do
-    item = OpenStruct.new(oauth_configured?: true)
+  test "provider_summary for snaptrade reports sync-based status once an item is authorized" do
+    item = OpenStruct.new(credentials_configured?: true)
     @snaptrade_items = [ item ]
     @provider_sync_health = {}
 
@@ -52,7 +52,7 @@ class SettingsHelperTest < ActionView::TestCase
   # An { status: :off } summary lists a connected provider under Available.
   # One key at a time, so a summary that reads another provider's items fails too.
   test "provider_summary is not off for any connected family panel provider" do
-    item = OpenStruct.new(oauth_configured?: true)
+    item = OpenStruct.new(credentials_configured?: true)
 
     off = Settings::ProvidersController::FAMILY_PANEL_KEYS.select do |key|
       instance_variable_set(:"@#{key}_items", [ item ])

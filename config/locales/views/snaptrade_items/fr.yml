@@ -25,6 +25,7 @@ fr:
         one: "%{count} à configurer"
         other: "%{count} à configurer"
       no_connections: Aucune connexion de courtier trouvée.
+      oauth_alternative: 'Vous gérez Sure pour d''autres personnes ? Enregistrez plutôt une application OAuth SnapTrade :'
       oauth_connect_button: Se connecter avec SnapTrade
       oauth_device_button: Utiliser un code d'appareil
       oauth_reauthorize_button: Réautoriser
@@ -32,10 +33,16 @@ fr:
       oauth_setup_step_2_html: 'Pour le flux navigateur uniquement : ajoutez l''URL de rappel de cette application (<code>%{callback_url}</code>) comme URI de redirection enregistrée'
       oauth_setup_step_3: Définissez SNAPTRADE_OAUTH_CLIENT_ID dans votre environnement et redémarrez. Cela suffit à activer le flux par code d'appareil ; ajoutez SNAPTRADE_OAUTH_CLIENT_SECRET pour activer aussi le flux navigateur
       oauth_status_authorized: Autorisé avec SnapTrade.
+      oauth_status_personal_key: Synchronisation avec votre clé API personnelle SnapTrade. Une autorisation via OAuth fait passer cette connexion en OAuth.
       oauth_status_ready: Utilisez un code d'appareil pour autoriser Sure pour SnapTrade.
       oauth_status_ready_device: Autorisez Sure avec un code d'appareil pour lire les données de votre compte SnapTrade.
       oauth_title: SnapTrade OAuth
       orphaned_connection: Connexion orpheline (non synchronisée localement)
+      personal_key_client_id_label: ID Client
+      personal_key_consumer_key_label: Clé consommateur
+      personal_key_description_html: Utilisez la clé personnelle gratuite pour vos propres comptes de courtage. Créez-la sur <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>, puis collez ici l'ID client et la clé consommateur.
+      personal_key_save_button: Enregistrer la clé
+      personal_key_title: Clé API personnelle SnapTrade
       setup_accounts_button: Configurer les comptes
       status_connected:
         one: "%{count} compte depuis SnapTrade"
@@ -120,6 +127,9 @@ fr:
       start_button: Lancer l'autorisation
       subtitle: Autorisez Sure auprès de SnapTrade avec un code d'appareil.
       title: Connecter SnapTrade
+    personal_key:
+      success: Clé API personnelle SnapTrade enregistrée. Synchronisation de vos comptes...
+      missing_fields: Saisissez à la fois l'ID client et la clé consommateur SnapTrade.
     preload_accounts:
       not_configured: SnapTrade n'est pas configuré.
     select_accounts:
