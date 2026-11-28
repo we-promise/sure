@@ -1,38 +1,78 @@
 ---
 pt-BR:
   trades:
+    api_errors:
+      activity_label_must_match_type: investment_activity_label deve ser %{label} quando type é %{type}
+      invalid_activity_label: Rótulo de atividade de investimento inválido
+      invalid_type: Tipo inválido
+      supported_types: "type deve ser um destes: %{types}"
     form:
       account: Conta de transferência (opcional)
       account_prompt: Buscar conta
       amount: Valor
+      fee: Taxa de corretagem
       holding: Símbolo do ticker
+      holding_optional: Símbolo do ticker (opcional)
       price: Preço por ação
       qty: Quantidade
       submit: Adicionar transação
       ticker_placeholder: AAPL
       type: Tipo
+      type_buy: Compra
+      type_sell: Venda
+      type_deposit: Depósito
+      type_withdrawal: Resgate
+      type_dividend: Dividendo
+      type_interest: Juros
+      dividend_requires_security: O ativo é obrigatório para dividendos
+      trade_requires_security: Um ativo (ticker) é obrigatório para negociações de compra e venda
+    trade:
+      scheduled: Agendada
+      scheduled_tooltip: Com data futura — não afetará seu saldo até lá
     header:
-      buy: Comprar
+      buy: Compra
       current_market_price_label: Preço de Mercado Atual
       overview: Visão geral
       purchase_price_label: Preço de Compra
       purchase_qty_label: Quantidade de Compra
-      sell: Vender
+      sell: Venda
+      dividend: Dividendo
+      interest: Juros
+      contribution: Aporte
+      exchange: Troca
+      fee: Taxa
+      other: Outro
+      reinvestment: Reinvestimento
+      sweep_in: Aplicação automática (sweep)
+      sweep_out: Resgate automático (sweep)
+      transfer: Transferência
+      withdrawal: Resgate
       symbol_label: Símbolo
       total_return_label: Ganho/perda não realizado
     new:
       title: Nova transação
     show:
       additional: Adicional
+      amount_label: Valor
+      buy: Compra
+      category_label: Categoria
       cost_per_share_label: Custo por Ação
       date_label: Data
       delete: Excluir
+      fee_label: Taxa de corretagem
+      lot_label: Lote da venda
+      lot_oldest_first: Mais antigo primeiro
+      lot_option: "%{date} · %{qty} a %{price}"
       delete_subtitle: Esta ação não pode ser desfeita
       delete_title: Excluir Negociação
       details: Detalhes
+      provider_disabled_warning: Atualizações de preço pausadas — o provedor %{provider} está desativado. Reative-o nas Configurações ou associe a posição a outro provedor.
       exclude_subtitle: Esta negociação não será incluída em relatórios e cálculos
       exclude_title: Excluir das análises
+      no_category: Sem categoria
       note_label: Nota
       note_placeholder: Adicione notas adicionais aqui...
       quantity_label: Quantidade
+      sell: Venda
       settings: Configurações
+      type_label: Tipo

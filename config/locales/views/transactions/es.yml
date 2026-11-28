@@ -12,10 +12,13 @@ es:
         merchant_prompt: Selecciona un comercio
         name_label: Nombre
         name_placeholder: Introduce un nombre que se aplicará a las transacciones seleccionadas
+        no_change: "(sin cambios)"
         none: (ninguno)
         notes_label: Notas
         notes_placeholder: Introduce una nota que se aplicará a las transacciones seleccionadas
         overview: Resumen
+        reconciled_status_hint: Solo se aplica a cuentas introducidas manualmente (sin sincronización bancaria).
+        reconciled_status_label: Estado de conciliación
         save: Guardar
         tags_label: Etiquetas
         transactions_section: Transacciones
@@ -23,6 +26,7 @@ es:
     selection_bar:
       duplicate: Duplicar
       edit: Editar
+      reconcile: Conciliar
       selected: seleccionadas
     form:
       details: Detalles
@@ -32,6 +36,12 @@ es:
       category: Categoría
       category_label: Categoría
       category_prompt: Selecciona una categoría
+      category_search_placeholder: Buscar categorías
+      create_category: Crear "%{name}"
+      create_category_error: No se ha podido crear la categoría
+      create_as_subcategory: Añadir como subcategoría…
+      choose_parent: 'Crear "%{name}" dentro de:'
+      back_to_categories: Atrás
       date: Fecha
       description: Descripción
       description_placeholder: Describe la transacción
@@ -43,6 +53,10 @@ es:
       note_label: Notas
       note_placeholder: Introduce una nota
       create_tag: Crear
+      create_merchant: Crear
+      create_merchant_error: No se ha podido crear el comercio
+      merchant_search_placeholder: Buscar o crear comercio
+      no_matching_categories: No hay categorías que coincidan
       submit: Añadir transacción
       tag_search_placeholder: Buscar o crear etiqueta
       tags_label: Etiquetas
@@ -53,12 +67,20 @@ es:
       updated: Transacción actualizada
     new:
       new_transaction: Nueva transacción
+    transaction_category:
+      set_on_outflow: La categoría pertenece al lado de salida de esta transferencia y solo se puede cambiar allí
     show:
+      category_set_on_hidden_outflow: Este es el lado de entrada de una transferencia. Su categoría pertenece al lado de salida, en una cuenta a la que no tienes acceso, y solo se puede cambiar allí.
+      category_set_on_outflow: Este es el lado de entrada de una transferencia. Su categoría pertenece al lado de salida y solo se puede cambiar allí, para que los presupuestos la cuenten una sola vez.
       keep_both: No, mantener ambas
       loan_payment: Pago de préstamo
       mark_recurring: Marcar como recurrente
+      create_bill: Crear un recibo
       mark_recurring_subtitle: Haz seguimiento de esta transacción como recurrente. La variación del importe se calcula automáticamente a partir de transacciones similares de los últimos 6 meses.
       mark_recurring_title: Transacción recurrente
+      applied_to_title: Recibos que paga
+      applied_to_detail: "%{amount} para el recibo que vence el %{date}"
+      applied_to_unreviewed: Pendiente de revisar
       merge_duplicate: Sí, combinarlas
       potential_duplicate_description: Esta transacción pendiente puede ser la misma que la transacción contabilizada de abajo. Si es así, combínalas para evitar contarlas dos veces.
       potential_duplicate_title: Posible duplicado detectado
@@ -101,7 +123,26 @@ es:
       payee: Beneficiario
       description: Descripción
       memo: Concepto
+      original_description: Descripción original
+      payment_channel: Canal de pago
+      transaction_code: Código de la transacción
       provider_extras: Extras del proveedor
+      plaid_payment_meta_label: Metadatos del pago · %{name}
+      plaid_counterparty_label: Contraparte %{index}
+      provider_extra_fields:
+        by_order_of: Por orden de
+        confidence_level: Nivel de confianza
+        entity_id: ID de la entidad
+        logo_url: URL del logotipo
+        name: Nombre
+        payee: Beneficiario
+        payer: Ordenante
+        phone_number: Teléfono
+        ppd_id: PPD ID
+        reason: Motivo
+        reference_number: Número de referencia
+        type: Tipo
+        website: Sitio web
       transfer_or_debt_payment: ¿Transferencia o pago de deuda?
       open_matcher: Abrir emparejador
       convert: Convertir
@@ -133,6 +174,8 @@ es:
     transfer_match:
       auto_matched: Emparejada automáticamente
       auto_matched_short: Auto
+      auto_matched_tooltip_html: "%{amount} en %{account} el %{date}. Haz clic para revisarla."
+      auto_matched_tooltip_hidden: Una transacción en una cuenta que no puedes ver.
       confirm_match: Confirmar coincidencia
       payment_confirmed: El pago está confirmado
       reject_match: Rechazar coincidencia
@@ -146,12 +189,31 @@ es:
       potential_duplicate_tooltip: Esto puede ser un duplicado de otra transacción
       review_recommended: Revisar
       review_recommended_tooltip: Gran diferencia de importe — se recomienda revisar para comprobar si es un duplicado
+      scheduled: Programada
+      scheduled_tooltip: 'Con fecha futura: no afectará a tu saldo hasta entonces'
       split: Dividida
       split_tooltip: Esta transacción se ha dividido en varias entradas
       split_child_tooltip: Parte de una transacción dividida
+      transfer_hint: "¿Transferencia?"
+      transfer_hint_dismiss: No es una transferencia
+      transfer_hint_tooltip: Una transacción equivalente en otra cuenta parece el otro lado de una transferencia; haz clic para emparejarlas
+      view_merchant: Ver comercio
     dismiss_duplicate:
       success: Mantenidas como transacciones separadas
       failure: No se pudo descartar la sugerencia de duplicado
+    reconcile:
+      success: Marcada como %{status}
+      failure: No se ha podido actualizar el estado de conciliación
+      unavailable: La conciliación no está activada para esta familia
+      not_manual_account: El estado de conciliación solo se aplica a cuentas introducidas manualmente (sin sincronización bancaria)
+      statuses:
+        unreconciled: Sin conciliar
+        cleared: Comprobada
+        reconciled: Conciliada
+      badge:
+        unreconciled_tooltip: Aún no se ha comprobado con un extracto. Haz clic para marcarla como comprobada.
+        cleared_tooltip: Confirmada en un extracto, pero aún sin conciliar del todo. Haz clic para marcarla como conciliada.
+        reconciled_tooltip: Periodo del extracto conciliado por completo. Haz clic para volver a sin conciliar.
     pending_duplicate_merge:
       possible_duplicate: ¿Duplicado?
       possible_duplicate_short: ¿Dup?
@@ -161,6 +223,9 @@ es:
       reject_title: Mantener como transacciones separadas
     summary:
       total_transactions: Total de transacciones
+      scheduled_count:
+        one: incluida %{count} programada
+        other: incluidas %{count} programadas
       income: Ingresos
       expenses: Gastos
       inflow: Entradas
@@ -231,10 +296,13 @@ es:
         date: Fecha
         type: Tipo
         status: Estado
+        reconcile_status: Conciliación
         amount: Importe
         category: Categoría
         tag: Etiqueta
         merchant: Comercio
+        ai: IA
+        attachment: Adjunto
     convert_to_trade:
       title: Convertir en operación de valores
       description: Convierte esta transacción en una operación con detalles del valor
@@ -303,6 +371,18 @@ es:
           transfer: Transferencia
           confirmed: Confirmada
           pending: Pendiente
+          ai_current: IA
+          ai_history: Historial de IA
+          attachment_with: Con adjunto
+          attachment_without: Sin adjunto
+        attachment_filter:
+          with: Con adjunto
+          without: Sin adjunto
+        ai_filter:
+          current: IA
+          current_description: La categoría sigue siendo la asignada automáticamente (IA o Bayes).
+          history: Historial de IA
+          history_description: Se categorizó automáticamente, pero la categoría se ha cambiado después.
         type_filter:
           expense: Gasto
           income: Ingreso
@@ -318,7 +398,9 @@ es:
         category_filter: Categoría
         clear_filters: Limpiar filtros
         date_filter: Fecha
+        loading: Cargando filtros...
         merchant_filter: Comercio
+        reconcile_status_filter: Conciliación
         status_filter: Estado
         tag_filter: Etiqueta
         type_filter: Tipo
