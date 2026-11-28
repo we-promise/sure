@@ -4,7 +4,8 @@ class Provider::IndexaCapitalAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("IndexaCapitalAccount", self)
-  declares_connection key: "indexa_capital", panel: { title: "Indexa Capital" }
+  declares_connection key: "indexa_capital", name: "Indexa Capital", panel: true,
+                      metadata: { region: "ES", kinds: %w[Investment], maturity: :alpha, logo_text: "IC", logo_color: "#dc2626", domain: "indexacapital.com" }
 
   # Indexa Capital supports index fund and pension plan investments
   def self.supported_account_types

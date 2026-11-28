@@ -16,7 +16,8 @@ class Provider::PlaidAdapter < Provider::Base
 
   # Register this adapter with the factory for ALL PlaidAccount instances
   Provider::Factory.register("PlaidAccount", self)
-  declares_connection key: "plaid"
+  declares_connection key: "plaid", name: "Plaid",
+                      metadata: { region: "US", kinds: %w[Bank], maturity: :stable, logo_text: "PL", logo_color: "#4f46e5", domain: "plaid.com", tier: "Paid" }
 
   def self.connection_item_class
     PlaidItem

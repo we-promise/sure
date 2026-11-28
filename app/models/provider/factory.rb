@@ -109,6 +109,12 @@ class Provider::Factory
       declarations(:panel_declaration)
     end
 
+    # Provider::Metadata attributes of every adapter that declares them, sorted by key.
+    # @return [Array<Hash>] the declared metadata plus key: and name:
+    def metadata_declarations
+      declarations(:metadata_declaration)
+    end
+
     # Clear all registered adapters (useful for testing)
     def clear_registry!
       @registry = {}

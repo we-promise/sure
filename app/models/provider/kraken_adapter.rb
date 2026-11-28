@@ -5,7 +5,8 @@ class Provider::KrakenAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("KrakenAccount", self)
-  declares_connection key: "kraken", panel: { title: "Kraken" }
+  declares_connection key: "kraken", name: "Kraken", panel: true,
+                      metadata: { region: "Global", kinds: %w[Crypto], maturity: :beta, logo_text: "KR", logo_color: "#7c3aed", domain: "kraken.com" }
 
   def self.supported_account_types
     %w[Crypto]

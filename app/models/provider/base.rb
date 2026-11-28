@@ -42,12 +42,17 @@ class Provider::Base
   # serves. Lists that cover every account provider, such as
   # ProviderConnectionStatus::PROVIDERS, are derived from these declarations.
   # @param key [String] The provider key, matching #provider_name (e.g., "brex")
+  # @param name [String] The display name, used as the panel title and in
+  #   Provider::Metadata
   # @param item_class [String] The connection model; defaults to "<Key>Item"
   # @param accounts [Symbol] The connection's provider account association
   # @param linked_accounts [Symbol, nil] An extra association to preload for status
-  # @param panel [Hash, nil] The provider's settings panel: title:, and optionally
+  # @param panel [true, Hash, nil] The provider's settings panel; a Hash may set
   #   turbo_id: (defaults to key) and auto_open:. The partial is "<key>_panel".
-  def self.declares_connection(key:, item_class: "#{key.camelize}Item", accounts: :"#{key}_accounts", linked_accounts: nil, panel: nil)
+  # @param metadata [Hash, nil] Provider::Metadata attributes (region:, kinds:,
+  #   maturity:, logo_text:, logo_color:, domain:, ...)
+  def self.declares_connection(key:, name:, item_class: "#{key.camelize}Item", accounts: :"#{key}_accounts",
+                               linked_accounts: nil, panel: nil, metadata: nil)
     @connection_declaration = {
       key: key,
       type: item_class,
@@ -55,13 +60,18 @@ class Provider::Base
       accounts: accounts,
       linked_accounts: linked_accounts
     }.compact.freeze
+    panel_options = panel.is_a?(Hash) ? panel : {}
     @panel_declaration = panel && {
       key: key,
-      title: panel.fetch(:title),
-      turbo_id: panel.fetch(:turbo_id, key),
+      title: name,
+      turbo_id: panel_options.fetch(:turbo_id, key),
       partial: "#{key}_panel",
-      auto_open: panel[:auto_open]
+      auto_open: panel_options[:auto_open]
     }.compact.freeze
+    if metadata&.key?(:name) || metadata&.key?(:key)
+      raise ArgumentError, "#{key}: declare key: and name: once, outside metadata:"
+    end
+    @metadata_declaration = metadata && metadata.merge(key: key, name: name).freeze
   end
 
   def self.connection_declaration
@@ -70,6 +80,10 @@ class Provider::Base
 
   def self.panel_declaration
     @panel_declaration
+  end
+
+  def self.metadata_declaration
+    @metadata_declaration
   end
 
   # Returns provider connection configurations

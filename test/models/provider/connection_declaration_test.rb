@@ -58,6 +58,17 @@ class Provider::ConnectionDeclarationTest < ActiveSupport::TestCase
     assert_equal keys.sort, keys
   end
 
+  test "a provider names itself once, outside its metadata" do
+    adapter = Class.new(Provider::Base)
+
+    error = assert_raises(ArgumentError) do
+      adapter.declares_connection key: "gocardless", name: "GoCardless", metadata: { name: "Other", kinds: %w[Bank] }
+    end
+    assert_match "gocardless", error.message
+    assert_raises(ArgumentError) { adapter.declares_connection key: "gocardless", name: "GoCardless", metadata: { key: "x" } }
+    assert_nil adapter.metadata_declaration
+  end
+
   test "an adapter that fails to load leaves the other declarations listed" do
     expected = Provider::Factory.connection_declarations.map { |declaration| declaration[:key] }
     files = Provider::Factory.send(:adapter_files)

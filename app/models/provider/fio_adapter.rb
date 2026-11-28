@@ -5,7 +5,8 @@ class Provider::FioAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("FioAccount", self)
-  declares_connection key: "fio", panel: { title: "Fio banka" }
+  declares_connection key: "fio", name: "Fio banka", panel: true,
+                      metadata: { region: "CZ", kinds: %w[Bank], maturity: :alpha, logo_text: "FI", logo_color: "#1d4ed8", domain: "fio.cz" }
 
   # Fio's statement header carries no account type, so the user picks one during setup.
   # Current and savings accounts are Depository; a token issued for a mortgage, loan or

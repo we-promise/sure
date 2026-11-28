@@ -3,7 +3,8 @@ class Provider::AkahuAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("AkahuAccount", self)
-  declares_connection key: "akahu", panel: { title: "Akahu" }
+  declares_connection key: "akahu", name: "Akahu", panel: true,
+                      metadata: { region: "NZ", kinds: %w[Bank Investment], maturity: :beta, logo_text: "AK", logo_color: "#059669", domain: "akahu.nz" }
 
   def self.supported_account_types
     %w[Depository CreditCard Loan Investment]

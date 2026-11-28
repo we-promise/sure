@@ -4,7 +4,8 @@ class Provider::SnaptradeAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("SnaptradeAccount", self)
-  declares_connection key: "snaptrade", linked_accounts: :linked_accounts, panel: { title: "SnapTrade", auto_open: "manage" }
+  declares_connection key: "snaptrade", name: "SnapTrade", linked_accounts: :linked_accounts, panel: { auto_open: "manage" },
+                      metadata: { region: "US / CA", kinds: %w[Investment], maturity: :beta, logo_text: "ST", logo_color: "#16a34a", domain: "snaptrade.com" }
 
   # Define which account types this provider supports
   # SnapTrade specializes in investment/brokerage accounts

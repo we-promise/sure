@@ -4,7 +4,8 @@ class Provider::SimplefinAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("SimplefinAccount", self)
-  declares_connection key: "simplefin", panel: { title: "SimpleFIN" }
+  declares_connection key: "simplefin", name: "SimpleFIN", panel: true,
+                      metadata: { region: "US", kinds: %w[Bank Investment], maturity: :stable, logo_text: "SF", logo_color: "#2563eb", domain: "simplefin.org" }
 
   # Define which account types this provider supports
   def self.supported_account_types

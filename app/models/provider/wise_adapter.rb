@@ -5,7 +5,8 @@ class Provider::WiseAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("WiseAccount", self)
-  declares_connection key: "wise", panel: { title: "Wise" }
+  declares_connection key: "wise", name: "Wise", panel: true,
+                      metadata: { region: "Global", kinds: %w[Bank], maturity: :beta, logo_text: "WI", logo_color: "#22c55e", domain: "wise.com" }
 
   def self.supported_account_types
     %w[Depository]

@@ -700,8 +700,10 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       source = File.exist?(adapter_path) ? File.read(adapter_path) : ""
       return if self.class.panel_declared?(source, key: file_name)
 
+      kinds = investment_provider? ? "Investment" : "Bank"
       say "Bank sync will not list #{file_name} until #{adapter_path} declares " \
-          "`declares_connection key: \"#{file_name}\", panel: { title: \"#{class_name.titleize}\" }`", :yellow
+          "`declares_connection key: \"#{file_name}\", name: \"#{class_name.titleize}\", panel: true, " \
+          "metadata: { region: \"Global\", kinds: %w[#{kinds}], maturity: :alpha, logo_text: \"#{class_name.first(2).upcase}\" }`", :yellow
     end
 
     def add_bank_sync_entry(path, name, marker)

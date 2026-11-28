@@ -4,7 +4,8 @@ class Provider::LunchflowAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("LunchflowAccount", self)
-  declares_connection key: "lunchflow", panel: { title: "Lunch Flow" }
+  declares_connection key: "lunchflow", name: "Lunch Flow", panel: true,
+                      metadata: { region: "Global", kinds: %w[Bank], maturity: :stable, logo_text: "LF", logo_color: "#f97316", domain: "lunchflow.app" }
 
   # Define which account types this provider supports
   def self.supported_account_types

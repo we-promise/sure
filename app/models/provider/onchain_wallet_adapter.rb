@@ -5,7 +5,8 @@ class Provider::OnchainWalletAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("OnchainWalletAccount", self)
-  declares_connection key: "onchain_wallet", panel: { title: "On-chain wallets" }
+  declares_connection key: "onchain_wallet", name: "On-chain wallets", panel: true,
+                      metadata: { region: "Global", kinds: %w[Crypto], maturity: :alpha, logo_text: "OC", logo_color: "#d97706", domain: nil, logo_icon: "wallet" }
 
   def self.supported_account_types
     %w[Crypto]

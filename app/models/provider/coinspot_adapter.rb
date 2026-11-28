@@ -5,7 +5,8 @@ class Provider::CoinspotAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("CoinspotAccount", self)
-  declares_connection key: "coinspot", panel: { title: "CoinSpot" }
+  declares_connection key: "coinspot", name: "CoinSpot", panel: true,
+                      metadata: { region: "AU", kinds: %w[Crypto], maturity: :beta, logo_text: "CS", logo_color: "#111827", domain: "coinspot.com.au" }
 
   # CoinSpot only supplies read-only exchange balances, so it can only back
   # the combined Crypto account type.

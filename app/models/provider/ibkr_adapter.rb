@@ -3,7 +3,8 @@ class Provider::IbkrAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("IbkrAccount", self)
-  declares_connection key: "ibkr", panel: { title: "Interactive Brokers" }
+  declares_connection key: "ibkr", name: "Interactive Brokers", panel: true,
+                      metadata: { region: "Global", kinds: %w[Investment], maturity: :beta, logo_text: "IB", logo_color: "#dc2626", domain: "interactivebrokers.com" }
 
   def self.supported_account_types
     %w[Investment]
