@@ -1,0 +1,6 @@
+id:
+  push_notifications:
+    budget_description: Beri tahu saya juga saat kategori anggaran mendekati batasnya. Peringatan melebihi anggaran selalu dikirim. Nonaktif secara default.
+    budget_title: Peringatan anggaran
+    description: Berlaku untuk setiap perangkat yang Anda aktifkan, browser dan iOS.
+    title: Notifikasi push
