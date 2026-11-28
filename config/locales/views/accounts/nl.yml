@@ -118,6 +118,12 @@ nl:
         title: "Hoe wilt u het toevoegen?"
       title: "Wat wilt u toevoegen?"
     health_status:
+      balance_gap:
+        detail_higher: "Sinds %{since} is het saldo dat je bank meldt %{difference} hoger dan je transacties bij elkaar opgeteld."
+        detail_lower: "Sinds %{since} is het saldo dat je bank meldt %{difference} lager dan je transacties bij elkaar opgeteld."
+        hint: "Meestal ontbreekt er een transactie in Sure of is er een dubbel geïmporteerd."
+        link: "Transacties sinds de laatste overeenkomst bekijken"
+        message: "Saldo komt niet overeen met de bank"
       negative_positions:
         detail: "%{name} (%{ticker}): onder nul sinds %{date}, laagste %{qty}"
         hint: "Waarschijnlijk ontbreekt een aankoop of overboeking. Voeg die toe of corrigeer de transacties die de positie onder nul brachten."

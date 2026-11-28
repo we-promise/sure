@@ -71,4 +71,35 @@ class Account::HealthStatusTest < ActiveSupport::TestCase
     assert_equal I18n.t("accounts.health_status.negative_positions.hint"), issue.hint
     assert_equal Rails.application.routes.url_helpers.account_path(@account, tab: "holdings"), issue.link[:href]
   end
+
+  test "an open balance gap on a linked account links to the transactions since the last match" do
+    account = accounts(:connected)
+    add_valuation(account, 10.days.ago.to_date, 1000)
+    (2..7).reverse_each { |days_ago| add_valuation(account, days_ago.days.ago.to_date, 1050) }
+
+    issue = Account::HealthStatus.new(account).issues.sole
+
+    assert_equal :warning, issue.severity
+    assert_equal I18n.t("accounts.health_status.balance_gap.message"), issue.message
+    assert_equal 50, issue.details.sole.difference
+    assert_equal I18n.t("accounts.health_status.balance_gap.hint"), issue.hint
+    assert_equal Rails.application.routes.url_helpers.transactions_path(q: { account_ids: [ account.id ], start_date: 10.days.ago.to_date }),
+                 issue.link[:href]
+  end
+
+  test "a linked account whose bank balance matches its transactions has no balance gap" do
+    account = accounts(:connected)
+    add_valuation(account, 10.days.ago.to_date, 1000)
+    add_valuation(account, 3.days.ago.to_date, 1000)
+
+    assert_empty Account::HealthStatus.new(account).issues
+  end
+
+  private
+    def add_valuation(account, date, balance)
+      account.entries.create!(
+        name: "Valuation", date: date, amount: balance, currency: account.currency,
+        entryable: Valuation.new(kind: "reconciliation")
+      )
+    end
 end

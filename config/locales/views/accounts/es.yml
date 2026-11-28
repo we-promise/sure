@@ -125,6 +125,12 @@ es:
         title: ¿Cómo te gustaría añadirla?
       title: ¿Qué te gustaría añadir?
     health_status:
+      balance_gap:
+        detail_higher: "Desde el %{since}, el saldo que informa tu banco es %{difference} mayor que la suma de tus transacciones."
+        detail_lower: "Desde el %{since}, el saldo que informa tu banco es %{difference} menor que la suma de tus transacciones."
+        hint: Normalmente falta una transacción en Sure o se importó dos veces.
+        link: Revisar transacciones desde la última coincidencia
+        message: El saldo no coincide con el banco
       negative_positions:
         detail: "%{name} (%{ticker}): por debajo de cero desde el %{date}, mínimo %{qty}"
         hint: "Probablemente falta una compra o un traspaso. Añádela o corrige las operaciones que dejaron la posición por debajo de cero."

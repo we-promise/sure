@@ -96,6 +96,12 @@ ca:
       depository_only: Només els comptes d'efectiu i de targeta de crèdit es poden
         establir com a predeterminats.
     health_status:
+      balance_gap:
+        detail_higher: "Des del %{since}, el saldo que informa el teu banc és %{difference} més alt que la suma de les teves transaccions."
+        detail_lower: "Des del %{since}, el saldo que informa el teu banc és %{difference} més baix que la suma de les teves transaccions."
+        hint: "Normalment falta una transacció a Sure o s'ha importat dues vegades."
+        link: "Revisa les transaccions des de l'última coincidència"
+        message: "El saldo no coincideix amb el del banc"
       negative_positions:
         detail: "%{name} (%{ticker}): per sota de zero des del %{date}, mínim %{qty}"
         hint: "Probablement falta una compra o un traspàs. Afegeix-la o corregeix les operacions que han deixat la posició per sota de zero."

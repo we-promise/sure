@@ -87,6 +87,12 @@ de:
         previous: Zurück
         select: Auswählen
     health_status:
+      balance_gap:
+        detail_higher: "Der Kontostand laut Bank liegt seit %{since} um %{difference} höher als die Summe deiner Buchungen."
+        detail_lower: "Der Kontostand laut Bank liegt seit %{since} um %{difference} niedriger als die Summe deiner Buchungen."
+        hint: Meist fehlt in Sure eine Buchung oder sie wurde doppelt importiert.
+        link: Buchungen seit der letzten Übereinstimmung prüfen
+        message: Kontostand stimmt nicht mit der Bank überein
       negative_positions:
         detail: "%{name} (%{ticker}): ab %{date} unter null, niedrigster Stand %{qty}"
         hint: Vermutlich fehlt ein Kauf oder ein Übertrag. Lege ihn an oder korrigiere die Trades, die den Bestand unter null gebracht haben.

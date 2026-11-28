@@ -35,6 +35,12 @@ ro:
         title: Cum dorești să adaugi?
       title: Ce dorești să adaugi?
     health_status:
+      balance_gap:
+        detail_higher: "Din %{since}, soldul raportat de banca ta este cu %{difference} mai mare decât suma tranzacțiilor tale."
+        detail_lower: "Din %{since}, soldul raportat de banca ta este cu %{difference} mai mic decât suma tranzacțiilor tale."
+        hint: "De obicei lipsește o tranzacție în Sure sau a fost importată de două ori."
+        link: "Verifică tranzacțiile de la ultima potrivire"
+        message: "Soldul nu se potrivește cu banca"
       negative_positions:
         detail: "%{name} (%{ticker}): sub zero din %{date}, minim %{qty}"
         hint: "Probabil lipsește o cumpărare sau un transfer. Adaug-o sau corectează tranzacțiile care au adus poziția sub zero."
