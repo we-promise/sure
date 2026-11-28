@@ -1,0 +1,113 @@
+---
+id:
+  truelayer_items:
+    default_name: Koneksi TrueLayer
+    redirect_blocked: Tidak dapat membuka TrueLayer. Silakan coba lagi.
+    create:
+      success: Kredensial TrueLayer disimpan. Anda sekarang dapat menghubungkan bank.
+    update:
+      success: Kredensial TrueLayer diperbarui.
+    destroy:
+      success: Koneksi TrueLayer dijadwalkan untuk dihapus.
+    connect:
+      credentials_required: Tambahkan ID klien dan rahasia TrueLayer Anda terlebih dahulu.
+    sync:
+      not_connected: Hubungkan bank sebelum menyinkronkan.
+    callback:
+      authorization_error: "Otorisasi TrueLayer gagal: %{error}"
+      authorization_failed: "Tidak dapat menyelesaikan koneksi TrueLayer: %{message}"
+      invalid_callback: Proses masuk TrueLayer kedaluwarsa atau tidak cocok dengan sesi ini. Silakan mulai lagi.
+      success: Bank terhubung. Rekening Anda sedang diimpor; atur setelah sinkronisasi selesai.
+    truelayer_item:
+      consent_expiring: "Akses bank kedaluwarsa pada %{date}"
+      delete: Hapus koneksi
+      deletion_in_progress: penghapusan sedang berlangsung...
+      error: Kesalahan
+      history_missed: Riwayat lama tidak diimpor. Hubungkan ulang untuk mengambilnya.
+      no_accounts_description: Koneksi ini belum memiliki rekening tertaut.
+      no_accounts_title: Tidak ada rekening
+      reconnect: Hubungkan ulang
+      requires_update: Hubungkan ulang bank ini untuk terus menyinkronkan
+      setup_action: Atur Rekening Baru
+      setup_description: "%{linked} dari %{total} rekening tertaut. Pilih jenis rekening untuk rekening TrueLayer yang baru diimpor."
+      setup_needed: Rekening baru siap diatur
+      status: "Disinkronkan %{timestamp} lalu"
+      status_never: Belum pernah disinkronkan
+      status_with_summary: "Terakhir disinkronkan %{timestamp} lalu • %{summary}"
+      syncing: Menyinkronkan...
+      sync_status:
+        no_accounts: Tidak ada rekening ditemukan
+        synced:
+          one: "%{count} rekening disinkronkan"
+          other: "%{count} rekening disinkronkan"
+        partial_setup:
+          one: "%{linked} disinkronkan, %{unlinked} perlu pengaturan"
+          other: "%{linked} disinkronkan, %{unlinked} perlu pengaturan"
+    subtype_select:
+      placeholder:
+        subtype: Pilih subjenis
+        type: Pilih jenis
+    setup_accounts:
+      account_type_label: "Jenis Rekening:"
+      all_accounts_linked: Semua rekening TrueLayer Anda telah diatur.
+      cancel: Batal
+      choose_account_type: "Pilih jenis rekening yang tepat untuk setiap rekening TrueLayer:"
+      create_accounts: Buat Rekening
+      creating_accounts: Membuat Rekening...
+      kind_account: Rekening bank
+      kind_card: Kartu
+      no_accounts_to_setup: Tidak Ada Rekening untuk Diatur
+      page_title: Atur Rekening TrueLayer
+      subtitle: Pilih jenis rekening yang tepat untuk rekening yang Anda impor
+      sync_start_date_help: Transaksi sebelum tanggal ini tidak disertakan. Biarkan kosong untuk menyimpan semua yang disediakan bank.
+      sync_start_date_label: Impor transaksi mulai dari
+      title: Atur Rekening TrueLayer Anda
+      account_types:
+        skip: Lewati rekening ini
+        depository: Rekening Giro atau Tabungan
+        credit_card: Kartu Kredit
+        loan: Pinjaman atau KPR
+      subtype_labels:
+        depository: "Subjenis Rekening:"
+        credit_card: ""
+        loan: "Jenis Pinjaman:"
+      subtype_messages:
+        credit_card: Kartu kredit akan diatur secara otomatis sebagai rekening kartu kredit.
+    complete_account_setup:
+      all_skipped: Semua rekening dilewati. Tidak ada rekening yang dibuat.
+      creation_failed: "Gagal membuat rekening: %{error}"
+      success:
+        one: Membuat %{count} rekening.
+        other: Membuat %{count} rekening.
+    select_existing_account:
+      cancel: Batal
+      description: Pilih rekening TrueLayer untuk ditautkan. Transaksinya akan disinkronkan ke rekening ini.
+      link_account: Tautkan rekening
+      no_accounts: Tidak ada rekening TrueLayer yang belum tertaut. Hubungkan bank di Pengaturan → Penyedia terlebih dahulu.
+      title: "Tautkan %{account_name} dengan TrueLayer"
+    link_existing_account:
+      already_linked: Rekening TrueLayer tersebut sudah ditautkan ke rekening lain.
+      only_manual: Hanya rekening manual yang dapat ditautkan ke TrueLayer.
+      success: "Menautkan %{account_name} dengan TrueLayer."
+  settings:
+    providers:
+      truelayer_panel:
+        client_id_label: ID Klien
+        client_id_placeholder: mis. sure-abc123 (sandbox-... untuk Mock Bank)
+        client_secret_label: Rahasia klien
+        client_secret_placeholder_new: Tempel rahasia klien Anda
+        client_secret_placeholder_update: Kosongkan untuk mempertahankan rahasia saat ini
+        connect_bank: Hubungkan bank
+        consent_expires: "Akses bank kedaluwarsa %{date}"
+        reconnect: Hubungkan ulang
+        reconnect_required: Perlu dihubungkan ulang
+        remove: Hapus
+        remove_confirm: Hapus koneksi bank ini? Rekening tertaut tetap menyimpan riwayatnya tetapi berhenti menyinkronkan.
+        save_credentials: Simpan kredensial
+        step_1_html: "Buat aplikasi di %{link} lalu salin ID klien dan rahasianya."
+        step_2_html: "Tambahkan %{callback_url} ke Allowed redirect URIs aplikasi."
+        step_3: Simpan kredensial di bawah ini, lalu hubungkan bank. Sure mengimpor riwayat lengkap dalam beberapa menit setelah Anda menyetujui akses.
+        step_4: Bank di Inggris Raya meminta Anda menghubungkan ulang setiap 90 hari; Sure menampilkan tombol Hubungkan ulang sebelum akses kedaluwarsa.
+        sync: Sinkronkan
+        syncing: Menyinkronkan...
+        update_credentials: Perbarui kredensial

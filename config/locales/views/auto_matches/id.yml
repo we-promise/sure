@@ -23,6 +23,9 @@ id:
       from: Dari
       to: Ke
       date: Tanggal
+      days_apart:
+        one: "Selisih %{count} hari"
+        other: "Selisih %{count} hari"
       actions: Tindakan
       separator: "·"
     bulk_actions:

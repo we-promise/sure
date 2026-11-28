@@ -79,6 +79,10 @@ class Provider::ExchangeRateConceptTest < ActiveSupport::TestCase
     end
   end
 
+  test "a provider may be asked for USD legs unless it says otherwise" do
+    assert StubProvider.new([ 1 ]).usd_cross?
+  end
+
   # A provider added to the registry is covered without extra work, as long as
   # it includes the concept.
   test "every registered exchange rate provider validates its rates" do

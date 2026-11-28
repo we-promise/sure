@@ -58,21 +58,27 @@ digests may have been built before that check, but named images and charts have 
 
 ## Version names
 
-Use unpadded `YYYY.M.D-alpha` for alpha releases and `YYYY.M.D` for stable releases.
+Use unpadded `YYYY.M.D-alpha` for alpha releases, `YYYY.M.D-rc.N` for
+release candidates (N is a nonnegative integer without leading zeroes), and
+`YYYY.M.D` for stable releases. All use the actual UTC release date.
 
-**Floating Docker channel promotion is temporarily paused.** Neither release
-updates `latest` or `stable` while we validate the CalVer rollout. Existing channel
-tags are left pointing to their previous images; they are not deleted. Test using
-explicit CalVer image tags (or the temporary versioned compatibility aliases).
-Re-enabling channel promotion requires a separate workflow change after validation.
-Nightly tags and release/deployment jobs are unchanged.
-There are no numbered canonical prereleases, beta/RC tags or hotfix suffixes.
-Only the temporary legacy compatibility alias keeps its old numbered format.
+Alpha releases publish their exact versioned Docker image and update `latest`,
+never `stable`. RC releases publish version-specific tags only: neither `latest`
+nor `stable` moves. Both use the alpha Render deployment path and are marked as
+GitHub prereleases. Stable releases update `stable` and use the stable deployment
+path. The GitHub prerelease checkbox does not override the tag-based workflow classification.
 
-The date distinguishes releases: publish at most one alpha and one stable per
-UTC day. A retry reuses the same tag and commit; a different release uses a new
-date, not an incremented suffix or a moved tag. Cut release branches as usual;
-daily fixes do not create new ones.
+During the compatibility window, RC releases also use `COMPATIBILITY_CHANNEL:
+alpha`. Advance `COMPATIBILITY_VERSION` to an unused legacy alias before each new
+release (or clear it); an existing alias pointing to another commit blocks
+publication. RC identity remains intact in the image, Helm appVersion and Android
+version name; iOS uses the numeric date, as it does for alpha.
+
+Publish at most one alpha and one stable per UTC day; numbered RCs allow multiple
+candidates on that date. A retry reuses the same tag and commit; a new candidate
+increments N without moving an existing tag. Beta, numbered alpha and hotfix
+suffixes remain unsupported. Cut release branches as usual; daily fixes do not
+create new ones.
 
 ## January
 

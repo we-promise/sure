@@ -21,6 +21,11 @@ class Assistant::Function::GetHoldings < Assistant::Function
 
         Note: This function only returns holdings from Investment and Crypto accounts.
 
+        Each holding's `lots` lists the parcels it is made of, oldest first:
+        when each was acquired, how many units are still held and what each
+        unit cost (`opening` is units held before the first recorded trade).
+        It is null when the recorded lots do not add up to the holding.
+
         Note on pagination:
 
         This function can be paginated. You can expect the following properties in the response:
@@ -84,13 +89,25 @@ class Assistant::Function::GetHoldings < Assistant::Function
   end
 
   def call(params = {})
-    holdings_query = build_holdings_query(params)
+    holdings = build_holdings_query(params).includes(:security, :account).to_a
 
-    ordered_holdings = holdings_query.order(amount: :desc)
-    pagy = Pagy.new(count: ordered_holdings.count, page: resolved_page(params), limit: default_page_size)
-    paginated_holdings = ordered_holdings.includes(:security, :account).offset(pagy.offset).limit(pagy.limit)
+    # A provider snapshot can be in another currency than the account, and the
+    # family's accounts can differ too, so amounts are converted to the family
+    # currency before they are ordered and totaled. They convert at today's
+    # rate, as InvestmentStatement and the balance sheet do for family totals,
+    # even when a provider snapshot is dated earlier. (Account#current_holdings_total
+    # uses each holding's own date, but converts into the account currency for
+    # the weights.) A currency with no rate counts as 0 rather than 1:1.
+    rates = ExchangeRate.rates_for(holdings.map(&:currency), to: family.currency, date: Date.current)
+    family_amounts = holdings.index_with { |holding| holding.amount * (rates[holding.currency] || 0) }
 
-    total_value = holdings_query.sum(:amount)
+    ordered_holdings = holdings.sort_by { |holding| [ -family_amounts[holding], holding.id ] }
+    pagy = Pagy.new(count: ordered_holdings.size, page: resolved_page(params), limit: default_page_size)
+    paginated_holdings = ordered_holdings[pagy.offset, pagy.limit] || []
+
+    total_value = family_amounts.values.sum
+
+    open_lots = Holding.open_lots_for(paginated_holdings)
 
     normalized_holdings = paginated_holdings.map do |holding|
       {
@@ -104,6 +121,7 @@ class Assistant::Function::GetHoldings < Assistant::Function
         weight: holding.weight&.round(2),
         average_cost: holding.avg_cost&.to_f,
         formatted_average_cost: holding.avg_cost&.format,
+        lots: open_lots[holding.id]&.map { |lot| normalized_lot(lot) },
         account: holding.account.name,
         date: holding.date
       }
@@ -120,6 +138,20 @@ class Assistant::Function::GetHoldings < Assistant::Function
   end
 
   private
+    # One open lot of a position: the opening lot (units held before the first
+    # trade) has no acquisition date and, unless the user set one, no cost.
+    def normalized_lot(lot)
+      unit_cost = lot.unit_cost && Money.new(lot.unit_cost, lot.currency)
+      {
+        opening: lot.opening?,
+        acquired_on: lot.acquired_on,
+        quantity: lot.qty.to_f,
+        unit_cost: unit_cost&.amount&.to_f,
+        formatted_unit_cost: unit_cost&.format,
+        manual_cost: lot.manual_cost?
+      }
+    end
+
     def default_page_size
       self.class.default_page_size
     end
@@ -131,13 +163,11 @@ class Assistant::Function::GetHoldings < Assistant::Function
         accounts = accounts.where(name: params["accounts"])
       end
 
-      holdings = Holding.where(account: accounts)
-        .where(
-          id: Holding.where(account: accounts)
-            .select("DISTINCT ON (account_id, security_id) id")
-            .where.not(qty: 0)
-            .order(:account_id, :security_id, date: :desc)
-        )
+      # The rows each account's Holdings tab shows, so the quantity and average
+      # cost match it. On a provider-linked account these are the provider rows
+      # on the latest snapshot date. The newest row there can be a calculated
+      # one dated today, whose cost basis covers only the imported trades.
+      holdings = Holding.where(id: accounts.flat_map { |account| account.current_holdings.ids })
 
       if params["securities"].present?
         holdings = holdings.joins(:security).where(securities: { ticker: params["securities"] })

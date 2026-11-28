@@ -1,0 +1,21 @@
+---
+es:
+  activerecord:
+    errors:
+      models:
+        monarch_import:
+          missing_columns: Al archivo de %{file} le faltan las columnas %{columns}. ¿Es la exportación correcta de Monarch?
+          malformed_csv: 'El archivo de %{file} no es un CSV legible: %{error}'
+          invalid_number: "%{value} no es un número"
+          invalid_date: "%{value} no es una fecha con el formato 2024-01-31"
+          date_out_of_range: "%{value} está fuera de las fechas que importa Sure (del %{from} al %{to})"
+          blank_account: Una fila no tiene nombre de cuenta. Comprueba que el archivo es una exportación de Monarch.
+          blank_transaction_id: Una transacción no tiene Id. Comprueba que el archivo es una exportación de transacciones de Monarch.
+          opening_balance_changed: El saldo inicial de %{account} cambió durante la importación. Revisa la importación y vuelve a publicarla.
+          target_not_supported: Sure ya no puede importar en %{accounts}. Los destinos deben ser cuentas manuales sin posiciones ni operaciones. Elige otros destinos y vuelve a publicar.
+          no_accounts: Las exportaciones no contienen ninguna cuenta. Comprueba que exportaste los archivos correctos de Monarch.
+          files:
+            balances: saldos
+            transactions: transacciones
+        import/monarch_account_mapping:
+          target_taken: "%{account} ya es el destino de otra cuenta de Monarch. Elige otra cuenta para %{monarch} o impórtala como cuenta nueva."

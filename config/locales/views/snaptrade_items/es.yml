@@ -30,6 +30,25 @@ es:
       access_denied: Se canceló la autorización de SnapTrade.
       state_mismatch: La autorización de SnapTrade falló una comprobación de seguridad. Inténtalo de nuevo.
       failed: No se pudo completar la autorización de SnapTrade. Inténtalo de nuevo.
+    oauth_device_flow:
+      title: Conectar SnapTrade
+      subtitle: Autoriza a Sure en SnapTrade con un código de dispositivo.
+      instructions: Abre SnapTrade, confirma este código de dispositivo y vuelve aquí para terminar.
+      code_label: Código de dispositivo
+      open_snaptrade: Abrir SnapTrade
+      start_button: Iniciar autorización
+      complete_button: Ya he autorizado SnapTrade
+      cancel_button: Cancelar
+      missing_client_id: OAuth de SnapTrade no está configurado. Añade SNAPTRADE_OAUTH_CLIENT_ID a .env.local, reinicia la app e inténtalo de nuevo.
+    start_oauth_device_flow:
+      failed: No se ha podido iniciar la autorización de dispositivo de SnapTrade. Inténtalo de nuevo.
+    complete_oauth_device_flow:
+      success: Autorización de SnapTrade completada.
+      device_code_required: No hay ninguna autorización de dispositivo de SnapTrade en curso para esta conexión. Vuelve a iniciarla para obtener un código nuevo.
+      authorization_pending: SnapTrade aún no ha recibido tu confirmación. Aprueba el código en SnapTrade e inténtalo de nuevo.
+      expired: Este código de dispositivo ha caducado. Vuelve a iniciar la autorización.
+      access_denied: Se ha rechazado la autorización de SnapTrade.
+      failed: No se ha podido completar la autorización de dispositivo de SnapTrade. Inténtalo de nuevo.
     select_existing_account:
       not_found: No se ha encontrado la cuenta o la configuración de SnapTrade.
       title: Vincular a cuenta de SnapTrade
@@ -124,12 +143,14 @@ es:
       description: SnapTrade conecta con más de 25 brókers principales (Fidelity, Vanguard, Schwab, Robinhood, etc.) y proporciona un historial completo de operaciones con etiquetas de actividad y base de costes.
       oauth_setup_step_1_html: Registra una aplicación OAuth en <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
       oauth_setup_step_2_html: Añade la URL de callback de esta aplicación (<code>%{callback_url}</code>) como URI de redirección registrada
-      oauth_setup_step_3: Define SNAPTRADE_OAUTH_CLIENT_ID y SNAPTRADE_OAUTH_CLIENT_SECRET en tu entorno y reinicia
+      oauth_setup_step_3: Define SNAPTRADE_OAUTH_CLIENT_ID en tu entorno y reinicia. Con eso basta para el flujo con código de dispositivo; añade también SNAPTRADE_OAUTH_CLIENT_SECRET para el flujo en el navegador
       free_tier_warning: El nivel gratuito de SnapTrade cubre 20 conexiones de bróker.
       oauth_title: OAuth de SnapTrade
       oauth_status_ready: Autoriza a Sure para leer los datos de tu cuenta de SnapTrade.
+      oauth_status_ready_device: Autoriza a Sure con un código de dispositivo para leer los datos de tu cuenta de SnapTrade.
       oauth_status_authorized: Autorizado con SnapTrade.
       oauth_connect_button: Conectar con SnapTrade
+      oauth_device_button: Usar un código de dispositivo
       oauth_reauthorize_button: Volver a autorizar
       status_connected:
         one: '%{count} cuenta de SnapTrade'

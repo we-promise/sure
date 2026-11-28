@@ -13,6 +13,10 @@ de:
       savings_rate_change: Transaktionen dieser Monate ansehen
       spending_anomaly: Transaktionen zu %{category} ansehen
       subscription_audit: Wiederkehrende Buchungen prüfen
+      bill_not_covered: "Zum Konto"
+      loan_payment_change: "Kredit ansehen"
+      bank_fees: "Gebühren ansehen"
+      fixed_commitments_ratio: "Wiederkehrende Buchungen prüfen"
     card:
       acknowledge: Verstanden
       acknowledge_title: Ausblenden, bis sich die Zahlen ändern
@@ -48,6 +52,11 @@ de:
       on_pace: hochgerechnet
       today: heute
       vs_previous_three_months: vs. die drei Monate davor
+      of_income: "des Einkommens"
+      short_on: "fehlen am %{date}"
+      fee_charges:
+        one: "%{count} Belastung"
+        other: "%{count} Belastungen"
     index:
       empty:
         description: Insights erscheinen hier, sobald in deinen Konten genug passiert ist. Sie werden jede Nacht aktualisiert.
@@ -85,6 +94,14 @@ de:
         above: Hochgerechnet gibst du diesen Monat %{projected_spend} für %{category} aus, rund %{deviation_pct} % mehr als dein jüngster Monatsschnitt von %{baseline_spend}.
         below: Hochgerechnet gibst du diesen Monat %{projected_spend} für %{category} aus, rund %{deviation_pct} % weniger als dein jüngster Monatsschnitt von %{baseline_spend}.
       subscription_audit: "%{name} (%{amount}) ist seit dem erwarteten Termin am %{expected_on} nicht mehr aufgetaucht. Vielleicht ist das Abo gekündigt oder die Abbuchung hat sich verschoben."
+      bill_not_covered: "%{name} über %{amount} ist am %{due_on} von %{account} fällig. Mit den übrigen Rechnungen und Einkommen, die bis dahin auf diesem Konto geplant sind, fehlen etwa %{shortfall}."
+      loan_payment_change:
+        up: "Deine Rate für %{account} ändert sich am %{effective_on} von %{previous_payment} auf %{new_payment}, %{change_pct} % mehr, laut Tilgungsplan und erfassten Zinssätzen des Kredits."
+        down: "Deine Rate für %{account} ändert sich am %{effective_on} von %{previous_payment} auf %{new_payment}, %{change_pct} % weniger, laut Tilgungsplan und erfassten Zinssätzen des Kredits."
+      bank_fees:
+        recurring: "Auf %{account} sind in den letzten %{days} Tagen Gebühren von %{amount} angefallen."
+        new: "Auf %{account} sind in den letzten %{days} Tagen Gebühren von %{amount} angefallen; in den %{days} Tagen davor waren es keine."
+      fixed_commitments_ratio: "Wiederkehrende Verpflichtungen von %{commitments} im Monat nehmen %{current_ratio} % deines üblichen Monatseinkommens von %{income} ein, nach %{previous_ratio} % vor sechs Monaten. %{explanation}"
     titles:
       budget_at_risk:
         one: Eine Kategorie in deinem Budget braucht Aufmerksamkeit
@@ -103,6 +120,14 @@ de:
         above: Deine Ausgaben für %{category} steigen
         below: Deine Ausgaben für %{category} sinken
       subscription_audit: Läuft %{name} noch?
+      bill_not_covered: "%{account} deckt %{name} möglicherweise nicht"
+      loan_payment_change:
+        up: "Die Rate für %{account} steigt"
+        down: "Die Rate für %{account} sinkt"
+      bank_fees: "Gebühren auf %{account}"
+      fixed_commitments_ratio:
+        up: "Fixkosten nehmen einen größeren Teil deines Einkommens ein"
+        over_half: "Fixkosten nehmen jetzt mindestens die Hälfte deines Einkommens ein"
     types:
       budget_at_risk: Budget
       budget_on_track: Budget
@@ -113,3 +138,13 @@ de:
       savings_rate_change: Sparquote
       spending_anomaly: Ausgaben
       subscription_audit: Abos
+      bill_not_covered: "Rechnungen"
+      loan_payment_change: "Kreditrate"
+      bank_fees: "Gebühren"
+      fixed_commitments_ratio: "Fixkosten"
+    fixed_commitments_ratio:
+      contributors: "Wichtigste Änderungen: %{list}."
+      contributor:
+        new: "%{name} (neu, %{amount} im Monat)"
+        raised: "%{name} (%{amount} mehr im Monat)"
+      income_fell: "Dein übliches Monatseinkommen ist von %{previous_income} auf %{current_income} gesunken."

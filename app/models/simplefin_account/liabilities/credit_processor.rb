@@ -24,7 +24,7 @@ class SimplefinAccount::Liabilities::CreditProcessor
 
     def update_credit_attributes
       # SimpleFin provides available_balance which could be credit limit for cards
-      available_balance = simplefin_account.raw_payload&.dig("available-balance")
+      available_balance = simplefin_account.available_balance
 
       if available_balance.present?
         credit_limit = parse_decimal(available_balance)

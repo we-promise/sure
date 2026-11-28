@@ -71,11 +71,27 @@ en:
       sync_start_date_label: "Start syncing transactions from:"
       sync_start_date_help: Optional. Leave it blank to import as much history as your bank provides; how far back that goes depends on the bank. If you pick a date, transactions before it are not imported.
       account_type_label: "Account Type:"
+      account_types:
+        skip: Skip this account
+        depository: Checking or Savings Account
+        credit_card: Credit Card
+        investment: Investment Account
+        loan: Loan or Mortgage
+        other_asset: Other Asset
+      subtype_labels:
+        depository: "Account Subtype:"
+        investment: "Investment Type:"
+        loan: "Loan Type:"
+      subtype_messages:
+        credit_card: Credit cards will be automatically set up as credit card accounts.
+        other_asset: Other assets will be set up as general assets.
       balance: Balance
       create_accounts: Create Accounts
       creating_accounts: Creating Accounts...
       cancel: Cancel
       psd2_savings_notice: "Note: Some regulated French savings accounts (Livret A, PEL, LEP, LDDS) may have limited or no access over Open Banking (PSD2). If a savings account is missing, you can add it manually."
+      select_subtype: Select subtype
+      select_type: Select type
     new:
       link_enable_banking_title: Link Enable Banking
       session_expired: Session expired - re-authorization required
