@@ -47,6 +47,15 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_select "textarea[name='chat[content]'][autofocus]", text: /#{Regexp.escape(insight.title)}/
   end
 
+  test "Dig in with AI asks a user with AI off to turn it on before anything is sent" do
+    @user.update!(ai_enabled: false)
+
+    get new_chat_url(insight_id: insights(:spending_anomaly_dining).id)
+
+    assert_select "h3", text: I18n.t("chats.ai_consent.title")
+    assert_select "textarea[name='chat[content]']", count: 0
+  end
+
   test "new chat ignores another family's insight" do
     insight = insights(:spending_anomaly_dining)
     insight.update_columns(family_id: families(:empty).id)
@@ -68,6 +77,20 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "textarea[name='chat[content]']", text: ""
     assert_no_match "Private holds a balance", response.body
+  end
+
+  test "new chat ignores a household total computed from accounts someone can no longer open" do
+    insight = families(:dylan_family).insights.create!(
+      insight_type: "savings_rate_change", priority: "medium", status: "active", title: "Savings",
+      body: "Stale household total", metadata: { "accounts_digest" => "an-account-set-that-changed" },
+      dedup_key: "savings_rate_change:stale", generated_at: Time.current
+    )
+
+    get new_chat_url(insight_id: insight.id)
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]']", text: ""
+    assert_no_match "Stale household total", response.body
   end
 
   # Hidden from everyone, owner included, same as the feed.
@@ -136,6 +159,17 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     # in the desktop-only sidebar, which the mobile Assistant entry never shows.
     assert_select "div.max-w-sm h3", text: I18n.t("chats.ai_consent.title")
     assert_select "form textarea", count: 0
+  end
+
+  test "the consent screen tells a family admin, and only an admin, that it also covers the family's background AI" do
+    @user.update!(ai_enabled: false)
+    get new_chat_url
+    assert_includes response.body, I18n.t("chats.ai_consent.family_note")
+
+    sign_in users(:family_member)
+    users(:family_member).update!(ai_enabled: false)
+    get new_chat_url
+    assert_not_includes response.body, I18n.t("chats.ai_consent.family_note")
   end
 
   test "new shows the AI consent screen instead of the compose form when AI is disabled" do

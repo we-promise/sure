@@ -11,7 +11,8 @@ fr:
     ai_busy: Je termine une tâche en arrière-plan, puis je m'occupe tout de suite de votre message.
     ai_consent:
       available_description: Le chat IA peut répondre aux questions financières et fournir des informations basées sur vos données. Pour utiliser cette fonctionnalité, vous devrez l'activer explicitement.
-      disable_note: Désactivez à tout moment. Toutes les données envoyées à nos prestataires LLM sont anonymisées.
+      disable_note: "Désactivez à tout moment. Cela active l'IA pour le chat, les factures et la recherche de documents, qui envoient vos messages, transactions et documents tels quels au fournisseur d'IA de cette instance."
+      family_note: "En tant qu'administrateur de la famille, cela active aussi la catégorisation par IA et la détection des marchands pour votre famille, qui envoient les libellés, montants et marchands des transactions."
       enable_button: Activer les discussions IA
       title: Activer les discussions IA
       unavailable_description_html: Pour utiliser l'assistant AI, vous devez définir la variable d'environnement <code class="bg-surface-inset px-1 py-0.5 round font-mono text-xs">OPENAI_ACCESS_TOKEN</code> ou la configurer dans les paramètres d'auto-hébergement de votre instance.
