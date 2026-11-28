@@ -86,4 +86,50 @@ class MobileDeviceTest < ActiveSupport::TestCase
 
     assert_raises(ActiveRecord::RecordInvalid) { device.issue_token! }
   end
+
+  test "a token that replaces a device token takes its device, and its revocation" do
+    device = MobileDevice.create!(user: users(:family_admin), device_id: "device-#{SecureRandom.hex(4)}", device_name: "Test Phone", device_type: "ios")
+    device.issue_token!
+    previous = device.unrevoked_tokens.sole
+
+    replacement = -> do
+      Doorkeeper::AccessToken.create!(
+        application: previous.application, resource_owner_id: previous.resource_owner_id, scopes: previous.scopes,
+        expires_in: previous.expires_in, use_refresh_token: true, previous_refresh_token: previous.refresh_token
+      )
+    end
+
+    live = replacement.call
+    assert_equal device.id, live.mobile_device_id
+    assert_not live.revoked?
+
+    device.revoke_all_tokens!
+    assert live.reload.revoked?
+
+    late = replacement.call
+    assert_equal device.id, late.mobile_device_id
+    assert late.revoked?, "a refresh that lost the race with a new sign-in must not outlive it"
+  end
+
+  test "issue_token! revokes an expired token so its refresh token stops working" do
+    device = users(:family_member).mobile_devices.create!(
+      device_id: "expired-token-test",
+      device_name: "Expired token test device",
+      device_type: "ios"
+    )
+    expired = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: MobileDevice.shared_oauth_application,
+      resource_owner_id: device.user_id,
+      mobile_device_id: device.id,
+      expires_in: 1.hour.to_i,
+      scopes: "read_write",
+      use_refresh_token: true,
+      created_at: 2.hours.ago
+    )
+    assert expired.expired?
+
+    device.issue_token!
+
+    assert expired.reload.revoked?
+  end
 end
