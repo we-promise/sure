@@ -285,15 +285,83 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       SecurityQuestion: [ "Question?" ].to_json,
       LastStatus: "Waiting"
     })
+    provider.expects(:get_account_transactions).with("acct-1", start_date: anything).returns({
+      transactions: [
+        {
+          id: "tx-1",
+          accountId: "acct-1",
+          amount: "-12.34",
+          currency: "USD",
+          date: "2026-05-01",
+          merchant: "Coffee Shop",
+          description: "Coffee Shop"
+        }.with_indifferent_access
+      ],
+      total: 1
+    })
 
     result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
 
+    # Cached rows are imported, but the sync must fail so last_synced_at does
+    # not advance past the last fresh fetch.
     assert_not result[:success]
+    assert_equal "Sophtron refresh requires MFA", result[:error]
+    assert_equal 1, result[:transactions_imported]
+    assert_equal 1, result[:transactions_failed]
     assert_equal "requires_update", @item.reload.status
     assert_equal "refresh-job", @item.current_job_id
+    assert_equal [ "existing-tx", "tx-1" ], sophtron_account.reload.raw_transactions_payload.map { |tx| tx.with_indifferent_access[:id] }
   end
 
-  test "refresh job still running enqueues poll job without fetching transactions" do
+  test "merges the stored snapshot under a lock when the poller wrote first" do
+    account = accounts(:depository)
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Checking",
+      currency: "USD",
+      balance: 100,
+      raw_transactions_payload: [ { id: "existing-tx" } ]
+    )
+    AccountProvider.create!(account: account, provider: sophtron_account)
+
+    provider = mock
+    provider.expects(:get_account_transactions).with("acct-1", start_date: anything).returns({
+      transactions: [ { id: "tx-1" }.with_indifferent_access ],
+      total: 1
+    })
+
+    # The refresh poller stores its row after this instance loaded.
+    SophtronAccount.find(sophtron_account.id).update!(raw_transactions_payload: [ { id: "poller-tx" } ])
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider)
+                                   .import_transactions_after_refresh(sophtron_account)
+
+    assert result[:success], result.inspect
+    assert_equal [ "poller-tx", "tx-1" ],
+      sophtron_account.reload.raw_transactions_payload.map { |tx| tx.with_indifferent_access[:id] }
+  end
+
+  test "empty response does not overwrite rows the poller stored" do
+    sophtron_account = linked_sophtron_account
+
+    provider = mock
+    provider.expects(:get_account_transactions).with("acct-1", start_date: anything).returns({
+      transactions: [],
+      total: 0
+    })
+
+    # The refresh poller stores its row after this instance loaded a nil payload.
+    SophtronAccount.find(sophtron_account.id).update!(raw_transactions_payload: [ { id: "poller-tx" } ])
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider)
+                                   .import_transactions_after_refresh(sophtron_account)
+
+    assert result[:success], result.inspect
+    assert_equal [ "poller-tx" ],
+      sophtron_account.reload.raw_transactions_payload.map { |tx| tx.with_indifferent_access[:id] }
+  end
+
+  test "refresh job still running imports stored transactions and enqueues poll job" do
     account = accounts(:depository)
     sophtron_account = @item.sophtron_accounts.create!(
       account_id: "acct-1",
@@ -319,14 +387,143 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     })
     provider.expects(:refresh_account).with("acct-1").returns({ JobID: "refresh-job" })
     provider.expects(:get_job_information).with("refresh-job").returns({ LastStatus: "Started" })
-    provider.expects(:get_account_transactions).never
+    provider.expects(:get_account_transactions).with("acct-1", start_date: anything).returns({
+      transactions: [
+        {
+          id: "tx-1",
+          accountId: "acct-1",
+          amount: "-12.34",
+          currency: "USD",
+          date: "2026-05-01",
+          merchant: "Coffee Shop",
+          description: "Coffee Shop"
+        }.with_indifferent_access
+      ],
+      total: 1
+    })
 
     assert_enqueued_with(job: SophtronRefreshPollJob) do
       result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
 
       assert result[:success]
-      assert_equal 0, result[:transactions_imported]
+      assert_equal 1, result[:transactions_imported]
       assert_equal 0, result[:transactions_failed]
+      assert_equal [ "existing-tx", "tx-1" ], sophtron_account.reload.raw_transactions_payload.map { |tx| tx.with_indifferent_access[:id] }
     end
   end
+
+  test "failed refresh does not fetch transactions" do
+    account = accounts(:depository)
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Checking",
+      currency: "USD",
+      balance: 100,
+      raw_transactions_payload: [ { id: "existing-tx" } ]
+    )
+    AccountProvider.create!(account: account, provider: sophtron_account)
+
+    provider = mock
+    provider.expects(:get_accounts).with("ui-1").returns({
+      accounts: [
+        {
+          account_id: "acct-1",
+          account_name: "Checking",
+          balance: "100.00",
+          balance_currency: "USD",
+          currency: "USD"
+        }.with_indifferent_access
+      ],
+      total: 1
+    })
+    provider.expects(:refresh_account).with("acct-1").returns({ JobID: "refresh-job" })
+    provider.expects(:get_job_information).with("refresh-job").returns({ SuccessFlag: false, LastStatus: "Failed" })
+    provider.expects(:get_account_transactions).never
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+
+    assert_not result[:success]
+    assert_equal 0, result[:transactions_imported]
+    assert_equal 1, result[:transactions_failed]
+  end
+
+  test "mfa on the first account stops the loop so its job id is kept" do
+    linked_sophtron_account(raw_transactions_payload: [ { id: "existing-tx" } ])
+    linked_sophtron_account(account_id: "acct-2", account: accounts(:credit_card), raw_transactions_payload: [ { id: "existing-tx-2" } ])
+
+    provider = mock
+    provider.expects(:get_accounts).with("ui-1").returns({
+      accounts: [
+        { account_id: "acct-1", account_name: "Checking", currency: "USD" }.with_indifferent_access,
+        { account_id: "acct-2", account_name: "Card", currency: "USD" }.with_indifferent_access
+      ],
+      total: 2
+    })
+    provider.expects(:refresh_account).once.returns({ JobID: "first-mfa-job" })
+    provider.expects(:get_job_information).with("first-mfa-job").returns({
+      SecurityQuestion: [ "Question?" ].to_json,
+      LastStatus: "Waiting"
+    })
+    provider.expects(:get_account_transactions).once.returns({ transactions: [], total: 0 })
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+
+    assert_not result[:success]
+    assert_equal "Sophtron refresh requires MFA", result[:error]
+    assert_equal "first-mfa-job", @item.reload.current_job_id
+  end
+
+  test "unauthorized refresh marks item requires update and skips the fetch" do
+    sophtron_account = linked_sophtron_account(raw_transactions_payload: [ { id: "existing-tx" } ])
+
+    provider = mock
+    provider.expects(:refresh_account).with("acct-1")
+            .raises(Provider::Sophtron::Error.new("Unauthorized", :unauthorized))
+    provider.expects(:get_account_transactions).never
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider)
+                                   .send(:fetch_and_store_transactions, sophtron_account)
+
+    assert_not result[:success]
+    assert result[:requires_update]
+    assert_equal "Unauthorized", result[:error]
+    assert_equal "requires_update", @item.reload.status
+  end
+
+  test "forbidden transaction fetch after an mfa refresh keeps the refresh state" do
+    sophtron_account = linked_sophtron_account(raw_transactions_payload: [ { id: "existing-tx" } ])
+
+    provider = mock
+    provider.expects(:refresh_account).with("acct-1").returns({ JobID: "refresh-job" })
+    provider.expects(:get_job_information).with("refresh-job").returns({
+      SecurityQuestion: [ "Question?" ].to_json,
+      LastStatus: "Waiting"
+    })
+    provider.expects(:get_account_transactions).with("acct-1", start_date: anything)
+            .raises(Provider::Sophtron::Error.new("Forbidden", :access_forbidden))
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider)
+                                   .send(:fetch_and_store_transactions, sophtron_account)
+
+    assert_not result[:success]
+    assert result[:requires_update]
+    assert_equal "Forbidden", result[:error]
+    assert_equal "requires_update", @item.reload.status
+    assert_equal "refresh-job", @item.current_job_id
+    assert_equal [ "existing-tx" ], sophtron_account.reload.raw_transactions_payload.map { |tx| tx.with_indifferent_access[:id] }
+  end
+
+  private
+
+    def linked_sophtron_account(account_id: "acct-1", account: accounts(:depository), **attributes)
+      sophtron_account = @item.sophtron_accounts.create!(
+        account_id: account_id,
+        name: "Checking",
+        currency: "USD",
+        balance: 100,
+        **attributes
+      )
+      AccountProvider.create!(account: account, provider: sophtron_account)
+      sophtron_account
+    end
 end
