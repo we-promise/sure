@@ -12,7 +12,11 @@ module Assistant::Function::MonthResolvable
     end
 
     def parse_month(raw)
-      return nil if raw.blank?
+      return nil if raw.nil? || (raw.is_a?(String) && raw.blank?)
+
+      unless raw.is_a?(String)
+        raise Assistant::Error, "Invalid month: #{raw}. Use YYYY-MM or MMM-YYYY."
+      end
 
       # Date.strptime ignores trailing characters, so guard with strict anchors first.
       fmt = case raw
