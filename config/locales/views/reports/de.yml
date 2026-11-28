@@ -23,6 +23,7 @@ de:
         last_6_months: Letzte 6 Monate
         all_time: Gesamter Zeitraum
         custom: Benutzerdefinierter Zeitraum
+        last_12_months: "Letzte 12 Monate"
       date_range:
         from: Von
         to: Bis
@@ -37,6 +38,7 @@ de:
         past_year: "%{year}"
         quarterly: Q%{quarter} %{year}
         ytd: "%{year} bis heute"
+        last_12_months: "%{start} – %{end}"
       period_picker:
         quarter: Q%{quarter} %{year}
         ytd: "%{year} bis heute"
@@ -44,6 +46,9 @@ de:
       previous_period: Vorheriger Zeitraum
       previous_year: Vorheriges Jahr
       today: Heute
+      built_at: "Vor %{time} aktualisiert"
+      updating: "wird im Hintergrund aktualisiert"
+      refresh: "Aktualisieren"
     invalid_date_range: "Das Enddatum kann nicht vor dem Startdatum liegen. Die Daten wurden vertauscht."
     summary:
       total_income: Gesamteinnahmen
@@ -105,6 +110,25 @@ de:
       insight_higher_weekday: "Du gibst %{percent}% mehr pro Transaktion unter der Woche als am Wochenende aus"
       insight_similar: "Deine Ausgaben pro Transaktion sind an Wochentagen und Wochenenden ähnlich"
       no_spending_data: Keine Ausgabendaten für diesen Zeitraum verfügbar
+      category_trend:
+        title: "Kategorie-Trends"
+        subtitle: "Monats- oder Jahressummen der gewählten Kategorien, abzüglich Erstattungen."
+        filtered_by_tags: "Nach Tags gefiltert"
+        select: "Kategorien auswählen"
+        selected:
+          one: "%{count} Kategorie"
+          other: "%{count} Kategorien"
+        search: "Kategorien suchen"
+        apply: "Anwenden"
+        clear: "Zurücksetzen"
+        month: "Monat"
+        year: "Jahr"
+        granularity_aria: "Zeiteinheit des Trends"
+        data_table: "Datentabelle anzeigen"
+        data_table_caption: "Trendwerte nach Zeitraum"
+        data_table_period: "Zeitraum"
+        no_data: "Wähle einen längeren Zeitraum, um einen Trend zu sehen."
+        prompt: "Wähle Kategorien aus, um ihren Trend zu sehen."
     empty_state:
       title: Keine Daten verfügbar
       description: Erfasse deine Finanzen, indem du Transaktionen hinzufügst oder deine Konten verbindest, um umfassende Berichte zu sehen

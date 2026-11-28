@@ -24,6 +24,21 @@ class Insight::Generators::IdleCashGeneratorTest < ActiveSupport::TestCase
     assert_includes nudged_account_ids, @private.id
   end
 
+  # A scheduled entry dated in the future is a plan, not activity.
+  test "a future-dated entry does not count as recent activity" do
+    @shared.entries.create!(name: "Planned", date: 10.days.from_now.to_date, amount: 10, currency: "USD",
+                            entryable: Transaction.new)
+
+    assert_includes nudged_account_ids, @shared.id
+  end
+
+  test "an entry within the idle window counts as activity" do
+    @shared.entries.create!(name: "Recent", date: 10.days.ago.to_date, amount: 10, currency: "USD",
+                            entryable: Transaction.new)
+
+    assert_not_includes nudged_account_ids, @shared.id
+  end
+
   private
     def nudged_account_ids
       Insight::Generators::IdleCashGenerator.new(@family).generate.map { |insight| insight.metadata[:account_id] }
