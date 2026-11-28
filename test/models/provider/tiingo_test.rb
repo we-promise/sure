@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Provider::TiingoTest < ActiveSupport::TestCase
+  include ProviderTestHelper
+
   setup do
     @provider = Provider::Tiingo.new("test_api_key")
     @provider.stubs(:throttle_request)
@@ -261,5 +263,61 @@ class Provider::TiingoTest < ActiveSupport::TestCase
     assert_not result.success?
     assert_instance_of Provider::Tiingo::Error, result.error
     assert_match "Could not determine currency", result.error.message
+  end
+
+  # The test environment caches in a null store, so the usage readers need a real
+  # RedisCacheStore to notice a counter they cannot read back. The per-run namespace
+  # keeps runs sharing one Redis from reading each other's counts.
+  test "usage reports the request counter on a real Redis cache" do
+    store = ActiveSupport::Cache::RedisCacheStore.new(
+      url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
+      namespace: "test:tiingo:#{SecureRandom.hex(8)}"
+    )
+    Rails.stubs(:cache).returns(store)
+
+    provider = Provider::Tiingo.new("test_api_key")
+    # Two distinct symbols: a symbol is counted once a month.
+    provider.send(:track_symbol, "AAPL")
+    provider.send(:track_symbol, "MSFT")
+
+    assert_equal 2, provider.usage.data.used
+  ensure
+    month = Date.current.strftime("%Y-%m")
+    store&.delete("tiingo:symbol_count:#{month}")
+    %w[AAPL MSFT].each { |symbol| store&.delete("tiingo:symbol:#{month}:#{symbol}") }
+  end
+
+  test "client sets explicit open and read timeouts" do
+    options = @provider.send(:client).options
+
+    assert_equal 5, options.open_timeout
+    assert_equal 20, options.timeout
+  end
+
+  test "a timed-out request returns a failed response with the provider's Error" do
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    search = stub_request(:get, %r{\Ahttps://api\.tiingo\.com/tiingo/utilities/search}).to_timeout
+    errors = capture_transformed_errors(@provider)
+
+    response = @provider.search_securities("TEST")
+
+    assert_not response.success?
+    assert_instance_of Provider::Tiingo::Error, response.error
+    assert_requested search, times: 4
+    assert_kind_of Faraday::ConnectionFailed, errors.last
+    assert_kind_of Net::OpenTimeout, errors.last.wrapped_exception
+  end
+
+  test "a read timeout is retried and returns a failed response with the provider's Error" do
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    search = stub_request(:get, %r{\Ahttps://api\.tiingo\.com/tiingo/utilities/search}).to_raise(Net::ReadTimeout)
+    errors = capture_transformed_errors(@provider)
+
+    response = @provider.search_securities("TEST")
+
+    assert_not response.success?
+    assert_instance_of Provider::Tiingo::Error, response.error
+    assert_requested search, times: 4
+    assert_kind_of Faraday::TimeoutError, errors.last
   end
 end

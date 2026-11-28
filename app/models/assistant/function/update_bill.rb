@@ -49,7 +49,7 @@ class Assistant::Function::UpdateBill < Assistant::Function
         frequency: {
           type: "string",
           enum: RecurringTransaction::FrequencyPreset::PRESETS,
-          description: "New cadence. Combine with due_day_of_month / weekday / month_of_year as the cadence needs."
+          description: "New cadence. once is a single occurrence on the bill's current due date. Combine other cadences with due_day_of_month / weekday / month_of_year as needed."
         },
         due_day_of_month: { type: "integer", minimum: 1, maximum: 31 },
         weekday: { type: "integer", minimum: 0, maximum: 6, description: "0 = Sunday." },
@@ -57,6 +57,8 @@ class Assistant::Function::UpdateBill < Assistant::Function
         autopay: { type: "boolean" },
         payment_url: { type: "string" },
         notes: { type: "string" },
+        bank_reference: { type: "string", description: "#{BANK_REFERENCE_DESCRIPTION} Empty string clears it." },
+        reference_only: { type: "boolean", description: REFERENCE_ONLY_DESCRIPTION },
         renews_on: { type: "string", description: "YYYY-MM-DD" },
         trial_ends_on: { type: "string", description: "YYYY-MM-DD" }
       }
@@ -94,7 +96,7 @@ class Assistant::Function::UpdateBill < Assistant::Function
   private
     def apply_simple_fields(series, params, changed)
       { "name" => :name, "autopay" => :autopay, "payment_url" => :payment_url,
-        "notes" => :notes, "renews_on" => :renews_on, "trial_ends_on" => :trial_ends_on }.each do |key, attribute|
+        "notes" => :notes, "bank_reference" => :bank_reference, "reference_only" => :reference_only, "renews_on" => :renews_on, "trial_ends_on" => :trial_ends_on }.each do |key, attribute|
         next unless params.key?(key)
 
         value = params[key]
@@ -264,6 +266,15 @@ class Assistant::Function::UpdateBill < Assistant::Function
         weekday: params["weekday"],
         month_of_year: params["month_of_year"]
       )
+
+      # A refused cadence (a paid one-off's date, say) is reported, not saved
+      # around: the save below would clear the error and drop the change.
+      if series.errors.any?
+        return {
+          error: series.errors.full_messages.to_sentence,
+          hint: "Fix the named fields and retry once."
+        }
+      end
 
       if applied
         series.pin_schedule

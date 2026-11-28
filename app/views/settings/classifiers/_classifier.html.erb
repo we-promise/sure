@@ -8,6 +8,9 @@
     <%= render "settings/classifiers/number", key: :threshold, settings: settings,
           attrs: { step: 0.01 },
           label: t(".threshold"), hint: t(".threshold_hint") %>
+    <%= render "settings/classifiers/number", key: :min_category_examples, settings: settings,
+          attrs: { step: 1 },
+          label: t(".min_category_examples"), hint: t(".min_category_examples_hint") %>
     <%= render "settings/classifiers/toggle", key: :lock_results, settings: settings, label: t(".lock_results"), hint: t(".lock_results_hint") %>
   <% end %>
 </div>

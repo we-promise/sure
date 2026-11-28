@@ -1,0 +1,282 @@
+---
+id:
+  questrade_items:
+    default_name: "Koneksi Questrade"
+    # Model method strings (i18n for item_model.rb)
+    sync_status:
+      no_accounts: "Tidak ada rekening ditemukan"
+      synced:
+        one: "%{count} rekening disinkronkan"
+        other: "%{count} rekening disinkronkan"
+      synced_with_setup: "%{linked} disinkronkan, %{unlinked} perlu pengaturan"
+    institution_summary:
+      none: "Tidak ada institusi terhubung"
+      count:
+        one: "%{count} institusi"
+        other: "%{count} institusi"
+    errors:
+      provider_not_configured: "Penyedia Questrade belum dikonfigurasi"
+
+    # Syncer status messages
+    sync:
+      status:
+        importing: "Mengimpor rekening dari Questrade..."
+        processing: "Memproses kepemilikan dan aktivitas..."
+        calculating: "Menghitung saldo..."
+        importing_data: "Mengimpor data rekening..."
+        checking_setup: "Memeriksa konfigurasi rekening..."
+        needs_setup: "%{count} rekening perlu pengaturan..."
+      success: "Sinkronisasi dimulai"
+
+    # Panel (settings view)
+    panel:
+      eyebrow: "Pengaturan · khusus desktop"
+      help_text: "Dokumentasi API Questrade"
+      disconnect: "Putuskan koneksi"
+      disconnect_confirm: "Putuskan koneksi Questrade? Ini akan menghapus koneksi dan melepas tautan rekening yang disinkronkan."
+      steps:
+        s1_html: 'Masuk ke <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">portal Questrade</a> di browser desktop. Pengaturan API tidak tersedia di aplikasi seluler.'
+        s2: "Buka Settings, lalu di bawah General settings edit pengaturan IQ API."
+        s3_html: "Di modal akses API, klik <strong>Manage</strong> di bawah <strong>My applications</strong>."
+        s4: "Daftarkan aplikasi pribadi dengan nama dan deskripsi, lalu simpan."
+        s5: "Tambahkan perangkat baru dan buat token."
+        s6: "Tempelkan token yang dihasilkan di bawah ini lalu simpan."
+      setup_instructions: "Petunjuk pengaturan:"
+      step_1: "Kunjungi dasbor Questrade Anda untuk mendapatkan kredensial Anda"
+      step_2: "Masukkan kredensial Anda di bawah ini lalu klik tombol Simpan"
+      step_3: "Setelah koneksi berhasil, buka tab Rekening untuk mengatur rekening baru"
+      field_descriptions: "Deskripsi kolom:"
+      optional: "(Opsional)"
+      required: "(wajib)"
+      optional_with_default: "(opsional, default ke %{default_value})"
+      save_button: "Simpan Konfigurasi"
+      update_button: "Perbarui Konfigurasi"
+      token_refresh_hint: "Token Questrade diperbarui secara otomatis setiap kali rekening Anda disinkronkan. Jika koneksi tidak digunakan selama lebih dari 7 hari dan menjadi usang, tempelkan token baru di sini untuk mengaktifkannya kembali tanpa memutuskan koneksi."
+      status_configured_html: "Sudah dikonfigurasi dan siap digunakan. Kunjungi tab <a href=\"%{accounts_path}\" class=\"link\">Rekening</a> untuk mengelola dan mengatur rekening."
+      status_not_configured: "Belum dikonfigurasi"
+      fields:
+        refresh_token:
+          label: "Token Penyegaran"
+          description: "Token penyegaran Questrade Anda"
+          placeholder_new: "Tempel token penyegaran di sini"
+          placeholder_update: "Masukkan token penyegaran baru untuk memperbarui"
+        api_server:
+          label: "Server API"
+          description: "Server API Questrade Anda"
+          placeholder_new: "Tempel server API di sini"
+          placeholder_update: "Masukkan server API baru untuk memperbarui"
+
+    # CRUD success messages
+    create:
+      success: "Koneksi Questrade berhasil dibuat"
+    update:
+      success: "Koneksi Questrade diperbarui"
+    destroy:
+      success: "Koneksi Questrade dihapus"
+    index:
+      title: "Koneksi Questrade"
+
+    # Loading states
+    loading:
+      loading_message: "Memuat rekening Questrade..."
+      loading_title: "Memuat"
+
+    # Account linking
+    link_accounts:
+      all_already_linked:
+        one: "Rekening yang dipilih (%{names}) sudah tertaut"
+        other: "Semua %{count} rekening yang dipilih sudah tertaut: %{names}"
+      api_error: "Kesalahan API: %{message}"
+      invalid_account_names:
+        one: "Tidak dapat menautkan rekening dengan nama kosong"
+        other: "Tidak dapat menautkan %{count} rekening dengan nama kosong"
+      link_failed: "Gagal menautkan rekening"
+      no_accounts_selected: "Silakan pilih setidaknya satu rekening"
+      no_api_key: "Kunci API Questrade tidak ditemukan. Silakan konfigurasikan di Pengaturan Penyedia."
+      partial_invalid: "Berhasil menautkan %{created_count} rekening, %{already_linked_count} sudah tertaut, %{invalid_count} rekening memiliki nama tidak valid"
+      partial_success: "Berhasil menautkan %{created_count} rekening. %{already_linked_count} rekening sudah tertaut: %{already_linked_names}"
+      success:
+        one: "Berhasil menautkan %{count} rekening"
+        other: "Berhasil menautkan %{count} rekening"
+
+    # Provider item display (used in _item partial)
+    questrade_item:
+      kind: Pialang
+      accounts_need_setup: "Rekening perlu pengaturan"
+      delete: "Hapus koneksi"
+      deletion_in_progress: "penghapusan sedang berlangsung..."
+      error: "Kesalahan"
+      more_accounts_available:
+        one: "%{count} rekening lagi tersedia"
+        other: "%{count} rekening lagi tersedia"
+      no_accounts_description: "Koneksi ini belum memiliki rekening tertaut."
+      no_accounts_title: "Tidak ada rekening"
+      provider_name: "Questrade"
+      requires_update: "Koneksi perlu diperbarui"
+      setup_action: "Atur Rekening Baru"
+      setup_description: "%{linked} dari %{total} rekening tertaut. Pilih jenis rekening untuk rekening Questrade yang baru diimpor."
+      setup_needed: "Rekening baru siap diatur"
+      status: "Disinkronkan %{timestamp} lalu"
+      status_never: "Belum pernah disinkronkan"
+      status_with_summary: "Terakhir disinkronkan %{timestamp} lalu - %{summary}"
+      syncing: "Menyinkronkan..."
+      total: "Total"
+      unlinked: "Belum tertaut"
+      update_credentials: "Perbarui kredensial"
+
+    # Select accounts view
+    select_accounts:
+      accounts_selected: "rekening dipilih"
+      api_error: "Kesalahan API: %{message}"
+      cancel: "Batal"
+      configure_name_in_provider: "Tidak dapat mengimpor - silakan konfigurasikan nama rekening di Questrade"
+      description: "Pilih rekening yang ingin Anda tautkan ke akun %{product_name} Anda."
+      link_accounts: "Tautkan rekening yang dipilih"
+      no_accounts_found: "Tidak ada rekening ditemukan. Silakan periksa konfigurasi kunci API Anda."
+      no_api_key: "Kunci API Questrade belum dikonfigurasi. Silakan konfigurasikan di Pengaturan."
+      no_credentials_configured: "Silakan konfigurasikan kredensial Questrade Anda terlebih dahulu di Pengaturan Penyedia."
+      no_name_placeholder: "(Tanpa nama)"
+      title: "Pilih Rekening Questrade"
+
+    # Select existing account view
+    select_existing_account:
+      page_title: "Tautkan rekening Questrade"
+      dialog_title: "Tautkan ke rekening Questrade"
+      linking_label: "Menautkan"
+      none_available: "Tidak ada rekening Questrade yang belum tertaut tersedia."
+      buttons:
+        cancel: "Batal"
+        link: "Tautkan"
+      account_already_linked: "Rekening ini sudah ditautkan ke penyedia lain"
+      all_accounts_already_linked: "Semua rekening Questrade sudah tertaut"
+      api_error: "Kesalahan API: %{message}"
+      balance_label: "Saldo:"
+      cancel: "Batal"
+      cancel_button: "Batal"
+      configure_name_in_provider: "Tidak dapat mengimpor - silakan konfigurasikan nama rekening di Questrade"
+      connect_hint: "Hubungkan rekening Questrade untuk mengaktifkan sinkronisasi otomatis."
+      description: "Pilih rekening Questrade untuk ditautkan dengan rekening ini. Transaksi akan disinkronkan dan dideduplikasi secara otomatis."
+      header: "Tautkan dengan Questrade"
+      link_account: "Tautkan rekening"
+      link_button: "Tautkan rekening ini"
+      linking_to: "Menautkan ke:"
+      no_account_specified: "Tidak ada rekening yang ditentukan"
+      no_accounts: "Tidak ada rekening Questrade yang belum tertaut ditemukan."
+      no_accounts_found: "Tidak ada rekening Questrade ditemukan. Silakan periksa konfigurasi kunci API Anda."
+      no_api_key: "Kunci API Questrade belum dikonfigurasi. Silakan konfigurasikan di Pengaturan."
+      no_credentials_configured: "Silakan konfigurasikan kredensial Questrade Anda terlebih dahulu di Pengaturan Penyedia."
+      no_name_placeholder: "(Tanpa nama)"
+      settings_link: "Buka Pengaturan Penyedia"
+      subtitle: "Hubungkan rekening ini ke salah satu rekening Questrade Anda"
+      title: "Tautkan %{account_name} dengan Questrade"
+
+    # Link existing account
+    link_existing_account:
+      account_already_linked: "Rekening ini sudah ditautkan ke penyedia lain"
+      api_error: "Kesalahan API: %{message}"
+      invalid_account_name: "Tidak dapat menautkan rekening dengan nama kosong"
+      provider_account_already_linked: "Rekening Questrade ini sudah ditautkan ke rekening lain"
+      provider_account_not_found: "Rekening Questrade tidak ditemukan"
+      missing_parameters: "Parameter yang diperlukan tidak lengkap"
+      no_api_key: "Kunci API Questrade tidak ditemukan. Silakan konfigurasikan di Pengaturan Penyedia."
+      success: "Berhasil menautkan %{account_name} dengan Questrade"
+
+    # Setup accounts wizard
+    setup_accounts:
+      page_title: "Atur rekening Questrade"
+      dialog_title: "Atur rekening Questrade Anda"
+      all_linked: "Semua rekening Questrade sudah tertaut."
+      import_as: "Impor sebagai"
+      buttons:
+        cancel: "Batal"
+        create: "Buat rekening"
+        done: "Selesai"
+      types:
+        investment: "Investasi"
+        depository: "Kas / Giro & Tabungan"
+        skip: "Lewati rekening ini"
+      account_type_label: "Jenis Rekening:"
+      accounts_count:
+        one: "%{count} rekening tersedia"
+        other: "%{count} rekening tersedia"
+      all_accounts_linked: "Semua rekening Questrade Anda telah diatur."
+      api_error: "Kesalahan API: %{message}"
+      creating: "Membuat rekening..."
+      fetch_failed: "Gagal Mengambil Rekening"
+      import_selected: "Impor rekening yang dipilih"
+      instructions: "Pilih rekening yang ingin Anda impor dari Questrade. Anda dapat memilih beberapa rekening."
+      no_accounts: "Tidak ada rekening yang belum tertaut ditemukan dari koneksi Questrade ini."
+      no_accounts_to_setup: "Tidak Ada Rekening untuk Diatur"
+      no_api_key: "Kunci API Questrade belum dikonfigurasi. Silakan periksa pengaturan koneksi Anda."
+      select_all: "Pilih semua"
+      account_types:
+        skip: "Lewati rekening ini"
+        depository: "Rekening Giro atau Tabungan"
+        credit_card: "Kartu Kredit"
+        investment: "Rekening Investasi"
+        crypto: "Rekening Mata Uang Kripto"
+        loan: "Pinjaman atau KPR"
+        other_asset: "Aset Lainnya"
+      subtype_labels:
+        depository: "Subjenis Rekening:"
+        credit_card: ""
+        investment: "Jenis Investasi:"
+        crypto: ""
+        loan: "Jenis Pinjaman:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kartu kredit akan diatur secara otomatis sebagai rekening kartu kredit."
+        other_asset: "Tidak ada opsi tambahan yang diperlukan untuk Aset Lainnya."
+        crypto: "Rekening mata uang kripto akan diatur untuk melacak kepemilikan dan transaksi."
+      subtypes:
+        depository:
+          checking: "Giro"
+          savings: "Tabungan"
+          hsa: "Rekening Tabungan Kesehatan (HSA)"
+          cd: "Sertifikat Deposito (CD)"
+          money_market: "Pasar Uang"
+        investment:
+          brokerage: "Pialang"
+          pension: "Pensiun"
+          retirement: "Dana Pensiun"
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: "Thrift Savings Plan"
+          "529_plan": "Paket 529"
+          hsa: "Rekening Tabungan Kesehatan (HSA)"
+          mutual_fund: "Reksa Dana"
+          ira: "IRA Tradisional"
+          roth_ira: "Roth IRA"
+          angel: "Angel"
+        loan:
+          mortgage: "KPR"
+          student: "Pinjaman Pelajar"
+          auto: "Pinjaman Kendaraan"
+          other: "Pinjaman Lainnya"
+      balance: "Saldo"
+      cancel: "Batal"
+      choose_account_type: "Pilih jenis rekening yang tepat untuk setiap rekening Questrade:"
+      create_accounts: "Buat Rekening"
+      creating_accounts: "Membuat Rekening..."
+      historical_data_range: "Rentang Data Historis:"
+      subtitle: "Pilih cara mengimpor setiap rekening"
+      sync_start_date_help: "Pilih seberapa jauh ke belakang Anda ingin menyinkronkan riwayat transaksi."
+      sync_start_date_label: "Mulai menyinkronkan transaksi dari:"
+      title: "Atur Rekening Questrade Anda"
+
+    # Complete account setup
+    setup_required:
+      title: Hubungkan Questrade terlebih dahulu
+      not_configured_title: Questrade belum terhubung
+      not_configured_description: Tambahkan koneksi Questrade Anda di Pengaturan Penyedia, lalu kembali ke sini untuk menautkan rekening.
+      go_to_provider_settings: Buka pengaturan penyedia
+    complete_account_setup:
+      all_skipped: "Semua rekening dilewati. Tidak ada rekening yang dibuat."
+      creation_failed: "Gagal membuat rekening: %{error}"
+      no_accounts: "Tidak ada rekening untuk diatur."
+      success: "Berhasil membuat %{count} rekening."
+
+    # Preload accounts
+    preload_accounts:
+      no_credentials_configured: "Silakan konfigurasikan kredensial Questrade Anda terlebih dahulu di Pengaturan Penyedia."

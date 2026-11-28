@@ -4,6 +4,7 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
   include EntriesTestHelper, ProviderTestHelper, ActiveJob::TestHelper
 
   setup do
+    use_ai_routes
     @family = families(:dylan_family)
     @account = @family.accounts.create!(name: "Enhancer test", balance: 100, currency: "USD", accountable: Depository.new)
     @llm_provider = mock
@@ -26,6 +27,16 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
       assert batches.all? { |ids| ids.size <= 2 }
       assert_equal unenhanced.sort, batches.flatten.sort
     end
+  end
+
+  test "sends nothing while no family admin has turned AI on" do
+    @family.users.update_all(ai_enabled: false)
+    merchant = ProviderMerchant.create!(source: "lunchflow", name: "Shop", provider_merchant_id: "lf_shop")
+    create_transaction(account: @account, name: "Shop", merchant: merchant)
+    @llm_provider.expects(:enhance_provider_merchants).never
+
+    assert_empty ProviderMerchant::Enhancer.new(@family).batches
+    assert_equal 0, ProviderMerchant::Enhancer.new(@family).enhance[:enhanced]
   end
 
   test "enhance with merchant_ids sends only those merchants" do
