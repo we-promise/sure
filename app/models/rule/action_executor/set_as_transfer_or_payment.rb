@@ -18,7 +18,8 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     target_account = family.accounts.find_by_id(value)
     return 0 unless target_account
-    scope = transaction_scope.with_entry
+    # A vest's income and taxes can't be transfer legs (Transfer validates it).
+    scope = transaction_scope.with_entry.where(entries: { vest_entry_id: nil })
     # Checked once per run, not per transaction.
     reconcile_pledges = target_account.linked_to_goal?
 

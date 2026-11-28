@@ -1805,6 +1805,26 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert @family.entries.where(entryable_type: "Transaction", amount: 300).exists?, "the tax is unlinked, not deleted"
   end
 
+  test "a replayed vest doesn't link a transaction that has become a transfer leg" do
+    export = vest_export
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    Family::DataImporter.new(@family, export, import_session: session).import!
+    vest = @family.entries.find_by!(entryable_type: "Trade")
+    tax = Trade::VestForm.parts_of(vest).last.first
+    tax.update_columns(vest_entry_id: nil)
+    checking = @family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
+    inflow = checking.entries.create!(name: "Refund", date: tax.date, amount: -tax.amount, currency: "USD", entryable: Transaction.new)
+    Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: tax.transaction)
+
+    # A session refuses a bad reference, as it does any other invalid part.
+    assert_raises(Family::DataImporter::InvalidRecordError) do
+      Family::DataImporter.new(@family, export, import_session: session).import!
+    end
+
+    assert_nil tax.reload.vest_entry_id
+    assert tax.transaction.transfer.present?
+  end
+
   test "a split line's activity label is restored" do
     ndjson = build_ndjson([
       { type: "Account", data: { id: "brokerage", name: "Brokerage", balance: "0", currency: "USD", accountable_type: "Investment", accountable: {} } },

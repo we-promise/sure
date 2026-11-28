@@ -179,6 +179,52 @@ class Trade::VestFormTest < ActiveSupport::TestCase
     assert income.reload.update(notes: "from the paystub"), "notes and other details stay editable"
   end
 
+  test "rules and direct saves can't change a vest part's label, exclusion, or transfer either" do
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10)
+    form.save
+    income, (tax, *) = Trade::VestForm.parts_of(form.entry)
+
+    assert_not tax.transaction.update(investment_activity_label: "Fee"), "a transaction saved without its entry"
+    assert_not tax.transaction.reload.enrich_attribute(:investment_activity_label, "Fee", source: "rule", ignore_locks: true)
+    assert_not income.update(excluded: true)
+
+    rule = rules(:one)
+    Rule::Action.new(rule: rule, action_type: "set_investment_activity_label", value: "Fee")
+                .apply(Transaction.where(id: tax.entryable_id), ignore_attribute_locks: true)
+    Rule::Action.new(rule: rule, action_type: "set_as_transfer_or_payment", value: accounts(:depository).id)
+                .apply(Transaction.where(id: [ income.entryable_id, tax.entryable_id ]))
+
+    assert_equal Trade::VestForm::TAX_LABEL, tax.transaction.reload.investment_activity_label
+    assert_nil income.transaction.reload.transfer
+    assert_nil tax.transaction.transfer
+  end
+
+  test "the transfer rule still sets up the other transactions it matches" do
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10)
+    form.save
+    tax = Trade::VestForm.parts_of(form.entry).last.first
+    other = @account.entries.create!(name: "Withdrawal", date: Date.current, amount: 50, currency: "USD", entryable: Transaction.new)
+
+    Rule::Action.new(rule: rules(:one), action_type: "set_as_transfer_or_payment", value: accounts(:depository).id)
+                .apply(Transaction.where(id: [ tax.entryable_id, other.entryable_id ]))
+
+    assert other.transaction.reload.transfer.present?
+  end
+
+  test "two tax lines can't name the same entry" do
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, tax_lines: [ { name: "Federal", amount: 300 } ])
+    form.save
+    federal = Trade::VestForm.parts_of(form.entry).last.first
+
+    reopened = Trade::VestForm.for(form.entry.reload)
+    reopened.assign_attributes(tax_lines: [ { id: federal.id, name: "Federal", amount: 200 }, { id: federal.id, name: "State", amount: 100 } ])
+
+    assert_not reopened.save
+    assert_includes reopened.errors[:base], I18n.t("vests.form.tax_line_repeated")
+    assert vest_form(vested_qty: 100, units_withheld: 30, price: 10, tax_lines: [ { name: "A", amount: 200 }, { name: "B", amount: 100 } ]).save,
+      "new lines without ids are fine"
+  end
+
   test "an ordinary trade can't be relabelled as a vest" do
     sell = @account.entries.create!(name: "Sell", date: Date.current, amount: -100, currency: "USD",
                                     entryable: Trade.new(security: securities(:aapl), qty: -1, price: 100, currency: "USD", investment_activity_label: "Sell"))

@@ -43,9 +43,11 @@ class Entry < ApplicationRecord
   belongs_to :vest_entry, class_name: "Entry", optional: true
   has_many :vest_parts, class_name: "Entry", foreign_key: :vest_entry_id, dependent: :destroy, inverse_of: :vest_entry
   # Set by Trade::VestForm and the data import, which write a vest and its
-  # parts together. Any other change to their amounts, dates, or labels would
-  # leave the parts out of step with the vest, so it is refused. It lasts one
-  # save, so the same record edited later is checked again.
+  # parts together. Any other change to their amounts, dates, exclusion, or
+  # labels would leave the parts out of step with the vest, so it is refused
+  # (vest_written_together here, Entryable for the trade's and transactions'
+  # columns). It lasts one save, so the same record edited later is checked
+  # again.
   attr_accessor :vest_write
   after_save { self.vest_write = nil }
   # Read side only, so a transaction can say which bills it paid. The foreign key
@@ -1015,6 +1017,7 @@ class Entry < ApplicationRecord
           if bulk_attributes.present?
             attrs = bulk_attributes.dup
             attrs.delete(:date) if entry.split_child? || entry.vest_entry_id?
+            attrs.delete(:excluded) if entry.vest_entry_id?
             attrs.delete(:entryable_attributes) unless entry.transaction?
             # reconciled_status is a manual-accounts-only concept — synced accounts
             # already have duplicate-matching + statement-level reconciliation.
@@ -1156,19 +1159,15 @@ class Entry < ApplicationRecord
       errors.add(:excluded, "cannot be toggled off for a split transaction")
     end
 
-    VEST_ENTRY_ATTRIBUTES = %w[account_id amount currency date].freeze
-    VEST_ENTRYABLE_ATTRIBUTES = %w[qty price units_withheld investment_activity_label].freeze
+    VEST_ENTRY_ATTRIBUTES = %w[account_id amount currency date excluded].freeze
 
     # A vest's shares, income, and taxes change only together, through
-    # Trade::VestForm. Turning an entry into a vest, or a vest into something
-    # else, goes through it too.
+    # Trade::VestForm. Entryable checks the trade's and transactions' own
+    # columns, which can be saved without the entry.
     def vest_written_together
       return if vest_write
-
-      vest_label = Trade::VEST_LABEL
-      labels = entryable.respond_to?(:investment_activity_label) ? entryable.investment_activity_label_change.to_a : []
-      return unless vest_entry_id_was.present? || (trade? && entryable.vest?) || labels.include?(vest_label)
-      return unless (changed & VEST_ENTRY_ATTRIBUTES).any? || (entryable.changed & VEST_ENTRYABLE_ATTRIBUTES).any?
+      return unless vest_entry_id_was.present? || (trade? && entryable.vest?)
+      return if (changed & VEST_ENTRY_ATTRIBUTES).none?
 
       errors.add(:base, "This entry is part of a vest. Edit it from the vest instead.")
     end

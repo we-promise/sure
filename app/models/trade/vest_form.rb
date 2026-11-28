@@ -40,6 +40,7 @@ class Trade::VestForm
   validate :account_holds_investments
   validate :security_present, unless: :entry
   validate :tax_lines_have_amounts
+  validate :tax_lines_name_each_entry_once
   validate :withheld_within_vested
 
   # The form for a vest already recorded, filled in from its entries.
@@ -201,6 +202,13 @@ class Trade::VestForm
     # Some shares must reach the account, or there is no lot to record.
     def withheld_within_vested
       errors.add(:base, I18n.t("vests.form.withheld_exceeds_vested")) unless received_qty.positive?
+    end
+
+    # Two lines naming one entry would save only the last, while the totals
+    # counted both.
+    def tax_lines_name_each_entry_once
+      ids = tax_lines.filter_map(&:id)
+      errors.add(:base, I18n.t("vests.form.tax_line_repeated")) if ids.uniq.size < ids.size
     end
 
     # A tax line needs an amount once anything else is filled in, a number

@@ -41,6 +41,7 @@ en:
       security_required: A ticker is required for a vest
       tax_amount_required: Each tax line needs an amount
       tax_amount_negative: A tax amount cannot be negative
+      tax_line_repeated: Each tax line can be saved only once
       withheld_exceeds_vested: Shares withheld must be fewer than the shares vested
     entries:
       income: "%{ticker} vest income"

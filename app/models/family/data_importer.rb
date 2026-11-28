@@ -1303,6 +1303,8 @@ class Family::DataImporter
       parts = Array(transaction_ids).filter_map do |old_id|
         new_id = mapped_id(:transactions, old_id, record_type: "Trade", required: false)
         part = vest.account.entries.find_by(entryable_type: "Transaction", entryable_id: new_id) if new_id
+        # A transfer leg can't also be a vest part, as Transfer refuses the reverse.
+        part = nil if part&.transaction&.transfer
         part || invalid_record!("Trade", "vest_part_transaction_ids", old_id)
       end
 
