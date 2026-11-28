@@ -4,6 +4,7 @@ en:
     entries:
       destroy:
         success: "Entry deleted successfully."
+        part_transferred: "A part of this split is linked as a transfer. Remove that transfer before you delete the transaction."
   accounts:
     reconciliation_indicator:
       matched: All transactions reconciled

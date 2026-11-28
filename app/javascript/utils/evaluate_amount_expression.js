@@ -48,11 +48,93 @@ const MAX_AMOUNT = 99999999999999
 // in which single character is accepted as the decimal point — a token
 // using the other one is then rejected rather than silently accepted, so
 // once that preference exists there is no ambiguity left to resolve at all.
-function parseTypedNumber(token, { separator } = {}) {
+//
+// A whole-number field (`precision: 0`, e.g. PYG, CLP, JPY) has no decimal
+// point to type, so there a dot or comma can only be thousands grouping:
+// "150.000.000" is 150000000. Only exact three-digit groups with one
+// grouping character are accepted; anything else ("150.5", "150.000000") is
+// rejected rather than rounded to a fraction of what was meant. Pasting uses
+// the same rule (parse_amount_paste.js), so a value means the same typed or
+// pasted. It applies to the terms that are added or subtracted only: a factor
+// of * or / keeps the decimal reading, so "1000*1.1" (10% tax) still works,
+// as long as it is a plain decimal multiplier (WHOLE_NUMBER_DECIMAL_FACTOR)
+// whose decimal point is not the currency's thousands delimiter (in PYG,
+// CLP, VND or ISK it is typed "1000*1,1").
+//
+// A pasted amount may also be grouped with spaces ("1 234,00", as pl or nb
+// write it) or in the Indian style ("1,00,000", which lib/money/formatting.rb
+// emits for Indian locales). A typed token cannot contain a space, so the
+// space form only ever comes from a paste.
+//
+// The leading group starts with 1-9: nobody groups 500 as "0.500", so that
+// shape is a decimal and is rejected rather than read as 500.
+const WHOLE_NUMBER_GROUPED = /^[1-9]\d{0,2}(?:([.,\u0020\u00a0\u202f])\d{3})(?:\1\d{3})*$/
+const WHOLE_NUMBER_INDIAN_GROUPED = /^[1-9]\d?(?:,\d{2})+,\d{3}$/
+
+// In a whole-number field a factor of * or / with a separator must be a plain
+// decimal multiplier: 0 and some decimals ("0.125"), or a whole part with no
+// leading zero and one or two decimals ("1.1", "1.25"). The decimals cannot
+// all be zero. Anything else is rejected instead of guessed, because the same
+// text as an amount reads as grouping or is rejected as a likely typo:
+// "150.000*12" could mean 1800000 or 1800, and "150.00*12" is probably a
+// mistyped "150.000*12".
+//
+// When the field knows its currency's thousands delimiter (`delimiter`, from
+// config/currencies.yml), a factor's decimal point cannot be that character
+// either: PYG writes 150.000 for a hundred and fifty thousand, so "150.50*12"
+// in a PYG field is rejected, while "150,50*12" is 150.5 × 12. JPY's
+// delimiter is a comma, so "165.5*40" stays a decimal there.
+const WHOLE_NUMBER_DECIMAL_FACTOR = /^(?:0[.,](?!0+$)\d+|[1-9]\d*[.,](?!0{1,2}$)\d{1,2})$/
+
+// Reads an unsigned digit string with a dot or comma in it as a grouped
+// whole number, or returns null when it is not exactly that shape.
+export function parseGroupedWholeNumber(input) {
+  let digits = input
+  // A zero cents part ("1.500.000,00", "1500.00") is still a whole amount, as
+  // long as its separator is not the grouping one.
+  const zeroCents = digits.match(/^(.+)([.,])0{1,2}$/)
+  if (zeroCents && !zeroCents[1].includes(zeroCents[2])) {
+    digits = zeroCents[1]
+    // An ungrouped lead of up to three digits ("150.00") is more likely a
+    // mistyped group ("150.000") than zero cents, so it is rejected.
+    if (/^\d{1,3}$/.test(digits)) return null
+    if (/^\d+$/.test(digits)) {
+      const plain = Number.parseInt(digits, 10)
+      return plain <= MAX_AMOUNT ? plain : null
+    }
+  }
+  if (!WHOLE_NUMBER_GROUPED.test(digits) && !WHOLE_NUMBER_INDIAN_GROUPED.test(digits)) return null
+  const value = Number.parseInt(digits.replace(/[^\d]/g, ""), 10)
+  return Number.isFinite(value) && value <= MAX_AMOUNT ? value : null
+}
+
+// True when a number in the text reads as thousands grouping in a
+// whole-number field ("150.000" in "150.000*12"). Such text means something
+// else in a currency with decimals, so a currency switch must not silently
+// take the new reading. Text that is merely invalid ("25.50") has no other
+// reading and is not flagged, nor is a zero cents part alone ("1500,00"),
+// which means 1500 either way.
+export function hasWholeNumberGrouping(value) {
+  if (typeof value !== "string") return false
+
+  return value.split(OPERATOR).some((token) => {
+    const unsigned = token.trim().replace(/^[+-]/, "")
+    const lead = unsigned.replace(/[.,]0{1,2}$/, "")
+    return /[.,]/.test(lead) && parseGroupedWholeNumber(unsigned) !== null
+  })
+}
+
+function parseTypedNumber(token, { separator, precision } = {}) {
   if (token.length > MAX_TOKEN_LENGTH) return null
 
   const negative = token.startsWith("-")
   const unsigned = token.replace(/^[+-]/, "")
+
+  if (precision === 0 && /[.,]/.test(unsigned)) {
+    const value = parseGroupedWholeNumber(unsigned)
+    if (value === null) return null
+    return negative ? -value : value
+  }
 
   const separators = unsigned.match(/[.,]/g) || []
   if (separators.length > 1) return null
@@ -127,7 +209,21 @@ export default function evaluateAmountExpression(value, options = {}) {
 
   if (numberTokens.some((t) => !NUMBER.test(t.trim()))) return null
 
-  const numbers = numberTokens.map((t) => parseTypedNumber(t.trim(), options))
+  // A factor of * or / is a multiplier, not an amount, so it is never read as
+  // whole-number grouping. In a whole-number field it must then be a plain
+  // decimal multiplier (WHOLE_NUMBER_DECIMAL_FACTOR) when it has a separator,
+  // and that separator cannot be the currency's thousands delimiter.
+  const isFactor = (i) => /[*/]/.test(`${tokens[2 * i - 1] ?? ""}${tokens[2 * i + 1] ?? ""}`)
+  const isUnclearFactor = (t, i) => {
+    const unsigned = t.trim().replace(/^[+-]/, "")
+    if (!isFactor(i) || !/[.,]/.test(unsigned)) return false
+    if (/^[.,]$/.test(options.delimiter ?? "") && unsigned.includes(options.delimiter)) return true
+    return !WHOLE_NUMBER_DECIMAL_FACTOR.test(unsigned)
+  }
+  if (options.precision === 0 && numberTokens.some(isUnclearFactor)) return null
+  const numbers = numberTokens.map((t, i) =>
+    parseTypedNumber(t.trim(), isFactor(i) ? { ...options, precision: undefined } : options),
+  )
   if (numbers.some((n) => n === null)) return null
 
   if (operatorTokens.length === 0) {
