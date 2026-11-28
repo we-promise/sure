@@ -6,7 +6,7 @@ module SnaptradeItem::Provided
   end
 
   def snaptrade_provider
-    return nil unless oauth_configured?
+    return nil unless credentials_configured?
 
     Provider::Snaptrade.new(self)
   end

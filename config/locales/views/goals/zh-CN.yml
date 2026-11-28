@@ -45,6 +45,9 @@ zh-CN:
           paused:
             one: 1 个已暂停
             other: "%{count} 个已暂停"
+          pace_unknown:
+            one: 1 个进度未知
+            other: "%{count} 个进度未知"
         on_track_sub_all_good: 所有进行中的目标进度正常
         on_track_all_caught_up: 全部已赶上进度
       goals_section:
@@ -161,6 +164,7 @@ zh-CN:
         behind_covered: 待确认承诺可以补足差距
         on_track: 预计在 %{date} 左右达成目标
         no_target_date: 设置目标日期以预测完成时间
+        pace_unknown: 尚无法根据这些账户衡量进度；需要过去一年内的余额更新以及满一年的余额历史记录
       pending_pledge:
         title:
           zero: 待确认：%{amount} 存入 %{account} · 今天过期
@@ -186,6 +190,12 @@ zh-CN:
         of_target: 目标进度
         market_value: 市值 %{amount}
         aria_label: 目标已完成 %{percent}%。已存 %{target} 中的 %{amount}。
+        basis:
+          balance: 计入账户当前的价值
+          contributions: 仅计入你投入的资金
+        basis_at_completion:
+          balance: 按目标完成时账户的价值计入
+          contributions: 仅计入目标完成时你已投入的资金
         aria_label_with_used: "目标已完成 %{percent}%。%{target} 中的 %{amount}，包括已使用的 %{used}。"
       projection:
         heading: 预测
@@ -196,6 +206,7 @@ zh-CN:
         reached: 你已达到目标，无需预测。
         no_target_date: 尚未设置目标日期。设置后可预测完成时间。
         no_pace: 还没有存入资金。向关联账户存钱后即可开始预测。
+        pace_unknown: 这些账户尚无足够的历史记录来衡量进度，因此暂无预测。
         behind: 按当前进度会低于目标。
         on_track_html: 按当前进度，你大约会在 <strong class="text-primary whitespace-nowrap">%{date}</strong> 达成此目标。
         aria_label: "%{name} 的预测图表"
@@ -261,6 +272,7 @@ zh-CN:
       reached: 已达成
       completed: 已完成
       no_target_date: 开放
+      pace_unknown: 进度未知
       paused: 已暂停
       archived: 已归档
     empty_state:
@@ -288,6 +300,8 @@ zh-CN:
         other: 剩余 %{count} 天
       pace_with_target: 平均 %{avg}/月 · 目标 %{target}/月
       pace_no_target: 平均 %{avg}/月
+      pace_unknown_with_target: 进度未知 · 目标 %{target}/月
+      pace_unknown: 进度未知
       footer_paused: 已暂停
       footer_archived: 已归档
       footer_reserve_intact: 储备完好
@@ -348,6 +362,7 @@ zh-CN:
         whole_balance: "留空即全部余额"
         earmark_for: 为「%{account}」预留的金额
         earmark_hint: 留空则使用该账户的全部余额。
+        progress_basis: 此目标计入什么
         currency_conversion_hint: "账户可以使用不同货币。总额将转换为 %{currency}；账户预留仍以各账户的原货币保留。"
       subtypes:
         checking: 支票账户
@@ -356,3 +371,11 @@ zh-CN:
         cd: 定期存单
         money_market: 货币市场
         other: 其他
+      progress_basis_locked: 此目标的进度已在完成时冻结。重新打开或恢复后才能更改计入方式。
+      progress_bases:
+        balance:
+          label: 账户当前的价值
+          hint: 市值。投资收益和亏损计入目标。
+        contributions:
+          label: 仅我投入的资金
+          hint: 净投入。不计市场收益和亏损。

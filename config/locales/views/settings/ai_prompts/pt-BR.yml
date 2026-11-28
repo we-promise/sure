@@ -2,17 +2,43 @@
 pt-BR:
   settings:
     ai_prompts:
+      prompt_field:
+        provider_label: Provedor
+        prompt_label: Prompt
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Restaurar padrão
+        reset_confirm_title: Restaurar o prompt padrão?
+        reset_confirm_body: Isso descartará seu prompt personalizado e restaurará as instruções padrão integradas.
+        status_custom: Usando seu prompt personalizado
+        status_default: Usando o padrão integrado
+        format_risk: "Seu prompt para %{provider} removeu o exemplo {\"%{key}\": ...}. Cada requisição ainda solicita esse formato, então a leitura da resposta geralmente continua funcionando, mas uma personalização que peça um formato de saída diferente vai quebrá-la."
       show:
         page_title: Prompts de IA
         openai_label: OpenAI
         disable_ai: Desativar Assistente de IA
+        save: Salvar prompts
+        save_confirm:
+          title: Salvar prompts de IA personalizados?
+          body: Prompts personalizados substituem as instruções de sistema integradas e as proteções de segurança (como as restrições a aconselhamento financeiro) para sua família.
+          dont_show_again: Não mostrar este aviso novamente
+          cancel: Cancelar
+          confirm: Confirmar
         prompt_instructions: Instruções do Prompt
         main_system_prompt:
           title: Prompt de Sistema Principal
           subtitle: Instruções centrais que definem como o assistente de IA se comporta em todas as conversas
+          label: Prompt de sistema do chat
         transaction_categorizer:
           title: Categorizador de Transações
           subtitle: A IA categoriza automaticamente suas transações com base nas suas categorias definidas
         merchant_detector:
           title: Detector de Estabelecimentos
           subtitle: A IA identifica e enriquece dados de transações com informações do estabelecimento
+        insight_dig_in:
+          title: Aprofundar insight
+          subtitle: Primeira mensagem do chat quando você aprofunda um insight com IA
+          label: Mensagem de aprofundamento
+      update:
+        success: Prompts de IA atualizados
+        multiple_errors: Vários prompts são longos demais (o máximo é %{count} caracteres)
