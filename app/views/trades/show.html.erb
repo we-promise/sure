@@ -80,7 +80,7 @@
                 data: { controller: "auto-submit-form" } do |f| %>
             <%= f.fields_for :entryable do |ef| %>
               <%= ef.select :lot_source_entry_id,
-                    lot_choices.map { |lot| [ t(".lot_option", date: l(lot.date, format: :long), qty: format_quantity(lot.trade.qty, exact: true), price: lot.trade.price_money.format), lot.id ] },
+                    lot_select_options(trade, lot_choices),
                     { label: t(".lot_label"), include_blank: t(".lot_oldest_first") },
                     { "data-auto-submit-form-target": "auto" } %>
             <% end %>

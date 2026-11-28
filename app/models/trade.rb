@@ -132,6 +132,48 @@ class Trade < ApplicationRecord
     before_sale.or(acquisitions.where(id: attribute_in_database(:lot_source_entry_id))).chronological
   end
 
+  # What was left of a lot when this sale ran, and what the lot was bought
+  # as, both in the shares of the sale's date.
+  LotShares = Data.define(:left, :size)
+  LOT_SHARES_TOLERANCE = BigDecimal("1e-15")
+
+  # The LotShares of each of `lots` (#lot_choices) by entry id, as of the last
+  # sync: the lot's stored quantity, in the shares of the position's latest
+  # holding, plus what this sale and every sale replayed after it took from
+  # it. A lot with no stored row (acquired since the last sync) is absent, as
+  # is a held choice that no longer replays before the sale. So is every lot
+  # while a transfer out replays at or after this sale, since it takes from
+  # lots without recording which, or while the position's lots do not add up
+  # to its holding (HoldingLot.in_partition).
+  def lot_shares(lots)
+    return {} if lots.empty? || transfer_out_on_or_after_sale?
+    return {} unless HoldingLot.in_partition([ entry.account_id ], [ security_id ]).include?([ entry.account_id, security_id ])
+
+    stored = HoldingLot.derived.where(account_id: entry.account_id, source_entry_id: lots.map(&:id))
+      .pluck(:source_entry_id, :qty).to_h
+    taken = on_or_after_sale(
+      HoldingLotDisposal.joins(:sale_entry).where(account_id: entry.account_id, lot_source_entry_id: stored.keys)
+    ).pluck(:lot_source_entry_id, "entries.date", :qty).group_by(&:first)
+    synced_on = entry.account.holdings.where(security_id: security_id).maximum(:date) || Date.current
+    splits = Security::Split.where(security_id: security_id, ex_date: ..Date.current).to_a
+    sale_order = [ entry.date, entry.created_at || Time.current ]
+
+    # The stored lot restated into the sale date's shares: back from the last
+    # sync, or forward to a sale dated after it.
+    stored_factor = synced_on < entry.date ? split_factor(splits, synced_on, entry.date) : 1 / split_factor(splits, entry.date, synced_on)
+
+    lots.select { |lot| stored.key?(lot.id) && ([ lot.date, lot.created_at ] <=> sale_order) <= 0 }.to_h do |lot|
+      left = Security::Split.scale(stored[lot.id], stored_factor) +
+        taken.fetch(lot.id, []).sum(BigDecimal("0")) { |_, date, qty| Security::Split.unscale(qty, split_factor(splits, entry.date, date)) }
+      size = Security::Split.scale(lot.trade.qty, split_factor(splits, lot.date, entry.date))
+      # A reverse split stores a repeating decimal, so undoing it is off in the
+      # last places (10 reads 10.000000000000000001). A lot within that of its
+      # size reads as its size, and anything else drops those places.
+      left = (left - size).abs < LOT_SHARES_TOLERANCE ? size : left.round(16)
+      [ lot.id, LotShares.new(left: left, size: size) ]
+    end
+  end
+
   class << self
     def build_name(type, qty, ticker)
       prefix = type == "buy" ? "Buy" : "Sell"
@@ -313,12 +355,7 @@ class Trade < ApplicationRecord
     # emptied. Nothing is excluded then: a lot that turns out to be empty
     # falls back to the account's method when the sale replays.
     def lots_emptied_before_sale
-      later_transfers_out = on_or_after_sale(
-        entry.account.entries.where(entryable_type: "Trade",
-          entryable_id: Trade.where(security_id: security_id, investment_activity_label: INTERNAL_MOVEMENT_LABELS)
-                             .where("qty < 0").select(:id))
-      )
-      return HoldingLot.none.select(:source_entry_id) if later_transfers_out.exists?
+      return HoldingLot.none.select(:source_entry_id) if transfer_out_on_or_after_sale?
 
       later_disposals = on_or_after_sale(
         HoldingLotDisposal.joins(:sale_entry).where(account_id: entry.account_id).where.not(lot_source_entry_id: nil)
@@ -326,6 +363,21 @@ class Trade < ApplicationRecord
       HoldingLot.derived.where(account_id: entry.account_id, qty: 0)
         .where.not(source_entry_id: later_disposals.select(:lot_source_entry_id))
         .select(:source_entry_id)
+    end
+
+    def transfer_out_on_or_after_sale?
+      on_or_after_sale(
+        entry.account.entries.where(entryable_type: "Trade",
+          entryable_id: Trade.where(security_id: security_id, investment_activity_label: INTERNAL_MOVEMENT_LABELS)
+                             .where("qty < 0").select(:id))
+      ).exists?
+    end
+
+    # How many shares one held at the close of `from` had become by the close
+    # of `to`: a split counts from the day after `from` through `to`, since it
+    # takes effect at the open of its ex-date, before that day's trades.
+    def split_factor(splits, from, to)
+      splits.select { |split| split.ex_date > from && split.ex_date <= to }.reduce(Rational(1)) { |factor, split| factor * split.ratio }
     end
 
     # Entries replay by date, then in the order they were entered (see
