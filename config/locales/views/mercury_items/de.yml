@@ -65,7 +65,6 @@ de:
       description: Wähl ein Mercury-Konto zur Verknüpfung mit diesem Konto. Transaktionen werden automatisch synchronisiert und dedupliziert.
       link_account: "Konto verknüpfen"
       no_account_specified: "Kein Konto angegeben"
-      no_accounts_found: Keine Mercury-Konten gefunden. Bitte prüf deine API-Token-Konfiguration.
       no_api_token: "Mercury API-Token ist nicht konfiguriert. Bitte in den Einstellungen konfigurieren."
       no_credentials_configured: Richte zuerst deinen Mercury-API-Token in den Anbietereinstellungen ein.
       no_name_placeholder: "(Kein Name)"
@@ -75,12 +74,12 @@ de:
       account_already_linked: "Dieses Konto ist bereits mit einem Anbieter verknüpft"
       api_error: "API-Fehler: %{message}"
       invalid_account_name: "Konto mit leerem Namen kann nicht verknüpft werden"
-      mercury_account_already_linked: "Dieses Mercury-Konto ist bereits mit einem anderen Konto verknüpft"
-      mercury_account_not_found: "Mercury-Konto nicht gefunden"
       missing_parameters: "Erforderliche Parameter fehlen"
       no_api_token: "Mercury API-Token nicht gefunden. Bitte in den Anbieter-Einstellungen konfigurieren."
-      success: "%{account_name} erfolgreich mit Mercury verknüpft"
+      provider_account_already_linked: "Dieses Mercury-Konto ist bereits mit einem anderen Konto verknüpft"
+      provider_account_not_found: "Mercury-Konto nicht gefunden"
       select_connection: Wähl eine Mercury-Verbindung, bevor du Konten verknüpfst.
+      success: "%{account_name} erfolgreich mit Mercury verknüpft"
     setup_accounts:
       account_type_label: "Kontotyp:"
       all_accounts_linked: Alle deine Mercury-Konten sind bereits eingerichtet.
@@ -164,8 +163,6 @@ de:
       service_down_label: Dienst nicht erreichbar
       title: Fehler bei der Mercury-Verbindung
       unable_to_connect: Die Verbindung zu Mercury kam nicht zustande
-    mercury_item_selection_error_payload:
-      select_connection: Wähl eine Mercury-Verbindung, bevor du Konten lädst.
     provider_connection:
       default_description: Verbinde deine Bank über Mercury
       default_name: Mercury
@@ -194,9 +191,6 @@ de:
       token_label: Token
       token_placeholder: Token hier einfügen
       update_connection: Verbindung aktualisieren
-    render_mercury_item_selection_failure:
-      no_credentials_configured: Hinterleg zuerst deinen Mercury-API-Token in den Anbietereinstellungen.
-      select_connection: Wähl in den Anbietereinstellungen eine Mercury-Verbindung.
     setup_required:
       api_token_description: Bevor du Mercury-Konten verknüpfen kannst, musst du deinen Mercury-API-Token hinterlegen.
       api_token_not_configured: API-Token nicht hinterlegt

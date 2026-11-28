@@ -101,4 +101,10 @@ class MercuryAccountTest < ActiveSupport::TestCase
       )
     end
   end
+
+  test "name_for prefers the nickname, then the name, then the legal business name" do
+    assert_equal "Ops", MercuryAccount.name_for(nickname: "Ops", name: "Mercury Checking ••1234", legalBusinessName: "Acme LLC")
+    assert_equal "Mercury Checking ••1234", MercuryAccount.name_for(nickname: " ", name: "Mercury Checking ••1234", legalBusinessName: "Acme LLC")
+    assert_equal "Acme LLC", MercuryAccount.name_for(nickname: nil, name: "", legalBusinessName: "Acme LLC")
+  end
 end

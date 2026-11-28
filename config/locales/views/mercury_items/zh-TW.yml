@@ -117,7 +117,6 @@ zh-TW:
       description: 選擇一個要與這個帳戶連結的 Mercury 帳戶。交易會自動同步並去除重複。
       link_account: 連結帳戶
       no_account_specified: 未指定帳戶
-      no_accounts_found: 找不到任何 Mercury 帳戶，請檢查您的 API Token 設定。
       no_api_token: 尚未設定 Mercury API Token，請前往「設定」完成設定。
       no_credentials_configured: 請先在供應商設定中設定您的 Mercury API Token。
       no_name_placeholder: （無名稱）
@@ -127,10 +126,10 @@ zh-TW:
       account_already_linked: 此帳戶已與供應商連結
       api_error: API 錯誤：%{message}
       invalid_account_name: 無法連結名稱空白的帳戶
-      mercury_account_already_linked: 這個 Mercury 帳戶已經連結到另一個帳戶了
-      mercury_account_not_found: 找不到 Mercury 帳戶
       missing_parameters: 缺少必要參數
       no_api_token: 找不到 Mercury API Token，請在供應商設定中設定。
+      provider_account_already_linked: 這個 Mercury 帳戶已經連結到另一個帳戶了
+      provider_account_not_found: 找不到 Mercury 帳戶
       select_connection: 連結帳戶前，請先選擇一個 Mercury 連線。
       success: 已成功將 %{account_name} 與 Mercury 連結
     setup_accounts:
@@ -201,8 +200,3 @@ zh-TW:
       success: 同步已開始
     update:
       success: Mercury 連線已更新
-    mercury_item_selection_error_payload:
-      select_connection: 載入帳戶前，請先選擇一個 Mercury 連線。
-    render_mercury_item_selection_failure:
-      select_connection: 請在供應商設定中選擇一個 Mercury 連線。
-      no_credentials_configured: 請先在供應商設定中設定您的 Mercury API Token。

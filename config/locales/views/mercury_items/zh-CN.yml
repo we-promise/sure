@@ -118,7 +118,6 @@ zh-CN:
       description: 选择一个 Mercury 账户与此账户关联。交易将自动同步并去重。
       link_account: 关联账户
       no_account_specified: 未指定账户
-      no_accounts_found: 未找到 Mercury 账户。请检查您的 API token 配置。
       no_api_token: Mercury API token 未配置。请在设置中配置。
       no_credentials_configured: 请先在提供商设置中配置您的 Mercury API token。
       no_name_placeholder: （无名称）
@@ -128,10 +127,10 @@ zh-CN:
       account_already_linked: 此账户已关联到某个提供商
       api_error: "API 错误：%{message}"
       invalid_account_name: 无法关联空名称账户
-      mercury_account_already_linked: 此 Mercury 账户已关联到另一个账户
-      mercury_account_not_found: 未找到 Mercury 账户
       missing_parameters: 缺少必需参数
       no_api_token: 未找到 Mercury API token。请在提供商设置中配置。
+      provider_account_already_linked: 此 Mercury 账户已关联到另一个账户
+      provider_account_not_found: 未找到 Mercury 账户
       select_connection: 在关联账户之前请选择一个 Mercury 连接。
       success: 已成功将 %{account_name} 与 Mercury 关联
     setup_accounts:
@@ -202,8 +201,3 @@ zh-CN:
       success: 同步已开始
     update:
       success: Mercury 连接已更新
-    mercury_item_selection_error_payload:
-      select_connection: 在加载账户之前请选择一个 Mercury 连接。
-    render_mercury_item_selection_failure:
-      select_connection: 请在提供商设置中选择一个 Mercury 连接。
-      no_credentials_configured: 请先在提供商设置中配置您的 Mercury API token。

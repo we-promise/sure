@@ -118,7 +118,6 @@ hu:
       description: Válassz egy Mercury számlát, amelyet ehhez a számlához szeretnél kapcsolni. A tranzakciók automatikusan szinkronizálásra és deduplikálásra kerülnek.
       link_account: Számla összekapcsolása
       no_account_specified: Nem lett megadva számla
-      no_accounts_found: Nem találhatók Mercury számlák. Kérlek ellenőrizd az API token konfigurációdat.
       no_api_token: A Mercury API token nincs beállítva. Kérlek állítsd be a Beállításokban.
       no_credentials_configured: Kérlek előbb állítsd be a Mercury API tokenedet a Szolgáltatói beállításokban.
       no_name_placeholder: "(Nincs név)"
@@ -128,10 +127,10 @@ hu:
       account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval
       api_error: "API hiba: %{message}"
       invalid_account_name: Nem lehet összekapcsolni üres nevű számlát
-      mercury_account_already_linked: Ez a Mercury számla már össze van kapcsolva egy másik számlával
-      mercury_account_not_found: Mercury számla nem található
       missing_parameters: Hiányzó kötelező paraméterek
       no_api_token: Mercury API token nem található. Kérlek állítsd be a Szolgáltatói beállításokban.
+      provider_account_already_linked: Ez a Mercury számla már össze van kapcsolva egy másik számlával
+      provider_account_not_found: Mercury számla nem található
       select_connection: Válassz Mercury kapcsolatot a számlák összekapcsolása előtt.
       success: "%{account_name} sikeresen összekapcsolva a Mercury-val"
     setup_accounts:
@@ -202,8 +201,3 @@ hu:
       success: Szinkronizálás elindítva
     update:
       success: Mercury kapcsolat frissítve
-    mercury_item_selection_error_payload:
-      select_connection: Válassz Mercury kapcsolatot a számlák betöltése előtt.
-    render_mercury_item_selection_failure:
-      select_connection: Válassz Mercury kapcsolatot a Szolgáltatói beállításokban.
-      no_credentials_configured: Kérlek előbb állítsd be a Mercury API tokenedet a Szolgáltatói beállításokban.

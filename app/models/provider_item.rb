@@ -9,6 +9,10 @@
 class ProviderItem < ApplicationRecord
   self.abstract_class = true
 
+  # Blank and whitespace-only credentials. Deterministically encrypted
+  # credentials can only be excluded in SQL by their exact values.
+  BLANK_TOKEN_SENTINELS = [ "", " ", "  ", "   ", "\t", "\n", "\r" ].freeze
+
   include Syncable, Unlinking
 
   def self.connection_declaration

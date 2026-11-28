@@ -52,12 +52,12 @@ ca:
       account_already_linked: Aquest compte ja està enllaçat a un proveïdor
       api_error: 'Error de l''API: %{message}'
       invalid_account_name: No es pot enllaçar un compte sense nom
-      mercury_account_already_linked: Aquest compte Mercury ja està enllaçat a un
-        altre compte
-      mercury_account_not_found: No s'ha trobat el compte Mercury
       missing_parameters: Falten paràmetres obligatoris
       no_api_token: No s'ha trobat el token API de Mercury. Configura'l a la configuració
         del proveïdor.
+      provider_account_already_linked: Aquest compte Mercury ja està enllaçat a un
+        altre compte
+      provider_account_not_found: No s'ha trobat el compte Mercury
       select_connection: Tria una connexió Mercury abans d'enllaçar comptes.
       success: S'ha enllaçat correctament %{account_name} amb Mercury
     loading:
@@ -80,8 +80,6 @@ ca:
       syncing: Sincronitzant...
       total: Total
       unlinked: Sense enllaç
-    mercury_item_selection_error_payload:
-      select_connection: Tria una connexió Mercury abans de carregar comptes.
     provider_connection:
       default_description: Connecta't al teu banc a través de Mercury
       default_name: Mercury
@@ -116,10 +114,6 @@ ca:
       token_label: Token
       token_placeholder: Enganxa el token aquí
       update_connection: Actualitza la connexió
-    render_mercury_item_selection_failure:
-      no_credentials_configured: Primer, configura el teu token API de Mercury a la
-        configuració del proveïdor.
-      select_connection: Tria una connexió Mercury a la configuració del proveïdor.
     select_accounts:
       accounts_selected: comptes seleccionats
       api_error: 'Error de l''API: %{message}'
@@ -147,8 +141,6 @@ ca:
         Les transaccions es sincronitzaran i deduplicaran automàticament.
       link_account: Enllaça compte
       no_account_specified: No s'ha especificat cap compte
-      no_accounts_found: No s'han trobat comptes Mercury. Comprova la configuració
-        del teu token API.
       no_api_token: El token API de Mercury no està configurat. Configura'l a la configuració.
       no_credentials_configured: Primer, configura el teu token API de Mercury a la
         configuració del proveïdor.

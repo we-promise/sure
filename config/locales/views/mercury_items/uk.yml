@@ -123,7 +123,6 @@ uk:
       description: Виберіть рахунок Mercury для пов'язування з цим рахунком. Транзакції будуть синхронізуватися та дедуплікуватися автоматично.
       link_account: Пов'язати рахунок
       no_account_specified: Рахунок не вказано
-      no_accounts_found: Рахунків Mercury не знайдено. Перевірте конфігурацію вашого токена API.
       no_api_token: Токен API Mercury не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
       no_credentials_configured: Будь ласка, спочатку налаштуйте свій токен API Mercury в налаштуваннях постачальника.
       no_name_placeholder: "(Без назви)"
@@ -133,10 +132,10 @@ uk:
       account_already_linked: Цей рахунок вже пов'язано з постачальником
       api_error: "Помилка API: %{message}"
       invalid_account_name: Неможливо пов'язати рахунок з порожньою назвою
-      mercury_account_already_linked: Цей рахунок Mercury вже пов'язано з іншим рахунком
-      mercury_account_not_found: Рахунок Mercury не знайдено
       missing_parameters: Відсутні обов'язкові параметри
       no_api_token: Токен API Mercury не знайдено. Будь ласка, налаштуйте його в налаштуваннях постачальника.
+      provider_account_already_linked: Цей рахунок Mercury вже пов'язано з іншим рахунком
+      provider_account_not_found: Рахунок Mercury не знайдено
       select_connection: Виберіть з'єднання Mercury перед пов'язуванням рахунків.
       success: "Успішно пов'язано %{account_name} з Mercury"
     setup_accounts:
@@ -211,8 +210,3 @@ uk:
       success: Синхронізацію розпочато
     update:
       success: З'єднання Mercury оновлено
-    mercury_item_selection_error_payload:
-      select_connection: Виберіть з'єднання Mercury перед завантаженням рахунків.
-    render_mercury_item_selection_failure:
-      select_connection: Виберіть з'єднання Mercury в налаштуваннях постачальника.
-      no_credentials_configured: Будь ласка, спочатку налаштуйте свій токен API Mercury в налаштуваннях постачальника.
