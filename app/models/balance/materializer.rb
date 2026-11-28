@@ -15,6 +15,11 @@ class Balance::Materializer
 
   def materialize_balances
     Balance.transaction do
+      # Every materialization of an account -- a sync, or a lot edit's
+      # restatement -- locks the account row before writing anything, so two of
+      # them serialise in one lock order rather than deadlocking on each other's
+      # holding rows.
+      account.lock!
       materialize_holdings
       calculate_balances
 

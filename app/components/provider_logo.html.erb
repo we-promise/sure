@@ -10,6 +10,6 @@
         ) %>
   <% end %>
   <% if (url = brand_url) %>
-    <%= helpers.image_tag url, class: "absolute inset-0 w-full h-full bg-container", alt: "", loading: "lazy", onerror: ProviderLogo::REMOVE_ON_ERROR %>
+    <%= helpers.image_tag url, class: "absolute inset-0 w-full h-full bg-container", alt: "", loading: "lazy", data: ProviderLogo::REMOVE_ON_ERROR %>
   <% end %>
 <% end %>

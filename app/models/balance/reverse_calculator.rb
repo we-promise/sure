@@ -116,12 +116,21 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
     # Only the opening_anchor_date itself gets this treatment — reconciliation waypoints
     # are handled separately in the calculate loop above.
     def use_opening_anchor_for_date?(date)
-      account.has_opening_anchor? && date == account.opening_anchor_date
+      date == opening_anchor_date_if_anchored
     end
 
     # Applies the one-day bridge from the opening anchor to the first derived day.
     def use_opening_boundary_adjustment_for_date?(date)
-      account.has_opening_anchor? && date == account.opening_anchor_date.next_day
+      date == opening_anchor_date_if_anchored&.next_day
+    end
+
+    # Checked on every day of the calculation. Account#has_opening_anchor? can't
+    # cache a missing anchor, so without this an account with no opening anchor
+    # queries for it twice per day of history.
+    def opening_anchor_date_if_anchored
+      return @opening_anchor_date_if_anchored if defined?(@opening_anchor_date_if_anchored)
+
+      @opening_anchor_date_if_anchored = account.has_opening_anchor? ? account.opening_anchor_date : nil
     end
 
     # Builds explicit adjustments that make the opening-boundary row auditably reconcile.

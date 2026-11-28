@@ -1,0 +1,141 @@
+---
+id:
+  providers:
+    fio:
+      name: Fio banka
+      description: Sinkronkan rekening Fio banka dengan token API hanya-baca
+  family:
+    fio:
+      create_fio_item:
+        default_name: Koneksi Fio banka
+  fio_item:
+    errors:
+      account_processing_failed: Tidak dapat menyinkronkan rekening Fio
+      account_mismatch: Token ini milik rekening Fio yang berbeda dari yang sudah disinkronkan oleh koneksi ini. Tambahkan sebagai koneksi terpisah.
+      account_sync_schedule_failed: Tidak dapat menjadwalkan sinkronisasi rekening Fio
+      statement_too_large: Laporan memiliki lebih banyak transaksi daripada yang disajikan Fio dalam satu permintaan. Pilih tanggal mulai sinkronisasi yang lebih baru dan sinkronkan kembali.
+      statement_fetch_failed: Tidak dapat mengambil laporan dari Fio
+      history_locked: Fio menolak periode laporan ini. Buka kunci riwayat lengkap rekening di internet banking pada Settings → API, lalu sinkronkan lagi dalam 10 menit.
+      sync_failed: Tidak dapat menyinkronkan koneksi Fio
+    sync:
+      status:
+        importing: Mengimpor laporan dari Fio...
+        checking_setup: Memeriksa konfigurasi rekening...
+        needs_setup:
+          one: 1 rekening perlu pengaturan...
+          other: "%{count} rekening perlu pengaturan..."
+        processing: Memproses transaksi...
+        calculating: Menghitung saldo...
+    sync_status:
+      no_accounts: Belum ada rekening ditemukan
+      all_synced:
+        one: 1 rekening disinkronkan
+        other: "%{count} rekening disinkronkan"
+      partial: "%{linked} disinkronkan, %{unlinked} perlu pengaturan"
+  fio_items:
+    account_types:
+      depository: Rekening giro atau tabungan
+      loan: Pinjaman, KPR, atau cerukan
+    provider_panel:
+      default_connection_name: Koneksi Fio banka
+      add_connection: Tambah koneksi Fio banka
+      update_connection: Perbarui koneksi
+      connection_name_label: Nama koneksi
+      connection_name_placeholder: Rekening Fio saya
+      token_label: Token API (hanya-baca)
+      token_placeholder: Tempel token 64 karakter
+      keep_token_placeholder: Kosongkan untuk mempertahankan token yang ada
+      sync_start_date_label: Impor transaksi mulai dari
+      sync_start_date_hint: Fio menyajikan 90 hari terakhir tanpa otorisasi tambahan. Untuk yang lebih lama, buka kunci riwayat lengkap rekening di internet banking pada Settings → API (ikon gembok) — ini membuka jendela 10 menit — dan sinkronkan selama waktu tersebut.
+      one_account_notice: Satu token menjangkau satu rekening Fio, jadi tambahkan koneksi untuk setiap rekening yang ingin Anda lacak. Token dapat digunakan sekali setiap 30 detik; sinkronisasi yang datang lebih cepat akan diambil oleh sinkronisasi berikutnya.
+      connected_account: Rekening terhubung
+      no_account_yet: Belum ada rekening — sinkronisasi pertama menemukan rekening yang dijangkau token ini.
+      account_needs_setup: Belum ditautkan ke rekening Sure.
+      requires_update: Token baru diperlukan
+      requires_update_notice: Fio menolak token ini. Token berlaku hingga 180 hari kecuali diperpanjang otomatis pada setiap login perbankan, jadi buat token hanya-baca baru di Settings → API lalu tempelkan di bawah ini.
+      last_synced: Disinkronkan %{timestamp} lalu
+      never_synced: Belum pernah disinkronkan
+      syncing: Menyinkronkan...
+      sync: Sinkronkan
+      setup_accounts: Atur rekening
+      disconnect: Putuskan koneksi
+      disconnect_confirm: "Apakah Anda yakin ingin memutuskan koneksi %{name}?"
+    create:
+      success: Koneksi Fio banka disimpan.
+      token_required: Tempelkan token API dari internet banking Fio.
+    update:
+      success: Koneksi Fio banka diperbarui.
+    destroy:
+      success: Koneksi Fio banka dijadwalkan untuk dihapus.
+      unlink_failed: Tidak dapat memutuskan koneksi Fio banka
+    select_accounts:
+      title: Tautkan rekening Fio Anda
+      description: Token ini menjangkau satu rekening. Pilih bagaimana rekening ini harus dilacak di Sure.
+      account_type_label: Jenis rekening
+      awaiting_first_sync: Fio belum melaporkan rekening untuk token ini. Jalankan sinkronisasi lalu kembali lagi.
+      already_linked: Rekening koneksi ini sudah ditautkan ke rekening Sure.
+      sync_now: Sinkronkan sekarang
+      no_credentials_configured: Konfigurasikan Fio banka di pengaturan penyedia terlebih dahulu.
+      cancel: Batal
+      link_account: Tautkan rekening
+    link_accounts:
+      success: "Menautkan rekening Fio Anda ke %{account_name}."
+      no_account_found: Tidak ada rekening Fio yang belum tertaut ditemukan untuk koneksi ini.
+      no_credentials_configured: Konfigurasikan Fio banka di pengaturan penyedia terlebih dahulu.
+      unsupported_account_type: Fio tidak mendukung jenis rekening tersebut.
+      link_failed: Rekening tidak dapat ditautkan.
+    select_existing_account:
+      title: "Tautkan rekening Fio ke %{account_name}"
+      description: Hubungkan rekening yang dijangkau token ini ke rekening yang Anda pilih.
+      awaiting_first_sync: Fio belum melaporkan rekening untuk token ini. Jalankan sinkronisasi lalu kembali lagi.
+      already_linked: Rekening koneksi ini sudah ditautkan ke rekening Sure.
+      sync_now: Sinkronkan sekarang
+      no_credentials_configured: Konfigurasikan Fio banka di pengaturan penyedia terlebih dahulu.
+      account_already_linked: Rekening ini sudah ditautkan ke penyedia lain.
+      cancel: Batal
+      link_account: Tautkan rekening
+    link_existing_account:
+      success: "Menautkan rekening Fio Anda ke %{account_name}."
+      account_already_linked: Rekening ini sudah ditautkan ke penyedia lain.
+      fio_account_already_linked: Rekening Fio ini sudah tertaut.
+      no_account_selected: Tidak ada rekening Fio yang tersedia untuk ditautkan.
+      unsupported_account_type: Fio hanya dapat menyinkronkan rekening kas dan pinjaman.
+    setup_accounts:
+      title: Tautkan rekening Fio Anda
+      subtitle: Pilih bagaimana rekening yang dijangkau token ini harus tampil di Sure.
+      choose_account_type: Pilih jenis rekening
+      choose_account_type_description: Lewati jika Anda tidak ingin melacak rekening ini.
+      account_type_label: Jenis rekening
+      account_types:
+        skip: Lewati
+      create_account: Buat rekening
+      awaiting_first_sync: Belum ada rekening ditemukan
+      awaiting_first_sync_description: Fio hanya melaporkan rekening dalam laporan, sehingga rekening muncul setelah sinkronisasi pertama berhasil.
+      sync_now: Sinkronkan sekarang
+      nothing_to_setup: Tidak ada yang perlu diatur
+      account_already_handled: Rekening koneksi ini sudah ditautkan atau dilewati.
+      close: Tutup
+      cancel: Batal
+    complete_account_setup:
+      success: "Membuat %{account_name}."
+      skipped: Rekening Fio dilewati.
+      no_account: Tidak ada rekening Fio yang perlu diatur.
+      unsupported_account_type: Fio tidak mendukung jenis rekening tersebut.
+      creation_failed: Tidak dapat membuat rekening Sure.
+    fio_item:
+      deletion_in_progress: Penghapusan sedang berlangsung
+      syncing: Menyinkronkan
+      requires_update: Token baru diperlukan
+      error: Kesalahan
+      status_with_summary: "Disinkronkan %{timestamp} lalu · %{summary}"
+      status_never: Belum pernah disinkronkan
+      delete: Hapus
+      requires_update_title: Token baru diperlukan
+      requires_update_description: Fio menolak token untuk koneksi ini. Buat token hanya-baca baru di Settings → API pada internet banking.
+      update_token: Perbarui token
+      setup_needed: Pengaturan rekening diperlukan
+      setup_description: Rekening yang dijangkau token ini belum ditautkan ke rekening Sure.
+      setup_action: Atur rekening
+      no_accounts_title: Belum ada rekening diimpor
+      no_accounts_description: Fio hanya melaporkan rekening dalam laporan, sehingga rekening muncul setelah sinkronisasi pertama berhasil.
+      sync_now: Sinkronkan sekarang

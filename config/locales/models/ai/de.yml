@@ -1,0 +1,35 @@
+---
+de:
+  ai:
+    availability:
+      capability_missing:
+        admin: "%{feature} ist nicht verfügbar: Keines der eingerichteten KI-Modelle kann das. Prüfe die Modelle unter Einstellungen → Self-Hosting."
+        member: "%{feature} ist nicht verfügbar: Keines der eingerichteten KI-Modelle kann das."
+      no_family_consent:
+        member: "Für %{feature} muss ein Admin deines Haushalts KI einschalten. Das geht über den KI-Assistenten."
+      not_configured:
+        admin: "%{feature} ist nicht verfügbar: Dafür ist kein KI-Modell eingerichtet. Füge eines unter Einstellungen → Self-Hosting hinzu."
+        member: "%{feature} ist nicht verfügbar: KI ist dafür auf dieser Instanz nicht eingerichtet."
+      user_disabled:
+        member: "Für %{feature} muss KI eingeschaltet sein. Das geht über den KI-Assistenten."
+    consent_rows:
+      bill_setup: "Rechnungen"
+      categorize: "Kategorien"
+      chat: "Chat"
+      detect_merchants: "Händler"
+      embed: "Dokumente"
+      extract_pdf: "PDF-Import"
+    sends:
+      bill_configuration: "Die aktuellen Einstellungen der Rechnung"
+      category_names: "Die Namen deiner Kategorien"
+      chat_messages: "Deine Chat-Nachrichten"
+      depends_on_vector_store: "Deine hochgeladenen Dokumente, als ganze Dateien an einen Vektorspeicher oder als Textabschnitte an ein Embedding-Modell"
+      looked_up_financial_data: "Die Finanzdaten, die der Assistent für eine Antwort abruft"
+      merchant_names: "Händlernamen"
+      provider_category_hints: "Kategorien, die deine Bank vorschlägt"
+      search_query: "Dein Suchtext"
+      stored_document_text: "Der Text der Kontoauszüge in deinem Kontoauszug-Tresor"
+      transaction_amounts: "Transaktionsbeträge"
+      transaction_dates: "Transaktionsdaten"
+      transaction_names: "Transaktionsnamen"
+      uploaded_document: "Das Dokument, das du hochlädst"
