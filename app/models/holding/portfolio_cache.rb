@@ -32,7 +32,16 @@ class Holding::PortfolioCache
     end
   end
 
+  # In the account's currency. Without an exchange rate the price is returned
+  # as it is, still labelled with the account's currency.
   def get_price(security_id, date, source: nil)
+    get_price_and_conversion(security_id, date, source: source)&.first
+  end
+
+  # [#get_price's price, whether it was converted], so a caller can tell an
+  # unconverted fallback from a price in the account's currency. Nil when the
+  # date has no price.
+  def get_price_and_conversion(security_id, date, source: nil)
     security = @security_cache[security_id]
     raise SecurityNotFound.new(security_id, account.id) unless security
 
@@ -48,19 +57,22 @@ class Holding::PortfolioCache
     return nil unless price
 
     price_money = Money.new(price.price, price.currency)
+    converted = true
 
     begin
       converted_amount = price_money.exchange_to(account.currency, date: date).amount
     rescue Money::ConversionError
+      converted = false
       converted_amount = price.price
     end
 
-    Security::Price.new(
+    converted_price = Security::Price.new(
       security_id: security_id,
       date: price.date,
       price: converted_amount,
       currency: account.currency
     )
+    [ converted_price, converted ]
   end
 
   def get_securities
@@ -243,29 +255,53 @@ class Holding::PortfolioCache
         # cleaned up) where both rank the same
         # A provider row with no units marks a position closed, not a price
         # (some providers write one at no price), so it is left out.
+        #
+        # For a security with no market data, holdings are its only price
+        # history past its trades. A row without a provider is mostly one the
+        # reverse calculator wrote on an earlier run, often with a price it
+        # carried across a gap. Read back, that price would outlast the
+        # provider price that later covered the same days, so while the
+        # security has provider rows that price it, only they count as prices
+        # for it. Unlinking a provider keeps its rows and clears their
+        # provider, which leaves a security none at all: then the rows without
+        # one are the only price history it has, and they all count, after a
+        # trade at no price too, since none of them can be told from a row the
+        # provider reported.
+        only_unowned_rows = false
         security_holdings = if use_holdings
-          (holdings_by_security_id[security.id] || [])
+          rows = (holdings_by_security_id[security.id] || [])
             .reject { |h| h.account_provider_id && h.qty.to_d.zero? }
-            .sort_by { |h| h.account_provider_id ? 0 : 1 }
+          if security.offline?
+            if rows.any?(&:account_provider_id)
+              rows = rows.select(&:account_provider_id)
+            else
+              only_unowned_rows = true
+            end
+          end
+          rows.sort_by { |h| h.account_provider_id ? 0 : 1 }
         else
           []
         end
         # Days whose holding price is only a calculated row's, which an earlier
         # sync derived from the prices known then
-        calculated_holding_dates = security_holdings.select { |h| h.account_provider_id.nil? }.map(&:date).to_set -
-          security_holdings.select(&:account_provider_id).map(&:date).to_set
+        calculated_holding_dates = if only_unowned_rows
+          Set.new
+        else
+          security_holdings.select { |h| h.account_provider_id.nil? }.map(&:date).to_set -
+            security_holdings.select(&:account_provider_id).map(&:date).to_set
+        end
         # Days from the first trade at no price on: their calculated rows were
         # filled in from prices as an earlier sync worked them out, the
         # movement's included, and anything seen since (a quote between two
         # runs, even today's) may change them. They give way like the movement
         # day's own, so the prices known now carry forward instead.
         first_unpriced = unpriced_dates.min
-        carried_dates = if first_unpriced
+        carried_dates = if first_unpriced && !only_unowned_rows
           security_holdings.select { |h| h.account_provider_id.nil? && h.date > first_unpriced }.map(&:date).to_set
         else
           Set.new
         end
-        passed_over = ->(h) { h.account_provider_id.nil? && (!h.price.positive? || unpriced_dates.include?(h.date) || carried_dates.include?(h.date)) }
+        passed_over = ->(h) { h.account_provider_id.nil? && (!h.price.positive? || (!only_unowned_rows && unpriced_dates.include?(h.date)) || carried_dates.include?(h.date)) }
         # The calculated rows passed over below (see #reprice_holding_source)
         passed_over_holdings = security_holdings.select(&passed_over)
 
