@@ -281,12 +281,14 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
     end
 
     # The requested period's months, counted the way the family-wide stats
-    # count them: a month without income (or expenses) is left out.
+    # count them: a month is left out when none of its income (or expenses)
+    # converts to the family currency, and a month that totals 0 is kept.
     def monthly_stats(period)
       months = income_statement.monthly_income_expense_totals(period: period).values
 
       %i[income expense].index_with do |classification|
-        totals = months.map { |month| month[classification] }.reject(&:zero?).sort
+        totals = months.select { |month| month[:"convertible_#{classification}_count"].positive? }
+                       .map { |month| month[classification] }.sort
         { median: median(totals), avg: totals.empty? ? 0 : totals.sum / totals.size }
       end
     end

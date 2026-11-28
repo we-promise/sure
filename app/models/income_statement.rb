@@ -37,9 +37,10 @@ class IncomeStatement
   end
 
   # Income/expense sums per calendar month over the period, computed in a
-  # single query. Returns a hash of { Date (first of month) => { income:, expense: } }
-  # with BigDecimal sums. Used by the reports trends chart, which previously
-  # issued a totals query per month of the period.
+  # single query. Returns a hash of { Date (first of month) => { income:, expense:,
+  # convertible_income_count:, convertible_expense_count: } } with BigDecimal sums
+  # and the number of entries each sum converted. Used by the reports trends
+  # chart, which previously issued a totals query per month of the period.
   def monthly_income_expense_totals(period:)
     key = period_cache_key(period)
     @monthly_income_expense_totals ||= {}
@@ -50,9 +51,14 @@ class IncomeStatement
       )
 
       rows.group_by(&:month).transform_values do |month_rows|
+        income_rows = month_rows.select { |r| r.classification == "income" }
+        expense_rows = month_rows.select { |r| r.classification == "expense" }
+
         {
-          income: month_rows.select { |r| r.classification == "income" }.sum { |r| r.total.to_d },
-          expense: month_rows.select { |r| r.classification == "expense" }.sum { |r| r.total.to_d }
+          income: income_rows.sum { |r| r.total.to_d },
+          expense: expense_rows.sum { |r| r.total.to_d },
+          convertible_income_count: income_rows.sum { |r| r.convertible_count.to_i },
+          convertible_expense_count: expense_rows.sum { |r| r.convertible_count.to_i }
         }
       end
     end

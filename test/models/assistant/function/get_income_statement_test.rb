@@ -50,6 +50,28 @@ class Assistant::Function::GetIncomeStatementTest < ActiveSupport::TestCase
     assert_equal format_money(1000), insights[:median_monthly_income]
   end
 
+  test "insights count a month whose only expense is zero" do
+    account = accounts(:depository)
+    create_transaction(account: account, amount: 0, date: Date.new(2021, 1, 10))
+    create_transaction(account: account, amount: 100, date: Date.new(2021, 2, 10))
+
+    insights = @fn.call("start_date" => "2021-01-01", "end_date" => "2021-02-28")[:insights]
+
+    assert_equal format_money(50), insights[:median_monthly_expenses]
+    assert_equal format_money(50), insights[:avg_monthly_expenses]
+  end
+
+  test "insights leave out a month with no expense that converts to the family currency" do
+    account = accounts(:depository)
+    create_transaction(account: account, amount: 100, currency: "EUR", date: Date.new(2021, 1, 10))
+    create_transaction(account: account, amount: 100, date: Date.new(2021, 2, 10))
+
+    insights = @fn.call("start_date" => "2021-01-01", "end_date" => "2021-02-28")[:insights]
+
+    assert_equal format_money(100), insights[:median_monthly_expenses]
+    assert_equal format_money(100), insights[:avg_monthly_expenses]
+  end
+
   test "insights are zero for a period without transactions" do
     insights = @fn.call("start_date" => "2001-01-01", "end_date" => "2001-12-31")[:insights]
 

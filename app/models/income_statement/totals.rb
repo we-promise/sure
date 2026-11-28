@@ -1,6 +1,6 @@
 class IncomeStatement::Totals
   # Bump when TotalsRow changes: persisted rows must deserialize with this shape.
-  CACHE_VERSION = "v3"
+  CACHE_VERSION = "v4"
 
   include IncomeStatement::ScopedTransactionsQuery
 
@@ -28,6 +28,7 @@ class IncomeStatement::Totals
         classification: row["classification"],
         total: row["total"],
         transactions_count: row["transactions_count"],
+        convertible_count: row["convertible_count"],
         is_uncategorized_investment: row["is_uncategorized_investment"],
         month: row["month"]&.to_date
       )
@@ -35,7 +36,9 @@ class IncomeStatement::Totals
   end
 
   private
-    TotalsRow = Data.define(:parent_category_id, :category_id, :classification, :total, :transactions_count, :is_uncategorized_investment, :month) do
+    # convertible_count leaves out entries with no exchange rate to the family
+    # currency, which add nothing to total.
+    TotalsRow = Data.define(:parent_category_id, :category_id, :classification, :total, :transactions_count, :convertible_count, :is_uncategorized_investment, :month) do
       def initialize(month: nil, **rest) = super
     end
 
@@ -56,7 +59,8 @@ class IncomeStatement::Totals
           is_uncategorized_investment,
           #{"month," if @group_by_month}
           SUM(total) as total,
-          SUM(entry_count) as transactions_count
+          SUM(entry_count) as transactions_count,
+          SUM(convertible_count) as convertible_count
         FROM (
           #{transactions_subquery_sql}
           UNION ALL
@@ -75,6 +79,7 @@ class IncomeStatement::Totals
           #{classification_sql("at")} as classification,
           ABS(COALESCE(SUM(#{converted_amount_sql("at")}), 0)) as total,
           COUNT(ae.id) as transactions_count,
+          COUNT(#{converted_amount_sql("at")}) as convertible_count,
           false as is_uncategorized_investment
         FROM (#{@transactions_scope.to_sql}) at
         #{entries_join_sql("at")}
@@ -99,6 +104,7 @@ class IncomeStatement::Totals
           #{classification_sql("at")} as classification,
           ABS(COALESCE(SUM(#{converted_amount_sql("at")}), 0)) as total,
           COUNT(ae.id) as entry_count,
+          COUNT(#{converted_amount_sql("at")}) as convertible_count,
           false as is_uncategorized_investment#{",\n          date_trunc('month', ae.date)::date as month" if @group_by_month}
         FROM (#{@transactions_scope.to_sql}) at
         #{entries_join_sql("at")}
@@ -123,7 +129,7 @@ class IncomeStatement::Totals
       # Contributions/withdrawals are tracked separately as Transactions with activity labels
       <<~SQL
         SELECT NULL as category_id, NULL as parent_category_id, NULL as classification,
-               NULL as total, NULL as entry_count, NULL as is_uncategorized_investment#{",\n               NULL::date as month" if @group_by_month}
+               NULL as total, NULL as entry_count, NULL as convertible_count, NULL as is_uncategorized_investment#{",\n               NULL::date as month" if @group_by_month}
         WHERE false
       SQL
     end
