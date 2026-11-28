@@ -59,7 +59,7 @@
               <!-- Subtype dropdowns (shown/hidden based on account type) -->
               <div data-account-type-selector-target="subtypeContainer">
                 <% subtype_options.each do |account_type, subtype_config| %>
-                  <div class="subtype-select hidden" data-type="<%= account_type %>">
+                  <div class="subtype-select<%= " hidden" unless classic? %>" data-type="<%= account_type %>"<% if classic? %> style="display: none;"<% end %>>
                     <% if subtype_config[:options].present? %>
                       <%= fields :account_subtypes do |subtypes| %>
                         <%= render DS::Select.new(
