@@ -313,13 +313,13 @@ class ReportsController < ApplicationController
       ].join("|"))
     end
 
-    # The family's settings that change a report's figures or how it reads
-    # (currency is already in family.build_cache_key). Part of the key, not the
-    # version: a build made under other settings is never served.
+    # The family's settings that change a report's figures or how it reads.
+    # Part of the key, not the version: a build made under other settings is
+    # never served, even while its replacement is still being built.
     def report_family_settings_version
       family = Current.family
       Digest::SHA256.hexdigest([
-        family.investment_contributions_as_spending, family.month_start_day, family.date_format,
+        family.currency, family.investment_contributions_as_spending, family.month_start_day, family.date_format,
         family.household_budget_enabled, family.personal_budgets, family.moniker
       ].join("|"))
     end
@@ -1254,7 +1254,7 @@ class ReportsController < ApplicationController
       # at Google Sheets, so the cells that carry them are escaped against
       # formula injection (CWE-1236). Only that column: the amount cells are
       # formatted money such as "-$42.00", which the escape would turn to text.
-      CSV.generate do |csv|
+      CSV.generate(force_quotes: true) do |csv|
         # Build header row: Category + Month columns + Total
         month_headers = @export_data[:months].map { |m| m.strftime("%b %Y") }
         header_row = [ "Category" ] + month_headers + [ "Total" ]

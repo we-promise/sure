@@ -44,6 +44,12 @@ class SnaptradeAccount::ActivitiesProcessor
     "INTERNAL_ASSET_TRANSFER_IN" => { category: :trade, label: "Transfer", sign: :buy, zero_amount: :unconditional },
     "INTERNAL_ASSET_TRANSFER_OUT" => { category: :trade, label: "Transfer", sign: :sell, zero_amount: :unconditional },
 
+    # Account credits: cashback paid into an account, fee refunds, sign-up bonuses
+    # (Wealthsimple). SnapTrade signs them from the account side, positive when
+    # money comes in; without a rule that amount was stored as an expense.
+    "REIMBURSEMENT" => { category: :cash, label: "Other", cash_flow: :invert },
+    "PROMOTION" => { category: :cash, label: "Other", cash_flow: :invert },
+
     # Unit-dependent types:
     # When units are present and non-zero, treated as a trade preserving signed units.
     # When units are nil/zero, treated as a cash activity.
@@ -80,6 +86,12 @@ class SnaptradeAccount::ActivitiesProcessor
     "DISTRIBUTION" => { category: :cash, label: "Dividend", cash_flow: :inflow },
     "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
 
+    # Card accounts (SnapTrade's LOC category) sign these from the account's
+    # perspective: purchases negative, refunds and payments positive.
+    "POSDEBIT" => { category: :cash, label: "Other", cash_flow: :outflow },
+    "POSCREDIT" => { category: :cash, label: "Other", cash_flow: :inflow },
+    "PAYMENT" => { category: :cash, label: "Other", cash_flow: :invert },
+
     # Card activities (Wealthsimple). Direction comes from the description, see normalize_card_activity.
     "CREDIT_CARD" => { category: :cash, label: "Other", cash_flow: :card },
     "PREPAID_CARD" => { category: :cash, label: "Other", cash_flow: :card }
@@ -95,7 +107,7 @@ class SnaptradeAccount::ActivitiesProcessor
   end
 
   def process
-    activities_data = @snaptrade_account.raw_activities_payload
+    activities_data = dedupe_card_activities(@snaptrade_account.raw_activities_payload)
     return { trades: 0, transactions: 0, failed: 0 } if activities_data.blank?
 
     Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Processing #{activities_data.size} activities"
@@ -575,9 +587,17 @@ class SnaptradeAccount::ActivitiesProcessor
         date: activity_date,
         name: description,
         source: "snaptrade",
+        kind: card_payment_kind(activity_type),
         investment_activity_label: label_from_type(activity_type)
       )
       @transactions_count += 1 if result
+    end
+
+    # A card PAYMENT is money arriving from another account. Unpaired, a
+    # standard inflow would count as income; this is the kind the card leg of a
+    # matched payment takes, so pairing it later changes nothing.
+    def card_payment_kind(activity_type)
+      "funds_movement" if activity_type&.upcase == "PAYMENT" && account.accountable_type == "CreditCard"
     end
 
     # The cash a row names: its amount, or its net amount when the amount is
@@ -648,6 +668,106 @@ class SnaptradeAccount::ActivitiesProcessor
       else
         [ amount, description ]
       end
+    end
+
+    # Wealthsimple sends some card charges twice, under two SnapTrade ids:
+    # - a pending copy, whose merchant name is cut short and padded with zeros
+    #   and a code ("Turkish Airl00000005Ydmbv"), and the posted copy
+    #   ("Turkish Airlines") on the same day for the same amount,
+    # - an older bare "CREDIT_CARD" row and the same purchase re-sent in the
+    #   "CREDIT_CARD PURCHASE: <merchant>" format.
+    # Each copy would import as its own charge. Only these two shapes are
+    # merged: two rows with the same merchant, amount and day can be two real
+    # charges (parking, transit), so they are left alone. Nothing is deleted;
+    # the extra row is skipped. When one copy is already imported it is the one
+    # kept, otherwise the posted / merchant-named copy is kept.
+    def dedupe_card_activities(activities)
+      return activities if activities.blank? || account.nil?
+
+      rows = activities.grep(Hash).map(&:with_indifferent_access).select do |row|
+        row[:type].to_s.upcase == "CREDIT_CARD" && row[:id].present? && cash_amount(row).present? && card_row_date(row).present?
+      end
+      return activities if rows.size < 2
+
+      imported = account.entries.where(external_id: rows.map { |row| row[:id].to_s }, source: "snaptrade").pluck(:external_id).to_set
+      drop_ids = Set.new
+
+      # Every copy of one charge ends up in one group; exactly one row per group is imported.
+      card_duplicate_groups(rows).each do |group|
+        keeper = group.min_by { |row| [ imported.include?(row[:id].to_s) ? 0 : 1, card_copy_rank(row), row[:id].to_s ] }
+        group.each { |row| drop_ids << row[:id].to_s unless row.equal?(keeper) }
+      end
+
+      return activities if drop_ids.empty?
+
+      activities.reject { |activity| activity.is_a?(Hash) && drop_ids.include?(activity.with_indifferent_access[:id].to_s) }
+    end
+
+    # Groups of rows that are copies of one charge: a posted purchase with its
+    # pending copies and with a bare row for the same purchase.
+    def card_duplicate_groups(rows)
+      purchases = rows.filter_map do |row|
+        match = CARD_DESCRIPTION.match(row[:description].to_s.strip)
+        [ row, match[2].to_s ] if match && match[1] == "PURCHASE"
+      end
+      posted = purchases.reject { |_, merchant| pending_card_merchant(merchant) }
+
+      groups = {}
+      claimed = Set.new
+      join = lambda do |extra, candidates|
+        keeper = candidates.find { |row| !claimed.include?([ extra[:_copy], row[:id].to_s ]) }
+        return unless keeper
+
+        claimed << [ extra[:_copy], keeper[:id].to_s ]
+        (groups[keeper[:id].to_s] ||= [ keeper ]) << extra
+      end
+
+      purchases.each do |row, merchant|
+        prefix = pending_card_merchant(merchant)
+        next unless prefix
+
+        row[:_copy] = :pending
+        join.call(row, posted.filter_map do |other, other_merchant|
+          other if same_card_charge?(row, other) && card_merchant_key(other_merchant).start_with?(prefix)
+        end)
+      end
+
+      rows.each do |row|
+        next unless row[:description].to_s.strip.upcase == "CREDIT_CARD"
+
+        row[:_copy] = :bare
+        join.call(row, posted.filter_map { |other, _| other if same_card_charge?(row, other, absolute: true) })
+      end
+
+      groups.values
+    end
+
+    # Which copy to keep when none is imported yet: posted, then pending, then bare.
+    def card_copy_rank(row)
+      { nil => 0, pending: 1, bare: 2 }.fetch(row[:_copy], 0)
+    end
+
+    # The merchant name a pending copy was cut down to, or nil when the name is
+    # not in the pending shape (name, then a run of zeros and a short code).
+    def pending_card_merchant(merchant)
+      match = card_merchant_key(merchant).match(/\A([a-z][a-z0-9]{3,}?)0{4,}[a-z0-9]{0,12}\z/)
+      match && match[1]
+    end
+
+    def card_merchant_key(merchant)
+      merchant.to_s.downcase.gsub(/[^a-z0-9]/, "")
+    end
+
+    def same_card_charge?(row, other, absolute: false)
+      return false if row[:id].to_s == other[:id].to_s || card_row_date(row) != card_row_date(other)
+
+      a = cash_amount(row)
+      b = cash_amount(other)
+      absolute ? a.abs == b.abs : a == b
+    end
+
+    def card_row_date(row)
+      (row[:trade_date].presence || row[:settlement_date]).to_s[0, 10].presence
     end
 
     def build_description(activity_type, symbol)

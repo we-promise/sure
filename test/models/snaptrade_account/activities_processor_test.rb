@@ -365,6 +365,32 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Other", entry.entryable.investment_activity_label
   end
 
+  test "processes REIMBURSEMENT and PROMOTION as negative cash inflows" do
+    process_activities(
+      build_cash_activity(id: "reimb_001", type: "REIMBURSEMENT", amount: 216.23, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "promo_001", type: "PROMOTION", amount: 5.00, settlement_date: Date.current.to_s)
+    )
+
+    reimbursement = snaptrade_entry("reimb_001")
+    promotion = snaptrade_entry("promo_001")
+
+    assert_not_nil reimbursement
+    assert_not_nil promotion
+    assert_equal(-216.23, reimbursement.amount.to_f, "cashback paid into the account must be stored as an inflow")
+    assert_equal(-5.00, promotion.amount.to_f, "a promotional bonus must be stored as an inflow")
+    assert_equal "Other", reimbursement.entryable.investment_activity_label
+  end
+
+  test "processes a negative REIMBURSEMENT (clawback) as an outflow" do
+    process_activities(
+      build_cash_activity(id: "reimb_neg_001", type: "REIMBURSEMENT", amount: -12.50, settlement_date: Date.current.to_s)
+    )
+
+    entry = snaptrade_entry("reimb_neg_001")
+    assert_not_nil entry
+    assert_equal 12.50, entry.amount.to_f
+  end
+
   test "processes RETURN_OF_CAPITAL, DISTRIBUTION, and SUBSTITUTE_DIVIDEND as negative cash inflows with Dividend label" do
     process_activities(
       build_cash_activity(id: "roc_001", type: "RETURN_OF_CAPITAL", amount: 75.00, settlement_date: Date.current.to_s, symbol: "VTI"),
@@ -385,6 +411,53 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Dividend", dist.entryable.investment_activity_label
     assert_equal(-45.00, sub_div.amount.to_f)
     assert_equal "Dividend", sub_div.entryable.investment_activity_label
+  end
+
+  test "processes card purchases as outflows and refunds and payments as inflows" do
+    process_activities(
+      build_cash_activity(id: "purchase_001", type: "POSDEBIT", amount: -32.73, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "refund_001", type: "POSCREDIT", amount: 10.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "payment_001", type: "PAYMENT", amount: 500.00, settlement_date: Date.current.to_s)
+    )
+
+    assert_equal 32.73, snaptrade_entry("purchase_001").amount.to_f
+    assert_equal(-10.00, snaptrade_entry("refund_001").amount.to_f)
+    assert_equal(-500.00, snaptrade_entry("payment_001").amount.to_f)
+  end
+
+  test "a card payment with no matched bank side is a transfer, not income" do
+    card = @family.accounts.create!(name: "Test Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    @snaptrade_account.ensure_account_provider!(card)
+    @snaptrade_account.reload
+
+    process_activities(
+      build_cash_activity(id: "payment_002", type: "PAYMENT", amount: 500.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "purchase_002", type: "POSDEBIT", amount: -32.73, settlement_date: Date.current.to_s)
+    )
+
+    payment = card.entries.find_by!(external_id: "payment_002", source: "snaptrade")
+    assert_equal(-500.00, payment.amount.to_f)
+    assert_equal "funds_movement", payment.entryable.kind
+    assert_equal "standard", card.entries.find_by!(external_id: "purchase_002", source: "snaptrade").entryable.kind
+  end
+
+  # SnapTrade links a line of credit without "card" in its type as a Loan.
+  # Account::ProviderImportAdapter already classifies money into a linked Loan
+  # as loan_payment (a transfer kind), so only cards needed card_payment_kind.
+  test "a payment into a line of credit linked as a loan is a loan payment, not income" do
+    loan = @family.accounts.create!(name: "Line of credit", balance: 0, currency: "USD", accountable: Loan.new)
+    @snaptrade_account.ensure_account_provider!(loan)
+    @snaptrade_account.reload
+
+    process_activities(
+      build_cash_activity(id: "payment_003", type: "PAYMENT", amount: 300.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "purchase_003", type: "POSDEBIT", amount: -40.00, settlement_date: Date.current.to_s)
+    )
+
+    payment = loan.entries.find_by!(external_id: "payment_003", source: "snaptrade").entryable
+    assert_equal "loan_payment", payment.kind
+    assert_includes Transaction::TRANSFER_KINDS, payment.kind
+    assert_equal "standard", loan.entries.find_by!(external_id: "purchase_003", source: "snaptrade").entryable.kind
   end
 
   test "processes cash FEE and TAX as positive outflow and INTEREST as negative inflow" do
@@ -2477,6 +2550,145 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     entry = snaptrade_entry("card_resync")
     assert_equal 18.40, entry.amount.to_f
     assert_equal "Food Hall", entry.name
+  end
+
+  test "two identical card charges on one day are both kept" do
+    process_activities(
+      card_activity(id: "park_a", description: "CREDIT_CARD PURCHASE: Parking Lot 4", amount: -6.00),
+      card_activity(id: "park_b", description: "CREDIT_CARD PURCHASE: Parking Lot 4", amount: -6.00)
+    )
+
+    assert_equal 2, @account.entries.where(source: "snaptrade", external_id: %w[park_a park_b]).count
+  end
+
+  test "a pending and a posted copy of one card charge import once, as the posted copy" do
+    process_activities(
+      card_activity(id: "air_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69),
+      card_activity(id: "air_posted", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: -409.69)
+    )
+
+    assert_nil snaptrade_entry("air_pending")
+    assert_equal 409.69, snaptrade_entry("air_posted").amount.to_f
+    assert_equal "Example Airlines", snaptrade_entry("air_posted").name
+  end
+
+  test "a pending copy already imported is kept and its posted copy is skipped" do
+    process_activities(card_activity(id: "pend_first", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69))
+
+    process_activities(
+      card_activity(id: "pend_first", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69),
+      card_activity(id: "post_later", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: -409.69)
+    )
+
+    assert_not_nil snaptrade_entry("pend_first")
+    assert_nil snaptrade_entry("post_later")
+  end
+
+  test "merchants that only share a prefix are not merged" do
+    process_activities(
+      card_activity(id: "corner_12", description: "CREDIT_CARD PURCHASE: Corner Grocery #12", amount: -42.50),
+      card_activity(id: "corner_34", description: "CREDIT_CARD PURCHASE: Corner Grocery #34", amount: -42.50)
+    )
+
+    assert_equal 2, @account.entries.where(source: "snaptrade", external_id: %w[corner_12 corner_34]).count
+  end
+
+  test "a bare CREDIT_CARD row and its merchant-format copy import once" do
+    process_activities(
+      card_activity(id: "bare_row", description: "CREDIT_CARD", amount: 43.00),
+      card_activity(id: "named_row", description: "CREDIT_CARD PURCHASE: Marketplace Ad", amount: -43.00)
+    )
+
+    assert_nil snaptrade_entry("bare_row")
+    assert_equal "Marketplace Ad", snaptrade_entry("named_row").name
+  end
+
+  test "a bare CREDIT_CARD row already imported is kept and nothing is deleted" do
+    process_activities(card_activity(id: "old_bare", description: "CREDIT_CARD", amount: 43.00))
+
+    process_activities(
+      card_activity(id: "old_bare", description: "CREDIT_CARD", amount: 43.00),
+      card_activity(id: "new_named", description: "CREDIT_CARD PURCHASE: Marketplace Ad", amount: -43.00)
+    )
+
+    assert_equal 43.00, snaptrade_entry("old_bare").amount.to_f
+    assert_nil snaptrade_entry("new_named")
+  end
+
+  test "a bare CREDIT_CARD row is not matched with a refund or payment of the same amount" do
+    process_activities(
+      card_activity(id: "bare_buy", description: "CREDIT_CARD", amount: 43.00),
+      card_activity(id: "refund", description: "CREDIT_CARD REFUND: Marketplace Ad", amount: 43.00),
+      card_activity(id: "payment", description: "CREDIT_CARD PAYMENT", amount: 43.00)
+    )
+
+    assert_not_nil snaptrade_entry("bare_buy")
+    assert_not_nil snaptrade_entry("refund")
+  end
+
+  test "pending, posted and bare copies of one charge import once" do
+    process_activities(
+      card_activity(id: "tri_bare", description: "CREDIT_CARD", amount: 409.69),
+      card_activity(id: "tri_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69),
+      card_activity(id: "tri_posted", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: -409.69)
+    )
+
+    assert_equal %w[tri_posted], @account.entries.where(source: "snaptrade", external_id: %w[tri_bare tri_pending tri_posted]).pluck(:external_id)
+  end
+
+  test "a pending copy already imported stays the only copy when bare and posted copies arrive" do
+    process_activities(card_activity(id: "only_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69))
+
+    process_activities(
+      card_activity(id: "only_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -409.69),
+      card_activity(id: "late_bare", description: "CREDIT_CARD", amount: 409.69),
+      card_activity(id: "late_posted", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: -409.69)
+    )
+
+    assert_equal %w[only_pending], @account.entries.where(source: "snaptrade", external_id: %w[only_pending late_bare late_posted]).pluck(:external_id)
+  end
+
+  test "only an exact bare CREDIT_CARD description is matched with a purchase" do
+    process_activities(
+      card_activity(id: "card_fee", description: "CREDIT_CARD FEE", amount: 43.00),
+      card_activity(id: "fee_day_buy", description: "CREDIT_CARD PURCHASE: Marketplace Ad", amount: -43.00)
+    )
+
+    assert_not_nil snaptrade_entry("card_fee")
+    assert_not_nil snaptrade_entry("fee_day_buy")
+  end
+
+  test "card charges with different amounts or merchants are not merged" do
+    process_activities(
+      card_activity(id: "diff_a", description: "CREDIT_CARD PURCHASE: Grocer", amount: -10.00),
+      card_activity(id: "diff_b", description: "CREDIT_CARD PURCHASE: Grocer", amount: -11.00),
+      card_activity(id: "diff_c", description: "CREDIT_CARD PURCHASE: Pharmacy", amount: -10.00)
+    )
+
+    assert_equal 3, @account.entries.where(source: "snaptrade", external_id: %w[diff_a diff_b diff_c]).count
+  end
+
+  test "a non-hash element in the payload does not stop card processing" do
+    result = process_activities(
+      nil,
+      card_activity(id: "after_nil_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: -20.00),
+      card_activity(id: "after_nil_posted", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: -20.00)
+    )
+
+    assert_not_nil result
+    assert_not_nil snaptrade_entry("after_nil_posted")
+    assert_nil snaptrade_entry("after_nil_pending")
+  end
+
+  test "card rows are compared by their effective cash amount" do
+    pending = card_activity(id: "net_pending", description: "CREDIT_CARD PURCHASE: Example Airl00000005Ydmbv", amount: nil)
+    posted = card_activity(id: "net_posted", description: "CREDIT_CARD PURCHASE: Example Airlines", amount: nil)
+    pending["net_amount"] = -10.00
+    posted["net_amount"] = -11.00
+
+    process_activities(pending, posted)
+
+    assert_equal 2, @account.entries.where(source: "snaptrade", external_id: %w[net_pending net_posted]).count
   end
 
   private
