@@ -18,6 +18,9 @@ es:
       set_up: Configurar el presupuesto de este mes
     goals_card:
       title: Tus objetivos
+      currency_warning:
+        one: 1 objetivo deja fuera saldos en %{currencies} (aún sin tipo de cambio).
+        other: "%{count} objetivos dejan fuera saldos en %{currencies} (aún sin tipo de cambio)."
       new_goal: Nuevo objetivo
       active_count:
         one: 1 activo

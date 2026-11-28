@@ -39,21 +39,23 @@ class IndexaCapitalAccount::ActivitiesProcessor
 
   def process
     activities_data = @indexa_capital_account.raw_activities_payload
-    return { trades: 0, transactions: 0 } if activities_data.blank?
+    return { trades: 0, transactions: 0, failed: 0 } if activities_data.blank?
 
     Rails.logger.info "IndexaCapitalAccount::ActivitiesProcessor - Processing #{activities_data.size} activities"
 
     @trades_count = 0
     @transactions_count = 0
+    @failed_count = 0
 
     activities_data.each do |activity_data|
       process_activity(activity_data.with_indifferent_access)
     rescue => e
+      @failed_count += 1
       Rails.logger.error "IndexaCapitalAccount::ActivitiesProcessor - Failed to process activity: #{e.message}"
       Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
     end
 
-    { trades: @trades_count, transactions: @transactions_count }
+    { trades: @trades_count, transactions: @transactions_count, failed: @failed_count }
   end
 
   private
