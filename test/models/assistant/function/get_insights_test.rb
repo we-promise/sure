@@ -104,4 +104,13 @@ class Assistant::Function::GetInsightsTest < ActiveSupport::TestCase
     assert_not_includes included_ids, total.id
     assert_not_includes included_ids, acknowledged.id
   end
+
+  test "returns the period stored on the insight" do
+    insight = @family.insights.visible.first
+    insight.update!(period_start: Date.new(2026, 7, 2), period_end: Date.new(2026, 8, 1))
+
+    row = @fn.call[:insights].find { |i| i[:id] == insight.id }
+
+    assert_equal [ Date.new(2026, 7, 2), Date.new(2026, 8, 1) ], [ row[:period_start], row[:period_end] ]
+  end
 end
