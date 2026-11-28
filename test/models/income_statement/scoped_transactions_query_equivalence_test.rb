@@ -62,9 +62,10 @@ class IncomeStatement::ScopedTransactionsQueryEquivalenceTest < ActiveSupport::T
           row.to_h.merge(month: nil)
         end
 
+        # convertible_count was added after the refactor and has no legacy counterpart.
         assert_equal_rows(
           expected_rows,
-          IncomeStatement::Totals.new(@family, **args).call,
+          IncomeStatement::Totals.new(@family, **args).call.map { |row| row.to_h.except(:convertible_count) },
           "Totals (include_trades: #{include_trades}, included_account_ids: #{included_account_ids.inspect})"
         )
       end

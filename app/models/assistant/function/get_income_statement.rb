@@ -138,7 +138,7 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
           total: format_money(expense_data.total),
           by_category: to_ai_category_totals(expense_data.category_totals)
         },
-        insights: get_insights(income_data, expense_data)
+        insights: get_insights(period, income_data, expense_data)
       }
       # Families that do not count investing as spending: say where that money went.
       unless family.investment_contributions_as_spending?
@@ -266,19 +266,37 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
       end
     end
 
-    def get_insights(income_data, expense_data)
+    def get_insights(period, income_data, expense_data)
       net_income = income_data.total - expense_data.total
       savings_rate = calculate_savings_rate(income_data.total, expense_data.total)
-      median_monthly_income = income_statement.median_income
-      median_monthly_expenses = income_statement.median_expense
-      avg_monthly_expenses = income_statement.avg_expense
+      monthly = monthly_stats(period)
 
       {
         net_income: format_money(net_income),
         savings_rate: number_to_percentage(savings_rate),
-        median_monthly_income: format_money(median_monthly_income),
-        median_monthly_expenses: format_money(median_monthly_expenses),
-        avg_monthly_expenses: format_money(avg_monthly_expenses)
+        median_monthly_income: format_money(monthly[:income][:median]),
+        median_monthly_expenses: format_money(monthly[:expense][:median]),
+        avg_monthly_expenses: format_money(monthly[:expense][:avg])
       }
+    end
+
+    # The requested period's months, counted the way the family-wide stats
+    # count them: a month is left out when none of its income (or expenses)
+    # converts to the family currency, and a month that totals 0 is kept.
+    def monthly_stats(period)
+      months = income_statement.monthly_income_expense_totals(period: period).values
+
+      %i[income expense].index_with do |classification|
+        totals = months.select { |month| month[:"convertible_#{classification}_count"].positive? }
+                       .map { |month| month[classification] }.sort
+        { median: median(totals), avg: totals.empty? ? 0 : totals.sum / totals.size }
+      end
+    end
+
+    def median(sorted_values)
+      return 0 if sorted_values.empty?
+
+      middle = sorted_values.size / 2
+      sorted_values.size.odd? ? sorted_values[middle] : (sorted_values[middle - 1] + sorted_values[middle]) / 2
     end
 end
