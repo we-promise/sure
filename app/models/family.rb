@@ -870,29 +870,46 @@ class Family < ApplicationRecord
 
   private
     # Currencies of the given visible accounts' balances, and of each
-    # account's holdings on its latest holding date.
+    # account's holdings on its latest holding date. Cached; see
+    # #exchange_rate_currencies_cache_key.
     def currencies_held_now(scope)
-      account_ids = self.accounts.visible.where(id: scope.select(:id)).select(:id)
-      latest = Holding.where(account_id: account_ids).group(:account_id).select("account_id, MAX(date) AS date")
-      (
-        Account.where(id: account_ids).distinct.pluck(:currency) +
-          Holding.joins("JOIN (#{latest.to_sql}) latest ON latest.account_id = holdings.account_id AND latest.date = holdings.date")
-            .distinct.pluck(:currency)
-      ).compact.uniq
+      account_ids = self.accounts.visible.where(id: scope.select(:id)).pluck(:id).sort
+      Rails.cache.fetch(exchange_rate_currencies_cache_key("currencies_held_now", account_ids), expires_in: 24.hours) do
+        latest = Holding.where(account_id: account_ids).group(:account_id).select("account_id, MAX(date) AS date")
+        (
+          Account.where(id: account_ids).distinct.pluck(:currency) +
+            Holding.joins("JOIN (#{latest.to_sql}) latest ON latest.account_id = holdings.account_id AND latest.date = holdings.date")
+              .distinct.pluck(:currency)
+        ).compact.uniq
+      end
     end
 
     # Currencies used by the given accounts that are visible, by their entries,
     # their trades and their holdings. Memoised per scope, so repeated reads in
-    # one render share one set of queries.
+    # one render share one set of queries, and cached across requests; see
+    # #exchange_rate_currencies_cache_key.
     def currencies_in_use(scope)
       account_ids = self.accounts.visible.where(id: scope.select(:id)).pluck(:id).sort
       @currencies_in_use ||= {}
-      @currencies_in_use[account_ids] ||= (
-        Account.where(id: account_ids).distinct.pluck(:currency) +
-          Entry.where(account_id: account_ids).distinct.pluck(:currency) +
-          Trade.joins(:entry).where(entries: { account_id: account_ids }).distinct.pluck("trades.currency") +
-          Holding.where(account_id: account_ids).distinct.pluck(:currency)
-      ).compact.uniq
+      @currencies_in_use[account_ids] ||= Rails.cache.fetch(exchange_rate_currencies_cache_key("currencies_in_use", account_ids), expires_in: 24.hours) do
+        (
+          Account.where(id: account_ids).distinct.pluck(:currency) +
+            Entry.where(account_id: account_ids).distinct.pluck(:currency) +
+            Trade.joins(:entry).where(entries: { account_id: account_ids }).distinct.pluck("trades.currency") +
+            Holding.where(account_id: account_ids).distinct.pluck(:currency)
+        ).compact.uniq
+      end
+    end
+
+    # The lists change when entries, holdings or accounts do. Entries and
+    # holdings change through syncs, so the key moves on any sync activity,
+    # not only completion: a sync that fails still lets a newly used currency
+    # through. build_cache_key adds account changes, and the account ids keep
+    # members who see different accounts apart. Each move leaves the old key
+    # behind; the 24-hour expiry bounds how long such a key lives, not how
+    # many there are.
+    def exchange_rate_currencies_cache_key(name, account_ids)
+      build_cache_key("#{name}_#{latest_sync_activity_at&.to_f}_#{Digest::SHA256.hexdigest(account_ids.join(","))}")
     end
 
     def log_invalid_timezone_once

@@ -23,6 +23,9 @@ class SimplefinHoldingsApplyJob < ApplicationJob
 
     begin
       SimplefinAccount::Investments::HoldingsProcessor.new(sfa).process
+      # This job is the tail of a sync, and the cached exchange rate note
+      # currencies key on this column.
+      account.family.touch(:latest_sync_activity_at) unless sfa.raw_holdings_payload.nil?
     rescue => e
       Rails.logger.warn("SimpleFin HoldingsApplyJob failed for SFA=#{sfa.id}: #{e.class} - #{e.message}")
     end

@@ -62,6 +62,47 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
     refute_nil newco_sec, "should create NEWCO security via resolver when missing"
   end
 
+  test "holdings applied after the sync reach the cached exchange rate notes" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    assert_not_includes @family.currencies_without_exchange_rate, "SEK"
+    @sfa.update!(raw_holdings_payload: [
+      { "id" => "h_sek", "symbol" => "AAPL", "quantity" => 10, "market_value" => 2000, "currency" => "SEK" }
+    ])
+
+    SimplefinHoldingsApplyJob.perform_now(@sfa.id)
+
+    assert @account.holdings.where(currency: "SEK").exists?
+    assert_includes Family.find(@family.id).currencies_without_exchange_rate, "SEK"
+  end
+
+  # Closing positions writes today's zero rows, so older holdings stop being
+  # current and their currencies leave the stale note.
+  test "an empty snapshot that closes positions reaches the cached exchange rate notes" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @account.holdings.delete_all
+    provider = @sfa.ensure_account_provider!
+    @account.holdings.create!(security: securities(:aapl), account_provider: provider,
+      date: Date.yesterday, qty: 2, amount: 200, price: 100, currency: "USD")
+    @account.holdings.create!(security: Security.create!(ticker: "CUSTOM:JPMANUAL", name: "Tokyo manual"),
+      date: Date.yesterday, qty: 1, amount: 100, price: 100, currency: "JPY")
+    ExchangeRate.create!(from_currency: "JPY", to_currency: @family.currency, date: 30.days.ago.to_date, rate: 0.0067)
+    assert_includes @family.stale_exchange_rate_dates.keys, "JPY"
+    @sfa.update!(raw_holdings_payload: [])
+
+    SimplefinHoldingsApplyJob.perform_now(@sfa.id)
+
+    assert @account.holdings.where(date: Date.current, qty: 0).exists?
+    assert_not_includes Family.find(@family.id).stale_exchange_rate_dates.keys, "JPY"
+  end
+
+  test "a run that writes no holdings leaves sync activity alone" do
+    @sfa.update!(raw_holdings_payload: nil, raw_payload: { balance: "100" })
+
+    assert_no_changes -> { @family.reload.latest_sync_activity_at } do
+      SimplefinHoldingsApplyJob.perform_now(@sfa.id)
+    end
+  end
+
   test "uses market_value for price and does not confuse value with market_value" do
     # Regression test for GH #1182: some brokerages (Vanguard, Fidelity) include a
     # "value" field that represents cost basis, not market value. The processor must

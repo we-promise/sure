@@ -2,6 +2,7 @@ require "test_helper"
 
 class PagesControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
+  include SqlQueryCapture
 
   setup do
     sign_in @user = users(:family_admin)
@@ -1246,6 +1247,23 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "[data-testid='stale-exchange-rates']", text: /JPY from #{Regexp.escape(I18n.l(rate_date, format: :long))}/
     assert_select "[data-testid='missing-exchange-rates']", count: 0
+  end
+
+  test "a repeat dashboard load reads the exchange rate note currencies from the cache" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @family.accounts.create!(name: "KRW Savings", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+    currency_lists = /SELECT DISTINCT "(accounts|entries|trades|holdings)"."currency"/
+
+    first, second = 2.times.map do
+      ActiveRecord::Base.connection.clear_query_cache
+      queries = capture_sql_queries { get root_path }
+      assert_select "[data-testid='missing-exchange-rates']", text: /KRW/
+      queries
+    end
+
+    assert_operator first.grep(currency_lists).size, :>, 0
+    assert_empty second.grep(currency_lists)
+    assert_operator second.size, :<, first.size
   end
 
   test "dashboard spending trend category filter narrows both months and the header totals" do
