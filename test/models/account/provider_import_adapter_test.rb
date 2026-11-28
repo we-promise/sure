@@ -7,6 +7,85 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
   end
 
+  test "amount provenance preservation is opt in and leaves other providers unchanged" do
+    args = { external_id: "synthetic_other_provider_metadata", amount: 10, currency: "USD",
+             date: Date.current, name: "Original", source: "example",
+             extra: { "example" => { "applied_rule" => "old", "stale" => true } },
+             replace_extra_namespaces: [ "example" ] }
+    entry = @adapter.import_transaction(**args)
+    entry.update!(user_modified: true)
+    @adapter.import_transaction(**args.merge(amount: 99, name: "Incoming",
+      extra: { "example" => { "applied_rule" => "incoming" } }))
+    assert_equal 10, entry.reload.amount
+    assert_equal "Original", entry.name
+    assert_equal({ "applied_rule" => "incoming" }, entry.transaction.extra.fetch("example"))
+  end
+
+  test "unprotected amount provenance follows the current namespace snapshot" do
+    args = { external_id: "synthetic_unprotected_metadata", amount: 10, currency: "USD",
+             date: Date.current, name: "Original", source: "simplefin",
+             extra: { "simplefin" => { "amount_normalization" => "old", "stale" => true } },
+             replace_extra_namespaces: [ "simplefin" ],
+             amount_extra_keys: { "simplefin" => [ "amount_normalization" ] } }
+    entry = @adapter.import_transaction(**args)
+    @adapter.import_transaction(**args.merge(amount: -10, name: "Incoming",
+      extra: { "simplefin" => { "pending" => false } }))
+    assert_equal(-10, entry.reload.amount)
+    assert_equal "Incoming", entry.name
+    assert_equal({ "pending" => false }, entry.transaction.extra.fetch("simplefin"))
+    @adapter.import_transaction(**args.merge(amount: 25, currency: "EUR",
+      extra: { "simplefin" => { "amount_normalization" => "current" } }))
+    assert_equal 25, entry.reload.amount
+    assert_equal "EUR", entry.currency
+    assert_equal({ "amount_normalization" => "current" }, entry.transaction.extra.fetch("simplefin"))
+  end
+
+  test "attribute locked amounts keep opted in provenance without user modified" do
+    [ :amount, :currency ].each do |attribute|
+      [ :absent, nil, "legacy_rule" ].each_with_index do |marker, index|
+        snapshot = { "pending" => false, "stale" => true }
+        snapshot["amount_normalization"] = marker unless marker == :absent
+        args = { external_id: "synthetic_locked_#{attribute}_#{index}", amount: -25, currency: "USD",
+                 date: Date.current, name: "Original", source: "simplefin",
+                 extra: { "simplefin" => snapshot, "unrelated" => { "keep" => true } },
+                 replace_extra_namespaces: [ "simplefin" ],
+                 amount_extra_keys: { "simplefin" => [ "amount_normalization" ] } }
+        entry = @adapter.import_transaction(**args)
+        entry.lock_attr!(attribute)
+        assert_not entry.reload.user_modified?
+
+        incoming = { simplefin: { pending: false, amount_normalization: "direct_debit" } }
+        original_incoming = incoming.deep_dup
+        @adapter.import_transaction(**args.merge(amount: 25, currency: "EUR", name: "Incoming", extra: incoming))
+
+        entry.reload
+        assert_not entry.user_modified?
+        assert_equal(-25, entry.amount)
+        assert_equal "USD", entry.currency
+        assert_equal "Incoming", entry.name
+        expected = { "pending" => false }
+        expected["amount_normalization"] = marker unless marker == :absent
+        assert_equal expected, entry.transaction.extra.fetch("simplefin")
+        assert_equal({ "keep" => true }, entry.transaction.extra.fetch("unrelated"))
+        assert_equal original_incoming, incoming
+      end
+    end
+  end
+
+  test "attribute locks do not opt other providers into provenance preservation" do
+    args = { external_id: "synthetic_locked_other_provider", amount: -25, currency: "USD",
+             date: Date.current, name: "Original", source: "example",
+             extra: { "example" => { "applied_rule" => "old" } },
+             replace_extra_namespaces: [ "example" ] }
+    entry = @adapter.import_transaction(**args)
+    entry.lock_attr!(:amount)
+    @adapter.import_transaction(**args.merge(amount: 25, currency: "EUR",
+      extra: { "example" => { "applied_rule" => "incoming" } }))
+    assert_equal(-25, entry.reload.amount)
+    assert_equal "USD", entry.currency
+    assert_equal({ "applied_rule" => "incoming" }, entry.transaction.extra.fetch("example"))
+  end
+
   test "imports transaction with all parameters" do
     category = categories(:income)
     merchant = ProviderMerchant.create!(
@@ -2654,6 +2733,63 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   # Some ASPSPs reuse the same transaction_id for pending and booked, so the
   # entry is found by find_or_initialize_by (persisted), bypassing auto-claim.
   # =========================================================================
+
+  test "replaces the complete SimpleFIN snapshot without changing unrelated metadata" do
+    entry = @adapter.import_transaction(
+      external_id: "synthetic_simplefin_snapshot", amount: 1, currency: "USD",
+      date: Date.current, name: "Synthetic snapshot", source: "simplefin",
+      extra: { "simplefin" => { "pending" => false, "amount_normalization" => "direct_debit", "fx_from" => "EUR", "fx_date" => "2000-01-01" },
+               "unrelated_provider" => { "keep" => true }, "exchange_rate" => "1.1" }
+    )
+    @adapter.import_transaction(
+      external_id: entry.external_id, amount: -1, currency: "USD",
+      date: Date.current, name: "Synthetic snapshot", source: "simplefin",
+      extra: { "simplefin" => { "pending" => false } }, replace_extra_namespaces: [ "simplefin" ]
+    )
+    entry.reload
+    assert_equal({ "pending" => false }, entry.transaction.extra.fetch("simplefin"))
+    assert_equal({ "keep" => true }, entry.transaction.extra.fetch("unrelated_provider"))
+    assert_equal "1.1", entry.transaction.extra.fetch("exchange_rate")
+    assert_equal(-1, entry.amount)
+  end
+
+  test "nil incoming metadata leaves the existing provider snapshot alone" do
+    snapshot = { "simplefin" => { "pending" => false, "amount_normalization" => "direct_debit" } }
+    entry = @adapter.import_transaction(
+      external_id: "synthetic_nil_snapshot", amount: 1, currency: "USD",
+      date: Date.current, name: "Synthetic snapshot", source: "simplefin", extra: snapshot
+    )
+    @adapter.import_transaction(
+      external_id: entry.external_id, amount: -1, currency: "USD",
+      date: Date.current, name: "Synthetic snapshot", source: "simplefin",
+      extra: nil, replace_extra_namespaces: [ "simplefin" ]
+    )
+    assert_equal snapshot, entry.reload.transaction.extra
+  end
+
+  test "snapshot replacement preserves the existing protected-entry contract" do
+    [ :user_modified, :import_locked, :excluded ].each do |flag|
+      old_snapshot = { "pending" => false, "amount_normalization" => "direct_debit", "fx_from" => "EUR" }
+      entry = @adapter.import_transaction(
+        external_id: "synthetic_protected_#{flag}", amount: 1, currency: "USD",
+        date: Date.current, name: "Protected synthetic entry", source: "simplefin",
+        extra: { "simplefin" => old_snapshot, "unrelated_provider" => { "keep" => true }, "exchange_rate" => "1.1" }
+      )
+      entry.update!(flag => true)
+      @adapter.import_transaction(
+        external_id: entry.external_id, amount: -1, currency: "USD",
+        date: Date.current, name: "Incoming synthetic entry", source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }, replace_extra_namespaces: [ "simplefin" ]
+      )
+      entry.reload
+      assert_equal 1, entry.amount
+      assert_equal "Protected synthetic entry", entry.name
+      expected_snapshot = flag == :user_modified ? { "pending" => false } : old_snapshot
+      assert_equal expected_snapshot, entry.transaction.extra.fetch("simplefin")
+      assert_equal({ "keep" => true }, entry.transaction.extra.fetch("unrelated_provider"))
+      assert_equal "1.1", entry.transaction.extra.fetch("exchange_rate")
+    end
+  end
 
   test "clears pending flag when same external_id is reused for booked version (not user-modified)" do
     pending_entry = @adapter.import_transaction(

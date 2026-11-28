@@ -921,8 +921,9 @@ class SimplefinItem::Importer
           return a_trans > b_trans ? a : b
         end
 
-        # 5) Stable: keep 'a'
-        a
+        # 5) Equal quality: current provider snapshots follow stored rows, so
+        # descriptor/memo corrections survive both initial and row-locked merges.
+        b
       end
 
       build_key = lambda do |tx|

@@ -404,6 +404,64 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert @item.reload.requires_update?
   end
 
+  test "description only corrections survive importer resync and downstream processing" do
+    account = accounts(:depository)
+    sfa = create_simplefin_account("synthetic_resync", "Checking", "checking", 100)
+    account.update!(simplefin_account_id: sfa.id)
+    @importer.stubs(:reconcile_and_track_pending_duplicates)
+    @importer.stubs(:review_and_exclude_stale_pending)
+    tx = { id: "synthetic_corrected_action", amount: "1.00", posted: Time.utc(2026, 1, 2).to_i,
+           transacted_at: Time.utc(2026, 1, 1).to_i, pending: false, description: "DIRECT DEBIT" }
+    payload = { id: sfa.account_id, name: sfa.name, type: "checking", balance: 100,
+                currency: "USD", org: { domain: "fidelity.com" }, transactions: [ tx ] }
+    @importer.send(:import_account, payload)
+    SimplefinAccount::Transactions::Processor.new(sfa.reload).process
+    entry = account.entries.find_by!(source: "simplefin", external_id: "simplefin_#{tx[:id]}")
+    assert_equal BigDecimal("1"), entry.amount
+
+    corrected = tx.merge(description: "DIRECT DEBIT REVERSAL")
+    3.times do
+      @importer.send(:import_account, payload.merge(transactions: [ corrected ]))
+      raw = sfa.reload.raw_transactions_payload
+      assert_equal 1, raw.size
+      assert_equal corrected[:description], raw.first.fetch("description")
+      SimplefinAccount::Transactions::Processor.new(sfa).process
+      assert_equal BigDecimal("-1"), entry.reload.amount
+      assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+      assert_equal 1, account.entries.where(source: "simplefin", external_id: entry.external_id).count
+    end
+  end
+
+  test "equal rank non Fidelity rows take the current complete provider snapshot" do
+    sfa = create_simplefin_account("synthetic_other_bank", "Checking", "checking", 100)
+    tx = { id: "synthetic_other_transaction", amount: "-1.00", posted: 1_700_000_000,
+           transacted_at: 1_699_999_000, pending: false, description: "Old description", memo: "Removed memo" }
+    payload = { id: sfa.account_id, name: sfa.name, type: "checking", balance: 100,
+                currency: "USD", org: { domain: "example.com" }, transactions: [ tx ] }
+    @importer.send(:import_account, payload)
+    incoming = tx.except(:memo).merge(description: "Corrected description")
+    @importer.send(:import_account, payload.merge(transactions: [ incoming ]))
+    assert_equal [ incoming.deep_stringify_keys ], sfa.reload.raw_transactions_payload
+  end
+
+  test "resync keeps posted date pending and transaction date precedence before latest payload" do
+    tx = { id: "synthetic_ranked", amount: "-1.00", posted: 1_700_000_000,
+           transacted_at: 1_699_999_000, pending: false, description: "Preferred saved row" }
+    [ { posted: 0, transacted_at: 1_800_000_000 }, { posted: 1_600_000_000 },
+      { pending: true }, { transacted_at: 1_600_000_000 } ].each_with_index do |change, index|
+      sfa = create_simplefin_account("synthetic_rank_#{index}", "Checking", "checking", 100)
+      sfa.update!(raw_transactions_payload: [ tx ])
+      @importer.send(:import_account, { id: sfa.account_id, name: sfa.name, type: "checking", balance: 100,
+                                       currency: "USD", transactions: [ tx.merge(change).merge(description: "Lower ranked incoming row") ] })
+      assert_equal [ tx.deep_stringify_keys ], sfa.reload.raw_transactions_payload
+    end
+    sfa = create_simplefin_account("synthetic_pending_upgrade", "Checking", "checking", 100)
+    sfa.update!(raw_transactions_payload: [ tx.merge(posted: 0, pending: true) ])
+    @importer.send(:import_account, { id: sfa.account_id, name: sfa.name, type: "checking", balance: 100,
+                                     currency: "USD", transactions: [ tx ] })
+    assert_equal [ tx.deep_stringify_keys ], sfa.reload.raw_transactions_payload
+  end
+
   test "a protocol v2 account takes its institution from the matching connection" do
     provider = mock
     provider.expects(:get_accounts).returns(

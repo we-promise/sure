@@ -2,6 +2,32 @@ require "digest/md5"
 
 class SimplefinEntry::Processor
   include CurrencyNormalizable
+
+  # Institution-specific sign normalization for unambiguous cash descriptors.
+  # Prefer an exact provider domain; use the exact name only when domain is absent.
+  FIDELITY_DOMAINS = %w[fidelity.com www.fidelity.com].freeze
+  FIDELITY_ORGANIZATION = /\AFidelity Investments\z/i
+  FIDELITY_AMOUNT_NORMALIZATION_RULES = {
+    direct_debit: { direction: :expense, pattern: /\ADIRECT\s+DEBIT\b/i },
+    eft_paid: { direction: :expense, pattern: /\A(?:EFT\s+PAID|ELECTRONIC\s+FUNDS\s+TRANSFER\s+PAID)\b/i },
+    direct_deposit: { direction: :income, pattern: /\ADIRECT\s+DEPOSIT\b/i },
+    rollover_check: { direction: :income, pattern: /\AROLLOVER\s+CASH\s+CHECK\s+RECEIVED\b/i },
+    check_received: { direction: :income, pattern: /\ACHECK\s+RECEIVED\b/i },
+    check_paid: { direction: :expense, pattern: /\ACHECK\s+PAID\b/i },
+    wire_out: { direction: :expense, pattern: /\AWIRE\s+TRANSFER\s+TO\s+BANK\b/i },
+    cash_advance: { direction: :expense, pattern: /\ACASH\s+ADVANCE\b/i },
+    fee_rebate: { direction: :income, pattern: /\A(?:ADJUST\s+)?FEE\s+CHARGED\s+ATM\s+FEE\s+REBATE\b/i },
+    interest: { direction: :income, pattern: /\AINTEREST\s+FULLY\s+PAID\b/i },
+    cash_in_lieu: { direction: :income, pattern: /\AIN\s+LIEU\s+OF\s+FRX\s+SHARE\s+LEU\s+PAYOUT\b/i },
+    dividend: {
+      direction: :income,
+      pattern: /\A(?:DIVIDEND\s+RECEIVED\b|DIVIDEND(?:\s+(?:PAYMENT|INCOME|CREDIT))?\z)/i
+    }
+  }.freeze
+  AMBIGUOUS_AMOUNT_TERMS = /\b(?:REVERS|RETURN|REFUND)/i
+  # TAX-FREE, TAX-EXEMPT and TOTAL RETURN can be security names, not actions.
+  # Withheld tax, reversals and returns of capital are not ordinary dividends.
+  DIVIDEND_TRANSACTION_QUALIFIERS = /\b(?:TAX(?:ES)?(?![-\s]+(?:FREE|EXEMPT)\b)|WITHHOLDING|WITHHELD)\b|\bRETURN\s+OF\s+CAPITAL\b/i
   # simplefin_transaction is the raw hash fetched from SimpleFin API and converted to JSONB
   # @param import_adapter [Account::ProviderImportAdapter, nil] Optional shared adapter for accumulating skipped entries
   def initialize(simplefin_transaction, simplefin_account:, import_adapter: nil)
@@ -42,7 +68,10 @@ class SimplefinEntry::Processor
       source: "simplefin",
       merchant: merchant,
       notes: notes,
-      extra: extra_metadata
+      extra: extra_metadata,
+      replace_extra_namespaces: [ "simplefin" ],
+      name_extra_keys: { "simplefin" => %w[payee description memo] },
+      amount_extra_keys: { "simplefin" => [ "amount_normalization" ] }
     )
   end
 
@@ -76,7 +105,7 @@ class SimplefinEntry::Processor
       sf["extra"] = data[:extra] if data[:extra].is_a?(Hash)
 
       # Pending detection handled by #pending?. We always set the key (true or false) to
-      # ensure deep_merge overwrites any stale value.
+      # ensure every namespace snapshot includes the current pending state.
       if pending?
         sf["pending"] = true
         Rails.logger.debug("SimpleFIN: flagged pending transaction #{external_id}")
@@ -93,6 +122,10 @@ class SimplefinEntry::Processor
         fx_d = transacted_date || posted_date
         sf["fx_date"] = fx_d&.to_s
       end
+
+      # Namespace replacement removes stale markers even when the institution changes.
+      # Unsupported institutions remain keyless; Fidelity carries a rule name or nil.
+      sf["amount_normalization"] = amount_normalization if institution_amount_normalization_rules
 
       return nil if sf.empty?
       { "simplefin" => sf }
@@ -144,6 +177,9 @@ class SimplefinEntry::Processor
         BigDecimal("0")
       end
 
+      return parsed_amount.abs if amount_normalization_direction == :expense
+      return -parsed_amount.abs if amount_normalization_direction == :income
+
       # SimpleFin uses banking convention (expenses negative, income positive)
       # Maybe expects opposite convention (expenses positive, income negative)
       # So we negate the amount to convert from SimpleFin to Maybe format
@@ -151,6 +187,58 @@ class SimplefinEntry::Processor
     rescue ArgumentError => e
       Rails.logger.error "Failed to parse SimpleFin transaction amount: #{data[:amount].inspect} - #{e.message}"
       raise
+    end
+
+    def amount_normalization
+      amount_normalization_rule&.first&.to_s
+    end
+
+    def amount_normalization_direction
+      amount_normalization_rule&.last&.fetch(:direction)
+    end
+
+    def amount_normalization_rule
+      return @amount_normalization_rule if defined?(@amount_normalization_rule)
+
+      @amount_normalization_rule = find_amount_normalization_rule
+    end
+
+    def find_amount_normalization_rule
+      rules = institution_amount_normalization_rules
+      return if rules.nil?
+      rules.find do |name, rule|
+        amount_descriptor_fields.any? do |value|
+          next false unless value.match?(rule.fetch(:pattern))
+          next false if name == :dividend && value.match?(DIVIDEND_TRANSACTION_QUALIFIERS)
+
+          # Exempt the specific fund-name compound, not arbitrary return language.
+          qualifier_text = name == :dividend ? value.gsub(/\bTOTAL[-\s]+RETURN\b/i, "") : value
+          !qualifier_text.match?(AMBIGUOUS_AMOUNT_TERMS)
+        end
+      end
+    end
+
+    def amount_descriptor_fields
+      @amount_descriptor_fields ||= [ data[:description] ].filter_map { |value| value.to_s.strip.presence }
+    end
+
+    # Rules for the account's institution, or nil when it has no sign normalization.
+    # org_data is raw provider JSON, so it may be nil, a non-Hash value, or lack a name.
+    def institution_amount_normalization_rules
+      return @institution_amount_normalization_rules if defined?(@institution_amount_normalization_rules)
+
+      org = simplefin_account.org_data
+      @institution_amount_normalization_rules = if org.is_a?(Hash)
+        domain = org.key?("domain") ? org["domain"] : org[:domain]
+        institution_name = org.key?("name") ? org["name"] : org[:name]
+        if domain.nil? || (domain.is_a?(String) && domain.strip.empty?)
+          if institution_name.is_a?(String) && institution_name.strip.match?(FIDELITY_ORGANIZATION)
+            FIDELITY_AMOUNT_NORMALIZATION_RULES
+          end
+        elsif domain.is_a?(String) && FIDELITY_DOMAINS.any? { |candidate| domain.strip.casecmp?(candidate) }
+          FIDELITY_AMOUNT_NORMALIZATION_RULES
+        end
+      end
     end
 
     def currency
