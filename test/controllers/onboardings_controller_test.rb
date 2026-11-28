@@ -186,6 +186,108 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "built-in AI on a self-hosted instance with no AI provider shows the setup warning" do
+    with_self_hosting do
+      with_ai_configuration do
+        assert_builtin_warnings not_configured: true, unavailable: false
+      end
+    end
+  end
+
+  test "built-in AI shows no warning once an OpenAI or Anthropic key is set" do
+    with_self_hosting do
+      with_ai_configuration(settings: { openai_access_token: "sk-test" }) do
+        assert_builtin_warnings not_configured: false, unavailable: false
+      end
+
+      with_ai_configuration(env: { ANTHROPIC_API_KEY: "sk-ant-test" }) do
+        assert_builtin_warnings not_configured: false, unavailable: false
+      end
+    end
+  end
+
+  test "an mcp_only household on a self-hosted instance is told the assistant won't run, even with a provider set" do
+    @family.update!(assistant_type: "mcp_only")
+
+    with_self_hosting do
+      with_ai_configuration(settings: { openai_access_token: "sk-test" }) do
+        assert_builtin_warnings not_configured: false, unavailable: true
+      end
+    end
+  end
+
+  test "an mcp_only household on a managed instance is told the assistant won't run" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    @family.update!(assistant_type: "mcp_only")
+
+    with_ai_configuration(settings: { openai_access_token: "sk-test" }) do
+      assert_builtin_warnings not_configured: false, unavailable: true
+    end
+  end
+
+  test "ASSISTANT_TYPE in the environment decides the warning over the household setting" do
+    with_self_hosting do
+      with_ai_configuration(settings: { openai_access_token: "sk-test" }, env: { ASSISTANT_TYPE: "mcp_only" }) do
+        assert_builtin_warnings not_configured: false, unavailable: true
+      end
+    end
+  end
+
+  test "an external household whose agent is configured and allows the user sees no warning" do
+    @family.update!(assistant_type: "external")
+
+    with_self_hosting do
+      with_ai_configuration(env: EXTERNAL_AGENT_ENV) do
+        assert_builtin_warnings not_configured: false, unavailable: false
+      end
+
+      allowed = { EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "someone@example.com, #{@user.email.upcase}" }
+      with_ai_configuration(env: EXTERNAL_AGENT_ENV.merge(allowed)) do
+        assert_builtin_warnings not_configured: false, unavailable: false
+      end
+    end
+  end
+
+  test "an external household whose agent is missing or not allowed sees the unavailable warning" do
+    @family.update!(assistant_type: "external")
+
+    with_self_hosting do
+      # Nothing is configured, not even a provider: the setup warning is only for built-in.
+      with_ai_configuration do
+        assert_builtin_warnings not_configured: false, unavailable: true
+      end
+
+      not_allowed = { EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "someone-else@example.com" }
+      with_ai_configuration(env: EXTERNAL_AGENT_ENV.merge(not_allowed)) do
+        assert_builtin_warnings not_configured: false, unavailable: true
+      end
+    end
+  end
+
+  test "an external agent set up in Settings needs only a URL and token" do
+    @family.update!(assistant_type: "external")
+    url = "http://localhost:18789/v1/chat"
+
+    with_self_hosting do
+      # No model is set: it falls back to openclaw/main, as for installs from before model selection.
+      with_ai_configuration(settings: { external_assistant_url: url, external_assistant_token: "test-token" }) do
+        assert_builtin_warnings not_configured: false, unavailable: false
+      end
+
+      with_ai_configuration(settings: { external_assistant_url: url }) do
+        assert_builtin_warnings not_configured: false, unavailable: true
+      end
+    end
+  end
+
+  test "built-in AI on a managed instance shows no warning without self-hosted keys" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+
+    with_ai_configuration do
+      assert_builtin_warnings not_configured: false, unavailable: false
+    end
+  end
+
   test "self-hosted onboarding finishes on the dashboard" do
     with_self_hosting do
       patch tools_onboarding_url, params: { user: { onboarding_ai_mode: "none" } }
@@ -314,5 +416,46 @@ end
         # unspecified, which made every suite that signs out this way flaky.
         # Teardown hygiene is not the behavior under test, so destroy directly.
         @user.sessions.destroy_all
+      end
+
+      AI_ENV = %w[
+        OPENAI_ACCESS_TOKEN ANTHROPIC_ACCESS_TOKEN ANTHROPIC_API_KEY ASSISTANT_TYPE
+        EXTERNAL_ASSISTANT_URL EXTERNAL_ASSISTANT_TOKEN EXTERNAL_ASSISTANT_MODEL EXTERNAL_ASSISTANT_ALLOWED_EMAILS
+      ].to_h { |name| [ name.to_sym, nil ] }.freeze
+
+      AI_SETTINGS = %i[
+        openai_access_token anthropic_access_token
+        external_assistant_url external_assistant_token external_assistant_model
+      ].freeze
+
+      EXTERNAL_AGENT_ENV = {
+        EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat",
+        EXTERNAL_ASSISTANT_TOKEN: "test-token",
+        EXTERNAL_ASSISTANT_MODEL: "openclaw/main"
+      }.freeze
+
+      # Runs the block with only the AI configuration given: every other AI
+      # setting and environment variable is cleared, and the settings are
+      # restored afterwards. Cleared settings are stored as "" rather than nil:
+      # the provider keys default to the environment as it was when Setting
+      # loaded, and a stored nil falls back to that default.
+      def with_ai_configuration(settings: {}, env: {})
+        previous = AI_SETTINGS.index_with { |name| Setting.public_send(name) }
+        AI_SETTINGS.each { |name| Setting.public_send("#{name}=", settings.fetch(name, "")) }
+        with_env_overrides(**AI_ENV.merge(env)) { yield }
+      ensure
+        previous&.each { |name, value| Setting.public_send("#{name}=", value) }
+      end
+
+      # Which of the two warnings the Built-in panel on the Tools step shows.
+      def assert_builtin_warnings(not_configured:, unavailable:)
+        get tools_onboarding_url
+        assert_response :success
+
+        panel = css_select("[data-ai-panel=builtin]").text
+        assert_equal not_configured, panel.include?(I18n.t("onboardings.tools.ai.panels.builtin.not_configured")),
+          "expected the missing-provider warning to be #{not_configured ? "shown" : "absent"}"
+        assert_equal unavailable, panel.include?(I18n.t("onboardings.tools.ai.panels.builtin.unavailable")),
+          "expected the assistant-unavailable warning to be #{unavailable ? "shown" : "absent"}"
       end
 end
