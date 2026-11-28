@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "sure": {
+      "type": "http",
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "sure",
+  "version": "1.0.0",
+  "description": "Agent skills and an MCP connection for Sure, the open-source personal finance app: self-hosting, the MCP financial tools, and the REST API.",
+  "author": {
+    "name": "Sure contributors",
+    "url": "https://github.com/we-promise/sure"
+  },
+  "homepage": "https://github.com/we-promise/sure",
+  "repository": "https://github.com/we-promise/sure",
+  "license": "AGPL-3.0",
+  "keywords": [
+    "sure",
+    "personal-finance",
+    "budgeting",
+    "self-hosted",
+    "mcp",
+    "rails",
+    "agent-skills"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Sure",
+    "shortDescription": "Personal finance, self-hosted",
+    "longDescription": "Skills and an MCP server config for Sure, the community-driven personal finance app. Covers self-hosting with Docker Compose (secret and encryption keys, host and origin restrictions, signup mode, the AI compose file with Pipelock); connecting assistants to Sure's /mcp endpoint with OAuth or a static token and using its account, transaction, budget, rule and statement tools safely with dry runs and preview tokens; and scripting the /api/v1 REST API with API keys, including transaction filters and regenerating the rswag OpenAPI spec.",
+    "developerName": "Sure contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/we-promise/sure",
+    "defaultPrompt": [
+      "Self-host Sure with Docker on my server",
+      "What did I spend on groceries last month in Sure?",
+      "Create a Sure rule that categorizes my Uber rides as Transport"
+    ],
+    "brandColor": "#202020",
+    "composerIcon": "./assets/logo.png",
+    "logo": "./assets/logo.png"
+  }
+}
