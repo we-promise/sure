@@ -1,0 +1,6 @@
+---
+pt-BR:
+  settings:
+    budget_shares:
+      update:
+        success: Configurações de compartilhamento de orçamento atualizadas

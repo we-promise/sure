@@ -1,0 +1,36 @@
+id:
+  web_push:
+    title: Notifikasi browser
+    description: Terima wawasan prioritas tinggi baru di browser atau aplikasi terinstal ini. Notifikasi menyembunyikan detail keuangan di layar kunci Anda.
+    enable: Aktifkan perangkat ini
+    disable: Nonaktifkan perangkat ini
+    test: Uji perangkat ini
+    preview: Pratinjau
+    session_notice: Notifikasi berhenti saat Anda keluar atau sesi Anda berakhir setelah 30 hari tidak aktif. Buka Sure secara berkala agar sesi Anda tetap aktif.
+    ios_guidance: Di iPhone atau iPad, buka Sure di Safari, pilih Bagikan → Tambahkan ke Layar Utama, lalu aktifkan notifikasi dari aplikasi yang terinstal. Memerlukan iOS atau iPadOS 16.4 atau lebih baru.
+    notification:
+      body: Peringatan keuangan baru tersedia. Buka Sure untuk meninjaunya.
+      test_body: Notifikasi uji Anda telah tiba. Buka Sure untuk melanjutkan.
+    status:
+      checking: Memeriksa perangkat ini…
+      enabled: Notifikasi diaktifkan untuk perangkat dan sesi ini.
+      disabled: Notifikasi dinonaktifkan untuk perangkat ini.
+      denied: Notifikasi diblokir di pengaturan browser. Izinkan di sana, lalu aktifkan kembali perangkat ini.
+      unsupported: Browser ini tidak mendukung notifikasi. Gunakan browser yang kompatibel atau aplikasi terinstal melalui HTTPS.
+      unconfigured: Notifikasi browser belum dikonfigurasi di server ini.
+      queued: Uji masuk antrean. Menunggu layanan push menerimanya.
+      accepted: Diterima oleh layanan push. Periksa perangkat ini untuk notifikasinya; penerimaan tidak memastikan notifikasi ditampilkan.
+      skipped: Uji dilewati karena sesi atau akses pratinjau ini berubah, atau uji kedaluwarsa. Aktifkan perangkat ini dan coba lagi.
+      rejected: Layanan push menolak uji ini. Nonaktifkan perangkat ini, lalu aktifkan kembali.
+      failed: Uji tidak dapat dikirimkan. Coba lagi nanti.
+      enqueue_failed: Uji tidak dapat dimasukkan ke antrean. Coba lagi nanti.
+      pending: Uji masuk antrean atau sedang dicoba ulang. Pengiriman mungkin memerlukan waktu sejenak.
+      expired: Uji masih dalam antrean. Periksa worker latar belakang atau coba uji lain nanti.
+    errors:
+      registration: Tidak dapat mendaftarkan perangkat ini. Coba nonaktifkan, lalu aktifkan kembali.
+      preview: Aktifkan fitur pratinjau sebelum menggunakan notifikasi browser.
+      unconfigured: Notifikasi browser belum dikonfigurasi di server ini.
+      rate_limited: Terlalu banyak permintaan notifikasi. Tunggu sebentar, lalu coba lagi.
+      enqueue: Tidak dapat memasukkan notifikasi uji ke antrean. Coba lagi nanti.
+      request: Tidak dapat memperbarui notifikasi browser. Periksa koneksi Anda dan coba lagi.
+      permission: Izin notifikasi tidak diberikan.
