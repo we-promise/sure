@@ -79,6 +79,7 @@ class Trade::VestForm
     @tax_lines = Array(lines).map do |line|
       line = line.to_h.symbolize_keys
       amount = BigDecimal(line[:amount].to_s.strip, exception: false) if line[:amount].present?
+      amount = nil unless amount&.finite?
       TaxLine.new(id: line[:id].presence, name: line[:name].to_s.strip, category_id: line[:category_id].presence,
                   amount: amount, amount_invalid: line[:amount].present? && amount.nil?)
     end

@@ -158,10 +158,12 @@ class Trade::VestFormTest < ActiveSupport::TestCase
   end
 
   test "a tax amount must be a number, not just start with one" do
-    form = vest_form(vested_qty: 10, price: 25, tax_lines: [ { amount: "300oops" } ])
+    %w[300oops NaN Infinity].each do |amount|
+      form = vest_form(vested_qty: 10, price: 25, tax_lines: [ { amount: amount } ])
 
-    assert_not form.save
-    assert_includes form.errors[:base], I18n.t("vests.form.tax_amount_required")
+      assert_not form.save, amount
+      assert_includes form.errors[:base], I18n.t("vests.form.tax_amount_required")
+    end
     assert vest_form(vested_qty: 10, price: 25, tax_lines: [ { name: "Federal", amount: "0" } ]).save, "zero is an amount"
   end
 
@@ -179,7 +181,7 @@ class Trade::VestFormTest < ActiveSupport::TestCase
     assert income.reload.update(notes: "from the paystub"), "notes and other details stay editable"
   end
 
-  test "rules and direct saves can't change a vest part's label, exclusion, or transfer either" do
+  test "rules and direct saves can't change a vest part's label, kind, exclusion, or transfer either" do
     form = vest_form(vested_qty: 100, units_withheld: 30, price: 10)
     form.save
     income, (tax, *) = Trade::VestForm.parts_of(form.entry)
@@ -187,6 +189,7 @@ class Trade::VestFormTest < ActiveSupport::TestCase
     assert_not tax.transaction.update(investment_activity_label: "Fee"), "a transaction saved without its entry"
     assert_not tax.transaction.reload.enrich_attribute(:investment_activity_label, "Fee", source: "rule", ignore_locks: true)
     assert_not income.update(excluded: true)
+    assert_not tax.transaction.reload.update(kind: "one_time"), "a kind outside the income statement"
 
     rule = rules(:one)
     Rule::Action.new(rule: rule, action_type: "set_investment_activity_label", value: "Fee")

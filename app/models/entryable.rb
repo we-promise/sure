@@ -9,7 +9,7 @@ module Entryable
 
   # A vest's trade columns and its parts' labels, which Trade::VestForm
   # writes with the vest (Entry#vest_write).
-  VEST_ATTRIBUTES = %w[qty price units_withheld investment_activity_label].freeze
+  VEST_ATTRIBUTES = %w[qty price units_withheld investment_activity_label kind].freeze
 
   included do
     include Enrichable
@@ -39,7 +39,10 @@ module Entryable
 
   private
     # Also refuses turning an entry into a vest, or a vest into something else.
+    # A vest is only ever trades and transactions; a valuation's kind is its own.
     def vest_attributes_written_together
+      return unless is_a?(Transaction) || is_a?(Trade)
+
       changed_attributes = changed & VEST_ATTRIBUTES
       return if changed_attributes.empty? || entry.nil? || entry.vest_write
 
