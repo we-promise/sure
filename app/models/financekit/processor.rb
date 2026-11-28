@@ -188,7 +188,7 @@ class Financekit::Processor
       account = mapping.account
       account.with_lock do
         entry = identity.entry
-        entry&.lock!
+        entry&.lock_with_entryable!
         if entry && protected_entry?(entry)
           settle_edited_pending_entry!(entry, record)
           identity.update!(review_required: true)
@@ -225,7 +225,7 @@ class Financekit::Processor
         counts["settled"] += 1
       elsif entry
         Entry.transaction do
-          entry.lock!
+          entry.lock_with_entryable!
           if protected_entry?(entry) || entry.source != "financekit" || entry.account_id != mapping.account.id
             identity.review_required = true
             create_conflict!(mapping, identity, "protected_tombstone")
@@ -278,7 +278,7 @@ class Financekit::Processor
       return unless entry
 
       Entry.transaction do
-        entry.lock!
+        entry.lock_with_entryable!
         if protected_entry?(entry) || entry.source != "financekit" || entry.account_id != mapping.account.id
           identity.review_required = true
           create_conflict!(mapping, identity, "protected_source_update")
@@ -305,7 +305,7 @@ class Financekit::Processor
       return unless entry && record["status"] == "booked"
 
       Entry.transaction do
-        entry.lock!
+        entry.lock_with_entryable!
         return unless entry.user_modified? && !entry.excluded? && !entry.import_locked?
 
         transaction = entry.transaction

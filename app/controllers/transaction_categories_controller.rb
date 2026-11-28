@@ -9,23 +9,24 @@ class TransactionCategoriesController < ApplicationController
     return head(:unprocessable_entity) if @entry.transaction.category_set_on_transfer_outflow?
 
     rule_input = @entry.rule_input_snapshot
-    @entry.update!(entry_params)
 
     transaction = @entry.transaction
 
-    transaction.record_category_usage!
+    @entry.save_and_lock_attributes do
+      @entry.update!(entry_params)
+      transaction.record_category_usage!
 
-    if needs_rule_notification?(transaction)
-      flash[:cta] = {
-        type: "category_rule",
-        category_id: transaction.category_id,
-        category_name: transaction.category.name,
-        merchant_name: @entry.name
-      }
+      if needs_rule_notification?(transaction)
+        flash[:cta] = {
+          type: "category_rule",
+          category_id: transaction.category_id,
+          category_name: transaction.category.name,
+          merchant_name: @entry.name
+        }
+      end
+      true
     end
 
-    transaction.lock_saved_attributes!
-    @entry.lock_saved_attributes!
     @entry.apply_immediate_rules_later(changed_from: rule_input)
 
     in_split_group = helpers.in_split_group?(@entry, params[:grouped])
