@@ -77,7 +77,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 13
+  CURRENT_BACKFILL_VERSION = 14
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -129,7 +129,7 @@ module ActiveRecordEncryptionConfig
     snaptrade_items: [ "SnaptradeItem", %i[client_id consumer_key snaptrade_user_secret oauth_access_token oauth_refresh_token raw_payload raw_institution_payload] ],
     sharesight_items: [ "SharesightItem", %i[client_id client_secret] ],
     sophtron_items: [ "SophtronItem", %i[user_id access_key raw_payload raw_institution_payload raw_customer_payload raw_job_payload] ],
-    trade_republic_items: [ "TradeRepublicItem", %i[phone_number session_blob pending_login_state] ],
+    trade_republic_items: [ "TradeRepublicItem", %i[phone_number session_blob pending_login_state pin] ],
     trading212_items: [ "Trading212Item", %i[api_key api_secret raw_instruments_payload] ],
     up_items: [ "UpItem", %i[access_token raw_payload raw_institution_payload] ],
     wise_items: [ "WiseItem", %i[token raw_payload sca_private_key] ],

@@ -8,6 +8,7 @@ class TradeRepublicItem::Syncer
   end
 
   def perform_sync(sync)
+    session_before = trade_republic_item.session_blob
     sync.update!(status_text: I18n.t("trade_republic_items.sync.status.checking_credentials")) if sync.respond_to?(:status_text)
     unless trade_republic_item.credentials_configured?
       trade_republic_item.update!(status: :requires_update)
@@ -62,7 +63,7 @@ class TradeRepublicItem::Syncer
   rescue Provider::TradeRepublicClient::AuthenticationRequired,
          Provider::TradeRepublicClient::LoginExpired,
          Provider::TradeRepublicClient::ConfigurationError => e
-    trade_republic_item.update!(status: :requires_update)
+    require_new_login(session_before)
     collect_health_stats(sync, errors: [ { message: e.message, category: "auth_error" } ])
     raise
   rescue Provider::TradeRepublicClient::Error => e
@@ -77,6 +78,15 @@ class TradeRepublicItem::Syncer
   end
 
   private
+
+    # A login confirmed while the sync ran replaced the session that failed;
+    # the new one must not be flagged. A fresh, locked row is compared, since
+    # the sync's own instance may be stale.
+    def require_new_login(session_before)
+      trade_republic_item.with_lock do
+        trade_republic_item.update!(status: :requires_update) if trade_republic_item.session_blob == session_before
+      end
+    end
 
     def raise_if_failed_results!(results, stage:)
       failed = Array(results).select { |result| result.is_a?(Hash) && result[:success] == false }
