@@ -16,19 +16,36 @@ en:
     errors:
       provider_not_configured: "<%= class_name %> provider is not configured"
 
-    # Syncer status messages
-    sync:
-      status:
-        importing: "Importing accounts from <%= class_name %>..."
+    # Sync status and error messages (ProviderItem::Syncer)
+    syncer:
+      account_processing_failed:
+        one: "%{count} <%= class_name %> account failed while processing."
+        other: "%{count} <%= class_name %> accounts failed while processing."
+      account_sync_failed:
+        one: "%{count} <%= class_name %> account sync could not be scheduled."
+        other: "%{count} <%= class_name %> account syncs could not be scheduled."
+      accounts_need_setup:
+        one: "%{count} account needs setup..."
+        other: "%{count} accounts need setup..."
+      accounts_failed:
+        one: "%{count} <%= class_name %> account failed to import."
+        other: "%{count} <%= class_name %> accounts failed to import."
+      calculating_balances: "Calculating balances..."
+      checking_account_configuration: "Checking account configuration..."
+      credentials_invalid: "Invalid <%= class_name %> credentials"
+      failed: "Sync failed. Please try again or contact support."
+      import_failed: "<%= class_name %> import failed."
+      import_failed_with_error: "<%= class_name %> import failed: %{error}"
+      importing_accounts: "Importing accounts from <%= class_name %>..."
 <% if investment_provider? -%>
-        processing: "Processing holdings and activities..."
+      processing_transactions: "Processing holdings and activities..."
 <% else -%>
-        processing: "Processing transactions..."
+      processing_transactions: "Processing transactions..."
 <% end -%>
-        calculating: "Calculating balances..."
-        importing_data: "Importing account data..."
-        checking_setup: "Checking account configuration..."
-        needs_setup: "%{count} accounts need setup..."
+      transactions_failed:
+        one: "%{count} <%= class_name %> account had transaction import failures."
+        other: "%{count} <%= class_name %> accounts had transaction import failures."
+    sync:
       success: "Sync started"
 
     # Panel (settings view)

@@ -18,7 +18,7 @@ module Family::<%= class_name %>Connectable
 -%>
   def create_<%= file_name %>_item!(<%= all_params %>)
     <%= file_name %>_item = <%= file_name %>_items.create!(
-      name: item_name || "<%= class_name.titleize %> Connection"<%= parsed_fields.map { |f| ",\n      #{f[:name]}: #{f[:name]}" }.join("") %>
+      name: item_name.presence || "<%= class_name.titleize %> Connection"<%= parsed_fields.map { |f| ",\n      #{f[:name]}: #{f[:name]}" }.join("") %>
     )
 
     <%= file_name %>_item.sync_later

@@ -63,7 +63,7 @@ class <%= class_name %>ActivitiesFetchJob < ApplicationJob
 
       # TODO: Implement API call to fetch activities
       # provider.get_activities(
-      #   account_id: @<%= file_name %>_account.<%= file_name %>_account_id,
+      #   account_id: @<%= file_name %>_account.account_id,
       #   start_date: @start_date,
       #   end_date: Date.current,
       #   **credentials

@@ -9,6 +9,10 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
   module GeneratedControllers
   end
 
+  # Holds each evaluated importer template, apart from the app's own constants.
+  module GeneratedImporters
+  end
+
   def append(content, name = "gocardless")
     Provider::FamilyGenerator.append_source_enum_entry(content, name)
   end
@@ -79,14 +83,201 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
-  test "the unlinking scaffold renders to valid Ruby and carries the disposition seam" do
-    rendered = render_template("unlinking_concern.rb.tt", class_name: "Gocardless", file_name: "gocardless")
+  # A template rendered as the generator renders it, with the generator's predicate
+  # helpers, which a Struct cannot name.
+  def render_provider_template(name, banking: true, parsed_fields: [ { name: "api_key", type: "string", secret: true, default: nil } ], **extra_helpers)
+    helpers = {
+      class_name: "Gocardless", file_name: "gocardless", parsed_fields: parsed_fields,
+      banking_provider?: banking, investment_provider?: !banking
+    }.merge(extra_helpers)
+    context = Object.new
+    helpers.each { |helper, value| context.define_singleton_method(helper) { value } }
+    template = Rails.root.join("lib/generators/provider/family/templates", name).read
+    ERB.new(template, trim_mode: "-").result(context.instance_eval { binding })
+  end
 
-    assert_parses rendered
-    # A generated provider retains by default and refuses a discard it has not
-    # implemented, rather than accepting one and keeping the data.
-    assert_includes rendered, "disposition: ProviderDisconnectable::DEFAULT_DISPOSITION"
-    assert_includes rendered, "does not implement the #{'#{disposition}'} disposition"
+  # Evaluates the importer template in its own module, with one linked account, and
+  # returns what #import returns.
+  def run_generated_importer(banking:)
+    namespace = Module.new
+    GeneratedImporters.const_set("Run#{GeneratedImporters.constants.size}", namespace)
+    namespace.const_set(:GocardlessItem, Class.new)
+    namespace.const_set(:GocardlessAccount, Module.new)
+    namespace::GocardlessAccount.const_set(:DataHelpers, Module.new)
+    namespace.module_eval(render_provider_template("importer.rb.tt", banking: banking))
+
+    linked_account = OpenStruct.new(id: "account-1", sync_start_date: nil, last_activities_sync: 1.day.ago, raw_transactions_payload: [], raw_activities_payload: [])
+    relation = mock("linked_accounts")
+    relation.stubs(:joins).returns(relation)
+    relation.stubs(:count).returns(1)
+    relation.stubs(:each).yields(linked_account)
+    namespace::GocardlessAccount.stubs(:where).returns(relation)
+
+    item = mock("item")
+    item.stubs(id: "item-1", gocardless_credentials: { api_key: "key" }, upsert_gocardless_snapshot!: true, last_synced_at: nil)
+    item.stubs(:gocardless_accounts).returns(stub(where: stub(not: [])))
+
+    importer = namespace::GocardlessItem::Importer.new(item, gocardless_provider: Object.new)
+    yield importer if block_given?
+    importer.import
+  end
+
+  # The provider kit's base class supplies syncing, the syncer and unlinking, so a
+  # generated connection model inherits them instead of carrying its own copies.
+  test "the generated item model is a provider kit connection" do
+    [ true, false ].each do |banking|
+      model = render_provider_template("item_model.rb.tt", banking: banking)
+
+      assert_parses model
+      assert_includes model, "class GocardlessItem < ProviderItem\n"
+      assert_includes model, "  include Provided, Encryptable, DestroyableLater, ProviderDisconnectable\n"
+      assert_not_includes model, "def syncer"
+      # The kit's syncer imports with the sync window's start date.
+      assert_includes model, "def import_latest_gocardless_data(sync_start_date: nil)"
+      # The kit's account flow lists only connections whose secret is set.
+      assert_includes model, %(scope :with_credentials, -> { where.not(api_key: [ nil, *BLANK_TOKEN_SENTINELS ]) })
+    end
+  end
+
+  # A blank name from a form must fall back to the default, as Brex, Lunch Flow
+  # and Mercury do: an empty string fails the item's name presence validation.
+  test "the generated connectable concern defaults a blank connection name" do
+    namespace = Module.new
+    GeneratedImporters.const_set("Run#{GeneratedImporters.constants.size}", namespace)
+    namespace.const_set(:Family, Module.new)
+    namespace.module_eval(render_provider_template("connectable_concern.rb.tt"))
+
+    family_class = Class.new do
+      def self.has_many(*) = nil
+      attr_accessor :gocardless_items
+    end
+    family_class.include(namespace::Family::GocardlessConnectable)
+    family = family_class.new
+
+    [ nil, "" ].each do |blank|
+      item = mock("item")
+      item.expects(:sync_later)
+      family.gocardless_items = mock("items")
+      family.gocardless_items.expects(:create!).with(name: "Gocardless Connection", api_key: "key").returns(item)
+
+      assert_same item, family.create_gocardless_item!(api_key: "key", item_name: blank)
+    end
+  end
+
+  test "the generated item model counts every connection as credentialed when it has no secret field" do
+    model = render_provider_template("item_model.rb.tt", parsed_fields: [ { name: "region", type: "string", secret: false, default: nil } ])
+
+    assert_parses model
+    assert_includes model, "scope :with_credentials, -> { all }"
+  end
+
+  test "the generated account model is a provider kit account" do
+    [ true, false ].each do |banking|
+      model = render_provider_template("account_model.rb.tt", banking: banking)
+
+      assert_parses model
+      assert_includes model, "class GocardlessAccount < ProviderAccount\n"
+      # ProviderAccount defines the link and #current_account.
+      assert_not_includes model, "has_one :account_provider"
+      assert_not_includes model, "def current_account"
+    end
+  end
+
+  # ProviderItem::AccountFlow plucks and indexes provider accounts by account_id,
+  # as the Brex, Lunch Flow and Mercury tables name it.
+  test "the generated migration stores the provider id in account_id" do
+    [ true, false ].each do |banking|
+      migration = render_provider_template("migration.rb.tt", banking: banking, table_name: "gocardless_items", migration_version: "[7.2]")
+      model = render_provider_template("account_model.rb.tt", banking: banking)
+      importer = render_provider_template("importer.rb.tt", banking: banking)
+
+      assert_parses migration
+      assert_includes migration, "      t.string :account_id\n"
+      # Two connections may see the same provider account, so the id is unique
+      # per item, as Brex and Mercury index it, not across the table.
+      assert_includes migration, <<~RUBY.indent(4)
+        add_index :gocardless_accounts,
+                  [ :gocardless_item_id, :account_id ],
+                  unique: true,
+                  name: "index_gocardless_accounts_on_item_and_account_id"
+      RUBY
+      assert_no_match(/add_index :gocardless_accounts, :account_id/, migration)
+      assert_match(/^      account_id: \(data\[:id\] \|\| data\[:account_id\]\)&\.to_s,$/, model)
+      assert_includes importer, ".where.not(account_id: upstream_account_ids)"
+      [ migration, model, importer ].each { |source| assert_not_includes source, "gocardless_account_id" }
+    end
+  end
+
+  # Postgres caps an index name at 63 characters, and Rails raises on an explicit
+  # name past that instead of shortening it as it does the names it derives.
+  test "the generated migration names the item and account id index only when the name fits" do
+    long_key = "a" * 26
+    migration = render_provider_template("migration.rb.tt", file_name: long_key, table_name: "#{long_key}_items", migration_version: "[7.2]")
+
+    assert_parses migration
+    assert_includes migration, "[ :#{long_key}_item_id, :account_id ],\n              unique: true\n"
+    assert_not_includes migration, "_on_item_and_account_id"
+
+    fits = "a" * 25
+    migration = render_provider_template("migration.rb.tt", file_name: fits, table_name: "#{fits}_items", migration_version: "[7.2]")
+    name = migration[/name: "(index_a+_accounts_on_item_and_account_id)"/, 1]
+    assert_equal 63, name.length
+  end
+
+  # ProviderItem::Syncer and ProviderItem::Unlinking replace both scaffolds.
+  test "the generator writes no syncer or unlinking concern for the item" do
+    Dir.mktmpdir do |dir|
+      generator = Provider::FamilyGenerator.new([ "gocardless" ], {}, destination_root: dir)
+      capture_io { Dir.chdir(dir) { generator.send(:create_item_concerns) } }
+
+      assert File.exist?(File.join(dir, "app/models/gocardless_item/importer.rb"))
+      assert_not File.exist?(File.join(dir, "app/models/gocardless_item/syncer.rb"))
+      assert_not File.exist?(File.join(dir, "app/models/gocardless_item/unlinking.rb"))
+    end
+    assert_not Rails.root.join("lib/generators/provider/family/templates/syncer.rb.tt").exist?
+    assert_not Rails.root.join("lib/generators/provider/family/templates/unlinking_concern.rb.tt").exist?
+  end
+
+  # ProviderItem::Syncer treats anything but a Hash with success: as a failed import,
+  # so the generated importer has to return one, counting the failures it rescued.
+  test "the generated importer's result reads as a clean or failed import to the kit syncer" do
+    syncer = BrexItem::Syncer.new(brex_items(:one))
+
+    [ true, false ].each do |banking|
+      clean = run_generated_importer(banking: banking)
+      assert_equal({ success: true, accounts_failed: 0, transactions_failed: 0 }, clean)
+      assert_empty syncer.send(:import_result_errors, clean)
+    end
+
+    failed = run_generated_importer(banking: true) do |importer|
+      importer.stubs(:calculate_transaction_start_date).raises(StandardError, "transactions unavailable")
+    end
+    assert_equal({ success: false, accounts_failed: 0, transactions_failed: 1 }, failed)
+    assert_equal [ "transaction_import_error" ], syncer.send(:import_result_errors, failed).map { |error| error[:category] }
+
+    failed = run_generated_importer(banking: false) do |importer|
+      importer.stubs(:calculate_start_date).raises(StandardError, "activities unavailable")
+    end
+    assert_equal [ "transaction_import_error" ], syncer.send(:import_result_errors, failed).map { |error| error[:category] }
+  end
+
+  # ProviderItem::Syncer reads its status and error messages from <key>_items.syncer.*.
+  # Brex's are the reference set: the generated locale defines the same keys, plural
+  # forms and interpolations.
+  test "the generated locale has every syncer message the provider kit reads" do
+    # Each message's plural forms, or the variables it interpolates.
+    shape = ->(messages) do
+      messages.deep_stringify_keys.transform_values { |value| value.is_a?(Hash) ? value.keys.sort : value.scan(/%\{(\w+)\}/).flatten.sort }
+    end
+    reference = shape.call(I18n.t("brex_items.syncer", locale: :en))
+
+    [ true, false ].each do |banking|
+      locale = YAML.safe_load(render_provider_template("locale.en.yml.tt", banking: banking))
+      generated = locale.dig("en", "gocardless_items", "syncer")
+
+      assert generated, "banking: #{banking}: no gocardless_items.syncer"
+      assert_equal reference, shape.call(generated), "banking: #{banking}"
+    end
   end
 
   # A generated card must require the accounts it lists, so a render that
