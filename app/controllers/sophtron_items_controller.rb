@@ -1192,7 +1192,12 @@ class SophtronItemsController < ApplicationController
     end
 
     def sophtron_params
-      params.require(:sophtron_item).permit(:name, :user_id, :access_key, :base_url, :sync_start_date)
+      permitted = params.require(:sophtron_item).permit(:name, :user_id, :access_key, :base_url, :sync_start_date)
+      if @sophtron_item&.persisted?
+        permitted.delete(:user_id) if permitted[:user_id].blank?
+        permitted.delete(:access_key) if permitted[:access_key].blank?
+      end
+      permitted
     end
 
     def connection_context_params

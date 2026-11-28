@@ -29,6 +29,19 @@ class AutoMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr##{ActionView::RecordIdentifier.dom_id(outflow_entry.transaction.transfer)}", false
   end
 
+  test "index shows the year of a past-year match and how far apart its legs are" do
+    outflow_entry = create_transaction(date: 2.years.ago.to_date, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: outflow_entry.date + 3.days, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+
+    get auto_matches_url
+    assert_response :success
+
+    row = "tr##{ActionView::RecordIdentifier.dom_id(outflow_entry.transaction.transfer)}"
+    assert_select row, text: /#{Regexp.escape(I18n.l(inflow_entry.date, format: :short_with_year))}/
+    assert_select row, text: /#{Regexp.escape(I18n.t("auto_matches.table.days_apart", count: 3))}/
+  end
+
   test "index excludes matches where the outflow account is private to another family member" do
     # other_asset is owned by family_admin and not shared with family_member;
     # depository is shared with family_member (full_control).

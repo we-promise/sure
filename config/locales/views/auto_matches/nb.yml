@@ -23,6 +23,9 @@ nb:
       from: "Fra"
       to: "Til"
       date: "Dato"
+      days_apart:
+        one: "%{count} dag mellom"
+        other: "%{count} dager mellom"
       actions: "Handlinger"
       separator: "·"
     bulk_actions:

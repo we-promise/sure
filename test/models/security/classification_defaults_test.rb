@@ -201,8 +201,8 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
     development_before = security.development_status
 
     provider = mock
-    provider.expects(:fetch_security_price).returns(
-      Provider::Response.new(success?: true, data: OpenStruct.new(price: 100, date: Date.current, currency: "USD"), error: nil)
+    provider.expects(:fetch_security_prices).returns(
+      Provider::Response.new(success?: true, data: [ OpenStruct.new(price: 100, date: Date.current, currency: "USD") ], error: nil)
     )
     Security.any_instance.stubs(:price_data_provider).returns(provider)
 

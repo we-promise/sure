@@ -27,6 +27,15 @@ de:
           session_count: "Anzahl Sitzungen"
           never: "Nie"
           role: "Rolle"
+          family: "Familie/Gruppe"
+          keep_current_family: "Aktuelle Familie/Gruppe beibehalten"
+          create_new_family_option: "+ Neue Familie/Gruppe anlegen"
+          new_family_name: "Name der neuen Familie/Gruppe"
+          new_family_name_placeholder: "Name für die neue Familie/Gruppe eingeben"
+          new_family_moniker: "Art der neuen Familie/Gruppe"
+          set_password: "Neues Passwort setzen"
+          password_placeholder: "Leer lassen, um das aktuelle zu behalten"
+          actions: "Aktionen"
         role_descriptions_title: "Rollenbeschreibungen"
         removed_sso_identities:
           title: "Entfernte SSO-Identitäten"
@@ -51,6 +60,60 @@ de:
           pending_label: Eingeladen (offen)
         no_subscription: Kein Abo
         unnamed_family: Familie/Gruppe ohne Namen
+        family_monikers:
+          family: "Familie"
+          group: "Gruppe"
+        actions:
+          manage_user: "Benutzer verwalten"
+          update: "Benutzer aktualisieren"
+          delete_user: "Benutzer löschen"
+          self_edit_warning: "Wenn du deine eigene Rolle änderst, ändern sich auch deine Administratorrechte."
+          self_update_confirm: "Möchtest du wirklich die Rolle oder Familie/Gruppe deines eigenen Kontos ändern?"
+          last_super_admin_role_locked: "Die Rolle lässt sich nicht ändern, weil du der letzte Super-Admin im System bist."
+        delete_confirm: "Möchtest du diesen Benutzer wirklich löschen? Das lässt sich nicht rückgängig machen."
+        delete_confirm_last_user: "Möchtest du diesen Benutzer wirklich löschen? Er ist der letzte Benutzer seiner Familie/Gruppe, deshalb werden auch die ganze Familie/Gruppe und alle zugehörigen Daten gelöscht. Das lässt sich nicht rückgängig machen."
+        remove: "Benutzer löschen"
+        auth_types:
+          sso: "SSO"
+          local: "Lokal"
+          local_and_sso: "Lokal + SSO"
+          sso_provider_tooltip: "SSO-Provider: %{providers}"
+        unused_families:
+          title: "Ungenutzte Familien/Gruppen"
+          family_id: "Familien-ID: %{id}"
+          delete: "Ungenutzte Familie löschen"
+          delete_confirm: "Möchtest du diese ungenutzte Familie/Gruppe wirklich löschen? Das lässt sich nicht rückgängig machen."
+          empty: "Keine ungenutzten Familien/Gruppen gefunden."
       update:
         success: "Benutzerrolle wurde erfolgreich aktualisiert."
         failure: "Benutzerrolle konnte nicht aktualisiert werden."
+        success_role: "Benutzerrolle wurde erfolgreich aktualisiert."
+        success_password: "Passwort des Benutzers wurde erfolgreich aktualisiert."
+        success_role_and_password: "Rolle und Passwort des Benutzers wurden erfolgreich aktualisiert."
+        success_family: "Familien-/Gruppenzugehörigkeit des Benutzers wurde erfolgreich aktualisiert."
+        family_required: "Wähl eine bestehende Familie/Gruppe oder gib einen Namen für eine neue ein."
+        password_and_family_conflict: "Passwort und Familien-/Gruppenzugehörigkeit lassen sich nicht gleichzeitig ändern."
+        password_disabled: "Ein Passwort lässt sich nicht setzen, weil sich Benutzer nur per SSO anmelden können."
+        password_too_short: "Das Passwort muss mindestens 8 Zeichen lang sein."
+        password_missing_case: "Das Passwort muss Groß- und Kleinbuchstaben enthalten."
+        password_missing_number: "Das Passwort muss mindestens eine Ziffer enthalten."
+        password_missing_special: "Das Passwort muss mindestens ein Sonderzeichen enthalten."
+        last_super_admin_error: "Der letzte Super-Admin im System kann nicht herabgestuft werden."
+      destroy:
+        success: "Zugriff des Benutzers entzogen, endgültige Löschung ist eingeplant."
+        failure: "Benutzer konnte nicht entfernt werden."
+        cannot_remove_self: "Dein eigenes Konto kannst du hier nicht entfernen."
+        cannot_remove_last_super_admin: "Der letzte aktive Super-Admin kann nicht entfernt werden."
+        confirmation_mismatch: "Die E-Mail-Adresse stimmt nicht überein. Der Benutzer wurde nicht entfernt."
+      deletion:
+        title: "Benutzer endgültig entfernen"
+        warning: "Damit wird der Zugriff sofort entzogen und die endgültige Löschung des Benutzers und seiner Daten eingeplant. Das lässt sich nicht rückgängig machen."
+        instruction: "Gib %{email} ein, um zu bestätigen."
+        email_label: "E-Mail des Benutzers"
+        cancel: "Abbrechen"
+        submit: "Benutzer endgültig entfernen"
+    families:
+      destroy:
+        family_has_active_subscription: "Die Familie/Gruppe hat ein aktives Abo und kann erst gelöscht werden, wenn das Abo gekündigt ist."
+        family_has_users: "Die Familie/Gruppe hat noch Benutzer und kann nicht gelöscht werden."
+        success: "Familie/Gruppe wurde erfolgreich gelöscht."
