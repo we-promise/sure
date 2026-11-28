@@ -38,9 +38,7 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     assert_equal open_groups_before, open_group_count
 
     visit account_path(checking)
-    within_testid("account-sidebar-tabs") do
-      assert_equal [ plaid.id, checking.id ], visible_depository_ids.first(2)
-    end
+    assert_depository_order [ plaid.id, checking.id ]
   end
 
   test "leaving sort mode saves a row still held with the keyboard" do
@@ -68,21 +66,42 @@ class AccountManualOrderTest < ApplicationSystemTestCase
 
     visit account_path(checking)
 
-    within_testid("account-sidebar-tabs") do
-      find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
+    wait_for_account_visit(account_path(plaid)) do
+      within_testid("account-sidebar-tabs") do
+        find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
 
-      handle = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] button")
-      handle.send_keys(:enter)
-      handle.send_keys(:up)
+        handle = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] button")
+        handle.send_keys(:enter)
+        handle.send_keys(:up)
 
-      find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] a[href='#{account_path(plaid)}']").click
+        wait_for_sidebar_sparklines
+        observe_account_prefetch(account_path(plaid))
+        link = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] a[href='#{account_path(plaid)}']")
+        link.hover
+        # Observe the absence of a request beyond Turbo's 100 ms hover delay.
+        # A negative Capybara matcher would return immediately, before that timer.
+        page.driver.browser.execute_async_script("setTimeout(arguments[0], 300)")
+        assert_empty evaluate_script("window.accountPrefetches"), "sortable account links must not prefetch the unsaved order"
+        link.click
+      end
     end
 
     assert_current_path account_path(plaid)
     assert_eventually { @user.reload.manual_account_order["depository"]&.first(2) == [ plaid.id, checking.id ] }
+    assert_depository_order [ plaid.id, checking.id ]
+  end
+
+  test "account links still prefetch when manual ordering is disabled" do
+    @user.update!(default_account_order: "name_asc")
+    visit account_path(accounts(:depository))
+    destination = account_path(accounts(:connected))
     within_testid("account-sidebar-tabs") do
-      assert_equal [ plaid.id, checking.id ], visible_depository_ids.first(2)
+      wait_for_sidebar_sparklines
+      observe_account_prefetch(destination)
+      find("a[href='#{destination}']", visible: true).hover
     end
+
+    assert_eventually { evaluate_script("window.accountPrefetches.length").positive? }
   end
 
   test "leaving sort mode keeps focus in the sidebar when no sort toggle is visible" do
@@ -229,6 +248,53 @@ class AccountManualOrderTest < ApplicationSystemTestCase
   end
 
   private
+    # A lazy frame GET cancels Turbo's pending hover-prefetch timer. Scroll
+    # rendered frames into view and await completion before measuring hover;
+    # hidden tab/mobile frames must remain lazy.
+    def wait_for_sidebar_sparklines
+      all("turbo-frame[loading='lazy'][src]:not([complete])", visible: true).each do |frame|
+        frame.scroll_to(:center)
+        frame.assert_matches_selector("turbo-frame[complete]")
+      end
+    end
+
+    def observe_account_prefetch(path)
+      page.execute_script(<<~JS, path)
+        window.accountPrefetches = [];
+        const destination = new URL(arguments[0], location.href).href;
+        document.addEventListener("turbo:before-fetch-request", (event) => {
+          const headers = new Headers(event.detail.fetchOptions.headers);
+          if (event.detail.url.href === destination && headers.get("X-Sec-Purpose") === "prefetch") {
+            window.accountPrefetches.push(event.detail.url.href);
+          }
+        });
+      JS
+    end
+
+    # The URL and saved order can update before the destination replaces the
+    # reordered source page. turbo:load follows the visit's final render.
+    def wait_for_account_visit(path)
+      page.execute_script(<<~JS, path)
+        delete document.documentElement.dataset.accountVisitLoaded;
+        const destination = new URL(arguments[0], location.href).href;
+        const onLoad = (event) => {
+          if (event.detail.url !== destination) return;
+          document.documentElement.dataset.accountVisitLoaded = "true";
+          document.removeEventListener("turbo:load", onLoad);
+        };
+        document.addEventListener("turbo:load", onLoad);
+      JS
+      yield
+      assert_selector "html[data-account-visit-loaded='true']", visible: :all
+    end
+
+    def assert_depository_order(ids)
+      selector = "[data-testid='account-sidebar-tabs'] [data-sortable-list-url-value='#{reorder_accounts_path(group: "depository")}']"
+      assert_selector selector, visible: true do |list|
+        list.all("[data-sortable-list-target='item']").map { |item| item["data-sortable-list-id"] }.first(ids.size) == ids
+      end
+    end
+
     def open_group_count
       evaluate_script("document.querySelectorAll(\"[data-testid='account-sidebar-tabs'] details[open]\").length")
     end
