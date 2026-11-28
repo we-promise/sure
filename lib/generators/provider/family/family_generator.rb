@@ -371,13 +371,8 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       return
     end
 
-    # Add to empty check - find the existing pattern and append our check
-    content = content.gsub(
-      /@coinstats_items\.empty\? %>/,
-      "@coinstats_items.empty? && #{items_var}.empty? %>"
-    )
-
-    # Add provider section before manual_accounts
+    # The empty state (accounts_index_empty?) already counts the provider through its
+    # adapter's declaration, so only its section is added, before manual_accounts.
     section = <<~ERB
 
     <% if #{items_var}&.any? %>
