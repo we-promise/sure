@@ -5,6 +5,7 @@ pt-PT:
       models:
         rule:
           min_actions: "tem de ter pelo menos uma ação"
+          conflicting_note_actions: "Uma regra não pode definir e acrescentar uma linha às notas da transação em simultâneo"
           duplicate_actions: "Uma regra não pode ter ações duplicadas %{types}"
           nested_conditions: "As condições compostas não podem estar aninhadas"
   rule:

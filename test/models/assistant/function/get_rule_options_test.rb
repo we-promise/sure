@@ -34,5 +34,9 @@ class Assistant::Function::GetRuleOptionsTest < ActiveSupport::TestCase
 
     category = result[:actions].find { |a| a[:action_type] == "set_transaction_category" }
     assert_match "get_categories", category[:values]
+
+    append = result[:actions].find { |a| a[:action_type] == "append_transaction_notes" }
+    assert_equal "text", append[:value_type]
+    assert_match "one or more lines", append[:values]
   end
 end
