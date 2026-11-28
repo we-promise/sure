@@ -55,8 +55,6 @@ RSpec.describe "Api::V1::FamilyExports", type: :request do
         description: "Family export creation does not accept request parameters."
       }
 
-      let(:body) { {} }
-
       response "202", "family export queued" do
         schema "$ref" => "#/components/schemas/FamilyExportResponse"
         run_test!

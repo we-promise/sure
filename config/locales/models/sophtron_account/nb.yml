@@ -1,0 +1,7 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        sophtron_account:
+          no_balance: Sophtron-kontoen må ha enten bokført eller disponibel saldo

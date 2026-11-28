@@ -35,10 +35,12 @@ rescue ActiveRecord::PendingMigrationError => e
   abort e.to_s.strip
 end
 RSpec.configure do |config|
-  # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
+  # Same fixtures as the Minitest suite; some docs specs use them.
   config.fixture_paths = [
-    Rails.root.join('spec/fixtures')
+    Rails.root.join('test/fixtures')
   ]
+  config.file_fixture_path = Rails.root.join('test/fixtures/files')
+  config.global_fixtures = :all
 
   # If you're not using ActiveRecord, or you'd prefer not to run each of your
   # examples within a transaction, remove the following line or assign false

@@ -13,6 +13,9 @@ nl:
       opening_balance: "Beginsaldo"
       original_principal: "Oorspronkelijke hoofdsom"
       original_purchase_price: "Oorspronkelijke aankoopprijs"
+      synced_balance: "Gesynchroniseerd saldo"
+      synced_principal: "Gesynchroniseerde hoofdsom"
+      synced_value: "Gesynchroniseerde waarde"
     confirmation_contents:
       this_will: "Hiermee gaat u de accountwaarde %{action_verb} per"
       to_colon: "naar:"
