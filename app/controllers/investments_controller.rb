@@ -5,9 +5,9 @@ class InvestmentsController < ApplicationController
 
   def update
     super
-    # Only if the account itself saved (we redirected). A failed update renders
-    # :edit and shouldn't save the portfolio's settings either.
-    update_sharesight_settings if response.redirect?
+    # Only if the account itself saved. A failed update renders :edit and
+    # shouldn't save the portfolio's settings either.
+    update_sharesight_settings if account_updated?
   end
 
   private

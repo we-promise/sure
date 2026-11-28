@@ -54,6 +54,13 @@ class ReportsTest < ApplicationSystemTestCase
     assert_equal %w[ArrowLeft], clicked_hotkeys
   end
 
+  test "the arrow keys scroll a focused trends or net worth table instead of changing the period" do
+    %w[trends_insights net_worth].each do |key|
+      find("section[data-section-key='#{key}'] [role='region']", match: :first).send_keys(:arrow_left)
+    end
+    assert_empty clicked_hotkeys
+  end
+
   test "a held arrow key steps one period" do
     page.execute_script(<<~JS)
       for (const repeat of [false, true, true]) {

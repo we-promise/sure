@@ -3,6 +3,7 @@ pt-BR:
   properties:
     edit:
       edit: Editar %{account}
+      title: Inserir imóvel manualmente
     form:
       address_line1: Endereço
       address_line1_placeholder: Rua Principal, 123
@@ -18,11 +19,83 @@ pt-BR:
       postal_code_placeholder: '01234-567'
       region: Estado
       region_placeholder: SP
-      subtype_prompt: Selecionar tipo de propriedade
+      subtype_prompt: Selecionar tipo de imóvel
       year_built: Ano de construção
       year_built_placeholder: '2000'
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+      chimnie: Chimnie
+      terrascoutx: TerraScoutX
     new:
-      title: Inserir detalhes da propriedade
+      title: Inserir imóvel manualmente
+      next: Próximo
+      avm_option: Adicionar via %{provider}
+      avm_title: Adicionar imóvel via %{provider}
+      avm_description: Informe um nome e o endereço do imóvel. O %{provider} buscará os detalhes do imóvel e o valor de mercado estimado para você.
+      avm_us_only: O %{provider} só aceita imóveis localizados nos Estados Unidos.
+      avm_uk_only: O %{provider} só aceita imóveis residenciais localizados no Reino Unido.
+      avm_uprn_label: UPRN
+      avm_uprn_placeholder: "100023336956"
+      avm_uprn_help: O Unique Property Reference Number (UPRN, com até 12 dígitos) identifica cada endereço do Reino Unido. Encontre-o no site findmyaddress.co.uk, da GeoPlace, ou peça à autoridade local (council). O %{provider} usa esse número para avaliar o imóvel gratuitamente.
+      avm_county_label: Condado (opcional)
+      avm_town_label: Cidade ou localidade
+      avm_postcode_label: Código postal
+      avm_submit: Buscar imóvel
+      avm_preview_title: Confirmar detalhes do imóvel
+      avm_preview_description: Veja o que o %{provider} encontrou. Revise os detalhes antes de adicionar o imóvel — nada foi criado ainda.
+      avm_descriptions:
+        terrascoutx: Informe um nome e o endereço do imóvel. O %{provider} buscará os detalhes do imóvel e o valor venal atribuído pelo condado no cadastro fiscal mais recente. Esse valor não é uma estimativa de mercado atual.
+      avm_roll_value_notes:
+        terrascoutx: O %{provider} informa o valor venal atribuído pelo condado no cadastro fiscal mais recente. Não é uma estimativa de mercado atual, então pode ser diferente do valor pelo qual o imóvel seria vendido.
+      avm_preview_no_record: O %{provider} não encontrou um registro de imóvel neste endereço, então o valor exibido é uma estimativa baseada na região. Confira o endereço antes de continuar.
+      avm_preview_back: Voltar
+      avm_preview_uprn: UPRN
+      avm_preview_range: Faixa da estimativa
+      avm_preview_confidence: Confiança
+      avm_confidence:
+        high: Alta
+        medium: Média
+        low: Baixa
+      avm_attribution_chimnie: Dados de avaliação da Chimnie. Contém dados do OS © Crown copyright and database right, dados do Royal Mail © Royal Mail copyright and database right e dados do HM Land Registry © Crown copyright and database right, licenciados sob a Open Government Licence v3.0.
+      avm_preview_confirm: Adicionar imóvel
+    address:
+      title: Inserir imóvel manualmente
+      address_line1_label: Endereço
+      address_line1_placeholder: Rua Principal, 123
+      city_label: Cidade
+      city_placeholder: São Paulo
+      state_region_label: Estado/Região
+      state_region_placeholder: SP
+      postal_code_label: CEP
+      postal_code_placeholder: "01234-567"
+      country_label: País
+      country_placeholder: Brasil
+      save: Salvar
+    balances:
+      title: Inserir imóvel manualmente
+      market_value_label: Valor de mercado estimado
+      market_value_tooltip: O valor de mercado estimado do seu imóvel. Esse número pode ser encontrado em portais imobiliários e nunca é exato.
+      purchase_date_label: Data de compra
+      save: Salvar
+      next: Próximo
+    overview_fields:
+      notes_label: Observações
+      notes_placeholder: Número da matrícula ou do cadastro, referência da escritura, cartório etc.
+      name_label: Nome
+      name_placeholder: Casa de praia
+      subtype_prompt: Selecione o tipo
+      property_type_label: Tipo de imóvel
+      year_built_label: Ano de construção (opcional)
+      year_built_placeholder: "1990"
+      area_label: Área (opcional)
+      area_placeholder: "120"
+      square_feet: Pés quadrados
+      square_meters: Metros quadrados
+      area_unit_label: Unidade de área
+      cost_tag_label: Tag de custos (opcional)
+      cost_tag_prompt: Nenhuma
+      cost_tag_hint: As transações com esta tag, como custas de cartório e impostos, entram no custo de aquisição do imóvel.
     overview:
       living_area: Área Útil
       market_value: Valor de Mercado
@@ -30,3 +103,59 @@ pt-BR:
       trend: Tendência
       unknown: Desconhecido
       year_built: Ano de Construção
+    tabs:
+      overview:
+        living_area: Área Útil
+        market_value: Valor de Mercado
+        purchase_price: Preço de Compra
+        trend: Tendência
+        trend_in_currency: Tendência em %{currency}
+        rate_unavailable: Taxa de câmbio indisponível
+        purchase_costs: Custos da compra
+        purchase_costs_in_currency: Custos da compra em %{currency}
+        cost_transactions:
+          one: 1 transação com a tag %{tag}
+          other: "%{count} transações com a tag %{tag}"
+        cost_basis: Custo de aquisição
+        cost_basis_in_currency: Custo de aquisição em %{currency}
+        gain_after_costs: Ganho após os custos
+        gain_after_costs_in_currency: Ganho após os custos em %{currency}
+        unknown: Desconhecido
+        year_built: Ano de Construção
+        edit_account_details: Editar detalhes da conta
+        refresh_valuation: Atualizar avaliação
+        valuation_source: Avaliado por %{provider}, última atualização em %{date}
+        link_valuation: Atualizar o valor automaticamente com %{provider}
+        link_valuation_description: O valor deste imóvel só é atualizado manualmente.
+    update_balances:
+      invalid_currency: Escolha uma moeda da lista.
+      invalid_purchase_date: Informe uma data de compra que não esteja no futuro nem seja de mais de 30 anos atrás.
+    refresh_valuation:
+      queued: A atualização da avaliação foi iniciada. O novo valor aparecerá em breve.
+      not_linked: Este imóvel não está vinculado a um provedor de avaliação.
+      not_configured: O %{provider} não está configurado. Adicione a chave de API dele em Configurações → Auto-hospedagem para atualizar esta avaliação.
+    link_valuation:
+      linked: Imóvel vinculado ao %{provider} e valor atualizado.
+      link_failed: O %{provider} não conseguiu avaliar este imóvel, então ele não foi vinculado. Confira se o endereço está correto e tente novamente.
+      not_linkable: Este imóvel não pode ser vinculado a esse provedor. Confira se o endereço está completo e em um país compatível, e se a moeda da conta corresponde à do provedor.
+    subtypes:
+      apartment:
+        short: Apartamento
+        long: Apartamento
+      plot:
+        short: Terreno
+        long: Terreno / Lote
+      commercial:
+        short: Comercial
+        long: Imóvel comercial
+      rented:
+        short: Alugado
+        long: Imóvel alugado
+      agri_land:
+        short: Terra agrícola
+        long: Terra agrícola
+    form_tabs:
+      address: Endereço
+      aria_label: Detalhes do imóvel
+      overview: Visão geral
+      value: Valor

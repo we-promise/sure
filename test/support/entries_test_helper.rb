@@ -34,6 +34,12 @@ module EntriesTestHelper
     Entry.create! entry_defaults.merge(entry_attributes)
   end
 
+  # Links a split part to a loan as the outflow leg of a loan payment.
+  def link_split_part_to_loan(part, loan_account: accounts(:loan), status: "confirmed")
+    loan_entry = create_transaction(account: loan_account, amount: -part.amount, currency: part.currency, name: "Payment")
+    Transfer.create!(inflow_transaction: loan_entry.transaction, outflow_transaction: part.transaction, status: status, amount: part.amount.abs)
+  end
+
   def create_trade(security, account:, qty:, date:, price: nil, currency: "USD", fee: 0)
     trade_price = price || Security::Price.find_by!(security: security, date: date).price
 
