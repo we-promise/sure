@@ -57,7 +57,9 @@ Treat `tools/list` as the source of truth. Main groups:
    and definition updates are saved inactive until applied; renaming an
    active rule alone leaves it active. Hand-set values are kept unless
    `override_locked: true`.
-4. Confirm with the user before deletes, budget changes, imports or
-   applying rules. This is their financial data.
+4. Confirm with the user before every write — including
+   `update_transaction`, `set_opening_balance`, and after any dry
+   run — not only deletes, budget changes, imports or applying
+   rules. This is their financial data.
 5. Notifications (no `id`) get `202` and a `tools/call` sent that way does
    not run.

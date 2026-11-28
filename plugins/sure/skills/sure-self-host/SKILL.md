@@ -66,6 +66,9 @@ TLS-terminating proxy prefer `ALLOWED_ORIGINS`.
 ## Applying changes
 
 Run `docker compose up -d` after editing `compose.yml` or `.env`.
+If you run the AI stack from `compose.ai.yml`, use
+`docker compose -f compose.ai.yml up -d` instead — plain
+`docker compose up -d` reads `compose.yml` and can drop Pipelock.
 `docker compose restart` keeps the old environment.
 
 ## AI features
@@ -78,11 +81,28 @@ scanning. Clients that need Pipelock scanning must connect to port 8889.
 Optional Ollama + Open WebUI are also included:
 
 ```bash
+# Refuse if these already exist (customize them; do not overwrite)
+[ ! -e compose.ai.yml ] && [ ! -e pipelock.example.yaml ] || { echo "AI compose or Pipelock policy already present; skip download or use a new path."; exit 1; }
 curl --fail -sSL -o compose.ai.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.ai.yml
 curl --fail -sSL -o pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
-docker compose -f compose.ai.yml up -d
-docker compose -f compose.ai.yml --profile local-ai up -d
 ```
 
-With Pipelock and `ALLOWED_HOSTS` set, add `web` to `ALLOWED_HOSTS` or
-MCP calls forwarded with `Host: web:3000` are refused.
+Before `up -d`, copy any `ALLOWED_HOSTS`, `APP_DOMAIN` and
+`ALLOWED_ORIGINS` entries from `compose.yml` into the `x-rails-env`
+anchor of `compose.ai.yml` (`.env` alone is not enough). Include `web`
+in `ALLOWED_HOSTS` or MCP calls forwarded with `Host: web:3000` are
+refused. The example pins `OPENAI_URI_BASE`, `OPENAI_MODEL` and
+`OPENAI_ACCESS_TOKEN` to Ollama; for another OpenAI-compatible
+provider, replace those values in `compose.ai.yml` first.
+
+```bash
+docker compose -f compose.ai.yml up -d
+```
+
+The `local-ai` profile publishes Open WebUI on port 8080 with
+`WEBUI_AUTH=False`. Restrict access or enable authentication before
+starting it on a network-reachable host:
+
+```bash
+docker compose -f compose.ai.yml --profile local-ai up -d
+```

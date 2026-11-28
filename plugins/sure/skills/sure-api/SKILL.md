@@ -35,8 +35,9 @@ curl -s "$SURE/api/v1/transactions/<id>" -H "X-Api-Key: $KEY"
 ```
 
 Filters: `page`, `per_page` (max 100), `account_id`/`account_ids[]`,
-`category_id(s)`, `merchant_id(s)`, `tag_ids[]`, `start_date`, `end_date`,
-`min_amount`, `max_amount`, `type` (`income`/`expense`), `search`.
+`category_id`/`category_ids[]`, `merchant_id`/`merchant_ids[]`,
+`tag_ids[]`, `start_date`, `end_date`, `min_amount`, `max_amount`,
+`type` (`income`/`expense`), `search`.
 
 `POST`, `PATCH` and `DELETE /api/v1/transactions[/{id}]` need a write
 scope. Amounts: `amount_decimal` is exact (positive = outflow, negative =
