@@ -5,30 +5,46 @@ pt-BR:
     settings_nav:
       accounts_label: Contas
       advanced_section_title: Avançado
-      ai_prompts_label: Sugestões de IA
+      ai_prompts_label: Prompts de IA
       auto_matches_label: Correspondências automáticas
-      api_key_label: Chave da API
+      classifier_label: Classificador
+      background_jobs_label: Tarefas em segundo plano
+      api_key_label: Chaves de API
       payment_label: Pagamento
       categories_label: Categorias
       feedback_label: Feedback
       general_section_title: Geral
       imports_label: Importações
       exports_label: Exportações
+      llm_usage_label: Uso de LLM
       logout: Sair
-      merchants_label: Comerciantes
+      merchants_label: Estabelecimentos
+      providers_label: Provedores
       guides_label: Guias
       other_section_title: Mais
       preferences_label: Preferências
-      profile_label: Conta
-      recurring_transactions_label: Recorrente
+      profile_label: Dados do perfil
+      recurring_transactions_label: Recorrentes
       rules_label: Regras
+      mcp_label: MCP
       security_label: Segurança
-      self_hosting_label: Auto hospedagem
+      self_hosting_label: Auto-hospedagem
+      sso_providers_label: Provedores de SSO
+      statement_vault_label: Cofre de extratos
+      system_health_label: Saúde do sistema
       tags_label: Tags
       transactions_section_title: Transações
+      users_label: Usuários
       whats_new_label: Novidades
-      api_keys_label: Chave da API
+      api_keys_label: Chaves de API
+      appearance_label: Aparência
       bank_sync_label: Sincronização bancária
+      debug_label: Depuração
+    settings_search:
+      aria_label: Buscar configurações
+      no_results: Nenhuma configuração corresponde à sua busca.
+      placeholder: Buscar configurações
+      results_label: Configurações correspondentes
     settings_nav_link_large:
       next: Próximo
       previous: Voltar
