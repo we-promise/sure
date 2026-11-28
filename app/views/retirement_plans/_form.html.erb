@@ -30,5 +30,9 @@
   <%= f.number_field :inflation_rate_percent, label: t(".inflation_rate"), step: "0.01", min: "-99.99", max: "100", required: true %>
   <p class="text-xs text-secondary -mt-2"><%= t(".returns_hint") %></p>
 
+  <%= f.number_field :return_volatility_percent, label: t(".return_volatility"), step: "0.1", min: "0", max: "100", required: true %>
+  <p class="text-xs text-secondary -mt-2"><%= t(".return_volatility_hint") %></p>
+  <%= f.number_field :success_target_percent, label: t(".success_target"), step: "1", min: "1", max: "100", required: true %>
+
   <%= f.submit t(".save") %>
 <% end %>

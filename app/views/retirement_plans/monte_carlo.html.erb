@@ -1,0 +1,3 @@
+<%= turbo_frame_tag "retirement-plan-monte-carlo-frame" do %>
+  <%= render RetirementPlans::MonteCarloComponent.new(plan: @retirement_plan, result: @monte_carlo) %>
+<% end %>

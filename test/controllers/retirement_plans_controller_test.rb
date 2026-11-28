@@ -48,13 +48,14 @@ class RetirementPlansControllerTest < ActionDispatch::IntegrationTest
     assert_difference "RetirementPlan.count", 1 do
       patch retirement_plan_url, params: { retirement_plan: {
         safe_withdrawal_rate_percent: "3.5", expected_annual_return_percent: "6",
-        savings_rate_percent: "", retirement_date: "2045-06-30"
+        savings_rate_percent: "", retirement_date: "2045-06-30",
+        return_volatility_percent: "15", success_target_percent: "85"
       } }
     end
 
     plan = RetirementPlan.find_by!(user: @user)
-    assert_equal [ BigDecimal("0.035"), BigDecimal("0.06"), nil, Date.new(2045, 6, 30) ],
-                 plan.values_at(:safe_withdrawal_rate, :expected_annual_return, :savings_rate, :retirement_date)
+    assert_equal [ BigDecimal("0.035"), BigDecimal("0.06"), nil, Date.new(2045, 6, 30), BigDecimal("0.15"), BigDecimal("0.85") ],
+                 plan.values_at(:safe_withdrawal_rate, :expected_annual_return, :savings_rate, :retirement_date, :return_volatility, :success_target)
     assert_equal BigDecimal("0.03"), others.reload.safe_withdrawal_rate
   end
 
