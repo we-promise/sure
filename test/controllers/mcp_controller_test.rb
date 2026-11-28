@@ -53,43 +53,13 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "authenticates a token issued to a dynamically registered MCP client" do
-    post "/register",
-      params: {
-        client_name: "Claude",
-        redirect_uris: [ "https://claude.ai/callback" ],
-        grant_types: [ "authorization_code" ],
-        response_types: [ "code" ],
-        token_endpoint_auth_method: "none"
-      }.to_json,
-      headers: { "Content-Type" => "application/json" }
-
-    assert_response :created
-    app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
+    app = register_mcp_client
     assert_equal "read_write", app.scopes.to_s
 
-    sign_in(@user)
     verifier = SecureRandom.urlsafe_base64(64)
-    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+    code = authorize_mcp_client(app, verifier)
 
-    post "/oauth/authorize", params: {
-      client_id: app.uid,
-      redirect_uri: app.redirect_uri,
-      response_type: "code",
-      code_challenge: challenge,
-      code_challenge_method: "S256"
-    }
-
-    assert_response :redirect
-    code = Rack::Utils.parse_query(URI.parse(response.location).query)["code"]
-    assert code.present?, "Authorization response should contain a code"
-
-    post "/oauth/token", params: {
-      grant_type: "authorization_code",
-      client_id: app.uid,
-      redirect_uri: app.redirect_uri,
-      code: code,
-      code_verifier: verifier
-    }
+    post_authorization_code(app, code, code_verifier: verifier)
 
     assert_response :success
     token_response = JSON.parse(response.body)
@@ -100,6 +70,30 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     assert_mcp_initialize_response(JSON.parse(response.body)["result"])
+  end
+
+  test "refuses a dynamically registered MCP client's code exchanged with the wrong PKCE verifier" do
+    app = register_mcp_client
+    code = authorize_mcp_client(app, SecureRandom.urlsafe_base64(64))
+
+    assert_no_difference -> { Doorkeeper::AccessToken.count } do
+      post_authorization_code(app, code, code_verifier: SecureRandom.urlsafe_base64(64))
+    end
+
+    assert_response :bad_request
+    assert_equal "invalid_grant", JSON.parse(response.body)["error"]
+  end
+
+  test "refuses a dynamically registered MCP client's code exchanged without a PKCE verifier" do
+    app = register_mcp_client
+    code = authorize_mcp_client(app, SecureRandom.urlsafe_base64(64))
+
+    assert_no_difference -> { Doorkeeper::AccessToken.count } do
+      post_authorization_code(app, code)
+    end
+
+    assert_response :bad_request
+    assert_equal "invalid_request", JSON.parse(response.body)["error"]
   end
 
   test "rejects token with read-only scope" do
@@ -969,6 +963,47 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       yield
     ensure
       Rails.cache = original_cache
+    end
+
+    def register_mcp_client
+      post "/register",
+        params: {
+          client_name: "Claude",
+          redirect_uris: [ "https://claude.ai/callback" ],
+          grant_types: [ "authorization_code" ],
+          response_types: [ "code" ],
+          token_endpoint_auth_method: "none"
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+
+      assert_response :created
+      Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
+    end
+
+    def authorize_mcp_client(app, verifier)
+      sign_in(@user)
+      post "/oauth/authorize", params: {
+        client_id: app.uid,
+        redirect_uri: app.redirect_uri,
+        response_type: "code",
+        code_challenge: Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false),
+        code_challenge_method: "S256"
+      }
+
+      assert_response :redirect
+      code = Rack::Utils.parse_query(URI.parse(response.location).query)["code"]
+      assert code.present?, "Authorization response should contain a code"
+      code
+    end
+
+    def post_authorization_code(app, code, code_verifier: nil)
+      post "/oauth/token", params: {
+        grant_type: "authorization_code",
+        client_id: app.uid,
+        redirect_uri: app.redirect_uri,
+        code: code,
+        code_verifier: code_verifier
+      }.compact
     end
 
     def mcp_headers(token)
