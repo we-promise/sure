@@ -130,6 +130,24 @@ class TransactionsTradeConversionTest < ActionDispatch::IntegrationTest
     assert @entry.reload.excluded?
   end
 
+  test "a vest's income or tax cannot open or submit the conversion" do
+    form = Trade::VestForm.new(account: accounts(:investment), date: Date.current, manual_ticker: "AAPL", vested_qty: 10, units_withheld: 3, price: 10)
+    assert form.save, form.errors.full_messages.to_sentence
+    tax = Trade::VestForm.parts_of(form.entry).second.first
+
+    get convert_to_trade_transaction_url(tax.transaction), headers: { "Turbo-Frame" => "modal" }
+    assert_redirected_to transactions_path
+
+    assert_no_difference "Trade.count" do
+      post create_trade_from_transaction_transaction_url(tax.transaction), params: {
+        security_id: securities(:aapl).id, qty: 3, price: 10, investment_activity_label: "Buy"
+      }
+    end
+    assert_redirected_to transactions_path
+    assert_equal I18n.t("transactions.convert_to_trade.errors.vest_part"), flash[:alert]
+    assert_not tax.reload.excluded?
+  end
+
   test "invalid trade quantities leave the original transaction unchanged" do
     assert_no_difference "Trade.count" do
       post create_trade_from_transaction_transaction_url(@entry.transaction), params: {

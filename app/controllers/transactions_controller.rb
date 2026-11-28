@@ -352,6 +352,13 @@ class TransactionsController < ApplicationController
       return
     end
 
+    # A vest's income or tax changes only with the vest, on its own screen.
+    if @entry.vest_entry_id?
+      flash[:alert] = t("transactions.convert_to_trade.errors.vest_part")
+      redirect_back_or_to transactions_path
+      return
+    end
+
     render :convert_to_trade
   end
 
@@ -365,6 +372,13 @@ class TransactionsController < ApplicationController
     # Pre-transaction validations
     unless @entry.account.supports_trades?
       flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    # A vest's income or tax changes only with the vest, on its own screen.
+    if @entry.vest_entry_id?
+      flash[:alert] = t("transactions.convert_to_trade.errors.vest_part")
       redirect_back_or_to transactions_path
       return
     end

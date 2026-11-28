@@ -369,6 +369,7 @@ en:
       errors:
         not_investment_account: Only transactions in investment accounts can be converted to trades
         already_converted: This transaction has already been converted or excluded
+        vest_part: A vest's income or tax can't be converted to a trade. Change it on the vest's screen.
         enter_ticker: Please enter a ticker symbol
         security_not_found: Selected security no longer exists. Please select another.
         select_security: Please select or enter a security
