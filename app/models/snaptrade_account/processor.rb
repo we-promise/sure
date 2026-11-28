@@ -13,9 +13,10 @@ class SnaptradeAccount::Processor
 
     Rails.logger.info "SnaptradeAccount::Processor - Processing account #{snaptrade_account.id} -> Sure account #{account.id}"
 
-    # Update account balance FIRST (before processing holdings/activities)
-    # This creates the current_anchor valuation needed for reverse sync
-    update_account_balance(account)
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
+    anchor_balance = update_account_balance(account)
 
     # Process holdings
     holdings_count = snaptrade_account.raw_holdings_payload&.size || 0
@@ -29,11 +30,27 @@ class SnaptradeAccount::Processor
     activities_count = snaptrade_account.raw_activities_payload&.size || 0
     Rails.logger.info "SnaptradeAccount::Processor - Activities payload has #{activities_count} items"
 
+    activities_ok = true
     if snaptrade_account.raw_activities_payload.present?
       Rails.logger.info "SnaptradeAccount::Processor - Processing activities..."
-      SnaptradeAccount::ActivitiesProcessor.new(snaptrade_account).process
+      activities = SnaptradeAccount::ActivitiesProcessor.new(snaptrade_account).process
+      activities_ok = activities[:failed].zero?
     else
       Rails.logger.warn "SnaptradeAccount::Processor - No activities payload to process"
+    end
+
+    if anchor_balance
+      # Missing activities would make the ledger misjudge the old readings'
+      # signs, whether the fetch failed (keeping the last payload) or some
+      # failed to import; the repair waits for a sync that brings all of them in.
+      if activities_ok && !snaptrade_account.activities_fetch_failed? && !snaptrade_account.activities_fetch_pending?
+        SnaptradeAccount::LiabilitySignRepair.new(snaptrade_account, account).run(anchor_balance, date)
+      end
+      account.set_current_balance(
+        anchor_balance,
+        date: date,
+        reuse_explained_anchor: activities_ok
+      )
     end
 
     # Trigger immediate UI refresh so entries appear in the activity feed
@@ -52,6 +69,13 @@ class SnaptradeAccount::Processor
       total_balance = calculate_total_balance
       cash_balance = calculate_cash_balance
 
+      # SnapTrade reports a card's debt as a negative balance; Sure stores what's
+      # owed on a liability as a positive one.
+      if account.liability?
+        total_balance = -total_balance
+        cash_balance = -cash_balance
+      end
+
       Rails.logger.debug "SnaptradeAccount::Processor - Balance update: total=#{total_balance}, cash=#{cash_balance}"
 
       # Update the cached fields on the account
@@ -62,9 +86,7 @@ class SnaptradeAccount::Processor
       )
       account.save!
 
-      # Create or update the current balance anchor valuation for linked accounts
-      # This is critical for reverse sync to work correctly
-      account.set_current_balance(total_balance)
+      total_balance
     end
 
     def calculate_total_balance

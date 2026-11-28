@@ -1,16 +1,8 @@
 class InvestmentFlowStatement
   include Monetizable
 
-  CONTRIBUTIONS_TOTAL_SQL = Arel.sql(
-    "COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Contribution' " \
-    "THEN entries.amount ELSE 0 END)), 0)"
-  )
-  WITHDRAWALS_TOTAL_SQL = Arel.sql(
-    "COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Withdrawal' " \
-    "THEN entries.amount ELSE 0 END)), 0)"
-  )
   INVESTMENT_ACCOUNT_TYPES = %w[Investment Crypto].freeze
-  private_constant :CONTRIBUTIONS_TOTAL_SQL, :WITHDRAWALS_TOTAL_SQL, :INVESTMENT_ACCOUNT_TYPES
+  private_constant :INVESTMENT_ACCOUNT_TYPES
 
   attr_reader :family, :user
 
@@ -21,10 +13,14 @@ class InvestmentFlowStatement
 
   # Get contribution/withdrawal totals for a period
   def period_totals(period: Period.current_month)
-    base = family.transactions
+    # From Transaction rather than family.transactions: `visible` joins the
+    # entry and its account itself, and the association's own copies of those
+    # joins left the date filter on one copy only, so Postgres matched every
+    # candidate transaction against every transaction entry of the family.
+    base = Transaction
       .visible
       .excluding_pending
-      .where(entries: { date: period.date_range })
+      .where(entries: { account_id: family.accounts.select(:id), date: period.date_range })
       .where(investment_activity_label: %w[Contribution Withdrawal])
 
     scope = base.where(kind: %w[standard investment_contribution])
@@ -35,9 +31,22 @@ class InvestmentFlowStatement
       scope = scope.where(entries: { account_id: account_ids })
     end
 
+    # Convert each entry into the family currency on its own date; entries whose
+    # currency has no stored rate evaluate to NULL and are skipped by SUM rather
+    # than counted at parity (see ExchangeRate.rate_sql).
+    rate = ExchangeRate.rate_sql(from: "entries.currency", to: ":currency", on: "entries.date")
+    contributions_sql = Transaction.sanitize_sql_array([
+      "COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Contribution' THEN entries.amount * (#{rate}) ELSE 0 END)), 0)",
+      { currency: family.currency }
+    ])
+    withdrawals_sql = Transaction.sanitize_sql_array([
+      "COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Withdrawal' THEN entries.amount * (#{rate}) ELSE 0 END)), 0)",
+      { currency: family.currency }
+    ])
+
     contributions, withdrawals = scope.pick(
-      CONTRIBUTIONS_TOTAL_SQL,
-      WITHDRAWALS_TOTAL_SQL
+      Arel.sql(contributions_sql),
+      Arel.sql(withdrawals_sql)
     )
 
     PeriodTotals.new(

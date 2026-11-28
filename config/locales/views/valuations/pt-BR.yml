@@ -1,6 +1,50 @@
 ---
 pt-BR:
   valuations:
+    names:
+      current_account_value: Valor atual da conta
+      current_balance: Saldo atual
+      current_loan_balance: Saldo devedor atual do empréstimo
+      current_market_value: Valor de mercado atual
+      manual_balance_update: Atualização manual de saldo
+      manual_principal_update: Atualização manual do principal
+      manual_value_update: Atualização manual de valor
+      opening_account_value: Valor inicial da conta
+      opening_balance: Saldo inicial
+      original_principal: Principal original
+      original_purchase_price: Preço de compra original
+      synced_balance: Saldo sincronizado
+      synced_principal: Principal sincronizado
+      synced_value: Valor sincronizado
+    confirmation_contents:
+      this_will: Isso vai %{action_verb} o valor da conta em
+      to_colon: "para:"
+      total_account_value: Valor total da conta
+      holdings_value: Valor das posições
+      brokerage_cash: Saldo em conta na corretora
+      account_balance: o saldo da conta
+      credit_card_balance: o saldo do cartão de crédito
+      loan_balance: o saldo devedor do empréstimo
+      property_value: o valor do imóvel
+      vehicle_value: o valor do veículo
+      crypto_balance: o saldo de cripto
+      asset_value: o valor do ativo
+      liability_balance: o saldo da dívida
+      balance: o saldo
+      "on": em
+      to: para
+      recalculate_notice: Todas as transações e saldos futuros serão recalculados com base nesta %{change_or_update}.
+      change: alteração
+      update: atualização
+      action_set: definir
+      action_update: atualizar
+    create:
+      account_updated: Conta atualizada
+    update:
+      account_updated: Conta atualizada
+      entry_updated: Lançamento atualizado
+    errors:
+      amount_required: O valor é obrigatório
     form:
       amount: Valor
       submit: Adicionar atualização de saldo
@@ -9,23 +53,33 @@ pt-BR:
     index:
       change: alteração
       date: data
-      new_entry: Nova entrada
-      no_valuations: Nenhuma avaliação para esta conta ainda
+      new_entry: Novo lançamento
+      no_valuations: Ainda não há atualizações de saldo para esta conta
       valuations: Valor
       value: valor
     new:
       title: Novo saldo
+      amount: Valor
+      submit: Adicionar atualização de saldo
     show:
       amount: Valor
+      amount_label: Valor da conta na data
       date_label: Data
       delete: Excluir
       delete_subtitle: Esta ação não pode ser desfeita
-      delete_title: Excluir Entrada
+      delete_title: Excluir lançamento
       details: Detalhes
       name_label: Nome
-      name_placeholder: Digite um nome para esta entrada
+      name_placeholder: Digite um nome para este lançamento
       note_label: Notas
-      note_placeholder: Adicione detalhes adicionais sobre esta entrada
+      note_placeholder: Adicione mais detalhes sobre este lançamento
       overview: Visão geral
       settings: Configurações
       opening_balance: Saldo inicial
+      update_value: Atualizar valor
+    confirm_create:
+      confirm: Confirmar
+      title: Confirmar novo saldo
+    confirm_update:
+      title: Atualizar saldo
+      update: Atualizar

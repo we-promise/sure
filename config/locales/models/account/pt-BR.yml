@@ -1,14 +1,46 @@
 ---
 pt-BR:
+  account_order:
+    balance_asc:
+      label: Saldo (menor para maior)
+      label_short: Saldo ↑
+    balance_desc:
+      label: Saldo (maior para menor)
+      label_short: Saldo ↓
+    manual:
+      label: Manual (arraste para reordenar)
+      label_short: Manual
+    name_asc:
+      label: Nome (A-Z)
+      label_short: Nome ↑
+    name_desc:
+      label: Nome (Z-A)
+      label_short: Nome ↓
   activerecord:
     attributes:
       account:
         balance: Saldo
         currency: Moeda
-        family: Família
-        family_id: Família
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        logo: Logo
         name: Nome
         subtype: Subtipo
+      depository:
+        subtype: Tipo de conta
+      investment:
+        subtype: Tipo de investimento
+      loan:
+        subtype: Tipo de empréstimo
+    errors:
+      models:
+        account:
+          attributes:
+            logo:
+              invalid_content_type: deve ser uma imagem PNG, JPEG, GIF, WebP ou ICO
+              too_large: deve ter menos de %{max_size} MB
+            base:
+              cost_tag_other_family: A tag de custos deve ser uma das suas próprias tags
     models:
       account: Conta
       account/credit: Cartão de Crédito

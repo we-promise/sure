@@ -27,7 +27,10 @@ class UsersController < ApplicationController
       end
     else
       was_ai_enabled = @user.ai_enabled
-      if @user.update(user_params.except(:redirect_to, :delete_profile_image))
+      # Lives in the preferences JSON, written under a row lock so concurrent
+      # preference writes aren't lost, rather than through update below.
+      @user.update_show_balance_updates(user_params[:show_balance_updates]) if user_params.key?(:show_balance_updates)
+      if @user.update(user_params.except(:redirect_to, :delete_profile_image, :show_balance_updates))
         @user.profile_image.purge if should_purge_profile_image?
 
         # Add a special notice if AI was just enabled or disabled
@@ -85,8 +88,8 @@ class UsersController < ApplicationController
         redirect_to root_path
       when "preferences"
         redirect_to settings_preferences_path, notice: notice
-      when "goals"
-        redirect_to goals_onboarding_path
+      when "tools", "goals"
+        redirect_to tools_onboarding_path
       when "trial"
         redirect_to trial_onboarding_path
       when "appearance"
@@ -124,7 +127,7 @@ class UsersController < ApplicationController
       params.require(:user).permit(
         :first_name, :last_name, :email, :profile_image, :redirect_to, :delete_profile_image, :onboarded_at,
         :show_sidebar, :default_period, :default_account_order, :show_ai_sidebar, :ai_enabled, :theme, :set_onboarding_preferences_at, :set_onboarding_goals_at, :locale,
-        :rule_prompts_disabled,
+        :rule_prompts_disabled, :show_balance_updates,
         family_attributes: family_attrs,
         goals: []
       )
