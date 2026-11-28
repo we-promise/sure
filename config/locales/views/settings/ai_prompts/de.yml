@@ -10,6 +10,7 @@ de:
         main_system_prompt:
           title: Hauptsystem-Prompt
           subtitle: Zentrale Anweisungen, die definieren, wie sich der KI-Assistent in allen Chat-Gesprächen verhält
+          label: "System-Prompt für den Chat"
         transaction_categorizer:
           title: Transaktionskategorisierung
           subtitle: Die KI kategorisiert deine Transaktionen automatisch basierend auf deinen definierten Kategorien
@@ -20,3 +21,24 @@ de:
           title: Analyse mit KI nachhaken
           subtitle: Erste Chat-Nachricht, wenn du bei einer Analyse mit KI nachhakst
           label: Nachricht zum Nachhaken
+        save: "Prompts speichern"
+        save_confirm:
+          title: "Eigene KI-Prompts speichern?"
+          body: "Eigene Prompts ersetzen für deine Familie die eingebauten Systemanweisungen und Schutzregeln (etwa die Einschränkungen bei Finanzberatung)."
+          dont_show_again: "Diese Warnung nicht mehr anzeigen"
+          cancel: "Abbrechen"
+          confirm: "Bestätigen"
+      prompt_field:
+        provider_label: "Anbieter"
+        prompt_label: "Prompt"
+        provider_openai: "OpenAI"
+        provider_anthropic: "Anthropic"
+        reset: "Auf Standard zurücksetzen"
+        reset_confirm_title: "Auf den Standard-Prompt zurücksetzen?"
+        reset_confirm_body: "Dein eigener Prompt wird verworfen und die eingebauten Standardanweisungen werden wiederhergestellt."
+        status_custom: "Dein eigener Prompt ist aktiv"
+        status_default: "Der eingebaute Standard ist aktiv"
+        format_risk: "In deinem %{provider}-Prompt fehlt das Beispiel {\"%{key}\": ...}. Jede Anfrage verlangt weiterhin dieses Format, daher klappt das Auslesen meist trotzdem; ein eigener Prompt, der ein anderes Ausgabeformat verlangt, macht es aber kaputt."
+      update:
+        success: "KI-Prompts aktualisiert"
+        multiple_errors: "Mehrere Prompts sind zu lang (höchstens %{count} Zeichen)"
