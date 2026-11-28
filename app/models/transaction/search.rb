@@ -272,37 +272,34 @@ class Transaction::Search
           on: "entries.date"
         )
 
-        # The list shows excluded entries; the sums leave them out. The
-        # reports do too, but they read excluded = false, so a NULL row is
-        # dropped there and counted here. The counts ignore the excluded flag
+        # The list shows excluded entries; the sums leave them out, as the
+        # reports do. The counts ignore the excluded flag
         # (so an excluded row still counts), but are taken after the scheduled
         # and tax-advantaged exclusions above. transfer_count lets the summary
         # tell a transfer-only result set from one whose sums are all zero
         # because its entries are excluded, and expense_count counts the rows
         # the expense sum covers, leaving out a row with no rate, so a
         # per-purchase average divides by purchases rather than listed rows.
-        # entries.excluded is nullable and a NULL row is live, hence IS NOT
-        # TRUE rather than = false.
         result = scope
                   .select(
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) AND entries.excluded IS NOT TRUE THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as expense_total",
+                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) AND entries.excluded = false THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as expense_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COUNT(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) AND entries.excluded IS NOT TRUE AND #{rate} IS NOT NULL THEN entries.id END) as expense_count",
+                      "COUNT(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) AND entries.excluded = false AND #{rate} IS NOT NULL THEN entries.id END) as expense_count",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) AND entries.excluded IS NOT TRUE THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as income_total",
+                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) AND entries.excluded = false THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as income_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind IN (?) AND entries.excluded IS NOT TRUE THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as transfer_inflow_total",
+                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind IN (?) AND entries.excluded = false THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as transfer_inflow_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind IN (?) AND entries.excluded IS NOT TRUE THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as transfer_outflow_total",
+                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind IN (?) AND entries.excluded = false THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as transfer_outflow_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([

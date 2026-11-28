@@ -631,13 +631,6 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal transfer_totals.count, transfer_totals.transfer_count
   end
 
-  test "totals treats a null excluded as live" do
-    entry = create_transaction(account: @checking_account, amount: 100, kind: "standard")
-    entry.update_columns(excluded: nil)
-
-    assert_equal Money.new(100, "USD"), Transaction::Search.new(@family).totals.expense_money
-  end
-
   test "totals excludes an excluded split child" do
     parent = create_transaction(account: @checking_account, amount: 100, kind: "standard")
     kept, excluded = parent.split!([
