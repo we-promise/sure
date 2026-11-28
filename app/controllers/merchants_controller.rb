@@ -15,7 +15,9 @@ class MerchantsController < ApplicationController
     @search = merchant_search
     if @q[:types].blank? || @q[:types].include?("expense")
       @expense_totals = merchant_search(types: [ "expense" ]).totals
-      @average_expense_money = @expense_totals.expense_money / @expense_totals.count if @expense_totals.count.positive?
+      # expense_count, not count: the sum leaves excluded entries out, and so
+      # must the average it derives from.
+      @average_expense_money = @expense_totals.expense_money / @expense_totals.expense_count if @expense_totals.expense_count.positive?
     end
     @first_date, @last_date = @search.transactions_scope.pick(Arel.sql("MIN(entries.date)"), Arel.sql("MAX(entries.date)"))
 
