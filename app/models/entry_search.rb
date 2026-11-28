@@ -7,6 +7,7 @@ class EntrySearch
   attribute :amount_operator, :string
   attribute :types, array: true
   attribute :status, array: true
+  attribute :reconcile_status, array: true
   attribute :accounts, array: true
   attribute :account_ids, array: true
   attribute :start_date, :string
@@ -17,9 +18,10 @@ class EntrySearch
 
   attr_reader :family
 
-  # `family` is only required to scope the category-name lookup in
-  # Transaction::Search.apply_category_filter (see #1480); every other filter
-  # here works without it.
+  # `family` is required to scope the category-name lookup in
+  # Transaction::Search.apply_category_filter (see #1480) and the manual-account
+  # subquery in apply_reconcile_status_filter; every other filter here works
+  # without it.
   def initialize(filters = {}, family: nil)
     @family = family
     super(filters)
@@ -116,7 +118,9 @@ class EntrySearch
 
     if transaction_specific_filters?
       # Only Transaction entries have a category/merchant/type/tags, so this
-      # join is skipped unless one of those filters is active. Most of
+      # join is skipped unless one of those filters is active. Reconciliation
+      # is also limited to transactions: the badge, the filter and the
+      # reconciliation indicator all treat it as a transaction concept. Most of
       # Transaction::Search's apply_* methods exclude non-Transaction entries
       # as a side effect of their own conditions, but apply_type_filter
       # doesn't when every type is selected (it's a no-op then) — so exclude
@@ -125,6 +129,7 @@ class EntrySearch
       query = query.where(entries: { entryable_type: "Transaction" })
       query = Transaction::Search.apply_category_filter(query, categories, family)
       query = Transaction::Search.apply_type_filter(query, types)
+      query = Transaction::Search.apply_reconcile_status_filter(query, reconcile_status, family)
       query = Transaction::Search.apply_merchant_filter(query, merchants)
       query = Transaction::Search.apply_tag_filter(query, tags)
     end
@@ -134,6 +139,7 @@ class EntrySearch
 
   private
     def transaction_specific_filters?
-      categories.present? || types.present? || merchants.present? || tags.present?
+      categories.present? || types.present? || merchants.present? || tags.present? ||
+        (Array(reconcile_status) & Entry.reconciled_statuses.keys).any?
     end
 end

@@ -67,6 +67,9 @@ zh-CN:
       note_label: 备注
       note_placeholder: 在此添加其他备注...
       quantity_label: 数量
+      lot_label: 卖出所属批次
+      lot_oldest_first: 最早批次优先
+      lot_option: "%{date} · %{qty}，价格 %{price}"
       sell: 卖出
       settings: 设置
       type_label: 类型

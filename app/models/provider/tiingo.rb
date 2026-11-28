@@ -53,7 +53,7 @@ class Provider::Tiingo < Provider
   def usage
     with_provider_response do
       count_key = "tiingo:symbol_count:#{Date.current.strftime('%Y-%m')}"
-      symbols_used = Rails.cache.read(count_key).to_i
+      symbols_used = Rails.cache.read(count_key, raw: true).to_i
 
       UsageData.new(
         used: symbols_used,
@@ -217,6 +217,9 @@ class Provider::Tiingo < Provider
 
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
+        faraday.options.open_timeout = 5
+        faraday.options.timeout      = 20
+
         faraday.request(:retry, {
           max: 3,
           interval: 1.0,

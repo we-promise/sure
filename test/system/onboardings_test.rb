@@ -43,9 +43,8 @@ class OnboardingsTest < ApplicationSystemTestCase
     # Submit preferences
     click_button I18n.t("onboardings.preferences.submit")
 
-    # Should redirect to goals page
-    assert_current_path goals_onboarding_path
-    assert_text I18n.t("onboardings.goals.title")
+    assert_current_path tools_onboarding_path
+    assert_text I18n.t("onboardings.tools.title")
   end
 
   test "browser locale defaults onboarding country and currency" do
@@ -62,7 +61,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_equal "CAD", find("#user_family_attributes_currency").value
 
     click_button I18n.t("onboardings.preferences.submit")
-    assert_current_path goals_onboarding_path
+    assert_current_path tools_onboarding_path
 
     @family.reload
     assert_equal "CA", @family.country
@@ -157,8 +156,8 @@ class OnboardingsTest < ApplicationSystemTestCase
     # Button text is in Spanish due to locale preview
     click_button I18n.t("onboardings.preferences.submit", locale: :es)
 
-    # Wait for redirect to goals page to ensure form was submitted
-    assert_current_path goals_onboarding_path
+    # Wait for redirect to the tools step to ensure form was submitted
+    assert_current_path tools_onboarding_path
 
     # Verify data was saved
     @family.reload
@@ -171,14 +170,44 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_not_nil @user.set_onboarding_preferences_at
   end
 
-  test "goals page renders correctly" do
-    # Complete preferences first
-    @user.update!(set_onboarding_preferences_at: Time.current)
+  test "tools step saves the starting point and AI preference" do
+    @user.update!(set_onboarding_preferences_at: Time.current, ai_enabled: false)
 
-    visit goals_onboarding_path
+    visit tools_onboarding_path
+    assert_text I18n.t("onboardings.tools.title")
+    assert_text I18n.t("onboardings.tools.ai.panels.none.title")
 
-    assert_text I18n.t("onboardings.goals.title")
-    assert_button I18n.t("onboardings.goals.submit")
+    find("summary", text: I18n.t("onboardings.tools.starting_point.select")).click
+    check I18n.t("onboardings.tools.starting_point.tools.ynab")
+    choose I18n.t("onboardings.tools.ai.modes.builtin.title")
+    assert_text I18n.t("onboardings.tools.ai.panels.builtin.title")
+    assert_no_text I18n.t("onboardings.tools.ai.panels.none.title")
+
+    click_button I18n.t("onboardings.tools.submit")
+    assert_current_path trial_onboarding_path
+
+    @user.reload
+    assert_equal [ "ynab" ], @user.onboarding_tools
+    assert @user.ai_enabled
+  end
+
+  test "external AI keeps the assistant enabled and remains selected on revisit" do
+    @user.update!(set_onboarding_preferences_at: Time.current, ai_enabled: false)
+    visit tools_onboarding_path
+
+    choose I18n.t("onboardings.tools.ai.modes.external.title")
+    assert_text I18n.t("onboardings.tools.ai.panels.external.title")
+    assert_no_text I18n.t("onboardings.tools.ai.panels.none.title")
+    click_button I18n.t("onboardings.tools.submit")
+    assert_current_path trial_onboarding_path
+    assert @user.reload.ai_enabled
+
+    visit tools_onboarding_path
+    assert_checked_field I18n.t("onboardings.tools.ai.modes.external.title")
+    click_button I18n.t("onboardings.tools.submit")
+    assert_current_path trial_onboarding_path
+    assert @user.reload.ai_enabled
+    assert_equal "external", @user.onboarding_ai_mode
   end
 
   test "trial page renders correctly" do
@@ -201,8 +230,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     select "MM/DD/YYYY", from: "user_family_attributes_date_format"
     click_button I18n.t("onboardings.preferences.submit")
 
-    # Should be at goals
-    assert_current_path goals_onboarding_path
+    assert_current_path tools_onboarding_path
   end
 
   test "onboarding nav shows correct steps" do

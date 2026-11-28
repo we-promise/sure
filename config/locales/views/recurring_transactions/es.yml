@@ -10,8 +10,158 @@ es:
       one: Esperado en %{count} día
       other: Esperado en %{count} días
     day_of_month: Día %{day} del mes
+    frequency_presets:
+      monthly: Mensual
+      weekly: Semanal
+      biweekly: Cada 2 semanas
+      semimonthly: Dos veces al mes
+      quarterly: Trimestral
+      semiannual: Cada 6 meses
+      annual: Anual
+      custom: Calendario personalizado
+      interval: Intervalo personalizado
+    frequency_interval_units:
+      weekly: semanas
+      monthly: meses
+      yearly: años
+    frequency:
+      monthly: Mensual, el día %{day}
+      weekly: Semanal, los %{weekday}
+      biweekly: Cada 2 semanas, los %{weekday}
+      semimonthly: Dos veces al mes, los días %{first} y %{second}
+      quarterly: Trimestral, el día %{day}
+      semiannual: Cada 6 meses, el día %{day}
+      annual: Anual, el %{day} de %{month}
+      every_n_weeks: Cada %{interval} semanas, los %{weekday}
+      every_n_months: Cada %{interval} meses, el día %{day}
+      every_n_years: Cada %{interval} años, el %{day} de %{month}
+      custom: Calendario personalizado
+      last_day: último día
     identify_patterns: Identificar Patrones
     cleanup_stale: Limpiar Obsoletos
+    actions:
+      edit_payment_link: Editar enlace de pago
+      pause: Pausar
+      resume: Reanudar
+      delete: Quitar
+    pay_action:
+      pay: Pagar
+      pay_aria: Pagar %{name} (se abre en una pestaña nueva)
+      add_link: Añadir enlace
+      add_link_aria: Añadir un enlace de pago para %{name}
+      autopay: Domiciliado
+      autopay_aria: "%{name} se paga automáticamente; abre su portal en una pestaña nueva"
+    new:
+      title: Nuevo recibo
+      income_title: Nuevo ingreso
+      start_from_title: Partir de un cargo recurrente detectado
+      start_from_income_title: Partir de un ingreso recurrente detectado
+      start_from_hint: Opcional. Elegir uno solo rellena el formulario; puedes cambiar lo que quieras.
+      candidate_meta: "%{count}× · último el %{date}"
+      search_all_prompt: "¿No ves lo que buscas?"
+      search_all_cta: Buscar en todas tus transacciones
+      pick_different: Partir de otra transacción
+      smart_fill: Rellenar con IA
+      smart_fill_applied: La IA ha sugerido estos valores a partir del historial de cargos. Revísalos antes de guardar.
+      covered_title: Esta transacción ya pertenece a un recibo
+      covered_body: "%{name} ya registra este pago, así que un recibo nuevo lo contaría dos veces."
+      covered_open: Abrir recibo
+      covered_suggested_title: Sure ya ha sugerido un recibo para este pago
+      covered_suggested_body: "%{name} está pendiente en tus sugerencias. Confírmalo para empezar a seguirlo y evitar que un recibo nuevo cuente este pago dos veces. Los pagos que coinciden se vinculan automáticamente y puedes vincular este desde el recibo."
+      covered_confirm: Confirmar recibo
+      covered_create_anyway: Crear un recibo aparte de todos modos
+      covered_income_title: Este ingreso ya pertenece a una fuente de ingresos
+      covered_income_body: "%{name} ya registra este ingreso, así que añadirlo otra vez lo contaría dos veces."
+      covered_income_open: Abrir ingreso
+      covered_income_suggested_title: Sure ya ha sugerido este ingreso
+      covered_income_suggested_body: "%{name} está pendiente en tus sugerencias. Añádelo para empezar a seguirlo y que este ingreso no se cuente dos veces. Los ingresos que coinciden se vinculan automáticamente y puedes vincular este desde el ingreso."
+      covered_income_confirm: Añadir ingreso
+      covered_income_create_anyway: Añadir un ingreso aparte de todos modos
+    smart_fills:
+      create:
+        failed: No se ha podido analizar el historial de cargos ahora. El formulario mantiene los valores de la propia transacción.
+    pick_entry:
+      title: Busca una transacción de la que partir
+      income_title: Busca un ingreso del que partir
+      hint: Elegir una solo rellena el formulario; puedes cambiar lo que quieras.
+      search_placeholder: Buscar por nombre, notas o comercio
+      back: Volver al formulario
+      showing_recent: Se muestran tus %{count} más recientes. Busca para acotar.
+      no_results: Nada coincide con “%{query}”. Prueba con menos palabras o vuelve y rellena tú el formulario.
+    picker_row:
+      claimed: Parte de %{name}
+    create:
+      success: Recibo añadido
+      success_income: Ingreso añadido
+      due_date_required: Introduce la próxima fecha de vencimiento del recibo
+      amount_invalid: Introduce el importe como un número sin más
+      amount_too_precise: Usa como máximo 4 decimales
+      account_invalid: Elige una cuenta a la que puedas añadir recibos o déjalo en blanco
+      category_invalid: Elige una de tus categorías o déjalo en blanco
+      already_exists: Este recibo ya existe
+    edit:
+      trigger_label: Editar recibo
+      title: Editar %{name}
+      income_title: Editar ingreso · %{name}
+    form:
+      payment_url_label: Enlace de pago
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: Dónde pagas este recibo. Se abre en una pestaña nueva desde tus listas de recurrentes y próximos.
+      autopay_label: Se paga automáticamente
+      autopay_hint: Lo mantiene en tu lista de recibos, pero deja de tratarlo como algo pendiente de hacer.
+      more_options: Más opciones
+      notes_label: Notas
+      notes_placeholder: Cuenta 4821, cargo en la Amex
+      notes_hint: Lo que quieras tener delante al pagar. Se muestra en el recibo.
+      apply_to_siblings:
+        one: Usar también este enlace para el otro recibo de %{name}
+        other: Usar también este enlace para los otros %{count} recibos de %{name}
+      submit: Guardar recibo
+      submit_income: Guardar ingreso
+      income_name_label: Origen
+      income_name_placeholder: Empresa, cliente, trabajo extra
+      income_amount_label: Importe por nómina
+      income_due_on_label: Próximo cobro
+      income_account_label: Se ingresa en
+      income_frequency_hint: Cada cuánto cobras. Ajusta el día para que coincida con tu día de cobro.
+      income_frequency_label: Cada cuánto cobras
+      income_frequency_new_hint: El día de cobro sale de la fecha de arriba. Puedes afinar el calendario después de guardar.
+      income_notes_placeholder: Transferencia directa, repartida entre dos cuentas
+      income_notes_hint: Cualquier cosa que convenga recordar sobre este ingreso.
+      name_label: Nombre
+      name_placeholder: Alquiler, Iberdrola, Netflix
+      amount_label: Importe
+      first_due_on_label: Próximo vencimiento
+      account_label: Se paga desde
+      account_blank: Cualquier cuenta
+      bill_type_label: Tipo
+      installment_count_label: Número de pagos
+      installment_count_hint: El plan termina tras este número de pagos y muestra su progreso hasta entonces.
+      renews_on_label: Se renueva
+      trial_ends_on_label: Fin de la prueba
+      amount_edit_hint: Se aplica a los recibos que venzan de ahora en adelante. Lo que ya ha vencido conserva su importe.
+      income_amount_edit_hint: Se aplica a los cobros de ahora en adelante. Lo que ya ha vencido conserva su importe.
+      cancelled_on_label: Cancelado
+      cancelled_on_hint: La fecha es solo para tu referencia. Pausa el recibo para que dejen de aparecer los futuros.
+      category_blank: Sin categoría
+      frequency_new_hint: El día sale de la fecha de vencimiento de arriba. Puedes afinar el calendario después de guardar.
+      frequency_label: Cada cuánto
+      frequency_hint: Cada cuánto vence este recibo. Ajusta el día para que coincida con tu extracto.
+      frequency_day_label: El día
+      frequency_interval_label: Se repite cada
+      frequency_interval_unit_label: Unidad
+      frequency_second_day_label: Y el día
+      frequency_weekday_label: El
+      frequency_month_label: En
+    update:
+      success: Recibo actualizado
+      success_with_siblings:
+        one: Recibo actualizado; el enlace de pago se ha copiado a 1 recibo más
+        other: Recibo actualizado; el enlace de pago se ha copiado a %{count} recibos más
+    manage:
+      title: Tus recibos están en la página Recibos
+      description: Desde allí puedes añadirlos, editarlos, pausarlos y pagarlos. Esta página controla la detección.
+      cta: Abrir todos los recibos
     settings:
       enable_label: Activar transacciones recurrentes
       enable_description: Detecta automáticamente patrones de transacciones recurrentes y muestra las próximas transacciones proyectadas.
@@ -24,13 +174,17 @@ es:
       - Finalización de importaciones CSV (transacciones, operaciones, cuentas, etc.)
       - Finalización de cualquier sincronización de proveedor (Plaid, SimpleFIN, etc.)
     identified: Identificados %{count} patrones de transacciones recurrentes
+    identify_already_running: La detección ya está en marcha. Vuelve en un momento.
     cleaned_up: Limpiadas %{count} transacciones recurrentes obsoletas
-    marked_inactive: Transacción recurrente marcada como inactiva
-    marked_active: Transacción recurrente marcada como activa
-    deleted: Transacción recurrente eliminada
-    confirm_delete: ¿Estás seguro de que deseas eliminar esta transacción recurrente?
+    marked_inactive: En pausa. No volverá a aparecer hasta que lo reanudes.
+    marked_active: Reanudado.
+    deleted: Recibo eliminado. Tus transacciones no se han modificado.
+    deleted_income: Ingreso quitado. Tus transacciones no se han tocado.
+    confirm_delete: "¿Quitar %{name} de tus recibos? Tus transacciones se quedan tal cual. Solo se elimina el recibo y su calendario de pagos."
+    confirm_delete_income: "¿Quitar %{name} como ingreso? Tus transacciones se quedan tal cual. Solo se quita el ingreso y su calendario."
     marked_as_recurring: Transacción marcada como recurrente
     already_exists: Ya existe una transacción recurrente manual para este patrón
+    already_covered: Esta transacción ya coincide con una transacción recurrente
     creation_failed: Error al crear la transacción recurrente. Por favor, comprueba los detalles e inténtalo de nuevo.
     unexpected_error: Ha ocurrido un error inesperado al crear la transacción recurrente
     amount_range: 'Rango: %{min} a %{max}'
@@ -40,6 +194,7 @@ es:
     table:
       merchant: Nombre
       amount: Importe
+      frequency: Frecuencia
       expected_day: Día Esperado
       next_date: Próxima Fecha
       last_occurrence: Última Ocurrencia
@@ -48,6 +203,24 @@ es:
     status:
       active: Activa
       inactive: Inactiva
+      suggested: Posible recibo
+      paused: En pausa
+      ended: Descartado
+    suggested:
+      title: Posibles recibos nuevos
+      seen_count:
+        one: visto una vez
+        other: visto %{count} veces
+      collapsed_hint: Toca para revisar
+      confirm: Añadir recibo
+      dismiss: No es un recibo
+    suggested_income:
+      title: Posibles ingresos nuevos
+      confirm: Añadir ingreso
+      dismiss: No es un ingreso
+    confirmed: Recibo añadido a tus transacciones recurrentes
+    confirmed_income: Ingreso añadido a tus transacciones recurrentes
+    dismissed: Descartado. Este patrón no se volverá a sugerir.
     badges:
       manual: Manual
     transfer_marked_as_recurring: Transferencia marcada como recurrente
