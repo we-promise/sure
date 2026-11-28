@@ -5,7 +5,7 @@ hu:
       sign_out: Kijelentkezés
       setup: Beállítás
       preferences: Beállítások
-      goals: Célok
+      tools: Eszközök/MI
       start: Kezdés
     logout:
       sign_out: Kijelentkezés
@@ -38,17 +38,48 @@ hu:
       currency: Pénznem
       date_format: Dátumformátum
       submit: Befejezés
-    goals:
-      title: Mi hozott ide?
-      subtitle: Válassz ki egy vagy több célt, amelyet el szeretnél érni a %{product_name} személyes pénzügyi eszközzel.
-      unified_accounts: Lássam az összes számlámat egy helyen
-      cashflow: Megértsem a pénzforgalmat és a kiadásokat
-      budgeting: Pénzügyi tervek és költségvetés kezelése
-      partner: Pénzügyek kezelése partnerrel együtt
-      investments: Befektetések nyomon követése
-      ai_insights: Hadd segítsen az AI a pénzügyeim megértésében
-      optimization: Számlák elemzése és optimalizálása
-      reduce_stress: Pénzügyi stressz vagy szorongás csökkentése
+    tools:
+      title: Érezd magad otthon.
+      subtitle: Néhány választás, hogy a(z) %{product_name} igazán a tiéd legyen.
+      starting_point:
+        eyebrow: A kiindulópontod
+        title: Mit használtál eddig?
+        description: Válaszd ki, milyen eszközökkel kezeled a háztartásod pénzügyeit.
+        select: Válaszd ki az eszközeidet
+        other_placeholder: Egyéb eszköz (nem kötelező)
+        hint: Jelölj be mindent, ami illik rád. Ez segít kiindulópontot javasolni, de nem jelenti, hogy az importálás kompatibilis.
+        tools:
+          nothing_yet: Még semmit
+          other: Egyéb
+      ai:
+        eyebrow: Az MI-preferenciád
+        title: Hogyan szeretnéd használni a(z) %{product_name} alkalmazást?
+        description: Te döntesz. Válaszd azt, ami neked megfelel.
+        default: Alapértelmezett
+        modes:
+          none:
+            title: MI nélkül
+            description: Kezeld a pénzügyeidet az alkalmazáson belüli asszisztens nélkül.
+          builtin:
+            title: Beépített MI
+            description: Kapcsold be az alkalmazáson belüli asszisztenst, amely ennek a példánynak az MI-szolgáltatóját használja.
+          external:
+            title: Saját MI-ügynök
+            description: Használd a saját asszisztensedet, az engedélyeddel csatlakoztatva.
+        panels:
+          admin_on: Adminisztrátorként ez egyben a háztartásod hozzájárulása is a háttérben futó MI-funkciókhoz, például a kategorizáláshoz.
+          admin_off: Adminisztrátorként ezzel egyben visszavonod a hozzájárulásodat a háttérben futó MI-funkciókhoz, például a kategorizáláshoz. Ezek csak akkor maradnak bekapcsolva, ha egy másik adminisztrátornál be van kapcsolva az MI.
+          none:
+            title: Az asszisztensed kikapcsolva marad.
+            body: Ez kikapcsolja az alkalmazáson belüli asszisztenst a fiókodban.
+          builtin:
+            title: Az asszisztensed bekapcsol.
+            body: Ez bekapcsolja az alkalmazáson belüli asszisztenst a fiókodban. Hogy melyik MI-szolgáltatót használja, és hogy elérhető-e, továbbra is a példány MI-beállításaitól függ.
+            not_configured: 'Ezen a példányon még nincs beállítva MI-szolgáltató. Egy adminisztrátor itt adhat hozzá egyet: Beállítások → Saját üzemeltetés.'
+            unavailable: A háztartásod jelenlegi MI-beállításai nem futtatják az alkalmazáson belüli asszisztenst, ezért nem fog válaszolni, amíg egy adminisztrátor meg nem változtatja őket.
+          external:
+            title: Csatlakoztasd az ügynöködet, amikor készen állsz.
+            body: "Így az MI bekapcsolva marad a fiókodban. Ha a háztartásod külső csevegésre van beállítva, a beszélgetések a beállított külső asszisztensedet használják a(z) %{product_name} beépített asszisztense helyett, ugyanabban a csevegőfelületben. A(z) %{product_name} továbbra is kezeli az importálást, a kategorizálást és a többi folyamatot, az adataid elsődleges nyilvántartásaként. Az ügynököd MCP-n vagy a sure-cli-n keresztül dolgozhat vele; a csatlakoztatáshoz lásd: Beállítások → MCP. Ez a választás nem állítja be a csevegési szolgáltatást, és nem hoz létre, nem módosít és nem töröl egyetlen kapcsolatot sem."
       submit: Tovább
     trial:
       title: Próbáld ki a Sure-t 45 napig

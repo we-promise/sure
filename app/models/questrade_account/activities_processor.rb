@@ -32,19 +32,21 @@ class QuestradeAccount::ActivitiesProcessor
   end
 
   def process
-    return { trades: 0, transactions: 0 } unless account.present?
+    return { trades: 0, transactions: 0, failed: 0 } unless account.present?
 
     @trades_count = 0
     @transactions_count = 0
+    @failed_count = 0
 
     activities.each do |raw|
       process_activity(raw.with_indifferent_access)
     rescue => e
+      @failed_count += 1
       Rails.logger.error "QuestradeAccount::ActivitiesProcessor - Failed to process activity: #{e.message}"
       Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
     end
 
-    { trades: @trades_count, transactions: @transactions_count }
+    { trades: @trades_count, transactions: @transactions_count, failed: @failed_count }
   end
 
   private

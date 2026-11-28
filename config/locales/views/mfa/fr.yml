@@ -13,7 +13,9 @@ fr:
     create:
       code_already_used: Ce code a déjà été utilisé. Veuillez saisir le code suivant de votre application d'authentification.
       invalid_code: Code de vérification invalide. Veuillez essayer à nouveau.
+      invalid_password: Mot de passe incorrect. Veuillez réessayer.
       setup_failed: Une erreur s'est produite lors de l'activation de l'authentification à deux facteurs. Veuillez réessayer.
+    demo_family_restricted: L'activation de la MFA est désactivée pour la famille de démonstration partagée, afin que l'accès à la démo reste disponible pour tout le monde.
     disable:
       failure: Une erreur s'est produite lors de la désactivation de l'authentification à deux facteurs. Veuillez réessayer.
       invalid_password: Mot de passe incorrect. Veuillez réessayer.
@@ -43,6 +45,7 @@ fr:
       page_title: Vérifier l'Authentification à Deux Facteurs
       title: Authentification à Deux Facteurs
       verify_button: Vérifier
+      verifying: Vérification...
       webauthn_button: Utiliser un mot de passe ou une clé de sécurité
       webauthn_unsupported: Ce navigateur ne prend pas en charge les mots de passe
         ou les clés de sécurité.
