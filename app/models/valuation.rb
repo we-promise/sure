@@ -29,7 +29,10 @@ class Valuation < ApplicationRecord
     name = Valuation::Name.new(kind, entry.account.accountable_type)
     return entry.name unless entry.name == name.to_s
 
-    translation_key = "valuations.names.#{name.translation_key}"
+    # A reconciliation on a linked account was left by a sync, not typed in,
+    # so it isn't called "manual" there.
+    key = reconciliation? && entry.account.linked? ? name.synced_translation_key : name.translation_key
+    translation_key = "valuations.names.#{key}"
     if opening_anchor? &&
         !I18n.exists?(translation_key, I18n.locale, fallback: false) &&
         I18n.exists?("valuations.show.opening_balance", I18n.locale, fallback: false)
