@@ -2,14 +2,29 @@
 pt-BR:
   layouts:
     application:
+      insights: Insights
       privacy_mode: Alternar modo de privacidade
+      resize_left_sidebar: Redimensionar a barra lateral de contas
+      resize_right_sidebar: Redimensionar a barra lateral do assistente
       skip_to_main: Pular para o conteúdo principal
+      release_highlight:
+        title: Novidades
+        done: Entendi
       nav:
         assistant: Assistente
+        bills: Contas a pagar
         budgets: Orçamentos
         home: Início
+        plan: Planejamento
+        portfolio: Carteira
         reports: Relatórios
+        goals: Metas
         transactions: Transações
+    auth:
+      existing_account: Já tem uma conta?
+      no_account: Novo no %{product_name}?
+      sign_in: Entrar
+      sign_up: Criar conta
     auth.sign_up:
       existing_account: Já tem uma conta?
       no_account: Novo no %{product_name}?
@@ -19,6 +34,15 @@ pt-BR:
       footer:
         privacy_policy: Política de Privacidade
         terms_of_service: Termos de Serviço
+      confirm_dialog:
+        are_you_sure: Tem certeza?
+        cannot_be_undone: Esta ação não pode ser desfeita.
+        confirm: Confirmar
+      notification_tray:
+        download_complete: Download concluído
+        download_failed: Falha no download. Tente novamente.
+        download_location: O arquivo está na sua pasta Downloads.
+        order_save_failed: Não foi possível confirmar se a nova ordenação foi salva. Verifique sua conexão e recarregue a página para ver a ordenação salva.
     trial:
       open_demo: Demo aberta
       data_deleted_in_days: Os dados serão excluídos em %{days} dias

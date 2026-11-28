@@ -5,7 +5,7 @@ en:
       sign_out: Sign out
       setup: Setup
       preferences: Preferences
-      goals: Goals
+      tools: Tools/AI
       start: Start
     logout:
       sign_out: Sign out
@@ -38,17 +38,62 @@ en:
       currency: Currency
       date_format: Date format
       submit: Complete
-    goals:
-      title: What brings you here?
-      subtitle: Select one or more goals that you have with using %{product_name} as your personal finance tool.
-      unified_accounts: See all my accounts in one place
-      cashflow: Understand cashflow and expenses
-      budgeting: Manage financial plans and budgeting
-      partner: Manage finances with a partner
-      investments: Track investments
-      ai_insights: Let AI help me understand my finances
-      optimization: Analyze and optimize accounts
-      reduce_stress: Reduce financial stress or anxiety
+    tools:
+      title: Make yourself at home.
+      subtitle: A couple of choices to make %{product_name} yours.
+      starting_point:
+        eyebrow: Your starting point
+        title: What have you been using?
+        description: Choose the tools you use to manage your household finances.
+        select: Select your tools
+        other_placeholder: Other tool (optional)
+        hint: Choose all that apply. This helps us suggest a starting point, not assume import compatibility.
+        tools:
+          nothing_yet: Nothing yet
+          actual_budget: Actual Budget
+          banktivity: Banktivity
+          copilot_money: Copilot Money
+          firefly_iii: Firefly III
+          gnucash: GnuCash
+          lunch_money: Lunch Money
+          maybe: Maybe
+          monarch_money: Monarch Money
+          money_manager_ex: Money Manager Ex
+          moneywiz: MoneyWiz
+          pocketsmith: PocketSmith
+          quicken_classic: Quicken Classic
+          quicken_simplifi: Quicken Simplifi
+          ynab: YNAB
+          other: Other
+      ai:
+        eyebrow: Your AI preference
+        title: How would you like to use %{product_name}?
+        description: You're in control. Choose what feels right for you.
+        default: Default
+        modes:
+          none:
+            title: No AI
+            description: Manage your finances without the in-app assistant.
+          builtin:
+            title: Built-in AI
+            description: Turn on the in-app assistant, using this instance's AI provider.
+          external:
+            title: Bring your own AI agent
+            description: Use your own assistant, connected with your permission.
+        panels:
+          admin_on: As an admin, this is also your household's consent for AI features that run in the background, like categorization.
+          admin_off: As an admin, this also withdraws your consent for AI features that run in the background, like categorization. They stay on only if another admin has AI turned on.
+          none:
+            title: Your assistant stays off.
+            body: This turns off the in-app assistant for your account.
+          builtin:
+            title: Your assistant turns on.
+            body: This turns on the in-app assistant for your account. Which AI provider it uses, and whether it's available, still depends on this instance's AI settings.
+            not_configured: No AI provider is set up on this instance yet. An admin can add one in Settings → Self-Hosting.
+            unavailable: Your household's current AI settings don't run the in-app assistant, so it won't answer until an admin changes them.
+          external:
+            title: Connect your agent when you're ready.
+            body: This keeps AI enabled for your account. When your household is configured for external chat, conversations use your configured external assistant instead of %{product_name}'s built-in assistant, in the same chat interface. %{product_name} still handles imports, categorization, and other system-of-record processes. Your agent can interact with it through MCP or sure-cli; see Settings → MCP to connect. This choice does not configure the chat backend or create, change, or remove any connection.
       submit: Next
     trial:
       title: Try Sure for 45 days

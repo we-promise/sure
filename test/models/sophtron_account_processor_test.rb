@@ -20,7 +20,7 @@ class SophtronAccountProcessorTest < ActiveSupport::TestCase
 
     [ -25, 25 ].each do |observed|
       sophtron_account.update!(balance: observed)
-      SophtronAccount::Processor.new(sophtron_account).process_account!
+      SophtronAccount::Processor.new(sophtron_account).process
 
       assert_equal BigDecimal("-25"), acct.reload.balance
       assert_equal BigDecimal("-25"), acct.current_anchor_balance
@@ -37,7 +37,7 @@ class SophtronAccountProcessorTest < ActiveSupport::TestCase
 
     [ -25, 25 ].each do |observed|
       sophtron_account.update!(balance: observed)
-      SophtronAccount::Processor.new(sophtron_account).process_account!
+      SophtronAccount::Processor.new(sophtron_account).process
 
       assert_equal BigDecimal("25"), acct.reload.balance
     end
@@ -50,7 +50,7 @@ class SophtronAccountProcessorTest < ActiveSupport::TestCase
     )
     acct = link_account(accounts(:depository), sophtron_account)
 
-    SophtronAccount::Processor.new(sophtron_account).process_account!
+    SophtronAccount::Processor.new(sophtron_account).process
 
     assert_equal BigDecimal("1000.00"), acct.reload.balance
   end
@@ -62,7 +62,7 @@ class SophtronAccountProcessorTest < ActiveSupport::TestCase
     )
     acct = link_account(accounts(:loan), sophtron_account)
 
-    SophtronAccount::Processor.new(sophtron_account).process_account!
+    SophtronAccount::Processor.new(sophtron_account).process
 
     assert_equal BigDecimal("400"), acct.reload.balance
   end
@@ -81,6 +81,38 @@ class SophtronAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("50"), acct.reload.balance
     assert_equal BigDecimal("50"), acct.cash_balance
     assert_equal BigDecimal("50"), acct.current_anchor_balance
+  end
+
+  test "anchors the balance after transactions have been imported" do
+    sophtron_account = create_sophtron_account(account_id: "dep_order", balance: BigDecimal("600"))
+    acct = link_account(accounts(:depository), sophtron_account)
+    acct.set_current_balance(1000, schedule_sync: false)
+
+    imported = false
+    SophtronAccount::Transactions::Processor.any_instance.stubs(:process).with do
+      unless imported
+        imported = true
+        acct.entries.create!(
+          date: Date.current,
+          name: "Late outflow",
+          amount: 400,
+          currency: "USD",
+          entryable: Transaction.new
+        )
+      end
+      true
+    end.returns({ success: true, total: 1, imported: 1, failed: 0, errors: [] })
+
+    imported_entry_visible = false
+    Account.any_instance.stubs(:set_current_balance).with do
+      imported_entry_visible = acct.entries.transactions.where(name: "Late outflow").exists?
+      true
+    end.returns(Account::CurrentBalanceManager::Result.new(success?: true, changes_made?: true, error: nil))
+
+    SophtronAccount::Processor.new(sophtron_account).process
+
+    assert imported_entry_visible,
+      "set_current_balance must run after the transaction batch is persisted"
   end
 
   test "historical observations preserve current balance and cash balance" do
