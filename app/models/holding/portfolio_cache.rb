@@ -17,10 +17,12 @@ class Holding::PortfolioCache
     end
   end
 
-  def initialize(account, use_holdings: false, security_ids: nil)
+  # carry_forward_prices lets a cash-anchored account value a day without a quote at the last known one.
+  def initialize(account, use_holdings: false, security_ids: nil, carry_forward_prices: false)
     @account = account
     @use_holdings = use_holdings
     @security_ids = security_ids
+    @carry_forward_prices = carry_forward_prices
     load_prices
   end
 
@@ -32,7 +34,8 @@ class Holding::PortfolioCache
     end
   end
 
-  def get_price(security_id, date, source: nil)
+  # Resolve a dated quote with shared precedence and convert it to the requested currency.
+  def get_price(security_id, date, source: nil, currency: account.currency)
     security = @security_cache[security_id]
     raise SecurityNotFound.new(security_id, account.id) unless security
 
@@ -42,16 +45,29 @@ class Holding::PortfolioCache
       security[:prices_by_date][date]
     end
 
+    if price_with_priority.nil? && @carry_forward_prices && source.nil?
+      dates = security[:price_dates]
+      index = dates.bsearch_index { |value| value > date }
+      previous_date = index ? (dates[index - 1] if index.positive?) : dates.last
+      price_with_priority = security[:prices_by_date][previous_date] if previous_date
+      # A quote carried across a split is for a pre-split share.
+      carried_split = split_factor_between(security_id, previous_date, date)
+    end
+
     return nil unless price_with_priority
 
     price = price_with_priority.price
     return nil unless price
 
-    price_money = Money.new(price.price, price.currency)
+    price_money = Money.new(carried_split ? Security::Split.unscale(price.price, carried_split) : price.price, price.currency)
 
     begin
-      converted_amount = price_money.exchange_to(account.currency, date: date).amount
+      converted_amount = price_money.exchange_to(currency, date: date).amount
     rescue Money::ConversionError
+      # Anchored accounts keep the last valued holding (gapfill) instead of
+      # booking an unconverted quote or failing the whole sync.
+      return nil if @carry_forward_prices
+
       converted_amount = price.price
     end
 
@@ -59,12 +75,16 @@ class Holding::PortfolioCache
       security_id: security_id,
       date: price.date,
       price: converted_amount,
-      currency: account.currency
+      currency: currency
     )
   end
 
   def get_securities
     @security_cache.map { |_, v| v[:security] }
+  end
+
+  def get_holdings(security_id)
+    holdings_by_security_id[security_id]
   end
 
   # The ratio of the split a security goes ex on this date, or nil when it
@@ -145,7 +165,16 @@ class Holding::PortfolioCache
     end
 
     def holdings
-      @holdings ||= account.holdings.chronological.to_a
+      @holdings ||= begin
+        scope = account.holdings
+        # Rebuild anchored prices from observations so a corrected split can change them.
+        if @carry_forward_prices
+          scope = scope.where(security_id: @security_ids) if @security_ids
+          scope.where(materialized: false).preferred_on_date.to_a
+        else
+          scope.where(superseded: false).chronological.to_a
+        end
+      end
     end
 
     def holdings_by_security_id
@@ -320,7 +349,10 @@ class Holding::PortfolioCache
       unpriced_trades_by_security_id.each do |security_id, trades|
         price_unpriced_trade_days(security_id, trades, earlier: earlier[security_id])
       end
-      @security_cache.each_key { |security_id| reprice_holding_source(security_id) }
+      @security_cache.each do |security_id, cached|
+        cached[:price_dates] = cached[:prices_by_date].keys.sort if @carry_forward_prices
+        reprice_holding_source(security_id)
+      end
     end
 
     # A lookup for holding prices alone (the reverse calculator reads today's

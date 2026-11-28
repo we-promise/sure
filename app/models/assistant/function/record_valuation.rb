@@ -107,7 +107,7 @@ class Assistant::Function::RecordValuation < Assistant::Function
 
     ActiveRecord::Base.transaction do
       account.lock!
-      replaced_existing = account.entries.valuations.exists?(date: date)
+      replaced_existing = account.entries.valuations.excluding_cash_anchors.exists?(date: date)
 
       result = account.create_reconciliation(balance: amount, date: date)
 
@@ -116,7 +116,7 @@ class Assistant::Function::RecordValuation < Assistant::Function
         raise ActiveRecord::Rollback
       end
 
-      entry = account.entries.valuations.find_by!(date: date)
+      entry = account.entries.valuations.excluding_cash_anchors.find_by!(date: date)
       entry.update!(notes: merged_notes(entry.notes, citation))
     end
 

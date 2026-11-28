@@ -72,7 +72,9 @@ class Entry < ApplicationRecord
   RECONCILED_STATUS_CYCLE = reconciled_statuses.keys.freeze
 
   validates :date, :name, :amount, :currency, presence: true
-  validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
+  validates :date, uniqueness: { scope: [ :account_id, :entryable_type ],
+    conditions: -> { excluding_cash_anchors } },
+    if: -> { valuation? && !entryable.cash_anchor? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
   validates :external_id, uniqueness: { scope: [ :account_id, :source ] }, if: -> { external_id.present? && source.present? }
 
@@ -96,7 +98,9 @@ class Entry < ApplicationRecord
   }
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
+  before_validation :reactivate_changed_valuation
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
+  after_destroy :remove_holdings_of_last_trade, if: -> { trade? && entryable.qty.nonzero? }
 
   # Any other write of `excluded` (a user toggling it, a reconciliation) ends the
   # "excluded automatically" state, so a later booking cannot override it. This
@@ -193,6 +197,9 @@ class Entry < ApplicationRecord
       )
     SQL
   }
+
+  # Cash anchors are internal accounting baselines, not user valuations.
+  scope :excluding_cash_anchors, -> { where.not(entryable_id: Valuation.cash_anchor.select(:id)) }
 
   # The entries in `ids` and the children of any of them that was split, which
   # stand in for their excluded parent wherever money is counted.
@@ -509,9 +516,12 @@ class Entry < ApplicationRecord
   # Starting the window after the old date would seed the incremental balance
   # calculation from a balance that still includes this entry.
   #
+  # A delete normally rebuilds everything. A cash-anchored account only
+  # rebuilds from a given date, so its deleted entry still names its own.
+  #
   # @return [void]
   def sync_account_later
-    sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed?
+    sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed? && !account.accounting_start_date
     @earliest_saved_date = nil
     account.sync_later(window_start_date: sync_start_date)
 
@@ -1096,6 +1106,28 @@ class Entry < ApplicationRecord
         lock!
         yield txn
       end
+    end
+
+    # A monetary or dated edit explicitly restores a superseded total valuation.
+    def reactivate_changed_valuation
+      return unless valuation? && !entryable.cash_anchor? && (amount_changed? || date_changed?)
+
+      entryable.superseded_at = nil
+    end
+
+    # Earlier trades may have been removed before the next sync. Clear the
+    # calculated series and rebuild from its first day to carry any observations.
+    def remove_holdings_of_last_trade
+      return unless account.accounting_start_date
+      # Serialize the last-trade check when two entries are deleted together.
+      Account.where(id: account_id).lock.pick(:id)
+      return if account.trades.where.not(qty: 0).exists?(security_id: entryable.security_id)
+
+      calculated = account.holdings.where(security_id: entryable.security_id, account_provider_id: nil,
+        materialized: true, superseded: false)
+      @earliest_saved_date = [ @earliest_saved_date, calculated.minimum(:date) ].compact.min
+      # Keep stored basis overrides; the rebuild reactivates any genuine snapshot carry.
+      calculated.update_all(superseded: true)
     end
 
     # Locks the parts' transfers and then the parts, the order Transfer#confirm!

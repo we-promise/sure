@@ -14,11 +14,21 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     @window_start_date.present? && @fell_back == false
   end
 
-  def calculate
+  # Rebuild daily balances from dated total valuations, cash anchors and ledger flows.
+  def calculate(as_of: nil)
     Rails.logger.tagged("Balance::ForwardCalculator") do
-      start_cash_balance, start_non_cash_balance = resolve_starting_balances
+      if as_of
+        # An anchor replays the cached ledger through its own date. Any opening
+        # valuation establishes the starting balance when the replay reaches it.
+        start_date = [ sync_cache.entries.first&.date, as_of ].compact.min
+        end_date = as_of
+        start_cash_balance = start_non_cash_balance = 0
+      else
+        start_cash_balance, start_non_cash_balance = resolve_starting_balances
+        start_date, end_date = calc_start_date, calc_end_date
+      end
 
-      calc_start_date.upto(calc_end_date).map do |date|
+      start_date.upto(end_date).map do |date|
         valuation = sync_cache.get_valuation(date)
 
         if valuation
@@ -27,6 +37,10 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
             date: date
           )
           end_non_cash_balance = valuation.amount - end_cash_balance
+        elsif (cash_anchor = sync_cache.get_cash_anchor(date))
+          ledger_delta = cash_anchor.entryable.cash_entry_total.to_d - sync_cache.cash_entry_total(date)
+          end_cash_balance = cash_anchor.amount + ledger_delta * flows_factor
+          end_non_cash_balance = holdings_value_for_date(date)
         else
           end_cash_balance = derive_end_cash_balance(start_cash_balance: start_cash_balance, date: date)
           end_non_cash_balance = derive_end_non_cash_balance(start_non_cash_balance: start_non_cash_balance, date: date)
@@ -36,7 +50,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
         market_value_change = market_value_change_on_date(date, flows)
 
         cash_adjustments = cash_adjustments_for_date(start_cash_balance, end_cash_balance, (flows[:cash_inflows] - flows[:cash_outflows]) * flows_factor)
-        non_cash_adjustments = non_cash_adjustments_for_date(start_non_cash_balance, end_non_cash_balance, (flows[:non_cash_inflows] - flows[:non_cash_outflows]) * flows_factor)
+        non_cash_adjustments = non_cash_adjustments_for_date(start_non_cash_balance, end_non_cash_balance, (flows[:non_cash_inflows] - flows[:non_cash_outflows]) * flows_factor) + asset_adjustments_for_date(date, flows)
 
         output_balance = build_balance(
           date: date,
@@ -62,6 +76,11 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     end
   end
 
+  # Use the same ledger snapshot as the calculated cash balance.
+  def cash_entry_total(date)
+    sync_cache.cash_entry_total(date)
+  end
+
   private
     # Returns [start_cash_balance, start_non_cash_balance] for the first iteration.
     #
@@ -81,7 +100,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
 
         prior = prior_balance
 
-        if prior && (prior.end_non_cash_balance || 0).zero?
+        if prior && ((prior.end_non_cash_balance || 0).zero? || account.accounting_start_date)
           Rails.logger.info("Incremental sync from #{@window_start_date}, seeding from persisted balance on #{prior.date}")
           @fell_back = false
           return [ prior.end_cash_balance, prior.end_non_cash_balance ]
@@ -130,8 +149,9 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
         .find_by(date: @window_start_date - 1)
     end
 
+    # Cash anchors rebase against the full ledger total, so anchored accounts load every entry.
     def sync_cache
-      @sync_cache ||= Balance::SyncCache.new(account, start_date: (@window_start_date if incremental?))
+      @sync_cache ||= Balance::SyncCache.new(account, start_date: (@window_start_date if incremental? && !account.accounting_start_date))
     end
 
     def calc_start_date
@@ -139,11 +159,11 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     end
 
     def calc_end_date
-      # Scheduled (future-dated) entries must not extend the calculation window --
-      # otherwise their flows would materialize a balance dated in the future,
-      # and Balance::Materializer#update_account_info would surface that as the
-      # account's *current* balance. See Entry#scheduled? and Balance::SyncCache.
-      [ account.entries.excluding_pending.where(date: ..Date.current).maximum(:date), account.holdings.maximum(:date) ].compact.max || Date.current
+      # Scheduled entries and future holdings only enter the calculation once
+      # their dates arrive.
+      last_entry = account.entries.excluding_pending.where(date: ..Date.current).maximum(:date)
+      last_holding = account.holdings.through_today.where(superseded: false).maximum(:date)
+      [ last_entry, last_holding ].compact.max || Date.current
     end
 
     # Negative entries amount on an "asset" account means, "account value has increased"

@@ -585,7 +585,9 @@ class Account::ProviderImportAdapter
         price: price,
         amount: amount,
         account_provider_id: account_provider_id,
-        external_id: external_id
+        external_id: external_id,
+        materialized: false,
+        superseded: false
       }
 
       corrections = corrections_from(carried, provider_security_id: security.id)
@@ -635,7 +637,9 @@ class Account::ProviderImportAdapter
             updates = {
               qty: quantity,
               price: price,
-              amount: amount
+              amount: amount,
+              materialized: false,
+              superseded: false
             }
 
             # Reconcile cost_basis to respect priority hierarchy

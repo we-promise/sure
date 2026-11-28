@@ -49,6 +49,20 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
       "a split moves no money, so total recorded cost is unchanged"
   end
 
+  test "drops calculated holdings dated after the family's today" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    date = Date.current.next_day
+    travel_to(date) do
+      @aapl.prices.find_or_initialize_by(date: date).update!(price: 200, currency: "USD")
+      Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+      assert @account.holdings.find_by!(security: @aapl, date: date).materialized?
+    end
+
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    refute @account.holdings.exists?(date: date)
+  end
+
   test "syncs holdings" do
     create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
 

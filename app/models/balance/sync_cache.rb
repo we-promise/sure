@@ -29,8 +29,23 @@ class Balance::SyncCache
     converted_entries
   end
 
+  # Return an authoritative total valuation, excluding cash-only and superseded anchors.
   def get_valuation(date)
-    entries_by_date[date]&.find { |e| e.valuation? }
+    cash_anchor = get_cash_anchor(date)
+    entries_by_date[date]&.find do |entry|
+      entry.valuation? && !entry.entryable.cash_anchor? && !(cash_anchor && entry.entryable.superseded_at?)
+    end
+  end
+
+  # Cash-only anchors are distinct from valuations of the entire account.
+  def get_cash_anchor(date)
+    entries_by_date[date]&.find { |e| e.valuation? && e.entryable.cash_anchor? }
+  end
+
+  # Reuse the standard pending, split and FX rules for an anchor's ledger baseline.
+  def cash_entry_total(date)
+    index = cash_entry_totals.bsearch_index { |(day, _)| day > date } || cash_entry_totals.size
+    index.zero? ? 0 : cash_entry_totals[index - 1].last
   end
 
   def get_holdings_value(date)
@@ -39,11 +54,6 @@ class Balance::SyncCache
 
   def get_entries(date)
     entries_by_date[date]&.select { |e| e.transaction? || e.trade? } || []
-  end
-
-  # Every entry converted to the account currency, in date order.
-  def entries
-    converted_entries
   end
 
   # One replay per loan per cache, so a calculator that asks twice does not
@@ -56,6 +66,14 @@ class Balance::SyncCache
   private
     attr_reader :account
 
+    # Running ledger totals by date, built once instead of once per anchor.
+    def cash_entry_totals
+      @cash_entry_totals ||= begin
+        running = 0
+        converted_entries.reject(&:valuation?).group_by(&:date).sort.map { |day, entries| [ day, running += entries.sum(&:amount) ] }
+      end
+    end
+
     def entries_by_date
       @entries_by_date ||= converted_entries.group_by(&:date)
     end
@@ -64,7 +82,8 @@ class Balance::SyncCache
       @holdings_value_by_date ||= begin
         missing_rate_pairs = []
 
-        totals = account.holdings.each_with_object(Hash.new(0)) do |h, acc|
+        holdings = account.accounting_start_date ? account.holdings.preferred_on_date : account.holdings.where(superseded: false)
+        totals = holdings.each_with_object(Hash.new(0)) do |h, acc|
           begin
             converted = Money.new(h.amount, h.currency).exchange_to(account.currency, date: h.date).amount
           rescue Money::ConversionError => error

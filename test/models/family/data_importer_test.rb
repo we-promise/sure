@@ -1674,6 +1674,56 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal %w[CAD USD], account.holdings.order(:currency).pluck(:currency)
   end
 
+  test "restoring cash-anchored accounts preserves the ledger baseline and holding provenance" do
+    account = @family.accounts.create!(name: "Anchored", accountable: Investment.new, currency: "USD", balance: 1000)
+    security = securities(:msft)
+    account.entries.create!(date: 2.days.ago.to_date, amount: 1000, currency: "USD", name: "Opening",
+      entryable: Valuation.new(kind: :opening_anchor))
+    %w[CAD EUR].each do |currency|
+      ExchangeRate.find_or_initialize_by(date: Date.yesterday, from_currency: currency, to_currency: "USD").update!(rate: "1.1")
+    end
+    account.entries.create!(date: Date.yesterday, amount: 160, currency: "CAD", name: "Buy MSFT",
+      entryable: Trade.new(security: security, qty: 2, price: 80, currency: "EUR", exchange_rate: "1.25",
+        investment_activity_label: "Buy"))
+    account.entries.create!(date: Date.current, amount: 1100, currency: "USD", name: "Old total", entryable: Valuation.new)
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    anchor = account.create_cash_anchor!
+    original_cash = anchor.amount
+    account.holdings.create!(security: security, date: Date.current, currency: "EUR", price: 50, qty: 2, amount: 100,
+      materialized: true, superseded: true, cost_basis: 35, cost_basis_inherited: true)
+
+    restored_family = Family.create!(name: "Restored", currency: "USD", locale: "en")
+    Family::DataImporter.new(restored_family, full_export_ndjson(@family)).import!
+    restored = restored_family.accounts.find_by!(name: account.name)
+    assert_equal 200, restored.valuations.cash_anchor.sole.cash_entry_total
+    assert_predicate restored.entries.valuations.find_by!(name: "Old total").entryable, :superseded_at?
+    assert restored.holdings.all?(&:materialized?)
+    retained = restored.holdings.find_by!(currency: "EUR")
+    assert_predicate retained, :superseded?
+    assert_predicate retained, :cost_basis_inherited?
+    Balance::Materializer.new(restored, strategy: :forward).materialize_balances
+    assert_equal original_cash, restored.reload.cash_balance
+    restored_trade_entry = restored.entries.trades.sole
+    assert_equal "CAD", restored_trade_entry.currency
+    assert_equal "EUR", restored_trade_entry.trade.currency
+    assert_equal 1.25, restored_trade_entry.trade.numeric_exchange_rate
+    restored_trade_entry.destroy!
+    assert_empty restored.current_holdings
+  end
+
+  test "a calculated holding in a backup does not replace an observation in a target account" do
+    account = @family.accounts.create!(name: "Target", accountable: Investment.new, currency: "USD", balance: 0)
+    security = Security.create!(ticker: "OBS", name: "Observed holding", exchange_operating_mic: "XNAS")
+    source = account.holdings.create!(security: security, date: Date.current, currency: "USD", qty: 3, price: 10, amount: 30)
+    record = { type: "Holding", data: {
+      account_id: "source", ticker: security.ticker, exchange_operating_mic: "XNAS", date: Date.current,
+      currency: "USD", qty: 6, price: 10, amount: 60, materialized: true
+    } }
+    Family::DataImporter.new(@family, record.to_json, account_targets: { "source" => account }).import!
+    assert_equal 3, source.reload.qty
+    refute_predicate source, :materialized?
+  end
+
   test "round trips holding snapshots through full export" do
     source_family = Family.create!(
       name: "Source Family",

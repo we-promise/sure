@@ -11,6 +11,30 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     )
   end
 
+  test "cash entry totals run through each date and skip valuations" do
+    [ [ 4, 100 ], [ 2, -30 ], [ 2, 10 ] ].each do |days_ago, amount|
+      @account.entries.create!(date: days_ago.days.ago.to_date, name: "Cash", amount: amount, currency: "USD", entryable: Transaction.new)
+    end
+    @account.entries.create!(date: 3.days.ago.to_date, name: "Total", amount: 5000, currency: "USD", entryable: Valuation.new)
+    cache = Balance::SyncCache.new(@account)
+
+    assert_equal 0, cache.cash_entry_total(5.days.ago.to_date)
+    assert_equal 100, cache.cash_entry_total(3.days.ago.to_date)
+    assert_equal 80, cache.cash_entry_total(2.days.ago.to_date)
+    assert_equal 80, cache.cash_entry_total(Date.current)
+  end
+
+  test "a superseded valuation cannot hide an active valuation on the same day" do
+    date = Date.current
+    superseded = Entry.new(date: date, entryable: Valuation.new(superseded_at: Time.current))
+    cash_anchor = Entry.new(date: date, entryable: Valuation.new(kind: :cash_anchor))
+    active = Entry.new(date: date, entryable: Valuation.new)
+    cache = Balance::SyncCache.new(@account)
+    cache.stubs(:converted_entries).returns([ superseded, cash_anchor, active ])
+
+    assert_equal active, cache.get_valuation(date)
+  end
+
   test "uses custom exchange rate from transaction extra field when present" do
     # Create a transaction with EUR currency and custom exchange rate
     _entry = @account.entries.create!(

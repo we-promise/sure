@@ -7822,7 +7822,8 @@ paths:
   "/api/v1/holdings":
     get:
       summary: List holdings
-      description: Holdings are ordered by date, then by holding ID for rows on the
+      description: Excludes calculated holdings superseded by a recalculation in another
+        currency. Holdings are ordered by date, then by holding ID for rows on the
         same date.
       tags:
       - Holdings
@@ -7911,6 +7912,8 @@ paths:
         type: string
     get:
       summary: Retrieve holding
+      description: Retrieves an accessible holding by ID, including a retained superseded
+        calculation.
       tags:
       - Holdings
       security:

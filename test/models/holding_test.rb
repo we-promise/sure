@@ -48,7 +48,8 @@ class HoldingTest < ActiveSupport::TestCase
   test "weight sums the account holdings once per account instance" do
     holdings = @account.current_holdings.to_a
 
-    Holding.uncached { assert_queries_count(2) { holdings.each { |holding| 3.times { holding.weight } } } }
+    # The cash-anchor date, the provider snapshot date and the holdings; none per holding.
+    Holding.uncached { assert_queries_count(3) { holdings.each { |holding| 3.times { holding.weight } } } }
   end
 
   test "weight sees holdings added before an account reload" do
