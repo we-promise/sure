@@ -371,6 +371,25 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     refute_includes account.read_attribute_before_type_cast(:iban).to_s, "CZ-PLAINTEXT-IBAN"
   end
 
+  # An API key created before encryption was turned on has to keep working
+  # once the backfill is done and the plaintext fallback is off. It still
+  # authenticates, and revoking it reads display_key without raising.
+  test "backfills a plaintext API key so it still authenticates and can be revoked" do
+    api_key = api_keys(:active_key)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE api_keys SET display_key = ? WHERE id = ?", "legacy-plaintext-api-key", api_key.id ]))
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    refute_includes api_key.reload.read_attribute_before_type_cast(:display_key).to_s, "legacy-plaintext-api-key"
+
+    without_plaintext_fallback do
+      assert_equal api_key, ApiKey.find_by_value("legacy-plaintext-api-key")
+      ApiKey.find(api_key.id).revoke!
+    end
+    assert api_key.reload.revoked?
+  end
+
   # Pins the manifest's content to CURRENT_BACKFILL_VERSION: a manifest change
   # without a version bump would leave installs that completed the previous
   # backfill marked "complete", turning off the plaintext fallback for fields
@@ -493,6 +512,16 @@ class SecurityBackfillTest < ActiveSupport::TestCase
   end
 
   private
+
+    # Reads as an install does after a completed backfill, when
+    # support_unencrypted_data is off.
+    def without_plaintext_fallback
+      previous = ActiveRecord::Encryption.config.support_unencrypted_data
+      ActiveRecord::Encryption.config.support_unencrypted_data = false
+      yield
+    ensure
+      ActiveRecord::Encryption.config.support_unencrypted_data = previous
+    end
 
     def encrypted_models_for_backfill
       ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.values.map { |name, _| name.constantize } + [ Session ]
