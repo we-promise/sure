@@ -1,0 +1,37 @@
+---
+pt-BR:
+  web_push:
+    title: Notificações do navegador
+    description: Receba novos insights de alta prioridade neste navegador ou no app instalado. As notificações ocultam detalhes financeiros na tela de bloqueio.
+    enable: Ativar este dispositivo
+    disable: Desativar este dispositivo
+    test: Testar este dispositivo
+    preview: Prévia
+    session_notice: As notificações param quando você sai ou quando sua sessão expira após 30 dias de inatividade. Abra o Sure regularmente para manter sua sessão ativa.
+    ios_guidance: No iPhone ou iPad, abra o Sure no Safari, escolha Compartilhar → Adicionar à Tela de Início e depois ative as notificações pelo app instalado. Requer iOS ou iPadOS 16.4 ou posterior.
+    notification:
+      body: Um novo alerta financeiro está disponível. Abra o Sure para revisá-lo.
+      test_body: Sua notificação de teste chegou. Abra o Sure para continuar.
+    status:
+      checking: Verificando este dispositivo…
+      enabled: As notificações estão ativadas para este dispositivo e esta sessão.
+      disabled: As notificações estão desativadas para este dispositivo.
+      denied: As notificações estão bloqueadas nas configurações do navegador. Permita-as lá e depois ative este dispositivo novamente.
+      unsupported: Este navegador não é compatível com notificações. Use um navegador compatível ou o app instalado via HTTPS.
+      unconfigured: As notificações do navegador não foram configuradas neste servidor.
+      queued: Teste na fila. Aguardando o serviço de push aceitá-lo.
+      accepted: Aceito pelo serviço de push. Verifique se a notificação chegou a este dispositivo; a aceitação não confirma que ela foi exibida.
+      skipped: Teste ignorado porque esta sessão ou o acesso à prévia mudou, ou o teste expirou. Ative este dispositivo e tente novamente.
+      rejected: O serviço de push rejeitou este teste. Desative este dispositivo e depois ative-o novamente.
+      failed: Não foi possível entregar o teste. Tente novamente mais tarde.
+      enqueue_failed: Não foi possível colocar o teste na fila. Tente novamente mais tarde.
+      pending: Teste na fila ou sendo reenviado. A entrega pode levar um momento.
+      expired: O teste ainda está na fila. Verifique os workers em segundo plano ou tente outro teste mais tarde.
+    errors:
+      registration: Não foi possível registrar este dispositivo. Tente desativá-lo e depois ativá-lo novamente.
+      preview: Ative os recursos em prévia antes de usar as notificações do navegador.
+      unconfigured: As notificações do navegador não foram configuradas neste servidor.
+      rate_limited: Muitas solicitações de notificação. Aguarde um minuto e tente novamente.
+      enqueue: Não foi possível colocar a notificação de teste na fila. Tente novamente mais tarde.
+      request: Não foi possível atualizar as notificações do navegador. Verifique sua conexão e tente novamente.
+      permission: A permissão de notificação não foi concedida.

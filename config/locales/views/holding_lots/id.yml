@@ -1,0 +1,10 @@
+---
+id:
+  holding_lots:
+    provider_cost: Penyedia Anda memasok biaya posisi ini, sehingga biaya lotnya
+      tidak dapat diatur.
+    update:
+      success: Biaya lot diperbarui.
+      error: Masukkan total biaya lot, nol atau lebih.
+    unlock:
+      success: Biaya manual dihapus.
