@@ -32,7 +32,7 @@ de:
           attributes:
             logo:
               invalid_content_type: "muss ein PNG-, JPEG-, GIF-, WebP- oder ICO-Bild sein"
-              too_large: "muss kleiner als %{max_size} MB sein"
+              too_large: "darf höchstens %{max_size} MB groß sein"
             base:
               cost_tag_other_family: "Der Kosten-Tag muss einer deiner eigenen Tags sein."
   account_order:
