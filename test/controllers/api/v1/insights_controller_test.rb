@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Api::V1::InsightsControllerTest < ActionDispatch::IntegrationTest
+  include InsightTestHelper
+
   setup do
     @user = users(:family_admin)
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
@@ -31,6 +33,20 @@ class Api::V1::InsightsControllerTest < ActionDispatch::IntegrationTest
     row = payload.fetch("insights").find { |insight| insight.fetch("id") == @insight.id }
     assert_equal "idle_cash", row.fetch("type")
     assert_equal "Put idle cash to work", row.fetch("title")
+  end
+
+  test "hides a household total once access to its accounts changes" do
+    total = household_total(@user.family)
+    accounts(:depository).unshare_with!(users(:family_member))
+
+    get api_v1_insights_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_not_includes response.parsed_body.fetch("insights").map { |insight| insight.fetch("id") }, total.id
+
+    @api_key.update!(scopes: [ "read_write" ])
+    patch acknowledge_api_v1_insight_url(total), headers: api_headers(@api_key)
+    assert_response :not_found
   end
 
   test "rejects requests without an API key" do

@@ -16,7 +16,7 @@ class SnaptradeItemsController < ApplicationController
   ].freeze
 
   before_action :set_snaptrade_item, only: [ :show, :destroy, :sync, :connect, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :complete_oauth_device_flow ]
-  before_action :require_admin!, only: [ :destroy, :sync, :connect, :callback, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :oauth_authorize, :oauth_callback, :oauth_device_authorize, :start_oauth_device_flow, :complete_oauth_device_flow, :preload_accounts, :select_accounts, :select_existing_account, :link_existing_account ]
+  before_action :require_admin!, only: [ :destroy, :sync, :connect, :callback, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :oauth_authorize, :oauth_callback, :oauth_device_authorize, :start_oauth_device_flow, :complete_oauth_device_flow, :personal_key, :preload_accounts, :select_accounts, :select_existing_account, :link_existing_account ]
 
   def index
     @snaptrade_items = Current.family.snaptrade_items.ordered
@@ -95,7 +95,7 @@ class SnaptradeItemsController < ApplicationController
     latest_sync = @snaptrade_item.syncs.ordered.first
     should_sync = latest_sync.nil? || !latest_sync.completed?
 
-    if @snaptrade_item.oauth_configured? && no_accounts && !@snaptrade_item.syncing? && should_sync
+    if @snaptrade_item.credentials_configured? && no_accounts && !@snaptrade_item.syncing? && should_sync
       @snaptrade_item.sync_later
     end
 
@@ -370,6 +370,26 @@ class SnaptradeItemsController < ApplicationController
     render :oauth_device_flow, status: :unprocessable_entity
   end
 
+  # Save a SnapTrade Personal API key (clientId + consumerKey) on the family's
+  # item. Personal keys come with their own SnapTrade user, so there is nothing
+  # to register: the item can sync as soon as the key is stored. Only offered
+  # when the instance has no OAuth app.
+  def personal_key
+    return head :not_found if Provider::Snaptrade.oauth_configured?
+
+    snaptrade_item = current_snaptrade_item || Current.family.snaptrade_items.build(name: t("snaptrade_items.default_name"))
+    client_id, consumer_key = personal_key_params.values_at(:client_id, :consumer_key).map { |value| value.to_s.strip }
+
+    if client_id.blank? || consumer_key.blank?
+      return render_provider_panel("snaptrade", alert: t(".missing_fields"))
+    end
+
+    snaptrade_item.apply_personal_key!(client_id: client_id, consumer_key: consumer_key)
+    snaptrade_item.sync_later_with_follow_up
+
+    render_provider_panel("snaptrade", notice: t(".success"))
+  end
+
   # Delete a brokerage connection
   def delete_connection
     authorization_id = params[:authorization_id]
@@ -428,7 +448,7 @@ class SnaptradeItemsController < ApplicationController
       return
     end
 
-    if snaptrade_item.oauth_configured?
+    if snaptrade_item.credentials_configured?
       snaptrade_item.sync_later_with_follow_up
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item)
     else
@@ -446,7 +466,7 @@ class SnaptradeItemsController < ApplicationController
       return
     end
 
-    if snaptrade_item.oauth_configured?
+    if snaptrade_item.credentials_configured?
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: @accountable_type, return_to: @return_to)
     else
       redirect_to helpers.snaptrade_authorize_path(item_id: snaptrade_item.id, accountable_type: @accountable_type, return_to: @return_to)
@@ -510,6 +530,10 @@ class SnaptradeItemsController < ApplicationController
 
       active_items.syncable.ordered.first ||
         active_items.ordered.first
+    end
+
+    def personal_key_params
+      params.require(:snaptrade_item).permit(:client_id, :consumer_key)
     end
 
     def assign_device_flow_context

@@ -210,7 +210,7 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     first_buy  = 10.days.ago.to_date
     second_buy = 3.days.ago.to_date
 
-    calc = calculator_with_trades(security) do
+    calc = calculator_with_trades(security, held: 15) do
       create_trade(security, account: @account, qty: 10, price: 100, date: first_buy)
       create_trade(security, account: @account, qty: 5,  price: 130, date: second_buy)
     end
@@ -228,7 +228,7 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     security = Security.create!(ticker: "TST", name: "Test")
     buy_date = 5.days.ago.to_date
 
-    calc = calculator_with_trades(security) do
+    calc = calculator_with_trades(security, held: 15) do
       create_trade(security, account: @account, qty: 10, price: 100, date: buy_date)
       create_trade(security, account: @account, qty: 5,  price: 130, date: buy_date)
     end
@@ -656,9 +656,11 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     # Brokerage Cash: $5,000
     # Holdings Value: $15,000
     # Total Balance: $20,000
-    def calculator_with_trades(security)
+    # `held` is what the provider reports; a position whose trades buy more
+    # than that is clamped, and has no cost basis.
+    def calculator_with_trades(security, held: 10)
       yield if block_given?
-      snapshot = OpenStruct.new(to_h: { security.id => 10 })
+      snapshot = OpenStruct.new(to_h: { security.id => held })
       calc = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot)
       calc.send(:precompute_cost_basis)
       calc
