@@ -20,6 +20,18 @@ module Oauth::ClientMetadataValidator
 
   module_function
 
+  # Runs all client metadata checks in a consistent order and returns the first
+  # failing error symbol, or nil when valid.
+  def error_for(redirect_uris:, client_name: nil)
+    uris = normalize_redirect_uris(redirect_uris)
+    return :redirect_uris_required if uris.empty?
+    return :invalid_redirect_uris unless uris.all? { |uri| valid_redirect_uri?(uri) }
+    return :invalid_client_name if bidi_control?(client_name)
+    return :reserved_client_name if reserved_client_name?(client_name)
+
+    nil
+  end
+
   def normalize_redirect_uris(raw_uris)
     return [] if raw_uris.blank?
 

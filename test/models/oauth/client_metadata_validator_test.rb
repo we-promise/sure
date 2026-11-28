@@ -1,6 +1,33 @@
 require "test_helper"
 
 class Oauth::ClientMetadataValidatorTest < ActiveSupport::TestCase
+  test "error_for returns nil for valid metadata and enforces check precedence" do
+    assert_nil Oauth::ClientMetadataValidator.error_for(
+      redirect_uris: [ "https://claude.ai/callback" ],
+      client_name: "Claude"
+    )
+    assert_nil Oauth::ClientMetadataValidator.error_for(
+      redirect_uris: [ "https://claude.ai/callback" ]
+    )
+
+    assert_equal :redirect_uris_required, Oauth::ClientMetadataValidator.error_for(
+      redirect_uris: [],
+      client_name: "\u202ESure"
+    )
+    assert_equal :invalid_redirect_uris, Oauth::ClientMetadataValidator.error_for(
+      redirect_uris: [ "javascript:alert(1)" ],
+      client_name: "\u202ESure"
+    )
+    assert_equal :invalid_client_name, Oauth::ClientMetadataValidator.error_for(
+      redirect_uris: [ "https://claude.ai/callback" ],
+      client_name: "\u202ESure"
+    )
+    assert_equal :reserved_client_name, Oauth::ClientMetadataValidator.error_for(
+      redirect_uris: [ "https://claude.ai/callback" ],
+      client_name: "Sure Mobile"
+    )
+  end
+
   test "normalize_redirect_uris strips whitespace and drops blank entries" do
     assert_equal [ "https://claude.ai/callback" ],
       Oauth::ClientMetadataValidator.normalize_redirect_uris([ "  https://claude.ai/callback  ", "", "   ", nil ])
