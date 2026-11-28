@@ -65,22 +65,40 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     plaid = accounts(:connected)
 
     visit account_path(checking)
+    observe_account_prefetch(account_path(plaid))
 
-    within_testid("account-sidebar-tabs") do
-      find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
+    wait_for_account_visit(account_path(plaid)) do
+      within_testid("account-sidebar-tabs") do
+        find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
 
-      handle = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] button")
-      handle.send_keys(:enter)
-      handle.send_keys(:up)
+        handle = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] button")
+        handle.send_keys(:enter)
+        handle.send_keys(:up)
 
-      link = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] a[href='#{account_path(plaid)}']")
-      link.hover
-      link.click
+        link = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] a[href='#{account_path(plaid)}']")
+        link.hover
+        # Observe the absence of a request beyond Turbo's 100 ms hover delay.
+        # A negative Capybara matcher would return immediately, before that timer.
+        page.driver.browser.execute_async_script("setTimeout(arguments[0], 300)")
+        assert_empty evaluate_script("window.accountPrefetches"), "sortable account links must not prefetch the unsaved order"
+        link.click
+      end
     end
 
     assert_current_path account_path(plaid)
     assert_eventually { @user.reload.manual_account_order["depository"]&.first(2) == [ plaid.id, checking.id ] }
     assert_depository_order [ plaid.id, checking.id ]
+  end
+
+  test "account links still prefetch when manual ordering is disabled" do
+    @user.update!(default_account_order: "name_asc")
+    visit account_path(accounts(:depository))
+    destination = account_path(accounts(:connected))
+    observe_account_prefetch(destination)
+
+    within_testid("account-sidebar-tabs") { find("a[href='#{destination}']", visible: true).hover }
+
+    assert_eventually { evaluate_script("window.accountPrefetches.length") == 1 }
   end
 
   test "leaving sort mode keeps focus in the sidebar when no sort toggle is visible" do
@@ -227,7 +245,36 @@ class AccountManualOrderTest < ApplicationSystemTestCase
   end
 
   private
-    # The URL and saved order can update before Turbo replaces its cached preview.
+    def observe_account_prefetch(path)
+      page.execute_script(<<~JS, path)
+        window.accountPrefetches = [];
+        const destination = new URL(arguments[0], location.href).href;
+        document.addEventListener("turbo:before-fetch-request", (event) => {
+          const headers = new Headers(event.detail.fetchOptions.headers);
+          if (event.detail.url.href === destination && headers.get("X-Sec-Purpose") === "prefetch") {
+            window.accountPrefetches.push(event.detail.url.href);
+          }
+        });
+      JS
+    end
+
+    # The URL and saved order can update before the destination replaces the
+    # reordered source page. turbo:load follows the visit's final render.
+    def wait_for_account_visit(path)
+      page.execute_script(<<~JS, path)
+        delete document.documentElement.dataset.accountVisitLoaded;
+        const destination = new URL(arguments[0], location.href).href;
+        const onLoad = (event) => {
+          if (event.detail.url !== destination) return;
+          document.documentElement.dataset.accountVisitLoaded = "true";
+          document.removeEventListener("turbo:load", onLoad);
+        };
+        document.addEventListener("turbo:load", onLoad);
+      JS
+      yield
+      assert_selector "html[data-account-visit-loaded='true']", visible: :all
+    end
+
     def assert_depository_order(ids)
       selector = "[data-testid='account-sidebar-tabs'] [data-sortable-list-url-value='#{reorder_accounts_path(group: "depository")}']"
       assert_selector selector, visible: true do |list|

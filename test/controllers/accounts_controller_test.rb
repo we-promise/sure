@@ -2272,6 +2272,63 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     Rails.logger = original_rails_logger
   end
 
+  test "cached sidebars from before the prefetch opt-out are not reused" do
+    original_perform_caching = ActionController::Base.perform_caching
+    original_cache_store = ActionController::Base.cache_store
+    @user.update!(default_account_order: "manual")
+    cache = ActiveSupport::Cache::MemoryStore.new
+    ActionController::Base.perform_caching = true
+    ActionController::Base.cache_store = cache
+
+    fragment_keys = []
+    capture_keys = ->(event) do
+      key = event.payload[:key]
+      fragment_keys << key if key.include?("account_sidebar_tabs_")
+    end
+    ActiveSupport::Notifications.subscribed(capture_keys, "cache_write.active_support") do
+      get account_url(@account)
+      assert_response :success
+    end
+    assert_equal 2, fragment_keys.uniq.size, "both desktop and mobile fragments must be cached"
+
+    # Simulate a deployment with unexpired HTML under the previous namespace.
+    # Keep every other key component identical so only the version invalidates it.
+    cache.clear
+    fragment_keys.uniq.each do |key|
+      legacy_key = key.sub(/account_sidebar_tabs_v\d+/, "account_sidebar_tabs_v12")
+      cache.write(legacy_key, '<div data-testid="legacy-sidebar">old sidebar</div>', expires_in: 12.hours)
+    end
+
+    get account_url(@account)
+    assert_response :success
+    assert_select "[data-testid='legacy-sidebar']", count: 0
+    assert_select "[data-testid='account-sidebar-tabs']", count: 2 do |sidebars|
+      sidebars.each do |sidebar|
+        assert_select sidebar, "[data-controller~='sortable-list'][data-turbo-prefetch='false']", minimum: 1
+      end
+    end
+
+    # Revisit with the new fragments warm, not just on the first cache miss.
+    hits = []
+    capture_hits = ->(event) do
+      hits << event.payload[:key] if event.payload[:hit] && event.payload[:key].include?("account_sidebar_tabs_")
+    end
+    ActiveSupport::Notifications.subscribed(capture_hits, "cache_read.active_support") do
+      get account_url(@account)
+    end
+    assert_response :success
+    assert_equal 2, hits.uniq.size
+    assert_select "[data-testid='legacy-sidebar']", count: 0
+    assert_select "[data-testid='account-sidebar-tabs']", count: 2 do |sidebars|
+      sidebars.each do |sidebar|
+        assert_select sidebar, "[data-controller~='sortable-list'][data-turbo-prefetch='false']", minimum: 1
+      end
+    end
+  ensure
+    ActionController::Base.perform_caching = original_perform_caching
+    ActionController::Base.cache_store = original_cache_store
+  end
+
   # --- member-owned connections (issue #3579) ------------------------------
 
   test "an owner is not shown a connection carrying an account they cannot see" do
