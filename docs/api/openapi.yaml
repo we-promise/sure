@@ -11116,7 +11116,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/DeleteResponse"
         '403':
-          description: account is shared with you without full control
+          description: you lack full control of the account, or of another account the deletion changes (a transfer fee, or a counterpart whose balance counts transfers)
           content:
             application/json:
               schema:

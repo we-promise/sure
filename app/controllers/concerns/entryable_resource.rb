@@ -32,9 +32,17 @@ module EntryableResource
 
   def destroy
     return unless require_account_permission!(@entry.account)
+    # Deleting a transfer leg removes the transfer, its fee transactions and,
+    # on a counterpart that counts transfers, the balance it moved. Those
+    # accounts sync in full: a fee can be dated before this leg.
+    changed_accounts = @entry.accounts_changed_by_transfer_removal
+    changed_accounts.each do |account|
+      return unless require_account_permission!(account)
+    end
 
     @entry.destroy_unless_split_part_transferred!
     @entry.sync_account_later
+    changed_accounts.each { |account| account.sync_later }
 
     redirect_back_or_to account_path(@entry.account), notice: t("account.entries.destroy.success")
   rescue Entry::SplitPartTransferredError

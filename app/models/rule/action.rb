@@ -39,6 +39,12 @@ class Rule::Action < ApplicationRecord
     action_type == "set_transaction_merchant" && Current.user && value.present? &&
       (new_record? || will_save_change_to_value? || will_save_change_to_action_type?)
   }
+  # Only for a target the user picks; one another member saved and that is
+  # resubmitted unchanged stays, and imports without a user are not affected.
+  validate :transfer_target_writable_by_user, if: -> {
+    action_type == "set_as_transfer_or_payment" && Current.user && value.present? &&
+      (new_record? || will_save_change_to_value? || will_save_change_to_action_type?)
+  }
 
   # Pre-seed (watermark): when an EMAIL_NOTIFICATION action is created — on a
   # new rule OR added to an existing one — record all currently-matching
@@ -145,6 +151,12 @@ class Rule::Action < ApplicationRecord
       return if UuidFormat.valid?(value) && rule&.family&.assignable_merchants_for(Current.user)&.exists?(id: value)
 
       errors.add(:value, :invalid)
+    end
+
+    def transfer_target_writable_by_user
+      return if UuidFormat.valid?(value) && executor.target_accounts_for(Current.user).exists?(id: value)
+
+      errors.add(:value, :transfer_target_not_writable)
     end
 
     def execution_value

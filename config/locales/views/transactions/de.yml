@@ -445,6 +445,9 @@ de:
         part_transferred:
           one: "1 aufgeteilte Transaktion wurde nicht gelöscht: Ein Teil davon ist als Überweisung verknüpft. Entferne zuerst diese Überweisung."
           other: "%{count} aufgeteilte Transaktionen wurden nicht gelöscht: Jeweils ein Teil ist als Überweisung verknüpft. Entferne zuerst diese Überweisungen."
+        other_account_not_writable:
+          one: "1 Buchung wurde nicht gelöscht: sie gehört zu einer Überweisung, die ein Konto ändert, das du nicht bearbeiten darfst."
+          other: "%{count} Buchungen wurden nicht gelöscht: jede gehört zu einer Überweisung, die ein Konto ändert, das du nicht bearbeiten darfst."
     category_provenance:
       title: "Automatische Kategorisierung"
       assigned: "„%{category}“ vor %{time_ago} zugewiesen durch %{source}."

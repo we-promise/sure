@@ -102,15 +102,18 @@ class TransfersController < ApplicationController
     # Confirming or rejecting rewrites the kind of both legs
     return unless require_account_permission!(inflow_account, redirect_path: transactions_url)
 
-    Transfer.transaction do
+    amounts_changed = Transfer.transaction do
       # The transfer row before any leg, the order unlinking, confirm! and
       # Entry#unsplit! take them in, so an edit racing an unlink cannot deadlock.
       Transfer.lock.find(@transfer.id)
       update_transfer_status
-      update_transfer_fees_and_amount
+      changed = update_transfer_fees_and_amount
       update_transfer_details
       update_investment_contribution
+      changed
     end
+    # Rewriting the legs and fees changes the balances of every account involved.
+    [ outflow_account, inflow_account ].uniq.each(&:sync_later) if amounts_changed
 
     @view_ctx = view_ctx_from_referer
     respond_to do |format|
@@ -328,19 +331,21 @@ class TransfersController < ApplicationController
 
     # Unlinking (reject/destroy) needs write access to one endpoint, plus every
     # account holding a fee transaction, since destroying the transfer deletes
-    # those fees. Returns the account to run the permission check against: the
-    # first one the user cannot write to, or a writable endpoint.
+    # those fees, plus an endpoint whose balance counts confirmed transfers,
+    # since unlinking moves its balance. Returns the account to run the
+    # permission check against: the first one the user cannot write to, or a
+    # writable endpoint.
     def unlink_permission_account
       endpoints = [ @transfer.from_account, @transfer.to_account ].compact
-      fee_accounts = Account.where(id: @transfer.fee_transactions.joins(:entry).select("entries.account_id")).to_a
+      changed_accounts = @transfer.accounts_changed_by_removal
       writable_ids = Current.family.accounts.writable_by(Current.user)
-                       .where(id: (endpoints + fee_accounts).map(&:id))
+                       .where(id: (endpoints + changed_accounts).map(&:id))
                        .pluck(:id).to_set
 
       writable_endpoint = endpoints.find { |account| writable_ids.include?(account.id) }
       return endpoints.first unless writable_endpoint
 
-      fee_accounts.find { |account| !writable_ids.include?(account.id) } || writable_endpoint
+      changed_accounts.find { |account| !writable_ids.include?(account.id) } || writable_endpoint
     end
 
     def transfer_params
@@ -427,7 +432,7 @@ class TransfersController < ApplicationController
       # the parts stop adding up to the parent.
       amount_changed = new_amount.present? && new_amount.to_d != @transfer.amount.to_d && !split_part_leg?
 
-      return unless amount_changed || source_fee_changed || dest_fee_changed
+      return false unless amount_changed || source_fee_changed || dest_fee_changed
 
       @transfer.amount = new_amount.to_d if amount_changed
 
@@ -462,6 +467,7 @@ class TransfersController < ApplicationController
       end
 
       @transfer.save!
+      true
     end
 
     def split_part_leg?

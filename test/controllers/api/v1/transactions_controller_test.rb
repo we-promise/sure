@@ -1503,6 +1503,31 @@ end
     assert_equal "validation_failed", JSON.parse(response.body)["error"]
   end
 
+  test "should reject destroying a transfer leg whose counterpart counts transfers and is not writable" do
+    liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
+    outflow = create_transaction(account: accounts(:depository), amount: 250, kind: "funds_movement")
+    inflow = create_transaction(account: liability, amount: -250, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "confirmed")
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      delete api_v1_transaction_url(outflow.transaction), headers: api_headers(@api_key)
+    end
+
+    assert_response :forbidden
+  end
+
+  test "destroying a transfer leg resyncs a counterpart that counts transfers" do
+    outflow = create_transaction(account: accounts(:depository), amount: 250, kind: "funds_movement")
+    inflow = create_transaction(account: accounts(:other_liability), amount: -250, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "confirmed")
+    Sync.where(syncable: accounts(:other_liability)).delete_all
+
+    delete api_v1_transaction_url(outflow.transaction), headers: api_headers(@api_key)
+
+    assert_response :ok
+    assert accounts(:other_liability).syncs.exists?
+  end
+
   test "should reject destroy with read-only API key" do
     delete api_v1_transaction_url(@transaction), headers: api_headers(@read_only_api_key)
     assert_response :forbidden

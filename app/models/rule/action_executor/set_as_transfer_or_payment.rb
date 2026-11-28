@@ -3,8 +3,19 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     "select"
   end
 
+  # A confirmed transfer moves the target's balance when it counts transfers,
+  # so a user only picks accounts they can write to.
   def options
-    family.accounts.alphabetically.pluck(:name, :id)
+    target_accounts_for(Current.user).alphabetically.pluck(:name, :id)
+  end
+
+  def target_accounts_for(user)
+    user ? family.accounts.writable_by(user) : family.accounts
+  end
+
+  # Keeps showing a target another member saved, which this user can't pick.
+  def option_for(value)
+    family.accounts.where(id: value).pick(:name, :id) if UuidFormat.valid?(value)
   end
 
   def claimed_attributes
@@ -18,7 +29,14 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     target_account = family.accounts.find_by_id(value)
     return 0 unless target_account
+    # Excluded entries are skipped, split parents among them: a transfer on a
+    # split parent would count its amount twice, and an excluded entry's
+    # counterpart would not be excluded. A split part can be a leg. A transfer
+    # needs two accounts, so the target's own entries are skipped.
     scope = transaction_scope.with_entry
+      .where(entries: { excluded: [ false, nil ] })
+      .where.not(entries: { account_id: target_account.id })
+
     # Checked once per run, not per transaction.
     reconcile_pledges = target_account.linked_to_goal?
 

@@ -6,6 +6,9 @@ nl:
         part_transferred:
           one: "1 gesplitste transactie is niet verwijderd: een deel ervan is gekoppeld als overboeking. Verwijder eerst die overboeking."
           other: "%{count} gesplitste transacties zijn niet verwijderd: van elk is een deel gekoppeld als overboeking. Verwijder eerst die overboekingen."
+        other_account_not_writable:
+          one: "1 transactie is niet verwijderd: ze hoort bij een overboeking die een rekening wijzigt die je niet mag bewerken."
+          other: "%{count} transacties zijn niet verwijderd: elk hoort bij een overboeking die een rekening wijzigt die je niet mag bewerken."
     bulk_updates:
       new:
         cancel: "Annuleren"

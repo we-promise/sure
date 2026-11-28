@@ -49,7 +49,8 @@ class Account < ApplicationRecord
   # projection stays consistent with what the balance will actually become
   # once these entries land. Non-cash valuation-only accounts (Property,
   # Vehicle, etc.) ignore transactions entirely for balance purposes, same as
-  # Balance::BaseCalculator#flows_for_date -- see Entry#scheduled?.
+  # Balance::BaseCalculator#flows_for_date -- see Entry#scheduled?. Other
+  # assets and liabilities count only legs and fees of confirmed transfers.
   #
   # Trades are included only when qty is 0 (Dividend/Interest): those are pure
   # cash flows with no offsetting holdings change, same shape as a Transaction.
@@ -971,6 +972,32 @@ class Account < ApplicationRecord
     end
   end
 
+  # Other assets and liabilities are valued, but money transferred in or out still moves
+  # their balance (see Balance::BaseCalculator#non_cash_balance_transactions).
+  def balance_counts_transfers?
+    accountable_type.in?(%w[OtherAsset OtherLiability])
+  end
+
+  # Ids of this account's transactions that are legs or fees of confirmed
+  # transfers: the ones that move the balance of an account that counts
+  # transfers. A transfer kind alone (a pending match, an unmatched provider
+  # leg) is no money moved from another account. Pass a subquery of
+  # transaction ids to look at fewer of them.
+  def confirmed_transfer_transaction_ids(transaction_ids = entries.where(entryable_type: "Transaction").select(:entryable_id))
+    confirmed = Transfer.confirmed
+    fee_ids = Transaction.where(id: transaction_ids, transfer_id: confirmed.select(:id)).pluck(:id)
+    # A split fee is excluded as a split parent; its parts carry its amount.
+    split_fee_part_ids = Entry.where(entryable_type: "Transaction", entryable_id: transaction_ids)
+      .where(parent_entry_id: Entry.where(entryable_type: "Transaction", entryable_id: Transaction.where(transfer_id: confirmed.select(:id)).select(:id)).select(:id))
+      .pluck(:entryable_id)
+
+    Set.new(
+      confirmed.where(inflow_transaction_id: transaction_ids).pluck(:inflow_transaction_id) +
+      confirmed.where(outflow_transaction_id: transaction_ids).pluck(:outflow_transaction_id) +
+      fee_ids + split_fee_part_ids
+    )
+  end
+
   # Whether the activity feed hides balance updates unless asked to show them.
   #
   # A linked account gets one from almost every daily sync, and users can't add
@@ -1030,15 +1057,26 @@ class Account < ApplicationRecord
     # [date, signed amount in account currency] for each scheduled entry that
     # contributes to the projection.
     def scheduled_entry_flows
-      @scheduled_entry_flows ||= if balance_type == :non_cash && accountable_type != "Loan"
+      @scheduled_entry_flows ||= if balance_type == :non_cash && accountable_type != "Loan" && !balance_counts_transfers?
         []
       else
-        entries.excluding_pending.excluding_split_parents
+        scheduled = entries.excluding_pending.excluding_split_parents
           .where(entryable_type: [ "Transaction", "Trade" ])
           .where("entries.date > ?", Date.current)
+        scheduled = scheduled_transfer_counting_entries(scheduled) if balance_type == :non_cash && accountable_type != "Loan"
+
+        scheduled
           .includes(:entryable)
           .filter_map { |entry| (amount = convert_scheduled_entry_amount(entry)) && [ entry.date, amount ] }
       end
+    end
+
+    # Other assets and liabilities only move with confirmed transfers, the
+    # same transactions Balance::BaseCalculator#non_cash_balance_transactions
+    # counts once they land.
+    def scheduled_transfer_counting_entries(scheduled)
+      transaction_ids = scheduled.where(entryable_type: "Transaction").select(:entryable_id)
+      scheduled.where(entryable_type: "Transaction", entryable_id: confirmed_transfer_transaction_ids(transaction_ids).to_a)
     end
 
     # Converts a scheduled entry's amount into this account's currency, signed

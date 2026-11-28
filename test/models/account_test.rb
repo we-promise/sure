@@ -1091,6 +1091,25 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal Money.new(1200, "USD"), credit_card.projected_balance_money
   end
 
+  test "projected_balance_money counts a scheduled confirmed transfer on an other liability and asset" do
+    checking = accounts(:depository)
+    liability = accounts(:other_liability)
+    asset = accounts(:other_asset)
+    [ liability, asset ].each do |account|
+      Transfer::Creator.new(family: checking.family, source_account_id: checking.id, destination_account_id: account.id,
+        date: 10.days.from_now.to_date, amount: 100).create
+    end
+    # A standard transaction and a pending match stay ignored, as in the balance calculator.
+    create_transaction(account: liability, amount: 30, date: 3.days.from_now.to_date)
+    pending_leg = create_transaction(account: liability, amount: -40, date: 4.days.from_now.to_date, kind: "funds_movement")
+    pending_out = create_transaction(account: checking, amount: 40, date: 4.days.from_now.to_date, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: pending_leg.transaction, outflow_transaction: pending_out.transaction)
+
+    assert_equal Money.new(-100, "USD"), liability.reload.scheduled_entries_total_money
+    assert_equal liability.balance_money - Money.new(100, "USD"), liability.projected_balance_money
+    assert_equal asset.balance_money + Money.new(100, "USD"), asset.reload.projected_balance_money
+  end
+
   test "projected_balance_money ignores transactions on non-cash valuation-only accounts" do
     property = accounts(:property)
     create_transaction(account: property, amount: 5000, date: 3.days.from_now.to_date)
