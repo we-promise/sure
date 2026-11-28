@@ -1,0 +1,20 @@
+{
+  "name": "sure",
+  "interface": {
+    "displayName": "Sure"
+  },
+  "plugins": [
+    {
+      "name": "sure",
+      "source": {
+        "source": "local",
+        "path": "./plugins/sure"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

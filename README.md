@@ -49,6 +49,13 @@ Sure is a fully working personal finance app that can be [self hosted with Docke
 Sure can be accessed from a browser, the macOS desktop app, the mobile app, API
 clients, and LLM agents. See [Sure Clients](docs/clients.md) for an overview.
 
+## Agent skills
+
+An agent-agnostic plugin marketplace at [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json) registers
+[`plugins/sure`](plugins/sure), with [agent skills](https://agentskills.io/) for self-hosting Sure, its [MCP server](docs/hosting/mcp.md)
+and the [REST API](docs/api/). The plugin's `.mcp.json` points at `http://localhost:3000/mcp`; MCP clients that support
+OAuth sign in through Sure, and others can use `MCP_API_TOKEN`.
+
 ## Forking and Attribution
 
 This repo is a community fork of the archived Maybe Finance repo.

@@ -1,0 +1,23 @@
+{
+  "name": "sure",
+  "version": "1.0.0",
+  "description": "Agent skills and an MCP connection for Sure, the open-source personal finance app: self-hosting, the MCP financial tools, and the REST API.",
+  "author": {
+    "name": "Sure contributors",
+    "url": "https://github.com/we-promise/sure"
+  },
+  "homepage": "https://github.com/we-promise/sure",
+  "repository": "https://github.com/we-promise/sure",
+  "license": "AGPL-3.0",
+  "keywords": [
+    "sure",
+    "personal-finance",
+    "budgeting",
+    "self-hosted",
+    "mcp",
+    "rails",
+    "agent-skills"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}
