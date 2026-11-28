@@ -464,7 +464,9 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal baseline.size, grown.size, "adding 20 holdings changed the query count:\n#{(grown - baseline).join("\n")}"
   end
 
-  PORTFOLIO_QUERY_CEILING = 50
+  # One more than before for the sidebar's grouped unread count per account
+  # (AccountsHelper#sidebar_unread_counts), which does not depend on holdings.
+  PORTFOLIO_QUERY_CEILING = 51
 
   private
     def enable_preview(user)
