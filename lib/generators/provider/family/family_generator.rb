@@ -424,6 +424,7 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     say "     - app/models/#{file_name}_item.rb"
     say "     - app/models/#{file_name}_account.rb"
     say "     - app/models/#{file_name}_item/provided.rb"
+    say "     - app/models/#{file_name}_item/account_flow.rb"
     say "     - app/models/#{file_name}_item/importer.rb"
     say "     - app/models/#{file_name}_account/data_helpers.rb"
     say "     - app/models/#{file_name}_account/processor.rb"
@@ -490,7 +491,11 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     say "     app/models/#{file_name}_item/importer.rb"
     say "     - Map API response fields to account fields"
     say ""
-    say "  4. Customize the Processors:"
+    say "  4. Implement the account flow:"
+    say "     app/models/#{file_name}_item/account_flow.rb"
+    say "     - Implement each private hook; they raise NotImplementedError until then"
+    say ""
+    say "  5. Customize the Processors:"
     if investment_provider?
       say "     app/models/#{file_name}_account/holdings_processor.rb"
       say "     app/models/#{file_name}_account/activities_processor.rb"
@@ -501,7 +506,7 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       say "     - Map provider transaction format to Sure entries"
     end
     say ""
-    say "  5. Test the integration:"
+    say "  6. Test the integration:"
     say "     Visit /settings/providers and configure credentials"
     say ""
     say "  📚 See docs/PER_FAMILY_PROVIDER_GUIDE.md for detailed documentation"
@@ -674,6 +679,15 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       else
         template "provided_concern.rb.tt", provided_concern_path
         say "Created Provided concern: #{provided_concern_path}", :green
+      end
+
+      # Account flow: the hooks ProviderItem::AccountFlow needs to list and link accounts
+      account_flow_path = "#{item_dir}/account_flow.rb"
+      if File.exist?(account_flow_path)
+        say "Account flow already exists: #{account_flow_path}", :skip
+      else
+        template "account_flow.rb.tt", account_flow_path
+        say "Created account flow: #{account_flow_path}", :green
       end
 
       # Importer class

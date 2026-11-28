@@ -31,6 +31,21 @@ class <%= class_name %>Account < ProviderAccount
   # Callbacks
   after_destroy :enqueue_connection_cleanup
 
+  # How the account flow reads an API account payload.
+  # TODO: Match the field names <%= class_name %>'s API uses.
+  def self.name_for(account_data)
+    account_data.with_indifferent_access[:name]
+  end
+
+  def self.currency_for(account_data)
+    account_data.with_indifferent_access[:currency].presence || "USD"
+  end
+
+  # Extra attributes for an account linked as `accountable_type`, such as a subtype.
+  def self.default_accountable_attributes(_accountable_type)
+    {}
+  end
+
   # Idempotently create or update AccountProvider link
   # CRITICAL: After creation, reload association to avoid stale nil
   def ensure_account_provider!(linked_account)
