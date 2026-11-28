@@ -2,3 +2,31 @@
 nb:
   provider_warnings:
     limited_investment_data: "Investeringsdata fra denne leverandøren er begrenset. Aktivitetsetiketter (Kjøp, Salg, Utbytte) er ikke tilgjengelige, noe som kan påvirke budsjettnøyaktigheten. Vurder å opprette regler for å ekskludere eller kategorisere investeringstransaksjoner."
+    lunchflow_accounts_failed:
+      one: 'Lunchflow-import: %{count} konto kunne ikke oppdateres'
+      other: 'Lunchflow-import: %{count} kontoer kunne ikke oppdateres'
+    lunchflow_transactions_failed:
+      one: 'Lunchflow-import: kunne ikke hente transaksjoner for %{count} konto'
+      other: 'Lunchflow-import: kunne ikke hente transaksjoner for %{count} kontoer'
+    lunchflow_import_error: 'Lunchflow-import: %{error}'
+    enable_banking_history_truncated:
+      one: "Enable Banking: Hele transaksjonshistorikken for %{count} konto kunne ikke hentes, så eldre transaksjoner kan mangle"
+      other: "Enable Banking: Hele transaksjonshistorikken for %{count} kontoer kunne ikke hentes, så eldre transaksjoner kan mangle"
+    truelayer_accounts_failed:
+      one: "TrueLayer-import: %{count} konto kunne ikke oppdateres"
+      other: "TrueLayer-import: %{count} kontoer kunne ikke oppdateres"
+    truelayer_transactions_failed:
+      one: "TrueLayer-import: Henting av transaksjoner mislyktes for %{count} konto"
+      other: "TrueLayer-import: Henting av transaksjoner mislyktes for %{count} kontoer"
+    truelayer_balances_failed:
+      one: "TrueLayer-import: Henting av saldo mislyktes for %{count} konto"
+      other: "TrueLayer-import: Henting av saldo mislyktes for %{count} kontoer"
+    truelayer_processing_failed:
+      one: "TrueLayer-import: %{count} konto kunne ikke behandles"
+      other: "TrueLayer-import: %{count} kontoer kunne ikke behandles"
+    truelayer_entries_failed:
+      one: "TrueLayer-import: %{count} transaksjon kunne ikke importeres"
+      other: "TrueLayer-import: %{count} transaksjoner kunne ikke importeres"
+    truelayer_scheduling_failed:
+      one: "TrueLayer-import: Saldooppdatering kunne ikke planlegges for %{count} konto"
+      other: "TrueLayer-import: Saldooppdatering kunne ikke planlegges for %{count} kontoer"

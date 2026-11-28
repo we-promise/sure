@@ -11,5 +11,5 @@
       title: button_label,
       aria: { label: button_label },
       class: "disabled:opacity-40 disabled:cursor-not-allowed",
-      form: { onclick: "event.stopPropagation()", class: "inline-flex" }
+      form: { data: { controller: "stop-propagation", action: "click->stop-propagation#stop" }, class: "inline-flex" }
     ) %>

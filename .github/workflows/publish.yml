@@ -40,7 +40,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   # Select the release channel and legacy alias through December; no date pin.
   COMPATIBILITY_CHANNEL: 'alpha'
-  COMPATIBILITY_VERSION: '0.7.7-alpha.7'
+  COMPATIBILITY_VERSION: '0.7.7-alpha.10'
 
 permissions:
   contents: write
@@ -105,13 +105,14 @@ jobs:
           fi
           if [[ -n "$selected_tag" ]]; then
             version="${selected_tag#refs/tags/v}"
-            [[ "$version" =~ ^[2-9][0-9]{3}\.[1-9][0-9]?\.[1-9][0-9]?(-alpha)?$ ]] || exit 1
+            [[ "$version" =~ ^[2-9][0-9]{3}\.[1-9][0-9]?\.[1-9][0-9]?(-alpha|-rc\.(0|[1-9][0-9]*))?$ ]] || exit 1
             base="${version%%-*}"
             [[ "$(date -u -d "${base//./-}" +%Y.%-m.%-d)" == "$base" ]] || exit 1
           fi
           stable=false; alpha=false; compatibility=""
           [[ "$version" == *-* ]] || stable=true
-          [[ "$version" != *-alpha ]] || alpha=true
+          # Release candidates share alpha deployment/compatibility, not floating tags.
+          [[ "$version" != *-alpha && "$version" != *-rc.* ]] || alpha=true
           channel=stable
           [[ "$alpha" != true ]] || channel=alpha
           if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* && "$version" == 2026.* && "$channel" == "$COMPATIBILITY_CHANNEL" ]]; then
@@ -134,7 +135,7 @@ jobs:
               echo "type=raw,value=$version"
               [[ -z "$compatibility" ]] || echo "type=raw,value=$compatibility"
               [[ "$stable" != true ]] || echo 'type=raw,value=stable'
-              [[ "$alpha" != true ]] || echo 'type=raw,value=latest'
+              [[ "$version" != *-alpha ]] || echo 'type=raw,value=latest'
             else
               echo "type=raw,value=sha-$(git rev-parse HEAD)"
               if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then
@@ -357,7 +358,7 @@ jobs:
 
 
   deploy_demo:
-    name: Deploy alpha to Render demo
+    name: Deploy alpha or RC to Render demo
     if: needs.prepare.outputs.release == 'true' && needs.prepare.outputs.alpha == 'true'
     needs: [prepare, merge]
 

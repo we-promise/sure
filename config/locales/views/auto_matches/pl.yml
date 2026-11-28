@@ -27,6 +27,11 @@ pl:
       from: Od
       to: Do
       date: Data
+      days_apart:
+        one: "%{count} dzień różnicy"
+        few: "%{count} dni różnicy"
+        many: "%{count} dni różnicy"
+        other: "%{count} dnia różnicy"
       actions: Działania
       separator: "·"
     bulk_actions:

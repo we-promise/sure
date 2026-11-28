@@ -63,6 +63,14 @@ class Transactions::TransactionRowCacheTest < ActionView::TestCase
     assert_not_equal base, row_key
   end
 
+  test "the key changes when manual reconciliation is toggled" do
+    base = row_key
+
+    Current.family.update!(manual_reconciliation: true)
+
+    assert_not_equal base, row_key
+  end
+
   test "renaming the merchant renders the row fresh, a balance sync does not" do
     merchant = merchants(:netflix)
     @transaction.update!(merchant: merchant)

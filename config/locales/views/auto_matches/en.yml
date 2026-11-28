@@ -23,6 +23,9 @@ en:
       from: From
       to: To
       date: Date
+      days_apart:
+        one: 1 day apart
+        other: "%{count} days apart"
       actions: Actions
       separator: "·"
     bulk_actions:

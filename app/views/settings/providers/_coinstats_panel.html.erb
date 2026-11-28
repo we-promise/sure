@@ -28,8 +28,9 @@
                        class: "space-y-3" do |form| %>
     <%= form.text_field :api_key,
                         label: t("coinstats_items.new.api_key_label"),
-                        placeholder: t("coinstats_items.new.api_key_placeholder"),
-                        type: :password %>
+                        placeholder: is_new_record ? t("coinstats_items.new.api_key_placeholder") : t("coinstats_items.new.api_key_placeholder_update"),
+                        type: :password,
+                        value: nil %>
 
     <div class="flex justify-end">
       <%= form.submit is_new_record ? t("coinstats_items.new.configure") : t("coinstats_items.new.update_configuration") %>

@@ -15,7 +15,7 @@
       <%= yield %>
     </div>
 
-    <script>
+    <script nonce="<%= content_security_policy_nonce %>">
       // Auto-trigger print dialog when page loads
       window.onload = function() {
         // Small delay to ensure styles are loaded
