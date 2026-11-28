@@ -49,25 +49,35 @@
   </header>
 
   <%= render "shared/exchange_rate_notes", family: Current.family %>
-  <%= render "summary", totals: @search.totals, transactions_count: @pagy.count %>
   <% if Current.family.recurring_transactions_disabled? %>
+    <%= render "summary", totals: @search.totals, transactions_count: @pagy.count %>
     <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
   <% else %>
-    <%= render DS::Tabs.new(active_tab: params[:tab].presence || "transactions") do |tabs| %>
+    <% totals = @search.totals %>
+    <%# One filter bar for both tabs: the Upcoming forecast follows the same filters. %>
+    <%= render "transactions/searches/search", selection_toggle: false %>
+
+    <%= render DS::Tabs.new(active_tab: @active_tab, session_key: TransactionsController::TRANSACTIONS_TAB_KEY) do |tabs| %>
       <% tabs.with_nav(classes: "max-w-fit") do |nav| %>
         <% nav.with_btn(id: "transactions", label: t("transactions.show.tab_transactions"), classes: "px-6") %>
         <% nav.with_btn(id: "upcoming", label: t("transactions.show.tab_upcoming"), classes: "px-6") %>
       <% end %>
 
       <% tabs.with_panel(tab_id: "transactions") do %>
-        <div class="bg-container rounded-xl shadow-border-xs">
-          <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
+        <div class="space-y-4">
+          <%= render "summary", totals: totals, transactions_count: @pagy.count %>
+          <div class="bg-container rounded-xl shadow-border-xs">
+            <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy, search: false %>
+          </div>
         </div>
       <% end %>
 
       <% tabs.with_panel(tab_id: "upcoming") do %>
-        <div class="bg-container rounded-xl shadow-border-xs">
-          <%= render "transactions/upcoming" %>
+        <div class="space-y-4">
+          <%= render "forecast_summary", totals: totals, transactions_count: @pagy.count, forecast: @forecast %>
+          <div class="bg-container rounded-xl shadow-border-xs">
+            <%= render "transactions/upcoming", forecast: @forecast %>
+          </div>
         </div>
       <% end %>
     <% end %>

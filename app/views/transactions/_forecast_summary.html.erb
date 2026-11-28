@@ -1,0 +1,28 @@
+<%# locals: (totals:, transactions_count:, forecast:) %>
+<%# The Upcoming tab's summary: the filtered transactions plus the forecast for
+    the same filters, with the forecast share called out under each figure. %>
+<% forecast_totals = forecast.totals %>
+<% combined = forecast.combined_with(totals, transactions_count) %>
+<div id="forecast-summary" class="bg-container rounded-xl shadow-border-xs">
+  <div class="flex flex-wrap items-center gap-2 px-4 pt-4 text-xs text-secondary">
+    <%= render DS::Pill.new(label: t(".forecast"), tone: :info, marker: false) %>
+    <span><%= t(".window", start: I18n.l(forecast.start_date), end: I18n.l(forecast.end_date)) %></span>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-3 md:divide-x divide-y md:divide-y-0 divide-alpha-black-100 theme-dark:divide-alpha-white-200">
+    <div class="p-4 space-y-2">
+      <p class="text-sm text-secondary"><%= t("transactions.summary.total_transactions") %></p>
+      <p class="text-primary font-medium text-xl privacy-sensitive" id="forecast-total-transactions"><%= combined.count %></p>
+      <p class="text-xs text-link"><%= t(".forecast_count", count: forecast_totals.count) %></p>
+    </div>
+    <div class="p-4 space-y-2">
+      <p class="text-sm text-secondary"><%= t("transactions.summary.income") %></p>
+      <p class="text-primary font-medium text-xl privacy-sensitive" id="forecast-total-income"><%= combined.income_money.format %></p>
+      <p class="text-xs text-link privacy-sensitive"><%= t(".forecast_amount", amount: forecast_totals.income_money.format) %></p>
+    </div>
+    <div class="p-4 space-y-2">
+      <p class="text-sm text-secondary"><%= t("transactions.summary.expenses") %></p>
+      <p class="text-primary font-medium text-xl privacy-sensitive" id="forecast-total-expense"><%= combined.expense_money.format %></p>
+      <p class="text-xs text-link privacy-sensitive"><%= t(".forecast_amount", amount: forecast_totals.expense_money.format) %></p>
+    </div>
+  </div>
+</div>
