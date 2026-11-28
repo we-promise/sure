@@ -13,6 +13,9 @@ fr:
       opening_balance: Solde d'ouverture
       original_principal: Principal initial
       original_purchase_price: Prix d'achat initial
+      synced_balance: Solde synchronisé
+      synced_principal: Principal synchronisé
+      synced_value: Valeur synchronisée
     confirm_create:
       confirm: Confirmer
       title: Confirmer le nouveau solde

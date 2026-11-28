@@ -27,6 +27,9 @@ class PasswordsController < ApplicationController
         next false unless Current.user.update(password_params)
 
         SecurityAuditLog.log_password_changed!(user: Current.user, request: request, actor: Current.true_user)
+        # A stolen or shared cookie must not outlive a password change
+        # (CWE-613). The current session stays so the user remains signed in.
+        Current.user.sessions.where.not(id: Current.session.id).destroy_all
 
         true
       end
