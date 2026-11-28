@@ -1788,6 +1788,40 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "a replayed vest that lists fewer parts unlinks the rest, leaving them as transactions" do
+    export = vest_export
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    Family::DataImporter.new(@family, export, import_session: session).import!
+    income_id = export.split("
+").map { |line| JSON.parse(line) }
+      .find { |record| record["type"] == "Transaction" && record["data"]["investment_activity_label"] == Trade::VestForm::INCOME_LABEL }["data"]["id"]
+
+    Family::DataImporter.new(@family, edit_trades(export) { |data| data["vest_part_transaction_ids"] = [ income_id ] }, import_session: session).import!
+
+    vest = @family.entries.find_by!(entryable_type: "Trade")
+    income, taxes = Trade::VestForm.parts_of(vest)
+    assert_equal(-1000, income.amount)
+    assert_empty taxes
+    assert @family.entries.where(entryable_type: "Transaction", amount: 300).exists?, "the tax is unlinked, not deleted"
+  end
+
+  test "a split line's activity label is restored" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "brokerage", name: "Brokerage", balance: "0", currency: "USD", accountable_type: "Investment", accountable: {} } },
+      { type: "Transaction", data: {
+          id: "split-parent", account_id: "brokerage", date: "2024-01-15", amount: "-100.00", name: "Deposit", currency: "USD",
+          split_lines: [
+            { id: "split-contribution", amount: "-60.00", name: "Contribution", investment_activity_label: "Contribution" },
+            { id: "split-interest", amount: "-40.00", name: "Interest", investment_activity_label: "Interest" }
+          ] } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    parent = @family.entries.find_by!(name: "Deposit")
+    assert_equal %w[Contribution Interest], parent.child_entries.order(:amount).map { |child| child.transaction.investment_activity_label }
+  end
+
   # An import stamps entries in file order, so the file's order of a day's
   # trades becomes the order they replay in.
   test "a fifo round trip replays a day's trades in the order they were entered" do

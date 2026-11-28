@@ -1113,7 +1113,8 @@ class Family::DataImporter
           excluded: boolean_import_value(row, "excluded", default: false),
           tag_ids: mapped_tag_ids(row["tag_ids"], record_type: "Transaction"),
           tag_ids_provided: row.key?("tag_ids"),
-          kind: row["kind"]
+          kind: row["kind"],
+          investment_activity_label: row["investment_activity_label"].presence_in(Transaction::ACTIVITY_LABELS)
         }
       end
     end
@@ -1134,7 +1135,10 @@ class Family::DataImporter
         transaction = child_entry.entryable
         transaction.update!(
           merchant_id: row[:merchant_id_provided] ? row[:merchant_id] : transaction.merchant_id,
-          kind: row[:kind].presence || transaction.kind
+          kind: row[:kind].presence || transaction.kind,
+          # split! creates the children here, so this never overwrites a label
+          # the user changed.
+          investment_activity_label: row[:investment_activity_label]
         )
         child_entry.update!(notes: row[:notes]) if row[:notes].present?
 
@@ -1278,7 +1282,7 @@ class Family::DataImporter
         entry.save!
         imported[old_id] = entry
         import_lot_total_cost(entry, data["lot_total_cost"])
-        import_vest_parts(entry, data["vest_part_transaction_ids"])
+        import_vest_parts(entry, data["vest_part_transaction_ids"]) if data.key?("vest_part_transaction_ids")
         @created_entry_ids << entry.id if created
         increment_summary("Trade", created ? :created : :updated)
       end
@@ -1288,18 +1292,22 @@ class Family::DataImporter
 
     # A vest's income and taxes are Transactions the export writes ahead of
     # it, in this file or an earlier chunk of the same session. Each must be
-    # in the vest's account.
+    # in the vest's account. The list is the vest's whole set of parts, so a
+    # replay that lists fewer unlinks the rest, leaving them as transactions.
     def import_vest_parts(vest, transaction_ids)
-      return if transaction_ids.blank?
-      return invalid_record!("Trade", "vest_part_transaction_ids", transaction_ids) unless vest.trade.vest?
+      unless vest.trade.vest?
+        return if transaction_ids.blank?
+        return invalid_record!("Trade", "vest_part_transaction_ids", transaction_ids)
+      end
 
-      Array(transaction_ids).each do |old_id|
+      parts = Array(transaction_ids).filter_map do |old_id|
         new_id = mapped_id(:transactions, old_id, record_type: "Trade", required: false)
         part = vest.account.entries.find_by(entryable_type: "Transaction", entryable_id: new_id) if new_id
-        next invalid_record!("Trade", "vest_part_transaction_ids", old_id) unless part
-
-        part.update!(vest_entry: vest)
+        part || invalid_record!("Trade", "vest_part_transaction_ids", old_id)
       end
+
+      vest.vest_parts.where.not(id: parts.map(&:id)).update_all(vest_entry_id: nil)
+      parts.each { |part| part.update!(vest_entry: vest) }
     end
 
     # The lot is rebuilt from its trade on the next sync, which keeps a cost
