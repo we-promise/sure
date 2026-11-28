@@ -1,0 +1,201 @@
+require "test_helper"
+
+class Account::LiquidityTest < ActiveSupport::TestCase
+  setup do
+    @family = families(:dylan_family)
+    @today = Date.new(2026, 10, 5)
+  end
+
+  test "new accounts take the default of their type and subtype" do
+    expectations = {
+      [ Depository, "checking" ] => "immediate",
+      [ Depository, "savings" ] => "immediate",
+      [ Depository, "money_market" ] => "short_term",
+      [ Depository, "notice_savings" ] => "short_term",
+      [ Depository, "cd" ] => "locked",
+      [ Depository, "building_savings" ] => "locked",
+      [ Depository, "hsa" ] => "long_term",
+      [ Investment, "brokerage" ] => "short_term",
+      [ Investment, "401k" ] => "long_term",
+      [ Investment, "riester" ] => "long_term",
+      [ Investment, "ruerup" ] => "long_term",
+      [ Investment, "bav" ] => "long_term",
+      [ Investment, "vl" ] => "locked",
+      [ Investment, "fd" ] => "locked",
+      [ Investment, nil ] => "short_term",
+      [ Crypto, "exchange" ] => "short_term",
+      [ Property, nil ] => "long_term",
+      [ Vehicle, nil ] => "long_term",
+      [ OtherAsset, nil ] => "long_term",
+      [ CreditCard, nil ] => "immediate",
+      [ Loan, "mortgage" ] => "long_term",
+      [ Loan, "line_of_credit" ] => "immediate",
+      [ OtherLiability, nil ] => "long_term"
+    }
+
+    expectations.each do |(klass, subtype), level|
+      account = create_account(klass, subtype)
+      assert_equal level, account.liquidity, "#{klass.name}/#{subtype.inspect}"
+      assert_not account.liquidity_manual?
+    end
+  end
+
+  test "a subtype change moves an automatic account to the new default" do
+    account = create_account(Depository, "checking")
+
+    account.update!(subtype: "cd")
+
+    assert_equal "locked", account.reload.liquidity
+  end
+
+  test "a subtype changed directly on the accountable also moves the default" do
+    account = create_account(Depository, "checking")
+
+    account.accountable.update!(subtype: "cd")
+
+    assert_equal "locked", account.reload.liquidity
+  end
+
+  test "a manual choice is locked and survives subtype changes" do
+    account = create_account(Depository, "savings")
+
+    account.update!(liquidity_choice: "locked", available_on: @today + 30)
+    account.update!(subtype: "checking")
+    account.accountable.update!(subtype: "money_market")
+
+    account.reload
+    assert_equal "locked", account.liquidity
+    assert account.liquidity_manual?
+  end
+
+  test "a manual choice equal to the old value still wins over a subtype change in the same save" do
+    account = create_account(Depository, "checking")
+
+    account.update!(liquidity_choice: "immediate", subtype: "cd")
+
+    assert_equal "immediate", account.reload.liquidity
+    assert account.liquidity_manual?
+  end
+
+  test "choosing automatic unlocks and restores the subtype default" do
+    account = create_account(Depository, "cd")
+    account.update!(liquidity_choice: "immediate")
+
+    account.update!(liquidity_choice: Account::Liquidity::AUTOMATIC)
+
+    account.reload
+    assert_equal "locked", account.liquidity
+    assert_not account.liquidity_manual?
+  end
+
+  test "release fields are cleared when the account is not locked" do
+    account = create_account(Depository, "cd")
+    account.update!(available_on: @today + 10, auto_renew: true, renewal_term_months: 12)
+
+    account.update!(liquidity_choice: "short_term")
+
+    account.reload
+    assert_nil account.available_on
+    assert_not account.auto_renew?
+    assert_nil account.renewal_term_months
+  end
+
+  test "a vehicle keeps its default whatever choice is sent" do
+    account = create_account(Vehicle, nil)
+
+    account.update!(liquidity_choice: "immediate")
+
+    assert_equal "long_term", account.reload.liquidity
+    assert_not account.liquidity_manual?
+  end
+
+  test "liabilities still take a manual choice" do
+    account = create_account(CreditCard, nil)
+
+    account.update!(liquidity_choice: "long_term")
+
+    assert_equal "long_term", account.reload.liquidity
+    assert account.liquidity_manual?
+  end
+
+  test "an unknown choice is rejected" do
+    account = create_account(Depository, "checking")
+
+    assert_not account.update(liquidity_choice: "whenever")
+    assert account.errors.of_kind?(:liquidity, :inclusion)
+  end
+
+  test "auto renewal needs a term" do
+    account = create_account(Depository, "cd")
+
+    assert_not account.update(auto_renew: true, renewal_term_months: nil)
+    assert account.errors.of_kind?(:renewal_term_months, :blank)
+  end
+
+  test "a locked account becomes available on its release date" do
+    account = create_account(Depository, "cd")
+    account.update!(available_on: @today + 10)
+
+    assert_not account.available_now?(@today + 9)
+    assert account.available_now?(@today + 10)
+  end
+
+  test "a locked account without a date stays locked" do
+    account = create_account(Depository, "cd")
+
+    assert_not account.available_now?(@today + 1000)
+  end
+
+  test "an auto renewing deposit never releases" do
+    account = create_account(Depository, "cd")
+    account.update!(available_on: Date.new(2025, 3, 31), auto_renew: true, renewal_term_months: 6)
+
+    assert_not account.available_now?(@today)
+  end
+
+  test "a provider changing the subtype away from locked clears the release fields" do
+    account = create_account(Depository, "cd")
+    account.update!(available_on: @today + 10, auto_renew: true, renewal_term_months: 12)
+
+    account.accountable.update!(subtype: "savings")
+
+    account.reload
+    assert_equal "immediate", account.liquidity
+    assert_nil account.available_on
+    assert_not account.auto_renew?
+    assert_nil account.renewal_term_months
+  end
+
+  test "today is evaluated in the family's time zone" do
+    @family.update!(timezone: "Pacific/Auckland")
+
+    travel_to Time.utc(2026, 10, 4, 12, 0, 0) do
+      assert_equal Date.new(2026, 10, 5), Account.liquidity_today_for(@family)
+    end
+  end
+
+  test "an invalid family time zone falls back to the app zone" do
+    @family.update_column(:timezone, "Mars/Olympus")
+
+    assert_equal Date.current, Account.liquidity_today_for(@family)
+  end
+
+  test "rules carry the subtype's default liquidity and tax treatment" do
+    rules = Investment.rules_for("401k")
+
+    assert_equal "long_term", rules.liquidity
+    assert_equal :tax_deferred, rules.tax_treatment
+    assert_equal "locked", Depository.rules_for("cd").liquidity
+    assert_nil Depository.rules_for("checking").tax_treatment
+  end
+
+  private
+    def create_account(klass, subtype)
+      @family.accounts.create!(
+        name: "#{klass.name} #{subtype}",
+        balance: 1000,
+        currency: "USD",
+        accountable: klass.new(subtype: subtype)
+      )
+    end
+end

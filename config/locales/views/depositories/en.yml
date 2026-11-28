@@ -24,6 +24,12 @@ en:
       money_market:
         long: Money Market
         short: MM
+      notice_savings:
+        long: Notice Savings Account
+        short: Notice Savings
+      building_savings:
+        long: Building Savings Contract
+        short: Building Savings
       savings:
         long: Savings
         short: Savings
