@@ -70,8 +70,14 @@ module Account::Anchorable
   # as of a statement rather than of this moment; it defaults to today.
   # Pass schedule_sync: false when the caller schedules the account sync
   # itself, such as a provider sync that syncs its accounts afterwards.
-  def set_current_balance(balance, date: nil, schedule_sync: true)
-    result = current_balance_manager.set_current_balance(balance, date: date)
+  # Pass reuse_explained_anchor: false when the import was partial: the reading
+  # is still recorded, but the ledger is not trusted to judge the old anchor.
+  def set_current_balance(balance, date: nil, schedule_sync: true, reuse_explained_anchor: true)
+    result = current_balance_manager.set_current_balance(
+      balance,
+      date: date,
+      reuse_explained_anchor: reuse_explained_anchor
+    )
     sync_later if schedule_sync && result.success?
     result
   end

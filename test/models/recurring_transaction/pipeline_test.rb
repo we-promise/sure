@@ -30,6 +30,53 @@ class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
     end
   end
 
+  test "run! removes suggestions detected from charges later confirmed as transfer legs" do
+    travel_to Date.new(2026, 8, 10) do
+      savings = accounts(:connected)
+      transfers = 3.times.map do |i|
+        date = Date.new(2026, 8, 5) << i
+        outflow = create_entry(amount: 500, date: date, name: "Move to savings")
+        inflow = savings.entries.create!(date: date, amount: -500, currency: "USD",
+                                         name: "Move from checking", entryable: Transaction.new)
+        Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "pending")
+      end
+
+      Pipeline.new(@family).run!
+      detected = @family.recurring_transactions.where(name: [ "Move to savings", "Move from checking" ])
+      assert_equal 2, detected.suggested.count, "both legs are detected while they are ordinary transactions"
+
+      transfers.each(&:confirm!)
+      Pipeline.new(@family).run!
+
+      assert_empty detected.reload
+    end
+  end
+
+  test "run! keeps a suggestion detection refreshed from ordinary charges at a new amount" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = @family.recurring_transactions.create!(
+        account: @account, name: "Move to savings", amount: 500, currency: "USD",
+        expected_day_of_month: 5, last_occurrence_date: Date.new(2026, 5, 5),
+        next_expected_date: Date.new(2026, 6, 5), status: "suggested", occurrence_count: 3
+      )
+      savings = accounts(:connected)
+      # Older 500 charges were later confirmed as transfer legs...
+      3.times do |i|
+        date = Date.new(2026, 5, 5) << i
+        outflow = create_entry(amount: 500, date: date, name: "Move to savings")
+        inflow = savings.entries.create!(date: date, amount: -500, currency: "USD",
+                                         name: "Move from checking", entryable: Transaction.new)
+        Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "pending").confirm!
+      end
+      # ...while the bill itself kept charging, now at 520.
+      3.times { |i| create_entry(amount: 520, date: Date.new(2026, 8, 5) << i, name: "Move to savings") }
+
+      Pipeline.new(@family).run!
+
+      assert suggestion.reload.suggested?, "detection claimed it from ordinary charges this run"
+    end
+  end
+
   test "run! with backfill reconstructs history and is idempotent" do
     travel_to Date.new(2026, 8, 10) do
       series = create_series(name: "CITY WATER", amount: 80, day_offset: -1)

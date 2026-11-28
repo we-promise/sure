@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class RedbarkItemsController < ApplicationController
+  include SafeReturnPath
+
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   before_action :set_redbark_item, only: [ :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
@@ -218,23 +220,6 @@ class RedbarkItemsController < ApplicationController
         metadata: { redbark_item_id: @redbark_item.id, error_class: e.class.name, error: e.message }
       )
       t("redbark_items.setup_accounts.api_error", message: e.message)
-    end
-
-    # Only allow internal relative paths in return_to
-    def safe_return_to_path
-      return nil if params[:return_to].blank?
-
-      return_to = params[:return_to].to_s
-
-      begin
-        uri = URI.parse(return_to)
-        return nil if uri.scheme.present?
-        return nil if uri.host.present?
-        return nil unless return_to.start_with?("/")
-        return_to
-      rescue URI::InvalidURIError
-        nil
-      end
     end
 
     def redbark_item_params
