@@ -625,6 +625,21 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "changing the family currency builds the report again" do
+    with_memory_cache do
+      get reports_path(period_type: :ytd)
+      assert_response :ok
+
+      @family.update!(currency: "EUR")
+
+      ReportsController.any_instance.expects(:render_report_body).once
+        .returns({ notes: "", has_transactions: true, summary: "<p id=rebuilt></p>", sections: [] })
+      get reports_path(period_type: :ytd)
+
+      assert_select "#rebuilt"
+    end
+  end
+
   test "assigning a tag marks the cached report stale" do
     with_memory_cache do
       get reports_path(period_type: :ytd)

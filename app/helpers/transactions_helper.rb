@@ -1,4 +1,20 @@
 module TransactionsHelper
+  # Returns [label, masked value, own account] for the counterparty row, or
+  # nil when the transaction carries no counterparty data. Only an IBAN is
+  # labelled as one; the provider's generic account reference gets a neutral
+  # label. Only the last four characters are stored. The own account is the
+  # family's account with that IBAN, shown only to a user who can see it.
+  def counterparty_account_display(transaction, user: Current.user)
+    own_account = transaction.counterparty_own_account
+    own_account = nil unless own_account && user&.accessible_accounts&.exists?(own_account.id)
+
+    if (iban_last4 = transaction.counterparty_iban_last4.presence)
+      [ t("transactions.show.counterparty_iban_label"), mask_last4(iban_last4), own_account ]
+    elsif (reference_last4 = transaction.counterparty_reference_last4.presence)
+      [ t("transactions.show.counterparty_account_label"), mask_last4(reference_last4), nil ]
+    end
+  end
+
   # @param exclude [Array<String>] filter keys to leave out (e.g. the account
   #   tab doesn't apply to the account activity feed, which is already scoped
   #   to one account)
@@ -342,7 +358,10 @@ module TransactionsHelper
         simplefin: {},
         plaid: {},
         provider_extras: [],
-        raw: pretty_json(extra)
+        # The import never stores counterparty keys in extra; a row synced by an
+        # older build may still carry a full IBAN there, so they never reach
+        # the raw dump.
+        raw: pretty_json(extra.is_a?(Hash) ? extra.except("counterparty_iban", "counterparty_account_id", "counterparty_reference") : extra)
       }
     end
   end

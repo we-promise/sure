@@ -304,4 +304,29 @@ class TransactionsHelperTest < ActionView::TestCase
   test "investment_activity_label_name falls back to the stored label when it has no translation" do
     assert_equal "Legacy Label", investment_activity_label_name("Legacy Label")
   end
+
+  test "counterparty_account_display labels an IBAN as an IBAN" do
+    transaction = Transaction.new(counterparty_iban_last4: "3000", counterparty_reference_last4: "8877")
+    assert_equal [ I18n.t("transactions.show.counterparty_iban_label"), "•••3000", nil ], counterparty_account_display(transaction, user: users(:family_admin))
+  end
+
+  test "counterparty_account_display gives a non-IBAN account reference a neutral label" do
+    transaction = Transaction.new(counterparty_reference_last4: "8877")
+    assert_equal [ I18n.t("transactions.show.counterparty_account_label"), "•••8877", nil ], counterparty_account_display(transaction, user: users(:family_admin))
+  end
+
+  test "counterparty_account_display returns nil without counterparty data" do
+    assert_nil counterparty_account_display(Transaction.new(counterparty_iban_last4: ""), user: users(:family_admin))
+  end
+
+  test "counterparty_account_display names the own account only for a user who can see it" do
+    own_account = accounts(:connected)
+    transaction = Transaction.new(counterparty_iban_last4: "3201", counterparty_own_account: own_account)
+
+    assert_equal own_account, counterparty_account_display(transaction, user: users(:family_admin)).last
+
+    own_account.update!(owner: users(:family_admin))
+    own_account.account_shares.destroy_all
+    assert_nil counterparty_account_display(transaction, user: users(:family_member)).last
+  end
 end

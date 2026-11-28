@@ -22,6 +22,8 @@ zh-CN:
         dashboard_account_groups_title: 默认展开
         dashboard_account_groups_description: 这些账户分组将在仪表盘和账户侧边栏中默认展开。您仍可随时手动折叠它们。
         split_grouped_title: 将拆分交易分组显示
+        show_counterparty_account_title: "显示交易对方账户信息"
+        show_counterparty_account_description: "当银行连接提供时，在交易详情中显示交易对方 IBAN 或账号的后 4 位。仅在有此数据时显示。"
         auto_generate_transaction_names_title: "自动生成交易名称"
         auto_generate_transaction_names_description: "手动输入的交易名称留空时，将根据所选分类和商户自动填写（例如“娱乐 - Netflix”）。如果两者都未选择，名称仍为必填。适用于整个家庭，且仅影响新交易。"
         split_grouped_description: 在交易列表中按父级分组显示拆分交易；关闭后，拆分子项将作为独立行显示。
