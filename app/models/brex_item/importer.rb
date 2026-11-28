@@ -36,6 +36,7 @@ class BrexItem::Importer
 
       unless accounts_data.is_a?(Hash)
         Rails.logger.error "BrexItem::Importer - Invalid accounts_data format: expected Hash, got #{accounts_data.class}"
+        capture_import_failure("Invalid accounts response format")
         return nil
       end
 
@@ -45,13 +46,16 @@ class BrexItem::Importer
       Rails.logger.error "BrexItem::Importer - Brex API error: #{e.message} trace_id=#{e.trace_id}"
       # A rejected token fails the sync instead of completing it with nothing imported
       raise if credentials_error?(e)
+      capture_import_failure("Failed to fetch accounts", error: e)
       nil
     rescue JSON::ParserError => e
       Rails.logger.error "BrexItem::Importer - Failed to parse Brex API response: #{e.message}"
+      capture_import_failure("Failed to parse accounts response", error: e)
       nil
     rescue => e
       Rails.logger.error "BrexItem::Importer - Unexpected error fetching accounts: #{e.class} - #{e.message}"
       Rails.logger.error Array(e.backtrace).join("\n")
+      capture_import_failure("Unexpected error fetching accounts", error: e)
       nil
     end
 
@@ -93,6 +97,7 @@ class BrexItem::Importer
       rescue => e
         accounts_failed += 1
         Rails.logger.error "BrexItem::Importer - Failed to import account #{account_id.presence || 'unknown'}: #{e.message}"
+        capture_import_failure("Failed to import account", error: e, account_id: account_id.presence)
       end
 
       {
@@ -129,6 +134,7 @@ class BrexItem::Importer
 
         transactions_failed += 1
         Rails.logger.error "BrexItem::Importer - Failed to fetch/store transactions for account #{brex_account.account_id}: #{e.message}"
+        capture_import_failure("Failed to import transactions", error: e, brex_account: brex_account)
       end
 
       {
@@ -149,6 +155,7 @@ class BrexItem::Importer
 
       unless transactions_data.is_a?(Hash)
         Rails.logger.error "BrexItem::Importer - Invalid transactions_data format for account #{brex_account.account_id}"
+        capture_import_failure("Invalid transactions response format", brex_account: brex_account)
         return { success: false, transactions_count: 0, error: "Invalid response format" }
       end
 
@@ -161,13 +168,16 @@ class BrexItem::Importer
       Rails.logger.error "BrexItem::Importer - Brex API error for account #{brex_account.account_id}: #{e.message} trace_id=#{e.trace_id}"
       # Also when the token can list accounts but not read their transactions
       raise if credentials_error?(e)
+      capture_import_failure("Failed to fetch transactions", error: e, brex_account: brex_account)
       { success: false, transactions_count: 0, error: e.message }
     rescue JSON::ParserError => e
       Rails.logger.error "BrexItem::Importer - Failed to parse transaction response for account #{brex_account.account_id}: #{e.message}"
+      capture_import_failure("Failed to parse transactions response", error: e, brex_account: brex_account)
       { success: false, transactions_count: 0, error: "Failed to parse response" }
     rescue => e
       Rails.logger.error "BrexItem::Importer - Unexpected error fetching transactions for account #{brex_account.account_id}: #{e.class} - #{e.message}"
       Rails.logger.error Array(e.backtrace).join("\n")
+      capture_import_failure("Unexpected error fetching transactions", error: e, brex_account: brex_account)
       { success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }
     end
 
@@ -239,6 +249,27 @@ class BrexItem::Importer
       brex_item.update!(status: :requires_update)
     rescue => update_error
       Rails.logger.error "BrexItem::Importer - Failed to update item status: #{update_error.message}"
+    end
+
+    # Failures the import swallows, for the debug log. Credential errors are
+    # re-raised instead, and the syncer logs those.
+    def capture_import_failure(message, error: nil, brex_account: nil, account_id: brex_account&.account_id)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: message,
+        source: self.class.name,
+        provider_key: "brex",
+        family: brex_item.family,
+        account_provider: brex_account&.account_provider,
+        metadata: {
+          brex_item_id: brex_item.id,
+          account_id: account_id,
+          error_class: error&.class&.name,
+          error_message: error&.message,
+          trace_id: error.try(:trace_id)
+        }.compact
+      )
     end
 
     def failed_result(error)
