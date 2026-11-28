@@ -108,6 +108,17 @@ in `compose.ai.yml` first. Preserve other `OPENAI_*` you set
 in `ALLOWED_HOSTS` or MCP calls forwarded with `Host: web:3000`
 are refused.
 
+`compose.ai.yml` also switches document search: it sets
+`VECTOR_STORE_PROVIDER: pgvector` and `EMBEDDING_URI_BASE` to
+Ollama. Ollama starts only with the `local-ai` profile; without
+it, embeddings have no reachable endpoint and document search
+fails. The pgvector store is separate from the previous one, so
+previously indexed documents are not available through it. If you
+need document search, either keep your current vector-store and
+embedding settings in `compose.ai.yml`, or start the `local-ai`
+profile and complete the pgvector migration in
+[docs/hosting/ai.md](https://github.com/we-promise/sure/blob/main/docs/hosting/ai.md).
+
 ```bash
 docker compose -f compose.ai.yml up -d
 ```
