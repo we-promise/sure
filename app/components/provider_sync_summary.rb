@@ -19,7 +19,7 @@
 #   ) %>
 #
 class ProviderSyncSummary < ViewComponent::Base
-  attr_reader :stats, :provider_item, :institutions_count, :activities_pending, :show_account_details
+  attr_reader :stats, :provider_item, :institutions_count, :activities_pending, :show_account_details, :show_account_counts
 
   # @param stats [Hash] The sync statistics hash from sync.sync_stats
   # @param provider_item [Object] The provider item (must respond to last_synced_at)
@@ -29,12 +29,15 @@ class ProviderSyncSummary < ViewComponent::Base
   #   the connection. The detail lists name accounts and transactions from the last
   #   sync, so a member shared only some of them gets the counts without the names
   #   (#3630).
-  def initialize(stats:, provider_item:, institutions_count: nil, activities_pending: false, show_account_details: true)
+  # @param show_account_counts [Boolean] Whether the viewer may see the connection's
+  #   account counts. False hides the Accounts section.
+  def initialize(stats:, provider_item:, institutions_count: nil, activities_pending: false, show_account_details: true, show_account_counts: true)
     @stats = stats || {}
     @provider_item = provider_item
     @institutions_count = institutions_count
     @activities_pending = activities_pending
     @show_account_details = show_account_details
+    @show_account_counts = show_account_counts
   end
 
   def activities_pending?

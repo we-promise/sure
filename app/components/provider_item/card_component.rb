@@ -48,10 +48,23 @@ class ProviderItem::CardComponent < ApplicationComponent
     visible_accounts.size == item.accounts.size
   end
 
+  # The viewer may see the connection's institution, its account counts and the
+  # account names in its sync summary: anyone who sees every linked account,
+  # admin or not, since an admin is not shared every account either (#3630).
+  # Before any account is linked there are none to hide, and only an admin,
+  # who sets them up, gets the counts.
+  def whole_connection_visible?
+    return @whole_connection_visible if defined?(@whole_connection_visible)
+
+    @whole_connection_visible = item.accounts.any? ? all_accounts_visible? : Current.user&.admin? == true
+  end
+
   # The title and description of the prompt to set up accounts: for imported
   # accounts nobody has linked yet, or for a connection with no accounts at all.
-  # Nil when there is nothing to set up.
+  # Nil when there is nothing to set up, and for a viewer who cannot set up.
   def setup_prompt
+    return unless Current.user&.admin?
+
     if unlinked_count > 0
       { title: card_t("setup_needed"), description: card_t("setup_description", linked: linked_count, total: total_count) }
     elsif item.accounts.empty? && total_count == 0

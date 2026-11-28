@@ -15,8 +15,8 @@
               <% end %>
             </div>
             <%# The institution belongs to every account on the connection, so it is
-                shown only to a viewer who can see them all (#3630). %>
-            <% if item.accounts.any? && all_accounts_visible? %>
+                shown only to a viewer who can see them all (#3630), once one is linked. %>
+            <% if item.accounts.any? && whole_connection_visible? %>
               <p class="text-xs text-secondary">
                 <%= item.institution_summary %>
               </p>
@@ -34,7 +34,7 @@
             <% else %>
               <p class="text-secondary">
                 <% if item.last_synced_at %>
-                  <% if item.sync_status_summary %>
+                  <% if whole_connection_visible? && item.sync_status_summary %>
                     <%= card_t("status_with_summary", timestamp: helpers.time_ago_in_words(item.last_synced_at), summary: item.sync_status_summary) %>
                   <% else %>
                     <%= card_t("status", timestamp: helpers.time_ago_in_words(item.last_synced_at)) %>
@@ -81,7 +81,8 @@
 
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: item, show_account_details: all_accounts_visible?,
+          provider_item: item, show_account_details: whole_connection_visible?,
+          show_account_counts: whole_connection_visible?,
           institutions_count: institutions_count
         ) %>
 
