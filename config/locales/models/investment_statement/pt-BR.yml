@@ -1,0 +1,5 @@
+---
+pt-BR:
+  models:
+    investment_statement:
+      cash: Dinheiro
