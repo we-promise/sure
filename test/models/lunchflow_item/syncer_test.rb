@@ -147,6 +147,14 @@ class LunchflowItem::SyncerTest < ActiveSupport::TestCase
     )
   end
 
+  test "the import starts from the sync's window" do
+    sync = recording_sync
+    sync.instance_variable_set(:@window_start_date, Date.new(2026, 9, 1))
+    @lunchflow_item.expects(:import_latest_lunchflow_data).with(sync_start_date: Date.new(2026, 9, 1)).returns(success: true)
+
+    @syncer.perform_sync(sync)
+  end
+
   test "status text comes from the Lunch Flow syncer translations" do
     I18n.backend.store_translations(:en, lunchflow_items: { syncer: { importing_accounts: "Fetching from Lunch Flow" } })
     sync = recording_sync
