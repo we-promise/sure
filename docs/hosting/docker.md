@@ -4,7 +4,14 @@ This guide will help you setup, update, and maintain your self-hosted Sure appli
 
 ## Setup Guide
 
-Follow the guide below to get your app running.
+Follow the guide below to get a **new installation** running.
+
+> [!WARNING]
+> **Already running Sure?** Do not download over your existing `compose.yml` or
+> `.env`, or generate replacement keys using the setup steps below. Preserve your
+> configuration and effective keys first; follow
+> [Upgrading an existing install](#upgrading-an-install-that-is-already-running-keep-your-secret_key_base)
+> and [Encrypting sensitive data](#encrypting-sensitive-data).
 
 ### Step 1: Install Docker
 
@@ -23,7 +30,7 @@ docker run hello-world
 
 #### Create a directory for your app to run
 
-Open your terminal and create a directory where your app will run. Below is an example command with a recommended directory:
+Open your terminal and choose a new directory that does not already contain a Sure installation or configuration. Below is an example command with a recommended directory:
 
 ```bash
 # Create a directory on your computer for Docker files (name it whatever you like)
@@ -51,7 +58,7 @@ At this point, you should have `compose.yml` in your directory. It includes an o
 
 ### Step 3 (required): Configure your environment
 
-`compose.yml` requires a `SECRET_KEY_BASE` you provide yourself — there is no built-in default. This isn't just a Rails formality: `SECRET_KEY_BASE` also seeds the automatic generation of your Active Record encryption keys (used to encrypt provider API tokens/keys and other sensitive data at rest) when you don't set `ACTIVE_RECORD_ENCRYPTION_*` explicitly. A shared or guessable value would mean session cookies can be forged **and** your encryption keys can be computed by anyone. Follow the steps below before starting the app.
+`compose.yml` requires a `SECRET_KEY_BASE` you provide yourself — there is no built-in default. This isn't just a Rails formality: `SECRET_KEY_BASE` also seeds the automatic generation of your Active Record encryption keys (used to encrypt provider API tokens/keys and other sensitive data at rest) when neither a complete set of `ACTIVE_RECORD_ENCRYPTION_*` variables nor Rails credentials supply them. A shared or guessable value would mean session cookies can be forged **and** your encryption keys can be computed by anyone. Explicit Active Record keys do not protect sessions or `Setting`-stored values from a public `SECRET_KEY_BASE`. Follow the steps below even for a disposable local test.
 
 > **Upgrading an existing install?** Keep the `SECRET_KEY_BASE` it already runs with; generating a new one makes already-encrypted data unreadable. See [Upgrading an install that is already running](#upgrading-an-install-that-is-already-running-keep-your-secret_key_base).
 
@@ -96,7 +103,7 @@ SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
 
-To encrypt sensitive data such as bank credentials with your own keys, set them now, before the first start; see [Encrypting sensitive data](#encrypting-sensitive-data).
+Separate Active Record keys are optional for a new self-hosted instance using derived keys. If you choose your own keys, set them before the first start; see [Encrypting sensitive data](#encrypting-sensitive-data), then finish the remaining configuration before [Step 4](#step-4-run-the-app).
 
 #### Restricting who can reach your instance
 
@@ -248,6 +255,10 @@ Pull request [#2811](https://github.com/we-promise/sure/pull/2811), which is sti
 **Applying changes**
 
 Run `docker compose up -d` after changing `compose.yml` or `.env`. It recreates the containers whose settings changed. `docker compose restart` keeps the old environment, so new settings do not take effect.
+
+During a restore or encryption-key change, use the
+[recovery startup sequence](#verify-recovery-before-resuming-services) instead;
+do not use this all-services command before recovery verification.
 
 To check what the worker sees, without printing the password:
 
@@ -533,50 +544,319 @@ docker compose up -d # Restart on the new version; database migrations run autom
 
 Older example compose files shipped a built-in `SECRET_KEY_BASE` default. Current ones don't, so after refreshing `compose.yml` from the example, `docker compose up` stops with "Set SECRET_KEY_BASE in your .env file". **Do not generate a new value for an existing install.** Put the value your install already runs with into `.env` first (if you never set one, it is the `SECRET_KEY_BASE` default in your previous `compose.yml`).
 
-Why: unless `ACTIVE_RECORD_ENCRYPTION_*` are set explicitly, your encryption keys are derived from `SECRET_KEY_BASE`. Changing it makes everything already encrypted under the old keys (provider tokens, API keys in settings, user emails and other encrypted fields) impossible to decrypt, which breaks logins and syncs. It also signs everyone out.
+Why: when neither the three `ACTIVE_RECORD_ENCRYPTION_*` variables nor Rails credentials supply the Active Record keys, those keys are derived from `SECRET_KEY_BASE`. Changing it makes everything already encrypted under the old keys (provider tokens, API keys in settings, user emails and other encrypted fields) impossible to decrypt, which breaks logins and syncs. It also signs everyone out.
 
-If the value you have been running with is that old public default, the app logs a `[SECURITY]` warning at boot.
+If the value you have been running with is a known public default or placeholder, the app logs a `[SECURITY]` warning at boot. To recover the effective values from the original configuration or container, see [Find the values in use](encryption.md#before-you-start-find-the-values-in-use).
 
-If your `.env` already sets `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`, `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` and `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`, your data is encrypted with those keys, not with keys derived from `SECRET_KEY_BASE`. Keep them unchanged and skip steps 1 and 2: change `SECRET_KEY_BASE` and re-encrypt the settings as described below. To rotate explicit keys as well, follow [Encryption key rotation](encryption.md), which keeps the replaced keys readable as a `previous` scheme.
+Use an image containing these rotation tasks, with its database migrations already applied; do not combine
+the rotation with a version update. This includes the required [Plaid instance
+credentials migration](encryption.md#upgrading-plaid-instance-credentials), which
+must run with the existing `SECRET_KEY_BASE` before any secret rotation. Follow the command and key-preservation
+precautions in [Encrypting sensitive data](#encrypting-sensitive-data).
 
-Otherwise, move your data to new encryption keys first, with a backup taken and the app stopped:
+> [!WARNING]
+> Before stopping `web` or changing `SECRET_KEY_BASE`, record the removed SSO
+> identities on the instance users page and review
+> [What a new `SECRET_KEY_BASE` invalidates](encryption.md#what-a-new-secret_key_base-invalidates).
+> Legacy digest-only blocks without an encrypted identity or a preserved digest
+> key can stop matching after the secret changes. Keep affected users denied at
+> the identity provider, or restrict SSO access during recovery, until their
+> blocks have been verified or re-established. If the secret already changed,
+> apply that restriction before allowing SSO access again. A successful backfill
+> alone does not prove that these legacy blocks still work.
 
-1. Generate new keys with `docker compose run --rm web bin/rails db:encryption:init` and put the three values into `.env` as `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`, `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` and `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`. Keep `SECRET_KEY_BASE` unchanged for now.
+Choose a supported [backup method](#backup-and-restore-prerequisites) first. Stop
+all writers before taking a named backup, and keep them stopped until the
+rotation is verified:
+
+```bash
+docker compose stop web worker
+docker compose run --rm --no-deps backup create
+```
+
+Confirm the backup succeeded and retain its folder name, original configuration,
+and any external keys. Keep the database and Redis running. If the current
+`backup` service is missing or is the v0.7.5 database-only service, use the
+[standalone backup method or upgrade guidance](#backup-and-restore-prerequisites)
+before continuing; a database-only dump does not include configuration or uploads.
+
+Choose the path based on the keys that actually encrypted the data:
+
+- **Keys from environment variables or Rails credentials:** if the containers receive
+  all three `ACTIVE_RECORD_ENCRYPTION_*` values, or Rails credentials supply the
+  keys, keep those effective keys unchanged. Complete environment keys take
+  precedence over credentials. Preserve the credentials file and its decryption
+  key too. Skip steps 1 and 2 below and proceed to the settings rotation: changing
+  `SECRET_KEY_BASE` does not change these independently configured Active Record
+  keys. To rotate them as well, follow [Encryption key rotation](encryption.md)
+  with the correct previous keys.
+- **Keys derived from `SECRET_KEY_BASE`:** follow steps 1 and 2 below before
+  changing that secret. Values present only in `.env` may never have reached older
+  Compose containers; check [Generate the keys](#generate-the-keys) before assuming
+  they were active.
+
+If the configured keys no longer decrypt existing data, or rows use multiple key
+sets, stop and establish the required current and previous keys using
+[Encryption key rotation](encryption.md). Do not select a path from the current
+`.env` contents alone or discard either key set.
+
+1. Generate new keys with `docker compose run --rm --no-deps web bin/rails db:encryption:init` and put the three values into `.env` as `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`, `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` and `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`. For an older Compose file, follow the [key-forwarding instructions](#generate-the-keys) so both `web` and `worker` receive them. Keep `SECRET_KEY_BASE` unchanged for now.
 2. Stop the app and re-encrypt everything under the new keys. `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE` holds the `SECRET_KEY_BASE` your data was encrypted with; it makes the keys derived from it a `previous` scheme ([key rotation](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation)), so existing data still decrypts:
 
 ```bash
 docker compose stop web worker
 read -rs ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE && export ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE   # paste the SECRET_KEY_BASE the data was encrypted with
-docker compose run --rm -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails "security:backfill_encryption[100,1]"  # dry run
+docker compose run --rm --no-deps -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails "security:backfill_encryption[100,1]"  # dry run
 ```
 
 Continue only if the dry run lists every table with `"failed_count":0`. Then write the changes:
 
 ```bash
-docker compose run --rm -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails "security:backfill_encryption[100,0]"  # writes
+docker compose run --rm --no-deps -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails "security:backfill_encryption[100,0]"  # writes
+```
+
+Continue only if the JSON report on the last line of the write shows `"ok":true`
+and `"failed_count":0`. Otherwise keep writers stopped, fix the listed failures
+and repeat with the same current and previous keys, or follow
+[Restoring after an interrupted rotation](#restoring-after-an-interrupted-rotation)
+with the named backup. Retain the previous value for retries until that check
+succeeds. Then remove it from the recovery shell:
+
+```bash
 unset ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE
 ```
 
-Start the app only if the JSON report on the last line of the write shows `"ok":true` and `"failed_count":0`; otherwise keep it stopped, restore the backup or fix the listed rows and run the write again:
-
-```bash
-docker compose up -d
-```
+Keep writers stopped for the `SECRET_KEY_BASE` change and settings rotation below.
 
 Pass the variable only to these commands, never put it into `.env` or `compose.yml`: while it is set, Rails writes deterministically encrypted values (emails, tokens, API keys) with the old key. Only after that is it safe to change `SECRET_KEY_BASE`. Generating a fresh value right away is only safe for a new install.
 
-If you already changed `SECRET_KEY_BASE` and logins or syncs broke, run step 2 with the old value in `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE`, then re-encrypt the settings as described next.
+If you already changed `SECRET_KEY_BASE` and logins or syncs broke, keep writers
+stopped and preserve both values. If the Active Record keys were derived, supply
+the original secret as `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE` during
+the conversion above. If they came from environment variables or Rails credentials,
+keep those keys unchanged and recover the settings below. Do not start the web
+service for manual settings recovery until Active Record data can be decrypted.
 
-Changing `SECRET_KEY_BASE` also affects settings. API keys and tokens saved on the self-hosting settings page (OpenAI and Anthropic tokens, market data and property valuation keys, and similar) are encrypted with a key derived from `SECRET_KEY_BASE` itself, not with the Active Record keys above, so the `previous` scheme does not cover them. Right after the change those settings no longer decrypt: the app does not show an error, it sends the stored ciphertext as the key and the provider rejects it. Re-encrypt them once, with the old value in `OLD_SECRET_KEY_BASE`:
+#### Rotate settings after changing `SECRET_KEY_BASE`
+
+Settings use separate encryption: API keys and tokens saved on the self-hosting
+settings page are encrypted with a key derived from `SECRET_KEY_BASE`, not the
+Active Record keys. An Active Record `previous` scheme does not cover them. If a
+stored setting cannot be decrypted, its getter returns the stored value unchanged;
+for ciphertext, that means the provider receives an unusable key.
+
+Before changing the secret, confirm that the SSO restrictions and records above
+are in place. The change also invalidates sessions, previously issued reset and
+confirmation links, calendar subscription links, and in-progress connection flows;
+see [What a new `SECRET_KEY_BASE` invalidates](encryption.md#what-a-new-secret_key_base-invalidates).
+After completing any required Active Record conversion above, set a new, unique
+`SECRET_KEY_BASE` in `.env`. If you already changed it, retain that new value rather
+than generating another one. Keep the current secret stable throughout settings
+recovery. With writers still stopped, preview the settings conversion using the
+old secret only for this one-off command:
 
 ```bash
 read -rs OLD_SECRET_KEY_BASE && export OLD_SECRET_KEY_BASE   # paste the previous value; keeps it out of your shell history
-docker compose run --rm -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[1]"   # dry run: lists what would change
-docker compose run --rm -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[0]"   # writes
+docker compose run --rm --no-deps -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[1]"
+```
+
+Inspect the report before writing:
+
+- **`"ok":true` and `"dry_run":true`:** `would_reencrypt` entries can be converted
+  with the write command below; `current` entries already use the current secret.
+  Any `not_decryptable` entries still need manual recovery, even when `ok` is true.
+- **`old_secret_key_base_did_not_match`:** first verify the supplied old secret.
+  If it is wrong, correct it and repeat the preview. If it is correct, the remaining
+  settings may be plaintext or encrypted with another secret; repeatedly changing
+  the supplied secret will not fix them. No settings were converted by the preview.
+  Skip the write pass and use [Manual settings recovery](#manual-settings-recovery).
+- **Other errors:** keep writers stopped and resolve the reported cause before
+  proceeding. For example, `old_secret_key_base_missing` requires the old value,
+  and `secret_key_base_unchanged` means the current and old values are still equal.
+
+After a successful preview, convert the settings that the old secret decrypts:
+
+```bash
+docker compose run --rm --no-deps -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[0]"
+```
+
+A successful write report shows `"dry_run":false`; converted entries read `reencrypted`.
+Inspect both `ok` and `not_decryptable`. If any settings remain undecryptable, follow
+the manual path below before starting workers. The same recovery path applies if a
+repeat command reports `old_secret_key_base_did_not_match` after decryptable settings
+were already converted. For other failures, keep writers stopped and investigate;
+preserve the current secret, original secret, backup, and effective Active Record
+keys. Retain `OLD_SECRET_KEY_BASE` in this recovery shell for retries and the
+final verification required by both recovery paths; do not put it in `.env` or
+the service configuration.
+
+**Choose the startup path before starting services:** if the Active Record
+conversion has succeeded (or its independent keys were preserved), and the settings
+write reports `"ok":true` with an empty `not_decryptable` list, keep `web` and
+workers stopped and complete
+[Final settings verification](#final-settings-verification). A successful write
+does not replace that final dry run. If settings need re-entry, use the manual
+path below first, then complete the same final verification. Do not unset
+`OLD_SECRET_KEY_BASE` or start all services before verification succeeds.
+
+#### Manual settings recovery
+
+Use this path only after the Active Record data is readable with the current keys
+and any required Active Record conversion succeeded. It handles settings recovery,
+not unreadable user records, lost Active Record keys, or a failed backfill.
+
+Keep `worker` and other writers stopped. Before starting `web`, apply the
+administrator-only access restrictions in
+[Verify recovery before resuming services](#verify-recovery-before-resuming-services)
+and avoid normal app use until the settings are verified. Keep the database and
+Redis running. Start only `web`, without starting dependencies:
+
+```bash
+docker compose up -d --no-deps web
+```
+
+Sign in as an administrator with access to the self-hosting settings. Re-enter each
+setting listed in `not_decryptable` using its original plaintext API key or token,
+or clear it if the integration is no longer used. Obtain replacement credentials
+from the provider if the original value is unavailable; do not paste stored
+ciphertext back into the form. Save through the settings UI so the values are
+encrypted with the current `SECRET_KEY_BASE`.
+
+After saving or clearing the affected settings, keep `web` restricted and workers
+stopped and complete [Final settings verification](#final-settings-verification).
+Retain `OLD_SECRET_KEY_BASE` until that verification succeeds.
+
+#### Final settings verification
+
+Both automatic settings conversion and manual settings recovery must pass this
+check before clearing the old secret or proceeding to service verification.
+Keep workers and other writers stopped; only the administrator-only `web` session
+needed for manual recovery may be running. Keep the current `SECRET_KEY_BASE`
+unchanged. Use the same `OLD_SECRET_KEY_BASE` retained for recovery. If resuming
+in a new shell, repeat the hidden-input `read`/`export` command above with the
+original secret first.
+
+Run the final dry run after the write pass or manual re-entry:
+
+```bash
+docker compose run --rm --no-deps -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[1]"
+```
+
+Require a successful command exit and a JSON report with `"ok":true`, `"dry_run":true`, an empty
+`not_decryptable` list, and only `current` or `not_stored` entries in `results`.
+`"ok":true` alone is insufficient: a dry run can still report `would_reencrypt`
+or unresolved settings.
+
+- If any `would_reencrypt` entries remain, stop the recovery `web` session if it
+  is running, return to the settings conversion with the same current and old
+  secrets, and repeat this final dry run afterwards.
+- If settings remain `not_decryptable`, including when the task reports
+  `old_secret_key_base_did_not_match`, verify the old value first. If it was wrong,
+  correct it and repeat this check. Use
+  [Manual settings recovery](#manual-settings-recovery) for settings it cannot
+  decrypt, then return here for the same final check.
+- For a failed command or any other unresolved result, keep workers stopped and
+  investigate. Retain the old secret for retries and do not change the current
+  secret again to bypass the failure.
+
+Only after all of the final dry-run requirements are met, unset the temporary
+variable:
+
+```bash
 unset OLD_SECRET_KEY_BASE
 ```
 
-Check that the dry run's report shows `"dry_run":true`. It marks fields it would move as `would_reencrypt`; after the second command they read `reencrypted`. If nothing decrypts with the value you gave, the task stops with `old_secret_key_base_did_not_match`: check the value. Anything listed under `not_decryptable` was saved under neither value (or as plaintext before settings encryption existed); re-enter those keys on the settings page. If you prefer not to run the task, note the keys before the change and re-enter them afterwards.
+Keep workers stopped and any running recovery `web` session restricted, then complete
+[Verify recovery before resuming services](#verify-recovery-before-resuming-services).
+If recovery cannot be completed, keep writers stopped and use
+[Restoring after an interrupted rotation](#restoring-after-an-interrupted-rotation).
+
+#### Verify recovery before resuming services
+
+Use this sequence after a restore, encryption conversion, key switch or settings
+recovery. Do not run an all-services `docker compose up -d` or a script's printed
+startup chain to resume a recovering instance.
+
+1. Keep `worker` and all other writers stopped. Before starting `web`, complete
+   any database and local/external-upload restore. Confirm the image,
+   configuration and effective keys match the data now in the target. After a
+   successful conversion, retain the converted keys; do not restore the
+   pre-conversion configuration onto converted data. Require the successful
+   conversion reports specified by the procedure you followed. If settings still need re-entry, use
+   [Manual settings recovery](#manual-settings-recovery) under the restrictions
+   below, then return here after its final verification. A readable rollback with
+   unchanged secrets does not need a settings-secret rotation.
+2. **Apply access restrictions before starting `web`.** Allow only the recovery
+   administrator through the reverse proxy/firewall or a private tunnel, and
+   block other routes to the published Docker port, including IPv6 if enabled.
+   `ALLOWED_HOSTS` and CORS settings are not administrator authentication. Keep
+   affected SSO identities denied at the identity provider until their blocks
+   are verified or re-established. Confirm these restrictions cover the recovered
+   target, not just the original instance.
+3. Keep the database and Redis running, and start only the web service. The
+   `--no-deps` option prevents custom Compose dependencies from starting workers:
+
+   ```bash
+   docker compose up -d --no-deps web
+   ```
+
+4. With normal access still restricted, check sign-in, configured MFA, provider
+   connections and the recorded SSO blocks. Confirm the app can read the restored
+   data without decryption errors. If a check fails, keep workers stopped and
+   access restricted; stop `web` before retrying a conversion or restore. Do not
+   change secrets again to bypass an error.
+5. Only after those checks succeed, resume workers and any other writers you
+   stopped, then restore normal access. For a separate restored copy, leave its
+   worker stopped while the original instance can still run workers or scheduled
+   jobs. Before promoting the copy to the active instance, stop the original
+   `web`, workers, scheduled jobs and any other writers. For the instance you
+   have verified and chosen to resume:
+
+   ```bash
+   docker compose up -d --no-deps worker
+   ```
+
+Do not remove identity-provider restrictions for any SSO block that remains
+unverified. If verification cannot be completed, keep the recovery restrictions
+and writers stopped rather than continuing with startup.
+
+#### Restoring after an interrupted rotation
+
+Stop `web`, `worker`, and every other writer before restoring, including any
+web-only recovery session. Choose the backup by its recorded folder name, not
+`latest`: restoring replaces the database and local uploaded files, discarding
+changes made since that backup. External uploads need the separate provider
+restore described in the [backup prerequisites](#backup-and-restore-prerequisites).
+Use the [supported restore method](#backup-and-restore-prerequisites)
+and restore the matching image and configuration, including credentials files and
+keys stored outside `.env`. An in-place restore does not replace your live
+configuration automatically.
+
+Choose keys for the data **inside that backup**, not just for the current `.env`:
+
+| Backup state | Keys and next step |
+| --- | --- |
+| Taken while data was readable, before any key change | Restore its original effective Active Record keys and `SECRET_KEY_BASE`. |
+| Taken after Active Record conversion completed, but before `SECRET_KEY_BASE` changed | Keep the converted Active Record keys and restore the old `SECRET_KEY_BASE` that still encrypted the settings. |
+| Taken after `SECRET_KEY_BASE` changed or while a conversion was incomplete | It may contain old-key and new-key data, or settings that were already unreadable. Preserve both secrets and all Active Record keys; restoring this snapshot does not undo that broken or mixed state. |
+
+For the last case, prefer a known-readable backup from before the failing change
+if losing the intervening writes is acceptable. Otherwise keep writers stopped
+and resume recovery on the restored data: first make Active Record data readable
+with the appropriate current/previous keys, then rotate settings with the secret
+that actually encrypted them. Use [Manual settings recovery](#manual-settings-recovery)
+for settings that neither secret decrypts. Do not blindly replace the current
+secret with the old one: that can make new-key rows unreadable. Missing Active
+Record keys cannot be recovered by restoring the same unreadable data.
+
+Keep previous-key variables and `OLD_SECRET_KEY_BASE` limited to the one-off
+conversion commands. If the restored snapshot still needs recovery, require the
+successful conversions and settings verification above before starting workers.
+For a known-readable rollback with all matching keys restored, follow
+[Verify recovery before resuming services](#verify-recovery-before-resuming-services),
+then resume workers and normal access only after its checks succeed. Do not run settings-secret
+rotation when the old and current secrets are the same; a readable rollback does
+not require another secret change.
 
 ### Re-encrypting data after an encryption-related update
 
@@ -653,7 +933,14 @@ Uploaded files are backed up from the `app-storage` volume. If you store them in
 The version comes from the running app: every time `web` starts it records its version, and a backup is refused if the database schema no longer matches it.
 
 > [!WARNING]
-> `config/.env` contains `SECRET_KEY_BASE`, your API keys and, if you set them, your [encryption keys](#encrypting-sensitive-data). Without them, encrypted data in the database cannot be read. Keep the backup folder private, and encrypt off-site copies (for example with [rclone crypt](https://rclone.org/crypt/)).
+> `config/.env` contains `SECRET_KEY_BASE`, your API keys and, if you set them,
+> your [encryption keys](#encrypting-sensitive-data). Preserve the exact effective
+> keys used for the backed-up data: `SECRET_KEY_BASE` alone cannot replace explicit
+> Active Record keys, and derived keys need the original `SECRET_KEY_BASE`.
+> Keys or Rails credentials stored outside `.env`, including the key needed to
+> decrypt those credentials, need their own secure backup. Keep the backup folder
+> private, and encrypt off-site copies (for example with
+> [rclone crypt](https://rclone.org/crypt/)).
 
 ### Settings
 
@@ -675,21 +962,36 @@ docker compose --profile backup-offsite up -d backup-offsite
 
 ### Roll back an upgrade
 
+Stop all writers, including any separate web-only recovery session or custom
+writer services. Keep the database and Redis running for the restore:
+
 ```bash
 docker compose stop web worker
-docker compose run --rm backup restore 0.7.4/2026-10-01_080524-manual   # or "latest"
+docker compose run --rm --no-deps backup restore 0.7.4/2026-10-01_080524-manual   # or "latest"
 # Set SURE_IMAGE_TAG=0.7.4 in .env
-docker compose up -d
 ```
 
-`restore` replaces the database and all uploaded files. It refuses while other clients are connected to the database, and asks you to type `restore` to confirm (pass `--yes` to skip in scripts).
+`restore` replaces the database and local uploaded files; external uploads need
+their matching provider restore. It refuses while other clients are connected to the database, and asks you to type `restore` to confirm (pass `--yes` to skip in scripts).
+Stop on a restore error. After a successful restore, restore the matching image,
+configuration and keys, then follow
+[Verify recovery before resuming services](#verify-recovery-before-resuming-services).
+For an interrupted key rotation, choose the named backup and keys using
+[Restoring after an interrupted rotation](#restoring-after-an-interrupted-rotation)
+instead of choosing `latest`.
 
 ### Restore into a new folder or onto a new machine
 
-Every backup contains `restore.sh`, so all you need is the backup folder and Docker:
+Every backup contains `restore.sh`. Before running it, follow
+[Preparing a separate recovery environment](#preparing-a-separate-recovery-environment),
+including preserving any configuration outside the bundle:
 
 ```bash
-sh 2026-10-01_080524-manual/restore.sh
+(
+  unset COMPOSE_ENV_FILES COMPOSE_DISABLE_ENV_FILE COMPOSE_PATH_SEPARATOR
+  unset COMPOSE_PROJECT_NAME COMPOSE_FILE COMPOSE_PROFILES COMPOSE_PROJECT_DIR
+  sh 2026-10-01_080524-manual/restore.sh --without-worker --no-start
+)
 ```
 
 It verifies the backup and asks for a folder for the restored instance (new or empty; its name becomes the Compose project name). Then it:
@@ -699,9 +1001,14 @@ It verifies the backup and asks for a folder for the restored instance (new or e
 - picks the next free port if the backup's `PORT` is taken;
 - stops with a list of files to copy over if your compose files mount local files that are not part of the backup (custom certificates, for example);
 - copies the configuration and the backup in, pins `web` and `worker` to the backed-up version in `compose.restore.yml`, and sets `COMPOSE_FILE` in `.env` so plain `docker compose` commands use it;
-- restores the database and files, starts the app and prints its address.
+- unless `--no-start` is set, restores the database and files, starts the app and prints its address.
 
-For scripts, pass the answers as options: `sh restore.sh --target ~/sure-restored --port 3001 --without-worker --yes`. Add `--no-start` to only prepare the folder.
+The example above only prepares the folder. Inspect its configuration and finish
+the restore using [Preparing a separate recovery environment](#preparing-a-separate-recovery-environment)
+before starting services. Do not paste the printed startup chain: its final
+command starts `web` before the verification access restrictions are applied.
+Options such as `--target ~/sure-restored --port 3001`
+supply answers non-interactively; `--yes` skips confirmation prompts.
 
 > [!WARNING]
 > Don't run a restored copy with its `worker` while the original instance is still running. Both would sync the same bank connections (some providers rotate access tokens on every sync, so the copy can disconnect the original) and run scheduled jobs such as recurring transactions and emails twice. Signing in to both on `localhost` also signs you out of the other, because browsers share cookies across ports.
@@ -714,18 +1021,169 @@ You can also run backups with the script on its own, without the `backup` servic
 curl --fail --location --silent --show-error --output sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup
 ```
 
-Then, from that folder:
+Then, from that folder, [select the same Compose project and configuration](#selecting-the-standalone-backup-target)
+that you use to manage the installation:
 
 ```bash
 sh sure-backup create                   # Take a backup now
 sh sure-backup list                     # List backups
 sh sure-backup restore latest           # Roll back in place (stop web and worker first)
-sh sure-backup recover backups/<version>/<backup>   # Restore into a new folder
 ```
 
+For `recover` into a new folder, use the separate environment below instead of
+the source installation's exported Compose selection.
+
 The script finds your `web` container and runs itself once in a container from that exact image, with your uploaded-files volume, network and database settings. It reads the version from the image and checks it against the database, so no `--version` is needed. Backups go to `./backups`, or `BACKUP_DIR` from `.env`. `restore` refuses while `web` or `worker` is running.
+After a successful in-place restore, use
+[Verify recovery before resuming services](#verify-recovery-before-resuming-services)
+with the matching image, configuration and keys; stop on any restore error.
 
 To take a backup every day without the service, add a cron job on the host, for example `0 2 * * * cd /opt/sure && sh sure-backup scheduled`. That takes a backup and removes scheduled backups older than `BACKUP_KEEP_DAYS`.
+
+#### Selecting the standalone backup target
+
+The script calls `docker compose` internally; it does not accept Compose's `-p`,
+`-f`, or `--env-file` options. Before stopping writers or running the script,
+set the equivalent [Compose environment variables](https://docs.docker.com/compose/how-tos/environment-variables/envvars/)
+in the same shell. For example, replace these example values with those from
+your existing deployment; do not introduce a new project name:
+
+```bash
+export COMPOSE_PROJECT_NAME="sure-production"                  # Same as -p
+export COMPOSE_FILE="compose.yml:compose.production.yml"      # Same files/order as -f
+export COMPOSE_ENV_FILES=".env.production"                    # Same as --env-file
+docker compose config --quiet
+docker compose ps -aq web
+```
+
+Set only the overrides your deployment needs, and preserve any exported values
+and profiles it already uses. Multiple environment files in `COMPOSE_ENV_FILES`
+are comma-separated, in the same order as your `--env-file` options. Multiple
+Compose files use `:` on macOS/Linux (`;` on Windows, unless
+`COMPOSE_PATH_SEPARATOR` overrides it). Run from the original configuration
+directory and preserve the same Docker context. Confirm that `docker compose
+ps -aq web` returns the same container ID as your usual command with its explicit
+options. Also compare the **resolved configuration**, not just the ID: the same
+project can resolve relative paths differently while still finding that container.
+
+These exports do not reproduce a custom `--project-directory`. If the original
+command requires a project directory different from the first Compose file's
+directory, this standalone method is not supported for that deployment. Do not
+run its backup or rotation commands. Use the current backup service with the
+original CLI options if available, or establish and verify a supported backup
+procedure first; do not drop `--project-directory` or move configuration files
+to make the check pass.
+
+For a supported layout, compare configuration using the same shell and working
+directory as the script. Adapt the first command below to your **usual explicit
+options** and the exports above to match them. The temporary files contain secrets,
+so keep them private and do not paste their contents into logs or issue comments:
+
+```bash
+(
+  set -eu
+  umask 077
+  compare_dir=$(mktemp -d)
+  trap 'rm -rf "$compare_dir"' EXIT
+  docker compose -p sure-production -f compose.yml -f compose.production.yml \
+    --env-file .env.production config --format json > "$compare_dir/usual.json"
+  docker compose config --format json > "$compare_dir/standalone.json"
+  if ! cmp -s "$compare_dir/usual.json" "$compare_dir/standalone.json"; then
+    echo "Compose configurations differ; stop and correct the selection." >&2
+    exit 1
+  fi
+)
+```
+
+Proceed only when both configuration commands and the comparison succeed and the
+existing container IDs match. If either configuration is invalid or differs, or
+the ID is missing or differs, stop and correct the selection before any backup,
+restore or rotation. Do not recreate containers just to make these checks pass.
+
+Keep these settings for stopping writers, creating the backup, in-place restore,
+and subsequent rotation commands. A new shell or cron job needs the same setup;
+the cron example above assumes the default configuration.
+
+Selecting a custom environment file does **not** make the backup script archive
+it. The script copies `.env` and the standard Compose/override filenames from the
+project directory; separately preserve custom Compose files, `env_file` files,
+included files, shell-supplied configuration and external keys with the named
+backup. Its host-side `BACKUP_DIR`, `BACKUP_KEEP_DAYS`, and `INSTANCE_ID` settings
+also come from that directory's `.env`, not `COMPOSE_ENV_FILES`. Confirm the actual
+backup location rather than assuming the custom env file selected it. Before
+restarting a restored installation, restore the matching configuration and keys;
+in-place restore does not replace live configuration, and `recover`/`restore.sh`
+cannot automatically reconstruct configuration that was not archived.
+
+#### Preparing a separate recovery environment
+
+`restore` rolls back the existing project and needs its original selection.
+`recover` (also called by a bundle's `restore.sh`) creates a different project;
+it must read the restored configuration instead of the source's custom env file.
+Use a fresh recovery shell without exported application overrides such as
+`SECRET_KEY_BASE`, `ACTIVE_RECORD_ENCRYPTION_*`, database or storage settings.
+Preserve the Docker connection/context needed to access the intended daemon.
+
+Clear the Compose overrides in a subshell so the original recovery shell remains
+available for in-place operations. For example, from the folder containing the
+script, replace the example backup path and target with your own:
+
+```bash
+(
+  unset COMPOSE_ENV_FILES COMPOSE_DISABLE_ENV_FILE COMPOSE_PATH_SEPARATOR
+  unset COMPOSE_PROJECT_NAME COMPOSE_FILE COMPOSE_PROFILES COMPOSE_PROJECT_DIR
+  sh sure-backup recover backups/0.7.6/2026-10-27_111135-manual \
+    --target "$HOME/sure-restored" --without-worker --no-start
+)
+```
+
+For a bundle's `restore.sh`, use the same subshell/unsets and replace the `sh`
+command with `sh /path/to/backup/restore.sh --target "$HOME/sure-restored"
+--without-worker --no-start`. This prepares files only; it does not restore data
+or start services. Custom Compose/includes/`env_file` files omitted from the
+bundle must be securely copied and wired into the target configuration. If
+preparation fails because one is missing, preserve the partially prepared folder,
+inspect the error and complete its configuration; do not rerun `recover` against
+that now non-empty folder or continue with startup commands after an error.
+
+In the target directory, use a clean shell with the same Compose overrides
+cleared. Inspect the restored `.env` and custom files for source-specific paths
+and overrides, adapt the target copies and supply any missing files first. Keep
+the original backup unchanged. Validate the target's resolved configuration,
+including the `sure-backup` profile, and verify that its database,
+volumes, mounts, networks and external uploads cannot overwrite the source instance.
+Use a separate Redis/queue endpoint as well; a restored copy must not enqueue or
+consume jobs in the source instance's queue.
+Do not execute the printed startup chain. Omit its final `docker compose up -d web`
+command (or `web worker` if the preparation was run without `--without-worker`);
+use the separate restore and verification steps below instead. If you added
+custom Compose files, update the target's `COMPOSE_FILE` selection as well;
+keep `compose.restore.yml` last to retain the pinned image and restore service.
+Do not overwrite the reviewed selection with an earlier, incomplete file list.
+
+The same steps apply after successful preparation and after correcting a
+configuration-validation failure: the prepared target contains
+`compose.restore.yml`, `bin/sure-backup` and the copied backup. With the target
+configuration valid and the isolation checks above complete, continue from that
+target with the Compose overrides cleared. Keep `web`, `worker` and any other
+writers stopped; these commands start only the data services and restore data.
+`--no-deps` prevents custom dependencies from starting other services; `--wait`
+waits for the database and Redis health checks before the restore. Retain working
+health checks for both services in a customized Compose file.
+Replace the backup ID below with the copied backup's actual version/name:
+
+```bash
+docker compose --profile sure-backup config --quiet &&
+  docker compose up -d --no-deps --wait db redis &&
+  docker compose run --rm --no-deps -e SURE_RECOVER=1 sure-backup restore 0.7.6/2026-10-27_111135-manual --yes
+```
+
+Stop on any error. After a successful restore, complete any matching
+[external-upload restore](#backup-and-restore-prerequisites) and confirm the keys
+before following [Verify recovery before resuming services](#verify-recovery-before-resuming-services).
+That sequence applies access restrictions before starting `web` and keeps
+workers stopped until verification succeeds. Do not use new-folder recovery
+as a substitute for the [interrupted-rotation recovery checks](#restoring-after-an-interrupted-rotation).
 
 ### Upgrading from the database-only backup service (v0.7.5)
 
@@ -741,15 +1199,56 @@ If you download the new `bin/db-backup.sh` without updating the compose file, th
 
 ## Encrypting sensitive data
 
-Sure encrypts sensitive fields in the database, such as bank and provider credentials, MFA secrets, email addresses and names. A self-hosted instance takes the keys from one of two places:
+Sure encrypts sensitive fields in the database, such as bank and provider credentials, MFA secrets, email addresses and names. On images containing the encryption gating fix in [#3189](https://github.com/we-promise/sure/pull/3189), a self-hosted instance uses these key sources in order:
 
 - Your own keys, set with the three `ACTIVE_RECORD_ENCRYPTION_*` variables. Set all three or none: the app refuses to start when only some of them are set.
+- Rails credentials, if configured and not overridden by a complete set of environment keys.
 - Otherwise, keys that Sure derives from `SECRET_KEY_BASE`. Changing `SECRET_KEY_BASE` then changes the keys as well.
 
 > [!WARNING]
 > Encrypted data can only be read with the keys it was encrypted with. On an instance with data, don't change the three keys or `SECRET_KEY_BASE` except as described below, and keep `config/.env` (which backups include) private.
 
 Your own keys are recommended, because they don't depend on `SECRET_KEY_BASE`. If the boot log warns that `SECRET_KEY_BASE` is a publicly known value, the derived keys are public; see [Encryption key rotation](encryption.md).
+
+For an existing installation, run backfill and rotation commands from its configuration directory.
+Retain the same Compose project, files, environment, and app image throughout a
+backfill or rotation. Include your usual `-f`, `-p`, `--project-directory`, and `--env-file` options on
+**every** command so it targets the same services and volumes. Stop any other
+writers as well as `web` and `worker`; keep the database and Redis running for the
+one-off commands. Preserve the original configuration and any keys outside `.env`
+alongside a verified backup. Missing old keys must be recovered before proceeding;
+a backfill cannot recover lost keys.
+
+### Backup and restore prerequisites
+
+The existing-install encryption procedures below and the [secret-rotation procedure](#upgrading-an-install-that-is-already-running-keep-your-secret_key_base)
+use the current `backup` service. If it is missing, or your Compose file still
+uses the v0.7.5 database-only service, use
+[Without the backup service](#without-the-backup-service-any-version-including-075-and-older)
+to create and restore a complete backup without replacing your deployment
+configuration. See [Upgrading the old backup service](#upgrading-from-the-database-only-backup-service-v075)
+if you also want to update that service; do not combine a service upgrade with an
+in-progress key rotation.
+
+With the standalone method, substitute `sh sure-backup create` for the service's
+`backup create` command, and `sh sure-backup restore` followed by the recorded
+backup folder name for `backup restore`. Keep writers stopped and use the same
+Compose project and configuration for both methods; follow
+[Selecting the standalone backup target](#selecting-the-standalone-backup-target)
+when using the script, including for in-place restore.
+
+Confirm that the backup contains the database and configuration, with any custom
+configuration files and external keys preserved separately. For local uploads,
+verify that `storage.tar.gz` includes the installation's uploaded files. For S3,
+R2, GCS, or another external store, verify a separate, restorable provider backup
+of the objects referenced by the database snapshot while writers remain stopped.
+A local storage archive does not prove that external uploads are backed up, and
+enabling versioning or replication alone does not verify a usable restore point.
+Record the provider snapshot or object versions with the named database backup
+and restore the matching objects when rolling back. Keep access credentials and
+any required storage encryption keys securely available. Do not proceed on a
+failed backup or a database-only dump without the corresponding configuration,
+keys, and upload backups.
 
 ### Generate the keys
 
@@ -780,55 +1279,67 @@ Older versions of Sure stored this data unencrypted when no keys were set. After
 
 Update Sure to a version that includes this guide first and let it start once, so its database migrations have run. Older versions convert only some of the tables. Then:
 
-1. Take a backup and note the folder name it prints (for example `0.7.6/2026-10-27_111135-manual`):
-
-   ```bash
-   docker compose run --rm backup create
-   ```
-
-2. Stop the app, so nothing is written while the data is converted:
+1. Stop `web`, `worker`, and any other writers. Keep them stopped until the conversion succeeds:
 
    ```bash
    docker compose stop web worker
    ```
 
+2. Take a backup using the [supported backup method](#backup-and-restore-prerequisites), confirm it succeeded, and note the folder name it prints (for example `0.7.6/2026-10-27_111135-manual`):
+
+   ```bash
+   docker compose run --rm --no-deps backup create
+   ```
+
 3. Preview the conversion. The `1` makes it a dry run that changes nothing. Its report must show `"dry_run":true`, list every table with `"failed_count":0` and include a `session_ip_digests` entry:
 
    ```bash
-   docker compose run --rm web bin/rails "security:backfill_encryption[100,1]"
+   docker compose run --rm --no-deps web bin/rails "security:backfill_encryption[100,1]"
    ```
 
-   If rows fail, they hold data encrypted with keys the instance no longer has, for example after `SECRET_KEY_BASE` was changed. Don't convert: run `docker compose up -d`, and put the keys or `SECRET_KEY_BASE` that data was encrypted with back in place first.
+   If rows fail, inspect `failed_samples`; undecryptable ciphertext can mean the instance no longer has the keys, for example after `SECRET_KEY_BASE` was changed. Keep writers stopped and resolve the failures before converting. Restore the effective keys or use [Encryption key rotation](encryption.md) with the correct previous keys; do not substitute newly generated keys.
 
 4. Convert the data:
 
    ```bash
-   docker compose run --rm web bin/rails "security:backfill_encryption[100,0]"
+   docker compose run --rm --no-deps web bin/rails "security:backfill_encryption[100,0]"
    ```
 
-   The command must finish without an error, and the JSON report on its last line must show `"ok":true` and `"failed_count":0`. If it doesn't, run the command again; it is safe to repeat. The per-table `failed_samples` name rows that keep failing.
+   The command must finish without an error, and the JSON report on its last line must show `"ok":true` and `"failed_count":0`. If it does not, keep writers stopped and investigate the per-table `failed_samples`. After fixing the cause, repeat the command. If you must restore, use the named backup from step 2 and the [backup-state-specific recovery guidance](#restoring-after-an-interrupted-rotation).
 
-5. Start the app with `docker compose up -d`, sign in, and open **Settings > Bank Sync** to check that your connections load.
+5. Follow [Verify recovery before resuming services](#verify-recovery-before-resuming-services): apply administrator-only access restrictions, start only `web`, check that your connections load in **Settings > Bank Sync**, and complete the remaining checks before starting workers.
+
+A clean write pass records the current backfill version. On the next boot, the
+initializer uses that record to disable legacy plaintext reads and query fallback.
+A dry run does not mark completion; a failed write leaves completion unset. Use the
+successful write report and the staged startup in step 5 to apply the result to
+both services. Successful
+sign-in alone, or setting `ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA=false`,
+is not proof of completion. The manifest in
+[`lib/active_record_encryption_config.rb`](../../lib/active_record_encryption_config.rb)
+tracks the encrypted columns; the task also handles sessions and IP digests.
+`Setting` secrets use separate encryption and a separate rotation task, described
+in [Upgrading an existing install](#upgrading-an-install-that-is-already-running-keep-your-secret_key_base).
 
 ### Switching an existing instance to your own keys
 
 Data an instance has already encrypted with the derived keys can't be read with new keys. The steps below first check whether the instance holds any such data. If it doesn't, for example because it was updated straight from a version that stored everything unencrypted, they convert it to your keys directly. If it does, step 4 moves it to your keys with the derived keys as previous keys.
 
 > [!NOTE]
-> Already added the keys without these steps? Data encrypted with the old keys then reads back as unreadable text, and provider syncs fail. Remove the three lines from `.env` and run `docker compose up -d`. Keep the three values and use the same ones when you switch: anything the app wrote while they were active is encrypted with them.
+> Already added keys without these steps? Stop writers and preserve both the old and new key material before changing anything else. The data may now contain rows encrypted with either set. Removing the new keys alone makes rows written with them unreadable. Use the same new keys as the current keys and supply the correct old keys during the rotation below; do not restart until the write pass succeeds.
 
 Update Sure to a version that includes this guide first and let it start once, so its database migrations have run. Don't combine the switch with a version update. Then:
 
-1. Take a backup and note the folder name it prints (for example `0.7.6/2026-10-27_111135-manual`):
-
-   ```bash
-   docker compose run --rm backup create
-   ```
-
-2. Stop the app:
+1. Stop `web`, `worker`, and any other writers. Keep them stopped until the conversion succeeds:
 
    ```bash
    docker compose stop web worker
+   ```
+
+2. Take a backup using the [supported backup method](#backup-and-restore-prerequisites), confirm it succeeded, and note the folder name it prints (for example `0.7.6/2026-10-27_111135-manual`):
+
+   ```bash
+   docker compose run --rm --no-deps backup create
    ```
 
 3. Add the three keys to `.env` (and the three lines to `compose.yml` if they are missing; see above).
@@ -836,33 +1347,33 @@ Update Sure to a version that includes this guide first and let it start once, s
 4. Preview the conversion with the new keys. The `1` makes it a dry run that changes nothing; its report must show `"dry_run":true`:
 
    ```bash
-   docker compose run --rm web bin/rails "security:backfill_encryption[100,1]"
+   docker compose run --rm --no-deps web bin/rails "security:backfill_encryption[100,1]"
    ```
 
-   Continue only if it lists every table with `"failed_count":0` and includes a `session_ip_digests` entry. Failed rows hold data encrypted with the derived keys. Then preview again with the keys derived from your `SECRET_KEY_BASE` as previous keys:
+   If every table shows `"failed_count":0` and the report includes `session_ip_digests`, proceed to step 5. Otherwise inspect `failed_samples`: if the failures are undecryptable ciphertext written with the derived keys, preview again with the `SECRET_KEY_BASE` that encrypted those rows as previous keys:
 
    ```bash
    read -rs ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE && export ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE   # paste the SECRET_KEY_BASE from .env
-   docker compose run --rm -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails "security:backfill_encryption[100,1]"
+   docker compose run --rm --no-deps -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails "security:backfill_encryption[100,1]"
    ```
 
-   If every table now shows `"failed_count":0`, add the same `-e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE` to the command in step 5, and run `unset ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE` after it. Pass the variable only to these commands, never put it into `.env` or `compose.yml`: while it is set, Rails writes deterministically encrypted values (emails, tokens, API keys) with the old keys. If rows still fail, remove the three lines from `.env` again and run `docker compose up -d`. The instance keeps working with the derived keys.
+   If every table now shows `"failed_count":0`, add the same `-e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE` to the command in step 5, and retain the previous value for retries until step 5 finishes successfully with `"ok":true` and `"failed_count":0`. Only then run `unset ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE` before restarting services. Pass the variable only to these commands, never put it into `.env` or `compose.yml`: while it is set, Rails writes deterministically encrypted values (emails, tokens, API keys) with the old keys. If rows still fail, keep writers stopped and resolve the failures. If the previous keys were explicit rather than derived, use the `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_*` values described in [Encryption key rotation](encryption.md). Do not assume all failed rows use derived keys or restart with a configuration that cannot decrypt them.
 
 5. Convert the data:
 
    ```bash
-   docker compose run --rm web bin/rails "security:backfill_encryption[100,0]"
+   docker compose run --rm --no-deps web bin/rails "security:backfill_encryption[100,0]"
    ```
 
-   The command must finish without an error, and the JSON report on its last line must show `"ok":true` and `"failed_count":0`. If it doesn't, run the command again; it is safe to repeat. If rows keep failing (the per-table `failed_samples` name them), don't start the app: undo the change as described below.
+   The command must finish without an error, and the JSON report on its last line must show `"ok":true` and `"failed_count":0`. If it does not, keep writers stopped and inspect the per-table `failed_samples`. Fix the cause before repeating the command with the same current and previous keys. If the conversion cannot be completed, undo the change as described below.
 
-6. Start the app with `docker compose up -d`, sign in, and open **Settings > Bank Sync** to check that your connections load.
+6. Follow [Verify recovery before resuming services](#verify-recovery-before-resuming-services): apply administrator-only access restrictions, start only `web`, check that your connections load in **Settings > Bank Sync**, and complete the remaining checks before starting workers.
 
-To undo the switch, stop `web` and `worker`, restore the backup from step 1 by its name (not `latest`, which may be a newer scheduled backup taken with the keys), remove the three `ACTIVE_RECORD_ENCRYPTION_*` lines from `.env`, and run `docker compose up -d`:
+To undo the switch, stop `web` and `worker` and use the backup from step 2 by its name (not `latest`, which may be a newer scheduled backup taken with the keys). Follow [Restoring after an interrupted rotation](#restoring-after-an-interrupted-rotation) to pair it with the correct image, configuration, and keys. A backup taken after an accidental key change may already contain mixed-key data and still require recovery; do not restart until it is readable. Remove the three explicit keys only if the backed-up data does not require them. With the current backup service:
 
 ```bash
 docker compose stop web worker
-docker compose run --rm backup restore 0.7.6/2026-10-27_111135-manual
+docker compose run --rm --no-deps backup restore 0.7.6/2026-10-27_111135-manual
 ```
 
 ## Troubleshooting
