@@ -52,6 +52,18 @@ plugin :tmp_restart
 
 pidfile ENV["PIDFILE"] if ENV["PIDFILE"]
 
+if ENV["SIDEKIQ_EMBEDDED"] == "true"
+  embedded_sidekiq = nil
+
+  after_booted do
+    require Rails.root.join("lib/embedded_sidekiq").to_s
+    embedded_sidekiq = EmbeddedSidekiq.build
+    embedded_sidekiq.run
+  end
+
+  after_stopped { embedded_sidekiq&.stop }
+end
+
 if rails_env == "development"
   # Specifies a very generous `worker_timeout` so that the worker
   # isn't killed by Puma when suspended by a debugger.

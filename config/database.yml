@@ -1,7 +1,8 @@
 default: &default
   adapter: postgresql
   encoding: unicode
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 3 } %>
+  # Embedded Sidekiq shares the web process, so it needs its own share of the pool.
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 3 }.to_i * (ENV["SIDEKIQ_EMBEDDED"] == "true" ? 2 : 1) %>
   host: <%= ENV.fetch("DB_HOST") { "127.0.0.1" } %>
   port: <%= ENV.fetch("DB_PORT") { "5432" } %>
   username: <%= ENV.fetch("POSTGRES_USER") { nil } %>
