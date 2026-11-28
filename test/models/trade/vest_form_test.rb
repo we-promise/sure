@@ -24,20 +24,19 @@ class Trade::VestFormTest < ActiveSupport::TestCase
     assert_equal Trade::VEST_LABEL, vest.trade.investment_activity_label
     assert_equal 70, vest.trade.qty
     assert_equal 30, vest.trade.units_withheld
-    assert_equal 100, vest.trade.vested_units
     assert_equal 700, vest.amount, "the shares are paid for from the pay, as a buy is"
 
     income = vest.vest_parts.find { |part| part.amount.negative? }
     assert_equal(-1000, income.amount)
     assert_equal @pay, income.transaction.category
     assert_equal Trade::VestForm::INCOME_LABEL, income.transaction.investment_activity_label
-    assert_equal "AAPL vest: income", income.name
+    assert_equal "AAPL vest income", income.name
 
     taxes = vest.vest_parts.select { |part| part.amount.positive? }.sort_by(&:amount)
     assert_equal [ 80, 220 ], taxes.map(&:amount)
     assert_equal [ @state, @federal ], taxes.map { |tax| tax.transaction.category }
     assert_equal [ Trade::VestForm::TAX_LABEL ], taxes.map { |tax| tax.transaction.investment_activity_label }.uniq
-    assert_equal "AAPL vest: Federal income tax", taxes.last.name
+    assert_equal "Federal income tax", taxes.last.name
 
     assert_equal 0, form.cash_left
     assert_equal 0, @account.entries.where(id: [ vest.id, *vest.vest_parts.map(&:id) ]).sum(:amount)
@@ -50,7 +49,7 @@ class Trade::VestFormTest < ActiveSupport::TestCase
 
     taxes = form.entry.vest_parts.select { |part| part.amount.positive? }
     assert_equal [ 300 ], taxes.map(&:amount)
-    assert_equal "AAPL vest: taxes withheld", taxes.first.name
+    assert_equal "Taxes withheld", taxes.first.name
   end
 
   test "with nothing withheld and no tax lines, there is only the income" do
@@ -96,6 +95,32 @@ class Trade::VestFormTest < ActiveSupport::TestCase
     assert_equal 60, vest.trade.qty
     assert_equal 600, vest.amount
     assert_equal [ -1000, 400 ], vest.vest_parts.map(&:amount).sort
+  end
+
+  test "saving the vest again keeps what the user added to its income and taxes" do
+    form = vest_form(qty: 70, units_withheld: 30, price: 10, tax_lines: [ { name: "Federal", amount: 200 }, { name: "State", amount: 100 } ])
+    form.save
+    federal = form.entry.vest_parts.find { |part| part.name == "Federal" }
+    federal.update!(notes: "paystub 2026-11-15")
+
+    reopened = Trade::VestForm.for(form.entry.reload)
+    reopened.assign_attributes(price: 11, tax_lines: [ { name: "Federal", amount: 230 } ])
+    assert reopened.save, reopened.errors.full_messages.to_sentence
+
+    federal.reload
+    assert_equal "paystub 2026-11-15", federal.notes
+    assert_equal 230, federal.amount
+    assert_equal [ federal.id ], Trade::VestForm.parts_of(form.entry.reload).last.map(&:id), "the State line is gone"
+  end
+
+  test "a tax line needs an amount, and it cannot be negative" do
+    missing = vest_form(qty: 10, price: 25, tax_lines: [ { name: "Federal", amount: "" } ])
+    assert_not missing.save
+    assert_includes missing.errors[:base], I18n.t("vests.form.tax_amount_required")
+
+    negative = vest_form(qty: 10, price: 25, tax_lines: [ { name: "Federal", amount: -5 } ])
+    assert_not negative.save
+    assert_includes negative.errors[:base], I18n.t("vests.form.tax_amount_negative")
   end
 
   test "deleting a vest deletes its income and taxes" do

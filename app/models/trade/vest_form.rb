@@ -12,7 +12,8 @@
 # in and out from outside (Contribution, Withdrawal), with the shares internal.
 #
 # The income and tax entries point at the vest's entry (Entry#vest_entry), so
-# opening any of them opens this form, and saving replaces them together.
+# opening any of them opens this form. Saving updates them in place, so what
+# the user added to one (notes, tags, attachments) stays.
 class Trade::VestForm
   include ActiveModel::Model
 
@@ -33,12 +34,12 @@ class Trade::VestForm
   validates :units_withheld, numericality: { greater_than_or_equal_to: 0 }, allow_blank: true
   validate :account_holds_investments
   validate :security_present, unless: :entry
+  validate :tax_lines_have_amounts
 
   # The form for a vest already recorded, filled in from its entries.
   def self.for(entry)
     trade = entry.trade
-    parts = entry.vest_parts.includes(:entryable).order(:created_at).to_a
-    income = parts.find { |part| part.transaction? && part.amount.negative? }
+    income, taxes = parts_of(entry)
 
     new(
       entry: entry,
@@ -48,14 +49,16 @@ class Trade::VestForm
       units_withheld: trade.units_withheld,
       price: trade.price,
       income_category_id: income&.entryable&.category_id,
-      tax_lines: (parts - [ income ]).select(&:transaction?).map do |tax|
-        { name: tax.name.delete_prefix(name_prefix(trade.security.ticker)), category_id: tax.entryable.category_id, amount: tax.amount }
-      end
+      tax_lines: taxes.map { |tax| { name: tax.name, category_id: tax.entryable.category_id, amount: tax.amount } }
     )
   end
 
-  def self.name_prefix(ticker)
-    "#{ticker} vest: "
+  # The vest's income entry and its tax entries, oldest first, told apart by
+  # their labels.
+  def self.parts_of(entry)
+    parts = entry.vest_parts.includes(:entryable).order(:created_at).select(&:transaction?)
+    labelled = ->(label) { parts.select { |part| part.entryable.investment_activity_label == label } }
+    [ labelled.(INCOME_LABEL).first, labelled.(TAX_LABEL) ]
   end
 
   def initialize(entry: nil, tax_lines: [], **attrs)
@@ -109,7 +112,7 @@ class Trade::VestForm
 
   # The tax lines to show: those entered, then blanks to fill in.
   def tax_lines_for_form
-    tax_lines.select(&:amount) + Array.new(BLANK_TAX_LINES) { TaxLine.new(name: "", category_id: nil, amount: nil) }
+    tax_lines.reject { |line| blank_line?(line) } + Array.new(BLANK_TAX_LINES) { TaxLine.new(name: "", category_id: nil, amount: nil) }
   end
 
   def save
@@ -117,20 +120,21 @@ class Trade::VestForm
 
     Entry.transaction do
       vest = entry || account.entries.new(entryable: Trade.new(security: security))
-      ticker = vest.trade.security.ticker
-      vest.assign_attributes(name: Trade.build_name("vest", qty, ticker), date: date, amount: shares_value, currency: currency)
+      vest.assign_attributes(name: Trade.build_name("vest", qty, vest.trade.security.ticker), date: date, amount: shares_value, currency: currency)
       vest.trade.assign_attributes(
         qty: qty.to_d, price: price.to_d, fee: 0, currency: currency,
         units_withheld: units_withheld.presence&.to_d, investment_activity_label: Trade::VEST_LABEL
       )
       vest.save!
 
-      vest.vest_parts.destroy_all
-      parts = [ build_part(vest, name: "income", category_id: income_category_id, amount: -gross_pay, label: INCOME_LABEL) ]
-      parts += taxes.map do |tax|
-        build_part(vest, name: tax.name.presence || "taxes withheld", category_id: tax.category_id, amount: tax.amount, label: TAX_LABEL)
+      income, old_taxes = entry ? self.class.parts_of(vest) : [ nil, [] ]
+      parts = [ write_part(vest, income, name: I18n.t("vests.entries.income", ticker: vest.trade.security.ticker),
+                           category_id: income_category_id, amount: -gross_pay, label: INCOME_LABEL) ]
+      parts += taxes.each_with_index.map do |tax, index|
+        write_part(vest, old_taxes[index], name: tax.name.presence || I18n.t("vests.entries.taxes_withheld"),
+                   category_id: tax.category_id, amount: tax.amount, label: TAX_LABEL)
       end
-      parts.each(&:save!)
+      old_taxes.drop(taxes.size).each(&:destroy_unless_split_part_transferred!)
 
       [ vest, *parts ].each do |saved|
         saved.lock_saved_attributes!
@@ -144,18 +148,19 @@ class Trade::VestForm
   rescue ActiveRecord::RecordInvalid => e
     errors.add(:base, e.record.errors.full_messages.to_sentence)
     false
+  rescue Entry::SplitPartTransferredError
+    errors.add(:base, I18n.t("account.entries.destroy.part_transferred"))
+    false
   end
 
   private
-    def build_part(vest, name:, category_id:, amount:, label:)
-      vest.vest_parts.build(
-        account: account,
-        date: date,
-        name: "#{self.class.name_prefix(vest.trade.security.ticker)}#{name}",
-        amount: amount,
-        currency: currency,
-        entryable: Transaction.new(category: family_category(category_id), investment_activity_label: label)
-      )
+    # Updates an income or tax entry in place, or adds it when there is none.
+    def write_part(vest, part, name:, category_id:, amount:, label:)
+      part ||= vest.vest_parts.build(entryable: Transaction.new)
+      part.assign_attributes(account: account, date: date, name: name, amount: amount, currency: currency)
+      part.entryable.assign_attributes(category: family_category(category_id), investment_activity_label: label)
+      part.save!
+      part
     end
 
     # Only the family's own categories; an id from anywhere else is no category.
@@ -163,19 +168,14 @@ class Trade::VestForm
       account.family.categories.find_by(id: id) if id.present?
     end
 
-    # Users can look up a ticker from a provider or enter an offline one, as on
-    # the trade form.
     def security
       return @security if defined?(@security)
 
-      parsed = ticker.present? ? Security.parse_combobox_id(ticker) : { ticker: manual_ticker }
-      @security = if parsed[:ticker].present?
-        Security::Resolver.new(
-          parsed[:ticker],
-          exchange_operating_mic: parsed[:exchange_operating_mic],
-          price_provider: parsed[:price_provider]
-        ).resolve
-      end
+      @security = Security::Resolver.from_form(ticker: ticker, manual_ticker: manual_ticker)
+    end
+
+    def blank_line?(line)
+      line.name.blank? && line.category_id.blank? && line.amount.nil?
     end
 
     def account_holds_investments
@@ -184,5 +184,13 @@ class Trade::VestForm
 
     def security_present
       errors.add(:base, I18n.t("vests.form.security_required")) unless security
+    end
+
+    # A tax line needs an amount once anything else is filled in, and a tax
+    # is money out, never in.
+    def tax_lines_have_amounts
+      amounts = tax_lines.reject { |line| blank_line?(line) }.map(&:amount)
+      errors.add(:base, I18n.t("vests.form.tax_amount_required")) if amounts.any?(&:nil?)
+      errors.add(:base, I18n.t("vests.form.tax_amount_negative")) if amounts.compact.any?(&:negative?)
     end
 end

@@ -48,10 +48,15 @@ class VestsController < ApplicationController
   def destroy
     return unless require_account_permission!(@entry.account)
 
-    @entry.destroy!
+    Entry.transaction do
+      @entry.vest_parts.each(&:destroy_unless_split_part_transferred!)
+      @entry.destroy!
+    end
     @entry.sync_account_later
 
     redirect_back_or_to account_path(@entry.account), notice: t(".success")
+  rescue Entry::SplitPartTransferredError
+    redirect_back_or_to account_path(@entry.account), alert: t("account.entries.destroy.part_transferred")
   end
 
   private

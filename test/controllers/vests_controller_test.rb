@@ -77,6 +77,16 @@ class VestsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a vest whose income or tax is part of a transfer is not deleted" do
+    vest = create_vest
+    Entry.any_instance.stubs(:destroy_unless_split_part_transferred!).raises(Entry::SplitPartTransferredError)
+
+    assert_no_difference -> { @account.entries.count } do
+      delete vest_url(vest)
+    end
+    assert_equal I18n.t("account.entries.destroy.part_transferred"), flash[:alert]
+  end
+
   test "a trade that is not a vest has no vest screen" do
     get vest_url(entries(:trade))
 

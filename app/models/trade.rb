@@ -113,17 +113,12 @@ class Trade < ApplicationRecord
     sell? && !internal_movement?
   end
 
-  # A negative quantity that left for another account you own. It looks exactly
-  # like a sale — same sign, same shape — and only the label tells them apart.
   def vest?
     investment_activity_label == VEST_LABEL
   end
 
-  # The shares the vest granted, before any were withheld for taxes.
-  def vested_units
-    qty.abs + units_withheld.to_d if vest?
-  end
-
+  # A negative quantity that left for another account you own. It looks exactly
+  # like a sale — same sign, same shape — and only the label tells them apart.
   def internal_movement?
     INTERNAL_MOVEMENT_LABELS.include?(investment_activity_label)
   end

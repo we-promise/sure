@@ -1,4 +1,13 @@
 class Security::Resolver
+  # The security a trade form names: a provider match picked from the ticker
+  # combobox, or an offline ticker typed in. nil when neither is given.
+  def self.from_form(ticker:, manual_ticker:)
+    parsed = ticker.present? ? Security.parse_combobox_id(ticker) : { ticker: manual_ticker }
+    return nil if parsed[:ticker].blank?
+
+    new(parsed[:ticker], exchange_operating_mic: parsed[:exchange_operating_mic], price_provider: parsed[:price_provider]).resolve
+  end
+
   def initialize(symbol, exchange_operating_mic: nil, country_code: nil, price_provider: nil)
     @symbol = validate_symbol!(symbol)
     @exchange_operating_mic = Security.canonical_exchange_operating_mic(exchange_operating_mic)
