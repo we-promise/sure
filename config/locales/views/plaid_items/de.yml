@@ -3,6 +3,9 @@ de:
   plaid_items:
     create:
       success: Konto erfolgreich verknüpft Bitte warte bis die Konten synchronisiert sind
+      already_connected: "Du hast für dieses Institut schon eine Verbindung, deshalb wurde diese nicht hinzugefügt."
+      exchange_failed: "Wir konnten diese Verbindung nicht hinzufügen. Versuch es noch einmal; bleibt der Fehler, sieh in die Server-Logs."
+      token_expired: "Diese Verbindung ist abgelaufen, bevor sie hinzugefügt wurde. Verbinde das Institut noch einmal."
     destroy:
       success: Konten zur Löschung vorgemerkt
     plaid_item:
@@ -23,6 +26,7 @@ de:
       syncing: Wird synchronisiert...
       update: Verbindung aktualisieren
       deletion_in_progress: "(wird gelöscht …)"
+      provider_name: "Plaid"
     select_existing_account:
       title: "%{account_name} mit Plaid verknüpfen"
       description: Wähl ein Plaid-Konto zur Verknüpfung mit deinem bestehenden Konto
@@ -36,3 +40,45 @@ de:
       already_linked: Dieses Plaid-Konto ist bereits verknüpft
       invalid_account: Ungültiges Plaid-Konto gewählt
       success: Konto mit Plaid verknüpft
+    auto_link_opener:
+      create_failed: "Wir konnten nicht bestätigen, dass diese Verbindung hinzugefügt wurde. Lade die Seite neu und prüfe das, bevor du es noch einmal versuchst."
+    duplicate_warning:
+      close: "Schließen"
+      confirm: "Diese Verbindung bestätigen"
+      connected_by: "Verbunden von %{name}"
+      eu_no_add_accounts: "Plaid unterstützt nicht, Konten zu einer bestehenden EU-Verbindung hinzuzufügen. Um zu ändern, welche Konten verbunden sind, entferne diese Verbindung und füge sie neu hinzu."
+      linked_on: "Verknüpft am %{date}"
+      manage_connection: "Zu den Konten"
+      mask: "****%{mask}"
+      no_accounts: "Über diese Verbindung wurden noch keine Konten synchronisiert."
+      overlap:
+        all_connected:
+          one: "Das Konto, das du hinzufügen wolltest, ist schon verbunden; ein erneutes Hinzufügen würde nur ein Duplikat erzeugen."
+          other: "Die %{count} Konten, die du hinzufügen wolltest, sind alle schon verbunden; ein erneutes Hinzufügen würde nur Duplikate erzeugen."
+        different_login: "Um ein anderes Login bei %{institution} zu verbinden, wähle noch einmal „Neues Konto“ und melde dich über Plaid mit diesem Login an."
+        more_accounts: "Um dieser Verbindung weitere Konten hinzuzufügen, schließe dieses Fenster und wähle „Konten hinzufügen“ bei der Verbindung zu %{institution}."
+        others_connected:
+          one: "Sure hat dieses Konto schon über die Verbindung von %{name}; deine würde nur ein Duplikat erzeugen."
+          other: "Sure hat diese Konten schon über die Verbindung von %{name}; deine würde nur Duplikate erzeugen."
+        others_connected_several:
+          one: "Sure hat dieses Konto schon über Verbindungen anderer Mitglieder; deine würde nur ein Duplikat erzeugen."
+          other: "Sure hat diese Konten schon über Verbindungen anderer Mitglieder; deine würde nur Duplikate erzeugen."
+        none_connected: "Keines der Konten, die du hinzufügen wolltest, ist bisher verbunden, es ist also vermutlich ein anderes Login. Das Hinzufügen zählt nur als weitere Plaid-Verbindung."
+        some_connected:
+          connected:
+            one: "Das andere ist schon verbunden; diese Verbindung würde es duplizieren und als weitere Plaid-Verbindung zählen."
+            other: "Die anderen %{count} sind schon verbunden; diese Verbindung würde sie duplizieren und als weitere Plaid-Verbindung zählen."
+          unconnected:
+            one: "Ein Konto, das du hinzufügen wolltest, ist noch nicht verbunden:"
+            other: "%{count} Konten, die du hinzufügen wolltest, sind noch nicht verbunden:"
+        unknown:
+          one: "Diese Konten lassen sich nicht mit deiner bestehenden Verbindung abgleichen. Sind es dieselben Konten, würde diese Verbindung sie duplizieren und als weitere Plaid-Verbindung zählen."
+          other: "Diese Konten lassen sich nicht mit deinen bestehenden Verbindungen abgleichen. Sind es dieselben Konten, würde diese Verbindung sie duplizieren und als weitere Plaid-Verbindung zählen."
+      title:
+        one: "Du hast für dieses Institut schon eine Verbindung"
+        other: "Du hast für dieses Institut schon %{count} Verbindungen"
+      title_all_connected: "Diese Verbindung besteht bereits"
+      title_others_connected:
+        one: "Dieses Konto ist schon verbunden"
+        other: "Diese Konten sind schon verbunden"
+      update_existing: "Bestehende Verbindung aktualisieren"

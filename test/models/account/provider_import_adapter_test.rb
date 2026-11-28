@@ -152,6 +152,21 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_nil broker_entry.transaction.category
   end
 
+  test "a deposit labelled as a contribution on a bank account stays a standard inflow" do
+    entry = @adapter.import_transaction(
+      external_id: "snaptrade_chequing_deposit_1",
+      amount: -1500.00,
+      currency: "USD",
+      date: Date.current,
+      name: "Payroll deposit",
+      source: "snaptrade",
+      investment_activity_label: "Contribution"
+    )
+
+    assert_equal "standard", entry.transaction.kind
+    assert_nil entry.transaction.category
+  end
+
   test "re-importing a contribution the user turned into a plain transfer keeps that choice" do
     checking_entry = @adapter.import_transaction(
       external_id: "plaid_checking_to_broker",

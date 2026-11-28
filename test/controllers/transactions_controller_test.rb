@@ -652,6 +652,15 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "a blank excluded field includes the transaction again" do
+    @entry.update!(excluded: true)
+
+    patch transaction_url(@entry), params: { entry: { excluded: "" } }
+
+    assert_redirected_to account_url(@entry.account)
+    assert_equal false, Entry.where(id: @entry.id).pick(:excluded)
+  end
+
   test "re-renders show with mark-recurring state when update fails validation" do
     family = families(:empty)
     sign_in users(:empty)
