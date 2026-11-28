@@ -1,0 +1,158 @@
+id:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: 'Nama'
+        redirect_uri: 'URI Pengalihan'
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              fragment_present: 'tidak boleh mengandung fragmen.'
+              invalid_uri: 'harus berupa URI yang valid.'
+              unspecified_scheme: 'harus menentukan skema.'
+              relative_uri: 'harus berupa URI absolut.'
+              secured_uri: 'harus berupa URI HTTPS/SSL.'
+              forbidden_uri: 'dilarang oleh server.'
+            scopes:
+              not_match_configured: 'tidak cocok dengan yang dikonfigurasi di server.'
+
+  doorkeeper:
+    applications:
+      confirmations:
+        destroy: 'Apakah Anda yakin?'
+      buttons:
+        edit: 'Edit'
+        destroy: 'Hapus'
+        submit: 'Kirim'
+        cancel: 'Batal'
+        authorize: 'Otorisasi'
+      form:
+        error: 'Ups! Periksa formulir Anda untuk kemungkinan kesalahan'
+      help:
+        confidential: 'Aplikasi akan digunakan di tempat rahasia klien dapat dijaga kerahasiaannya. Aplikasi seluler asli dan Aplikasi Halaman Tunggal (SPA) dianggap tidak rahasia.'
+        redirect_uri: 'Gunakan satu baris per URI'
+        blank_redirect_uri: 'Biarkan kosong jika Anda mengonfigurasi penyedia untuk menggunakan Client Credentials, Resource Owner Password Credentials, atau jenis hibah lain yang tidak memerlukan URI pengalihan.'
+        scopes: 'Pisahkan cakupan dengan spasi. Biarkan kosong untuk menggunakan cakupan default.'
+      edit:
+        title: 'Edit aplikasi'
+      index:
+        title: 'Aplikasi Anda'
+        new: 'Aplikasi Baru'
+        name: 'Nama'
+        callback_url: 'URL Callback'
+        confidential: 'Rahasia?'
+        actions: 'Tindakan'
+        confidentiality:
+          'yes': 'Ya'
+          'no': 'Tidak'
+      new:
+        title: 'Aplikasi Baru'
+      show:
+        title: 'Aplikasi: %{name}'
+        application_id: 'UID'
+        secret: 'Rahasia'
+        secret_hashed: 'Rahasia di-hash'
+        scopes: 'Cakupan'
+        confidential: 'Rahasia'
+        callback_urls: 'URL callback'
+        actions: 'Tindakan'
+        not_defined: 'Tidak ditentukan'
+
+    authorizations:
+      buttons:
+        authorize: 'Otorisasi'
+        deny: 'Tolak'
+      error:
+        title: 'Terjadi kesalahan'
+        go_back: 'Kembali'
+      new:
+        title: 'Otorisasi diperlukan'
+        prompt: 'Izinkan %{client_name} menggunakan akun Anda?'
+        able_to: 'Aplikasi ini akan dapat'
+      show:
+        title: 'Kode otorisasi'
+        authorization_code_label: 'Kode Otorisasi:'
+        copy_instructions: 'Salin kode ini dan tempelkan ke dalam aplikasi.'
+      form_post:
+        title: 'Kirim formulir ini'
+
+    authorized_applications:
+      confirmations:
+        revoke: 'Apakah Anda yakin?'
+      buttons:
+        revoke: 'Cabut'
+      index:
+        title: 'Aplikasi terotorisasi Anda'
+        application: 'Aplikasi'
+        created_at: 'Dibuat Pada'
+        date_format: '%Y-%m-%d %H:%M:%S'
+
+    pre_authorization:
+      status: 'Pra-otorisasi'
+
+    errors:
+      messages:
+        # Common error messages
+        invalid_request:
+          unknown: 'Permintaan tidak memiliki parameter yang diperlukan, menyertakan nilai parameter yang tidak didukung, atau formatnya salah.'
+          missing_param: 'Parameter yang diperlukan tidak ada: %{value}.'
+          request_not_authorized: 'Permintaan perlu diotorisasi. Parameter yang diperlukan untuk mengotorisasi permintaan tidak ada atau tidak valid.'
+          invalid_code_challenge: 'Code challenge diperlukan.'
+        invalid_redirect_uri: 'URI pengalihan yang diminta formatnya salah atau tidak cocok dengan URI pengalihan klien.'
+        unauthorized_client: 'Klien tidak diotorisasi untuk melakukan permintaan ini menggunakan metode ini.'
+        access_denied: 'Pemilik sumber daya atau server otorisasi menolak permintaan.'
+        invalid_scope: 'Cakupan yang diminta tidak valid, tidak dikenal, atau formatnya salah.'
+        invalid_code_challenge_method:
+          zero: 'Server otorisasi tidak mendukung PKCE karena tidak ada nilai code_challenge_method yang diterima.'
+          one: 'code_challenge_method harus berupa %{challenge_methods}.'
+          other: 'code_challenge_method harus salah satu dari %{challenge_methods}.'
+        server_error: 'Server otorisasi mengalami kondisi tak terduga yang mencegahnya memenuhi permintaan.'
+        temporarily_unavailable: 'Server otorisasi saat ini tidak dapat menangani permintaan karena kelebihan beban sementara atau pemeliharaan server.'
+
+        # Configuration error messages
+        credential_flow_not_configured: 'Alur Resource Owner Password Credentials gagal karena Doorkeeper.configure.resource_owner_from_credentials belum dikonfigurasi.'
+        resource_owner_authenticator_not_configured: 'Pencarian Pemilik Sumber Daya gagal karena Doorkeeper.configure.resource_owner_authenticator belum dikonfigurasi.'
+        admin_authenticator_not_configured: 'Akses ke panel admin dilarang karena Doorkeeper.configure.admin_authenticator belum dikonfigurasi.'
+
+        # Access grant errors
+        unsupported_response_type: 'Server otorisasi tidak mendukung jenis respons ini.'
+        unsupported_response_mode: 'Server otorisasi tidak mendukung mode respons ini.'
+
+        # Access token errors
+        invalid_client: 'Autentikasi klien gagal karena klien tidak dikenal, tidak ada autentikasi klien yang disertakan, atau metode autentikasi tidak didukung.'
+        invalid_grant: 'Hibah otorisasi yang diberikan tidak valid, kedaluwarsa, dicabut, tidak cocok dengan URI pengalihan yang digunakan dalam permintaan otorisasi, atau diterbitkan untuk klien lain.'
+        unsupported_grant_type: 'Jenis hibah otorisasi tidak didukung oleh server otorisasi.'
+
+        invalid_token:
+          revoked: "Token akses telah dicabut"
+          expired: "Token akses telah kedaluwarsa"
+          unknown: "Token akses tidak valid"
+        revoke:
+          unauthorized: "Anda tidak diotorisasi untuk mencabut token ini"
+
+        forbidden_token:
+          missing_scope: 'Akses ke sumber daya ini memerlukan cakupan "%{oauth_scopes}".'
+
+    flash:
+      applications:
+        create:
+          notice: 'Aplikasi dibuat.'
+        destroy:
+          notice: 'Aplikasi dihapus.'
+        update:
+          notice: 'Aplikasi diperbarui.'
+      authorized_applications:
+        destroy:
+          notice: 'Aplikasi dicabut.'
+
+    layouts:
+      admin:
+        title: 'Doorkeeper'
+        nav:
+          oauth2_provider: 'Penyedia OAuth2'
+          applications: 'Aplikasi'
+          home: 'Beranda'
+      application:
+        title: 'Otorisasi OAuth diperlukan'

@@ -657,6 +657,31 @@ class EntryTest < ActiveSupport::TestCase
       account.entries.excluding_balance_updates.pluck(:id).sort
   end
 
+  # A blank form value casts to nil. Stored as NULL, the row read as live in
+  # Ruby but dropped out of every `excluded = false` query.
+  test "a blank or nil excluded is stored as false" do
+    entry = create_transaction(account: accounts(:depository))
+
+    [ "", nil ].each do |blank|
+      entry.update!(excluded: true)
+      entry.update!(excluded: blank)
+
+      assert_equal false, Entry.where(id: entry.id).pick(:excluded), "excluded: #{blank.inspect}"
+    end
+  end
+
+  test "the database refuses a NULL excluded" do
+    entry = create_transaction(account: accounts(:depository))
+
+    # A savepoint, so the refused UPDATE leaves the test's transaction usable.
+    assert_raises(ActiveRecord::NotNullViolation) do
+      Entry.transaction(requires_new: true) do
+        Entry.connection.execute(Entry.sanitize_sql_array([ "UPDATE entries SET excluded = NULL WHERE id = ?", entry.id ]))
+      end
+    end
+    assert_equal false, entry.reload.excluded
+  end
+
   private
     def create_pending(account, date:, amount:)
       create_transaction(
