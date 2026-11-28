@@ -90,6 +90,13 @@ module Family::AiSettings
     effective_assistant_type == "external"
   end
 
+  # Whether the family lets AI features it didn't start send its data out. Families don't record
+  # this yet, so a family admin's own AI switch stands in for it: a member's switch covers only
+  # what that member does.
+  def ai_consented?
+    users.where(role: %w[admin super_admin], active: true, ai_enabled: true).exists?
+  end
+
   private
     # Returns Jev, or nil when it cannot be built. The registry constructs a fresh
     # Provider::Jev per lookup and its constructor rejects a cleartext endpoint,

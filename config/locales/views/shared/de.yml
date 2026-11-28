@@ -8,6 +8,13 @@ de:
       title: Bist du sicher
     money_field:
       label: Betrag
+      above_max: "Gib einen Betrag von höchstens %{max} ein."
+      below_min: "Gib einen Betrag von mindestens %{min} ein."
+      invalid_amount: "Gib einen gültigen Betrag oder Rechenausdruck ein."
+      operator_add: "Addieren"
+      operator_subtract: "Subtrahieren"
+      operator_multiply: "Multiplizieren"
+      operator_divide: "Dividieren"
     exchange_rate_tabs:
       calculate_rate_tab: FX-Kurs berechnen
       convert_tab: Mit FX-Kurs konvertieren
@@ -50,6 +57,15 @@ de:
         stale_heartbeat: "Der Sidekiq-Worker hat seit einiger Zeit kein Lebenszeichen gesendet. Möglicherweise hängt er oder ist abgestürzt."
         ai_queues_not_polled: "Kein Worker verarbeitet die KI-Warteschlangen (Chat, Händlererkennung, Kategorisierung). Prüfe, ob der Worker config/sidekiq.yml lädt."
         queue_backed_up: "Die älteste Hintergrundaufgabe in der Warteschlange wartet bereits länger als vorgesehen. Der Worker läuft, kommt aber mit der Verarbeitung nicht hinterher."
+    exchange_rate_notes:
+      missing:
+        one: "Für %{currencies} nach %{currency} ist noch kein Wechselkurs gespeichert, deshalb fehlen in manchen Summen Beträge in %{currencies}."
+        other: "Für %{currencies} nach %{currency} sind noch keine Wechselkurse gespeichert, deshalb fehlen in manchen Summen Beträge in diesen Währungen."
+      stale:
+        one: "Der letzte Wechselkurs nach %{currency} ist veraltet: %{rates}. Die heutigen Summen verwenden ihn."
+        other: "Die letzten Wechselkurse nach %{currency} sind veraltet: %{rates}. Die heutigen Summen verwenden sie."
+      stale_rate: "%{from} vom %{date}"
+    require_connector_owner: "Du kannst nur Verbindungen verwalten, die du selbst hinzugefügt hast"
   concerns:
     self_hostable:
       redis_configured: Redis ist jetzt richtig eingerichtet! Du kannst deine Sure-Installation nun einrichten.

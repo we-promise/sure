@@ -32,4 +32,28 @@ class Provider::SnaptradeAdapterTest < ActiveSupport::TestCase
     assert_instance_of Provider::Snaptrade, provider
     assert_equal item, provider.snaptrade_item
   end
+
+  test "build_provider returns a Personal-key item's provider when no OAuth app is configured" do
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(false)
+    item = snaptrade_items(:configured_item)
+    item.update!(oauth_access_token: nil, oauth_refresh_token: nil, oauth_token_type: SnaptradeItem::PERSONAL_KEY_TOKEN_TYPE,
+                 client_id: "personal-client", consumer_key: "personal-consumer-key")
+
+    provider = Provider::SnaptradeAdapter.build_provider(family: families(:dylan_family))
+
+    assert_instance_of Provider::Snaptrade, provider
+    assert_equal item, provider.snaptrade_item
+  end
+
+  test "build_provider picks the newest Personal-key item, as the settings controller does" do
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(false)
+    family = families(:dylan_family)
+    older = snaptrade_items(:configured_item)
+    older.update!(created_at: 2.days.ago)
+    older.apply_personal_key!(client_id: "old-client", consumer_key: "old-key")
+    newer = family.snaptrade_items.create!(name: "Newer")
+    newer.apply_personal_key!(client_id: "new-client", consumer_key: "new-key")
+
+    assert_equal newer, Provider::SnaptradeAdapter.build_provider(family: family).snaptrade_item
+  end
 end
