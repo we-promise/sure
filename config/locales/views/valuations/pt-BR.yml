@@ -45,6 +45,7 @@ pt-BR:
       entry_updated: Lançamento atualizado
     errors:
       amount_required: O valor é obrigatório
+      duplicate_date: Esta data já tem uma atualização de saldo. Atualize a página e tente novamente.
     form:
       amount: Valor
       submit: Adicionar atualização de saldo
