@@ -32,13 +32,17 @@ module Assistant
     Function::GetBillAudit,
     Function::CreateBill,
     Function::UpdateBill,
-    Function::RecordBillPayment
+    Function::RecordBillPayment,
+    # Writes proposals that change nothing until a person approves them, and
+    # nothing in the app lists or approves them yet. Preview until it does.
+    Function::SuggestSecurityClassification
   ].freeze
 
   # Guests may view family configuration (tags, categories, rules) but not
   # change it, so these tools are left out of a guest's registry (chat and MCP
   # alike). PreviewRule writes nothing, but it issues the token ApplyRule needs,
-  # and the web blocks guests from a rule's confirmation page too.
+  # and the web blocks guests from a rule's confirmation page too. A
+  # classification proposal is a family-level write as well.
   FAMILY_CONFIG_FUNCTION_CLASSES = [
     Function::CreateTag,
     Function::UpdateTag,
@@ -48,7 +52,8 @@ module Assistant
     Function::CreateRule,
     Function::UpdateRule,
     Function::ApplyRule,
-    Function::PreviewRule
+    Function::PreviewRule,
+    Function::SuggestSecurityClassification
   ].freeze
 
   class << self
