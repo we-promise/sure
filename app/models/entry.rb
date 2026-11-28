@@ -26,6 +26,9 @@ class Entry < ApplicationRecord
 
   monetize :amount
 
+  # A blank form value casts to nil, which the NOT NULL column refuses.
+  normalizes :excluded, with: ->(excluded) { excluded || false }, apply_to_nil: true
+
   belongs_to :account
   belongs_to :transfer, optional: true
   belongs_to :import, optional: true
