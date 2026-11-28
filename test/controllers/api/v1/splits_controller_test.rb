@@ -395,6 +395,56 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_empty plain.tags
   end
 
+  test "locks the category and merchant it assigns to each child" do
+    params = { split: { splits: [
+      { name: "Chosen", amount: (@entry.amount / 2).to_s, category_id: @family.categories.first.id, merchant_id: merchants(:amazon).id },
+      { name: "Plain",  amount: (@entry.amount / 2).to_s }
+    ] } }
+
+    post api_v1_transaction_split_url(@transaction), params: params, headers: api_headers(@api_key), as: :json
+    assert_response :created
+
+    chosen = @entry.reload.child_entries.find_by!(name: "Chosen").entryable
+    plain = @entry.child_entries.find_by!(name: "Plain").entryable
+    assert chosen.locked?(:category_id)
+    assert chosen.locked?(:merchant_id)
+    assert_not plain.locked?(:category_id), "a child sent without a category stays open to rules"
+  end
+
+  test "locks the categories of replacement children" do
+    post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
+
+    categorised = halves
+    categorised[:split][:splits].each { |split| split[:category_id] = @family.categories.first.id }
+
+    patch api_v1_transaction_split_url(@transaction), params: categorised, headers: api_headers(@api_key), as: :json
+    assert_response :success
+
+    children = @entry.reload.child_entries.map(&:entryable)
+    assert_equal 2, children.size
+    assert children.all? { |child| child.locked?(:category_id) }
+  end
+
+  test "a replacement child sent the parent's merchant leaves it unlocked" do
+    @transaction.update!(merchant: merchants(:netflix))
+    post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
+    assert_response :created
+
+    # A client re-sending the children it read back sends the inherited merchant.
+    resent = halves
+    resent[:split][:splits][0][:merchant_id] = merchants(:netflix).id
+    resent[:split][:splits][1][:merchant_id] = merchants(:amazon).id
+
+    patch api_v1_transaction_split_url(@transaction), params: resent, headers: api_headers(@api_key), as: :json
+    assert_response :success
+
+    inherited = @entry.reload.child_entries.find_by!(name: "First half").entryable
+    chosen = @entry.child_entries.find_by!(name: "Second half").entryable
+    assert_equal merchants(:netflix).id, inherited.merchant_id
+    assert_not inherited.locked?(:merchant_id), "the parent's merchant was not chosen for the child"
+    assert chosen.locked?(:merchant_id)
+  end
+
   test "omitting merchant_id keeps the parent's merchant on the child" do
     @transaction.update!(merchant: merchants(:netflix))
 

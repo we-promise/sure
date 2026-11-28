@@ -719,12 +719,12 @@ class Entry < ApplicationRecord
   # and two edits can't both insert children. Returns false when the entry is no longer a split
   # parent. Editing an existing split doesn't re-check whether the parent is pending or a transfer:
   # it creates no new split. Raises SplitPartTransferredError while a part is a leg of a confirmed transfer.
-  def resplit!(splits)
+  def resplit!(splits, lock_attributes: false)
     with_split_lock do
       next false unless split_parent?
 
       unsplit!
-      split!(splits)
+      split!(splits, lock_attributes: lock_attributes)
       true
     end
   end
@@ -786,7 +786,11 @@ class Entry < ApplicationRecord
         )
         if lock_attributes
           locked_at = Time.current
-          child_transaction.locked_attributes = split_attrs.slice(:category_id, :merchant_id).compact_blank.keys.index_with { locked_at }
+          chosen = split_attrs.slice(:category_id, :merchant_id).compact_blank
+          # A part sent the parent's merchant keeps what it would inherit anyway: the edit
+          # dialog and a client re-sending a split it read back send inherited merchants too.
+          chosen.delete(:merchant_id) if chosen[:merchant_id].to_s == entryable.try(:merchant_id).to_s
+          child_transaction.locked_attributes = chosen.keys.index_with { locked_at }
         end
 
         child_entries.create!(

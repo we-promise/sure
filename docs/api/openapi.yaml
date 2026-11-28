@@ -76,10 +76,15 @@ components:
                   category_id:
                     type: string
                     nullable: true
+                    description: A category sent here is locked on the child, so later
+                      rule runs leave it alone
                   merchant_id:
                     type: string
                     nullable: true
-                    description: Omitted or null, the child takes the parent's merchant
+                    description: Omitted or null, the child takes the parent's merchant.
+                      A merchant other than the parent's is locked on the child, so
+                      later rule runs leave it alone; the parent's merchant stays
+                      unlocked, as when omitted
                   tag_ids:
                     type: array
                     items:
