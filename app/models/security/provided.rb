@@ -6,6 +6,11 @@ module Security::Provided
   # Needs no API key, so it can stand in for an enabled provider that can't be built
   KEYLESS_FALLBACK_PROVIDER = "yahoo_finance"
 
+  # After a provider answers a details lookup, it isn't asked again for this
+  # long, even when its answer left the security without a logo or website
+  # (see import_provider_details).
+  PROVIDER_DETAILS_RECHECK_INTERVAL = 7.days
+
   class_methods do
     # Returns all enabled and configured securities providers. When the first
     # enabled provider can't be built (e.g. no API key), the keyless Yahoo
@@ -314,11 +319,18 @@ module Security::Provided
       return
     end
 
-    # Price-provider metadata (name/website/logo). Skip the refetch only when we
+    # Price-provider metadata (name/website/logo). Skip the refetch when we
     # already have a name plus a logo or website. This gate must be evaluated
     # before any brand-logo enrichment, otherwise setting logo_url first would
     # trip it and skip website_url backfill from providers that return links.
-    unless self.name.present? && (self.logo_url.present? || self.website_url.present?) && !clear_cache
+    #
+    # Some answers can't close that gate: Yahoo Finance never returns a logo
+    # and has no website for funds, so the importers would ask again on every
+    # sync, one request per security. A successful answer is therefore also
+    # remembered for PROVIDER_DETAILS_RECHECK_INTERVAL. A failed one isn't, so
+    # it is retried on the next import.
+    has_metadata = self.name.present? && (self.logo_url.present? || self.website_url.present?)
+    unless (has_metadata || provider_details_recently_fetched?) && !clear_cache
       response = price_data_provider.fetch_security_info(
         symbol: ticker,
         exchange_operating_mic: exchange_operating_mic
@@ -332,6 +344,7 @@ module Security::Provided
         attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
         attrs[:website_url] = response.data.links   if response.data.links.present?
         update(attrs) if attrs.any?
+        Rails.cache.write(provider_details_cache_key, true, expires_in: PROVIDER_DETAILS_RECHECK_INTERVAL)
       else
         Rails.logger.warn("Failed to fetch security info for #{ticker} from #{price_data_provider.class.name}: #{response.error.message}")
         DebugLogEntry.capture(
@@ -354,6 +367,17 @@ module Security::Provided
     # Runs after metadata so it never short-circuits website_url backfill.
     import_brand_logo(clear_cache: clear_cache)
   end
+
+  # Keyed by provider, so a security that moves to another provider asks it.
+  def provider_details_cache_key
+    "security_provider_details:#{id}:#{price_data_provider.class.name.demodulize.underscore}"
+  end
+  private :provider_details_cache_key
+
+  def provider_details_recently_fetched?
+    Rails.cache.exist?(provider_details_cache_key)
+  end
+  private :provider_details_recently_fetched?
 
   # Enriches the security with a brand logo from a dedicated logo provider
   # (T-Invest), independent of which provider supplies prices. No-op when the

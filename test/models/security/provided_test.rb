@@ -207,6 +207,98 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     assert_equal "twelve_data", entry.provider_key
   end
 
+  # A Yahoo-style answer: a name, but no logo and no website (Yahoo never
+  # returns a logo, and funds have no website), so the has-metadata gate can't
+  # close. The test env's null cache store would make the recheck window a
+  # no-op, so these tests swap in a real store.
+  def with_memory_cache
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    yield
+  ensure
+    Rails.cache = original_cache
+  end
+
+  def details_without_logo_or_website
+    Provider::SecurityConcept::SecurityInfo.new(
+      symbol: "AAPL", name: "Apple", links: nil, logo_url: nil,
+      description: nil, kind: "common stock", exchange_operating_mic: "XNAS"
+    )
+  end
+
+  test "import_provider_details doesn't ask again soon after an answer without a logo or website" do
+    with_memory_cache do
+      provider = mock("provider")
+      provider.stubs(:class).returns(Provider::YahooFinance)
+      provider.expects(:fetch_security_info).once.returns(provider_success_response(details_without_logo_or_website))
+      @security.stubs(:price_data_provider).returns(provider)
+      @security.stubs(:import_brand_logo)
+
+      @security.import_provider_details
+      @security.import_provider_details
+    end
+  end
+
+  test "import_provider_details asks again once the recheck interval has passed" do
+    with_memory_cache do
+      provider = mock("provider")
+      provider.stubs(:class).returns(Provider::YahooFinance)
+      provider.expects(:fetch_security_info).twice.returns(provider_success_response(details_without_logo_or_website))
+      @security.stubs(:price_data_provider).returns(provider)
+      @security.stubs(:import_brand_logo)
+
+      @security.import_provider_details
+      travel Security::Provided::PROVIDER_DETAILS_RECHECK_INTERVAL + 1.minute do
+        @security.import_provider_details
+      end
+    end
+  end
+
+  test "import_provider_details retries a failed lookup on the next import" do
+    with_memory_cache do
+      provider = mock("provider")
+      provider.stubs(:class).returns(Provider::YahooFinance)
+      provider.expects(:fetch_security_info).twice.returns(
+        provider_error_response(Provider::YahooFinance::RateLimitError.new("Yahoo Finance rate limit exceeded"))
+      )
+      @security.stubs(:price_data_provider).returns(provider)
+      @security.stubs(:import_brand_logo)
+
+      @security.import_provider_details
+      @security.import_provider_details
+    end
+  end
+
+  test "import_provider_details with clear_cache asks again despite a recent answer" do
+    with_memory_cache do
+      provider = mock("provider")
+      provider.stubs(:class).returns(Provider::YahooFinance)
+      provider.expects(:fetch_security_info).twice.returns(provider_success_response(details_without_logo_or_website))
+      @security.stubs(:price_data_provider).returns(provider)
+      @security.stubs(:import_brand_logo)
+
+      @security.import_provider_details
+      @security.import_provider_details(clear_cache: true)
+    end
+  end
+
+  test "import_provider_details asks a different provider despite a recent answer from another" do
+    with_memory_cache do
+      yahoo = mock("yahoo")
+      yahoo.stubs(:class).returns(Provider::YahooFinance)
+      yahoo.expects(:fetch_security_info).once.returns(provider_success_response(details_without_logo_or_website))
+      twelve_data = mock("twelve_data")
+      twelve_data.stubs(:class).returns(Provider::TwelveData)
+      twelve_data.expects(:fetch_security_info).once.returns(provider_success_response(details_without_logo_or_website))
+      @security.stubs(:import_brand_logo)
+
+      @security.stubs(:price_data_provider).returns(yahoo)
+      @security.import_provider_details
+      @security.stubs(:price_data_provider).returns(twelve_data)
+      @security.import_provider_details
+    end
+  end
+
   # --- find_or_fetch_price ---
 
   test "find_or_fetch_price logs a debug entry when the provider fetch fails" do
