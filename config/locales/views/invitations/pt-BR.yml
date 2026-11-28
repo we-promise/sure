@@ -1,8 +1,39 @@
 ---
 pt-BR:
   invitations:
+    accept_choice:
+      create_account: Criar nova conta
+      existing_account_hint: Já tem uma conta? Contas existentes não podem entrar em outro grupo familiar por meio de um convite.
+      joined_household: Você entrou no grupo familiar.
+      message: "%{inviter} convidou você para participar como %{role}."
+      title: Participar de %{family}
+    bulk_create:
+      download: Baixar relatório
+      errors:
+        email_not_queued: Convite salvo, mas não foi possível colocar o e-mail na fila de envio. Remova-o e tente novamente.
+        processing_failed: Não foi possível processar o convite. Verifique se já existe um convite pendente antes de tentar novamente.
+      invalid_role: Convites em massa só podem ser enviados para membros e convidados.
+      invite_more: Convidar mais pessoas
+      no_emails: Informe pelo menos um endereço de e-mail.
+      status:
+        invalid: Não foi possível convidar
+        link_only: Pronto para compartilhar
+        sent: Convite enviado
+      summary: "%{sent} enviados, %{link_only} prontos para compartilhar, %{invalid} com falha."
+      title: Resultado dos convites
+      too_many: Você pode convidar até %{max} pessoas por vez. Envie menos convites.
+    bulk_new:
+      emails_label: Endereços de e-mail
+      emails_placeholder: Digite os endereços de e-mail separados por vírgulas ou um por linha
+      role_guest: Convidado
+      role_label: Função
+      role_member: Membro
+      submit: Enviar convites
+      subtitle: Convide várias pessoas para participar da sua conta %{moniker} no %{product_name}
+      title: Convidar várias pessoas
     create:
       failure: Não foi possível enviar o convite
+      own_email: Você não pode convidar a si mesmo.
       success: Convite enviado com sucesso
     destroy:
       failure: Houve um problema ao remover o convite.
@@ -12,8 +43,9 @@ pt-BR:
       email_label: Endereço de E-mail
       email_placeholder: Digite o endereço de e-mail
       role_admin: Administrador
+      role_guest: Convidado
       role_label: Função
       role_member: Membro
       submit: Enviar Convite
-      subtitle: Envie um convite para se juntar à sua conta familiar no %{product_name}
+      subtitle: Envie um convite para participar da sua conta %{moniker} no %{product_name}
       title: Convidar Alguém

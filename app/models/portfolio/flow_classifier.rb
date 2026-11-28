@@ -320,15 +320,14 @@ class Portfolio::FlowClassifier
 
     # A security moved between accounts has no Transfer row; its other leg is
     # the opposite-quantity Transfer trade on the same security and date in
-    # another account. entries.excluded is nullable, and a NULL leg is live
-    # here as it is to #classify, hence IS NOT TRUE rather than = false.
+    # another account.
     def security_transfer_counterpart_in_scope?(entry, trade)
       Entry
         .joins("JOIN trades counterpart_trades ON counterpart_trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'")
         .where(account_id: scope_account_ids)
         .where.not(account_id: entry.account_id)
         .where(date: entry.date)
-        .where("entries.excluded IS NOT TRUE")
+        .where(excluded: false)
         .where(counterpart_trades: { security_id: trade.security_id, qty: -trade.qty, investment_activity_label: TRANSFER_LABEL })
         .exists?
     end
@@ -371,9 +370,7 @@ class Portfolio::FlowClassifier
     # jit_above_cost; JIT compilation then took longer than the query.
     # Grouped and hash-joined, the cost stays proportional to the rows read.
     #
-    # entries.excluded is nullable, and a NULL leg is live here as it is to
-    # #classify, hence IS NOT TRUE rather than = false. uuid has no MIN or
-    # MAX, so the ids are compared as text.
+    # uuid has no MIN or MAX, so the ids are compared as text.
     def security_transfer_legs_sql
       <<~SQL.squish
         SELECT
@@ -387,7 +384,7 @@ class Portfolio::FlowClassifier
           ON counterpart_trades.id = counterpart_entries.entryable_id
           AND counterpart_entries.entryable_type = 'Trade'
         WHERE counterpart_entries.account_id = ANY(#{scope_ids_sql})
-          AND counterpart_entries.excluded IS NOT TRUE
+          AND counterpart_entries.excluded = false
           AND counterpart_trades.investment_activity_label = '#{TRANSFER_LABEL}'
         GROUP BY counterpart_entries.date, counterpart_trades.security_id, counterpart_trades.qty
       SQL
