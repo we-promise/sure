@@ -71,7 +71,10 @@ If you run the AI stack from `compose.ai.yml`, use
 `docker compose up -d` reads `compose.yml` and can drop Pipelock.
 When the `local-ai` profile is active, add `--profile local-ai` so
 Compose recreates those services (e.g. Open WebUI after a
-`WEBUI_AUTH` change); omit it otherwise.
+`WEBUI_AUTH` change). When `external-assistant` is active, add
+`--profile external-assistant` so OpenClaw picks up
+`EXTERNAL_ASSISTANT_TOKEN` changes with Sure; omit inactive
+profiles.
 `docker compose restart` keeps the old environment.
 
 ## AI features
@@ -92,13 +95,18 @@ Optional Ollama + Open WebUI are also included:
 Before `up -d`, carry over customized `x-rails-env` entries from
 `compose.yml` into `compose.ai.yml` (`.env` alone is not enough) —
 `ALLOWED_HOSTS`, `APP_DOMAIN`, `ALLOWED_ORIGINS`, plus others you set
-such as `RAILS_FORCE_SSL` or SMTP. Do not copy `OPENAI_*`,
-`HTTP_PROXY`, `HTTPS_PROXY` or `NO_PROXY`; the AI stack sets those.
-Include `web` in `ALLOWED_HOSTS` or MCP calls forwarded with
-`Host: web:3000` are refused. The example pins `OPENAI_URI_BASE`,
-`OPENAI_MODEL` and `OPENAI_ACCESS_TOKEN` to Ollama; for another
-OpenAI-compatible provider, replace those values in `compose.ai.yml`
-first.
+such as `RAILS_FORCE_SSL` or SMTP. Do not copy `HTTP_PROXY` or
+`HTTPS_PROXY`; the AI stack sets those. Keep the AI stack's
+`NO_PROXY` list, and append any internal provider hostnames you
+need (or allow them in Pipelock `trusted_domains`) — Pipelock
+blocks private destinations by default. Do not copy the Ollama
+`OPENAI_URI_BASE`, `OPENAI_MODEL` and `OPENAI_ACCESS_TOKEN`
+defaults; for another OpenAI-compatible provider, replace those
+in `compose.ai.yml` first. Preserve other `OPENAI_*` you set
+(e.g. `OPENAI_EXTRA_HEADERS`); add any missing ones under
+`x-rails-env` — the example does not forward them. Include `web`
+in `ALLOWED_HOSTS` or MCP calls forwarded with `Host: web:3000`
+are refused.
 
 ```bash
 docker compose -f compose.ai.yml up -d
