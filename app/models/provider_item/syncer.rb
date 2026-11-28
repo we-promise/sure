@@ -5,7 +5,13 @@
 class ProviderItem::Syncer
   include SyncStats::Collector
 
-  SafeSyncError = Class.new(StandardError)
+  # Raised once the syncer has sent the raw error to Sentry itself, so Sync does
+  # not report it again.
+  class SafeSyncError < StandardError
+    def reported?
+      true
+    end
+  end
 
   attr_reader :provider_item
 
@@ -90,10 +96,10 @@ class ProviderItem::Syncer
       metadata: { "#{provider_key}_item_id": provider_item.id, error_class: e.class.name, error_message: e.message }
     )
     Sentry.capture_exception(e) do |scope|
-      scope.set_tags("#{provider_key}_item_id": provider_item.id)
+      scope.set_tags("#{provider_key}_item_id": provider_item.id, sync_id: sync.try(:id))
     end
     collect_health_stats(sync, errors: [ { message: safe_message, category: "sync_error" } ])
-    # cause: nil keeps the raw error, already reported above, off Sync's own report.
+    # cause: nil keeps the raw error, reported above, out of the safe error.
     raise SafeSyncError.new(safe_message), cause: nil
   end
 

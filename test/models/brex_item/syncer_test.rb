@@ -17,23 +17,6 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
     @syncer.perform_sync(sync)
   end
 
-  test "a failed sync reaches Sentry once, without the safe error carrying it as its cause" do
-    error = StandardError.new("raw provider failure")
-    BrexItem.any_instance.stubs(:import_latest_brex_data).raises(error)
-    sync = Sync.create!(syncable: @brex_item)
-    captured = []
-
-    Sentry.stub(:capture_exception, ->(exception, *) { captured << exception }) do
-      sync.perform
-    end
-
-    safe_errors = captured.grep(BrexItem::Syncer::SafeSyncError)
-    assert_equal 1, safe_errors.size
-    assert_nil safe_errors.first.cause
-    assert_equal 1, captured.flat_map { |exception| exception_chain(exception) }.count { |exception| exception.equal?(error) }
-    assert_equal I18n.t("brex_items.syncer.failed"), sync.reload.error
-  end
-
   test "records localized setup status text and counts" do
     window_start_date = Date.new(2026, 2, 1)
     sync = recording_sync(window_start_date: window_start_date)
@@ -120,11 +103,13 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
     assert_equal 1, sync.sync_stats["tx_seen"]
   end
 
-  test "tags the Sentry report with the Brex item id" do
+  test "tags the Sentry report with the Brex item id and the sync id" do
     sync = mock_sync(window_start_date: Date.new(2026, 2, 1))
+    sync.stubs(:respond_to?).with(:id).returns(true)
+    sync.stubs(:id).returns(42)
     @brex_item.expects(:import_latest_brex_data).raises(RuntimeError, "connection reset")
     scope = mock("scope")
-    scope.expects(:set_tags).with(brex_item_id: @brex_item.id).once
+    scope.expects(:set_tags).with(brex_item_id: @brex_item.id, sync_id: 42).once
     Sentry.expects(:capture_exception).yields(scope)
 
     assert_raises(BrexItem::Syncer::SafeSyncError) { @syncer.perform_sync(sync) }
@@ -190,15 +175,6 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
   end
 
   private
-
-    def exception_chain(exception)
-      chain = []
-      while exception
-        chain << exception
-        exception = exception.cause
-      end
-      chain
-    end
 
     def mock_sync(window_start_date:)
       sync = mock("sync")

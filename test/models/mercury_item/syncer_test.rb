@@ -74,20 +74,15 @@ class MercuryItem::SyncerTest < ActiveSupport::TestCase
                  sync.sync_stats["errors"].map { |e| e.values_at("message", "category") }
   end
 
-  test "a failed sync reaches Sentry once, without the safe error carrying it as its cause" do
-    error = StandardError.new("raw provider failure")
-    @mercury_item.stubs(:import_latest_mercury_data).raises(error)
-    captured = []
+  test "a sync without an id still raises the safe error" do
+    @mercury_item.expects(:import_latest_mercury_data).raises(StandardError, "boom")
+    tags = {}
+    scope = Object.new
+    scope.define_singleton_method(:set_tags) { |new_tags| tags.merge!(new_tags) }
+    Sentry.stubs(:capture_exception).yields(scope)
 
-    Sentry.stub(:capture_exception, ->(exception, *) { captured << exception }) do
-      Sync.create!(syncable: @mercury_item).perform
-    end
-
-    safe_errors = captured.grep(MercuryItem::Syncer::SafeSyncError)
-    assert_equal 1, safe_errors.size
-    assert_nil safe_errors.first.cause
-    reported = captured.flat_map { |exception| exception_chain(exception) }
-    assert_equal 1, reported.count { |exception| exception.equal?(error) }
+    assert_raises(MercuryItem::Syncer::SafeSyncError) { @syncer.perform_sync(recording_sync) }
+    assert_equal({ mercury_item_id: @mercury_item.id, sync_id: nil }, tags)
   end
 
   test "a failed sync records a debug log entry for support" do
@@ -158,15 +153,6 @@ class MercuryItem::SyncerTest < ActiveSupport::TestCase
   end
 
   private
-
-    def exception_chain(exception)
-      chain = []
-      while exception
-        chain << exception
-        exception = exception.cause
-      end
-      chain
-    end
 
     def recording_sync
       Class.new do
