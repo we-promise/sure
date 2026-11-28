@@ -1,21 +1,8 @@
 ---
 pl:
   onboardings:
-    goals:
-      ai_insights: Korzystać z AI do lepszego zrozumienia moich finansów
-      budgeting: Zarządzać planami finansowymi i budżetem
-      cashflow: Lepiej rozumieć przepływy pieniężne i wydatki
-      investments: Śledzić inwestycje
-      optimization: Analizować i optymalizować konta
-      partner: Zarządzać finansami z partnerem
-      reduce_stress: Zmniejszyć stres lub niepokój związany z finansami
-      submit: Dalej
-      subtitle: Wybierz jeden lub więcej celów, które chcesz osiągnąć, używając %{product_name}
-        do zarządzania finansami osobistymi.
-      title: Co Cię tutaj sprowadza?
-      unified_accounts: Widzieć wszystkie moje konta w jednym miejscu
     header:
-      goals: Cele
+      tools: Narzędzia/AI
       preferences: Preferencje
       setup: Konfiguracja
       sign_out: Wyloguj się
@@ -52,6 +39,49 @@ pl:
       submit: Dalej
       subtitle: Na początek skonfigurujmy Twój profil.
       title: Skonfigurujmy Twoje konto
+    tools:
+      title: Rozgość się.
+      subtitle: Kilka wyborów, aby dopasować aplikację %{product_name} do siebie.
+      starting_point:
+        eyebrow: Twój punkt wyjścia
+        title: Z czego dotąd korzystasz?
+        description: Wybierz narzędzia, których używasz do zarządzania finansami domowymi.
+        select: Wybierz narzędzia
+        other_placeholder: Inne narzędzie (opcjonalnie)
+        hint: Zaznacz wszystkie pasujące. To pomaga nam zaproponować punkt wyjścia, a nie zakładać zgodność importu.
+        tools:
+          nothing_yet: Jeszcze żadnych
+          other: Inne
+      ai:
+        eyebrow: Twoje preferencje AI
+        title: Jak chcesz używać aplikacji %{product_name}?
+        description: Ty decydujesz. Wybierz to, co Ci odpowiada.
+        default: Domyślne
+        modes:
+          none:
+            title: Bez AI
+            description: Zarządzaj finansami bez asystenta w aplikacji.
+          builtin:
+            title: Wbudowane AI
+            description: Włącz asystenta w aplikacji, korzystającego z dostawcy AI tej instancji.
+          external:
+            title: Własny agent AI
+            description: Używaj własnego asystenta, połączonego za Twoją zgodą.
+        panels:
+          admin_on: Jako administrator wyrażasz tym samym zgodę Twojego gospodarstwa domowego na funkcje AI działające w tle, takie jak kategoryzacja.
+          admin_off: Jako administrator wycofujesz tym samym swoją zgodę na funkcje AI działające w tle, takie jak kategoryzacja. Pozostaną włączone tylko wtedy, gdy inny administrator ma włączone AI.
+          none:
+            title: Asystent pozostaje wyłączony.
+            body: Wyłącza to asystenta w aplikacji dla Twojego konta.
+          builtin:
+            title: Asystent zostanie włączony.
+            body: Włącza to asystenta w aplikacji dla Twojego konta. To, z jakiego dostawcy AI korzysta i czy jest dostępny, nadal zależy od ustawień AI tej instancji.
+            not_configured: W tej instancji nie skonfigurowano jeszcze dostawcy AI. Administrator może go dodać w Ustawienia → Hosting własny.
+            unavailable: Obecne ustawienia AI Twojego gospodarstwa domowego nie uruchamiają asystenta w aplikacji, więc nie będzie on odpowiadać, dopóki administrator ich nie zmieni.
+          external:
+            title: Połącz agenta, kiedy zechcesz.
+            body: AI pozostaje włączone dla Twojego konta. Gdy Twoje gospodarstwo domowe jest skonfigurowane do czatu zewnętrznego, rozmowy korzystają z Twojego zewnętrznego asystenta zamiast wbudowanego asystenta %{product_name}, w tym samym interfejsie czatu. %{product_name} nadal obsługuje importy, kategoryzację i inne procesy jako główny rejestr Twoich danych. Twój agent może z nim współpracować przez MCP lub sure-cli; aby go połączyć, przejdź do Ustawienia → MCP. Ten wybór nie konfiguruje usługi czatu ani nie tworzy, nie zmienia i nie usuwa żadnego połączenia.
+      submit: Dalej
     trial:
       continue_trial: Kontynuuj okres próbny
       data_deletion: Dane zostaną wtedy usunięte

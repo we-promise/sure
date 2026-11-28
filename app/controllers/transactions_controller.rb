@@ -151,6 +151,7 @@ class TransactionsController < ApplicationController
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+      @entry.apply_immediate_rules_later
 
       respond_with_created_entry(@entry)
     else
@@ -172,6 +173,8 @@ class TransactionsController < ApplicationController
   end
 
   def update
+    rule_input = @entry.rule_input_snapshot
+
     if @entry.update(permitted_entry_params)
       sync_needed = @entry.saved_changes_affect_balances?
       transaction = @entry.transaction
@@ -181,7 +184,8 @@ class TransactionsController < ApplicationController
         flash[:cta] = {
           type: "category_rule",
           category_id: transaction.category_id,
-          category_name: transaction.category.name
+          category_name: transaction.category.name,
+          merchant_name: @entry.name
         }
       end
 
@@ -189,6 +193,7 @@ class TransactionsController < ApplicationController
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.sync_account_later if sync_needed
+      @entry.apply_immediate_rules_later(changed_from: rule_input)
 
       notes_changed = @entry.saved_change_to_notes?
 
@@ -226,6 +231,11 @@ class TransactionsController < ApplicationController
               locals: { entry: @entry }
             ) if can_edit_entry? && !@entry.split_child?),
             turbo_stream.replace(
+              dom_id(@entry, :category_provenance),
+              partial: "transactions/category_provenance",
+              locals: { entry: @entry }
+            ),
+            turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",
               locals: { entry: @entry, in_split_group: in_split_group }
@@ -243,18 +253,25 @@ class TransactionsController < ApplicationController
   def update_tags
     return unless require_account_permission!(@entry.account, :annotate, redirect_path: transaction_path(@entry))
 
+    rule_input = @entry.rule_input_snapshot
+
     # The transaction-row tag picker toggles one tag at a time; the drawer's
-    # multiselect sends the full set.
+    # multiselect sends the full set, plus the set it last saved so only its
+    # own changes apply and tags a rule added meanwhile stay.
     if params[:toggle_tag_id].present?
       @toggled_tag = Current.family.tags.find(params[:toggle_tag_id])
       @entry.transaction.toggle_tag!(@toggled_tag)
+    elsif params.key?(:previous_tag_ids)
+      previous_ids = Array(params[:previous_tag_ids]).reject(&:blank?)
+      @entry.transaction.merge_tag_changes!(tag_ids_param, previous_ids, available_tags: Current.family.tags)
     else
-      @entry.transaction.tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
+      @entry.transaction.replace_tags!(tag_ids_param, available_tags: Current.family.tags)
     end
 
     @entry.lock_saved_attributes!
     @entry.mark_user_modified!
     @entry.transaction.lock_attr!(:tag_ids)
+    @entry.apply_immediate_rules_later(changed_from: rule_input)
 
     respond_to do |format|
       # JSON stays first so Accept: */* callers keep the original response.
@@ -812,6 +829,14 @@ class TransactionsController < ApplicationController
         ep
       else
         {} # read_only — no edits allowed
+      end
+
+      # A split part's amount, currency and kind belong to the split; the editor
+      # disables them, and a change would make the parts stop adding up to the
+      # parent or turn a transfer leg back into a plain transaction.
+      if @entry.split_child?
+        permitted = permitted.except(:amount, :currency)
+        permitted[:entryable_attributes] = permitted[:entryable_attributes].except(:kind) if permitted[:entryable_attributes]
       end
 
       # A matched transfer's category lives on its outflow leg; a category
