@@ -361,4 +361,57 @@ class PlaidItem::AccountsSnapshotTest < ActiveSupport::TestCase
 
     @snapshot.get_account_data("123")
   end
+
+  test "temporary server errors are memoized with sanitized warnings" do
+    @plaid_item.update!(available_products: [], billed_products: [ "liabilities" ])
+    @snapshot.stubs(:accounts).returns([
+      OpenStruct.new(account_id: "123", type: "credit", subtype: "credit card"),
+      OpenStruct.new(account_id: "456", type: "credit", subtype: "credit card")
+    ])
+    @plaid_provider.expects(:get_item_liabilities).raises(Plaid::ApiError.new(code: 500, response_body: {
+      error_code: "INTERNAL_SERVER_ERROR", request_id: "not safe / request", error_message: "private-provider-message"
+    }.to_json)).once
+
+    assert_nil @snapshot.get_account_data("123").liabilities_data
+    assert_nil @snapshot.get_account_data("456").liabilities_data
+    warning = @snapshot.warnings.sole
+    assert_equal "INTERNAL_SERVER_ERROR", warning[:error_code]
+    refute warning.key?(:request_id)
+    refute_includes warning.to_json, "private-provider-message"
+  end
+
+  test "a malformed gateway error is a warning without raw response data" do
+    @plaid_item.update!(available_products: [], billed_products: [ "liabilities" ])
+    @snapshot.stubs(:accounts).returns([ OpenStruct.new(account_id: "123", type: "credit", subtype: "credit card") ])
+    @plaid_provider.expects(:get_item_liabilities).raises(Plaid::ApiError.new(code: 502, response_body: "private-provider-message"))
+
+    assert_nil @snapshot.get_account_data("123").liabilities_data
+    assert_equal 1, @snapshot.warnings.size
+    refute_includes @snapshot.warnings.to_json, "private-provider-message"
+  end
+
+  test "authentication consent configuration rate limits and unknown server errors remain blocking" do
+    @plaid_item.update!(available_products: [], billed_products: [ "liabilities" ])
+    [ [ 400, "ITEM_LOGIN_REQUIRED" ], [ 401, nil ], [ 403, nil ], [ 400, "ADDITIONAL_CONSENT_REQUIRED" ],
+      [ 400, "INVALID_ACCESS_TOKEN" ], [ 400, "INVALID_PRODUCT" ], [ 429, "RATE_LIMIT_EXCEEDED" ],
+      [ 500, "ITEM_LOGIN_REQUIRED" ], [ 500, "INVALID_API_KEYS" ], [ 500, "UNKNOWN_ERROR" ] ].each do |status, code|
+      provider = mock
+      snapshot = PlaidItem::AccountsSnapshot.new(@plaid_item, plaid_provider: provider)
+      snapshot.stubs(:accounts).returns([ OpenStruct.new(account_id: "123", type: "credit", subtype: "credit card") ])
+      error = Plaid::ApiError.new(code: status, response_body: { error_code: code }.to_json)
+      provider.expects(:get_item_liabilities).raises(error)
+
+      assert_same error, assert_raises(Plaid::ApiError) { snapshot.get_account_data("123") }
+      assert_empty snapshot.warnings
+    end
+  end
+
+  test "liabilities programming errors are not converted to warnings" do
+    @plaid_item.update!(available_products: [], billed_products: [ "liabilities" ])
+    @snapshot.stubs(:accounts).returns([ OpenStruct.new(account_id: "123", type: "credit", subtype: "credit card") ])
+    @plaid_provider.expects(:get_item_liabilities).raises(TypeError, "synthetic coding error")
+
+    assert_raises(TypeError) { @snapshot.get_account_data("123") }
+    assert_empty @snapshot.warnings
+  end
 end

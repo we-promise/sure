@@ -2,9 +2,12 @@
 # providers a convenience method, get_account_data which scopes the item-level payload
 # to each Plaid Account
 class PlaidItem::AccountsSnapshot
+  attr_reader :warnings
+
   def initialize(plaid_item, plaid_provider:)
     @plaid_item = plaid_item
     @plaid_provider = plaid_provider
+    @warnings = []
   end
 
   # Plaid reports no balance at all for some payment-only accounts, such as
@@ -128,7 +131,11 @@ class PlaidItem::AccountsSnapshot
       @liabilities_data = plaid_provider.get_item_liabilities(plaid_item.access_token)
     rescue Plaid::ApiError => e
       error_code = plaid_error_code(e)
-      raise unless liabilities_unavailable?(error_code)
+      unless liabilities_unavailable?(error_code)
+        raise unless temporary_liabilities_error?(e, error_code)
+
+        warnings << liabilities_warning(e, error_code)
+      end
 
       log_liabilities_unavailable(error_code)
       @liabilities_data = nil
@@ -138,11 +145,27 @@ class PlaidItem::AccountsSnapshot
     # records the consent even when Plaid can't add it: the issuer lacks it, or
     # the user withheld the OAuth permission. Consent alone can't gate the call,
     # so skip the data instead of failing the whole sync. Once liabilities was
-    # added to the Item (loans, or a card where it worked), errors still raise
-    # rather than clearing the liabilities already stored.
+    # added to the Item, only temporary server failures can become warnings.
+    # Authentication, consent, configuration and other failures still raise.
     def liabilities_unavailable?(error_code)
       %w[PRODUCTS_NOT_SUPPORTED ACCESS_NOT_GRANTED NO_LIABILITY_ACCOUNTS].include?(error_code) &&
         plaid_item.billed_products.map(&:to_s).exclude?("liabilities")
+    end
+
+    def temporary_liabilities_error?(error, error_code)
+      error.code.to_i.between?(500, 599) &&
+        (error_code.nil? || %w[INTERNAL_SERVER_ERROR INSTITUTION_NOT_RESPONDING INSTITUTION_DOWN].include?(error_code))
+    end
+
+    def liabilities_warning(error, error_code)
+      request_id = plaid_error_details(error)["request_id"]
+      {
+        severity: "warning",
+        category: "liabilities_unavailable",
+        message: "Liabilities details could not be refreshed. Account and transaction data were imported; saved liability terms were left unchanged.",
+        error_code: error_code,
+        request_id: (request_id if request_id.is_a?(String) && request_id.match?(/\A[A-Za-z0-9_-]{1,64}\z/))
+      }.compact
     end
 
     def log_account_without_balance(account)
@@ -179,9 +202,13 @@ class PlaidItem::AccountsSnapshot
     end
 
     def plaid_error_code(error)
+      plaid_error_details(error)["error_code"]
+    end
+
+    def plaid_error_details(error)
       body = JSON.parse(error.response_body.to_s)
-      body["error_code"] if body.is_a?(Hash)
+      body.is_a?(Hash) ? body : {}
     rescue JSON::ParserError
-      nil
+      {}
     end
 end
