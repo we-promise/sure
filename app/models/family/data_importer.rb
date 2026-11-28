@@ -1034,9 +1034,11 @@ class Family::DataImporter
         transaction.assign_attributes(
           category_id: new_category_id,
           merchant_id: new_merchant_id,
-          kind: data["kind"] || "standard",
-          investment_activity_label: data["investment_activity_label"].presence_in(Transaction::ACTIVITY_LABELS)
+          kind: data["kind"] || "standard"
         )
+        # A label is restored on a new entry only, so a re-import keeps one
+        # the user has changed since.
+        transaction.investment_activity_label = data["investment_activity_label"].presence_in(Transaction::ACTIVITY_LABELS) if created
         # Source-system metadata, such as the ID that lets a later import from
         # that system recognise the transaction, kept out of external_id so
         # provider sync can still claim the entry.
@@ -1247,15 +1249,15 @@ class Family::DataImporter
         created = trade.blank?
 
         trade ||= Trade.new
-        label = data["investment_activity_label"].presence_in(Trade::ACTIVITY_LABELS)
         trade.assign_attributes(
           security: security,
           qty: data["qty"].to_d,
           price: data["price"].to_d,
-          currency: data["currency"] || account.currency,
-          investment_activity_label: label,
-          units_withheld: (data["units_withheld"].presence&.to_d if label == Trade::VEST_LABEL)
+          currency: data["currency"] || account.currency
         )
+        # As for a transaction, the label is restored on a new trade only.
+        trade.investment_activity_label = data["investment_activity_label"].presence_in(Trade::ACTIVITY_LABELS) if created
+        trade.units_withheld = (data["units_withheld"].presence&.to_d if trade.vest?)
 
         entry ||= Entry.new(entryable: trade)
         entry.assign_attributes(
