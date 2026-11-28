@@ -533,19 +533,6 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal [ 3000.0, 1000.0 ], [ counted, not_counted ]
   end
 
-  # The category median comes from category_stats, which has no kind filter,
-  # so a request to leave kinds out must fail rather than be ignored.
-  test "a category median refuses to leave kinds out, and still works without them" do
-    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
-    create_transaction(account: @checking_account, amount: 1000, category: @groceries_category)
-    income_statement = IncomeStatement.new(@family)
-
-    assert_raises(ArgumentError) do
-      income_statement.median_expense(category: @groceries_category, excluding_kinds: %w[investment_contribution])
-    end
-    assert_equal 1000.0, income_statement.median_expense(category: @groceries_category)
-  end
-
   test "a period bounds the months the median expense is taken over, and the default still takes them all" do
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
     create_transaction(account: @checking_account, amount: 1000, date: Date.new(2026, 2, 10))
@@ -561,6 +548,21 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 9000.0, default, "the same instance must not reuse the bounded figure"
   end
 
+  # Both ends of the period are in it, and the day either side is not. Months
+  # in: March 2025 (1,000) and February 2026 (3,000), a median of 2,000. Losing
+  # either end day leaves one month (1,000 or 3,000); taking in either outside
+  # day adds a 9,000 month and the median becomes 3,000.
+  test "a period takes in its first and last days and neither day outside it" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, date: Date.new(2025, 3, 1))
+    create_transaction(account: @checking_account, amount: 3000, date: Date.new(2026, 2, 28))
+    create_transaction(account: @checking_account, amount: 9000, date: Date.new(2025, 2, 28))
+    create_transaction(account: @checking_account, amount: 9000, date: Date.new(2026, 3, 1))
+    period = Period.custom(start_date: Date.new(2025, 3, 1), end_date: Date.new(2026, 2, 28))
+
+    assert_equal 2000.0, IncomeStatement.new(@family).median_expense(interval: "month", period: period)
+  end
+
   test "the bounded and default medians are cached under different keys" do
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
@@ -573,6 +575,22 @@ class IncomeStatementTest < ActiveSupport::TestCase
     default = IncomeStatement.new(@family).median_expense(interval: "month")
 
     assert_equal [ 1000.0, 9000.0 ], [ bounded, default ]
+  end
+
+  # The category median comes from category_stats, which has no kind or
+  # period filter, so a request for either must fail rather than be ignored.
+  test "a category median refuses to leave kinds out or bound the period, and still works without them" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, category: @groceries_category)
+    income_statement = IncomeStatement.new(@family)
+
+    assert_raises(ArgumentError) do
+      income_statement.median_expense(category: @groceries_category, excluding_kinds: %w[investment_contribution])
+    end
+    assert_raises(ArgumentError) do
+      income_statement.median_expense(category: @groceries_category, period: Period.custom(start_date: Date.new(2025, 3, 1), end_date: Date.new(2026, 2, 28)))
+    end
+    assert_equal 1000.0, income_statement.median_expense(category: @groceries_category)
   end
 
   test "calculates median income correctly with known dataset" do

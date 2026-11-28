@@ -1,0 +1,70 @@
+# Something a retirement plan spends or receives over a span of calendar years.
+# The simulation reads these as RetirementPlan::Simulation::Stream.
+#
+# expense: recurring spending, drawn from the portfolio once retired.
+# income:  a pension or similar, set against that spending once retired.
+# one_off: a single amount out of the portfolio in its start year.
+class RetirementPlan::Stream < ApplicationRecord
+  KINDS = %w[expense income one_off].freeze
+  SOURCES = %w[seeded_living_costs seeded_loan manual].freeze
+
+  belongs_to :retirement_plan
+  # The loan a seeded repayment came from. Kept when the account goes: the
+  # user may have edited the stream since.
+  belongs_to :account, optional: true
+
+  before_validation :default_currency, on: :create
+  before_validation :value_amount_this_year, if: -> { will_save_change_to_annual_amount? || will_save_change_to_indexed? }
+
+  validates :name, presence: true
+  validates :currency, presence: true
+  validates :kind, inclusion: { in: KINDS }
+  validates :source, inclusion: { in: SOURCES }
+  validates :annual_amount, numericality: { greater_than: 0 }
+  validates :start_year, :end_year, numericality: { only_integer: true }, allow_nil: true
+  validates :base_year, numericality: { only_integer: true, greater_than_or_equal_to: 1900, less_than_or_equal_to: 2200 }
+  validate :ends_no_earlier_than_it_starts
+  # Only when the account changes: a form resubmits the account a stream
+  # already holds, and a loan that has since stopped being shared must not
+  # block an edit of its seeded repayment.
+  validate :account_is_in_the_users_finances, if: :will_save_change_to_account_id?
+
+  # The amount in `currency` at the rate on `date`. Raises
+  # Money::ConversionError when there is no rate.
+  def to_simulation_stream(currency:, date:)
+    amount = Money.new(annual_amount, self.currency).exchange_to(currency, date: date).amount
+    RetirementPlan::Simulation::Stream.new(kind:, annual_amount: amount, start_year:, end_year:, indexed:,
+                                           base_year:, seeded: source != "manual")
+  end
+
+  private
+    # The family's currency when the stream is entered, the same default a
+    # Goal or Budget takes.
+    def default_currency
+      self.currency ||= retirement_plan&.user&.family&.currency
+    end
+
+    # An amount is entered in the money of the year it is entered or changed
+    # in, so a new or changed amount is valued in this year unless the caller
+    # names the year, as seeding does. So is one newly marked indexed: until
+    # then it was a fixed nominal figure. Any other edit keeps the year.
+    def value_amount_this_year
+      self.base_year = Date.current.year unless will_save_change_to_base_year?
+    end
+
+    def ends_no_earlier_than_it_starts
+      return if start_year.blank? || end_year.blank? || end_year >= start_year
+
+      errors.add(:end_year, :greater_than_or_equal_to, count: start_year)
+    end
+
+    # As RetirementPlan::FundingAccount, so a stream can never point at
+    # another member's unshared account or another family's. Not limited to
+    # funding types: a seeded repayment points at its loan.
+    def account_is_in_the_users_finances
+      return if account.nil? || retirement_plan.nil?
+      return if retirement_plan.user.family.accounts.included_in_finances_for(retirement_plan.user).exists?(id: account.id)
+
+      errors.add(:account, :invalid)
+    end
+end

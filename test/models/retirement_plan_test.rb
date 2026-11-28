@@ -173,6 +173,29 @@ class RetirementPlanTest < ActiveSupport::TestCase
     assert_equal BigDecimal("13200"), projection.annual_expenses
   end
 
+  # With funding links the plan is funded from the linked accounts only, but
+  # spending is the user's whole spending, so every account is still
+  # converted first and fetches its rate: an unlinked EUR account's spending
+  # would otherwise drop out of the medians.
+  test "spending reads the rate fetched for an account the plan is not funded from" do
+    linked = own_account(owner: @member, amount: 5_000)
+    unlinked = own_account(owner: @member, amount: 1_000, currency: "EUR")
+    create_transaction(account: unlinked, date: AS_OF, amount: 1_000, currency: "EUR")
+    provider = mock
+    provider.stubs(:fetch_exchange_rate).returns(Provider::Response.new(
+      success?: true, error: nil,
+      data: Provider::ExchangeRateConcept::Rate.new(date: AS_OF, from: "EUR", to: "USD", rate: 1.1)
+    ))
+    ExchangeRate.stubs(:provider).returns(provider)
+    plan = RetirementPlan.create!(user: @member)
+    plan.funding_links.create!(account: linked)
+
+    projection = RetirementPlan.find(plan.id).projection(as_of: AS_OF)
+
+    assert_equal BigDecimal("5000"), projection.current_assets
+    assert_equal BigDecimal("13200"), projection.annual_expenses
+  end
+
   test "an account with no exchange rate is left out, and the plan says how many were" do
     own_account(owner: @member, amount: 1_000)
     own_account(owner: @member, amount: 500, currency: "GBP")

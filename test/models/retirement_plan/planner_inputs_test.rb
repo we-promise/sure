@@ -1,0 +1,467 @@
+require "test_helper"
+
+# What the year-by-year planner is built from: the seeded streams, the
+# funding accounts, and the simulation and solver a plan hands them to.
+class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
+  AS_OF = Date.new(2026, 3, 15)
+
+  setup do
+    @family = families(:dylan_family)
+    @admin = users(:family_admin)
+    @member = users(:family_member)
+    RetirementPlan.where(user: [ @admin, @member ]).delete_all
+    # Fixture shares would put the admin's accounts, loans and transactions
+    # into the member's finances; every figure here is made only of what the
+    # test adds.
+    AccountShare.where(user: @member).delete_all
+    @plan = RetirementPlan.create!(user: @member, birth_year: 1980)
+  end
+
+  # --- Seeding --------------------------------------------------------------
+
+  test "reading a plan's simulation seeds nothing" do
+    own_account(amount: 1_000)
+
+    assert_no_difference [ "RetirementPlan.count", "RetirementPlan::Stream.count" ] do
+      sim = RetirementPlan.for(@member).simulation(as_of: AS_OF, retirement_year: 2050)
+      assert_not_empty sim.rows
+    end
+  end
+
+  # Months in the window (Mar 2025 to Feb 2026) with spending: Dec 2025
+  # spends 1,000; Jan 2026 spends 2,000 plus a 500 contribution and a 700
+  # loan payment; Feb 2026 spends 6,000. The median of those three months is
+  # 2,000 (the mean would be 3,000). Outside the window, Jan and Feb 2025
+  # spend 9,000 each. Counting the old months gives a median of 6,000,
+  # counting the contribution 2,500, and counting the loan payment 2,700.
+  # Leaving all three out gives 2,000: 24,000 a year.
+  test "living costs are the median of the months with spending in the last 12 whole months, without contributions or loan payments" do
+    checking = own_account(amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2025, 12, 10), amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2026, 1, 10), amount: 2_000)
+    create_transaction(account: checking, date: Date.new(2026, 1, 11), amount: 500, kind: "investment_contribution")
+    create_transaction(account: checking, date: Date.new(2026, 1, 12), amount: 700, kind: "loan_payment")
+    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 6_000)
+    create_transaction(account: checking, date: Date.new(2025, 1, 10), amount: 9_000)
+    create_transaction(account: checking, date: Date.new(2025, 2, 10), amount: 9_000)
+
+    @plan.seed_streams!(as_of: AS_OF)
+    living = @plan.streams.find_by!(source: "seeded_living_costs")
+
+    assert_equal BigDecimal("24000"), living.annual_amount
+    assert_equal [ "expense", true, nil, nil ], [ living.kind, living.indexed, living.start_year, living.end_year ]
+  end
+
+  # Seeded on 15 March 2026, the window is 1 March 2025 to 28 February 2026.
+  # Spending on both of those days counts (1,000 and 3,000, a median of 2,000);
+  # spending the day before or the day after does not (9,000 would make it
+  # 3,000).
+  test "living costs take in the window's first and last days and neither day outside it" do
+    checking = own_account(amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2025, 3, 1), amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2026, 2, 28), amount: 3_000)
+    create_transaction(account: checking, date: Date.new(2025, 2, 28), amount: 9_000)
+    create_transaction(account: checking, date: Date.new(2026, 3, 1), amount: 9_000)
+
+    @plan.seed_streams!(as_of: AS_OF)
+
+    assert_equal BigDecimal("24000"), @plan.streams.find_by!(source: "seeded_living_costs").annual_amount
+  end
+
+  # with_lock reloads the row, which a new record does not have: it would
+  # either fail on streams.create! or save the plan as a side effect.
+  test "an unsaved plan refuses to seed and saves nothing" do
+    plan = RetirementPlan.new(user: @admin, birth_year: 1980)
+
+    assert_no_difference [ "RetirementPlan.count", "RetirementPlan::Stream.count" ] do
+      assert_raises(ArgumentError) { plan.seed_streams!(as_of: AS_OF) }
+    end
+  end
+
+  test "no spending on record seeds no living-costs stream" do
+    own_account(amount: 1_000)
+
+    @plan.seed_streams!(as_of: AS_OF)
+
+    assert_not @plan.streams.exists?(source: "seeded_living_costs")
+  end
+
+  # 45,000 left of 60,000 a year into five years at 6% is ahead of
+  # the contract's 49,400 or so, so the contracted repayment clears it before
+  # maturity. Behind the contract, the projection has no payoff date to end on.
+  test "a loan seeds its repayment, ending the year it is paid off" do
+    loan_account = own_loan(balance: 45_000, term_months: 60)
+    projection = Loan::PayoffProjection.new(loan_account.loan, as_of: AS_OF)
+    payment = loan_account.loan.amortization_schedule.payment_in_force(AS_OF)
+
+    @plan.seed_streams!(as_of: AS_OF)
+    stream = @plan.streams.find_by!(source: "seeded_loan")
+
+    assert_equal BigDecimal("1159.97"), payment.amount, "the level repayment on 60,000 over 60 months at 6%"
+    assert_equal payment.amount * 12, stream.annual_amount
+    assert_equal projection.payoff_date.year, stream.end_year
+    assert_equal [ "expense", false, loan_account ], [ stream.kind, stream.indexed, stream.account ]
+  end
+
+  # 50,000 left is behind the contract's 49,400 or so: the contracted
+  # repayment no longer clears it by maturity, so there is no payoff year.
+  # The contract still asks for the repayment until maturity.
+  test "a loan its contracted repayment no longer clears seeds its repayment until maturity" do
+    loan_account = own_loan(balance: 50_000, term_months: 60)
+    assert_nil Loan::PayoffProjection.new(loan_account.loan, as_of: AS_OF).payoff_date, "precondition: no payoff date"
+    schedule = loan_account.loan.amortization_schedule
+
+    @plan.seed_streams!(as_of: AS_OF)
+    stream = @plan.streams.find_by!(source: "seeded_loan")
+
+    assert_equal schedule.payment_in_force(AS_OF).amount * 12, stream.annual_amount
+    assert_equal (AS_OF - 12.months + 60.months).year, schedule.payoff_date.year, "precondition: maturity"
+    assert_equal schedule.payoff_date.year, stream.end_year
+    assert_equal AS_OF, @plan.reload.streams_seeded_on
+  end
+
+  test "a loan with nothing left to pay seeds nothing" do
+    own_loan(balance: 0, term_months: 60)
+
+    @plan.seed_streams!(as_of: AS_OF)
+
+    assert_not @plan.streams.exists?(source: "seeded_loan")
+  end
+
+  # Seeding marks the plan even when a foreign loan has no rate yet, so a
+  # seeded stream the user deletes is never seeded again.
+  test "streams are seeded once: a deleted seeded stream does not come back" do
+    checking = own_account(amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 1_000)
+    own_loan(balance: 45_000, term_months: 60, currency: "EUR")
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    @plan.seed_streams!(as_of: AS_OF)
+    assert_equal [ "seeded_living_costs", "seeded_loan" ], @plan.streams.pluck(:source).sort
+    @plan.streams.destroy_all
+
+    assert_no_difference "@plan.streams.count" do
+      @plan.seed_streams!(as_of: AS_OF)
+    end
+    assert_equal AS_OF, @plan.reload.streams_seeded_on
+  end
+
+  # The marker and the streams are written in one transaction: a seed whose
+  # marker cannot be saved leaves no streams behind to be seeded twice.
+  test "a seed whose marker fails to save leaves no streams" do
+    checking = own_account(amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 1_000)
+    @plan.stubs(:update!).raises(ActiveRecord::RecordInvalid.new(@plan))
+
+    assert_no_difference "RetirementPlan::Stream.count" do
+      assert_raises(ActiveRecord::RecordInvalid) { @plan.seed_streams!(as_of: AS_OF) }
+    end
+  end
+
+  # A foreign loan's repayment is kept in the loan's currency, as any stream
+  # can be, so a loan with no rate yet is seeded all the same and the plan
+  # marked seeded. The simulation leaves it out, and counts it, until the
+  # rate arrives, and then draws the converted repayment.
+  test "a foreign loan seeds its repayment in its own currency, and joins the plan once a rate exists" do
+    euros = own_loan(balance: 45_000, term_months: 60, currency: "EUR")
+    payment = euros.loan.amortization_schedule.payment_in_force(AS_OF)
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    @plan.seed_streams!(as_of: AS_OF)
+
+    stream = @plan.streams.find_by!(source: "seeded_loan")
+    assert_equal AS_OF, @plan.reload.streams_seeded_on
+    assert_equal [ "EUR", payment.amount * 12, euros ], [ stream.currency, stream.annual_amount, stream.account ]
+    before = RetirementPlan.find(@plan.id)
+    assert_equal 1, before.unconverted_stream_count(as_of: AS_OF)
+    withdrawal_before = before.simulation(as_of: AS_OF, retirement_year: AS_OF.year).rows.second.withdrawal
+
+    ExchangeRate.unstub(:find_or_fetch_rate)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: AS_OF, rate: BigDecimal("1.1"))
+
+    after = RetirementPlan.find(@plan.id)
+    assert_equal 0, after.unconverted_stream_count(as_of: AS_OF)
+    withdrawal_after = after.simulation(as_of: AS_OF, retirement_year: AS_OF.year).rows.second.withdrawal
+    assert_in_delta payment.amount * 12 * BigDecimal("1.1"), withdrawal_after - withdrawal_before, 0.01
+  end
+
+  test "loans in different currencies each seed their repayment in their own currency" do
+    dollars = own_loan(balance: 45_000, term_months: 60)
+    euros = own_loan(balance: 45_000, term_months: 60, currency: "EUR")
+
+    @plan.seed_streams!(as_of: AS_OF)
+
+    currencies = @plan.streams.where(source: "seeded_loan").to_h { |stream| [ stream.account_id, stream.currency ] }
+    assert_equal({ dollars.id => "USD", euros.id => "EUR" }, currencies)
+  end
+
+  # Two requests that each loaded the plan before either seeded: the second
+  # must see the first's marker, not its own stale copy.
+  test "two copies of a plan loaded before either seeds do not both seed" do
+    checking = own_account(amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 1_000)
+    first = RetirementPlan.find(@plan.id)
+    second = RetirementPlan.find(@plan.id)
+
+    first.seed_streams!(as_of: AS_OF)
+    assert_nil second.streams_seeded_on, "the second copy must be stale for this to prove anything"
+
+    assert_no_difference "RetirementPlan::Stream.count" do
+      second.seed_streams!(as_of: AS_OF)
+    end
+  end
+
+  # --- Funding accounts -----------------------------------------------------
+
+  test "linked accounts replace the default set of accounts" do
+    own_account(amount: 1_000)
+    picked = own_account(amount: 5_000)
+
+    default_start = @plan.simulation(as_of: AS_OF, retirement_year: 2050).rows.first.start_value
+    @plan.funding_links.create!(account: picked)
+    linked_start = RetirementPlan.find(@plan.id).simulation(as_of: AS_OF, retirement_year: 2050).rows.first.start_value
+
+    assert_equal [ BigDecimal("6000"), BigDecimal("5000") ], [ default_start, linked_start ]
+  end
+
+  # Deleting a linked account cascades its link away, so the plan falls back
+  # to the default set. A linked account that leaves the user's finances
+  # without being deleted keeps its link, and must fall back the same way
+  # rather than fund the plan with nothing.
+  test "linked accounts that have all left the user's finances fall back to the default set" do
+    own_account(amount: 1_000)
+    picked = own_account(amount: 5_000)
+    shared = Account.create!(family: @family, owner: @admin, accountable: Depository.new, name: "Joint", currency: "USD", balance: 7_000)
+    Balance.create!(account: shared, date: AS_OF, balance: 7_000, currency: "USD")
+    share = AccountShare.create!(account: shared, user: @member, permission: "read_write", include_in_finances: true)
+    @plan.funding_links.create!(account: picked)
+    @plan.funding_links.create!(account: shared)
+
+    start = -> { RetirementPlan.find(@plan.id).simulation(as_of: AS_OF, retirement_year: 2050).rows.first.start_value }
+    assert_equal BigDecimal("12000"), start.call, "both links in scope"
+
+    picked.update_columns(status: "disabled")
+    assert_equal BigDecimal("7000"), start.call, "one link left in scope: only it counts"
+
+    share.update!(include_in_finances: false)
+    assert_equal BigDecimal("1000"), start.call, "hidden and unshared: the default set"
+
+    picked.update_columns(status: "active", exclude_from_reports: true)
+    assert_equal BigDecimal("1000"), start.call, "excluded from reports and unshared: the default set"
+  end
+
+  # 60,000 linked out of 160,000, with an FI number of 300,000: progress is
+  # 20%, the figure the milestones measure, not 53% from every account.
+  test "progress, like the simulation, counts only the linked accounts" do
+    own_account(amount: 100_000)
+    picked = own_account(amount: 60_000)
+    @plan.funding_links.create!(account: picked)
+    plan = RetirementPlan.find(@plan.id)
+
+    assert_equal BigDecimal("60000"), plan.projection(as_of: AS_OF).current_assets
+    assert_equal plan.simulation(as_of: AS_OF, retirement_year: 2050).rows.first.start_value,
+                 plan.projection(as_of: AS_OF).current_assets
+  end
+
+  # An account outside the linked set has no bearing on the plan, so its
+  # missing rate is not one the plan should warn about.
+  test "the unconverted-account count reads the linked accounts when there are any" do
+    own_account(amount: 500, currency: "GBP")
+    picked = own_account(amount: 60_000)
+    ExchangeRate.stubs(:provider).returns(nil)
+    assert_equal 1, RetirementPlan.find(@plan.id).unconverted_account_count(as_of: AS_OF)
+
+    @plan.funding_links.create!(account: picked)
+    assert_equal 0, RetirementPlan.find(@plan.id).unconverted_account_count(as_of: AS_OF)
+  end
+
+  test "an account the user does not count in their finances cannot be linked" do
+    admins = Account.create!(family: @family, owner: @admin, accountable: Depository.new, name: "Admin's", currency: "USD", balance: 1)
+
+    assert_not @plan.funding_links.new(account: admins).valid?
+  end
+
+  # The same tenancy rule as a funding link, without the type limit: a stream
+  # points at the loan it was seeded from.
+  test "a stream's account must be one the user counts in their finances" do
+    loan = own_loan(balance: 45_000, term_months: 60)
+    admins = Account.create!(family: @family, owner: @admin, accountable: Depository.new, name: "Admin's", currency: "USD", balance: 1)
+    elsewhere = Account.create!(family: families(:empty), owner: users(:empty), accountable: Depository.new, name: "Elsewhere", currency: "USD", balance: 1)
+    stream = ->(account) { @plan.streams.new(kind: "expense", name: "Repayment", annual_amount: 1, account: account) }
+
+    assert stream.call(loan).valid?
+    assert stream.call(nil).valid?
+    assert_not stream.call(admins).valid?, "another member's unshared account"
+    assert_not stream.call(elsewhere).valid?, "another family's account"
+  end
+
+  # The check runs only when the account changes, so a form that resubmits the
+  # account a stream already holds still saves after the account stops being
+  # shared.
+  test "a stream whose account has left the user's finances can still be edited" do
+    admins = Account.create!(family: @family, owner: @admin, accountable: Loan.new, name: "Admin's loan", currency: "USD", balance: 1)
+    share = AccountShare.create!(account: admins, user: @member, permission: "read_only", include_in_finances: true)
+    stream = @plan.streams.create!(kind: "expense", name: "Repayment", annual_amount: 1, account: admins)
+
+    share.update!(include_in_finances: false)
+
+    assert stream.update(name: "Old repayment", account_id: admins.id)
+  end
+
+  # The funding total counts only cash, investment and crypto balances, so a
+  # linked property would replace the default set with nothing.
+  test "only cash, investment and crypto accounts can be linked" do
+    house = Account.create!(family: @family, owner: @member, accountable: Property.new, name: "House", currency: "USD", balance: 1)
+    brokerage = Account.create!(family: @family, owner: @member, accountable: Investment.new, name: "Brokerage", currency: "USD", balance: 1)
+
+    assert_not @plan.funding_links.new(account: house).valid?
+    assert @plan.funding_links.new(account: brokerage).valid?
+  end
+
+  # --- Simulation and solver ------------------------------------------------
+
+  # Born 1980 with an end age of 90: the plan runs 2026..2070.
+  test "a plan is simulated only when its end age is still ahead and its owner is born" do
+    own_account(amount: 1_000)
+
+    assert_not_nil @plan.simulation(as_of: AS_OF, retirement_year: 2070), "retiring in the end-age year"
+    assert_nil @plan.simulation(as_of: AS_OF, retirement_year: 2071), "retiring after the end age"
+
+    @plan.update!(birth_year: 1936)
+    assert_not_nil @plan.simulation(as_of: AS_OF, retirement_year: 2026), "end-age year is this year"
+    assert_not_nil @plan.solve(as_of: AS_OF)
+
+    @plan.update!(birth_year: 1935)
+    assert_nil @plan.simulation(as_of: AS_OF, retirement_year: 2026), "end-age year already passed"
+    assert_nil @plan.solve(as_of: AS_OF)
+
+    @plan.update!(birth_year: 2027)
+    assert_nil @plan.simulation(as_of: AS_OF, retirement_year: 2050), "born after the reference year"
+    assert_nil @plan.solve(as_of: AS_OF)
+  end
+
+  test "the simulation runs on the plan's own settings, streams and contribution" do
+    checking = own_account(amount: 100_000)
+    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: -5_000)
+    @plan.update!(expected_annual_return: BigDecimal("0.05"), inflation_rate: 0, savings_rate: BigDecimal("0.2"),
+                  end_age: 70, retirement_date: Date.new(2040, 1, 1))
+    @plan.streams.create!(kind: "expense", name: "Living costs", annual_amount: 30_000, source: "seeded_living_costs")
+
+    sim = @plan.simulation(as_of: AS_OF)
+
+    assert_equal [ 2040, 2050 ], [ sim.retirement_year, sim.last_year ]
+    assert_equal BigDecimal("100000"), sim.rows.first.start_value
+    assert_equal BigDecimal("12000"), sim.rows.second.contribution, "20% of 60,000 a year of income"
+    assert_equal "9600.0", sim.rows.first.contribution.round(2).to_s("F"), "292 of 2026's 365 days left from 15 March"
+    assert_equal BigDecimal("30000"), sim.rows.find { |r| r.year == 2040 }.withdrawal
+  end
+
+  # A stream keeps the currency it was entered in. After the family changes
+  # its currency, the simulation converts the amount rather than reading
+  # 30,000 dollars as 30,000 euros.
+  test "a stream's amount is converted into the family's current currency" do
+    @plan.update!(inflation_rate: 0, end_age: 70, retirement_date: Date.new(2040, 1, 1))
+    stream = @plan.streams.create!(kind: "expense", name: "Living costs", annual_amount: 30_000)
+    assert_equal "USD", stream.currency
+
+    @member.family.update_columns(currency: "EUR")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: AS_OF, rate: 0.5)
+
+    assert_equal BigDecimal("15000"), @plan.reload.simulation(as_of: AS_OF).rows.find { |r| r.year == 2040 }.withdrawal
+  end
+
+  test "a stream with no rate into the family's currency is left out of the simulation, and counted" do
+    @plan.update!(inflation_rate: 0, end_age: 70, retirement_date: Date.new(2040, 1, 1))
+    @plan.streams.create!(kind: "expense", name: "Living costs", annual_amount: 30_000)
+    assert_equal 0, RetirementPlan.find(@plan.id).unconverted_stream_count(as_of: AS_OF)
+
+    @plan.streams.create!(kind: "expense", name: "Rent", annual_amount: 1_000, currency: "EUR")
+    ExchangeRate.stubs(:provider).returns(nil)
+    plan = RetirementPlan.find(@plan.id)
+
+    assert_equal BigDecimal("30000"), plan.simulation(as_of: AS_OF).rows.find { |r| r.year == 2040 }.withdrawal
+    assert_equal 1, plan.unconverted_stream_count(as_of: AS_OF)
+  end
+
+  # --- A stream's base year -------------------------------------------------
+
+  test "a seeded stream is valued in the year of the seed's reference date" do
+    checking = own_account(amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2026, 2, 10), amount: 1_000)
+
+    travel_to Date.new(2027, 6, 1) do
+      @plan.seed_streams!(as_of: AS_OF)
+    end
+
+    assert_equal [ 2026 ], @plan.streams.pluck(:base_year)
+  end
+
+  # Amounts are entered in the money of the year they are entered in. An
+  # edited amount is a new figure in that year's money; an edit that leaves
+  # the amount alone keeps the year.
+  test "a manual stream is valued in the year it is entered, and again in the year its amount is changed" do
+    stream = travel_to(Date.new(2026, 5, 1)) { @plan.streams.create!(kind: "expense", name: "Rent", annual_amount: 12_000) }
+    assert_equal 2026, stream.base_year
+
+    travel_to(Date.new(2027, 5, 1)) { stream.update!(name: "Flat") }
+    assert_equal 2026, stream.reload.base_year
+
+    travel_to(Date.new(2028, 5, 1)) { stream.update!(annual_amount: 13_000) }
+    assert_equal 2028, stream.reload.base_year
+  end
+
+  # An unindexed amount is a fixed nominal figure, not one valued in any
+  # year's money. Ticking it indexed says the amount is today's, so it is
+  # valued in this year rather than inflated from the year it was entered.
+  test "a stream turned indexed is valued in the year it is turned" do
+    stream = travel_to(Date.new(2026, 5, 1)) { @plan.streams.create!(kind: "expense", name: "Loan", annual_amount: 12_000, indexed: false) }
+
+    travel_to(Date.new(2030, 5, 1)) { stream.update!(indexed: true) }
+    assert_equal 2030, stream.reload.base_year
+  end
+
+  # Entered at 10,000 in 2026 and read a year later at 3% inflation, the
+  # stream is 10,300 in 2027, as it was when the plan was read in 2026.
+  test "a plan read a year later keeps the inflation since a stream was entered" do
+    @plan.update!(inflation_rate: BigDecimal("0.03"), end_age: 70, retirement_date: Date.new(2027, 1, 1))
+    travel_to(AS_OF) { @plan.streams.create!(kind: "expense", name: "Living costs", annual_amount: 10_000) }
+
+    read_in_2026 = RetirementPlan.find(@plan.id).simulation(as_of: AS_OF).rows.find { _1.year == 2027 }.withdrawal
+    read_in_2027 = RetirementPlan.find(@plan.id).simulation(as_of: Date.new(2027, 1, 1)).rows.first.withdrawal
+
+    assert_equal [ BigDecimal("10300"), BigDecimal("10300") ], [ read_in_2026, read_in_2027 ]
+  end
+
+  test "without a birth year there is no simulation and no solution" do
+    @plan.update!(birth_year: nil, retirement_date: Date.new(2040, 1, 1))
+
+    assert_nil @plan.simulation(as_of: AS_OF)
+    assert_nil @plan.solve(as_of: AS_OF)
+  end
+
+  test "the traditional plan needs a retirement date; the solver does not" do
+    own_account(amount: 1_000_000)
+    @plan.update!(retirement_date: nil)
+
+    assert_nil @plan.simulation(as_of: AS_OF)
+    assert_equal AS_OF.year, @plan.solve(as_of: AS_OF).retirement_year
+  end
+
+  private
+    def own_account(amount:, currency: "USD")
+      account = Account.create!(family: @family, owner: @member, accountable: Depository.new,
+                                name: "Checking #{SecureRandom.hex(3)}", currency: currency, balance: amount)
+      Balance.create!(account: account, date: AS_OF, balance: amount, currency: currency)
+      account
+    end
+
+    def own_loan(balance:, term_months:, currency: "USD")
+      Account.create!(
+        family: @family, owner: @member, name: "Loan #{SecureRandom.hex(3)}", currency: currency, balance: balance,
+        accountable: Loan.new(rate_type: "fixed", interest_rate: 6, term_months: term_months,
+                              initial_balance: 60_000, start_date: AS_OF - 12.months)
+      )
+    end
+end
