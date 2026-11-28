@@ -1,9 +1,12 @@
 class MercuryItem::Importer
-  attr_reader :mercury_item, :mercury_provider
+  attr_reader :mercury_item, :mercury_provider, :sync_start_date
 
-  def initialize(mercury_item, mercury_provider:)
+  # sync_start_date: an explicit window start (the sync's), which overrides
+  # where each account's fetch would otherwise start.
+  def initialize(mercury_item, mercury_provider:, sync_start_date: nil)
     @mercury_item = mercury_item
     @mercury_provider = mercury_provider
+    @sync_start_date = sync_start_date
   end
 
   def import
@@ -283,6 +286,8 @@ class MercuryItem::Importer
     end
 
     def determine_sync_start_date(mercury_account)
+      return sync_start_date if sync_start_date.present?
+
       # Check if this account has any stored transactions
       # If not, treat it as a first sync for this account even if the item has been synced before
       has_stored_transactions = mercury_account.raw_transactions_payload.to_a.any?
