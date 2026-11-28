@@ -44,8 +44,13 @@ class ProviderItemCardsTest < ActiveSupport::TestCase
   end
 
   # Every render of a card by partial name, including the provider generator's
-  # template. Each must hand the card its accounts explicitly.
-  CARD_REFERENCE = Regexp.union(*CARD_PARTIALS.map { |partial| %("#{partial}") }, %("<%= file_name %>_items/<%= file_name %>_item"))
+  # template and ProviderItemsController's. Each must hand the card its accounts
+  # explicitly.
+  CARD_REFERENCE = Regexp.union(
+    *CARD_PARTIALS.map { |partial| %("#{partial}") },
+    %("<%= file_name %>_items/<%= file_name %>_item"),
+    '"#{provider_key}_items/#{provider_key}_item"'
+  )
 
   CARD_NAMES = CARD_PARTIALS.map { |partial| partial.split("/").last }
 

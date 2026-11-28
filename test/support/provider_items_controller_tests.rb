@@ -29,6 +29,11 @@ module ProviderItemsControllerTests
       sync_path = provider_routes.public_send(:"sync_#{key}_item_path", provider_item)
       assert_equal "/#{key}_items/#{provider_item.id}/sync", sync_path
       assert_equal({ controller: "#{key}_items", action: "sync", id: provider_item.id.to_s }, Rails.application.routes.recognize_path(sync_path, method: :post))
+      { "setup_accounts" => :get, "complete_account_setup" => :post }.each do |action, verb|
+        path = provider_routes.public_send(:"#{action}_#{key}_item_path", provider_item)
+        assert_equal "/#{key}_items/#{provider_item.id}/#{action}", path
+        assert_equal({ controller: "#{key}_items", action: action, id: provider_item.id.to_s }, Rails.application.routes.recognize_path(path, method: verb))
+      end
       assert_operator "#{key}_items_controller".camelize.constantize, :<, ProviderItemsController
     end
 
@@ -38,7 +43,8 @@ module ProviderItemsControllerTests
       item_path = provider_routes.public_send(:"#{key}_item_path", provider_item)
       requests = ACCOUNT_FLOW_ROUTES.map { |action, verb| [ verb, "/#{key}_items/#{action}" ] } +
         [ [ :get, "/#{key}_items/new" ], [ :post, "/#{key}_items" ], [ :get, "#{item_path}/edit" ] ] +
-        [ [ :post, "#{item_path}/sync" ], [ :patch, item_path ], [ :delete, item_path ] ]
+        [ [ :post, "#{item_path}/sync" ], [ :patch, item_path ], [ :delete, item_path ],
+          [ :get, "#{item_path}/setup_accounts" ], [ :post, "#{item_path}/complete_account_setup" ] ]
 
       assert_no_difference [ "Account.count", "AccountProvider.count", "Sync.count", "#{provider_item.class.name}.count" ] do
         requests.each do |verb, path|
@@ -78,9 +84,65 @@ module ProviderItemsControllerTests
       assert Account.exists?(account.id)
       assert provider_item.reload.scheduled_for_deletion?
     end
+
+    test "provider kit: the setup page lists the connection's accounts that are not linked yet" do
+      sign_in users(:family_admin)
+      provider_item.class::AccountFlow.any_instance.stubs(:fetch_accounts).returns([])
+      unlinked = provider_item.provider_accounts.first
+      linked = unlinked.dup.tap { |account| account.update!(account_id: "#{unlinked.account_id}-linked", name: "Already linked account") }
+      AccountProvider.create!(account: provider_item.family.accounts.create!(name: "Manual", balance: 0, currency: "USD", accountable: Depository.new), provider: linked)
+
+      get provider_routes.public_send(:"setup_accounts_#{provider_item.provider_key}_item_path", provider_item)
+
+      assert_response :success
+      assert_includes response.body, unlinked.name
+      assert_not_includes response.body, linked.name
+    end
+
+    test "provider kit: completing setup links only this connection's accounts, with supported types and subtypes" do
+      sign_in users(:family_admin)
+      provider_item.class.any_instance.stubs(:sync_later)
+      own = provider_item.provider_accounts.first
+      unsupported = own.dup.tap { |account| account.update!(account_id: "#{own.account_id}-unsupported") }
+      foreign = foreign_provider_account
+      supported_types = provider_item.class::AccountFlow.adapter_class.supported_account_types
+      supported_type = supported_types.first
+      unsupported_type = (Accountable::TYPES - supported_types).first
+      # A real subtype, but of a type this provider cannot create, such as an Investment's roth_ira.
+      subtypes_of = ->(types) { types.flat_map { |type| type.constantize::SUBTYPES.keys.map(&:to_s) } }
+      foreign_subtype = (subtypes_of.(Accountable::TYPES - supported_types) - subtypes_of.(supported_types)).first
+      default_subtype = supported_type.constantize.const_defined?(:DEFAULT_SUBTYPE) ? supported_type.constantize::DEFAULT_SUBTYPE : nil
+
+      assert_difference [ "Account.count", "AccountProvider.count" ], 1 do
+        post provider_routes.public_send(:"complete_account_setup_#{provider_item.provider_key}_item_path", provider_item),
+             params: {
+               account_types: { own.id => supported_type, unsupported.id => unsupported_type, foreign.id => supported_type },
+               account_subtypes: { own.id => foreign_subtype }
+             },
+             headers: { "Turbo-Frame" => "modal" }
+      end
+
+      assert_response :success
+      assert_includes response.body, %(target="#{ActionView::RecordIdentifier.dom_id(provider_item)}")
+      account = own.reload.account
+      assert_equal supported_type, account.accountable_type
+      assert_equal default_subtype.to_s, account.accountable.subtype.to_s
+      assert_nil unsupported.reload.account_provider
+      assert_nil foreign.reload.account_provider
+    end
   end
 
   private
+    # A provider account of the same provider that belongs to another connection.
+    def foreign_provider_account
+      other_item = provider_item.dup.tap { |item| item.save!(validate: false) }
+      item_association = provider_item.provider_accounts.klass.reflect_on_all_associations(:belongs_to).find { |reflection| reflection.klass == provider_item.class }
+      provider_item.provider_accounts.first.dup.tap do |account|
+        account.public_send(:"#{item_association.name}=", other_item)
+        account.update!(account_id: "foreign-#{SecureRandom.hex(4)}")
+      end
+    end
+
     def provider_routes
       Rails.application.routes.url_helpers
     end
