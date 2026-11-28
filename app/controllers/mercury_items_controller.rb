@@ -72,10 +72,9 @@ class MercuryItemsController < ApplicationController
 
   def create
     @mercury_item = Current.family.mercury_items.build(mercury_item_params)
-    @mercury_item.name ||= "Mercury Connection"
+    @mercury_item.name = t("mercury_items.default_connection_name") if @mercury_item.name.blank?
 
     if @mercury_item.save
-      # Trigger initial sync to fetch accounts
       @mercury_item.sync_later
 
       redirect_to accounts_path, notice: t(".success"), status: :see_other
@@ -88,12 +87,7 @@ class MercuryItemsController < ApplicationController
   end
 
   def update
-    permitted_params = mercury_item_params
-    expire_accounts_cache = mercury_accounts_cache_sensitive_update?(permitted_params)
-
-    if @mercury_item.update(permitted_params)
-      Rails.cache.delete(mercury_accounts_cache_key(@mercury_item)) if expire_accounts_cache
-
+    if MercuryItem::AccountFlow.update_item_with_cache_expiration(@mercury_item, family: Current.family, attributes: mercury_item_params)
       render_provider_panel("mercury", notice: t(".success"), fallback_path: accounts_path,
                             mercury_items: Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts))
     else
@@ -102,20 +96,13 @@ class MercuryItemsController < ApplicationController
   end
 
   def destroy
-    # Ensure we detach provider links before scheduling deletion
-    begin
-      @mercury_item.unlink_all!(dry_run: false)
-    rescue => e
-      Rails.logger.warn("Mercury unlink during destroy failed: #{e.class} - #{e.message}")
-    end
+    @mercury_item.unlink_all!(dry_run: false)
     @mercury_item.destroy_later
     redirect_to accounts_path, notice: t(".success")
   end
 
   def sync
-    unless @mercury_item.syncing?
-      @mercury_item.sync_later
-    end
+    @mercury_item.sync_later unless @mercury_item.syncing?
     return render_provider_panel("mercury", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
@@ -257,13 +244,5 @@ class MercuryItemsController < ApplicationController
       permitted = params.require(:mercury_item).permit(:name, :sync_start_date, :token, :base_url)
       permitted.delete(:token) if @mercury_item&.persisted? && permitted[:token].blank?
       permitted
-    end
-
-    def mercury_accounts_cache_key(mercury_item)
-      "mercury_accounts_#{Current.family.id}_#{mercury_item.id}"
-    end
-
-    def mercury_accounts_cache_sensitive_update?(permitted_params)
-      permitted_params.key?(:token) || permitted_params.key?(:base_url)
     end
 end

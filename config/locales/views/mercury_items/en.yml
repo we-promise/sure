@@ -1,6 +1,7 @@
 ---
 en:
   mercury_items:
+    default_connection_name: Mercury Connection
     api_error:
       title: Mercury Connection Error
       unable_to_connect: Unable to connect to Mercury
