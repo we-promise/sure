@@ -6,8 +6,8 @@
 # API payloads into Options; messages come from its own
 # `<key>_items.select_accounts.*` / `select_existing_account.*` keys.
 #
-# `variant: :classic` reproduces the markup Lunch Flow's dialogs have: a
-# hand-written form tag with its own authenticity token field,
+# `variant: :classic` reproduces the markup Lunch Flow's and Mercury's dialogs
+# have: a hand-written form tag with its own authenticity token field,
 # error-coloured rows for accounts without a name, a Cancel link that also
 # closes the dialog, and a submit button that is never disabled.
 class ProviderItem::AccountSelectionComponent < ApplicationComponent

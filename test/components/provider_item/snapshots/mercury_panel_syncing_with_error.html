@@ -1,0 +1,160 @@
+<div id="mercury-providers-panel" class="space-y-4">
+<div class="bg-surface-inset rounded-xl p-4">
+<p class="text-xs font-medium uppercase text-subdued tracking-wider mb-2">Setup</p>
+<ol class="list-none p-0 m-0 space-y-2">
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">1</span>Visit<a target="_blank" rel="noopener noreferrer" class="text-link underline" href="https://mercury.com">Mercury</a>and log in to the account you want to connect</li>
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">2</span>Go to Settings &gt; Developer &gt; API Tokens</li>
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">3</span>Create a new API token with &quot;Read Only&quot; access</li>
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">4</span>
+<strong>Important:</strong>Add your server's IP address to the token's whitelist</li>
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">5</span>Copy the<strong>full token</strong>(including the<code>secret-token:</code>prefix) and add it as a named connection below</li>
+</ol>
+</div>
+<div class="p-4 rounded-lg border bg-destructive/10 border-destructive-subtle">
+<div class="flex items-center gap-3">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-destructive -mt-0.5">
+<circle cx="12" cy="12" r="10">
+</circle>
+<path d="m15 9-6 6">
+</path>
+<path d="m9 9 6 6">
+</path>
+</svg>
+<p class="text-sm text-primary flex-1 leading-5">
+<span class="sr-only">Error:</span>Token rejected</p>
+</div>
+</div>
+<div class="space-y-3">
+<details class="group bg-container p-4 shadow-border-xs rounded-xl">
+<summary class="list-none cursor-pointer focus-ring rounded-xl">
+<div class="w-full">
+<div class="flex items-center justify-between gap-2 w-full">
+<div class="flex items-center gap-3">
+<span class="relative block overflow-hidden shrink-0 w-8 h-8 rounded-full">
+<span class="absolute inset-0" aria-hidden="true">
+<div style="background-color: color-mix(in oklab, #0891b2 10%, transparent); border-color: color-mix(in oklab, #0891b2 10%, transparent); color: #0891b2;" class="flex justify-center items-center shrink-0 w-8 h-8 rounded-full border w-full h-full" aria-hidden="true">
+<span class="text-center font-medium uppercase text-xs">ME</span>
+</div>
+</span>
+</span>
+<div>
+<p class="font-medium text-primary">Test Mercury Connection</p>
+<p class="text-xs text-secondary">0 synced, 1 need setup</p>
+</div>
+</div>
+</div>
+</div>
+</summary>
+<div class="mt-2">
+<div class="mt-4 space-y-4">
+<div class="flex items-center gap-2">
+<form class="button_to" method="post" action="/mercury_items/UUID/sync?source=panel">
+<button disabled="disabled" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-primary border border-secondary bg-transparent hover:bg-surface-hover" type="submit">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-secondary">
+<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8">
+</path>
+<path d="M21 3v5h-5">
+</path>
+<path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16">
+</path>
+<path d="M8 16H3v5">
+</path>
+</svg>
+<span class="min-w-0 truncate">Sync</span>
+</button>
+</form>
+<form class="button_to" method="post" action="/mercury_items/UUID">
+<input type="hidden" name="_method" value="delete" />
+<button class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-destructive border border-secondary bg-transparent hover:bg-container-inset-hover" data-turbo-confirm="Disconnect Test Mercury Connection?" type="submit">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-destructive text-secondary">
+<path d="M10 11v6">
+</path>
+<path d="M14 11v6">
+</path>
+<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6">
+</path>
+<path d="M3 6h18">
+</path>
+<path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+</path>
+</svg>
+<span class="min-w-0 truncate">Disconnect</span>
+</button>
+</form>
+</div>
+<form class="space-y-3" data-turbo="true" action="/mercury_items/UUID" accept-charset="UTF-8" method="post">
+<input type="hidden" name="_method" value="patch" />
+<div class="form-field">
+<div class="form-field__body">
+<label class="form-field__label" for="mercury_item_name">Connection name</label>
+<input class="form-field__input" placeholder="Business checking" type="text" value="Test Mercury Connection" name="mercury_item[name]" id="mercury_item_name" />
+</div>
+</div>
+<div class="form-field">
+<div class="form-field__body">
+<label class="form-field__label" for="mercury_item_token">Token</label>
+<input class="form-field__input" placeholder="Leave blank to keep the current token" type="password" name="mercury_item[token]" id="mercury_item_token" />
+</div>
+</div>
+<div class="form-field">
+<div class="form-field__body">
+<label class="form-field__label" for="mercury_item_base_url">Base URL (optional)</label>
+<input class="form-field__input" placeholder="https://api.mercury.com/api/v1 (default)" value="https://api-sandbox.mercury.com/api/v1" type="text" name="mercury_item[base_url]" id="mercury_item_base_url" />
+</div>
+</div>
+<div class="flex flex-wrap justify-end gap-2">
+<a class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary bg-gray-200 theme-dark:bg-gray-700 hover:bg-gray-300 theme-dark:hover:bg-gray-600 disabled:bg-gray-200 theme-dark:disabled:bg-gray-600" data-turbo-frame="modal" href="/mercury_items/UUID/setup_accounts">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915">
+</path>
+<circle cx="12" cy="12" r="3">
+</circle>
+</svg>Set up accounts</a>
+<button type="submit" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg w-full justify-center px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400" data-turbo-submits-with="Submitting...">
+<span class="min-w-0 truncate">Update connection</span>
+</button>
+</div>
+</form>
+</div>
+</div>
+</details>
+</div>
+<h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-secondary">
+<path d="M5 12h14">
+</path>
+<path d="M12 5v14">
+</path>
+</svg>Add Mercury connection</h3>
+<form class="space-y-3" data-turbo="true" action="/mercury_items" accept-charset="UTF-8" method="post">
+<div class="form-field">
+<div class="form-field__body">
+<label class="form-field__label" for="mercury_item_name">Connection name</label>
+<input class="form-field__input" placeholder="Business checking" type="text" value="Mercury Connection" name="mercury_item[name]" id="mercury_item_name" />
+</div>
+</div>
+<div class="form-field">
+<div class="form-field__body">
+<label class="form-field__label" for="mercury_item_token">Token</label>
+<input class="form-field__input" placeholder="Paste token here" type="password" name="mercury_item[token]" id="mercury_item_token" />
+</div>
+</div>
+<div class="form-field">
+<div class="form-field__body">
+<label class="form-field__label" for="mercury_item_base_url">Base URL (optional)</label>
+<input class="form-field__input" placeholder="https://api.mercury.com/api/v1 (default)" type="text" name="mercury_item[base_url]" id="mercury_item_base_url" />
+</div>
+</div>
+<p class="text-xs text-secondary px-1 -mt-1">Use a separate named connection for each Mercury login/API token you want to sync. For sandbox testing, use<code>https://api-sandbox.mercury.com/api/v1</code>as the Base URL. Mercury requires IP whitelisting - make sure to add your IP in the Mercury dashboard.</p>
+<div class="flex justify-end">
+<button type="submit" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg w-full justify-center px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400" data-turbo-submits-with="Submitting...">
+<span class="min-w-0 truncate">Add Mercury connection</span>
+</button>
+</div>
+</form>
+</div>

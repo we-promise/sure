@@ -39,7 +39,7 @@
                 size: :sm,
                 href: item_path(item),
                 method: :delete,
-                aria: { label: panel_t("disconnect_label", name: item.name) },
+                aria: disconnect_aria(item),
                 data: { turbo_confirm: panel_t("disconnect_confirm", name: item.name) }
               ) %>
             </div>

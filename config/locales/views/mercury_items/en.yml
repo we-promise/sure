@@ -208,6 +208,10 @@ en:
       partial_success: "Successfully created %{created_count} account(s), but %{failed_count} account(s) failed."
       success: "Successfully created %{count} account(s)."
       unexpected_error: An unexpected error occurred
+    subtype_select:
+      placeholder:
+        subtype: Select subtype
+        type: Select type
     sync:
       success: Sync started
     syncer:
