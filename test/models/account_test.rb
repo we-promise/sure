@@ -797,6 +797,20 @@ class AccountTest < ActiveSupport::TestCase
     assert_nil statement.match_confidence
   end
 
+  test "destroying an account keeps a statement an import carries, and the import keeps it" do
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    import = TransactionImport.create!(family: @family, account: @account, account_statement: statement)
+
+    @account.destroy!
+
+    assert_nil statement.reload.account_id
+    assert_equal statement.id, import.reload.account_statement_id
+  end
+
   test "rolled back account destroy keeps linked statements unchanged" do
     statement = AccountStatement.create_from_upload!(
       family: @family,

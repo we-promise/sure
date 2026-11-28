@@ -2,26 +2,92 @@
 pt-BR:
   family_merchants:
     create:
-      error: 'Erro ao criar comerciante: %{error}'
-      success: Novo comerciante criado com sucesso
+      error: 'Erro ao criar estabelecimento: %{error}'
+      success: Novo estabelecimento criado com sucesso
     destroy:
-      success: Comerciante excluído com sucesso
+      success: Estabelecimento excluído com sucesso
+      unlinked_success: Estabelecimento removido das suas transações
     edit:
-      title: Editar comerciante
+      title: Editar estabelecimento
     form:
-      name_placeholder: Nome do comerciante
+      name_placeholder: Nome do estabelecimento
+      website_placeholder: "Site (ex.: starbucks.com)"
+      website_hint: Informe o site do estabelecimento para exibir o logotipo automaticamente
+      logo_label: Logotipo
+      logo_hint: Substitui o logotipo do site. JPEG, PNG ou WebP, até %{max_megabytes} MB.
+      remove_logo_label: Remover logotipo enviado
     index:
-      empty: Nenhum comerciante ainda
-      new: Novo comerciante
-      title: Comerciantes
+      empty: Nenhum estabelecimento ainda
+      new: Novo estabelecimento
+      import: Importar estabelecimentos
+      merge: Mesclar estabelecimentos
+      title: Estabelecimentos
+      family_title: Estabelecimentos (%{moniker})
+      family_empty: Nenhum estabelecimento na sua conta %{moniker} ainda
+      provider_title: Estabelecimentos dos provedores
+      provider_empty: Nenhum estabelecimento de provedor vinculado a esta conta %{moniker} ainda
+      provider_read_only: Os estabelecimentos dos provedores são sincronizados das suas instituições conectadas. Eles não podem ser editados aqui.
+      provider_info: Estes estabelecimentos foram detectados automaticamente pelas suas conexões bancárias ou pela IA. Você pode editá-los para criar sua própria cópia ou removê-los para desvinculá-los das suas transações.
+      enhance_info:
+        one: "%{count} estabelecimento de provedor está sem informações de site. Aprimore com IA para detectar sites, exibir logotipos e mesclar estabelecimentos duplicados."
+        other: "%{count} estabelecimentos de provedores estão sem informações de site. Aprimore com IA para detectar sites, exibir logotipos e mesclar estabelecimentos duplicados."
+      enhance_button: Aprimorar com IA
+      search_family_merchants: Buscar estabelecimentos da família...
+      search_provider_merchants: Buscar estabelecimentos dos provedores...
+      no_family_merchants_found: Nenhum estabelecimento da família encontrado
+      no_provider_merchants_found: Nenhum estabelecimento de provedor encontrado
+      per_page: por página
+      unlinked_title: Desvinculados recentemente
+      unlinked_info: Estes estabelecimentos foram removidos recentemente das suas transações. Eles sairão desta lista após 30 dias, a menos que sejam atribuídos novamente a uma transação.
+      table:
+        merchant: Estabelecimento
+        actions: Ações
+        source: Origem
+    family_merchant:
+      edit: Editar
+      delete: Excluir
     merchant:
-      confirm_accept: Excluir comerciante
-      confirm_body: Tem certeza de que deseja excluir este comerciante? Remover este comerciante
-        desvinculará todas as transações associadas e pode afetar seus relatórios.
-      confirm_title: Excluir comerciante?
-      delete: Excluir comerciante
-      edit: Editar comerciante
+      confirm_accept: Excluir estabelecimento
+      confirm_body: Tem certeza de que deseja excluir este estabelecimento? Remover este estabelecimento desvinculará todas as transações associadas e pode afetar seus relatórios.
+      confirm_title: Excluir estabelecimento?
+      delete: Excluir estabelecimento
+      edit: Editar estabelecimento
+    merge:
+      title: Mesclar estabelecimentos
+      description: Selecione um estabelecimento de destino e os estabelecimentos que serão mesclados nele. Todas as transações dos estabelecimentos mesclados serão reatribuídas ao destino.
+      target_label: Mesclar em (destino)
+      select_target: Selecione o estabelecimento de destino...
+      sources_label: Estabelecimentos a mesclar
+      sources_search_placeholder: Buscar estabelecimentos...
+      no_merchants_found: Nenhum estabelecimento encontrado
+      sources_hint: Os estabelecimentos selecionados serão mesclados no destino. Estabelecimentos da família serão excluídos e estabelecimentos de provedores serão desvinculados.
+      submit: Mesclar selecionados
     new:
-      title: Novo comerciante
+      title: Novo estabelecimento
+    perform_merge:
+      success:
+        one: "%{count} estabelecimento mesclado com sucesso"
+        other: "%{count} estabelecimentos mesclados com sucesso"
+      no_merchants_selected: Nenhum estabelecimento selecionado para mesclar
+      target_not_found: Estabelecimento de destino não encontrado
+      invalid_merchants: Estabelecimentos selecionados inválidos
+    provider_merchant:
+      edit: Editar
+      remove: Remover
+      remove_confirm_title: Remover estabelecimento?
+      remove_confirm_body: Tem certeza de que deseja remover %{name}? Isso desvinculará deste estabelecimento todas as transações associadas, mas não excluirá o estabelecimento em si.
+    enhance:
+      success: O aprimoramento dos estabelecimentos de provedores foi iniciado. Os estabelecimentos serão aprimorados e os duplicados serão mesclados em instantes.
+      already_running: O aprimoramento já está em andamento. Aguarde a conclusão.
     update:
-      success: Comerciante atualizado com sucesso
+      success: Estabelecimento atualizado com sucesso
+      converted_success: Estabelecimento convertido e atualizado com sucesso
+  merchants:
+    show:
+      average_transaction: Transação média
+      edit: Editar estabelecimento
+      first_transaction: Primeira transação
+      last_transaction: Última transação
+      summary: Resumo
+      total_spending: Gasto total
+      total_transactions: Total de transações

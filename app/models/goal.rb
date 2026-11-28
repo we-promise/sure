@@ -388,7 +388,7 @@ class Goal < ApplicationRecord
     dormant = Entry
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
       .where(account_id: account_ids - valued_ids)
-      .where("entries.excluded IS NOT TRUE")
+      .where(entries: { excluded: false })
       .merge(Transaction.excluding_pending)
       .distinct
       .pluck(:account_id)

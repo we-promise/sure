@@ -476,7 +476,7 @@ class QifImport < Import
           next unless target_account
 
           Account::OpeningBalanceManager.new(target_account).set_opening_balance(
-            balance: opening_balance[:amount],
+            balance: opening_balance_amount(target_account, opening_balance[:amount]),
             date:    opening_balance[:date]
           )
         end
@@ -488,12 +488,19 @@ class QifImport < Import
         end
       elsif (opening_balance = opening_balances.first)
         Account::OpeningBalanceManager.new(account).set_opening_balance(
-          balance: opening_balance[:amount],
+          balance: opening_balance_amount(account, opening_balance[:amount]),
           date:    opening_balance[:date]
         )
       else
         adjust_opening_anchor_if_needed!(account, earliest_row_date)
       end
+    end
+
+    # A QIF opening balance carries the same sign as the file's transactions
+    # (money owed on a credit card or loan is negative), while a liability's
+    # balance in Sure is the amount owed.
+    def opening_balance_amount(target_account, amount)
+      target_account.liability? ? -amount : amount
     end
 
     def adjust_opening_anchor_if_needed!(target_account, earliest)

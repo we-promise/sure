@@ -200,7 +200,7 @@ GEM
     digest-crc (0.7.0)
       rake (>= 12.0.0, < 14.0.0)
     docile (1.4.1)
-    doorkeeper (5.9.1)
+    doorkeeper (5.9.10)
       railties (>= 5)
     dotenv (3.1.8)
     dotenv-rails (3.1.8)

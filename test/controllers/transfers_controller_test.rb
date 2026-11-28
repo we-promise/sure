@@ -689,6 +689,62 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Test notes", transfer.reload.notes
   end
 
+  test "editing a transfer locks the transfer before its legs" do
+    transfer = transfers(:one)
+    locking = []
+    record = ->(*, payload) do
+      sql = payload[:sql]
+      locking << sql if sql.include?("FOR UPDATE") || sql.match?(/\A\s*(UPDATE|DELETE)\b/i)
+    end
+
+    ActiveSupport::Notifications.subscribed(record, "sql.active_record") do
+      patch transfer_url(transfer), params: { transfer: { category_id: categories(:food_and_drink).id, notes: "Rent" } }
+    end
+
+    assert_redirected_to transactions_url
+    assert_match(/FROM "transfers".*FOR UPDATE/, locking.first)
+  end
+
+  test "a category chosen in the transfer editor is locked as the user's" do
+    transfer = transfers(:one)
+    category = families(:dylan_family).investment_contributions_category
+
+    patch transfer_url(transfer), params: { transfer: { category_id: category.id } }
+
+    outflow = transfer.outflow_transaction.reload
+    assert_equal category, outflow.category
+    assert outflow.locked?(:category_id), "a cleanup or sync would treat an unlocked choice as its own"
+  end
+
+  test "a category re-chosen in the transfer editor stays the user's where the AI had set it" do
+    transfer = transfers(:one)
+    category = families(:dylan_family).investment_contributions_category
+    outflow = transfer.outflow_transaction
+    outflow.enrich_attribute(:category_id, category.id, source: "ai")
+    outflow.lock_attr!(:category_id)
+
+    patch transfer_url(transfer), params: { transfer: { category_id: category.id } }
+
+    assert_empty Transaction.where(id: outflow.id).without_user_category_lock
+    outflow.reload.update!(kind: "funds_movement")
+    assert_equal category, outflow.reload.category
+  end
+
+  test "a different category chosen in the transfer editor keeps the AI's superseded suggestion" do
+    transfer = transfers(:one)
+    outflow = transfer.outflow_transaction
+    outflow.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "ai")
+    outflow.lock_attr!(:category_id)
+    category = families(:dylan_family).investment_contributions_category
+
+    patch transfer_url(transfer), params: { transfer: { category_id: category.id } }
+
+    assert_equal category, outflow.reload.category
+    suggestion = DataEnrichment.find_by(enrichable: outflow, attribute_name: "category_id", source: "ai")
+    assert suggestion, "the AI's suggestion was deleted, so the transaction leaves the AI history filter"
+    assert_equal true, suggestion.metadata["superseded"]
+  end
+
   test "confirming a transfer keeps the outflow category" do
     transfer = transfers(:one)
     transfer.outflow_transaction.update!(category: categories(:food_and_drink))
@@ -1016,6 +1072,33 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "show names each side's transaction beside its amount" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.entry.update!(name: "Card bill sent from checking")
+    transfer.inflow_transaction.entry.update!(name: "Payment received, thank you")
+
+    get transfer_url(transfer)
+
+    assert_response :success
+    assert_select "dt", text: I18n.t("transfers.show.transaction"), count: 2
+    assert_select "dd", text: "Card bill sent from checking"
+    assert_select "dd", text: "Payment received, thank you"
+  end
+
+  test "show leaves out the name of a side whose account the user cannot see" do
+    transfer = cross_owner_transfer(outflow_account: member_loan, inflow_account: accounts(:depository))
+    transfer.outflow_transaction.entry.update!(name: "Private loan payment")
+    transfer.inflow_transaction.entry.update!(name: "Money in")
+
+    get transfer_url(transfer)
+
+    assert_response :success
+    assert_select "dt", text: I18n.t("transfers.show.transaction"), count: 1
+    assert_select "dd", text: "Money in"
+    assert_select "dd", text: "Private loan payment", count: 0
+    assert_no_match "Private loan payment", response.body
+  end
+
   test "show offers the investment contribution switch only for transfers into an investment account" do
     contribution = create_confirmed_transfer(to: accounts(:investment))
     payment = create_confirmed_transfer(to: accounts(:credit_card))
@@ -1164,6 +1247,18 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       post mark_as_recurring_transfer_url(transfer)
     end
     assert_equal I18n.t("recurring_transactions.transfer_feature_disabled"), flash[:alert]
+  end
+
+  test "update leaves the amount of a transfer whose leg is a split part" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
+    part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    transfer = link_split_part_to_loan(part)
+
+    patch transfer_url(transfer), params: { transfer: { amount: "75", notes: "Principal" } }
+
+    assert_equal 60, part.reload.amount
+    assert_equal(-60, transfer.inflow_transaction.entry.reload.amount)
+    assert_equal "Principal", transfer.reload.notes
   end
 
   private

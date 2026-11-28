@@ -1,0 +1,94 @@
+---
+id:
+  providers:
+    ibkr:
+      named_connection: Interactive Brokers (%{name})
+      named_connection_description: Tautkan rekening dari Flex Query %{name} Anda
+      name: Interactive Brokers
+      connection_description: Hubungkan laporan Flex Web Service Interactive Brokers
+      institution_name: Interactive Brokers
+  ibkr_items:
+    defaults:
+      name: Interactive Brokers
+    ibkr_item:
+      deletion_in_progress: Penghapusan sedang berlangsung
+      flex_web_service: Flex Web Service
+      syncing: Menyinkronkan
+      requires_update: Kredensial perlu perhatian
+      error: Kesalahan
+      synced: Disinkronkan %{time} lalu. %{summary}.
+      never_synced: Belum pernah disinkronkan.
+      setup_accounts: Atur rekening
+      delete: Hapus
+      accounts_need_setup: Rekening perlu pengaturan
+      accounts_need_setup_description: Beberapa rekening dari IBKR perlu ditautkan ke rekening Sure.
+      no_accounts_discovered: Belum ada rekening IBKR yang ditemukan.
+      no_accounts_discovered_description: Jalankan sinkronisasi setelah mengonfigurasi Flex query Anda untuk menemukan rekening.
+    setup_accounts:
+      page_title: Atur Rekening Interactive Brokers
+      dialog_title: Atur Rekening Interactive Brokers Anda
+      subtitle: Pilih rekening pialang IBKR yang ingin ditautkan.
+      info_box:
+        title: Impor Flex Query IBKR
+        items:
+          item_1: Kepemilikan dengan harga dan jumlah saat ini
+          item_2: Dasar biaya per posisi
+          item_3: Perdagangan, dividen, komisi, dan setoran atau penarikan kas
+        warning: Aktivitas yang lebih lama dari periode Flex Query akan diimpor secara bertahap dalam beberapa sinkronisasi berikutnya, hingga empat tahun ke belakang
+      status:
+        fetching_accounts: Mengambil rekening dari Interactive Brokers...
+        no_accounts_found_title: Tidak ada rekening ditemukan.
+        no_accounts_found_description: Sure tidak dapat menemukan rekening IBKR apa pun dalam laporan Flex terbaru.
+      available_accounts:
+        title: Rekening tersedia
+        account_type_investment: Investasi
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "ID Rekening: %{account_id}"
+      link_existing:
+        description: Atau tautkan rekening IBKR yang ditemukan ke rekening investasi manual yang sudah ada.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Pilih rekening...
+      linked_accounts:
+        title: Sudah tertaut
+        linked_to_html: "Tertaut ke: %{account}"
+      buttons:
+        refresh: Muat Ulang
+        cancel: Batal
+        back_to_settings: Kembali ke Pengaturan
+        create_selected_accounts: Buat rekening yang dipilih
+        link: Tautkan
+        done: Selesai
+    sync_status:
+      no_accounts: Belum ada rekening IBKR yang ditemukan
+      all_linked:
+        one: 1 rekening tertaut
+        other: "%{count} rekening tertaut"
+      partial: "%{linked} tertaut, %{unlinked} perlu pengaturan"
+    select_existing_account:
+      title: Tautkan rekening Interactive Brokers
+      no_accounts_available: Belum ada rekening Interactive Brokers yang belum tertaut tersedia.
+      run_sync_hint: "Jalankan sinkronisasi dari Pengaturan > Penyedia setelah memperbarui Flex query Anda."
+      wait_for_sync: Tunggu hingga sinkronisasi penemuan rekening selesai.
+      balance: Saldo
+      link: Tautkan
+      cancel: Batal
+    create:
+      success: Interactive Brokers berhasil dikonfigurasi.
+    update:
+      success: Konfigurasi Interactive Brokers berhasil diperbarui.
+    destroy:
+      success: Koneksi Interactive Brokers dijadwalkan untuk dihapus.
+    select_accounts:
+      not_configured: Interactive Brokers belum dikonfigurasi.
+    link_existing_account:
+      not_found: Rekening atau konfigurasi Interactive Brokers tidak ditemukan.
+      only_manual_investment: Hanya rekening investasi manual yang dapat ditautkan ke Interactive Brokers.
+      already_linked: Rekening Interactive Brokers ini sudah tertaut.
+      success: Berhasil ditautkan ke rekening Interactive Brokers.
+      failed: Gagal menautkan rekening Interactive Brokers.
+    complete_account_setup:
+      success:
+        one: Berhasil membuat %{count} rekening Interactive Brokers.
+        other: Berhasil membuat %{count} rekening Interactive Brokers.
+      none_selected: Tidak ada rekening yang dipilih.
+      none_created: Tidak ada rekening yang dibuat.
