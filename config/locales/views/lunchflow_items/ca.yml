@@ -1,6 +1,14 @@
 ---
 ca:
   lunchflow_items:
+    syncer:
+      accounts_failed:
+        one: 'Importació de Lunchflow: no s''ha pogut actualitzar %{count} compte'
+        other: 'Importació de Lunchflow: no s''han pogut actualitzar %{count} comptes'
+      import_failed_with_error: 'Importació de Lunchflow: %{error}'
+      transactions_failed:
+        one: 'Importació de Lunchflow: no s''han pogut obtenir les transaccions de %{count} compte'
+        other: 'Importació de Lunchflow: no s''han pogut obtenir les transaccions de %{count} comptes'
     api_error:
       check_provider_settings: Revisa la configuració del proveïdor
       common_issues: 'Problemes habituals:'

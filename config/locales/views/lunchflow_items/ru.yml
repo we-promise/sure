@@ -1,6 +1,18 @@
 ---
 ru:
   lunchflow_items:
+    syncer:
+      accounts_failed:
+        one: 'Импорт Lunchflow: не удалось обновить %{count} счёт'
+        few: 'Импорт Lunchflow: не удалось обновить %{count} счёта'
+        many: 'Импорт Lunchflow: не удалось обновить %{count} счетов'
+        other: 'Импорт Lunchflow: не удалось обновить %{count} счёта'
+      import_failed_with_error: 'Импорт Lunchflow: %{error}'
+      transactions_failed:
+        one: 'Импорт Lunchflow: не удалось получить операции по %{count} счёту'
+        few: 'Импорт Lunchflow: не удалось получить операции по %{count} счетам'
+        many: 'Импорт Lunchflow: не удалось получить операции по %{count} счетам'
+        other: 'Импорт Lunchflow: не удалось получить операции по %{count} счёта'
     api_error:
       check_provider_settings: Проверьте настройки провайдера
       common_issues: 'Возможные проблемы:'

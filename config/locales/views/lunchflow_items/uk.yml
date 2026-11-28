@@ -1,5 +1,17 @@
 uk:
   lunchflow_items:
+    syncer:
+      accounts_failed:
+        one: 'Імпорт Lunchflow: не вдалося оновити %{count} рахунок'
+        few: 'Імпорт Lunchflow: не вдалося оновити %{count} рахунки'
+        many: 'Імпорт Lunchflow: не вдалося оновити %{count} рахунків'
+        other: 'Імпорт Lunchflow: не вдалося оновити %{count} рахунку'
+      import_failed_with_error: 'Імпорт Lunchflow: %{error}'
+      transactions_failed:
+        one: 'Імпорт Lunchflow: не вдалося отримати транзакції для %{count} рахунку'
+        few: 'Імпорт Lunchflow: не вдалося отримати транзакції для %{count} рахунків'
+        many: 'Імпорт Lunchflow: не вдалося отримати транзакції для %{count} рахунків'
+        other: 'Імпорт Lunchflow: не вдалося отримати транзакції для %{count} рахунку'
     api_error:
       title: Помилка з'єднання Lunch Flow
       unable_to_connect: Неможливо підключитися до Lunch Flow

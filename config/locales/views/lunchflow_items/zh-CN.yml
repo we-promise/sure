@@ -1,6 +1,14 @@
 ---
 zh-CN:
   lunchflow_items:
+    syncer:
+      accounts_failed:
+        one: Lunchflow 导入：%{count} 个账户更新失败
+        other: Lunchflow 导入：%{count} 个账户更新失败
+      import_failed_with_error: Lunchflow 导入：%{error}
+      transactions_failed:
+        one: Lunchflow 导入：%{count} 个账户的交易获取失败
+        other: Lunchflow 导入：%{count} 个账户的交易获取失败
     api_error:
       title: Lunch Flow 连接错误
       unable_to_connect: 无法连接到 Lunch Flow

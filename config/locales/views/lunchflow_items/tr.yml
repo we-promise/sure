@@ -1,6 +1,14 @@
 ---
 tr:
   lunchflow_items:
+    syncer:
+      accounts_failed:
+        one: 'Lunchflow içe aktarma: %{count} hesap güncellenemedi'
+        other: 'Lunchflow içe aktarma: %{count} hesap güncellenemedi'
+      import_failed_with_error: 'Lunchflow içe aktarma: %{error}'
+      transactions_failed:
+        one: 'Lunchflow içe aktarma: %{count} hesabın işlemleri alınamadı'
+        other: 'Lunchflow içe aktarma: %{count} hesabın işlemleri alınamadı'
     api_error:
       check_provider_settings: Sağlayıcı Ayarlarını Kontrol Et
       common_issues: 'Yaygın Sorunlar:'

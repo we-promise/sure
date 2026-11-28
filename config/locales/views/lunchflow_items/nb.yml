@@ -1,6 +1,14 @@
 ---
 nb:
   lunchflow_items:
+    syncer:
+      accounts_failed:
+        one: 'Lunchflow-import: %{count} konto kunne ikke oppdateres'
+        other: 'Lunchflow-import: %{count} kontoer kunne ikke oppdateres'
+      import_failed_with_error: 'Lunchflow-import: %{error}'
+      transactions_failed:
+        one: 'Lunchflow-import: kunne ikke hente transaksjoner for %{count} konto'
+        other: 'Lunchflow-import: kunne ikke hente transaksjoner for %{count} kontoer'
     api_error:
       title: Tilkoblingsfeil for Lunch Flow
       unable_to_connect: Kan ikke koble til Lunch Flow

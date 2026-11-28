@@ -1,6 +1,14 @@
 ---
 es:
   lunchflow_items:
+    syncer:
+      accounts_failed:
+        one: 'Importación de Lunchflow: no se ha podido actualizar %{count} cuenta'
+        other: 'Importación de Lunchflow: no se han podido actualizar %{count} cuentas'
+      import_failed_with_error: 'Importación de Lunchflow: %{error}'
+      transactions_failed:
+        one: 'Importación de Lunchflow: no se han podido obtener las transacciones de %{count} cuenta'
+        other: 'Importación de Lunchflow: no se han podido obtener las transacciones de %{count} cuentas'
     api_error:
       title: Error de conexión con Lunch Flow
       unable_to_connect: No se puede conectar con Lunch Flow

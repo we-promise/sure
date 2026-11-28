@@ -1,6 +1,20 @@
 ---
 pl:
   lunchflow_items:
+    syncer:
+      accounts_failed:
+        few: 'Import Lunch Flow: nie udało się zaktualizować %{count} konta'
+        many: 'Import Lunch Flow: nie udało się zaktualizować %{count} kont'
+        one: 'Import Lunch Flow: nie udało się zaktualizować %{count} konto'
+        other: 'Import Lunch Flow: nie udało się zaktualizować %{count} kont'
+      import_failed_with_error: 'Import Lunch Flow: %{error}'
+      transactions_failed:
+        few: 'Import Lunch Flow: pobranie transakcji nie powiodło się dla %{count} kont'
+        many: 'Import Lunch Flow: pobranie transakcji nie powiodło się dla %{count}
+          kont'
+        one: 'Import Lunch Flow: pobranie transakcji nie powiodło się dla %{count} konta'
+        other: 'Import Lunch Flow: pobranie transakcji nie powiodło się dla %{count}
+          kont'
     api_error:
       check_provider_settings: Sprawdź ustawienia dostawcy
       common_issues: 'Typowe problemy:'
