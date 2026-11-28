@@ -1,6 +1,7 @@
 ---
 en:
   lunchflow_items:
+    default_connection_name: Lunch Flow Connection
     errors:
       unexpected_error: An unexpected error occurred. Please try again later.
     provider_connection:

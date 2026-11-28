@@ -72,10 +72,9 @@ class LunchflowItemsController < ApplicationController
 
   def create
     @lunchflow_item = Current.family.lunchflow_items.build(lunchflow_params)
-    @lunchflow_item.name ||= "Lunch Flow Connection"
+    @lunchflow_item.name = t("lunchflow_items.default_connection_name") if @lunchflow_item.name.blank?
 
     if @lunchflow_item.save
-      # Trigger initial sync to fetch accounts
       @lunchflow_item.sync_later
 
       redirect_to accounts_path, notice: t(".success"), status: :see_other
@@ -88,30 +87,23 @@ class LunchflowItemsController < ApplicationController
   end
 
   def update
-    permitted = lunchflow_params
-    if @lunchflow_item.update(permitted)
-      Rails.cache.delete(lunchflow_accounts_cache_key(@lunchflow_item)) if permitted.key?(:api_key) || permitted.key?(:base_url)
-      render_provider_panel("lunchflow", notice: t(".success"), fallback_path: accounts_path)
+    if LunchflowItem::AccountFlow.update_item_with_cache_expiration(@lunchflow_item, family: Current.family, attributes: lunchflow_params)
+      render_provider_panel("lunchflow", notice: t(".success"), fallback_path: accounts_path,
+                            lunchflow_items: Current.family.lunchflow_items.active.ordered.includes(:syncs, :lunchflow_accounts))
     else
       render_provider_panel("lunchflow", alert: @lunchflow_item.errors.full_messages.join(", "))
     end
   end
 
   def destroy
-    # Ensure we detach provider links before scheduling deletion
-    begin
-      @lunchflow_item.unlink_all!(dry_run: false)
-    rescue => e
-      Rails.logger.warn("LunchFlow unlink during destroy failed: #{e.class} - #{e.message}")
-    end
+    @lunchflow_item.unlink_all!(dry_run: false)
     @lunchflow_item.destroy_later
     redirect_to accounts_path, notice: t(".success")
   end
 
   def sync
-    unless @lunchflow_item.syncing?
-      @lunchflow_item.sync_later
-    end
+    @lunchflow_item.sync_later unless @lunchflow_item.syncing?
+    return render_provider_panel("lunchflow", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -250,10 +242,5 @@ class LunchflowItemsController < ApplicationController
 
     def lunchflow_params
       params.require(:lunchflow_item).permit(:name, :sync_start_date, :api_key, :base_url)
-    end
-
-    # The accounts list is cached per connection, under the provider kit's key.
-    def lunchflow_accounts_cache_key(lunchflow_item)
-      "lunchflow_accounts_#{Current.family.id}_#{lunchflow_item.id}"
     end
 end
