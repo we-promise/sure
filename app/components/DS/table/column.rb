@@ -16,7 +16,9 @@ class DS::Table::Column < DesignSystemComponent
   #   column that names each row
   # @param class [String, nil] extra classes for the body cells, e.g. "text-secondary"
   #   or "privacy-sensitive"
-  def initialize(header, cell:, sticky: false, inset: false, align: :left, numeric: false, row_header: false, class: nil)
+  # @param aria_sort [String, nil] "ascending" or "descending" on the column the
+  #   rows are sorted by; nil (the default) leaves the attribute off
+  def initialize(header, cell:, sticky: false, inset: false, align: :left, numeric: false, row_header: false, class: nil, aria_sort: nil)
     @header = header
     @cell = cell
     @sticky = sticky
@@ -26,6 +28,7 @@ class DS::Table::Column < DesignSystemComponent
     candidate = align.to_s.to_sym
     @align = numeric ? :right : (ALIGNS.include?(candidate) ? candidate : :left)
     @row_header = row_header
+    @aria_sort = aria_sort
     @cell_class = binding.local_variable_get(:class)
   end
 
@@ -33,7 +36,7 @@ class DS::Table::Column < DesignSystemComponent
   # the one job a line is good at, separating the labels from the data; the
   # rows use the subdued rule between them.
   def call
-    tag.th header, scope: "col", class: class_names(
+    tag.th header, scope: "col", aria: { sort: @aria_sort }.compact, class: class_names(
       "px-4 py-3 border-b border-divider text-xs uppercase font-medium text-secondary",
       alignment_classes,
       # z-10 so a privacy-blurred amount, which paints in a layer of its own,

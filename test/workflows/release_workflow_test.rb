@@ -21,18 +21,41 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     end
   end
 
-  test "alpha and stable releases publish only their matching floating channel" do
+  test "alpha and stable promote their channel while RCs publish only versioned tags" do
     with_repo do |dir|
-      %w[2026.11.2-alpha 2026.11.2].each do |version|
+      %w[2026.11.2-alpha 2026.11.2-rc.0 2026.11.2-rc.1 2026.11.2-rc.10 2026.11.2].each do |version|
         success, output = resolve(dir, version)
         assert success, version
         assert_includes output, "release=true"
         assert_includes output, "type=raw,value=#{version}"
-        channel, other_channel = version.end_with?("-alpha") ? %w[latest stable] : %w[stable latest]
-        assert_includes output, "type=raw,value=#{channel}"
-        assert_not_includes output, "type=raw,value=#{other_channel}"
+        tags = output.split("image_tags<<RELEASE_TAGS\n", 2).last.split("RELEASE_TAGS", 2).first.lines.map(&:strip)
+        if version.include?("-rc.")
+          assert_equal [ "type=raw,value=#{version}", "type=raw,value=0.7.7-alpha.3" ], tags
+        else
+          channel, other_channel = version.end_with?("-alpha") ? %w[latest stable] : %w[stable latest]
+          assert_includes tags, "type=raw,value=#{channel}"
+          assert_not_includes tags, "type=raw,value=#{other_channel}"
+        end
       end
     end
+  end
+
+  test "RC uses alpha compatibility and deployment gates without floating channel promotion" do
+    with_repo do |dir|
+      success, output = resolve(dir, "2026.11.30-rc.1")
+      assert success, output
+      assert_includes output, "alpha=true\n"
+      assert_includes output, "stable=false\n"
+      assert_includes output, "compatibility_version=0.7.7-alpha.3\n"
+      success, output = resolve(dir, "2026.11.30-rc.1", extra_env: { "COMPATIBILITY_CHANNEL" => "stable", "COMPATIBILITY_VERSION" => "0.7.7" })
+      assert success, output
+      assert_includes output, "compatibility_version=\n"
+    end
+    jobs = workflow.fetch("jobs")
+    assert_equal "needs.prepare.outputs.release == 'true' && needs.prepare.outputs.alpha == 'true'", jobs.fetch("deploy_demo").fetch("if")
+    assert_equal "needs.prepare.outputs.release == 'true' && needs.prepare.outputs.stable == 'true'", jobs.fetch("deploy_app").fetch("if")
+    release = jobs.fetch("release").fetch("steps").find { |step| step["name"] == "Create GitHub Release" }
+    assert_equal "${{ needs.prepare.outputs.stable != 'true' }}", release.fetch("with").fetch("prerelease")
   end
 
   test "Docker metadata disables automatic latest tagging" do
@@ -69,9 +92,9 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     end
   end
 
-  test "invalid dates and all canonical suffixes other than alpha are rejected" do
+  test "invalid dates and unsupported canonical suffixes are rejected" do
     with_repo do |dir|
-      %w[2026.11.02 2026.11.0 2026.2.29 2026.4.31 2026.10.28-hotfix.1 2026.10.28-1 2026.10.30-alpha.2 2026.10.30-alpha.0 2026.10.30-beta 2026.10.30-rc.1 2026.10.30-daily 2026.10.30-nightly].each do |version|
+      %w[2026.11.02 2026.11.0 2026.2.29 2026.4.31 2026.10.28-hotfix.1 2026.10.28-1 2026.10.30-alpha.2 2026.10.30-alpha.0 2026.10.30-beta 2026.10.30-rc 2026.10.30-rc.01 2026.10.30-rc.-1 2026.10.30-rc.x 2026.10.30-daily 2026.10.30-nightly].each do |version|
         assert_not resolve(dir, version).first, version
       end
     end
@@ -110,7 +133,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
       workflow_sha = git!(dir, "rev-parse", "HEAD").strip
       git!(dir, "commit", "--allow-empty", "-m", "selected commit")
       selected_sha = git!(dir, "rev-parse", "HEAD").strip
-      %w[2026.11.2 2026.11.2-alpha].each do |version|
+      %w[2026.11.2 2026.11.2-alpha 2026.11.2-rc.1].each do |version|
         git!(dir, "tag", "-a", "v#{version}", "-m", "release")
         [ "v#{version}", "refs/tags/v#{version}" ].each do |selected_ref|
           success, output = resolve(dir, version, event: "workflow_dispatch", ref: "refs/heads/main",
