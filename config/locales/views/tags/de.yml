@@ -24,3 +24,8 @@ de:
       updated: Tag aktualisiert
     destroy_all:
       all_deleted: Alle Tags gelöscht
+    menu:
+      label: "Tags bearbeiten"
+    summary:
+      add: "Tags hinzufügen"
+      title: "Tags: %{names}"

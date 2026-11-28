@@ -1,0 +1,19 @@
+---
+de:
+  sync_schedules:
+    menu_item: "Sync-Häufigkeit"
+    intervals:
+      minutes: "Alle %{count} Minuten"
+      hours:
+        one: "Jede Stunde"
+        other: "Alle %{count} Stunden"
+    edit:
+      title: "Sync-Häufigkeit"
+      description: "Jede Verbindung wird mit dem Familien-Sync synchronisiert, bei den meisten Anbietern einmal am Tag. Wähl ein Intervall, um %{name} zusätzlich über den Tag verteilt einzeln zu synchronisieren."
+      interval_label: "Sync"
+      no_schedule: "Nur üblicher Sync"
+      hint: "Häufige Syncs zählen gegen die Abruflimits des Anbieters, und manche Anbieter rechnen pro Anfrage ab."
+      save: "Speichern"
+    update:
+      updated: "Sync-Häufigkeit gespeichert."
+      cleared: "Sync-Häufigkeit entfernt. Die Verbindung nutzt wieder den üblichen Sync."

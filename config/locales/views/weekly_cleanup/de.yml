@@ -1,0 +1,22 @@
+---
+de:
+  weekly_cleanup:
+    chat_title: "Wöchentliches Aufräumen – Woche vom %{date}"
+    intro: "Hier ist dein wöchentlicher Aufräumbericht. Ich habe %{count} Bereich(e) gefunden, die einen Blick wert sind – alles unten ist nur zum Lesen, nichts wurde geändert."
+    clean: "Diese Woche gibt es nichts aufzuräumen – alles sieht ordentlich aus."
+    outro: "Antworte hier, wenn du dir einen dieser Punkte genauer ansehen willst – ich helfe dir beim Kategorisieren, Zusammenführen von Händlern oder Prüfen der Duplikate."
+    detectors:
+      uncategorized_transactions:
+        heading: "Nicht kategorisierte Transaktionen (letzte 7 Tage)"
+      stale_imports:
+        heading: "Hängende oder fehlgeschlagene Importe"
+      provider_data_gaps:
+        heading: "Sync-Probleme bei Anbietern (letzte 7 Tage)"
+      missing_merchant_info:
+        heading: "Transaktionen ohne Händlerangaben (letzte 7 Tage)"
+      duplicate_imported_entries:
+        heading: "Mögliche doppelt importierte Buchungen (letzte 30 Tage)"
+      missing_context:
+        heading: "Größere Ausgaben ohne Notizen oder Belege (letzte 7 Tage)"
+      merchant_duplicates:
+        heading: "Händler-Duplikate – %{total} Händler, %{clusters} Duplikatgruppen (%{coverage} % gruppiert)"

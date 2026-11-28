@@ -47,6 +47,14 @@ de:
           - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
           - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
           title: Verschlüsselungsschlüssel fehlen
+        disable_mfa_password_label: "Mit deinem Passwort bestätigen"
+        disable_mfa_password_placeholder: "Passwort eingeben"
+        mfa_sso_only: "Die Zwei-Faktor-Authentifizierung wird über deinen Identitätsanbieter verwaltet."
+        compromised_secret_warning:
+          title: "Die Verschlüsselungsschlüssel sind nicht wirklich geheim"
+          intro: "Die Verschlüsselungsschlüssel dieser Installation wurden automatisch aus einem öffentlich bekannten SECRET_KEY_BASE-Wert abgeleitet (einem Standard- oder Platzhalterwert aus den Beispieldateien oder Hosting-Anleitungen dieses Projekts). Wer diesen Wert kennt, kann dieselben Verschlüsselungsschlüssel berechnen – diese Daten sind also nicht wirklich geschützt."
+          generate: "Setz NICHT einfach einen neuen SECRET_KEY_BASE und führe die Backfill-Aufgabe aus: Wurden bereits Daten mit dem kompromittierten Schlüssel verschlüsselt, kann der Backfill diesen Geheimtext nicht von echtem Klartext unterscheiden und verschlüsselt ihn ein zweites Mal – dann ist er nicht mehr wiederherstellbar. Rotiere stattdessen sicher, bei gestoppter App: Erzeuge mit bin/rails db:encryption:init neue Schlüssel und setze sie als ACTIVE_RECORD_ENCRYPTION_*-Variablen. Führe dann bin/rails \"security:backfill_encryption[100,0]\" aus und setze nur für diesen Befehl diesen SECRET_KEY_BASE in die Umgebungsvariable ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE, damit vorhandene Daten weiter entschlüsselt und auf die neuen Schlüssel übertragen werden. Siehe die Docker-Hosting-Anleitung."
+          settings_secrets: "In den Einstellungen gespeicherte API-Schlüssel und Tokens werden mit einem Schlüssel verschlüsselt, der direkt aus SECRET_KEY_BASE abgeleitet ist – das vorige Verfahren deckt sie nicht ab. Verschlüssele sie nach dem Ändern von SECRET_KEY_BASE mit bin/rails \"security:rotate_setting_secrets[0]\" neu und übergib dabei den alten Wert in der Umgebungsvariable OLD_SECRET_KEY_BASE (siehe Docker-Hosting-Anleitung). Gib jeden Schlüssel, den der Befehl als nicht entschlüsselbar meldet, erneut ein."
   webauthn_credentials:
     code_already_used: Dieser Code wurde schon verwendet. Warte auf den nächsten Code aus deiner Authenticator-App.
     default_name: Sicherheitsschlüssel

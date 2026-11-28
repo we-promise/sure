@@ -1,0 +1,9 @@
+---
+de:
+  holding_lots:
+    provider_cost: "Dein Anbieter liefert den Einstandspreis dieser Position, deshalb lassen sich die Kosten ihrer Tranchen nicht festlegen."
+    update:
+      success: "Kosten der Tranche aktualisiert."
+      error: "Gib ein, was die Tranche insgesamt gekostet hat – null oder mehr."
+    unlock:
+      success: "Manuelle Kosten entfernt."

@@ -101,3 +101,14 @@ de:
       provider_error: Die aktuellen Kurse ließen sich nicht abrufen. Versuch es in ein paar Minuten noch einmal.
       success: Marktdaten aktualisiert.
       unavailable: Für Offline-Wertpapiere gibt es keinen Marktdaten-Abgleich.
+    lots:
+      title: "Tranchen"
+      opening: "Vor dem ersten Trade gehalten"
+      unknown: "Preis pro Anteil unbekannt"
+      per_unit: "%{amount} pro Anteil"
+      total_cost_label: "Gesamtkosten dieser Tranche"
+      total_cost_hint: "Was die gesamte Tranche beim Erwerb gekostet hat. Wenn du ihren Trade löschst, werden die Tranche und die von dir gesetzten Kosten entfernt."
+      save: "Speichern"
+      unlock: "Manuelle Kosten entfernen"
+      provider_cost_hint: "Dein Anbieter liefert den Einstandspreis dieser Position, deshalb lassen sich die Kosten ihrer Tranchen nicht festlegen."
+      provider_cost_clear_hint: "Früher gesetzte Kosten kannst du trotzdem entfernen."

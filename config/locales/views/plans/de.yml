@@ -34,3 +34,6 @@ de:
       pending_marker: offen
       runway: "%{months} Mon. Reichweite · %{pace}/Mon."
       all_goals: Alle Ziele
+      currency_warning:
+        one: "1 Ziel lässt Guthaben in %{currencies} unberücksichtigt (noch kein Wechselkurs)."
+        other: "%{count} Ziele lassen Guthaben in %{currencies} unberücksichtigt (noch kein Wechselkurs)."

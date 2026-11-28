@@ -13,6 +13,9 @@ de:
       name_placeholder: Händlername
       website_placeholder: Website (z. B. starbucks.com)
       website_hint: Gib die Website des Händlers ein, um dessen Logo automatisch anzuzeigen
+      logo_label: "Logo"
+      logo_hint: "Ersetzt das Logo der Website. JPEG, PNG oder WebP, bis %{max_megabytes} MB."
+      remove_logo_label: "Hochgeladenes Logo entfernen"
     index:
       empty: Noch keine Händler vorhanden
       new: Neuer Händler
@@ -80,3 +83,12 @@ de:
     family_merchant:
       delete: Löschen
       edit: Bearbeiten
+  merchants:
+    show:
+      average_transaction: "Durchschnittliche Transaktion"
+      edit: "Händler bearbeiten"
+      first_transaction: "Erste Transaktion"
+      last_transaction: "Letzte Transaktion"
+      summary: "Zusammenfassung"
+      total_spending: "Ausgaben gesamt"
+      total_transactions: "Transaktionen gesamt"

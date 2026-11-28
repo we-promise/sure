@@ -70,6 +70,8 @@ de:
       activity_date:
         balance_tooltip: Der Kontostand am Tagesende, nach allen Transaktionen und Anpassungen
         no_balance_data: Für dieses Datum liegen keine Saldodaten vor
+        projected: "Voraussichtlich"
+        projected_balance_tooltip: "Eine Schätzung: aktueller Kontostand plus geplante Buchungen bis zu diesem Datum"
       activity_feed:
         toggle_selection_checkboxes: Auswahl umschalten
       balance_reconciliation:

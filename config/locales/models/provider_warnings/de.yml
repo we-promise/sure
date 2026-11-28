@@ -2,3 +2,31 @@
 de:
   provider_warnings:
     limited_investment_data: Dieser Anbieter liefert nur eingeschränkte Investmentdaten. Kennzeichnungen wie Kauf, Verkauf oder Dividende fehlen, was die Budgetgenauigkeit beeinträchtigen kann. Leg dir Regeln an, um Investment-Transaktionen auszuschließen oder zu kategorisieren.
+    enable_banking_history_truncated:
+      one: "Enable Banking: Der vollständige Transaktionsverlauf von %{count} Konto ließ sich nicht abrufen, ältere Transaktionen fehlen möglicherweise"
+      other: "Enable Banking: Der vollständige Transaktionsverlauf von %{count} Konten ließ sich nicht abrufen, ältere Transaktionen fehlen möglicherweise"
+    lunchflow_accounts_failed:
+      one: "Lunchflow-Import: %{count} Konto konnte nicht aktualisiert werden"
+      other: "Lunchflow-Import: %{count} Konten konnten nicht aktualisiert werden"
+    lunchflow_transactions_failed:
+      one: "Lunchflow-Import: Abruf der Transaktionen für %{count} Konto fehlgeschlagen"
+      other: "Lunchflow-Import: Abruf der Transaktionen für %{count} Konten fehlgeschlagen"
+    lunchflow_import_error: "Lunchflow-Import: %{error}"
+    truelayer_accounts_failed:
+      one: "TrueLayer-Import: %{count} Konto konnte nicht aktualisiert werden"
+      other: "TrueLayer-Import: %{count} Konten konnten nicht aktualisiert werden"
+    truelayer_transactions_failed:
+      one: "TrueLayer-Import: Abruf der Transaktionen für %{count} Konto fehlgeschlagen"
+      other: "TrueLayer-Import: Abruf der Transaktionen für %{count} Konten fehlgeschlagen"
+    truelayer_balances_failed:
+      one: "TrueLayer-Import: Abruf des Kontostands für %{count} Konto fehlgeschlagen"
+      other: "TrueLayer-Import: Abruf der Kontostände für %{count} Konten fehlgeschlagen"
+    truelayer_processing_failed:
+      one: "TrueLayer-Import: %{count} Konto konnte nicht verarbeitet werden"
+      other: "TrueLayer-Import: %{count} Konten konnten nicht verarbeitet werden"
+    truelayer_entries_failed:
+      one: "TrueLayer-Import: %{count} Transaktion konnte nicht importiert werden"
+      other: "TrueLayer-Import: %{count} Transaktionen konnten nicht importiert werden"
+    truelayer_scheduling_failed:
+      one: "TrueLayer-Import: Aktualisierung des Kontostands für %{count} Konto konnte nicht eingeplant werden"
+      other: "TrueLayer-Import: Aktualisierung der Kontostände für %{count} Konten konnte nicht eingeplant werden"

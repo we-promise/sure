@@ -95,6 +95,8 @@ de:
         greater_or_equal_to: Größer oder gleich
         less_than: Kleiner als
         less_than_or_equal_to: Kleiner oder gleich
+      transaction_additional_detail:
+        label: "Zusätzliche Details (Schlüssel=Wert)"
     confirm:
       ai_cost_no_estimate_html: Damit kategorisiert die KI %{count} Transaktion(en).
       ai_cost_title: Geschätzte KI-Kosten

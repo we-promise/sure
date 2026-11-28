@@ -1,0 +1,14 @@
+---
+de:
+  activerecord:
+    attributes:
+      account/accountable:
+        purchase_date: "Kaufdatum"
+      vehicle:
+        purchase_date: "Kaufdatum"
+    errors:
+      models:
+        vehicle:
+          attributes:
+            purchase_date:
+              must_precede_entries: "muss vor der ältesten Buchung des Kontos liegen"

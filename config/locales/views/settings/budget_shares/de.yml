@@ -1,0 +1,6 @@
+---
+de:
+  settings:
+    budget_shares:
+      update:
+        success: "Einstellungen zum Teilen von Budgets aktualisiert"

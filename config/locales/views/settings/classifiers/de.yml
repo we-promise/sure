@@ -31,6 +31,8 @@ de:
         rule_hint: Die zugehörige Regel, die sich mit dieser Einstellung in den Regeln ein- und ausschaltet. Sie kategorisiert nach jedem Sync nicht kategorisierte Transaktionen, an ihrer Stelle in deiner Regelreihenfolge; worüber sie sich nicht sicher ist, bleibt für eine Regel zur KI-Kategorisierung.
         threshold: Schwellenwert
         threshold_hint: Niedrigster Wert, ab dem Bayes handelt (0,05–0,99). Niedriger kategorisiert mehr, mit mehr Fehlern.
+        min_category_examples: "Mindestzahl Beispiele pro Kategorie"
+        min_category_examples_hint: "Eine Kategorie wird erst gewählt, wenn so viele deiner Transaktionen sie tragen (1–100). Sonst gewinnt eine Kategorie mit sehr wenigen Beispielen unbekannte Transaktionen mit hoher Wertung."
       clear_locks:
         success: Die Sperren von Bayes werden aufgehoben. Das kann einen Moment dauern.
       evaluation:

@@ -12,6 +12,7 @@ de:
     openid_connect:
       account_linked: "Konto erfolgreich mit %{provider} verknüpft"
       failed: Anmeldung über OpenID Connect fehlgeschlagen.
+      legacy_issuer_relink_required: "Diese ältere OIDC-Verbindung muss erneut bestätigt werden. Gib dein Sure-Passwort ein, um sie wieder zu verbinden; wenn du kein lokales Passwort hast, wende dich an einen Administrator."
     failure:
       failed: Anmeldung fehlgeschlagen.
       sso_provider_unavailable: "Der SSO-Anbieter ist derzeit nicht verfügbar. Bitte versuche es später erneut oder wende dich an einen Administrator."

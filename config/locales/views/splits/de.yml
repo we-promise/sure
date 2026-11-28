@@ -41,6 +41,7 @@ de:
       description: Bearbeite die aufgeteilten Einträge dieser Transaktion.
       submit: Aufteilung aktualisieren
       not_split: Diese Transaktion ist nicht aufgeteilt.
+      part_transferred: "Ein Teil dieser Aufteilung ist als Überweisung verknüpft. Entferne diese Überweisung, bevor du die Aufteilung bearbeitest oder aufhebst."
     update:
       success: Aufteilung erfolgreich aktualisiert
     child:

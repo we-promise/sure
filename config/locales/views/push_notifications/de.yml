@@ -1,0 +1,7 @@
+---
+de:
+  push_notifications:
+    budget_description: "Benachrichtige mich auch, wenn eine Budgetkategorie ihr Limit fast erreicht. Warnungen bei Budgetüberschreitung werden immer gesendet. Standardmäßig aus."
+    budget_title: "Budgetwarnungen"
+    description: "Gilt für jedes Gerät, auf dem du sie aktiviert hast, im Browser und unter iOS."
+    title: "Push-Benachrichtigungen"

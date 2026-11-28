@@ -31,6 +31,9 @@ de:
       new: Neue Kategorie
       delete_all: Alle löschen
       merge: Kategorien zusammenführen
+      lock_categories: "Neue Kategorien sperren"
+      locked_message: "Neue Kategorien sind gesperrt. Importe und Bank-Syncs können weiterhin Kategorien hinzufügen."
+      unlock_categories: "Neue Kategorien erlauben"
     new:
       new_category: Neue Kategorie
     update:
@@ -57,6 +60,10 @@ de:
       payment: Zahlung
       trade: Trade
       transfer: Überweisung
+    locked: "Kategorien sind gesperrt. Entsperre sie, um eine neue Kategorie hinzuzufügen."
+    toggle_lock:
+      locked: "Kategorien gesperrt"
+      unlocked: "Kategorien entsperrt"
   category:
     dropdowns:
       show:

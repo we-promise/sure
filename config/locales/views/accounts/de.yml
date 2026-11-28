@@ -288,3 +288,4 @@ de:
     entries:
       destroy:
         success: Eintrag gelöscht.
+        part_transferred: "Ein Teil dieser Aufteilung ist als Überweisung verknüpft. Entferne diese Überweisung, bevor du die Transaktion löschst."

@@ -52,3 +52,4 @@ de:
         save: Speichern
         resend_confirmation_link: eine neue Bestätigungsmail anfordern
         unconfirmed_email_notice_html: Du hast angefragt, deine E-Mail-Adresse auf %{email} zu ändern. Öffne dein Postfach und bestätige die Änderung, damit sie wirksam wird. Falls keine Mail angekommen ist, sieh im Spam-Ordner nach oder %{resend_link}.
+        invite_multiple: "Mehrere Mitglieder hinzufügen"
