@@ -122,7 +122,71 @@ class EntrySearchTest < ActiveSupport::TestCase
     assert_includes result_ids, txn.id
   end
 
-  test "family is not required unless a category filter is used" do
+  test "reconcile status filter matches only manual-account transaction entries" do
+    cleared = create_transaction(account: @account, amount: 100)
+    cleared.update!(reconciled_status: "cleared")
+    unreconciled = create_transaction(account: @account, amount: 100)
+    reconciled = create_transaction(account: @account, amount: 100)
+    reconciled.update!(reconciled_status: "reconciled")
+    valuation = create_valuation(account: @account)
+
+    result_ids = @account.entries.search({ reconcile_status: [ "cleared" ] }, @family).pluck(:id)
+
+    assert_includes result_ids, cleared.id
+    assert_not_includes result_ids, unreconciled.id
+    assert_not_includes result_ids, reconciled.id
+    assert_not_includes result_ids, valuation.id
+
+    both_ids = @account.entries.search({ reconcile_status: [ "cleared", "reconciled" ] }, @family).pluck(:id)
+
+    assert_includes both_ids, cleared.id
+    assert_includes both_ids, reconciled.id
+    assert_not_includes both_ids, unreconciled.id
+  end
+
+  test "reconcile status filter is a no-op for blank values" do
+    txn = create_transaction(account: @account, amount: 100)
+    valuation = create_valuation(account: @account)
+
+    result_ids = @account.entries.search({ reconcile_status: [ "" ] }, @family).pluck(:id)
+
+    assert_includes result_ids, txn.id
+    assert_includes result_ids, valuation.id
+  end
+
+  test "reconcile status filter excludes synced accounts" do
+    synced_account = accounts(:connected)
+    entry = create_transaction(account: synced_account, amount: 100)
+    assert_equal "unreconciled", entry.reconciled_status
+
+    result_ids = synced_account.entries.search({ reconcile_status: [ "unreconciled" ] }, @family).pluck(:id)
+
+    assert_empty result_ids
+  end
+
+  test "reconcile status filter includes a reconciled transfer leg in a manual account" do
+    transfer = create_transfer(
+      from_account: @account,
+      to_account: accounts(:credit_card),
+      amount: 100
+    )
+    outflow_entry = transfer.outflow_transaction.entry
+    outflow_entry.update!(reconciled_status: "reconciled")
+
+    result_ids = @account.entries.search({ reconcile_status: [ "reconciled" ] }, @family).pluck(:id)
+
+    assert_includes result_ids, outflow_entry.id
+  end
+
+  test "reconcile status filter requires a family" do
+    create_transaction(account: @account, amount: 100)
+
+    assert_raises ArgumentError do
+      @account.entries.search({ reconcile_status: [ "unreconciled" ] }).pluck(:id)
+    end
+  end
+
+  test "family is not required for merchant-only filters" do
     txn = create_transaction(account: @account, amount: 100, merchant: merchants(:netflix))
 
     result_ids = @account.entries.search({ merchants: [ merchants(:netflix).name ] }).pluck(:id)

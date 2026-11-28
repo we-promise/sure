@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @user = users(:family_admin)
     @account = accounts(:depository)
@@ -280,5 +282,22 @@ class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
 
     entry = Entry.find_by(name: "User Modified", account: @account)
     assert entry.user_modified?
+  end
+
+  test "runs rules set to apply immediately on the new transaction" do
+    @user.family.rules.create!(name: "Immediate", resource_type: "transaction", active: true, apply_immediately: true,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+
+    result = @function.call(
+      "account_id" => @account.id,
+      "date" => "2026-09-11",
+      "amount" => 10.00,
+      "type" => "expense",
+      "name" => "Immediate Rule Target"
+    )
+
+    assert_equal true, result[:created]
+    entry = Entry.find_by(name: "Immediate Rule Target", account: @account)
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ entry.entryable_id ] } ])
   end
 end

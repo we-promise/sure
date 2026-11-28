@@ -37,7 +37,6 @@ RSpec.describe "Api::V1::Financekit", type: :request do
   let(:per_page) { nil }
 
   before do
-    allow(Financekit).to receive(:enabled?).and_return(true)
     allow(ApiRateLimiter).to receive(:limit).and_return(nil)
   end
 

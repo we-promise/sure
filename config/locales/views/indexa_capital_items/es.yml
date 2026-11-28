@@ -169,6 +169,7 @@ es:
       fetch_failed: "Error al obtener las cuentas"
       import_selected: "Importar cuentas seleccionadas"
       instructions: "Selecciona las cuentas que quieres importar de Indexa Capital. Puedes elegir varias cuentas."
+      skip_notice: 'Las cuentas sin marcar se omiten: Sure deja de obtenerlas hasta que las vincules a una cuenta.'
       no_accounts: "No se han encontrado cuentas sin vincular en esta conexión de Indexa Capital."
       no_accounts_to_setup: "No hay cuentas para configurar"
       no_api_key: "Las credenciales de Indexa Capital no están configuradas. Por favor, comprueba los ajustes de conexión."
