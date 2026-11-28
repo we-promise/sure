@@ -1,0 +1,56 @@
+<div id="lunchflow-providers-panel" class="space-y-4">
+<div class="bg-surface-inset rounded-xl p-4">
+<p class="text-xs font-medium uppercase text-subdued tracking-wider mb-2">Setup</p>
+<ol class="list-none p-0 m-0 space-y-2">
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">1</span>Go to<a target="_blank" rel="noopener noreferrer" class="text-link underline" href="https://www.lunchflow.app/?atp=BiDIYS">Lunch Flow</a>and create an API key.</li>
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">2</span>Paste your key below and connect.</li>
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">3</span>Then head to Accounts to link your synced accounts.</li>
+</ol>
+</div>
+<div class="p-4 rounded-lg border bg-destructive/10 border-destructive-subtle">
+<div class="flex items-center gap-3">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-destructive -mt-0.5">
+<circle cx="12" cy="12" r="10">
+</circle>
+<path d="m15 9-6 6">
+</path>
+<path d="m9 9 6 6">
+</path>
+</svg>
+<p class="text-sm text-primary flex-1 leading-5">
+<span class="sr-only">Error:</span>API key rejected</p>
+</div>
+</div>
+<form class="space-y-3" data-turbo="true" action="/lunchflow_items/UUID" accept-charset="UTF-8" method="post">
+<input type="hidden" name="_method" value="patch" />
+<div class="form-field">
+<div class="form-field__body">
+<label class="form-field__label" for="lunchflow_item_api_key">API Key</label>
+<input class="form-field__input" placeholder="Enter new API key to update" type="password" name="lunchflow_item[api_key]" id="lunchflow_item_api_key" />
+</div>
+</div>
+<div class="form-field">
+<div class="form-field__body">
+<label class="form-field__label" for="lunchflow_item_base_url">Base URL (Optional)</label>
+<input class="form-field__input" placeholder="https://lunchflow.app/api/v1 (default)" value="https://lunchflow.example/api/v1" type="text" name="lunchflow_item[base_url]" id="lunchflow_item_base_url" />
+</div>
+</div>
+<div class="space-y-1">
+<div class="form-field">
+<div class="form-field__body">
+<label class="form-field__label" for="lunchflow_item_sync_start_date">Import transactions from</label>
+<input class="form-field__input" value="2026-01-15" max="2026-11-15" aria-describedby="lunchflow_item_sync_start_date_help_text" type="date" name="lunchflow_item[sync_start_date]" id="lunchflow_item_sync_start_date" />
+</div>
+</div>
+<p id="lunchflow_item_sync_start_date_help_text" class="text-xs text-secondary px-1">Leave blank to import everything Lunch Flow has. Moving the date earlier imports the missing period on the next sync. Moving it later doesn&#39;t affect transactions already imported.</p>
+</div>
+<div class="flex justify-end">
+<button type="submit" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg w-full justify-center px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400" data-turbo-submits-with="Submitting...">
+<span class="min-w-0 truncate">Update connection</span>
+</button>
+</div>
+</form>
+</div>

@@ -4,7 +4,7 @@ class Provider::LunchflowAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("LunchflowAccount", self)
-  declares_connection key: "lunchflow", name: "Lunch Flow", panel: true,
+  declares_connection key: "lunchflow", name: "Lunch Flow", panel: { shape: :single },
                       metadata: { region: "Global", kinds: %w[Bank], maturity: :stable, logo_text: "LF", logo_color: "#f97316", domain: "lunchflow.app" },
                       lists: { settings_page: ->(items) { items.where.not(api_key: [ nil, "" ]).ordered.select(:id) } }
 
