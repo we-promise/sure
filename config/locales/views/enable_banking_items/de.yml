@@ -131,3 +131,5 @@ de:
       sync_start_date_help: Optional. Leer lassen, um so viel Historie zu importieren, wie deine Bank liefert; wie weit das zurückreicht, hängt von der Bank ab. Wählst du ein Datum, werden ältere Transaktionen nicht importiert.
       sync_start_date_label: 'Transaktionen synchronisieren ab:'
       title: Enable-Banking-Konten einrichten
+    entry:
+      bank_note: "Bank: %{name}"

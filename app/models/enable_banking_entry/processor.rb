@@ -54,6 +54,35 @@ class EnableBankingEntry::Processor
   #   transaction_amount: { amount, currency },
   #   creditor_name, debtor_name, remittance_information, ...
   # }
+  #
+  # Deliberately excludes counterparty IBAN, unlike the importer's dedup key
+  # (see EnableBankingItem::Importer#build_transaction_base_key /
+  # #distinct_ibans_by_base_key). This is a known, narrower gap: two ID-less
+  # transactions that share identical base content but differ only by
+  # counterparty IBAN both survive dedup as distinct raw rows, but still
+  # collapse onto the same external_id here and get merged into one Entry by
+  # the transaction processor. Including the IBAN would close that gap, but
+  # would also change the external_id of every existing content-ID-based
+  # transaction on its next sync for ASPSPs that omit transaction_id/
+  # entry_reference (a real, pre-existing production code path) -- each one
+  # would import as a brand-new duplicate Entry instead of updating in place.
+  # Accepted as a tradeoff: the collision requires an ASPSP that omits both
+  # ID fields *and* two distinct payments with byte-identical date/amount/
+  # currency/direction/creditor/debtor/remittance text, which is rare enough
+  # to prefer stability for the common case.
+  #
+  # The same gap exists, for the same reason, when transaction_id/entry_reference
+  # IS present but reused by the ASPSP across two genuinely distinct payments
+  # (the API docs don't guarantee uniqueness -- see the importer's dedup key
+  # comment): the dedup pass can now correctly keep both as separate raw rows
+  # when their counterparty IBANs differ, but they still compute the SAME
+  # external_id here and get collapsed into one Entry during import, silently
+  # dropping one real transaction. Folding IBAN into this branch's ID would
+  # have the identical every-existing-transaction-becomes-a-duplicate problem
+  # as above, just triggered by a much more common ASPSP behavior (a present
+  # but reused transaction_id, vs. an absent one) -- so it's deliberately
+  # left as the wider, still-open half of this same accepted tradeoff rather
+  # than patched narrowly here.
   def self.compute_external_id(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
     id = data[:transaction_id].presence || data[:entry_reference].presence
@@ -152,6 +181,27 @@ class EnableBankingEntry::Processor
   # @return [String, nil]
   def self.content_external_id(raw_transaction_data)
     compute_external_id(raw_transaction_data.with_indifferent_access.except(:transaction_id, :entry_reference))
+  end
+
+  # PSD2/Enable Banking exposes the counterparty's own account/bank details
+  # on creditor_account/creditor_agent (who we paid) or
+  # debtor_account/debtor_agent (who paid us), depending on direction.
+  # Populated for SEPA transfers/direct debits; typically blank for card
+  # and wallet payments (those aren't account-to-account), so callers must
+  # treat a blank result as "no data available", not an error.
+  def self.counterparty_account_info(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
+    if data[:credit_debit_indicator] == "CRDT"
+      account_key, agent_key, additional_key = :debtor_account, :debtor_agent, :debtor_account_additional_identification
+    else
+      account_key, agent_key, additional_key = :creditor_account, :creditor_agent, :creditor_account_additional_identification
+    end
+
+    {
+      iban: IbanNormalizable.normalize(data.dig(account_key, :iban)),
+      other_id: data.dig(additional_key, :identification).presence,
+      bank_name: data.dig(agent_key, :name).presence
+    }
   end
 
   def self.party_name(data, key)
@@ -539,6 +589,14 @@ class EnableBankingEntry::Processor
 
       parts << data[:note] if data[:note].present?
 
+      bank_name = counterparty_account_info[:bank_name]
+      if bank_name.present?
+        # Stored in the entry's notes, so use the family's locale rather than
+        # whatever locale the sync job happens to run under.
+        note_locale = account&.family&.locale.presence || I18n.default_locale
+        parts << I18n.with_locale(note_locale) { I18n.t("enable_banking_items.entry.bank_note", name: bank_name) }
+      end
+
       parts.join("\n\n").presence
     end
 
@@ -555,7 +613,25 @@ class EnableBankingEntry::Processor
       eb[:pending] = true if pending_payload?
 
       eb.compact!
-      eb.empty? ? nil : { enable_banking: eb }
+
+      result = eb.empty? ? {} : { enable_banking: eb }
+
+      # Top-level, not namespaced under enable_banking: who the transaction was
+      # with is a provider-neutral fact. These keys never reach the jsonb
+      # column: Account::ProviderImportAdapter#import_transaction pops them and
+      # keeps only the last four characters, plus a link when the IBAN is one
+      # of the family's own accounts. Always sent, even as nil; a nil value
+      # never clears what an earlier sync captured, because some ASPSPs drop
+      # the account data on the booked re-delivery of a pending transaction.
+      cp = counterparty_account_info
+      result[:counterparty_iban] = cp[:iban]
+      result[:counterparty_reference] = cp[:iban].blank? ? cp[:other_id] : nil
+
+      result.presence
+    end
+
+    def counterparty_account_info
+      @counterparty_account_info ||= self.class.counterparty_account_info(data)
     end
 
     def amount_value

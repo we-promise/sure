@@ -132,3 +132,5 @@ ru:
       title: Настройте ваши счета Enable Banking
     update:
       success: Конфигурация Enable Banking обновлена.
+    entry:
+      bank_note: "Банк: %{name}"

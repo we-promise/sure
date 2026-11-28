@@ -166,6 +166,8 @@ class EnableBankingAccount < ApplicationRecord
 
     target = current_account
     return if target.nil? || !target.supports_iban?
+    # Runs on every sync, so skip the row lock when there is nothing to fill.
+    return if target.iban.present? || target.locked?(:iban)
 
     # #with_lock reloads target under SELECT FOR UPDATE before the block
     # runs, so a concurrent manual edit that lands between our earlier
@@ -191,6 +193,9 @@ class EnableBankingAccount < ApplicationRecord
     return if iban.blank? || previous_account.iban != iban
 
     previous_account.update_column(:iban, nil)
+    # update_column skips Account's commit callback; transactions linked to
+    # the previous account by this IBAN must be relinked all the same.
+    RematchCounterpartyAccountsJob.perform_later(previous_account.family)
   end
 
   writes_unless_ignored :upsert_enable_banking_snapshot!, :upsert_enable_banking_transactions_snapshot!

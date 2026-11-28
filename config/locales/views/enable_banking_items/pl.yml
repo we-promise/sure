@@ -133,3 +133,5 @@ pl:
       title: Skonfiguruj swoje konta Enable Banking
     update:
       success: Konfiguracja Enable Banking została zaktualizowana.
+    entry:
+      bank_note: "Bank: %{name}"

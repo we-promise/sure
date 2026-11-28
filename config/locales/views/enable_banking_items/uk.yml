@@ -115,3 +115,5 @@ uk:
       title: "Виберіть свій банк"
     update:
       success: "Конфігурацію Enable Banking оновлено."
+    entry:
+      bank_note: "Банк: %{name}"

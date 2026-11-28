@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_27_043917) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -703,7 +703,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
     t.date "date"
     t.uuid "entryable_id"
     t.string "entryable_type"
-    t.boolean "excluded", default: false
+    t.boolean "excluded", default: false, null: false
     t.string "external_id"
     t.string "idempotency_key"
     t.uuid "import_id"
@@ -2907,6 +2907,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
 
   create_table "transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "category_id"
+    t.string "counterparty_iban_last4"
+    t.uuid "counterparty_own_account_id"
+    t.string "counterparty_reference_last4"
     t.datetime "created_at", null: false
     t.string "external_id"
     t.jsonb "extra", default: {}, null: false
@@ -2919,6 +2922,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
     t.datetime "updated_at", null: false
     t.index "(((extra -> 'goal'::text) ->> 'pledge_id'::text))", name: "ix_transactions_extra_goal_pledge_id", unique: true, where: "(((extra -> 'goal'::text) ->> 'pledge_id'::text) IS NOT NULL)"
     t.index ["category_id"], name: "index_transactions_on_category_id"
+    t.index ["counterparty_own_account_id"], name: "index_transactions_on_counterparty_own_account_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
     t.index ["extra"], name: "index_transactions_on_extra", using: :gin
     t.index ["investment_activity_label"], name: "index_transactions_on_investment_activity_label"
@@ -3364,6 +3368,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
   add_foreign_key "trades", "securities"
   add_foreign_key "trading212_accounts", "trading212_items"
   add_foreign_key "trading212_items", "families"
+  add_foreign_key "transactions", "accounts", column: "counterparty_own_account_id", on_delete: :nullify
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
   add_foreign_key "transactions", "transfers"
