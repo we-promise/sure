@@ -20,7 +20,7 @@ en:
     form:
       ticker: Ticker symbol
       date: Vest date
-      qty: Shares received
+      vested_qty: Shares vested
       units_withheld: Shares withheld for taxes
       price: Price per share at vest
       income_category: Income category
@@ -40,6 +40,7 @@ en:
       security_required: A ticker is required for a vest
       tax_amount_required: Each tax line needs an amount
       tax_amount_negative: A tax amount cannot be negative
+      withheld_exceeds_vested: Shares withheld must be fewer than the shares vested
     entries:
       income: "%{ticker} vest income"
       taxes_withheld: Taxes withheld

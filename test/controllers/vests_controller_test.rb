@@ -25,7 +25,7 @@ class VestsControllerTest < ActionDispatch::IntegrationTest
     get new_vest_url(account_id: @account.id)
 
     assert_response :success
-    %w[qty units_withheld price income_category_id].each { |field| assert_select "[name='vest[#{field}]']" }
+    %w[vested_qty units_withheld price income_category_id].each { |field| assert_select "[name='vest[#{field}]']" }
     assert_select "[name='vest[tax_lines][0][name]']"
     assert_select "[name='vest[tax_lines][0][category_id]']"
     assert_select "[name='vest[tax_lines][0][amount]']"
@@ -56,13 +56,13 @@ class VestsControllerTest < ActionDispatch::IntegrationTest
 
     get vest_url(vest)
     assert_response :success
-    assert_select "[name='vest[qty]'][value='70.0']"
+    assert_select "[name='vest[vested_qty]'][value='100.0']"
   end
 
   test "saving the vest screen updates the shares, the income, and the taxes together" do
     vest = create_vest
 
-    patch vest_url(vest), params: { vest: vest_params(qty: 60, units_withheld: 40, tax_amount: 400) }
+    patch vest_url(vest), params: { vest: vest_params(units_withheld: 40, tax_amount: 400) }
 
     vest.reload
     assert_equal 60, vest.trade.qty
@@ -94,9 +94,9 @@ class VestsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
-    def vest_params(qty: 70, units_withheld: 30, tax_amount: 300)
+    def vest_params(units_withheld: 30, tax_amount: 300)
       {
-        manual_ticker: "AAPL", date: Date.current, qty: qty, units_withheld: units_withheld, price: 10,
+        manual_ticker: "AAPL", date: Date.current, vested_qty: 100, units_withheld: units_withheld, price: 10,
         tax_lines: { "0" => { name: "Federal", category_id: @federal.id, amount: tax_amount } }
       }
     end

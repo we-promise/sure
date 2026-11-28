@@ -12,7 +12,7 @@ class Trade::VestFormTest < ActiveSupport::TestCase
   # 100 vested at 10: 70 received, 30 withheld for taxes paid as two lines.
   test "a vest is the shares, the gross pay as income, and each tax line, with no cash left" do
     form = vest_form(
-      qty: 70, units_withheld: 30, price: 10, income_category_id: @pay.id,
+      vested_qty: 100, units_withheld: 30, price: 10, income_category_id: @pay.id,
       tax_lines: [ { name: "Federal income tax", category_id: @federal.id, amount: 220 }, { name: "State income tax", category_id: @state.id, amount: 80 } ]
     )
 
@@ -43,7 +43,7 @@ class Trade::VestFormTest < ActiveSupport::TestCase
   end
 
   test "with no tax lines, the withheld shares' value is one tax line" do
-    form = vest_form(qty: 70, units_withheld: 30, price: 10)
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10)
 
     assert form.save, form.errors.full_messages.to_sentence
 
@@ -53,14 +53,14 @@ class Trade::VestFormTest < ActiveSupport::TestCase
   end
 
   test "with nothing withheld and no tax lines, there is only the income" do
-    form = vest_form(qty: 10, price: 25)
+    form = vest_form(vested_qty: 10, price: 25)
 
     assert form.save, form.errors.full_messages.to_sentence
     assert_equal [ -250 ], form.entry.vest_parts.map(&:amount)
   end
 
   test "taxes that differ from the withheld shares leave the difference as cash" do
-    form = vest_form(qty: 70, units_withheld: 30, price: 10, tax_lines: [ { name: "Federal", amount: 280 } ])
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, tax_lines: [ { name: "Federal", amount: 280 } ])
 
     assert form.save
     assert_equal 20, form.cash_left
@@ -68,25 +68,25 @@ class Trade::VestFormTest < ActiveSupport::TestCase
 
   test "a category from another family is no category" do
     other = families(:empty).categories.create!(name: "Not theirs")
-    form = vest_form(qty: 10, price: 25, income_category_id: other.id)
+    form = vest_form(vested_qty: 10, price: 25, income_category_id: other.id)
 
     assert form.save
     assert_nil form.entry.vest_parts.first.transaction.category
   end
 
   test "reopening a vest fills the form from its entries, and saving replaces them" do
-    form = vest_form(qty: 70, units_withheld: 30, price: 10, income_category_id: @pay.id,
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, income_category_id: @pay.id,
                      tax_lines: [ { name: "Federal", category_id: @federal.id, amount: 300 } ])
     form.save
     vest = form.entry
 
     reopened = Trade::VestForm.for(vest.reload)
-    assert_equal 70, reopened.qty
+    assert_equal 100, reopened.vested_qty
     assert_equal 30, reopened.units_withheld
     assert_equal @pay.id, reopened.income_category_id
     assert_equal [ [ "Federal", @federal.id, 300 ] ], reopened.tax_lines.map { |line| [ line.name, line.category_id, line.amount ] }
 
-    reopened.assign_attributes(qty: 60, units_withheld: 40, tax_lines: [ { name: "Federal", category_id: @federal.id, amount: 400 } ])
+    reopened.assign_attributes(vested_qty: 100, units_withheld: 40, tax_lines: [ { name: "Federal", category_id: @federal.id, amount: 400 } ])
     assert_no_difference -> { @account.entries.count } do
       assert reopened.save, reopened.errors.full_messages.to_sentence
     end
@@ -98,7 +98,7 @@ class Trade::VestFormTest < ActiveSupport::TestCase
   end
 
   test "saving the vest again keeps what the user added to its income and taxes" do
-    form = vest_form(qty: 70, units_withheld: 30, price: 10, tax_lines: [ { name: "Federal", amount: 200 }, { name: "State", amount: 100 } ])
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, tax_lines: [ { name: "Federal", amount: 200 }, { name: "State", amount: 100 } ])
     form.save
     federal = form.entry.vest_parts.find { |part| part.name == "Federal" }
     federal.update!(notes: "paystub 2026-11-15")
@@ -113,18 +113,25 @@ class Trade::VestFormTest < ActiveSupport::TestCase
     assert_equal [ federal.id ], Trade::VestForm.parts_of(form.entry.reload).last.map(&:id), "the State line is gone"
   end
 
+  test "some vested shares must reach the account" do
+    form = vest_form(vested_qty: 30, units_withheld: 30, price: 10)
+
+    assert_not form.save
+    assert_includes form.errors[:base], I18n.t("vests.form.withheld_exceeds_vested")
+  end
+
   test "a tax line needs an amount, and it cannot be negative" do
-    missing = vest_form(qty: 10, price: 25, tax_lines: [ { name: "Federal", amount: "" } ])
+    missing = vest_form(vested_qty: 10, price: 25, tax_lines: [ { name: "Federal", amount: "" } ])
     assert_not missing.save
     assert_includes missing.errors[:base], I18n.t("vests.form.tax_amount_required")
 
-    negative = vest_form(qty: 10, price: 25, tax_lines: [ { name: "Federal", amount: -5 } ])
+    negative = vest_form(vested_qty: 10, price: 25, tax_lines: [ { name: "Federal", amount: -5 } ])
     assert_not negative.save
     assert_includes negative.errors[:base], I18n.t("vests.form.tax_amount_negative")
   end
 
   test "deleting a vest deletes its income and taxes" do
-    form = vest_form(qty: 70, units_withheld: 30, price: 10)
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10)
     form.save
 
     assert_difference -> { @account.entries.count }, -3 do
@@ -133,17 +140,17 @@ class Trade::VestFormTest < ActiveSupport::TestCase
   end
 
   test "a vest needs shares, a price, and an investment account" do
-    assert_not vest_form(qty: 0, price: 10).save
-    assert_not vest_form(qty: 10, price: "").save
+    assert_not vest_form(vested_qty: 0, price: 10).save
+    assert_not vest_form(vested_qty: 10, price: "").save
 
-    checking = Trade::VestForm.new(account: accounts(:depository), date: Date.current, manual_ticker: "AAPL", qty: 10, price: 10)
+    checking = Trade::VestForm.new(account: accounts(:depository), date: Date.current, manual_ticker: "AAPL", vested_qty: 10, price: 10)
     assert_not checking.save
     assert_includes checking.errors[:base], I18n.t("vests.form.investment_account_required")
   end
 
   test "nothing is saved when one of the entries fails" do
     Transaction.any_instance.stubs(:valid?).returns(false)
-    form = vest_form(qty: 70, units_withheld: 30, price: 10)
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10)
 
     assert_no_difference -> { Entry.count } do
       assert_not form.save
@@ -152,7 +159,7 @@ class Trade::VestFormTest < ActiveSupport::TestCase
   end
 
   test "the vest's shares are internal to the returns, its income is money in and its taxes money out" do
-    form = vest_form(qty: 70, units_withheld: 30, price: 10)
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10)
     form.save
     classifier = Portfolio::FlowClassifier.new(scope_account_ids: [ @account.id ])
     income, tax = form.entry.vest_parts.sort_by(&:amount)
@@ -163,7 +170,7 @@ class Trade::VestFormTest < ActiveSupport::TestCase
   end
 
   test "the cash flow counts the gross pay as income and each tax as spending in its category" do
-    form = vest_form(qty: 70, units_withheld: 30, price: 10, income_category_id: @pay.id,
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, income_category_id: @pay.id,
                      tax_lines: [ { name: "Federal", category_id: @federal.id, amount: 220 }, { name: "State", category_id: @state.id, amount: 80 } ])
     form.save
     statement = IncomeStatement.new(@family)
@@ -179,7 +186,7 @@ class Trade::VestFormTest < ActiveSupport::TestCase
 
   test "the lot costs the price the shares vested at" do
     # A ticker the account holds no other shares of, so nothing averages in.
-    form = vest_form(qty: 70, units_withheld: 30, price: 10, manual_ticker: "VESTONLY")
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, manual_ticker: "VESTONLY")
     form.save
 
     holding = Holding::ForwardCalculator.new(@account).calculate

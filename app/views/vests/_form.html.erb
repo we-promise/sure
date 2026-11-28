@@ -26,7 +26,7 @@
       <% end %>
 
       <%= form.date_field :date, label: t("vests.form.date"), required: true %>
-      <%= form.number_field :qty, label: t("vests.form.qty"), placeholder: "70", min: 0.000000000000000001, step: "any", required: true %>
+      <%= form.number_field :vested_qty, label: t("vests.form.vested_qty"), placeholder: "100", min: 0.000000000000000001, step: "any", required: true %>
       <%= form.number_field :units_withheld, label: t("vests.form.units_withheld"), placeholder: "0", min: 0, step: "any" %>
       <%= form.money_field :price, label: t("vests.form.price"), step: "any", precision: 10, required: true, disable_currency: true %>
       <%= form.select :income_category_id, categories, { label: t("vests.form.income_category"), include_blank: t("vests.form.no_category") } %>

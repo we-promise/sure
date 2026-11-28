@@ -24,17 +24,18 @@ class Trade::VestForm
 
   TaxLine = Data.define(:name, :category_id, :amount)
 
-  attr_accessor :account, :date, :ticker, :manual_ticker, :qty, :units_withheld, :price,
+  attr_accessor :account, :date, :ticker, :manual_ticker, :vested_qty, :units_withheld, :price,
                 :income_category_id
   attr_reader :entry, :tax_lines
 
   validates :date, presence: true
-  validates :qty, numericality: { greater_than: 0 }
+  validates :vested_qty, numericality: { greater_than: 0 }
   validates :price, numericality: { greater_than: 0 }
   validates :units_withheld, numericality: { greater_than_or_equal_to: 0 }, allow_blank: true
   validate :account_holds_investments
   validate :security_present, unless: :entry
   validate :tax_lines_have_amounts
+  validate :withheld_within_vested
 
   # The form for a vest already recorded, filled in from its entries.
   def self.for(entry)
@@ -45,7 +46,7 @@ class Trade::VestForm
       entry: entry,
       account: entry.account,
       date: entry.date,
-      qty: trade.qty,
+      vested_qty: trade.qty + trade.units_withheld.to_d,
       units_withheld: trade.units_withheld,
       price: trade.price,
       income_category_id: income&.entryable&.category_id,
@@ -83,12 +84,17 @@ class Trade::VestForm
     account.currency
   end
 
+  # The shares that reached the account: those vested less those withheld.
+  def received_qty
+    vested_qty.to_d - units_withheld.to_d
+  end
+
   def shares_value
-    qty.to_d * price.to_d
+    received_qty * price.to_d
   end
 
   def gross_pay
-    (qty.to_d + units_withheld.to_d) * price.to_d
+    vested_qty.to_d * price.to_d
   end
 
   # The tax lines saved: those with an amount, or, when none has one, the
@@ -120,9 +126,9 @@ class Trade::VestForm
 
     Entry.transaction do
       vest = entry || account.entries.new(entryable: Trade.new(security: security))
-      vest.assign_attributes(name: Trade.build_name("vest", qty, vest.trade.security.ticker), date: date, amount: shares_value, currency: currency)
+      vest.assign_attributes(name: Trade.build_name("vest", received_qty, vest.trade.security.ticker), date: date, amount: shares_value, currency: currency)
       vest.trade.assign_attributes(
-        qty: qty.to_d, price: price.to_d, fee: 0, currency: currency,
+        qty: received_qty, price: price.to_d, fee: 0, currency: currency,
         units_withheld: units_withheld.presence&.to_d, investment_activity_label: Trade::VEST_LABEL
       )
       vest.save!
@@ -184,6 +190,11 @@ class Trade::VestForm
 
     def security_present
       errors.add(:base, I18n.t("vests.form.security_required")) unless security
+    end
+
+    # Some shares must reach the account, or there is no lot to record.
+    def withheld_within_vested
+      errors.add(:base, I18n.t("vests.form.withheld_exceeds_vested")) unless received_qty.positive?
     end
 
     # A tax line needs an amount once anything else is filled in, and a tax

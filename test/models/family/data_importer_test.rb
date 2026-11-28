@@ -4056,7 +4056,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       source = Family.create!(name: "Vest Source", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
       account = source.accounts.create!(name: "Vest Round Trip", accountable: Investment.new, balance: 0, cash_balance: 0, currency: "USD")
       form = Trade::VestForm.new(account: account, date: 2.days.ago.to_date, manual_ticker: "VRT#{SecureRandom.hex(3).upcase}",
-                                 qty: 70, units_withheld: 30, price: 10)
+                                 vested_qty: 100, units_withheld: 30, price: 10)
       assert form.save, form.errors.full_messages.to_sentence
 
       ndjson = nil
