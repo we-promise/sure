@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
 # Signed tokens that split a write into preview and confirmation. A preview
-# issues a token bound to the tool that accepts it (its purpose), the user, the
-# target record and the state the preview showed; the write runs only with a
-# token that still matches. So the preview can't be skipped, and a token can't
-# be replayed on another record, by another user, after the target changed, or
-# after PREVIEW_TOKEN_TTL.
+# issues a token bound to the tool that accepts it (its purpose: the issuing
+# tool's own name unless it previews for another tool), the user, the target
+# record and the state the preview showed. A tool reads only tokens issued for
+# its own name, and the write runs only with a token that still matches. So the
+# preview can't be skipped, and a token can't be replayed on another tool or
+# record, by another user, after the target changed, or after PREVIEW_TOKEN_TTL.
 #
 # Used by apply_rule (see RuleSupport) and by the tools that delete or undo
 # data (delete_transaction, delete_category, unmatch_transfer), which preview
@@ -14,17 +15,17 @@ module Assistant::Function::PreviewToken
   PREVIEW_TOKEN_TTL = 30.minutes
 
   private
-    def issue_preview_token(target, state)
+    def issue_preview_token(target, state, for_tool: name)
       preview_token_verifier.generate(
         { "target_id" => target.id, "user_id" => user.id, "state" => state },
-        purpose: preview_token_purpose, expires_in: PREVIEW_TOKEN_TTL
+        purpose: for_tool, expires_in: PREVIEW_TOKEN_TTL
       )
     end
 
     # The token's payload, or nil when it is missing, forged, expired, or
     # issued to another user, target or tool.
     def read_preview_token(token, target)
-      payload = preview_token_verifier.verified(token.to_s, purpose: preview_token_purpose) if token.present?
+      payload = preview_token_verifier.verified(token.to_s, purpose: name) if token.present?
       return nil unless payload.is_a?(Hash)
       return nil unless payload["target_id"] == target.id && payload["user_id"] == user.id
 
@@ -85,10 +86,6 @@ module Assistant::Function::PreviewToken
 
     def preview_digest(preview)
       Digest::SHA256.hexdigest(preview.to_json)
-    end
-
-    def preview_token_purpose
-      name
     end
 
     def preview_token_verifier

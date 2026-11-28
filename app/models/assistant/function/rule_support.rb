@@ -406,21 +406,16 @@ module Assistant::Function::RuleSupport
     # sample_size, or when every match is in an account the user can't see.
     # A rule matching nothing gets one, so a rule meant for future
     # transactions can be activated. Bound to the rule's definition and match
-    # count (see PreviewToken).
+    # count, and issued for apply_rule, the tool that accepts it (see PreviewToken).
     def preview_token(rule, match_count, shown:)
       return nil unless rule.persisted? && rule.changes.empty?
       return nil if match_count.positive? && shown.zero?
 
-      issue_preview_token(rule, preview_state(rule, match_count))
+      issue_preview_token(rule, preview_state(rule, match_count), for_tool: Assistant::Function::ApplyRule.name)
     end
 
     def preview_state(rule, match_count)
       [ definition_digest(rule), match_count ]
-    end
-
-    # Every rule tool issues tokens for apply_rule, the one that accepts them.
-    def preview_token_purpose
-      "apply_rule"
     end
 
     # What the rule would do, independent of timestamps and display names.
