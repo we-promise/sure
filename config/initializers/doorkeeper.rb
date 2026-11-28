@@ -303,7 +303,7 @@ Doorkeeper.configure do
   # (sureapp://) are unaffected. Plain http stays allowed for loopback hosts
   # (RFC 8252 native clients) and in development.
   force_ssl_in_redirect_uri do |uri|
-    !Rails.env.development? && !uri.host.to_s.downcase.delete_prefix("[").delete_suffix("]").in?(OauthRegistrationController::LOOPBACK_HOSTS)
+    !Rails.env.development? && !uri.host.to_s.downcase.delete_prefix("[").delete_suffix("]").in?(Oauth::ClientMetadataValidator::LOOPBACK_HOSTS)
   end
 
   # Specify what redirect URI's you want to block during Application creation.
