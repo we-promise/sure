@@ -1,4 +1,4 @@
-<%# locals: (statement:, period:, as_of:, rows:, sort:, dir:) %>
+<%# locals: (statement:, period:, as_of:, rows:, sort:, dir:, by:) %>
 
 <%#
   One row per security across every account, sorted by the statement. Every
@@ -10,7 +10,7 @@
 %>
 <%
   sorting = { active_sort: sort.presence || "value", active_dir: dir.presence || "desc" }
-  header = ->(label, key) { holdings_sort_header(label, key, **sorting) }
+  header = ->(label, key) { holdings_sort_header(label, key, **sorting, by: by) }
 %>
 
 <%= render DS::Table.new(

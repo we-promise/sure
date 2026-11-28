@@ -1,6 +1,7 @@
 require "test_helper"
 
 class PortfoliosControllerTest < ActionDispatch::IntegrationTest
+  include PortfoliosHelper
   include SqlQueryCapture
 
   setup do
@@ -33,6 +34,15 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_nil @user.reload.preferences["portfolio_section_order"]
   end
 
+  test "an allocation grouping link is preview-gated like the page" do
+    disable_preview(@user)
+
+    get portfolio_path(by: "kind")
+
+    assert_redirected_to root_path
+    assert_equal I18n.t("preview.not_enabled"), flash[:alert]
+  end
+
   test "a request the gate turns away does not save its period as the user's default" do
     disable_preview(@user)
     @user.update!(default_period: "last_30_days")
@@ -43,14 +53,14 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal "last_30_days", @user.reload.default_period
   end
 
-  # The fixture family holds AAPL in accounts(:investment), so both sections
-  # have something to show.
-  test "renders the hub with its holdings and accounts sections" do
+  # The fixture family holds AAPL in accounts(:investment), so every section
+  # has something to show.
+  test "renders the hub with its holdings, accounts and allocation sections" do
     get portfolio_path
 
     assert_response :success
     assert_select "h1", text: I18n.t("portfolios.show.title")
-    assert_equal %w[holdings accounts], css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_equal %w[holdings accounts allocation], css_select("[data-section-key]").map { |node| node["data-section-key"] }
     assert_select "header + div[role=list]"
   end
 
@@ -130,8 +140,9 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[accounts holdings], @user.preferences["portfolio_section_order"]
     assert_equal({ "holdings" => true }, @user.preferences["portfolio_collapsed_sections"])
 
+    # allocation is not in the saved order, so it is appended after it.
     get portfolio_path
-    assert_equal %w[accounts holdings], css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_equal %w[accounts holdings allocation], css_select("[data-section-key]").map { |node| node["data-section-key"] }
     assert_select "[data-section-key=holdings][data-reports-section-collapsed-value=?]", "true"
   end
 
@@ -465,6 +476,202 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
   end
 
   PORTFOLIO_QUERY_CEILING = 50
+
+  test "stores the allocation section in the saved order and collapsed set" do
+    patch update_preferences_portfolio_path,
+      params: { preferences: { portfolio_section_order: %w[allocation accounts], portfolio_collapsed_sections: { allocation: true } } },
+      as: :json
+
+    assert_response :ok
+    @user.reload
+    assert_equal %w[allocation accounts], @user.preferences["portfolio_section_order"]
+    assert @user.section_collapsed?("portfolio", "allocation")
+  end
+
+  test "allocation donut carries the grouping's segments and switches grouping through links" do
+    statement = InvestmentStatement.new(@family, user: @user)
+
+    get portfolio_path
+    assert_response :success
+
+    mount = css_select("#portfolio-allocation [data-controller='donut-chart']").first
+    segments = JSON.parse(mount["data-donut-chart-segments-value"])
+    assert_equal statement.allocation_by(nil).each_with_index.map { |segment, index| allocation_segment_key(segment, index) },
+                 segments.map { |s| s["id"] }
+    assert_in_delta 100.0, segments.sum { |s| s["percentage"] }, 0.2
+    assert segments.all? { |s| s["color"].match?(/\A#\h{6}\z/) }
+    assert_select "#portfolio-allocation a[aria-current='true'][href=?]", "#{portfolio_path}?by=security"
+
+    get portfolio_path(by: "kind")
+    assert_response :success
+
+    assert_select "#portfolio-allocation a[aria-current='true'][href=?]", "#{portfolio_path}?by=kind"
+    assert_select "#portfolio-allocation a[href=?]", "#{portfolio_path}?by=currency"
+    assert_select "#portfolio-allocation [data-portfolio-allocation='kind'] [data-portfolio-segment='standard']",
+                  text: I18n.t("portfolios.allocation.kinds.standard")
+  end
+
+  # Each control changes its own params and keeps the other's, so sorting the
+  # holdings does not reset the grouping, nor the other way round.
+  test "the grouping picker and the holdings sort links keep each other's state" do
+    get portfolio_path(by: "kind", sort: "name", dir: "asc")
+    assert_response :success
+
+    assert_select "#portfolio-allocation a[href=?]", "#{portfolio_path}?by=currency&dir=asc&sort=name"
+    assert_select "#portfolio-holdings th a[href=?]", "#{portfolio_path}?by=kind&dir=desc&sort=value"
+  end
+
+  test "only whitelisted state carries between the grouping picker and the sort links" do
+    get portfolio_path(by: "drop table", sort: "drop table", dir: "sideways")
+    assert_response :success
+
+    assert_select "#portfolio-allocation a[href=?]", "#{portfolio_path}?by=currency"
+    assert_select "#portfolio-holdings th a[href=?]", "#{portfolio_path}?dir=asc&sort=value"
+    assert_select "#portfolio-allocation a[href*=?], #portfolio-holdings a[href*=?]", "drop", "drop", count: 0
+    assert_select "#portfolio-allocation a[href*=?], #portfolio-holdings a[href*=?]", "sideways", "sideways", count: 0
+  end
+
+  # The picker offers what the statement can group by, and nothing else: no
+  # tag and no look-through.
+  test "the grouping picker lists exactly the statement's groupings" do
+    get portfolio_path
+    assert_response :success
+
+    hrefs = css_select("#portfolio-allocation [role=group] a").map { |a| a["href"] }
+    assert_equal InvestmentStatement::ALLOCATION_GROUPINGS.map { |by| "#{portfolio_path}?by=#{by}" }, hrefs
+    assert_select "#portfolio-allocation a[href*=?]", "look_through", count: 0
+    assert_select "#portfolio-allocation a[href*=?]", "by=tag", count: 0
+  end
+
+  # The controller whitelists against ALLOCATION_GROUPINGS. A 200 alone proves
+  # nothing: a grouping dropped from the constant falls back to the default
+  # with the same 200, so assert the grouping the page actually rendered.
+  test "every grouping renders, and is actually the grouping asked for" do
+    InvestmentStatement::ALLOCATION_GROUPINGS.each do |grouping|
+      get portfolio_path(by: grouping)
+      assert_response :success, "?by=#{grouping} did not render"
+      assert_select %([data-portfolio-allocation="#{grouping}"]), { count: 1 },
+                    "?by=#{grouping} fell back to the default grouping"
+    end
+  end
+
+  test "an unknown grouping falls back to the default rather than erroring" do
+    get portfolio_path(by: "drop table")
+
+    assert_response :success
+    assert_select %([data-portfolio-allocation="security"]), count: 1
+    assert_select "#portfolio-allocation a[href*=?]", "drop", count: 0
+  end
+
+  # The fallback is labelled `security`, so its rows must be the per-security
+  # allocation, not whatever allocation_by's else branch happens to return.
+  # Segments are listed largest first, so the rows are compared in that order.
+  test "the default grouping lists one row per security plus cash" do
+    expected = InvestmentStatement.new(@family, user: @user).allocation
+      .sort_by { |row| -row.amount.amount }
+      .map { |row| row.cash? ? "cash" : row.security.id }
+    assert_operator expected.size, :>=, 2
+
+    get portfolio_path
+    assert_response :success
+
+    rows = css_select("#portfolio-allocation-table [data-portfolio-segment]").map { |node| node["data-portfolio-segment"] }
+    assert_equal expected, rows
+  end
+
+  # Rendered through the controller because the partial stitches the levels
+  # together: it asks for each level's children, and the bottom level only
+  # stays inside its own asset class if the asset class is passed down. Each
+  # level's table is named by the path it was opened along.
+  test "an asset class opens onto its sub-classes, and a sub-class onto its positions" do
+    account = accounts(:investment)
+    share = Security.create!(ticker: "SHR9", name: "A share", asset_class: "equity", asset_sub_class: "stock", offline: true)
+    bond = Security.create!(ticker: "BND9", name: "A bond", asset_class: "fixed_income", offline: true)
+    stray = Security.create!(ticker: "UEQ9", name: "Unfiled share", asset_class: "equity", offline: true)
+    Holding.create!(account: account, security: share, date: Date.current, qty: 1, price: 600, amount: 600, currency: "USD")
+    Holding.create!(account: account, security: bond, date: Date.current, qty: 1, price: 400, amount: 400, currency: "USD")
+    Holding.create!(account: account, security: stray, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD")
+
+    get portfolio_path(by: "asset_class")
+    assert_response :success
+
+    root = "#portfolio-allocation-table"
+    assert_select "#{root} [data-portfolio-segment='equity'] [aria-controls]", count: 1
+    assert_select "#{root}-equity [data-portfolio-child='stock'] [aria-controls]", count: 1
+    assert_select "#{root}-equity #{root}-equity-stock [data-portfolio-grandchild='#{share.id}']", { count: 1, text: /A share/ }
+    # `unclassified` is a sub-class of both equity and fixed income here; each
+    # opens onto its own class's position only.
+    assert_select "#{root}-equity #{root}-equity-unclassified [data-portfolio-grandchild='#{stray.id}']", count: 1
+    assert_select "#{root}-equity [data-portfolio-grandchild='#{bond.id}']", count: 0
+    assert_select "#{root}-fixed_income #{root}-fixed_income-unclassified [data-portfolio-grandchild='#{bond.id}']", { count: 1, text: /A bond/ }
+    assert_select "#{root}-fixed_income [data-portfolio-grandchild='#{stray.id}']", count: 0
+    # A position is the bottom: it has no toggle of its own.
+    assert_select "[data-portfolio-grandchild] [aria-controls]", count: 0
+    # The detail rows start hidden; the toggle reveals them.
+    assert_select "tr[hidden] #{root}-equity", count: 1
+    # Each nested table is named for the row it opens from.
+    assert_select "#{root}-equity > [role=region][aria-label=?]",
+                  I18n.t("portfolios.allocation.nested_label", name: I18n.t("portfolios.allocation.asset_classes.equity"))
+  end
+
+  # A sector is provider free text, so its id can carry spaces. The donut finds
+  # a segment's hover content by `#segment_<id>`, which only works when the id
+  # in the chart data and in the markup is CSS-safe and the same.
+  test "a sector with spaces in its name keeps its donut hover content reachable" do
+    security = Security.create!(ticker: "CDS9", name: "A retailer", sector: "Consumer Discretionary", offline: true)
+    Holding.create!(account: accounts(:investment), security: security, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+
+    get portfolio_path(by: "sector")
+    assert_response :success
+
+    mount = css_select("#portfolio-allocation [data-controller='donut-chart']").first
+    ids = JSON.parse(mount["data-donut-chart-segments-value"]).map { |s| s["id"] }
+    assert ids.none? { |id| id.match?(/\s/) }, "segment ids must be CSS-safe: #{ids.inspect}"
+    ids.each { |id| assert_select "#portfolio-allocation #segment_#{id}", count: 1 }
+  end
+
+  # A sub-class picked as the top grouping is still on the asset-class ladder,
+  # one rung down: it opens onto its securities, from every asset class, since
+  # no asset class above it narrows them.
+  test "a sub-class grouping opens onto its securities across asset classes" do
+    account = accounts(:investment)
+    share = Security.create!(ticker: "SHR9", name: "A share", asset_class: "equity", asset_sub_class: "stock", offline: true)
+    bond = Security.create!(ticker: "BND9", name: "A bond", asset_class: "fixed_income", offline: true)
+    stray = Security.create!(ticker: "UEQ9", name: "Unfiled share", asset_class: "equity", offline: true)
+    Holding.create!(account: account, security: share, date: Date.current, qty: 1, price: 600, amount: 600, currency: "USD")
+    Holding.create!(account: account, security: bond, date: Date.current, qty: 1, price: 400, amount: 400, currency: "USD")
+    Holding.create!(account: account, security: stray, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD")
+
+    get portfolio_path(by: "asset_sub_class")
+    assert_response :success
+
+    root = "#portfolio-allocation-table"
+    assert_select "#{root} [data-portfolio-segment='unclassified'] [aria-controls]", count: 1
+    # `unclassified` gathers the equity and the fixed-income position alike.
+    assert_select "#{root}-unclassified [data-portfolio-child='#{stray.id}']", { count: 1, text: /Unfiled share/ }
+    assert_select "#{root}-unclassified [data-portfolio-child='#{bond.id}']", { count: 1, text: /A bond/ }
+    assert_select "#{root}-unclassified [data-portfolio-child='#{share.id}']", count: 0
+    assert_select "#{root}-stock [data-portfolio-child='#{share.id}']", count: 1
+    # A security is the bottom: no toggle, and no third level.
+    assert_select "[data-portfolio-child] [aria-controls]", count: 0
+    assert_select "[data-portfolio-grandchild]", count: 0
+  end
+
+  # Only the asset-class ladder nests; a flat grouping renders no disclosure.
+  test "a grouping that does not nest renders its rows without a disclosure" do
+    Security.create!(ticker: "CDS9", name: "A retailer", sector: "Technology", offline: true).tap do |security|
+      Holding.create!(account: accounts(:investment), security: security, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+    end
+
+    (InvestmentStatement::ALLOCATION_GROUPINGS - %w[asset_class asset_sub_class]).each do |grouping|
+      get portfolio_path(by: grouping)
+      assert_response :success
+
+      assert_select "#portfolio-allocation [data-portfolio-segment]", { minimum: 1 }, "?by=#{grouping} rendered no rows"
+      assert_select "#portfolio-allocation [data-controller='row-expander']", { count: 0 }, "?by=#{grouping} rendered a toggle"
+      assert_select "#portfolio-allocation tr[hidden]", { count: 0 }, "?by=#{grouping} rendered a detail row"
+    end
+  end
 
   private
     def enable_preview(user)
