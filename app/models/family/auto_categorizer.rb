@@ -48,7 +48,7 @@ class Family::AutoCategorizer
     )
 
     unless result.success?
-      raise Error, "Failed to auto-categorize transactions: #{result.error.message}"
+      raise Error, "Failed to auto-categorize transactions: #{result.error.message}", cause: result.error
     end
 
     shadow_decisions = run_shadow(categories_input)

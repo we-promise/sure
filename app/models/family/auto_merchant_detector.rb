@@ -7,7 +7,7 @@ class Family::AutoMerchantDetector
   end
 
   def auto_detect
-    raise "No LLM provider for auto-detecting merchants" unless llm_provider
+    raise Error, "No LLM provider for auto-detecting merchants" unless llm_provider
 
     if scope.none?
       Rails.logger.info("No transactions to auto-detect merchants for family #{family.id}")
@@ -23,8 +23,7 @@ class Family::AutoMerchantDetector
     )
 
     unless result.success?
-      Rails.logger.error("Failed to auto-detect merchants for family #{family.id}: #{result.error.message}")
-      return 0
+      raise Error, "Failed to auto-detect merchants: #{result.error.message}", cause: result.error
     end
 
     modified_count = 0

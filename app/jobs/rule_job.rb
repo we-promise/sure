@@ -17,11 +17,13 @@ class RuleJob < ApplicationJob
       execution_type: execution_type,
       ignore_attribute_locks: ignore_attribute_locks
     )
-    rule_runs = runner.run
+    runner.run
 
     # The RuleRun records the failure; re-raise so the job is marked failed.
-    # A failing rule above is only recorded, because a retry would re-run all
-    # rules above as well. The applied rule runs last, so its error is last.
-    raise runner.errors.last if rule_runs.last&.status == "failed"
+    # Only the applied rule's own error does: a failing rule above is only
+    # recorded, because a retry would re-run all rules above as well, and an AI
+    # batch that couldn't be queued is recorded on the run by RuleRun#fail_job!.
+    error = runner.error_for(rule)
+    raise error if error
   end
 end

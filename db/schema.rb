@@ -2338,6 +2338,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_27_120000) do
     t.integer "pending_jobs_count", default: 0, null: false
     t.uuid "rule_id", null: false
     t.string "rule_name"
+    t.string "settled_job_ids", default: [], null: false, array: true
     t.string "status", null: false
     t.integer "transactions_modified", default: 0, null: false
     t.integer "transactions_processed", default: 0, null: false

@@ -75,7 +75,37 @@ class Rule::ActionExecutor
     nil
   end
 
+  DEFERRED_AI_JOBS = :rule_action_executor_deferred_ai_jobs
+  UNQUEUED_SETTLE_ATTEMPTS = 3
+
+  # Runs a rule's actions (the block) with their AI jobs queued after the last
+  # one, so no job can finish the run before every AI action has counted its
+  # own. Jobs counted before an action raised are still queued.
+  def self.queue_ai_jobs_after
+    jobs = []
+    previous = ActiveSupport::IsolatedExecutionState[DEFERRED_AI_JOBS]
+    ActiveSupport::IsolatedExecutionState[DEFERRED_AI_JOBS] = jobs
+    yield
+  ensure
+    ActiveSupport::IsolatedExecutionState[DEFERRED_AI_JOBS] = previous
+    jobs.each(&:call)
+  end
+
   protected
+    # Queues one AI job per batch of `scope`, each counted on the run before
+    # any is queued, so a job that finishes at once finds itself counted. The
+    # block queues a batch and returns whether it was queued; a batch that
+    # wasn't counts as a failed job. Inside queue_ai_jobs_after, the jobs are
+    # queued once every action has run; otherwise at once.
+    def queue_ai_jobs(scope, rule_run:, &queue)
+      batches = scope.pluck(:id).each_slice(Provider::LlmConcept.max_items_per_call).to_a
+      rule_run&.await_jobs!(batches.size)
+
+      jobs = batches.map { |ids| -> { queue_ai_job(scope.model.where(id: ids), ids, rule_run:, &queue) } }
+      deferred = ActiveSupport::IsolatedExecutionState[DEFERRED_AI_JOBS]
+      deferred ? deferred.concat(jobs) : jobs.each(&:call)
+    end
+
     # Helper method to track modified count during enrichment
     # The block should return true if the resource was modified, false otherwise
     # If the block doesn't return a value, we'll check previous_changes as a fallback
@@ -106,6 +136,33 @@ class Rule::ActionExecutor
 
   private
     attr_reader :rule
+
+    # Never raises, so one batch can't keep the others from being queued.
+    def queue_ai_job(batch, ids, rule_run:)
+      raise ActiveJob::EnqueueError, "the AI job couldn't be queued" unless yield(batch)
+    rescue StandardError => error
+      Rails.logger.error("[#{self.class.name}] #{error.class}: #{error.message}")
+      fail_unqueued_job(rule_run, error, ids)
+    end
+
+    # Recorded under one job_id, so an attempt that committed before failing
+    # is counted once. A database still out of reach after the last attempt
+    # leaves the batch counted as pending: there is nothing left to record on.
+    def fail_unqueued_job(rule_run, error, ids)
+      return unless rule_run
+
+      job_id = SecureRandom.uuid
+      attempts = 0
+      begin
+        attempts += 1
+        rule_run.fail_job!(job_id:, error:, source: self.class.name, transaction_ids: ids)
+      rescue *RuleAiJob::TRANSIENT_DB
+        retry if attempts < UNQUEUED_SETTLE_ATTEMPTS
+        raise
+      end
+    rescue StandardError => settle_error
+      Rails.error.report(settle_error, handled: true, context: { rule_run_id: rule_run.id, source: self.class.name })
+    end
 
     def family
       rule.family
