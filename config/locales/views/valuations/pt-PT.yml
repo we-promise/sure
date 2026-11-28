@@ -30,6 +30,7 @@ pt-PT:
       entry_updated: Registo atualizado
     errors:
       amount_required: O montante é obrigatório
+      duplicate_date: Esta data já tem uma atualização de saldo. Atualize a página e tente novamente.
     form:
       amount: Montante
       submit: Adicionar atualização de saldo

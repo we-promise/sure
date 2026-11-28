@@ -34,6 +34,7 @@ pl:
       account_updated: Konto zaktualizowane
     errors:
       amount_required: Kwota jest wymagana
+      duplicate_date: Dla tej daty istnieje już aktualizacja salda. Odśwież stronę i spróbuj ponownie.
     form:
       amount: Kwota
       submit: Dodaj aktualizację salda
