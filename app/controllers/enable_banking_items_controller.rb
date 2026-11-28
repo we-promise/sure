@@ -232,10 +232,38 @@ class EnableBankingItemsController < ApplicationController
         fallback_path: settings_providers_path,
         fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again.")
       )
+    rescue EnableBankingItem::BankNotSelectedError => e
+      # Items whose initial authorization never recorded a bank cannot be
+      # reauthorized in place; the providers panel offers "Connect bank" for them.
+      Rails.logger.warn "Enable Banking reauthorize: item #{@enable_banking_item.id} has no bank selected"
+      DebugLogEntry.capture(
+        category: "provider_auth_error",
+        level: "warn",
+        message: "Enable Banking reauthorize attempted without a selected bank",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: @enable_banking_item.family,
+        metadata: { enable_banking_item_id: @enable_banking_item.id, error: e.message }
+      )
+      redirect_to settings_providers_path, alert: t(".bank_required",
+        default: "This connection has no bank selected. Please connect your bank again.")
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "Enable Banking reauthorization error: #{e.message}"
       redirect_to settings_providers_path, alert: t(".reauthorization_failed",
         default: "Failed to re-authorize: %{message}", message: e.message)
+    rescue => e
+      Rails.logger.error "Unexpected error in reauthorize: #{e.class}: #{e.message}"
+      Sentry.capture_exception(e) { |scope| scope.set_tags(enable_banking_item_id: @enable_banking_item.id) } if defined?(Sentry)
+      DebugLogEntry.capture(
+        category: "provider_auth_error",
+        level: "error",
+        message: "Unexpected error in Enable Banking reauthorize",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: @enable_banking_item.family,
+        metadata: { enable_banking_item_id: @enable_banking_item.id, error_class: e.class.name, error: e.message }
+      )
+      redirect_to settings_providers_path, alert: t(".unexpected_error", default: "An unexpected error occurred. Please try again.")
     end
   end
 
