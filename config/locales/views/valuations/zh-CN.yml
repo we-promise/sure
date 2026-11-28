@@ -13,6 +13,9 @@ zh-CN:
       opening_balance: 期初余额
       original_principal: 初始本金
       original_purchase_price: 初始购买价格
+      synced_balance: 同步余额
+      synced_principal: 同步本金
+      synced_value: 同步估值
     confirmation_contents:
       this_will: "这将%{action_verb}账户在"
       to_colon: "改为："

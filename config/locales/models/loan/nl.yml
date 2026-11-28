@@ -5,4 +5,5 @@ nl:
       models:
         loan:
           invalid_rate_change: "Rijen met rentewijzigingen hebben zowel een ingangsdatum als een rentepercentage nodig."
+          invalid_rate_schedule_snapshot: "De rentewijzigingen konden niet worden vergeleken met het opgeslagen renteschema. Laad de lening opnieuw en breng je wijzigingen opnieuw aan."
           rate_change_before_origination: "Een rentewijziging kan niet ingaan vóór de startdatum van de lening."

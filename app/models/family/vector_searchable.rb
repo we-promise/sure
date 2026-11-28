@@ -22,22 +22,7 @@ module Family::VectorSearchable
     end
   end
 
-  def search_documents(query, max_results: 10)
-    return [] unless vector_store_id.present?
-
-    adapter = vector_store_adapter
-    return [] unless adapter
-
-    response = adapter.search(
-      store_id: vector_store_id,
-      query: query,
-      max_results: max_results
-    )
-
-    response.success? ? response.data : []
-  end
-
-  def upload_document(file_content:, filename:, metadata: {})
+  def upload_document(file_content:, filename:, metadata: {}, account_statement: nil)
     adapter = vector_store_adapter
     return nil unless adapter
 
@@ -58,6 +43,7 @@ module Family::VectorSearchable
       file_size: file_content.bytesize,
       provider_file_id: response.data[:file_id],
       status: "ready",
+      account_statement: account_statement,
       metadata: metadata || {}
     )
   end

@@ -1,21 +1,8 @@
 ---
 tr:
   onboardings:
-    goals:
-      ai_insights: AI'ın finanslarımı anlamama yardım etmesini sağlamak
-      budgeting: Finansal planları ve bütçeleri yönetmek
-      cashflow: Nakit akışını ve harcamaları anlamak
-      investments: Yatırımları takip etmek
-      optimization: Hesapları analiz etmek ve optimize etmek
-      partner: Bir partnerle birlikte finansları yönetmek
-      reduce_stress: Finansal stresi veya kaygıyı azaltmak
-      submit: Sonraki
-      subtitle: "%{product_name}'i kişisel finans aracınız olarak kullanmak için bir
-        veya daha fazla hedef seçin."
-      title: Sizi buraya ne getirdi?
-      unified_accounts: Tüm hesaplarımı tek bir yerde görmek
     header:
-      goals: Hedefler
+      tools: Araçlar/YZ
       preferences: Tercihler
       setup: Kurulum
       sign_out: Çıkış yap
@@ -53,6 +40,49 @@ tr:
       submit: Devam et
       subtitle: Önce profilinizi tamamlayalım.
       title: Hesabınızı kuralım
+    tools:
+      title: Kendinizi evinizde hissedin.
+      subtitle: '%{product_name} uygulamasını size göre ayarlamak için birkaç seçim.'
+      starting_point:
+        eyebrow: Başlangıç noktanız
+        title: Şimdiye kadar ne kullandınız?
+        description: Hane finanslarınızı yönetmek için kullandığınız araçları seçin.
+        select: Araçlarınızı seçin
+        other_placeholder: Başka bir araç (isteğe bağlı)
+        hint: Uygun olanların hepsini seçin. Bu, size bir başlangıç noktası önermemize yardımcı olur; içe aktarma uyumluluğu anlamına gelmez.
+        tools:
+          nothing_yet: Henüz hiçbiri
+          other: Diğer
+      ai:
+        eyebrow: Yapay zeka tercihiniz
+        title: '%{product_name} uygulamasını nasıl kullanmak istersiniz?'
+        description: Kontrol sizde. Size uygun olanı seçin.
+        default: Varsayılan
+        modes:
+          none:
+            title: Yapay zeka olmadan
+            description: Finanslarınızı uygulama içi asistan olmadan yönetin.
+          builtin:
+            title: Yerleşik yapay zeka
+            description: Bu sunucunun yapay zeka sağlayıcısını kullanan uygulama içi asistanı açın.
+          external:
+            title: Kendi yapay zeka ajanınızı kullanın
+            description: İzninizle bağlanan kendi asistanınızı kullanın.
+        panels:
+          admin_on: Yönetici olarak bu, aynı zamanda hanenizin kategorizasyon gibi arka planda çalışan yapay zeka özelliklerine verdiği onay anlamına gelir.
+          admin_off: Yönetici olarak bu, aynı zamanda kategorizasyon gibi arka planda çalışan yapay zeka özellikleri için verdiğiniz onayı geri çeker. Bu özellikler yalnızca başka bir yöneticide yapay zeka açıksa açık kalır.
+          none:
+            title: Asistanınız kapalı kalır.
+            body: Bu, hesabınız için uygulama içi asistanı kapatır.
+          builtin:
+            title: Asistanınız açılır.
+            body: Bu, hesabınız için uygulama içi asistanı açar. Hangi yapay zeka sağlayıcısını kullanacağı ve kullanılabilir olup olmadığı yine bu sunucunun yapay zeka ayarlarına bağlıdır.
+            not_configured: Bu sunucuda henüz bir yapay zeka sağlayıcısı ayarlanmamış. Bir yönetici Ayarlar → Kendi Sunucunda Barındırma bölümünden ekleyebilir.
+            unavailable: Hanenizin mevcut yapay zeka ayarları uygulama içi asistanı çalıştırmıyor; bir yönetici bu ayarları değiştirene kadar asistan yanıt vermez.
+          external:
+            title: Hazır olduğunuzda ajanınızı bağlayın.
+            body: Bu, hesabınız için yapay zekayı açık tutar. Haneniz harici sohbet için yapılandırıldığında, konuşmalar aynı sohbet arayüzünde %{product_name} uygulamasının yerleşik asistanı yerine harici asistanınızı kullanır. %{product_name}, verilerinizin ana kaydı olarak içe aktarmaları, kategorizasyonu ve diğer süreçleri yürütmeye devam eder. Ajanınız onunla MCP veya sure-cli üzerinden etkileşime girebilir; bağlamak için Ayarlar → MCP bölümüne gidin. Bu seçim sohbet hizmetini yapılandırmaz ve herhangi bir bağlantı oluşturmaz, değiştirmez veya kaldırmaz.
+      submit: Sonraki
     trial:
       continue_trial: Denemeye devam et
       data_deletion: Veriler daha sonra silinecek

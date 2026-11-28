@@ -34,7 +34,7 @@ pt-BR:
           item_1: Posições com preços e quantidades atuais
           item_2: Custo de aquisição por posição
           item_3: Negociações, dividendos, comissões e depósitos ou saques em dinheiro
-        warning: A atividade histórica é limitada ao período do relatório da consulta Flex
+        warning: A atividade anterior ao período da consulta Flex é importada nas próximas sincronizações, até quatro anos atrás
       status:
         fetching_accounts: Buscando contas na Interactive Brokers...
         no_accounts_found_title: Nenhuma conta encontrada.
@@ -61,7 +61,7 @@ pt-BR:
     sync_status:
       no_accounts: Nenhuma conta da IBKR encontrada ainda
       all_linked:
-        one: 1 conta vinculada
+        one: "%{count} conta vinculada"
         other: "%{count} contas vinculadas"
       partial: "%{linked} vinculadas, %{unlinked} precisam de configuração"
     select_existing_account:
