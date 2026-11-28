@@ -32,6 +32,12 @@ The connection follows Sure’s regular sync schedule. Use the Bank Sync refresh
 
 Disconnecting leaves the imported Sure accounts as manual accounts and removes the link. Reconnecting creates fresh linked accounts. Review any existing Scalable accounts for overlapping balances before connecting.
 
+## Roll back to an older preview
+
+The older preview supports one brokerage and one optional personal Overnight Savings account. Sure can convert a picker connection back to that format when it has one brokerage and one explicitly selected personal Overnight Savings account, with matching account links and no conflicting sync state. The rollback carries over both account IDs and sync checkpoints and keeps the linked Sure accounts. The older preview automatically discovers savings when no ID is configured, so a brokerage-only picker selection cannot be converted safely.
+
+Before attempting a rollback, stop Sure’s web and worker services and back up the current database. If the rollback reports an incompatible connection, keep the current build and run its migrations forward before restarting the services. To return to an older build, restore a pre-upgrade backup with the matching Sure version in a separate instance. Keep the current database for records added since the backup.
+
 ## Securities prices
 
 After connecting a brokerage, open **Settings → Self-hosting → Financial Data Providers** and enable **Scalable Capital** under **Securities Providers**. The same read-only CLI session supplies security search, consolidated quotes, and available daily prices for supported ISINs. The CLI identifies securities by ISIN. For new Scalable holdings, Sure still prefers a verified ticker from other enabled providers and uses the ISIN when Scalable supplies the price feed. Exchange rates use the separately selected exchange rate provider.
