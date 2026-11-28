@@ -38,6 +38,8 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match "recurring_transaction[autopay]", body
     assert_match "recurring_transaction[notes]", body
     assert_match I18n.t("recurring_transactions.form.more_options"), body
+    assert_match I18n.t("recurring_transactions.frequency_presets.once"), body
+    assert_match I18n.t("recurring_transactions.form.once_new_hint"), body
   end
 
   # The amount is the money field every other form uses. On a new bill its
@@ -112,6 +114,18 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_match I18n.t("recurring_transactions.create.amount_too_precise"), response.body
     assert_equal 15.99, @recurring_transaction.reload.amount
+  end
+
+  # Editing the amount is how a rent rise is declared, so the old price has to
+  # stay in history for anything comparing against an earlier date.
+  test "update keeps the previous amount in the bill's price history" do
+    patch recurring_transaction_url(@recurring_transaction),
+      params: { recurring_transaction: { name: @recurring_transaction.display_name, amount: "17.99" } }
+
+    @recurring_transaction.reload
+    assert_equal 17.99, @recurring_transaction.amount
+    assert_equal 15.99, @recurring_transaction.amount_on(6.months.ago.to_date)
+    assert @recurring_transaction.recurring_price_changes.sole.recorded_by_user?
   end
 
   test "the amount steps by the currency, never finer than the column" do
@@ -219,6 +233,33 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to recurring_transactions_url
     assert_equal "https://pay.example.com/bill", @recurring_transaction.reload.payment_url
+  end
+
+  test "update saves and clears a bank reference" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { bank_reference: "VN 4711" } }
+    assert_equal "VN 4711", @recurring_transaction.reload.bank_reference
+
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { bank_reference: "" } }
+    assert_nil @recurring_transaction.reload.bank_reference
+  end
+
+  test "update toggles match by reference only" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { bank_reference: "VN 4711", reference_only: "1" } }
+    assert @recurring_transaction.reload.reference_only?
+
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { bank_reference: "VN 4711", reference_only: "0" } }
+    assert_not @recurring_transaction.reload.reference_only?
+  end
+
+  test "edit offers the bank reference field" do
+    get edit_recurring_transaction_url(@recurring_transaction), headers: { "Turbo-Frame" => "modal" }
+
+    assert_match "recurring_transaction[bank_reference]", response.body
+    assert_match "recurring_transaction[reference_only]", response.body
   end
 
   test "new renders the create dialog in a single modal frame" do
@@ -727,6 +768,99 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
                                first_due_on: (Date.current + 3).iso8601, frequency_preset: "monthly" }
     }
     assert_equal 2, @family.recurring_transactions.where(name: "STREAMCO").count
+  end
+
+  test "creating a bill with frequency once schedules that date and no other" do
+    due = Date.current + 20
+
+    assert_difference "@family.recurring_transactions.count", 1 do
+      post recurring_transactions_url, params: {
+        recurring_transaction: {
+          name: "Car registration",
+          amount: "320",
+          account_id: accounts(:depository).id,
+          first_due_on: due.iso8601,
+          frequency_preset: "once"
+        }
+      }
+    end
+
+    bill = @family.recurring_transactions.find_by!(name: "Car registration")
+    assert bill.one_off?
+    assert_equal due, bill.anchor_date
+    assert_equal due, bill.next_expected_date
+    assert_equal [ due ], bill.recurring_occurrences.reload.pluck(:due_on)
+    assert_empty bill.schedule.occurrences_between(due + 1, due + 400)
+
+    get edit_recurring_transaction_url(bill), headers: { "Turbo-Frame" => "modal" }
+    assert_response :success
+    assert_select "option[selected][value=?]", "once"
+    assert_select "input[name=?][value=?]", "recurring_transaction[frequency_once_on]", due.iso8601
+
+    get bill_url(bill, display: "history"),
+        headers: { "Turbo-Frame" => ActionView::RecordIdentifier.dom_id(bill, :history) }
+    assert_response :success
+    assert_match I18n.t("bills.detail.once_kind_hint"), response.body
+  end
+
+  test "a one-off dated in the past still materializes, and its date can move" do
+    due = Date.current - 3
+
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "School fee", amount: "80", first_due_on: due.iso8601, frequency_preset: "once"
+      }
+    }
+
+    bill = @family.recurring_transactions.find_by!(name: "School fee")
+    assert_equal [ due ], bill.recurring_occurrences.reload.pluck(:due_on)
+
+    moved = Date.current + 12
+    patch recurring_transaction_url(bill), params: {
+      recurring_transaction: { frequency_preset: "once", frequency_once_on: moved.iso8601 }
+    }
+
+    assert_equal [ moved ], bill.recurring_occurrences.reload.pluck(:due_on)
+    assert_equal moved, bill.reload.next_expected_date
+  end
+
+  test "switching a repeating bill to once without a date uses its current due date" do
+    due = Date.current + 5
+    post recurring_transactions_url, params: {
+      recurring_transaction: { name: "Tuition", amount: "900", first_due_on: due.iso8601, frequency_preset: "monthly" }
+    }
+    bill = @family.recurring_transactions.find_by!(name: "Tuition")
+    stale = Date.current - 200
+    bill.update_columns(anchor_date: stale)
+
+    get edit_recurring_transaction_url(bill), headers: { "Turbo-Frame" => "modal" }
+    assert_select "input[name=?][value=?]", "recurring_transaction[frequency_once_on]", due.iso8601
+
+    # What Smart Configure submits: the preset alone, with no date.
+    patch recurring_transaction_url(bill), params: { recurring_transaction: { frequency_preset: "once" } }
+
+    assert_equal due, bill.reload.anchor_date
+    assert_equal [ due ], bill.recurring_occurrences.reload.pluck(:due_on)
+  end
+
+  test "moving a paid one-off is refused and does not add a second occurrence" do
+    due = Date.current + 4
+
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Registration", amount: "80", first_due_on: due.iso8601, frequency_preset: "once"
+      }
+    }
+    bill = @family.recurring_transactions.find_by!(name: "Registration")
+    RecurringTransaction::Allocator.new(bill.recurring_occurrences.find_by!(due_on: due)).mark_paid!
+
+    patch recurring_transaction_url(bill), params: {
+      recurring_transaction: { frequency_preset: "once", frequency_once_on: (due + 30).iso8601 }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal due, bill.reload.anchor_date
+    assert_equal [ due ], bill.recurring_occurrences.reload.pluck(:due_on)
   end
 
   test "marking a bill as an installment plan caps its occurrences and tracks progress" do
