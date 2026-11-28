@@ -500,4 +500,66 @@ class AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_url(@account, tab: "statements")
     assert_equal I18n.t("account_statements.destroy.failure"), flash[:alert]
   end
+
+  test "destroy keeps a statement that an import still carries" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    import = TransactionImport.create!(family: @account.family, account: @account, account_statement: statement)
+
+    assert_no_difference "AccountStatement.count" do
+      delete account_statement_url(statement)
+    end
+
+    assert_redirected_to account_url(@account, tab: "statements")
+    assert_equal I18n.t("account_statements.destroy.failure"), flash[:alert]
+    assert_equal statement.id, import.reload.account_statement_id
+  end
+
+  test "destroy reports failure when the database refuses the delete" do
+    statement = AccountStatement.create_from_upload!(
+      family: @account.family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    # An import committed between the model's check and the DELETE.
+    AccountStatement.any_instance.stubs(:destroy).raises(ActiveRecord::InvalidForeignKey)
+
+    assert_no_difference "AccountStatement.count" do
+      delete account_statement_url(statement)
+    end
+
+    assert_redirected_to account_url(@account, tab: "statements")
+    assert_equal I18n.t("account_statements.destroy.failure"), flash[:alert]
+  end
+
+  test "statement vault lists linked statements by period and the inbox by upload" do
+    february = statement_for(account: @account, month: Date.new(2024, 2, 1), name: "february")
+    april = statement_for(account: @account, month: Date.new(2024, 4, 1), name: "april")
+    march = statement_for(account: @account, month: Date.new(2024, 3, 1), name: "march")
+    older_upload = statement_for(account: nil, month: Date.new(2024, 4, 1), name: "older_upload")
+    newer_upload = statement_for(account: nil, month: Date.new(2024, 2, 1), name: "newer_upload")
+    older_upload.update_columns(created_at: 2.days.ago)
+    newer_upload.update_columns(created_at: 1.day.ago)
+
+    get account_statements_url
+
+    assert_response :success
+    assert_equal [ newer_upload, older_upload, april, march, february ].map { |statement| dom_id(statement) },
+                 css_select("tr[id^='account_statement_']").map { |row| row["id"] }
+  end
+
+  private
+
+    def statement_for(account:, month:, name:)
+      statement = AccountStatement.create_from_upload!(
+        family: @account.family,
+        account: account,
+        file: uploaded_file(filename: "#{name}.csv", content_type: "text/csv", content: "date,amount\n#{month},1\n#{name}\n")
+      )
+      statement.update!(period_start_on: month, period_end_on: month.end_of_month)
+      statement
+    end
 end

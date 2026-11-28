@@ -38,6 +38,23 @@ class TradesTest < ApplicationSystemTestCase
     end
   end
 
+  # The fee's currency picker used to be submitted after the price's and
+  # override it, saving a 305.6 EUR price as 305.6 in the account's currency.
+  test "keeps the currency picked for the price" do
+    open_new_trade_modal
+
+    fill_in "Ticker symbol", with: "AAPL"
+    fill_in "Date", with: Date.current
+    fill_in "Quantity", with: 10
+    fill_in "model[price]", with: 305.6
+    first("select[name='model[currency]']").select("EUR")
+
+    click_button "Add transaction"
+
+    assert_text "Entry created"
+    assert_equal "EUR", @account.entries.order(:created_at).last.currency
+  end
+
   test "can create sell transaction" do
     qty = 10
     aapl = @account.holdings.find { |h| h.security.ticker == "AAPL" }

@@ -1,6 +1,7 @@
 require "test_helper"
 require "ostruct"
 require "openssl"
+require "base64"
 
 class Provider::EnableBankingTest < ActiveSupport::TestCase
   setup do
@@ -454,5 +455,54 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_equal "longest", requested_queries.first[:strategy]
     assert_not requested_queries.first.key?(:date_from)
     assert_not requested_queries.second.key?(:strategy)
+  end
+
+  # Checked with OpenSSL rather than the jwt gem that signs it, so a gem bump
+  # cannot pass by agreeing with itself.
+  test "signs requests with an RS256 JWT for the application" do
+    key = OpenSSL::PKey::RSA.new(2048)
+    provider = Provider::EnableBanking.new(application_id: "test_app_id", client_certificate: key.to_pem)
+    authorization = nil
+    Provider::EnableBanking.expects(:get).with do |_url, options|
+      authorization = options[:headers]["Authorization"]
+      true
+    end.returns(OpenStruct.new(code: 200, body: { aspsps: [] }.to_json))
+
+    freeze_time do
+      provider.get_aspsps(country: "FI")
+
+      header, payload, signature = authorization.delete_prefix("Bearer ").split(".")
+      assert key.public_key.verify("SHA256", Base64.urlsafe_decode64(signature), "#{header}.#{payload}")
+      assert_equal({ "typ" => "JWT", "alg" => "RS256", "kid" => "test_app_id" }, JSON.parse(Base64.urlsafe_decode64(header)))
+      claims = JSON.parse(Base64.urlsafe_decode64(payload))
+      assert_equal({ "iss" => "enablebanking.com", "aud" => "api.enablebanking.com", "iat" => Time.current.to_i, "exp" => Time.current.to_i + 3600 }, claims)
+    end
+  end
+
+  # The settings panel asks for the application's private key. Setups that
+  # pasted the key followed by a certificate must keep working.
+  test "accepts a private key followed by a certificate" do
+    key = OpenSSL::PKey::RSA.new(2048)
+    cert = OpenSSL::X509::Certificate.new
+    cert.version = 2
+    cert.serial = 1
+    cert.subject = cert.issuer = OpenSSL::X509::Name.parse("/CN=test")
+    cert.public_key = key.public_key
+    cert.not_before = Time.current
+    cert.not_after = 1.day.from_now
+    cert.sign(key, OpenSSL::Digest.new("SHA256"))
+
+    provider = Provider::EnableBanking.new(application_id: "test_app_id", client_certificate: key.to_pem + cert.to_pem)
+
+    assert_equal key.to_pem, provider.private_key.to_pem
+  end
+
+  test "an unreadable private key raises an error that names the private key" do
+    error = assert_raises Provider::EnableBanking::EnableBankingError do
+      Provider::EnableBanking.new(application_id: "test_app_id", client_certificate: "not a key")
+    end
+
+    assert_match(/\AInvalid private key: /, error.message)
+    assert_no_match(/certificate/i, error.message)
   end
 end

@@ -32,7 +32,7 @@ class ClearTransferredPositionCostBasesMigrationTest < ActiveSupport::TestCase
   end
 
   # The runtime only invalidates on a transfer IN: both `calculate_avg_cost` and
-  # the calculators drop `qty <= 0` rows before they ever look at the label.
+  # the calculators relieve a transfer out at the running average, like a sell.
   # Shares sent elsewhere leave the remaining ones with the cost they were
   # actually bought at, and that figure is correct.
   test "a position transferred out keeps it" do
