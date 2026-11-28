@@ -6,7 +6,7 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
 
-  helper_method :new_transaction_idempotency_key
+  helper_method :new_transaction_idempotency_key, :offer_create_rule?
 
   def show
     super
@@ -230,6 +230,11 @@ class TransactionsController < ApplicationController
               partial: "transactions/mark_recurring",
               locals: { entry: @entry }
             ) if can_edit_entry? && !@entry.split_child?),
+            (turbo_stream.replace(
+              dom_id(@entry, :create_rule),
+              partial: "transactions/create_rule",
+              locals: { entry: @entry }
+            ) if offer_create_rule?),
             turbo_stream.replace(
               dom_id(@entry, :category_provenance),
               partial: "transactions/category_provenance",
@@ -627,6 +632,11 @@ class TransactionsController < ApplicationController
       @mark_recurring_disabled = blocked.present?
       @mark_recurring_title = blocked
       @mark_recurring_button_class = blocked ? "disabled:opacity-50" : nil
+    end
+
+    # Guests cannot open the rule form, so they get no link to it.
+    def offer_create_rule?
+      can_edit_entry? && !@entry.split_child? && !Current.user.guest?
     end
 
     def accessible_transactions
