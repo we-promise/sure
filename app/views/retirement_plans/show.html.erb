@@ -23,4 +23,41 @@
       currency: Current.user.family.currency, milestones: @milestones
     ) %>
   <% end %>
+
+  <%= render DS::Card.new do %>
+    <div class="flex items-center justify-between gap-2 mb-3">
+      <h2 class="text-sm font-medium text-primary"><%= t(".streams") %></h2>
+      <%= render DS::Link.new(text: t(".add_stream"), variant: "secondary", size: "sm", icon: "plus",
+                              href: new_retirement_plan_stream_path, frame: :modal) %>
+    </div>
+
+    <% if @streams.any? %>
+      <p class="text-sm text-secondary mb-3"><%= t(".streams_explainer") %></p>
+      <%= render DS::Table.new(rows: @streams, id: "retirement-plan-streams", inset: true, label: t(".streams"),
+                               row_opts: ->(stream) { { data: { stream_id: stream.id } } }) do |table| %>
+        <% table.with_column(t(".columns.name"), row_header: true) { |stream| stream.name } %>
+        <% table.with_column(t(".columns.kind")) { |stream| t(".stream_kinds.#{stream.kind}") } %>
+        <% table.with_column(t(".columns.years")) do |stream| %>
+          <% if stream.kind == "one_off" %>
+            <%= t(".stream_once", year: stream.start_year || t(".now")) %>
+          <% else %>
+            <%= t(".stream_years", from: stream.start_year || t(".now"), to: stream.end_year || t(".end_age")) %>
+          <% end %>
+          <% unless stream.indexed %><span class="text-xs text-subdued"><%= t(".fixed") %></span><% end %>
+        <% end %>
+        <% table.with_column(t(".columns.amount"), numeric: true, class: "privacy-sensitive") { |stream| Money.new(stream.annual_amount, stream.currency).format(precision: 0) } %>
+        <% table.with_column("", align: :right) do |stream| %>
+          <%= render DS::Menu.new do |menu| %>
+            <% menu.with_item(variant: "link", text: t(".edit"), icon: "pencil-line",
+                              href: edit_retirement_plan_stream_path(stream), data: { turbo_frame: :modal }) %>
+            <% menu.with_item(variant: "button", text: t(".delete"), icon: "trash-2",
+                              href: retirement_plan_stream_path(stream), method: :delete, destructive: true,
+                              confirm: t(".confirm_delete", name: stream.name)) %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t(".no_streams") %></p>
+    <% end %>
+  <% end %>
 </div>

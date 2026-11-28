@@ -5,6 +5,7 @@ class RetirementPlansController < ApplicationController
   # One reference date for every figure on the page.
   def show
     @as_of = Date.current
+    @streams = @retirement_plan.persisted? ? @retirement_plan.streams.order(:kind, :start_year, :name) : RetirementPlan::Stream.none
 
     if @retirement_plan.mode == "fire"
       @solution = @retirement_plan.solve(as_of: @as_of)
