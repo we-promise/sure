@@ -213,24 +213,13 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     # The processor logs simplefin_account.id per lot, so the stub has to
     # answer it as well as account_provider.
     processor.stubs(:simplefin_account).returns(
-      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, currency: "USD")
     )
     processor.send(:simplefin_account).stubs(:with_lock).yields
 
     # A plain recorder rather than a mocha argument matcher, so the assertions
     # read against the real keyword arguments.
-    recorder = Class.new do
-      attr_reader :calls
-
-      def initialize = @calls = []
-
-      def import_holding(**kwargs)
-        @calls << kwargs
-        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
-              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
-                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
-      end
-    end.new
+    recorder = recording_import_adapter
 
     processor.stubs(:import_adapter).returns(recorder)
 
@@ -262,7 +251,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     processor.stubs(:resolve_security).returns(security)
     processor.stubs(:institution_reports_total_basis?).returns(false)
     processor.stubs(:simplefin_account).returns(
-      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, currency: "USD")
     )
     processor.send(:simplefin_account).stubs(:with_lock).yields
 
@@ -301,22 +290,11 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     processor.stubs(:resolve_security).returns(security)
     processor.stubs(:institution_reports_total_basis?).returns(false)
     processor.stubs(:simplefin_account).returns(
-      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, currency: "USD")
     )
     processor.send(:simplefin_account).stubs(:with_lock).yields
 
-    recorder = Class.new do
-      attr_reader :calls
-
-      def initialize = @calls = []
-
-      def import_holding(**kwargs)
-        @calls << kwargs
-        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
-              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
-                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
-      end
-    end.new
+    recorder = recording_import_adapter
 
     processor.stubs(:import_adapter).returns(recorder)
 
@@ -332,4 +310,194 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     # but the basis is unknown for the position as a whole, NOT $100/share
     assert_nil position[:cost_basis]
   end
+
+  test "an investment holding uses the account currency when the provider reports a ticker as currency (#2856)" do
+    # Wealthfront reports the Grayscale Ethereum Mini Trust ETF with
+    # "currency" => "ETH". Storing that as the holding currency made
+    # Holding#amount_money raise Money::Currency::UnknownCurrencyError.
+    security = securities(:aapl)
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+
+    processor.stubs(:holdings_data).returns([
+      {
+        "id" => "eth-etf",
+        "symbol" => "ETH",
+        "description" => "Grayscale Ethereum Mini Trust ETF",
+        "shares" => "10",
+        "market_value" => "230.57",
+        "currency" => "ETH"
+      }
+    ])
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:resolve_security).returns(security)
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Wealthfront", account_provider: nil, currency: "USD")
+    )
+    processor.send(:simplefin_account).stubs(:with_lock).yields
+
+    recorder = recording_import_adapter
+
+    processor.stubs(:import_adapter).returns(recorder)
+
+    processor.process
+
+    assert_equal 1, recorder.calls.size
+    assert_equal "USD", recorder.calls.first[:currency]
+  end
+
+  test "a holding in a real ISO currency keeps that currency (#2856)" do
+    security = securities(:aapl)
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+
+    processor.stubs(:holdings_data).returns([
+      {
+        "id" => "eur-fund",
+        "symbol" => "VWCE",
+        "description" => "Vanguard FTSE All-World",
+        "shares" => "10",
+        "market_value" => "1200.00",
+        "currency" => "eur"
+      }
+    ])
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:resolve_security).returns(security)
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Wealthfront", account_provider: nil, currency: "USD")
+    )
+    processor.send(:simplefin_account).stubs(:with_lock).yields
+
+    recorder = recording_import_adapter
+
+    processor.stubs(:import_adapter).returns(recorder)
+
+    processor.process
+
+    assert_equal 1, recorder.calls.size
+    assert_equal "EUR", recorder.calls.first[:currency]
+  end
+
+  test "a holding in a supported non-ISO currency keeps that currency" do
+    security = securities(:aapl)
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+
+    processor.stubs(:holdings_data).returns([
+      {
+        "id" => "cnh-fund",
+        "symbol" => "VWCE",
+        "description" => "Vanguard FTSE All-World",
+        "shares" => "10",
+        "market_value" => "1200.00",
+        "currency" => "CNH"
+      }
+    ])
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:resolve_security).returns(security)
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Wealthfront", account_provider: nil, currency: "USD")
+    )
+    processor.send(:simplefin_account).stubs(:with_lock).yields
+
+    recorder = recording_import_adapter
+
+    processor.stubs(:import_adapter).returns(recorder)
+
+    processor.process
+
+    assert_equal 1, recorder.calls.size
+    assert_equal "CNH", recorder.calls.first[:currency]
+  end
+
+  test "an investment account keeps an ETF ticker out of the crypto namespace (#2856)" do
+    assert_resolves(account: accounts(:investment), symbol: "ETH",
+                    description: "Grayscale Ethereum Mini Trust ETF", expected: "ETH")
+  end
+
+  test "a crypto account still namespaces its tickers as crypto (#2856)" do
+    assert_resolves(account: accounts(:crypto), symbol: "ETH", description: "Ethereum",
+                    expected: "CRYPTO:ETH")
+  end
+
+  test "an investment account inferred for a crypto exchange still namespaces crypto (#2856)" do
+    assert_resolves(account: accounts(:investment), symbol: "BTC", description: "Bitcoin",
+                    expected: "CRYPTO:BTC")
+  end
+
+  test "a crypto-named investment account namespaces tickers outside the known list" do
+    assert_resolves(account: accounts(:investment), symbol: "ADA", description: "Cardano",
+                    simplefin_name: "Crypto Portfolio", expected: "CRYPTO:ADA")
+  end
+
+  test "a crypto-named investment account keeps an ETF ticker out of the crypto namespace" do
+    assert_resolves(account: accounts(:investment), symbol: "ETH",
+                    description: "Grayscale Ethereum Mini Trust ETF",
+                    simplefin_name: "Crypto Portfolio", expected: "ETH")
+  end
+
+  test "a fund description that mentions crypto stays an equity" do
+    assert_resolves(account: accounts(:investment), symbol: "ETH",
+                    description: "Grayscale Ethereum Mini Trust ETF (Crypto)", expected: "ETH")
+  end
+
+  test "an investment ETF ticker never attaches to a crypto security" do
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:simplefin_account).returns(stub(name: "Wealthfront"))
+
+    crypto_security = Security.new(ticker: "ETHUSD", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+    Security::Resolver.stubs(:new).returns(stub(resolve: crypto_security))
+
+    resolved = processor.send(:resolve_security, "ETH", "Grayscale Ethereum Mini Trust ETF")
+
+    assert_equal "ETH", resolved.ticker
+    assert resolved.offline?
+    refute resolved.crypto?
+  end
+
+  test "a genuine crypto asset keeps the provider's crypto security" do
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:simplefin_account).returns(stub(name: "Wealthfront"))
+
+    crypto_security = Security.new(ticker: "ADAUSD", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+    Security::Resolver.stubs(:new).returns(stub(resolve: crypto_security))
+
+    resolved = processor.send(:resolve_security, "ADA", "Cardano")
+
+    assert_equal crypto_security, resolved
+    assert resolved.crypto?
+  end
+
+  private
+
+    def recording_import_adapter
+      Class.new do
+        attr_reader :calls
+
+        def initialize = @calls = []
+
+        def import_holding(**kwargs)
+          @calls << kwargs
+          Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
+                .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
+                     kwargs[:currency], kwargs[:date], kwargs[:external_id])
+        end
+      end.new
+    end
+
+    def assert_resolves(account:, symbol:, description:, expected:, simplefin_name: "Wealthfront")
+      processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+      processor.stubs(:account).returns(account)
+      processor.stubs(:simplefin_account).returns(stub(name: simplefin_name))
+
+      resolved_symbol = nil
+      Security::Resolver.stubs(:new).with { |value| resolved_symbol = value; true }
+        .returns(stub(resolve: securities(:aapl)))
+
+      processor.send(:resolve_security, symbol, description)
+
+      assert_equal expected, resolved_symbol
+    end
 end
