@@ -23,3 +23,12 @@ de:
         theme_title: Design
         transactions_subtitle: Lege fest, wie Transaktionen angezeigt werden
         transactions_title: Transaktionen
+        account_lists_title: Kontolisten
+        account_lists_subtitle: Lege fest, wie Konten in der Seitenleiste und im Dashboard gruppiert werden
+        account_grouping_primary_sidebar_label: Erste Ebene in der Seitenleiste
+        account_grouping_primary_dashboard_label: Erste Ebene im Dashboard
+        account_grouping_sidebar_label: Zweite Ebene in der Seitenleiste
+        account_grouping_dashboard_label: Zweite Ebene im Dashboard
+        account_grouping_none: Keine
+        custom_account_group_label_label: Name des Felds „Eigene Gruppe“
+        account_lists_hint: Vermögen und Schulden bleiben immer getrennt. Darin werden Konten nach dem ersten Feld gruppiert und optional nach dem zweiten weiter aufgeteilt; die Summen gelten über Kontotypen hinweg. Konten ohne Wert stehen unter „Ohne Angabe“. Die eigene Gruppe ist ein Freitextfeld in den Kontodetails.

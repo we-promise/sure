@@ -1,0 +1,22 @@
+---
+en:
+  account_grouping:
+    none: Not set
+    dimensions:
+      account_type: Account type
+      subtype: Subtype
+      institution: Institution
+      connection: Connection
+      owner: Owner
+      ownership: Mine or shared with me
+      currency: Currency
+      tax_treatment: Tax treatment
+      custom_group: Custom group
+    connections:
+      manual: Manual
+      plaid: Plaid
+      simplefin: SimpleFIN
+      enable_banking: Enable Banking
+    ownership:
+      mine: Mine
+      shared_with_me: Shared with me

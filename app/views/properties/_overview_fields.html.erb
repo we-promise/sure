@@ -37,6 +37,7 @@
     <p class="text-xs text-secondary"><%= t(".cost_tag_hint") %></p>
   <% end %>
 
+  <%= render "accounts/custom_group_field", form: form %>
   <%= form.text_area :notes,
                   label: t(".notes_label"),
                   placeholder: t(".notes_placeholder"),
