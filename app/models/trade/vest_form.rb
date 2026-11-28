@@ -133,6 +133,9 @@ class Trade::VestForm
     return false unless valid?
 
     Entry.transaction do
+      # A tax-only save doesn't update the vest row, so lock it: a second save
+      # of the same vest waits here and then reads the first save's taxes.
+      entry&.lock!
       vest = entry || account.entries.new(entryable: Trade.new(security: security))
       vest.assign_attributes(name: Trade.build_name("vest", received_qty, vest.trade.security.ticker), date: date, amount: shares_value, currency: currency)
       vest.trade.assign_attributes(
@@ -162,6 +165,7 @@ class Trade::VestForm
     end
 
     account.sync_later
+    EntryScheduledSyncJob.schedule_for(@entry)
     true
   rescue ActiveRecord::RecordInvalid => e
     errors.add(:base, e.record.errors.full_messages.to_sentence)

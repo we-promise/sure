@@ -352,6 +352,24 @@ class Trade::VestFormTest < ActiveSupport::TestCase
     assert_equal 80, expenses.find { |ct| ct.category.id == @state.id }.total
   end
 
+  test "saving schedules the fallback sync for the vest's date" do
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, date: 1.week.from_now.to_date)
+    EntryScheduledSyncJob.expects(:schedule_for).with { |entry| entry.trade&.vest? }
+
+    assert form.save, form.errors.full_messages.to_sentence
+  end
+
+  test "saving an existing vest locks it first, so overlapping saves of its taxes queue up" do
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10)
+    form.save
+    vest = form.entry.reload
+
+    reopened = Trade::VestForm.for(vest)
+    vest.expects(:lock!).returns(vest)
+
+    assert reopened.save, reopened.errors.full_messages.to_sentence
+  end
+
   test "the lot costs the price the shares vested at" do
     # A ticker the account holds no other shares of, so nothing averages in.
     form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, manual_ticker: "VESTONLY")
