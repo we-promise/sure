@@ -24,6 +24,9 @@ class Entry < ApplicationRecord
 
   monetize :amount
 
+  # A blank form value casts to nil, which the NOT NULL column refuses.
+  normalizes :excluded, with: ->(excluded) { excluded || false }, apply_to_nil: true
+
   belongs_to :account
   belongs_to :transfer, optional: true
   belongs_to :import, optional: true
@@ -512,7 +515,10 @@ class Entry < ApplicationRecord
     @earliest_saved_date = nil
     account.sync_later(window_start_date: sync_start_date)
 
-    EntryScheduledSyncJob.schedule_for(self) if !destroyed? && scheduled?
+    # No scheduled? gate here: schedule_for judges "future" in the family's
+    # time zone, and the app-zone check would skip entries that are still
+    # tomorrow for the family.
+    EntryScheduledSyncJob.schedule_for(self) unless destroyed?
   end
 
   # Whether the last save changed anything a sync depends on. Call it right

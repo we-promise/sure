@@ -183,6 +183,16 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to @investment
   end
 
+  # The price and the fee each had a model[currency] picker, and the fee's,
+  # submitted last, overrode the currency picked for the price.
+  test "a buy form submits one currency, the price's, which the fee follows" do
+    get new_trade_url(account_id: @entry.account_id, type: "buy")
+
+    assert_response :success
+    assert_select "select[name='model[currency]']", count: 1
+    assert_select "[data-money-field-currency-source-value] input[name='model[fee]']"
+  end
+
   test "the transfer account picker only offers accounts the member may write to" do
     sign_in_as_member_with_writable_investment
 

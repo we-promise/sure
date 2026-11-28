@@ -1787,20 +1787,6 @@ end
                  "split children should not be loaded just to compute split_parent"
   end
 
-  test "excluded is false, not null, when the stored flag is null" do
-    entry = create_transaction(account: @account, amount: 20, name: "Null exclusion")
-    entry.update_column(:excluded, nil)
-
-    get api_v1_transaction_url(entry.transaction), headers: api_headers(@api_key)
-    assert_response :success
-    assert_equal false, JSON.parse(response.body)["excluded"]
-
-    get api_v1_transactions_url, params: { per_page: 100 }, headers: api_headers(@api_key)
-    assert_response :success
-    row = JSON.parse(response.body)["transactions"].find { |t| t["id"] == entry.transaction.id }
-    assert_equal false, row["excluded"]
-  end
-
   test "show exposes the activity label and the safe provider fields, not the raw extra" do
     security = Security.create!(ticker: "WHT#{SecureRandom.hex(2).upcase}", name: "Withholding Security", country_code: "US")
     entry = create_transaction(

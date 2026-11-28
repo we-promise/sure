@@ -517,6 +517,9 @@ We recommend using one of the following images, but you can pin your app to what
 - `ghcr.io/we-promise/sure:latest` (latest `alpha`)
 - `ghcr.io/we-promise/sure:stable` (latest release)
 
+Release candidates require an explicit version tag such as `2026.11.30-rc.1`;
+they do not update either `latest` or `stable`.
+
 By default, your app _will NOT_ automatically update. Take a backup first (see below), then run:
 
 ```bash
