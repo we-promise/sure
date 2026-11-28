@@ -7,6 +7,8 @@
 class Assistant::Function::GetTransferMatchCandidates < Assistant::Function
   include Assistant::Function::TransferMatchSupport
 
+  annotate :read_only
+
   class << self
     def name
       "get_transfer_match_candidates"

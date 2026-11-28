@@ -10,6 +10,8 @@
 class Assistant::Function::UpdateTransfer < Assistant::Function
   include Assistant::Function::TransferSupport
 
+  annotate :destructive, idempotent: true
+
   class << self
     def name
       "update_transfer"

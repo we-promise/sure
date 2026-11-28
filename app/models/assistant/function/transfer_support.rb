@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
-# Shared lookups for the transfer tools (unmatch_transfer, update_transfer):
-# a transfer is reachable only when the user can write to both of its accounts.
+# Shared lookups for the tools that write transfers. A transfer is reachable
+# (unmatch_transfer, update_transfer) only when the user can write to both of
+# its accounts; delete_transaction needs only the leg it deletes. Neither
+# delete_transaction nor unmatch_transfer deletes fees the user cannot write.
 module Assistant::Function::TransferSupport
   private
     def writable_transactions
@@ -36,6 +38,18 @@ module Assistant::Function::TransferSupport
 
       ref = params["transfer_id"].presence || params["transaction_id"]
       error("not_found", "No transfer for '#{ref}' between accounts you can write to.")
+    end
+
+    # Whether unlinking or deleting the transfer would delete a fee on an
+    # account the user cannot write. Transfer::Creator puts fees only on the
+    # legs' accounts, but every fee goes with the transfer, so each is checked
+    # (as TransfersController checks them before an unlink).
+    def unwritable_fees?(transfer)
+      transfer.present? && transfer.fee_transactions.where.not(id: writable_transactions.select(:id)).exists?
+    end
+
+    def unwritable_fee_error
+      error("transfer_spans_unwritable_account", "The transfer has fee transactions in an account you cannot write to, and they would be deleted with it. Nothing was changed. Someone who can write to every account involved has to do it.")
     end
 
     def error(key, message)

@@ -7,6 +7,8 @@
 class Assistant::Function::ApplyRule < Assistant::Function
   include Assistant::Function::RuleSupport
 
+  annotate :destructive
+
   class << self
     def name
       "apply_rule"
@@ -20,7 +22,7 @@ class Assistant::Function::ApplyRule < Assistant::Function
 
         preview_token must come from the latest preview_rule, create_rule or
         update_rule for this rule (get_rules does not issue one). It expires
-        after #{Assistant::Function::RuleSupport::PREVIEW_TOKEN_TTL.inspect}. If the rule or its matches have
+        after #{Assistant::Function::PreviewToken::PREVIEW_TOKEN_TTL.inspect}. If the rule or its matches have
         changed since, nothing is applied and a fresh preview, with a new
         token, is returned.
 
@@ -81,7 +83,7 @@ class Assistant::Function::ApplyRule < Assistant::Function
       # Not affected_resource_count, which reads a timeout as 0: a rule
       # previewed with no matches would then compare equal and be activated.
       current = rule.matching_scope.count
-      unchanged = definition_digest(rule) == token["definition"] && current == token["match_count"]
+      unchanged = token["state"] == preview_state(rule, current)
       rule.update!(active: true) if unchanged
     end
 

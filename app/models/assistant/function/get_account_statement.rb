@@ -3,6 +3,8 @@
 class Assistant::Function::GetAccountStatement < Assistant::Function
   include Assistant::Function::StatementVaultSupport
 
+  annotate :read_only
+
   class << self
     def name
       "get_account_statement"

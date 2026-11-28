@@ -136,7 +136,7 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert_equal "preview_required",
       Assistant::Function::ApplyRule.new(other_user).call("rule_id" => @rule.id, "preview_token" => token)[:error]
 
-    travel Assistant::Function::RuleSupport::PREVIEW_TOKEN_TTL + 1.minute do
+    travel Assistant::Function::PreviewToken::PREVIEW_TOKEN_TTL + 1.minute do
       assert_equal "preview_required", @fn.call("rule_id" => @rule.id, "preview_token" => token)[:error]
     end
   end

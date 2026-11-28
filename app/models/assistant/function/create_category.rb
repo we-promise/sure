@@ -1,4 +1,6 @@
 class Assistant::Function::CreateCategory < Assistant::Function
+  annotate :additive
+
   class << self
     def name
       "create_category"

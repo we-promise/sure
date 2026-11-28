@@ -1,4 +1,6 @@
 class Assistant::Function::GetValuations < Assistant::Function
+  annotate :read_only
+
   class << self
     def default_page_size
       50

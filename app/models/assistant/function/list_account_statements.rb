@@ -3,6 +3,8 @@
 class Assistant::Function::ListAccountStatements < Assistant::Function
   include Assistant::Function::StatementVaultSupport
 
+  annotate :read_only
+
   DEFAULT_LIMIT = 25
   MAX_LIMIT = 100
 

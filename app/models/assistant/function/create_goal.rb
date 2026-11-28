@@ -1,4 +1,6 @@
 class Assistant::Function::CreateGoal < Assistant::Function
+  annotate :additive
+
   class << self
     def name
       "create_goal"

@@ -8,6 +8,8 @@
 # happens to the current balance: a later balance update (reconciliation)
 # fixes it, otherwise it moves by the same amount as the opening balance.
 class Assistant::Function::SetOpeningBalance < Assistant::Function
+  annotate :destructive, idempotent: true
+
   class << self
     def name
       "set_opening_balance"

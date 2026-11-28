@@ -3,6 +3,8 @@
 class Assistant::Function::GetStatementCoverage < Assistant::Function
   include Assistant::Function::StatementVaultSupport
 
+  annotate :read_only
+
   class << self
     def name
       "get_statement_coverage"

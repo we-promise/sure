@@ -1,4 +1,6 @@
 class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
+  annotate :read_only
+
   MAX_PAYEES = 50
   DEFAULT_LOOKBACK_DAYS = 180
   # The whole window is materialized to normalize and group labels, so an

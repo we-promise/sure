@@ -15,8 +15,24 @@
 # consistent with CreateTransaction. A read-only shared account, a cross-family
 # id, or an unknown id all resolve to a safe `not_found` without leaking
 # whether the record exists.
+#
+# Preview first: a call without preview_token deletes nothing and returns what
+# would be removed plus a token; only a call with that token deletes (see
+# PreviewToken).
+#
+# Deleting a transfer leg also deletes the transfer's fee transactions, so it
+# is refused when a fee sits on an account the user cannot write, as the web's
+# unlink is. The other leg stays (as a standard transaction); the preview names
+# it only when the user can open its account.
 
 class Assistant::Function::DeleteTransaction < Assistant::Function
+  include Assistant::Function::TransferSupport
+  include Assistant::Function::PreviewToken
+
+  HIDDEN_ACCOUNT = "another account"
+
+  annotate :destructive, idempotent: true
+
   class << self
     # The tool's stable name; this is the MCP function identifier callers use.
     def name
@@ -30,6 +46,13 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
         and irreversible: the transaction and its ledger entry are removed and
         the account balance is recalculated.
 
+        Always two calls. First call it without preview_token: nothing is
+        deleted, and it returns the transaction it would delete and a
+        preview_token. Show that to the user, and only once they confirm call
+        it again with the same id and that preview_token. The token expires
+        after #{Assistant::Function::PreviewToken::PREVIEW_TOKEN_TTL.inspect} and is refused if the transaction
+        changed since the preview.
+
         Use get_transactions first to find the transaction id (the same id
         create_transaction returns). Optionally pass account_id as a guard so a
         mismatched id cannot delete the wrong record.
@@ -38,6 +61,8 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
         transaction. It will not delete a split child transaction individually —
         delete the split parent instead. It will not delete a split while a part
         of it is linked as a transfer; that transfer must be removed first.
+        Deleting a transfer leg also deletes the transfer's fee transactions, so
+        it is refused when a fee is in an account the user cannot write.
       INSTRUCTIONS
     end
   end
@@ -60,80 +85,98 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
         account_id: {
           type: "string",
           description: "Optional guard. If provided, the transaction must also belong to this writable account; a mismatch returns not_found."
+        },
+        preview_token: {
+          type: "string",
+          description: "preview_token from the preview call for this transaction. Omit it to preview; nothing is deleted without it."
         }
       }
     )
   end
 
-  # Tool entry point. Resolves a writable transaction, snapshots it, destroys
-  # its root ledger entry (cascading to the transaction), enqueues the
-  # post-delete account sync (best-effort), and returns a result hash. Returns
-  # { success: true, deleted: true, transaction: } on success (with an optional
-  # :warning if the sync could not be enqueued), or an error hash for
-  # not_found / split_child / split_part_transferred / delete_aborted.
+  # Tool entry point. Resolves a writable transaction and, without a valid
+  # preview_token, returns the preview instead of deleting. With one, destroys
+  # its root ledger entry (cascading to the transaction, a split's children and
+  # a transfer with its fees), enqueues the post-delete account sync
+  # (best-effort), and returns { success: true, deleted: true, transaction: }
+  # (with an optional :warning if the sync could not be enqueued). Errors:
+  # not_found, split_child, split_part_transferred,
+  # transfer_spans_unwritable_account, preview_required, preview_stale,
+  # delete_aborted.
   def call(params = {})
     transaction = find_transaction(params["id"], params["account_id"])
     return error("not_found", "No transaction with id '#{params["id"]}' in an account you can write to.") unless transaction
 
     entry = transaction.entry
     return error("split_child", "Split child transactions cannot be deleted individually. Delete the split parent instead.") if entry.split_child?
+    # Refused before the preview so the user is never asked to confirm a delete
+    # that would be refused; destroy_entry checks again under the split lock.
+    return split_part_transferred_error if entry.split_parent? && entry.split_part_transferred?
+    return unwritable_fee_error if unwritable_fees?(transaction.transfer)
 
-    # Snapshot before destruction so the response never reads destroyed
-    # associations or triggers lazy loads on a deleted record.
-    snapshot = serialize(transaction, entry)
+    # The preview is both what the user confirms and the deleted record in the
+    # response, taken before destruction so the response never reads destroyed
+    # associations. The locks follow Entry#with_split_lock, so a resplit can't
+    # change the children between the check and the destroy.
+    # Write access to the fee accounts is checked again under the lock: a
+    # share downgraded since the preview leaves the preview unchanged.
+    result = confirm_with_preview(params, transaction, -> { preview(transaction, entry) }, lock: [ transaction, entry ]) do |snapshot|
+      next unwritable_fee_error if unwritable_fees?(transaction.transfer)
 
-    # 1) Destroy. Entry is the delegated_type root record; destroy! cascades
-    #    to the Transaction child (delegated_type ... dependent: :destroy) and
-    #    wraps itself in a transaction (atomic: fully destroyed or it raises).
-    #    This is the exact record and the same refusal as the native destroy
-    #    action: a split whose part is a transfer leg is not deleted.
-    begin
+      destroy_entry(entry, snapshot)
+    end
+    result[:deleted] ? sync_after_delete(entry, result) : result
+  end
+
+  private
+    def destroy_entry(entry, snapshot)
+      # Entry is the delegated_type root record; destroy! cascades to the
+      # Transaction child (delegated_type ... dependent: :destroy). This is the
+      # exact record and the same refusal as the native destroy action: a
+      # split whose part is a transfer leg is not deleted.
       entry.destroy_unless_split_part_transferred!
+
+      {
+        success: true,
+        deleted: true,
+        transaction: snapshot,
+        message: "Deleted #{snapshot[:name]} (#{snapshot[:amount_formatted]} on #{snapshot[:date]})."
+      }
     rescue Entry::SplitPartTransferredError
-      return error("split_part_transferred", "A part of this split is linked as a transfer. Remove that transfer before you delete the transaction.")
+      split_part_transferred_error
     rescue ActiveRecord::RecordNotDestroyed
       # A before_destroy guard aborted the destroy (e.g. a split child that
       # slipped past the pre-check, or another constraint). `throw :abort` in
       # a before_destroy makes destroy! raise RecordNotDestroyed — the record
       # was NOT deleted.
-      return error("delete_aborted", "Deletion was aborted by a record constraint; the transaction was not deleted.")
+      error("delete_aborted", "Deletion was aborted by a record constraint; the transaction was not deleted.")
     end
 
-    # 2) Recalculate the account balance/sync window. This is best-effort: the
-    #    transaction is ALREADY deleted at this point, so a failure here must
-    #    NOT be reported as a failed deletion. sync_account_later is
-    #    destroyed?-safe (reads the still-loaded in-memory account).
-    sync_warning = nil
-    begin
+    def split_part_transferred_error
+      error("split_part_transferred", "A part of this split is linked as a transfer. Remove that transfer before you delete the transaction.")
+    end
+
+    # Recalculates the account balance/sync window after the delete commits.
+    # Best-effort: the transaction is ALREADY deleted, so a failure here must
+    # NOT be reported as a failed deletion. sync_account_later is
+    # destroyed?-safe (reads the still-loaded in-memory account).
+    def sync_after_delete(entry, result)
       entry.sync_account_later
+      result
     rescue StandardError => e
-      sync_warning = "Transaction deleted, but the post-delete account sync could not be enqueued (#{e.class}). The balance will recalculate on the next sync."
+      result.merge(warning: "Transaction deleted, but the post-delete account sync could not be enqueued (#{e.class}). The balance will recalculate on the next sync.")
     end
 
-    response = {
-      success: true,
-      deleted: true,
-      transaction: snapshot,
-      message: "Deleted #{snapshot[:name]} (#{snapshot[:amount_formatted]} on #{snapshot[:date]})."
-    }
-    response[:warning] = sync_warning if sync_warning
-    response
-  end
-
-  private
     # Resolve a Transaction by id, scoped to accounts the user can WRITE to
     # (owner or full_control share) — the same write gate CreateTransaction
-    # uses. `merge(Account.writable_by(user))` is the native set_transaction
-    # pattern (which uses accessible_by) tightened to the write set, so a
-    # read-only shared account simply yields nil -> not_found. An optional
-    # account_id narrows the query so a mismatched id cannot delete the wrong
-    # record. Returns nil if the id is not a valid UUID or is not found.
+    # uses (writable_transactions), so a read-only shared account simply
+    # yields nil -> not_found. An optional account_id narrows the query so a
+    # mismatched id cannot delete the wrong record. Returns nil if the id is
+    # not a valid UUID or is not found.
     def find_transaction(id, account_id)
       return nil unless valid_uuid?(id)
 
-      query = family.transactions
-        .joins(entry: :account)
-        .merge(Account.writable_by(user))
+      query = writable_transactions
 
       if account_id.present?
         return nil unless valid_uuid?(account_id)
@@ -144,20 +187,60 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
       query.find_by(id: id)
     end
 
+    # What deleting the transaction removes: the transaction itself, a split's
+    # children and, for a transfer leg, the transfer and its fee transactions
+    # (the other leg stays and becomes a standard transaction). Entries in an
+    # account the user cannot open show only that (see serialize_brief), and
+    # names never show such an account (entry_name). The confirmation rebuilds
+    # it under the lock, so access is read each time.
+    def preview(transaction, entry)
+      visible = accessible_account_ids
+      snapshot = serialize(transaction, entry, visible)
+
+      children = entry.child_entries.in_split_order.to_a
+      snapshot[:split_children] = children.map { |child| serialize_brief(child, visible) } if children.any?
+
+      if (transfer = transaction.transfer)
+        counterpart = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction : transfer.inflow_transaction
+        snapshot[:transfer] = {
+          id: transfer.id,
+          status: transfer.status,
+          counterpart: serialize_brief(counterpart.entry, visible),
+          deleted_fee_transactions: transfer.fee_transactions.order(:id).map { |fee| serialize_brief(fee.entry, visible) }
+        }
+      end
+
+      snapshot
+    end
+
     # Shape a Transaction (and its root entry) into the result hash returned to
-    # the caller. Called BEFORE destruction so the response carries a complete
-    # snapshot of what was deleted.
-    def serialize(transaction, entry)
+    # the caller.
+    def serialize(transaction, entry, visible)
       {
         id: transaction.id,
         entry_id: entry.id,
         account_id: entry.account_id,
-        name: entry_name(entry),
+        name: entry_name(entry, visible),
         date: entry.date,
         amount: entry.amount.to_s,
         amount_formatted: format_money(entry),
         currency: entry.currency,
+        account: entry.account.name,
         type: entry.classification
+      }
+    end
+
+    def serialize_brief(entry, visible)
+      return { account: HIDDEN_ACCOUNT } unless visible.include?(entry.account_id)
+
+      {
+        id: entry.entryable_id,
+        entry_id: entry.id,
+        account: entry.account.name,
+        name: entry_name(entry, visible),
+        date: entry.date,
+        amount: entry.amount.to_s,
+        currency: entry.currency
       }
     end
 
@@ -167,10 +250,5 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
       entry.amount_money.format
     rescue StandardError
       "#{entry.amount} #{entry.currency}"
-    end
-
-    # Build a standard error result hash: { success: false, error:, message: }.
-    def error(key, message)
-      { success: false, error: key, message: message }
     end
 end

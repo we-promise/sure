@@ -1,4 +1,6 @@
 class Assistant::Function::GetInsights < Assistant::Function
+  annotate :read_only
+
   DEFAULT_LIMIT = 10
   MAX_LIMIT = 50
 

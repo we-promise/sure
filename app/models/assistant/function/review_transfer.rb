@@ -6,6 +6,8 @@
 class Assistant::Function::ReviewTransfer < Assistant::Function
   include Assistant::Function::TransferMatchSupport
 
+  annotate :destructive, idempotent: true
+
   ACTIONS = %w[confirm reject].freeze
 
   class << self

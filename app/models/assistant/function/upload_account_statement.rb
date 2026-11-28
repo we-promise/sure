@@ -3,6 +3,8 @@
 class Assistant::Function::UploadAccountStatement < Assistant::Function
   include Assistant::Function::StatementVaultSupport
 
+  annotate :additive, idempotent: true
+
   class << self
     def name
       "upload_account_statement"

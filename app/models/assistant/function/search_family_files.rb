@@ -1,6 +1,8 @@
 class Assistant::Function::SearchFamilyFiles < Assistant::Function
   include LangfuseTraceable
 
+  annotate :read_only
+
   # Excerpts asked of the store before those of documents the user may not
   # see are dropped (OpenAI's store returns at most 50).
   SEARCH_POOL = 50

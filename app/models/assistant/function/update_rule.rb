@@ -6,6 +6,8 @@
 class Assistant::Function::UpdateRule < Assistant::Function
   include Assistant::Function::RuleSupport
 
+  annotate :destructive, idempotent: true
+
   class << self
     def name
       "update_rule"

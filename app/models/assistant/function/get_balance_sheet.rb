@@ -1,6 +1,8 @@
 class Assistant::Function::GetBalanceSheet < Assistant::Function
   include ActiveSupport::NumberHelper
 
+  annotate :read_only
+
   MAX_SERIES_POINTS = 400
   INTERVALS = [ "1 day", "1 week", "1 month" ].freeze
 
