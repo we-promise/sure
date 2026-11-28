@@ -276,6 +276,19 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "a vest's withheld shares are in the trade, and null on any other" do
+    vest = create_api_vest
+
+    get "/api/v1/trades/#{vest.trade.id}", headers: api_headers(read_write_api_key)
+    assert_response :ok
+    body = JSON.parse(response.body)
+    assert_equal "70.0", body["qty"].to_s
+    assert_equal "30.0", body["units_withheld"]
+
+    get "/api/v1/trades/#{Trade.find(create_buy_trade("NOVEST")).id}", headers: api_headers(read_write_api_key)
+    assert_nil JSON.parse(response.body)["units_withheld"]
+  end
+
   test "deleting a vest is refused while its income or a tax is a transfer leg" do
     vest = create_api_vest
     income = Trade::VestForm.parts_of(vest).first

@@ -42,6 +42,8 @@ module EntryableResource
     redirect_back_or_to account_path(@entry.account), notice: t("account.entries.destroy.success")
   rescue Entry::SplitPartTransferredError
     redirect_back_or_to account_path(@entry.account), alert: t("account.entries.destroy.part_transferred")
+  rescue Entry::VestPartDeletionError
+    redirect_back_or_to account_path(@entry.account), alert: t("account.entries.destroy.vest_part")
   end
 
   private

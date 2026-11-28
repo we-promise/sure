@@ -149,7 +149,10 @@ class Trade::VestForm
         write_part(vest, old_taxes.find { |old| old.id == tax.id }, name: tax.name.presence || I18n.t("vests.entries.taxes_withheld"),
                    category_id: tax.category_id, amount: tax.amount, label: TAX_LABEL)
       end
-      (old_taxes - parts).each(&:destroy!)
+      (old_taxes - parts).each do |removed|
+        removed.vest_write = true
+        removed.destroy_unless_split_part_transferred!
+      end
 
       [ vest, *parts ].each do |saved|
         saved.lock_saved_attributes!
@@ -162,6 +165,9 @@ class Trade::VestForm
     true
   rescue ActiveRecord::RecordInvalid => e
     errors.add(:base, e.record.errors.full_messages.to_sentence)
+    false
+  rescue Entry::SplitPartTransferredError
+    errors.add(:base, I18n.t("vests.form.tax_transferred"))
     false
   end
 

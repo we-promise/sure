@@ -20,6 +20,11 @@ class Entry < ApplicationRecord
   # to be unlinked first.
   class SplitPartTransferredError < StandardError; end
 
+  # Raised when a vest's income or tax entry would be deleted on its own,
+  # which would leave the vest's totals counting it. The vest is deleted, or
+  # the tax line removed, on the vest's own screen.
+  class VestPartDeletionError < StandardError; end
+
   attr_accessor :unsplitting
 
   monetize :amount
@@ -756,10 +761,12 @@ class Entry < ApplicationRecord
   # Deletes this entry for a user. A split is refused like unsplit! while a part
   # is a leg of a confirmed transfer: deleting the parent takes the part and its
   # transfer with it and leaves the other leg behind as a standalone entry. A
-  # vest is refused the same way while its income or a tax is a transfer leg.
+  # vest is refused the same way while one of its parts is a transfer leg, and
+  # a part on its own only through Trade::VestForm (vest_write).
   # Syncs and imports that remove entries call destroy! directly.
   def destroy_unless_split_part_transferred!
-    refuse_while_vest_part_transferred! if trade? && entryable.vest?
+    raise VestPartDeletionError, "Delete the vest, or remove the tax line on the vest's screen" if vest_entry_id? && !vest_write
+    refuse_while_vest_part_transferred! if vest_entry_id? || (trade? && entryable.vest?)
     return destroy! unless split_parent?
 
     with_split_lock do
@@ -1131,14 +1138,16 @@ class Entry < ApplicationRecord
       raise SplitPartTransferredError, "Remove the transfer on a split part before changing the split" if split_part_transferred?
     end
 
-    # Deleting a vest deletes its income and taxes, and with them any transfer
-    # one of them is a leg of. Transfers aren't matched to vest parts, but one
-    # recorded before that rule, or by a path that skips it, still counts.
+    # Deleting a vest deletes its income and taxes, and deleting a part deletes
+    # that part, with any transfer they are legs of. Transfers aren't matched
+    # to vest parts, but one recorded before that rule, or by a path that skips
+    # it, still counts.
     def refuse_while_vest_part_transferred!
-      part_ids = vest_parts.where(entryable_type: "Transaction").select(:entryable_id)
+      parts = vest_entry_id? ? self.class.where(id: id) : vest_parts
+      part_ids = parts.where(entryable_type: "Transaction").select(:entryable_id)
       transferred = Transfer.confirmed.where(outflow_transaction_id: part_ids)
         .or(Transfer.confirmed.where(inflow_transaction_id: part_ids)).exists?
-      raise SplitPartTransferredError, "Remove the transfer on a vest's income or tax before deleting the vest" if transferred
+      raise SplitPartTransferredError, "Remove the transfer on a vest's income or tax before deleting it" if transferred
     end
 
     def split_part_transaction_ids

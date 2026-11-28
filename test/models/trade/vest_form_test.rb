@@ -247,6 +247,32 @@ class Trade::VestFormTest < ActiveSupport::TestCase
     assert_includes transfer.errors[:base], I18n.t("activerecord.errors.models.transfer.vest_part")
   end
 
+  test "a vest's income or tax is deleted only with the vest, or as a line removed on its form" do
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, tax_lines: [ { name: "Federal", amount: 200 }, { name: "State", amount: 100 } ])
+    form.save
+    income = Trade::VestForm.parts_of(form.entry).first
+
+    assert_no_difference -> { Entry.count } do
+      assert_raises(Entry::VestPartDeletionError) { income.destroy_unless_split_part_transferred! }
+    end
+  end
+
+  test "removing a tax line on the vest's form is refused while it is a transfer leg" do
+    form = vest_form(vested_qty: 100, units_withheld: 30, price: 10, tax_lines: [ { name: "Federal", amount: 200 }, { name: "State", amount: 100 } ])
+    form.save
+    federal, state = Trade::VestForm.parts_of(form.entry).last
+    inflow = accounts(:depository).entries.create!(name: "Refund", date: Date.current, amount: -100, currency: "USD", entryable: Transaction.new)
+    # Recorded past the transfer rules, as an older or raw-SQL path could.
+    Transfer.new(inflow_transaction: inflow.transaction, outflow_transaction: state.transaction, status: "confirmed").save!(validate: false)
+
+    reopened = Trade::VestForm.for(form.entry.reload)
+    reopened.assign_attributes(tax_lines: [ { id: federal.id, name: "Federal", amount: 300 } ])
+    assert_not reopened.save
+    assert_includes reopened.errors[:base], I18n.t("vests.form.tax_transferred")
+    assert Entry.exists?(state.id)
+    assert_equal 200, federal.reload.amount, "nothing saved"
+  end
+
   test "auto-matching leaves a vest's income out" do
     form = vest_form(vested_qty: 100, units_withheld: 30, price: 10)
     form.save
