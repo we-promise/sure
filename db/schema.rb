@@ -2370,6 +2370,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_120100) do
     t.string "classification_source"
     t.datetime "constituents_fetched_at"
     t.string "constituents_fetched_from"
+    t.datetime "constituents_replaced_at"
     t.string "country_code"
     t.datetime "created_at", null: false
     t.string "exchange_acronym"
