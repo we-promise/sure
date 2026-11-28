@@ -248,44 +248,42 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   end
 
   # Every account provider has a settings panel, so the partial its declared panel
-  # renders is written even with --skip-view.
+  # renders, and the credential fields ProviderItem::PanelComponent renders inside
+  # each of its forms, are written even with --skip-view.
   def create_panel_view
     template "panel.html.erb.tt",
              "app/views/settings/providers/_#{file_name}_panel.html.erb"
+    template "credential_fields.html.erb.tt",
+             "app/views/#{file_name}_items/_credential_fields.html.erb"
   end
 
+  # Each view renders a provider kit component; the helper turns the provider's
+  # API payloads into what the selection and setup components take.
   def create_item_views
     return if options[:skip_view]
 
-    # Create views directory
-    view_dir = "app/views/#{file_name}_items"
-    FileUtils.mkdir_p(view_dir) unless options[:pretend]
-
-    # Setup accounts dialog
-    setup_accounts_path = "#{view_dir}/setup_accounts.html.erb"
-    if File.exist?(setup_accounts_path)
-      say "Setup accounts view already exists: #{setup_accounts_path}", :skip
-    else
-      template "setup_accounts.html.erb.tt", setup_accounts_path
-      say "Created setup_accounts view: #{setup_accounts_path}", :green
+    views = {
+      "select_accounts.html.erb.tt" => "select_accounts.html.erb",
+      "select_existing_account.html.erb.tt" => "select_existing_account.html.erb",
+      "setup_accounts.html.erb.tt" => "setup_accounts.html.erb",
+      "api_error.html.erb.tt" => "_api_error.html.erb",
+      "setup_required.html.erb.tt" => "_setup_required.html.erb",
+      "item_partial.html.erb.tt" => "_#{file_name}_item.html.erb"
+    }
+    views.each do |source, name|
+      path = "app/views/#{file_name}_items/#{name}"
+      if File.exist?(path)
+        say "View already exists: #{path}", :skip
+      else
+        template source, path
+      end
     end
 
-    # Select existing account dialog
-    select_existing_path = "#{view_dir}/select_existing_account.html.erb"
-    if File.exist?(select_existing_path)
-      say "Select existing account view already exists: #{select_existing_path}", :skip
+    helper_path = "app/helpers/#{file_name}_items_helper.rb"
+    if File.exist?(helper_path)
+      say "Helper already exists: #{helper_path}", :skip
     else
-      template "select_existing_account.html.erb.tt", select_existing_path
-      say "Created select_existing_account view: #{select_existing_path}", :green
-    end
-
-    # Item partial for accounts index
-    item_partial_path = "#{view_dir}/_#{file_name}_item.html.erb"
-    if File.exist?(item_partial_path)
-      say "Item partial already exists: #{item_partial_path}", :skip
-    else
-      template "item_partial.html.erb.tt", item_partial_path
-      say "Created item partial: #{item_partial_path}", :green
+      template "items_helper.rb.tt", helper_path
     end
   end
 
@@ -435,9 +433,8 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     say "  🎮 Controller: app/controllers/#{file_name}_items_controller.rb"
     say "  🖼️  Views:"
     say "     - app/views/settings/providers/_#{file_name}_panel.html.erb"
-    say "     - app/views/#{file_name}_items/setup_accounts.html.erb"
-    say "     - app/views/#{file_name}_items/select_existing_account.html.erb"
-    say "     - app/views/#{file_name}_items/_#{file_name}_item.html.erb"
+    say "     - app/views/#{file_name}_items/ (credential fields, card, selection, error and setup views)"
+    say "     - app/helpers/#{file_name}_items_helper.rb"
     say "  ⚡ Jobs:"
     if investment_provider?
       say "     - app/jobs/#{file_name}_activities_fetch_job.rb"

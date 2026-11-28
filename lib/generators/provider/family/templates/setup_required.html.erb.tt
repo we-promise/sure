@@ -1,0 +1,1 @@
+<%%= render ProviderItem::SetupRequiredComponent.new(provider_key: "<%= file_name %>") %>

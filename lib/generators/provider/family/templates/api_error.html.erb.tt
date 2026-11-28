@@ -1,0 +1,2 @@
+<%%# locals: (error_message:, return_path:) %>
+<%%= render ProviderItem::ApiErrorComponent.new(provider_key: "<%= file_name %>", error_message: error_message, return_path: return_path) %>

@@ -1,0 +1,6 @@
+<%%= render ProviderItem::AccountSelectionComponent.new(
+      item: @<%= file_name %>_item,
+      options: <%= file_name %>_account_options(@available_accounts),
+      return_to: @return_to,
+      accountable_type: @accountable_type
+    ) %>
