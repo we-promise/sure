@@ -215,7 +215,7 @@ class Transaction < ApplicationRecord
   # All valid investment activity labels (for UI dropdown)
   ACTIVITY_LABELS = [
     "Buy", "Sell", "Sweep In", "Sweep Out", "Dividend", "Reinvestment",
-    "Interest", "Fee", "Transfer", "Contribution", "Withdrawal", "Exchange", "Other"
+    "Interest", "Fee", "Transfer", "Contribution", "Withdrawal", "Exchange", "Vest", "Other"
   ].freeze
 
   # Internal movement labels that should be excluded from budget (auto cash management)

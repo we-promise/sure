@@ -38,6 +38,10 @@ class Entry < ApplicationRecord
   validates :reconciled_at, presence: true, if: -> { reconciled_by_statement_id.present? }
 
   has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
+  # A vest's income and tax entries point at the vest's own entry (see
+  # Trade::VestForm), so the three are edited and deleted together.
+  belongs_to :vest_entry, class_name: "Entry", optional: true
+  has_many :vest_parts, class_name: "Entry", foreign_key: :vest_entry_id, dependent: :destroy, inverse_of: :vest_entry
   # Read side only, so a transaction can say which bills it paid. The foreign key
   # already nullifies on delete, so this adds no lifecycle behaviour.
   has_many :recurring_allocations, dependent: nil, inverse_of: :entry
@@ -751,6 +755,13 @@ class Entry < ApplicationRecord
       refuse_while_split_part_transferred! if split_parent?
       destroy!
     end
+  end
+
+  # The vest this entry records, or is the income or a tax of: what opens when
+  # any of them is opened. nil for an entry that is no part of a vest.
+  def vest
+    return vest_entry if vest_entry_id
+    self if trade? && entryable.vest?
   end
 
   def split_child?

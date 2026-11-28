@@ -9,7 +9,10 @@ module EntryableResource
     helper_method :can_edit_entry?, :can_annotate_entry?
   end
 
+  # A vest's shares, income and taxes are edited together on its own screen.
   def show
+    vest = @entry.vest
+    redirect_to vest_path(vest) if vest
   end
 
   def new

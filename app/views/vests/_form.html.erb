@@ -1,0 +1,59 @@
+<%# locals: (form_model:) %>
+
+<% categories = Current.family.categories.alphabetically_by_hierarchy.map { |category| [ category.name, category.id ] } %>
+<% url = form_model.persisted? ? vest_path(form_model.entry) : vests_path(account_id: form_model.account.id) %>
+
+<%= styled_form_with model: form_model, scope: :vest, url: url, method: form_model.persisted? ? :patch : :post do |form| %>
+  <div class="space-y-4">
+    <% if form_model.errors.any? %>
+      <%= render "shared/form_errors", model: form_model %>
+    <% end %>
+
+    <div class="space-y-2">
+      <% if form_model.persisted? %>
+        <p class="text-sm text-secondary"><%= form_model.entry.trade.security.ticker %></p>
+      <% elsif Security.providers.any? %>
+        <div class="form-field combobox">
+          <%= form.combobox :ticker,
+                            securities_path(country_code: Current.family.country),
+                            name_when_new: "vest[manual_ticker]",
+                            label: t("vests.form.ticker"),
+                            placeholder: t("trades.form.ticker_placeholder"),
+                            required: true %>
+        </div>
+      <% else %>
+        <%= form.text_field :manual_ticker, label: t("vests.form.ticker"), placeholder: t("trades.form.ticker_placeholder"), required: true %>
+      <% end %>
+
+      <%= form.date_field :date, label: t("vests.form.date"), required: true %>
+      <%= form.number_field :qty, label: t("vests.form.qty"), placeholder: "70", min: 0.000000000000000001, step: "any", required: true %>
+      <%= form.number_field :units_withheld, label: t("vests.form.units_withheld"), placeholder: "0", min: 0, step: "any" %>
+      <%= form.money_field :price, label: t("vests.form.price"), step: "any", precision: 10, required: true, disable_currency: true %>
+      <%= form.select :income_category_id, categories, { label: t("vests.form.income_category"), include_blank: t("vests.form.no_category") } %>
+    </div>
+
+    <div class="space-y-2">
+      <h4 class="text-sm font-medium text-primary"><%= t("vests.form.taxes") %></h4>
+      <p class="text-xs text-secondary"><%= t("vests.form.taxes_hint") %></p>
+      <% form_model.tax_lines_for_form.each_with_index do |line, index| %>
+        <%= form.fields_for :tax_lines, line, index: index do |tax| %>
+          <div class="grid grid-cols-3 gap-2">
+            <%= tax.text_field :name, label: t("vests.form.tax_name"), placeholder: t("vests.form.tax_name_placeholder") %>
+            <%= tax.select :category_id, categories, { label: t("vests.form.tax_category"), include_blank: t("vests.form.no_category") } %>
+            <%= tax.money_field :amount, label: t("vests.form.tax_amount"), step: "any", min: 0, disable_currency: true, default_currency: form_model.currency %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if form_model.persisted? %>
+      <dl class="text-sm space-y-1">
+        <div class="flex justify-between"><dt class="text-secondary"><%= t("vests.form.gross_pay") %></dt><dd class="text-primary privacy-sensitive"><%= format_money(Money.new(form_model.gross_pay, form_model.currency)) %></dd></div>
+        <div class="flex justify-between"><dt class="text-secondary"><%= t("vests.form.taxes_total") %></dt><dd class="text-primary privacy-sensitive"><%= format_money(Money.new(form_model.taxes_total, form_model.currency)) %></dd></div>
+        <div class="flex justify-between"><dt class="text-secondary"><%= t("vests.form.cash_left") %></dt><dd class="text-primary privacy-sensitive"><%= format_money(Money.new(form_model.cash_left, form_model.currency)) %></dd></div>
+      </dl>
+    <% end %>
+
+    <%= form.submit t(form_model.persisted? ? "vests.form.save" : "vests.form.create") %>
+  </div>
+<% end %>

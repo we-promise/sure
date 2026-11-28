@@ -56,6 +56,7 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
       "Sweep In" => "Sweep In",
       "Sweep Out" => "Sweep Out",
       "Transfer" => "Überweisung",
+      "Vest" => "Vesting",
       "Withdrawal" => "Entnahme"
     }
 
@@ -66,6 +67,8 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
 
       assert_equal translation,
                    I18n.t("trades.header.#{key}", locale: :de, fallback: false, default: nil)
+      # A vest opens its own screen, not this header (VestsControllerTest).
+      next if activity_label == Trade::VEST_LABEL
 
       @entry.trade.update!(investment_activity_label: activity_label)
 

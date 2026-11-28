@@ -24,6 +24,7 @@ en:
       type_withdrawal: Withdrawal
       type_dividend: Dividend
       type_interest: Interest
+      type_vest: Vest (RSU)
       dividend_requires_security: Security is required for dividends
       trade_requires_security: A security (ticker) is required for buy and sell trades
     trade:
@@ -42,6 +43,7 @@ en:
       sweep_in: Sweep in
       sweep_out: Sweep out
       transfer: Transfer
+      vest: Vest
       withdrawal: Withdrawal
       current_market_price_label: Current Market Price
       overview: Overview

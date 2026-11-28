@@ -169,6 +169,7 @@ en:
       contribution: Contribution
       withdrawal: Withdrawal
       exchange: Exchange
+      vest: Vest
       other: Other
     mark_recurring: Mark as Recurring
     mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.

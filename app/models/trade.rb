@@ -36,7 +36,15 @@ class Trade < ApplicationRecord
   # same ownership-preserving rule.
   TRANSFER_LABEL = "Transfer".freeze
 
+  # Shares an employer paid as compensation (an RSU vest), at the price they
+  # vested at. Trade::VestForm records the pay itself as income beside it.
+  VEST_LABEL = "Vest".freeze
+
   validates :qty, presence: true
+  # Shares a stock plan kept back at a vest for its taxes. They never reach
+  # the account, so they are not in qty; only a vest has them.
+  validates :units_withheld, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :units_withheld, absence: true, unless: :vest?
   validates :price, :currency, presence: true
   validates :investment_activity_label, inclusion: { in: ACTIVITY_LABELS }, allow_nil: true
 
@@ -107,6 +115,15 @@ class Trade < ApplicationRecord
 
   # A negative quantity that left for another account you own. It looks exactly
   # like a sale — same sign, same shape — and only the label tells them apart.
+  def vest?
+    investment_activity_label == VEST_LABEL
+  end
+
+  # The shares the vest granted, before any were withheld for taxes.
+  def vested_units
+    qty.abs + units_withheld.to_d if vest?
+  end
+
   def internal_movement?
     INTERNAL_MOVEMENT_LABELS.include?(investment_activity_label)
   end
@@ -134,7 +151,7 @@ class Trade < ApplicationRecord
 
   class << self
     def build_name(type, qty, ticker)
-      prefix = type == "buy" ? "Buy" : "Sell"
+      prefix = { "buy" => "Buy", "vest" => VEST_LABEL }.fetch(type, "Sell")
       "#{prefix} #{qty.to_d.abs} shares of #{ticker}"
     end
   end

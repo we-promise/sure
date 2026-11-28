@@ -61,6 +61,9 @@ class Portfolio::FlowClassifier
   # "Reinvestment" is internal: the cash that bought the shares was a
   # dividend, but income is only counted when a separate Dividend entry
   # records it, as InvestmentStatement::Totals already assumes.
+  #
+  # "Vest" is internal for the same reason: the pay that bought the shares is
+  # its own Contribution entry (Trade::VestForm).
   LABEL_RULES = {
     "Dividend" => :income,
     "Interest" => :income,
@@ -71,6 +74,7 @@ class Portfolio::FlowClassifier
     "Sweep In" => :internal,
     "Sweep Out" => :internal,
     "Exchange" => :internal,
+    "Vest" => :internal,
     "Contribution" => :external,
     "Withdrawal" => :external,
     "Transfer" => :transfer,
