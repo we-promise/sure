@@ -115,7 +115,7 @@ id:
       api_error: "Kesalahan API: %{message}"
       fetch_failed: "Gagal Mengambil Rekening"
       no_accounts_to_setup: "Tidak Ada Rekening untuk Diatur"
-      no_api_key: "Kunci API Lunch Flow belum dikonfigurasi. Silakan periksa pengaturan koneksi Anda."
+      no_api_token: "Kunci API Lunch Flow belum dikonfigurasi. Silakan periksa pengaturan koneksi Anda."
       page_title: Atur Rekening Lunch Flow
       account_types:
         skip: Lewati rekening ini

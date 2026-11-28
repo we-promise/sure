@@ -101,7 +101,7 @@ zh-TW:
       api_error: API 錯誤：%{message}
       fetch_failed: 取得帳戶失敗
       no_accounts_to_setup: 沒有需要設定的帳戶
-      no_api_key: 尚未設定 Lunch Flow API 金鑰。請檢查您的連線設定。
+      no_api_token: 尚未設定 Lunch Flow API 金鑰。請檢查您的連線設定。
       account_types:
         skip: 跳過此帳戶
         depository: 支票或儲蓄帳戶

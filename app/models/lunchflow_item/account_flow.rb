@@ -22,6 +22,15 @@ class LunchflowItem::AccountFlow < ProviderItem::AccountFlow
       provider.get_accounts[:accounts] || []
     end
 
+    def provider_account_snapshot_changed?(lunchflow_account, account_data)
+      lunchflow_account.raw_payload.to_h.deep_stringify_keys != account_data.to_h.deep_stringify_keys
+    end
+
+    # Lunch Flow labels subtypes with the app-wide translated name.
+    def subtype_label_default(type_key, key, _value)
+      type_key.camelize.constantize.long_subtype_label_for(key)
+    end
+
     def upsert_provider_account!(account_id, account_data)
       lunchflow_account = item.lunchflow_accounts.find_or_initialize_by(account_id: account_id.to_s)
       lunchflow_account.upsert_lunchflow_snapshot!(account_data)

@@ -124,7 +124,7 @@ nl:
       api_error: "API fout: %{message}"
       fetch_failed: "Accounts ophalen mislukt"
       no_accounts_to_setup: "Geen accounts om in te stellen"
-      no_api_key: "Lunch Flow-API-sleutel is niet geconfigureerd. Controleer uw koppelingsinstellingen."
+      no_api_token: "Lunch Flow-API-sleutel is niet geconfigureerd. Controleer uw koppelingsinstellingen."
       page_title: "Lunch Flow-accounts instellen"
       account_types:
         skip: "Dit account overslaan"

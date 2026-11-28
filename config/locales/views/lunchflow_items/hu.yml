@@ -101,7 +101,7 @@ hu:
       api_error: "API hiba: %{message}"
       fetch_failed: "Nem sikerült lekérni a számlákat"
       no_accounts_to_setup: "Nincs beállítandó számla"
-      no_api_key: "A Lunch Flow API-kulcs nincs beállítva. Kérlek ellenőrizd a kapcsolati beállításaidat."
+      no_api_token: "A Lunch Flow API-kulcs nincs beállítva. Kérlek ellenőrizd a kapcsolati beállításaidat."
       account_types:
         skip: Számla kihagyása
         depository: Folyó- vagy megtakarítási számla

@@ -123,7 +123,7 @@ nb:
       api_error: 'API-feil: %{message}'
       fetch_failed: Kunne ikke hente kontoer
       no_accounts_to_setup: Ingen kontoer å sette opp
-      no_api_key: Lunch Flow API-nøkkel er ikke konfigurert. Kontroller tilkoblingsinnstillingene.
+      no_api_token: Lunch Flow API-nøkkel er ikke konfigurert. Kontroller tilkoblingsinnstillingene.
       page_title: Sett opp Lunch Flow-kontoer
       account_types:
         skip: Hopp over denne kontoen

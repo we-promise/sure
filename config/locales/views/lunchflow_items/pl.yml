@@ -152,7 +152,7 @@ pl:
       fetch_failed: Nie udało się pobrać kont
       historical_data_range: 'Zakres danych historycznych:'
       no_accounts_to_setup: Brak kont do konfiguracji
-      no_api_key: Klucz API Lunch Flow nie jest skonfigurowany. Sprawdź ustawienia
+      no_api_token: Klucz API Lunch Flow nie jest skonfigurowany. Sprawdź ustawienia
         połączenia.
       page_title: Skonfiguruj konta Lunch Flow
       subtitle: Wybierz poprawne typy dla importowanych kont

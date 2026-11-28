@@ -96,7 +96,7 @@ de:
       api_error: "API-Fehler: %{message}"
       fetch_failed: "Konten konnten nicht geladen werden"
       no_accounts_to_setup: "Keine Konten zum Einrichten"
-      no_api_key: "Der Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte prüfe deine Verbindungseinstellungen."
+      no_api_token: "Der Lunch‑Flow-API-Schlüssel ist nicht konfiguriert. Bitte prüfe deine Verbindungseinstellungen."
       page_title: Lunch‑Flow-Konten einrichten
       account_types:
         skip: Dieses Konto überspringen

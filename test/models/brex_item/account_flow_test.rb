@@ -90,7 +90,7 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     flow = BrexItem::AccountFlow.new(family: @family, brex_item_id: SecureRandom.uuid)
 
     assert_raises BrexItem::AccountFlow::NoApiTokenError do
-      flow.import_accounts_from_api_if_needed
+      flow.import_accounts_from_api
     end
   end
 
@@ -184,7 +184,7 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     flow = BrexItem::AccountFlow.new(family: @family, brex_item: brex_item)
 
     assert_difference -> { brex_item.brex_accounts.count }, 1 do
-      assert_nil flow.import_accounts_from_api_if_needed
+      assert_nil flow.import_accounts_from_api
     end
 
     brex_account = brex_item.brex_accounts.find_by!(account_id: "cash_import_1")
@@ -224,7 +224,7 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     flow = BrexItem::AccountFlow.new(family: @family, brex_item: brex_item)
 
     assert_no_difference -> { brex_item.brex_accounts.count } do
-      assert_nil flow.import_accounts_from_api_if_needed
+      assert_nil flow.import_accounts_from_api
     end
 
     brex_account = brex_item.brex_accounts.find_by!(account_id: "cash_import_1")

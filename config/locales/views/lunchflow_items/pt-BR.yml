@@ -123,7 +123,7 @@ pt-BR:
       api_error: "Erro da API: %{message}"
       fetch_failed: Não foi possível buscar as contas
       no_accounts_to_setup: Nenhuma conta para configurar
-      no_api_key: A chave de API do Lunch Flow não está configurada. Verifique as configurações da sua conexão.
+      no_api_token: A chave de API do Lunch Flow não está configurada. Verifique as configurações da sua conexão.
       page_title: Configurar contas do Lunch Flow
       account_types:
         skip: Ignorar esta conta

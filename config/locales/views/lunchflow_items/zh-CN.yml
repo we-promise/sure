@@ -129,7 +129,7 @@ zh-CN:
       api_error: API 错误：%{message}
       fetch_failed: 获取账户失败
       no_accounts_to_setup: 没有需要设置的账户
-      no_api_key: 未配置 Lunch Flow API 密钥。请检查您的连接设置。
+      no_api_token: 未配置 Lunch Flow API 密钥。请检查您的连接设置。
       account_types:
         skip: 跳过此账户
         depository: 支票账户或储蓄账户
