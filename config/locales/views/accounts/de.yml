@@ -178,6 +178,7 @@ de:
       collapse_all: "Alle einklappen"
     types:
       depository: Bankkonto
+      physical_cash: Bargeld
       investment: Investment
       crypto: Krypto
       property: Immobilie
@@ -233,6 +234,7 @@ de:
       loan: Kredite
       other_asset: Sonstige Vermögenswerte
       other_liability: Sonstige Verbindlichkeiten
+      physical_cash: Bargeld
       property: Immobilien
       vehicle: Fahrzeuge
     reconciliation_indicator:

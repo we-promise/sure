@@ -28,6 +28,16 @@ depository:
   accountable: one
   status: active
 
+physical_cash:
+  family: dylan_family
+  owner: family_admin
+  name: Wallet Cash
+  balance: 120
+  currency: USD
+  accountable_type: PhysicalCash
+  accountable: one
+  status: active
+
 connected:
   family: dylan_family
   owner: family_admin

@@ -39,7 +39,7 @@ class AccountStatement::AccountMatcher
 
       excluded = Array.wrap(exclude_account_ids).compact
 
-      candidates = family.accounts.visible.to_a.filter_map do |account|
+      candidates = family.accounts.visible.where.not(accountable_type: "PhysicalCash").to_a.filter_map do |account|
         next if excluded.include?(account.id)
 
         confidence = confidence_for(

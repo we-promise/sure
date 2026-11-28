@@ -1,0 +1,7 @@
+<%# locals: (account:, url:) %>
+
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= form.select :subtype,
+                 PhysicalCash.subtype_options_for_select,
+                 { label: true, prompt: t("physical_cashes.form.subtype_prompt"), include_blank: t("physical_cashes.form.none") } %>
+<% end %>
