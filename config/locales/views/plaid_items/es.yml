@@ -1,14 +1,60 @@
 ---
 es:
   plaid_items:
+    auto_link_opener:
+      create_failed: No hemos podido confirmar que se haya añadido esta conexión. Recarga la página para comprobarlo antes de volver a intentarlo.
     create:
+      already_connected: Ya tienes una conexión con esta entidad, así que no se ha añadido esta.
+      exchange_failed: No hemos podido añadir esta conexión. Inténtalo de nuevo y, si el problema continúa, revisa los registros del servidor.
       success: Cuenta vinculada con éxito. Por favor, espere mientras se sincronizan las cuentas.
+      token_expired: Esta conexión ha caducado antes de añadirse. Vuelve a conectar la entidad.
     destroy:
       success: Cuentas programadas para eliminación.
+    duplicate_warning:
+      close: Cerrar
+      confirm: Confirmar esta conexión
+      connected_by: Conectada por %{name}
+      eu_no_add_accounts: Plaid no permite añadir cuentas a una conexión de la UE existente. Para cambiar qué cuentas están conectadas, quita esta y vuelve a añadirla.
+      linked_on: Vinculada el %{date}
+      manage_connection: Ir a cuentas
+      mask: "****%{mask}"
+      no_accounts: Aún no se ha sincronizado ninguna cuenta de esta conexión.
+      overlap:
+        all_connected:
+          one: La cuenta que intentabas añadir ya está conectada, así que añadirla otra vez solo crearía un duplicado.
+          other: Las %{count} cuentas que intentabas añadir ya están conectadas, así que añadirlas otra vez solo crearía duplicados.
+        different_login: Para conectar otro acceso de %{institution}, vuelve a elegir Nueva cuenta e inicia sesión con ese acceso a través de Plaid.
+        more_accounts: Para añadir más cuentas a esta conexión, cierra esto y elige Añadir cuentas en la conexión de %{institution}.
+        others_connected:
+          one: Sure ya tiene esta cuenta a través de la conexión de %{name}, así que añadir la tuya solo crearía un duplicado.
+          other: Sure ya tiene estas cuentas a través de la conexión de %{name}, así que añadir la tuya solo crearía duplicados.
+        others_connected_several:
+          one: Sure ya tiene esta cuenta a través de las conexiones de otros miembros, así que añadir la tuya solo crearía un duplicado.
+          other: Sure ya tiene estas cuentas a través de las conexiones de otros miembros, así que añadir la tuya solo crearía duplicados.
+        none_connected: Ninguna de las cuentas que intentabas añadir está conectada aún, así que probablemente sea otro acceso. Añadirlo solo cuenta como otra conexión de Plaid.
+        some_connected:
+          connected:
+            one: La otra ya está conectada, así que añadir esta conexión la duplicaría y contaría como otra conexión de Plaid.
+            other: Las otras %{count} ya están conectadas, así que añadir esta conexión las duplicaría y contaría como otra conexión de Plaid.
+          unconnected:
+            one: 'Una de las cuentas que intentabas añadir aún no está conectada:'
+            other: "%{count} de las cuentas que intentabas añadir aún no están conectadas:"
+        unknown:
+          one: No se pueden comparar estas cuentas con tu conexión existente. Si son las mismas cuentas, añadir esta conexión las duplicaría y contaría como otra conexión de Plaid.
+          other: No se pueden comparar estas cuentas con tus conexiones existentes. Si son las mismas cuentas, añadir esta conexión las duplicaría y contaría como otra conexión de Plaid.
+      title:
+        one: Ya tienes una conexión con esta entidad
+        other: Ya tienes %{count} conexiones con esta entidad
+      title_all_connected: Ya has hecho esta conexión
+      title_others_connected:
+        one: Esta cuenta ya está conectada
+        other: Estas cuentas ya están conectadas
+      update_existing: Actualizar conexión existente
     errors:
       link_token_generic: No hemos podido abrir Plaid en este momento. Inténtalo de nuevo y, si el problema persiste, revisa los registros del servidor para más detalles.
       link_token_with_message: 'Plaid no pudo abrir la conexión: %{message}'
     plaid_item:
+      add_accounts: Añadir cuentas
       add_new: Añadir nueva conexión
       confirm_accept: Eliminar institución
       confirm_body: Esto eliminará permanentemente todas las cuentas de este grupo y todos los datos asociados.
@@ -20,6 +66,7 @@ es:
       error: Ocurrió un error mientras se sincronizaban los datos
       no_accounts_description: No pudimos cargar ninguna cuenta de esta institución financiera.
       no_accounts_title: No se encontraron cuentas
+      provider_name: Plaid
       requires_update: Requiere reautenticación
       status: Última sincronización hace %{timestamp}
       status_never: Requiere sincronización de datos

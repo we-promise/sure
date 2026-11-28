@@ -1,6 +1,11 @@
 ---
 es:
   trades:
+    api_errors:
+      activity_label_must_match_type: investment_activity_label debe ser %{label} cuando type es %{type}
+      invalid_activity_label: Etiqueta de actividad de inversión no válida
+      invalid_type: Tipo no válido
+      supported_types: 'type debe ser uno de: %{types}'
     form:
       account: Cuenta de transferencia (opcional)
       account_prompt: Buscar cuenta
@@ -21,11 +26,23 @@ es:
       type_interest: Interés
       dividend_requires_security: Se requiere un valor para los dividendos
       trade_requires_security: Se requiere un valor (símbolo) para las operaciones de compra y venta
+    trade:
+      scheduled: Programada
+      scheduled_tooltip: 'Con fecha futura: no afectará a tu saldo hasta entonces'
     header:
       buy: Comprar
       sell: Vender
       dividend: Dividendo
       interest: Interés
+      contribution: Aportación
+      exchange: Canje
+      fee: Comisión
+      other: Otra
+      reinvestment: Reinversión
+      sweep_in: Barrido de entrada
+      sweep_out: Barrido de salida
+      transfer: Transferencia
+      withdrawal: Retirada
       current_market_price_label: Precio de mercado actual
       overview: Resumen
       purchase_price_label: Precio de compra

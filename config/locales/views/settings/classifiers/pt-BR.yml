@@ -1,0 +1,158 @@
+---
+pt-BR:
+  settings:
+    classifiers:
+      account:
+        account_field: Incluir a conta como um token
+        account_field_hint: "A conta da transação serve como indício. Ela nunca decide sozinha: a transação precisa de uma palavra ou de um estabelecimento conhecido."
+      amount:
+        amount_by_direction: "Incluir o sentido: entrada ou saída de dinheiro"
+        amount_by_direction_hint: Cada categoria aprende em que sentido o dinheiro dela se move, e reembolsos e compras na mesma loja ficam separados.
+        amount_field: Incluir o valor
+        amount_field_hint: Compara o valor com os valores habituais de cada categoria na mesma moeda, em escala logarítmica.
+      category_training:
+        apply: Aplicar
+        categories: Categorias
+        categories_all: Todas as categorias
+        categories_hint: Categorias desmarcadas, com suas subcategorias, ficam fora do treinamento, então o Bayes nunca as escolhe.
+        categories_some: "%{count} de %{total} categorias"
+        exclude_transfers: Desconsiderar transferências
+        exclude_transfers_hint: Transferências e pagamentos entre suas contas.
+        search_categories: Buscar categorias
+        skip_self_labels: Não aprender com os palpites do próprio Bayes até que sejam confirmados ou tenham esta quantidade de dias
+        skip_self_labels_hint: Confirmado significa que você o alterou ou bloqueou. Um palpite errado não é realimentado nem reforçado; um que fica intocado por esse tempo conta como aceito.
+      add_rule:
+        success: A regra %{name} foi adicionada ao topo das suas regras.
+      classifier:
+        apply: Aplicar
+        lock_results: Bloquear as categorias definidas pelo classificador
+        lock_results_hint: Impede que regras alterem as escolhas do Bayes, a menos que você clique em Aplicar em uma regra. A IA nunca altera as escolhas do Bayes, bloqueadas ou não.
+        rule: Categorizar com o classificador
+        rule_hint: A regra Classificador de categorias, ativada e desativada junto com esta opção em Regras. Ela categoriza as transações sem categoria na ordem das suas regras, após cada sincronização; o que ela não consegue decidir com segurança fica para uma regra de categorização automática.
+        threshold: Limiar
+        threshold_hint: Pontuação mínima para o Bayes agir (0,05–0,99). Um valor menor categoriza mais, com mais erros.
+        min_category_examples: Mínimo de exemplos por categoria
+        min_category_examples_hint: Uma categoria só é escolhida quando pelo menos este número das suas transações está nela (1–100). Caso contrário, uma categoria com pouquíssimos exemplos ganha transações desconhecidas com pontuação alta.
+      clear_locks:
+        success: Os bloqueios do Bayes estão sendo removidos. Isso pode levar alguns instantes.
+      evaluation:
+        apply_best: Aplicar estas configurações
+        best: Melhor configuração
+        best_changes: "Melhor configuração, com estas mudanças em relação à sua:"
+        best_no_changes: Nada teve pontuação melhor que as suas configurações.
+        buttons_hint: "Testar minhas configurações pontua as suas configurações. Encontrar as melhores configurações pesquisa os %{tuning} meses anteriores aos exibidos, então o que ele encontra é pontuado em meses que não viu. O critério é o ROC-AUC: o quanto as pontuações colocam as transações de cada categoria acima das demais, em qualquer limiar; uma mudança só é mantida quando é maior no geral e também em cada um desses %{tuning} meses isoladamente, exceto um. Primeiro ele escolhe as entradas (todas as combinações de token do estabelecimento, valor e conta; depois, pontuar o estabelecimento e a conta separadamente; depois, o nome do estabelecimento e as notas como palavras), em seguida testa uma mudança por vez nas outras configurações e, por último, em Pontuação. Os padrões são os do classificador original, com as categorias que você escolheu; Restaurar padrões passa a usá-los e os testa."
+        categories_heading: Classificador de categorias
+        change: "%{setting}: %{value}"
+        confusion: "%{actual} → %{predicted}"
+        confusions: "Erros mais comuns: %{column}, limiar %{threshold}"
+        current: Minhas configurações
+        defaults: Padrões
+        description: Cada coluna é pontuada nos últimos %{months} meses como se fossem transações novas, com cada mês treinado no histórico anterior a ele, e depois comparada com as suas categorias. O teste não altera a categoria de nenhuma transação, e as configurações do classificador só mudam quando você aplica ou restaura.
+        find_best: Encontrar as melhores configurações
+        matcher_confusions: "Erros de estabelecimento mais comuns: %{column}, similaridade %{similarity}"
+        matcher_description: "Estabelecimentos que o identificador preenche nos mesmos %{months} meses: %{count} transações com estabelecimento, cada uma comparada com o histórico anterior ao seu mês, com o estabelecimento oculto; o acerto é o estabelecimento que ela tem. Todos os pontos de corte e números de estabelecimentos são pontuados; a Melhor configuração é a que tem a melhor célula para o custo de um erro, e é ela que o Aplicar define. O teste não preenche nenhum estabelecimento."
+        merchants_heading: Identificador de estabelecimentos
+        no_confusions: Nenhum erro com este limiar.
+        no_matcher_confusions: Nenhum erro de estabelecimento com esta similaridade.
+        no_uncategorized: Nada fica sem categoria com este limiar.
+        no_unfilled: Nada fica sem estabelecimento com esta similaridade.
+        none: Ainda não testado.
+        "off": desativado
+        "on": ativado
+        ran_at: Pontuado há %{time} com %{count} transações (%{months}).
+        reset: Restaurar padrões
+        reset_confirm: Restaurar todas as configurações do classificador para o padrão e testá-las?
+        right_wrong: Cada célula mostra acertos / erros.
+        run: Testar minhas configurações
+        running: Testando… esta seção será atualizada quando terminar.
+        short_history: Ainda não há histórico suficiente para calibrar o classificador de categorias. São necessários cerca de %{months} meses de transações categorizadas, então, por enquanto, o Aplicar não altera as configurações dele.
+        similarity: Similaridade
+        stale: As configurações mudaram desde este teste.
+        threshold: Limiar
+        trying: Testando %{changes}…
+        uncategorized: "Mais comuns sem categoria: %{column}, limiar %{threshold}"
+        unfilled: "Mais comuns sem estabelecimento: %{column}, similaridade %{similarity}"
+        weight: Um erro custa
+        weight_hint: "Escolhe o que o Aplicar define: as células em negrito, onde os acertos menos esta quantidade por erro dão o maior resultado. Para as categorias, o limiar da Melhor configuração; para o identificador, o ponto de corte, a similaridade e o número de estabelecimentos."
+        weight_option:
+          one: 1 acerto
+          other: "%{count} acertos"
+      matcher:
+        lock_similar_merchants: Bloquear os estabelecimentos definidos pelo identificador
+        lock_similar_merchants_hint: Impede que regras, IA e sincronizações os alterem, a menos que você clique em Aplicar em uma regra. Os bloqueios feitos pelo próprio identificador não contam como confirmados (Calibragem do identificador de estabelecimentos).
+        rule: Preencher estabelecimentos ausentes a partir de transações quase idênticas
+        rule_hint: A regra Identificador de estabelecimentos, ativada e desativada junto com esta opção em Regras. Na ordem das suas regras, uma transação sem estabelecimento recebe aquele que todas as transações quase idênticas a ela têm, como "NETFLIX.COM 8812" e "Netflix com". Transferências ficam de fora.
+        similar_threshold: Similaridade
+        similar_threshold_hint: Similaridade mínima entre as descrições, ignorando números e códigos de referência (0,5–0,99). Um valor menor preenche mais, com mais erros. O Aplicar da calibragem automática também define este valor.
+      matcher_tuning:
+        similar_common_share: Ponto de corte
+        similar_common_share_hint: Uma palavra ou trecho de 3 letras presente em uma fração maior que esta das transações de onde ele copia (0,01–1), e em pelo menos 50 delas, é comum demais para diferenciá-las, como "cartão" ou "pagamento", e por isso é ignorado. Um valor maior considera mais dessas palavras. O Aplicar da calibragem automática também define este valor.
+        similar_min_neighbours: Estabelecimentos concordantes
+        similar_min_neighbours_hint: Quantas transações quase idênticas precisam ter o estabelecimento, sem que nenhuma tenha outro. Com 1, ele copia de uma única transação, inclusive os erros.
+        similar_min_neighbours_option:
+          one: 1 estabelecimento
+          other: "%{count} estabelecimentos"
+        similar_skip_self: Não copiar dos estabelecimentos definidos pelo próprio identificador até que sejam confirmados ou tenham esta quantidade de dias
+        similar_skip_self_hint: Confirmado significa que você o alterou ou bloqueou. Uma cópia errada não se espalha; uma que fica intocada por esse tempo conta como aceita.
+      merchant:
+        merchant_field: Incluir o estabelecimento como um token, quando definido
+        merchant_field_hint: Conta pela identidade, então um estabelecimento renomeado mantém seu histórico.
+        merchant_name_words: Incluir o nome do estabelecimento como palavras
+        merchant_name_words_hint: É lido como a descrição, como faz o original, então nomes parecidos compartilham indícios. Sobrepõe-se ao token abaixo.
+      run:
+        success: O Bayes está categorizando as transações sem categoria. Isso pode levar alguns instantes.
+      scoring:
+        complement: Usar naive Bayes complementar
+        complement_hint: Pontua cada categoria pelo quanto a transação não se encaixa nas outras, o que lida melhor com categorias de tamanhos muito diferentes. Desativado usa o multinomial original.
+        prior: Incluir a frequência de uso de cada categoria
+        prior_hint: Favorece as categorias que você mais usa. Desativado trata todas as categorias igualmente, como faz o original.
+        separate_fields: Pontuar o estabelecimento e a conta separadamente das palavras
+        separate_fields_hint: Cada um tem sua própria distribuição, então uma descrição longa não pesa mais que eles. Exige incluir o estabelecimento ou a conta; o valor é sempre pontuado separadamente.
+        smoothing: Suavização
+        smoothing_hint: Somada a cada contagem para que uma palavra nunca vista não descarte uma categoria (0,001–10). 1 é o valor do original; valores menores confiam mais no que já foi visto.
+      show:
+        add_rule_body: Não há uma regra %{name} nas suas regras, então não há nada para ativar. Adicioná-la ao topo das suas regras?
+        add_rule_cancel: Não
+        add_rule_confirm: Adicionar regra
+        add_rule_title: Adicionar a regra %{name}?
+        account: Calibragem da conta
+        amount: Calibragem do valor
+        auto_tune: Calibragem automática
+        category_training: Calibragem do classificador de categorias
+        clear_locks: Remover bloqueios do Bayes
+        clear_locks_confirm_body: Desbloqueia as categorias que o Bayes bloqueou e os estabelecimentos que o identificador bloqueou e que ainda estão como eles definiram, para que regras e IA possam alterá-los de novo. As categorias e os estabelecimentos são mantidos.
+        clear_locks_confirm_button: Remover bloqueios
+        clear_locks_confirm_title: Remover bloqueios do Bayes?
+        description: O classificador de categorias Bayes aprende com suas transações categorizadas e categoriza as novas antes de qualquer provedor de IA. Alterações nestas configurações valem a partir da próxima execução da categorização; transações já categorizadas mantêm suas categorias.
+        matcher: Identificador
+        matcher_description: Preenche estabelecimentos ausentes a partir de transações quase idênticas, como a regra Identificador de estabelecimentos (após cada sincronização) e ao clicar em Executar. Ele altera os estabelecimentos salvos.
+        matcher_tuning: Calibragem do identificador de estabelecimentos
+        merchant: Calibragem do estabelecimento
+        run: Executar
+        scoring: Pontuação
+        title: Classificador
+        training: Treinamento
+        words: Calibragem da transação
+      training:
+        max_training_transactions: Transações de treinamento
+        max_training_transactions_hint: "Quantas das transações mais recentes usar (100–20.000): as categorizadas, com as quais o classificador aprende, e as que têm estabelecimento, das quais o identificador copia."
+      words:
+        bigrams: Incluir pares de palavras
+        bigrams_hint: Palavras vizinhas também contam juntas, como "compra cartão".
+        binary: Desconsiderar palavras repetidas
+        binary_hint: Cada palavra conta uma vez por transação.
+        drop_codes: Desconsiderar códigos de referência
+        drop_codes_hint: Palavras que misturam letras com 2 ou mais dígitos, como 2k4l19.
+        drop_numbers: Desconsiderar números
+        drop_numbers_hint: Números de loja, datas e valores na descrição.
+        include_notes: Incluir notas
+        include_notes_hint: Lê as notas além do nome.
+        keep_single_chars: Incluir palavras de um caractere
+        keep_single_chars_hint: Letras e dígitos soltos que sobram após a separação, como o "s" de mcdonald's.
+        spread_filter: Desconsiderar palavras que todas as categorias usam igualmente
+        spread_filter_hint: Elas não dizem nada sobre a categoria. O número indica quanto acima de uma divisão uniforme o uso de uma categoria precisa estar.
+        word_split: As palavras são formadas por
+        word_split_ascii: a–z e 0–9
+        word_split_hint: Qualquer outro caractere separa palavras. Com letras de qualquer alfabeto, palavras como Geschäft ou Кофейня ficam inteiras; com símbolos internos, letras unidas por um único símbolo também formam uma palavra, como mcdonald's, s/o e m&s (um símbolo em qualquer das pontas, como em *netflix, continua sendo removido).
+        word_split_symbols: Letras, dígitos e símbolos internos
+        word_split_unicode: Letras e dígitos de qualquer alfabeto

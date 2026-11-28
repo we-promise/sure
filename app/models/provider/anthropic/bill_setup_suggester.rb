@@ -101,6 +101,7 @@ class Provider::Anthropic::BillSetupSuggester
 
         Rules:
         - Infer the cadence from the gaps between the dates, never from the row count.
+          Use "once" only for a single charge with no repeating gap.
         - amount is the typical recent charge as a positive number; when amounts drift,
           prefer the most recent ones.
         - day_of_month is the modal charge day (monthly-style cadences only); weekday

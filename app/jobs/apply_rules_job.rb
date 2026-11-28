@@ -6,11 +6,15 @@ class ApplyRulesJob < ApplicationJob
 
   # A failing rule is recorded as a failed RuleRun and the remaining rules still
   # run. The job itself does not fail, because a retry would re-run every rule.
-  def perform(family, execution_type: "scheduled")
+  # `warm_reports` (after a sync) builds the usual Reports views once the
+  # rules are done, so they aren't cached from entries the rules still change.
+  def perform(family, execution_type: "scheduled", warm_reports: false)
     Rule::Runner.new(
       family,
       rules: family.rules.where(active: true),
       execution_type: execution_type
     ).run
+
+    WarmReportsCacheJob.perform_later(family) if warm_reports
   end
 end
