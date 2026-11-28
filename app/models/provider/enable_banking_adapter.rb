@@ -4,7 +4,7 @@ class Provider::EnableBankingAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("EnableBankingAccount", self)
-  declares_connection key: "enable_banking"
+  declares_connection key: "enable_banking", panel: { title: "Enable Banking" }
 
   # Define which account types this provider supports
   def self.supported_account_types

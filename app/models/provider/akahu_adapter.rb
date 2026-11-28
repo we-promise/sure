@@ -3,7 +3,7 @@ class Provider::AkahuAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("AkahuAccount", self)
-  declares_connection key: "akahu"
+  declares_connection key: "akahu", panel: { title: "Akahu" }
 
   def self.supported_account_types
     %w[Depository CreditCard Loan Investment]

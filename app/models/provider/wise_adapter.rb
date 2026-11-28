@@ -5,7 +5,7 @@ class Provider::WiseAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("WiseAccount", self)
-  declares_connection key: "wise"
+  declares_connection key: "wise", panel: { title: "Wise" }
 
   def self.supported_account_types
     %w[Depository]

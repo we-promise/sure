@@ -4,7 +4,7 @@ class Provider::LunchflowAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("LunchflowAccount", self)
-  declares_connection key: "lunchflow"
+  declares_connection key: "lunchflow", panel: { title: "Lunch Flow" }
 
   # Define which account types this provider supports
   def self.supported_account_types

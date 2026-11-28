@@ -4,7 +4,7 @@ class Provider::QuestradeAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("QuestradeAccount", self)
-  declares_connection key: "questrade"
+  declares_connection key: "questrade", panel: { title: "Questrade" }
 
   # Define which account types this provider supports
   def self.supported_account_types

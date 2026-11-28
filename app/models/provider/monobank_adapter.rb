@@ -3,7 +3,7 @@ class Provider::MonobankAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("MonobankAccount", self)
-  declares_connection key: "monobank"
+  declares_connection key: "monobank", panel: { title: "Monobank" }
 
   # Sure accountable types that can be created from Monobank accounts. Everything the
   # personal API exposes — cards and jars alike — is a cash account (see

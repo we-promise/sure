@@ -3,7 +3,7 @@ class Provider::TruelayerAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("TruelayerAccount", self)
-  declares_connection key: "truelayer"
+  declares_connection key: "truelayer", panel: { title: "TrueLayer" }
 
   def self.supported_account_types
     %w[Depository CreditCard Loan]
