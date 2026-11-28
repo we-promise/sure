@@ -88,6 +88,22 @@ class Provider::TiingoTest < ActiveSupport::TestCase
     assert_equal "USD", security.currency
   end
 
+  # The country searched with is the caller's, not the listing's: a result
+  # with no countryCode has no country rather than the caller's.
+  test "search_securities gives no country for a result without one" do
+    stub_client_get([ { "name" => "No Country Fund", "ticker" => "NOCTRY", "countryCode" => nil } ].to_json)
+
+    security = @provider.search_securities("NOCTRY", country_code: "GB").data.first
+
+    assert_nil security.country_code
+  end
+
+  test "search_securities keeps a result's own country" do
+    stub_client_get(vfv_search_body)
+
+    assert_equal "CA", @provider.search_securities("VFV", country_code: "GB").data.first.country_code
+  end
+
   test "search_securities resolves CAD for a Canadian security via countryCode (VFV)" do
     stub_client_get(vfv_search_body)
 

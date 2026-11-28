@@ -1370,6 +1370,7 @@ class Family::DataImporter
           exchange_mic: data["exchange_mic"],
           exchange_acronym: data["exchange_acronym"],
           country_code: data["country_code"],
+          country_source: data["country_source"],
           kind: data["kind"],
           website_url: data["website_url"]
         )
@@ -1938,7 +1939,13 @@ class Family::DataImporter
       assign_if_blank(security, :exchange_operating_mic, attributes[:exchange_operating_mic].presence&.upcase)
       assign_if_blank(security, :exchange_mic, attributes[:exchange_mic].presence)
       assign_if_blank(security, :exchange_acronym, attributes[:exchange_acronym].presence)
-      assign_if_blank(security, :country_code, attributes[:country_code].presence)
+      # A file's country fills a blank country, with the file's source (trusted
+      # when it names none); only a country a provider gave replaces a hint.
+      country = attributes[:country_code].presence
+      source = attributes[:country_source].presence_in(Security::COUNTRY_SOURCES)
+      if country && (security.country_code.blank? || (source == "provider" && security.country_hint?))
+        security.assign_country(country, source: source)
+      end
       assign_if_blank(security, :website_url, attributes[:website_url].presence)
       security.kind = security_kind_for(attributes[:kind]) if security.new_record? || security.kind.blank?
 

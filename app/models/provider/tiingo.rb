@@ -123,7 +123,7 @@ class Provider::Tiingo < Provider
           name: security["name"],
           logo_url: nil,
           exchange_operating_mic: map_exchange_to_mic(security["exchange"]),
-          country_code: security["countryCode"].presence || country_code,
+          country_code: security["countryCode"].presence,
           currency: currency
         )
       end
