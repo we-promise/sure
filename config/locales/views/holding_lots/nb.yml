@@ -1,0 +1,9 @@
+---
+nb:
+  holding_lots:
+    provider_cost: "Leverandøren din oppgir kostnaden for denne posisjonen, så kostnaden for de enkelte partiene kan ikke angis."
+    update:
+      success: "Kostnaden for partiet er oppdatert."
+      error: "Skriv inn hva partiet kostet totalt, null eller mer."
+    unlock:
+      success: "Den manuelle kostnaden er fjernet."
